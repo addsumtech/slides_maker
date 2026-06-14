@@ -132,17 +132,32 @@ def text(slide, x, y, w, h, runs, align=PP_ALIGN.LEFT, anchor=MSO_ANCHOR.TOP,
 
 
 # ===================================================================== shapes
-def box(slide, x, y, w, h, fill=None, line=None, line_w=1.0, round=False):
-    t = MSO_SHAPE.ROUNDED_RECTANGLE if round else MSO_SHAPE.RECTANGLE
+def box(slide, x, y, w, h, fill=None, line=None, line_w=1.0, round=False, corners="all", r=None):
+    """A rectangle. `round=True` rounds all four corners (radius = 8% of the shorter side,
+    or `r` inches if given). For a colored HEADER BAND sitting on top of a rounded card,
+    use `corners='top'` and pass `r=<the card's corner radius in inches>` so the band's
+    curve MATCHES the card — a square band over a rounded card (corners poking out) is the
+    tell to avoid. `corners='bottom'` rounds the bottom two. (A thin accent strip can
+    instead be inset by the radius so its square ends fall on the card's straight edge.)"""
+    if not (round or r is not None or corners != "all"):
+        t = MSO_SHAPE.RECTANGLE
+    elif corners in ("top", "bottom"):
+        t = MSO_SHAPE.ROUND_2_SAME_RECTANGLE   # rounds the two top corners (rotate for bottom)
+    else:
+        t = MSO_SHAPE.ROUNDED_RECTANGLE
     s = slide.shapes.add_shape(t, Inches(x), Inches(y), Inches(w), Inches(h))
     if fill is None: s.fill.background()
     else: s.fill.solid(); s.fill.fore_color.rgb = fill
     if line is None: s.line.fill.background()
     else: s.line.color.rgb = line; s.line.width = Pt(line_w)
     s.shadow.inherit = False
-    if round:
-        try: s.adjustments[0] = 0.08
+    if t != MSO_SHAPE.RECTANGLE:
+        adj = (r / min(w, h)) if r is not None else 0.08
+        adj = max(0.0, min(0.5, adj))
+        try: s.adjustments[0] = adj
         except Exception: pass
+        if corners == "bottom":
+            s.rotation = 180
     return s
 
 
@@ -215,7 +230,8 @@ def callout(slide, x, y, w, h, label, body, label_c=MAGENTA, fill=TINT, body_c=D
     nlines = max(1, -(-(_disp_len(label) + 2 + _disp_len(body)) // cpl))   # CJK-aware
     h = max(h, 0.36 + 0.245 * nlines)
     box(slide, x, y, w, h, fill=fill, round=True)
-    box(slide, x, y, 0.07, h, fill=label_c)
+    rad = 0.08 * min(w, h)                                   # inset the accent bar so its square
+    box(slide, x, y + rad, 0.07, h - 2 * rad, fill=label_c)  # ends fall on the card's straight edge
     text(slide, x + 0.24, y + 0.07, w - 0.44, h,
          [[(label + "  ", 11, label_c, True, False), (body, 12.5, body_c, False, False)]],
          anchor=MSO_ANCHOR.MIDDLE, space_after=0, line_spacing=1.08)

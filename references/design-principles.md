@@ -97,6 +97,13 @@ as much as the words on it. Design is not optional polish; it is half the job.
   asymmetric, off-centre cluster) is the "out of lock" tell. Compute positions from the
   container's centre and keep them symmetric; after rendering, check no shape pokes outside
   its frame.
+- **Match corner rounding between a card and anything overlaid on it.** A *rounded* card
+  with a **square** colored header band (or a square accent bar) on top is a classic tell —
+  the band's right-angle corners poke past the card's curve. Fix it one of two ways: give
+  the band rounded *top* corners that match the card's radius (`deckkit.box(corners='top',
+  r=<card radius>)`), or **inset** a thin accent strip/bar by the corner radius so its
+  square ends land on the card's *straight* edge, not over the rounded corner (deckkit's
+  `callout` insets its accent bar this way). Never lay a square block over a rounded one.
 - **Connector labels: centred and tight.** A word over an arrow (a verb or transform name —
   e.g. "encode", "train", "merge") should be *centred on the arrow* and sit just above it
   with a small gap — not drifting to one side or floating far above. `deckkit.arrow_label`
