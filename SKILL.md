@@ -272,13 +272,15 @@ authors' actual emphasis, not a plausible-sounding paraphrase. Reuse their figur
   metric is last year's, label it as such and add the current year-to-date figure rather
   than presenting old data as current. **Re-verify time-sensitive facts on *every* build,
   including a regeneration/rebuild — never reuse earlier research for fast-moving or *dated*
-  facts.** A figure or status that was right days ago can be stale now; for any **scheduled
-  / dated event** (an IPO, launch, election, deadline, release), re-check whether it has
-  **already happened as of today** and phrase it by its real status — a "planned/scheduled"
-  event whose date has passed is **completed**, not upcoming (e.g. don't write "拟上市" for an
-  IPO that has since listed). Reusing cached research is fine for *stable* facts, never for
-  anything time-bound. Then confirm the outline with the user before building the full deck
-  (cheaper to correct an outline than a finished deck).
+  facts.** A price, count, ranking, role-holder, version, or status that was right days ago
+  can be stale now. Re-check anything time-bound: live metrics; "current / latest / upcoming"
+  claims; "first / largest / record" superlatives; who currently holds a position; and any
+  **scheduled or dated event** (a launch, release, ruling, earnings, election, deadline). For
+  a dated event, check whether it has **already happened as of today** and write it in the
+  correct status/tense — a "planned / upcoming" item whose date has passed is **completed**,
+  and a "leading / latest" thing may since have been overtaken or superseded. Reusing cached
+  research is fine for *stable* facts, never for anything time-bound. Then confirm the outline
+  with the user before building the full deck (cheaper to correct an outline than a finished deck).
   > **🔴 CHECKPOINT** — get the user's OK on the outline before building the full deck.
 
 ## Step 2 — Set up the canvas
