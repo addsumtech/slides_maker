@@ -25,23 +25,35 @@ a speaker*, not a document to be read — optimize for "understood in seconds." 
 `references/design-principles.md` for the craft, and treat the actor-critic loop
 (step 5) as non-negotiable: you are not the final judge of your own work.
 
-**The user's requirements are the source of truth — learn them by asking, not assuming.**
-A template, an old deck's content, or your own taste are *inputs that serve the
-requirements*, not instructions: unless the user says "reuse as-is," mine provided
-material for facts/figures and drop the rest; when an artifact conflicts with the stated
-requirement, the requirement wins.
+**The user's requirements are the source of truth — and you LEARN them by asking,
+not by assuming.** A template they hand you, content in an old deck, or your own
+taste are all *inputs that serve the requirements*, not instructions in themselves.
+Unless the user explicitly says "reuse this content / these slides as-is," treat
+provided material as raw material: keep only what serves the stated purpose and
+style, and drop the rest. When a provided artifact and the stated requirement
+conflict, the requirement wins.
 
 **Stay strictly faithful to the source — do not invent.** Every claim, number, result,
-and figure must trace to what the user gave you; don't embellish or infer results the
-source never states. Unsure? Leave it out or ask. *One exception:* a clearly **flagged**
-forward-looking slide (future work / the ask) may extrapolate, if correct. (Full rule: step 1.)
+figure, and framing must trace back to what the user gave you: don't embellish, infer
+results the source never states, "improve" numbers, or add plausible detail that isn't
+there — experts spot it and it can mislead real decisions. Unsure if it's in the source?
+Leave it out or ask. **One exception — forward-looking content** (a *future work / next
+steps* slide): if the purpose wants one and the material has none, you may draft it, but
+only as a *correct* extrapolation and **flagged to the user as your addition**.
+Everything describing what was *done* stays anchored to the source.
 
-**Work efficiently — parallelize only independent work.** Fan out across *separate*
-documents or batch asset prep (figure crops, equation PNGs) — never split one paper's
-through-line across blind agents; parallelism speeds *gathering*, not *understanding*, so
-synthesize back into one comprehension brief (step 1). Build the whole deck in **one
-script run**, and **scale the critic to stakes** (step 5) — one critic for a quick deck,
-the multi-critic panel only for high-stakes. (`superpowers:dispatching-parallel-agents`.)
+**Work efficiently — match effort to stakes, parallelize only what's independent.**
+Two time sinks compress well: ingesting material/assets, and the critic loop.
+- **Parallelize independent work, never a single argument.** Fan out across *separate*
+  documents, or batch asset prep (figure crops, equation PNGs) — but never split one
+  paper's intro/method/results across blind agents; the through-line is one mind's job.
+  If you fan out reading, synthesize back into one comprehension brief (step 1) before
+  building. Parallelism speeds *gathering*, never *understanding*.
+  (`superpowers:dispatching-parallel-agents`.)
+- **Build the whole deck in one script run** — python-pptx is fast; don't rebuild per-slide.
+- **Scale the critic to stakes** (step 5): one critic for a quick internal deck; the
+  multi-critic, multi-round panel only for high-stakes. The loop is non-negotiable;
+  its *weight* is what you tune.
 
 **Two modes.** *Auto* (default): interview, then build and run the critic loop to a high
 bar yourself. *Collaborative* (opt-in — when the user wants to see options or approve as
