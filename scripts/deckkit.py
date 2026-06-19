@@ -190,6 +190,58 @@ def arrow_label(slide, x, y, w, h, label, color=BLUE, size=9, lab_c=None, box_w=
     return arrow(slide, x, y, w, h, color=color)
 
 
+# ====================================================================== images
+def picture(slide, path, x, y, w, h, fit="contain", alt=None):
+    """Place an image in a frame without distorting it.
+
+    `fit="contain"` shows the whole image inside the frame, letterboxed by whitespace.
+    Use it for source figures, charts, screenshots, and anything whose edges/labels matter.
+    `fit="cover"` fills the frame and crops evenly from the long dimension. Use it for
+    decorative plates, photo panels, and generated atmosphere where edge crop is acceptable.
+
+    Pass `alt` for informative images; pass `alt=""` for decorative plates. Returns the
+    picture shape. Requires Pillow for reliable aspect-ratio reads, matching the rest of
+    deckkit's image/equation helpers.
+    """
+    from PIL import Image
+    with Image.open(path) as im:
+        iw, ih = im.size
+    if iw <= 0 or ih <= 0:
+        raise ValueError(f"cannot read image dimensions for {path}")
+
+    img_ar = iw / ih
+    frame_ar = w / h
+    fit = fit.lower()
+    if fit == "contain":
+        if frame_ar > img_ar:
+            ph = h
+            pw = h * img_ar
+            px = x + (w - pw) / 2
+            py = y
+        else:
+            pw = w
+            ph = w / img_ar
+            px = x
+            py = y + (h - ph) / 2
+        pic = slide.shapes.add_picture(path, Inches(px), Inches(py), width=Inches(pw), height=Inches(ph))
+    elif fit == "cover":
+        pic = slide.shapes.add_picture(path, Inches(x), Inches(y), width=Inches(w), height=Inches(h))
+        if img_ar > frame_ar:
+            crop = (1.0 - frame_ar / img_ar) / 2.0
+            pic.crop_left = crop
+            pic.crop_right = crop
+        elif img_ar < frame_ar:
+            crop = (1.0 - img_ar / frame_ar) / 2.0
+            pic.crop_top = crop
+            pic.crop_bottom = crop
+    else:
+        raise ValueError("fit must be 'contain' or 'cover'")
+
+    if alt is not None:
+        alt_text(pic, alt)
+    return pic
+
+
 # ================================================================= components
 def _is_wide(o):
     """True for CJK / full-width code points — their glyph advance is ≈ one em."""
@@ -419,6 +471,14 @@ def equation_png(latex_lines, out_path, color="FFFFFF", fontsize=28, dpi=300, ma
       • \\| gives the norm bars; \\hat \\mathcal \\Psi \\lambda \\epsilon \\Delta all work;
       • keep prose annotations OUT of the math (render them as a separate deck-font label),
         so the PNG stays pure math and font-independent."""
+    import os
+    import tempfile
+    if not os.environ.get("MPLCONFIGDIR"):
+        default = os.path.join(os.path.expanduser("~"), ".matplotlib")
+        if not (os.path.isdir(default) and os.access(default, os.W_OK)):
+            path = os.path.join(tempfile.gettempdir(), "slide-maker-matplotlib")
+            os.makedirs(path, exist_ok=True)
+            os.environ["MPLCONFIGDIR"] = path
     import matplotlib; matplotlib.use("Agg")
     matplotlib.rcParams["mathtext.fontset"] = mathfont   # math typeface (see docstring)
     import matplotlib.pyplot as plt

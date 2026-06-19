@@ -29,7 +29,8 @@ use them as a throwaway mood sketch, then confirm with a real rendered slide.)
    - **How many:** when this gate fires because the user chose **"design a clean one" /
      no template** (its recommended-default home), use **3** — the look is fully yours to
      invent, so a fuller spread earns the pick. For the lighter "unsure / brand-defining"
-     opt-in offer, **2–3** is fine. Present the pick itself as `AskUserQuestion` options.
+     opt-in offer, **2–3** is fine. Present the pick through the host's natural UI:
+     structured choices when available, or a short direct question in plain chat.
 2. For each, build the **same archetype slides** with `scripts/archetypes.py`
    (`build_archetypes(prs, S)` / `preview_direction(style_path, out)`): cover, a
    bullets+callout slide, a diagram slide, and a data/figure slide. Same content,
@@ -41,7 +42,7 @@ use them as a throwaway mood sketch, then confirm with a real rendered slide.)
 3. **Run a quick critic on each preview first** (don't spend the user's attention on
    issues a critic would catch — show decent options).
 4. Render all directions, present them (a contact sheet / the PNGs), and collect
-   **structured feedback** with `AskUserQuestion`: pick a direction, plus **knobs** —
+   **structured feedback**: pick a direction, plus **knobs** —
    density (minimal/moderate/dense), accent colour, font pairing, light/dark.
    - **Always include a final "D — describe your own" option** beyond the rendered
      directions. The rendered options are only your *opening proposals*; the author may
@@ -53,7 +54,7 @@ use them as a throwaway mood sketch, then confirm with a real rendered slide.)
 5. Apply knobs — or a "D" free-text intention — by editing/creating the **style module**
    (a tweak = change a constant + re-render the archetypes — cheap) until the user consents.
 6. On consent: **(a)** the chosen module becomes the deck's `style.py`; **(b)** optionally
-   persist it to `~/.claude/slide-templates/<name>/` (profile.md + the style module) so it's
+   persist it to the active template registry (profile.md + the style module) so it's
    a reusable registered template next time — collaborative mode *grows the registry*; then
    **(c) delete the throwaway preview artifacts** — the whole `_directions/` preview folder
    (every direction's preview deck + render PNGs) and the *rejected* directions' style

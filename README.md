@@ -33,6 +33,7 @@ Three quiet disciplines separate it from the usual ways of making slides:
 | Asks your goal & audience *before* building | ✗ | ~ | ✓ | **✓** |
 | Stays faithful to your source — no invented numbers | ~ | ~ | ✓ | **✓** |
 | Uses your source's own figures — auto-cropped from the PDF, not redrawn | ✗ | ✗ | ~ | **✓** |
+| Optional generated visual plates for polish, kept text-free and non-evidentiary | ~ | ✓ | ~ | **✓** |
 | Independent critic checks the **rendered** slides | ✗ | ✗ | ✗ | **✓** |
 | Design tuned to the *purpose* (defense ≠ pitch ≠ lecture) | ~ | ~ | ✓ | **✓** |
 | Real, editable `.pptx` you own — no lock-in | ~ | ~ | ✓ | **✓** |
@@ -52,11 +53,11 @@ Every deck flows through seven steps (`SKILL.md` is the authoritative spec):
 
 | Step | What happens | Why it exists |
 |---|---|---|
-| **0 — Interview** | One `AskUserQuestion` batch: template, purpose & audience, source material, style. (+follow-ups: conference venue, new template.) | The user's requirements are the source of truth; you *learn* them, never inherit them from a prior deck. |
+| **0 — Interview** | One compact interview turn: template, purpose & audience, source material, style. Structured choices when the host supports them; direct free-text prompts in plain Codex chat. | The user's requirements are the source of truth; you *learn* them, never inherit them from a prior deck. |
 | **1 — Understand** | Read all source deeply; write a **comprehension brief** (one-sentence message, contributions, method essence, what each figure/table is *for*, limitations). | A deck that looks right but misreads the work fools no expert. Faithfulness starts here. |
 | **2 — Canvas** | Decide output folder (`~/Downloads/<deck>/`), load template *or* design a purpose-fit look; set palette/fonts (incl. CJK `EAFONT`). | Branding lives on layouts; design should signal the right *kind* of document before a word is read. |
 | **3 — Plan** | Slide count scales to the time budget (~1/min): short talk ~6–9, longer talk/lecture/defense/job-talk ~10–20+. One idea each, takeaway-first, arc shaped to the purpose; ~15+ → section fan-out (step 4). | Cheap to fix an outline; expensive to fix a finished deck. |
-| **4 — Build** | One build script using `deckkit` helpers. Whole source figures, gutters, rotating accents, real equations, one language, purposeful builds/animation (a default pass), speaker notes. | python-pptx is fast; one script run, one coherent author. |
+| **4 — Build** | One build script using `deckkit` helpers. Whole source figures, optional text-free generated visual plates, gutters, rotating accents, real equations, one language, purposeful builds/animation (a default pass), speaker notes. | python-pptx is fast; one script run, one coherent author. |
 | **5 — Render + critic loop** | Render to PNGs and *look*; then an **independent critic subagent** returns JSON (consent / revise + per-slide fixes). Loop until consent. | python-pptx writes blind — overflow/contrast/glyph bugs only show in pixels. You are not the judge of your own work. |
 | **6 — Hand off + iterate** | Show the user, give the folder path, explain editability + the two change-lanes, fold in feedback. | The deck is theirs to own and keep tweaking — safely. |
 
@@ -73,6 +74,7 @@ Every deck flows through seven steps (`SKILL.md` is the authoritative spec):
 
 - **Build from anything — or nothing.** A paper, codebase, doc, or existing slides → a deck. No material? It drafts from expertise and **web-searches to ground and fact-check** every claim.
 - **Uses your real figures, precisely.** It pulls the source's own figures **straight from the paper/PDF** — auto-detected by caption and cropped to the figure's true extent (legend and axes intact), shown *whole* rather than redrawn or chopped. Dense comparison grids can be reassembled to just the columns that matter; suspect crops are flagged for a look.
+- **Can add generated visuals where they help.** For slides that need atmosphere, hero imagery, or conceptual polish rather than evidence, it can plan text-free image-generation prompts and place the selected assets reproducibly in the deck. In Codex it can use native imagegen; outside Codex it can use an optional OpenAI API helper with `OPENAI_API_KEY`. Real figures, charts, labels, and source evidence stay real and editable.
 - **Redesign your existing deck.** It diagnoses first, confirms scope, then rebuilds reusing your content and figures — never a silent ground-up replacement.
 - **Match a look you like.** Hand it an example and it reproduces the *style* — grid, palette, typography, motifs — in its own build.
 - **Speak your audience's language.** Any language, held consistently throughout, with proper **CJK typography** and real **LaTeX-quality equations**.
@@ -87,15 +89,20 @@ Every deck flows through seven steps (`SKILL.md` is the authoritative spec):
 slide-maker is an **Agent Skill** — it runs in Claude Code and other Agent-Skills-compatible runtimes. You don't run commands to use it; you just **ask**, and the skill takes over (starting with the interview).
 
 ```bash
-# 1. Install (Claude Code path shown; any Agent-Skills runtime works)
-git clone https://github.com/dong845/slides_maker ~/.claude/skills/slide-maker
+# 1. From this repo, install/import into both terminal runtimes
+python scripts/install_skill.py --target both
 
 # 2. One-time toolchain check (python-pptx, LibreOffice, matplotlib, …)
-bash ~/.claude/skills/slide-maker/scripts/check_env.sh
+python ~/.codex/skills/slide-maker/scripts/check_env.py
+python ~/.claude/skills/slide-maker/scripts/check_env.py
+
+# 3. If Python packages are missing, install them for the same interpreter
+python -m pip install -r ~/.codex/skills/slide-maker/requirements.txt
 ```
 
 Then just ask your agent:
 
+> *"Use $slide-maker to create one slide explaining our new architecture."*
 > *"Make a 12-minute conference talk from paper.pdf."*
 > *"My deck is too dense — redesign it."*
 > *"A lecture on diffusion models, in 中文 — clean and diagram-heavy."*
@@ -148,11 +155,15 @@ The interview (step 0, Q3 especially) routes the request:
 
 **Engine (`scripts/`)**
 - `deckkit.py` — the build kit: text/shape/component helpers (`bullet`, `callout`, `chip`, `arrow`, `modbox`, `hrule`), equations (`eq_par`, `equation_png`), `speaker_notes`, contrast check, palette/fonts (incl. CJK `EAFONT`), template reuse (`open_template`, `content_slide`) and the no-template chrome (`blank_deck`, `title_bar`, `footer`). Import it; don't re-derive primitives.
+- `install_skill.py` — terminal installer/import helper for Codex and Claude Code skill directories.
+- `requirements.txt` — Python package dependencies for terminal use.
 - `render_deck.sh` — `.pptx` → one PNG per slide (LibreOffice → PDF → PNG). Cross-platform; uses a private LibreOffice profile so parallel/coexisting renders don't collide.
 - `check_env.sh` — one-time preflight for the toolchain.
 - `anim.py` — injects PowerPoint build/animation timing XML python-pptx can't write.
 - `assemble.py` — combine parallel-authored section modules into one deck (no fragile merge).
 - `archetypes.py` — build the same preview slides per direction for the collaborative gate.
+- `image_prompts.py` — create prompt manifests and expected filenames for optional text-free generated visual plates.
+- `generate_images_openai.py` — optional OpenAI Images API fallback: reads `image_prompt_manifest.json` and writes `slide-XX.png` files when `OPENAI_API_KEY` is set.
 - `inspect_template.py` — print a template's layouts/placeholders/logos.
 - `extract_pdf.py` — pull a figure *out* of a source PDF: `figures`/`figure`/`autofig` **auto-detect and crop figures precisely from the paper** (caption-anchored + snap-to-content, with validity checks), plus manual page/region/embedded-image extraction.
 - `crop_helper.py` — operate on an image *by looking, not guessing*: `grid` (ruler overlay), `crop`/`--snap`, `trim` (snap-to-content; removes background without clipping a legend/axis, light or dark bg), `panel` (reassemble chosen columns/rows of a dense comparison grid).
@@ -165,10 +176,10 @@ The interview (step 0, Q3 especially) routes the request:
 - `references/design-principles.md` — the craft and the "why."
 
 **Per-scenario references**
-- `design-by-purpose.md` · `animation.md` · `multilingual.md` · `font-guidance.md` · `style-analysis.md` · `redesign-existing-deck.md` · `collaborative-mode.md` · `large-deck-orchestration.md` · `handoff-and-iteration.md`
+- `design-by-purpose.md` · `image-generation.md` · `animation.md` · `multilingual.md` · `font-guidance.md` · `style-analysis.md` · `redesign-existing-deck.md` · `collaborative-mode.md` · `large-deck-orchestration.md` · `handoff-and-iteration.md`
 - `examples/` — worked build script, the shared-style + section-module convention.
 
 **External (not part of the skill)**
-- `~/.claude/slide-templates/` — the user's personal template registry; read for choices, write new profiles to it. Empty for a new user.
+- `~/.codex/slide-templates/` / `~/.claude/slide-templates/` — the user's personal template registry for Codex / Claude Code; read for choices, write new profiles to the active host's registry. Empty for a new user.
 
 </details>

@@ -6,9 +6,9 @@ authored in parallel by different subagents cannot drift: one palette, one font,
 title/footer treatment, one set of layout constants. Coherence lives here and nowhere
 else — sections never redefine colours or chrome, they call these helpers.
 """
-import os
 import sys
-sys.path.insert(0, os.path.expanduser("~/.claude/skills/slide-maker/scripts"))
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import deckkit
 from deckkit import add_slide, box, text, RGBColor, PP_ALIGN  # noqa: F401 (re-exported)
 

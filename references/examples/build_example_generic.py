@@ -3,14 +3,15 @@
 so it shows the deckkit helpers without any institution's branding.
 
 If the user has a template, build on it instead (deckkit.open_template + the template's
-profile in ~/.claude/slide-templates/<name>/). This file is just a how-to for the kit.
+profile in the active template registry). This file is just a how-to for the kit.
 
 Run:  python build_example_generic.py   →  <tempdir>/slide_maker_demo.pptx
 Then: bash ../../scripts/render_deck.sh <that path>   (or, on native Windows,
       python ..\\..\\scripts\\render_deck.py <that path>)  and inspect the PNGs.
 """
 import sys, os, tempfile
-sys.path.insert(0, os.path.expanduser("~/.claude/skills/slide-maker/scripts"))
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 from deckkit import (  # noqa: E402
     blank_deck, add_slide, title_bar, footer,
     box, text, bullet, callout, arrow, chip, modbox, equation_png,

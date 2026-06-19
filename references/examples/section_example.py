@@ -18,8 +18,9 @@ assembly. Iterate here, then return the finalized module.
 import os
 import sys
 import tempfile
+from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))               # find style.py
-sys.path.insert(0, os.path.expanduser("~/.claude/skills/slide-maker/scripts"))  # deckkit, assemble
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))      # deckkit, assemble
 # In the real workflow the shared module is named style.py; this example ships it as
 # style_example.py, so fall back to that if you run this file before renaming/copying it.
 try:

@@ -75,26 +75,33 @@ the content, source material, style, and template are all still unknown and must
 assumptions from a prior deck in the same session (its topic, its content, its
 style, its template) — every deck starts fresh with these questions.
 
-Ask all four in a **single `AskUserQuestion` call** — it takes up to four questions at
-once, so the user fills one screen instead of clearing four sequential prompts. This
-batching is deliberate: the interview is non-negotiable, so it has to be *cheap* —
-four separate round-trips is the friction that tempts everyone (you included) to skip
-it. **Present the interview (and most later choices) as selectable options via
-`AskUserQuestion`, not as a free-text questionnaire the user must type into** —
-option-selection is faster and is what users expect here; users can still pick "Other"
-to type when an option doesn't fit. **The one exception is a genuinely open-ended prompt
-with nothing to pre-fill** — e.g. the *subject* of a from-scratch deck for a brand-new
-user (see the footprint rule below) — which you ask openly. If the user **declines or
-interrupts** the call, re-ask with adjusted/fewer options — **don't fall back to a typed
-questionnaire.** Only drop a question if the user already answered *that* one in their current
-request; when in doubt, keep it. Never assume the **topic/content**, the **style**, or
-**which template** — confirm each.
+Collect all four answers in **one cheap interview turn**. Match the host UI:
+- **If the runtime provides a structured choice UI** (for example Claude Code's
+  `AskUserQuestion`), ask the four questions in one batched call with concise options.
+- **If the runtime does not provide that UI** (for example plain Codex chat), ask one
+  compact direct question and let the user answer in free text. Do not fabricate a fake
+  multiple-choice form; give short examples only where they reduce ambiguity.
+
+Direct-question fallback:
+```text
+Before I build, please give me:
+1. Template/brand: existing template, new template, or design a clean one?
+2. Purpose/audience/time: who is this for and how long?
+3. Source material: paper, deck, doc, figures, repo, or none?
+4. Style/language: minimal, corporate, academic, playful, 中文/English/etc.?
+```
+
+This batching is deliberate: the interview is non-negotiable, so it has to be *cheap*.
+Only drop a question if the user already answered *that* one in their current request;
+when in doubt, keep it. Never assume the **topic/content**, the **style**, or **which
+template** — confirm each.
 
 **Personalize options only from THIS user's own footprint — never a hardcoded or guessed
 domain.** Any *suggestions* you pre-fill into a question — candidate topics, example
 subjects, registered templates — must come from what this user has actually given you:
 materials they provided (now or in a past session) or their saved registry / profile /
-memory. A **brand-new user has no footprint**, so do NOT seed a specific domain (e.g.
+memory. In Codex, prefer the registry root `~/.codex/slide-templates/`; in Claude Code,
+prefer `~/.claude/slide-templates/`. If only one exists, use it. A **brand-new user has no footprint**, so do NOT seed a specific domain (e.g.
 don't offer "MRI reconstruction" or any field as a topic just because some *past* deck
 used it) or a prior user's branding — ask the subject **openly** (a genuinely open-ended
 topic is the one place free text beats options) and offer only "provide a template" /
@@ -111,13 +118,14 @@ hand over the file; *"design a clean one" (no template)* → offer the **directi
 (see Q1's design-one branch) — recommend showing **3** rendered style directions to pick
 from before the full build. The four:
 
-1. **Template / brand.** First **list this user's registered templates** — check
-   `~/.claude/slide-templates/` (each subfolder is one template they've used before,
+1. **Template / brand.** First **list this user's registered templates** — check the
+   host-appropriate registry (`~/.codex/slide-templates/` in Codex, `~/.claude/slide-templates/`
+   in Claude Code; if only one exists, use it). Each subfolder is one template they've used before,
    with a `profile.md`). Offer those as choices, **plus** "a new template (I'll
    provide one)" and "design a clean one." Then:
    - *A registered template* → build on it using its saved `profile.md` (step 2).
    - *A new template* → they give a `.pptx`/brand; build on it, AND after profiling it
-     (step 2) **save a new subfolder to `~/.claude/slide-templates/<name>/`** (its
+     (step 2) **save a new subfolder to the active template registry** (its
      `profile.md`) so it becomes a remembered choice next time. The registry **grows
      through conversation.**
    - *Design a clean one* → build from preferences (brand colour/logo? formality?),
@@ -127,8 +135,9 @@ from before the full build. The four:
      **Because the look is entirely yours to invent here, default to offering the
      direction gate** — this is the one branch where preference, not just quality, is
      unresolved, so let the user *choose* the look rather than guessing one for them.
-     After the interview, present (as `AskUserQuestion` options, not free text)
-     **"see 3 style directions first (recommended)"** vs **"just design one and go."**
+     After the interview, ask in the host's natural style — structured choices when
+     available, otherwise a direct text question — between **"see 3 style directions first
+     (recommended)"** and **"just design one and go."**
      - *Picks the 3 directions* → run **Gate A** of `references/collaborative-mode.md`
        with **3 *differentiated* directions** (distinct light/dark, warm/cool, serif/sans —
        not three shades of one idea), each a style module rendered by
@@ -208,7 +217,7 @@ from before the full build. The four:
    - **Their own deck, to *improve*** (e.g. "redesign this", "my slides are too
      dense", "make my deck better") → this is a redesign, not a build-from-scratch, and
      it rewards a different front end. **Follow `references/redesign-existing-deck.md`**:
-     ask two extra answers in the same `AskUserQuestion` batch — *keep your
+     ask two extra answers in the same interview turn — *keep your
      design/branding, or redesign the look?* and *how deep — light cleanup keeping your
      structure, or full re-author?* — and **diagnose their deck first** (render it,
      extract its content/figures with `scripts/extract_deck.py`, run the critic on it),
@@ -331,7 +340,7 @@ iterate without clobbering the user's manual edits.
   layouts, so new slides inherit them). Then `deckkit.open_template()` loads the
   deck and wipes old slides while keeping masters/layouts. Pull the brand colors
   from the template and set `deckkit` palette/`FONT` to match. Save what you learn as
-  a `profile.md` under `~/.claude/slide-templates/<name>/` so it's reusable next time
+  a `profile.md` under the active template registry so it's reusable next time
   (a registered template's `profile.md` is a fully worked example of this).
   - **Conference template:** if step 0 turned up an official conference template,
     download it (`WebFetch`/`curl`) and treat it exactly like a user template —
@@ -382,6 +391,18 @@ or status update runs ~6–9 slides; a longer lecture, thesis defense, or job ta
 Keep **one idea per slide** regardless — a longer deck means *more* slides, never a
 denser one. At **~15+ slides**, consider the section fan-out (step 4) to keep a big deck
 coherent. Write each slide's **takeaway** first; bullets are support, not the message.
+
+Plan each slide's visual source before building: source figure, deterministic chart,
+native diagram, generated visual plate, or no image. Generated plates are optional style
+support, not evidence. Use them for text-free hero imagery, atmosphere, side panels,
+textures, conceptual scenes, and decorative motifs; do **not** use them for source
+figures, data charts, medical/scientific evidence, screenshots, logos, or anything whose
+content must be traceable. For generated plates, read `references/image-generation.md`
+and create a prompt manifest with `scripts/image_prompts.py` so the selected images live
+inside the deck folder and the build stays reproducible. In Codex, prefer the native
+imagegen tool when available. Outside Codex, use `scripts/generate_images_openai.py` with
+`OPENAI_API_KEY` as an optional API fallback, or ask the user to provide externally
+generated images with the manifest filenames.
 
 **Sanity-check pace against the clock.** After planning, compute `slide_count ÷
 time_minutes`: well over ~1/min for a *spoken* talk means you'll overrun — cut slides or
@@ -472,6 +493,19 @@ A few rules that matter (see `references/design-principles.md`):
   artifact, plot the real distribution from the data — so what you show is what genuinely
   occurs, not a plausible-looking stand-in. Keep generated assets in the deck folder and
   reproducible from the build.
+- **Need atmosphere or a conceptual visual → use image generation deliberately.** If a
+  slide would otherwise feel visually thin and the missing image is decorative or
+  conceptual rather than evidentiary, use the agent's image generation skill to create a
+  **text-free visual plate**. Keep all slide words, numbers, labels, charts, equations,
+  citations, UI copy, and logos as editable PowerPoint objects or real source assets. Run
+  `scripts/image_prompts.py` from the deck outline to make prompts + expected filenames,
+  generate/select the images with the native imagegen tool when available, or run
+  `scripts/generate_images_openai.py <manifest>` when the user has configured
+  `OPENAI_API_KEY`. Copy/keep the final assets in `~/Downloads/<deck>/assets/generated/`,
+  and place them with `deckkit.picture(..., fit="cover", alt="")` for decorative plates or
+  `fit="contain"` when edges must be preserved. Always render-check that generated imagery
+  leaves calm space behind text and contains no accidental pseudo-text/fake charts. Full
+  rules: `references/image-generation.md`.
 - **Speaker notes — put the spoken script in the notes, not on the slide.** For any deck
   the user will *present* (especially a conference talk, defense, or lecture), move the
   full sentences off the slide into speaker notes with `deckkit.speaker_notes(slide, "…")`.
@@ -698,6 +732,9 @@ A checkable red-flag list; if a draft does any of these, stop and fix it before 
 - **Never clobber the user's hand-edits** — reconcile before regenerating over their file.
 - **Never** ship a wall-of-text slide, a redrawn source figure where a real one exists, a
   cine GIF reduced to one frame, meaning carried by colour alone, or text below ~4.5:1 contrast.
+- **Never** put real slide text, labels, numbers, logos, citations, source figures, or
+  evidence-bearing charts inside an AI-generated image; generated images are text-free
+  visual support unless the user explicitly requested a raster mockup.
 - **Never** clip a figure's own parts (legend, colour bar, axis labels/ticks, outer
   row/column) with a crop or a too-large placement, and **never** chop a multi-panel figure
   into context-losing pieces when the whole figure would serve — default to the integral
@@ -717,12 +754,21 @@ A checkable red-flag list; if a draft does any of these, stop and fix it before 
 - `scripts/check_env.py` — one-time preflight; verifies LibreOffice + python deps and
   prints the exact fix for anything missing. Run it if a render ever fails. `check_env.sh`
   is a thin bash shim that forwards to it. On native Windows run the `.py` directly.
+- `scripts/install_skill.py` — terminal installer/import helper; copies this skill into
+  `~/.codex/skills/slide-maker`, `~/.claude/skills/slide-maker`, or both.
+- `requirements.txt` — Python package dependencies for terminal use; install with
+  `python -m pip install -r requirements.txt` if `check_env.py` reports missing modules.
 - `scripts/anim.py` — inject purposeful PowerPoint builds/animations (click-reveal,
   fade) that python-pptx can't; pair with `references/animation.md`.
 - `scripts/assemble.py` — assemble a large deck from parallel-authored section modules
   into one file (robust, no .pptx merge); pair with `references/large-deck-orchestration.md`.
 - `scripts/archetypes.py` — build the same representative slides (cover/bullets/diagram/
   data) for each candidate direction, for collaborative mode's direction gate.
+- `scripts/image_prompts.py` — create text-free image generation prompt manifests and
+  expected filenames for optional slide visual plates.
+- `scripts/generate_images_openai.py` — optional OpenAI Images API fallback that reads
+  `image_prompt_manifest.json` and writes the selected `slide-XX.png` files when
+  `OPENAI_API_KEY` is configured; native Codex imagegen remains preferred in Codex.
 - `scripts/extract_deck.py` — pull text/tables/figures OUT of an existing deck (the
   redesign path), so a rebuild reuses the user's real content and figures.
 - `scripts/extract_pdf.py` — pull a figure OUT of a source PDF/paper as a clean PNG.
@@ -739,11 +785,15 @@ A checkable red-flag list; if a draft does any of these, stop and fix it before 
 - `agents/arbiter.md` — the independent finding-arbiter's brief + per-finding verdict
   JSON; high-stakes cross-validation of critic findings before the actor acts, plus
   fix-verification on re-render. A no-op for low-stakes decks.
+- `agents/openai.yaml` — Codex-facing display metadata and default prompt for installed
+  skill lists/chips.
 - `references/design-principles.md` — the craft / the "why".
 - `references/review-rubrics.md` — universal + per-purpose review criteria.
 - `references/style-analysis.md` — how to study & reproduce a style example (Q4).
 - `references/design-by-purpose.md` — per-purpose design language for the
   "design a clean one" branch (palette/density/layout/chrome tuned to the purpose).
+- `references/image-generation.md` — when and how to use native imagegen for optional
+  text-free visual plates without compromising source fidelity or editability.
 - `references/font-guidance.md` — pick portable fonts, avoid tofu, recover from missing
   fonts; brand-font and CJK pointers.
 - `references/animation.md` — when/why to animate, craft rules, and how to add
@@ -762,6 +812,6 @@ A checkable red-flag list; if a draft does any of these, stop and fix it before 
   editable; the build script is the source of truth) and how to iterate after delivery
   WITHOUT overwriting their manual edits.
 - `references/examples/build_example_generic.py` — a brand-free worked build script.
-- `~/.claude/slide-templates/` — the **user's** personal template registry (NOT part
-  of this skill); read it for template choices, write new profiles to it. Empty for a
-  new user.
+- `~/.codex/slide-templates/` / `~/.claude/slide-templates/` — the **user's** personal
+  template registry for Codex / Claude Code respectively (NOT part of this skill); read it
+  for template choices, write new profiles to the active host's registry. Empty for a new user.

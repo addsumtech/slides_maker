@@ -13,7 +13,8 @@ as the build path — this just adds the front end.
 
 ## Step R0 — Two extra interview answers (ask alongside the usual four)
 Beyond purpose/audience/source/style, a redesign hinges on two questions the build path
-doesn't ask. Fold them into the same `AskUserQuestion` batch:
+doesn't ask. Fold them into the same interview turn, using the host's natural UI:
+structured choices when available, or one compact direct question in plain Codex chat.
 
 - **Keep the design, or redesign the look too?** Their deck may carry branding (a template,
   a colour scheme, a logo) they must keep, or it may be a blank-PowerPoint look they'd happily
