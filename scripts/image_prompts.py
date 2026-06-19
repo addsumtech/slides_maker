@@ -27,18 +27,23 @@ def _sentence(s):
 
 
 def parse_outline(text):
-    """Return a list of {'title', 'notes'} parsed from markdown-ish slide headings."""
+    """Return a list of {'title', 'notes'} parsed from markdown-ish slide headings.
+
+    Any markdown heading (``#``/``##``/``###``) starts a new slide. A ``Slide N:`` or
+    ``N:`` prefix is stripped from the title when present, but plain headings such as
+    ``## Background`` are recognized too.
+    """
     slides = []
     current = None
     for raw in text.splitlines():
         m = HEADING_RE.match(raw)
-        heading = m.group(1).strip() if m else ""
-        sm = SLIDE_HEADING_RE.match(heading) or NUMBERED_HEADING_RE.match(heading)
-        if sm:
+        if m:
+            heading = m.group(1).strip()
+            sm = SLIDE_HEADING_RE.match(heading) or NUMBERED_HEADING_RE.match(heading)
+            title = _clean(sm.group(2)) if sm else _clean(heading)
             if current:
                 slides.append(current)
-            title = _clean(sm.group(2)) or f"Slide {len(slides) + 1}"
-            current = {"title": title, "notes": []}
+            current = {"title": title or f"Slide {len(slides) + 1}", "notes": []}
         elif current:
             current["notes"].append(raw.rstrip())
     if current:

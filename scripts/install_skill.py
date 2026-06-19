@@ -65,12 +65,17 @@ def iter_files(src):
 
 
 def copy_skill(src, dest, *, dry_run=False, replace=False):
+    if src.resolve() == dest.resolve():
+        print(f"skip {dest}: source and destination are the same directory")
+        return len(list(iter_files(src)))
+    # List source files BEFORE any rmtree, so a misconfigured path can never wipe
+    # the source out from under us.
+    files = list(iter_files(src))
     if replace and dest.exists():
         if dry_run:
             print(f"would remove existing {dest}")
         else:
             shutil.rmtree(dest)
-    files = list(iter_files(src))
     if dry_run:
         print(f"would copy {len(files)} files -> {dest}")
         return len(files)
