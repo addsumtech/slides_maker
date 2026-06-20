@@ -393,11 +393,18 @@ denser one. At **~15+ slides**, consider the section fan-out (step 4) to keep a 
 coherent. Write each slide's **takeaway** first; bullets are support, not the message.
 
 Plan each slide's visual source before building: source figure, deterministic chart,
-native diagram, generated visual plate, or no image. Generated plates are optional style
-support, not evidence. Use them for text-free hero imagery, atmosphere, side panels,
-textures, conceptual scenes, and decorative motifs; do **not** use them for source
-figures, data charts, medical/scientific evidence, screenshots, logos, or anything whose
-content must be traceable. For generated plates, read `references/image-generation.md`
+native diagram, generated visual plate, or **no image** (a clean, well-typeset slide
+needs none). Generated plates are optional style support, not evidence.
+**Use generated images with judgment, not by default — most decks need zero, and a plate
+on *every* slide is the failure to avoid.** Decide per slide whether one earns its place:
+add a generated plate only when a *specific* slide would otherwise feel visually thin and a
+text-free, decorative/conceptual image genuinely helps — never reflexively, never one-per-
+slide, and never when a source figure, a real generated artifact, a chart, or simply more
+whitespace would serve better. When in doubt, leave the slide image-free. When they do earn
+their place, use them for text-free hero imagery, atmosphere, side panels, textures,
+conceptual scenes, and decorative motifs; do **not** use them for source figures, data
+charts, medical/scientific evidence, screenshots, logos, or anything whose content must be
+traceable. For generated plates, read `references/image-generation.md`
 and create a prompt manifest with `scripts/image_prompts.py` so the selected images live
 inside the deck folder and the build stays reproducible. In Codex, prefer the native
 imagegen tool when available. Outside Codex, use `scripts/generate_images_openai.py` with
@@ -413,7 +420,11 @@ this.
 ## Step 4 — Build with deckkit
 Write a small per-deck build script that imports `scripts/deckkit.py` rather than
 re-deriving primitives. Helpers: `content_slide`/`title_bar` (a clear title),
-`bullet`, `callout` (auto-grows to fit), `arrow`, `chip` (pipelines), `modbox`,
+`columns` (equal-width split panels with symmetric margins — use it for *any* left/right
+or N-up layout so the two sides and their flanking white space come out the same width),
+`picture` (place a figure/plate without distorting it — `fit="contain"` keeps edges,
+`fit="cover"` crops to fill), `bullet`, `callout` (auto-grows to fit), `arrow`,
+`chip` (pipelines), `modbox`,
 `table` (booktabs data tables — highlight the key row to foreground the authors'
 comparison), `code_block` (monospace code panels with line-highlight),
 `hrule` (table rules), `equation_png` (formal LaTeX-style math via matplotlib) /
@@ -493,8 +504,14 @@ A few rules that matter (see `references/design-principles.md`):
   artifact, plot the real distribution from the data — so what you show is what genuinely
   occurs, not a plausible-looking stand-in. Keep generated assets in the deck folder and
   reproducible from the build.
-- **Need atmosphere or a conceptual visual → use image generation deliberately.** If a
-  slide would otherwise feel visually thin and the missing image is decorative or
+- **Need atmosphere or a conceptual visual → use image generation deliberately, and
+  sparingly.** This is a *per-slide judgment call, not a per-deck habit* — the same
+  restraint as animation. Most slides (and many whole decks) need **no** generated image;
+  reach for one only when a *specific* slide would otherwise feel visually thin **and** a
+  decorative or conceptual image genuinely helps it — not to fill space, not on every slide,
+  and not when a source figure, a real computed artifact, a chart, or plain whitespace would
+  serve better. If you can't name what a plate adds to *that* slide, don't generate it. When
+  one does earn its place and the missing image is decorative or
   conceptual rather than evidentiary, use the agent's image generation skill to create a
   **text-free visual plate**. Keep all slide words, numbers, labels, charts, equations,
   citations, UI copy, and logos as editable PowerPoint objects or real source assets. Run
@@ -515,6 +532,16 @@ A few rules that matter (see `references/design-principles.md`):
   hand-off; it directly serves the "few words per point" rule.
 - **Spacing.** Leave a `deckkit.GUTTER` (~0.4 in) gap between a figure and any text,
   callout, or edge — crowding looks amateur. Mind each page's overall layout.
+- **Balanced split layouts — equal panels, equal margins.** When a slide is divided into
+  left/right regions (text + figure, two-up comparison, image + caption) the two regions —
+  *and the white margins flanking them* — should be the **same width** unless you have a
+  deliberate reason otherwise. A left panel and right panel of different widths, or a wider
+  white margin on one side than the other, is a lopsided-slide tell that reads as careless.
+  Don't eyeball each panel's `x`/`w`; derive them from one grid with **`deckkit.columns(n)`**
+  (it returns `n` equal-width rects with symmetric outer margins and equal gutters), then
+  drop content into those rects. If you *intend* an asymmetric split (e.g. a 1/3 text rail
+  beside a 2/3 figure), make it clearly intentional and keep the *outer* margins equal —
+  and **re-view the render** to confirm the two sides look balanced, not accidentally uneven.
 - **Colour.** Rotate `deckkit.ACCENTS` so diagrams aren't monotone; reserve magenta
   for emphasis. Name the closing slide for its purpose ("Conclusion" for a talk).
 - **Accessibility.** Keep text ≥4.5:1 on its fill (`contrast_ratio`; `chip`/`modbox`
@@ -555,23 +582,30 @@ fights the single-file artifact, and doesn't speed up the parts that actually co
 time. Full workflow (incl. the critic panel + finding-routing) in
 `references/large-deck-orchestration.md`.
 
-**Motion & builds — a REQUIRED pass on EVERY deck, any purpose.** Motion is not a
-talks-only flourish; a step-by-step diagram or a build-to-takeaway aids a lab meeting,
-status update, or lecture just as much as a keynote. So this is a *standard build step you
-do not skip* — a deck that ships with zero motion because nobody looked is the failure this
-pass exists to prevent. Two distinct layers, decided separately:
-- **The calm deck-wide transition is the DEFAULT, applied unless you have a reason not
-  to.** Add `slide_transition(s, "fade")` (~0.4–0.5s) to *every* slide — it adds polish and
-  continuity and never distracts. Only omit it deliberately (e.g. a print-only leave-behind)
-  — and if you omit it, say why. Don't leave it off just because you forgot to consider it.
-- **Click-builds are per-slide — scan every slide, record the decision.** Walk each slide
-  and ask "would revealing this step by step help the audience follow it?" Reach for a build
-  on **pipelines / multi-stage diagrams** (one stage + its arrow per click), **multi-part
-  arguments** (reveal each part as you reach it), **before→after / problem→solution**, and
-  **build-to-takeaway** (evidence first, the takeaway callout last). Restraint still rules:
-  most *individual* slides have nothing to pace and stay static, and you never animate for
-  flourish — if a build doesn't help the audience *follow*, drop it. The discipline is that
-  you *considered* every slide, not that you animated many.
+**Motion & builds — CONSIDER on every slide, ANIMATE only where it earns its place.**
+What's required is the *consideration pass* (so a deck that obviously needed a step-by-step
+build doesn't ship static because nobody looked) — **not** motion on every slide. The
+default outcome of that pass is the opposite: **most slides stay static**, and a click-build
+is the *exception* you add only when you can name the specific thing it helps the audience
+follow. Animating reflexively — a build on every slide, motion for polish — is exactly the
+failure to avoid; it pulls attention to the motion instead of the meaning. Two distinct
+layers, decided separately:
+- **The calm deck-wide transition** is a sensible, low-distraction default: a subtle
+  `slide_transition(s, "fade")` (~0.4–0.5s) applied uniformly across the deck adds
+  continuity without anyone noticing it. Apply it as the default *for the deck* (it is the
+  one motion that's fine to apply broadly), or omit it for a static/print feel — either is a
+  legitimate choice; just decide deliberately and record it. This is *not* the "animation"
+  that makes a deck feel over-animated — that's the per-slide builds below.
+- **Click-builds are per-slide, and the bar is high — static is the default.** Walk each
+  slide and ask "would revealing this step by step genuinely help the audience *follow*?"
+  For most slides the honest answer is no, and they stay static — **that is the expected,
+  correct outcome, not a gap.** Add a build *only* for the clear cases: **pipelines /
+  multi-stage diagrams** (one stage + its arrow per click), **multi-part arguments** (reveal
+  each part as you reach it), **before→after / problem→solution**, and **build-to-takeaway**
+  (evidence first, the takeaway callout last). Title / section / single-idea slides and
+  side-by-side comparisons the audience scans together **should stay static**. The test
+  before animating any slide: *name the comprehension aid the build provides* — if you can't,
+  leave it static. The discipline is that you *considered* every slide, then animated *few*.
 
 Use `scripts/anim.py` (it injects the PowerPoint timing XML python-pptx can't): draw the
 static scaffold, wrap each reveal-on-click chunk in a `Build.step()`, then

@@ -67,6 +67,10 @@ Score each dimension; cite specific slides.
    partial-cropped or hand-redrawn (redraws risk dropping/mis-stating detail)? Is
    there breathing room — a consistent gutter between figures and text, nothing
    crammed, **and no two elements overlapping** (a figure encroaching on a table/text)?
+   On **split layouts** (text + figure, two-up, image + caption), are the left and right
+   regions — *and the white margins flanking them* — the **same width** (or a clearly
+   intentional asymmetric split with equal outer margins)? Unequal panels or a lopsided
+   left-vs-right white margin is a real finding, not a nitpick.
    Is text inside filled boxes (callouts, chips, takeaway bars, cells) **optically
    centred**, not hugging an edge or sitting a touch low? Does colour vary with intent,
    or is everything one monotone accent? Is the closing slide named for its purpose
@@ -87,8 +91,11 @@ Score each dimension; cite specific slides.
    product pitch, warm/clear for teaching (see `references/design-by-purpose.md`)? A
    purpose-mismatched look (or a generic default palette shipped for a high-polish
    pitch/exec deck) is a real finding. Judge against this purpose, not a generic ideal.
-12. **Motion & pacing** *(applies to every purpose, not just talks).* Was motion *designed*,
-   or did the deck ship with none because nobody looked? Two checks, read against the
+12. **Motion & pacing** *(applies to every purpose, not just talks).* Was the pacing
+   decision *made deliberately* — animating only the slides a build genuinely helps, and no
+   more? Two failure modes count: under-design (shipped static because nobody looked) and the
+   more common over-application (a build on every slide, or motion added for polish). Two
+   checks, read against the
    **motion manifest** (the static render can't show a reveal sequence, so judge the design,
    not the playback): (a) a calm **deck-wide transition** is the default — its absence with no
    stated reason is a minor finding; (b) any slide that is clearly a **pipeline / multi-stage
@@ -97,8 +104,17 @@ Score each dimension; cite specific slides.
    finding (typically major for a *presented* talk, minor for a read-alone deck). Calibrate:
    title/section/one-idea slides and side-by-side comparisons *should* be static; most
    individual slides stay static; "static, because X" is a valid answer. You're enforcing
-   that the pacing decision was *made*, never that everything animates. A cluttered
+   that the pacing decision was *made*, never that everything animates — **over-animation is
+   equally a finding**: a build on a slide that gains nothing from one, motion added for
+   polish/consistency, or builds on most slides reads as needless and is a real flaw (flag
+   it and say which slides should revert to static). A cluttered
    *final built* state is still a layout finding, not a motion one — animation never excuses it.
+12a. **Generated-image restraint** *(when the deck uses AI-generated plates).* Generated
+   images should be *sparse and purposeful*, not one-per-slide. Flag **over-use** — a
+   decorative plate on most/every slide, a generated image where a source figure / real
+   computed artifact / chart / plain whitespace would serve better, or imagery that competes
+   with the slide's text. (Fidelity violations — readable text, fake charts/labels/logos, or
+   a generated image standing in for evidence — are blockers under item 10, not this one.)
 
 ## Severity scale
 - **blocker** — undermines the deck's purpose (e.g. results illegible at a
@@ -150,10 +166,12 @@ framing/fidelity and content-completeness — it's a style sample, not the deck;
 `consent` = "strong and on-purpose enough to show the user."
 
 **Animation / builds.** Judge the *final built state* shown in the render (static PNGs
-can't play a sequence). Never treat the absence of animation as a flaw, and don't
-demand it. The only animation-related finding is a **cluttered final state** — a slide
-that would only look clean mid-build is relying on animation to hide crowding. Fix the
-layout, not the timeline.
+can't play a sequence). Never treat the absence of animation as a flaw, and don't demand
+it — most slides should stay static. Two kinds of animation finding exist: (a) a
+**cluttered final state** — a slide that would only look clean mid-build is relying on
+animation to hide crowding (fix the layout, not the timeline); and (b) **over-application**
+— a build on a slide that gains nothing, motion added for polish/consistency, or builds on
+most slides; flag it and name the slides that should revert to static (see item 12).
 
 ---
 

@@ -162,6 +162,7 @@ tabs. Like a conference talk but built for a *shared-screen* medium, not a proje
 - **Layout/chrome:** keep key content in the central "safe area" (edges can be cropped by
   meeting UI/inset cameras); avoid bottom-edge content where a control bar or captions
   sit. Simple, frequent slide changes hold attention better than one dense slide.
-- **Signature:** more, lighter slides to keep momentum; build/animate to pace a remote
-  audience you can't read; explicit "ask in the chat" prompts; a visible agenda so late
-  joiners orient. If it's recorded, ensure every slide reads as a still frame.
+- **Signature:** more, lighter slides to keep momentum; build/animate the *few* slides where
+  step-by-step pacing genuinely helps a remote audience you can't read (most slides still stay
+  static — see `references/animation.md`); explicit "ask in the chat" prompts; a visible
+  agenda so late joiners orient. If it's recorded, ensure every slide reads as a still frame.

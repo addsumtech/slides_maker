@@ -26,20 +26,32 @@ reveal-on-click chunk in a build step.
   callout last, after the setup is on screen.
 - **Layered data.** Show a baseline, then reveal the comparison/annotation on top.
 
-## Consider it on every deck — the decision is per-slide, not per-purpose
-Animation is a **standard step for all purposes** (research/lab meeting, status update,
-conference, defense, exec, pitch, teaching) — on every deck, scan each slide and ask
-"would a purposeful build help here?" A step-by-step diagram or a build-to-takeaway
-aids a Monday lab meeting as much as a keynote; don't skip the check just because a deck
-is "internal". What you scale is the *amount*, not whether you consider it.
+## Consider it on every slide — but animate few; static is the default
+What's a standard step for all purposes (research/lab meeting, status update, conference,
+defense, exec, pitch, teaching) is the **consideration**: on every deck, scan each slide and
+ask "would a purposeful build help here?" That is *not* a mandate to animate — for most
+slides the honest answer is no, and they stay static. **Considering motion ≠ applying
+motion.** What you scale across decks is whether you bother to *check*; what you do *not*
+scale up is the number of slides that actually move. A deck where only two or three slides
+build is a well-judged deck, not an under-animated one. Skipping the check on an "internal"
+deck is the under-side failure; putting a build on every slide is the over-side failure —
+and the over-side is the more common and more damaging one, because needless motion pulls
+attention off the meaning.
 
-## When to stay static (most individual slides)
-Restraint still rules — most single slides have nothing to pace and should stay static:
+## Default to static — animate only the clear cases
+**Most individual slides have nothing to pace and should stay static — that is the expected,
+correct outcome of the per-slide check, not a gap to fix.** Leave these static:
 - Title, section, and simple one-idea slides.
 - Dense reference / leave-behind decks meant to be read, not presented.
 - Any slide where everything should be seen at once (e.g. a side-by-side comparison the
   audience scans together).
-Never animate for flourish: if a build doesn't help the audience *follow*, drop it.
+- Any slide where you cannot name *what understanding* a build would aid.
+
+Only animate when a slide is one of the clear build cases above (pipeline, multi-part
+argument, before→after, build-to-takeaway). **The test before you animate any slide: name
+the specific comprehension aid the build provides. If you can't, drop it.** Never animate
+for flourish, for "consistency" with other built slides, or to fill a slide that feels
+plain — fix the layout instead.
 
 ## Animated GIFs / looping results — insert the GIF, don't freeze it
 When a result is a GIF (a looping animation, a time-resolved/4D sequence, a training run),
@@ -59,12 +71,14 @@ s.shapes.add_picture("results/demo_loop.gif", Inches(x), Inches(y), height=Inche
   *moves* — both loop together.
 - Keep file size sane: prefer the source GIF; if you generate one, palette-optimize it.
 
-## A calm deck-wide transition is the default — apply it unless you have a reason not to
+## The calm deck-wide transition is a separate, low-distraction choice
 Separate from click-builds, a subtle **slide-to-slide transition** applied across the
 whole deck (`slide_transition(s, "fade")` on each slide, ~0.4–0.5s) adds polish and
-continuity without ever distracting — so make it the **default-on** choice, not an
-afterthought. Add it to every slide; only omit it deliberately (e.g. a print-only
-leave-behind), and record that reason in the motion manifest. It's independent of builds:
+continuity without anyone noticing it. **This is *not* the "animation" that makes a deck
+feel over-animated** — that's the per-slide builds above; a uniform fade is the one motion
+that's fine to apply broadly. So it's a reasonable **default-on** choice — but applying it
+deck-wide *or* omitting it for a static/print feel are both legitimate; just decide
+deliberately and record the choice in the motion manifest. It's independent of builds:
 use it on a deck whose individual slides are otherwise static, and combine it with
 click-builds on the few slides that warrant them. Keep it calm (fade/none); avoid
 theatrical transitions (cube, push, morph-everywhere).

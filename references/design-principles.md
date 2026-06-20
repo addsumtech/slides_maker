@@ -80,6 +80,16 @@ as much as the words on it. Design is not optional polish; it is half the job.
 - **Gutters.** Leave a consistent ~0.4 in (`deckkit.GUTTER`) between a figure and
   any adjacent text, callout, or slide edge. Text butted against a figure looks
   amateur.
+- **Balanced split layouts — equal panels, equal flanking margins.** When a slide is split
+  into left/right regions (text + figure, two-up comparison, image + caption), the two
+  regions *and the white margins on either side of them* should be the **same width** unless
+  you deliberately intend otherwise. A left panel and a right panel of unequal width — or a
+  wider strip of white on one side than the other — is a lopsided-slide tell that reads as
+  careless even when nothing overflows. Don't eyeball each panel's `x`/`w`; derive them all
+  from one grid (`deckkit.columns(n)` returns `n` equal-width rects with symmetric outer
+  margins and equal gutters). An *intentional* asymmetric split (e.g. a 1/3 text rail beside
+  a 2/3 figure) is fine, but keep the outer left and right margins equal, and **check the
+  render** — the two sides should look balanced, not accidentally uneven.
 - **Bottom margin.** Keep content clear of the footer — nothing should touch or
   cross the footer band (stop content by ~5.05 in on a 5.625-in slide). A line or
   box jammed against the bottom edge is the most common amateur tell.

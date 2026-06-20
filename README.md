@@ -57,7 +57,7 @@ Every deck flows through seven steps (`SKILL.md` is the authoritative spec):
 | **1 — Understand** | Read all source deeply; write a **comprehension brief** (one-sentence message, contributions, method essence, what each figure/table is *for*, limitations). | A deck that looks right but misreads the work fools no expert. Faithfulness starts here. |
 | **2 — Canvas** | Decide output folder (`~/Downloads/<deck>/`), load template *or* design a purpose-fit look; set palette/fonts (incl. CJK `EAFONT`). | Branding lives on layouts; design should signal the right *kind* of document before a word is read. |
 | **3 — Plan** | Slide count scales to the time budget (~1/min): short talk ~6–9, longer talk/lecture/defense/job-talk ~10–20+. One idea each, takeaway-first, arc shaped to the purpose; ~15+ → section fan-out (step 4). | Cheap to fix an outline; expensive to fix a finished deck. |
-| **4 — Build** | One build script using `deckkit` helpers. Whole source figures, optional text-free generated visual plates, gutters, rotating accents, real equations, one language, purposeful builds/animation (a default pass), speaker notes. | python-pptx is fast; one script run, one coherent author. |
+| **4 — Build** | One build script using `deckkit` helpers. Whole source figures, optional text-free generated visual plates, gutters, rotating accents, real equations, one language, purposeful builds/animation (consider every slide; most stay static, animate only where a build aids comprehension), speaker notes. | python-pptx is fast; one script run, one coherent author. |
 | **5 — Render + critic loop** | Render to PNGs and *look*; then an **independent critic subagent** returns JSON (consent / revise + per-slide fixes). Loop until consent. | python-pptx writes blind — overflow/contrast/glyph bugs only show in pixels. You are not the judge of your own work. |
 | **6 — Hand off + iterate** | Show the user, give the folder path, explain editability + the two change-lanes, fold in feedback. | The deck is theirs to own and keep tweaking — safely. |
 
@@ -154,7 +154,7 @@ The interview (step 0, Q3 especially) routes the request:
 - `SKILL.md` — the operating instructions the model follows (steps 0–6, the rules).
 
 **Engine (`scripts/`)**
-- `deckkit.py` — the build kit: text/shape/component helpers (`bullet`, `callout`, `chip`, `arrow`, `modbox`, `hrule`), equations (`eq_par`, `equation_png`), `speaker_notes`, contrast check, palette/fonts (incl. CJK `EAFONT`), template reuse (`open_template`, `content_slide`) and the no-template chrome (`blank_deck`, `title_bar`, `footer`). Import it; don't re-derive primitives.
+- `deckkit.py` — the build kit: text/shape/component helpers (`bullet`, `callout`, `chip`, `arrow`, `modbox`, `hrule`), layout/image helpers (`columns` for equal split panels, `picture`), equations (`eq_par`, `equation_png`), `speaker_notes`, contrast check, palette/fonts (incl. CJK `EAFONT`), template reuse (`open_template`, `content_slide`) and the no-template chrome (`blank_deck`, `title_bar`, `footer`). Import it; don't re-derive primitives.
 - `install_skill.py` — terminal installer/import helper for Codex and Claude Code skill directories.
 - `requirements.txt` — Python package dependencies for terminal use.
 - `render_deck.sh` — `.pptx` → one PNG per slide (LibreOffice → PDF → PNG). Cross-platform; uses a private LibreOffice profile so parallel/coexisting renders don't collide.

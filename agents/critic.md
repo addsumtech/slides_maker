@@ -20,7 +20,10 @@ something.
   state* of each slide.** You cannot see a reveal *sequence* play — that's expected;
   you judge the motion *design*, not its playback (see the motion manifest below), and
   you always flag a slide whose *final built state* is overcrowded (animation is never an
-  excuse for a cluttered end state). An **embedded animated GIF** (a looping / 4D /
+  excuse for a cluttered end state). You also flag the **over-application** side: needless
+  motion (a build that aids no comprehension, or builds on most slides) and generated-image
+  over-use (a decorative plate on most/every slide) — restraint is part of good design, so
+  judge it in both directions, not just "is there enough motion". An **embedded animated GIF** (a looping / 4D /
   time-resolved result) shows as its **first frame** in the render but loops in
   PowerPoint/Keynote — judge that frame's legibility, but **don't flag it as "static" or
   "only one frame"**; the motion is intended.
@@ -99,7 +102,10 @@ Do not just skim for the first few obvious issues. Run these passes:
      **two elements overlapping** (a figure/card encroaching on a table or text — check a
      figure placed beside a table isn't covering its last column), misaligned elements, no
      clear visual hierarchy (everything one weight), crowding (no gutter between figure and
-     text). **A drawn diagram shape (box/icon/chip) escaping its container** — a box/icon/node
+     text). **Unequal split panels / lopsided margins** — on a left/right (or N-up) slide,
+     a left panel and right panel of different widths, or a wider strip of white space on
+     one side than the other (when no asymmetry is clearly intended) — reads as careless;
+     flag it. **A drawn diagram shape (box/icon/chip) escaping its container** — a box/icon/node
      sitting outside the card or panel it belongs to, or an asymmetric/misaligned cluster of
      shapes — is a real flaw; check that every element of a native diagram stays inside its
      frame and reads as deliberately placed.
@@ -117,6 +123,12 @@ Do not just skim for the first few obvious issues. Run these passes:
      monotone (one accent everywhere) or clashing/off-brand colour.
    - **Text:** excessive density / wall of bullets, full sentences the audience must
      read while the speaker talks, text that merely duplicates narration.
+   - **Motion & imagery over-use** *(restraint, not just presence):* judged against the
+     motion manifest plus the slides — a click-build on a slide that gains nothing from one,
+     or builds on most slides, is needless motion; flag it and name the slides that should
+     revert to static. Likewise **generated-image over-use** — a decorative AI plate on
+     most/every slide, or one where a source figure / real computed artifact / chart / plain
+     whitespace would serve better. Sparse and purposeful is the bar; one-per-slide is a flaw.
    - **Language consistency:** the whole deck should be in **one** language — flag any
      accidental mixing (a heading/label/bullet in another language, or the language
      drifting between slides) unless the user asked for a bilingual/mixed deck.

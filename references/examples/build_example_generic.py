@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 from deckkit import (  # noqa: E402
     blank_deck, add_slide, title_bar, footer,
     box, text, bullet, callout, arrow, chip, modbox, equation_png,
+    columns, picture,
     set_font, Inches, PP_ALIGN, MSO_ANCHOR,
     DEEP, BLUE, TEAL, MAGENTA, SLATE, MUTE, TINT, LIGHT, WHITE,
     GOLD, STEEL, VIOLET, ACCENTS,
@@ -68,6 +69,27 @@ s.shapes.add_picture(_eqp, Inches((10 - _tw) / 2), Inches(2.2), width=Inches(_tw
 callout(s, 0.6, 4.3, 8.8, 0.6, "WHY",
         "equation_png typesets real math (italic variables, true sub/superscripts) — much "
         "cleaner than ASCII; keep eq_par only for trivial inline math.")
+
+# --- a balanced split layout: columns() gives equal panels + symmetric margins ---
+# The most common lopsided-slide tell is a left panel and right panel of different widths,
+# or unequal white margins. columns(n) derives every panel from one grid so they come out
+# equal by construction — reach for it on ANY text+figure / two-up / image+caption slide.
+s = add_slide(prs)
+title_bar(s, "Equal split panels, by construction", kicker="layout")
+footer(s, "demo deck", page=5)
+L, R = columns(2, slide=s, bottom=1.3)   # two equal halves; left/right margins identical
+bullet(s, L[0], L[1], L[2], [
+    ("columns(2) ", "returns equal-width rects"),
+    ("Outer margins ", "stay symmetric"),
+    ("No eyeballing ", "x / w per panel"),
+], size=16, gap=0.3)
+# right half: chips occupy the SAME width as the left panel (a real figure would use
+# picture(s, fig, *R, fit="contain") here — same rect, edges preserved)
+rx, ry, rw, _rh = R
+for i, (name, detail) in enumerate([("Left rail", "text / bullets"), ("Right panel", "figure or chips")]):
+    chip(s, rx, ry + i * (1.2 + 0.3), rw, 1.2, name, detail, ACCENTS[i % len(ACCENTS)])
+callout(s, L[0], 4.45, R[0] + R[2] - L[0], 0.6, "WHY",
+        "Both panels come from one grid, so left/right widths and flanking margins match.")
 
 prs.save(OUT)
 print("saved ->", OUT, "| slides:", len(prs.slides._sldIdLst))

@@ -75,20 +75,23 @@ def build_prompt(slide, idx, *, deck_size, style, calm_zone):
 
 def main():
     ap = argparse.ArgumentParser(description="Create imagegen prompts for slide visual plates.")
-    ap.add_argument("outline", help="Markdown outline with one heading per slide.")
+    ap.add_argument("outline", help="Markdown outline listing ONLY the slides that earn a "
+                    "generated plate (one heading per plate) — NOT the whole deck.")
     ap.add_argument("out_dir", help="Directory for image_prompt_manifest.json and image_prompts.md.")
-    ap.add_argument("--count", type=int, default=None, help="Expected slide count. Pads or truncates parsed slides.")
+    ap.add_argument("--count", type=int, default=None, help="Optional cap on the number of plates; "
+                    "truncates the parsed list (does NOT pad). Pass only plate-worthy slides.")
     ap.add_argument("--deck-size", default="16:9", help="Deck aspect ratio or size label.")
-    ap.add_argument("--style", default="", help="Shared art direction to carry across all prompts.")
+    ap.add_argument("--style", default="", help="Shared art direction to carry across the plated slides.")
     ap.add_argument("--calm-zone", default="", help="Where generated plates should leave quiet space, e.g. left third.")
     ap.add_argument("--prefix", default="slide", help="Output filename prefix.")
     args = ap.parse_args()
 
     text = Path(args.outline).read_text(encoding="utf-8")
     slides = parse_outline(text)
+    # Cap the number of plates if asked, but never PAD: padding to a deck-length count would
+    # invent a context-free plate per slide — the one-image-per-slide habit we want to avoid.
+    # Feed an outline of only the plate-worthy slides instead.
     if args.count is not None:
-        while len(slides) < args.count:
-            slides.append({"title": f"Slide {len(slides) + 1}", "notes": ""})
         slides = slides[:args.count]
 
     out_dir = Path(args.out_dir)

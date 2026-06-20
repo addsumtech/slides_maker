@@ -242,6 +242,53 @@ def picture(slide, path, x, y, w, h, fit="contain", alt=None):
     return pic
 
 
+def columns(n=2, *, slide=None, w_in=None, h_in=None, top=1.15, bottom=0.55, margin=None, gap=None):
+    """Return ``n`` equal-width content-column rects ``(x, y, w, h)`` with **symmetric**
+    outer margins and equal gutters between columns.
+
+    Use this for any split slide — text+figure, two-up, three-up, image+caption — so the
+    left and right regions (and the white margins flanking them) come out the SAME width.
+    The most common lopsided-slide tell is a left panel and right panel of different
+    widths, or a wider white margin on one side than the other; that happens when x/w are
+    eyeballed per panel. Deriving every panel from one grid makes the layout balanced by
+    construction:
+
+        L, R = dk.columns(2, slide=s)         # two equal halves, equal flanking margins
+        dk.bullet(s, *L[:3], items)           # text in the left half
+        dk.picture(s, fig, *R, fit="contain") # figure in the right half (same width)
+
+    **Pass ``slide=`` so the grid matches the deck's REAL size** — the width/height are then
+    read from the presentation, so it stays symmetric on a 16:9, a widescreen 13.333×7.5, or
+    a poster. Only the no-arg call falls back to the standard 10×5.625 deck; if you call it
+    without ``slide=`` on a differently-sized deck, pass the same ``w_in``/``h_in`` you gave
+    ``blank_deck`` (otherwise the right margin will be wrong — the very lopsidedness this
+    helper exists to prevent).
+
+    ``margin`` (outer left == outer right) and ``gap`` (between columns) default to
+    ``GUTTER``. ``top``/``bottom`` reserve room for the title bar and footer. Returns a
+    list of ``(x, y, w, h)`` tuples in inches, left to right.
+    """
+    if slide is not None:
+        prs = slide.part.package.presentation_part.presentation
+        if w_in is None:
+            w_in = prs.slide_width / 914400
+        if h_in is None:
+            h_in = prs.slide_height / 914400
+    w_in = 10.0 if w_in is None else w_in
+    h_in = 5.625 if h_in is None else h_in
+    margin = GUTTER if margin is None else margin
+    gap = GUTTER if gap is None else gap
+    if n < 1:
+        raise ValueError("columns(n) needs n >= 1")
+    usable = w_in - 2 * margin - (n - 1) * gap
+    if usable <= 0:
+        raise ValueError("margins/gap leave no room for columns; reduce margin or gap")
+    cw = usable / n
+    y = top
+    h = h_in - top - bottom
+    return [(margin + i * (cw + gap), y, cw, h) for i in range(n)]
+
+
 # ================================================================= components
 def _is_wide(o):
     """True for CJK / full-width code points — their glyph advance is ≈ one em."""
