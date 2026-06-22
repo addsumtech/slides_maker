@@ -202,6 +202,11 @@ Do not just skim for the first few obvious issues. Run these passes:
      cell should sit **optically centred** in its box (or intentionally aligned) — text that
      hugs the bottom or top edge, or sits a few px below the vertical middle, reads as a
      centring bug. Check the bottom takeaway bars especially.
+   - **Mixed-size inline baseline-misalignment:** a line that pairs a small part with a much bigger
+     emphasised one (a `before → after` stat, a label + hero number, a unit beside a big figure) where
+     the small part/arrow **sits low on the shared baseline**, dropped below the big value's vertical
+     centre (e.g. "<10% → **≈40%**" with the arrow sunk). They should be **vertically centred** on the
+     same line (fix: separate middle-anchored boxes / `deckkit.change_stat`, or sizes kept close).
    - **Typography:** text too small to read from the back (callout/caption/figure
      labels — see the size floor in `design-principles.md`), inconsistent fonts/sizes.
      For **non-Latin (CJK) decks**: any **tofu / missing glyphs** (□ / 缺字) is a blocker; the

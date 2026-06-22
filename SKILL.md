@@ -515,6 +515,9 @@ native content matches it — the bridge for the image-tool template branch),
 `scorecard` / `leaderboard` / `takeaway_rail` (KPI tiles · ranked rows keyed to a chart · the
 "so-what" rail beside a chart — the data-furniture; pair with the chart roster in
 `references/data-viz.md` + `scripts/designed_charts.py`),
+`change_stat` (a `before → after` change stat with the AFTER value emphasized large and **vertically
+centred** with the small before+arrow — avoids the baseline-mix where a small arrow/prefix sinks
+below a big number),
 `glass_card` / `glow` / `scrim_overlay` (frosted-glass card · soft radial glow · graduated photo
 scrim — for dark/glassmorphism decks and text-over-photo legibility; built on `box`'s new
 gradient+alpha fill) and `offset_shadow` (hard letterpress/riso shadow),

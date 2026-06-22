@@ -453,6 +453,23 @@ def stat_row(slide, x, y, w, items, *, ink=DEEP, accent=MAGENTA, serif=None, div
     return y + 1.1
 
 
+def change_stat(slide, x, y, w, h, before, after, *, accent=MAGENTA, ink=DEEP, before_size=15,
+                after_size=28, arrow="→", font=None, split=0.46):
+    """A 'before → after' change stat with the AFTER value emphasized large and **vertically
+    centered** with the small before+arrow. Mixing very different font sizes on ONE line baseline-
+    aligns them, so the small prefix/arrow sinks to the baseline and looks dropped below the big
+    number — the misalignment to avoid. Here the two halves are each MIDDLE-anchored on the same
+    line (before right-aligned, after left-aligned) so the arrow and the big value meet at the
+    centre, optically aligned. Returns nothing; place at the row's box."""
+    bw = w * split
+    text(slide, x, y, max(0.3, bw - 0.06), h,
+         [[(f"{before} {arrow}", before_size, ink, False, False, font)]],
+         align=PP_ALIGN.RIGHT, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
+    text(slide, x + bw + 0.06, y, w - bw - 0.06, h,
+         [[(str(after), after_size, accent, True, False, font)]],
+         align=PP_ALIGN.LEFT, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
+
+
 def quadrant(slide, x, y, w, h, *, x_labels=("", ""), y_labels=("", ""), gap=0.35, axis_c=MUTE):
     """A 2×2 matrix whose AXES carry meaning (e.g. frequency × severity). Draws edge axis captions
     and returns the four cell rects (TL, TR, BL, BR) to fill with cards/scorecards. Use only when
