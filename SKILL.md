@@ -733,10 +733,11 @@ or a missing glyph only show up in the image. Fix mechanical issues and re-rende
 LibreOffice + the python deps and prints the fix for anything missing.)
 
 **Then run the layout lint** — `python scripts/lint_deck.py <deck.pptx>` — a cheap, deterministic
-check that flags **off-slide overflow, two solid blocks/images overlapping (neither contained), and
-footer collisions**: exactly the failures the eye misses (a callout tucked a few px under a panel or
-image — the recurring "block overlaps another block/image" bug). Fix every finding, re-render, and
-re-lint to clean before handing to the critic. It's a safety net for the no-overlap rule, **not** a
+check that flags **off-slide overflow, text overflowing the card behind it (text taller than its
+card), two solid blocks/images overlapping (neither contained), and footer collisions**: exactly the
+failures the eye misses (a callout tucked under a panel; a 2-line body hanging below a card sized for
+one). Fix every finding, re-render, and re-lint to clean before handing to the critic. It's a safety
+net for the no-overlap / fits-its-box rules, **not** a
 replacement for looking (it can't judge crop, balance, legibility, or fidelity).
 
 **Render self-check — scan EVERY slide for these before handing to the critic** (they're

@@ -203,9 +203,17 @@ ask of each element "is there suitable, balanced space around it, or is it crowd
   ask `deckkit.content_band()` for the safe region, and pack content-height blocks with
   `deckkit.vstack(..., bottom=…)` (equal gaps + no overlap by construction; it errors at build
   time if the content can't fit). A hand-picked y for any auto-growing block is a bug.
-- **Text must fit its box.** Never let text spill outside its callout/box. Size the
-  box to the text (deckkit `callout` auto-grows), shorten the text, or both — then
-  *check the render*, because overflow is invisible until you look.
+- **Text must fit its box — and its CARD.** Never let text spill outside its callout/box, and never
+  let an auto-growing text box extend **past the card/container drawn behind it** (the classic tell:
+  a card sized for one line of body, but the body wraps to two — the second line hangs below the
+  card). **Measure-then-place: size the card to the *measured* text** (count the wrapped lines at the
+  real width — `deckkit.measure_lines`/`columns` + a height that fits), or shorten the text; don't
+  hard-code a card height and hope. `scripts/lint_deck.py` now flags text that overruns its card —
+  run it, and *check the render*, because overflow is invisible in the build code.
+- **No widow — never strand one word (or a lone CJK glyph) on the last line.** A final line holding a
+  single word/character reads as a mistake. Fix it by nudging the box **width** (a little wider or
+  narrower so the last line gains company) or lightly rewording, so the wrap fills toward the end of
+  the last line. Check it in the render — most common on 2–3 line bodies and titles.
 - **Interior padding.** Text should never crowd a block's edge — keep a comfortable
   inset between a label/title/body and the boundary of its chip, callout, card, or
   box (the deckkit `chip`/`callout` helpers bake this in; for boxes you draw yourself,
@@ -224,6 +232,13 @@ ask of each element "is there suitable, balanced space around it, or is it crowd
   blocks (cards, chips, rows, list items) — derive them from `columns`/`rows`/`vstack`, never
   eyeball; one gap visibly larger than its neighbours reads as careless. Adjacent blocks always need
   a **visible, consistent** gap — never touching, never wildly uneven.
+- **Cards in a row share ONE height.** Sibling cards on the same row must be the **same height** —
+  when their text differs in length, **size the whole row to the tallest card's content** and apply
+  that height to all (don't grow each card independently — that yields a ragged row, the tell to
+  avoid). If one card's text is much longer, either tighten its wording, widen the body so it wraps to
+  the same line-count as its siblings, or accept the taller uniform row — but keep the heights equal.
+  And leave a **clear gap below the row before the next line/element** (a caption or summary line
+  directly under a card looks cramped) — `scripts/lint_deck.py` flags uneven row heights.
 - **Read the whole slide as one composition (the overview test).** After building, step back from
   the render and take the slide in as a whole: is it balanced top-to-bottom and left-to-right, is
   attention led to one focal point, do the blocks line up on a clean grid, is the space used well?

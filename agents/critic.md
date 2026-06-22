@@ -131,6 +131,9 @@ Do not just skim for the first few obvious issues. Run these passes:
      pattern used where it doesn't fit** — a `quadrant` with no real second axis, a `hub_spoke` for a
      sequence, a `specimen_card`/`wireframe_grid` outside a type/design/systems deck.
    - **Layout:** overflow / clipped text, content occluded or jammed on the footer,
+     **text spilling outside its own card/box** — a body that wraps to more lines than its card was
+     sized for, so a line hangs *below the card edge* (a distinct, glaring tell; fix by sizing the
+     card to the measured text, not the text to a fixed card — `scripts/lint_deck.py` flags this),
      **two elements overlapping** (a figure/card encroaching on a table or text — check a
      figure placed beside a table isn't covering its last column), misaligned elements, no
      clear visual hierarchy (everything one weight), crowding (no gutter between figure and
@@ -144,7 +147,12 @@ Do not just skim for the first few obvious issues. Run these passes:
      a side or across the bottom, a blank quadrant — reads as half-finished; flag it (fix: enlarge
      the content/figure to use the space, add the supporting element, redistribute the blocks, or
      merge/cut a too-thin slide). Also flag **uneven gaps between repeated/adjacent blocks** (one
-     gap visibly larger than its neighbours — derive from `columns`/`rows`/`vstack`). **A figure centred in
+     gap visibly larger than its neighbours — derive from `columns`/`rows`/`vstack`). **Uneven card
+     heights in a row** — sibling cards on the same row at **different heights** (one taller because
+     its text wrapped to more lines) reads as ragged; they must share ONE height (size the row to the
+     tallest's content). **A card crowding the line/element directly below it** (a summary or caption
+     hard against a card's bottom edge, no breathing gap) is the same family — give the row a clear
+     gap below. (`scripts/lint_deck.py` flags uneven row heights.) **A figure centred in
      its half *and* the side text pushed to the far edge** — leaving white on the figure's outer
      edge AND a big dead gap between figure and text — is the same imbalance (fix: anchor the
      figure to its margin, pull the text in to one gutter). **Suitable space on all four sides:**
@@ -212,6 +220,10 @@ Do not just skim for the first few obvious issues. Run these passes:
      right) — it must be equidistant. Common cause on CJK decks: a **full-width space (`　`) on one
      side and an ASCII space on the other**; the fix is the same space on both sides. Check stat lines
      and any "X = Y" especially.
+   - **Widow — a lone word/glyph on the last line:** a wrapped body or title whose **final line holds
+     a single word** (or a lone CJK character) reads as unfinished. Flag it; the fix is to nudge the
+     box width (a touch wider/narrower) or lightly reword so the last line gains company / fills
+     toward its end. Most common on 2–3-line bodies and long titles.
    - **Typography:** text too small to read from the back (callout/caption/figure
      labels — see the size floor in `design-principles.md`), inconsistent fonts/sizes.
      For **non-Latin (CJK) decks**: any **tofu / missing glyphs** (□ / 缺字) is a blocker; the

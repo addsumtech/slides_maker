@@ -160,7 +160,7 @@ The interview (step 0, Q3 especially) routes the request:
 - `install_skill.py` — terminal installer/import helper for Codex and Claude Code skill directories.
 - `requirements.txt` — Python package dependencies for terminal use.
 - `render_deck.sh` — `.pptx` → one PNG per slide (LibreOffice → PDF → PNG). Cross-platform; uses a private LibreOffice profile so parallel/coexisting renders don't collide.
-- `lint_deck.py` — deterministic layout lint on a built `.pptx`: flags off-slide overflow, solid block/image overlaps (ignoring intentional layering), and footer collisions. Run after rendering, before the critic.
+- `lint_deck.py` — deterministic layout lint on a built `.pptx`: flags off-slide overflow, **text overflowing its card** (text taller than the card behind it), solid block/image overlaps (ignoring intentional layering), footer collisions, whole-page-image/editability, and orphan slides. Run after rendering, before the critic.
 - `check_env.sh` — one-time preflight for the toolchain.
 - `anim.py` — injects PowerPoint build/animation timing XML python-pptx can't write.
 - `designed_charts.py` — the "designed plots" roster (donut+KPI, dumbbell, slope, dual-axis, bubble+trend, Pareto): themed, single-highlight matplotlib recipes beyond default bars; pair with `references/data-viz.md`.

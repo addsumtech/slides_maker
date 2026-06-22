@@ -38,13 +38,45 @@ def _boxes(slide, sw, sh):
             continue
         if not w or not h or w <= 0 or h <= 0:
             continue
-        txt = s.text_frame.text.strip().replace("\n", " ")[:26] if s.has_text_frame else ""
+        full = s.text_frame.text.strip() if s.has_text_frame else ""
+        txt = full.replace("\n", " ")[:26]
+        paras, size = [], 0.0
+        if s.has_text_frame:
+            size = max((r.font.size.pt for p in s.text_frame.paragraphs for r in p.runs if r.font.size),
+                       default=12.0)
+            for p in s.text_frame.paragraphs:
+                pr = [(r.text, (r.font.size.pt if r.font.size else size)) for r in p.runs]
+                if pr:
+                    paras.append(pr)
         out.append({"l": l, "t": t, "w": w, "h": h, "r": l + w, "b": t + h,
-                    "st": str(s.shape_type).split()[0], "txt": txt,
-                    "solid": s.shape_type in SOLID,
+                    "st": str(s.shape_type).split()[0], "txt": txt, "full": full, "size": size or 12.0,
+                    "paras": paras, "solid": s.shape_type in SOLID,
                     "text": bool(s.has_text_frame and txt),
                     "bg": (w * h) >= 0.95 * (sw * sh)})
     return out
+
+
+def _est_lines(paras, width_in):
+    """CJK-aware estimate of total wrapped line count across paragraphs, using each RUN's own font
+    size (so a mixed-size 'small label + big value' stat line counts as one line, not two). CJK glyph
+    ≈ 1 em, Latin ≈ 0.52 em."""
+    if width_in <= 0 or not paras:
+        return 1
+    total = 0
+    for pr in paras:
+        lines, w = 1, 0.0
+        for text, size_pt in pr:
+            em = max(0.01, size_pt / 72.0)
+            for ch in text:
+                if ch == "\n":
+                    lines += 1; w = 0.0; continue
+                cw = em * (1.0 if ord(ch) > 0x2E80 else 0.52)
+                if w + cw > width_in and w > 0:
+                    lines += 1; w = cw
+                else:
+                    w += cw
+        total += lines
+    return total or 1
 
 
 def _inter(a, b):
@@ -100,6 +132,39 @@ def lint(path):
         # 5) orphan / blank slide
         if not [s for s in bx if not s["bg"] and (s["text"] or s["solid"])]:
             finds.append("EMPTY/ORPHAN slide: no native content (blank or background only)")
+        # 6) text overflowing the filled CARD it sits on (text taller than its container)
+        cards = [s for s in bx if s["solid"] and not s["bg"] and not s["text"] and s["h"] > 0.35]
+        for t in [s for s in bx if s["text"]]:
+            host = None
+            for c in cards:
+                if c["l"] - 0.12 <= t["l"] and t["r"] <= c["r"] + 0.12 and c["t"] - 0.12 <= t["t"] <= c["b"] - 0.05:
+                    if host is None or c["b"] < host["b"]:
+                        host = c
+            if host:
+                nlines = _est_lines(t["paras"], t["w"])
+                lh = 1.4 if any(ord(ch) > 0x2E80 for ch in t["full"]) else 1.25   # CJK lines run taller
+                est_bottom = t["t"] + 0.06 + nlines * (t["size"] / 72.0) * lh      # + top inset
+                if est_bottom > host["b"] + 0.05:
+                    finds.append(f"TEXT OVERFLOWS its card: '{t['txt']}' (~{nlines} lines) runs past the "
+                                 f"card bottom ({round(host['b'],2)}in) — size the card to the text "
+                                 f"(measure-then-place) or shorten the text")
+        # 7) uneven card heights in a row (sibling cards must share ONE height)
+        cset = [s for s in bx if s["solid"] and not s["bg"] and not s["text"] and s["h"] > 0.5 and s["w"] < 0.6 * sw]
+        bycol = {}                                  # dedupe layered shapes per (top,left): keep the tallest (the card, not its header band)
+        for c in cset:
+            key = (round(c["t"] * 10), round(c["l"] * 10))
+            if key not in bycol or c["h"] > bycol[key]["h"]:
+                bycol[key] = c
+        rows = {}
+        for c in bycol.values():
+            rows.setdefault(round(c["t"] * 10), []).append(c)
+        for _top, row in rows.items():
+            if len(row) >= 2 and (max(r["w"] for r in row) - min(r["w"] for r in row)) < 0.4:  # a row of similar-width siblings
+                hs = [r["h"] for r in row]
+                if max(hs) - min(hs) > 0.12:
+                    finds.append(f"UNEVEN CARD HEIGHTS: a row of {len(row)} cards has heights "
+                                 f"{sorted(round(h,2) for h in hs)} — sibling cards in a row must share ONE "
+                                 f"height (size the row to the tallest card's content)")
         for m in finds:
             print(f"  slide {si+1}: {m}")
         total += len(finds)
