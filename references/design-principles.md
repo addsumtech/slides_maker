@@ -252,6 +252,30 @@ ask of each element "is there suitable, balanced space around it, or is it crowd
   attention led to one focal point, do the blocks line up on a clean grid, is the space used well?
   A slide can pass every *local* check and still look **off** as a gestalt — a lopsided mass, a
   drifting focal point, an empty quadrant. Fix the overall impression, not only the parts.
+- **The squint test (hierarchy at a glance).** Blur your eyes — or just downscale the render to a
+  thumbnail — and look again: the **3–4 levels of hierarchy** (the one focal element, the title, the
+  supporting blocks, the fine print) must *still* be distinguishable when you can't read the words. If
+  everything blurs into one even-grey field, the slide has no visual hierarchy — enlarge the
+  protagonist, add contrast, or cut. A cheap, tool-free check that catches "flat" slides the
+  word-level reading misses.
+- **Invest unevenly — one element at 120%, the rest at 80%.** A slide (and a deck) reads as *authored*
+  when one hero — the key figure, the headline number, the one diagram — is pushed and everything else
+  stays cleanly competent, not when every element is maxed equally. Pick the one thing this slide is
+  *for* and let it dominate; keep the supporting cast quiet.
+- **Deck-level rhythm — vary the protagonist across slides.** A long deck reads as one template
+  repeated if every slide has the same shape. Orchestrate **rhythm** deliberately: a *colour* rhythm
+  (mostly light, with the occasional full-bleed dark divider or accent slide as a beat), a *density*
+  rhythm (dense data slide → airy one-idea slide → a quote/whitespace breath), and a rotating *visual
+  protagonist* (a chart slide, then a diagram slide, then a photo slide, then a big-number slide). Not
+  random variety for its own sake — a paced sequence so the audience feels movement. (Section dividers
+  are the natural beat markers.)
+- **Avoid the AI-slop tells.** A handful of choices instantly read as machine-generated filler — name
+  and avoid them: full-screen rainbow / mesh / purple-to-blue gradients; emoji in titles or as bullet
+  markers; ✅/🚀/🔥 decoration; the rounded-card-with-a-left-border-accent everywhere; three-near-identical
+  "feature cards"; over-exposed default fonts used without intent; and **fabricated specifics** (made-up
+  stats, fake quotes, invented logos). Meta-heuristic: **when you feel the urge to *add* something to
+  make a plain slide "look nicer," that urge is usually the slop signal — subtract instead** (more
+  whitespace, one stronger element) and fix the layout, don't decorate it.
 - **Don't crowd the title's accent rule.** `title_bar` draws a short accent underline below
   the title. When you add a subtitle / definition line under it, leave a clear gap *below the
   rule* before the subline (and start the body a step below that) — a sub-line jammed against

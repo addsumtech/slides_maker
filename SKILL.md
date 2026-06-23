@@ -898,6 +898,18 @@ layout, but they should confirm the editable deck itself opens cleanly on their
 machine. If you added any forward-looking content (per the fidelity rule), call that
 out explicitly here so they can confirm it.
 
+**Keep the hand-off minimal — caveats + next steps, not a recap.** The note should carry only what
+the user *acts on*: the folder path, the open-the-pptx check, the font/portability caveat, any
+forward-looking content you added, and open questions (e.g. a missing real brand asset to supply). Do
+**not** narrate the deck slide-by-slide, restate what they can see in the render, or self-praise the
+result — a tight hand-off respects their time and reads as senior.
+
+**For a long deck (~15+ slides), show work at ~50%, not only at 100%.** When a build is large enough
+that a wrong direction is expensive to unwind, render the first few finished slides (cover + a couple
+of content archetypes) and check in **before** completing the rest — "here's the look and the first 3
+slides; continuing in this direction unless you'd change something." Cheaper than discovering a
+palette/density/structure mismatch after all 20 are built. (Short decks: just build and run the critic.)
+
 **If the deck has speaker notes, tell them how to use the notes.** They render nowhere on
 the slide, so the user may not know they exist: "the spoken script is in the notes — open
 **Presenter View** (PowerPoint: Slide Show → Presenter View; Keynote: Play with a second

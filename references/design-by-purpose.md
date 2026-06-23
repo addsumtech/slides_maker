@@ -64,6 +64,14 @@ not a fixed palette — pick a distinct, concrete look each time (warm/cool, lig
 serif/sans, restrained/vivid) rather than shipping one identical house style across decks.
 Don't reuse the previous deck's scheme out of habit.
 
+> **Name the bias, then beat it.** Before settling a look, name the default pull (the safe,
+> light/minimal/blue-ish reflex) and deliberately consider the **temperature span** — a *bold*
+> direction (saturated, high-contrast, expressive type), a *neutral* one, and a *quiet* one — then
+> choose what the purpose actually wants, not the reflex middle. **Anchor the choice to a concrete,
+> named exemplar** — a *kind* of look (a clean product-doc look, an editorial-newspaper look, a
+> Swiss-poster look) or a specific brand/reference — rather than vague adjectives, so "distinct" is
+> real and checkable. (The web-search step in the build is where you ground it.)
+
 **Non-Latin decks:** the font names below are Latin. For Chinese/Japanese/Korean, pick
 the script-appropriate equivalent and set `deckkit.EAFONT` — sans (modern/corporate/
 talks) → Heiti SC / PingFang SC / Noto Sans CJK; serif (formal/defense) → Songti SC /
@@ -161,6 +169,10 @@ modern, visual; the product itself is the hero.
 - **Signature:** a crisp one-line positioning ("X for Y who want Z"); benefits phrased
   as outcomes for the user; a bold, specific **CTA slide** to close (try / buy / sign
   up / contact) — never end on a flat "Thanks".
+- **Real assets first:** the **real logo / product render / UI screenshot** is the credibility
+  anchor — show it, never a generated look-alike or a generic box. If a needed brand/product asset is
+  missing, **ask for it** rather than fake it (recognizability hierarchy in `image-generation.md`).
+  Same for any competitor/customer logos: real or omit.
 
 ## Thesis defense
 Formal, rigorous, complete; an expert committee that will probe. Serious and

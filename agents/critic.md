@@ -88,7 +88,10 @@ Do not just skim for the first few obvious issues. Run these passes:
    - *Design & layout:* whole figures (not partial-cropped or hand-redrawn); a figure
      that *is* the point given the slide; gutters between figure and text; a real
      **bottom margin** (nothing jammed on the footer); **no text spilling its box**;
-     intentional colour variety; aligned, balanced, uncrowded. **Does the look fit the
+     intentional colour variety; aligned, balanced, uncrowded. **Squint test:** blur your eyes (or
+     view the render as a thumbnail) — the focal element, title, and supporting blocks must still
+     separate into distinct hierarchy levels; if it all blurs to an even grey field, the slide has no
+     hierarchy (flag it). **Does the look fit the
      purpose?** A status update should read crisp/corporate, a thesis defense
      sober/formal, a product pitch bold/on-brand, a lecture warm/clear (see
      `references/design-by-purpose.md`) — a mismatch (a playful palette on a defense,
@@ -267,6 +270,22 @@ Do not just skim for the first few obvious issues. Run these passes:
      near-invisible (flag it); a **photo scrim aimed at the text zone**, not a flat full-slide wash
      that greys the whole image. Flag a `big_numeral`/`scorecard` value that wrapped or overran, and
      a `leaderboard` whose swatch colours don't match its paired chart.
+   - **AI-slop tells (named):** flag, by name, the choices that read as machine-generated filler — a
+     full-screen rainbow / mesh / purple-to-blue **gradient wash**; **emoji in titles** or as bullet
+     markers; ✅/🚀/🔥 decoration; the **rounded-card-with-left-border-accent** on every block; three
+     near-identical "feature cards"; an over-exposed default font used without intent; and **fabricated
+     specifics** (invented stats, fake quotes, an imagined/realistic-but-fake logo — the last is also a
+     fidelity blocker). The tell beneath them: decoration *added* to a plain slide instead of the
+     layout being fixed by subtraction.
+   - **Real brand/product asset faked or generic-filled:** on a slide about a real brand/product/UI, a
+     **generated look-alike, an invented logo, or a default-blue box** standing in for the real asset
+     (instead of the real logo/product/screenshot, or an honest "swap this" placeholder) — a
+     credibility + fidelity finding; the fix is to use the real asset or ask the user for it.
+   - **Deck rhythm (a deck-level check — scan all the thumbnails together):** across a **long** deck,
+     do the **visual protagonist and density vary** (chart → diagram → photo → big-number → quote, with
+     dense slides paced by airy ones), or does it read as **one template repeated**? Flag a long deck
+     where nearly every slide has the same shape. (This is a *structural-variety* check, not a frequency
+     quota — a short deck or a deliberately uniform series is fine.)
    - **Text** *(scope by delivery mode):* for a **presented** deck — excessive density / wall of
      bullets, full sentences the audience must read while the speaker talks, text that merely
      duplicates narration. For a **read-alone** deck (leave-behind / reference / poster) there is no

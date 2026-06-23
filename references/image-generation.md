@@ -52,6 +52,23 @@ Prefer real or deterministic assets instead when the visual carries evidence:
 - any result whose content must be traceable to the user's material;
 - any plot or diagram that needs readable labels, axes, numbers, or formulas.
 
+## Real brand / product assets come first — never fill with a generic stand-in
+
+When a slide is *about* a real brand, product, company, or UI (a pitch, a launch, a stakeholder
+readout, a competitor slide), the single biggest credibility lever is showing the **real thing** —
+and a generated plate or a default-coloured box is the *wrong* answer, not a fallback. Source the
+asset down a **recognizability hierarchy**, stopping at the first you can actually get:
+
+1. the **real logo / product render / UI screenshot** (the user's, or a clearly-official asset they point you to);
+2. the brand's **real colours + typography** applied to native deckkit blocks;
+3. only then a tasteful neutral treatment — **never** a fake logo, an AI-imagined product, or a generic gradient silhouette standing in for the real mark.
+
+**If the real asset is needed but missing, STOP and ask the user for it** — do not paper over the gap
+with a generated look-alike or a placeholder that pretends to be the brand. A *correct placeholder*
+("logo goes here") the user will swap is honest; an invented brand asset is a fidelity violation (it
+misstates a real thing) and reads as fake instantly. This complements the rule above: generated
+imagery is for *atmosphere/concept*, never for a real identity that should be shown as-is.
+
 ## Planning workflow
 
 1. During Step 3, decide each slide's visual role: source figure, deterministic chart,

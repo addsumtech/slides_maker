@@ -145,7 +145,11 @@ For every slide, decide and record:
   it implements, and verify the equation against the code (same variables/indices/operations); do
   **not** invent a plausible-looking formula the code doesn't implement, or over-simplify it wrongly.
   If you can't derive it confidently, show the key code lines instead and flag it as an open question.
-- **Layout** — a *concrete* design, not "some bullets and a figure" (see §5).
+- **Layout** — a *concrete* design, not "some bullets and a figure" (see §5). **Name the ONE hero
+  element** this slide is built around (the figure, the headline number, the diagram, the quote); if
+  you can't name the hero, the slide has no focus — fix the takeaway or split it. Design so the slide
+  passes the **squint test** (a blurred thumbnail still separates into 3–4 hierarchy levels), with that
+  hero dominating and the rest kept quiet.
 - **Motion** and **image** — by taste and purpose (see §6), recorded per slide.
 
 ### 5 — Choose the design that fits the content, then lay it out (this is half the job)
@@ -172,11 +176,20 @@ list.** The kit is large now, so match it deliberately to the content's *communi
 - **The look (whole-deck) →** adopt a design-language `preset` matched to purpose (glassmorphism ·
   swiss · editorial_paper · editorial_report · risograph · memphis); glass/glow only on a dark base,
   `offset_shadow` for a print/riso feel, `editorial_header` + a serif for a showcase/report register.
+  Choose it by **naming the bias and beating it** (don't reflex to the safe light/minimal/blue-ish
+  default) — see `design-by-purpose.md` "Name the bias, then beat it" and the deck-level decision below.
 
 **Bullets are the fallback, not the default** — reserve them for genuinely list-like qualitative
 points with no better structure, and even then prefer cards/`columns`. In the per-slide *Layout*
 column, name the chosen pattern **plus one clause of why it fits this content**, so the choice is
 deliberate and the critic can check design-fits-content.
+
+**Then read DOWN the column you've built (deck rhythm — only you see every slide at once).** If three+
+consecutive slides resolve to the *same* form (all split text+figure, all bullet cards), vary the
+**visual protagonist** deliberately — alternate chart / diagram / photo / big-number / quote slides,
+and pace the density (a dense slide followed by an airy one-idea breath), with section dividers as beat
+markers. This cross-slide check is the planner's to make — the actor builds each slide in isolation and
+the builder can't retrofit rhythm. See `design-principles.md` "Deck-level rhythm".
 
 Then lay it out. Layout is not afterthought polish — decide it deliberately for every slide. Name the
 concrete pattern and the balance:
@@ -247,6 +260,10 @@ not by counting:
   (no one clicks it), and never add motion for flourish/"consistency"/to fill a plain slide (fix the
   layout instead). A slide must read correctly **fully-built** — a build layers on a correct static
   slide, never fixes a cluttered one. See `animation.md`.
+  - **Decide builds *with* the deck rhythm, not on a separate pass.** A built pipeline/step-card slide
+    is itself a protagonist-variation beat, and whether builds *cluster* or *spread* is part of the
+    density pacing you set in the deck-level decision — so choose *where the builds fall* while you plan
+    the rhythm, not afterward.
 - **Generated images — add one only where it helps the audience UNDERSTAND or feel the content,
   never as decoration or filler.** First decide *which specific slides/parts* actually benefit: a
   concept that's clearer **shown than told**, the real thing the audience should picture, or
@@ -262,6 +279,12 @@ not by counting:
   the visual, a prompted-and-verified generated plate is fine, or **draw it natively** (deckkit
   shapes / a chart) for guaranteed control — just never plan to ship an unverified one. See
   `image-generation.md`.
+- **A real brand/product/UI → plan the REAL asset, never a generic stand-in.** When a slide is about
+  a real logo, product, company, or interface (pitch, launch, stakeholder, competitor), plan to show
+  the **real thing** (real logo / product render / UI screenshot, or the brand's real colours+fonts on
+  native blocks) — *not* a generated look-alike or a default-blue box. If that asset is needed but you
+  don't have it, **flag it as an open question for the user to supply**, rather than planning a fake or
+  silent placeholder. (Recognizability hierarchy in `image-generation.md`.)
 - **Image style is part of the design — align it with topic, content, AND the deck's template/
   style.** Decide **one coherent art-direction for the whole deck** (palette, medium, mood, level of
   realism, motif, where to leave calm space for text) that fits *this* purpose and subject **and
@@ -272,6 +295,13 @@ not by counting:
   glassmorphism/Memphis/riso deck's plates must carry that same look. Pull the deck's palette into
   the prompt. Apply that one direction to every plate you propose so they read as one family. Record the art-direction
   once in the plan; the user approves it with the images.
+- **Plan the look clear of the AI-slop tells.** Steer the design language and per-slide forms away from
+  the machine-generated tells (full-screen rainbow/mesh/gradient washes, emoji in titles or as bullet
+  markers, the rounded-card-with-left-accent on *every* slide, three near-identical "feature cards") —
+  the critic flags these, so don't plan them in. Meta-heuristic: when a slide feels thin and you reach
+  to **add** a plate or a card-row to fill it, that urge is the slop signal — plan to **subtract**
+  instead (more whitespace, one stronger hero) and fix the layout. See `design-principles.md` "Avoid
+  the AI-slop tells".
 
 ## Output — the deck plan
 Produce a single, human-readable **deck plan** (markdown) the user can approve and the
@@ -283,8 +313,14 @@ builder can execute. Include:
    the rest of the plan stands on, and the Step-3 checkpoint reviews them first; a brief with
    empty/hedged/untraced fields or a ledger with shipped `verified?=N` rows is not ready.
 2. **Deck-level decisions** — the narrative arc in one line; slide count vs. time budget
-   (with the pace check); the look/palette/style for the purpose; the deck's **image
-   art-direction** (even if no images are proposed yet); the deck-wide transition choice.
+   (with the pace check); the **look/palette/style for the purpose, chosen by naming the default
+   pull and beating it** (span a bold / neutral / quiet direction, pick what the purpose wants — not
+   the reflex middle — anchored to a concrete named exemplar, e.g. a clean product-doc look, an
+   editorial-newspaper look, a Swiss-poster look); the deck's **rhythm** — the planned sequence of
+   visual protagonists (e.g. cover → diagram → chart → photo → big-number → divider) and the
+   colour/density pacing (mostly-light with deliberate dark-divider/accent beats; dense slides spaced
+   by airy one-idea breaths) so the deck reads as a paced sequence, not one template repeated; the
+   deck's **image art-direction** (even if no images are proposed yet); the deck-wide transition choice.
 3. **Per-slide plan** — a row per slide:
 
    | # | Takeaway | Content (terse) | Visual source | Layout | Motion | Image (proposed?) |
@@ -299,7 +335,9 @@ builder can execute. Include:
    decision, and nothing is generated until they say so.
 5. **Forward-looking additions** — anything you drafted that isn't in the source, clearly
    flagged as proposed.
-6. **Open questions** — anything you couldn't verify or need the user to confirm.
+6. **Open questions** — anything you couldn't verify or need the user to confirm (including any
+   **real brand/product/UI asset** a pitch/launch/stakeholder slide needs but you don't have — list it
+   for the user to supply, rather than planning a stand-in).
 
 ## What you must NOT do
 - Don't **invent** content, numbers, results, citations, or figures (the one exception is

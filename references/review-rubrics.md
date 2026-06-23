@@ -73,7 +73,9 @@ Score each dimension; cite specific slides.
    alignment), whitespace (not crammed, not awkwardly empty), no overflow/clipping. Is
    any meaning carried by **colour alone** (a plot legend or status distinguished only
    by hue)? Pair it with a label/shape/marker so it survives projection and colour-blind
-   viewers.
+   viewers. And **none of the named AI-slop tells** (full-screen gradient wash, emoji titles,
+   rounded-left-border cards on every slide, three identical feature cards) — see the named list in
+   `agents/critic.md` / `references/design-principles.md`.
 8. **Framing.** Does an unprepared audience member know, early, *what this is about
    and why it matters*? Or does it start mid-method?
 9. **Layout, figures & colour** *(applies to every purpose — a lab-meeting or exec
@@ -110,6 +112,11 @@ Score each dimension; cite specific slides.
    rule rather than jamming against it? Does colour vary with intent,
    or is everything one monotone accent? Is the closing slide named for its purpose
    ("Conclusion" for a talk, "Next steps" for a status update — not a generic "Take home")?
+   **Deck-level rhythm (scan all slides together):** across a *long* deck, does the visual
+   protagonist and density vary (a paced sequence — chart / diagram / photo / big-number / quote,
+   dense slides spaced by airy ones), or does it read as **one template repeated**? A long deck where
+   nearly every slide has the same shape is a deck-level finding (structural variety, not a per-slide
+   quota — a short or deliberately-uniform deck is fine).
 10. **Factual fidelity** *(when source material exists — the check every system fails).*
    Does every number, label, and headline claim trace back to the source? Does the deck
    represent the source's *actual emphasis* (e.g. a comparison table foregrounds the
@@ -120,7 +127,10 @@ Score each dimension; cite specific slides.
    next steps / the ask* slide may carry content not in the source, **if** it is clearly
    flagged as proposed and follows correctly from the material. Don't flag a
    properly-flagged forward-looking slide; *do* flag forward-looking claims dressed as
-   established fact, or fabricated traction/market numbers presented as real.
+   established fact, or fabricated traction/market numbers presented as real. **Faked real
+   assets count too:** on a slide about a real brand/product/UI, a generated look-alike, an
+   invented logo, or a default-blue box standing in for the real asset (rather than the real
+   logo/screenshot or an honest placeholder) is a fidelity blocker — use the real asset or ask the user.
 11. **Design fits the purpose.** Does the look match the deck's purpose and audience —
    crisp/corporate for a status update, sober/formal for a defense, bold/on-brand for a
    product pitch, warm/clear for teaching (see `references/design-by-purpose.md`)? A
