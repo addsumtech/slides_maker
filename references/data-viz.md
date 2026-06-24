@@ -41,6 +41,22 @@ The recipes render a themed PNG → place with `deckkit.picture(out, ..., fit="c
 4. **Label directly, don't rely on colour alone.** End-of-line value labels, a legend keyed by
    the SAME colours as a paired `leaderboard`, markers as well as hue — so it survives a projector
    and colour-blind viewers (the deck-wide accessibility rule).
+5. **It must LOOK right — render it and check.** Applies to **every plot you generate with code**
+   (matplotlib, a designed_charts recipe, any domain plot), not one chart type. Two recurring failures:
+   **(a) undersampled curves** — a continuous/high-frequency function plotted at coarse or integer `x`
+   *aliases* into jagged zigzags (the "sine looks weird" bug); sample with a dense `np.linspace` (a few
+   hundred points, ≥~10× the highest frequency) so smooth functions look smooth — plot the curve on a
+   fine grid even if the *data/markers* sit on integers. **(b) A legend (or annotation) sitting ON the
+   data** — when the plot is full, put the legend **outside the axes** or in the truly empty corner;
+   `loc='best'` is not enough on a busy plot. The general pattern:
+   ```python
+   xs = np.linspace(x0, x1, 600)            # dense grid — NOT np.arange(0, 50) for a smooth curve
+   for k in series: ax.plot(xs, f(xs, k), label=...)
+   ax.legend(loc="center left", bbox_to_anchor=(1.02, 0.5), frameon=False)  # legend OUTSIDE the axes
+   fig.savefig(out, bbox_inches="tight")    # so the outside legend isn't clipped
+   ```
+   Always **view the rendered PNG** and fix aliasing / an occluding legend / clipped labels before
+   placing it — a wrong-*looking* plot misleads even when the numbers are right.
 
 ## Editable native charts vs matplotlib rasters — pick by need
 Three ways to put a chart on a slide; choose by what the deck needs:

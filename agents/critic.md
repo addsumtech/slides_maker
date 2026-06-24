@@ -275,6 +275,12 @@ Do not just skim for the first few obvious issues. Run these passes:
      the classic raster-`designed_charts` failure on a non-Latin deck) is a blocker: rebuild it as an
      **editable native chart** (`deckkit.native_chart`/`native_dual_axis`, which render any script via
      PowerPoint's fonts) or pass `font=<the script's font>` to the recipe.
+   - **Plot doesn't look right (computed/matplotlib plots):** **(a) jagged/aliased curves** — a smooth
+     or high-frequency function rendered as angular zigzags because it was sampled too coarsely (the
+     "sine looks weird" tell); the fix is a dense `np.linspace`, not integer steps. **(b) Legend or
+     annotation sitting ON the data** — overlapping the curves in a busy plot; move it outside the axes
+     or to the empty corner. Either is a real finding — a wrong-looking plot misleads even when the
+     math is right.
    - **AI-slop tells (named):** flag, by name, the choices that read as machine-generated filler — a
      full-screen rainbow / mesh / purple-to-blue **gradient wash**; **emoji in titles** or as bullet
      markers; ✅/🚀/🔥 decoration; the **rounded-card-with-left-border-accent** on every block; three
@@ -282,6 +288,17 @@ Do not just skim for the first few obvious issues. Run these passes:
      specifics** (invented stats, fake quotes, an imagined/realistic-but-fake logo — the last is also a
      fidelity blocker). The tell beneath them: decoration *added* to a plain slide instead of the
      layout being fixed by subtraction.
+   - **Build/meta annotation leaked onto a slide (BLOCKER):** any text describing *how the slide was
+     made* rather than its content — e.g. "（可点击编辑的原生图表）"/"(editable native chart)",
+     "(AI-generated)"/"AI 生成", "(placeholder)"/"占位", "(draft)"/"草稿", "(sample/示例)", "generated
+     by …", or a stray TODO/FIXME/dev note. This never ships; it reads as unfinished and unprofessional.
+     Flag it as a **blocker** — the fix is to delete it (a caption names the data/subject, never the
+     technique; editability is a delivered feature, not a slide label).
+   - **Stacked groups too tight (proximity broken):** in stacked labelled groups (a stat's
+     label+value+caption, then the next stat; stacked cards), the gap *between* groups isn't clearly
+     larger than the gaps *within* one — so a group's caption crowds the next group's label and they
+     blur together (the recurring stacked-stat-card tell). Flag it: the inter-group gap should be
+     ~1.5–2× the intra-group spacing (`vstack`/`rows` with a deliberate between-group gap).
    - **Real brand/product asset faked or generic-filled:** on a slide about a real brand/product/UI, a
      **generated look-alike, an invented logo, or a default-blue box** standing in for the real asset
      (instead of the real logo/product/screenshot, or an honest "swap this" placeholder) — a
