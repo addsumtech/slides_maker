@@ -17,7 +17,11 @@ Checks (tuned for low false-positives):
                   card, an image inside its frame, a header band on a card, a full-bleed
                   background — is *containment* and is NOT flagged; only "two separate blocks
                   collide" partial overlaps are.
-  3. FOOTER     — a solid block overlaps a footer / page-number text box at the bottom.
+  3. FOOTER     — the bottom footer band is reserved deck chrome: NO content block (solid or text)
+                  may cover the footer/page-number text or dip into its zone. Unlike OVERLAP this has
+                  NO containment escape — a low content band that swallows the footer text into its
+                  bbox is still a collision (that "text-on-a-card" exclusion was the blind spot that
+                  let a band overlap the footer).
 """
 import sys
 from pptx import Presentation
@@ -124,13 +128,26 @@ def lint(path):
                     if same_size and tiny_offset:
                         continue
                     finds.append(f"OVERLAP {round(ix,2)}x{round(iy,2)}in  {a['st']}'{a['txt']}' x {b['st']}'{b['txt']}'")
-        # 3) footer collision: a solid block over a bottom text label
+        # 3) footer-zone reservation: the bottom footer band is deck chrome — NO content block (solid
+        #    or text) may cover the footer text or dip into its reserved zone. (No containment escape:
+        #    a content band whose bottom collides with the footer is a bug even when the footer text
+        #    falls inside the band's bbox — that "text on a card" exclusion is the blind spot that let
+        #    a low band overlap the footer.)
         footers = [s for s in bx if s["text"] and s["t"] > sh - 0.6 and not s["bg"]]
-        for f in footers:
-            for s in sol:
-                ix, iy = _inter(s, f)
-                if ix > TOL and iy > TOL and _frac_inside(f, s) < CONTAIN:
-                    finds.append(f"FOOTER collision  {s['st']}'{s['txt']}' over footer '{f['txt']}'")
+        if footers:
+            fid = {id(f) for f in footers}
+            fb_top = min(f["t"] for f in footers) - 0.08      # keep content above this line
+            for s in bx:
+                if s["bg"] or id(s) in fid or not (s["solid"] or s["text"]) or s["h"] <= 0.2:
+                    continue
+                if s["t"] < fb_top - 0.04 and s["b"] > fb_top:    # starts in the content area, dips into the footer zone
+                    covers = [f for f in footers if _inter(s, f)[0] > TOL and _inter(s, f)[1] > TOL]
+                    if covers:
+                        finds.append(f"FOOTER collision  {s['st']}'{s['txt']}' overlaps footer '{covers[0]['txt']}' "
+                                     f"— keep content above {round(fb_top,2)}in (content_band()/bottom_callout())")
+                    else:
+                        finds.append(f"FOOTER-ZONE intrusion  {s['st']}'{s['txt']}' (bottom {round(s['b'],2)}in) "
+                                     f"dips into the reserved footer band — keep content above {round(fb_top,2)}in")
         # 4) editability: a slide that is ~one whole-page image with no native text/objects
         bigpic = next((s for s in bx if s["st"] == "PICTURE" and s["w"] * s["h"] >= 0.85 * sw * sh), None)
         if bigpic is not None:

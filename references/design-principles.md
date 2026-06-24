@@ -215,6 +215,12 @@ ask of each element "is there suitable, balanced space around it, or is it crowd
   auto-growing `callout`; chips/cards sized ≈ text + a small pad) and **middle-anchor** the text
   so the padding is symmetric — a short card must not leave a big white strip at the bottom, and
   a one-line callout must not swim in a deep bar.
+- **The footer band is RESERVED — content stays above it (a `≈0.6in` bottom strip is deck chrome).**
+  Keep *every* content block — a card, a dark stat band, a callout, a figure — clear of the bottom
+  footer/page-number zone. A content band whose bottom dips over the footer is the recurring collision
+  (it still "looks placed" in code but overlaps the footer in the render). `scripts/lint_deck.py` now
+  flags this as a **FOOTER collision / FOOTER-ZONE intrusion** with no "text-on-a-card" escape (the
+  footer is chrome, never something a block may sit on).
 - **Bottom margin — measure or anchor, never hand-pick a y.** Keep content clear of the
   footer. The recurring failure is a bottom callout placed at an eyeballed low `y` that grows
   *down* into the footer when its text wraps. Don't guess a coordinate: use
@@ -222,6 +228,12 @@ ask of each element "is there suitable, balanced space around it, or is it crowd
   ask `deckkit.content_band()` for the safe region, and pack content-height blocks with
   `deckkit.vstack(..., bottom=…)` (equal gaps + no overlap by construction; it errors at build
   time if the content can't fit). A hand-picked y for any auto-growing block is a bug.
+- **Avoid overlap by *construction*, then catch by lint — not by eyeballing.** The reliable way to
+  "no overlaps, perfect layout" is to derive every position from the measured layout helpers
+  (`content_band` for the safe rect, `columns`/`rows` for splits, `vstack(bottom=…)` for stacks,
+  `bottom_callout` for the bottom) so blocks *can't* collide, then run `lint_deck.py` as the safety
+  net (off-slide overflow · block/footer collisions · text-past-card · uneven rows). Hand-placed
+  coordinates are where overlaps creep in; measured placement + the lint is how they stay gone.
 - **Text must fit its box — and its CARD.** Never let text spill outside its callout/box, and never
   let an auto-growing text box extend **past the card/container drawn behind it** (the classic tell:
   a card sized for one line of body, but the body wraps to two — the second line hangs below the
