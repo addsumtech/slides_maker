@@ -85,7 +85,13 @@ read; icons live on structural / navigation / framework slides, not on the resul
 preset, do **not** staple on an icon family — reach for the device named.
 
 - **FIT — icon-native:** `dark_tech`, `consulting`, `glassmorphism`, `blueprint` (**line only** —
-  filled clashes with the schematic), `swiss` (**sparingly, mono or the one red**, not colour-coded-per-category).
+  filled clashes with the schematic), `swiss` (**sparingly, mono or the one red**, not colour-coded-per-category).  **On a FIT preset whose content is full of icon-able structure** — agent-loop stages, a small set
+  of named patterns, tools/memory/protocols, production layers, lifecycle phases — **actively plan an
+  icon family; don't merely *allow* one.** Label each category / section / entity / step with its
+  metaphor (jobs #1/#3/#4/#5). Shipping ZERO icons on an icon-native preset over category-rich content
+  is a *miss*, not restraint — the consistency device is exactly what the register is reaching for.
+  (Still bounded by the rule-of-thumb + the ≤5-per-card-group count — this is "label the real
+  categories", never one-per-bullet or decoration.)
 - **CONSTRAINED:** `memphis` / `risograph` — only **bold/filled marks flattened to the 2-ink / accent
   palette**, and prefer the preset's native motifs; `editorial_report` — at most **one restrained
   monochrome wayfinding mark on dividers**, no icon-card grids.

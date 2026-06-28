@@ -262,9 +262,16 @@ Do not just skim for the first few obvious issues. Run these passes:
    - **Diagram connectors:** an arrow pointing the **wrong way for the flow** — most often a
      *sideways* arrow squeezed between two **vertically-stacked** boxes (where it should point
      down/up); and **unequal spacing** of repeated blocks/connectors in a row or column (one
-     gap or arrow visibly longer than the next); and **two blocks touching** with no gap
-     between them (a stacked pair whose edges meet reads as one merged block). Check arrow
-     direction matches the layout, gaps are even, and adjacent blocks have a visible gap.
+     gap or arrow visibly longer than the next); and **two blocks touching — or a near-zero sliver gap between them**
+     (a stacked pair whose edges meet, *or sit a hairline apart*, reads as one merged block; a gap far
+     smaller than the surrounding margins — e.g. a ~0.02in seam from a stack pitch (1.04) that barely
+     clears the block height (1.02) — reads as cramped, so require a gap ≥ ~⅓ `GUTTER` derived from
+     `rows`/`vstack`). Check arrow
+     direction matches the layout, gaps are even, and adjacent blocks have a visible gap. Also flag the
+     **wrong arrow SHAPE**: a **feedback/repeat loop, a return path, or a link between non-adjacent nodes
+     drawn as a straight line** (it reads as forward flow, not a loop) — it should be an **elbow / U-shaped**
+     connector (`elbow_connector` / `loop_path`); and a **straight arrow shoved diagonally across other
+     shapes** to reach a distant node (route it as an elbow instead).
    - **A single glyph/icon off-centre** in its box (a "?", number, or mark sitting low or to
      one side instead of optically centred). On a **CJK deck**, an off-centre large mark is
      usually a *full-width* punctuation glyph (`？！。`), which sits left-of-centre in its
@@ -454,6 +461,15 @@ Do not just skim for the first few obvious issues. Run these passes:
      do the **visual protagonist and density vary** (chart → diagram → photo → big-number → quote, with
      dense slides paced by airy ones), or does it read as **one template repeated**? Flag a long deck
      where nearly every slide has the same shape. (This is a *structural-variety* check, not a frequency
+   - **Over-reliance on ONE format (flag mid-deck, not only when *every* slide matches):** separate from
+     the structural-variety check above — count how many **content** slides resolve to the *same block
+     type*, and if **more than ~40–50%** are the same layout (most often the rounded-card / panel /
+     feature-tile grid — the AI-slop reflex) flag it **even when the rest of the deck varies**, not just
+     when literally every slide matches. The fix names the **format the over-used slides should become**
+     (a `timeline`, `big_numeral`/`stat_row`, `pull_quote`, chart, `diagram_island`, `quadrant`/2×2,
+     `step_list`, `before_after`, or comparison table — whichever the content wants). Calibrate by
+     content, not a hard quota: a deck whose material genuinely is N parallel card-sets is fine — but a
+     card grid used because it's the default, on half the deck, is a real finding.
      quota — a short deck or a deliberately uniform series is fine.)
    - **Text** *(scope by delivery mode):* for a **presented** deck — excessive density / wall of
      bullets, full sentences the audience must read while the speaker talks, text that merely

@@ -238,7 +238,10 @@ components → `design-principles.md` + the component catalogue in `design-galle
   is small (≲4).
 - **A process / architecture / dataflow / flowchart →** the **diagram kit** (`node` + `connector`, or
   `flow_chain` for a pipeline) — rebuild it from rounded-rect/pill/circle nodes joined by connectors with
-  **stroke semantics** (solid=required · dashed=optional · dotted=feedback), promoting exactly ONE node
+  **stroke semantics** (solid=required · dashed=optional · dotted=feedback) and **shape semantics** (a
+  *straight* connector for direct flow between adjacent nodes; an **elbow / U-shaped** `elbow_connector` /
+  `loop_path` for a feedback/repeat loop, a return path, or a link between **non-adjacent** nodes — never a
+  straight line forced across the boxes between them), promoting exactly ONE node
   to `hub`. On a **dark** deck, host the figure in a bright `diagram_island` ("Figure N"). A *nested /
   containment* framework (core→ring→ring) → `concentric_rings`; specific fixed shapes still use
   `hub_spoke`/`quadrant`/`timeline`. (This is the most-used technical device in the sample decks — never
@@ -276,6 +279,17 @@ consecutive slides resolve to the *same* form (all split text+figure, all bullet
 and pace the density (a dense slide followed by an airy one-idea breath), with section dividers as beat
 markers. This cross-slide check is the planner's to make — the actor builds each slide in isolation and
 the builder can't retrofit rhythm. See `design-principles.md` "Deck-level rhythm".
+
+**Vary the FORMAT, not only the protagonist — don't default every content slide to a card/panel grid.**
+The rounded-card / icon-card / feature-tile grid is the easy reflex, and reaching for it slide after
+slide is exactly what makes a deck read as one template (and trips the AI-slop tell). Having picked each
+slide's form above, read down the column once more and **deliberately rotate FORMATS** from §5's
+catalogue — a `timeline`, a `big_numeral`/`stat_row`, a `pull_quote`, a chart, a `diagram_island`, a
+`quadrant`/2×2, a `step_list`, a `before_after`, a comparison table — so the audience meets a fresh
+structure, not a 12th card row. Rule of thumb: if **more than ~40–50% of the content slides** resolve to
+the same block type (usually cards), that's over-reliance — rework the weakest into the form their
+content actually wants. Taste, not a quota: a genuinely card-shaped run is fine when the *content* asks
+for it, but prove it's the content, not the reflex.
 
 Then lay it out. Layout is not afterthought polish — decide it deliberately for every slide. Name the
 concrete pattern and the balance:
@@ -454,6 +468,12 @@ not by counting:
   `cjk_numeral`; photography + serif numerals; `year_badge` + `duotone`; heavy rules + big numerals).
   Only plan an icon family on icon-native presets (`dark_tech`, `consulting`, `glassmorphism`,
   `blueprint` [line-only], `swiss` [sparing/mono], `memphis`/`riso` [bold/flattened]).
+  On those icon-native presets, **flip from permission to intent when the content is icon-able**: if the
+  deck has clear category / section / entity / step structure (agent-loop stages, a handful of named
+  patterns, tools/memory/protocols, production layers), **actively plan an icon family and assign each
+  category/step its own metaphor** — do NOT ship a category-rich `dark_tech`/`consulting`/`glassmorphism`
+  deck with zero icons; that's a miss, not restraint. Still hold the guards (rule-of-thumb, ≤5 per
+  card-group, no icon-per-bullet, no icon on an evidence slide).
   Where the gates allow icons, scan each slide for the recurring jobs it can do: **(1)** a reused **section /
   wayfinding** mark, **(2)** a **short list of distinct attributes** turned into scannable cards, **(3)**
   **category separation / hierarchy** (colour-coded), **(4)** a **repeated entity** (dataset, user,

@@ -2255,6 +2255,41 @@ def connector(slide, p0, p1, *, style="solid", color=None, width=1.5, label="", 
     return c
 
 
+def elbow_connector(slide, pts, *, style="solid", color=None, width=1.5, arrow=True, label="", label_c=None):
+    """A multi-segment ELBOW / U-shaped connector through `pts` (list of (x,y) inch tuples) — the right
+    arrow when a STRAIGHT line would be wrong or cross other shapes: a **feedback / repeat loop** that
+    drops below a row and returns, a **return path**, or a link between **non-adjacent** nodes. Don't
+    default every arrow to straight — straight is for direct adjacent flow; an elbow reads as
+    'goes back / around'. Same stroke SEMANTICS as `connector` (solid=required · dashed=optional ·
+    dotted=feedback). Arrowhead on the FINAL segment only. Helper `loop_path(...)` builds a common U.
+    Example (a repeat-loop under a 4-node row at y≈3.1, dropping to 3.5):
+        dk.elbow_connector(s, dk.loop_path(x_last, x_first, 3.1, 3.5), style="dotted", color=CYAN)"""
+    col = color if color is not None else MUTE
+    segs = []
+    for i in range(len(pts) - 1):
+        a, b = pts[i], pts[i + 1]
+        c = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, Inches(a[0]), Inches(a[1]), Inches(b[0]), Inches(b[1]))
+        c.line.color.rgb = col; c.line.width = Pt(width); c.shadow.inherit = False
+        if style in ("dashed", "dotted"):
+            ln = c.line._get_or_add_ln()
+            ln.append(parse_xml(f'<a:prstDash {nsdecls("a")} val="{"dash" if style == "dashed" else "sysDot"}"/>'))
+        segs.append(c)
+    if arrow and segs:
+        ln = segs[-1].line._get_or_add_ln()
+        ln.append(parse_xml(f'<a:tailEnd {nsdecls("a")} type="triangle" w="med" len="med"/>'))
+    if label and len(pts) >= 2:
+        mid = pts[len(pts) // 2]
+        text(slide, mid[0] - 0.9, mid[1] - 0.16, 1.8, 0.3, [[(label, 9, label_c or col, False, False, MONO)]],
+             align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
+    return segs
+
+
+def loop_path(x_from, x_to, y_row, y_drop):
+    """Waypoints for a U-shaped feedback/repeat loop: from (x_from, y_row) DOWN to y_drop, across to
+    x_to, and UP to (x_to, y_row). Feed to `elbow_connector`. y_drop should clear the row's content."""
+    return [(x_from, y_row), (x_from, y_drop), (x_to, y_drop), (x_to, y_row)]
+
+
 def flow_chain(slide, x, y, w, h, labels, *, accent=None, gap=None, subs=None, hub_idx=None,
                vertical=False, hub_accent=None):
     """Convenience over node()+connector(): a CHAIN of nodes joined by arrows (a pipeline).

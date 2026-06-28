@@ -568,9 +568,11 @@ full signatures + behaviour are in its docstrings). The helper set, by job:
   `equation_png` (LaTeX-style math) / `eq_par` (inline).
 - **East-Asian (CJK) accents:** `seal` (vermilion chop/印章 stamp — the one red accent on an ink deck),
   `cjk_numeral` (壹·贰·叁 section markers vs Latin "01"). See `references/east-asian-aesthetic.md`.
-- **Diagram kit (general flowcharts):** `node` + `connector` (+ `flow_chain`) — any architecture from
-  rounded-rect/pill/circle nodes + connectors with **stroke semantics** (solid=required · dashed=optional
-  · dotted=feedback), exactly one `hub`; `diagram_island` (bright figure panel on a dark slide);
+- **Diagram kit (general flowcharts):** `node` + `connector` / `flow_chain` (straight links between adjacent nodes) + `elbow_connector` /
+  `loop_path` (elbow / U-shaped paths for a feedback/repeat loop, a return, or a link between NON-adjacent
+  nodes) — any architecture from rounded-rect/pill/circle nodes with **stroke semantics** (solid=required
+  · dashed=optional · dotted=feedback) and **shape semantics** (straight=adjacent flow · elbow/U=loop /
+  return / non-adjacent), exactly one `hub`; `diagram_island` (bright figure panel on a dark slide);
   `concentric_rings` (nested framework); `step_list` (numbered process, vertical/horizontal).
 - **Editorial / consulting furniture:** `insight_banner` (so-what bar), `bilingual_lockup` (CJK+tracked
   Latin headline), `highlight` (inline `<k>keyword</k>` recolour), `ghost_numeral` (faint watermark
@@ -729,7 +731,7 @@ A few rules that matter (see `references/design-principles.md`):
   (vertical), with symmetric outer margins (an intentional asymmetric split still keeps equal
   outer margins, and don't strand a narrow element in a too-wide column); point
   `arrow(direction=…)` the way the flow moves (down/up between stacked boxes), keep repeated
-  connectors evenly spaced and adjacent blocks **gapped (never touching)**, and centre a lone
+  connectors evenly spaced and adjacent blocks **gapped with a clearly visible gap (≥ ~⅓ `GUTTER`, never near-touching)** — derive the stack pitch from `rows`/`vstack`, not a pitch that barely clears the block height — and centre a lone
   glyph in its box; place figures/plates with **`picture(..., fit="contain")`** so the subject
   is never cropped (`cover` only for edge-tolerant texture).
 - **Never hand-pick a y for an auto-growing block — measure or anchor.** A bottom callout
@@ -917,6 +919,12 @@ critic round — full rationale in `references/design-principles.md`):
   seam where content meets a bottom callout/bar:** a *wide* bar grazing the cards above it by even
   a sliver clips their rounded corners — there must be a visible gap, so size content to the
   callout's returned top minus a `GUTTER` (reserve its space before sizing content, don't add it last).
+- **Adjacent / stacked blocks — a VISIBLE gap, not a sliver** — between any two same-axis blocks
+  (stacked panels, side-by-side cards, pipeline nodes) the gap must read clearly: **≥ ~0.12in
+  (~⅓ `GUTTER`)**. A ~0.02in seam (three panels at pitch 1.04 with height 1.02) reads as touching —
+  a gap far smaller than the slide's own margins looks cramped even though nothing overlaps. Cause:
+  a hand-picked pitch that nearly equals the block height. Fix: **derive the pitch from the region** —
+  `rows(n)` / `vstack(..., bottom=…)` — so the gap is set by construction, never `block_h + 0.02`.
 - **Bar labels sit ON the bar** — for any track+fill row (percentile / share / progress / "want vs
   have"), the value/percent label is **vertically centered on the bar's centerline**, not floating
   above or below it, and doesn't overlap the track. Use `meter_bar()` (which centers the value by

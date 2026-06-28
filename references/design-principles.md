@@ -356,7 +356,12 @@ ask of each element "is there suitable, balanced space around it, or is it crowd
 - **Mind the gaps between blocks — even and intentional.** Equal gaps between repeated/adjacent
   blocks (cards, chips, rows, list items) — derive them from `columns`/`rows`/`vstack`, never
   eyeball; one gap visibly larger than its neighbours reads as careless. Adjacent blocks always need
-  a **visible, consistent** gap — never touching, never wildly uneven.
+  a **visible, consistent** gap — never touching *and never a near-zero sliver*: make it read clearly
+  (**≥ ~0.12in, ~⅓ `GUTTER`**), never wildly uneven. A gap far smaller than the slide's own margins
+  reads as cramped even when nothing technically overlaps — the classic cause is a stacked pitch
+  hand-picked just above the block height (panels at pitch 1.04, height 1.02 → a ~0.02in seam).
+  **Derive the stack pitch from the region** (`rows(n)` / `vstack(..., bottom=…)`), never `block_h`
+  plus a tiny nudge.
 - **Group by proximity — the gap BETWEEN groups must be clearly larger than the gaps WITHIN a group.**
   When you stack labelled groups (a stat's label + big value + caption, then the next stat; or stacked
   cards), the space *separating the groups* has to beat the space *inside* a group — otherwise one
@@ -393,7 +398,13 @@ ask of each element "is there suitable, balanced space around it, or is it crowd
   rhythm (dense data slide → airy one-idea slide → a quote/whitespace breath), and a rotating *visual
   protagonist* (a chart slide, then a diagram slide, then a photo slide, then a big-number slide). Not
   random variety for its own sake — a paced sequence so the audience feels movement. (Section dividers
-  are the natural beat markers.)
+  are the natural beat markers.) Vary the
+  **component FORMAT too, not only the protagonist** — the rounded-card / panel grid is the reflex that
+  makes a deck read as one template, so don't default every content slide to it; rotate in a timeline, a
+  big-numeral / stat row, a pull-quote, a chart, a diagram island, a 2×2 / quadrant, a step-list, a
+  before/after, or a comparison table as the content invites. If more than ~40–50% of the content slides
+  are the same block type, that's over-reliance — rework the weakest into the form their content wants
+  (taste, not a quota).
 - **Avoid the AI-slop tells.** A handful of choices instantly read as machine-generated filler — name
   and avoid them: full-screen rainbow / mesh / purple-to-blue gradients; emoji in titles or as bullet
   markers; ✅/🚀/🔥 decoration; the rounded-card-with-a-left-border-accent everywhere; three-near-identical
@@ -462,7 +473,15 @@ ask of each element "is there suitable, balanced space around it, or is it crowd
   (problem→solution, before→after read top-to-bottom) → a **down/up** arrow
   (`deckkit.arrow(..., direction="down")`). A sideways arrow squeezed between two
   stacked boxes is a classic wrong-direction tell — match every connector's orientation to
-  the layout, and check it in the render.
+  the layout, and check it in the render.- **Connector SHAPE carries meaning — straight for adjacent flow, elbow/U for everything else.**
+  A **straight** arrow means *direct flow between two adjacent nodes*. A **feedback/repeat loop, a
+  return path, or any link between NON-adjacent nodes** is an **elbow / U-shaped** connector — build it
+  with `deckkit.elbow_connector(pts=…)` (orthogonal segments) or `deckkit.loop_path(x_from, x_to,
+  y_row, y_drop)` (the U that drops under a row for a "repeat" arrow), never a straight line shoved
+  diagonally across the boxes in between. The classic miss is drawing a *repeat/feedback* edge as a
+  straight arrow: it reads as forward flow and crosses other shapes. So **stroke** encodes the link's
+  *kind* (solid=required · dashed=optional · dotted=feedback) and **shape** encodes its *path*
+  (straight=adjacent · elbow/U=loop / return / non-adjacent).
 - **Equal spacing for repeated elements.** A row or column of blocks joined by connectors
   must have **equal gaps and equal connector lengths** — hand-placing each block's `x`/`y` and
   each arrow produces visibly unequal spacing (one arrow longer than the next), which reads
@@ -472,7 +491,9 @@ ask of each element "is there suitable, balanced space around it, or is it crowd
   gap** rather than eyeballing positions. And **adjacent blocks always need a visible gap
   between them — never let two boxes touch** (a stacked pair whose bottom edge meets the next
   box's top edge reads as one merged block); leave a clear `gap` (the `rows`/`columns` helpers
-  enforce one). A zero-gap seam between blocks is a common hand-placed-coordinate bug.
+  enforce one). A zero- *or near-zero* (e.g. ~0.02in) gap seam between blocks is a common hand-placed-coordinate
+  bug — derive the pitch from `rows`/`vstack` rather than picking a pitch (1.04) that barely clears
+  the block height (1.02).
 - **Image `fit`: never crop the subject out.** `fit="cover"` fills a frame by cropping the
   overflow — fine for edge-tolerant texture, atmosphere, or backgrounds, but it will happily
   slice off the very thing the image is *about* (the subject cut down to a sliver; a key
