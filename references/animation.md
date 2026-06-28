@@ -182,12 +182,15 @@ record of your design choices, not a checklist quota. A comment block at the top
 - **Keep the static scaffold visible.** Titles, axes, frames, the always-true
   context are drawn outside steps — only the *new* information animates in.
 - **Start from an EMPTY content area — reveal from the *first* item.** Put **every** content beat inside
-  a `step()`, the first one included, so the slide opens showing only the persistent scaffold (title /
-  frame / axes) — the content area **empty** — and then fills in click by click. The anti-pattern to
-  avoid: drawing the first bullet / stage / card **outside** a step so it is already on screen when the
-  slide appears — then the build doesn't *start empty*, it starts half-shown and only the later items
-  animate. (Keep the always-true scaffold minimal; everything that is *content to be paced* begins hidden
-  and accumulates.)
+  a `step()`, the first one included, so the slide opens showing only the persistent scaffold and then
+  fills in click by click. **"Empty" means the MAIN CONTENT region only — the page title / header (and
+  any frame, axes, or always-true context) STAYS VISIBLE from the start and is never animated in.**
+  Animating a title/header is itself a flaw — it must be readable the instant the slide appears; the
+  reveal starts from the first *content* beat, not the title. The anti-pattern to avoid: drawing the
+  first bullet / stage / card **outside** a step so it is already on screen when the slide appears — then
+  the *content* doesn't *start empty*, it starts half-shown and only the later items animate. (Keep the
+  always-true scaffold — title + minimal frame — visible; everything that is *content to be paced* begins
+  hidden and accumulates under it.)
 - **Builds add up, they don't replace.** Prefer entrance builds that accumulate the
   full picture; avoid exit animations that make earlier content vanish unless you
   have a strong reason.
