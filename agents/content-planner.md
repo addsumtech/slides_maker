@@ -561,8 +561,9 @@ builder can execute. Include:
    | # | Takeaway | Content (terse) | Visual source | Layout | Motion | Image (proposed?) |
 
    Be specific in *Layout* (e.g. "`columns(2)`: left = 3 bullets, right = Fig. 3 whole,
-   takeaway bar full-width below") and in *Motion* (e.g. "build: reveal the 4 pipeline
-   stages on click, then the takeaway" — or "—" for none). In *Image*, mark the slides where
+   takeaway bar full-width below") and in *Motion* — every slide carries **`build: <what reveals, in
+   order>`** OR **`static: <why this slide is plain>`** (a reason, matching the motion manifest + gate
+   (e); never a bare "—", which the gate and critic reject as an unreasoned static). In *Image*, mark the slides where
    your design sense calls for a plate (in the deck's art-direction), or "—". In *Layout*, for any
    non-obvious slide also name the **runner-up form** the winner beat: `<form> — beats <alt> because
    <reason>` (from `form-selection.md`) — design is choosing, not matching.
@@ -589,7 +590,8 @@ builder can execute. Include:
      **style-matched icon family is planned** (labelling the categories/steps); a category-rich deck that
      ships **zero icons is not ready**. *(Bounded by the rule-of-thumb + ≤5/group; match the style to any
      preset — never excluded by topic; never one-per-bullet or on an evidence slide. See `icons.md`.)*
-   - (g) **Diverse components** — the Form-ledger gate (b) must show you **actively varied the form**
+   - (g) **Diverse components** — *this is the Form-ledger diversity gate (b), surfaced here as the third
+     design must (not a second, separate check)*: that gate must show you **actively varied the form**
      (timeline / stat / quote / chart / diagram / table / big-number…), not one card grid repeated.
    If any of (a)–(g) fails, fix it before the Step-3 checkpoint.
    **Plus two CONTENT-TRIGGERED checks (conditional — only when that content type is present; NOT a

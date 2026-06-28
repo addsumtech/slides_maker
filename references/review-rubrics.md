@@ -114,10 +114,10 @@ Score each dimension; cite specific slides.
    visible gap** (never touching — *and not a near-zero sliver*, which reads as cramped even when
    nothing technically overlaps)? Is a **hub / converge / fan-out node centred on the set it links**
    (a many→one or hub-and-spoke node on the geometric centre of its members, with symmetric connectors)
-   — not eyeballed to one member's level (`span_center`/`mid`)? When a line mixes **font sizes** (a big
-   number + its unit/suffix, a value + a small label), do they **share one baseline** — sitting on the
-   same horizon, not the small run floating above/below (one `text()` box auto-aligns runs;
-   `_set_baseline` to centre; never top-align separate boxes)? Is each **feedback / repeat / return or non-adjacent link an
+   — not eyeballed to one member's level (`span_center`/`mid`)? When a line mixes **font sizes**, do they read
+   as one line — a **unit/suffix on the shared baseline** (one `text()` box; correct, as `stat_row`), a
+   **comparison prefix/arrow vertically centred** on the hero number (`_set_baseline`/`change_stat`) —
+   with the flaw being a *sunk* prefix or a small run *floating* from top-aligned separate boxes? Is each **feedback / repeat / return or non-adjacent link an
    elbow / U-shape** (`elbow_connector` / `loop_path`), not a **straight** arrow (straight = direct
    adjacent flow only; a straight "repeat" edge reads as forward flow and crosses other shapes)?
    Does **every shape of a native diagram sit inside its

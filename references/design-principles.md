@@ -224,16 +224,17 @@ design a slide and when you critique one. Each maps onto rules this skill alread
     "the middle block isn't on the middle line of the two it joins") reads as broken. Compute it:
     `hub_y = span_center([(y1,h1),(y2,h2),…], hub_h)` and anchor connectors with `mid(y, y+h)` — the
     converge/fan analogue of `spaced_centers` for evenly-spaced rows. (deckkit, SKILL §4.)
-  - **Mixed font sizes on ONE line must share a baseline — don't let the small text float.** A big + a
-    small size on the same visual line (a big number + its **unit/suffix**, a value + a small label, an
-    inline emphasis word, "≈4×" + "faster") must sit on **one line, one horizon** — not with the small
-    run hovering above or below the big one. Do it right: **put them as multiple runs in ONE `text()`
-    box** — PowerPoint baseline-aligns runs of different sizes automatically (the small run sits on the
-    big run's baseline). If you instead want the small run **vertically centred** on the big one (not on
-    the baseline), shift it with `deckkit._set_baseline(run, pct)` (as `change_stat` / `stat_row` already
-    do). Only if the sizes are unavoidably in **separate boxes**, align them on a **shared baseline** —
-    anchor both `BOTTOM` (or compute y so the baselines meet); **never top-align different sizes** (the
-    smaller one then floats high). The tell to fix: a unit/suffix/label not sitting on the big figure's line.
+  - **Mixed font sizes on ONE line must read as one line — share a baseline, or deliberately centre.** A
+    big + a small size on the same visual line must sit on **one horizon**, not float. Which is right
+    depends on *what the small part is*: a **unit / suffix** (dB · % · × · ms) correctly sits on the
+    **shared baseline** — put both as runs in **ONE `text()` box** and PowerPoint baseline-aligns them
+    (this is exactly what `stat_row` does; **don't centre a unit**). A **comparison prefix / arrow / small
+    operand beside a hero number** (a `before → after`, "<10% → ≈40%") instead reads better **vertically
+    centred** on the big value — shift the small run with `deckkit._set_baseline(run, pct)` (this is what
+    `change_stat` does). The tells to fix: a comparison prefix/arrow **sunk low** below the big value's
+    optical centre, or mixed sizes that **don't share a consistent line** — most often from top-aligning
+    **separate boxes** (never top-align different sizes; if they must be separate, anchor both `BOTTOM`
+    so the baselines meet).
 - **Proximity — group related items; separate unrelated ones with space.** What belongs together sits
   together; the gap *between* groups is clearly larger than the gap *within* one, so the eye parses the
   structure without lines or boxes. (See "Group by proximity — inter-group gap ≥ ~1.5–2× intra-group".)

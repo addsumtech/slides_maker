@@ -158,8 +158,13 @@ Do not just skim for the first few obvious issues. Run these passes:
        (or view a thumbnail) — focal element, title, and supporting blocks must still separate into
        distinct hierarchy levels; if it blurs to an even grey field, there's no hierarchy (flag it).
        **Does the look fit the purpose?** crisp/corporate status vs sober defense vs bold pitch vs warm
-       lecture (`design-by-purpose.md`) — a mismatch is a real finding. **If a style example was given,
-       judge fidelity to it** (palette, type, chrome, motifs, density read as one family).
+       lecture (`design-by-purpose.md`) — a mismatch is a real finding. **If a style example was given, judge
+       fidelity to it PER THE CHOSEN MIMIC MODE** (the plan records it; `style-analysis.md`): **Mode A
+       (reproduce)** → it should read as the **same family** (palette, type, chrome, motifs, density);
+       **Mode B (borrow & restyle)** → the example's **components / layout / signature motif** should
+       clearly echo, but the **palette, mood, and type are deliberately the user's own topic** — a
+       *different* palette there is correct, **not** a fidelity miss; flag only if the borrowed components/
+       structure don't show through, or the result is a literal recolour rather than a restyle.
      - **Owns these named-flaw checks (below):** OVERLAP (collision vs layering); layout/balance/footer/
        margins; **large empty region / oversized filler block**; diagram arrow-direction & even spacing;
        the full typography set (too-small, **font hierarchy: content < title**, box-alignment, mixed-size
@@ -348,10 +353,13 @@ Do not just skim for the first few obvious issues. Run these passes:
      hugs the bottom or top edge, or sits a few px below the vertical middle, reads as a
      centring bug. Check the bottom takeaway bars especially.
    - **Mixed-size inline baseline-misalignment:** a line that pairs a small part with a much bigger
-     emphasised one (a `before → after` stat, a label + hero number, a unit beside a big figure) where
-     the small part/arrow **sits low on the shared baseline**, dropped below the big value's vertical
-     centre (e.g. "<10% → **≈40%**" with the arrow sunk). They should be **vertically centred** on the
-     same line (fix: baseline-shift the small run / `deckkit.change_stat`, or sizes kept close).
+     emphasised one — a `before → after` stat, a `≈`/arrow prefix, a small operand beside a hero number —
+     where the small part/arrow **sits low on the shared baseline**, dropped below the big value's vertical
+     centre (e.g. "<10% → **≈40%**" with the arrow sunk): vertically centre the small run (fix:
+     `deckkit.change_stat` / `_set_baseline`, or keep the sizes close). **Exception — a unit / suffix**
+     (dB · % · × · ms) **correctly sits on the shared baseline** (as `stat_row` ships it); **don't flag
+     that.** Do flag mixed sizes that **don't share a consistent line** (e.g. top-aligned separate boxes
+     leaving the small run floating high).
    - **Uneven spacing around an operator/symbol:** an inline `=`, `≈`, `→`, `+`, `×`, `:` with a
      **bigger gap on one side than the other** (e.g. `A  =B`, or an arrow closer to its left than its
      right) — it must be equidistant. Common cause on CJK decks: a **full-width space (`　`) on one
