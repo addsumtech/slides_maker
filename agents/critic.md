@@ -413,6 +413,17 @@ Do not just skim for the first few obvious issues. Run these passes:
      is decoration, flag it. Well-used icons (one coherent family, semantic fit, colour-coded per
      category, good contrast, small, consistent, each doing a job) are *good* — don't flag those. Emoji or ✅/🚀/🔥 used
      **as** icons is the AI-slop tell above, not an icon.
+   - **Register-/preset-inappropriate icon PRESENCE (design-fits-purpose, item 11):** the checks above
+     judge icons-done-badly when present; this one judges *whether they belong at all*. On a
+     photography/restraint or East-Asian/heritage preset (`editorial_paper`, `luxury_dark`,
+     `museum_memorial`, `editorial_report`, `ink_wash`, `eastern_traditional`) or a `brutalist` deck,
+     the **presence** of an SVG icon family is itself a finding regardless of execution — expect the
+     native device (seal/`cjk_numeral`, photography, `year_badge`/duotone, heavy rules). Likewise on a
+     **sober, figure-dominated academic deck** (defense, conference/results, lab meeting, job-talk deep
+     results), decorative icons are a finding even when well-crafted; the fix is to remove them and let
+     the figure / numbered structure carry the slide. On `blueprint`, a **filled** icon (vs line) is a
+     finding; an icon on **every KPI/stat tile** or on an **evidence slide** is a finding
+     (`icons.md` Scenario fit).
    - **Build/meta annotation leaked onto a slide (BLOCKER):** any text describing *how the slide was
      made* rather than its content — e.g. "（可点击编辑的原生图表）"/"(editable native chart)",
      "(AI-generated)"/"AI 生成", "(placeholder)"/"占位", "(draft)"/"草稿", "(sample/示例)", "generated

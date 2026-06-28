@@ -58,6 +58,9 @@ for i,(head,body) in enumerate(items):                    # 壹·贰·叁 marker
 ## Pitfalls (what makes a CJK deck look machine-translated)
 - Latin "01/02" numerals, a sans-everywhere look, pure white bg + pure black text, a SaaS rounded-card
   grid, a generic blue accent, emoji — all read as a Western template with Chinese text poured in.
+- **SVG line-icon card grids (Tabler/Lucide/etc.) are the same translated-Western-template tell** —
+  banning emoji does not license a line-icon family. Use `deckkit.seal` + `cjk_numeral` for
+  section/wayfinding marks, never a line-icon grid (see `icons.md` Scenario fit).
 - **Tofu / wrong fallback:** always set `EAFONT`/`EADISPLAY` (a CJK face) or glyphs render as boxes;
   the lint flags CJK-without-EA-font. Emphasise with weight/colour, not italic (CJK has no true italic).
 - Over-decorating: more than one seal, a busy ink-wash behind text, or filling the 留白 kills the calm.

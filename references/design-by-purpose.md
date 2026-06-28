@@ -32,7 +32,7 @@ None are mandatory: pick what the *content* needs, and keep it **restrained for 
 | Event · culture · marketing | `memphis` / `risograph` | `offset_shadow` stickers, bold motifs, designed plots |
 | Editorial / brand / portfolio / report | `editorial_paper` / `editorial_report` | `editorial_header`, `big_numeral`, `photo_triptych`, `cover`/`colophon`, `sources_page` |
 | **Read-alone** leave-behind / reference / pre-read *(no speaker)* | match the host purpose's look | **fuller, self-contained text** (NOT few-words), `sources_page` + appendix, `table` for dense reference, scannable headings/titles; judge by **completeness**, not slide count |
-| **Fixed surface** — poster / single-slide infographic | `swiss`/`editorial` (or bold for an event) | one canvas → **multi-region hierarchy** (`columns`/`rows`/`quadrant`), larger headline, designed plots; build at the real size with `blank_deck(w_in, h_in)` |
+| **Fixed surface** — poster / single-slide infographic | `swiss`/`editorial` (or bold for an event) | one canvas → **multi-region hierarchy** (`columns`/`rows`/`quadrant`), larger headline, designed plots; build at the real size with `blank_deck(w_in, h_in)`. *Icons:* at most small region-header marks to guide the reading path + diagram-entity marks, never competing with the focal result, always text-labelled (no speaker) |
 
 **Delivery mode flexes density** (`design-principles.md` "Delivery mode"): a **read-alone /
 reference / poster** deck is read without a speaker, so it legitimately carries **more text per
@@ -89,6 +89,8 @@ polish. Calm, low-chrome, content-forward.
   short equation. Show the *actual* figures/tables from your work, annotated.
 - **Layout/chrome:** minimal footer, small section kicker, generous whitespace. No
   title slide theatrics. Date/iteration tag helps (it's a progress checkpoint).
+- **Icons:** default **off** (low-chrome working deck) — at most a repeated-entity mark inside the
+  recurring architecture diagram; a status chip beats a status icon (see `icons.md` Scenario fit).
 - **Signature:** "what changed since last time" framing; open questions slide.
 
 ## Work status update to a manager / team
@@ -114,6 +116,8 @@ an official template or venue norms, those override this section.
   Every results figure gets a legend + a one-line takeaway.
 - **Layout/chrome:** large type (titles ~28pt+, body ~18pt+), big figures, lots of
   air. Respect the venue's aspect ratio (16:9 vs 4:3) and any title-slide format.
+- **Icons:** default **off** — only diagram-entity shorthand or one consistent wayfinding mark on a
+  long arc (skip it if numeral wayfinding already does the job); never on a results/figure slide.
 - **Signature:** a clear arc (problem → method → result → so-what); a memorable
   closing message slide named "Conclusion".
 
@@ -136,6 +140,8 @@ of a room holding people far from your subfield.
   section dividers that re-show the through-line, a "you are here" on the program map.
   A personal title slide (name, the program's one-line thesis, current affiliation). Keep
   backup slides for Q&A.
+- **Icons:** restrained — concentrate a wayfinding mark on the agenda spine / dividers and per-theme
+  colour-coded marks on the program-map; **none** on the deep-result slides (the figure carries those).
 - **Signature:** open by establishing *who you are as a scholar* and the program's unifying
   thesis; descend into 2-3 deep results; **close on a concrete future-program roadmap** (named
   5-7-year projects) and return to the opening big picture — never end on "Thanks".
@@ -172,7 +178,9 @@ modern, visual; the product itself is the hero.
 - **Real assets first:** the **real logo / product render / UI screenshot** is the credibility
   anchor — show it, never a generated look-alike or a generic box. If a needed brand/product asset is
   missing, **ask for it** rather than fake it (recognizability hierarchy in `image-generation.md`).
-  Same for any competitor/customer logos: real or omit.
+  Same for any competitor/customer logos: real or omit — **never** a recolored monochrome `simple:`
+  glyph on a proof/partner slide (the icon mechanism recolors it to the deck accent → a wrong-colour
+  look-alike); `simple:` is for naming a tool inline, not for a credibility logo (`icons.md`).
 
 ## Thesis defense
 Formal, rigorous, complete; an expert committee that will probe. Serious and
@@ -183,6 +191,9 @@ authoritative, but still legible as a talk.
   of text. Plan for backup/appendix slides for Q&A.
 - **Layout/chrome:** clear numbered structure, consistent section dividers, visible
   contribution framing. Institution colours if the user has them.
+- **Icons:** default **none** — an expert reads a cute icon on a contributions/method slide as
+  padding (a credibility hit). Carry structure with the numbered contributions (`big_numeral`) and
+  typographic hierarchy; the only defensible icon is a neutral entity mark inside a diagram node.
 - **Signature:** contributions slide stated plainly; limitations + future work owned
   honestly; an appendix of defensible detail.
 
@@ -195,6 +206,10 @@ progressive; a little warmth is welcome.
   diagrams beat dense definitions.
 - **Layout/chrome:** clear learning-objective framing, consistent "concept → example →
   check" rhythm, generous figures, summary/recap slide.
+- **Icons:** a strong fit here — reuse one mark per section / concept-stage (concept → example →
+  check) and give each distinct concept its own colour-coded category icon; but never an icon on every
+  bullet, and **split** a long list across slides rather than carding it (`icons.md` jobs 1–3 + the ≤5
+  short-list guard).
 - **Signature:** an objectives slide up front and a recap at the end; questions to the
   audience built in.
 
@@ -211,6 +226,9 @@ tabs. Like a conference talk but built for a *shared-screen* medium, not a proje
 - **Layout/chrome:** keep key content in the central "safe area" (edges can be cropped by
   meeting UI/inset cameras); avoid bottom-edge content where a control bar or captions
   sit. Simple, frequent slide changes hold attention better than one dense slide.
+- **Icons:** if used, favour a slightly **heavier** weight + a `disc=` tile so they read when the
+  slide is shrunk in a video window, and keep them inside the central safe area (not near cropped
+  edges/bottom); a wayfinding/agenda mark helps late joiners — per-card decoration competes for pixels.
 - **Signature:** more, lighter slides to keep momentum; build/animate where step-by-step
   pacing genuinely helps a remote audience you can't read (by design sense, not a quota — see
   `references/animation.md`); explicit "ask in the chat" prompts; a visible agenda so late

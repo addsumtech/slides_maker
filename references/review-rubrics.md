@@ -138,7 +138,11 @@ Score each dimension; cite specific slides.
    judge the five quality marks (`icons.md`) — semantic fit, one coherent family, per-category
    colour-coding, contrast, and consistent size/position; a mismatched zoo, one-per-bullet clutter, or a
    decorative icon that does no job (fails the rule-of-thumb — *what is this / does / why pay attention*)
-   is a finding. **Corner-rounding** (rounded vs hard-edged) is a deck-wide language — a square-cornered
+   is a finding. **Also judge scenario fit (Scenario fit, `icons.md`):** an SVG icon family on a
+   photography/restraint, East-Asian/heritage, or brutalist preset — or icons used decoratively on a
+   sober, figure-dominated academic deck (defense / conference-results / lab meeting) — is a finding
+   **even if the five marks pass** (design-fits-purpose, item 11); the deck should use that preset's
+   native device (seal/`cjk_numeral`, photography + serif numerals, `year_badge`/duotone, heavy rules). **Corner-rounding** (rounded vs hard-edged) is a deck-wide language — a square-cornered
    image inside rounded cards (or vice-versa) is a consistency finding.
    **Deck-level rhythm (scan all slides together):** across a *long* deck, does the visual
    protagonist and density vary (a paced sequence — chart / diagram / photo / big-number / quote,

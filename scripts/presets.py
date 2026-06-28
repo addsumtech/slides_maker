@@ -68,7 +68,9 @@ PRESETS = {
         "ea": "Noto Serif CJK SC", "ea_display": "Songti SC",
         "surface": "serif display headlines + caps kicker over a hairline; a designed chart per slide "
                    "(designed_charts) with single-highlight + takeaway_rail; per-slide source line; "
-                   "roman-numeral section dividers; atmospheric orb image ONLY on dividers.",
+                   "roman-numeral section dividers; atmospheric orb image ONLY on dividers. "
+                   "ICONS: not the device here (dark gravitas + designed charts) — at most one "
+                   "restrained monochrome wayfinding mark on dividers; no icon-card grids.",
         "image_prompt": "a single abstract glowing orb / eclipse on near-black, restrained, mood-shifted "
                         "per chapter, no text — for section dividers only",
         "when": "market/landscape reports, investor/strategy briefings, thought-leadership.",
@@ -159,7 +161,9 @@ PRESETS = {
                    "gradient_rule along the top; a SEMANTIC 5-colour contract (navy=structure, "
                    "emerald=good/opportunity, gold=brand/highlight, coral=risk/gap, slate=neutral) "
                    "propagated to headings/badges/table-columns/chart-series; scorecard tiles, "
-                   "step_list roadmaps, quadrant/matrix; a small CONFIDENTIAL footer status_stamp.",
+                   "step_list roadmaps, quadrant/matrix; a small CONFIDENTIAL footer status_stamp. "
+                   "ICONS: heroicons-solid or tabler, sparingly, for the few section/category marks + "
+                   "status flags ONLY (not on every KPI tile) — alongside, not on top of, the furniture.",
         "image_prompt": "clean corporate abstract, soft navy and emerald geometric, lots of white "
                         "space, professional, no text",
         "when": "strategy proposals, board/exec readouts, consulting, business cases.",

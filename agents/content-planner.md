@@ -443,7 +443,18 @@ not by counting:
   once in the plan; the user approves it with the images.
 - **Icons — propose ONE coherent family where an icon does a real JOB, never as decoration (the jobs +
   rule-of-thumb + five quality marks in `references/icons.md`).** An icon must **reduce cognitive load,
-  not decorate** — scan each slide for the recurring jobs it can do: **(1)** a reused **section /
+  not decorate**. **FIRST run the two scenario gates (`icons.md` "Scenario fit").** *Gate 1 (register):*
+  on sober/figure-dominated decks (thesis/committee defense, conference/results, lab meeting, job-talk
+  deep-result slides) do **NOT** scan for icon jobs by default — plan icons only where a structural job
+  (#1 long-arc wayfinding, #3 diagram colour-coding, #4 repeated-entity shorthand) clearly earns it,
+  never #6 to fill a results/method slide (enlarge the figure or add whitespace), and never an icon on
+  every KPI/scorecard/stat tile (use `scorecard`/status chips). *Gate 2 (preset):* on `ink_wash` /
+  `eastern_traditional` / `luxury_dark` / `museum_memorial` / `editorial_paper` / `brutalist` /
+  `editorial_report` do **NOT** plan an SVG icon family — plan the **native device** instead (`seal` +
+  `cjk_numeral`; photography + serif numerals; `year_badge` + `duotone`; heavy rules + big numerals).
+  Only plan an icon family on icon-native presets (`dark_tech`, `consulting`, `glassmorphism`,
+  `blueprint` [line-only], `swiss` [sparing/mono], `memphis`/`riso` [bold/flattened]).
+  Where the gates allow icons, scan each slide for the recurring jobs it can do: **(1)** a reused **section /
   wayfinding** mark, **(2)** a **short list of distinct attributes** turned into scannable cards, **(3)**
   **category separation / hierarchy** (colour-coded), **(4)** a **repeated entity** (dataset, user,
   model) given one shorthand icon, **(5)** **guiding reading order** in a step sequence, **(6)**
