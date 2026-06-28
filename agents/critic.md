@@ -63,9 +63,10 @@ something.
     revealing in is a *flaw* (a title must be visible immediately; a paragraph is unreadable while it
     streams in) — call it out. And a **self-read / read-alone deck with appear builds** is wrong (no one
     clicks it) — it should be static.
-  Calibrate: a title/section/one-idea slide *should* be static (don't flag those), most
-  individual slides stay static, and "designed to be static for reason X" is a valid answer —
-  you're enforcing that the decision was *made*, not that everything animates. If no manifest
+  Calibrate: a title/section/one-idea slide *should* be static (don't flag those), and "designed to
+  be static for reason X" is a valid answer — you're enforcing that the decision was *made by taste*,
+  not that everything animates and not that most slides stay static (there is **no quota in either
+  direction**). If no manifest
   is given, note that and judge candidates from the pixels alone.
 - The deck's **purpose + audience** (e.g. "MICCAI oral, 10 min, broad audience").
 - Optionally the **source material** (paper/README/data). If given, **verify claims,
@@ -114,6 +115,9 @@ Do not just skim for the first few obvious issues. Run these passes:
        actual emphasis** — e.g. a comparison table foregrounding the authors' comparison (baseline vs
        the proposed thing), not a distracting one? A faithful-looking but mis-emphasised result means
        the author didn't fully understand the material — flag it.
+     - *Currency:* if the deck makes **time-bound / falsifiable** claims (a "latest / current", a count,
+       a ranking, a dated event), does it carry an **as-of date** (the planner requires one), and has
+       nothing dated silently gone stale (last year's figure shown as this year's)?
      - *Audience at the read distance* (back of the room for a talk; a shrunk window for a webinar;
        arm's-length/print for a read-alone/poster): can they read every figure and verify every
        headline? Do they know the jargon yet? For a **read-alone** deck (no speaker), is each slide
@@ -123,7 +127,8 @@ Do not just skim for the first few obvious issues. Run these passes:
        not "Take home") **in the deck's language** (a native 结论/总结 on a Chinese deck is correct).
      - **Owns these named-flaw checks (below):** factual fidelity; source-figure faithfulness;
        generated-image factual correctness + topical relevance; real brand/product-asset credibility;
-       build/meta-annotation leaks; formula transcription/derivation fidelity; kicker-echoes-title;
+       build/meta-annotation leaks; formula transcription/derivation fidelity; claim currency (as-of
+       date); kicker-echoes-title;
        language consistency; text-density vs delivery mode. *(Rubric items 1, 3, 6, 8, 10, 12a-fidelity.)*
    - **LENS B · Design, layout & legibility — *how it looks.***
      - **Diagnose layout with the C.R.A.P. lens** (`design-principles.md` "The C.R.A.P. framework") — the

@@ -27,7 +27,9 @@ lift in perceived quality. Map a small, deliberate set of faces to roles:
 - **Body** — bullets, captions, labels: a clean, legible workhorse.
 - **Mono** — code, filenames, page-markers / chrome: `MONO`.
 
-Keep it to **2–3 families** (more looks chaotic), pair for contrast (a characterful display over a
+Keep it to **≤2 *text* families (display + body)** — a **mono** and a **CJK/EA** face are *functional*
+roles, not extra style fonts, so they don't count against this (more genuine display/body styles looks
+chaotic), pair for contrast (a characterful display over a
 neutral body), and apply the mapping **consistently on every slide**. `deckkit` supports it directly:
 set `DISPLAY` (title face) alongside `FONT` (body) — `title_bar`/`editorial_header` use `DISPLAY`
 for the title automatically; body stays on `FONT`; code/chrome on `MONO`. Per-run control: the 6th

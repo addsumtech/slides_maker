@@ -85,8 +85,8 @@ Collect all four answers in **one cheap interview turn**. Match the host UI:
 Direct-question fallback:
 ```text
 Before I build, please give me:
-1. Template/brand: existing template, new template, or design a clean one?
-2. Purpose/audience/time: who is this for and how long?
+1. Template/brand: existing template, new template, design a clean one, or generate one with an image tool?
+2. Purpose/audience/time: who is this for, how long — and is it presented live, screen-shared, or sent to self-read? Main goal: inform, support a decision, or inspire action?
 3. Source material: paper, deck, doc, figures, repo, or none?
 4. Style/language: minimal, corporate, academic, playful, 中文/English/etc.?
 ```

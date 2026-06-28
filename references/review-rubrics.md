@@ -128,6 +128,17 @@ Score each dimension; cite specific slides.
    rule rather than jamming against it? Does colour vary with intent,
    or is everything one monotone accent? Is the closing slide named for its purpose
    ("Conclusion" for a talk, "Next steps" for a status update — not a generic "Take home")?
+   Diagnose layout with the **C.R.A.P. lens** (Contrast · Repetition · Alignment · Proximity — the
+   shared vocabulary the planner designs to and the critic names). **Semantic colour contract:** if the
+   deck binds a hue to a concept (`semantic-color-contract.md`), the same concept keeps **one hue
+   deck-wide** and no hue carries two meanings — a drifting or double-booked binding is a real finding.
+   **N-identical units:** many units identical except an index (replicas / layers / ensemble / team
+   members) shown as *N duplicate blocks* is a flaw — expect the **pattern** (2–3 representatives + `…`
+   + a `×N` badge, shared detail said once; `repeat_row`). **Icons:** when the deck uses SVG icons,
+   judge the five quality marks (`icons.md`) — semantic fit, one coherent family, per-category
+   colour-coding, contrast, and consistent size/position; a mismatched zoo or one-per-bullet clutter is
+   a finding. **Corner-rounding** (rounded vs hard-edged) is a deck-wide language — a square-cornered
+   image inside rounded cards (or vice-versa) is a consistency finding.
    **Deck-level rhythm (scan all slides together):** across a *long* deck, does the visual
    protagonist and density vary (a paced sequence — chart / diagram / photo / big-number / quote,
    dense slides spaced by airy ones), or does it read as **one template repeated**? A long deck where
@@ -147,6 +158,9 @@ Score each dimension; cite specific slides.
    assets count too:** on a slide about a real brand/product/UI, a generated look-alike, an
    invented logo, or a default-blue box standing in for the real asset (rather than the real
    logo/screenshot or an honest placeholder) is a fidelity blocker — use the real asset or ask the user.
+   **Currency:** if the deck makes time-bound / falsifiable claims (a "latest / current", a count, a
+   ranking, a dated event), confirm it carries an **as-of date** (as the planner requires) and that
+   nothing dated has silently gone stale (last year's figure presented as this year's is a finding).
 11. **Design fits the purpose.** Does the look match the deck's purpose and audience —
    crisp/corporate for a status update, sober/formal for a defense, bold/on-brand for a
    product pitch, warm/clear for teaching (see `references/design-by-purpose.md`)? A
@@ -175,7 +189,10 @@ Score each dimension; cite specific slides.
    even several *consecutive* built slides — that's a legitimate design choice; "plain,
    because nothing to pace here" is a valid answer, and so is "built, because this beat needed
    guiding." A cluttered *final built* state is a layout finding, not a motion one — animation
-   never excuses it.
+   never excuses it. **Embedded animated GIF (a result that IS motion):** the render / print / edit
+   view all show **frame 0**, so its first frame must be representative (not blank / black / loading),
+   placed whole and undistorted (`contain`); a frozen-frame stand-in for a time-resolved / cine / demo
+   result throws away the point — a real finding.
 12a. **Generated images — taste & purpose** *(when the deck uses AI-generated plates).*
    Judge them the same way as motion: by design intent, not by count. Flag **thoughtless**
    use — a plate added for flourish, to fill space, or that competes with the slide's text;
@@ -355,6 +372,9 @@ oriented. *They want:* impact, value, and what you're asking of them.
 - **Weight heavily:** lead with the outcome/recommendation (not the method);
   business/clinical framing of "so what"; minimal jargon (or defined plainly); high
   polish and consistency; every slide answers "why do I care?"; a clear ask/next step.
+  **Prefer a full-sentence *action title*** (a conclusion, not a topic label) + a one-line
+  implication bar (`insight_banner`) over a noun-phrase heading — for an exec/board readout a
+  topic-label title that buries the so-what is a real finding.
 - **Relax:** algorithmic detail, equations (cut or move to appendix).
 - **Red flags:** method-first ordering; unexplained acronyms; raw technical plots
   with no business interpretation; no recommendation/ask.

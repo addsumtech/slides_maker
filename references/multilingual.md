@@ -70,7 +70,8 @@ text, plus a clean **Latin** face for the numbers/English inside CJK runs:
   (e.g. "≈40%", "1/5–1/7") render in a crisp Latin face, not the CJK fallback.
 
 A tasteful, portable Chinese pairing: **PingFang SC** (titles) + **Hiragino Sans GB** or **Noto
-Sans CJK SC** (body) + **Helvetica Neue/Arial** (Latin). Keep it to 2–3 families and apply it on
+Sans CJK SC** (body) + **Helvetica Neue/Arial** (Latin). Keep it to **≤2 text families (display +
+body)** — the Latin and mono faces are functional roles, not extra style fonts — and apply it on
 every slide. *(Avoid setting everything to "Arial" — it has no CJK glyphs, so the whole deck rides
 an uncontrolled single fallback, the flat one-font look to fix.)*
 

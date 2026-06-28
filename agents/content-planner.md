@@ -290,10 +290,13 @@ the planner's layout lens — for each slide, decide and record how the layout s
   chip/band/card) to set the key element apart. The slide must pass the squint test — if it blurs to an
   even grey field, there's no contrast; push the hero or cut.
 - **Repetition (DECK-LEVEL — yours to own)** — the **design language you set in Step A** (palette, type
-  pairing, title chrome, footer, divider treatment, signature motif, wayfinding numeral) must **repeat on
-  every slide** — only you see the whole deck, so *you* enforce it. Call out in the plan the elements that
-  must repeat, so the deck reads as one designed thing, not slide-by-slide invention. (Repeat the
-  *system*; vary the *protagonist* — the deck-rhythm check above.)
+  pairing, title chrome, footer, divider treatment, signature motif, wayfinding numeral, **corner-rounding**)
+  must **repeat on every slide** — only you see the whole deck, so *you* enforce it. Call out in the plan
+  the elements that must repeat, so the deck reads as one designed thing, not slide-by-slide invention.
+  (Repeat the *system*; vary the *protagonist* — the deck-rhythm check above.) Two specifics the critic
+  enforces, so spec them up front: **a kicker/eyebrow adds the section/category label — it must NOT repeat
+  a word the title already leads with**; and **corner-rounding is one deck-wide language** — match image /
+  figure corners to the cards/preset (rounded cards ⇒ rounded images, hard-edged ⇒ hard), don't mix.
 - **Alignment** — every element on a shared grid, placed by a measured primitive
   (`columns`/`rows`/`vstack`/`content_band`), never an eyeballed coordinate; edges line up across the
   slide (and ideally slide-to-slide — title baseline, content top, footer all in the same place).
