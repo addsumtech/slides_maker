@@ -236,13 +236,14 @@ A good icon slide gets ALL of these right; getting one wrong is what makes icons
    the card** (`icon_card`, the default) or **centred at the top** of a step/pipeline card — every
    sibling the **same family, size, colour-treatment, and position**. Size small, to ~heading scale
    (**≈0.32–0.5 in**), and **never larger than the title** (font-hierarchy). One odd icon breaks it.
-5. **Design style matches the deck — or use none.** Outline icons for a clean/minimal/technical deck
-   (the dark "glowing line" look pairs thin line icons); filled/solid only for a bold **corporate**
-   deck (`consulting`, `glassmorphism`). For a bold **print/zine** register (`brutalist`, `risograph`,
-   `memphis`) the bold comes from heavy rules, halftone duotone and motif sets — **not** the icon
-   library; use icons there only if flattened to the print palette. And some presets take **no** icon
-   family at all (see *Scenario fit* — Gate 2). The icon weight should echo the deck's type/stroke;
-   don't mix outline and filled across siblings.
+5. **Design style MATCHES the deck — match the weight/treatment, never exclude by topic or preset.**
+   Outline icons for a clean/minimal/technical deck (the dark "glowing line" look pairs thin line icons);
+   filled/solid for a bold **corporate** deck (`consulting`, `glassmorphism`). For a bold **print/zine**
+   register (`brutalist`, `risograph`, `memphis`) the bold comes from heavy rules, halftone duotone and
+   motif sets — so flatten icons to the print palette and keep them structural. **No preset is icon-free
+   by rule** — every preset *can* carry icons; pick the family's weight/treatment to fit the register (a
+   heavy icon feels cheap on a delicate deck; see *Scenario fit — B) Style*). The icon weight should echo
+   the deck's type/stroke; don't mix outline and filled across siblings.
 
 ## Placement patterns + the craft
 - **Upper-left corner of a card** (`icon_card`) — default and strongest: icon top-left (bare or in a

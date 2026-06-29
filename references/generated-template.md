@@ -67,9 +67,10 @@ later in the normal interview):
   **Hand the user the single `file://…` link** to open in a browser and *see what each style is actually
   like* — then pick (each card has a **Pick** button that copies a paste-back line). This mirrors the
   **direction gate** (`collaborative-mode.md`) but for the generated-template look.
-  - The HTML mockups are **native token-set previews** — they show each style's **palette / mood / type /
-    motif** (the *direction*); the real generated imagery is produced **only for the chosen style** and
-    gated at the 🔴 hero checkpoint below. **Don't generate 3–4 real hero images just for the picker** —
+  - The HTML mockups are **native token-set previews** — they convey each style's **palette / type / mood**
+    (the *direction*); the style's **motifs and the actual generated imagery** are NOT in the mockup —
+    those land **only for the chosen style** at the 🔴 hero checkpoint below. **Don't generate 3–4 real
+    hero images just for the picker** —
     that's slow and wasteful; mock them natively in the HTML, generate only the winner for real.
   - **If the user likes none of them**, the page's **"D — describe your own"** path applies, plus two
     escapes you offer in one line:

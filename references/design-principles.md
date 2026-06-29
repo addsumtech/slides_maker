@@ -314,8 +314,10 @@ ask of each element "is there suitable, balanced space around it, or is it crowd
   text.** Text must never crowd a block's edge — keep a comfortable inset between a label/title/body and
   the boundary of its chip, callout, card, or box (deckkit `chip`/`callout` bake it in; for boxes you
   draw yourself, inset ~0.15 in, more at a titled card's top). Cramped text touching an edge/corner reads
-  as unfinished **even when nothing overflows** — `lint_deck.py` now flags it (**TEXT PADDING**), so run
-  it and check the render. Two recurring sub-cases it now catches and you must design against:
+  as unfinished **even when nothing overflows** — `lint_deck.py` flags the highest-frequency case (**TEXT
+  PADDING**: text cramped against / past the card's BOTTOM, against the rendered text) plus the two
+  sub-cases below; **left/right/top insets you eyeball in the render** (the lint stays bottom-only to avoid
+  false positives on centred labels). Two recurring sub-cases the lint also catches and you must design against:
   - **Size a chip / pill / label to its text — never the reverse.** A label wider or taller than its
     pill (e.g. "Boston Dynamics" in a 0.8-in chip) wrap-crams against the edges. Size the chip to the
     longest label (or use fewer/shorter labels, or a plain `· `-separated line instead of pills). (**CHIP/LABEL TOO SMALL**.)

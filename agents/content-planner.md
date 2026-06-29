@@ -474,6 +474,12 @@ not by counting:
   real colours+fonts on native blocks) — *not* a generated look-alike or a default-blue box. If that
   asset is needed but you don't have it, **flag it as an open question for the user to supply**, rather
   than planning a fake or silent placeholder. (Recognizability hierarchy in `image-generation.md`.)
+  - **Single-entity deck → plan PERSISTENT brand chrome.** When the deck's subject *is* one
+    organisation/product (a pitch, product/launch, company or stakeholder readout, an institution's
+    report), plan the entity's **real logo in a fixed corner on every content slide** (`deckkit.logo`,
+    a consistent position/size — it reads as chrome) so the deck looks finished. **Skip it** for a
+    multi-organisation deck (survey / landscape / review) or a neutral-academic talk (name entities
+    inline), and **don't double** a logo a provided/registered template already carries. (image-generation.md.)
 - **Image style is part of the design — align it with topic, content, AND the deck's template/
   style.** Decide **one coherent art-direction for the whole deck** (palette, medium, mood, level of
   realism, motif, where to leave calm space for text) that fits *this* purpose and subject **and

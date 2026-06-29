@@ -503,17 +503,29 @@ Do not just skim for the first few obvious issues. Run these passes:
      (a header here, a corner image there). Flag the inconsistency; a content plate belongs in the
      content area (full-bleed / side panel / inline figure), and repeated full-bleed imagery belongs on
      dividers, applied consistently.
-   - **Flat opaque blocks on a rich/image background (a "pasted-on" tell):** when content sits on a
-     textured / photographic / 3D / generated-plate background, **fully opaque** cards/panels read as
-     stuck on top rather than part of the scene. Expect **semi-transparent (frosted)** blocks — the
-     background showing through ~30–45% with a subtle rim (`glass_card` / `box(grad=…α)`), one treatment
-     deck-wide, the tint harmonising with the palette. Flag flat opaque panels on a lush background — AND
-     conversely flag a frosted block whose **text drops below 4.5:1** over a bright patch (the fix is more
-     α / a stronger tint there, not removing the transparency). (On a plain/flat background, opaque is fine.)
+   - **Persistent brand chrome on a single-entity deck:** when the deck's subject IS one organisation /
+     product (pitch · product/launch · company/stakeholder readout · an institution's report), expect the
+     entity's **real logo in a fixed corner on every content slide** (consistent position + size — chrome
+     that never jumps). Flag a single-entity deck **missing** the persistent mark, or a logo that **jumps
+     corner/size** across slides. *(Not for a multi-organisation deck — survey / landscape / review — or a
+     neutral-academic talk, where house branding is noise; and don't double a logo a template already
+     carries. The mark must be the **real** one or an honest placeholder, never faked.)* (image-generation.md.)
+   - **Flat opaque blocks — or a flat single-colour CANVAS — on a rich/image background (a "pasted-on" /
+     half-finished tell):** when content sits on a textured / photographic / 3D / generated-plate
+     background, **fully opaque** cards/panels read as stuck on top rather than part of the scene. Expect
+     **semi-transparent (frosted)** blocks — the background showing through ~30–45% with a subtle rim
+     (`glass_card` / `box(grad=…α)`), one treatment deck-wide, the tint harmonising with the palette. Flag
+     flat opaque panels on a lush background — AND conversely a frosted block whose **text drops below
+     4.5:1** over a bright patch (fix: more α / a stronger tint, not removing the transparency). **For a
+     generated-template deck also check the CANVAS:** every interior content slide should carry the
+     **shallow low-contrast background** of the template — a flat single-colour content page among textured
+     ones (a missing content background) is the #1 half-finished tell; flag it. (On a plain/flat-by-design
+     background, opaque blocks are fine.)
    - **Deck rhythm (a deck-level check — scan all the thumbnails together):** across a **long** deck,
      do the **visual protagonist and density vary** (chart → diagram → photo → big-number → quote, with
      dense slides paced by airy ones), or does it read as **one template repeated**? Flag a long deck
      where nearly every slide has the same shape. (This is a *structural-variety* check, not a frequency
+     quota — a short deck or a deliberately uniform series is fine.)
    - **Over-reliance on ONE format (flag mid-deck, not only when *every* slide matches):** separate from
      the structural-variety check above — count how many **content** slides resolve to the *same block
      type*, and if **more than ~40–50%** are the same layout (most often the rounded-card / panel /
@@ -523,7 +535,6 @@ Do not just skim for the first few obvious issues. Run these passes:
      `step_list`, `before_after`, or comparison table — whichever the content wants). Calibrate by
      content, not a hard quota: a deck whose material genuinely is N parallel card-sets is fine — but a
      card grid used because it's the default, on half the deck, is a real finding.
-     quota — a short deck or a deliberately uniform series is fine.)
    - **Text** *(scope by delivery mode):* for a **presented** deck — excessive density / wall of
      bullets, full sentences the audience must read while the speaker talks, text that merely
      duplicates narration. For a **read-alone** deck (leave-behind / reference / poster) there is no

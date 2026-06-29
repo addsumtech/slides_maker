@@ -103,9 +103,13 @@ Score each dimension; cite specific slides.
    text crossing out of its box) — is **unacceptable** (major; a covered footer / unreadable overlap is
    a blocker). *Intentional layering* — a child fully inside its parent (label on a card, scrim on a
    photo, glow under a glass card) — is **not** overlap and is fine. Also check **interior padding** (no
-   text crammed against a card edge), **chips sized to their text** (no label overrunning its pill), no
-   **wrapped value/label colliding** with the line below, and **no node sitting ON a connector line**
-   (links route in the gaps) — `lint_deck.py` flags these against the rendered text.
+   text crammed against a card edge), **chips sized to their text** (no label overrunning its pill), and no
+   **wrapped value/label colliding** with the line below — `lint_deck.py` flags these against the rendered
+   text. *(Visual-only, not lint-backed)* **no node sitting ON a connector line** — links route in the gaps.
+   On a **rich / image / 3D / generated-plate** background, are content **blocks semi-transparent (frosted)**
+   (~30–45% show-through, one treatment deck-wide) rather than flat opaque, and does **every interior slide
+   carry the shallow background** (not a flat single colour) — text still ≥4.5:1? (Opaque is fine on a
+   plain/flat-by-design background.)
    On **split layouts** (text + figure, two-up, image + caption), are the left and right
    regions — *and the white margins flanking them* — the **same width** (or a clearly
    intentional asymmetric split with equal outer margins)? Unequal panels, a lopsided
@@ -172,8 +176,7 @@ Score each dimension; cite specific slides.
    quota — a short or deliberately-uniform deck is fine). **Also flag over-reliance on ONE component
    format** (most often the rounded-card / panel grid) on **>~40–50% of content slides** — even
    *mid-deck*, not only when literally every slide matches; the fix is to rework the weakest into the
-   format their content wants (a timeline, big-numeral, quote, chart, 2×2, step-list, table). For
-   **CS/AI methods**, is the procedure shown as an `algorithm_block` (numbered pseudocode) rather than
+   format their content wants (a timeline, big-numeral, quote, chart, 2×2, step-list, table). For **any algorithmic procedure** (a training loop, optimizer, derivation, or protocol-as-computation — any field), is it shown as an `algorithm_block` (numbered pseudocode) rather than
    buried in prose; and for a **principle/mechanism**, is there a labelled schematic diagram *beside* the
    statement rather than text alone? (See `references/form-selection.md`.)
 10. **Factual fidelity** *(when source material exists — the check every system fails).*
@@ -190,6 +193,10 @@ Score each dimension; cite specific slides.
    assets count too:** on a slide about a real brand/product/UI, a generated look-alike, an
    invented logo, or a default-blue box standing in for the real asset (rather than the real
    logo/screenshot or an honest placeholder) is a fidelity blocker — use the real asset or ask the user.
+   **Persistent brand chrome:** a **single-entity** deck (pitch / product / company readout / institution
+   report) should carry the entity's real logo in a **fixed corner on every content slide** (consistent
+   position + size) — flag it missing, or a mark that jumps around. (Not for multi-org / neutral-academic
+   decks; don't double a template's own branding.)
    **Currency:** if the deck makes time-bound / falsifiable claims (a "latest / current", a count, a
    ranking, a dated event), confirm it carries an **as-of date** (as the planner requires) and that
    nothing dated has silently gone stale (last year's figure presented as this year's is a finding).
