@@ -169,17 +169,17 @@ def ray_diagram(path, f=1.6, do=3.4, accent="#76B900", dark=True, font="Helvetic
     ax.plot([0,0],[-1.6,1.6], color=ink, lw=2)                       # lens
     ax.annotate("", (0,1.55),(0,1.75), arrowprops=dict(arrowstyle="<->",color=ink,lw=1.4))
     for s in (1,-1):                                                 # foci & 2F
-        for k,(m,lab) in enumerate([(f,"F"),(2*f,"2F")]):
+        for m,lab in [(f,"F"),(2*f,"2F")]:
             ax.plot(s*m,0,"o",color=MUT,ms=3)
             ax.text(s*m,-0.22, lab, color=MUT, fontsize=11, ha="center")
     ho=1.1                                                            # object (upright arrow, left)
     ax.add_patch(FancyArrowPatch((-do,0),(-do,ho),color=ink,lw=2.4,arrowstyle="-|>",mutation_scale=16))
     di = 1/(1/f - 1/do); hi = -ho*di/do                              # thin-lens eqn (the real geometry)
     ax.add_patch(FancyArrowPatch((di,0),(di,hi),color=accent,lw=2.4,arrowstyle="-|>",mutation_scale=16))
-    # three principal rays
-    ax.plot([-do,0,di],[ho,ho,hi], color=accent, lw=1.3)             # parallel → through F'
-    ax.plot([-do,di],[ho,hi], color=MUT, lw=1.1)                     # through optical centre
-    ax.plot([-do,0,di],[ho,0,0 if abs(f)>1e6 else hi], color=MUT, lw=1.1, alpha=0)  # (through F) optional
+    # three principal rays — all meet at the image tip (di, hi)
+    ax.plot([-do,0,di],[ho,ho,hi], color=accent, lw=1.3)             # 1) parallel in → through far focus F'
+    ax.plot([-do,di],[ho,hi], color=MUT, lw=1.1)                     # 2) straight through the optical centre
+    ax.plot([-do,0,di],[ho,hi,hi], color=MUT, lw=1.1)               # 3) through near focus F → parallel out
     ax.text(-do,ho+0.18,"object",color=ink,fontsize=12,ha="center")
     ax.text(di,hi-0.22,"real image",color=accent,fontsize=12,ha="center")
     ax.set_xlim(-do-0.6, di+0.8); ax.set_ylim(-1.8,1.9); save(fig, path)
@@ -188,7 +188,8 @@ def ray_diagram(path, f=1.6, do=3.4, accent="#76B900", dark=True, font="Helvetic
 a real image is **inverted** and on the far side; the parallel ray bends through the far focus.
 
 ### Electric circuit
-Prefer **`schemdraw`** if available (publication-grade, trivial):
+Prefer **`schemdraw`** if available (publication-grade, trivial) — *its element API varies by version,
+so check `schemdraw.elements` for the exact names*:
 ```python
 import schemdraw, schemdraw.elements as e
 d = schemdraw.Drawing()
