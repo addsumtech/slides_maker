@@ -174,9 +174,11 @@ the direction gate** (the look is already decided). The four:
      hero/divider illustration, then reproduced natively so every content block fits it — for a vivid,
      designed deck (launch, event, brand, playful pitch) where a clean default isn't enough. **Follow
      `references/generated-template.md`**: a mini-interview *now* (scenario + brand colours; **seed from
-     its Style library**, offering the 3–4 best-fit as options + "describe your own" + "a reference" +
-     **"let the image tool pick the style"** — the auto path where you don't choose a named style and
-     instead let the model/image tool decide the best-fit look from the scenario) →
+     its Style library**, and **show the 3–4 best-fit styles as a VISUAL HTML preview — a "style gate"**
+     (`archetypes_html.py`, one `file://` link, each style across a few representative pages) so the user
+     *sees* the candidate looks before any image is generated, then picks — plus "describe your own" / "a
+     reference" / **"let the image tool pick the style"** (auto: you select & name the best-fit, or give a
+     mood-led prompt). Mock the candidates natively; generate only the chosen style's hero for real) →
      generate the text-free hero with a calm title zone (**no key** — native imagegen in Codex, else
      `generate_images_codex.py`; see `image-generation.md`) → **derive a matching `style.py`** (palette
      via `deckkit.palette_from_image`, motif + component helpers, so native blocks match) → render the

@@ -56,22 +56,30 @@ layers**, and the split is what keeps it editable *and* on-brand:
 Run a short extra interview *now* — only what the *look* needs (purpose/audience/source come
 later in the normal interview):
 - **Scenario / topic** — what the deck is for (e.g. "summer music festival annual handbook").
-- **Offer the style as a choice — list common styles AND an auto option.** Present, as selectable
-  options:
-  - **The 3–4 best-fit named styles** for this scenario from the **Style library** at the end of this
-    file (e.g. **Memphis** from the Sugar Rush sample, or Swiss, Art Deco, Vaporwave, Editorial,
-    Risograph, Glassmorphism, Blueprint…). A named style gives the image tool a strong, coherent target
-    *and* a ready palette + motif + type starting point for the native `style.py` — so it's the
-    recommended path when the user has a leaning.
-  - **"Describe your own look"** (a vibe, era, reference in words) and **"I'll provide a reference
-    image / brand."**
-  - **"Let the image tool pick the style" (auto)** — the user has no preference and wants you to
-    choose. Don't generate from a *cold* prompt even here: from the **scenario + brand colours**, YOU
-    select the best-fit library style (name it back to the user so the choice is legible — "for a summer
-    festival I'll go Memphis/pop"), or, when the scenario is distinctive, let the image tool decide by
-    giving it a richer *mood-led* prompt (scenario + energy + palette + "design a cohesive visual
-    identity") rather than a named style. Either way the 🔴 sample-slide checkpoint below is where the
-    user approves or redirects — so "auto" still gets a real look to react to, never a blind commit.
+- **Show the candidate styles as a VISUAL HTML preview, not just a text list — a "style gate"
+  (recommended).** Don't make the user choose a style from words alone. Pick the **3–4 best-fit named
+  styles** for this scenario from the **Style library** at the end of this file (e.g. **Memphis** from
+  the Sugar Rush sample, or Swiss, Art Deco, Vaporwave, Editorial, Risograph, Glassmorphism, Blueprint…),
+  **tailor each to the topic + brand colours**, turn each into a **token-set** (palette + portable fonts +
+  motif/accent — pull from `presets.py` when the style is a named preset, else author it), and render all
+  of them into **ONE self-contained HTML** with **`scripts/archetypes_html.py styles.json out.html
+  "Deck Title"`** — each style shown across a few representative pages (cover · content · diagram · data).
+  **Hand the user the single `file://…` link** to open in a browser and *see what each style is actually
+  like* — then pick (each card has a **Pick** button that copies a paste-back line). This mirrors the
+  **direction gate** (`collaborative-mode.md`) but for the generated-template look.
+  - The HTML mockups are **native token-set previews** — they show each style's **palette / mood / type /
+    motif** (the *direction*); the real generated imagery is produced **only for the chosen style** and
+    gated at the 🔴 hero checkpoint below. **Don't generate 3–4 real hero images just for the picker** —
+    that's slow and wasteful; mock them natively in the HTML, generate only the winner for real.
+  - **If the user likes none of them**, the page's **"D — describe your own"** path applies, plus two
+    escapes you offer in one line:
+    - **"Let the image tool decide (auto)"** — from **scenario + brand colours** YOU select the best-fit
+      library style and **name it back** ("for a summer festival I'll go Memphis/pop"), or, when the
+      scenario is distinctive, give the model a richer **mood-led** prompt (scenario + energy + palette +
+      "design a cohesive visual identity") instead of a named style.
+    - **"Describe your own / provide a reference"** — synthesize a fresh token-set from their words /
+      reference image / brand and **regenerate the HTML** so they still pick from something they can *see*.
+  Either way, "auto" and "own" still resolve to a concrete look the user reacts to — never a blind commit.
 - **Vibe / mood (if describing your own)** — the aesthetic in words: energy (calm↔loud), era,
   references. Use this to pick/blend a library style or to author a fresh one.
 - **Brand colours / must-haves** — any fixed colours, a logo, words that must appear.
