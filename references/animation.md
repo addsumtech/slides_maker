@@ -111,7 +111,27 @@ build there would add nothing. Never animate for flourish, for "consistency" wit
 built slides, or to fill a slide that feels plain — fix the layout instead.
 
 ## Animated GIFs / looping results — insert the GIF, don't freeze it
-When a result is a GIF, **embed the GIF itself** — never extract one frame and show that. When the
+
+### When a GIF earns its place — the decision (use it SPARINGLY)
+**Core principle: a GIF only when *motion, progression, or interaction conveys information a static
+image cannot.* Animation should REVEAL information, not decorate.** Most slides are static — a GIF is an
+occasional, high-value exception (a deck usually has **zero or a few**, never one per slide; if every
+other slide wants motion, you're decorating, not revealing). Run the checklist before planning one:
+*does something actually change over time · is that change the point · would a single frame lose it ·
+does the motion simplify rather than distract?* If any answer is no, use a static figure.
+- **Strong fits** (motion is the content): **temporal/physical phenomena** (fluid flow, weather, a
+  biological process, cine/4D/time-resolved), a **step-by-step process / algorithm / optimisation run**,
+  a **progressive transformation** (reconstruction, image enhancement, deformation, a simulation
+  converging), a **rotating 3D / spatial** structure (molecule, CAD, anatomy), a **UI / software / app
+  demo loop**, a **cause-and-effect** sim (physics, circuit, mechanism), a **hidden internal mechanism**
+  (packet flow, scheduling). Before/after and progressive data-viz (cluster/graph build-up) are weaker
+  fits — a GIF helps only if the *transition itself* matters; else a static two-panel or final frame wins.
+- **Keep STATIC** (a GIF adds nothing or distracts): concepts, relationships, **architecture / org
+  diagrams**, **tables, equations**, **simple charts**, definitions, bullet lists, long text. Rule of
+  thumb — static for *concepts / relationships / structure / data values*; GIF for *motion / process /
+  interaction / temporal evolution / transformation / cause-and-effect / spatial exploration*.
+
+When the result IS motion, **embed the GIF itself** — never extract one frame and show that. When the
 *motion is the result*, a static frame discards what you're showing. This comes up across **every
 kind of deck**: a product/UI demo loop or app walkthrough (pitch / product), an interaction or
 worked animation (teaching), a looping data viz, a 4D / time-resolved / cine sequence, an

@@ -446,7 +446,23 @@ not by counting:
     segmentation-over-time, a sim) → embed the **GIF**, not a frozen frame (`deckkit.gif()`; it loops
     in PowerPoint/Keynote). Comes up in **any deck** — a product/UI demo (pitch), an interaction
     (teaching), a data-viz loop, a simulation or time-resolved/cine result (research/status); whenever
-    the user provides a loop, it's often the slide's result. Plan it like a figure: often the slide's **hero** (large, assertion title + a one-line *"what to watch"*
+    the user provides a loop, it's often the slide's result.
+  - **No GIF provided, but the content IS inherently motion/process/transformation? Consider GENERATING
+    one — but think SMART and SPARING.** The default visual is **static**; promote a slide to a generated
+    GIF only when it clears the **"When a GIF earns its place" rubric in `animation.md`** — *motion
+    conveys what a single frame can't*, the change is the point, one frame would lose it. Strong fits you
+    can compute: a **process / algorithm / optimisation** unfolding, a **reconstruction / enhancement /
+    simulation converging**, a **transformation or deformation**, **temporal/cine/4D** evolution, a
+    **rotating 3D** structure, a **progressive data-viz** building up. When it fits, plan
+    **`deckkit.make_gif`** (compute the frames in the asset step exactly like a static figure) → **`gif`**,
+    and record the *frame recipe + fps* in the visual/Motion column so the actor builds it directly. **Two
+    hard guardrails:** **(1) Fidelity** — the GIF must animate a **REAL computable change the source
+    supports** (the data/algorithm genuinely evolves); never fabricate motion or dynamics the source
+    doesn't have — that's the same line as inventing a result, and it must be flagged like any
+    forward/derived content. **(2) Restraint** — a deck carries **zero or a few** purposeful GIFs, never
+    one per slide; if several slides want motion, you're decorating, not revealing — keep the rest static
+    (concepts, relationships, architecture, tables, equations, simple charts, text never become GIFs).
+  - **Either way — provided OR generated — plan the GIF like a figure:** often the slide's **hero** (large, assertion title + a one-line *"what to watch"*
     caption), or in a `columns(2)` split **beside its quant panel** (metrics/scorecard/legend); two
     GIFs side-by-side for before/after. **Flag the first frame:** a GIF shows its *first frame* in the
     render, in a PDF/print export, and in edit view (it animates only in slideshow), so the plan must

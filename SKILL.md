@@ -738,7 +738,13 @@ A few rules that matter (see `references/design-principles.md`):
     a fidelity check (you can read each cell's numbers and confirm they're faithful). When the
     user provides the *original* source images/PDFs, prefer working from those.
 - **Animated results (GIF / looping animations) → insert the GIF itself with `deckkit.gif()`**,
-  never reduce it to a single frame. It embeds the real animated GIF (every frame preserved;
+  never reduce it to a single frame. **No GIF provided but the content IS inherently motion (a process /
+  algorithm / optimisation, a reconstruction or simulation converging, a transformation, cine/4D, a
+  rotating 3D)? You MAY generate one — `deckkit.make_gif` from frames you compute in the asset step —
+  but SPARINGLY:** only when motion conveys what a static frame can't (the "When a GIF earns its place"
+  rubric in `animation.md`; the content-planner makes the call), a deck carries **zero-to-a-few**
+  purposeful GIFs (never one per slide — keep concepts/tables/equations/charts static), and a generated
+  GIF must animate a **real computable change, never fabricated motion**. It embeds the real animated GIF (every frame preserved;
   PowerPoint and Keynote **loop it in slideshow**), places it **whole and undistorted** (`contain` —
   a square cine clip is never stretched), sets alt-text, and **warns on a heavy file** (a big cine GIF
   bloats the `.pptx` and stutters live) or a single-frame still. For time-resolved / 4D / cine /
