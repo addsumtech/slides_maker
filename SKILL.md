@@ -188,10 +188,11 @@ the direction gate** (the look is already decided). The four:
      > subject/composition/lighting/motifs — then re-derive `style.py`; don't just recolour the old plate.
      > A minor palette/contrast tweak is a `style.py`-only change. See `references/generated-template.md`.)*
      Then **the look is decided — SKIP the 3-direction gate**, finish the interview normally, and build
-     (image cover/dividers with native title on top; content built natively in `style.py` — **content
-     blocks DEFAULT to a frosted / semi-transparent treatment so they fit the generated background, not
-     flat opaque panels**, text kept ≥4.5:1; see `generated-template.md`); save the confirmed template to
-     the registry.
+     (image cover/dividers with native title on top; content built natively in `style.py`. **🔴 MUST,
+     not a default: every INTERIOR page carries a shallow non-flat background AND its content blocks are
+     FROSTED / semi-transparent (~30–45% see-through, α≈0.55–0.72), never flat opaque panels — only the
+     end pages (the cover + section dividers) carry full-strength imagery; interior content pages don't**; text kept ≥4.5:1; see
+     `generated-template.md`); save the confirmed template to the registry.
 
    **Never hardcode or assume a specific institution's template.** This skill ships
    to anyone: a brand-new user has an *empty* registry, so they see only generic choices
@@ -1002,7 +1003,14 @@ critic round — full rationale in `references/design-principles.md`):
   hand-roll a dots+captions row with a per-caption edge clamp.
 - **Diagrams** — arrows point the way the flow moves (down/up between stacked boxes); adjacent
   blocks have a visible gap (never touching); a lone glyph/icon optically centred (ASCII, not
-  full-width, for a centred mark on a CJK deck).
+  full-width, for a centred mark on a CJK deck). **A connector / loop label (e.g. a feedback-loop's
+  「修订」/「retry」) sits in the OPEN GAP next to the line — offset above a horizontal segment, or beside a
+  vertical one, with clearance — NOT inside an opaque chip that STANDS OUT over the line.** A chip that
+  contrasts with the slide reads as a band-aid; route the label into clear space so the line and text
+  simply don't collide. (On a PLAIN background a label that knocks the line OUT in the background colour —
+  the line breaking cleanly for the text — is fine; the band-aid is a *visible* chip, e.g. a white block on
+  a coloured/textured slide. Add a subtle *translucent* backing only if the label must cross a busy area.
+  See `references/design-principles.md` → "Connector labels".)
 - **Block colours** — in a sequence of chips/cards/stages, every block is a **distinct,
   deliberately-contrasted hue**: no two adjacent blocks share a colour, and **no neutral gray
   sits in the sequence as if it were a category** (use `palette()` — it warns on both). A vivid

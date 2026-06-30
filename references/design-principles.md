@@ -115,6 +115,21 @@ A bare image grid means nothing to the audience. State what the rows/columns are
 (write your own caption — don't rely on tiny in-figure text), and add a one-line
 TAKEAWAY of what to notice. Without the takeaway, the audience guesses.
 
+## A placed figure's OWN text must stay LEGIBLE at the displayed size
+Sizing a figure is not just "make it fit the slot" — **its internal text (axis labels, tick numbers,
+legend, in-plot annotations) has to be READABLE at the size it's actually shown.** The recurring
+failure is shrinking a figure to fit a small cell until its labels are an illegible blur — the figure
+then proves nothing. When the internal text won't read at the placed size, fix it in this order:
+**(1)** give the figure more room — fewer figures per slide, a bigger cell, or its own slide (and for a
+**SOURCE** figure whose own labels won't read, more room *plus* big NATIVE labels overlaid so the audience
+reads those instead of the original's tiny ones — you can't regenerate a source figure; see "Use the
+source's own figures — whole"); **(2)** for a figure *YOU* generate (never a source figure — don't redraw
+those), **regenerate the plot bigger-but-simpler** — larger fonts, thicker lines, fewer series/ticks/words,
+so it stays legible when small (author a thumbnail-destined chart at thumbnail scale, not a dense full-size
+plot crammed down); **(3)** only if neither is possible, drop the in-figure text and carry it in a native
+caption (per "Every figure gets a legend"). **Check it in the render**: zoom each figure and confirm a back-of-room
+viewer could read its labels — if you can't read them on screen, neither can they.
+
 ## Designed plots — pick the chart per argument
 When *you* make the chart (data, no source figure), don't default to a bar every time: choose the
 chart **type that fits the argument** (part-to-whole → donut; before→after gap → dumbbell; two-point
@@ -224,6 +239,27 @@ design a slide and when you critique one. Each maps onto rules this skill alread
     "the middle block isn't on the middle line of the two it joins") reads as broken. Compute it:
     `hub_y = span_center([(y1,h1),(y2,h2),…], hub_h)` and anchor connectors with `mid(y, y+h)` — the
     converge/fan analogue of `spaced_centers` for evenly-spaced rows. (deckkit, SKILL §4.)
+  - **A two-part layout shares ONE centre line.** When a slide splits into two regions — left↔right
+    (a table + a side panel, a figure + its text, before↔after) or top↕bottom — the two parts are
+    **centred on the same axis**, not corner-pinned. Equal-height parts share top & bottom edges;
+    **unequal-height parts are centred so their mid-lines coincide** — a free-floating shorter block is
+    centred to the taller one's midline rather than top-pinned (which would leave the taller one hanging
+    below). The classic tell: a short table top-aligned with a taller side card. Fix by centring the
+    shorter part on the taller's midline (`y_short = y_tall + (h_tall − h_short)/2`), or size both from
+    `columns`/`content_band` so their centres coincide by construction. **Guard — top-align (NOT
+    midline-centre) when the two parts are parallel top-down *reading* content** (two text columns, two
+    bulleted lists, or two panels both starting under a shared header): the eye scans each from the top,
+    so they share a TOP edge; centring would strand the shorter one with dead space above it. Mid-line
+    centring is for self-contained *blocks* whose vertical position is free — a table, figure, card,
+    stat, or image — set against a taller neighbour.
+  - **Text inside a box sits in its true (geometric) middle — anchor, don't y-nudge.** A badge / chip /
+    pill / selected-marker / button / callout label must be **vertically centred** in its box: give the
+    textbox the box's FULL `(x, y, w, h)` and `anchor=MSO_ANCHOR.MIDDLE` (deckkit `chip`/`meter_bar`/
+    `scorecard` do this), **never a hand-picked `y + small offset` with a shorter height** — that y-nudge
+    is exactly what makes a label read "a bit high / a bit low" in its block. Re-check every badge/pill in
+    the render: the text block's centre must match the box's centre. (The one exception is a run that must
+    share a BASELINE with a separate sibling box — a number beside its unit — anchored BOTTOM per the next
+    bullet, not MIDDLE; never a licence to top-pin or y-nudge a self-contained label.)
   - **Mixed font sizes on ONE line must read as one line — share a baseline, or deliberately centre.** A
     big + a small size on the same visual line must sit on **one horizon**, not float. Which is right
     depends on *what the small part is*: a **unit / suffix** (dB · % · × · ms) correctly sits on the
@@ -536,7 +572,9 @@ ask of each element "is there suitable, balanced space around it, or is it crowd
   e.g. "encode", "train", "merge") should be *centred on the arrow* and sit just above it
   with a small gap — not drifting to one side or floating far above. `deckkit.arrow_label`
   does this for you (places the label at the arrow's centre x, a hair above its top), so
-  every connector label stays consistent.
+  every connector label stays consistent. Keep the label in the OPEN GAP beside the line, never wrapped in
+  an opaque chip that stands out over it — only a subtle translucent backing if it must cross a busy area
+  (a background-colour knockout on a plain slide is fine). Mirrors the SKILL §5 render self-check.
 - **Connectors point the way the flow actually moves.** An arrow between two blocks must run
   *along the flow*. Side-by-side blocks → a left/right arrow; **vertically stacked** blocks
   (problem→solution, before→after read top-to-bottom) → a **down/up** arrow

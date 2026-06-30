@@ -41,9 +41,18 @@ layers**, and the split is what keeps it editable *and* on-brand:
     the frame/footer chrome so it still reads as one system) or seat the figure on a solid/frosted panel
     that masks the motif. This is the one place "same treatment on every slide" yields — see
     `design-principles.md` "A textured / line / grid background must not compete with line-heavy content."
-  - **DEFAULT the content BLOCKS to a transparency degree (frosted) — it's the standard for a
-    generated-template deck.** A generated template's whole point is a rich, *designed* background, so a
-    flat **opaque** card reads as "pasted on"; frosted blocks are the default here, not an exception.
+  - **🔴 MUST — on a generated-template deck the content BLOCKS are FROSTED (semi-transparent),
+    NEVER flat opaque.** A *hard rule*, not a skippable default: a generated template's whole point is a
+    rich, *designed* background, so a flat **opaque** card reads as "pasted on" and breaks the illusion.
+    Every interior page therefore pairs the **shallow background (above)** with **frosted blocks** — the
+    two go together, and shipping either a flat-colour content page **or** opaque cards on the generated
+    background is the failure to avoid. (Narrow exceptions that may stay OPAQUE: a thumbnail's own image; a deliberately solid emphasis
+    band; a panel placed to MASK a line motif under a line-heavy figure (that one MUST be solid, per the
+    suppress-motif rule above); a **full-bleed figure / photo that fills the slide** (not a "block" — out
+    of scope); and a **deliberately PLAIN / near-flat minimal style** (Swiss · Scandinavian · Brutalist)
+    whose interior background is flat by design — there a crisp **opaque** card is correct, matching
+    design-principles.md "Block fill must FIT the background". Otherwise cards / panels / chips default
+    frosted.)
     Give every card/panel/chip a **slight transparency** so the background shows through (~30–45%) and it
     belongs to the scene — a low-alpha glass tint of the block colour + a subtle lighter rim
     (`deckkit.glass_card`, or `box(grad=[(0,tint,α),(1,tint,α)])` with **α ≈ 0.55–0.72**), the **same
