@@ -60,16 +60,26 @@ Score each dimension; cite specific slides.
    *Would a sharp person in this field say this line aloud?* (See `multilingual.md` "Write like a human".)
 4. **Figures labeled, intact & cleanly cropped.** Every figure has a legend (what rows/cols/axes
    are) and a one-line takeaway (what to notice). Unlabeled figure = major issue. A PDF-sourced
-   figure must be **precisely cropped** — zoom in on all four edges and check both failure modes:
-   (a) **intact** — none of its own parts (legend, colour bar, axis labels/ticks, title, units,
-   outer rows/columns, a sub-plot's x-axis labels) is clipped by the crop or the slide placement
-   (a half-cut legend, or x-labels shaved off the bottom, is the classic miss); and (b) **no page
-   text bled in** — the crop contains none of the page's prose: not the figure's own caption
-   ("Fig. N." / "Table N."), a neighbouring figure's caption fragment, a running head/author line,
-   a page number, or a stray body-text line at an edge. A clean crop is tight to the figure's own
-   content and nothing else; either failure is a real finding (the crop box was imprecise), not a
-   nitpick. Also flag a figure **chopped into pieces that lose the authors' context** (prefer the
-   whole, integral figure; a narrowed crop that changes what was shown is a real finding).
+   figure must be **precisely cropped** — zoom in **close-up on each of the four edges** (not a
+   glance at the whole) and check three failure modes:
+   (a) **intact & not flush** — none of its own parts (legend, colour bar, axis **titles** & tick
+   labels, panel-strip headers, units, **error bars / confidence intervals & significance markers
+   (`*`, p-values)**, **panel labels `(a) (b) (c)`**, outer rows/columns, a sub-plot's x-axis labels)
+   is clipped **or sitting flush against the image edge** — a *flush* element (its baseline/descenders
+   butting the boundary) reads as clipped once the figure sits on a coloured slide, so treat flush =
+   cut; a half-cut axis title or x-labels shaved off the bottom is the classic miss;
+   (b) **no page text bled in** — the crop contains none of the page's prose: not the figure's own
+   caption ("Fig. N." / "Table N."), a neighbouring figure's caption fragment, a running head/author
+   line, a page number, or a stray body-text line at an edge; and
+   (c) **self-contained — its OWN axis labels are present**, NOT silently replaced by a legend added
+   on the slide. A tidy slide-legend must not *mask* an over-crop that dropped the figure's own
+   x-axis category labels; the placed figure's axes must be readable on their own (a legend on top
+   is an optional aid, never a substitute). A clean crop is tight to the figure's own content and
+   nothing else; any of the three is a real finding (the crop box was imprecise — often because it
+   was snapped to the plot-panel bbox, which excludes the axis titles/ticks/legend the library draws
+   outside it), not a nitpick. Also flag a figure **chopped into pieces that lose the authors'
+   context** (prefer the whole, integral figure; a narrowed crop that changes what was shown is a
+   real finding).
 5. **Signaling.** Is the eye guided to what matters (arrow, box, color, bold), or
    is everything the same weight?
 6. **Narrative flow.** Do the slides form an arc (problem → idea → method →
