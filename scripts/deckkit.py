@@ -166,7 +166,8 @@ FONT    = "Calibri"       # display font — cross-platform default (ships with 
                           # renders the same on Windows PowerPoint and macOS/Keynote).
 MONO    = "Consolas"      # code / filenames — Calibri's cross-platform monospace pair.
 EQFONT  = "Arial"         # equations — universal glyph + Greek coverage
-EAFONT  = None            # East-Asian font for CJK text (e.g. "PingFang SC" / "Heiti SC"
+EAFONT  = None            # East-Asian font for CJK text (e.g. "Hiragino Sans GB" — render-loop-safe on macOS;
+                          # avoid "PingFang SC" for verification: LibreOffice substitutes a handwriting face
                           # / "Microsoft YaHei" / "Noto Sans CJK SC"). When set, every run
                           # ALSO carries an <a:ea> typeface so PowerPoint/Keynote render
                           # Chinese/Japanese/Korean glyphs with THIS font (not an
@@ -176,7 +177,7 @@ DISPLAY = None            # optional DISPLAY/title font (Latin) — when set, ti
                           # the title so headings get their own face vs the FONT body. Falls back
                           # to FONT. Pairing roles (display / body / mono) beats one font for the
                           # whole deck — see references/font-guidance.md ("Type pairing").
-EADISPLAY = None          # optional CJK DISPLAY/title font (e.g. "PingFang SC" titles over a
+EADISPLAY = None          # optional CJK DISPLAY/title font (e.g. "Hiragino Sans GB" titles over a
                           # "Hiragino Sans GB"/"Noto Sans CJK SC" EAFONT body). Falls back to EAFONT.
 # To re-theme a whole deck (e.g. to match a style example), reassign these AND the
 # palette constants above right after importing deckkit, before building — set_font

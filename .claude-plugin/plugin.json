@@ -3,11 +3,11 @@
   "name": "slide-maker",
   "description": "Generate editable PowerPoint decks from papers, PDFs, code repositories, documents, and existing slides.",
   "author": {
-    "name": "Leo-Lyu",
-    "url": "https://github.com/dong845"
+    "name": "Addsum",
+    "url": "https://github.com/addsum-comp"
   },
-  "homepage": "https://github.com/dong845/slides_maker",
-  "repository": "https://github.com/dong845/slides_maker",
+  "homepage": "https://github.com/addsum-comp/slides_maker",
+  "repository": "https://github.com/addsum-comp/slides_maker",
   "license": "MIT",
   "keywords": [
     "pptx",

@@ -54,7 +54,7 @@ identically anywhere — so when the math font can't be guaranteed (or the formu
 
 ## Non-Latin (CJK / etc.)
 Set `deckkit.EAFONT` to a script-appropriate font so every run is tagged with a CJK
-typeface (not an uncontrolled fallback): PingFang SC / Heiti SC / Noto Sans CJK SC
+typeface (not an uncontrolled fallback): Hiragino Sans GB (macOS, render-loop-safe) / Noto Sans CJK SC / Microsoft YaHei — beware PingFang SC: LibreOffice substitutes it with a handwriting face, blinding the render self-check
 (Chinese), Hiragino / Noto Sans JP (Japanese), Apple SD Gothic / Noto Sans KR (Korean).
 Noto fonts are the most portable (free, broad coverage). Full guidance + RTL limits in
 `references/multilingual.md`.

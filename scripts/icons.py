@@ -84,11 +84,26 @@ def fetch_svg(spec):
     return svg
 
 
+def _norm_color(color):
+    """Normalize a hex colour to '#RRGGBB'. A bare 'C2410C' silently produces an INVALID
+    stroke/fill attribute -> every rasterizer draws nothing -> a fully transparent PNG with no
+    error. Auto-prefix '#' for 3/6-digit hex; reject anything else loudly."""
+    if color is None:
+        return None
+    c = str(color).strip()
+    if re.fullmatch(r"#?[0-9a-fA-F]{6}", c) or re.fullmatch(r"#?[0-9a-fA-F]{3}", c):
+        return c if c.startswith("#") else "#" + c
+    if c.lower() in ("currentcolor", "none") or c.lower().startswith(("rgb(", "hsl(")):
+        return c
+    raise ValueError(f"icons: invalid colour {color!r} — pass hex like '#C2410C'")
+
+
 def recolor(svg, color):
     """Bake `color` (e.g. '#1F5FA8') into the SVG text so ANY rasterizer renders it — no CSS
     needed. currentColor icons (Tabler/Lucide/Phosphor/Feather/Heroicons) → replace currentColor;
     fill-based monochrome (Simple Icons brand logos) → set a root fill. `color=None` keeps the
     icon's own colors (use for a brand logo you want in its brand colour)."""
+    color = _norm_color(color)
     if not color:
         return svg
     if "currentColor" in svg:
@@ -104,6 +119,7 @@ def gradient_recolor(svg, colors, *, angle="diag"):
     root fill) is repointed at an injected `<linearGradient>`. `angle`: 'diag' (TL→BR, default),
     'h' (left→right), or 'v' (top→bottom). Keep the two stops close in hue/value so the glyph stays
     legible; reserve gradient icons for hero/feature spots, not a dense row of tiny ones."""
+    colors = tuple(_norm_color(c) for c in colors) if colors else colors
     c0, c1 = colors
     gid = "smIconGrad"
     coords = {"h": 'x1="0%" y1="0%" x2="100%" y2="0%"',
@@ -139,6 +155,21 @@ def _find_chrome():
     return None
 
 
+def _check_ink(out_png):
+    """Refuse to hand back a fully-transparent PNG — the silent-failure mode where a bad colour
+    or a broken rasterizer 'succeeds' with an invisible icon that no lint catches."""
+    try:
+        from PIL import Image
+    except ImportError:
+        return _check_ink(out_png)
+    im = Image.open(out_png)
+    if im.mode == "RGBA" and not im.getchannel("A").getbbox():
+        raise RuntimeError(
+            f"icons: {out_png} rasterized fully transparent — the SVG drew nothing "
+            "(bad colour value or rasterizer failure). Nothing was placed.")
+    return out_png
+
+
 def rasterize(svg, out_png, px=160):
     """Render recolored SVG text to a transparent PNG, `px`×`px`. Tries cairosvg → rsvg-convert
     → headless Chrome (whichever is present). Sizes the SVG to fill the square."""
@@ -152,7 +183,7 @@ def rasterize(svg, out_png, px=160):
         import cairosvg
         cairosvg.svg2png(bytestring=svg2.encode("utf-8"), write_to=out_png,
                          output_width=px, output_height=px)
-        return out_png
+        return _check_ink(out_png)
     except Exception:
         pass
     # backend 2 — rsvg-convert
@@ -162,7 +193,7 @@ def rasterize(svg, out_png, px=160):
         try:
             subprocess.run(["rsvg-convert", "-w", str(px), "-h", str(px), "-o", out_png, src],
                            check=True, capture_output=True)
-            return out_png
+            return _check_ink(out_png)
         finally:
             os.unlink(src)
     # backend 3 — headless Chrome (transparent screenshot of an HTML wrapper)
@@ -179,7 +210,7 @@ def rasterize(svg, out_png, px=160):
                             f"--window-size={px},{px}", "--force-device-scale-factor=3",
                             "--default-background-color=00000000", "--hide-scrollbars",
                             f"file://{src}"], check=True, capture_output=True, timeout=60)
-            return out_png
+            return _check_ink(out_png)
         finally:
             os.unlink(src)
     raise RuntimeError(

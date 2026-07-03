@@ -58,6 +58,36 @@ def main():
     check_module("matplotlib", "matplotlib", "matplotlib",
                  optional=True, note="only for equation_png")
 
+    # SVG rasterizer — icons.py needs ONE of: cairosvg (working libcairo), rsvg-convert, or a
+    # Chromium-family browser. cairosvg importing cleanly is NOT enough: it dies at call time
+    # when libcairo is missing, so probe the native lib too.
+    rasterizer = None
+    try:
+        import cairosvg  # noqa: F401
+        rasterizer = "cairosvg"
+    except Exception:
+        pass
+    if not rasterizer:
+        import shutil as _sh
+        if _sh.which("rsvg-convert"):
+            rasterizer = "rsvg-convert"
+    if not rasterizer:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        try:
+            from icons import _find_chrome
+            if _find_chrome():
+                rasterizer = "headless Chrome/Edge"
+        except Exception:
+            pass
+    if rasterizer:
+        print("  [ok]  SVG rasterizer ({})".format(rasterizer))
+    else:
+        print("  [MISSING]  SVG rasterizer (icons will FAIL)  ->  "
+              "macOS: brew install librsvg | "
+              "Ubuntu: sudo apt install librsvg2-bin | "
+              "Windows: install Google Chrome or Edge (used headless) | "
+              "any OS: pip install cairosvg (needs a working libcairo)")
+
     soffice = find_soffice()
     if soffice:
         print("  [ok]  LibreOffice ({})".format(soffice))

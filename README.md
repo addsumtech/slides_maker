@@ -14,7 +14,7 @@
 > Chat with it in Codex or Claude Code. It reads your material first, then hands you a real PowerPoint: every text box, shape, and chart is click-to-edit, the script lives in speaker notes, and bullet reveals are native click builds.
 
 <p align="center">
-  <a href="https://dong845.github.io/slides_maker/"><strong>Live demo</strong></a> ·
+  <a href="https://addsum-comp.github.io/slides_maker/"><strong>Live demo</strong></a> ·
   <a href="#the-fastest-way-to-judge-it-download-a-deck"><strong>Download a deck</strong></a> ·
   <a href="#template-gallery"><strong>Templates</strong></a> ·
   <a href="#what-makes-slide-maker-different"><strong>What's different</strong></a> ·
@@ -27,7 +27,7 @@
 
 **[Download the "Lab Meeting / Paper Talk" .pptx](templates/decks/en/transformer-talk/template.pptx?raw=1) and open it in PowerPoint.** It is a 15-slide reading of "Attention Is All You Need": the paper's figures are cropped straight from the PDF, the attention formula is editable native math text, the BLEU comparison is a native chart you can double-click and re-number, every slide carries a full spoken script in its notes, and bullets reveal click by click in presentation mode.
 
-Prefer the browser first? [Flip through all 16 decks online](https://dong845.github.io/slides_maker/). But don't judge an AI slide tool by its marketing screenshots alone: open the file it produces and click around.
+Prefer the browser first? [Flip through all 16 decks online](https://addsum-comp.github.io/slides_maker/). But don't judge an AI slide tool by its marketing screenshots alone: open the file it produces and click around.
 
 ---
 
@@ -38,50 +38,50 @@ Eight directions, one set in English and one in Chinese. Each is a complete exam
 <table>
   <tr>
     <td align="center" width="50%">
-      <a href="https://dong845.github.io/slides_maker/viewer.html?deck=en/transformer-talk"><img src="docs/assets/screenshots/preview_en_transformer-talk.png" alt="Lab Meeting / Paper Talk template preview"></a><br/>
+      <a href="https://addsum-comp.github.io/slides_maker/viewer.html?deck=en/transformer-talk"><img src="docs/assets/screenshots/preview_en_transformer-talk.png" alt="Lab Meeting / Paper Talk template preview"></a><br/>
       <sub><strong>Lab Meeting / Paper Talk</strong><br/>paper reading, lab meeting, method overview, experiment report<br/>
-      <a href="https://dong845.github.io/slides_maker/viewer.html?deck=en/transformer-talk">Flip online</a> · <a href="templates/decks/en/transformer-talk/template.pptx?raw=1">Download .pptx</a></sub>
+      <a href="https://addsum-comp.github.io/slides_maker/viewer.html?deck=en/transformer-talk">Flip online</a> · <a href="templates/decks/en/transformer-talk/template.pptx?raw=1">Download .pptx</a></sub>
     </td>
     <td align="center" width="50%">
-      <a href="https://dong845.github.io/slides_maker/viewer.html?deck=en/nvidia-overview"><img src="docs/assets/screenshots/preview_en_nvidia-overview.png" alt="Company / Product Intro template preview"></a><br/>
+      <a href="https://addsum-comp.github.io/slides_maker/viewer.html?deck=en/nvidia-overview"><img src="docs/assets/screenshots/preview_en_nvidia-overview.png" alt="Company / Product Intro template preview"></a><br/>
       <sub><strong>Company / Product Intro</strong><br/>company overview, product matrix, customer communication, fundraising intro<br/>
-      <a href="https://dong845.github.io/slides_maker/viewer.html?deck=en/nvidia-overview">Flip online</a> · <a href="templates/decks/en/nvidia-overview/template.pptx?raw=1">Download .pptx</a></sub>
+      <a href="https://addsum-comp.github.io/slides_maker/viewer.html?deck=en/nvidia-overview">Flip online</a> · <a href="templates/decks/en/nvidia-overview/template.pptx?raw=1">Download .pptx</a></sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
-      <a href="https://dong845.github.io/slides_maker/viewer.html?deck=en/nl-job-market-2026"><img src="docs/assets/screenshots/preview_en_nl-job-market-2026.png" alt="Data / Market Analysis template preview"></a><br/>
+      <a href="https://addsum-comp.github.io/slides_maker/viewer.html?deck=en/nl-job-market-2026"><img src="docs/assets/screenshots/preview_en_nl-job-market-2026.png" alt="Data / Market Analysis template preview"></a><br/>
       <sub><strong>Data / Market Analysis</strong><br/>industry research, trend explanation, structured analysis<br/>
-      <a href="https://dong845.github.io/slides_maker/viewer.html?deck=en/nl-job-market-2026">Flip online</a> · <a href="templates/decks/en/nl-job-market-2026/template.pptx?raw=1">Download .pptx</a></sub>
+      <a href="https://addsum-comp.github.io/slides_maker/viewer.html?deck=en/nl-job-market-2026">Flip online</a> · <a href="templates/decks/en/nl-job-market-2026/template.pptx?raw=1">Download .pptx</a></sub>
     </td>
     <td align="center" width="50%">
-      <a href="https://dong845.github.io/slides_maker/viewer.html?deck=en/solo-company-talk"><img src="docs/assets/screenshots/preview_en_solo-company-talk.png" alt="AI Trends / Solo Talk template preview"></a><br/>
+      <a href="https://addsum-comp.github.io/slides_maker/viewer.html?deck=en/solo-company-talk"><img src="docs/assets/screenshots/preview_en_solo-company-talk.png" alt="AI Trends / Solo Talk template preview"></a><br/>
       <sub><strong>AI Trends / Solo Talk</strong><br/>trend talk, personal presentation, startup story<br/>
-      <a href="https://dong845.github.io/slides_maker/viewer.html?deck=en/solo-company-talk">Flip online</a> · <a href="templates/decks/en/solo-company-talk/template.pptx?raw=1">Download .pptx</a></sub>
+      <a href="https://addsum-comp.github.io/slides_maker/viewer.html?deck=en/solo-company-talk">Flip online</a> · <a href="templates/decks/en/solo-company-talk/template.pptx?raw=1">Download .pptx</a></sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
-      <a href="https://dong845.github.io/slides_maker/viewer.html?deck=en/kids-ai-explainer"><img src="docs/assets/screenshots/preview_en_kids-ai-explainer.png" alt="Teaching / Knowledge Sharing template preview"></a><br/>
+      <a href="https://addsum-comp.github.io/slides_maker/viewer.html?deck=en/kids-ai-explainer"><img src="docs/assets/screenshots/preview_en_kids-ai-explainer.png" alt="Teaching / Knowledge Sharing template preview"></a><br/>
       <sub><strong>Teaching / Knowledge Sharing</strong><br/>class explanation, reading share, training material<br/>
-      <a href="https://dong845.github.io/slides_maker/viewer.html?deck=en/kids-ai-explainer">Flip online</a> · <a href="templates/decks/en/kids-ai-explainer/template.pptx?raw=1">Download .pptx</a></sub>
+      <a href="https://addsum-comp.github.io/slides_maker/viewer.html?deck=en/kids-ai-explainer">Flip online</a> · <a href="templates/decks/en/kids-ai-explainer/template.pptx?raw=1">Download .pptx</a></sub>
     </td>
     <td align="center" width="50%">
-      <a href="https://dong845.github.io/slides_maker/viewer.html?deck=en/chengdu"><img src="docs/assets/screenshots/preview_en_chengdu.png" alt="Visual Storytelling / Culture template preview"></a><br/>
+      <a href="https://addsum-comp.github.io/slides_maker/viewer.html?deck=en/chengdu"><img src="docs/assets/screenshots/preview_en_chengdu.png" alt="Visual Storytelling / Culture template preview"></a><br/>
       <sub><strong>Visual Storytelling / Culture</strong><br/>city, culture, event, brand story<br/>
-      <a href="https://dong845.github.io/slides_maker/viewer.html?deck=en/chengdu">Flip online</a> · <a href="templates/decks/en/chengdu/template.pptx?raw=1">Download .pptx</a></sub>
+      <a href="https://addsum-comp.github.io/slides_maker/viewer.html?deck=en/chengdu">Flip online</a> · <a href="templates/decks/en/chengdu/template.pptx?raw=1">Download .pptx</a></sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
-      <a href="https://dong845.github.io/slides_maker/viewer.html?deck=en/standup-history"><img src="docs/assets/screenshots/preview_en_standup-history.png" alt="History / Evolution Narrative template preview"></a><br/>
+      <a href="https://addsum-comp.github.io/slides_maker/viewer.html?deck=en/standup-history"><img src="docs/assets/screenshots/preview_en_standup-history.png" alt="History / Evolution Narrative template preview"></a><br/>
       <sub><strong>History / Evolution Narrative</strong><br/>historical arc, industry evolution, timeline story<br/>
-      <a href="https://dong845.github.io/slides_maker/viewer.html?deck=en/standup-history">Flip online</a> · <a href="templates/decks/en/standup-history/template.pptx?raw=1">Download .pptx</a></sub>
+      <a href="https://addsum-comp.github.io/slides_maker/viewer.html?deck=en/standup-history">Flip online</a> · <a href="templates/decks/en/standup-history/template.pptx?raw=1">Download .pptx</a></sub>
     </td>
     <td align="center" width="50%">
-      <a href="https://dong845.github.io/slides_maker/viewer.html?deck=en/michael-jackson-king-of-pop"><img src="docs/assets/screenshots/preview_en_michael-jackson-king-of-pop.png" alt="Biography / Brand Story template preview"></a><br/>
+      <a href="https://addsum-comp.github.io/slides_maker/viewer.html?deck=en/michael-jackson-king-of-pop"><img src="docs/assets/screenshots/preview_en_michael-jackson-king-of-pop.png" alt="Biography / Brand Story template preview"></a><br/>
       <sub><strong>Biography / Brand Story</strong><br/>public figure, brand archive, cultural retrospective<br/>
-      <a href="https://dong845.github.io/slides_maker/viewer.html?deck=en/michael-jackson-king-of-pop">Flip online</a> · <a href="templates/decks/en/michael-jackson-king-of-pop/template.pptx?raw=1">Download .pptx</a></sub>
+      <a href="https://addsum-comp.github.io/slides_maker/viewer.html?deck=en/michael-jackson-king-of-pop">Flip online</a> · <a href="templates/decks/en/michael-jackson-king-of-pop/template.pptx?raw=1">Download .pptx</a></sub>
     </td>
   </tr>
 </table>
@@ -150,6 +150,8 @@ To be plain about it: it does not promise a perfect deck in one shot. It promise
 4. **It generates the PPTX.** Layout is guaranteed by code, with automatic layout checks both at build time and on the rendered output. Overflow, overlap, and font problems get caught there.
 5. **An independent critic reviews it.** Rendered slides go to a critic agent that judges them against presentation standards. Fixes land, the deck is re-checked, and only then is it delivered to `~/Downloads/<deck-name>/`.
 
+**What it costs:** the tool is free; you pay only your AI usage. The read-plan-build path is cheap; the independent review loop is the expensive part, and it scales with stakes: a quick internal deck gets a light single-pass check, while a conference-grade deck with a multi-critic panel can consume a few hundred thousand tokens. Say "light review" or "skip the critic" any time to trade polish for cost.
+
 ---
 
 ## Quick start
@@ -160,10 +162,18 @@ To be plain about it: it does not promise a perfect deck in one shot. It promise
 
 ### Step 1: Install
 
-You need **Python 3.9+** and **LibreOffice** (it renders slide previews for the automatic layout checks; `brew install --cask libreoffice` on macOS, `sudo apt install libreoffice` on Linux).
+You need **Python 3.9+**, **LibreOffice** (renders slide previews for the automatic layout checks), and **one SVG rasterizer** for icons (librsvg, cairosvg, or any Chrome-family browser).
+
+| OS | LibreOffice | Icon rasterizer |
+| --- | --- | --- |
+| macOS | `brew install --cask libreoffice` | `brew install librsvg` |
+| Linux | `sudo apt install libreoffice` | `sudo apt install librsvg2-bin` |
+| Windows | `winget install TheDocumentFoundation.LibreOffice` | Chrome or Edge installed (used headless) |
+
+**Windows note:** the pipeline is cross-platform Python and is exercised in CI on Linux, but day-to-day development happens on macOS. If you hit a Windows-specific issue, `check_env.py` below will name the missing piece; issues with error output are welcome.
 
 ```bash
-git clone https://github.com/dong845/slides_maker.git
+git clone https://github.com/addsum-comp/slides_maker.git
 cd slides_maker
 python3 -m pip install -r requirements.txt
 python3 scripts/install_skill.py --target both

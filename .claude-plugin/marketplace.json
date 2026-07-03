@@ -2,8 +2,8 @@
   "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
   "name": "slides-maker",
   "owner": {
-    "name": "Leo-Lyu",
-    "url": "https://github.com/dong845"
+    "name": "Addsum",
+    "url": "https://github.com/addsum-comp"
   },
   "metadata": {
     "description": "slide-maker skill — editable PPTX generation for academic talks, code repo presentations, and general decks",
@@ -15,11 +15,11 @@
       "source": "./",
       "description": "Generate editable PowerPoint decks from papers, PDFs, code repositories, documents, and existing slides.",
       "author": {
-        "name": "Leo-Lyu",
-        "url": "https://github.com/dong845"
+        "name": "Addsum",
+        "url": "https://github.com/addsum-comp"
       },
-      "homepage": "https://github.com/dong845/slides_maker",
-      "repository": "https://github.com/dong845/slides_maker",
+      "homepage": "https://github.com/addsum-comp/slides_maker",
+      "repository": "https://github.com/addsum-comp/slides_maker",
       "license": "MIT",
       "category": "productivity",
       "keywords": [

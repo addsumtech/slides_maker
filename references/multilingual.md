@@ -41,7 +41,7 @@ without a good fallback). So for a CJK deck, set the East-Asian font explicitly:
 ```python
 import deckkit
 deckkit.FONT   = "Calibri"      # Latin letters + numbers
-deckkit.EAFONT = "PingFang SC"  # CJK glyphs  (or "Heiti SC" / "Microsoft YaHei" / "Noto Sans CJK SC")
+deckkit.EAFONT = "Hiragino Sans GB"  # CJK glyphs (macOS render-loop-safe; or "Microsoft YaHei" / "Noto Sans CJK SC")
 ```
 
 `EAFONT` makes every run carry **both** `<a:latin>` (for Latin/numbers) **and** `<a:ea>`
@@ -52,7 +52,7 @@ travels correctly. (Without `EAFONT`, CJK falls back to an uncontrolled default.
 ### Font choices
 | Role | Portable (recommended) | macOS | Windows |
 |---|---|---|---|
-| CJK sans (default) | Noto Sans CJK SC / Source Han Sans | PingFang SC, Heiti SC | Microsoft YaHei |
+| CJK sans (default) | Noto Sans CJK SC / Source Han Sans | **Hiragino Sans GB** (render-loop-safe), PingFang SC (final deck only — see warning) | Microsoft YaHei |
 | CJK serif (formal) | Noto Serif CJK SC / Source Han Serif | Songti SC | SimSun |
 | CJK brush/handwritten | — | Kaiti SC | KaiTi |
 | Japanese / Korean | Noto Sans JP / KR | Hiragino Sans / Apple SD Gothic | Yu Gothic / Malgun Gothic |
@@ -60,16 +60,18 @@ travels correctly. (Without `EAFONT`, CJK falls back to an uncontrolled default.
 Pick the CJK font to match the *purpose* the same way as Latin (`design-by-purpose.md`):
 sans (Heiti/PingFang) for modern/corporate/talks, serif (Songti) for formal/defense.
 
+**Render-loop trap (macOS):** in the LibreOffice render used for self-checks and the critic, **PingFang SC gets substituted with a handwriting-style face** — the QC loop then judges pixels that PowerPoint will never show. Default to **Hiragino Sans GB** on macOS (renders identically in LibreOffice and PowerPoint/Keynote); PingFang SC is fine for the final deck itself, but verify with a font that the render loop displays faithfully.
+
 **Pair CJK fonts by role too — don't set the whole deck in one face** (see the "Type pairing"
 section of `font-guidance.md`). Use a CJK **display** face for titles and a CJK **body** face for
 text, plus a clean **Latin** face for the numbers/English inside CJK runs:
-- `deckkit.EADISPLAY` = CJK title face (e.g. **PingFang SC**), `deckkit.EAFONT` = CJK body face
+- `deckkit.EADISPLAY` = CJK title face (e.g. **Hiragino Sans GB**), `deckkit.EAFONT` = CJK body face
   (e.g. **Hiragino Sans GB** / **Noto Sans CJK SC**) — `title_bar`/`editorial_header` then set
   titles in EADISPLAY and body in EAFONT automatically.
 - `deckkit.DISPLAY`/`deckkit.FONT` = the Latin faces for those same roles, so digits/units/English
   (e.g. "≈40%", "1/5–1/7") render in a crisp Latin face, not the CJK fallback.
 
-A tasteful, portable Chinese pairing: **PingFang SC** (titles) + **Hiragino Sans GB** or **Noto
+A tasteful, portable Chinese pairing: **Hiragino Sans GB** (titles and body) or **Noto
 Sans CJK SC** (body) + **Helvetica Neue/Arial** (Latin). Keep it to **≤2 text families (display +
 body)** — the Latin and mono faces are functional roles, not extra style fonts — and apply it on
 every slide. *(Avoid setting everything to "Arial" — it has no CJK glyphs, so the whole deck rides

@@ -546,7 +546,7 @@ than the current working directory, so `python /path/to/build_<deck>.py` works f
 
 **Fonts for non-Latin languages (Chinese / Japanese / Korean)** — applies to both
 branches. The defaults are Latin-only, so set a script-appropriate font before
-building: `deckkit.EAFONT = "PingFang SC"` (or Heiti SC / Microsoft YaHei / Noto Sans
+building: `deckkit.EAFONT = "Hiragino Sans GB"` (macOS render-loop-safe; or Microsoft YaHei / Noto Sans
 CJK SC), keeping `FONT` for Latin/numbers. This tags every run with a CJK `<a:ea>` font
 so it renders correctly *and portably* (not an uncontrolled fallback), and mixed
 中文+English stays right. Pick the CJK font to the purpose, emphasize with weight/colour

@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system deps (LibreOffice, rsvg, CJK fonts)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q libreoffice-impress librsvg2-bin fonts-noto-cjk
+
+      - name: Install python deps
+        run: python -m pip install -r requirements.txt
+
+      - name: Environment check
+        run: python scripts/check_env.py
+
+      - name: deckkit smoke (every public helper)
+        run: python scripts/smoke_deckkit.py
+
+      - name: Minimal build, lint, render
+        run: |
+          python - <<'EOF'
+          import sys
+          sys.path.insert(0, 'scripts')
+          import deckkit as dk
+          prs = dk.blank_deck()
+          s = dk.add_slide(prs)
+          dk.title_bar(s, "CI smoke deck", kicker="TEST")
+          dk.bullet(s, 0.8, 1.6, 8.4, [("Builds", "deckkit constructs a slide"),
+                                       ("Lints", "geometry gate passes"),
+                                       ("Renders", "LibreOffice produces a PNG")])
+          dk.footer(s, tag="ci", page=1)
+          dk.lint_layout(prs)
+          prs.save('/tmp/ci.pptx')
+          EOF
+          python scripts/render_deck.py /tmp/ci.pptx /tmp/ci_render
+          test -f /tmp/ci_render/slide01.png
+          python scripts/lint_deck.py /tmp/ci.pptx
+
+      - name: Icon pipeline (fetch, recolor, ink guard)
+        run: |
+          python - <<'EOF'
+          import sys
+          sys.path.insert(0, 'scripts')
+          from icons import icon_png
+          from PIL import Image
+          # bare hex on purpose: must be normalized, not silently transparent
+          icon_png('lucide:rocket', '/tmp/icon.png', color='C2410C', px=128)
+          im = Image.open('/tmp/icon.png').convert('RGBA')
+          assert im.getchannel('A').getbbox(), 'icon rasterized fully transparent'
+          print('icon ok')
+          EOF
+
+      - name: PDF figure extraction (pymupdf API drift canary)
+        run: |
+          python - <<'EOF'
+          import sys
+          sys.path.insert(0, 'scripts')
+          import fitz
+          doc = fitz.open()
+          page = doc.new_page(width=595, height=842)
+          page.insert_text((72, 100), "Figure 1: canary", fontsize=11)
+          page.draw_rect(fitz.Rect(72, 120, 300, 300), color=(0, 0, 1), width=2)
+          doc.save('/tmp/canary.pdf')
+          from extract_pdf import find_figures  # crashes here if pymupdf drifts
+          find_figures('/tmp/canary.pdf', 1)
+          print('extract_pdf ok')
+          EOF
