@@ -127,6 +127,15 @@ h1 .hl { color:var(--accent); }
 .meta .row a.dl { border:1.5px solid var(--line); color:var(--ink); }
 .meta .row a.dl:hover { border-color:var(--accent); color:var(--accent); }
 
+/* ---------- intro video ---------- */
+.vid { margin-top:34px; }
+.vidcard { border:1px solid var(--line); background:var(--card); border-radius:16px; padding:24px 28px; }
+.vidhead { display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:14px; }
+.vidhead h2 { margin:0; font-size:20px; }
+.vidhead p { margin:0; color:#4b5260; font-size:14px; }
+.vidcard video { width:100%; display:block; border-radius:12px; border:1px solid var(--line); background:#000;
+  box-shadow:0 12px 36px rgba(31,36,48,.10); aspect-ratio:16/9; }
+
 /* ---------- how ---------- */
 .how { margin:52px 0 0; border:1px solid var(--line); background:var(--card); border-radius:16px; padding:26px 28px; }
 .how h3 { margin:0 0 8px; font-size:17px; }
@@ -189,6 +198,18 @@ footer .sp { flex:1; }
   </div>
 </header>
 
+<section class="wrap vid">
+  <div class="vidcard">
+    <div class="vidhead">
+      <h2 id="vTitle"></h2>
+      <p id="vLede"></p>
+    </div>
+    <video controls preload="metadata" poster="docs/assets/intro-poster.jpg">
+      <source src="docs/assets/slide-maker-intro.mp4" type="video/mp4">
+    </video>
+  </div>
+</section>
+
 <main class="wrap" id="gallery">
   <div class="bar">
     <h2 id="galleryTitle"></h2>
@@ -236,6 +257,8 @@ const STR = {
     ctaFlip: 'Browse the decks ↓', ctaDl: '⬇ Grab the sample deck',
     ctaNote: 'The sample is the 15-page paper-talk deck. Open it in PowerPoint and click anything: the chart, the math, the speaker notes.',
     st1: 'complete decks', st2: 'languages × styles', st3: 'native editable PPTX', st4: 'free & open source',
+    vTitle: 'See it work · 2\u00bd min',
+    vLede: 'How one prompt becomes an editable deck: the interview, the build, and the self-review. English narration with captions.',
     galleryTitle: 'The gallery', hoverHint: 'Hover a cover to preview pages',
     pages: 'pages', flip: 'Flip online', dl: '.pptx',
     howTitle: 'Use any of these as your template',
@@ -257,6 +280,8 @@ const STR = {
     ctaFlip: '浏览全部 deck ↓', ctaDl: '⬇ 下载样例 .pptx',
     ctaNote: '样例是 15 页的论文精读 deck。在 PowerPoint 里打开随便点：图表、公式、讲稿备注，都是活的。',
     st1: '套完整 deck', st2: '两种语言 × 八种风格', st3: '原生可编辑 PPTX', st4: '免费开源',
+    vTitle: '2 分半，看它怎么干活',
+    vLede: '一条指令如何变成可编辑的 deck：访谈、构建、自检全流程。英文配音，带字幕。',
     galleryTitle: '模板画廊', hoverHint: '悬停封面可预览内页',
     pages: '页', flip: '在线翻页', dl: '.pptx',
     howTitle: '把任何一套当作你的模板',
@@ -321,7 +346,7 @@ function setLang(lang) {
   if (history.replaceState) history.replaceState(null, '', lang === 'zh' ? '#zh' : '#en');
   document.getElementById('btn-en').classList.toggle('on', lang === 'en');
   document.getElementById('btn-zh').classList.toggle('on', lang === 'zh');
-  for (const k of ['byline','headline','lede','st1','st2','st3','st4','galleryTitle','hoverHint','howTitle','hs1','hs2','hs3','howFoot','footText','footReadme','ctaNote']) {
+  for (const k of ['byline','headline','lede','vTitle','vLede','st1','st2','st3','st4','galleryTitle','hoverHint','howTitle','hs1','hs2','hs3','howFoot','footText','footReadme','ctaNote']) {
     const el = document.getElementById(k);
     if (el) el.innerHTML = t[k];
   }
