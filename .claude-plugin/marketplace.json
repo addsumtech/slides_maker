@@ -3,7 +3,7 @@
   "name": "slides-maker",
   "owner": {
     "name": "Addsum",
-    "url": "https://github.com/addsum-comp"
+    "url": "https://github.com/addsumtech"
   },
   "metadata": {
     "description": "slide-maker skill — editable PPTX generation for academic talks, code repo presentations, and general decks",
@@ -16,10 +16,10 @@
       "description": "Generate editable PowerPoint decks from papers, PDFs, code repositories, documents, and existing slides.",
       "author": {
         "name": "Addsum",
-        "url": "https://github.com/addsum-comp"
+        "url": "https://github.com/addsumtech"
       },
-      "homepage": "https://github.com/addsum-comp/slides_maker",
-      "repository": "https://github.com/addsum-comp/slides_maker",
+      "homepage": "https://github.com/addsumtech/slides_maker",
+      "repository": "https://github.com/addsumtech/slides_maker",
       "license": "MIT",
       "category": "productivity",
       "keywords": [
