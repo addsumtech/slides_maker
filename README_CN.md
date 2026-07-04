@@ -27,7 +27,7 @@
 
 **2 分半，看它怎么干活**（英文配音，带字幕）· 一条指令，一次访谈，一份可编辑的 deck：
 
-https://github.com/user-attachments/assets/60f65e33-80fd-40e3-8e51-371e98cebda2
+https://github.com/user-attachments/assets/9d28772b-39dd-44c1-989a-3f5cb45a3b01
 
 
 ## 最诚实的检验：打开文件，而不是截图

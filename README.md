@@ -27,7 +27,7 @@
 
 **See it work in 2½ minutes** · one prompt, one interview, one editable deck:
 
-https://github.com/user-attachments/assets/60f65e33-80fd-40e3-8e51-371e98cebda2
+https://github.com/user-attachments/assets/9d28772b-39dd-44c1-989a-3f5cb45a3b01
 
 
 ## The honest test: open the file, not the screenshot
