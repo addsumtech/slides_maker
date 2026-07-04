@@ -53,6 +53,7 @@ h1 .hl { color:var(--accent); }
 .btn.primary:hover { background:var(--accent); box-shadow:0 8px 22px rgba(194,65,12,.32); }
 .btn.ghost { border:1.5px solid var(--line); color:var(--ink); background:var(--card); }
 .btn.ghost:hover { border-color:var(--accent); color:var(--accent); }
+.ctaNote { position:relative; color:var(--mute); font-size:12.5px; margin:12px 2px 0; }
 .stats { position:relative; display:flex; gap:0; margin-top:38px; border:1px solid var(--line); border-radius:14px;
   background:var(--card); overflow:hidden; max-width:760px; }
 .stat { flex:1; padding:15px 10px 13px; text-align:center; }
@@ -95,8 +96,21 @@ h1 .hl { color:var(--accent); }
 .how { margin:52px 0 0; border:1px solid var(--line); background:var(--card); border-radius:16px; padding:26px 28px; }
 .how h3 { margin:0 0 8px; font-size:17px; }
 .how p { margin:0 0 14px; color:#4b5260; font-size:14px; line-height:1.65; }
-.how code { display:block; background:var(--ink); color:#f2efe7; border-radius:10px; padding:14px 16px;
+.how .steps { margin:0 0 16px; padding-left:0; list-style:none; counter-reset:hs; display:flex; gap:22px; flex-wrap:wrap; }
+.how .steps li { counter-increment:hs; position:relative; padding-left:34px; color:#4b5260; font-size:14px;
+  line-height:1.55; flex:1; min-width:200px; }
+.how .steps li::before { content:counter(hs); position:absolute; left:0; top:1px; width:24px; height:24px;
+  border-radius:50%; background:var(--accent); color:#fff; font-weight:800; font-size:12.5px;
+  display:flex; align-items:center; justify-content:center; }
+.how .steps a { color:var(--accent); font-weight:600; text-decoration:none; }
+.how .steps a:hover { text-decoration:underline; }
+.codewrap { display:flex; gap:10px; align-items:stretch; }
+.how code { display:block; flex:1; background:var(--ink); color:#f2efe7; border-radius:10px; padding:14px 16px;
   font-family:ui-monospace, "SF Mono", Menlo, monospace; font-size:13px; line-height:1.6; overflow-x:auto; white-space:pre; }
+.codewrap button { border:1.5px solid var(--line); background:#fff; color:var(--ink); border-radius:10px;
+  padding:0 18px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap; }
+.codewrap button:hover { border-color:var(--accent); color:var(--accent); }
+.how .foot { margin:12px 0 0; color:var(--mute); font-size:12.5px; }
 
 footer { margin-top:56px; border-top:1px solid var(--line); }
 footer .inner { display:flex; align-items:center; gap:18px; flex-wrap:wrap; padding:24px 0 40px; color:var(--mute); font-size:13px; }
@@ -130,6 +144,7 @@ footer .sp { flex:1; }
       <a class="btn primary" id="ctaFlip" href="#gallery"></a>
       <a class="btn ghost" id="ctaDl" href="templates/decks/en/transformer-talk/template.pptx" download></a>
     </div>
+    <p class="ctaNote" id="ctaNote"></p>
     <div class="stats">
       <div class="stat"><div class="n">16</div><div class="l" id="st1"></div></div>
       <div class="stat"><div class="n">2 × 8</div><div class="l" id="st2"></div></div>
@@ -152,8 +167,16 @@ footer .sp { flex:1; }
 
   <section class="how">
     <h3 id="howTitle"></h3>
-    <p id="howBody"></p>
-    <code id="howCode"></code>
+    <ol class="steps">
+      <li id="hs1"></li>
+      <li id="hs2"></li>
+      <li id="hs3"></li>
+    </ol>
+    <div class="codewrap">
+      <code id="howCode"></code>
+      <button id="howCopy"></button>
+    </div>
+    <p class="foot" id="howFoot"></p>
   </section>
 </main>
 
@@ -175,13 +198,19 @@ const STR = {
     byline: 'by <a href="https://addsum.top/en/">Addsum</a>',
     headline: 'Real decks. <span class="hl">Really editable.</span><br>Generated end-to-end by AI agents.',
     lede: 'A skill for Codex and Claude Code that turns papers, code, docs, or just a topic into a natively editable PPTX: real text boxes, native charts, editable math, speaker notes, click builds. Every deck below came out of it. Hover a card to flip through.',
-    ctaFlip: 'Browse the decks ↓', ctaDl: 'Download a .pptx',
+    ctaFlip: 'Browse the decks ↓', ctaDl: '⬇ Grab the sample deck',
+    ctaNote: 'The sample is the 15-page paper-talk deck. Open it in PowerPoint and click anything: the chart, the math, the speaker notes.',
     st1: 'complete decks', st2: 'languages × styles', st3: 'native editable PPTX', st4: 'free & open source',
     galleryTitle: 'The gallery', hoverHint: 'Hover a cover to preview pages',
     pages: 'pages', flip: 'Flip online', dl: '.pptx',
     howTitle: 'Use any of these as your template',
-    howBody: 'Every deck ships as template.pptx plus a style profile. Point slide-maker at one and hand it your own material:',
+    hs1: '<a href="https://github.com/addsumtech/slides_maker#quick-start">Install slide-maker</a> — clone the repo and run one install command. Every deck above ships inside it as template.pptx plus a style profile.',
+    hs2: 'Pick a deck you like. Its exact command is on the flip-through page, one Copy click away.',
+    hs3: 'Paste it into Claude Code or Codex with your own material, and answer the short interview.',
     howCode: 'Use slide-maker. Follow the style of templates/decks/en/nvidia-overview/template.pptx\nand build a product intro from my product.md.',
+    howCopy: 'Copy',
+    howCopied: 'Copied ✓',
+    howFoot: 'The path is relative to your cloned repo. slide-maker parses the deck\'s layout and visual system, then rebuilds them around your content.',
     footText: 'Built with slide-maker in Codex / Claude Code.',
     footReadme: 'Quick start',
     title: 'slide-maker — flip through real generated decks',
@@ -190,13 +219,19 @@ const STR = {
     byline: '<a href="https://addsum.top/">增和科技 Addsum</a> 出品',
     headline: '真实的 deck，<span class="hl">真的能编辑</span>。<br>由 AI agent 团队端到端生成。',
     lede: '一个给 Codex 和 Claude Code 用的 skill：把论文、代码、文档，甚至只是一个主题，变成原生可编辑的 PPTX。真文本框、原生图表、可编辑公式、逐页讲稿、点击渐显。下面每一套都是它生成的，悬停封面即可翻页预览。',
-    ctaFlip: '浏览全部 deck ↓', ctaDl: '下载一份 .pptx',
+    ctaFlip: '浏览全部 deck ↓', ctaDl: '⬇ 下载样例 .pptx',
+    ctaNote: '样例是 15 页的论文精读 deck。在 PowerPoint 里打开随便点：图表、公式、讲稿备注，都是活的。',
     st1: '套完整 deck', st2: '两种语言 × 八种风格', st3: '原生可编辑 PPTX', st4: '免费开源',
     galleryTitle: '模板画廊', hoverHint: '悬停封面可预览内页',
     pages: '页', flip: '在线翻页', dl: '.pptx',
     howTitle: '把任何一套当作你的模板',
-    howBody: '每套 deck 都带 template.pptx 和风格档案。把路径指给 slide-maker，换上你自己的材料：',
+    hs1: '<a href="https://github.com/addsumtech/slides_maker/blob/main/README_CN.md#快速开始">装好 slide-maker</a>：clone 仓库跑一条安装命令。上面每套 deck 都以 template.pptx 加风格档案的形式装在里面。',
+    hs2: '挑一套喜欢的。它的专属命令就在翻页页面上，点一下复制。',
+    hs3: '带上你自己的材料贴进 Claude Code 或 Codex，答完简短访谈即可。',
     howCode: '用 slide-maker，参考 templates/decks/zh/nvidia-overview/template.pptx 的风格，\n按我的 product.md 做一份产品介绍。',
+    howCopy: '复制',
+    howCopied: '已复制 ✓',
+    howFoot: '路径相对于你 clone 下来的仓库。slide-maker 会解析这套 deck 的版式和视觉系统，围绕你的内容重建。',
     footText: '由 slide-maker 在 Codex / Claude Code 里生成。',
     footReadme: '快速开始',
     title: 'slide-maker — 在线翻阅真实生成的 PPT',
@@ -251,7 +286,7 @@ function setLang(lang) {
   if (history.replaceState) history.replaceState(null, '', lang === 'zh' ? '#zh' : '#en');
   document.getElementById('btn-en').classList.toggle('on', lang === 'en');
   document.getElementById('btn-zh').classList.toggle('on', lang === 'zh');
-  for (const k of ['byline','headline','lede','st1','st2','st3','st4','galleryTitle','hoverHint','howTitle','howBody','footText','footReadme']) {
+  for (const k of ['byline','headline','lede','st1','st2','st3','st4','galleryTitle','hoverHint','howTitle','hs1','hs2','hs3','howFoot','footText','footReadme','ctaNote']) {
     const el = document.getElementById(k);
     if (el) el.innerHTML = t[k];
   }
@@ -259,6 +294,12 @@ function setLang(lang) {
   document.getElementById('ctaDl').textContent = t.ctaDl;
   document.getElementById('ctaDl').href = `templates/decks/${lang}/transformer-talk/template.pptx`;
   document.getElementById('howCode').textContent = t.howCode;
+  const hc = document.getElementById('howCopy');
+  hc.textContent = t.howCopy;
+  hc.onclick = () => navigator.clipboard.writeText(t.howCode).then(() => {
+    hc.textContent = t.howCopied;
+    setTimeout(() => { hc.textContent = t.howCopy; }, 1600);
+  });
   document.title = t.title;
   document.documentElement.lang = (lang === 'zh') ? 'zh-CN' : 'en';
   document.getElementById('grid').innerHTML =
