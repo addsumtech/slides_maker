@@ -1088,7 +1088,7 @@ permission issue, not evidence that the deck is malformed.
 `dk.lint_layout` (Step 4) already cleared the pure-geometry faults *before* this render; **lint_deck.py
 is its render-time complement** — it re-checks geometry on the FINAL file and adds the faults that only
 the rendered/parsed deck reveals (which `lint_layout` deliberately leaves to it). A cheap, deterministic
-check, it flags **off-slide overflow, text overflowing the card behind it, uneven card heights in a
+check, it flags **invisible/low-contrast text against its backing fill (an uncoloured run defaults to black and vanishes on a dark card), off-slide overflow, text overflowing the card behind it, uneven card heights in a
 row, two solid blocks/images overlapping (neither contained), footer collisions, orphaned punctuation
 / widow (a lone 。/，or single glyph on the last line — 避头尾), CJK text with no EA font (the kinsoku
 root cause), whole-page-image (editability), and orphan/empty slides**: exactly the failures the eye

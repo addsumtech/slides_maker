@@ -101,7 +101,26 @@ def _boxes(slide, sw, sh):
                 descr = cn.get("descr")
         except Exception:
             descr = None
+        run_colors = []                                  # (snippet, RGB-hex or None=inherited)
+        if s.has_text_frame:
+            for p in s.text_frame.paragraphs:
+                for r in p.runs:
+                    if r.text.strip():
+                        try:
+                            run_colors.append((r.text.strip()[:24], str(r.font.color.rgb)))
+                        except Exception:
+                            run_colors.append((r.text.strip()[:24],
+                                               None if r.font.color.type is None else "THEME"))
+        fill_rgb = None                                  # solid-fill colour of this shape, if resolvable
+        try:
+            from pptx.enum.dml import MSO_FILL
+            if s.fill.type == MSO_FILL.SOLID:
+                fill_rgb = str(s.fill.fore_color.rgb)
+        except Exception:
+            fill_rgb = None
+        is_pic = str(s.shape_type).startswith("PICTURE")
         out.append({"l": l, "t": t, "w": w, "h": h, "r": l + w, "b": t + h,
+                    "runs": run_colors, "fill": fill_rgb, "pic": is_pic,
                     "st": str(s.shape_type).split()[0], "txt": txt, "full": full, "size": size or 12.0,
                     "paras": paras, "solid": s.shape_type in SOLID, "align": align, "anchor": anchor,
                     "text": bool(s.has_text_frame and txt), "descr": descr, "mathfont": mathfont,
@@ -198,6 +217,45 @@ def _frac_inside(a, b):
     return (ix * iy) / (a["w"] * a["h"] + 1e-9)
 
 
+def _lum(hex6):
+    def ch(c):
+        c = c / 255.0
+        return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+    r, g, b = int(hex6[0:2], 16), int(hex6[2:4], 16), int(hex6[4:6], 16)
+    return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b)
+
+
+def _contrast(h1, h2):
+    a, b = _lum(h1), _lum(h2)
+    if a < b:
+        a, b = b, a
+    return (a + 0.05) / (b + 0.05)
+
+
+def _backing_fill(bx, ti):
+    """The topmost solid fill under text shape bx[ti]: the shape's OWN fill if solid, else the
+    highest lower-z shape whose box covers the text (center inside + >=50% overlap). A picture
+    in between wins and returns None (backing colour unknowable). Slide bg unknown -> None."""
+    t = bx[ti]
+    if t["fill"]:
+        return t["fill"]
+    cx, cy = (t["l"] + t["r"]) / 2, (t["t"] + t["b"]) / 2
+    ta = max(t["w"] * t["h"], 1e-6)
+    best = None
+    for k in range(ti):                                  # shapes before ti are below in z-order
+        s = bx[k]
+        if not (s["l"] <= cx <= s["r"] and s["t"] <= cy <= s["b"]):
+            continue
+        ix, iy = _inter(s, t)
+        if ix * iy < 0.5 * ta:
+            continue
+        if s["pic"]:
+            best = None                                  # image behind the text: can't judge
+        elif s["fill"]:
+            best = s["fill"]
+    return best
+
+
 def lint(path):
     try:
         prs = Presentation(path)
@@ -210,6 +268,7 @@ def lint(path):
     for si, slide in enumerate(prs.slides):
         bx = _boxes(slide, sw, sh)
         finds = []
+        warns = []
         # 1) overflow
         for s in bx:
             if s["bg"]:
@@ -221,6 +280,27 @@ def lint(path):
             if s["b"] > sh + TOL: ov.append(f"bottom+{round(s['b']-sh,2)}")
             if ov:
                 finds.append(f"OVERFLOW [{','.join(ov)}] {s['st']} '{s['txt']}'")
+        # 1b) text-vs-backing contrast — the invisible dark-on-dark class. A run with NO
+        # explicit colour inherits the default (BLACK in the LibreOffice render loop and most
+        # viewers), so on a dark card it vanishes; lint treats inherited as black. THEME colours
+        # are skipped (unresolvable cheaply); picture backings are skipped (unknowable).
+        for ti, s in enumerate(bx):
+            if not s["text"] or not s["runs"]:
+                continue
+            back = _backing_fill(bx, ti)
+            if not back:
+                continue
+            for snip, rc in s["runs"]:
+                if rc == "THEME":
+                    continue
+                ink = rc if rc else "000000"
+                ratio = _contrast(ink, back)
+                if ratio < 1.8:
+                    finds.append(f"INVISIBLE TEXT: '{snip}' ink #{ink}"
+                                 + (" (no explicit colour, defaults to black)" if rc is None else "")
+                                 + f" on fill #{back} — contrast {ratio:.2f}:1, unreadable")
+                elif ratio < 3.0:
+                    warns.append(f"LOW CONTRAST: '{snip}' ink #{ink} on fill #{back} — {ratio:.2f}:1 (< 3:1)")
         # 2) solid vs solid partial overlap (neither contained)
         sol = [s for s in bx if s["solid"] and not s["bg"]]
         for i in range(len(sol)):
@@ -382,7 +462,6 @@ def lint(path):
                                  f"height (size the row to the tallest card's content)")
         # --- soft WARNs: advisory (do NOT fail the build) — accessibility + font-portability nudges
         #     that are otherwise invisible to the critic and the geometry checks ---
-        warns = []
         for s in bx:
             if s["st"] == "PICTURE" and not s["bg"] and _no_real_alt(s["descr"]):
                 warns.append(f"MISSING ALT-TEXT: an informative image ({round(s['w'],1)}×{round(s['h'],1)}in) has no "

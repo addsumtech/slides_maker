@@ -64,6 +64,28 @@ jobs:
           print('icon ok')
           EOF
 
+      - name: Contrast lint regression (invisible dark-on-dark text must fail)
+        run: |
+          python - <<'EOF'
+          import sys, subprocess
+          sys.path.insert(0, 'scripts')
+          import deckkit as dk
+          from pptx.util import Inches, Pt
+          prs = dk.blank_deck()
+          s = dk.add_slide(prs)
+          dk.box(s, 1, 1, 5, 2, fill=dk.RGBColor(0x14, 0x14, 0x1A))
+          tb = s.shapes.add_textbox(Inches(1.3), Inches(1.5), Inches(4), Inches(0.6))
+          r = tb.text_frame.paragraphs[0].add_run()
+          r.text = "invisible body text"
+          r.font.size = Pt(14)
+          prs.save('/tmp/bad_contrast.pptx')
+          p = subprocess.run(['python', 'scripts/lint_deck.py', '/tmp/bad_contrast.pptx'],
+                             capture_output=True, text=True)
+          assert p.returncode != 0, 'lint must fail on invisible text'
+          assert 'INVISIBLE TEXT' in p.stdout + p.stderr, p.stdout + p.stderr
+          print('contrast guard ok')
+          EOF
+
       - name: PDF figure extraction (pymupdf API drift canary)
         run: |
           python - <<'EOF'
