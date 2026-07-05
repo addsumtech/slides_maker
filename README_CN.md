@@ -24,14 +24,6 @@
   <a href="#遇到问题"><strong>遇到问题</strong></a>
 </p>
 
-<p align="center"><strong>3 分钟，看它怎么干活</strong> · 一条指令，一次访谈，一份可编辑的 deck。</p>
-
-<div align="center">
-
-https://github.com/user-attachments/assets/43085240-403a-4751-b30a-eebbb4787587
-
-</div>
-
 
 ## 模板库
 

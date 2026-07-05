@@ -24,14 +24,6 @@
   <a href="#troubleshooting"><strong>Troubleshooting</strong></a>
 </p>
 
-<p align="center"><strong>See it work in 3 minutes</strong> · one prompt, one interview, one editable deck.</p>
-
-<div align="center">
-
-https://github.com/user-attachments/assets/71950303-0f0c-4a7c-9a44-dc3035b79452
-
-</div>
-
 
 ## Template gallery
 
