@@ -25,9 +25,13 @@
   <a href="#遇到问题"><strong>遇到问题</strong></a>
 </p>
 
-**2 分半，看它怎么干活**（英文配音，带字幕）· 一条指令，一次访谈，一份可编辑的 deck：
+<p align="center"><strong>3 分钟，看它怎么干活</strong> · 一条指令，一次访谈，一份可编辑的 deck。</p>
 
-https://github.com/user-attachments/assets/9d28772b-39dd-44c1-989a-3f5cb45a3b01
+<div align="center">
+
+https://github.com/user-attachments/assets/76f7662c-112a-45b7-a90a-fcd7b300dde0
+
+</div>
 
 
 ## 最诚实的检验：打开文件，而不是截图
