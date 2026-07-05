@@ -226,7 +226,7 @@ The best, most reliable result comes from **invoking the skill and answering its
 /slide-maker
 ```
 
-The interview opens as a clickable, tabbed form (Topic · Template · Audience · Style): arrow keys to move, Enter to pick, and every question ships with ready-made options. The topic tab even guesses candidates from your recent projects. **Answering each question is what makes the deck yours instead of generic**: audience, length, live-vs-self-read, density, language, and look all steer the plan. Short answers are fine, and **"you decide" is always a valid answer**. But letting the skill ask beats making it guess.
+The interview opens as a clickable, tabbed form (Topic · Template · Audience · Style): arrow keys to move, Enter to pick, and every question ships with ready-made options. The topic tab even guesses candidates from your recent projects. **Answering each question is what makes the deck yours instead of generic**: audience, length, live-vs-self-read, density, language, and look all steer the plan. Short answers are fine, and **"you decide" is always a valid answer**.
 
 **In a hurry? A one-liner works too, but treat it as a shortcut, not the best path:**
 
