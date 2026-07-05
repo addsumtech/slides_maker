@@ -192,7 +192,7 @@ slide-maker relies on three system tools: **Python 3.9+**, **LibreOffice** (rend
 
 (Windows works too; we just test it less, so if you hit an environment quirk, run `check_env.py` below to self-diagnose or open an issue with the error.)
 
-With those system tools in place, install slide-maker itself. The four lines below clone the repo, install its Python packages, and register it as a skill:
+**With those system tools in place, install slide-maker itself.** The four lines below clone the repo, install its Python packages, and register it as a skill:
 
 ```bash
 git clone --depth 1 https://github.com/addsumtech/slides_maker.git
