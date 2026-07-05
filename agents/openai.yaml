@@ -1,8 +1,0 @@
-interface:
-  display_name: "Slide Maker"
-  short_description: "Build and critique editable PPTX decks"
-  brand_color: "#007CC2"
-  default_prompt: "Use $slide-maker to create a polished editable slide deck from my topic, source material, or existing slides."
-
-policy:
-  allow_implicit_invocation: true

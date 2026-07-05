@@ -34,8 +34,8 @@ https://github.com/user-attachments/assets/9d28772b-39dd-44c1-989a-3f5cb45a3b01
 
 任何 AI PPT 工具，截图都好看。真正见分晓的，是你拿回来的文件。所以打开一份，点两下：
 
-- **[论文 / 组会 deck ↓](templates/decks/zh/transformer-talk/template.pptx?raw=1)**：一份 15 页的《Attention Is All You Need》精读。双击 BLEU 图表改数字；点进注意力公式，像改文字一样直接编辑；打开 **视图 ▸ 备注** 看完整讲稿；按放映，看要点逐条渐显。每张图都直接裁自论文 PDF。
-- **[视觉 / 文化 deck ↓](templates/decks/zh/chengdu/template.pptx?raw=1)**：能力的另一端，一整套 AI 生成的视觉识别，封面、分隔页、内页浑然一体。
+- **[论文 / 组会 deck ↓](https://slides.addsum.top/templates/decks/zh/transformer-talk/template.pptx)**：一份 15 页的《Attention Is All You Need》精读。双击 BLEU 图表改数字；点进注意力公式，像改文字一样直接编辑；打开 **视图 ▸ 备注** 看完整讲稿；按放映，看要点逐条渐显。每张图都直接裁自论文 PDF。
+- **[视觉 / 文化 deck ↓](https://slides.addsum.top/templates/decks/zh/chengdu/template.pptx)**：能力的另一端，一整套 AI 生成的视觉识别，封面、分隔页、内页浑然一体。
 
 想先在浏览器里翻？**[在线翻页看全部 16 套](https://slides.addsum.top/)。** 但判断一个 AI PPT 工具，别看它的画廊，看它交给你的文件：打开它，点哪都能改。
 
@@ -48,66 +48,72 @@ https://github.com/user-attachments/assets/9d28772b-39dd-44c1-989a-3f5cb45a3b01
 <table>
   <tr>
     <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/transformer-talk"><img src="docs/assets/screenshots/preview_transformer-talk.png" alt="组会 / 论文汇报模板预览"></a><br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/transformer-talk"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_transformer-talk.png" alt="组会 / 论文汇报模板预览"></a><br/>
       <sub><strong>组会 / 论文汇报</strong><br/>论文精读、组会、方法综述、实验结果汇报<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/transformer-talk">在线翻页</a> · <a href="templates/decks/zh/transformer-talk/template.pptx?raw=1">下载 .pptx</a></sub>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/transformer-talk">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/transformer-talk/template.pptx">下载 .pptx</a></sub>
     </td>
     <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/nvidia-overview"><img src="docs/assets/screenshots/preview_nvidia-overview.png" alt="公司 / 产品介绍模板预览"></a><br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/nvidia-overview"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_nvidia-overview.png" alt="公司 / 产品介绍模板预览"></a><br/>
       <sub><strong>公司 / 产品介绍</strong><br/>公司介绍、产品矩阵、客户沟通、融资介绍<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/nvidia-overview">在线翻页</a> · <a href="templates/decks/zh/nvidia-overview/template.pptx?raw=1">下载 .pptx</a></sub>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/nvidia-overview">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/nvidia-overview/template.pptx">下载 .pptx</a></sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/nl-job-market-2026"><img src="docs/assets/screenshots/preview_nl-job-market-2026.png" alt="数据 / 市场分析模板预览"></a><br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/nl-job-market-2026"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_nl-job-market-2026.png" alt="数据 / 市场分析模板预览"></a><br/>
       <sub><strong>数据 / 市场分析</strong><br/>行业研究、趋势解读、结构化汇报<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/nl-job-market-2026">在线翻页</a> · <a href="templates/decks/zh/nl-job-market-2026/template.pptx?raw=1">下载 .pptx</a></sub>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/nl-job-market-2026">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/nl-job-market-2026/template.pptx">下载 .pptx</a></sub>
     </td>
     <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/solo-company-talk"><img src="docs/assets/screenshots/preview_solo-company-talk.png" alt="AI 趋势 / 个人演讲模板预览"></a><br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/solo-company-talk"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_solo-company-talk.png" alt="AI 趋势 / 个人演讲模板预览"></a><br/>
       <sub><strong>AI 趋势 / 个人演讲</strong><br/>趋势解读、个人表达、创业分享<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/solo-company-talk">在线翻页</a> · <a href="templates/decks/zh/solo-company-talk/template.pptx?raw=1">下载 .pptx</a></sub>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/solo-company-talk">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/solo-company-talk/template.pptx">下载 .pptx</a></sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/kids-ai-explainer"><img src="docs/assets/screenshots/preview_kids-ai-explainer.png" alt="课程 / 知识分享模板预览"></a><br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/kids-ai-explainer"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_kids-ai-explainer.png" alt="课程 / 知识分享模板预览"></a><br/>
       <sub><strong>课程 / 知识分享</strong><br/>课程讲解、读书分享、培训材料<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/kids-ai-explainer">在线翻页</a> · <a href="templates/decks/zh/kids-ai-explainer/template.pptx?raw=1">下载 .pptx</a></sub>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/kids-ai-explainer">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/kids-ai-explainer/template.pptx">下载 .pptx</a></sub>
     </td>
     <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/chengdu"><img src="docs/assets/screenshots/preview_chengdu.png" alt="视觉叙事 / 文化介绍模板预览"></a><br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/chengdu"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_chengdu.png" alt="视觉叙事 / 文化介绍模板预览"></a><br/>
       <sub><strong>视觉叙事 / 文化介绍</strong><br/>城市、文化、活动、品牌故事<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/chengdu">在线翻页</a> · <a href="templates/decks/zh/chengdu/template.pptx?raw=1">下载 .pptx</a></sub>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/chengdu">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/chengdu/template.pptx">下载 .pptx</a></sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/standup-history"><img src="docs/assets/screenshots/preview_standup-history.png" alt="历史 / 演变叙事模板预览"></a><br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/standup-history"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_standup-history.png" alt="历史 / 演变叙事模板预览"></a><br/>
       <sub><strong>历史 / 演变叙事</strong><br/>历史脉络、行业演进、时间线故事<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/standup-history">在线翻页</a> · <a href="templates/decks/zh/standup-history/template.pptx?raw=1">下载 .pptx</a></sub>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/standup-history">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/standup-history/template.pptx">下载 .pptx</a></sub>
     </td>
     <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/michael-jackson-king-of-pop"><img src="docs/assets/screenshots/preview_michael-jackson-king-of-pop.png" alt="人物 / 品牌故事模板预览"></a><br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/michael-jackson-king-of-pop"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_michael-jackson-king-of-pop.png" alt="人物 / 品牌故事模板预览"></a><br/>
       <sub><strong>人物 / 品牌故事</strong><br/>名人传记、品牌档案、文化回顾<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/michael-jackson-king-of-pop">在线翻页</a> · <a href="templates/decks/zh/michael-jackson-king-of-pop/template.pptx?raw=1">下载 .pptx</a></sub>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/michael-jackson-king-of-pop">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/michael-jackson-king-of-pop/template.pptx">下载 .pptx</a></sub>
     </td>
   </tr>
 </table>
 
-<p align="center"><sub>英文版在 <a href="templates/decks/">templates/decks/en/</a>，预览见 <a href="README.md">English README</a>。</sub></p>
+<p align="center"><sub>英文版在 <a href="https://slides.addsum.top/templates/decks/">templates/decks/en/</a>，预览见 <a href="README.md">English README</a>。</sub></p>
 
 ---
 
 ## 模板怎么用
 
-模板库在仓库的 `templates/decks/` 下，中文在 `zh/`，英文在 `en/`。两种用法：
+模板库在独立仓库 [slides_maker-site](https://github.com/addsumtech/slides_maker-site) 的 `templates/decks/` 下，中文在 `zh/`，英文在 `en/`。先取一次：
+
+```bash
+git clone --depth 1 https://github.com/addsumtech/slides_maker-site.git
+```
+
+两种用法：
 
 **用法一：直接指路（最简单）。** 把模板路径写进需求：
 
 ```text
-用 slide-maker，参考 templates/decks/zh/nvidia-overview/template.pptx 的风格，
+用 slide-maker，参考 slides_maker-site/templates/decks/zh/nvidia-overview/template.pptx 的风格，
 按我的 product.md 做一份产品介绍。
 ```
 
@@ -117,10 +123,10 @@ https://github.com/user-attachments/assets/9d28772b-39dd-44c1-989a-3f5cb45a3b01
 
 ```bash
 # Claude Code 用户
-cp -r templates/decks/zh/nvidia-overview ~/.claude/slide-templates/nvidia-overview
+cp -r slides_maker-site/templates/decks/zh/nvidia-overview ~/.claude/slide-templates/nvidia-overview
 
 # Codex 用户
-cp -r templates/decks/zh/nvidia-overview ~/.codex/slide-templates/nvidia-overview
+cp -r slides_maker-site/templates/decks/zh/nvidia-overview ~/.codex/slide-templates/nvidia-overview
 ```
 
 做中文 deck 用 `zh/` 的模板，英文 deck 用 `en/` 的，两套的版式一致，文案语言不同。
@@ -179,7 +185,7 @@ slide-maker 不是一个 prompt 包办一切，而是一组各有专职的 **age
 ## 快速开始
 
 <p align="center">
-  <img src="docs/assets/quickstart_zh.png" alt="快速开始：装一次、敲 /slide-maker、读材料或联网调研、确认结构稿、生成加独立评审、拿到 pptx 再微调">
+  <img src="https://slides.addsum.top/docs/assets/quickstart_zh.png" alt="快速开始：装一次、敲 /slide-maker、读材料或联网调研、确认结构稿、生成加独立评审、拿到 pptx 再微调">
 </p>
 
 ### 第一步：安装
@@ -195,10 +201,10 @@ slide-maker 不是一个 prompt 包办一切，而是一组各有专职的 **age
 **Windows 说明：** 流水线是跨平台 Python，CI 在 Linux 上跑，日常开发在 macOS。遇到 Windows 特有问题，下方的 `check_env.py` 会指出缺什么；欢迎带报错开 issue。
 
 ```bash
-git clone https://github.com/addsumtech/slides_maker.git
+git clone --depth 1 https://github.com/addsumtech/slides_maker.git
 cd slides_maker
-python3 -m pip install -r requirements.txt
-python3 scripts/install_skill.py --target both
+python3 -m pip install -r skills/slide-maker/requirements.txt
+python3 skills/slide-maker/scripts/install_skill.py --target both
 ```
 
 只用一个工具的话，把 `both` 换成 `codex` 或 `claude`。不确定缺什么？[检查命令](#遇到问题)会直接打印修复方法。
@@ -206,10 +212,10 @@ python3 scripts/install_skill.py --target both
 **想一行搞定？用 [`npx skills`](https://github.com/vercel-labs/skills) 只装技能本体**（免克隆，约 1.1 MB）：
 
 ```bash
-npx skills add addsumtech/slides_maker#skill-dist
+npx skills add addsumtech/slides_maker
 ```
 
-它会先问装到哪个 agent、哪个范围。`#skill-dist` 是只含技能的轻量分支（不含画廊和站点），所以安装小而快。加 `-g` 装到全局（所有项目），加 `-a claude-code`（或 `-a codex`）跳过 agent 选择，加 `-y` 全程免确认。仍需上面的运行依赖：LibreOffice、一个 SVG 栅格化器，以及 `python3 -m pip install -r requirements.txt`。
+它会先问装到哪个 agent、哪个范围。技能位于仓库的 `skills/slide-maker/` 下，而画廊和演示站在独立仓库 [slides_maker-site](https://github.com/addsumtech/slides_maker-site)，主仓库没有大文件，所以安装小而快。加 `-g` 装到全局（所有项目），加 `-a claude-code`（或 `-a codex`）跳过 agent 选择，加 `-y` 全程免确认。仍需上面的运行依赖：LibreOffice、一个 SVG 栅格化器，以及 `python3 -m pip install -r skills/slide-maker/requirements.txt`。
 
 ### 第二步：敲 /slide-maker，逐题回答（最推荐）
 

@@ -9,6 +9,9 @@ jobs:
   smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: skills/slide-maker
     steps:
       - uses: actions/checkout@v4
 

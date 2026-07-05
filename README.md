@@ -34,8 +34,8 @@ https://github.com/user-attachments/assets/9d28772b-39dd-44c1-989a-3f5cb45a3b01
 
 Any AI slide tool looks great in a screenshot. The real question is what you get *back*. So open one and click around:
 
-- **[Paper / lab-meeting deck ↓](templates/decks/en/transformer-talk/template.pptx?raw=1)**: a 15-slide reading of *Attention Is All You Need*. Double-click the BLEU chart and re-number it; click into the attention formula and edit it like text; open **View ▸ Notes** for the full spoken script; press Play and watch the bullets reveal one click at a time. Every figure is cropped straight from the paper's PDF.
-- **[Visual / culture deck ↓](templates/decks/en/chengdu/template.pptx?raw=1)**: the other end of the range, a fully generated visual identity where cover, dividers, and interior read as one system.
+- **[Paper / lab-meeting deck ↓](https://slides.addsum.top/templates/decks/en/transformer-talk/template.pptx)**: a 15-slide reading of *Attention Is All You Need*. Double-click the BLEU chart and re-number it; click into the attention formula and edit it like text; open **View ▸ Notes** for the full spoken script; press Play and watch the bullets reveal one click at a time. Every figure is cropped straight from the paper's PDF.
+- **[Visual / culture deck ↓](https://slides.addsum.top/templates/decks/en/chengdu/template.pptx)**: the other end of the range, a fully generated visual identity where cover, dividers, and interior read as one system.
 
 Rather browse first? **[Flip through all 16 decks online](https://slides.addsum.top/).** But don't judge an AI slide tool by its gallery. Judge it by the file it hands you: open it, and click anything.
 
@@ -48,66 +48,72 @@ Eight directions, one set in English and one in Chinese. Each is a complete exam
 <table>
   <tr>
     <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/transformer-talk"><img src="docs/assets/screenshots/preview_en_transformer-talk.png" alt="Lab Meeting / Paper Talk template preview"></a><br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/transformer-talk"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_transformer-talk.png" alt="Lab Meeting / Paper Talk template preview"></a><br/>
       <sub><strong>Lab Meeting / Paper Talk</strong><br/>paper reading, lab meeting, method overview, experiment report<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/transformer-talk">Flip online</a> · <a href="templates/decks/en/transformer-talk/template.pptx?raw=1">Download .pptx</a></sub>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/transformer-talk">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/transformer-talk/template.pptx">Download .pptx</a></sub>
     </td>
     <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/nvidia-overview"><img src="docs/assets/screenshots/preview_en_nvidia-overview.png" alt="Company / Product Intro template preview"></a><br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/nvidia-overview"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_nvidia-overview.png" alt="Company / Product Intro template preview"></a><br/>
       <sub><strong>Company / Product Intro</strong><br/>company overview, product matrix, customer communication, fundraising intro<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/nvidia-overview">Flip online</a> · <a href="templates/decks/en/nvidia-overview/template.pptx?raw=1">Download .pptx</a></sub>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/nvidia-overview">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/nvidia-overview/template.pptx">Download .pptx</a></sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/nl-job-market-2026"><img src="docs/assets/screenshots/preview_en_nl-job-market-2026.png" alt="Data / Market Analysis template preview"></a><br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/nl-job-market-2026"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_nl-job-market-2026.png" alt="Data / Market Analysis template preview"></a><br/>
       <sub><strong>Data / Market Analysis</strong><br/>industry research, trend explanation, structured analysis<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/nl-job-market-2026">Flip online</a> · <a href="templates/decks/en/nl-job-market-2026/template.pptx?raw=1">Download .pptx</a></sub>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/nl-job-market-2026">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/nl-job-market-2026/template.pptx">Download .pptx</a></sub>
     </td>
     <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/solo-company-talk"><img src="docs/assets/screenshots/preview_en_solo-company-talk.png" alt="AI Trends / Solo Talk template preview"></a><br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/solo-company-talk"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_solo-company-talk.png" alt="AI Trends / Solo Talk template preview"></a><br/>
       <sub><strong>AI Trends / Solo Talk</strong><br/>trend talk, personal presentation, startup story<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/solo-company-talk">Flip online</a> · <a href="templates/decks/en/solo-company-talk/template.pptx?raw=1">Download .pptx</a></sub>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/solo-company-talk">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/solo-company-talk/template.pptx">Download .pptx</a></sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/kids-ai-explainer"><img src="docs/assets/screenshots/preview_en_kids-ai-explainer.png" alt="Teaching / Knowledge Sharing template preview"></a><br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/kids-ai-explainer"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_kids-ai-explainer.png" alt="Teaching / Knowledge Sharing template preview"></a><br/>
       <sub><strong>Teaching / Knowledge Sharing</strong><br/>class explanation, reading share, training material<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/kids-ai-explainer">Flip online</a> · <a href="templates/decks/en/kids-ai-explainer/template.pptx?raw=1">Download .pptx</a></sub>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/kids-ai-explainer">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/kids-ai-explainer/template.pptx">Download .pptx</a></sub>
     </td>
     <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/chengdu"><img src="docs/assets/screenshots/preview_en_chengdu.png" alt="Visual Storytelling / Culture template preview"></a><br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/chengdu"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_chengdu.png" alt="Visual Storytelling / Culture template preview"></a><br/>
       <sub><strong>Visual Storytelling / Culture</strong><br/>city, culture, event, brand story<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/chengdu">Flip online</a> · <a href="templates/decks/en/chengdu/template.pptx?raw=1">Download .pptx</a></sub>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/chengdu">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/chengdu/template.pptx">Download .pptx</a></sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/standup-history"><img src="docs/assets/screenshots/preview_en_standup-history.png" alt="History / Evolution Narrative template preview"></a><br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/standup-history"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_standup-history.png" alt="History / Evolution Narrative template preview"></a><br/>
       <sub><strong>History / Evolution Narrative</strong><br/>historical arc, industry evolution, timeline story<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/standup-history">Flip online</a> · <a href="templates/decks/en/standup-history/template.pptx?raw=1">Download .pptx</a></sub>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/standup-history">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/standup-history/template.pptx">Download .pptx</a></sub>
     </td>
     <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/michael-jackson-king-of-pop"><img src="docs/assets/screenshots/preview_en_michael-jackson-king-of-pop.png" alt="Biography / Brand Story template preview"></a><br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/michael-jackson-king-of-pop"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_michael-jackson-king-of-pop.png" alt="Biography / Brand Story template preview"></a><br/>
       <sub><strong>Biography / Brand Story</strong><br/>public figure, brand archive, cultural retrospective<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/michael-jackson-king-of-pop">Flip online</a> · <a href="templates/decks/en/michael-jackson-king-of-pop/template.pptx?raw=1">Download .pptx</a></sub>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/michael-jackson-king-of-pop">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/michael-jackson-king-of-pop/template.pptx">Download .pptx</a></sub>
     </td>
   </tr>
 </table>
 
-<p align="center"><sub>Chinese versions live in <a href="templates/decks/">templates/decks/zh/</a>, previewed in the <a href="README_CN.md">Chinese README</a>.</sub></p>
+<p align="center"><sub>Chinese versions live in <a href="https://slides.addsum.top/templates/decks/">templates/decks/zh/</a>, previewed in the <a href="README_CN.md">Chinese README</a>.</sub></p>
 
 ---
 
 ## How to use the templates
 
-The gallery lives in `templates/decks/`, English under `en/`, Chinese under `zh/`. Two ways to use them:
+The gallery lives in the [slides_maker-site](https://github.com/addsumtech/slides_maker-site) repo under `templates/decks/`, English under `en/`, Chinese under `zh/`. Grab it once:
+
+```bash
+git clone --depth 1 https://github.com/addsumtech/slides_maker-site.git
+```
+
+Two ways to use a template:
 
 **Option 1: point at it (simplest).** Put the template path in your request:
 
 ```text
-Use slide-maker. Follow the style of templates/decks/en/nvidia-overview/template.pptx
+Use slide-maker. Follow the style of slides_maker-site/templates/decks/en/nvidia-overview/template.pptx
 and build a product intro from my product.md.
 ```
 
@@ -117,10 +123,10 @@ It parses the template's layout and visual system, then applies them to your con
 
 ```bash
 # Claude Code users
-cp -r templates/decks/en/nvidia-overview ~/.claude/slide-templates/nvidia-overview
+cp -r slides_maker-site/templates/decks/en/nvidia-overview ~/.claude/slide-templates/nvidia-overview
 
 # Codex users
-cp -r templates/decks/en/nvidia-overview ~/.codex/slide-templates/nvidia-overview
+cp -r slides_maker-site/templates/decks/en/nvidia-overview ~/.codex/slide-templates/nvidia-overview
 ```
 
 Use `en/` templates for English decks and `zh/` for Chinese ones. The layouts match; only the copy language differs.
@@ -179,7 +185,7 @@ To be plain about it: it does not promise a perfect deck in one shot. It promise
 ## Quick start
 
 <p align="center">
-  <img src="docs/assets/quickstart_en.png" alt="Quick start: install once, start /slide-maker, it reads or researches, confirm the plan, build + critic review, get the pptx then tune">
+  <img src="https://slides.addsum.top/docs/assets/quickstart_en.png" alt="Quick start: install once, start /slide-maker, it reads or researches, confirm the plan, build + critic review, get the pptx then tune">
 </p>
 
 ### Step 1: Install
@@ -195,10 +201,10 @@ You need **Python 3.9+**, **LibreOffice** (renders slide previews for the automa
 **Windows note:** the pipeline is cross-platform Python and is exercised in CI on Linux, but day-to-day development happens on macOS. If you hit a Windows-specific issue, `check_env.py` below will name the missing piece; issues with error output are welcome.
 
 ```bash
-git clone https://github.com/addsumtech/slides_maker.git
+git clone --depth 1 https://github.com/addsumtech/slides_maker.git
 cd slides_maker
-python3 -m pip install -r requirements.txt
-python3 scripts/install_skill.py --target both
+python3 -m pip install -r skills/slide-maker/requirements.txt
+python3 skills/slide-maker/scripts/install_skill.py --target both
 ```
 
 If you only use one tool, replace `both` with `codex` or `claude`. Not sure what's missing? The [check command](#troubleshooting) prints the exact fix.
@@ -206,10 +212,10 @@ If you only use one tool, replace `both` with `codex` or `claude`. Not sure what
 **Prefer a one-liner? Install just the skill with [`npx skills`](https://github.com/vercel-labs/skills)** (no clone, about 1.1 MB):
 
 ```bash
-npx skills add addsumtech/slides_maker#skill-dist
+npx skills add addsumtech/slides_maker
 ```
 
-It prompts for the agent and scope. `#skill-dist` is a lightweight, skill-only branch (no gallery or website), so the install stays small and fast. Add `-g` to install globally (all projects), `-a claude-code` (or `-a codex`) to skip the agent prompt, and `-y` for a fully non-interactive run. You still need the runtime dependencies above: LibreOffice, an SVG rasterizer, and `python3 -m pip install -r requirements.txt`.
+It prompts for the agent and scope. The skill lives under `skills/slide-maker/` and the repo carries no heavy assets (the gallery and demo site live in [slides_maker-site](https://github.com/addsumtech/slides_maker-site)), so the install stays small and fast. Add `-g` to install globally (all projects), `-a claude-code` (or `-a codex`) to skip the agent prompt, and `-y` for a fully non-interactive run. You still need the runtime dependencies above: LibreOffice, an SVG rasterizer, and `python3 -m pip install -r skills/slide-maker/requirements.txt`.
 
 ### Step 2: Invoke it and answer the interview (the recommended path)
 
