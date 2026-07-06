@@ -99,6 +99,16 @@ feel art-directed rather than defaulted, and it's yours to set once and hold. Pi
   For a returning user, recall the previous deck's look and deliberately vary at least one foundation
   (canvas value, header furniture, signature device, type pairing) — converging on one house template
   *across decks* is the same failure as one template *across slides*.
+- **Declare the TYPE SCALE as a contract — with real drama.** Fix the deck's modular scale once, as
+  named tokens the builder must use (e.g. `display 54 · title 24 · body 12 · caption 9`), instead of
+  improvising sizes per slide (the 9.6/10.3/10.5 drift that makes a deck feel unconsidered). Two
+  requirements: **(1) hierarchy** — clear steps (~1.4–1.8× between adjacent levels); **(2) drama** —
+  the display level exists and gets USED: at least the deck's key numbers / hero statements reach
+  ≥2.5–4× body size. A deck whose largest run is ~1.5–2× body reads timid and text-like — big scale
+  on the few things that matter is what makes a slide feel designed and *directed* (the eye lands on
+  the hero first because it physically cannot land anywhere else). The render-time lint prints the
+  measured font histogram + a `type drama` ratio and warns `FLAT TYPE` below 2× — treat that warning
+  as this rule failing.
 - **Then pick the cross-cutting "atmosphere / polish" moves that fit the register** (taste, NOT a
   checklist — match the move to the look; `design-gallery.md`) and apply them consistently: a **semantic
   colour contract** (bind one hue per concept — navy=structure, green=good, red=risk — reused on
@@ -190,8 +200,13 @@ each slide in isolation and can't retrofit rhythm, so this is yours.
 - Decide **where the appear-builds fall** here (step 6), not on a separate pass — a built pipeline slide
   *is* a protagonist beat, and whether builds cluster or spread is part of density pacing.
 - **Build the rhythm map** (`design-intelligence-addendum.md` §1.2) — one row per content slide:
-  *density · background mode · visual protagonist · emotional register · role in rhythm* — and confirm
-  **adjacent rows differ on more than one axis**, not just in title text. The *emotional register*
+  ***canvas skeleton** · density · background mode · visual protagonist · emotional register · role in
+  rhythm* — and confirm **adjacent rows differ on more than one axis**, not just in title text. The
+  skeleton column (statement / split / island / dashboard / band / full-bleed / rail / gallery — §1.2)
+  rotates the page's *bone structure*, one level above the protagonist: a deck that rotates charts and
+  diagrams inside the same title-top / one-zone / footer skeleton still reads as a template. **≥4
+  distinct skeletons on an 8+-slide deck; never 3 consecutive slides on one skeleton** (render-time
+  lint fingerprints this — its `LAYOUT SAMENESS` warning means this rule was missed). The *emotional register*
   column is not yours to invent: it **executes the Content plan's planned emotional curve** (each
   slide's `beat`) — your job is to make the curve *visible* (density, colour temperature, scale
   rising and falling with it); deviate from a planned beat only with a stated reason.
@@ -309,8 +324,10 @@ verb it performs; `design-intelligence-addendum.md` §1.1) → content shape →
 grid / bullets / generic columns) → chosen language → why, folding in the runner-up it beat
 (`form-selection.md`). Visual
 protagonist and density/whitespace live in the §1.2 rhythm map, not this table. Be specific in *Layout*
-(e.g. "`columns(2)`: left = 3 bullets, right = Fig. 3 whole, takeaway bar below"), and never leave
-*Motion* a bare "—". Mark *Image* only where a topical plate earns its place, else "—".
+(e.g. "`columns(2)`: left = 3 bullets, right = Fig. 3 whole, takeaway bar below"), **and on every
+non-obvious slide end the Layout cell with its eye path** — `eye: <hero> → <support> → <caveat>` (the
+§3 Contrast rule, recorded here so the builder engineers that order instead of re-deriving it). Never
+leave *Motion* a bare "—". Mark *Image* only where a topical plate earns its place, else "—".
 
 ### Form ledger + diversity gate + block audit
 One row per **content** slide: `# | visual protagonist | format-family (card · chart · diagram · quote ·
@@ -370,6 +387,13 @@ The roll-up of every slide whose *Image?* column is marked: *"slides X, Y could 
 in <art-direction> — approve which, if any."* Match the table exactly. Be SMART and selective — mark
 only the few slides where a **topical content plate** genuinely earns its place, NEVER every slide even
 if the user opted into image generation. Nothing is generated until the user says so.
+
+### Open questions
+The design-side questions that must not fall between the agents: every design-relevant open question
+**carried over from the Content plan** (venue norms, a missing brand/UI asset, the logo not-found →
+wordmark default) with its resolution or "for the user", plus any new question this design raised
+(e.g. a form that needs an asset the user hasn't provided). An empty section is written as "none" —
+never omitted, so a dropped question is visible as a gap rather than silent.
 
 End with a **hand-off line** to the main build loop: the Design plan is complete and awaits DESIGN
 approval before the build begins.

@@ -239,6 +239,15 @@ Score each dimension; cite specific slides.
    memorable** — a hero beat that is merely a *large* element, not one that contrasts with its neighbours
    and stays memorable after the deck is closed. (General and cross-purpose — a short or
    deliberately-uniform deck relaxes the counts.)
+   **Two evidence sources for this deck-level pass:** *(1) the THUMBNAIL pass* — view all slides at
+   thumbnail scale in one grid and ask, per slide, "what does this slide say?": if the answer requires
+   reading body text, the form isn't carrying the message (the slide is *decorated text*, not a
+   *directed visual*); thumbnails also expose sameness and a flat type scale instantly. *(2) the DECK
+   STATS block* from `scripts/lint_deck.py` (the builder pastes it into your input; ask for it if
+   missing) — measured reading load, text/ink coverage, font histogram + type-drama ratio, build
+   presence, and skeleton-similarity per slide. Score the numbers, not impressions: a `TEXT WALL` /
+   `CROWDED` / `LAYOUT SAMENESS` / `FLAT TYPE` / `NO BUILDS` stats warning left unaddressed (no
+   one-clause exception recorded) is a finding with the measurement as its evidence.
 10. **Factual fidelity** *(when source material exists — the check every system fails).*
    Does every number, label, and headline claim trace back to the source? Does the deck
    represent the source's *actual emphasis* (e.g. a comparison table foregrounds the

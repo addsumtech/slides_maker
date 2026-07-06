@@ -36,9 +36,10 @@ Say it plainly, in one or two lines:
   as a shareable read-only copy.
 
 ## Iterating after delivery — the safety rule
-Before you re-run the build on a deck you delivered earlier, **determine whether the user
-has hand-edited the file since your last build** — ask them, or compare the `.pptx`
-mtime to when you last wrote it.
+🔴 **MUST — before any post-delivery rebuild, determine whether the user has hand-edited the
+file since your last build** — ask them, or compare the `.pptx` mtime to when you last wrote
+it. This fires in a *later session* where no pipeline gate runs and the reflex path (just
+rebuild) is the destructive one — treat it as a hard stop, not a courtesy.
 
 - **They have NOT hand-edited** → safe path: edit the **build script**, rebuild, re-render,
   re-run the critic. This is the normal iteration loop.

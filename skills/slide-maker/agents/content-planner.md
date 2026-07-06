@@ -186,7 +186,12 @@ agent decides form, layout, icons, and motion downstream. For each slide record:
   beat → rhythm map), so don't leave it implicit.
 - **Content units** — the terse points / the actual words, faithful to the source. Few words per
   point; the slide is a visual aid for a speaker, not a script (put the spoken script in speaker
-  notes). **Write the copy like a sharp human in that field, not a content generator — kill the
+  notes). **Budget it, don't feel it:** a *presented* slide targets **≤ ~40 words (≈ ≤ ~80 CJK
+  characters) of on-slide reading load** — titles + points + captions together; past that, the
+  audience reads instead of listening. Prose that matters but busts the budget goes to **speaker
+  notes**, or the slide splits. A *self-read* deck may carry ~2–3× that. (The render-time lint
+  measures the actual load per slide and warns `TEXT WALL` — that warning means this budget was
+  blown at the source, here.) **Write the copy like a sharp human in that field, not a content generator — kill the
   "AI taste":** concrete nouns + active verbs over abstract nouns; the specific number/name over a
   vague claim; cut hype-filler adjectives; vary the rhythm. This matters in every language and is
   **most acute in 中文** (translationese: `的…的…的` chains, `进行/实现`-nominalization, empty

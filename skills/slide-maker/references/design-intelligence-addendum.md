@@ -90,12 +90,33 @@ density, same colour mode, same protagonist type, same emotional temperature.
 
 Required table (one row per content slide):
 
-| # | Density | Background mode | Protagonist | Emotional register | Role in rhythm |
-|---|---------|-----------------|-------------|--------------------|----------------|
-| 1 | light   | white           | hero symbol | aspirational       | opener         |
-| 2 | medium  | warm accent     | risk / gap  | pressure           | conflict       |
-| 3 | light   | white           | funnel      | diagnostic         | explanation    |
-| 4 | medium  | cool system     | flywheel    | constructive       | solution       |
+| # | Skeleton | Density | Background mode | Protagonist | Emotional register | Role in rhythm |
+|---|----------|---------|-----------------|-------------|--------------------|----------------|
+| 1 | statement | light  | white           | hero symbol | aspirational       | opener         |
+| 2 | split     | medium | warm accent     | risk / gap  | pressure           | conflict       |
+| 3 | island    | light  | white           | funnel      | diagnostic         | explanation    |
+| 4 | dashboard | medium | cool system     | flywheel    | constructive       | solution       |
+
+**The Density cell carries the §1.3 whitespace estimate** — write it as `light ~65%` / `medium ~55%` /
+`dense ~45% (split?)`, so the 50–70% target is *planned* per slide here rather than remembered
+mid-build (the render-time lint then measures the real ink coverage and warns `CROWDED` when the
+estimate was optimistic).
+
+**The SKELETON column is the page's bone structure — one level above the protagonist.** A deck can
+rotate protagonists (chart → diagram → number) and still feel templated because every page shares the
+same skeleton: title top-left, one content zone, footer. Rotate the *canvas architecture* itself, from
+this vocabulary (extend it freely):
+- **statement** — one oversized sentence / number, centred or golden-ratio placed, nothing else
+- **split** — two vertical fields (50/50 or 1/3–2/3), often text ↔ visual
+- **island** — one diagram/figure dominating the middle, annotations orbiting
+- **dashboard** — a measured grid of tiles with ONE hero tile breaking the grid
+- **band** — a full-width horizontal axis (timeline / flow / spectrum) with content hanging off it
+- **full-bleed** — the visual IS the page (image/diagram edge-to-edge), text overlaid on a scrim/plate
+- **rail** — a narrow side rail (nav / context / stat stack) + a wide main field
+- **gallery** — 2–4 exhibits with captions, curated not gridded
+A deck of 8+ content slides should use **≥4 distinct skeletons**, and **no 3 consecutive slides share
+one skeleton** (the render-time lint fingerprints this — `LAYOUT SAMENESS`). Adjacent rows must still
+differ on more than one axis overall.
 
 The example rows are cross-domain scaffolding, not a prescription — a teaching deck's registers might run
 *curiosity → tension → aha → consolidation*; a status deck's might run *steady → concern → plan →

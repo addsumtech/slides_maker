@@ -256,7 +256,139 @@ def _backing_fill(bx, ti):
     return best
 
 
-def lint(path):
+# ───────────────────────── DECK STATS — measured design targets ─────────────────────────
+# Turns the prose targets ("few words", "~50-70% whitespace", "type hierarchy with drama",
+# "builds on a presented deck", "vary the layout skeleton") into NUMBERS printed after the
+# findings, so the builder and the critic read measurements instead of remembering rules.
+# Everything here is ADVISORY ([stats] warns) — it informs, it never fails the exit code.
+
+_CJK_RANGES = ((0x3040, 0x30FF), (0x3400, 0x4DBF), (0x4E00, 0x9FFF), (0xAC00, 0xD7AF), (0xF900, 0xFAFF))
+
+
+def _text_load(s):
+    """Reading load of one string: latin words + CJK chars / 2 (≈ words of reading effort)."""
+    cjk = sum(1 for ch in s if any(a <= ord(ch) <= b for a, b in _CJK_RANGES))
+    latin_words = len([w for w in "".join(ch if (ch.isalnum() and ord(ch) < 0x2E80) else " " for ch in s).split() if w])
+    return latin_words + (cjk + 1) // 2
+
+
+def _coverage(boxes, sw, sh):
+    """Union area of the boxes as a fraction of the canvas (0.1-inch grid — ±2% is plenty)."""
+    if not boxes:
+        return 0.0
+    step = 0.1
+    nx, ny = int(sw / step) + 1, int(sh / step) + 1
+    cells = set()
+    for b in boxes:
+        x0, x1 = max(0, int(b["l"] / step)), min(nx - 1, int(b["r"] / step))
+        y0, y1 = max(0, int(b["t"] / step)), min(ny - 1, int(b["b"] / step))
+        for gx in range(x0, x1 + 1):
+            for gy in range(y0, y1 + 1):
+                cells.add(gx * ny + gy)
+    return len(cells) / float(nx * ny)
+
+
+def _skeleton(bx):
+    """Coarse layout signature: the multiset of (shape-class, ½-inch position/width buckets).
+    Two slides with near-identical signatures share the same page SKELETON (chrome always
+    matches — content must be what differs)."""
+    return frozenset((s["st"], round(s["l"] * 2), round(s["t"] * 2), round(s["w"] * 2))
+                     for s in bx if not s["bg"])
+
+
+def _slide_stats(slide, bx, sw, sh):
+    footer_y = sh - 0.6
+    load = 0
+    for s in bx:
+        if s["full"] and not (s["t"] > footer_y and s["size"] <= 10.5):   # footers are chrome, not reading load
+            load += _text_load(s["full"])
+    sizes = []                                                             # (pt, chars) for every explicit-size run
+    for r in _walk_runs(slide.shapes):
+        if r.text.strip() and r.font.size:
+            sizes.append((r.font.size.pt, len(r.text.strip())))
+    has_timing = slide.element.find(qn("p:timing")) is not None
+    has_trans = slide.element.find(".//" + qn("p:transition")) is not None
+    pingfang = 0
+    for r in _walk_runs(slide.shapes):
+        try:
+            rPr = r._r.find(qn("a:rPr"))
+            ea = rPr.find(qn("a:ea")) if rPr is not None else None
+            if ea is not None and ea.get("typeface") == "PingFang SC":
+                pingfang += 1
+        except Exception:
+            pass
+    return {
+        "pingfang": pingfang,
+        "load": load,
+        "text_cov": _coverage([s for s in bx if s["text"] and not s["bg"]], sw, sh),
+        "ink_cov": _coverage([s for s in bx if not s["bg"]], sw, sh),
+        "max_pt": max((pt for pt, _ in sizes), default=0.0),
+        "sizes": sizes,
+        "n_shapes": len([s for s in bx if not s["bg"]]),
+        "n_pic": len([s for s in bx if s["pic"]]),
+        "n_chart": len([s for s in slide.shapes if getattr(s, "has_chart", False)]),
+        "build": has_timing,
+        "trans": has_trans,
+        "skel": _skeleton(bx),
+    }
+
+
+def _print_stats(rows, mode, sw, sh):
+    if not rows:
+        return
+    n = len(rows)
+    # deck-wide dominant body size = char-weighted median of run sizes ≤ 20pt
+    body = sorted((pt for r in rows for pt, ch in r["sizes"] if pt <= 20 for _ in range(ch)))
+    body_med = body[len(body) // 2] if body else 12.0
+    print(f"\n  ── deck stats (mode: {mode}) — measured, advisory ──")
+    print("     #  load  text%  ink%  maxpt  shp  pic  cht  build  sim↑")
+    warns = []
+    sames = 0
+    for i, r in enumerate(rows):
+        sim = ""
+        if i:
+            a, b = rows[i - 1]["skel"], r["skel"]
+            j = len(a & b) / max(1, len(a | b))
+            sim = f"{j:.2f}"
+            sames = sames + 1 if j >= 0.75 else 0
+            if sames >= 2:
+                warns.append(f"LAYOUT SAMENESS: slides {i-1}-{i+1} share ≥75% of their skeleton — "
+                             f"vary the page structure, not just the words (rhythm / canvas-skeleton rule)")
+                sames = 0
+        print(f"    {i+1:2d}  {r['load']:4d}  {r['text_cov']*100:4.0f}%  {r['ink_cov']*100:4.0f}%  "
+              f"{r['max_pt']:5.1f}  {r['n_shapes']:3d}  {r['n_pic']:3d}  {r['n_chart']:3d}    "
+              f"{'✓' if r['build'] else '—'}   {sim}")
+        budget = 70 if mode == "presented" else 120
+        if r["load"] > budget:
+            warns.append(f"TEXT WALL: slide {i+1} carries a reading load of ~{r['load']} words "
+                         f"({mode} budget ≈{'40' if mode=='presented' else '90'}, warn >{budget}) — move prose "
+                         f"to speaker notes or split the slide")
+        if r["ink_cov"] > 0.65:
+            warns.append(f"CROWDED: slide {i+1} ink coverage {r['ink_cov']*100:.0f}% (whitespace "
+                         f"{100-r['ink_cov']*100:.0f}% < the ~50-70% ‘air’ target) — subtract, don't shrink")
+    builds = sum(1 for r in rows if r["build"])
+    transd = sum(1 for r in rows if r["trans"])
+    drama = (max((r["max_pt"] for r in rows), default=0.0) / body_med) if body_med else 0.0
+    avg_ink = sum(r["ink_cov"] for r in rows) / n
+    print(f"     fonts: body-median {body_med:.0f}pt · deck max {max((r['max_pt'] for r in rows), default=0):.0f}pt "
+          f"· type drama {drama:.1f}× | builds {builds}/{n} · transitions {transd}/{n} · avg ink {avg_ink*100:.0f}%")
+    if mode == "presented" and builds == 0 and n > 2:
+        warns.append("NO BUILDS: a presented deck with zero appear-builds — the motion manifest "
+                     "should name build:/static:+reason per slide (anim.py Build)")
+    import platform
+    pingfang = sum(r.get("pingfang", 0) for r in rows)
+    if platform.system() == "Darwin" and pingfang:
+        warns.append(f"PINGFANG ON MACOS: {pingfang} run(s) carry 'PingFang SC' as the EA font — the "
+                     f"macOS LibreOffice render loop substitutes a handwriting face for it; use "
+                     f"'Hiragino Sans GB' (see deckkit.EAFONT; presets now default to it)")
+    if drama and drama < 2.0 and n > 3:
+        warns.append(f"FLAT TYPE: no run anywhere reaches 2× the body size ({drama:.1f}×) — the deck has "
+                     f"no typographic hero; give at least the key number/statement real scale")
+    for w in warns:
+        print(f"  [stats] {w}")
+
+
+def lint(path, mode="presented"):
     try:
         prs = Presentation(path)
     except Exception:
@@ -265,8 +397,13 @@ def lint(path):
     sw, sh = prs.slide_width / EMU, prs.slide_height / EMU
     total = 0
     warn_total = 0
+    stats_rows = []
     for si, slide in enumerate(prs.slides):
         bx = _boxes(slide, sw, sh)
+        try:
+            stats_rows.append(_slide_stats(slide, bx, sw, sh))
+        except Exception:
+            pass
         finds = []
         warns = []
         # 1) overflow
@@ -301,6 +438,11 @@ def lint(path):
                                  + f" on fill #{back} — contrast {ratio:.2f}:1, unreadable")
                 elif ratio < 3.0:
                     warns.append(f"LOW CONTRAST: '{snip}' ink #{ink} on fill #{back} — {ratio:.2f}:1 (< 3:1)")
+                elif ratio < 4.5 and s["size"] >= 12:
+                    # body-size text is held to the full WCAG bar; small chrome (footers, tick
+                    # labels) may sit in the 3.0-4.5 band without a warn
+                    warns.append(f"BODY CONTRAST: '{snip}' ink #{ink} on fill #{back} — {ratio:.2f}:1 "
+                                 f"(body-size text targets ≥4.5:1)")
         # 2) solid vs solid partial overlap (neither contained)
         sol = [s for s in bx if s["solid"] and not s["bg"]]
         for i in range(len(sol)):
@@ -475,12 +617,15 @@ def lint(path):
             print(f"  slide {si+1}: [warn] {m}")
         total += len(finds)
         warn_total += len(warns)
+    _print_stats(stats_rows, mode, sw, sh)
     tail = ("" if total else "  ✓ clean (no hard findings)") + (f"  ·  {warn_total} warning(s)" if warn_total else "")
     print(f"\n{path}: {total} layout finding(s){tail}")
     return total
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("usage: python lint_deck.py <deck.pptx>"); sys.exit(2)
-    sys.exit(1 if lint(sys.argv[1]) > 0 else 0)
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    mode = "selfread" if any(a in ("--mode=selfread", "--selfread") for a in sys.argv[1:]) else "presented"
+    if not args:
+        print("usage: python lint_deck.py <deck.pptx> [--selfread]"); sys.exit(2)
+    sys.exit(1 if lint(args[0], mode) > 0 else 0)

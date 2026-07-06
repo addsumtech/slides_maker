@@ -269,7 +269,12 @@ Do not just skim for the first few obvious issues. Run these passes:
      **interior-padding (text crammed against a card edge), chip/label-too-small (a label overrunning its
      pill), and text-vs-text collision (a wrapped value/label overrunning the line below)** —
      deterministically, against the *rendered* text. **Read its findings AND re-verify visually**, because
-     it still can't see every case. For each real collision, name the **two elements**, where they touch,
+     it still can't see every case. It also prints a **DECK STATS block** (per-slide reading load,
+     text/ink coverage, font histogram + type-drama, build presence, skeleton-similarity): score those
+     NUMBERS against the design targets — an unaddressed `TEXT WALL` / `CROWDED` / `LAYOUT SAMENESS` /
+     `FLAT TYPE` / `NO BUILDS` stats warning is a finding with the measurement as evidence, and the
+     **thumbnail pass** (all slides in one grid: per slide, "what does it say?" — needing to read body
+     text = the form isn't carrying the message) is the design lens's cheapest whole-deck instrument. For each real collision, name the **two elements**, where they touch,
      and the **root-cause fix** (re-anchor via `content_band` / `vstack(bottom=)` / `bottom_callout`,
      resize, or add a gap — never a one-off `y` nudge that recurs when the wording changes).
    - **Interior padding & cramming (a recurring, easy-to-miss flaw):** text must keep a real margin (≥~0.12in)
@@ -706,6 +711,11 @@ consumes it as-is.
 ```json
 {
   "purpose": "<echo the purpose you reviewed against>",
+  "coverage": {
+    "slides_opened": [1, 2, "...every slide number whose PNG you actually Read — a missing number means the review is INVALID, not that the slide was fine"],
+    "passes": ["<name each lens pass you ran, e.g. 'content lens (full deck)', 'design lens (full deck)' — a sole critic lists TWO; round 2+ adds 'fresh whole-deck re-pass'>"],
+    "stats_block_seen": true
+  },
   "verdict": "consent" | "revise",
   "summary": "<2-3 sentences: the deck's biggest lever right now>",
   "strengths": ["<what genuinely works — keep it>"],
@@ -722,6 +732,13 @@ consumes it as-is.
   ]
 }
 ```
+
+**The `coverage` block is the anti-skim gate** — a skimmed review and a full one used to produce
+identical JSON, which is exactly why skims happened. Now the review proves itself: `slides_opened`
+must list every slide in the deck (the main loop rejects a review with gaps), `passes` shows the
+two lens passes actually ran (and, on rounds 2+, that the re-pass was whole-deck fresh, not a
+fix-list check), and `stats_block_seen: false` obliges the main loop to hand you the lint deck-stats
+block before the review counts.
 
 Severity: **blocker** = undermines the purpose / a claim the audience can't verify or
 that is wrong → must fix. **major** = clearly hurts comprehension or impact. **minor**

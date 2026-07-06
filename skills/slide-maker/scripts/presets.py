@@ -6,7 +6,9 @@ treatment + image-prompt style, so a deck's look is consistent from the first sl
 These are *starting languages*, not straitjackets — the model still tunes to the brand/purpose and
 the user's references always win. Apply one like:
 
-    from presets import preset
+    from presets # NOTE: CJK faces use 'Hiragino Sans GB', NOT 'PingFang SC' — the macOS LibreOffice
+# render loop substitutes a handwriting face for PingFang (see deckkit.EAFONT comment).
+import preset
     p = preset("glassmorphism")
     deckkit.FONT = p["font"]; deckkit.DISPLAY = p["display"]; deckkit.MONO = p["mono"]
     INK = p["ink"]; ACCENTS = p["accents"]; BG = p["bg"]
@@ -30,7 +32,7 @@ PRESETS = {
         "bg": C("0A0E27"), "ink": C("F2F5FC"), "muted": C("AEB7CC"),
         "accents": [C("5B8DEF"), C("3DDDFC"), C("A26BFA"), C("FB7185"), C("4ADE80")],
         "font": "Arial", "display": "Arial", "mono": "Consolas",
-        "ea": "Noto Sans CJK SC", "ea_display": "PingFang SC",
+        "ea": "Noto Sans CJK SC", "ea_display": "Hiragino Sans GB",
         "surface": "glass_card (tint+sheen+rim) on a BG-filled slide lit by 1-2 glow()s; KPI tiles "
                    "use scorecard(glass_tint=); white headline keyword in the accent.",
         "image_prompt": "dark atmospheric gradient background, deep navy to violet, soft neon color "
@@ -41,7 +43,7 @@ PRESETS = {
         "mood": "International Typographic Style — grid, restraint, one red",
         "bg": C("FFFFFF"), "ink": C("111111"), "muted": C("777777"),
         "accents": [C("E2231A")], "font": "Arial", "display": "Arial", "mono": "Consolas",
-        "ea": "Noto Sans CJK SC", "ea_display": "PingFang SC",
+        "ea": "Noto Sans CJK SC", "ea_display": "Hiragino Sans GB",
         "surface": "strict flush-left columns(), hairline rules, big type-scale ratio, generous "
                    "whitespace; spend the ONE red on the single focal item (accent_one); ghost "
                    "numerals for enumerated grids.",
@@ -79,7 +81,7 @@ PRESETS = {
         "mood": "indie print zine — 2-color riso, halftone, hard offset shadows",
         "bg": C("F3ECD9"), "ink": C("1B2A4A"), "muted": C("6B7280"),
         "accents": [C("FF4D8D"), C("F5B301"), C("1B2A4A")], "font": "Arial", "display": "Arial Black",
-        "mono": "Consolas", "ea": "PingFang SC", "ea_display": "Heiti SC",
+        "mono": "Consolas", "ea": "Hiragino Sans GB", "ea_display": "Heiti SC",
         "surface": "offset_shadow 'sticker' cards/numbers/headlines (hard, not soft); mono chrome "
                    "(eyebrows/footers/page-markers); full-bleed duotone halftone illustrations.",
         "image_prompt": "two-color risograph halftone print, navy + fluorescent pink on cream paper, "
@@ -91,7 +93,7 @@ PRESETS = {
         "bg": C("FCF2D8"), "ink": C("1A1A17"), "muted": C("9A9384"),
         "accents": [C("F76302"), C("0548C5"), C("E2342B"), C("1B7A3D"), C("F6BE1A")],
         "font": "Arial", "display": "Arial Black", "mono": "Consolas",
-        "ea": "PingFang SC", "ea_display": "Heiti SC",
+        "ea": "Hiragino Sans GB", "ea_display": "Heiti SC",
         "surface": "cream bg; rounded cards with colored header bands (auto-contrast label); dark "
                    "emphasis bands; scattered Memphis motifs (dots/zigzags/triangles) as margin accents.",
         "image_prompt": "Memphis / New Wave 80s-90s flat illustration, bold black outlines, squiggles "
@@ -127,8 +129,8 @@ PRESETS = {
     "ink_wash": {
         "mood": "Chinese ink editorial (藏拙) — warm paper, ink black, one seal red, KaiTi serif",
         "bg": C("F5F1E8"), "ink": C("1A1A1A"), "muted": C("8B8680"),
-        "accents": [C("A52A2A"), C("5C5852")], "font": "PingFang SC", "display": "KaiTi", "mono": "Consolas",
-        "ea": "PingFang SC", "ea_display": "KaiTi",
+        "accents": [C("A52A2A"), C("5C5852")], "font": "Hiragino Sans GB", "display": "KaiTi", "mono": "Consolas",
+        "ea": "Hiragino Sans GB", "ea_display": "KaiTi",
         "surface": "warm-paper bg, large KaiTi/Songti CJK display, ink-black body; ONE seal-red accent "
                    "as a chop/seal stamp (deckkit.seal) + CJK numeral section markers (壹贰叁, via "
                    "deckkit.cjk_numeral); hairline rules, generous margins, dark label-chips for "
@@ -140,8 +142,8 @@ PRESETS = {
     "eastern_traditional": {
         "mood": "Eastern traditional-colour narrative — warm paper, ochre-gold + sage, KaiTi",
         "bg": C("F7F2E8"), "ink": C("3A3530"), "muted": C("7A7068"),
-        "accents": [C("C99E62"), C("6F8F75"), C("A52A2A")], "font": "PingFang SC", "display": "KaiTi", "mono": "Consolas",
-        "ea": "PingFang SC", "ea_display": "KaiTi",
+        "accents": [C("C99E62"), C("6F8F75"), C("A52A2A")], "font": "Hiragino Sans GB", "display": "KaiTi", "mono": "Consolas",
+        "ea": "Hiragino Sans GB", "ea_display": "KaiTi",
         "surface": "warm-paper bg with a TRADITIONAL Chinese colour palette (ochre-gold 赭 + sage 竹青 + "
                    "vermilion 朱); KaiTi/Songti display, refined body; colour-name swatches, seal "
                    "stamps (deckkit.seal), vertical-text accents, ink-wash motifs. The colours "

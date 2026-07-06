@@ -88,6 +88,12 @@ every **🔴 CHECKPOINT** is a hard stop.
 | **by taste / opt-in** | A judgment call (generated images, motion, icons) — apply where it helps, justify where not |
 | **carve / exception** | A named case where a rule deliberately yields — follow the carve, don't over-apply it |
 
+> **Enforcement invariant (for anyone evolving this skill):** every 🔴 MUST must be *wired into a gate
+> artifact* — an interview question, a required plan field/column, a self-verify item, the PRE-FLIGHT
+> checklist (Step 4), a deterministic lint check, or a named critic-rubric item. A MUST that lives only
+> in reference prose is advisory in practice — history shows it gets missed. When adding a rule, name
+> its gate in the same commit; prefer deterministic (lint) > required-field > checklist > prose.
+
 **Where things live** — the reference that *owns* each concern (read it when that concern is in play):
 
 | Concern | Owner |
@@ -1098,6 +1104,31 @@ You'll hand this to the critic in step 5 (it can't *see* motion in a static rend
 judges your motion *design* from this manifest plus the build-candidates it spots in the
 pixels). Keep it next to the build (a comment block in `build_<deck>.py` is fine).
 
+### 🔴 PRE-FLIGHT — tick these 10 before the first render, EVERY deck, no exceptions
+This is the fixed boarding-pass between build and render. **Emit it as ten literal ✓/✗ lines** (in
+your working notes or the build script's tail comment) — writing the ticks is what forces the checks
+to actually run; a deck with un-ticked pre-flight items is not ready to render. It exists because
+these are the rules that history shows get *silently* skipped when they live only as prose — they are
+judgment calls the render-time lint cannot measure (lint already covers: word load, ink coverage,
+font drama, build presence, layout sameness, CJK ea-font, contrast, footer, overlaps — don't re-tick
+those here; read its report instead).
+1. **Speaker notes**: presented deck → every slide's spoken script is in its notes (`dk.speaker_notes`); self-read → prose is ON the slides instead.
+2. **Builds start empty**: no animated slide pre-shows its first beat or a spoiling summary/legend in the static base.
+3. **Icons & motion match the plan**: the design plan's icon family and every `build:` line actually made it into the code (the classic inline-mode miss).
+4. **Charts native**: every chart is editable-native unless a matplotlib look was deliberately chosen; legends sit off the data.
+5. **Evidence real**: every domain image/figure is the real computed/source artifact — no plausible stand-in; PDF crops checked on all four edges.
+6. **Colour keyed**: the semantic-colour ledger's meanings are taught on-slide (key at first use) and no accent appears outside its bound meaning; chrome stays quiet (motif ≤3 appearances).
+7. **Claims current**: every time-bound ledger row re-verified with as-of = TODAY; the deck carries its "as of" date.
+8. **Language & hygiene**: one language throughout; zero meta-annotations ("placeholder"/"TODO"/"AI-generated"); voice pass done on every line.
+9. **Eye path**: squint each slide — first look lands on the named hero, 3–4 hierarchy levels survive the blur.
+10. **Hand-off ready**: font/portability deps + per-slide click order noted for the hand-off; open questions carried, not dropped.
+
+**Gates never collapse.** A quick / low-stakes / inline run scales the *size* of each artifact
+(a 5-line content plan, a 10-line design plan), never the *existence* of the gates: interview →
+content plan → design plan (with self-verify) → pre-flight → lint+stats → critic. Every rule-miss
+this skill has shipped happened when a step was run "in my head" instead of emitted — if it isn't
+written down, it didn't happen.
+
 ## Step 5 — Render, verify, then run the actor–critic loop
 **You should already have run the build-time geometry gate** (`dk.lint_layout(prs)` at the end of
 Step 4) and cleared its CRITICALs (off-canvas · overflow · text-on-text) in-process, so the render
@@ -1126,8 +1157,22 @@ root cause), whole-page-image (editability), and orphan/empty slides**: exactly 
 misses (a callout tucked under a panel; a 2-line body hanging below a card; a 。 stranded on its own row). Fix every finding, re-render, and re-lint
 to clean before handing to the critic. It also prints soft **`[warn]`s** (advisory, non-blocking) for the
 two things invisible to every other check: **missing alt-text** on an informative image, and a **math-font
-tofu** risk (an `equation_native` font not installed on the render host) — resolve them too. It's a safety
-net for the no-overlap / fits-its-box rules, **not** a
+tofu** risk (an `equation_native` font not installed on the render host) — resolve them too.
+
+**It then prints a DECK STATS block — the measured form of the design targets. READ it, don't skim
+past it** (pass `--selfread` for a read-alone deck so the budgets scale). Per slide it measures:
+reading **load** (latin words + CJK chars/2) vs the ~40-word presented budget · **text% / ink%
+coverage** vs the ~50–70% whitespace target · **max font pt** · shape/picture/chart counts ·
+**build** presence · **sim↑** (layout-skeleton similarity vs the previous slide); deck-wide it
+prints the **font histogram + type-drama ratio** and **builds/transitions n/N**. Its `[stats]`
+warnings name the rule they measure — **`TEXT WALL`** (word budget blown → cut copy to notes or
+split), **`CROWDED`** (whitespace target missed → subtract, don't shrink), **`LAYOUT SAMENESS`**
+(3 consecutive slides share one skeleton → the §1.2 skeleton-rotation rule failed), **`FLAT TYPE`**
+(no typographic hero → the type-scale drama rule failed), **`NO BUILDS`** (presented deck with no
+appear-builds → the motion manifest failed). Treat each `[stats]` warning as the NAMED design rule
+having failed measurably: fix it or write one clause of why this deck is the exception, and **paste
+the stats block into the critic's input** so the judges score numbers, not impressions. It's a safety
+net for the no-overlap / fits-its-box / density / rhythm rules, **not** a
 replacement for looking (it can't judge crop, balance, legibility, or fidelity).
 
 **Render self-check — scan EVERY slide for these before handing to the critic** (they're
