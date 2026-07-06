@@ -20,7 +20,7 @@ so they can't drift, and **(2)** after the user picks, render **one real slide i
 style** with deckkit / `render_deck` and confirm before the full build. The gate decides *taste/
 direction*; the single real render confirms *fidelity*.
 
-## The three gates (each cheap to change; expensive work deferred)
+## The four gates (each cheap to change; expensive work deferred)
 
 ### Gate A — Direction + archetypes
 1. From the interview (purpose/audience/style) generate **differentiated directions** —
@@ -76,17 +76,24 @@ direction*; the single real render confirms *fidelity*.
    `_directions/` folder (`directions.json` + `directions.html`) and the *rejected* directions'
    token-sets — keeping only the chosen `style.py` (and the registry copy, if persisted). The
    previews were scaffolding for the choice; don't leave demo files littering the user's
-   Downloads. Then continue to Gate B/C and build the **full** deck in the chosen style.
+   Downloads. Then continue to Gates B–D and build the **full** deck in the chosen style.
 
-### Gate B — Deck plan
-This gate **is the Step 3 plan checkpoint surfaced as a gate** — present the content-planner's
-**deck plan**: the slide-by-slide takeaways / arc *and* the per-slide spec + the **image
-opt-in list** (not a thinner "outline"). Approve before building all slides — this catches
-structural/content-direction errors before the costly build. Confirm scope here too ("9
-slides in *Editorial* — proceed?").
+### Gate B — Content plan (the Step 1 CONTENT checkpoint)
+This gate **is the content checkpoint surfaced as a gate** — present the **content-planner's**
+work only: the deck's **arc** and the **per-slide takeaways** (the story, not the styling — no
+thinner "outline"). Approve before any design or build work — this catches structural /
+content-direction errors while they are cheapest to fix. Confirm scope here too ("9 slides —
+this arc, proceed?").
 
-### Gate C — Draft (the existing step 6)
-Build the **full** deck in the approved direction — single-author by default, or
+### Gate C — Design plan (the Step 2 DESIGN checkpoint)
+This gate **is the design checkpoint surfaced as a gate** — present the **slide-design** agent's
+work: the **Design language** (the direction fixed at Gate A, now expanded into a full spec), the
+**form ledger** + **rhythm**, the **per-slide design**, and the **image opt-in list**. Approve
+before building all slides — this catches form / layout / motion direction errors before the
+costly build. Confirm any scope shift here too ("9 slides in *Editorial* — proceed?").
+
+### Gate D — Draft (the build + critic loop, Steps 4–5)
+Build the **full** deck in the approved content + design plan — single-author by default, or
 **section fan-out** for large decks (`large-deck-orchestration.md`) — then run the
 **critic panel** and show the user. Iterate on their feedback as normal.
 

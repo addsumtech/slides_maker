@@ -2516,6 +2516,78 @@ def footer(slide, tag="", page=None, w_in=None, h_in=None):
              [[(str(page), 9, MUTE, True, False)]], align=PP_ALIGN.RIGHT, space_after=0)
 
 
+def wordmark(text, out_path, *, font=None, color=None, size=180, rule=False, monogram=False, pad=0.12):
+    """Render a clean typographic WORDMARK — the entity's name set in the deck's DISPLAY face —
+    to a TRANSPARENT PNG, and return `out_path`. This is the SANCTIONED stand-in when a real
+    logo can't be found (see references/image-generation.md): type done *well*, NOT an
+    illustration or an AI-imagined mark. Build it in the asset step, then place it exactly like
+    a real logo — `logo(slide, out_path, ...)` treats it as chrome and holds its aspect ratio.
+
+    `font` picks the face (defaults to the deck's DISPLAY, then FONT); `color` is the ink
+    (RGBColor or 'RRGGBB'/'#RRGGBB' hex, default DEEP). `size` is the cap size in px — the PNG is
+    cropped tight to the glyphs, so this only sets rasterisation crispness; `logo()`'s `h`
+    controls the on-slide height. `rule=True` adds a thin baseline rule under the name (a
+    restrained divider, not a box). `monogram=True` prefixes a simple square block holding the
+    first letter (pass `monogram="disc"` for a circle) — a minimal lockup, still just type.
+    `pad` is transparent margin as a fraction of `size`. Keep it restrained: a wordmark, not a
+    logo redraw."""
+    from PIL import Image, ImageDraw, ImageFont
+    fam = font or DISPLAY or FONT
+    ink = _as_rgb(color) if color is not None else DEEP
+    ink_rgba = tuple(int(v) for v in ink) + (255,)
+    fp = _font_file(fam) or _font_file(FONT)
+    try:
+        f = ImageFont.truetype(fp, int(size))
+    except Exception:
+        f = ImageFont.load_default()
+    s = str(text)
+
+    pad_px = max(1, int(round(size * pad)))
+    probe = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+    tb = probe.textbbox((0, 0), s, font=f)
+    tw, th = tb[2] - tb[0], tb[3] - tb[1]
+
+    mono_side = int(round(th * 1.30)) if monogram else 0
+    mono_gap = int(round(size * 0.16)) if monogram else 0
+    rule_gap = max(2, int(round(size * 0.12))) if rule else 0
+    rule_h = max(1, int(round(size * 0.035))) if rule else 0
+
+    band_h = max(th, mono_side)
+    W = pad_px * 2 + mono_side + mono_gap + tw
+    H = pad_px * 2 + band_h + rule_gap + rule_h
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    dr = ImageDraw.Draw(img)
+
+    x = pad_px
+    top = pad_px
+    if monogram:
+        my = top + (band_h - mono_side) // 2
+        rect = [x, my, x + mono_side, my + mono_side]
+        if str(monogram).lower() == "disc":
+            dr.ellipse(rect, fill=ink_rgba)
+        else:
+            try:
+                dr.rounded_rectangle(rect, radius=max(2, int(round(mono_side * 0.16))), fill=ink_rgba)
+            except (AttributeError, TypeError):
+                dr.rectangle(rect, fill=ink_rgba)
+        ch = (s.strip()[:1] or "•").upper()
+        cf = ImageFont.truetype(fp, max(1, int(mono_side * 0.60))) if fp else f
+        cb = dr.textbbox((0, 0), ch, font=cf)
+        dr.text((x + (mono_side - (cb[2] - cb[0])) / 2 - cb[0],
+                 my + (mono_side - (cb[3] - cb[1])) / 2 - cb[1]), ch, font=cf, fill=(255, 255, 255, 255))
+        x += mono_side + mono_gap
+
+    ty = top + (band_h - th) // 2
+    dr.text((x - tb[0], ty - tb[1]), s, font=f, fill=ink_rgba)
+    if rule:
+        ry = top + band_h + rule_gap
+        dr.rectangle([x, ry, x + tw, ry + rule_h], fill=ink_rgba)
+
+    out_path = str(out_path)
+    img.save(out_path)
+    return out_path
+
+
 def logo(slide, path, *, corner="tr", h=0.42, margin=0.3, w_in=None, h_in=None, alt=None):
     """Place a brand / institution / product logo as PERSISTENT chrome — the SAME mark in the
     SAME spot on every slide. For a deck that is *about* a company, institution, or product,
@@ -2527,8 +2599,10 @@ def logo(slide, path, *, corner="tr", h=0.42, margin=0.3, w_in=None, h_in=None, 
     identical across slides so it doesn't jump. The logo holds its aspect ratio (a wide wordmark
     and a square mark both sit right). `corner` is "tr" (default), "tl", "br", or "bl".
 
-    Use the REAL logo (see references/image-generation.md's real-asset hierarchy) — if it's
-    missing, ask the user for it or drop in an honest "logo here" placeholder; NEVER an
+    Use the REAL logo (see references/image-generation.md's real-asset hierarchy). Fallback
+    order when it's missing: a real logo image -> a designed **wordmark** (call `wordmark()` to
+    set the entity name in the deck's DISPLAY face as a transparent PNG, then pass that PNG here
+    — the sanctioned stand-in) -> an honest "logo here" placeholder as a last resort. NEVER an
     AI-imagined or recolored look-alike. On a busy/dark background, give the logo a small scrim
     or light plate behind it so it stays legible. Returns the picture shape."""
     from PIL import Image

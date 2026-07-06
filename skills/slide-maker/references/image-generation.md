@@ -139,7 +139,7 @@ above: the real mark or an honest placeholder, never a faked one.
 
 ## Planning workflow
 
-1. During Step 3, decide each slide's visual role: source figure, deterministic chart,
+1. During Step 2 (the slide-design agent's design plan), decide each slide's visual role: source figure, deterministic chart,
    native diagram, generated plate, or no image — **by taste and purpose** (see the section
    above). Note which slides your design sense calls for a plate, so the manifest covers
    exactly those.

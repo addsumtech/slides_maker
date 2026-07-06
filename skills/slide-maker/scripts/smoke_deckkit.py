@@ -84,6 +84,12 @@ ok("glass/glow/scrim/offset", lambda: (lambda sl: (dk.box(sl, 0, 0, W, H, fill="
 ok("editorial_header", lambda: dk.editorial_header(S(), "eyebrow", "Title", serif="Georgia"))
 ok("big_numeral", lambda: dk.big_numeral(S(), 0.5, 0.5, "04", mode="ghost"))
 ok("picture", lambda: dk.picture(S(), IMG, 1, 1, 4, 3, round=True))
+def _wordmark():
+    p = os.path.join(TMP, "_wm.png")
+    dk.wordmark("Acme Labs", p, rule=True, monogram=True)
+    assert os.path.exists(p) and os.path.getsize(p) > 0, "wordmark PNG missing/empty"
+    dk.logo(S(), p, h=0.4)                       # placed afterward, exactly like a real logo
+ok("wordmark (typographic logo stand-in)", _wordmark)
 ok("backdrop_motif", lambda: dk.backdrop_motif(S(), accent_disc=C("C0362C")))
 ok("native_chart (editable)", lambda: dk.native_chart(S(), 0.6, 1, 6, 3.2, ["Q1", "Q2", "Q3"],
    [("新客", [10, 18, 26]), ("老客", [30, 33, 36])], kind="column", dark=True, highlight=0))

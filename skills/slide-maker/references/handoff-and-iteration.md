@@ -11,7 +11,7 @@ and both are avoidable:
 ## The core model: the script is the source of truth
 A per-deck build (`build_<deck>.py`) **regenerates** the entire `.pptx` every run. So:
 - The **script** is the source of truth; the **`.pptx` is a build artifact**.
-- Keep the script in the deck folder next to the `.pptx` (step 2) so it travels with the
+- Keep the script in the deck folder next to the `.pptx` (step 3) so it travels with the
   deck and any iteration is reproducible.
 - The moment the user hand-edits the `.pptx`, there are **two diverging sources of
   truth** (their edited file, your script) that do not auto-merge. From then on you must

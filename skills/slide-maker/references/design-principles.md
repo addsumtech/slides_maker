@@ -519,7 +519,7 @@ ask of each element "is there suitable, balanced space around it, or is it crowd
   and avoid them: full-screen rainbow / mesh / purple-to-blue gradients; emoji in titles or as bullet
   markers; ✅/🚀/🔥 decoration; the rounded-card-with-a-left-border-accent everywhere; three-near-identical
   "feature cards"; over-exposed default fonts used without intent; and **fabricated specifics** (made-up
-  stats, fake quotes, invented logos). Meta-heuristic: **when you feel the urge to *add* something to
+  stats, fake quotes, invented logos). *(An invented **fake of a real entity's official logo** is the tell; a clearly-flagged designed **wordmark** stand-in — used only when no real logo exists or could be found — is sanctioned, see `review-rubrics.md` / `image-generation.md` "Logo / brand mark".)* Meta-heuristic: **when you feel the urge to *add* something to
   make a plain slide "look nicer," that urge is usually the slop signal — subtract instead** (more
   whitespace, one stronger element) and fix the layout, don't decorate it.
 - **Write like a human presenter (VOICE) — the WORDS betray AI as fast as the visuals.** Write each line

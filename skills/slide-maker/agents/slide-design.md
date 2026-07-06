@@ -51,22 +51,21 @@ sameness, no hero, dead layout, thoughtless motion, decorative icons — is your
 - **Whenever a choice risks becoming a card grid, a repeated template, or a visually even
   medium-density page, consult `references/design-intelligence-addendum.md`** — it turns this philosophy
   into testable gates.
-- The five bottlenecks you exist to beat (`design-principles.md`): **1 Layout intelligence** (narrative
+- The five bottlenecks you exist to beat (`design-intelligence-addendum.md` §1): **1 Layout intelligence** (narrative
   → visual structure → layout, never template-first); **2 Rhythm** (alternate dense/light; mix
-  hero / dashboard / diagram / timeline / minimalist); **3 Space** (intentional whitespace, ~50–70% page
-  utilization); **4 Visual surprise** (a memorable WOW/hero slide every ~6–8 slides — a bold number,
+  hero / dashboard / diagram / timeline / minimalist); **3 Space** (intentional whitespace, ~50–70% whitespace); **4 Visual surprise** (a memorable WOW/hero slide every ~6–8 slides — a bold number,
   a dramatic statement, or an iconic diagram); **5 Visual reasoning** (concept → visualization).
 
 ## Method
 
 **This design intelligence is HOW you design — it runs on EVERY deck / each case, never opt-in per
-deck.** The design self-verify (a–o) and the `references/design-intelligence-addendum.md` gates
+deck.** The design self-verify (a–i) and the `references/design-intelligence-addendum.md` gates
 (concept→viz reasoning, block audit, evenness / one-hero-per-slide, semantic colour where colour is
 used, rhythm, WOW) apply to every deck and **scale down gracefully** — a 4-slide deck still gets one
 hero per slide, no card-grid reflex, semantic colour, and one memorable moment; you just do less of it,
-you don't skip it. The **deck-level NUMERIC FLOORS** (≥4 protagonists · ≤2 consecutive card slides ·
-≥3 non-card forms · ≥1 WOW; addendum §7) are the only part gated to size — they apply to decks with
-**6+ content slides**. Treat all of this as the craft applied to this case, not an extra gate to pass.
+you don't skip it. The **deck-level NUMERIC FLOORS** (≥4 distinct protagonists, of which ≥3 non-card · ≤2 consecutive
+card slides · ≥1 WOW; addendum §7) are the only part gated to size: **hard gates at ~8+ content slides**
+(each with a one-clause-justify escape), **strong guidance at 6–7**, lighter under 6. Treat all of this as the craft applied to this case, not an extra gate to pass.
 
 ### 1 — Set the deck's DESIGN LANGUAGE first (the atmosphere)
 Before any per-slide choice, decide ONE coherent look for the whole deck — this is what makes a deck
@@ -94,15 +93,11 @@ feel art-directed rather than defaulted, and it's yours to set once and hold. Pi
 
 ### 2 — Per slide, pick the FORM that makes the point land
 The reflex bullet list / card grid is the failure mode. Choose, don't match.
-- **First move — reason concept → visualization** (the dictionary below; the philosophy is in
-  `design-principles.md`): read the content unit's
-  underlying *shape* and reach for its visual language before opening the component catalogue —
-  Flow → pipeline/river/conveyor · Journey → timeline/road/metro · Growth → mountain/rocket/curve ·
-  Loop → flywheel/orbit · Comparison → split-screen · Hierarchy → pyramid · Strategy → compass ·
-  Ecosystem → galaxy/network · System → circuit/layer · Transformation → morphing · Decision →
-  decision-tree · Process → assembly-line · Relationship → network · Dependency → sankey · Scale →
-  stairs · Prioritization → quadrant · Evolution → timeline · Risk → heatmap · Performance → dashboard ·
-  Progress → progress-bar.
+- **First move — reason concept → visualization** (the reasoning philosophy is operationalized in
+  `design-intelligence-addendum.md` §1): read the content unit's underlying *shape* and reach for its
+  visual language before opening the component catalogue — resolve the shape through the single
+  authoritative Concept→Visualization dictionary (`design-intelligence-addendum.md` §3; compact copy in
+  `references/form-selection.md`) rather than re-deriving it here.
 - **Record an explicit reasoning trace on every non-obvious slide:** content shape → rejected default
   (card grid / bullets / generic columns) → chosen visual language → why it aids comprehension. Resolve
   the concept through the addendum's authoritative **Concept→Visualization decision table** (use / avoid /
@@ -110,8 +105,9 @@ The reflex bullet list / card grid is the failure mode. Choose, don't match.
 - **Then generate the 2–3 candidate forms and pick with the tie-breaker** from
   `references/form-selection.md` (the single content-shape → candidate-forms map; charts →
   `data-viz.md`, components → `design-gallery.md`). **Record why the winner beat the runner-up** — that's
-  the Form-ledger row. Cards are for **parallel, unordered, equal-weight** items ONLY; the moment content
-  has order, magnitude, a relationship, time, or two axes, a non-card form says it better.
+  the Form-ledger row. Reach for cards only when the **block-dependency test** passes (the parallel ·
+  unordered · equal-weight · independent rule is stated once in the Layout pass below, authoritative in
+  `design-intelligence-addendum.md` §2).
 - **The what / how / why method triad** (carry over from the Content plan's *visual source* cell, which
   already tags which question each method slide answers): **WHAT the method is** → a **labelled schematic
   diagram** + short gloss (intuition at a glance); **HOW it works** → an **`algorithm_block`** (numbered
@@ -167,9 +163,9 @@ each slide in isolation and can't retrofit rhythm, so this is yours.
 - **Build the rhythm map** (`design-intelligence-addendum.md` §1.2) — one row per content slide:
   *density · background mode · visual protagonist · emotional register · role in rhythm* — and confirm
   **adjacent rows differ on more than one axis**, not just in title text.
-- **Meet the deck-level minimum-variation floors** for any deck with 6+ content slides (addendum §7):
-  **≥4 distinct protagonists · ≥3 non-card forms · ≤2 consecutive card/panel slides · ≥1 WOW/hero**, plus
-  the content-triggered diagram / contrast / time floors — a plan that misses them is not ready.
+- **Meet the deck-level minimum-variation floors** (addendum §7): **≥4 distinct protagonists (of which
+  ≥3 non-card) · ≤2 consecutive card/panel slides · ≥1 WOW/hero**, plus the content-triggered diagram /
+  contrast / time floors — **hard at ~8+ content slides** (or a one-clause reason), **strong guidance at 6–7**.
 
 ### 5 — SVG icons (a first-class decision — think SMART about where/when, never by quota)
 An icon must **reduce cognitive load, not decorate.** Rule-of-thumb: it must answer *what-is-this /
@@ -272,56 +268,57 @@ fall (every ~6–8 slides), and where the **appear-builds** cluster or spread.
 ### Per-slide design
 A row per slide (keep it workable — the runner-up folds into *Reasoning*):
 
-| # | Narrative job | Visual protagonist | Form/component | Reasoning (shape → rejected default → why; incl. runner-up beaten) | Layout (C.R.A.P.; primitives; balance) | Density/whitespace | Icons | Motion (`build:…` / `static:…`) | Image? |
+| # | Form/component (+ runner-up it beat) | Reasoning (narrative job → content shape → rejected default → why) | Layout (C.R.A.P.) | Motion (`build:…` / `static:…`) | Image? |
 
-Fill *Narrative job* with the verb the slide performs (diagnosis / proof / contrast / mechanism /
-transition / decision / action; `design-intelligence-addendum.md` §1.1). Make *Reasoning* carry the trace
-on every non-obvious slide — content shape → rejected default (card grid / bullets / generic columns) →
-chosen language → why, folding in the runner-up it beat (`form-selection.md`). Be specific in *Layout*
-(e.g. "`columns(2)`: left = 3 bullets, right = Fig. 3 whole, takeaway bar below"), give a
-*Density/whitespace* estimate (~50–70% target; addendum §1.3), and never leave *Motion* a bare "—". Mark
-*Image* only where a topical plate earns its place, else "—".
+Make *Reasoning* carry the whole trace on every non-obvious slide — the slide's **narrative job** (the
+verb it performs: diagnosis / proof / contrast / mechanism / transition / decision / action;
+`design-intelligence-addendum.md` §1.1) → content shape → rejected default (card grid / bullets / generic
+columns) → chosen language → why, folding in the runner-up it beat (`form-selection.md`). Visual
+protagonist and density/whitespace live in the §1.2 rhythm map, not this table. Be specific in *Layout*
+(e.g. "`columns(2)`: left = 3 bullets, right = Fig. 3 whole, takeaway bar below"), and never leave
+*Motion* a bare "—". Mark *Image* only where a topical plate earns its place, else "—".
 
 ### Form ledger + diversity gate + block audit
 One row per **content** slide: `# | visual protagonist | format-family (card · chart · diagram · quote ·
 big-number · timeline · table · photo) | build?` — followed by the **diversity-gate** result. If any one
 format-family exceeds **~40–50% of content slides**, the plan is **NOT ready**: rework the weakest into
 the form its content wants (`form-selection.md`), or record a one-clause justification per the gate.
-Then run the **Block Dependency Audit** (`design-intelligence-addendum.md` §2) — one row per card/panel
-slide: *why the parallel/unordered/equal-weight/independent test passes · the non-block alternative
-considered · keep-or-redesign*. If card/panel logic runs on **>2 consecutive slides**, the plan is **NOT
-ready** unless justified by content shape — this qualitative gate catches the visual sameness the family
-count misses, so both must pass.
+Then run the **Block Dependency Audit** (the parallel/unordered/equal-weight/independent test and the
+>2-consecutive-slides rule are stated once in the Layout pass §3; authoritative in
+`design-intelligence-addendum.md` §2) — one row per card/panel slide: *why the block-dependency test
+passes · the non-block alternative considered · keep-or-redesign*. This qualitative gate catches the
+visual sameness the family count misses, so it and the diversity gate both must pass.
 
-### Design self-verify (a–o)
-State the plan is **not ready** unless: **(a)** every slide has ONE named hero passing the squint test;
-**(b)** the Form-ledger diversity gate passes; **(c)** every non-obvious slide names the alternative its
-form beat; **(d)** the Design language is concrete — a *named* signature motif + a deliberately-chosen
-palette/type, never a defaulted light/minimal/blue with no motif. Plus the **three design musts**
-(considered + applied where they help, one-clause-justified where they aren't — smart placement, NOT a
-per-slide quota): **(e) appear-builds** — the structural beats carry a build and the **motion manifest
-records build/static + reason for every slide** (a presented deck with obvious candidates and no reasoned
-builds is not ready; a self-read deck static-by-design is the reasoned answer); **(f) SVG icons** — on an
-icon-fit preset with category/section/step/entity content a style-matched icon family is planned (a
-category-rich deck shipping zero icons is not ready); **(g) diverse components** — this IS gate (b),
-surfaced here (form actively varied, not one card grid repeated). Plus two **content-triggered** checks
-(only when that content is present): **(h) method/procedure → `algorithm_block`** (or one-clause why prose
-is better); **(i) principle / mechanism / experiment / definition → a labelled schematic diagram built
-CORRECTLY (domain-accurate, faithful to source) alongside text** (or an `equation_png` when the law *is*
-the relation) — not text alone. Plus the **operational gates** from `design-intelligence-addendum.md`
-(consider + apply, justify where a slide legitimately doesn't need one — NOT blanket quotas): **(j)
-evenness penalty** (§5) — every slide has a clear first-read element and blurs to 3–4 hierarchy levels,
-not one even grey field; **(k) WOW is memorable** (§1.4) — each WOW/hero names *why-memorable* AND the
-*surrounding contrast* against its neighbours, else it's just a bigger slide; **(l) minimum-variation
-floors** (§7) met for 6+-slide decks; **(m) block-dependency audit** (§2) passes — no card/panel logic on
->2 consecutive slides without a content reason; **(n) semantic-colour ledger** (§6) present — no accent
-hue without a bound meaning. Plus one more **content-triggered** check (fires ONLY when the deck's
-subject IS a company / product / single entity — an org / brand / institution, incl. a talk naming a
-tool/framework/model, per the LOGO PRINCIPLE): **(o) the deck carries a logo as persistent chrome** —
-the REAL one if the web search found it, else a **designed wordmark by default (flagged as a stand-in)**,
-surfaced at the DESIGN checkpoint for the user to confirm or override (a multi-org / neutral-academic
-deck, or one whose template already carries a logo, satisfies this by naming entities inline / not
-doubling). Fix any failing check before the DESIGN checkpoint.
+### Design self-verify (a–i)
+State the plan is **not ready** unless these DISTINCT checks pass — each weighed with judgment
+(considered + applied where it helps, one-clause-justified where a slide legitimately doesn't need it,
+NOT a blanket per-slide quota):
+- **(a) hierarchy & evenness** — every slide has ONE named hero passing the squint test and blurs to 3–4
+  hierarchy levels, not one even grey field (evenness penalty, `design-intelligence-addendum.md` §5).
+- **(b) form diversity & no block-sameness** — the Form-ledger diversity gate passes (form actively
+  varied, not one card grid repeated), the minimum-variation floors are met for 6+-slide decks (§7), and
+  the block-dependency audit passes (§2).
+- **(c) form reasoning** — every non-obvious slide names the alternative its form beat (`form-selection.md`).
+- **(d) design language concrete** — a *named* signature motif + a deliberately-chosen palette/type,
+  never a defaulted light/minimal/blue look with no motif.
+- **(e) semantic-colour ledger** — present; no accent hue ships without a bound meaning (§6).
+- **(f) appear-builds** — the structural beats carry a build and the motion manifest records
+  build/static + reason for **every** slide (a presented deck with obvious candidates and no reasoned
+  builds is not ready; a self-read deck static-by-design is the reasoned answer).
+- **(g) SVG icons** — on an icon-fit preset with category / section / step / entity content a
+  style-matched icon family is planned (a category-rich deck shipping zero icons is not ready).
+- **(h) WOW is memorable** — each WOW/hero names *why-memorable* AND the *surrounding contrast* against
+  its neighbours, else it's just a bigger slide (§1.4).
+- **(i) content-triggered** (only when that content is present) — method / procedure → an `algorithm_block`
+  (or one-clause why prose is better); principle / mechanism / experiment / definition → a labelled
+  schematic diagram built CORRECTLY (domain-accurate, faithful to source) alongside text, or an
+  `equation_png` when the law *is* the relation — not text alone; and, when the deck's subject IS a
+  company / product / single entity (incl. a talk naming a tool / framework / model, per the LOGO
+  PRINCIPLE), the deck carries a **logo as persistent chrome** — the REAL one if the web search found it,
+  else a **designed wordmark by default (flagged as a stand-in)**, surfaced at the DESIGN checkpoint for
+  the user to confirm or override (a multi-org / neutral-academic deck, or one whose template already
+  carries a logo, satisfies this by naming entities inline / not doubling).
+Fix any failing check before the DESIGN checkpoint.
 
 ### Design-critic checklist
 Confirm the deck answers the 10 checks the critic's design lens will apply (design bible):

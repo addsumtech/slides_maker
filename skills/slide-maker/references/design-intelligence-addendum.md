@@ -32,7 +32,7 @@ gates, it does not restate their mechanics:
 4. **Reference-vs-Generated Gap Heuristic** — is this plan art-directed, or just clean template output?
 5. **Evenness Penalty** — the "something must win" check.
 6. **Semantic Colour Ledger** — colour as bound meaning, as an enforceable output.
-7. **Minimum Deck-level Variation Requirements** — hard minimums for decks with 6+ content slides.
+7. **Minimum Deck-level Variation Requirements** — deck-level floors; hard gates at ~8+ content slides, strong guidance below.
 8. **Slide Archetype Alternatives** — escape hatches from the default page-type reflex.
 
 ---
@@ -107,7 +107,7 @@ Whitespace estimate: ~55% / ~65% / ~70%
 Density decision: keep airy because … / split because … / compress only if …
 ```
 
-Target band is ~50–70% whitespace (`design-principles.md`). "Compress" is the last resort and must be
+Target band is ~50–70% whitespace (the operational figure here for `design-principles.md`'s *generous whitespace*). "Compress" is the last resort and must be
 justified; the first two moves are **strengthen the hero** and **split the slide** (never shrink to
 illegible).
 
@@ -317,6 +317,10 @@ enforceable output**: the plan must state, up front, what each colour *means* an
 | **Neutral support** | grey / warm grey | cards, grid, background | the main hero |
 | **Decision / action** | deep blue / purple | roadmap, commitment, "what we'll do" | historical evidence |
 
+The roles and vocabulary above are **illustrative and cross-domain**, not a fixed palette — a teaching
+deck might bind *known / new / misconception*, a scientific deck *signal / noise / artifact*; carry the
+same declare-once discipline onto whatever concepts your content actually names.
+
 Rules:
 - **No accent colour without semantic meaning.** If a hue appears, it must *mean* something the audience
   can name.
@@ -333,22 +337,28 @@ colour alone — pair it with a label / icon / shape (`semantic-color-contract.m
 
 ## 7 — Minimum Deck-level Variation Requirements
 
-The Form-ledger diversity gate sets a *ceiling* per format-family; these are the *floors*. **For any deck
-with 6+ content slides**, the plan is not ready unless all of these hold:
+The Form-ledger diversity gate sets a *ceiling* per format-family; these are the *floors*. **Consider all
+of these on every deck** — the consideration is never optional; what scales with size is how hard the
+numbers bind. For any deck with **~8+ content slides** they are hard gates: the plan is not ready unless
+each holds *or* carries a one-clause reason why this deck's content genuinely wants otherwise. At **6–7
+content slides** treat them as **strong guidance**, not a hard fail; under 6, as lighter guidance still (a
+4-slide deck may legitimately carry fewer protagonists).
 
-- **≥ 4 distinct visual protagonists** across the deck.
-- **≥ 3 non-card forms** (diagram / chart / timeline / hero number / quote / table — not panels).
+- **≥ 4 distinct visual protagonists** across the deck, **of which ≥ 3 are non-card forms** (diagram /
+  chart / timeline / hero number / quote / table — not panels) — or a one-clause reason why this deck's
+  content genuinely wants otherwise.
 - **No more than 2 consecutive slides** using card / panel logic (this is the §2 consecutive-slides rule,
-  surfaced as a deck-level floor).
-- **≥ 1 hero / WOW slide** (with its §1.4 fields filled).
+  surfaced as a deck-level floor) — or a stated, strong content reason (as in §2).
+- **≥ 1 hero / WOW slide** (with its §1.4 fields filled) — or a one-clause reason why this deck's content
+  genuinely wants otherwise.
 - **≥ 1 diagrammatic slide** if the content contains **any process, system, mechanism, or framework.**
 - **≥ 1 contrast slide** if the content contains **before/after, old/new, problem/solution, or
   baseline/proposed.**
 - **≥ 1 time / roadmap slide** if the content contains **sequence, phases, evolution, or a future plan.**
 
 The last three are *content-triggered*: they only bind when that content is present — but when it is,
-skipping the corresponding form is a miss, not a stylistic choice. (Under 6 content slides, treat these as
-strong guidance rather than hard gates — a 4-slide deck may legitimately carry fewer protagonists.)
+skipping the corresponding form is a miss, not a stylistic choice (unless a one-clause content reason
+says otherwise).
 
 ---
 

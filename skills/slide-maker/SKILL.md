@@ -524,8 +524,8 @@ references it designs against (`form-selection.md`, `design-gallery.md`, `script
 `east-asian-aesthetic.md`). It consumes the approved content — it does **not** reopen it — and
 returns a **Design plan**: the deck's **Design language** (a *named* signature motif + a
 deliberately-chosen palette/type + the polish moves), the **deck rhythm**, a **per-slide design
-table** (visual protagonist · form + the runner-up it beat · layout · icons · motion · image?), the
-**Form ledger + diversity gate**, the **design self-verify (a–o)**, the **10-item design-critic
+table** (form + the runner-up it beat · reasoning · layout · motion · image?), the
+**Form ledger + diversity gate**, the **design self-verify checks**, the **10-item design-critic
 checklist** (which the Step-5 critic's design lens then applies), and the **image opt-in list**. The
 art director is *one mind* over the whole deck — only it sees every slide at once, so deck rhythm and
 where the appear-builds fall are its call, not the builder's.
@@ -534,8 +534,8 @@ where the appear-builds fall are its call, not the builder's.
 and getting the user's OK before the canvas is set up or anything is built. **This design intelligence
 runs on EVERY deck — it's how the art director designs, never opt-in per deck — and scales down
 gracefully to small decks (a 4-slide deck still earns one hero per slide, no card-grid reflex, semantic
-colour, and one memorable moment); only the deck-level numeric floors are size-gated (6+ content
-slides).** **Precondition — the design gate:** the plan is **not ready** unless it has a concrete **Design language** (a *named*
+colour, and one memorable moment); only the deck-level numeric floors are size-gated (hard at ~8+ content
+slides, strong guidance at 6–7).** **Precondition — the design gate:** the plan is **not ready** unless it has a concrete **Design language** (a *named*
 signature motif + a deliberately-chosen palette/type, not a defaulted light/minimal/blue), a **Form
 ledger** whose diversity gate passes (no one format-family on >~40–50% of content slides — the
 card-overuse guard), the addendum's **deck-level design gates** — a **rhythm map**, a **semantic-colour
@@ -545,7 +545,7 @@ single-entity** deck (its subject IS one org / product / brand / institution, or
 tool/framework/model), a **logo plan**: the real logo if the web search found it, else a
 **designed-wordmark-by-default** the user confirms at the DESIGN checkpoint (skip only for
 multi-org / neutral-academic decks, or where a template already carries the mark) — and the **THREE
-DESIGN MUSTS** addressed (`slide-design.md` self-verify e–g) —
+DESIGN MUSTS** addressed (`slide-design.md`'s three design musts) —
 **(1) appear-builds** on the structural beats (a motion manifest: build/static *with a reason* per
 slide), **(2) a style-matched SVG icon family** on an icon-fit, category-rich deck, **(3) diverse
 formats** (not a card grid repeated) — each *applied where it helps or justified where not* (a must
@@ -643,9 +643,12 @@ Full list, fallbacks, and tofu recovery in `references/font-guidance.md`.
 
 ## Step 4 — Build with deckkit
 Write a small per-deck build script that imports `scripts/deckkit.py` (don't re-derive primitives;
-full signatures + behaviour are in its docstrings). **First, for each slide pick its visual FORM
-deliberately** — generate 2-3 candidate forms and choose with the tie-breaker in
-`references/form-selection.md`; **don't default every multi-item slide to a card grid.** The helper set, by job:
+full signatures + behaviour are in its docstrings). **Build the approved Design plan** (form ledger,
+rhythm, per-slide design, colour, logo) as the source of truth — the slide-design agent already chose
+each slide's visual FORM and the user approved it at the DESIGN checkpoint, so **don't re-derive an
+approved form.** *Fallback only where the plan left something open:* pick that slide's form deliberately —
+generate 2-3 candidate forms and choose with the tie-breaker in `references/form-selection.md`;
+**don't default every multi-item slide to a card grid.** The helper set, by job:
 - **Chrome:** `title_bar`/`content_slide`, `footer`, `editorial_header` (caps eyebrow + title +
   hairline), `part_eyebrow`/`page_marker` (mono eyebrow + page marker), `logo` (persistent
   brand/institution/product mark in a fixed corner on every page — see the brand-logo rule below).
@@ -875,8 +878,12 @@ A few rules that matter (see `references/design-principles.md`):
   to whichever corner the title/figures/motifs leave free, but keep it the same everywhere so it never
   jumps). Use `deckkit.logo(slide, path, corner=..., h=...)` per slide on clean/generated decks; on a
   **provided/registered template** the branding usually already lives on the layouts (don't double it).
-  Use the **real** mark (or an honest "logo here" placeholder if it's missing — ask the user), never a
-  faked/recolored one. This does **not** apply to multi-organisation decks (surveys, landscapes) or
+  Source the mark in order, stopping at the first you can get: the **real** logo (an image asset the
+  content-planner found or the user gave) → else a clean designed typographic **WORDMARK** in the deck's
+  own type — build it with `deckkit.wordmark(text, out_path, …)` then place it with `logo(slide, out_path,
+  …)` (**the sanctioned default** when no real logo was found, per `references/image-generation.md`
+  "Logo / brand mark") → and only if even that doesn't fit, an honest "logo here" placeholder. Never a
+  faked/recolored replica of a real entity's official mark. This does **not** apply to multi-organisation decks (surveys, landscapes) or
   neutral academic talks — there, name entities inline. Full rule + the no-apply cases in
   `references/image-generation.md` ("Real brand / product assets come first").
 - **SVG icons — ONE coherent open-licensed family, recolored, used with restraint (full rules — the

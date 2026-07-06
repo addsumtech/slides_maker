@@ -25,26 +25,35 @@ by an independent critic panel.
 
 ## Actor side — coordinator + parallel section authors
 
-1. **Coordinator does the non-parallelizable core itself (one owner):** the comprehension
-   brief and plan/arc are the **content-planner's** job (`agents/content-planner.md`,
-   SKILL.md Step 1). On a large deck the coordinator *is* that single planner mind (or
-   dispatches it once); like the planner it may fan out *reading* across the independent
-   sources, but it must never split the brief or arc across the section subagents — that one
-   owner is what keeps the deck coherent.
-   - the **comprehension brief** (step 1) — one mind holds the through-line,
-   - the **plan/arc** (step 3) — write each slide's takeaway, then **group slides into
-     contiguous sections** and assign each section its **role** and its **page range**
-     (`START_PAGE`),
-   - **`style.py`** — the single source of truth for palette, `FONT`, title/footer
-     chrome, and layout constants (copy `references/examples/style_example.py`, tune to
-     purpose via `design-by-purpose.md`). Sections never redefine colours or chrome.
+1. **Coordinator does the non-parallelizable core itself (one owner) — two minds, in sequence.**
+   Both the CONTENT and the DESIGN of a large deck are owned centrally; only the *authoring*
+   fans out. On a large deck the coordinator *is* these two planner minds (or dispatches each
+   once); like them it may fan out *reading* across the independent sources, but it must never
+   split the brief, the arc, or the design system across the section subagents — that one owner
+   is what keeps the deck coherent.
+   - **Content-planner mind → CONTENT checkpoint** (`agents/content-planner.md`, SKILL.md Step 1):
+     - the **comprehension brief** — one mind holds the through-line,
+     - the **plan/arc** (Step 1) — write each slide's takeaway, then **group slides into
+       contiguous sections** and assign each section its **role** and its **page range**
+       (`START_PAGE`).
+     Approve the arc + per-slide takeaways at the **Step-1 CONTENT checkpoint** before any design.
+   - **Slide-design mind → DESIGN checkpoint** (`agents/slide-design.md`, SKILL.md Step 2):
+     - **`style.py`** — the single source of truth for palette, `FONT`, title/footer
+       chrome, and layout constants (copy `references/examples/style_example.py`, tune to
+       purpose via `design-by-purpose.md`). Sections never redefine colours or chrome.
+     - the **rhythm** + a **per-slide design table** — each slide's **form · protagonist ·
+       motion**, grouped so every section carries its own design rows.
+     Approve the design language + rhythm + per-slide design at the **Step-2 DESIGN checkpoint**
+     before fanning out authors.
 
 2. **Fan out one subagent per section, in parallel** using the host runtime's available
    multi-agent/subagent tool (in Codex, discover multi-agent tools with `tool_search` if
    they are not already exposed). Give each subagent: the comprehension
    brief, the full plan, **`style.py`**, **its** section's role + slide takeaways +
+   **its per-slide DESIGN rows (form · protagonist · motion) from the design table** +
    `START_PAGE`, and a one-line summary of the **neighbouring** sections (so seams and
-   transitions are clean). Each subagent:
+   transitions are clean) — so a section author never skips the art-director stage. Each
+   subagent:
    - writes `section_NN_<name>.py` exposing `build_section(prs)` that imports `style`
      and appends its slides (copy `references/examples/section_example.py`),
    - **self-renders just its section** with `assemble.preview_section(...)` →
