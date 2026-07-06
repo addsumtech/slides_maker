@@ -213,7 +213,8 @@ when in doubt, keep it. Never assume the **topic/content**, the **style**, or **
 template** — confirm each.
 
 **Personalize options only from THIS user's own footprint — never a hardcoded or guessed
-domain.** Any *suggestions* you pre-fill into a question — candidate topics, example
+domain — and roll past work up into ONE option, drilling in only on pick (Q1's two-stage
+pattern), so personalization never crowds out the general choices.** Any *suggestions* you pre-fill into a question — candidate topics, example
 subjects, registered templates — must come from what this user has actually given you:
 materials they provided (now or in a past session) or their saved registry / profile /
 memory. In Codex, prefer the registry root `~/.codex/slide-templates/`; in Claude Code,
@@ -225,6 +226,16 @@ choices: "provide a template", "design a clean one", and, when a more vivid cust
 would fit, "generate a template with an image tool". Personalizing from a *returning* user's
 own materials is good and encouraged; assuming a domain for someone who gave you nothing is
 the failure to avoid.
+**The TWO-STAGE rule governs past-work personalization in EVERY question, not just templates:**
+whatever the question, history enters as **ONE rolled-up option beside the always-present general
+choices**, and the specific past items are listed only in a follow-up if the user picks it.
+Instances — **Q1 template:** "one of your saved templates (N)" (worked mechanics in Q1 below) ·
+**topic/subject:** a returning user with known past projects gets ONE "continue one of my previous
+topics" option beside the open free-text ask — never their domains enumerated as competing options ·
+**Q4 style:** ONE "like one of my previous decks" option beside the generic density/tone choices,
+expanding to named past looks on pick · same shape for any other history (past purposes, prior
+venues). Marking a *general* option "(Recommended)" is fine and unaffected — the rule bounds how
+PAST ITEMS enter, so they never crowd generic paths out of a bounded-option UI.
 
 **Scale the interview to the ask:** a full deck needs
 all four; a genuinely tiny ask (a single slide, a quick infographic) still needs purpose
@@ -239,21 +250,28 @@ from before the full build; *"generate a template with an image tool"* → run t
 mini-interview + generation + feedback loop in `references/generated-template.md`, then **skip
 the direction gate** (the look is already decided). The four:
 
-1. **Template / brand.** First **list this user's registered templates** — check the
+1. **Template / brand.** First **check this user's registered templates** — the
    host-appropriate registry (`~/.codex/slide-templates/` in Codex, `~/.claude/slide-templates/`
    in Claude Code; if only one exists, use it). Each subfolder is one template they've used before,
-   with a `profile.md`).
+   with a `profile.md`.
    **⚠️ WHENEVER the template question is asked, it MUST present ALL FOUR standard choices — do not
    silently drop one (especially the image-tool option, which is easy to forget). The question itself
    may be skipped only per the named carves: the current request already answers Q1, or the tiny-ask
    scale-down (default stated in one line) — and on the redesign path R0's keep/redesign answer
    REPLACES this question (on "redesign the look" ask it as the follow-up — see
    `references/redesign-existing-deck.md`):**
-   **(a)** each *registered template* · **(b)** *"a new template (I'll provide one)"* · **(c)** *"design
-   a clean one"* · **(d)** *"generate a template with an image tool"* (a bespoke generated visual
-   identity). If you're using a structured-choice UI and run out of option slots, keep (c) and (d) and
-   fold the registered/provide-your-own into one "use/provide a template" option — never omit the
-   generate-with-image-tool path. Then:
+   **(a)** *"one of your saved templates (N registered)"* — the registry **rolled up as ONE option**
+   · **(b)** *"a new template (I'll provide one)"* · **(c)** *"design a clean one"* · **(d)**
+   *"generate a template with an image tool"* (a bespoke generated visual identity).
+   **Past work rolls up; general choices always stay.** Never enumerate the saved templates in the
+   first question — a returning user's registry (which can hold many) would crowd the general
+   choices out of a bounded-option UI, and the generic paths must stay visible on every deck. If the
+   user picks (a), ask a quick FOLLOW-UP listing the registered templates by name (+ a one-clause
+   hint each from `profile.md`) — with many, the few most recently used / best-fit first plus "show
+   the rest". Carve: exactly ONE registered template may be inlined directly in place of the
+   rolled-up option (no follow-up needed); an empty registry drops (a) entirely (brand-new user).
+   (This instantiates the two-stage personalization rule above — the same shape applies to topic,
+   style, and every other history-seeded question.) Then:
    - *A registered template* → build on it using its saved `profile.md` (step 3).
    - *A new template* → they give a `.pptx`/brand; build on it, AND after profiling it
      (step 3) **save a new subfolder to the active template registry** (its
