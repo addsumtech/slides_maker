@@ -99,7 +99,18 @@ chat as the FYI (for the hero: the rendered hero + sample-content-slide image pa
 redesign diagnosis: the 3–5 biggest levers + the chosen keep/rebuild scope in ≤10 lines) and
 proceed; the user reacts at hand-off. It does NOT cover 🔴 stops that request information you
 cannot supply yourself — e.g. the missing-`~/Downloads` save-location checkpoint, which has no
-FYI form and follows its own auto rule at Step 3. Content checkpoint = the deck
+FYI form and follows its own auto rule at Step 3.
+**The waiver extends to the Step-0 interview — by DELEGATION, with a hard floor.** Under a full
+"decide everything yourself" directive you don't fire the four-question form; you ANSWER the
+questions yourself with defensible, purpose-derived picks (template → design a clean one shaped
+to the purpose, unless the request itself points elsewhere — an attached template, or explicit
+vivid/branded language that earns the image-tool branch; delivery/goal/density → derived from
+the stated purpose; language → the user's own), and post the picks as the FIRST FYI — one
+compact block, one line per question — before any planning, so a wrong pick costs one glance to
+veto, not a build. The FLOOR: delegation covers *preferences*, never *information only the user
+has* — a missing TOPIC or unlocatable source material is still asked (that one question, not the
+form), same class as the save-location stop. Preference questions the request already answers
+are simply recorded, not re-picked. Content checkpoint = the deck
 memory sentence + emotional-curve line + pace check + ONE table (`# | 角色 | 记忆句(takeaway) |
 承载证据`); Design checkpoint = look/palette/type/motif in ~4 lines + the rhythm-map table +
 the three design musts + logo plan. Keep each under ~25 lines — the user reads it in the
@@ -194,7 +205,10 @@ Before I build, please give me:
 ```
 
 This batching is deliberate: the interview is non-negotiable, so it has to be *cheap*.
-Only drop a question if the user already answered *that* one in their current request;
+Only drop a question if the user already answered *that* one in their current request — or the
+deck runs under a full per-deck auto directive, where you answer the preference questions by
+delegation and post the picks as the first FYI (see **the per-deck AUTO WAIVER**; the topic /
+source-material floor still gets asked);
 when in doubt, keep it. Never assume the **topic/content**, the **style**, or **which
 template** — confirm each.
 
