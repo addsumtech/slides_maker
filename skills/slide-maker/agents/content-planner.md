@@ -90,6 +90,9 @@ mapped to a slide or consciously cut in Open questions; a silent omission blocks
 **Emphasis test:** predict, from your brief alone, what the source's own
 abstract/conclusion stresses most; if your one-sentence message would surprise the authors, it's
 wrong — fix it before continuing.
+**Spine test:** read the Takeaway spine (Narrative arc output) forward as one paragraph and
+backward slide-by-slide; a takeaway that can't join the paragraph is rewritten, or its slide
+cut/merged/moved behind a divider — a plan whose spine doesn't argue is not ready.
 
 ### 2 — Research and fact-check the web (for any deck, not just no-source)
 Use the web for **three jobs**, and run it whether or not you have a source:
@@ -104,7 +107,9 @@ Use the web for **three jobs**, and run it whether or not you have a source:
   (Y/N) | as-of date | tense/status`. **Extraction rule:** every number, date, proper name,
   citation, every "first / largest / latest / state-of-the-art / best" superlative, and every
   scheduled/dated event — from the SOURCE as well as the web — must be a ledger row before it can
-  appear on a slide; a row with **verified? = N is cut or marked open, never shipped**. **Recency
+  appear on a slide **or in a Spoken thread** (the narration is a claim surface too — a number the
+  audience *hears* misleads exactly like one they read); a row with **verified? = N is cut or
+  marked open, never shipped**. **Recency
   by type:** superlatives / SOTA / rankings / prices / counts / versions / role-holders →
   re-verify at *today's* date with a recency-bounded search; dated events → check whether they
   have already happened as of today and write the correct tense; stable facts (definitions,
@@ -196,7 +201,8 @@ Then:
   end-to-end reads as a document, not a talk. Sketch the curve across the arc in purpose-relative
   beats — a pitch might run *surprise → tension → clarity → confidence → inspiration*; a defense
   *curiosity → rigor → confidence*; a status update *steady → concern → plan → commitment* — and
-  tag each slide's beat (the slide-design agent's rhythm map executes this curve visually; it must
+  tag each slide's beat, **marking which beat is the curve's PEAK** (a curve with no named peak has
+  no climax to design toward) (the slide-design agent's rhythm map executes this curve visually; it must
   not have to invent it). And **stage information deliberately** across slides — problem → cause →
   solution → evidence → conclusion — rather than front-loading: for each content unit ask *"does
   this land harder if delayed one beat?"* Suspense is a content decision; within-slide appear-builds
@@ -232,10 +238,26 @@ agent decides form, layout, icons, and motion downstream. For each slide record:
   强大/高效/赋能, 机械排比, 破折号成瘾) — **read each 中文 line aloud: would a person actually say it?**
   See the "Write like a human" section of `references/multilingual.md`.
   - **Required VOICE PASS before the content checkpoint.** Once the copy is drafted, re-read
-    **every line of text in the deck — titles, points, captions, callouts, the closing line** (not
+    **every line of text in the deck — titles, points, captions, callouts, the closing line, AND
+    each slide's Spoken thread** (not
     just body) — and rewrite anything that reads machine-translated or press-release-generic. A
     deck whose text smells AI-generated (esp. 中文 translationese) is **not ready**; this pass is
     the actor-side guarantee the critic's Voice check then independently confirms.
+  - **Deterministic budget check — run `python scripts/plan_wordcount.py <plan.md> --<mode>` after
+    the VOICE PASS, before emitting the plan** (advisory; it counts takeaway + content units per
+    row with the same load formula as the render lint, warning above ~50 plan-words presented /
+    ~110 self-read — thresholds below the lint's TEXT WALL lines because design adds captions).
+    An over-budget row gets **"over budget → notes/split"** recorded in its *notes* column, so the
+    user approves the resolution at the CONTENT checkpoint instead of meeting a TEXT WALL warn
+    two stages later.
+- **Spoken thread (PRESENTED decks only — omit the field entirely for a self-read deck).** For
+  each slide, 1–3 sentences of what the presenter actually *says*: the spoken transition-in that
+  answers the slide's *question* column, then the spoken point. You own the story, so you author
+  the narration — the builder pipes it verbatim into speaker notes (`dk.speaker_notes`,
+  PRE-FLIGHT 1), the lint measures it, and the critics read it; a narration invented at build
+  time bypasses your VOICE PASS and your claim ledger. Record it as a 7th table column or an
+  indented line per row; it lives in the FULL plan only — never in the compact ≤25-line
+  checkpoint table.
 - **Visual source** — name **which real figure / number / data belongs on this slide, and which
   question it answers** (what / how / why). This identifies the *evidence*, not its rendering:
   - Point to exactly one of: a **specific source figure / table / chart / screenshot** (name which
@@ -286,8 +308,22 @@ fix the message before continuing.
 
 ## Narrative arc
 - The narrative **arc in one line** (which arc shape you chose and why — inform / decide / inspire).
-- The **emotional curve in one line** (purpose-relative beats mapped across the arc, per §3) and
+- The **emotional curve in one line** (purpose-relative beats mapped across the arc, per §3 —
+  with the PEAK beat marked) and
   **what is deliberately staged** — the information held back so it lands on a later slide.
+- **Takeaway spine (required)** — the takeaway sentences of the CONTENT slides only, concatenated
+  in slide order as **one paragraph** (structural slides — cover, agenda, dividers, closing — are
+  excluded; each divider appears as a thread-break marker: `— new thread: <divider title> —`),
+  plus ONE verdict line: *"read forward it argues as one story; read backward, each slide's
+  question is raised by the previous takeaway or sits after a new-thread break."* This is the
+  editor's horizontal-flow check run where a fix is a text edit, not a rebuild (the §1 Spine test
+  gates it).
+- **The slide this deck exists for (required)** — one line: `#N — <takeaway> — carried by
+  <claim-ledger row / figure id + carrying element>`. This is the slide where the deck-level
+  one-sentence message lands with its strongest evidence — the same message, not a parallel
+  ranking — and its beat is the curve's PEAK. The carrying-evidence field is mandatory (a "money
+  slide" with no named evidence — a bare conclusion/cover — doesn't pass). *(If the deck genuinely
+  has no single climax — e.g. a survey/agenda deck — say so in one clause instead.)*
 - **Slide count vs. time budget** (spoken deck: the ~1/min pace check; one idea per slide — a longer
   deck means more slides, not denser ones) **or vs. the user's chosen length band** (self-read:
   short ~5–8 / medium ~9–15 / long 16+ — the band wins over completeness; cut consciously into
@@ -298,13 +334,17 @@ fix the message before continuing.
 ## Per-slide content
 One row per slide — **content only**:
 
-| # | Takeaway (an assertion sentence) | Role · question · beat | Content units (terse) | Visual source (which figure / number / data belongs here, AND which question it answers: what / how / why) | notes |
+| # | Takeaway (an assertion sentence) | Role · question · beat | Content units (terse) | Visual source (which figure / number / data belongs here, AND which question it answers: what / how / why) | notes | Spoken thread (presented decks only) |
 
 Keep *Role · question · beat* terse — one word / short phrase each (e.g. `problem · "为什么增长停滞?"
-· tension`); it's the editorial contract the design agent reads. Be specific in *Visual source* —
+· tension`); it's the editorial contract the design agent reads. The *Spoken thread* column (or an
+indented line per row, if the table gets wide) is required on a **presented** deck and omitted
+entirely on a self-read one — full plan only, never the compact checkpoint table (§4). Be specific in *Visual source* —
 name the actual figure ("Fig. 3, the right-hand panel — the recon-vs-baseline curve"), the actual
 number/series (traceable to a ledger row), or the equation (transcribed / derived-from-code,
-verified), and state which question (what / how / why) the slide answers. Do **not** name a chart
+verified), **including the asset's locator** (a file path, or source PDF + page/figure id) so the
+Step-2 Evidence-manifest probe can read its geometry deterministically,
+and state which question (what / how / why) the slide answers. Do **not** name a chart
 type, diagram, component, layout, icon, or build here — those are the slide-design agent's
 decisions. Use *notes* for content caveats (e.g. "self-read: fuller copy", "forward-looking — see
 below", "needs asset — see open questions").

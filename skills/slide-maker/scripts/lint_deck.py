@@ -401,7 +401,15 @@ def _slide_stats(slide, bx, sw, sh):
         except Exception:
             pass
     tight, sp_y, sp_n = _cjk_typography(slide)
+    notes_text = ""                                       # the spoken thread (speaker notes)
+    try:
+        if slide.has_notes_slide:                         # never touch .notes_slide when absent —
+            notes_text = slide.notes_slide.notes_text_frame.text or ""   # accessing it CREATES one
+    except Exception:
+        pass
     return {
+        "notes": notes_text,
+        "notes_words": _text_load(notes_text),
         "pingfang": pingfang,
         "cjk_tight": tight, "sp_spaced": sp_y, "sp_unspaced": sp_n,
         "size_clusters": _size_clusters(bx, sh),
@@ -419,7 +427,45 @@ def _slide_stats(slide, bx, sw, sh):
     }
 
 
-def _print_stats(rows, mode, sw, sh):
+def _load_render_lums(path, renders_dir, n):
+    """Per-slide (mean luminance, mean HSV saturation) from the rendered PNGs, or None.
+    Silent no-op when Pillow is missing, the dir is absent, or the PNG count != slide count —
+    so a standalone lint (no ./render) is byte-for-byte unchanged. Cheap: each PNG is downscaled
+    to ~64px wide before the pixel walk."""
+    import os
+    if renders_dir is None:
+        cand = os.path.join(os.path.dirname(os.path.abspath(str(path))), "render")
+        renders_dir = cand if os.path.isdir(cand) else None
+    if not renders_dir or not os.path.isdir(renders_dir):
+        return None
+    try:
+        from PIL import Image
+    except ImportError:
+        return None
+    import glob
+    pngs = sorted(glob.glob(os.path.join(renders_dir, "slide*.png")))
+    if len(pngs) != n:
+        return None
+    out = []
+    for p in pngs:
+        try:
+            im = Image.open(p).convert("RGB")
+            w, h = im.size
+            im = im.resize((64, max(1, int(64 * h / w))))
+            px = list(im.getdata())
+            m = len(px)
+            lum = sum(0.299 * r + 0.587 * g + 0.114 * b for r, g, b in px) / (m * 255.0)
+            sat = 0.0
+            for r, g, b in px:
+                mx = max(r, g, b)
+                sat += 0.0 if mx == 0 else (mx - min(r, g, b)) / mx
+            out.append((lum, sat / m))
+        except Exception:
+            return None
+    return out
+
+
+def _print_stats(rows, mode, sw, sh, lums=None):
     if not rows:
         return {}
     n = len(rows)
@@ -432,7 +478,10 @@ def _print_stats(rows, mode, sw, sh):
         body = sorted((pt for r in rows for pt, ch in r["sizes"] if pt <= 20 for _ in range(ch)))
     body_med = body[len(body) // 2] if body else 12.0
     print(f"\n  ── deck stats (mode: {mode}) — measured, advisory ──")
-    print("     #  load  text%  ink%  maxpt  shp  pic  cht  build  sim↑")
+    hdr = "     #  load  text%  ink%  maxpt  shp  pic  cht  build  notes  sim↑"
+    if lums:
+        hdr += "   lum   sat  Δlum"
+    print(hdr)
     warns = []
     sames = 0
     for i, r in enumerate(rows):
@@ -446,9 +495,15 @@ def _print_stats(rows, mode, sw, sh):
                 warns.append(f"LAYOUT SAMENESS: slides {i-1}-{i+1} share ≥75% of their skeleton — "
                              f"vary the page structure, not just the words (rhythm / canvas-skeleton rule)")
                 sames = 0
-        print(f"    {i+1:2d}  {r['load']:4d}  {r['text_cov']*100:4.0f}%  {r['ink_cov']*100:4.0f}%  "
-              f"{r['max_pt']:5.1f}  {r['n_shapes']:3d}  {r['n_pic']:3d}  {r['n_chart']:3d}    "
-              f"{'✓' if r['build'] else '—'}   {sim}")
+        nw = r.get("notes_words", 0)
+        line = (f"    {i+1:2d}  {r['load']:4d}  {r['text_cov']*100:4.0f}%  {r['ink_cov']*100:4.0f}%  "
+                f"{r['max_pt']:5.1f}  {r['n_shapes']:3d}  {r['n_pic']:3d}  {r['n_chart']:3d}    "
+                f"{'✓' if r['build'] else '—'}   {(str(nw) if nw else '—'):>5}  {sim}")
+        if lums:
+            lu, sa = lums[i]
+            dl = abs(lums[i][0] - lums[i - 1][0]) if i else 0.0
+            line += f"  {lu:.2f}  {sa:.2f}  {dl:.2f}"
+        print(line)
         budget = 70 if mode == "presented" else 120
         # surface: a poster/single-canvas artifact has no per-slide word budget (judge density per
         # the fixed-surface overlay); textheavy: the user explicitly chose text-heavy density (Q4),
@@ -476,9 +531,46 @@ def _print_stats(rows, mode, sw, sh):
         if tokens and sz - tokens[-1] <= 0.75:
             continue
         tokens.append(sz)
+    # deck-wide skeleton VARIETY: greedily cluster per-slide skeleton fingerprints at the same
+    # Jaccard ≥0.75 'same skeleton' threshold LAYOUT SAMENESS uses — a slide joins the first cluster
+    # whose representative it matches ≥0.75, else opens a new one. Distinct-count printed always;
+    # the warn fires only on an 8+-slide deck that barely rotates its canvas architecture.
+    skel_reps = []
+    for r in rows:
+        if not any(len(rep & r["skel"]) / max(1, len(rep | r["skel"])) >= 0.75 for rep in skel_reps):
+            skel_reps.append(r["skel"])
+    n_skel = len(skel_reps)
     print(f"     fonts: body-median {body_med:.0f}pt · deck max {max((r['max_pt'] for r in rows), default=0):.0f}pt "
-          f"· type drama {drama:.1f}× · size tokens in use {len(tokens)} (target 4-5 deck-wide) | "
+          f"· type drama {drama:.1f}× · size tokens in use {len(tokens)} (target 4-5 deck-wide) · "
+          f"distinct skeletons {n_skel} | "
           f"builds {builds}/{n} · transitions {transd}/{n} · avg occupancy {avg_ink*100:.0f}%")
+    if mode != "surface" and n >= 9 and n_skel < 4:
+        warns.append(f"SKELETON VARIETY: only {n_skel} distinct layout skeleton(s) across {n} slides — "
+                     f"floor is ≥4 on an 8+-slide deck (design-intelligence-addendum §1.2); rotate the "
+                     f"canvas architecture (statement / split / island / dashboard / band / full-bleed / "
+                     f"rail / gallery), not just the protagonist")
+    # TIMID COVER: the cover is the deck's poster — its largest run should reach display scale
+    # (≥2.5× body; warn below 2×). max_pt>0 guards template-inherited sizes (only explicit-size runs
+    # count); a deliberately quiet register answers with the one-clause exception.
+    if mode != "surface" and n > 1 and rows[0]["max_pt"] > 0 and rows[0]["max_pt"] < 2.0 * body_med:
+        warns.append(f"TIMID COVER: slide 1's largest run is {rows[0]['max_pt']:.0f}pt vs body-median "
+                     f"{body_med:.0f}pt ({rows[0]['max_pt']/body_med:.1f}×) — the cover is the deck's poster; "
+                     f"give the title display scale (type contract: display ≥2.5× body), or write the "
+                     f"one-clause register exception (ink_wash / museum_memorial)")
+    # FLAT RHYTHM: with renders available, the deck never changes canvas VALUE — no light/dark or
+    # temperature event across 8+ slides. Uniformly-dark decks trip the same range test (correct — a
+    # deliberately uniform series answers with the register exception).
+    if lums and n >= 8:
+        L = [x[0] for x in lums]
+        Sat = [x[1] for x in lums]
+        lum_range = max(L) - min(L)
+        max_dlum = max((abs(L[i] - L[i - 1]) for i in range(1, len(L))), default=0.0)
+        sat_range = max(Sat) - min(Sat)
+        if lum_range < 0.12 and max_dlum < 0.06 and sat_range < 0.10:
+            warns.append(f"FLAT RHYTHM: deck-wide luminance range {lum_range:.2f} and max adjacent Δlum "
+                         f"{max_dlum:.2f} — no light/dark or temperature event anywhere (rhythm map "
+                         f"'Background mode'; design-gallery light/dark pacing) — vary the canvas value on "
+                         f"at least one beat, or record why this deck is deliberately single-mode")
     if mode == "surface":
         print("     single-canvas surface: per-slide word/size budgets not applied — judge density "
               "per the fixed-surface overlay (review-rubrics.md poster section)")
@@ -494,6 +586,11 @@ def _print_stats(rows, mode, sw, sh):
     if mode in ("presented", "textheavy") and builds == 0 and n > 2:
         warns.append("NO BUILDS: a presented deck with zero appear-builds — the motion manifest "
                      "should name build:/static:+reason per slide (anim.py Build)")
+    if mode in ("presented", "textheavy") and n > 2:
+        no_notes = sum(1 for r in rows if not r.get("notes_words"))
+        if no_notes:
+            warns.append(f"NO NOTES: {no_notes} of {n} slides have empty speaker notes on a presented "
+                         f"deck — PRE-FLIGHT 1 (notes = the plan's Spoken thread)")
     import platform
     pingfang = sum(r.get("pingfang", 0) for r in rows)
     if platform.system() == "Darwin" and pingfang:
@@ -518,11 +615,11 @@ def _print_stats(rows, mode, sw, sh):
     for w in warns:
         print(f"  [stats] {w}")
     return {"warns": warns, "body_median_pt": body_med, "type_drama": round(drama, 2),
-            "size_tokens": len(tokens), "builds": builds, "transitions": transd,
-            "avg_occupancy": round(avg_ink, 3)}
+            "size_tokens": len(tokens), "distinct_skeletons": n_skel, "builds": builds,
+            "transitions": transd, "avg_occupancy": round(avg_ink, 3)}
 
 
-def lint(path, mode="presented", json_out=None):
+def lint(path, mode="presented", json_out=None, renders_dir=None):
     try:
         prs = Presentation(path)
     except Exception:
@@ -761,7 +858,8 @@ def lint(path, mode="presented", json_out=None):
             j_warns.append({"slide": si + 1, "text": m})
         total += len(finds)
         warn_total += len(warns)
-    deck_stats = _print_stats(stats_rows, mode, sw, sh)
+    lums = _load_render_lums(path, renders_dir, len(stats_rows))
+    deck_stats = _print_stats(stats_rows, mode, sw, sh, lums=lums)
     tail = ("" if total else "  ✓ clean (no hard findings)") + (f"  ·  {warn_total} warning(s)" if warn_total else "")
     print(f"\n{path}: {total} layout finding(s){tail}")
     if json_out:
@@ -770,7 +868,11 @@ def lint(path, mode="presented", json_out=None):
                       "ink_cov": round(r["ink_cov"], 3), "max_pt": r["max_pt"],
                       "n_shapes": r["n_shapes"], "n_pic": r["n_pic"], "n_chart": r["n_chart"],
                       "build": r["build"], "transition": r["trans"],
-                      "size_clusters": r["size_clusters"]} for i, r in enumerate(stats_rows)]
+                      "size_clusters": r["size_clusters"],
+                      "notes_words": r.get("notes_words", 0),
+                      "notes": (r.get("notes") or "")[:500],
+                      **({"lum": round(lums[i][0], 3), "sat": round(lums[i][1], 3)} if lums else {})}
+                     for i, r in enumerate(stats_rows)]
         with open(json_out, "w", encoding="utf-8") as f:
             json.dump({"file": str(path), "mode": mode, "findings": j_findings,
                        "warnings": j_warns, "stats_warnings": deck_stats.get("warns", []),
@@ -791,6 +893,7 @@ if __name__ == "__main__":
     elif any(a in ("--mode=textheavy", "--textheavy") for a in argv):
         mode = "textheavy"        # user-chosen text-heavy presented deck: TEXT WALL waived only
     json_out = None
+    renders_dir = None
     for i, a in enumerate(argv):
         if a == "--json" and i + 1 < len(argv):
             json_out = argv[i + 1]
@@ -798,6 +901,13 @@ if __name__ == "__main__":
                 args.remove(json_out)
         elif a.startswith("--json="):
             json_out = a.split("=", 1)[1]
+        elif a == "--renders" and i + 1 < len(argv):
+            renders_dir = argv[i + 1]
+            if renders_dir in args:
+                args.remove(renders_dir)
+        elif a.startswith("--renders="):
+            renders_dir = a.split("=", 1)[1]
     if not args:
-        print("usage: python lint_deck.py <deck.pptx> [--selfread] [--surface] [--textheavy] [--json out.json]"); sys.exit(2)
-    sys.exit(1 if lint(args[0], mode, json_out) > 0 else 0)
+        print("usage: python lint_deck.py <deck.pptx> [--selfread] [--surface] [--textheavy] "
+              "[--renders dir] [--json out.json]"); sys.exit(2)
+    sys.exit(1 if lint(args[0], mode, json_out, renders_dir) > 0 else 0)

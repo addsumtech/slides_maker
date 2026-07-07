@@ -33,6 +33,16 @@ sameness, no hero, dead layout, thoughtless motion, decorative icons — is your
   **Mode B** hands you its borrowed component vocabulary / structure / signature motif as design
   inputs, while palette/mood/type remain your topic-derived choice. A mimic deck designed without
   its brief silently skips the user's stated look — ask for it if it's missing.
+- **The Evidence manifest** — one READ-ONLY line per asset the Content plan's *Visual source*
+  column names (`asset | locator | WxH | aspect class | table RxC | value range`), probed by the
+  main loop before your dispatch. It exists so you plan geometry with open eyes: a 2400×700px
+  figure is a WIDE asset and must not be committed to a half-column blind ("dims unknown" rows
+  and no-asset decks simply carry no annotation). The §3 Image-fit rule below consumes it.
+- **The taste lines** — the registry-root `taste.md` DIALS + NO-GOs + its LAST look-history line,
+  handed to you by the main loop per `references/user-taste.md` ("none on file" for a brand-new user
+  — skip silently). They seed §1 Freshness and the chrome-budget default; NO-GOs are user vetoes. The
+  interview's explicit answers and the §0 LOCKED-look carve always outrank a dial — the profile seeds,
+  it never decides.
 - **The Content plan's `Open questions`** — venue DESIGN norms the content-planner parked for you
   (slide ratio, an official template) and any real brand / product / UI asset the deck needs but the
   content-planner lacked. Resolve the design-relevant ones, or carry them forward as design open
@@ -142,6 +152,8 @@ feel art-directed rather than defaulted, and it's yours to set once and hold. Pi
   signature device is content-born (a flywheel story → a ring motif; a funnel story → a taper; a
   timeline deck → an axis; a bilingual deck → the lockup), not a stock ornament any deck could wear.
   For a returning user, recall the previous deck's look and deliberately vary at least one foundation
+  — recall it from the taste lines' LAST look-history entry (the input the main loop hands you; "none
+  on file" = nothing to vary against, design fresh) —
   (canvas value, header furniture, signature device, type pairing) — converging on one house template
   *across decks* is the same failure as one template *across slides*. (Skip this cross-deck variation
   when the look is LOCKED per §0 — a registered/provided template the user chose is *meant* to repeat
@@ -241,6 +253,9 @@ in `design-principles.md`), and record how each is satisfied:
   is one deck-wide language (rounded cards ⇒ rounded images).
 - **Alignment** — every element on a shared grid via a **measured primitive**
   (`columns`/`rows`/`vstack`/`content_band`), never an eyeballed coordinate; edges line up slide-to-slide.
+  The plan may state a split/rail **ratio** (1:2, 2:3, golden) — `columns(weights=)` /
+  `rows(weights=)` honour it mechanically, so an asymmetric split is a measured primitive too,
+  never a licence to eyeball.
 - **Proximity** — group related, separate unrelated with space (gap between groups ≥ ~1.5–2× the gap
   within one), so structure reads without boxes or rules.
 - **Balance & no-overlap** — split/N-up regions *and their flanking margins* equal (derive from one
@@ -250,6 +265,15 @@ in `design-principles.md`), and record how each is satisfied:
   **split the slide — never shrink it to illegible.**
 - **Image fit** — for any slide with an image, state the **`fit`**: `contain` when the subject/all parts
   must stay whole; `cover` only for edge-tolerant texture. Never a `cover` crop that slices the subject.
+  **For every placed source figure/table with known dims (Evidence manifest), end the Layout cell
+  with `AR a.b -> <zone>`** and check the contain-fill = `min(zoneAR/figAR, figAR/zoneAR)`: under
+  ~60%, **re-form** (whole-slide, full-width band, full-bleed, or an asymmetric split whose zone
+  matches the figure's AR — `columns(weights=)`) or record the one-clause taste reason (e.g. a
+  deliberate inset thumbnail) — a wide figure contain-fit into a half-column renders as a strip
+  and kills the Contrast promise. A manifest table whose RxC cannot fit its zone legibly **splits
+  or re-forms, never shrinks** (the "split the slide — never shrink it to illegible" rule above).
+  The manifest AR from a PDF auto-bbox is the plot-panel estimate — fine for wide/tall/square
+  form choices, not for pixel math.
 - **Block Dependency Audit** (`design-intelligence-addendum.md` §2) — cards / panels / blocks are allowed
   ONLY for **parallel · unordered · equal-weight · independent** units; the moment they have order, a
   relationship, two axes, or differing weight, a non-block form says it better. If card/panel logic recurs
@@ -374,13 +398,18 @@ atmosphere/polish moves committed deck-wide (only those that fit the register) a
 (`design-intelligence-addendum.md` §6) — a *role | token | used-for | must-not* table binding each accent
 hue to a named meaning; **no accent colour ships without a bound meaning**, and one hue used for
 everything means the plan is not ready. When a Q4 style example is in play, this section also records
-the **chosen mimic mode (A / B) + a pointer to the style brief** — the Step-4 build and the critic
-read the mode from the plan.
+the **chosen mimic mode (A / B) + a pointer to the style brief** — the Step-4 build reads the mode
+from the plan; the critic receives it via the Step-5 contract card.
+This section always carries ONE required line — `taste profile: <n dials applied / none on file> ·
+freshness: varied <foundation> vs <last look-history line>`, or the alternate arm `look LOCKED
+(registered/provided template) — carve applies` — the line that makes the freshness rule checkable
+(self-verify (j) reads it; the Step-2 design gate requires it; `references/user-taste.md`).
 
 ### Deck rhythm
 The planned **sequence of visual protagonists** (e.g. cover → diagram → chart → photo → big-number →
 divider), the dense↔light / colour pacing, the ~50–70% whitespace target, where the **WOW/hero** beats
-fall (every ~6–8 slides), and where the **appear-builds** cluster or spread.
+fall (every ~6–8 slides, **one anchored on the content plan's money slide** — the "slide this deck
+exists for"), and where the **appear-builds** cluster or spread.
 
 ### Per-slide design
 A row per slide (keep it workable — the runner-up folds into *Reasoning*):
@@ -429,7 +458,9 @@ NOT a blanket per-slide quota):
 - **(g) SVG icons** — on an icon-fit preset with category / section / step / entity content a
   style-matched icon family is planned (a category-rich deck shipping zero icons is not ready).
 - **(h) WOW is memorable** — each WOW/hero names *why-memorable* AND the *surrounding contrast* against
-  its neighbours, else it's just a bigger slide (§1.4).
+  its neighbours, else it's just a bigger slide (§1.4) — and one WOW/hero coincides with the content
+  plan's **"slide this deck exists for"**, or the plan states a one-clause reason the visual peak
+  sits elsewhere.
 - **(i) content-triggered** (only when that content is present) — method / procedure → an `algorithm_block`
   (or one-clause why prose is better); principle / mechanism / experiment / definition → a labelled
   schematic diagram built CORRECTLY (domain-accurate, faithful to source) alongside text, or an
@@ -446,7 +477,9 @@ NOT a blanket per-slide quota):
 - **(j) chrome budget & freshness** — saturated colour sits on content elements (data, icons, diagram
   nodes, hero numbers); chrome is quiet (no multi-hue ornament, colour spine, or loud badge stamped
   per-slide; the signature motif appears ≤3 times), and the look is derived from *this* deck's subject,
-  not a rerun of the previous deck's look for the same user.
+  not a rerun of the previous deck's look for the same user — checked against the Design language's
+  `taste profile:` line: the varied foundation is named against the last look-history entry, or the
+  LOCKED arm is stated (unfalsifiable "it feels fresh" is not a pass).
 Fix any failing check before the DESIGN checkpoint.
 
 ### Design-critic checklist

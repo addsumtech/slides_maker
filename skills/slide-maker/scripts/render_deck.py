@@ -148,8 +148,15 @@ def main(argv):
             os.path.basename(sys.executable) or "python"))
 
     doc = fitz.open(pdf)
-    for i, page in enumerate(doc, 1):
+    pages = list(enumerate(doc, 1))
+    for i, page in pages:
         page.get_pixmap(matrix=fitz.Matrix(2, 2)).save(os.path.join(out, "slide{:02d}.png".format(i)))
+    # bookend thumbnails (~240px wide) for the critic's poster test — first + last slide small,
+    # the scale at which a cover either survives or dies. Same PyMuPDF path, no new deps.
+    if pages:
+        for name, (_, page) in (("thumb_first", pages[0]), ("thumb_last", pages[-1])):
+            zoom = 240.0 / max(1.0, page.rect.width)
+            page.get_pixmap(matrix=fitz.Matrix(zoom, zoom)).save(os.path.join(out, name + ".png"))
     print("rendered {} slides -> {}".format(doc.page_count, out))
     print("next: python {} {}  # render-time lint, then the actor-critic loop".format(
         os.path.join(os.path.dirname(os.path.abspath(__file__)), "lint_deck.py"), argv[0] if argv else "<deck.pptx>"))

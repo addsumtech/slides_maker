@@ -73,7 +73,11 @@ direction*; the single real render confirms *fidelity*.
    confirm it matches what they picked — this closes the HTML→pptx fidelity gap before the
    costly build; **(b)** optionally persist it to the active template registry (profile.md +
    the style module) so it's a reusable registered template next time — collaborative mode
-   *grows the registry*; then **(c) delete the throwaway preview artifacts** — the whole
+   *grows the registry* — **best done at hand-off (Step 6), after the critic loop, so the
+   profile's Notes can carry what the vetted deck proved** (the Step-6 "save this look?"
+   offer IS this persist — one save, one owner, on an explicit yes; the chosen `style.py`
+   survives the (c) cleanup, so nothing is lost by deferring; `references/user-taste.md`
+   §"Consented-look mining"); then **(c) delete the throwaway preview artifacts** — the whole
    `_directions/` folder (`directions.json` + `directions.html`) and the *rejected* directions'
    token-sets — keeping only the chosen `style.py` (and the registry copy, if persisted). The
    previews were scaffolding for the choice; don't leave demo files littering the user's

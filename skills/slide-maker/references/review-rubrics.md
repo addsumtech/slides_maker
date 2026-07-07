@@ -52,6 +52,12 @@ Score each dimension; cite specific slides.
    assertion, not a topic label — e.g. "Churn dropped 12% after the redesign" (status),
    "Switching saves you 4 hours a week" (pitch), or "Only the warp needs to be 3D" (research) — not
    a bare topic like "Results" or "Method"). This applies to every purpose, not just research.
+   When a content plan with a takeaway column exists (the contract card carries it), an
+   argument/evidence slide whose title is a bare topic label diverging from its planned takeaway
+   is a **real finding** (major for the deck's key evidence slides), not a style preference;
+   without the plan, a bare "Results"/"Method"-style label on a slide that visibly argues or
+   shows evidence is still flagged from the pixels. Structural slides (cover/divider/agenda/
+   closing) are exempt — the closer is deliberately named "Conclusion"-style.
 2. **Results legibility.** This is the one people get wrong most. Can the audience
    *actually see* the evidence from a normal viewing distance — figures large
    enough, key differences pointed at, in-figure labels readable? A results slide
@@ -86,17 +92,26 @@ Score each dimension; cite specific slides.
 5. **Signaling.** Is the eye guided to what matters (arrow, box, color, bold), or
    is everything the same weight?
 6. **Narrative flow.** Do the slides form an arc (problem → idea → method →
-   evidence → so-what)? Are there gaps or non-sequiturs between slides? Three sharper probes:
+   evidence → so-what)? Are there gaps or non-sequiturs between slides? Three sharper probes.
+   *Scope of "the plan's" artifacts:* for a deck built by this pipeline the coordinator provides
+   the Content-plan artifacts via the **contract card** (deck message + emotional curve, the
+   role · question · beat table, claim ledger, carrying-element rows, the design contracts) —
+   their **absence is itself a process finding**; for an external deck under review/redesign (no
+   Step-1 plan exists) judge from the deck and source alone. The probes:
    **(question chain)** every slide should answer a nameable question — ideally one the *previous*
-   slide raised (question → answer → evidence, per the content plan's role · question · beat
-   column when provided); a slide whose question nobody asked, or whose title is a bare topic
-   answering nothing, is filler — cite it. **(memory test)** After the full pass, close the deck
-   and write the ONE sentence you remember plus the deck's message as you understood it; if it
-   isn't close to the planned deck message, or no slide takeaway survived, the deck optimised for
+   slide raised (question → answer → evidence, per the contract card's role · question · beat
+   column); a slide whose question nobody asked, or whose title is a bare topic
+   answering nothing, is filler — cite it. **(memory test — SEQUENCED and RECORDED)** After the
+   full pass, close the deck
+   and **write the ONE sentence you remember BEFORE reading the provided deck message, then
+   compare** (the provided message must not anchor the probe it exists to serve; record both in
+   the review's `probes.memory_sentence`); if it
+   isn't close to the planned deck message (and, when the plan names the slide the deck exists
+   for, to that slide's takeaway specifically), or no slide takeaway survived, the deck optimised for
    looking right over being remembered — a real finding, citing the forgettable beats (the goal is
    a presentation people *remember*, not merely beautiful slides). **(emotional flatness)** a deck
-   holding one emotional temperature end-to-end — check against the content plan's emotional curve
-   when provided — reads as a document, not a talk; pair this with the design lens's rhythm checks
+   holding one emotional temperature end-to-end — check against the contract card's emotional
+   curve — reads as a document, not a talk; pair this with the design lens's rhythm checks
    (the rhythm map's emotional-register column is where the curve should be visible).
 7. **Visual quality.** Contrast (text vs. background — aim for ≥4.5:1, so light-grey
    text on white or low-contrast figure labels are flags), consistency (fonts, colors,
@@ -229,10 +244,12 @@ Score each dimension; cite specific slides.
    a heavy title badge) repeated identically on every slide and competing with content for attention:
    the chrome budget (`agents/slide-design.md` §1) puts saturated colour on content elements and holds
    the signature motif to ~2–3 appearances, so palette-as-ornament stamped per-slide is a finding even
-   when each instance is individually tidy; **pendulum overshoot** *(iteration rounds only)* — a fix
+   when each instance is individually tidy; **pendulum overshoot** *(any round after the first — critic-fix and user-feedback rounds alike)* — a fix
    for named feedback that swung to the opposite extreme (muted → rainbow chrome, dense → bare, static
    → everything animated) instead of moving the criticised dial one deliberate step in the content
-   layer (`references/handoff-and-iteration.md` "Move the dial");
+   layer (`references/handoff-and-iteration.md` "Move the dial") — when the round record carries a
+   `user-dials:` line, cite it as the check's evidence: the user's verbatim words fix which dial was
+   named and in which direction, so overshoot is judged against their words, not a reconstruction;
    **template-with-extra-steps (the taste tell)** — every choice on every slide traces to a stock
    component at default settings or a preset default, with no visible choice a template wouldn't
    have made (no bespoke composition, no adapted component, no content-born device, no deliberate
@@ -247,8 +264,12 @@ Score each dimension; cite specific slides.
    memorable** — a hero beat that is merely a *large* element, not one that contrasts with its neighbours
    and stays memorable after the deck is closed. (General and cross-purpose — a short or
    deliberately-uniform deck relaxes the counts.)
-   **Two evidence sources for this deck-level pass:** *(1) the THUMBNAIL pass* — view all slides at
-   thumbnail scale in one grid and ask, per slide, "what does this slide say?": if the answer requires
+   **Two evidence sources for this deck-level pass:** *(1) the THUMBNAIL pass — RECORDED* — view all
+   slides at
+   thumbnail scale in one grid, FIRST (before the per-slide close reads), and ask, per slide, "what
+   does this slide say?", **recording each answer** in the review's `probes.per_slide`
+   (`{slide, first_read, takeaway_guess}` — a waved-through probe and a genuinely-run one must not
+   produce identical JSON): if the answer requires
    reading body text, the form isn't carrying the message (the slide is *decorated text*, not a
    *directed visual*); thumbnails also expose sameness and a flat type scale instantly. *(2) the DECK
    STATS block* from `scripts/lint_deck.py` (the builder pastes it into your input; ask for it if

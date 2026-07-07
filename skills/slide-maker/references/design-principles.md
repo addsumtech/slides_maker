@@ -310,13 +310,16 @@ ask of each element "is there suitable, balanced space around it, or is it crowd
   careless even when nothing overflows. Don't eyeball each panel's `x`/`w`; derive them all
   from one grid (`deckkit.columns(n)` returns `n` equal-width rects with symmetric outer
   margins and equal gutters). An *intentional* asymmetric split (e.g. a 1/3 text rail beside
-  a 2/3 figure) is fine, but keep the outer left and right margins equal, and **check the
+  a 2/3 figure) is fine, but keep the outer left and right margins equal — build it as
+  `dk.columns(2, slide=s, weights=(1, 2))`, which proportions the panels while keeping the
+  margins symmetric by construction — and **check the
   render** — the two sides should look balanced, not accidentally uneven.
 - **Don't strand a narrow element in a too-wide panel.** When one column's content is
   *naturally* much narrower than its half — a vertical timeline, a tall thin chart, a short
   list beside a paragraph — a 50/50 split leaves a big dead-white gap on that side. Fix it
   by **either** giving that column a *narrower, intentional* width (asymmetric split, equal
-  outer margins) so its content **fills** the region, **or** centring the narrow element in
+  outer margins — `dk.columns(2, slide=s, weights=(1, 2))` is the measured form of exactly this
+  fix) so its content **fills** the region, **or** centring the narrow element in
   its panel so the leftover white is symmetric. A large lopsided white band on one side is
   the tell to catch in the render.
 - **Figure beside text — anchor the figure, gutter the text (don't centre + far-strand).** A
@@ -485,7 +488,8 @@ ask of each element "is there suitable, balanced space around it, or is it crowd
   reads as cramped even when nothing technically overlaps — the classic cause is a stacked pitch
   hand-picked just above the block height (panels at pitch 1.04, height 1.02 → a ~0.02in seam).
   **Derive the stack pitch from the region** (`rows(n)` / `vstack(..., bottom=…)`), never `block_h`
-  plus a tiny nudge.
+  plus a tiny nudge. (The floor stays ~0.12–0.13in; the build-time lint warns `SLIVER_GAP` only
+  clearly below it — a 0.005–0.10in seam — so a rule-compliant gap never warns.)
 - **Group by proximity — the gap BETWEEN groups must be clearly larger than the gaps WITHIN a group.**
   When you stack labelled groups (a stat's label + big value + caption, then the next stat; or stacked
   cards), the space *separating the groups* has to beat the space *inside* a group — otherwise one

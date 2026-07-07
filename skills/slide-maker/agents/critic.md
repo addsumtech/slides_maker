@@ -84,10 +84,30 @@ something.
   not that everything animates and not that most slides stay static (there is **no quota in either
   direction**). If no manifest
   is given, note that and judge candidates from the pixels alone.
+- The **CONTRACT CARD** (pipeline-built decks): a compact artifact of the deck's DECLARED
+  contracts — the deck memory sentence + emotional-curve line (peak marked), the per-slide
+  takeaway/role/question/beat table, the claim ledger, the per-figure carrying-element rows, and
+  the Design plan's declared contracts (skeleton rhythm map · WOW slide(s) · money slide ·
+  semantic-colour ledger · type tokens · motion manifest). Like the motion manifest it extends,
+  it carries intent the pixels can't show. Two guard lines: **a promise is a commitment to audit,
+  never an excuse — pixels win**; and **the audit is ADDITIVE** — plan conformance never caps or
+  substitutes for the rubric (a kept promise that reads badly is still a finding; you audit
+  execution of the approved plan, you don't relitigate the user's approval). Any
+  plan_audit-derived finding must QUOTE the promise line it audits in its `issue` text, so an
+  arbiter can adjudicate from pixels + the quoted promise. When the dispatch explicitly states
+  no plans exist (external deck under review/redesign, direction preview), judge from the deck
+  and source alone.
+- The **lint `--json`** (stats + findings; ask for it if missing). On a **presented** deck its
+  per-slide rows carry each slide's **speaker-notes text** (the plan's Spoken thread) — Lens A
+  runs the voice probe and the question-chain probe over it too: empty narration on a content
+  slide, AI-taste/translationese notes, or a notes claim absent from the slide's evidence are
+  Lens A findings.
 - The deck's **purpose + audience** (e.g. "MICCAI oral, 10 min, broad audience").
 - Optionally the **source material** (paper/README/data). If given, **verify claims,
   figure labels, and numbers against it** — a caption that disagrees with its figure,
-  an over-claimed trend, or a wrong number is a major/blocker, not a nitpick.
+  an over-claimed trend, or a wrong number is a major/blocker, not a nitpick. Fidelity stays
+  **source-first**: the contract card's claim-ledger row is corroboration for a number, never a
+  substitute for its source location.
 - The **rubric**: read `references/review-rubrics.md` (universal rubric + the overlay
   for this purpose) and `references/design-principles.md`.
 - **Your assigned LENS** (when dispatched as a panel): **Content** (Lens A) or **Design** (Lens B) —
@@ -108,7 +128,9 @@ pick from. When the prompt says it's a *direction preview*:
 - **Do NOT flag what a style sample can't have:** missing narrative/arc/framing,
   placeholder figures or sample content, thin coverage, or unverifiable claims — those
   belong to the real deck and are judged later at the draft gate. Penalizing them here
-  is noise. Keep findings tight and design-focused.
+  is noise. Keep findings tight and design-focused. No plans exist yet, so set
+  `plan_audit: null` (reason: direction preview), skip the `probes` block, set
+  `coverage.contract_card_seen: "none-declared"`, and don't populate `ceiling`.
 
 ## How to review — be systematic, not impressionistic
 Do not just skim for the first few obvious issues. Run these passes:
@@ -142,10 +164,18 @@ Do not just skim for the first few obvious issues. Run these passes:
        slide answers a question the previous raised; closing slide named for its purpose ("Conclusion",
        not "Take home") **in the deck's language** (a native 结论/总结 on a Chinese deck is correct).
        Run rubric §6's three probes by name: the **question chain** (a slide whose question nobody asked
-       is filler), the **memory test** (after the full pass, close the deck and write the ONE sentence
-       you remember — if it isn't close to the planned deck message, or no takeaway survived, the deck
-       optimised for looking right over being remembered), and **emotional flatness** (one temperature
-       end-to-end, judged against the content plan's emotional curve when provided).
+       is filler; the contract card's role · question · beat table is the declared chain to audit), the
+       **memory test — SEQUENCED: after the full pass, close the deck and write the ONE sentence
+       you remember BEFORE reading the contract card's deck message, then compare** (record both as
+       `probes.memory_sentence`) — if it isn't close to the planned deck message (and, when the card
+       names the slide the deck exists for, to that slide's takeaway specifically), or no takeaway
+       survived, the deck
+       optimised for looking right over being remembered — and **emotional flatness** (one temperature
+       end-to-end, judged against the contract card's emotional-curve line; on a "none-declared" deck
+       judge it from the pixels alone). Lens A also owns **title-vs-takeaway binding**: when the
+       card's takeaway table is provided, compare each rendered content-slide title against it
+       mechanically; otherwise judge topic-label titles from the pixels (structural slides —
+       cover/divider/agenda/closing — are exempt).
      - *Voice — does the copy read HUMAN, or AI-generated?* Flag the "AI taste": **hype-filler** adjectives
        with no fact (强大/高效/全面/赋能/打造 · "leverage / robust / seamless"), **machine parallelism /
        套路连接词** (every line same shape; "值得一提的是 / it's worth noting"), and — **most acute in 中文 —
@@ -197,7 +227,7 @@ Do not just skim for the first few obvious issues. Run these passes:
        missing counter-example as its evidence.
        **Does the look fit the purpose?** crisp/corporate status vs sober defense vs bold pitch vs warm
        lecture (`design-by-purpose.md`) — a mismatch is a real finding. **If a style example was given, judge
-       fidelity to it PER THE CHOSEN MIMIC MODE** (the plan records it; `style-analysis.md`): **Mode A
+       fidelity to it PER THE CHOSEN MIMIC MODE** (the contract card carries it; `style-analysis.md`): **Mode A
        (reproduce)** → it should read as the **same family** (palette, type, chrome, motifs, density);
        **Mode B (borrow & restyle)** → the example's **components / layout / signature motif** should
        clearly echo, but the **palette, mood, and type are deliberately the user's own topic** — a
@@ -209,7 +239,12 @@ Do not just skim for the first few obvious issues. Run these passes:
        baseline, operator spacing, widow, corner-rounding, lone-glyph centring, type-pairing); **formula
        sizing-to-content + variables in math format**; colour/contrast/one-accent; charts & computed-plot
        correctness + legibility (tofu, aliasing, legend placement, single-highlight, so-what); image
-       crop/placement; AI-slop visual tells; stacked-group proximity; deck rhythm; motion/build design.
+       crop/placement; AI-slop visual tells; stacked-group proximity; deck rhythm; motion/build design;
+       **Poster test (bookends)** — judge the cover and the TRUE closing slide (you know which slide
+       closes the argument — not a trailing sources/backup page) at thumbnail scale (the provided
+       `thumb_first`/`thumb_last` PNGs, or squint the full renders): title legible, hook identifiable.
+       A cover that dies at thumbnail is a finding (corroborated by the `TIMID COVER` stats warn); a
+       deliberately quiet register may pass via composition rather than scale, but say so.
        *(Rubric items 2, 4, 5, 7, 9, 11, 12-motion.)*
 3. **Tick the named-flaw checklist — apply the checks YOUR lens owns** (per Lens A/B above; the sole
    critic does both passes). Reviewers (human or model) miss far more when asked to "judge quality" in
@@ -279,12 +314,16 @@ Do not just skim for the first few obvious issues. Run these passes:
      it still can't see every case. It also prints a **DECK STATS block** (per-slide reading load,
      text/ink coverage, font histogram + type-drama, build presence, skeleton-similarity): score those
      NUMBERS against the design targets — an unaddressed `TEXT WALL` / `CROWDED` / `LAYOUT SAMENESS` /
-     `FLAT TYPE` / `SMALL TYPE` / `SIZE SPRAWL` / `CJK TIGHT LEADING` / `CJK-LATIN SPACING` /
+     `FLAT TYPE` / `SMALL TYPE` / `SIZE SPRAWL` / `SKELETON VARIETY` / `TIMID COVER` / `FLAT RHYTHM` /
+     `CJK TIGHT LEADING` / `CJK-LATIN SPACING` /
      `NO BUILDS` stats warning is a finding with the measurement as evidence (occupancy judged against role bands, not one number; a stats
      block run in `--surface` mode — poster / single-canvas — legitimately omits the per-slide
      TEXT WALL / SIZE SPRAWL budgets, so their absence there is not an unrecorded exception), and the
      **thumbnail pass** (all slides in one grid: per slide, "what does it say?" — needing to read body
-     text = the form isn't carrying the message) is the design lens's cheapest whole-deck instrument. For each real collision, name the **two elements**, where they touch,
+     text = the form isn't carrying the message) is the design lens's cheapest whole-deck instrument —
+     **run it FIRST, before the per-slide close reads, and RECORD its answers** as `probes.per_slide`
+     (`{slide, first_read, takeaway_guess}`, each ≤1 line; the recorded answer, not the sequencing, is
+     the enforced artifact). For each real collision, name the **two elements**, where they touch,
      and the **root-cause fix** (re-anchor via `content_band` / `vstack(bottom=)` / `bottom_callout`,
      resize, or add a gap — never a one-off `y` nudge that recurs when the wording changes).
    - **Interior padding & cramming (a recurring, easy-to-miss flaw):** text must keep a real margin (≥~0.12in)
@@ -702,6 +741,13 @@ if there is any `blocker` or `major`, **or if you are unsure** — when in doubt
 consent and say what would make it not just acceptable but genuinely strong. Don't grant
 consent just because the obvious problems from a previous round were fixed; re-review the
 whole deck fresh each round, because fixes introduce new issues.
+**A full-deck consent carries a `ceiling`** — one concrete sentence: the single
+highest-leverage change that would move the deck from ship-ready to memorable (a top-tier
+reviewer approving a deck still tells you the one thing they'd do with another hour). A
+ceiling is **aspiration, not a withheld finding** — anything blocker/major belongs in
+`findings` and the verdict is revise; your consent bar does not move. Not populated for
+direction previews; if you omit it on a full-deck consent, the main loop asks you for the
+one sentence (a follow-up, not a rejection).
 
 ## After you return: your findings get cross-checked (high-stakes)
 For high-stakes decks (conference, defense, exec/pitch) your findings don't go straight to
@@ -715,8 +761,10 @@ home turf survives arbitration) and **lowers** the cost of an honest miss (a wea
 filtered, not blindly fixed) — so flag real issues precisely; don't hedge. Consent is
 **corroborated** at high stakes (a second independent pass must also see no blocker/major),
 which means your consent is *necessary, not sufficient* — hold your bar exactly where it
-is; this is not a cue to soften it. Your output JSON below is **unchanged** — arbitration
-consumes it as-is.
+is; this is not a cue to soften it. Arbitration consumes your output JSON as-is — the
+`plan_audit` / `probes` / `ceiling` blocks below are for the coordinator; arbiters
+adjudicate `findings` (which is why a plan_audit-derived finding must quote the promise
+line it audits).
 
 ## Output — return ONLY this JSON
 ```json
@@ -725,11 +773,23 @@ consumes it as-is.
   "coverage": {
     "slides_opened": [1, 2, "...every slide number whose PNG you actually Read — a missing number means the review is INVALID, not that the slide was fine"],
     "passes": ["<name each lens pass you ran, e.g. 'content lens (full deck)', 'design lens (full deck)' — a sole critic lists TWO; round 2+ adds 'fresh whole-deck re-pass'>"],
-    "stats_block_seen": true
+    "stats_block_seen": true,
+    "contract_card_seen": "true | false | 'none-declared' — true = the card was in your input; 'none-declared' = the dispatch explicitly stated no plans exist (external deck / redesign diagnosis / direction preview — legitimate); false = card absent with no statement, which obliges the main loop to re-dispatch with it before the review counts"
+  },
+  "plan_audit": {
+    "_comment": "the contract-card audit — each declared contract judged from PIXELS as kept | broken | degraded, lens-owned; null (with the reason) for direction previews / external decks with no plans",
+    "lens_b": {"skeleton_rhythm": "kept|broken|degraded — <one clause>", "wow": [{"slide": 0, "landed": true, "why": "<one clause vs its actual neighbours — a WOW that is merely big did not land>"}], "money_slide": "<did the visual peak land on the declared slide?>", "semantic_colour": "<ledger kept / a hue double-booked where>", "type_tokens": "<sizes drawn from the declared tokens?>", "eye_path_misses": ["<slides whose squint-level first-read missed the declared hero>"]},
+    "lens_a": {"memory_sentence": "<your remembered ONE sentence, written BEFORE reading the card's deck message>", "matches_deck_message": true, "curve_visible": "<is the declared emotional curve visible in pacing?>", "takeaway_titles": "<content-slide titles vs the takeaway table — list divergent slides>", "motion_manifest": "kept|broken|degraded"}
+  },
+  "probes": {
+    "_comment": "recorded fresh-eyes answers — required lens-scoped on FULL-DECK reviews only (direction previews / archetype samples exempt); Lens B fills per_slide (thumbnail pass, run FIRST), Lens A fills memory_sentence, a sole critic fills both; on a sectioned deck, section critics fill per_slide for their slides and the whole-deck coherence critic fills memory_sentence. Verbatim/near-verbatim echo of the plan's takeaway phrasing invalidates the probe like a slides_opened gap",
+    "per_slide": [{"slide": 1, "first_read": "<≤1 line: what the eye lands on>", "takeaway_guess": "<≤1 line: what this slide says, from the thumbnail>"}],
+    "memory_sentence": "<the ONE sentence you remember + the deck message as you understood it>"
   },
   "verdict": "consent" | "revise",
+  "ceiling": "<full-deck consent only: ONE sentence — the single highest-leverage change from ship-ready to memorable; omit on revise / direction previews>",
   "summary": "<2-3 sentences: the deck's biggest lever right now>",
-  "strengths": ["<what genuinely works — keep it>"],
+  "strengths": ["<what genuinely works — keep it; the coordinator hands this to the actor as a do-not-harm ledger on fix rounds>"],
   "findings": [
     {
       "id": "<stable unique handle, e.g. 's3-fidelity-1' — so two findings on the same slide+dimension don't collide when arbiters reference them>",
@@ -749,8 +809,12 @@ consumes it as-is.
 identical JSON, which is exactly why skims happened. Now the review proves itself: `slides_opened`
 must list every slide in the deck (the main loop rejects a review with gaps), `passes` shows the
 two lens passes actually ran (and, on rounds 2+, that the re-pass was whole-deck fresh, not a
-fix-list check), and `stats_block_seen: false` obliges the main loop to hand you the lint deck-stats
-block before the review counts.
+fix-list check), `stats_block_seen: false` obliges the main loop to hand you the lint deck-stats
+block before the review counts, and `contract_card_seen: false` obliges it to re-dispatch with the
+card. **The `probes` and lens-owned `plan_audit` blocks are gated the same way:** on a full-deck
+review of a pipeline-built deck, the main loop rejects a review whose lens-required probe fields
+or plan_audit subfields are missing, exactly as it rejects `slides_opened` gaps (direction
+previews and external no-plan decks set `plan_audit: null` with the reason and skip `probes`).
 
 Severity: **blocker** = undermines the purpose / a claim the audience can't verify or
 that is wrong → must fix. **major** = clearly hurts comprehension or impact. **minor**

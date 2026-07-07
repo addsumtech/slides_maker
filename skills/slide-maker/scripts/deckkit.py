@@ -29,6 +29,7 @@ from pptx.enum.shapes import MSO_SHAPE, MSO_CONNECTOR
 from pptx.oxml.ns import qn, nsdecls
 from pptx.oxml import parse_xml
 import math
+import re
 
 # ---- default professional palette (a neutral blue scheme). NOT tied to any brand —
 # when building on a template, override these with the template's real theme colours.
@@ -230,6 +231,102 @@ def _has_cjk(s):
     return any(a <= ord(ch) <= b for ch in s for a, b in _CJK_ORD)
 
 
+CJK_SPACING = None        # opt-in 盘古之白 normalizer: None (default — byte-for-byte current
+                          # behaviour, nothing is touched) | 'spaced' (insert ONE ASCII space at
+                          # every CJK↔Latin boundary — 全年 ARR 增长 51%) | 'unspaced' (strip such
+                          # boundary spaces). Set beside EAFONT before building a CJK/bilingual
+                          # deck so the deck-wide convention holds BY CONSTRUCTION instead of by
+                          # per-string discipline (lint's CJK-LATIN SPACING warn stays as the net).
+                          # text() applies it per paragraph (runs AND the seams between adjacent
+                          # runs — the accent-coloured number lockup is its own run) and table()
+                          # applies it per cell; MONO / EQ_MATHFONT runs and URL/path/code strings
+                          # are exempt. See references/multilingual.md.
+
+# ---- shared CJK↔Latin boundary classes — the ONE source of truth for the 盘古之白 convention.
+# lint_deck.py imports BOTH constants for its _SPACED/_UNSPACED counters, so the normalizer and
+# the render lint can never drift. NOTE: the CJK class deliberately starts at U+3040 — CJK
+# punctuation (U+3000–303F) and full-width forms (U+FF00–FFEF) are EXCLUDED, so pangu() never
+# inserts a space next to full-width punctuation (they take no flanking spaces).
+PANGU_CJK_CLASS = "\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af\uf900-\ufaff"
+PANGU_LATIN_CLASS = "A-Za-z0-9%"
+
+_PANGU_INS_A = re.compile(f"([{PANGU_CJK_CLASS}])([{PANGU_LATIN_CLASS}])")
+_PANGU_INS_B = re.compile(f"([{PANGU_LATIN_CLASS}])([{PANGU_CJK_CLASS}])")
+_PANGU_DEL_A = re.compile(f"([{PANGU_CJK_CLASS}]) +([{PANGU_LATIN_CLASS}])")
+_PANGU_DEL_B = re.compile(f"([{PANGU_LATIN_CLASS}]) +([{PANGU_CJK_CLASS}])")
+# operator symmetry: only when whitespace ALREADY exists on both sides of = ≈ → + × ÷ ± and the
+# two space characters differ (the classic full-width-one-side bug) — never insert new spaces.
+_PANGU_OP = re.compile("([ 　])([=≈→+×÷±])([ 　])")
+# never touch URLs / paths / code-looking strings (the exemption is per string, conservative)
+_PANGU_EXEMPT = re.compile(r"://|www\.|`|[\w\)\]]\/[\w\(\[]|\\[A-Za-z]")
+# a bare CJK↔Latin boundary (either direction) — used to judge the SEAM between adjacent runs
+_PANGU_SEAM = re.compile(f"[{PANGU_CJK_CLASS}][{PANGU_LATIN_CLASS}]"
+                         f"|[{PANGU_LATIN_CLASS}][{PANGU_CJK_CLASS}]")
+
+
+def pangu(s, mode=None):
+    """Normalize CJK↔Latin boundary spacing (盘古之白) in one string, per the deck convention.
+
+    ``pangu(s, mode=None)`` — ``mode`` = ``'spaced'`` | ``'unspaced'`` | ``None`` (falls back to
+    the module global ``CJK_SPACING``; both ``None`` → the string is returned untouched).
+    'spaced' inserts ONE ASCII space at each bare CJK↔Latin boundary (Latin class
+    ``[A-Za-z0-9%]`` — the same class the render lint counts); 'unspaced' strips such spaces.
+    Either mode also SYMMETRIZES an operator's existing flanking spaces (``= ≈ → + × ÷ ±``):
+    when a full-width space (U+3000) sits on one side and an ASCII space on the other, both
+    become the convention's space ('spaced' → ASCII, 'unspaced' → full-width, which reads well
+    between CJK terms) — spaces are never *inserted* around operators. Full-width punctuation
+    never gains flanking spaces (excluded from the boundary class by construction), and
+    URL/path/code-looking strings are returned untouched. Idempotent: pangu(pangu(s)) == pangu(s).
+    """
+    mode = mode or CJK_SPACING
+    if not mode or not s or _PANGU_EXEMPT.search(s):
+        return s
+    if mode not in ("spaced", "unspaced"):
+        raise ValueError("pangu(): mode must be 'spaced', 'unspaced', or None")
+    op_sp = " " if mode == "spaced" else "　"
+    s = _PANGU_OP.sub(lambda m: (m.group(0) if m.group(1) == m.group(3)
+                                 else op_sp + m.group(2) + op_sp), s)
+    if mode == "spaced":
+        s = _PANGU_INS_A.sub(r"\1 \2", s)
+        s = _PANGU_INS_B.sub(r"\1 \2", s)
+    else:
+        s = _PANGU_DEL_A.sub(r"\1\2", s)
+        s = _PANGU_DEL_B.sub(r"\1\2", s)
+    return s
+
+
+def _pangu_exempt_run(font_name):
+    """Runs typeset in the code/math faces keep their spacing verbatim."""
+    return font_name is not None and font_name in (MONO, EQ_MATHFONT)
+
+
+def _pangu_para(para):
+    """Apply the CJK_SPACING convention to ONE text() paragraph: each run's string AND each
+    seam between adjacent (non-exempt) runs — the accent-coloured number lockup ('速度' + '3倍'
+    as two runs) is the dominant bilingual pattern, and a per-run pass alone would miss its
+    boundary. The seam space is appended to / stripped from the LEFT run's tail."""
+    out = [list(r) for r in para]
+    for r in out:
+        if not _pangu_exempt_run(r[5] if len(r) > 5 else None):
+            r[0] = pangu(r[0])
+    ins = _PANGU_SEAM
+    for a, b in zip(out, out[1:]):
+        if (_pangu_exempt_run(a[5] if len(a) > 5 else None)
+                or _pangu_exempt_run(b[5] if len(b) > 5 else None) or not a[0] or not b[0]):
+            continue
+        if CJK_SPACING == "spaced":
+            if ins.fullmatch(a[0][-1] + b[0][0]):
+                a[0] += " "
+        else:
+            while a[0].endswith(" ") and a[0].rstrip(" ") and b[0] \
+                    and ins.fullmatch(a[0].rstrip(" ")[-1] + b[0][0]):
+                a[0] = a[0][:-1]
+            while b[0].startswith(" ") and a[0] and b[0].lstrip(" ") \
+                    and ins.fullmatch(a[0][-1] + b[0].lstrip(" ")[0]):
+                b[0] = b[0][1:]
+    return [tuple(r) for r in out]
+
+
 def text(slide, x, y, w, h, runs, align=PP_ALIGN.LEFT, anchor=MSO_ANCHOR.TOP,
          space_after=6, line_spacing=None):
     """runs = list of paragraphs; each paragraph = list of run tuples
@@ -251,6 +348,8 @@ def text(slide, x, y, w, h, runs, align=PP_ALIGN.LEFT, anchor=MSO_ANCHOR.TOP,
     tf.margin_left = tf.margin_right = Pt(2)
     tf.margin_top = tf.margin_bottom = Pt(2)
     for i, para in enumerate(runs):
+        if CJK_SPACING:                     # opt-in 盘古之白 normalizer (default None = untouched)
+            para = _pangu_para(para)
         p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
         p.alignment = align
         p.space_after = Pt(space_after)
@@ -587,6 +686,30 @@ def spaced_centers(x, w, n, *, label_w=2.0, total_w=10.0, margin=0.05):
     return ([x0 + i * step for i in range(n)], x0, aw)
 
 
+def axis_scale(x, w, lo, hi):
+    """The ONE value→x mapper for every horizontal VALUE axis (dumbbell rows, dot strips,
+    value-spaced timelines). ``axis_scale(x, w, lo, hi)`` returns ``(X, draw_axis)``:
+
+        X, draw_axis = dk.axis_scale(x0, span_w, lo, hi)
+        draw_axis(slide, ay)                      # the muted axis track, centred on ay
+        cx = X(v)                                 # value v mapped linearly onto [x, x+w]
+
+    ``X(v) = x + (v - lo) / (hi - lo) * w``; a degenerate ``hi == lo`` uses span 1.0 instead of
+    dividing by zero (``dumbbell_board``'s historic behaviour, which this replaces inline).
+    ``draw_axis(slide, y, *, color=None, weight=0.024)`` draws the track as a thin bar centred
+    on ``y`` (default colour: the same muted gray ``timeline`` uses). Components SHARE this
+    mapper instead of re-deriving ``(v - lo) / span`` inline, so value geometry can never drift
+    between forms — ``dumbbell_board``, ``dot_strip`` and ``timeline(spacing='value')`` all call
+    it, and any new value-mapped form must too."""
+    span = float(hi - lo) or 1.0
+    def X(v):
+        return x + (float(v) - lo) / span * w
+    def draw_axis(slide, y, *, color=None, weight=0.024):
+        box(slide, x, y - weight / 2.0, w, weight,
+            fill=color if color is not None else RGBColor(0x9A, 0xA0, 0xAE))
+    return X, draw_axis
+
+
 def mid(*vals):
     """Midpoint of the given coordinates — e.g. centre a connector endpoint on a block:
     `connector(s, (ax, mid(by, by+bh)), ...)`, or a hub between two block centres."""
@@ -608,18 +731,63 @@ def span_center(boxes, size):
 
 
 def timeline(slide, x, y, w, events, *, orientation="h", highlight=None, accent=MAGENTA,
-             ink=DEEP, axis_c=RGBColor(0x9A, 0xA0, 0xAE), h=1.4):
+             ink=DEEP, axis_c=RGBColor(0x9A, 0xA0, 0xAE), h=1.4, polarity="below",
+             spacing="even", label_w=2.0):
     """Native timeline. events = [(when, title[, caption]), ...]. orientation='h' (axis L→R, 3-6
     evenly-weighted events) or 'v' (top→bottom spine, when each event needs 2+ lines). One node is
     recolored `accent` via `highlight` index. For chronology/roadmaps/evolution — not comparisons.
-    End nodes are inset (via `spaced_centers`) so the first/last captions stay centered on their dots."""
+    End nodes are inset (via `spaced_centers`) so the first/last captions stay centered on their dots.
+
+    Horizontal-only kwargs (defaults reproduce the classic geometry exactly):
+      ``polarity`` = 'below' (all captions under the axis — the classic) | **'alternate'**
+        (captions whipsaw above/below: even indices below, odd above — doubles the same-side
+        step, so ~2× the events fit at the same width; budget ~2.7in tall, returns ay+1.35).
+      ``spacing`` = 'even' (equal steps via ``spaced_centers``) | **'value'** (each dot at its
+        TRUE position on the date/value axis via ``axis_scale`` — uneven gaps become visible
+        information; requires a NUMERIC ``when`` per event, e.g. 1979, 2024.5).
+      ``label_w`` = the centered caption-box width (default 2.0in; captions use +0.2).
+    **Never silent overlap:** after computing centers, if any SAME-SIDE adjacent pair sits
+    closer than ``label_w`` the call raises ``ValueError`` with the measured min step (the
+    ``vstack`` errors-at-build-time precedent) — switch to ``polarity='alternate'``, widen
+    ``w``, cut events, lower ``label_w``, or use ``dot_strip`` (whose label engine nudges
+    with leader ticks and cannot collide)."""
     n = len(events)
     if orientation == "h":
-        ay = y + 0.2
+        if polarity not in ("below", "alternate"):
+            raise ValueError("timeline(): polarity must be 'below' or 'alternate'")
+        if spacing not in ("even", "value"):
+            raise ValueError("timeline(): spacing must be 'even' or 'value'")
+        ay = y + (1.35 if polarity == "alternate" else 0.2)
         sw, _sh = _slide_size(slide)
         def _lx(cx, lw):                                  # keep a centered label box on-canvas
             return max(0.05, min(cx - lw / 2, sw - lw - 0.05))
-        centers, ax0, axw = spaced_centers(x, w, n, label_w=2.0, total_w=sw)
+        if spacing == "value":
+            whens = [ev[0] for ev in events]
+            if not all(isinstance(t, (int, float)) and not isinstance(t, bool) for t in whens):
+                raise ValueError("timeline(spacing='value') needs a NUMERIC `when` per event "
+                                 "(e.g. 1979, 2024.5) — got " + repr(whens))
+            # end-inset by the same rule spaced_centers uses, so end captions stay co-centered
+            pad = max(0.0, label_w / 2.0 - (x - 0.05),
+                      label_w / 2.0 - ((sw - 0.05) - (x + w)))
+            pad = min(pad, w / 2.0 - 0.3)
+            ax0, axw = x + pad, w - 2 * pad
+            X, _draw = axis_scale(ax0, axw, min(whens), max(whens))
+            centers = [X(t) for t in whens]
+        else:
+            centers, ax0, axw = spaced_centers(x, w, n, label_w=label_w, total_w=sw)
+        # never silent overlap: same-side adjacent captions must clear label_w (fail loudly)
+        if n > 1:
+            groups = ([centers[0::2], centers[1::2]] if polarity == "alternate" else [centers])
+            steps = [b - a for g in groups for a, b in zip(sorted(g), sorted(g)[1:])]
+            min_step = min(steps) if steps else None
+            if min_step is not None and min_step < label_w - 1e-9:
+                raise ValueError(
+                    f"timeline(): adjacent same-side captions land {min_step:.2f}in apart but each "
+                    f"caption box is {label_w:.2f}in wide — they would overlap. "
+                    + ("Use polarity='alternate' (doubles the same-side step), widen w, cut events, "
+                       "or lower label_w." if polarity == "below" else
+                       "Widen w, cut events, lower label_w, or switch to dot_strip() — its label "
+                       "engine nudges labels with leader ticks and cannot collide."))
         box(slide, ax0, ay - 0.012, axw, 0.024, fill=axis_c)
         for i, ev in enumerate(events):
             ex = centers[i] if n > 1 else (x + w / 2)
@@ -627,10 +795,17 @@ def timeline(slide, x, y, w, events, *, orientation="h", highlight=None, accent=
             em = (highlight is None or i == highlight)
             dc = accent if em else axis_c
             box(slide, ex - 0.09, ay - 0.09, 0.18, 0.18, fill=dc, round=True, r=0.09)
-            text(slide, _lx(ex, 2.0), ay + 0.18, 2.0, 0.3, [[(str(when), 13, dc, True, False)]], align=PP_ALIGN.CENTER, space_after=0)
-            text(slide, _lx(ex, 2.0), ay + 0.5, 2.0, 0.3, [[(title, 12, ink, True, False)]], align=PP_ALIGN.CENTER, space_after=0)
-            if cap:
-                text(slide, _lx(ex, 2.2), ay + 0.78, 2.2, 0.5, [[(cap, 10.5, MUTE, False, False)]], align=PP_ALIGN.CENTER, space_after=0)
+            above = (polarity == "alternate" and i % 2 == 1)
+            if above:                                     # mirrored stack: when nearest the dot
+                text(slide, _lx(ex, label_w), ay - 0.48, label_w, 0.3, [[(str(when), 13, dc, True, False)]], align=PP_ALIGN.CENTER, space_after=0)
+                text(slide, _lx(ex, label_w), ay - 0.80, label_w, 0.3, [[(title, 12, ink, True, False)]], align=PP_ALIGN.CENTER, space_after=0)
+                if cap:
+                    text(slide, _lx(ex, label_w + 0.2), ay - 1.30, label_w + 0.2, 0.5, [[(cap, 10.5, MUTE, False, False)]], align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.BOTTOM, space_after=0)
+            else:
+                text(slide, _lx(ex, label_w), ay + 0.18, label_w, 0.3, [[(str(when), 13, dc, True, False)]], align=PP_ALIGN.CENTER, space_after=0)
+                text(slide, _lx(ex, label_w), ay + 0.5, label_w, 0.3, [[(title, 12, ink, True, False)]], align=PP_ALIGN.CENTER, space_after=0)
+                if cap:
+                    text(slide, _lx(ex, label_w + 0.2), ay + 0.78, label_w + 0.2, 0.5, [[(cap, 10.5, MUTE, False, False)]], align=PP_ALIGN.CENTER, space_after=0)
     else:
         ax = x + 0.12
         box(slide, ax - 0.012, y, 0.024, h, fill=axis_c)
@@ -643,7 +818,101 @@ def timeline(slide, x, y, w, events, *, orientation="h", highlight=None, accent=
             text(slide, ax + 0.35, ey - 0.16, w - 0.5, 0.3, [[(str(when) + "  ", 13, dc, True, False), (title, 13, ink, True, False)]], space_after=0)
             if cap:
                 text(slide, ax + 0.35, ey + 0.16, w - 0.5, 0.4, [[(cap, 10.5, MUTE, False, False)]], space_after=0)
+    if orientation == "h" and polarity == "alternate":
+        return y + 2.7                                    # ay + 1.35 (the below-side extent)
     return y + (h if orientation == "v" else 1.4)
+
+
+def dot_strip(slide, x, y, w, points, lo, hi, *, label_w=None, stagger="auto",
+              accent=MAGENTA, ink=DEEP, axis_c=RGBColor(0x9A, 0xA0, 0xAE),
+              highlight=None, unit="", size=11, dot_r=0.07, font=None):
+    """N labelled points on ONE shared value axis — "where everyone sits on one scale"
+    (benchmark scores, cost/latency positions, maturity ratings) with **anti-collision labels
+    by construction**. The editable native form for a labelled 1-D dot plot: reach for it
+    before ``native_bubble`` (no per-point text) or a hand-rolled row of dots.
+
+    ``dot_strip(slide, x, y, w, points, lo, hi, *, label_w=None, stagger='auto',
+    accent=MAGENTA, ink=DEEP, axis_c=<muted gray>, highlight=None, unit='', size=11,
+    dot_r=0.07, font=None)`` — ``points = [(label, value), ...]``; ``lo``/``hi`` fix the axis
+    (pad ~10%); ``highlight`` = index of the ONE emphasised point (its dot + value keep
+    ``accent``, the rest mute to ``axis_c``/ink); ``unit`` suffixes every value. Value→x runs
+    through the shared ``axis_scale`` mapper. Returns the bottom y (budget ~1.0in tall).
+
+    LABEL ENGINE (deterministic, collision-impossible for ARBITRARY value distributions):
+    each point carries one line "label value" whose width is **measured from real glyph ink**
+    (``label_w`` overrides the measurement with a fixed width — rarely needed). ``stagger=``
+      'auto'      — one row above the axis when every neighbour clears; else alternate
+                    above/below in value order; a dense CLUSTER that defeats alternation too
+                    is NUDGED along x to the measured minimum separation (0.08in) with a thin
+                    leader tick joining each nudged label to its dot;
+      'none'      — force the single row (still nudges rather than collides);
+      'alternate' — force the whipsaw (ditto).
+    End labels are CLAMPED on-canvas (the ``spaced_centers`` end-inset guarantee, applied to
+    measured widths), and if the labels physically cannot fit on the canvas at all the call
+    raises ``ValueError`` — fail loudly, never silent overlap."""
+    if stagger not in ("auto", "none", "alternate"):
+        raise ValueError("dot_strip(): stagger must be 'auto', 'none', or 'alternate'")
+    if not points:
+        raise ValueError("dot_strip() needs at least one (label, value) point")
+    sw, _sh = _slide_size(slide)
+    ay = y + 0.5
+    X, draw_axis = axis_scale(x, w, lo, hi)
+    draw_axis(slide, ay, color=axis_c)
+    fmt = lambda v: f"{v:g}"
+    meta = []                                             # value-sorted layout records
+    for i in sorted(range(len(points)), key=lambda k: float(points[k][1])):
+        label, v = str(points[i][0]), points[i][1]
+        val = fmt(v) + ((" " + unit) if unit else "")
+        mruns = ([(label + "  ", False)] if label else []) + [(val, True)]
+        wi = (label_w if label_w is not None else _natural_width_in(mruns, size, font)) + 0.06
+        meta.append({"i": i, "cx": X(v), "w": wi, "label": label, "val": val})
+    GAP, LO, HI = 0.08, 0.05, sw - 0.05
+
+    def _clears(items):
+        return all(b["cx"] - a["cx"] >= (a["w"] + b["w"]) / 2 + GAP
+                   for a, b in zip(items, items[1:]))
+
+    def _solve(items):
+        """1-D anti-collision sweep: desired centre = the dot's x; a forward pass enforces the
+        measured min separation, a backward pass pulls the row back on-canvas. Deterministic;
+        raises only when the row genuinely cannot fit between the canvas margins."""
+        if sum(it["w"] for it in items) + GAP * (len(items) - 1) > (HI - LO) + 1e-9:
+            raise ValueError(f"dot_strip(): {len(items)} labels need "
+                             f"{sum(it['w'] for it in items) + GAP * (len(items) - 1):.1f}in on one "
+                             f"side but only {HI - LO:.1f}in of canvas exists — cut points, shorten "
+                             f"labels, or lower size")
+        pos = []
+        for k, it in enumerate(items):
+            p = max(it["cx"], LO + it["w"] / 2)
+            if pos:
+                p = max(p, pos[-1] + (items[k - 1]["w"] + it["w"]) / 2 + GAP)
+            pos.append(p)
+        if pos[-1] > HI - items[-1]["w"] / 2:             # pull back inside the right margin
+            pos[-1] = HI - items[-1]["w"] / 2
+            for k in range(len(pos) - 2, -1, -1):
+                pos[k] = min(pos[k], pos[k + 1] - (items[k]["w"] + items[k + 1]["w"]) / 2 - GAP)
+        return pos
+
+    if stagger == "none" or (stagger == "auto" and _clears(meta)):
+        rows_ = [meta, []]
+    else:
+        rows_ = [meta[0::2], meta[1::2]]
+    for items, row_y, is_above in ((rows_[0], ay - 0.46, True), (rows_[1], ay + 0.18, False)):
+        if not items:
+            continue
+        for it, px in zip(items, _solve(items)):
+            em = (highlight is None or it["i"] == highlight)
+            dc = accent if em else axis_c
+            box(slide, it["cx"] - dot_r, ay - dot_r, 2 * dot_r, 2 * dot_r, fill=dc, round=True, r=dot_r)
+            if abs(px - it["cx"]) > 0.04:                 # nudged → leader tick from dot to label
+                connector(slide, (it["cx"], ay + (-dot_r if is_above else dot_r)),
+                          (px, ay + (-0.20 if is_above else 0.20)),
+                          color=axis_c, width=1.0, arrow=False)
+            runs = ([(it["label"] + "  ", size, ink, False, False, font)] if it["label"] else [])
+            runs.append((it["val"], size, (accent if em else ink), True, False, font))
+            text(slide, px - it["w"] / 2 - 0.02, row_y, it["w"] + 0.04, 0.28, [runs],
+                 align=PP_ALIGN.CENTER, space_after=0)
+    return y + 1.0
 
 
 def image_tab(slide, x, y, text_str, *, color=DEEP, tcolor=WHITE, size=10.5):
@@ -1287,9 +1556,11 @@ def gif(slide, path, x, y, w, h, *, fit="contain", alt=None, max_mb=8.0, warn=Tr
     return picture(slide, path, x, y, w, h, fit=fit, alt=alt)
 
 
-def columns(n=2, *, slide=None, w_in=None, h_in=None, top=1.15, bottom=0.55, margin=None, gap=None):
+def columns(n=2, *, slide=None, w_in=None, h_in=None, top=1.15, bottom=0.55, margin=None, gap=None,
+            weights=None):
     """Return ``n`` equal-width content-column rects ``(x, y, w, h)`` with **symmetric**
-    outer margins and equal gutters between columns.
+    outer margins and equal gutters between columns — or, with ``weights=``, a **measured
+    asymmetric split** with the same symmetric margins.
 
     Use this for any split slide — text+figure, two-up, three-up, image+caption — so the
     left and right regions (and the white margins flanking them) come out the SAME width.
@@ -1309,6 +1580,20 @@ def columns(n=2, *, slide=None, w_in=None, h_in=None, top=1.15, bottom=0.55, mar
     ``blank_deck`` (otherwise the right margin will be wrong — the very lopsidedness this
     helper exists to prevent).
 
+    ``weights=`` (keyword-only, one positive number per column, ``len == n``) divides the
+    usable span **proportionally** instead of equally — the constructive form of two rules
+    that otherwise live only as prose: *"an intentional asymmetric split still keeps equal
+    outer margins"* and the fix for *"don't strand a narrow element in a too-wide panel"*
+    (give the narrow timeline/list a genuinely narrower column). Reach for it as a
+    **remedy** when the plan states a split/rail ratio, not as decoration::
+
+        rail, main = dk.columns(2, slide=s, weights=(1, 2))     # a 1/3–2/3 split (rail + main)
+        L, R      = dk.columns(2, slide=s, weights=(1, 1.618))  # a golden split
+
+    Margin/gap/slide-size logic is untouched, so equal outer margins are inherited by
+    construction; a mis-sized ``weights`` tuple raises ``ValueError`` (like ``n < 1``).
+    Default ``weights=None`` keeps today's equal split exactly.
+
     ``margin`` (outer left == outer right) and ``gap`` (between columns) default to
     ``GUTTER``. ``top``/``bottom`` reserve room for the title bar and footer. Returns a
     list of ``(x, y, w, h)`` tuples in inches, left to right.
@@ -1325,18 +1610,39 @@ def columns(n=2, *, slide=None, w_in=None, h_in=None, top=1.15, bottom=0.55, mar
     gap = GUTTER if gap is None else gap
     if n < 1:
         raise ValueError("columns(n) needs n >= 1")
+    if weights is not None:
+        weights = list(weights)
+        if len(weights) != n:
+            raise ValueError(f"columns(weights=) needs exactly n={n} weights, got {len(weights)}")
+        if any(wt <= 0 for wt in weights):
+            raise ValueError("columns(weights=) needs every weight > 0")
     usable = w_in - 2 * margin - (n - 1) * gap
     if usable <= 0:
         raise ValueError("margins/gap leave no room for columns; reduce margin or gap")
-    cw = usable / n
     y = top
     h = h_in - top - bottom
-    return [(margin + i * (cw + gap), y, cw, h) for i in range(n)]
+    if weights is None:
+        cw = usable / n
+        return [(margin + i * (cw + gap), y, cw, h) for i in range(n)]
+    tot = float(sum(weights))
+    out, cx = [], margin
+    for wt in weights:
+        cw = usable * wt / tot
+        out.append((cx, y, cw, h))
+        cx += cw + gap
+    return out
 
 
-def rows(n=2, *, slide=None, w_in=None, h_in=None, x=None, y=None, w=None, top=1.15, bottom=0.55, gap=None):
+def rows(n=2, *, slide=None, w_in=None, h_in=None, x=None, y=None, w=None, top=1.15, bottom=0.55, gap=None,
+         weights=None):
     """Return ``n`` equal-**height** row rects ``(x, y, w, h)`` stacked top-to-bottom with
     equal gaps — the vertical counterpart of :func:`columns`.
+
+    ``weights=`` (keyword-only, one positive number per row, ``len == n``) divides the
+    stack's usable height **proportionally** — e.g. ``rows(2, slide=s, weights=(2, 1))``
+    for a tall figure band over a short caption band — with gaps and the top/bottom
+    reserves unchanged, exactly like :func:`columns`; a mis-sized tuple raises
+    ``ValueError``. Default ``weights=None`` keeps the equal split.
 
     Use it for a **vertical stack** of boxes (problem→solution, before→after, a list of
     cards) so the gaps — and any ``arrow(..., direction="down")`` connectors you drop between
@@ -1369,11 +1675,25 @@ def rows(n=2, *, slide=None, w_in=None, h_in=None, x=None, y=None, w=None, top=1
     y = top
     if n < 1:
         raise ValueError("rows(n) needs n >= 1")
+    if weights is not None:
+        weights = list(weights)
+        if len(weights) != n:
+            raise ValueError(f"rows(weights=) needs exactly n={n} weights, got {len(weights)}")
+        if any(wt <= 0 for wt in weights):
+            raise ValueError("rows(weights=) needs every weight > 0")
     usable = h_in - top - bottom - (n - 1) * gap
     if usable <= 0:
         raise ValueError("top/bottom/gap leave no room for rows; reduce them")
-    rh = usable / n
-    return [(x, y + i * (rh + gap), w, rh) for i in range(n)]
+    if weights is None:
+        rh = usable / n
+        return [(x, y + i * (rh + gap), w, rh) for i in range(n)]
+    tot = float(sum(weights))
+    out, cy = [], y
+    for wt in weights:
+        rh = usable * wt / tot
+        out.append((x, cy, w, rh))
+        cy += rh + gap
+    return out
 
 
 def content_band(slide, *, top=1.15, footer_gap=0.15):
@@ -2185,7 +2505,9 @@ def table(slide, x, y, w, rows, col_w=None, header=True, highlight=None,
         is_hi = (i == hi_row)
         for j in range(ncol):
             cell = tbl.cell(i, j)
-            cell.text = rows[i][j] if j < len(rows[i]) else ""
+            # table cells count toward lint's 盘古之白 tally, so the opt-in CJK_SPACING
+            # normalizer covers them too (pangu() is a no-op when the flag is unset)
+            cell.text = pangu(rows[i][j]) if j < len(rows[i]) else ""
             cell.margin_left = cell.margin_right = Pt(7)
             cell.margin_top = cell.margin_bottom = Pt(2)
             cell.vertical_anchor = MSO_ANCHOR.MIDDLE
@@ -3264,6 +3586,12 @@ def dumbbell_board(slide, x, y, w, rows, *, row_h=0.52, label_w=None, accent=Non
 
     rows = [(name, sub_or_"", v_before, v_after, scale_lo, scale_hi, unit), ...] — set lo/hi per
     row (pad ~10%); improvements where lower-is-better simply have v_after left of v_before.
+    An optional **8th element** per row, ``v_mid``, draws a small neutral mid dot on the track
+    (an intermediate checkpoint — e.g. an interim release between before and after) with its
+    value labelled above the dot when it clears the end labels, else below the track.
+    **Value labels are direction-aware and always placed OUTWARD** of the dumbbell span: a
+    rightward row keeps the classic before-left / after-right geometry; a leftward
+    (lower-is-better) row mirrors it, so the labels cannot collide at any span.
     `hero` = row index to emphasise (left accent bar + bold name) · `threshold` = optional
     (row_idx, value, tick_label) drawing a vertical reference tick on that row (e.g. the 100%
     line NRR must cross). Budget ~0.52in/row + margins; keep w ≥ ~8 so value labels clear.
@@ -3275,7 +3603,9 @@ def dumbbell_board(slide, x, y, w, rows, *, row_h=0.52, label_w=None, accent=Non
     mc = mute if mute is not None else MUTE
     lw = label_w if label_w is not None else 0.42 * w
     bx0, bx1 = x + lw + 0.15, x + w - 1.02
-    for i, (name, sub, v0, v1, lo, hi, unit) in enumerate(rows):
+    for i, row in enumerate(rows):
+        name, sub, v0, v1, lo, hi, unit = row[:7]
+        v_mid = row[7] if len(row) > 7 else None       # optional mid-point (8-element row form)
         ry = y + i * row_h
         is_hero = (hero == i)
         if is_hero:
@@ -3286,8 +3616,7 @@ def dumbbell_board(slide, x, y, w, rows, *, row_h=0.52, label_w=None, accent=Non
             parts.append(("   " + sub, sub_size, mc, False, False, font))
         text(slide, x, ry - 0.02, lw + 0.1, 0.4, [parts], anchor=MSO_ANCHOR.MIDDLE, space_after=0)
         box(slide, bx0, ry + 0.14, bx1 - bx0, 0.018, fill=tc)
-        span = float(hi - lo) or 1.0
-        X = lambda v: bx0 + (v - lo) / span * (bx1 - bx0)
+        X, _draw = axis_scale(bx0, bx1 - bx0, lo, hi)   # the ONE shared value→x mapper
         x0, x1 = X(v0), X(v1)
         if threshold and threshold[0] == i:
             xk = X(threshold[1])
@@ -3299,12 +3628,49 @@ def dumbbell_board(slide, x, y, w, rows, *, row_h=0.52, label_w=None, accent=Non
         box(slide, x0 - 0.05, ry + 0.10, 0.10, 0.10, fill=bc, round=True, r=0.05)
         box(slide, x1 - 0.06, ry + 0.09, 0.12, 0.12, fill=acc, round=True, r=0.06)
         fmt = lambda v: f"{v:g}"
-        text(slide, x0 - 0.62, ry - 0.185, 0.6, 0.24,
-             [[(fmt(v0), before_size, mc, False, False, value_font or font)]],
-             align=PP_ALIGN.RIGHT, space_after=0)
-        text(slide, x1 + 0.10, ry - 0.21, 0.98, 0.28,
-             [[(fmt(v1) + (" " + unit if unit else ""), value_size, acc, True, False,
-                value_font or font)]], space_after=0)
+        after_txt = fmt(v1) + (" " + unit if unit else "")
+        # Direction-aware OUTWARD labels: rightward rows keep the original geometry byte-for-byte;
+        # a leftward (lower-is-better) row mirrors it — after-label LEFT of x1, before-label RIGHT
+        # of x0 — so end labels can never collide with each other at any span. (Known latent limit,
+        # deliberately unchanged here: the after-label box is a fixed 0.98in, so an unusually long
+        # value+unit can still wrap to two lines.)
+        if x1 >= x0:
+            text(slide, x0 - 0.62, ry - 0.185, 0.6, 0.24,
+                 [[(fmt(v0), before_size, mc, False, False, value_font or font)]],
+                 align=PP_ALIGN.RIGHT, space_after=0)
+            text(slide, x1 + 0.10, ry - 0.21, 0.98, 0.28,
+                 [[(after_txt, value_size, acc, True, False,
+                    value_font or font)]], space_after=0)
+        else:
+            text(slide, x0 + 0.10, ry - 0.185, 0.6, 0.24,
+                 [[(fmt(v0), before_size, mc, False, False, value_font or font)]],
+                 space_after=0)
+            text(slide, x1 - 1.08, ry - 0.21, 0.98, 0.28,
+                 [[(after_txt, value_size, acc, True, False,
+                    value_font or font)]], align=PP_ALIGN.RIGHT, space_after=0)
+        if v_mid is not None:
+            xm = X(v_mid)
+            box(slide, xm - 0.04, ry + 0.11, 0.08, 0.08, fill=mc, round=True, r=0.04)
+            mtxt = fmt(v_mid)
+            # place the mid value ABOVE its dot only when its measured natural width clears BOTH
+            # end-label ink extents by >= 0.08in horizontally; otherwise drop it BELOW the track
+            # (ry + 0.30 — the shelf the threshold tick label uses), so it can never collide.
+            w_m = _natural_width_in([(mtxt, False)], before_size, value_font or font)
+            w_b = _natural_width_in([(fmt(v0), False)], before_size, value_font or font)
+            w_a = _natural_width_in([(after_txt, True)], value_size, value_font or font)
+            if x1 >= x0:
+                b_lo, b_hi = (x0 - 0.02) - w_b, (x0 - 0.02)
+                a_lo, a_hi = x1 + 0.10, x1 + 0.10 + w_a
+            else:
+                b_lo, b_hi = x0 + 0.10, x0 + 0.10 + w_b
+                a_lo, a_hi = (x1 - 0.10) - w_a, (x1 - 0.10)
+            m_lo, m_hi = xm - w_m / 2, xm + w_m / 2
+            clear = ((m_lo >= b_hi + 0.08 or m_hi <= b_lo - 0.08) and
+                     (m_lo >= a_hi + 0.08 or m_hi <= a_lo - 0.08))
+            my = (ry - 0.185) if clear else (ry + 0.30)
+            text(slide, xm - 0.35, my, 0.7, 0.22,
+                 [[(mtxt, before_size, mc, False, False, value_font or font)]],
+                 align=PP_ALIGN.CENTER, space_after=0)
     return y + len(rows) * row_h
 
 
@@ -3754,6 +4120,12 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
                      the real footer; a footer-less slide relies on OFF_CANVAS + the Step-5 lint_deck).
       OFFCENTER    — a card whose ONLY content is a single line of text leaves a lopsided top/bottom
                      gap (one line in a block reads best vertically centred — anchor it MIDDLE).
+      SLIVER_GAP   — two panels (or a panel and a picture) NEARLY touch: their projections overlap
+                     on one axis and the edge gap on the other is a sliver (0.005–0.10in — clearly
+                     below the documented ~0.12in "≥ ~⅓ GUTTER" floor, so rule-compliant gaps never
+                     warn). The classic cause is a hand-picked stack pitch that barely clears the
+                     block height (pitch 1.04, height 1.02 → a ~0.02in seam). Flush/contained/
+                     overlapping pairs (g ≤ 0) stay lint_deck.py's domain.
 
     Returns findings = [(slide_no, severity, code, msg)]. `verbose` prints a compact report;
     `strict=True` raises if any CRITICAL remains (headless / CI). Stays deliberately silent on what
@@ -3784,6 +4156,32 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
             if _has_fill(sh) and "AUTO_SHAPE" in st and _rectish(sh) and not full_bleed \
                     and bb[2] >= 0.8 and bb[3] >= 0.35 and 0.5 <= bb[2]*bb[3] <= W*H*0.85:
                 containers.append(bb)
+        # ---- SLIVER_GAP: near-touching panels (panel–panel or panel–picture; picture–picture is
+        #      skipped). A gap that exists but reads as touching clips rounded corners and looks
+        #      cramped even though nothing overlaps; overlap/flush (g <= 0) stays lint_deck's domain.
+        pics_bb = [bb for sh, bb, st, ink, r in info
+                   if "PICTURE" in st and not (bb[2] >= W*0.92 and bb[3] >= H*0.92)]
+        gap_boxes = [(cb, "panel") for cb in containers] + [(pb, "picture") for pb in pics_bb]
+        for gi in range(len(gap_boxes)):
+            for gj in range(gi+1, len(gap_boxes)):
+                (ga, ka), (gb, kb) = gap_boxes[gi], gap_boxes[gj]
+                if ka == "picture" and kb == "picture":
+                    continue
+                ox = min(ga[0]+ga[2], gb[0]+gb[2]) - max(ga[0], gb[0])
+                oy = min(ga[1]+ga[3], gb[1]+gb[3]) - max(ga[1], gb[1])
+                if ox >= 0.60 * min(ga[2], gb[2]):            # stacked vertically → check the y gap
+                    g = max(ga[1], gb[1]) - min(ga[1]+ga[3], gb[1]+gb[3])
+                    if 0.005 < g < 0.10:
+                        findings.append((n, "WARN", "SLIVER_GAP",
+                            f"panels nearly touch (gap {g:.2f}in) — derive the stack pitch from "
+                            f"rows()/vstack()"))
+                        continue
+                if oy >= 0.60 * min(ga[3], gb[3]):            # side by side → check the x gap
+                    g = max(ga[0], gb[0]) - min(ga[0]+ga[2], gb[0]+gb[2])
+                    if 0.005 < g < 0.10:
+                        findings.append((n, "WARN", "SLIVER_GAP",
+                            f"panels nearly touch (gap {g:.2f}in) — widen the gap (grow the diagram "
+                            f"radius/pitch or shrink the blocks)"))
         # where the FOOTER chrome actually sits this slide (short text inks hugging the bottom edge),
         # so the footer check flags a REAL collision with it — not the conservative reserved band
         foot_inks = [ink for sh, bb, st, ink, r in info if ink is not None and ink[1]+ink[3] >= H-0.14 and ink[3] < 0.45]

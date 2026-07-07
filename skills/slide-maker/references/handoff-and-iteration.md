@@ -78,9 +78,40 @@ same failure on other dials. So when the user critiques a dimension:
    take another step — two cheap rounds beat one overshoot.
 3. **Hold every dimension they did NOT criticise stable**, so they can judge the fix in
    isolation rather than re-reviewing the whole design.
-The critic's design lens applies the matching check on iteration rounds (**pendulum
+4. **Record WHY the round happened** — the round record gains one **`user-dials:`** line per
+   criticised dimension: `dimension → direction, layer — "verbatim user words"` (e.g.
+   `colour: +vivid, content layer — "太素了"`). Zero cost when no iteration happens — and it is
+   the observation stream the Step-6 taste write-back promotes from (below), so a preference
+   the user voiced twice never has to be re-taught at the cost of a render-review round.
+The critic's design lens applies the matching check on **any round after the first —
+critic-fix rounds exactly like user-feedback rounds** (**pendulum
 overshoot**, `review-rubrics.md` §9) — a fix that swung to the opposite extreme is a
-finding, not a fix.
+finding, not a fix, whoever named the dial; when a `user-dials:` line exists for the round,
+cite it as the check's evidence — the user's own words fix which dial moved and how far.
+
+## The taste write-back (step 6 close) — durable dials only
+The `user-dials:` ledger above is the per-deck observation stream; **`taste.md` at the
+registry root** (`~/.claude/slide-templates/` · `~/.codex/slide-templates/`) is the durable
+store; the **Step-6 close is the only bridge** — full schema + protocol in
+`references/user-taste.md`. Three named actions (the Step-6 close checklist in SKILL.md is
+the gate — a write not on it didn't happen):
+1. **Append ONE look-history line** for the delivered deck (`date | deck | preset/look |
+   canvas value | signature motif`, pruned to the 10 most recent) — next deck's freshness
+   rule varies against it.
+2. **Promote a dial ONLY on the recurrence gate (🔴 MUST):** the user's own words mark it
+   standing ("always", "一直", "in general", "for all my decks"), or the same
+   dimension+direction appears in the round records of **≥2 distinct decks** — once is a
+   deck-scoped correction, twice is a preference. Every DIALS row carries its verbatim quote
+   + deck + date (an unevidenced dial is an invention); later conflicting feedback **UPDATES
+   the row — move the dial** — never appends a contradiction (two rows arguing about one
+   dimension is exactly the diverging-sources-of-truth failure this file exists to prevent).
+3. **Say it, don't hide it** — every write gets one hand-off FYI line (*"recorded to your
+   taste profile: <X> — say the word and I'll drop it"*); the file is the user's own, so the
+   veto is one edit.
+A brand-new user (no `taste.md`) gets no writes until the first durable signal — never
+manufacture a profile. The **save-this-look offer** (persist a freshly-designed look to the
+registry, Notes distilled from the final critic `strengths`) rides the same hand-off note —
+opt-in on an explicit yes only; see `references/user-taste.md` §"Consented-look mining".
 
 ## Why this matters
 A deck is a living document the user will rehearse with and keep tweaking. The skill
