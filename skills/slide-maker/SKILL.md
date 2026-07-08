@@ -105,7 +105,8 @@ FYI form and follows its own auto rule at Step 3.
 questions yourself with defensible, purpose-derived picks (template → design a clean one shaped
 to the purpose, unless the request itself points elsewhere — an attached template, or explicit
 vivid/branded language that earns the image-tool branch; delivery/goal/density → derived from
-the stated purpose; language → the user's own), and post the picks as the FIRST FYI — one
+the stated purpose; **appear-builds → derived from delivery** (presented → builds ON, the
+recommended default; self-read → static); language → the user's own), and post the picks as the FIRST FYI — one
 compact block, one line per question — before any planning, so a wrong pick costs one glance to
 veto, not a build. The FLOOR: delegation covers *preferences*, never *information only the user
 has* — a missing TOPIC or unlocatable source material is still asked (that one question, not the
@@ -122,7 +123,10 @@ naming the applied dials in the first-FYI pick block so a stale dial costs one g
 Then choose the way the sharpest person in the room would choose *for THIS deck* — the TASTE
 PROTOCOL applies to the picks themselves, and "a defensible default" that ignores what the
 material obviously wants is not defensible. Downstream, nothing relaxes: Step 1's deep-read /
-comprehension-brief bar, the no-source web-verification, and the full critic loop run at the
+comprehension-brief bar, the no-source web-verification, the **full design intelligence** (a
+topical cover visual, harmonised + value-varied backgrounds, the design musts, the semantic-colour
+ledger — deciding with limited info is never a licence for a barren default-blue type deck), and
+the full critic loop all run at the
 same standard as an interviewed deck. And if the deep read later contradicts an initial pick
 (the material turns out self-read-shaped, denser, or more formal than the first scan suggested),
 REVISE the pick and say so in the next FYI — riding a wrong guess to delivery is the one failure
