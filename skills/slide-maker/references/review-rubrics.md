@@ -155,7 +155,13 @@ Score each dimension; cite specific slides.
    regions — *and the white margins flanking them* — the **same width** (or a clearly
    intentional asymmetric split with equal outer margins)? Unequal panels, a lopsided
    left-vs-right white margin, or a **large dead-white band** beside a narrow element stranded
-   in a too-wide column is a real finding, not a nitpick. Does the **kicker/eyebrow add a
+   in a too-wide column is a real finding, not a nitpick. When a slide carries **two background
+   ZONES** (a split-colour canvas, a coloured side rail, a header band over the body), do they
+   **harmonise** (same hue family / analogous / one a tint of the other), or is it a **harsh
+   dark-panel-beside-light-panel** that reads as two slides stitched together? A clashing dual
+   background is a finding — the fix is two *cooperating* colours or bridging the zones
+   (`design-principles.md`); a deliberate full-slide colour flood (one background, whole slide)
+   is NOT this and is fine. Does the **kicker/eyebrow add a
    section label rather than echo a word the title already leads with**? In **diagrams**, do
    arrows point the way the flow moves (a *sideways* arrow between vertically-stacked boxes is
    wrong), are repeated blocks/connectors **evenly spaced**, and do **adjacent blocks have a
@@ -327,15 +333,24 @@ Score each dimension; cite specific slides.
    product pitch, warm/clear for teaching (see `references/design-by-purpose.md`)? A
    purpose-mismatched look (or a generic default palette shipped for a high-polish
    pitch/exec deck) is a real finding. Judge against this purpose, not a generic ideal.
-12. **Motion & pacing** *(applies to every purpose, not just talks).* Judge motion by
+12. **Motion & pacing** *(applies to every purpose, not just talks).* **FIRST honor the user's
+   WHETHER-choice: appear-builds are the user's opt-in** (the interview records it). If the user opted
+   OUT — or the deck is self-read — a static deck is CORRECT: do **not** flag any "missed beat", and the
+   manifest reading `static: user opted out` on every slide is a pass, not a gap. The judgments below
+   apply only to a deck the user opted to animate. Judge motion by
    **taste and purpose, not by a count** — there is no right number of builds and no quota in
    either direction. Read against the **motion manifest** (the static render can't show a
-   reveal sequence, so judge the *design*, not the playback). The two failures to flag are
-   both about *thoughtlessness*: (a) **thoughtless motion** — a build (or flashy entrance)
+   reveal sequence, so judge the *design*, not the playback). The failures to flag are
+   about *thoughtlessness*: (a) **thoughtless motion** — a build (or flashy entrance)
    that doesn't emphasize, engage, or guide, that distracts, or that is added for flourish or
-   for "consistency"; and (b) a **missed beat** — a slide where revealing the points/blocks
+   for "consistency"; (b) a **missed beat** — a slide where revealing the points/blocks
    **one by one (an appear build)** would clearly have helped the audience follow, left plain for
-   no reason. Scale the severity to how much the build helps: a **pipeline / multi-stage diagram, a
+   no reason; and (c) 🔴 **a HALF-STAGED slide** — a build that reveals only *some* of the slide's
+   content while the rest sits pre-shown from click 0 (the jarring half-animated slide). On a built
+   slide **every content element should be in a step**, revealed in a deliberate order; only the
+   title/frame/always-true scaffold is visible at click 0. A half-staged slide is a **major** finding
+   (it reads as broken, not designed) — check it from the manifest's `build:` line: does it list all the
+   slide's content beats, or only a subset? Scale the severity to how much the build helps: a **pipeline / multi-stage diagram, a
    multi-part argument building to a conclusion, or an evidence→takeaway** dumped all at once is
    typically *major* for a presented talk (the all-at-once version genuinely confuses); a plain
    **multi-point bullet list** that would merely read better stepped is at most *minor* (plain lists

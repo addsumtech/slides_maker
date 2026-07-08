@@ -285,6 +285,13 @@ Read DOWN the column you've built. Vary the **visual protagonist** and pace dens
 each slide in isolation and can't retrofit rhythm, so this is yours.
 - **Alternate dense ↔ light**; mix hero / dashboard / diagram / timeline / minimalist beats; a dense
   slide followed by an airy one-idea breath; section dividers as beat markers.
+- **Vary the canvas VALUE, not just the layout — with native means (no image tool).** A flat fill on
+  *every* interior slide is safe but reads monotone (the `FLAT RHYTHM` lint measures it). Plan a few
+  beats with a different background *feeling* — a **tonal-shifted section divider** (deeper/richer fill),
+  a **subtle gradient** hero, a **duotone photo/texture band** (`image_fx.duotone`), or an **accent-flood
+  WOW** — so the deck breathes in light/dark as well as in density. **Dose it like the WOW (a few beats,
+  not every slide), keep each such slide's background zones harmonised** (no dark-panel-beside-light-panel
+  clash — `design-principles.md`), and keep it *canvas* variation, not loud chrome.
 - **A WOW / hero slide every ~6–8 slides** — a bold number, a dramatic statement, or an iconic diagram
   that passes the squint test from across a room.
 - **~50–70% whitespace target** — when a slide feels thin, **subtract** (more whitespace, one stronger
@@ -327,12 +334,16 @@ and the five quality marks in `references/icons.md`; here you own the decision:
   perception, plug→execute), never "an icon"; ensure contrast; **never one-per-bullet, never on an
   evidence / results slide, never without a text label, never a decorative/mismatched mark.**
 
-### 6 — APPEAR-ANIMATION (a first-class decision — per-slide builds, NOT deck-wide fades)
-The animation that matters is a per-slide **appear build**: each click brings in the next bullet / card /
-stage / cell / final callout so the audience is *led*. 🔴 **Do NOT plan "fade transitions on every
-slide" as the deck's animation** — that's the lazy default; a deck-wide transition is at most an
-optional one-line secondary note, never a stand-in for builds. Detail + the ✅/⚠️/❌ by-content-type
-matrix in `references/animation.md`; here you own where builds fall (think SMART, not by quota):
+### 6 — APPEAR-ANIMATION (the USER opts in; you place & fully stage)
+🔴 **Appear-builds are the user's WHETHER-choice, not a design default.** The interview records it on
+presented decks: if the user opted **OUT** (or the deck is self-read), every slide is `static: user
+opted out` / `static: self-read` — DO NOT plan builds, and that plan is complete. Plan builds ONLY when
+the user opted in. When they did, the animation that matters is a per-slide **appear build**: each click
+brings in the next bullet / card / stage / cell / final callout so the audience is *led*. 🔴 **Do NOT
+plan "fade transitions on every slide" as the deck's animation** — that's the lazy default; a deck-wide
+transition is at most an optional one-line secondary note, never a stand-in for builds. Detail + the
+✅/⚠️/❌ by-content-type matrix in `references/animation.md`; here (builds opted in) you own WHERE builds
+fall and stage each built slide FULLY (think SMART, not by quota):
 - **Check each slide's LAYOUT against the build-friendly shapes** and build the ones that fit (only
   those): a **pipeline / flow of blocks joined by arrows** (reveal each stage *with its arrow*) · a
   **multi-part argument / numbered list** (reveal each point as reached) · **before→after / problem→
@@ -343,14 +354,35 @@ matrix in `references/animation.md`; here you own where builds fall (think SMART
   embed a **GIF**, not a frozen frame; generating one is opt-in, SPARING, and only when *motion conveys
   what one frame can't* (the `animation.md` "when a GIF earns its place" rubric + the fidelity guardrail:
   animate a REAL computable change, never fabricated dynamics).
+- **🔴 A built slide is FULLY staged — no half-animated slides.** Once a slide gets a build, **every
+  content element on it is assigned to a step and reveals in a deliberate reading order** — never
+  animate two of four cards while the other two sit on screen from frame 0 (the jarring "half-shown"
+  slide the user calls out). The static base holds ONLY the persistent scaffold — title/header + any
+  frame, axes, or always-true context the beats land on; all *content to be paced* begins hidden and
+  accumulates. Group one thought's shapes into one step (a node *and* its arrow together). The
+  `build:` manifest line lists the beats **in order** so this is checkable.
 - **What NOT to build — show at once:** simple titles, large paragraphs, reference/source lists,
   dividers, single-idea slides, scan-all-at-once comparisons, and any **self-read / poster** deck (no one
   clicks it). Never add motion for flourish/"consistency"/to fill a plain slide — fix the layout instead.
 - **Motion manifest (gated):** every slide carries **`build: <what reveals, in order>`** OR
-  **`static: <reason>`** — never a bare "—". A presented deck with obvious build-candidate slides and no
-  reasoned builds is **not ready**; a self-read deck being static-by-design IS the reasoned answer.
+  **`static: <reason>`** — never a bare "—". If the user opted OUT (or self-read), every line is
+  `static: user opted out` / `static: self-read` and the plan is complete. If opted IN: a slide with
+  obvious build-candidate content and no reasoned build is **not ready**, and a `build:` line that
+  reveals only *some* of the slide's content (leaving the rest pre-shown) is **not ready** — list every
+  beat.
 
 ### 7 — Generated plates, brand chrome, art-direction
+- **The COVER earns a topical VISUAL — even on a flat / clean template, and even with NO image tool.**
+  A type-only cover on a flat fill is a safe default, not the ceiling. Give the opening a subject-related
+  image the way a real deck does — reaching for **real / sourced / computed** imagery *before* settling
+  for bare type (the image tool is one option, never the only path to a visual cover): the **source's own
+  hero figure**, a **real domain artifact** (a data sample, a signal/waveform, a map, a microscopy /
+  medical patch), a **computed data-viz** of the deck's headline number, a **license-clear photo**
+  (duotoned to the palette via `image_fx.duotone` so it sits with — not against — the flat scheme), or a
+  **strong graphic MOTIF** (the deck's signature device rendered at cover scale). Keep a calm title zone
+  and text ≥4.5:1. *(The same holds for section dividers — a topical visual or a tonal-shifted fill beats
+  a bare divider.)* This is separate from Q1's generated-template path — it applies to **any** template,
+  no gen-AI required.
 - **A content plate only where it helps the audience UNDERSTAND or feel the content** — a concept clearer
   *shown than told*, the real thing they should picture, or section atmosphere. Name in one phrase **what
   it DEPICTS about that slide's point** — it must be **highly topical**, not a generic gradient/orb that
@@ -452,9 +484,12 @@ NOT a blanket per-slide quota):
 - **(d) design language concrete** — a *named* signature motif + a deliberately-chosen palette/type,
   never a defaulted light/minimal/blue look with no motif.
 - **(e) semantic-colour ledger** — present; no accent hue ships without a bound meaning (§6).
-- **(f) appear-builds** — the structural beats carry a build and the motion manifest records
-  build/static + reason for **every** slide (a presented deck with obvious candidates and no reasoned
-  builds is not ready; a self-read deck static-by-design is the reasoned answer).
+- **(f) appear-builds** — honors the user's WHETHER-choice: if opted OUT (or self-read), every manifest
+  line is `static: user opted out` / `static: self-read` and that is complete; if opted IN, the
+  structural beats carry a build, **each built slide is FULLY staged** (its `build:` line lists ALL its
+  content beats in order — no slide that animates some blocks and leaves the rest pre-shown), and the
+  manifest records build/static + reason for **every** slide (an opted-in deck with obvious candidates
+  and no reasoned build is not ready).
 - **(g) SVG icons** — on an icon-fit preset with category / section / step / entity content a
   style-matched icon family is planned (a category-rich deck shipping zero icons is not ready).
 - **(h) WOW is memorable** — each WOW/hero names *why-memorable* AND the *surrounding contrast* against

@@ -465,7 +465,7 @@ def _load_render_lums(path, renders_dir, n):
     return out
 
 
-def _print_stats(rows, mode, sw, sh, lums=None):
+def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False):
     if not rows:
         return {}
     n = len(rows)
@@ -583,9 +583,10 @@ def _print_stats(rows, mode, sw, sh, lums=None):
         warns.append(f"SMALL TYPE: body-median {body_med:.0f}pt is under the ~{floor:.0f}pt floor for this "
                      f"{sw:.1f}in-wide canvas (≈18-22pt on a standard 13.3in slide) — a presented deck's body "
                      f"text must read from the back of the room; fewer words, bigger type")
-    if mode in ("presented", "textheavy") and builds == 0 and n > 2:
+    if mode in ("presented", "textheavy") and builds == 0 and n > 2 and not static_ok:
         warns.append("NO BUILDS: a presented deck with zero appear-builds — the motion manifest "
-                     "should name build:/static:+reason per slide (anim.py Build)")
+                     "should name build:/static:+reason per slide (anim.py Build). If the user opted "
+                     "OUT of appear-builds, this is expected — pass --static to silence it.")
     if mode in ("presented", "textheavy") and n > 2:
         no_notes = sum(1 for r in rows if not r.get("notes_words"))
         if no_notes:
@@ -619,7 +620,7 @@ def _print_stats(rows, mode, sw, sh, lums=None):
             "transitions": transd, "avg_occupancy": round(avg_ink, 3)}
 
 
-def lint(path, mode="presented", json_out=None, renders_dir=None):
+def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=False):
     try:
         prs = Presentation(path)
     except Exception:
@@ -859,7 +860,7 @@ def lint(path, mode="presented", json_out=None, renders_dir=None):
         total += len(finds)
         warn_total += len(warns)
     lums = _load_render_lums(path, renders_dir, len(stats_rows))
-    deck_stats = _print_stats(stats_rows, mode, sw, sh, lums=lums)
+    deck_stats = _print_stats(stats_rows, mode, sw, sh, lums=lums, static_ok=static_ok)
     tail = ("" if total else "  ✓ clean (no hard findings)") + (f"  ·  {warn_total} warning(s)" if warn_total else "")
     print(f"\n{path}: {total} layout finding(s){tail}")
     if json_out:
@@ -892,6 +893,7 @@ if __name__ == "__main__":
         mode = "surface"          # poster / single-canvas artifact: no per-slide word/size budgets
     elif any(a in ("--mode=textheavy", "--textheavy") for a in argv):
         mode = "textheavy"        # user-chosen text-heavy presented deck: TEXT WALL waived only
+    static_ok = any(a == "--static" for a in argv)   # user opted OUT of appear-builds: silence NO BUILDS
     json_out = None
     renders_dir = None
     for i, a in enumerate(argv):
@@ -909,5 +911,5 @@ if __name__ == "__main__":
             renders_dir = a.split("=", 1)[1]
     if not args:
         print("usage: python lint_deck.py <deck.pptx> [--selfread] [--surface] [--textheavy] "
-              "[--renders dir] [--json out.json]"); sys.exit(2)
-    sys.exit(1 if lint(args[0], mode, json_out, renders_dir) > 0 else 0)
+              "[--static] [--renders dir] [--json out.json]"); sys.exit(2)
+    sys.exit(1 if lint(args[0], mode, json_out, renders_dir, static_ok) > 0 else 0)

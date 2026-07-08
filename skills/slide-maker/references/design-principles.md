@@ -423,6 +423,26 @@ ask of each element "is there suitable, balanced space around it, or is it crowd
   block treatment deck-wide** so every card reads as the same material — and design the **block colour +
   rim to harmonise with the palette** (a dark deck → a dark glass tint + a faint light/accent rim; a
   light deck → a white glass tint), never a colour that fights the background.
+- **TWO background ZONES on one slide must HARMONISE — don't stitch a dark panel to a light one.**
+  When a single slide carries two background fills (a split-colour canvas, a coloured side rail beside
+  the body, a header band over the content), the two zones should be **tonally cooperative** — the same
+  hue family at two values, analogous neighbours, or one a soft tint of the other — so the slide reads
+  as ONE surface. A hard **dark-panel-beside-light-panel** (high value contrast between two big
+  background areas) looks like two slides stitched together and reads harsh, even when each half is fine
+  alone. Prefer two *similar / well-cooperating* colours; if you truly need a dark zone against a light
+  one, bridge them (a shared accent hairline, a gradient seam, or narrow the dark zone to a rail so it
+  reads as an accent, not a half). *(Different from a deliberate full-slide colour FLOOD — one
+  background across the whole slide as a WOW beat — which is fine; the rule is about two zones **fighting
+  within** one slide.)*
+- **Vary the canvas VALUE across the deck for beauty — with NATIVE means, no image tool needed.** A
+  flat fill on *every* interior slide is safe but can feel monotone; a deck that never changes its
+  background value reads flat (the `FLAT RHYTHM` lint measures exactly this). Give a few beats a
+  different feeling using code alone: a **tonal-shifted section divider** (a deeper/richer fill on the
+  divider pages), a **subtle vertical gradient** on a hero slide, a **duotone photo/texture band**
+  (`image_fx.duotone` on a license-clear or computed image), or a **deliberate accent-flood WOW**
+  (`box(0,0,W,H,fill=…)` behind light type). **Dose it like the WOW — a few tasteful beats, not every
+  slide different** (and keep each such slide's zones harmonised, per the rule above; a varied deck is
+  not a clashing one). This is *canvas* variation, not loud chrome — the frame/footer stay quiet.
 - **No large empty region — fill the slide, balanced.** A slide that's mostly blank (content
   huddled in one corner or the top third, a wide empty band down a side or across the bottom) reads
   as unfinished — don't ship it. **Default fix: ENRICH the content** — add the supporting detail,

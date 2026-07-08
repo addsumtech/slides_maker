@@ -23,7 +23,9 @@ something.
   excuse for a cluttered end state). Judge motion and generated images by **taste and
   purpose, not by count** — flag *thoughtless* use (a build or a plate that doesn't
   emphasize/engage/guide, that distracts, or is added for flourish) and the opposite (a clear
-  beat left plain that a build would have helped), but **never** flag a slide for being plain
+  beat left plain that a build would have helped) — **but appear-builds are the user's opt-in: if the
+  input says builds were opted OUT (or the deck is self-read), a static deck is CORRECT, so never flag a
+  "missed beat"** (rubric §12); and **never** flag a slide for being plain
   or a deck for having several/consecutive builds or plates — frequency is a legitimate design
   choice. An **embedded animated GIF** (any looping result — a product-UI demo loop, an app
   walkthrough, a looping data viz, or a 4D / time-resolved / cine / training sequence) shows as its

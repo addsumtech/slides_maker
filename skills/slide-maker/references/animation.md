@@ -1,5 +1,11 @@
 # Animation — purposeful builds that guide the audience
 
+**🔴 Builds are the USER's opt-in choice — whether to animate at all is theirs, not the skill's
+default.** The interview asks it on presented decks (Step 0); a self-read / poster deck is static by
+design (no one clicks it), so it is never asked and never animated. This file is about how to build
+WELL *once the user has opted in* — and where to place builds within an opted-in deck (that WHERE is
+the skill's call). If the user opted out, the deck is static and correct; don't manufacture builds.
+
 Animation is a tool for **controlling attention and pace**, not decoration. In a
 live talk the audience reads the whole slide the instant it appears — often racing
 ahead of the speaker. A *build* (revealing one piece at a time on click) keeps them
@@ -8,6 +14,15 @@ previous pieces on screen as the picture accumulates. That's the legitimate use.
 Flying, spinning, bouncing text is the opposite — it pulls attention to the motion
 instead of the meaning. The bar: **if an animation doesn't help the audience
 understand or follow, cut it.**
+
+> **🔴 FULL STAGED REVEAL — an animated slide reveals ALL its content, one beat at a time, in order.**
+> The single most common build defect (the user has called it out): a slide where *some* blocks animate
+> in while the *rest sit on screen from click 0* — a jarring half-animated slide. The rule: once a slide
+> gets a build, **every content element on it is assigned to a step**, revealed in a deliberate reading
+> order; the only things visible at click 0 are the **persistent scaffold** — the title/header + any
+> frame, axes, or always-true context the beats land on. If a block isn't worth its own step, it still
+> joins a neighbouring step (group one thought's shapes together) — it does NOT get left pre-shown.
+> "Animate this slide" therefore means "stage this whole slide," never "animate a couple of its pieces."
 
 `scripts/anim.py` makes this real (python-pptx has no animation API; it injects the
 slide's `<p:timing>` XML). The model: draw your static base, then wrap each
@@ -84,8 +99,9 @@ title or a paragraph in is a *flaw*, not polish); the ⚠️ rows build **only**
 them piece-by-piece. Still **taste, not a quota** (next section) — the matrix says *what's eligible*,
 your judgement says *whether this particular slide and moment need it*.
 
-## Decide by taste and purpose — not by a rule or a quota
-Whether a slide builds is a **design call**, the same for every purpose (research/lab
+## Decide WHERE by taste and purpose — not by a rule or a quota
+*(WHETHER the deck animates at all is the user's opt-in, above — this section is about where builds
+fall **within a deck the user opted to animate**.)* Which slides build is a **design call**, the same for every purpose (research/lab
 meeting, status update, conference, defense, exec, pitch, teaching): reach for a build where
 your design sense says it will **emphasize** a point, make a slide **more engaging**, or
 **guide the audience step by step** — and leave it off where it wouldn't. There is **no

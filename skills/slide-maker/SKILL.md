@@ -397,6 +397,17 @@ the direction gate** (the look is already decided). The four:
        **spoken** deck → the **time budget** sets the working count (~1 slide/min), but still **confirm the
        resulting slide count** with the user at the Step-1 content checkpoint before building. Don't ship a
        length the user never saw (e.g. quietly building 14 slides because the content "felt like 14").
+     - **Appear-builds (in-slide staged reveals) — the USER decides WHETHER; you decide WHERE.**
+       A *presented* deck can reveal a slide's content one beat at a time on click so the room follows
+       the speaker instead of reading ahead. **Whether to use builds at all is the user's call, offered
+       explicitly — not a silent skill default** (recommended ON for a live talk, since an audience
+       benefits, but a user who wants a plain click-through deck just says so). Ask this on **presented
+       decks only** — *self-read / screen-shared-to-read* decks are static by design, so don't ask.
+       If the user opts **IN**, YOU still choose WHERE (which slides earn a staged reveal) and each
+       chosen slide is staged **FULLY** — every content element reveals in a deliberate reading order,
+       nothing pre-shown but the title/frame (Step 4 / `references/animation.md`). If they opt **OUT**,
+       the deck is static: no builds, and no `NO BUILDS` pressure (run lint with `--static`). Carry the
+       choice into the design plan's motion manifest.
      - **Primary goal / intent — inform & educate · support a decision · inspire / motivate action.**
        This sets the **rhetorical arc**: *inform* builds to the evidence; *decide* leads with the
        recommendation and the ask; *inspire* opens on stakes and closes on a call to action. Purpose
@@ -704,12 +715,15 @@ tool/framework/model), a **logo plan**: the real logo if the web search found it
 **designed-wordmark-by-default** the user confirms at the DESIGN checkpoint (skip only for
 multi-org / neutral-academic decks, or where a template already carries the mark) — and the **THREE
 DESIGN MUSTS** addressed (`slide-design.md`'s three design musts) —
-**(1) appear-builds** on the structural beats (a motion manifest: build/static *with a reason* per
-slide), **(2) a style-matched SVG icon family** on an icon-fit, category-rich deck, **(3) diverse
-formats** (not a card grid repeated) — each *applied where it helps or justified where not* (a must
-to consider + apply, never a blank per-slide quota — still smart about where/when). A plan that
-defaults its look, over-relies on one format, or silently forgets builds or icons is **not ready** —
-send it back to the art director.
+**(1) appear-builds — ONLY if the user opted in** (the interview's presented-deck choice): if IN, a
+motion manifest places builds where they help (build/static *with a reason* per slide) and each built
+slide is staged FULLY (every content element in a step, deliberate order); if OUT, every slide is
+`static: user opted out` and that is complete, not a gap. **(2) a style-matched SVG icon family** on an
+icon-fit, category-rich deck, **(3) diverse formats** (not a card grid repeated) — musts 2–3 are
+*applied where they help or justified where not* (a must to consider + apply, never a blank per-slide
+quota — still smart about where/when). A plan that defaults its look, over-relies on one format, forgets
+icons, or — when builds are opted in — leaves a built slide half-staged or forgets builds where they'd
+clearly help is **not ready** — send it back to the art director.
 **The per-slide content-image opt-in is a CROSS-CUTTING choice, available on EVERY deck** — it is
 *not* tied to the template choice and is *separate from* Q1's "generate a template with an image
 tool" path (which makes the visual identity). Whenever an image tool is available, offer it
@@ -1246,26 +1260,33 @@ time. Full workflow (incl. the critic panel + finding-routing) in
 
 **Motion & builds — the animation that matters is in-slide "appear" builds, NOT slide transitions.**
 🔴 **Do not "animate" a deck by putting a fade transition on every slide — that adds nothing and is the
-lazy mistake to avoid.** What "add animation" means here is **revealing bullets / blocks one at a time
-on click** (an *appear* build) so the audience follows the speaker instead of reading ahead. The two
-layers are **not** equal:
-- **(1) In-slide appear builds — THE real work; default to considering one on every multi-point content
-  slide.** Reveal each **bullet, card, pipeline stage, quadrant cell, or the final takeaway callout**
-  one per click. Reach for it wherever stepping the reveal will *emphasize*, *engage*, or *guide* — a
-  multi-point list, a **pipeline / multi-stage diagram** (stage at a time), a **multi-part argument**,
-  **before→after**, **evidence→takeaway**. Leave title / divider / single-image / scan-all-at-once
-  slides plain. By taste, not a quota (consecutive builds fine, a plain stretch fine) — the failure is
-  *thoughtlessness*: either no build where one would clearly help, or motion for flourish.
+lazy mistake to avoid.** What "add animation" means here is **revealing a slide's content one beat at a
+time on click** (an *appear* build) so the audience follows the speaker instead of reading ahead.
+**Builds are the USER's opt-in choice** (the interview asks it on presented decks; see Step 0) — this
+section is about how to build them WELL *once the user has opted in*; if they opted out, the deck is
+static and that is correct, not a missing must. The two layers are **not** equal:
+- **(1) In-slide appear builds — THE real work, WHEN the user opted in.** *You* decide WHERE (which
+  slides earn a staged reveal): reach for it wherever stepping the reveal will *emphasize*, *engage*,
+  or *guide* — a multi-point list, a **pipeline / multi-stage diagram** (stage at a time), a
+  **multi-part argument**, **before→after**, **evidence→takeaway**. Leave title / divider /
+  single-image / scan-all-at-once slides plain. Not every slide needs a build (a plain stretch is
+  fine) — but **a slide that DOES get a build is staged FULLY**: 🔴 **every content element on it is
+  assigned to a build step and reveals in a deliberate reading order — never animate some blocks while
+  the rest sit pre-shown from frame 0** (the "half-animated slide" is the exact weirdness to avoid).
+  The static base holds ONLY the persistent scaffold — the title/header + any frame, axes, or
+  always-true context the beats land on; everything that is *content to be paced* begins hidden and
+  accumulates. Group the shapes of one thought into one step (a box *and* its arrow reveal together).
 - **(2) Slide-to-slide transition — optional, secondary, off the critical path.** A calm deck-wide
   `slide_transition(s, "fade")` is *allowed* but never the point; a deck with **no** transition and good
   appear-builds beats one with a fade on every slide and no builds. Decide it once; **don't count
   "added transitions" as having animated the deck.**
 
-Use `scripts/anim.py`: draw the static scaffold, wrap **each reveal-on-click chunk** in a `Build.step()`
-(one bullet/block per step → they appear one by one), then `apply(effect="appear")` (instant) or
-`"fade"` (soft). Recipe in `references/animation.md` ("bread-and-butter build"). A slide must still read
-correctly **fully-built** (for print/PDF) — builds layer on a correct static slide, never fix a
-cluttered one.
+Use `scripts/anim.py`: draw ONLY the persistent scaffold outside steps, then wrap **each content beat**
+(the first one included) in a `Build.step()` — one bullet/block/stage per step, in reading order, so the
+content area opens EMPTY and fills in click by click — then `apply(effect="appear")` (instant) or
+`"fade"` (soft). Recipe in `references/animation.md` ("bread-and-butter build" + "full staged reveal").
+A slide must still read correctly **fully-built** (for print/PDF) — builds layer on a correct static
+slide, never fix a cluttered one.
 
 **Record a one-line motion manifest** as you go — for each slide, `build: <what reveals,
 in order>` or `static: <why nothing to pace>`, plus whether the deck-wide transition is on.
@@ -1285,7 +1306,7 @@ judgment calls the render-time lint cannot measure (lint already covers: word lo
 font drama, build presence, layout sameness, CJK ea-font, contrast, footer, overlaps — don't re-tick
 those here; read its report instead).
 1. **Speaker notes**: presented deck (screen-shared = presented) → every slide's notes = the plan's **Spoken thread, verbatim**, via `dk.speaker_notes` (deviations — e.g. a split/merged slide — noted in one clause); self-read → prose is ON the slides instead.
-2. **Builds start empty**: no animated slide pre-shows its first beat or a spoiling summary/legend in the static base.
+2. **Builds — opted-in? then FULLY staged**: builds appear only if the user opted in; every animated slide reveals ALL its content beats in order (nothing content-bearing pre-shown but the title/frame — no half-animated slide), starting from an empty content area (first beat included), with no spoiling summary/legend in the base.
 3. **Plan↔code correspondence**: (a) mechanical — diff the design plan's per-slide rows against the slide-function docstrings (icon family included; the classic inline-mode miss); (b) spot-check — each `build:` docstring has matching `Build.step` calls in its function body.
 4. **Charts native**: every chart is editable-native unless a matplotlib look was deliberately chosen; legends sit off the data.
 5. **Evidence real**: every domain image/figure is the real computed/source artifact — no plausible stand-in; PDF crops checked on all four edges.
@@ -1335,8 +1356,10 @@ tofu** risk (an `equation_native` font not installed on the render host) — res
 **It then prints a DECK STATS block — the measured form of the design targets. READ it, don't skim
 past it** (pass `--selfread` for a read-alone deck — it raises the TEXT WALL budget (~40→~90 words)
 and drops the presented-only SMALL TYPE / NO BUILDS warns; the other warns are mode-independent —
-`--surface` for a poster/single-canvas artifact, or `--textheavy` when the user explicitly chose
-text-heavy density for a presented deck, so the budgets fit the delivery mode). Per slide it measures:
+`--surface` for a poster/single-canvas artifact, `--textheavy` when the user explicitly chose
+text-heavy density for a presented deck, or `--static` on a presented deck when the user opted OUT of
+appear-builds (silences NO BUILDS — a static presented deck was their choice, not an omission), so the
+budgets fit the delivery mode). Per slide it measures:
 reading **load** (latin words + CJK chars/2) vs the ~40-word presented budget · **text% / ink%
 coverage** vs the ~50–70% whitespace target · **max font pt** · shape/picture/chart counts ·
 **build** presence · **sim↑** (layout-skeleton similarity vs the previous slide); deck-wide it
@@ -1348,7 +1371,8 @@ subtract or split, don't shrink), **`LAYOUT SAMENESS`**
 (no typographic hero → the type-scale drama rule failed), **`SMALL TYPE`** (body-median under the
 canvas-relative ≈18pt-equivalent floor → fewer words, bigger type), **`SIZE SPRAWL`** (>3–4 font sizes
 on one slide → use the declared type-scale tokens), **`NO BUILDS`** (presented deck with no
-appear-builds → the motion manifest failed), **`SKELETON VARIETY`** (<4 distinct layout skeletons
+appear-builds → the motion manifest failed *unless the user opted out of builds* — then pass
+`--static`), **`SKELETON VARIETY`** (<4 distinct layout skeletons
 across an 8+-slide deck → the canvas architecture barely rotates), **`TIMID COVER`** (slide 1's
 largest run under 2× body → the cover lacks poster scale), **`FLAT RHYTHM`** (when render PNGs are
 present via `--renders`/`./render`: no light/dark or colour-temperature event across the deck → the
