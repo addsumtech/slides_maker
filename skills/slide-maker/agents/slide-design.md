@@ -288,6 +288,20 @@ in `design-principles.md`), and record how each is satisfied:
 ### 4 — Design the DECK RHYTHM (only you see every slide at once)
 Read DOWN the column you've built. Vary the **visual protagonist** and pace density — the builder builds
 each slide in isolation and can't retrofit rhythm, so this is yours.
+- **Repeat the SYSTEM, vary the ARCHITECTURE — and know which is which.** The system (palette,
+  type, chrome, plate/canvas, panel treatment, icon family) repeats on every page; that is what
+  "one visual system" means. The page ARCHITECTURE — where the protagonist sits, whether it's
+  panelled or free on the canvas, where the takeaway lands (bottom strip · side rail · inline
+  under the figure · the headline itself · deliberately absent) — must ROTATE. The failure mode:
+  build helpers (a `glass()` wrapper, an `insight_banner` at H−1.55) quietly become a page
+  template, and every slide gets poured into title + panel-stack + bottom strip — consistent AND
+  dead. Two hard checks: **no takeaway slot on more than ~half the content slides** (the bottom
+  strip is the greedy frame-filler — the DEAD BOTTOM fix is enrichment in ANY slot, not a strip
+  stamped on every page; `BOTTOM-STRIP MONOCULTURE` lint backstops this), and **a containment
+  budget** — on a calm canvas, at least ~1/3 of content slides put their protagonist directly on
+  the canvas (a free-standing diagram, an uncontained hero number, a full-bleed band); panels are
+  for dense mixed content, not a reflex. Consistency lives in the system; freshness lives in the
+  architecture — a deck can be 100% on-system and still rotate its bones every page.
 - **Alternate dense ↔ light**; mix hero / dashboard / diagram / timeline / minimalist beats; a dense
   slide followed by an airy one-idea breath; section dividers as beat markers.
 - **Vary the canvas VALUE, not just the layout — with native means (no image tool).** A flat fill on
@@ -523,8 +537,15 @@ NOT a blanket per-slide quota):
   content beats in order — no slide that animates some blocks and leaves the rest pre-shown), and the
   manifest records build/static + reason for **every** slide (an opted-in deck with obvious candidates
   and no reasoned build is not ready).
-- **(g) SVG icons** — on an icon-fit preset with category / section / step / entity content a
-  style-matched icon family is planned (a category-rich deck shipping zero icons is not ready).
+- **(g) SVG icons** — on ANY deck whose content names categories, entities, tools, roles, or
+  pillars — **including the generated-template branch and any custom identity, not just icon-fit
+  presets** — a style-matched icon family is planned (one family, recolored to the palette, one
+  size grid per tier). A category-rich deck shipping zero icons is not ready; "the branch didn't
+  mention icons" is not a waiver. WHERE they belong: on the label that names a THING-TYPE — tool/
+  connector chips, model or product rosters, pillar/column heads, diagram node types, section
+  markers. WHERE they don't: one per prose bullet, as space-filler in an empty region, mixed
+  families/weights, or duplicating a number (stats stay numeric). The test: would a glyph let a
+  squinting viewer identify the item before reading its label? Yes → icon; no → skip, one clause.
 - **(h) WOW is memorable** — each WOW/hero names *why-memorable* AND the *surrounding contrast* against
   its neighbours, else it's just a bigger slide (§1.4) — and one WOW/hero coincides with the content
   plan's **"slide this deck exists for"**, or the plan states a one-clause reason the visual peak

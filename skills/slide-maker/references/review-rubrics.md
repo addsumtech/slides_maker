@@ -133,7 +133,7 @@ Score each dimension; cite specific slides.
    any meaning carried by **colour alone** (a plot legend or status distinguished only
    by hue)? Pair it with a label/shape/marker so it survives projection and colour-blind
    viewers. And **none of the named AI-slop tells** (full-screen gradient wash, emoji titles,
-   rounded-left-border cards on every slide, three identical feature cards) — see the named list in
+   rounded-left-border cards on every slide, three identical feature cards, **a full-width takeaway strip parked at the bottom of nearly every page, every element panelled on an already-calm canvas — rotate the takeaway slot and free at least a third of the protagonists — and a deck whose chips/rosters/pillars name tools or categories with NO icon family**) — see the named list in
    `agents/critic.md` / `references/design-principles.md`.
 8. **Framing.** Does an unprepared audience member know, early, *what this is about
    and why it matters*? Or does it start mid-method?

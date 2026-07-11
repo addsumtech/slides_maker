@@ -294,6 +294,15 @@ them, and show both. The content slide is essential: it proves the blocks actual
   a family (all section dividers dark, or dark bookends) — never exactly one interior slide
   (`ONE-OFF CANVAS FLIP` in lint_deck.py enforces this deterministically). Answer FLAT RHYTHM
   with the register exception line, not with a one-off flip.
+- **Frosted blocks are a legibility TOOL, not the page format.** The frosted-panel treatment exists
+  so text stays readable where the plate is busy — it is NOT an instruction to panel everything.
+  On a calm, even plate, big type, hero numbers, chips, and diagrams can (and on ~1/3 of content
+  slides SHOULD) sit directly on the canvas; reserve panels for dense mixed content. A deck where
+  every element lives in a panel plus a bottom strip on every page reads as one template stamped
+  nine times — the architecture-rotation rule (slide-design §4) applies fully on this branch.
+- **Icons belong on this branch too** — the icon MUST (self-verify (g)) is not suspended by a
+  generated identity: fetch one family (`scripts/icons.py`), recolor to the deck palette, and use
+  glass/tile treatments so the glyphs sit inside the same frosted system as the panels.
 - **The shallow background must stay BEHIND the content** — it's atmosphere, not a competing layer.
   If it darkens or busies the area under text, mute it harder (lighter tint, stronger scrim, fewer
   motifs); body text must clear 4.5:1 against whatever the background leaves under it. A subtle
@@ -323,6 +332,8 @@ them, and show both. The content slide is essential: it proves the blocks actual
       interior, except a deliberately minimal/flat style) + frosted blocks; the **real logo present and
       consistently placed** on every page if it's a company/institution/product deck; figures framed
       to sit on the template; legibility ≥ 4.5:1 everywhere.
+- [ ] Where content names tools/entities/categories, a **palette-recolored icon family** is placed (`scripts/icons.py`; glass/tile treatments on-system) — or the one-clause waiver is recorded.
+- [ ] **Architecture rotates** — takeaway slot varies (no bottom strip on every page) and ≥1/3 of protagonists sit direct-on-canvas on a calm plate.
 - [ ] The interior plate is a **faint DERIVATIVE of the hero** (same motif/palette, not a generic texture) and stays **subtly visible** on every body page — not scrimmed into a flat near-white field.
 - [ ] A **closing / ending page bookends the cover** — full-strength divider-style imagery with a native wrap-up (thank-you / recap / CTA / contact), so the deck doesn't stop on a body slide.
 - [ ] Template **saved to the registry** for reuse.

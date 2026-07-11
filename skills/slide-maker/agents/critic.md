@@ -239,7 +239,9 @@ Do not just skim for the first few obvious issues. Run these passes:
        structure don't show through, or the result is a literal recolour rather than a restyle.
      - **Owns these named-flaw checks (below):** OVERLAP (collision vs layering); layout/balance/footer/
        margins; **large empty region / oversized filler block**; **lone canvas flip (exactly one interior
-       slide on a foreign background value — an error, not rhythm; rubric owns the fix)**; diagram
+       slide on a foreign background value — an error, not rhythm; rubric owns the fix)**; **architecture
+       monoculture (same panel-stack + same-slot takeaway strip page after page; missing icons on
+       category/entity-rich content)**; diagram
        arrow-direction & even spacing;
        the full typography set (too-small, **font hierarchy: content < title**, box-alignment, mixed-size
        baseline, operator spacing, widow, corner-rounding, lone-glyph centring, type-pairing, **hero-numeral

@@ -486,6 +486,10 @@ def _slide_stats(slide, bx, sw, sh):
         # a SUBSTANTIAL foreground image (≥10% of canvas) earns its whitespace; small icons don't —
         # an icon-column slide with a dead lower third is still a dead lower third
         "big_pic_fg": any(s["pic"] and not s["bg"] and s["w"] * s["h"] >= 0.10 * sw * sh for s in bx),
+        # a wide strip parked in the bottom band (the insight_banner / takeaway-strip pattern) —
+        # fine on a few pages, a template tell when it's on nearly every page
+        "bottom_strip": any(s["solid"] and not s["bg"] and s["w"] >= 0.6 * sw
+                            and s["t"] >= 0.70 * sh and 0.25 <= s["h"] <= 1.4 for s in bx),
         # how far down the canvas the content actually reaches (footer chrome excluded)
         "content_bottom": (max((s["t"] + s["h"] for s in bx
                                 if not s["bg"] and s["t"] < footer_y), default=0.0) / sh),
@@ -734,6 +738,19 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False):
                          f"exactly one interior slide (that trips ONE-OFF CANVAS FLIP); on a "
                          f"generated-template deck vary imagery strength instead; or record why this deck "
                          f"is deliberately single-mode")
+    # BOTTOM-STRIP MONOCULTURE: a wide takeaway strip parked in the bottom band of nearly every
+    # content slide — the greedy frame-filler turned page template. The strip itself is a good
+    # device; stamping it on every page is the same monoculture as the card grid. Rotation is the
+    # fix: takeaway as side rail / inline line / the headline itself on at least half the pages.
+    if n >= 6:
+        strips = [i + 1 for i, r in enumerate(rows) if 0 < i < n - 1 and r.get("bottom_strip")]
+        interior_n = n - 2
+        if interior_n > 0 and len(strips) > 0.6 * interior_n:
+            warns.append(f"BOTTOM-STRIP MONOCULTURE: {len(strips)} of {interior_n} content slides "
+                         f"(slides {', '.join(map(str, strips))}) park a full-width strip in the bottom "
+                         f"band — one takeaway slot stamped deck-wide reads as a template; rotate the "
+                         f"slot (side rail · inline under the figure · the headline itself · none) so no "
+                         f"slot carries more than ~half the deck (architecture-rotation rule)")
     # ONE-OFF CANVAS FLIP: exactly ONE interior slide whose canvas value departs sharply from the
     # deck's median — a lone dark (or light) page mid-deck reads as an ERROR, not rhythm. Rhythm
     # events must recur (a divider family, bookends) or come from imagery strength, never a single
