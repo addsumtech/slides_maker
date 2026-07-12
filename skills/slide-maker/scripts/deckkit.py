@@ -668,7 +668,7 @@ def takeaway_rail(slide, x, y, w, label, hero, body, *, accent=MAGENTA, ink=DEEP
 
 # ============================================ layout patterns (editorial / diagram / wayfinding)
 def editorial_header(slide, eyebrow, title, *, x=0.6, y=0.55, w=None, accent=MAGENTA, ink=DEEP,
-                     serif=None, size=28, rule_w=1.2):
+                     serif=None, size=28, rule_w=1.2, rule=True):
     """Editorial header lockup: a caps eyebrow, a large title, and a short accent hairline beneath.
     The premium/showcase alternative to title_bar. The title uses the **DISPLAY** face by default
     (falls back to FONT), and EADISPLAY for CJK; pass `serif=` to override per call."""
@@ -690,7 +690,8 @@ def editorial_header(slide, eyebrow, title, *, x=0.6, y=0.55, w=None, accent=MAG
             for r in p.runs:
                 _apply_ea(r, EADISPLAY)
     rule_y = y + 0.34 + max(lh, nlines * lh)          # floor = one-line render (byte-identical)
-    box(slide, x + 0.02, rule_y, rule_w, 0.05, fill=accent)
+    if rule:
+        box(slide, x + 0.02, rule_y, rule_w, 0.05, fill=accent)
     return rule_y + 0.18
 
 
