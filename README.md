@@ -318,8 +318,8 @@ It prints the exact fix for anything missing. If problems persist after installi
 
 <p align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://slides.addsum.top/docs/assets/star_history_dark.png" />
-      <img alt="Star history for addsumtech/slides_maker" src="https://slides.addsum.top/docs/assets/star_history.png" width="720" />
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/addsumtech/slides_maker/main/docs/assets/star_history_dark.png" />
+      <img alt="Star history for addsumtech/slides_maker" src="https://raw.githubusercontent.com/addsumtech/slides_maker/main/docs/assets/star_history.png" width="720" />
   </picture>
 </p>
 
