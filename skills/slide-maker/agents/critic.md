@@ -213,7 +213,15 @@ Do not just skim for the first few obvious issues. Run these passes:
        real-and-specific subject (named place / real product / real person) is a fidelity finding; a
        declared stylized illustration recorded as a deviation is a taste call; a recorded
        `searched, none found → …` rung is a sanctioned exit (`review-rubrics.md` item 9 +
-       `references/image-generation.md` "Sourced real imagery"). *(Rubric items 1, 3, 6, 8, 10, 12a-fidelity.)*
+       `references/image-generation.md` "Sourced real imagery"); **primary-source provenance** (a
+       load-bearing web-sourced claim whose ledger row traces only to an aggregator/secondary source,
+       or that a live primary-source check refutes, is a **blocker** — the planner's PROVENANCE
+       CONTRACT, `agents/content-planner.md` §2); **spliced figures** (numbers from different
+       sources/dates paired on one slide as a single current fact — each may be real, the pairing
+       misleads; **major**, rubric item 10); **quote-mark abuse** (quotation marks around
+       non-contiguous, altered, or paraphrased words — a clause quote needs its ellipsis, a
+       paraphrase needs no marks at all; **major**, rubric item 10).
+       *(Rubric items 1, 3, 6, 8, 10, 12a-fidelity.)*
    - **LENS B · Design, layout & legibility — *how it looks.***
      - **Diagnose layout with the C.R.A.P. lens** (`design-principles.md` "The C.R.A.P. framework") — the
        same four principles the planner designed to, so findings name a shared cause: **Contrast** (does

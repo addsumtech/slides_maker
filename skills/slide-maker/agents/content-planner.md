@@ -118,6 +118,27 @@ Use the web for **three jobs**, and run it whether or not you have a source:
   have already happened as of today and write the correct tense; stable facts (definitions,
   historical events) → a source citation suffices. Re-run verification for time-bound rows on
   **every** build — never reuse cached values for them.
+- **PROVENANCE CONTRACT (🔴 MUST for web-sourced claims)** — the ledger verifies against *reality*,
+  not against whoever said it loudest:
+  - **Primary source or it doesn't ship.** The `source` column for a web-sourced load-bearing claim
+    must be the **primary source** — the original paper, the org's own announcement/blog/docs, the
+    official repo — not an aggregator, news rewrite, or summary post. A claim found only in a
+    secondary source is either traced to its primary before it ships, or moved to the plan's open
+    questions labelled `secondary — unverified against primary`; it cannot appear on a slide as
+    established fact. **`verified? = Y` may be set only by opening the primary source and comparing
+    the verbatim figure/wording** — never by trusting a search snippet, an aggregator, or a research
+    subagent's summary (a hallucinated ledger row otherwise passes every downstream check, because
+    the critic verifies slides *against the ledger*).
+  - **No spliced figures.** Two numbers presented as one fact on one slide must come from the same
+    source at the same as-of date. Figures from different dates or documents get separately dated
+    on the slide, or the pairing is dropped. (The failure this encodes: a vendor's conversation
+    count from November paired with a resolution rate measured months earlier at half the volume —
+    each number real, the *pairing* fake news.)
+  - **Quote marks promise verbatim AND contiguous.** Quotation marks around words the source never
+    said in that form is fabrication — including hardening a relative claim ("more parallelizable
+    than") into an absolute ("writes don't"). A clause lifted from a longer sentence keeps its
+    lowercase and a leading ellipsis (or bracketed capital); a paraphrase drops the quote marks and
+    attributes as `after <who>`.
 - **(c) Find the single-entity's real brand assets (a research act, not a design one).** When the
   deck's subject **is one organisation / product / brand / institution** — a pitch, product intro,
   launch, company or stakeholder readout, an org's report, **and equally** a research talk naming a

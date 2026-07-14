@@ -644,8 +644,10 @@ inventing — it's fidelity to what's *true now*.
 - **No content:** draft an outline from your own expertise, then **ground *and verify*
   it** with the host's available web search/fetch tools (Codex: use `web.run`) — treat this as a **fact-check, not just framing**.
   List the deck's specific *falsifiable* claims (numbers, dates, names, citations, and
-  every "first/largest/state-of-the-art" assertion) and confirm each against a credible
-  source before it lands on a slide; fix or cut anything you can't verify, and never
+  every "first/largest/state-of-the-art" assertion) and confirm each against its **primary**
+  source (the planner's PROVENANCE CONTRACT, `agents/content-planner.md` §2 — an aggregator
+  or news rewrite is not confirmation) before it lands on a slide; fix or cut anything you
+  can't verify, and never
   present an unverifiable claim as established fact. This matters because a no-source deck
   has **no paper to anchor it** — *you* are the only check on whether a confident-sounding
   statement is actually true, and an expert audience spots a wrong "fact" instantly (the
@@ -1710,6 +1712,28 @@ Then run the **actor-critic loop** — this is the quality engine, and the criti
 3. **Repeat.** The critic **re-reviews the whole deck fresh** (fixes introduce new
    issues). Converge; keep a short record of what changed each round so improvement is
    visible, not just churn.
+
+**🔴 PRIMARY-SOURCE GATE — research-sourced decks only, before hand-off.** When the deck's
+load-bearing claims came from **web research** (every no-source deck, and any sourced deck where
+research supplied slide-level numbers/quotes), the content critic verifying slides *against the
+ledger* is not enough — a hallucinated or secondhand ledger row passes that check by construction.
+So before hand-off, run one **adversarial primary-source spot-check**: independent verifier
+agent(s) with live web access take the deck's load-bearing claims (every headline number, date,
+direct quote, ranking, attribution) and try to **REFUTE** each against its **primary source** (the
+original paper / the org's own post / official docs — never an aggregator), returning per claim
+`CONFIRMED (URL) / WRONG / PARTLY-WRONG / UNVERIFIABLE`. **WRONG and PARTLY-WRONG are fixed before
+ship; UNVERIFIABLE is hedged as unverified or cut — never shipped as established fact.** While
+there, verifiers also flag the planner's PROVENANCE CONTRACT breaks (spliced figures, quote-mark
+abuse — `agents/content-planner.md` §2, rubric item 10). Scale it to stakes like the critic itself
+(a quick deck: one verifier over the top ~10 claims; high-stakes: a fan-out over all of them) —
+but never skip it entirely on a research-sourced deck: this is the gate between "the slides match
+the ledger" and "the ledger matches reality." **The gate's artifact (required, per the enforcement
+invariant):** the Step-6 hand-off carries one `provenance:` line — `N claims checked · N confirmed
+· N fixed · N cut/hedged` — plus the per-claim verdict list on request; a research-sourced hand-off
+without that line means the gate did not run. Decks built purely from the user's own material skip
+this gate — there, fidelity is to the provided source, and item 10 already owns it — **but** a
+source claim that §2(b) re-verification *updated or replaced* with a web-found current value counts
+as research-supplied, and pulls the gate in for those rows.
 
 **High-stakes only — verify the fixes and corroborate consent.** On re-render, the
 arbiters cheaply re-check each promoted finding against the actor's **change manifest**

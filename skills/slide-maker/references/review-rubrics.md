@@ -382,6 +382,15 @@ Score each dimension; cite specific slides.
    **Currency:** if the deck makes time-bound / falsifiable claims (a "latest / current", a count, a
    ranking, a dated event), confirm it carries an **as-of date** (as the planner requires) and that
    nothing dated has silently gone stale (last year's figure presented as this year's is a finding).
+   **Web-sourced claims (the planner's PROVENANCE CONTRACT, `agents/content-planner.md` §2) —
+   applies whenever the ledger carries web-sourced rows, INCLUDING no-source decks (this item's
+   "source exists" scoping does not exempt them; a no-source deck is where these checks matter most):**
+   a load-bearing claim traceable only to an aggregator/secondary source — or refuted when re-traced
+   to its primary — is a **blocker**; **spliced figures** (numbers from different sources/dates
+   paired on one slide as a single current fact) are a **major**, because each number can be real
+   while the pairing misleads; **quote-mark abuse** (quotation marks around non-contiguous, altered,
+   or paraphrased words — including a relative claim hardened into an absolute) is a **major**: fix
+   with the verbatim sentence, an ellipsis'd clause quote, or an unquoted `after <who>` paraphrase.
 11. **Design fits the purpose.** Does the look match the deck's purpose and audience —
    crisp/corporate for a status update, sober/formal for a defense, bold/on-brand for a
    product pitch, warm/clear for teaching (see `references/design-by-purpose.md`)? A
