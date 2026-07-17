@@ -2,7 +2,7 @@
 """formats.py — named CANVAS FORMATS + per-format layout tokens for deckkit builds.
 
 One deck skill, many canvases: a conference talk (16:9), a legacy-projector deck (4:3),
-a 小红书/RED image-note (3:4), an Instagram/Facebook square post (1:1), a Story/Reels/
+a rednote/小红书 image-note (3:4), an Instagram/Facebook square post (1:1), a Story/Reels/
 Shorts vertical cover (9:16), and an A4 print document — each is a DIFFERENT design
 surface, not a resized 16:9 slide. This module is the single registry of those surfaces:
 dimensions, safe zones, chrome policy, density budget, and layout DNA, consumed by build
@@ -77,7 +77,7 @@ FORMATS = {f.name: f for f in [
            columns_ok=False, lint_flags=("--selfread",),
            aliases=("1:1", "1x1", "instagram", "ins", "facebook", "post")),
     Format("red", "小红书 3:4", 7.5, 10.0, "portrait",
-           "小红书/RED image note · portrait social card",
+           "rednote/小红书 image note · portrait social card",
            margin=0.5, safe_top=0.35, safe_bottom=0.55, chrome="social",
            title_band=1.15, display_scale=1.25,
            density_units="ONE idea per card; list-style cards may carry 4-6 short rows",
@@ -130,7 +130,7 @@ def blank_deck(fmt):
 
 def band(fmt, *, title=True):
     """The SAFE CONTENT RECT (x, y, w, h) for this format: outer margins + the format's
-    platform-UI safe zones (story/RED overlays) + a FOOTER RESERVE on chrome-bearing
+    platform-UI safe zones (story/rednote overlays) + a FOOTER RESERVE on chrome-bearing
     formats (full/print draw a footer — content anchored at the band bottom must stay
     above it), minus the title band when ``title=True``. This is the format-aware
     analogue of ``deckkit.content_band`` — use it on any non-default format so content
