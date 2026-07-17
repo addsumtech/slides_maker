@@ -9,6 +9,8 @@
   <img alt="Codex" src="https://img.shields.io/badge/Codex-supported-111827">
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude_Code-supported-5b5bd6">
   <img alt="Output: editable PPTX" src="https://img.shields.io/badge/output-native_editable_PPTX-0f766e">
+  <a href="https://skillhub.cloud.tencent.com/skills/slides-maker"><img alt="腾讯 SkillHub" src="https://img.shields.io/badge/%E8%85%BE%E8%AE%AF_SkillHub-%E7%AB%8B%E5%8D%B3%E8%8E%B7%E5%8F%96-2f6feb"></a>
+  <a href="https://xiaping.coze.com/skill/c0136d99-50d0-4f05-909a-f78fa4be7104"><img alt="Coze 扣子" src="https://img.shields.io/badge/Coze_%E6%89%A3%E5%AD%90-%E7%AB%8B%E5%8D%B3%E8%8E%B7%E5%8F%96-6653f5"></a>
 </p>
 
 <p align="center"><sub><a href="https://addsum.top/cn/"><strong>增和科技 Addsum</strong></a> 出品 · 免费开源</sub></p>
@@ -22,7 +24,7 @@
 - 🔍 **读你的材料,而不是编造。** 每个数字、每张图都溯源到你的材料;绝不为了填满一页瞎编一个统计数(这是所有"把主题铺开"类工具的通病——某流行助手把真实的 *12%* 印成了 *43%*)。
 - ✏️ **一份真 PowerPoint,不是截图。** 每个文本框、形状、原生图表、公式都是点开就改的对象——**没有任何**东西被压成图片(很多"导出 PPTX"的工具,会悄悄把三分之一的页面变成改不动的图)。
 - 🧑‍⚖️ **交付前先过审。** 不可协商的 actor-critic 闭环:一个**独立**评审去挑毛病——版式挤压、对比度不足、数字和原文对不上——再打回修正。不是作者模型给自己批卷。
-- 🎨 **围绕你的内容设计,任意语言。** 一页页现场编排——匹配你的模板或现设计一套干净的——研究报告、答辩、产品 pitch 皆可。不是把你的文字倒进现成版式。
+- 🎨 **围绕你的内容设计,任意语言、任意画布。** 一页页现场编排——匹配你的模板或现设计一套干净的——研究报告、答辩、产品 pitch 皆可。不是把你的文字倒进现成版式。而且不止 16:9:同一套技能可以重排成 4:3、方形 1:1、小红书 3:4 图文卡、9:16 竖版封面、A4 打印一页纸,每种画布都有自己的安全区和排版逻辑。
 
 <sub>原生可编辑 PPTX 如今已是基本盘(不少工具都能做)。稀缺的是**可编辑 + 溯源不编造 + 审校过 + 每 deck 定制**——四者合一,在一份归你所有的文件里。诚实的边界:没有零配置云端、没有分享链接、没有动态网页背景——它做的是一个**本地生成的文件**,能在真 PowerPoint/Keynote 里干净打开、编辑。详见[不一样在哪](#slide-maker-不一样在哪)。</sub>
 
@@ -190,6 +192,11 @@ slide-maker 不是一个 prompt 包办一切，而是一组各有专职的 **age
 
 ### 第一步：安装
 
+> **⚡ 更喜欢从市场一键获取？slide-maker 也已上架
+> [腾讯 SkillHub](https://skillhub.cloud.tencent.com/skills/slides-maker) 和
+> [Coze 扣子 · 小瓶智能体](https://xiaping.coze.com/skill/c0136d99-50d0-4f05-909a-f78fa4be7104)** ——
+> 按对应页面的说明获取即可，然后回来装下面的运行依赖（无论哪种装法都需要）。
+
 slide-maker 依赖三样系统工具：**Python 3.9+**、**LibreOffice**（渲染页面预览做自动版式检查），以及**任一 SVG 栅格化器**给图标用（librsvg、cairosvg 或任意 Chrome 系浏览器）。按你的系统装：
 
 | 系统 | LibreOffice | 图标栅格化 |
@@ -291,6 +298,7 @@ npx skills add addsumtech/slides_maker
 | 课程材料、产品资料、市场数据 | 课程分享、产品介绍、市场分析、方案说明 |
 | 什么都没有，只有一个主题 | 给它一个主题；agent 团队联网调研最新信息，和你对好结构，再从零做出整份 deck |
 | 参考 PPT | 换主题、换内容、重新组织表达：用它的观感，你的材料 |
+| 想让同一个故事走出 16:9 | 小红书 3:4 图文卡、方形 1:1、9:16 竖版封面、4:3 会场版、A4 打印一页纸——同一套视觉与组件，按画布重排，自动避开平台 UI 安全区 |
 
 ---
 

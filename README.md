@@ -9,6 +9,8 @@
   <img alt="Codex" src="https://img.shields.io/badge/Codex-supported-111827">
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude_Code-supported-5b5bd6">
   <img alt="Output: editable PPTX" src="https://img.shields.io/badge/output-native_editable_PPTX-0f766e">
+  <a href="https://skillhub.cloud.tencent.com/skills/slides-maker"><img alt="Tencent SkillHub" src="https://img.shields.io/badge/Tencent_SkillHub-get_it-2f6feb"></a>
+  <a href="https://xiaping.coze.com/skill/c0136d99-50d0-4f05-909a-f78fa4be7104"><img alt="Coze" src="https://img.shields.io/badge/Coze-get_it-6653f5"></a>
 </p>
 
 <p align="center"><sub>Free and open source, built by <a href="https://addsum.top/"><strong>Addsum</strong></a></sub></p>
@@ -22,7 +24,7 @@ Most AI-PPT tools race to look pretty in seconds. slide-maker optimizes for the 
 - 🔍 **Reads your source — doesn't invent it.** Every number and figure traces back to your material; it won't make up a statistic to fill a slide. (The failure mode of every "expand a topic" tool — one popular assistant printed *43% growth* where the real figure was *12%*.)
 - ✏️ **A real PowerPoint, not a screenshot.** Every text box, shape, native chart and equation is a click-to-edit object — *nothing* flattened to an image. (Many "export to PPTX" tools quietly turn a third of your slides into uneditable pictures.)
 - 🧑‍⚖️ **Reviewed before you see it.** A non-negotiable actor–critic loop: a *separate* critic tries to break the deck — cramped layout, weak contrast, a number that doesn't match the source — and sends fixes back. Not the author model grading its own homework.
-- 🎨 **Designed around your content, in any language.** Composed slide by slide — matching your template or designing a clean one — for a research talk, a thesis defense, or a product pitch. Not your text poured into a stock layout.
+- 🎨 **Designed around your content, in any language — on any canvas.** Composed slide by slide — matching your template or designing a clean one — for a research talk, a thesis defense, or a product pitch. Not your text poured into a stock layout. And not only 16:9: the same skill recomposes to 4:3, square 1:1, 小红书 3:4 cards, 9:16 story covers, and A4 print one-pagers, each with its own safe zones and layout logic.
 
 <sub>Native-editable PPTX is now table stakes (several tools do it). What's rare is *editable **and** source-traced **and** critic-reviewed **and** bespoke* — together, in one file you own. Honest limits: no zero-setup cloud, no share links, no animated web backgrounds — it makes a **file**, run locally, that opens and edits cleanly in real PowerPoint/Keynote. See [what's different](#what-makes-slide-maker-different).</sub>
 
@@ -190,6 +192,12 @@ To be plain about it: it does not promise a perfect deck in one shot. It promise
 
 ### Step 1: Install
 
+> **⚡ Prefer a marketplace? slide-maker is also published on
+> [Tencent SkillHub](https://skillhub.cloud.tencent.com/skills/slides-maker) and
+> [Coze 小瓶智能体](https://xiaping.coze.com/skill/c0136d99-50d0-4f05-909a-f78fa4be7104)** —
+> grab it there by following each page's install instructions, then come back for the runtime
+> dependencies below (they apply however you install).
+
 slide-maker relies on three system tools: **Python 3.9+**, **LibreOffice** (renders slide previews for the automatic layout checks), and **one SVG rasterizer** for icons (librsvg, cairosvg, or any Chrome-family browser). Install them for your OS:
 
 | OS | LibreOffice | Icon rasterizer |
@@ -295,6 +303,7 @@ Research talks are the home turf, because it parses the problem, method, results
 | Course material, product docs, market data | Class talk, product introduction, market analysis, proposal |
 | Nothing yet, just a topic in your head | Hand it a topic; the agents research current information online, agree on a structure with you, then build the deck from scratch |
 | A reference PPT | New topic, new content, reorganized story: its look, your material |
+| A story that needs to live beyond 16:9 | 小红书/RED 3:4 image notes, square 1:1 posts, 9:16 story covers, 4:3 venue decks, A4 print one-pagers — same identity and components, recomposed per surface with platform safe zones |
 
 ---
 
