@@ -9,6 +9,38 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+## [3.2.0] - 2026-07-18
+
+### Added
+- **Boldness dial + signature-move distinctiveness axis** — the design plan now carries a
+  two-line aesthetic-risk contract. `boldness: <conservative | balanced+ | bold | experimental>`
+  sets how many beats may carry risk and how far the deck's ONE required `signature move` pushes
+  (precedence: explicit user request > `taste.md`'s promoted dial > purpose-derived default;
+  `balanced+` = exactly one genuine signature move). A pre-commit web pass for 2–3 genuinely
+  distinctive references raises the ceiling before the move is fixed. Wired through
+  `agents/slide-design.md` (contract + reference pass), `agents/critic.md` and
+  `references/review-rubrics.md` (a distinctiveness lens that flags template-competent-but-timid
+  work), `agents/arbiter.md`, `references/user-taste.md` (the dial is a promotable taste
+  dimension), `references/large-deck-orchestration.md`, and SKILL.md.
+- `scripts/smoke_deckkit.py` — a stdlib-only smoke test covering gradient-stop normalization
+  (both shorthand and full-stop forms; the RGBColor-is-tuple parse guard) and the icon_tile
+  contrast guard.
+- Install channels: **SkillHub** and **Coze** added to `README.md` / `README_CN.md` alongside
+  the existing `npx skills add` / marketplace paths.
+
+### Changed
+- The 3:4 social format is named **rednote** (小红书's English name) across `scripts/formats.py`
+  and `references/canvas-formats.md`.
+
+### Fixed
+- `deckkit.icon_tile` guarantees glyph↔tile contrast **by construction**: when the glyph's ink
+  is known (declared, or inferred from the PNG via `_png_dominant_ink`), the tile fill is
+  auto-nudged to keep the pair ≥3:1 — a low-contrast icon-on-tile is now impossible rather than
+  merely flagged after render.
+- `deckkit._norm_stops` parses `(c0, c1)` shorthand, `(pos, colour)` pairs, and full
+  `(pos, colour, alpha)` stop-lists uniformly, closing an RGBColor-looks-like-a-tuple ambiguity
+  in gradient fills.
+
 ## [3.1.0] - 2026-07-17
 
 ### Added
