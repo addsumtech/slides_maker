@@ -11,13 +11,14 @@
   <img alt="Output: editable PPTX" src="https://img.shields.io/badge/output-native_editable_PPTX-0f766e">
   <a href="https://skillhub.cloud.tencent.com/skills/slides-maker"><img alt="Tencent SkillHub" src="https://img.shields.io/badge/Tencent_SkillHub-get_it-2f6feb"></a>
   <a href="https://xiaping.coze.com/skill/c0136d99-50d0-4f05-909a-f78fa4be7104"><img alt="Coze" src="https://img.shields.io/badge/Coze-get_it-6653f5"></a>
+  <a href="https://chatgpt.com/g/g-6a5b41f0a33881918be69e8b10f8b4ff-slide-maker-gpt"><img alt="ChatGPT GPT Store" src="https://img.shields.io/badge/GPT_Store-slide--maker_GPT-10a37f"></a>
 </p>
 
 <p align="center"><sub>Free and open source, built by <a href="https://addsum.top/"><strong>Addsum</strong></a></sub></p>
 
 > **The slide-maker that reads your actual work, never invents a number, ships fully-editable native PowerPoint, and won't hand it over until an independent critic signs off.**
 
-Chat with it in Codex or Claude Code. It isn't one prompt guessing at slides: a small team of specialized agents reads your paper / repo / doc (or researches the topic when you have none), plans the story, designs each slide around it, builds a real `.pptx`, and puts it through an independent review before you ever see it.
+Chat with it in Codex or Claude Code — or, with **zero install, in ChatGPT** via the [slide-maker GPT](https://chatgpt.com/g/g-6a5b41f0a33881918be69e8b10f8b4ff-slide-maker-gpt). It isn't one prompt guessing at slides: a small team of specialized agents reads your paper / repo / doc (or researches the topic when you have none), plans the story, designs each slide around it, builds a real `.pptx`, and puts it through an independent review before you ever see it.
 
 Most AI-PPT tools race to look pretty in seconds. slide-maker optimizes for the four things that actually matter when the deck is *yours to defend*:
 
@@ -27,6 +28,11 @@ Most AI-PPT tools race to look pretty in seconds. slide-maker optimizes for the 
 - 🎨 **Designed around your content, in any language — on any canvas.** Composed slide by slide — matching your template or designing a clean one — for a research talk, a thesis defense, or a product pitch. Not your text poured into a stock layout. And not only 16:9: the same skill recomposes to 4:3, square 1:1, rednote (小红书) 3:4 cards, 9:16 story covers, and A4 print one-pagers, each with its own safe zones and layout logic.
 
 <sub>Native-editable PPTX is now table stakes (several tools do it). What's rare is *editable **and** source-traced **and** critic-reviewed **and** bespoke* — together, in one file you own. Honest limits: no zero-setup cloud, no share links, no animated web backgrounds — it makes a **file**, run locally, that opens and edits cleanly in real PowerPoint/Keynote. See [what's different](#what-makes-slide-maker-different).</sub>
+
+> ### 🤖 New: use it in ChatGPT — no install, straight from the GPT Store
+> **[slide-maker GPT →](https://chatgpt.com/g/g-6a5b41f0a33881918be69e8b10f8b4ff-slide-maker-gpt)** inherits this skill's ability, so **making slides with ChatGPT is fully feasible**: open the link or search **"slide-maker GPT"** in the **GPT Store**, hand it a paper / doc / topic, and get your deck. (The local skill below remains the full-power path.)
+
+Recent updates: it now also reads **Word, Excel, CSV, images, and video/audio** (extraction-first — it never guesses a number off pixels), and handles a whole **book or very-long PDF** by triaging chapters around your deck's purpose instead of skimming.
 
 <p align="center">
   <a href="https://slides.addsum.top/"><strong>Intro video</strong></a> ·
@@ -174,7 +180,7 @@ To be plain about it: it does not promise a perfect deck in one shot. It promise
 ## How it works
 
 1. **It asks first.** Who is the audience, how long is the talk, live or self-read, what style. Short answers are enough. Say "you decide" if you are in a hurry — it then picks sensible answers itself and posts its picks before building, so a wrong guess costs you one glance, not a rebuild (only a missing topic or source still needs you). No material at all? Give it a topic and it will research online before anything else.
-2. **It reads (or researches) the material.** Papers, docs, and repos are read in full: figures cropped from the PDF, key numbers verified line by line, nothing without a source on a slide. With only a topic, it researches current information online first, then works from that.
+2. **It reads (or researches) the material.** Papers, docs, repos — and now Word / Excel / CSV / images / video, plus whole books via purpose-driven triage — are read faithfully: figures cropped from the PDF, key numbers verified line by line, nothing without a source on a slide. With only a topic, it researches current information online first, then works from that.
 3. **You approve the story, then the look — right in the chat.** The content-planner posts a compact per-slide table (what each slide says, which figure carries it, how the deck flows); once you confirm the story, the art director posts the design plan (look, palette, per-slide form, motion) the same way. Two quick confirmations at the two cheapest moments to change direction — no plan files to open.
 4. **It generates the PPTX.** Layout is guaranteed by code, with automatic layout checks both at build time and on the rendered output. Overflow, overlap, and font problems get caught there.
 5. **An independent critic reviews it.** Rendered slides go to the critic agent (with an arbiter cross-checking on high-stakes decks), judged against presentation standards. Fixes land, the deck is re-checked, and only then is it delivered to `~/Downloads/<deck-name>/`.
@@ -192,7 +198,11 @@ To be plain about it: it does not promise a perfect deck in one shot. It promise
 
 ### Step 1: Install
 
-> **⚡ Prefer a marketplace? slide-maker is also published on
+> **⚡ Don't want to install anything? Use the [slide-maker GPT](https://chatgpt.com/g/g-6a5b41f0a33881918be69e8b10f8b4ff-slide-maker-gpt) in ChatGPT** — it inherits this skill's
+> ability, so you can make slides right in ChatGPT: open the link or find it in the **GPT Store**.
+> Zero setup; the local install below stays the full-power path.
+>
+> **Prefer a marketplace? slide-maker is also published on
 > [Tencent SkillHub](https://skillhub.cloud.tencent.com/skills/slides-maker) and
 > [Coze 小瓶智能体](https://xiaping.coze.com/skill/c0136d99-50d0-4f05-909a-f78fa4be7104)** —
 > grab it there by following each page's install instructions, then come back for the runtime

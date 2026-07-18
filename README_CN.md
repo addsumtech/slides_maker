@@ -11,13 +11,14 @@
   <img alt="Output: editable PPTX" src="https://img.shields.io/badge/output-native_editable_PPTX-0f766e">
   <a href="https://skillhub.cloud.tencent.com/skills/slides-maker"><img alt="腾讯 SkillHub" src="https://img.shields.io/badge/%E8%85%BE%E8%AE%AF_SkillHub-%E7%AB%8B%E5%8D%B3%E8%8E%B7%E5%8F%96-2f6feb"></a>
   <a href="https://xiaping.coze.com/skill/c0136d99-50d0-4f05-909a-f78fa4be7104"><img alt="Coze 扣子" src="https://img.shields.io/badge/Coze_%E6%89%A3%E5%AD%90-%E7%AB%8B%E5%8D%B3%E8%8E%B7%E5%8F%96-6653f5"></a>
+  <a href="https://chatgpt.com/g/g-6a5b41f0a33881918be69e8b10f8b4ff-slide-maker-gpt"><img alt="ChatGPT GPT 商店" src="https://img.shields.io/badge/GPT_Store-slide--maker_GPT-10a37f"></a>
 </p>
 
 <p align="center"><sub><a href="https://addsum.top/cn/"><strong>增和科技 Addsum</strong></a> 出品 · 免费开源</sub></p>
 
 > **一个会读你真实材料、绝不编造数字、输出真正可编辑的原生 PowerPoint、并且要等独立评审点头才交付的 AI 做 PPT 工具。**
 
-在 Codex 或 Claude Code 里聊几句。它不是一句 prompt 瞎猜幻灯片:一支各司其职的 **agent 团队**先读懂你的论文 / 代码 / 文档(没有材料就先联网调研),规划故事线,围绕它设计每一页,生成一份真正的 `.pptx`,再交给独立评审过一遍,才交到你手上。
+在 Codex 或 Claude Code 里聊几句——或者**零安装**,直接在 ChatGPT 里用 [slide-maker GPT](https://chatgpt.com/g/g-6a5b41f0a33881918be69e8b10f8b4ff-slide-maker-gpt)。它不是一句 prompt 瞎猜幻灯片:一支各司其职的 **agent 团队**先读懂你的论文 / 代码 / 文档(没有材料就先联网调研),规划故事线,围绕它设计每一页,生成一份真正的 `.pptx`,再交给独立评审过一遍,才交到你手上。
 
 多数 AI-PPT 工具都在拼"几秒出漂亮 PPT"。slide-maker 优化的是——当这份 deck 是**你要拿去讲、要负责**的时候——真正重要的四件事:
 
@@ -27,6 +28,11 @@
 - 🎨 **围绕你的内容设计,任意语言、任意画布。** 一页页现场编排——匹配你的模板或现设计一套干净的——研究报告、答辩、产品 pitch 皆可。不是把你的文字倒进现成版式。而且不止 16:9:同一套技能可以重排成 4:3、方形 1:1、小红书 3:4 图文卡、9:16 竖版封面、A4 打印一页纸,每种画布都有自己的安全区和排版逻辑。
 
 <sub>原生可编辑 PPTX 如今已是基本盘(不少工具都能做)。稀缺的是**可编辑 + 溯源不编造 + 审校过 + 每 deck 定制**——四者合一,在一份归你所有的文件里。诚实的边界:没有零配置云端、没有分享链接、没有动态网页背景——它做的是一个**本地生成的文件**,能在真 PowerPoint/Keynote 里干净打开、编辑。详见[不一样在哪](#slide-maker-不一样在哪)。</sub>
+
+> ### 🤖 新:在 ChatGPT 里直接用——零安装,GPT 商店即开即用
+> **[slide-maker GPT →](https://chatgpt.com/g/g-6a5b41f0a33881918be69e8b10f8b4ff-slide-maker-gpt)** 继承了本技能的能力,**用 ChatGPT 做幻灯片完全可行**:点开链接,或在 **GPT 商店**搜索 **"slide-maker GPT"**,丢给它一篇论文 / 一份文档 / 一个主题就能出 deck。(下方的本地技能仍是完整体验。)
+
+近期更新:现在还能读 **Word、Excel、CSV、图片、视频/音频**(一律先精确提取——绝不从像素里猜数字),整本**书或超长 PDF** 也会按你这份 deck 的目的做章节取舍,而不是走马观花。
 
 <p align="center">
   <a href="https://slides.addsum.top/cn/"><strong>视频介绍</strong></a> ·
@@ -174,7 +180,7 @@ slide-maker 不是一个 prompt 包办一切，而是一组各有专职的 **age
 ## 它是怎么干活的
 
 1. **问清楚。** 给谁看、讲多久、现场讲还是发出去自读、要什么风格。你用短句回答就行，没想好就说「你定」——它会自己选出稳妥的答案并**在动手前先贴出来**，选错了你扫一眼就能否决，不用等一版重建（只有主题、素材这类只有你知道的信息仍然要问）。什么材料都没有？给个主题，它会先联网调研再动手。
-2. **读材料（或联网调研）。** 论文、文档、代码库通读，图表从 PDF 里裁原图，关键数字逐条核对，没有来源的数字不上页面。只有一个主题时，它先联网调研最新信息，再动手。
+2. **读材料（或联网调研）。** 论文、文档、代码库——现在还包括 Word / Excel / CSV / 图片 / 视频，以及按目的取舍的整本书——都如实读取：图表从 PDF 里裁原图，关键数字逐条核对，没有来源的数字不上页面。只有一个主题时，它先联网调研最新信息，再动手。
 3. **先确认故事，再确认观感——都在对话里。** content-planner 先贴一张紧凑的逐页表（每页讲什么、靠哪张图、整体怎么走）；你确认故事后，美术总监再以同样方式贴出设计方案（观感、配色、每页形式、动效）。两次快速确认，正好落在改方向最便宜的两个时刻——不用打开任何计划文件。
 4. **生成 PPTX。** 版面由代码保证，构建时和渲染后各过一遍自动版式检查，文字溢出、元素遮挡、字体异常都会被拦下。
 5. **独立评审，修到点头。** 渲染图交给评审 agent（重要场合再加一道 arbiter 复核），按演讲场景的标准挑毛病，修完复查，通过才交付到 `~/Downloads/<deck-name>/`。
@@ -192,7 +198,10 @@ slide-maker 不是一个 prompt 包办一切，而是一组各有专职的 **age
 
 ### 第一步：安装
 
-> **⚡ 更喜欢从市场一键获取？slide-maker 也已上架
+> **⚡ 什么都不想装？直接在 ChatGPT 里用 [slide-maker GPT](https://chatgpt.com/g/g-6a5b41f0a33881918be69e8b10f8b4ff-slide-maker-gpt)** ——
+> 它继承了本技能的能力，去 **GPT 商店**搜 "slide-maker GPT" 即可开始做幻灯片，零配置；下面的本地安装仍是完整体验。
+>
+> **更喜欢从市场一键获取？slide-maker 也已上架
 > [腾讯 SkillHub](https://skillhub.cloud.tencent.com/skills/slides-maker) 和
 > [Coze 扣子 · 小瓶智能体](https://xiaping.coze.com/skill/c0136d99-50d0-4f05-909a-f78fa4be7104)** ——
 > 按对应页面的说明获取即可，然后回来装下面的运行依赖（无论哪种装法都需要）。
