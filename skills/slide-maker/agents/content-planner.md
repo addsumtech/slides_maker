@@ -95,9 +95,10 @@ arc/plan). **Coverage gate:** run the diff described in "The editor's stance" �
 mapped to a slide or consciously cut in Open questions; a silent omission blocks the plan.
 **Long-source gate (hard):** if the `source size:` field marks the source over-threshold
 (Long-source mode step 0), the plan MUST carry a **Source-coverage map** with a disposition for
-every `map` TOC chapter (a "cut" is a conscious, justified cut, never an absence) **and** the
-"deep-read verbatim vs. mapped/skimmed" line filled — a missing or partial map, or an over-threshold
-source with no map at all, is **not ready** and blocks the plan exactly like a dropped brief point.
+every **skeleton section** (the `map` TOC, or the recorded reconstructed skeleton when there is no
+TOC; every file for a multi-file source) — a "cut" is a conscious, justified cut, never an absence —
+**and** the "deep-read verbatim vs. mapped/skimmed" line filled; a missing or partial map, or an
+over-threshold source with no map at all, is **not ready** and blocks the plan like a dropped brief point.
 **Emphasis test:** predict, from your brief alone, what the source's own
 abstract/conclusion stresses most; if your one-sentence message would surprise the authors, it's
 wrong — fix it before continuing.
@@ -113,61 +114,83 @@ The governing truth: **importance is relative to the deck's PURPOSE.** A book ho
 "important" points; which ones matter is set by what THIS deck is for and who reads it — you are
 not summarising the book, you are finding the **one through-line that serves this deck, plus its
 evidence, and letting the rest go on purpose.** Work in this order:
-0. **Classify the source deterministically — don't eyeball "long".** For any PDF/doc source, run
-   `python scripts/extract_pdf.py map <src.pdf>` (or `info`) and **record its page + token estimate
-   as the comprehension brief's `source size:` field.** 🔴 **If it is over ~40–50 pages (or a token
-   estimate that won't fit a faithful single pass), long-source mode + a Source-coverage map are
-   REQUIRED** — the §1 self-verify gate below blocks a plan that skips them for an over-threshold
-   source. This converts "is it long?" from a silent judgment into a recorded, checkable field; a
-   book that "technically fits the window" is still long (the worst case is exactly the read that
-   *fits and goes shallow, then fabricates*).
+0. **Classify the source deterministically — don't eyeball "long".** Record a page + token estimate
+   as the comprehension brief's `source size:` field, by source type: **PDF / EPUB** → `python
+   scripts/extract_pdf.py map <src>` (CJK-correct load + token estimate; `info` gives page count only,
+   no tokens); **`.docx` / `.md` / a Google-Doc / a long web page** → export/convert to PDF first, or
+   fall back to a non-tool count (`wc -w`, line count) for the estimate; **a code repo** → there are no
+   pages — size it by the file/module tree (`git ls-files | wc -l`, total LOC) and triage by directory,
+   not chapters. **Multi-file / multi-volume** (vol1+vol2, a doc set) → run the estimate **per file and
+   SUM** for the decision (three "bounded" 30-pp PDFs are a 90-pp long source). 🔴 **If the total is
+   over ~40–50 pages (or a token estimate that won't fit a faithful single pass), long-source mode + a
+   Source-coverage map are REQUIRED** — the §1 self-verify gate below blocks a plan that skips them for
+   an over-threshold source. This converts "is it long?" from a silent judgment into a recorded,
+   checkable field; a book that "technically fits the window" is still long (the worst case is exactly
+   the read that *fits and goes shallow, then fabricates*).
 1. **Anchor on the deck's job FIRST.** Lock purpose + audience + length before reading deeply, so
    every later "keep / cut" call has a yardstick. (A practitioner deck mines the how-to chapters; a
    survey deck mines the frameworks — the "reader-needed parts" are audience-relative, so they can't
    be chosen before the audience is.)
 2. **Map before you read (cheap, no body text).** The `map` run from step 0 gives the author's own
    TOC/bookmarks (the first prioritisation signal) + a word-density *shape* cue (front/back-matter,
-   figure/reference bulk — **not** an importance signal). The TOC is your skeleton; mark the chapters
-   that plausibly carry the deck's message. **No embedded TOC?** Reconstruct a skeleton with `text`:
-   scan for heading lines / chapter titles, or fall back to fixed-size page windows and recover each
-   window's section title — then triage on that; note in the plan that the read cost is higher.
-3. **Hierarchical read (map-reduce), NEVER one linear pass.** Chunk by chapter
-   (`extract_pdf.py text <pdf> <start> <end> ch.txt`), write a structured note per chunk — thesis ·
-   key claims · evidence · quotes · figures — **each tagged with page numbers**, then reduce those
-   notes into the one comprehension brief. **A book's chapters ARE severable at the *reading* layer**
-   — unlike a single paper's tightly-coupled intro/method/results (the "never split one paper" rule
-   in *Why you exist*), chapters can be read in parallel — **provided the understanding, the arc, and
-   every verified claim are re-derived by ONE mind from the real pages** (§5). Fan out the reading;
-   never fan out the synthesis. It prioritises better than a linear pass even when the book would fit.
-4. **Triage — deep-read only the load-bearing ~20% VERBATIM.** With the skeleton + chapter notes +
-   the locked angle, go back and read *verbatim* only the sections that actually carry the deck's
-   message; pull exact numbers, quotes, and figures from the real pages there. The rest stays at
-   summary altitude — that is correct, not a gap.
+   figure/reference bulk — **not** an importance signal). The TOC is your **skeleton**; mark the
+   chapters that plausibly carry the deck's message. **No embedded TOC?** Reconstruct the skeleton
+   with `extract_pdf.py headings <src> [start] [end]` (emits candidate heading lines by font-size
+   outlier — no whole-book read); if the book is single-size, fall back to fixed-size page windows and
+   title each from its first line. Either way **record the reconstructed skeleton in the plan** — it
+   is the ground-truth chapter list the coverage gate (step 6) diffs against, so a no-TOC book is
+   gated exactly like a TOC'd one; note that the read cost is higher.
+3. **Hierarchical read (map-reduce), NEVER one linear pass — and BUDGETED.** Read **only the chapters
+   you'll build-around or summarise** (from the step-2 skeleton + the locked angle); a chapter you
+   `cut` is dispositioned from its TOC/skeleton line **without reading it** (that is where the savings
+   come from — "note every chapter" would defeat the triage). For the kept chapters, `extract_pdf.py
+   text <src> <start> <end> ch.txt` → a structured note per chunk (thesis · key claims · evidence ·
+   quotes · figures) **tagged with page numbers**, reduced into the one comprehension brief. **Bound
+   the total:** keep verbatim deep-reading to ~20% (step 4) and summary-reading to a sane ceiling; if
+   even summary-reading the kept chapters blows the budget (a 1500-pp book), the slice is too wide —
+   narrow the angle or ask the user to pick chapters. **A book's chapters ARE severable at the
+   *reading* layer** — unlike a single paper's tightly-coupled intro/method/results (the "never split
+   one paper" rule in *Why you exist*), chapters can be read in parallel — **provided the
+   understanding, the arc, and every verified claim are re-derived by ONE mind from the real pages**
+   (step 5). Fan out the reading; never fan out the synthesis.
+4. **Triage — deep-read only the load-bearing ~20% VERBATIM.** Among the kept chapters, go back and
+   read *verbatim* only the sections that actually carry the deck's message; pull exact numbers,
+   quotes, and figures from the real pages there. The rest stays at summary altitude — that is correct,
+   not a gap. **Figures for slides:** extract them **per page from the plan's Visual-source locators**
+   (`extract_pdf.py figures <src> <page>` → `figure … <idx>`), scoped to that page — never `autofig`
+   the whole book (it returns hundreds and its global indices shift between runs; pin a figure by
+   page + caption label, not a bare index).
 5. **Trace every slide-bound claim to a page — a chunk note is corroboration, not a source.** The
    long-source fabrication risk is the highest of any deck (plausible-but-absent claims; mis-attributing
    which chapter said what). So the PROVENANCE CONTRACT (§2) applies to **book/source pages too, not
    just web claims**: **`verified? = Y` may be set only by re-opening the actual page and comparing the
-   verbatim value**, and the ledger's `source` column must cite that page (`p.NNN`). A row whose only
-   provenance is your own chapter note or a reading subagent's summary is **`verified? = N` — not
-   shippable** (the exact hazard: a note-derived "fact" otherwise passes every downstream check).
+   verbatim value**, and the ledger's `source` column must cite that page (`p.NNN`, or **`<file>:p.NNN`
+   for a multi-file / multi-volume source** so a page number is unambiguous across volumes). A row
+   whose only provenance is your own chapter note or a reading subagent's summary is **`verified? = N`
+   — not shippable** (the exact hazard: a note-derived "fact" otherwise passes every downstream check).
 6. **Make the SELECTION explicit and BLOCKING — the biggest long-source risk is building around the
    WRONG SLICE** (not misreading one figure). Emit a **Source-coverage map** (Output section): **every
-   major chapter/section in the `map` TOC gets a row** with a disposition — *built-around / summarised
-   / cut* — and any *cut* is a conscious, one-clause-justified cut, never a silent absence. This
-   extends the COVERAGE GATE to the *source→brief* axis (the brief→slide diff can't see a chapter
-   dropped during triage, because it never became a brief point) — **a TOC chapter missing from the
-   map blocks the plan**, same as a dropped brief key point. **Surface it EARLY:** show the coverage
-   map to the user right after mapping+triage (steps 2–3), *before* sinking the verbatim deep-read of
-   step 4 — that is when a wrong-slice correction is cheapest — and it rides the CONTENT checkpoint
-   again before design/build.
+   section in the SKELETON gets a row** — the `map` TOC, *or* the step-2 reconstructed skeleton when
+   there is no embedded TOC (multi-file: every file's skeleton, with a `file/volume` column) — each
+   with a disposition — *built-around / summarised / cut* — and any *cut* is a conscious,
+   one-clause-justified cut, never a silent absence. This extends the COVERAGE GATE to the
+   *source→brief* axis (the brief→slide diff can't see a chapter dropped during triage, because it
+   never became a brief point) — **a skeleton section missing from the map blocks the plan**, same as
+   a dropped brief key point (which is why the reconstructed skeleton is recorded in the plan: the gate
+   needs a ground-truth list to diff against). **Surface it EARLY:** show the coverage map to the user
+   right after mapping+triage (steps 2–3), *before* sinking the verbatim deep-read of step 4 — that is
+   when a wrong-slice correction is cheapest — and it rides the CONTENT checkpoint again before
+   design/build.
 
 **Honest limits — state them, never fake them.** A **scanned / image-only or DRM-locked** PDF yields
 no extractable text (`map`/`text` print a `⚠ NO extractable text` warning) — say so and ask for a text
-version, OCR, or the specific chapters, rather than inventing contents. When the book is huge and the
-angle is genuinely **subjective**, the slice is the user's call — propose one and confirm it, or ask
-them to point you at the chapters that matter. And **never claim you "read the whole book" when you
-triaged it** — record in the plan what you deep-read verbatim vs. mapped/skimmed. That honesty is what
-keeps the deck trustworthy; a confident deck built on a shallow read is the failure this mode prevents.
+version, OCR, or the specific chapters, rather than inventing contents. A **`.docx` / Google-Doc /
+web page / code repo** isn't a paginated PDF — convert it first (or size it by the non-tool heuristic
+in step 0) rather than assuming the PDF tooling applies. When the book is huge and the angle is
+genuinely **subjective**, the slice is the user's call — propose one and confirm it, or ask them to
+point you at the chapters that matter. And **never claim you "read the whole book" when you triaged
+it** — record in the plan what you deep-read verbatim vs. mapped/skimmed. That honesty is what keeps
+the deck trustworthy; a confident deck built on a shallow read is the failure this mode prevents.
 
 ### 2 — Research and fact-check the web (for any deck, not just no-source)
 Use the web for **three jobs**, and run it whether or not you have a source:
@@ -437,19 +460,22 @@ Produce a single, human-readable **Content plan** (markdown) the user can approv
 ## Comprehension brief
 The fixed-field artifact from §1, **every field filled and traced** to a locatable source span
 (one-sentence message + its verbatim source sentence and location; contributions; method essence;
-per figure/table/chart/screenshot one row naming the carrying element; nuance/limitation quoted).
+per figure/table/chart/screenshot one row naming the carrying element; nuance/limitation quoted;
+**plus, for a long source, the `source size:` field** — pages + token estimate from Long-source
+mode step 0, the recorded basis for the over-threshold classification).
 This is not optional preamble — it's the evidence the rest of the plan stands on, and the content
 checkpoint reviews it first. A brief with empty / hedged / untraced fields is **not ready**.
 
 ## Source-coverage map  *(long-source decks only — a book / very long PDF; omit entirely for a bounded source)*
-One row per major chapter / section — **every chapter in the `map` TOC gets a row**: `section |
-pages | disposition (built-around / summarised / cut) | why`. This makes the SELECTION reviewable —
-it is the coverage gate at book scale (the *source→brief* axis the brief→slide diff can't see) — so
-the CONTENT checkpoint can confirm the chosen slice **and the conscious cuts**. Also state, in one
-line, **what you deep-read verbatim vs. mapped / skimmed**, so the depth of the read is never
-overclaimed. For an over-threshold source (Long-source mode step 0) this section is **required**: a
-TOC chapter with no row, a "cut" with no one-clause reason, or a missing verbatim-vs-skimmed line is
-**not ready** and blocks the plan.
+One row per **skeleton** section — the `map` TOC, or the step-2 reconstructed skeleton when there is
+no embedded TOC (record that skeleton so the gate has a ground-truth list): `[file/volume] | section
+| pages | disposition (built-around / summarised / cut) | why` (the `file/volume` column only for a
+multi-file source). This makes the SELECTION reviewable — it is the coverage gate at book scale (the
+*source→brief* axis the brief→slide diff can't see) — so the CONTENT checkpoint can confirm the chosen
+slice **and the conscious cuts**. Also state, in one line, **what you deep-read verbatim vs. mapped /
+skimmed**, so the depth of the read is never overclaimed. For an over-threshold source (Long-source
+mode step 0) this section is **required**: a skeleton section with no row, a "cut" with no one-clause
+reason, or a missing verbatim-vs-skimmed line is **not ready** and blocks the plan.
 
 ## Claim ledger
 The table from §2 — one row per falsifiable claim: `claim | type | source | verbatim value/quote |

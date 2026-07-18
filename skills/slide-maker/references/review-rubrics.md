@@ -358,7 +358,11 @@ Score each dimension; cite specific slides.
    COVERAGE:** diff the deck against the source's own key points / contributions / headline
    results — a key point *silently* missing from the deck is a **major** (completeness is part of
    faithfulness; compression is editing, silent omission is misrepresentation); a consciously-cut
-   point must be visible in the plan's open questions / hand-off, not just absent. Does the deck
+   point must be visible in the plan's open questions / hand-off, not just absent. **For a
+   long-source deck (a book / very long PDF), completeness is judged against the approved
+   Source-coverage map's *built-around + summarised* set — NOT the whole book:** a section the map
+   marks `cut` is a conscious cut (not a silent omission), so don't raise a "missing" finding against
+   it; conversely, a `built-around` chapter absent from the deck IS a finding. Does the deck
    represent the source's *actual emphasis* (e.g. a comparison table foregrounds the
    authors' comparison — baseline vs. the proposed thing — not a distracting one)? A
    caption that disagrees with its figure, a wrong number, or an over-claimed trend is a
@@ -396,11 +400,14 @@ Score each dimension; cite specific slides.
    **Currency:** if the deck makes time-bound / falsifiable claims (a "latest / current", a count, a
    ranking, a dated event), confirm it carries an **as-of date** (as the planner requires) and that
    nothing dated has silently gone stale (last year's figure presented as this year's is a finding).
-   **Web-sourced claims (the planner's PROVENANCE CONTRACT, `agents/content-planner.md` §2) —
-   applies whenever the ledger carries web-sourced rows, INCLUDING no-source decks (this item's
-   "source exists" scoping does not exempt them; a no-source deck is where these checks matter most):**
-   a load-bearing claim traceable only to an aggregator/secondary source — or refuted when re-traced
-   to its primary — is a **blocker**; **spliced figures** (numbers from different sources/dates
+   **Web- OR book/long-source-page-sourced claims (the planner's PROVENANCE CONTRACT,
+   `agents/content-planner.md` §2) — applies whenever the ledger carries web-sourced rows, INCLUDING
+   no-source decks (this item's "source exists" scoping does not exempt them; a no-source deck is where
+   these checks matter most), AND to long-source decks where the `source` column is a book page
+   (`p.NNN` / `<file>:p.NNN`): a book claim whose only provenance is a chapter note or reading-subagent
+   summary rather than the re-opened page counts as unverified (`verified?=N`) and must not ship as
+   fact:** a load-bearing claim traceable only to an aggregator/secondary source — or refuted when
+   re-traced to its primary — is a **blocker**; **spliced figures** (numbers from different sources/dates
    paired on one slide as a single current fact) are a **major**, because each number can be real
    while the pairing misleads; **quote-mark abuse** (quotation marks around non-contiguous, altered,
    or paraphrased words — including a relative claim hardened into an absolute) is a **major**: fix

@@ -29,6 +29,28 @@ section is a distilled summary — the full notes live on the
 - SKILL.md wiring: a long-source case in Step 1, the Source-coverage/SELECTION gate on the CONTENT
   checkpoint, and nav-table + Files rows pointing at the mode and its tooling.
 
+### Robustness — non-PDF · multi-file · no-TOC · CJK · graceful tooling (hardened from a 4-lens adversarial audit)
+- **Non-PDF & multi-file sources** — the mode no longer assumes a single PDF. Step 0 classifies by
+  type: PDF/EPUB via `extract_pdf.py map`; `.docx`/`.md`/Google-Doc/web → convert or a `wc`-style
+  count; a code repo → size the file tree; **multi-file/multi-volume → sum pages/tokens across
+  files**, with per-file coverage rows and `<file>:p.NNN` provenance cites.
+- **No-TOC books genuinely gated** — the Source-coverage gate is re-keyed from "every `map` TOC
+  chapter" to "every **skeleton** section (TOC *or* a recorded reconstructed skeleton)", so a no-TOC
+  book can't pass vacuously; new `extract_pdf.py headings` reconstructs the skeleton by font-size
+  outlier (no whole-book read).
+- **CJK sizing fixed** — `map`/`text` used `.split()`, undercounting Chinese/Japanese/Korean 10-30×
+  so a dense CJK book evaded the token trigger; now a CJK-aware load (`latin words + CJK chars / 2`).
+- **Reading budgeted** — only `built-around`/`summarised` chapters are read; `cut` chapters are
+  dispositioned from the skeleton unread; verbatim stays ~20% with a total ceiling; figures extracted
+  per page from the plan's locators, never `autofig` over the whole book.
+- **`extract_pdf.py` fails gracefully** — `_open` catches missing/corrupt/unopenable files (clean
+  message + exit 1, no traceback) and flags a non-PDF; `map` warns on scanned PDFs; `text` counts
+  body-only (excludes PAGE markers), rejects bad ranges, writes UTF-8; arg parsing prints usage, not
+  tracebacks.
+- **Critic rubric mirrors the planner** — `review-rubrics.md` item 10 widened: PROVENANCE covers
+  book-page claims (a chapter-note-only "fact" = unverified), COVERAGE judged against the approved
+  Source-coverage map's built-around/summarised set.
+
 ## [3.2.0] - 2026-07-18
 
 ### Added

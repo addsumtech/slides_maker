@@ -211,7 +211,7 @@ every **🔴 CHECKPOINT** is a hard stop.
 | The craft / the "why" (contrast · hierarchy · C.R.A.P. · layout safety) | `references/design-principles.md` |
 | Per-purpose look (defense vs exec vs lecture …) | `references/design-by-purpose.md` |
 | Content — deep read + per-slide message (Step 1) | `agents/content-planner.md` |
-| Long source (book / very long PDF) — map → triage → deep-read the load-bearing 20% + coverage map | `agents/content-planner.md` §1 (long-source mode) · `scripts/extract_pdf.py map`/`text` |
+| Long source (book / very long PDF / repo / multi-volume) — map → triage → deep-read the load-bearing 20% + coverage map | `agents/content-planner.md` §1 (long-source mode) · `scripts/extract_pdf.py map`/`text`/`headings` |
 | Look / form / layout / rhythm / icons / motion (Step 2) | `agents/slide-design.md` |
 | Independent review + JSON schema | `agents/critic.md` · `agents/arbiter.md` · `references/review-rubrics.md` |
 | Which visual FORM a slide takes (avoid the card-grid default) | `references/form-selection.md` |
@@ -634,6 +634,10 @@ A deck is only as good as your grasp of the material — a superficial read prod
 deck that *looks* right but misrepresents the work, which an expert audience spots
 instantly. Read **all of it**, not the abstract: run the code's README, read the
 paper end-to-end (intro → method → **every results table/figure** → conclusion).
+*(That end-to-end read is the default for a BOUNDED source; for a LONG source — a book /
+very long PDF / large corpus — do NOT fake a single linear read: classify the size, then
+run **long-source mode** (map → triage → deep-read the load-bearing ~20% + a blocking
+Source-coverage map). See the long-source bullet below and `content-planner.md` §1.)*
 
 Then **write a comprehension brief — a REQUIRED, fixed-field, source-traced artifact** (the
 planner's `agents/content-planner.md` §1 is the spec); every field must trace to a locatable
@@ -697,20 +701,26 @@ inventing — it's fidelity to what's *true now*.
   approves it — a no-source deck is gated the same as any other: once at the CONTENT
   checkpoint (Step 1), then again at the DESIGN checkpoint (Step 2).
 
-- **A long source (a book / very long PDF / large corpus)** — one you can't read faithfully in a
-  single pass — is NOT read front-to-back: a faked linear read either overflows or, worse, *fits*
-  and goes shallow, then invents plausible-but-absent points. Run the planner's **Long-source mode**
-  (`agents/content-planner.md` §1): (1) anchor on the deck's purpose/audience FIRST (importance is
-  purpose-relative), (2) **map the structure** — `python scripts/extract_pdf.py map <book.pdf>` (TOC
-  + word-density, no body text), (3) read chapter-by-chapter — `extract_pdf.py text <pdf> <start>
-  <end>` — into page-tagged chapter notes (map-reduce; fan out the *reading*, synthesise as one
-  mind), (4) **deep-read *verbatim* only the load-bearing ~20%** for the claims that land on slides,
-  (5) trace every slide-bound claim to a real page (a chapter note is corroboration, not a source).
-  The plan then carries a **Source-coverage map** (each chapter → built-around / summarised / cut)
-  so the SELECTION is explicit — on a book the biggest risk is building around the *wrong slice*, not
-  misreading one figure. A **scanned / image-only or DRM-locked** PDF yields no extractable text
-  (`map`/`text` come back empty) — say so and ask for a text version, OCR, or the specific chapters,
-  never hallucinate the contents.
+- **A long source (a book / very long PDF / large corpus / multi-volume set)** — one you can't read
+  faithfully in a single pass — is NOT read front-to-back: a faked linear read either overflows or,
+  worse, *fits* and goes shallow, then invents plausible-but-absent points. Run the planner's
+  **Long-source mode** (`agents/content-planner.md` §1): (1) **classify size deterministically** —
+  PDF/EPUB → `python scripts/extract_pdf.py map <src>` (CJK-correct load + token estimate); `.docx`/
+  `.md`/Google-Doc/web → convert to PDF first or use a `wc`-style count; a code repo → size the file
+  tree; **multi-file → sum across files** — recorded as the brief's `source size:` field; over
+  ~40–50 pp (or a token estimate that won't fit one pass) FORCES the mode, (2) anchor on purpose FIRST,
+  (3) **map the structure** — TOC/bookmarks + density; **no TOC? `extract_pdf.py headings <src>`**
+  reconstructs a skeleton by font-size outlier (recorded in the plan), (4) read **only the chapters
+  you'll build-around/summarise** into page-tagged notes (`extract_pdf.py text <src> <start> <end>`;
+  fan out the *reading*, synthesise as one mind; `cut` chapters are dispositioned from the skeleton,
+  unread), (5) **deep-read *verbatim* only the load-bearing ~20%**, tracing every slide-bound claim
+  to a real page (`<file>:p.NNN`; a chapter note is corroboration, not a source), extracting figures
+  **per page** from the plan's locators (never `autofig` the whole book). The plan then carries a
+  **Source-coverage map** (every skeleton section → built-around / summarised / cut) so the SELECTION
+  is explicit — on a book the biggest risk is building around the *wrong slice*, not misreading one
+  figure. A **scanned / image-only or DRM-locked** PDF yields no extractable text (`map`/`text` print
+  a `⚠ NO extractable text` warning) — say so and ask for a text version, OCR, or the specific
+  chapters, never hallucinate the contents.
 
 **End Step 1 at the 🔴 CONTENT checkpoint — pace-check first, then approve the story.** The
 Content plan is the cheapest place to fix a misread or a wrong emphasis, so present it *before any
@@ -2084,8 +2094,9 @@ A checkable red-flag list; if a draft does any of these, stop and fix it before 
 - `image_fx.py` — `duotone(img, ink_a, ink_b)` / `grayscale(img)` — preprocess a colour photo to the
   deck's ink so it doesn't fight the accent (riso/brutalist/ink/luxury/museum). See `design-gallery.md`.
 - `extract_pdf.py` (crop a figure from a PDF — `figures`/`figure`/`autofig` auto-detect, `page`/`crop`
-  manual; **plus the long-source pair `map` (TOC + word-density skeleton) and `text` (page-range dump
-  for chunked reading)** — the tooling for the content-planner's long-source mode) · `crop_helper.py`
+  manual; **plus the long-source trio `map` (TOC + CJK-aware word-density skeleton), `text` (page-range
+  dump for chunked reading), and `headings` (reconstruct a skeleton for a no-TOC book)** — the tooling
+  for the content-planner's long-source mode) · `crop_helper.py`
   (crop/trim/panel **by looking, not guessing**) · `extract_deck.py` (pull content out of an existing
   deck — the redesign path).
 **Agents** (`agents/`): `content-planner.md` (Step-1 CONTENT deep-understand + claim ledger + per-slide message; the content checkpoint) · `slide-design.md` (the art director — Step-2 design language + per-slide form/layout/rhythm + icons + appear-animation + the Form ledger; the design checkpoint) · `critic.md` (independent critic brief — the two review lenses + JSON schema) · `arbiter.md` (high-stakes finding cross-validation + fix-verification; no-op low-stakes) · `asset-prep.md` (execution-only asset materializer — crops/equations/plates/icons after the design plan is approved; zero design decisions) · `openai.yaml` (Codex display metadata).

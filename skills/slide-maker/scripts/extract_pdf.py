@@ -39,11 +39,15 @@ Quick start (manual fallback):
     python extract_pdf.py images paper.pdf 4 figdir/          # embedded images -> figdir/
 
 LONG-SOURCE MODE (a book / very long PDF — map before you read, then read the parts that matter):
-    python extract_pdf.py map  book.pdf                       # structural skeleton: TOC + word-density
-    python extract_pdf.py text book.pdf 40 72 ch3.txt        # dump pages 40-72 for a chunked read
-`map` dumps NO body text (it is triage: page/word/token estimate + the author's own TOC/bookmarks +
-a binned density strip); `text` dumps a 1-indexed inclusive page range, keeping PAGE markers so
-every claim traces back to a real page. See the content-planner's long-source method.
+    python extract_pdf.py map      book.pdf                   # structural skeleton: TOC + word-density
+    python extract_pdf.py headings book.pdf 1 400            # reconstruct a skeleton for a NO-TOC book
+    python extract_pdf.py text     book.pdf 40 72 ch3.txt    # dump pages 40-72 for a chunked read
+`map` dumps NO body text (triage only: page + CJK-aware load/token estimate + the author's own
+TOC/bookmarks + a binned density strip, and a ⚠ if the doc is scanned/non-PDF); `headings` emits
+candidate heading lines by font-size outlier when there's no embedded TOC; `text` dumps a 1-indexed
+inclusive page range, keeping PAGE markers so every claim traces back to a real page. Works on any
+fitz-openable doc (PDF/EPUB/…); convert .docx/.md/web to PDF first. See the content-planner's
+long-source method.
 
 To find a manual crop box: render the page once, open the PNG, read off the figure's pixel
 box with `crop_helper.py grid`, divide by the render scale (dpi/72) to get points — or use
@@ -51,6 +55,7 @@ box with `crop_helper.py grid`, divide by the render scale (dpi/72) to get point
 """
 import sys
 import os
+import re
 import fitz   # PyMuPDF
 
 # _rect_area_compat: pymupdf>=1.26 removed Rect.get_area()
@@ -60,10 +65,29 @@ if not hasattr(fitz.Rect, "get_area"):
 
 
 def _open(pdf):
-    doc = fitz.open(pdf)
+    if not os.path.exists(pdf):
+        raise SystemExit(f"no such file: {pdf}")
+    try:
+        doc = fitz.open(pdf)
+        _ = doc.page_count                       # force a parse so a corrupt file fails HERE, cleanly
+    except Exception as e:                       # corrupt / not a document fitz understands
+        raise SystemExit(f"can't open {pdf!r} as a document ({e.__class__.__name__}: {e}) — "
+                         "expected a complete, non-corrupt PDF (or EPUB/XPS/…).")
     if doc.needs_pass:
-        raise SystemExit("PDF is password-protected — can't read it.")
+        raise SystemExit("PDF is password-protected — can't read it. Supply an unlocked copy.")
     return doc
+
+
+_CJK = re.compile(r"[㐀-鿿豈-﫿぀-ヿ가-힯]")
+
+
+def _load(s):
+    """Reading load = latin words + CJK chars / 2 (matches the skill's lint/plan counter, so the
+    `source size:` trigger is correct for Chinese/Japanese/Korean, where whitespace-splitting would
+    undercount 10-30x)."""
+    cjk = len(_CJK.findall(s))
+    latin = len(_CJK.sub(" ", s).split())
+    return latin + cjk // 2
 
 
 def info(pdf):
@@ -87,10 +111,12 @@ def outline_map(pdf, bins=30):
     NOT an importance signal (the TOC + the deck's purpose drive what matters). Dumps NO
     body text — this is triage; pull the chapters that matter with `text` afterwards."""
     doc = _open(pdf)
-    wpp = [len(page.get_text("text").split()) for page in doc]
+    wpp = [_load(page.get_text("text")) for page in doc]
     total = sum(wpp)
     pc = doc.page_count
-    print(f"{pdf}: {pc} pages · ~{total:,} words · ~{total * 4 // 3:,} tokens est.")
+    fmt = (doc.metadata or {}).get("format", "") or "?"
+    note = "" if doc.is_pdf else f"  ⚠ opened as {fmt}, NOT a PDF — confirm this is the file you meant"
+    print(f"{pdf}: {pc} pages · ~{total:,} load-words · ~{total * 4 // 3:,} tokens est.  [{fmt}]{note}")
     # scanned / image-only / DRM guard — get_text() returns "" on image-only pages, so a
     # scanned book would otherwise print a normal-looking (but empty) skeleton.
     empty = sum(1 for w in wpp if w == 0)
@@ -125,17 +151,17 @@ def dump_text(pdf, start, end, out=None):
     Returns 0 on success, 1 on an unusable range (so the caller can fail loudly)."""
     doc = _open(pdf)
     pc = doc.page_count
-    if start > pc or start > end:
+    if start < 1 or end < 1 or start > end or start > pc:
         doc.close()
-        print(f"error: requested pages {start}-{end} but PDF has {pc} pages — nothing to dump")
+        print(f"error: bad page range {start}-{end} — need 1 ≤ start ≤ end ≤ {pc} (PDF has {pc} pages)")
         return 1
     start = max(1, start)
     end = min(end, pc)
     parts = []
-    body_words = 0                           # count BODY only, never the PAGE markers
+    body_words = 0                           # count BODY only (CJK-aware), never the PAGE markers
     for p in range(start, end + 1):
         t = doc[p - 1].get_text("text")
-        body_words += len(t.split())
+        body_words += _load(t)
         parts.append(f"\n===== PAGE {p} =====\n" + t)
     doc.close()
     text = "".join(parts)
@@ -145,9 +171,51 @@ def dump_text(pdf, start, end, out=None):
     if out:
         with open(out, "w", encoding="utf-8") as f:
             f.write(text)
-        print(f"wrote pages {start}-{end} -> {out} ({body_words:,} words)")
+        print(f"wrote pages {start}-{end} -> {out} ({body_words:,} load-words)")
     else:
         print(text)
+    return 0
+
+
+def headings(pdf, start=1, end=None, limit=250):
+    """Reconstruct a skeleton for a NO-TOC book — emit candidate heading lines (font-size
+    outliers: larger than the range's dominant body size) with their page, so a book with no
+    embedded bookmarks can still be triaged into a Source-coverage map WITHOUT reading every
+    word. A heuristic aid, not ground truth — view it and pick the real chapter breaks."""
+    from collections import Counter
+    doc = _open(pdf)
+    pc = doc.page_count
+    start = max(1, start)
+    end = min(end or pc, pc)
+    if start > end:
+        doc.close(); print(f"error: bad page range {start}-{end} (PDF has {pc} pages)"); return 1
+    sizes = Counter()
+    spans = []
+    for p in range(start, end + 1):
+        for blk in doc[p - 1].get_text("dict").get("blocks", []):
+            for line in blk.get("lines", []):
+                txt = "".join(sp["text"] for sp in line.get("spans", [])).strip()
+                if not txt or not line.get("spans"):
+                    continue
+                sz = round(max(sp["size"] for sp in line["spans"]), 1)
+                sizes[sz] += len(txt)
+                spans.append((p, sz, txt))
+    doc.close()
+    if not sizes:
+        print("no extractable text (scanned/image-only) — can't reconstruct headings; needs OCR")
+        return 1
+    body = sizes.most_common(1)[0][0]        # dominant size = body text
+    print(f"candidate headings (body ≈ {body}pt; lines ≥ {body * 1.15:.1f}pt, ≤ 90 chars):")
+    shown = 0
+    for p, sz, txt in spans:
+        if sz >= body * 1.15 and len(txt) <= 90:
+            print(f"  p{p:<5} {sz:>5}pt  {txt}")
+            shown += 1
+            if shown >= limit:
+                break
+    if not shown:
+        print("  (no font-size outliers — the book may be single-size; fall back to fixed-size page "
+              "windows and title each window from its first line)")
     return 0
 
 
@@ -729,9 +797,27 @@ def _main(argv):
     if cmd == "info":
         info(pos[0])
     elif cmd == "map":                            # long-source: structural skeleton (TOC + density)
+        if not pos:
+            print("usage: extract_pdf.py map <src.pdf>"); return 1
         outline_map(pos[0])
+    elif cmd == "headings":                       # long-source: reconstruct a skeleton (no-TOC books)
+        if not pos:
+            print("usage: extract_pdf.py headings <src.pdf> [start] [end]"); return 1
+        try:
+            s = int(pos[1]) if len(pos) > 1 else 1
+            e = int(pos[2]) if len(pos) > 2 else None
+        except ValueError:
+            print("usage: extract_pdf.py headings <src.pdf> [start] [end]  (start/end integers)"); return 1
+        return headings(pos[0], s, e)
     elif cmd == "text":                           # long-source: dump a page range for chunked reading
-        return dump_text(pos[0], int(pos[1]), int(pos[2]), pos[3] if len(pos) > 3 else None)
+        if len(pos) < 3:
+            print("usage: extract_pdf.py text <pdf> <start> <end> [out]  "
+                  "(start/end are 1-based page numbers)"); return 1
+        try:
+            s, e = int(pos[1]), int(pos[2])
+        except ValueError:
+            print("usage: extract_pdf.py text <pdf> <start> <end> [out]  (start/end are integers)"); return 1
+        return dump_text(pos[0], s, e, pos[3] if len(pos) > 3 else None)
     elif cmd == "page":
         render_page(pos[0], int(pos[1]), pos[2], dpi=flags.get("dpi", 300))
     elif cmd == "crop":
@@ -758,4 +844,10 @@ def _main(argv):
 
 
 if __name__ == "__main__":
-    sys.exit(_main(sys.argv))
+    try:
+        sys.exit(_main(sys.argv))
+    except SystemExit:
+        raise
+    except RuntimeError as e:                # mupdf content error surfaced mid-processing
+        print(f"error: {e} — the document may be corrupt or partially unreadable.")
+        sys.exit(1)
