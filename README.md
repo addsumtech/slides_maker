@@ -11,7 +11,10 @@
   <img alt="Output: editable PPTX" src="https://img.shields.io/badge/output-native_editable_PPTX-0f766e">
   <a href="https://skillhub.cloud.tencent.com/skills/slides-maker"><img alt="Tencent SkillHub" src="https://img.shields.io/badge/Tencent_SkillHub-get_it-2f6feb"></a>
   <a href="https://xiaping.coze.com/skill/c0136d99-50d0-4f05-909a-f78fa4be7104"><img alt="Coze" src="https://img.shields.io/badge/Coze-get_it-6653f5"></a>
-  <a href="https://clawhub.ai/dong845/skills/slide-maker"><img alt="ClawHub" src="https://img.shields.io/badge/ClawHub-install_via_OpenClaw-e8590c"></a>
+</p>
+
+<p align="center">
+  <a href="https://clawhub.ai/dong845/skills/slide-maker"><img alt="ClawHub" src="https://img.shields.io/badge/ClawHub-via_OpenClaw-e8590c.svg"></a>
   <a href="https://chatgpt.com/g/g-6a5b41f0a33881918be69e8b10f8b4ff-slide-maker-gpt"><img alt="ChatGPT GPT Store" src="https://img.shields.io/badge/GPT_Store-slide--maker_GPT-10a37f"></a>
 </p>
 

@@ -11,7 +11,10 @@
   <img alt="Output: editable PPTX" src="https://img.shields.io/badge/output-native_editable_PPTX-0f766e">
   <a href="https://skillhub.cloud.tencent.com/skills/slides-maker"><img alt="腾讯 SkillHub" src="https://img.shields.io/badge/%E8%85%BE%E8%AE%AF_SkillHub-%E7%AB%8B%E5%8D%B3%E8%8E%B7%E5%8F%96-2f6feb"></a>
   <a href="https://xiaping.coze.com/skill/c0136d99-50d0-4f05-909a-f78fa4be7104"><img alt="Coze 扣子" src="https://img.shields.io/badge/Coze_%E6%89%A3%E5%AD%90-%E7%AB%8B%E5%8D%B3%E8%8E%B7%E5%8F%96-6653f5"></a>
-  <a href="https://clawhub.ai/dong845/skills/slide-maker"><img alt="ClawHub" src="https://img.shields.io/badge/ClawHub-OpenClaw_%E5%AE%89%E8%A3%85-e8590c"></a>
+</p>
+
+<p align="center">
+  <a href="https://clawhub.ai/dong845/skills/slide-maker"><img alt="ClawHub" src="https://img.shields.io/badge/ClawHub-OpenClaw_%E5%AE%89%E8%A3%85-e8590c.svg"></a>
   <a href="https://chatgpt.com/g/g-6a5b41f0a33881918be69e8b10f8b4ff-slide-maker-gpt"><img alt="ChatGPT GPT 商店" src="https://img.shields.io/badge/GPT_Store-slide--maker_GPT-10a37f"></a>
 </p>
 
