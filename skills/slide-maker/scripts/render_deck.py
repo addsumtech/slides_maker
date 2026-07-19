@@ -103,7 +103,24 @@ def main(argv):
         )
 
     if os.path.isdir(out):
-        shutil.rmtree(out, ignore_errors=True)
+        entries = os.listdir(out)
+        own_pdf = os.path.splitext(os.path.basename(pptx))[0] + ".pdf"
+        render_only = all(
+            (e.startswith(("slide", "thumb_")) and e.endswith(".png"))
+            or e == "viewer.html" or e == own_pdf          # only THIS deck's fallback pdf is ours
+            or e in (".DS_Store", "Thumbs.db")             # OS junk only — a .git/.venv must NOT
+            for e in entries)                              # make the dir look deletable
+        if render_only:
+            shutil.rmtree(out, ignore_errors=True)
+        else:
+            # out holds files that are NOT ours (worst case: the user passed "." — the pptx's own
+            # directory). NEVER rmtree it; clear only our previous render products.
+            for e in entries:
+                if (e.startswith(("slide", "thumb_")) and e.endswith(".png")) or e == "viewer.html":
+                    try:
+                        os.remove(os.path.join(out, e))
+                    except OSError:
+                        pass
     os.makedirs(out, exist_ok=True)
 
     # Give this invocation its OWN LibreOffice profile: lets parallel renders (the
@@ -157,9 +174,85 @@ def main(argv):
         for name, (_, page) in (("thumb_first", pages[0]), ("thumb_last", pages[-1])):
             zoom = 240.0 / max(1.0, page.rect.width)
             page.get_pixmap(matrix=fitz.Matrix(zoom, zoom)).save(os.path.join(out, name + ".png"))
-    print("rendered {} slides -> {}".format(doc.page_count, out))
+    n_pages = doc.page_count
+    doc.close()
+
+    # Keep the PDF as a first-class deliverable: the pipeline already paid for it (pptx -> PDF is
+    # step one of this render), so park it beside the .pptx instead of leaving it buried in the
+    # render dir — submissions, email and printing all want it. Cross-platform (plain os.replace).
+    pdf_dest = os.path.join(os.path.dirname(os.path.abspath(pptx)) or ".",
+                            os.path.splitext(os.path.basename(pptx))[0] + ".pdf")
+    try:
+        if os.path.abspath(pdf_dest) != os.path.abspath(pdf):
+            os.replace(pdf, pdf_dest)
+    except OSError:
+        pdf_dest = pdf                     # couldn't move (odd mount/permissions) — it stays in out/
+
+    # Self-contained flip-through viewer beside the PNGs — one file:// link the user can open in
+    # any browser on any OS (arrow keys / click / thumbnail strip). Zero dependencies, zero network.
+    slides = ["slide{:02d}.png".format(i) for i in range(1, n_pages + 1)]
+    viewer = os.path.join(out, "viewer.html")
+    try:
+        with open(viewer, "w", encoding="utf-8") as f:
+            f.write(_viewer_html(os.path.splitext(os.path.basename(pptx))[0], slides))
+    except OSError:
+        viewer = None
+    print("rendered {} slides -> {}".format(n_pages, out))
+    print("pdf: {}".format(pdf_dest))
+    if viewer:
+        print("preview: {}  (open in a browser; arrow keys flip)".format(
+            Path(viewer).resolve().as_uri()))
     print("next: python3 {} {} --renders {}  # render-time lint, then the actor-critic loop".format(
         os.path.join(os.path.dirname(os.path.abspath(__file__)), "lint_deck.py"), pptx, out))
+
+
+def _viewer_html(title, slides):
+    """Single-file dark flip-through viewer: big slide + thumbnail rail + keyboard/click nav."""
+    import json
+    return """<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{title} — preview</title>
+<style>
+  :root {{ color-scheme: dark; }}
+  * {{ margin: 0; box-sizing: border-box; }}
+  body {{ background: #17191f; color: #cfd4de; font: 13px/1.4 system-ui, sans-serif;
+         height: 100vh; display: flex; flex-direction: column; user-select: none; }}
+  header {{ padding: 8px 14px; display: flex; align-items: center; gap: 12px; }}
+  header b {{ color: #fff; font-weight: 600; }}
+  #stage {{ flex: 1; display: flex; align-items: center; justify-content: center;
+            min-height: 0; padding: 0 12px; cursor: pointer; }}
+  #main {{ max-width: 100%; max-height: 100%; box-shadow: 0 6px 30px rgba(0,0,0,.5);
+           border-radius: 4px; }}
+  #rail {{ display: flex; gap: 6px; overflow-x: auto; padding: 10px 14px; flex: none; }}
+  #rail img {{ height: 62px; border-radius: 3px; opacity: .45; cursor: pointer;
+               border: 2px solid transparent; }}
+  #rail img.on {{ opacity: 1; border-color: #5b8def; }}
+  #num {{ margin-left: auto; font-variant-numeric: tabular-nums; color: #8a93a6; }}
+  kbd {{ background:#2a2e38; border-radius:3px; padding:1px 5px; font-size:11px; color:#9aa3b2; }}
+</style></head><body>
+<header><b>{title}</b><span>&larr;/&rarr; or click to flip &nbsp;<kbd>F</kbd> fullscreen</span><span id="num"></span></header>
+<div id="stage"><img id="main" alt="slide"></div>
+<div id="rail"></div>
+<script>
+const S = {slides}; let i = 0;
+const main = document.getElementById('main'), rail = document.getElementById('rail'),
+      num = document.getElementById('num');
+S.forEach((src, k) => {{ const t = document.createElement('img'); t.src = src; t.loading = 'lazy';
+  t.onclick = () => go(k); rail.appendChild(t); }});
+function go(k) {{ i = (k + S.length) % S.length; main.src = S[i];
+  num.textContent = (i + 1) + ' / ' + S.length;
+  [...rail.children].forEach((t, k2) => t.classList.toggle('on', k2 === i));
+  rail.children[i].scrollIntoView({{ inline: 'center', block: 'nearest', behavior: 'smooth' }});
+  if (i + 1 < S.length) (new Image()).src = S[i + 1]; }}
+document.getElementById('stage').onclick = () => go(i + 1);
+addEventListener('keydown', e => {{
+  if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') go(i + 1);
+  else if (e.key === 'ArrowLeft' || e.key === 'PageUp') go(i - 1);
+  else if (e.key === 'Home') go(0); else if (e.key === 'End') go(S.length - 1);
+  else if (e.key.toLowerCase() === 'f') document.documentElement.requestFullscreen?.(); }});
+go(0);
+</script></body></html>
+""".format(title=title.replace("&", "&amp;").replace("<", "&lt;"), slides=json.dumps(slides))
 
 
 if __name__ == "__main__":

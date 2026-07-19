@@ -87,6 +87,13 @@ def main():
               "Ubuntu: sudo apt install librsvg2-bin | "
               "Windows: install Google Chrome or Edge (used headless) | "
               "any OS: pip install cairosvg (needs a working libcairo)")
+    try:
+        import icons as _icons
+        print("  [--]  icon cache: {}{}".format(
+            _icons._CACHE,
+            "  (SLIDE_MAKER_CACHE override)" if os.environ.get("SLIDE_MAKER_CACHE") else ""))
+    except Exception:
+        pass
 
     soffice = find_soffice()
     if soffice:

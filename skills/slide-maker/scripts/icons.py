@@ -55,7 +55,28 @@ LIBRARIES = {
     "heroicons-solid": f"{_CDN}/heroicons@latest/24/solid/{{name}}.svg",
     "simple":        f"{_CDN}/simple-icons@latest/icons/{{name}}.svg",
 }
-_CACHE = os.path.join(tempfile.gettempdir(), "slide-maker-icons")
+def _cache_dir():
+    """Persistent, HOST-AGNOSTIC icon cache — shared by every runtime (Claude Code, Codex, plain
+    CLI) on this machine, so an icon is fetched from the CDN once ever, not once per deck, and
+    builds keep working offline once warm. Override with SLIDE_MAKER_CACHE. Platform-correct:
+    macOS ~/Library/Caches · Linux $XDG_CACHE_HOME|~/.cache · Windows %LOCALAPPDATA%."""
+    env = os.environ.get("SLIDE_MAKER_CACHE")
+    if env:
+        return os.path.join(env, "icons")
+    if sys.platform == "win32":
+        base = os.environ.get("LOCALAPPDATA") or os.path.expanduser(r"~\AppData\Local")
+    elif sys.platform == "darwin":
+        base = os.path.expanduser("~/Library/Caches")
+    else:
+        base = os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
+    return os.path.join(base, "slide-maker", "icons")
+
+
+_CACHE = _cache_dir()
+try:                                     # unwritable cache location (odd env/override) must never
+    os.makedirs(_CACHE, exist_ok=True)   # break a build — fall back to the old tmp cache
+except OSError:
+    _CACHE = os.path.join(tempfile.gettempdir(), "slide-maker-icons")
 
 
 def fetch_svg(spec):
@@ -69,7 +90,13 @@ def fetch_svg(spec):
     os.makedirs(_CACHE, exist_ok=True)
     cache = os.path.join(_CACHE, f"{lib}__{name}.svg")
     if os.path.exists(cache) and os.path.getsize(cache) > 0:
-        return open(cache, encoding="utf-8").read()
+        svg = open(cache, encoding="utf-8").read()
+        if "<svg" in svg:                    # self-heal: a torn/poisoned cache entry refetches
+            return svg
+        try:
+            os.remove(cache)
+        except OSError:
+            pass
     url = LIBRARIES[lib].format(name=name)
     try:
         with urllib.request.urlopen(url, timeout=15) as r:
@@ -80,7 +107,12 @@ def fetch_svg(spec):
             f"library's site, or pass a local .svg path to deckkit.icon() instead.") from e
     if "<svg" not in svg:
         raise RuntimeError(f"{spec}: fetched content is not an SVG (wrong name?) — {url}")
-    open(cache, "w", encoding="utf-8").write(svg)
+    # atomic write — the cache is shared across hosts/processes (Claude Code + Codex + fan-out
+    # builds), and a torn write in a PERSISTENT cache would poison every future build of this icon
+    fd, tmp = tempfile.mkstemp(dir=_CACHE, suffix=".svg")
+    with os.fdopen(fd, "w", encoding="utf-8") as fh:
+        fh.write(svg)
+    os.replace(tmp, cache)
     return svg
 
 

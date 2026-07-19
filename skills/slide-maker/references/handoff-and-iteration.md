@@ -29,7 +29,8 @@ and both are avoidable:
   scope for the builder, high value for the presenter).
 
 ## What the deliverable folder contains
-The deck + `render/` PNGs (+ PDF), the build script (source of truth), the speaker-notes source,
+The deck + `<deck>.pdf` (parked beside the pptx by `render_deck` — submission/email/print-ready) +
+`render/` PNGs + `render/viewer.html` (the flip-through preview), the build script (source of truth), the speaker-notes source,
 `assets/` (incl. `sourced/credits.txt` when sourced photos exist),
 and the final lint/stats snapshot — a tidy, buildable bundle. The content/design PLANS are **not**
 files here: they are presented directly in chat as compact tables at the two checkpoints (that
@@ -60,8 +61,10 @@ Say it plainly, in one or two lines:
   layout is absolutely positioned, so heavily expanding a text box won't auto-reflow its
   neighbours (normal PowerPoint behaviour); and credit portability — CC BY/BY-SA credits live
   on-slide / on the sources page + `credits.txt`, so keep them if the images are reused.
-- **PDF on request.** `render_deck.sh` already leaves a `.pdf` beside the PNGs; offer it
-  as a shareable read-only copy.
+- **PDF included by default.** `render_deck` parks `<deck>.pdf` beside the `.pptx` on every
+  render; mention it at hand-off as the shareable read-only copy. On versioned critic rounds this
+  also produces `deck_v<N>.pdf` per round — **delete the stale round PDFs before hand-off** so the
+  bundle ships only the final `<deck>.pdf` (same tidy-bundle rule as the round pptx files).
 
 ## Iterating after delivery — the safety rule
 🔴 **MUST — before any post-delivery rebuild, determine whether the user has hand-edited the

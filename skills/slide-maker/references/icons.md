@@ -288,3 +288,5 @@ tile of the same hue). · small (≤ title) · **consistent
 size/position/treatment** across siblings · style matches the deck (outline vs filled) · **does a job**
 (passes the rule-of-thumb — answers *what is this / what does it do / why pay attention*; else cut) ·
 text always present · assets cached in the deck folder.
+
+**Cache.** Fetched SVGs persist in the platform cache dir — macOS `~/Library/Caches/slide-maker/icons` · Linux `$XDG_CACHE_HOME`/`~/.cache/slide-maker/icons` · Windows `%LOCALAPPDATA%\slide-maker\icons` (override with `SLIDE_MAKER_CACHE`) — shared across Claude Code AND Codex, so an icon is fetched once ever and warm builds work offline. Delete a file there to force a refetch (a torn entry also self-heals on next read).

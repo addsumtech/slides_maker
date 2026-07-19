@@ -91,6 +91,8 @@ intentional sticker/burst overhangs.
 The shipped pipeline is one command: `bash scripts/render_deck.sh <deck.pptx>` — internally
 LibreOffice (`soffice --headless --convert-to pdf`, with an **isolated per-run profile**) then
 PyMuPDF rasterizes each page at a fixed 2× (~144 DPI) to `render/slide01.png … slideNN.png`
+(plus `thumb_first/last.png` and a self-contained `render/viewer.html` preview; the intermediate
+`<deck>.pdf` is then parked beside the `.pptx` as a deliverable — both are expected products)
 (zero-padded, no hyphen) plus `thumb_first.png`/`thumb_last.png`; then
 `python3 scripts/lint_deck.py <deck.pptx> --renders render/`.
 

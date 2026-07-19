@@ -9,6 +9,26 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+### Added — free-win deliverables & speed (multi-platform: identical on Claude Code / Codex / Windows)
+- **PDF as a first-class deliverable** — the render pipeline already produces a PDF as its first
+  step; `render_deck.py` now parks it beside the `.pptx` (`<deck>.pdf`) instead of burying it in
+  `render/` — submission/email/print-ready at zero extra cost.
+- **`render/viewer.html`** — a self-contained, zero-dependency flip-through preview generated on
+  every render: one `file://` link, any browser, any OS (arrow keys / click / thumbnail rail /
+  fullscreen). The fastest way to eyeball a deck without opening PowerPoint.
+- **Persistent host-agnostic icon cache** — icon SVGs now cache in the platform cache dir
+  (macOS `~/Library/Caches/slide-maker/icons` · Linux `$XDG_CACHE_HOME` · Windows `%LOCALAPPDATA%`,
+  override `SLIDE_MAKER_CACHE`) instead of `/tmp` — shared across Claude Code AND Codex on the same
+  machine, fetched once ever, and warm builds work offline. Hardened by an adversarial audit:
+  atomic cache writes + self-healing torn entries, unwritable-cache fallback to tmp, and
+  `check_env.py` now prints the active cache path.
+- **`render_deck` out-dir safety** — the pre-existing `rmtree(out)` could wipe a user directory
+  (passing `.` as out deleted the pptx itself); now the dir is only removed when it holds nothing
+  but this deck's own render products (OS junk tolerated, `.git`/foreign PDFs route to a safe
+  per-file clean). Special-character deck names (spaces/中文/&) verified; viewer title HTML-escaped;
+  preview link is a proper `file:///` URI via `Path.as_uri()`. Docs synced (handoff-and-iteration's
+  stale "PDF on request", FAQ §5 pipeline products, large-deck section-PDF cleanup, icons.md cache note).
+
 ### Fixed — ZH/EN system consistency (from a 2-round bilingual audit incl. a live CJK build test)
 - **`presets.py` KaiTi platform bug** — `ink_wash`/`eastern_traditional` hardcoded `"KaiTi"`, a family
   name that does not exist on macOS (it's `"Kaiti SC"`); the ink presets' calligraphic titles rode an
