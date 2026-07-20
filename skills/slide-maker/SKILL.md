@@ -911,11 +911,14 @@ generated or sourced. Fold in the user's design edits, then set up the canvas (S
 ## Step 3 — Set up the canvas
 **First, decide where the deck lands.** Deliver each deck as one self-contained
 folder in the user's Downloads — `~/Downloads/<deck-name>/`, holding the
-`<deck-name>.pptx`, the **`<deck-name>.pdf`** (the render pipeline produces it anyway —
-`render_deck` parks it beside the pptx as a free deliverable for submissions/email/print),
-and a `render/` subfolder of slide PNGs **plus `viewer.html` at the deck root beside the pptx** (a
-self-contained flip-through preview `render_deck` generates — one `file://` link, any browser, any OS) —
-so the user gets a tidy, findable bundle rather than a stray file in `/tmp`. Point your build script's
+`<deck-name>.pptx` and a `render/` subfolder of slide PNGs — so the user gets a tidy,
+findable bundle rather than a stray file in `/tmp`.
+**🔴 The `.pdf` and `viewer.html` are NOT produced during the build.** A deck is iterated
+— rebuilt each critic round, then usually hand-edited in PowerPoint — so a PDF and a preview
+page generated on every render are churn: they clutter the deck root and go **stale** the moment
+the `.pptx` changes, which is worse than absent (a user opens a stale PDF and reviews the wrong
+deck). They are **reserved deliverables**: at hand-off (step 6), once the user confirms the deck
+is final, offer them and generate both with `render_deck … --deliverables`. Point your build script's
 output path and `render_deck.sh`'s out-dir there from the start (no need to copy
 files around at the end). **Before the first save, confirm `~/Downloads` exists; if
 it doesn't, ask the user where they'd like outputs** and use that location instead —
@@ -1976,11 +1979,15 @@ purpose it was built for, and the font/portability caveat if relevant. **Tell th
 user the exact output folder path (`~/Downloads/<deck-name>/`, or wherever they
 chose) and ask them to open it and check the `.pptx`** — the rendered PNGs verify
 layout, but they should confirm the editable deck itself opens cleanly on their
-machine. **Hand them the `file://…/<deck>/viewer.html` link too** (the flip-through
-preview `render_deck` parks beside the `.pptx` at the deck root — the fastest way to eyeball the deck
-without opening PowerPoint) and mention the `.pdf` sitting beside the pptx too (submission/email/print-ready).
-Both the `viewer.html` and the `.pdf` live at the deck-folder root next to the `.pptx` (the PNGs stay in
-`render/`); surface BOTH file:// links — never leave the preview buried in `render/`. If you added any forward-looking content (per the fidelity rule), call that
+machine. **Then OFFER the two reserved deliverables rather than shipping them unasked** — a
+**`.pdf`** (submission / email / print) and a self-contained **`viewer.html`** flip-through preview
+(one `file://` link, any browser, any OS, no PowerPoint needed). They are deliberately not generated
+during the build, because a deck still being edited makes them stale immediately. Ask in one line
+("want a PDF and a browser preview?"); on a yes — or once the user confirms this is the final
+version — run `bash scripts/render_deck.sh <deck.pptx> --deliverables` (or
+`python scripts/render_deck.py … --deliverables`), which parks both at the deck root beside the
+`.pptx`, and surface the two `file://` links then. **Re-run it after any later change** so the pair
+never lags the deck. If you added any forward-looking content (per the fidelity rule), call that
 out explicitly here so they can confirm it.
 
 **Keep the hand-off minimal — caveats + next steps, not a recap.** The note should carry only what
@@ -2108,8 +2115,10 @@ A checkable red-flag list; if a draft does any of these, stop and fix it before 
   any-language-safe) **and the build-time geometry gate** (`lint_layout(prs, strict=True)` — run before `prs.save()`;
   the in-process pre-render net for overflow/off-canvas/text-overlap/card-escape/footer/off-centre — plus
   `fit_text_size`); the build's source of truth. Full signatures in its docstrings.
-- `render_deck.py` — pptx → one PNG per slide (verify + critic loop) **+ parks the intermediate PDF beside
-  the pptx as a deliverable + writes `viewer.html` at the deck root beside the pptx, a zero-dependency flip-through preview** (PNGs stay in `render/`); finds LibreOffice cross-platform
+- `render_deck.py` — pptx → one PNG per slide (verify + critic loop). **`--deliverables` (alias
+  `--final`) additionally parks the PDF beside the pptx and writes `viewer.html`, a zero-dependency
+  flip-through preview** — off by default, so an in-progress deck never accumulates stale copies;
+  run it at hand-off once the user confirms the deck is final (PNGs always stay in `render/`); finds LibreOffice cross-platform
   or set `SOFFICE` (`.sh` is a shim). `check_env.py` — preflight if a render fails. `inspect_template.py`
   — a template's layouts/placeholders/logos. `requirements.txt` / `install_skill.py` — deps / installer.
 - `lint_deck.py` — deterministic **render-time** layout lint and complement to deckkit's build-time

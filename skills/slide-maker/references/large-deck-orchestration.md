@@ -116,8 +116,8 @@ makes its verdict worth anything.
 - Assembly order = plan order; the arc is the coordinator's responsibility.
 - Animations (`anim.py`) are added **inside** a section's `build_section`, per slide.
 - Output still lands in `~/Downloads/<deck>/` (the normal rule); the assembled `.pptx`
-  is the deliverable, with `<deck>.pdf` and `viewer.html` beside it at the deck root, and a
-  `render/` of the final PNGs. Section subagents' self-renders each drop a `section_NN_*.pdf` beside their
+  is the deliverable, with a `render/` of the final PNGs (the `.pdf` and `viewer.html` are the
+  reserved hand-off pair — `render_deck … --deliverables`, generated once the deck is final). Section subagents' self-renders each drop a `section_NN_*.pdf` beside their
   section deck — **clean those up at assembly** so only the final deck's PDF ships.
 - If the deck is small, skip all of this — one build script is the right tool.
 

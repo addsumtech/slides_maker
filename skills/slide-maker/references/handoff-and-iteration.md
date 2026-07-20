@@ -29,11 +29,13 @@ and both are avoidable:
   scope for the builder, high value for the presenter).
 
 ## What the deliverable folder contains
-The deck + `<deck>.pdf` + `viewer.html` (both parked at the deck root beside the pptx by `render_deck` —
-the pdf submission/email/print-ready, the viewer a one-click flip-through preview) +
-`render/` PNGs, the build script (source of truth), the speaker-notes source,
+The deck + `render/` PNGs, the build script (source of truth), the speaker-notes source,
 `assets/` (incl. `sourced/credits.txt` when sourced photos exist),
-and the final lint/stats snapshot — a tidy, buildable bundle. The content/design PLANS are **not**
+and the final lint/stats snapshot — a tidy, buildable bundle.
+**`<deck>.pdf` and `viewer.html` are RESERVED deliverables, not part of the working folder:** they
+would go stale on every rebuild and after any hand-edit, so they are generated on request at
+hand-off — `render_deck … --deliverables` — once the user says the deck is final, and re-generated
+after any later change so the pair never lags the `.pptx`. The content/design PLANS are **not**
 files here: they are presented directly in chat as compact tables at the two checkpoints (that
 conversation is the record); write plan `.md` files only if the user explicitly asks.
 

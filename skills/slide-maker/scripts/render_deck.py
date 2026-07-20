@@ -82,8 +82,18 @@ def _tail(text, limit=4000):
 
 
 def main(argv):
+    # --deliverables (alias --final): ALSO park the PDF beside the .pptx and write viewer.html.
+    # OFF by default: while a deck is still being iterated, those two are pure churn — they are
+    # regenerated every round, clutter the deck root, and go stale the moment the user hand-edits
+    # the .pptx. They are produced once, at hand-off, when the user says the deck is final.
+    deliverables = False
+    argv = list(argv)
+    for flag in ("--deliverables", "--final"):
+        while flag in argv:
+            argv.remove(flag)
+            deliverables = True
     if not argv:
-        die("usage: python render_deck.py /path/to/deck.pptx [out_dir]")
+        die("usage: python render_deck.py /path/to/deck.pptx [out_dir] [--deliverables]")
     pptx = argv[0]
     out = argv[1] if len(argv) > 1 else "./render"
 
@@ -185,38 +195,45 @@ def main(argv):
     n_pages = doc.page_count
     doc.close()
 
-    # Keep the PDF as a first-class deliverable: the pipeline already paid for it (pptx -> PDF is
-    # step one of this render), so park it beside the .pptx instead of leaving it buried in the
-    # render dir — submissions, email and printing all want it. Cross-platform (plain os.replace).
-    pdf_dest = os.path.join(os.path.dirname(os.path.abspath(pptx)) or ".",
-                            os.path.splitext(os.path.basename(pptx))[0] + ".pdf")
-    try:
-        if os.path.abspath(pdf_dest) != os.path.abspath(pdf):
-            os.replace(pdf, pdf_dest)
-    except OSError:
-        pdf_dest = pdf                     # couldn't move (odd mount/permissions) — it stays in out/
+    # The PDF is an INTERMEDIATE of this render (pptx -> PDF -> PNG), so it always exists. Whether
+    # it is promoted to a deliverable beside the .pptx is the user's call at hand-off.
+    pdf_dest = pdf
+    if deliverables:
+        pdf_dest = os.path.join(os.path.dirname(os.path.abspath(pptx)) or ".",
+                                os.path.splitext(os.path.basename(pptx))[0] + ".pdf")
+        try:
+            if os.path.abspath(pdf_dest) != os.path.abspath(pdf):
+                os.replace(pdf, pdf_dest)
+        except OSError:
+            pdf_dest = pdf                 # couldn't move (odd mount/permissions) — it stays in out/
 
     # Self-contained flip-through viewer — parked BESIDE the .pptx (deck root), same as the PDF, so
     # the user finds it without digging into render/. It references the PNGs through the render subdir
     # (relative to the viewer's own location), so a plain double-click works. One file:// link, any
     # browser, any OS (arrow keys / click / thumbnail strip). Zero dependencies, zero network.
     deck_dir = os.path.dirname(os.path.abspath(pptx)) or "."
-    rel = os.path.relpath(os.path.abspath(out), deck_dir)
-    pref = "" if rel in (".", "") else rel.replace(os.sep, "/").rstrip("/") + "/"   # forward-slash URL
-    slides = [pref + "slide{:02d}.png".format(i) for i in range(1, n_pages + 1)]
-    viewer = os.path.join(deck_dir, "viewer.html")
-    try:
-        with open(viewer, "w", encoding="utf-8") as f:
-            f.write(_viewer_html(os.path.splitext(os.path.basename(pptx))[0], slides))
-    except OSError:
-        viewer = None
+    viewer = None
+    if deliverables:
+        rel = os.path.relpath(os.path.abspath(out), deck_dir)
+        pref = "" if rel in (".", "") else rel.replace(os.sep, "/").rstrip("/") + "/"
+        slides = [pref + "slide{:02d}.png".format(i) for i in range(1, n_pages + 1)]
+        viewer = os.path.join(deck_dir, "viewer.html")
+        try:
+            with open(viewer, "w", encoding="utf-8") as f:
+                f.write(_viewer_html(os.path.splitext(os.path.basename(pptx))[0], slides))
+        except OSError:
+            viewer = None
     # sweep a stale viewer.html left inside the render dir by an older build (it now lives at root)
     stale = os.path.join(out, "viewer.html")
     if viewer and os.path.abspath(stale) != os.path.abspath(viewer) and os.path.exists(stale):
         try: os.remove(stale)
         except OSError: pass
     print("rendered {} slides -> {}".format(n_pages, out))
-    print("pdf: {}".format(pdf_dest))
+    if not deliverables:
+        print("pdf/viewer: not generated (deck still in progress) — at hand-off, once the user "
+              "confirms the deck is final, re-run with --deliverables")
+    else:
+        print("pdf: {}".format(pdf_dest))
     if viewer:
         print("preview: {}  (open in a browser; arrow keys flip)".format(
             Path(viewer).resolve().as_uri()))
