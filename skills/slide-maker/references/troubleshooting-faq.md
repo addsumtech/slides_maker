@@ -81,6 +81,7 @@ it refuses to save while criticals exist. Codes, in plain words:
 | `SLIVER_GAP` • | Two blocks almost touch (a hair-thin gap) — reads as a rendering accident | Open the gap to ≥ ~0.13 in — derive the pitch from `rows()`/`vstack()`, never `block_h + ε` (touching edges are their own flaw — "one merged block"; deliberately-jointed zones are a named exception, not the default fix) |
 | `FOOTER` • | Content dips into the reserved footer band at the bottom | Keep content above the band (the card/panel variant of the message gives the exact y-line; the text variant quotes the colliding block — move it up) |
 | `CJK_NO_EA` ✗ | CJK text with no `<a:ea>` font — PowerPoint/LibreOffice would pick an uncontrolled fallback and 避头尾 never engages | Set `deckkit.EAFONT = "Hiragino Sans GB"` (macOS; Microsoft YaHei on Windows, Noto Sans CJK SC on Linux) before building — `references/multilingual.md` has the pairing table |
+| `CONNECTOR_IN_BOX` ✗ | An arrow/line endpoint sits in a block's interior and is drawn ABOVE the block, so the stroke crosses it (classic: hub-and-spoke connectors anchored at the hub's centre, cutting through its own label) | Dock both ends on block EDGES — `connect_boxes(a, b)` / `hub_spokes(hub, spokes)` from the block rects, or `edge_point(rect, toward)` for one end. Or add the connector BEFORE the node so the node paints over the seam. Never pass a block's centre as an endpoint on a line that's drawn on top |
 
 A build that ends `0 critical, N warning(s)` **saves fine** — warnings are judgment calls; the two
 you most often accept deliberately are `OFFCENTER` on chip labels and `ESCAPES_CARD` on
@@ -91,8 +92,8 @@ intentional sticker/burst overhangs.
 The shipped pipeline is one command: `bash scripts/render_deck.sh <deck.pptx>` — internally
 LibreOffice (`soffice --headless --convert-to pdf`, with an **isolated per-run profile**) then
 PyMuPDF rasterizes each page at a fixed 2× (~144 DPI) to `render/slide01.png … slideNN.png`
-(plus `thumb_first/last.png` and a self-contained `render/viewer.html` preview; the intermediate
-`<deck>.pdf` is then parked beside the `.pptx` as a deliverable — both are expected products)
+(plus `thumb_first/last.png`; a self-contained `viewer.html` preview is parked at the deck root beside
+the `.pptx`, and the intermediate `<deck>.pdf` beside it too — both root files are expected deliverables)
 (zero-padded, no hyphen) plus `thumb_first.png`/`thumb_last.png`; then
 `python3 scripts/lint_deck.py <deck.pptx> --renders render/`.
 

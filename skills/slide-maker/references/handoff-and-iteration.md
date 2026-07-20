@@ -29,8 +29,9 @@ and both are avoidable:
   scope for the builder, high value for the presenter).
 
 ## What the deliverable folder contains
-The deck + `<deck>.pdf` (parked beside the pptx by `render_deck` — submission/email/print-ready) +
-`render/` PNGs + `render/viewer.html` (the flip-through preview), the build script (source of truth), the speaker-notes source,
+The deck + `<deck>.pdf` + `viewer.html` (both parked at the deck root beside the pptx by `render_deck` —
+the pdf submission/email/print-ready, the viewer a one-click flip-through preview) +
+`render/` PNGs, the build script (source of truth), the speaker-notes source,
 `assets/` (incl. `sourced/credits.txt` when sourced photos exist),
 and the final lint/stats snapshot — a tidy, buildable bundle. The content/design PLANS are **not**
 files here: they are presented directly in chat as compact tables at the two checkpoints (that

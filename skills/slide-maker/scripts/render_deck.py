@@ -188,15 +188,25 @@ def main(argv):
     except OSError:
         pdf_dest = pdf                     # couldn't move (odd mount/permissions) — it stays in out/
 
-    # Self-contained flip-through viewer beside the PNGs — one file:// link the user can open in
-    # any browser on any OS (arrow keys / click / thumbnail strip). Zero dependencies, zero network.
-    slides = ["slide{:02d}.png".format(i) for i in range(1, n_pages + 1)]
-    viewer = os.path.join(out, "viewer.html")
+    # Self-contained flip-through viewer — parked BESIDE the .pptx (deck root), same as the PDF, so
+    # the user finds it without digging into render/. It references the PNGs through the render subdir
+    # (relative to the viewer's own location), so a plain double-click works. One file:// link, any
+    # browser, any OS (arrow keys / click / thumbnail strip). Zero dependencies, zero network.
+    deck_dir = os.path.dirname(os.path.abspath(pptx)) or "."
+    rel = os.path.relpath(os.path.abspath(out), deck_dir)
+    pref = "" if rel in (".", "") else rel.replace(os.sep, "/").rstrip("/") + "/"   # forward-slash URL
+    slides = [pref + "slide{:02d}.png".format(i) for i in range(1, n_pages + 1)]
+    viewer = os.path.join(deck_dir, "viewer.html")
     try:
         with open(viewer, "w", encoding="utf-8") as f:
             f.write(_viewer_html(os.path.splitext(os.path.basename(pptx))[0], slides))
     except OSError:
         viewer = None
+    # sweep a stale viewer.html left inside the render dir by an older build (it now lives at root)
+    stale = os.path.join(out, "viewer.html")
+    if viewer and os.path.abspath(stale) != os.path.abspath(viewer) and os.path.exists(stale):
+        try: os.remove(stale)
+        except OSError: pass
     print("rendered {} slides -> {}".format(n_pages, out))
     print("pdf: {}".format(pdf_dest))
     if viewer:

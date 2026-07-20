@@ -219,6 +219,34 @@ def _sliver_gap():
         "SLIVER_GAP false-positive on a rule-compliant 0.2in gap"
 ok("lint_layout SLIVER_GAP (0.02in seam warns, 0.2in gap silent)", _sliver_gap)
 
+# --- lint_layout CONNECTOR_IN_BOX: flags an arrow anchored at a block's centre (drawn above it),
+#     stays silent when the ends are edge-docked (connect_boxes/hub_spokes) or the line is covered ---
+def _connector_in_box():
+    hub = (3.5, 1.0, 3.0, 1.0); spokes = [(1.0, 3.5, 2.4, 1.0), (3.8, 3.5, 2.4, 1.0), (6.6, 3.5, 2.4, 1.0)]
+    def deck(fn):
+        p = dk.blank_deck(10, 5.625); s = dk.add_slide(p); fn(s); return p
+    def centred(s):                                   # BUG: spokes leave the hub's centre, drawn ABOVE it
+        dk.box(s, *hub, fill="FF5A4D", round=True)
+        for sp in spokes: dk.box(s, *sp, fill="1B1E27", round=True)
+        for sp in spokes: dk.connector(s, (hub[0]+hub[2]/2, hub[1]+hub[3]/2), (sp[0]+sp[2]/2, sp[1]), color=C("3DD6C4"))
+    def docked(s):                                    # FIX: edge-docked fan
+        dk.box(s, *hub, fill="FF5A4D", round=True)
+        for sp in spokes: dk.box(s, *sp, fill="1B1E27", round=True)
+        dk.hub_spokes(s, hub, spokes, color=C("3DD6C4"), gap=0.05)
+    def covered(s):                                   # OK: connectors added BEFORE the nodes cover the seam
+        for sp in spokes: dk.connector(s, (hub[0]+hub[2]/2, hub[1]+hub[3]/2), (sp[0]+sp[2]/2, sp[1]), color=C("3DD6C4"))
+        dk.box(s, *hub, fill="FF5A4D", round=True)
+        for sp in spokes: dk.box(s, *sp, fill="1B1E27", round=True)
+    assert any(c == "CONNECTOR_IN_BOX" for _n, _sv, c, _m in dk.lint_layout(deck(centred), verbose=False)), \
+        "CONNECTOR_IN_BOX missed a centre-anchored fan drawn above the hub"
+    for name, fn in (("edge-docked", docked), ("covered", covered)):
+        assert not any(c == "CONNECTOR_IN_BOX" for _n, _sv, c, _m in dk.lint_layout(deck(fn), verbose=False)), \
+            f"CONNECTOR_IN_BOX false-positive on the {name} pattern"
+    # edge_point lands ON the boundary, not the interior
+    ex, ey = dk.edge_point((3.5, 1.0, 3.0, 1.0), (5.0, 4.0))
+    assert abs(ey - 2.0) < 1e-6, "edge_point should dock on the block's bottom edge (y=2.0)"
+ok("lint_layout CONNECTOR_IN_BOX (centre-anchor flags; edge-docked/covered silent)", _connector_in_box)
+
 ok("tint mixes toward white", lambda: dk.tint("1B7F5C", 0.14))
 ok("kpi_card (delta + strip, tall enough)", lambda: dk.kpi_card(
     S(), 0.8, 0.8, 3.4, 2.3, "净收入留存 NRR", "108", unit="%", delta="+16pt",

@@ -3493,7 +3493,15 @@ def connector(slide, p0, p1, *, style="solid", color=None, width=1.5, label="", 
     boundaries → connectors → nodes → floating labels) so shapes sit above lines — plan the
     geometry first and derive centres as (x + w/2, y + h/2), then create shapes in z-order
     (node() returning the centre is a convenience, not an ordering requirement); a connector joins
-    node edges/centres and must never be visible crossing a box interior."""
+    node edges/centres and must never be visible crossing a box interior.
+
+    EDGE-DOCK BY DEFAULT: an endpoint must land ON a block's boundary, not inside it. Passing a
+    block's CENTRE as `p0`/`p1` draws a line out of the block's middle — if that connector is above
+    the block in z-order the line shows crossing the interior (across the block's own label). Reach
+    for `connect_boxes(slide, rectA, rectB, ...)` / `hub_spokes(...)` (they compute the edge docks
+    for you), or `edge_point(rect, toward)` for a single end. The build-time CONNECTOR_IN_BOX lint
+    flags a centre-anchored endpoint drawn above its block. The one time a centre endpoint is OK is
+    the covered pattern — connector added BEFORE the node so the node paints over the interior seam."""
     col = color if color is not None else MUTE
     c = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, Inches(p0[0]), Inches(p0[1]),
                                    Inches(p1[0]), Inches(p1[1]))
@@ -3510,6 +3518,58 @@ def connector(slide, p0, p1, *, style="solid", color=None, width=1.5, label="", 
         text(slide, mx - 0.8, my - 0.16, 1.6, 0.3, [[(label, 9, label_c or col, False, False, MONO)]],
              align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
     return c
+
+
+def edge_point(rect, toward, *, inset=0.0):
+    """The point on `rect`'s BOUNDARY along the ray from its centre toward `toward` — i.e. where a
+    line aimed at `toward` crosses the block's edge. `rect`=(x,y,w,h) inches; `toward`=(tx,ty) inches
+    (usually the OTHER block's centre). `inset`>0 pulls the dock inward (into the block); `inset`<0
+    pushes it outward (a small standoff so an arrowhead doesn't kiss the edge). This is the primitive
+    behind edge-docked connectors: use it (or `connect_boxes`) so an arrow starts/ends ON a block's
+    boundary instead of emerging from its centre and visibly crossing the interior."""
+    x, y, w, h = rect
+    cx, cy = x + w / 2.0, y + h / 2.0
+    dx, dy = toward[0] - cx, toward[1] - cy
+    if abs(dx) < 1e-9 and abs(dy) < 1e-9:
+        return (cx, y + h)                       # degenerate (concentric) — dock at the bottom edge
+    hw, hh = w / 2.0, h / 2.0
+    sx = hw / abs(dx) if abs(dx) > 1e-9 else float("inf")
+    sy = hh / abs(dy) if abs(dy) > 1e-9 else float("inf")
+    s = min(sx, sy)                              # scale to the nearest (vertical|horizontal) edge
+    ex, ey = cx + dx * s, cy + dy * s
+    if inset:
+        L = (dx * dx + dy * dy) ** 0.5
+        ux, uy = dx / L, dy / L                  # unit centre→edge direction
+        ex -= ux * inset; ey -= uy * inset
+    return (ex, ey)
+
+
+def connect_boxes(slide, a, b, *, style="solid", color=None, width=1.5, label="", arrow=True,
+                  label_c=None, head="triangle", gap=0.0):
+    """Connector DOCKED on the facing EDGES of two blocks — the safe default for any
+    architecture/flow/topology diagram, because BOTH ends land on a block boundary and never inside
+    a block. `a`, `b` are (x,y,w,h) rects (the same tuple you passed to `box`); the connector runs
+    from a's edge facing b to b's edge facing a. `gap` (inches) adds a small standoff OUTSIDE each
+    edge (breathing room before the arrowhead). Every other argument matches `connector`. Prefer this
+    over hand-computing centres — passing a block's centre as an endpoint is the #1 cause of the
+    "arrow emerges from the middle of a box" defect the CONNECTOR_IN_BOX lint flags. For one hub to
+    many blocks, see `hub_spokes`."""
+    ca = (a[0] + a[2] / 2.0, a[1] + a[3] / 2.0)
+    cb = (b[0] + b[2] / 2.0, b[1] + b[3] / 2.0)
+    p0 = edge_point(a, cb, inset=-gap)
+    p1 = edge_point(b, ca, inset=-gap)
+    return connector(slide, p0, p1, style=style, color=color, width=width, label=label,
+                     arrow=arrow, label_c=label_c, head=head)
+
+
+def hub_spokes(slide, hub, spokes, *, style="solid", color=None, width=1.6, arrow=True,
+               head="open", gap=0.0):
+    """One central `hub` rect → many `spokes` (each an (x,y,w,h) rect), every connector edge-docked
+    via `connect_boxes`: it leaves the hub's edge facing that spoke and lands on the spoke's facing
+    edge, so nothing emanates from the hub's centre across its own label. This is the exact shape of
+    a 'one Gateway, everything connects to it' topology slide. Returns the list of connectors."""
+    return [connect_boxes(slide, hub, sp, style=style, color=color, width=width, arrow=arrow,
+                          head=head, gap=gap) for sp in spokes]
 
 
 def elbow_connector(slide, pts, *, style="solid", color=None, width=1.5, arrow=True, label="", label_c=None,
@@ -4641,12 +4701,14 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
     findings = []; subbed_any = False
     for n, slide in enumerate(prs.slides, 1):
         info = []   # (sh, bb, st, ink_or_None, r_full_or_None)  — watermark numerals carry ink=None (decorative)
-        for sh in slide.shapes:
+        zof = {}    # id(sh)->z-order; keyed on the SAME sh objects held alive in `info` (python-pptx
+                    # yields fresh proxies per iteration, so a separate comprehension's id()s wouldn't match)
+        for zi, sh in enumerate(slide.shapes):
             bb = _bbox_in(sh)
             if bb is None: continue
             st = str(getattr(sh, "shape_type", ""))
             r = _ink_rect(sh, bb) if (_is_text(sh) and not _is_watermark(sh)) else None
-            info.append((sh, bb, st, (r[0] if r else None), r))
+            info.append((sh, bb, st, (r[0] if r else None), r)); zof[id(sh)] = zi
         # CJK runs with no <a:ea> font — fully detectable from the in-memory pptx, so fail at
         # BUILD time instead of after the expensive render round-trip (lint_deck re-checks as the
         # backstop): without the EA slot, PowerPoint/LibreOffice pick an uncontrolled fallback
@@ -4672,12 +4734,41 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
         # candidate CARD/PANEL/CHIP containers a label should sit inside: filled, boxy auto-shapes —
         # wide AND tall enough to be a panel (so thin accent rails, icon tiles and badges are excluded),
         # and not a full-bleed background. Chip/node-sized boxes count, so their labels get escape-checked.
-        containers = []
+        containers = []; containers_z = []
         for sh, bb, st, ink, r in info:
             full_bleed = bb[2] >= W*0.92 and bb[3] >= H*0.92
             if _has_fill(sh) and "AUTO_SHAPE" in st and _rectish(sh) and not full_bleed \
                     and bb[2] >= 0.8 and bb[3] >= 0.35 and 0.5 <= bb[2]*bb[3] <= W*H*0.85:
-                containers.append(bb)
+                containers.append(bb); containers_z.append((bb, zof.get(id(sh), 0)))
+        # ---- CONNECTOR_IN_BOX: an arrow/line endpoint that lands in a block's CENTRAL zone AND is
+        #      drawn ABOVE that block (so the stroke shows crossing the interior, across its own
+        #      label) — the "spokes emanate from the hub's centre" defect. Endpoints docked on an
+        #      edge (connect_boxes/edge_point/hub_spokes) sit near the boundary → never flagged; a
+        #      connector drawn BELOW the block (the node paints over it) → never flagged; chart grid/
+        #      axis lines end near a border, not centre → never flagged. The central-zone + z-order
+        #      pair keeps this false-positive-free.
+        for sh, bb, st, ink, r in info:
+            if not ("CONNECTOR" in st or "LINE" in st):
+                continue
+            try:
+                ends = [(sh.begin_x/914400.0, sh.begin_y/914400.0),
+                        (sh.end_x/914400.0, sh.end_y/914400.0)]
+            except Exception:
+                continue
+            czi = zof.get(id(sh), 0); hit = False
+            for (ex, ey) in ends:
+                for (cb, pzi) in containers_z:
+                    if czi <= pzi:                          # behind the block → block covers it → ok
+                        continue
+                    pcx, pcy = cb[0]+cb[2]/2.0, cb[1]+cb[3]/2.0
+                    if abs(ex-pcx) < 0.33*cb[2] and abs(ey-pcy) < 0.33*cb[3]:
+                        findings.append((n, "CRITICAL", "CONNECTOR_IN_BOX",
+                            "a connector endpoint sits in a block's interior (drawn above the block, so "
+                            "the line crosses it) — dock both ends on the block EDGE with "
+                            "connect_boxes()/hub_spokes()/edge_point(), or add the connector BEFORE the "
+                            "block so the block covers the seam"))
+                        hit = True; break
+                if hit: break
         # ---- SLIVER_GAP: near-touching panels (panel–panel or panel–picture; picture–picture is
         #      skipped). A gap that exists but reads as touching clips rounded corners and looks
         #      cramped even though nothing overlaps; overlap/flush (g <= 0) stays lint_deck's domain.

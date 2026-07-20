@@ -66,7 +66,10 @@ legibility rules).
 - **Diagrams (general):** `node` + `connector` (+ `flow_chain`) — rebuild ANY architecture/flowchart
   from rounded-rect/pill/circle nodes (+ diamond/parallelogram/cylinder when formal flowchart
   notation applies — see the Standard-notation crib) joined by connectors with **stroke semantics**
-  (solid=required · dashed=optional · dotted=feedback/inferred); promote exactly ONE node to `hub=True`. On a dark deck
+  (solid=required · dashed=optional · dotted=feedback/inferred); promote exactly ONE node to `hub=True`.
+  **Connectors dock on EDGES, both ends** — pass block rects to `connect_boxes(a, b)` /
+  `hub_spokes(hub, spokes)` (or `edge_point(rect, toward)` for one end) so no arrow ever emerges from
+  a block's centre across its own label; the `CONNECTOR_IN_BOX` lint enforces it. On a dark deck
   host the diagram in a bright `diagram_island` ("Figure N"). `concentric_rings` for nested frameworks
   (CMT 色彩·材质·纹理); `hub_spoke`/`quadrant`/`timeline` for those specific shapes.
 - **Layered-card vocabulary (modern-SaaS polish):** `kpi_card` (hairline card = tinted `icon_chip`

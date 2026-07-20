@@ -180,6 +180,15 @@ feel art-directed rather than defaulted, and it's yours to set once and hold. Pi
   A palette line without ratios is an incomplete plan; the render-time lint is the backstop, not
   the discovery mechanism — a below-floor family caught at lint time means rebuilding every slide
   that used it.
+- **Connectors DOCK on block edges — both ends, always.** On any diagram/topology/flow slide an
+  arrow's endpoints must land ON a block's boundary, never inside it. A line drawn from a block's
+  CENTRE emerges from the middle and — if it sits above the block in z-order — visibly crosses the
+  block's own label (the "spokes fan out of the hub's centre, over its subtitle" bug). Use
+  `deckkit.connect_boxes(a, b)` / `hub_spokes(hub, spokes)` (they compute the edge docks from the
+  block rects) or `edge_point(rect, toward)` for one end; the alternative is the covered pattern —
+  add the connector BEFORE the node so the node paints over the interior seam. The build-time
+  `CONNECTOR_IN_BOX` lint flags a centre-anchored endpoint drawn above its block, but design it
+  right up front rather than relying on the backstop.
 - **Chrome budget — colour lives in CONTENT, not scaffolding.** Saturated hue goes where it encodes
   meaning: data, diagram nodes, icons, key numbers, one hero field. The deck's *chrome* — title
   furniture, rules, footers, spines, page badges — stays quiet (ink / grey / ONE thin accent at most).

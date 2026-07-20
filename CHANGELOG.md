@@ -9,6 +9,20 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+### Added — connectors dock on block edges (arrows never emerge from a block's centre)
+- **`edge_point(rect, toward)`** — the point where a line aimed at `toward` crosses a block's
+  boundary; the primitive behind edge-docked arrows (optional `inset` for a standoff).
+- **`connect_boxes(a, b)` / `hub_spokes(hub, spokes)`** — connectors that dock on the facing EDGES
+  of two block rects, so BOTH ends land on a boundary and nothing crosses a block's own label. The
+  ergonomic replacement for hand-computing a centre point (the `hub_spokes` fan is exactly the
+  "one Gateway, everything connects to it" topology shape).
+- **`CONNECTOR_IN_BOX` build-time lint** — flags an arrow/line endpoint sitting in a block's central
+  zone AND drawn above that block (so the stroke shows crossing the interior). Central-zone + z-order
+  test keeps it false-positive-free: edge-docked ends, chart grid/axis lines, and the covered pattern
+  (connector added before the node) never trip it. New `smoke_deckkit.py` case
+  ("lint_layout CONNECTOR_IN_BOX") locks in the behaviour. Wired into `slide-design.md` (diagram
+  self-verify), `design-gallery.md` (diagram crib), and `troubleshooting-faq.md` (§4).
+
 ### Added — overflow-proof components (by construction, not by lint)
 - **`meter_bar`** measures the value label's real width, clamps the value box to it, and shortens
   the BAR when the footprint would leave the canvas (printed note; impossible fits raise) — the
@@ -28,9 +42,10 @@ section is a distilled summary — the full notes live on the
 - **PDF as a first-class deliverable** — the render pipeline already produces a PDF as its first
   step; `render_deck.py` now parks it beside the `.pptx` (`<deck>.pdf`) instead of burying it in
   `render/` — submission/email/print-ready at zero extra cost.
-- **`render/viewer.html`** — a self-contained, zero-dependency flip-through preview generated on
-  every render: one `file://` link, any browser, any OS (arrow keys / click / thumbnail rail /
-  fullscreen). The fastest way to eyeball a deck without opening PowerPoint.
+- **`viewer.html`** — a self-contained, zero-dependency flip-through preview generated on every
+  render and **parked at the deck root beside the `.pptx`/`.pdf`** (not buried in `render/`; it
+  references the PNGs through the `render/` subdir): one `file://` link, any browser, any OS (arrow
+  keys / click / thumbnail rail / fullscreen). The fastest way to eyeball a deck without opening PowerPoint.
 - **Persistent host-agnostic icon cache** — icon SVGs now cache in the platform cache dir
   (macOS `~/Library/Caches/slide-maker/icons` · Linux `$XDG_CACHE_HOME` · Windows `%LOCALAPPDATA%`,
   override `SLIDE_MAKER_CACHE`) instead of `/tmp` — shared across Claude Code AND Codex on the same
