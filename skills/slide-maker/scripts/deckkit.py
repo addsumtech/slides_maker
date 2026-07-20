@@ -229,6 +229,15 @@ EAFONT  = None            # East-Asian font for CJK text (e.g. "Hiragino Sans GB
                           # None for Latin decks. See references/multilingual.md.
 DISPLAY = None            # optional DISPLAY/title font (Latin) — when set, title_bar uses it for
                           # the title so headings get their own face vs the FONT body. Falls back
+
+# Default face for helpers whose payload is ENTIRELY digits (big_numeral, stat_row figures).
+# It must be a LINING-figure face: those components render nothing but a number, so an old-style
+# default guarantees the wobble every time — and, since v3.6.0, trips the deck's own build gate.
+# Georgia's italic display look is still available to any caller that passes serif="Georgia".
+NUMERAL_SERIF = "Arial"
+
+# Shape-name marker for decorative background numerals (ghost_numeral / big_numeral mode='ghost').
+WATERMARK_TAG = "deckkit-watermark"
                           # to FONT. Pairing roles (display / body / mono) beats one font for the
                           # whole deck — see references/font-guidance.md ("Type pairing").
 EADISPLAY = None          # optional CJK DISPLAY/title font (e.g. "Hiragino Sans GB" titles over a
@@ -766,7 +775,7 @@ def editorial_header(slide, eyebrow, title, *, x=0.6, y=0.55, w=None, accent=MAG
 
 
 def big_numeral(slide, x, y, n, *, mode="marker", color=MAGENTA, size=None, w=None,
-                italic=True, serif="Georgia"):
+                italic=True, serif=NUMERAL_SERIF):
     """An oversized index figure as wayfinding/rhythm. mode='marker' (solid accent, ~44pt) for a
     numbered item; 'ghost' (very large, near-bg) as a watermark behind a title. The box is sized
     GENEROUSLY WIDE so a short token like '01' / '04' never wraps to two stacked glyphs (the bug
@@ -778,6 +787,8 @@ def big_numeral(slide, x, y, n, *, mode="marker", color=MAGENTA, size=None, w=No
         w = min(len(str(n)) * s / 72.0 * 1.0 + 0.5, sw - x - 0.1)   # wide enough to stay one line, but on-canvas
     tb = text(slide, x, y, w, s / 72.0 * 1.35, [[(str(n), s, c, True, italic, serif)]], space_after=0)
     tb.text_frame.word_wrap = False
+    if mode != "marker":
+        tb.name = WATERMARK_TAG        # near-bg decoration, not a figure anyone reads
     return tb
 
 
@@ -3889,8 +3900,13 @@ def ghost_numeral(slide, x, y, w, h, text_str, *, color=None, bg=None, opacity=0
     figure use `big_numeral` / `stat_row` instead. No alpha needed."""
     c = _blend(color if color is not None else MUTE, bg if bg is not None else WHITE, 1 - opacity)
     sz = int(min(h * 72 * 1.05, 220))
-    text(slide, x, y, w, h, [[(str(text_str), sz, c, True, False, font or DISPLAY or FONT)]],
-         align=align, anchor=MSO_ANCHOR.MIDDLE, space_after=0, line_spacing=0.9)
+    tb = text(slide, x, y, w, h, [[(str(text_str), sz, c, True, False, font or DISPLAY or FONT)]],
+              align=align, anchor=MSO_ANCHOR.MIDDLE, space_after=0, line_spacing=0.9)
+    # Tagged so lint checks can recognise a decorative watermark EXACTLY. Guessing from size
+    # cannot work: a ghost and a hero numeral are both "large and short", so a size heuristic
+    # either waves through a real defect or blocks a legitimate watermark.
+    tb.name = WATERMARK_TAG
+    return tb
 
 
 def insight_banner(slide, x, y, w, body, *, label="INSIGHT", fill=None, accent=None,
@@ -4972,6 +4988,9 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
         for sh in slide.shapes:
             if not getattr(sh, "has_text_frame", False):
                 continue
+            if (getattr(sh, "name", "") or "") == WATERMARK_TAG:
+                continue      # ghost_numeral / big_numeral(mode='ghost') — decorative, sitting
+                              # behind content at ~12% opacity; nobody reads its baselines
             for para in sh.text_frame.paragraphs:
                 for run in para.runs:
                     try:
@@ -4981,8 +5000,13 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
                         if not any(ch.isdigit() for ch in (run.text or "")):
                             continue
                         pts = run.font.size.pt if run.font.size is not None else None
-                        if pts is not None and pts < _OLDSTYLE_DISPLAY_PT:
-                            continue                        # body prose — old-style figures are fine
+                        if pts is None or pts < _OLDSTYLE_DISPLAY_PT:
+                            # Below the display threshold old-style figures are correct typography;
+                            # and an INHERITED size (template placeholder / paragraph default) is
+                            # unknown, not large. Blocking a save on a size we cannot read would
+                            # break the registered-template branch and contradicts the documented
+                            # ">=20pt" scope.
+                            continue
                         entry = (nm, run.text.strip()[:18], pts)
                         if _digit_share(run.text) >= _OLDSTYLE_NUMERAL_SHARE:
                             bad_fig.append(entry)           # a display NUMERAL — the real defect

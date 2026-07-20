@@ -567,6 +567,28 @@ def _oldstyle_figures():
     assert not _lint("Georgia", 28, "2026 Roadmap"), "heading containing a year must PASS"
     assert not _lint("Georgia", 28, "Q3 results"), "heading with one digit must PASS"
     assert not _lint("Helvetica Neue", 58, "596,513"), "display numeral in a lining face must PASS"
+
+    # The skill's OWN components must survive its own gate. big_numeral/stat_row render nothing
+    # but digits, so an old-style default would fail every deck that uses them; a ghost numeral is
+    # decoration behind content and has no legibility stake. Lint them, not just build them - the
+    # suite previously constructed these shapes and never linted them, which is how a component the
+    # gate forbids shipped green.
+    def _lint_prs(fn):
+        p = dk.blank_deck(); s = dk.add_slide(p); fn(s)
+        try:
+            dk.lint_layout(p, verbose=False, strict=True); return False
+        except RuntimeError:
+            return True
+    assert not _lint_prs(lambda s: dk.big_numeral(s, 1, 1, "01")), "big_numeral() default must PASS"
+    assert not _lint_prs(lambda s: dk.big_numeral(s, 1, 1, "03", mode="ghost", serif="Georgia")), \
+        "a ghost watermark must PASS even in an old-style face"
+    assert not _lint_prs(lambda s: dk.stat_row(s, 0.7, 2, 8.6, [("42%", "", "share"), ("2026", "", "yr")])), \
+        "stat_row() defaults must PASS"
+    # an INHERITED (unknown) size is not evidence of a display numeral and must never block a save
+    def _unsized(s):
+        tb = s.shapes.add_textbox(dk.Inches(1), dk.Inches(1), dk.Inches(6), dk.Inches(1))
+        r = tb.text_frame.paragraphs[0].add_run(); r.text = "1234"; r.font.name = "Georgia"
+    assert not _lint_prs(_unsized), "unsized Georgia digits must PASS"
 ok("OLDSTYLE_FIGURES gate (display numerals in text-figure faces fail; body prose passes)", _oldstyle_figures)
 
 print(f"\nsmoke_deckkit: {len(fails)} failure(s)" + ("" if not fails else " — " + "; ".join(n for n, _ in fails)))

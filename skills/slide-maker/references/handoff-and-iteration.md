@@ -75,10 +75,11 @@ Say it plainly, in one or two lines:
   layout is absolutely positioned, so heavily expanding a text box won't auto-reflow its
   neighbours (normal PowerPoint behaviour); and credit portability — CC BY/BY-SA credits live
   on-slide / on the sources page + `credits.txt`, so keep them if the images are reused.
-- **PDF included by default.** `render_deck` parks `<deck>.pdf` beside the `.pptx` on every
-  render; mention it at hand-off as the shareable read-only copy. On versioned critic rounds this
-  also produces `deck_v<N>.pdf` per round — **delete the stale round PDFs before hand-off** so the
-  bundle ships only the final `<deck>.pdf` (same tidy-bundle rule as the round pptx files).
+- **PDF on request, not by default.** `render_deck` keeps the pptx→PDF conversion as a render
+  intermediate inside `render/` and does **not** park a `<deck>.pdf` beside the `.pptx` unless you
+  pass `--deliverables`. So don't tell the user a PDF is sitting next to the deck — offer it, and
+  produce it once they confirm the deck is final (see the reserved-deliverables note above). Round
+  PDFs need no cleanup: they never leave the render dir, which is rewritten each full render.
 
 ## Iterating after delivery — the safety rule
 🔴 **MUST — before any post-delivery rebuild, determine whether the user has hand-edited the

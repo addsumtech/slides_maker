@@ -52,7 +52,7 @@ for your platform — run the command it gives you, nothing else to figure out.
 | `ModuleNotFoundError: pptx` (or PIL / fitz / matplotlib) | Python deps not installed into the interpreter you're running | `python3 -m pip install -r scripts/../requirements.txt` — use the same `python3` you run the build with (check_env prints the exact path) |
 | Text renders as hollow boxes (tofu) | The chosen font has no glyphs for that script (usually CJK on a Latin-only font) | Set an East-Asian font for CJK runs (`dk.EAFONT = "Hiragino Sans GB"` on macOS, `"Microsoft YaHei"` on Windows, `"Noto Sans CJK SC"` on Linux); `references/multilingual.md` has the pairing table |
 | Deck looks right on your Mac, wrong fonts on a colleague's Windows | macOS-only fonts (Chalkboard SE, PingFang, Hiragino) don't exist there — PowerPoint silently substitutes | Either stick to the cross-platform pairs in `references/font-guidance.md`, or ship a **PDF** next to the pptx for sharing (the hand-off should flag this whenever a platform font was a deliberate style choice) |
-| `KeyError` / auth error from an image script | API key env var not set in *this* shell | `OPENAI_API_KEY="$(cat ~/.openai_key)"` inline before the command (never echo or commit a key) |
+| `KeyError` / auth error from an image script | API key env var not set in *this* shell | First check you should be on this path at all: the API is **metered** and needs the user's explicit go-ahead (BILLING GATE in `image-generation.md`) — `codex login` is the free alternative. Once agreed: `OPENAI_API_KEY="$(cat ~/.openai_key)"` inline before the command (never echo or commit a key) |
 
 ## 3 · Build-time Python exceptions
 

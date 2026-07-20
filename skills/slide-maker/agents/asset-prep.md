@@ -29,8 +29,13 @@ Per asset, the plan gives you a complete spec:
   plan's spec → whole, un-clipped PNG.
 - **Render equations** with `deckkit.equation_png` from the plan's LaTeX at the plan's height.
 - **GIF posters** with `deckkit.gif_poster` (the plan's representative frame).
-- **Generated plates** via `scripts/image_prompts.py` → `generate_images_codex.py` (no key) / OpenAI
-  fallback, using the plan's prompts. Put ALL plates (hero · divider · interior plate · per-slide heroes)
+- **Generated plates** via `scripts/image_prompts.py` → `generate_images_codex.py` (no key, runs on
+  the user's Codex subscription), using the plan's prompts. **🔴 Do NOT fall through to the OpenAI
+  API path.** It is metered — real money per image — and an `OPENAI_API_KEY` being present is not
+  authorisation. You are an execution-only worker with no user channel, so you cannot obtain that
+  consent: if no free image path exists, STOP and report "no free image path — needs `codex login`
+  or the user's go-ahead for the paid API" instead of spending. (BILLING GATE:
+  `references/image-generation.md`.) Put ALL plates (hero · divider · interior plate · per-slide heroes)
   in ONE manifest and run the script ONCE — it generates them **concurrently** (`--concurrency`), so the
   batch lands in ~one image's time, not N×. (Don't launch a separate process per image.)
 - **Icons** via `scripts/icons.py` `icon_png` (fetch → recolor → rasterize), one coherent family.

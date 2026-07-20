@@ -126,6 +126,16 @@ def _slide_fingerprints(pptx):
     blockers = []
     with zipfile.ZipFile(pptx) as z:
         names = set(z.namelist())
+        _part_cache = {}
+
+        def part_digest(name):
+            """Hash a package part ONCE. A background plate shared by every slide was previously
+            re-read and re-hashed per referencing slide, making cost O(slides x media-bytes)."""
+            d = _part_cache.get(name)
+            if d is None:
+                d = hashlib.sha256(z.read(name)).digest()
+                _part_cache[name] = d
+            return d
         pres_rels = _rels_targets(z.read("ppt/_rels/presentation.xml.rels"), "ppt") \
             if "ppt/_rels/presentation.xml.rels" in names else {}
 
@@ -153,7 +163,7 @@ def _slide_fingerprints(pptx):
         for m in sorted(global_media):
             if m in names:
                 gh.update(m.encode())
-                gh.update(z.read(m))
+                gh.update(part_digest(m))
         global_digest = gh.digest()
 
         # ---- deck order ---------------------------------------------------------------
@@ -190,7 +200,7 @@ def _slide_fingerprints(pptx):
             for tgt in sorted(_rels_targets(rel_bytes, "ppt/slides").values()):
                 if "/media/" in "/" + tgt and tgt in names:
                     h.update(tgt.encode())
-                    h.update(z.read(tgt))
+                    h.update(part_digest(tgt))
             fps.append(h.hexdigest())
 
         if len(fps) != len(rids):
@@ -286,8 +296,21 @@ def main(argv):
         )
 
     # Decide full vs incremental BEFORE spending anything on LibreOffice.
+    # When out == the deck's own folder (the code below explicitly tolerates the user passing "."),
+    # <deck>.pdf and viewer.html there are the HAND-OFF deliverables, not render products. Nothing
+    # in this run may delete or overwrite them.
+    _deck_dir = os.path.dirname(os.path.abspath(pptx)) or "."
+    _out_is_deck_dir = os.path.abspath(out) == os.path.abspath(_deck_dir)
+
     cache_path = os.path.join(out, ".render-cache.json")
-    fps, blockers = _slide_fingerprints(pptx)
+    # Cheap, but not free on a big deck — and a full render still needs them, both to validate the
+    # page count and to leave a cache the NEXT --fast can diff against. Guarded so an unreadable
+    # package falls back to LibreOffice's own diagnostic instead of a zipfile traceback (v3.5.1
+    # behaviour, which the friendly error in troubleshooting-faq.md documents).
+    try:
+        fps, blockers = _slide_fingerprints(pptx)
+    except Exception as exc:
+        fps, blockers = [], ["could not read the .pptx package: {}".format(exc)]
     changed, skip_reason = None, None
     if fast:
         prev = None
@@ -329,6 +352,11 @@ def main(argv):
                 missing.append(len(fps) - 1)
             changed = sorted(set(changed) | set(i for i in missing if 0 <= i < len(fps)))
 
+    try:
+        _st = os.stat(pptx)
+        pptx_stat = (_st.st_mtime_ns, _st.st_size)
+    except OSError:
+        pptx_stat = None
     incremental = fast and changed is not None and 0 < len(changed) < len(fps)
     if fast and changed is not None and len(changed) == len(fps) and len(fps):
         # Every slide changed (a rebuild that touched everything, or a deck-global edit such as a
@@ -358,7 +386,9 @@ def main(argv):
             # out holds files that are NOT ours (worst case: the user passed "." — the pptx's own
             # directory). NEVER rmtree it; clear only our previous render products.
             for e in entries:
-                if (e.startswith(("slide", "thumb_")) and e.endswith(".png")) or e == "viewer.html":
+                if e == "viewer.html" and _out_is_deck_dir:
+                    continue                    # that is the hand-off preview, not our render output
+                if (e.startswith(("slide", "thumb_")) and e.endswith(("png",))) or e == "viewer.html":
                     try:
                         os.remove(os.path.join(out, e))
                     except OSError:
@@ -381,6 +411,9 @@ def main(argv):
     # A subset renders into its OWN temp dir. Writing out/subset.pdf would collide between two
     # concurrent runs sharing a render dir (which the per-invocation LibreOffice profile above
     # exists to allow), and a crashed run would leave a file that breaks the render-only cleanup.
+    if tmp_dir:
+        import atexit
+        atexit.register(shutil.rmtree, tmp_dir, True)   # a die() mid-render must not leak a deck copy
     pdf, result, cmd = _render_pdf(soffice, src_pptx, tmp_dir if incremental else out)
     if not os.path.isfile(pdf):
         detail = [
@@ -447,13 +480,15 @@ def main(argv):
             skip_cache = True
     doc.close()
     if incremental:
-        shutil.rmtree(tmp_dir, ignore_errors=True)
         pdf = None                              # a subset PDF is not the deck's PDF
-        stale_pdf = os.path.join(out, os.path.splitext(os.path.basename(pptx))[0] + ".pdf")
-        try:                                    # a full render's PDF is now older than the PNGs
-            os.remove(stale_pdf)
-        except OSError:
-            pass
+        # Drop the previous FULL render's intermediate PDF, which the new PNGs have outdated —
+        # but never when `out` IS the deck folder, where that same filename is the user's
+        # hand-off deliverable. Deleting it there silently destroyed a --deliverables artefact.
+        if not _out_is_deck_dir:
+            try:
+                os.remove(os.path.join(out, os.path.splitext(os.path.basename(pptx))[0] + ".pdf"))
+            except OSError:
+                pass
 
     # Record fingerprints so the NEXT run can diff against them. Written only after the PNGs
     # actually landed, so a crashed render never leaves a cache claiming work that did not happen.
@@ -461,12 +496,15 @@ def main(argv):
     # state that was never rasterized — caching them would freeze that slide stale forever;
     # (2) a failed write must DELETE the cache, because a cache older than the PNGs is exactly the
     # "no slide changed" lie this whole path must not tell.
-    if not skip_cache:
+    if not skip_cache and fps:
+        # A stat() beats re-hashing the whole package: we only need to know whether the file moved
+        # under us during the ~10s render, and mtime+size answers that for a fraction of the cost.
         try:
-            now_fps, _ = _slide_fingerprints(pptx)
-        except Exception:
-            now_fps = None
-        if now_fps != fps:
+            st = os.stat(pptx)
+            moved = (st.st_mtime_ns, st.st_size) != pptx_stat
+        except OSError:
+            moved = True
+        if moved:
             skip_cache = True
             print("note: the .pptx changed during the render — not caching fingerprints",
                   file=sys.stderr)
@@ -529,13 +567,7 @@ def main(argv):
             len(keep), len(fps), ", ".join(str(i + 1) for i in keep), out))
         # If a hand-off already produced the deck-root pair, they now lag the deck. Say so loudly:
         # a stale PDF someone opens and reviews is the failure this whole path is built to avoid.
-        deck_dir_now = os.path.dirname(os.path.abspath(pptx)) or "."
-        stale = [f for f in (os.path.splitext(os.path.basename(pptx))[0] + ".pdf", "viewer.html")
-                 if os.path.isfile(os.path.join(deck_dir_now, f))]
-        if stale:
-            print("WARNING: {} at the deck root {} now STALE — re-run without --fast and with "
-                  "--deliverables before handing the deck over".format(
-                      " and ".join(stale), "is" if len(stale) == 1 else "are"), file=sys.stderr)
+
     else:
         print("rendered {} slides -> {}".format(n_pages, out))
         if fast and skip_reason:
@@ -548,6 +580,16 @@ def main(argv):
     if viewer:
         print("preview: {}  (open in a browser; arrow keys flip)".format(
             Path(viewer).resolve().as_uri()))
+    # Any render that is NOT the hand-off run leaves an already-delivered pair behind the deck.
+    # This must fire on the full path too: re-rendering a delivered deck is the likeliest way to
+    # end up with a PDF someone opens and reviews after it stopped matching the .pptx.
+    if not deliverables and not _out_is_deck_dir:
+        _stale = [f for f in (os.path.splitext(os.path.basename(pptx))[0] + ".pdf", "viewer.html")
+                  if os.path.isfile(os.path.join(_deck_dir, f))]
+        if _stale:
+            print("WARNING: {} at the deck root {} now STALE — re-run with --deliverables (and "
+                  "without --fast) before handing the deck over".format(
+                      " and ".join(_stale), "is" if len(_stale) == 1 else "are"), file=sys.stderr)
     print("next: python3 {} {} --renders {}  # render-time lint, then the actor-critic loop".format(
         os.path.join(os.path.dirname(os.path.abspath(__file__)), "lint_deck.py"), pptx, out))
 

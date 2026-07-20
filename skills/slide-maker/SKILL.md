@@ -1271,8 +1271,10 @@ A few rules that matter (see `references/design-principles.md`):
   "fancy" image that could sit on any slide** (name what it shows, else cut). **Place plates
   consistently — never a one-off generated *header* on a single body slide** (title chrome is
   `title_bar`'s; a content plate goes full-bleed / side-panel / inline, one role + art-direction across
-  the plated slides). Generate with **no key** (auto-detect: native imagegen → `generate_images_codex.py`
-  → OpenAI fallback; build the manifest with `image_prompts.py`), keep assets in
+  the plated slides). Generate with **no key** (auto-detect the FREE rungs: native imagegen →
+  `generate_images_codex.py`; build the manifest with `image_prompts.py`). The OpenAI-API path is
+  **metered and gated** — an available key is not consent; ask first (🔴 `image-generation.md`
+  BILLING GATE), keep assets in
   `~/Downloads/<deck>/assets/generated/`, place with `deckkit.picture(fit="contain"|"cover")`, and
   render-check (calm space behind text, no pseudo-text/fake charts, subject whole, real things right).
 - **Brand logo on every page when the deck is ABOUT one company / institution / product.** A pitch,
@@ -2172,7 +2174,7 @@ A checkable red-flag list; if a draft does any of these, stop and fix it before 
   eastern_traditional → `references/east-asian-aesthetic.md`; the full style+component catalogue →
   `references/design-gallery.md`).
 - `image_prompts.py` (build the prompt manifest) → `generate_images_codex.py` (no-key, Codex CLI) /
-  `generate_images_openai.py` (API fallback). `archetypes_html.py` (direction-gate previews as
+  `generate_images_openai.py` (**metered** API path — gated, see the BILLING GATE). `archetypes_html.py` (direction-gate previews as
   **one HTML link**; `archetypes.py` is the older pptx-render variant + the post-pick one-slide
   fidelity confirm) · `assemble.py` (assemble a sectioned deck) · `export_notes.py` (notes →
   rehearsal script).
