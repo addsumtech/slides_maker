@@ -234,7 +234,31 @@ DISPLAY = None            # optional DISPLAY/title font (Latin) — when set, ti
 # It must be a LINING-figure face: those components render nothing but a number, so an old-style
 # default guarantees the wobble every time — and, since v3.6.0, trips the deck's own build gate.
 # Georgia's italic display look is still available to any caller that passes serif="Georgia".
-NUMERAL_SERIF = "Arial"
+# Faces that ship OLD-STYLE (text) figures by default — digits at mixed heights. Shared by the
+# numeral-face resolver below and by lint_layout's OLDSTYLE_FIGURES check.
+_OLDSTYLE_FIGURE_FACES = {
+    "Georgia", "Baskerville", "Palatino", "Palatino Linotype", "Book Antiqua",
+    "Constantia", "Hoefler Text", "Calluna", "Candara",
+}
+# Fallback for a digits-only run when the deck's own display face has old-style figures. A SERIF
+# with lining figures, so an editorial deck keeps its register — swapping to a grotesque would
+# silently restyle four shipped presets that deliberately choose a serif display face.
+NUMERAL_SERIF = "Times New Roman"
+
+
+def numeral_face(preferred=None):
+    """Face for a run that is ENTIRELY digits (big_numeral, stat_row figures).
+
+    Honours the deck's own display face when it has lining figures, so the design is not
+    overridden; substitutes a lining face of the SAME register when the configured face would
+    make the digits wobble. The substitution applies to an explicitly-passed face too — there is
+    deliberately no opt-in, because lint_layout would reject the result anyway, and a helper that
+    renders nothing but digits has no legitimate use for old-style figures.
+    """
+    cand = preferred or DISPLAY or FONT
+    if cand and cand not in _OLDSTYLE_FIGURE_FACES:
+        return cand
+    return NUMERAL_SERIF
 
 # Shape-name marker for decorative background numerals (ghost_numeral / big_numeral mode='ghost').
 WATERMARK_TAG = "deckkit-watermark"
@@ -775,7 +799,7 @@ def editorial_header(slide, eyebrow, title, *, x=0.6, y=0.55, w=None, accent=MAG
 
 
 def big_numeral(slide, x, y, n, *, mode="marker", color=MAGENTA, size=None, w=None,
-                italic=True, serif=NUMERAL_SERIF):
+                italic=True, serif=None):
     """An oversized index figure as wayfinding/rhythm. mode='marker' (solid accent, ~44pt) for a
     numbered item; 'ghost' (very large, near-bg) as a watermark behind a title. The box is sized
     GENEROUSLY WIDE so a short token like '01' / '04' never wraps to two stacked glyphs (the bug
@@ -785,7 +809,8 @@ def big_numeral(slide, x, y, n, *, mode="marker", color=MAGENTA, size=None, w=No
     if w is None:
         sw, _ = _slide_size(slide)
         w = min(len(str(n)) * s / 72.0 * 1.0 + 0.5, sw - x - 0.1)   # wide enough to stay one line, but on-canvas
-    tb = text(slide, x, y, w, s / 72.0 * 1.35, [[(str(n), s, c, True, italic, serif)]], space_after=0)
+    tb = text(slide, x, y, w, s / 72.0 * 1.35,
+              [[(str(n), s, c, True, italic, numeral_face(serif))]], space_after=0)
     tb.text_frame.word_wrap = False
     if mode != "marker":
         tb.name = WATERMARK_TAG        # near-bg decoration, not a figure anyone reads
@@ -4753,11 +4778,6 @@ def catalogue_frame(slide, *, inset=0.32, gap=0.06, color=None, line_w=1.0, slid
 # the vertical anchor, and the alignment — NOT the text frame, which is routinely drawn taller
 # and wider than its text (top-anchored boxes with slack below, wide title boxes). Comparing
 # frames flags collisions that don't exist; comparing ink flags only the ones that do.
-# Faces that ship OLD-STYLE (text) figures by default — digits at mixed heights.
-_OLDSTYLE_FIGURE_FACES = {
-    "Georgia", "Baskerville", "Palatino", "Palatino Linotype", "Book Antiqua",
-    "Constantia", "Hoefler Text", "Calluna", "Candara",
-}
 # Below this, old-style figures inside running prose are a legitimate typographic choice;
 # at or above it a NUMERAL-DOMINANT run is a display number and the wobble is a defect.
 _OLDSTYLE_DISPLAY_PT = 20.0
