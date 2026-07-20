@@ -4737,6 +4737,15 @@ def catalogue_frame(slide, *, inset=0.32, gap=0.06, color=None, line_w=1.0, slid
 # the vertical anchor, and the alignment — NOT the text frame, which is routinely drawn taller
 # and wider than its text (top-anchored boxes with slack below, wide title boxes). Comparing
 # frames flags collisions that don't exist; comparing ink flags only the ones that do.
+# Faces that ship OLD-STYLE (text) figures by default — digits at mixed heights.
+_OLDSTYLE_FIGURE_FACES = {
+    "Georgia", "Baskerville", "Palatino", "Palatino Linotype", "Book Antiqua",
+    "Constantia", "Hoefler Text", "Calluna", "Candara",
+}
+# Below this, old-style figures inside running prose are a legitimate typographic choice;
+# at or above it the run is a display numeral and the wobble is a defect.
+_OLDSTYLE_DISPLAY_PT = 20.0
+
 _LINT_LINE_H = 1.20     # DETECTION line-height factor — the real LibreOffice render height (≈1.2×em).
                         # Deliberately > the 1.12 PLACEMENT estimate the measure_*/vstack helpers use:
                         # the lint models what actually renders (conservative), while those helpers pack
@@ -4942,6 +4951,36 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
                                 bad_ea.append(run.text.strip()[:12])
                     except Exception:
                         pass
+        # OLDSTYLE_FIGURES — digits set in a face whose numerals are OLD-STYLE (text) figures:
+        # 0/1/2 sit at x-height, 6/8 ascend, 3/4/5/7/9 descend. Lovely in running prose, WRONG on a
+        # display numeral, where the number visibly bobs up and down and misaligns with adjacent
+        # CJK/Latin. This rule was documented in five reference files and still shipped repeatedly —
+        # prose is advisory, so it is a deterministic gate now (SKILL.md's enforcement invariant).
+        bad_fig = []
+        for sh in slide.shapes:
+            if not getattr(sh, "has_text_frame", False):
+                continue
+            for para in sh.text_frame.paragraphs:
+                for run in para.runs:
+                    try:
+                        nm = (run.font.name or "").strip()
+                        if nm not in _OLDSTYLE_FIGURE_FACES:
+                            continue
+                        if not any(ch.isdigit() for ch in (run.text or "")):
+                            continue
+                        pts = run.font.size.pt if run.font.size is not None else None
+                        if pts is None or pts >= _OLDSTYLE_DISPLAY_PT:
+                            bad_fig.append((nm, run.text.strip()[:18], pts))
+                    except Exception:
+                        pass
+        if bad_fig:
+            nm, txt, pts = bad_fig[0]
+            sz = f"{pts:.0f}pt" if pts else "unsized"
+            findings.append((n, "CRITICAL", "OLDSTYLE_FIGURES",
+                             f"{len(bad_fig)} display numeral run(s) set in {nm}, an OLD-STYLE figure "
+                             f"face (e.g. '{txt}' at {sz}) — its digits sit at different heights, so the "
+                             "number bobs. Route runs containing digits to a LINING-figure face "
+                             "(Helvetica Neue / Arial / Cambria); see references/font-guidance.md"))
         if bad_ea:
             findings.append((n, "CRITICAL", "CJK_NO_EA",
                              f"{len(bad_ea)} CJK run(s) carry no <a:ea> font (e.g. '{bad_ea[0]}') — set "

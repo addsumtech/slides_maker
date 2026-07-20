@@ -9,6 +9,29 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+## [3.6.0] — 2026-07-20
+
+### Added — `OLDSTYLE_FIGURES`: a documented rule becomes a deterministic gate
+- **`deckkit.lint_layout` now hard-fails on display numerals set in an OLD-STYLE (text) figure
+  face** — Georgia, Palatino, Baskerville, Book Antiqua, Constantia, Hoefler Text, Calluna, Candara.
+  Those faces set 0/1/2 at x-height, push 6/8 up and drop 3/4/5/7/9 below the baseline, so a hero
+  number visibly bobs and misaligns with adjacent CJK/Latin. The check names the face, the offending
+  run and its size, and points at the lining-figure fix.
+- **Threshold-aware, so it is right rather than merely strict:** fires at **≥20pt** only. Old-style
+  figures inside running prose are a legitimate typographic choice and stay quiet; the gate targets
+  display numerals, where the wobble is a defect.
+- **Why this shipped as code and not more prose:** the rule was already written in *five* places —
+  `SKILL.md`, `design-principles.md`, `font-guidance.md`, `multilingual.md` and `critic.md` — and was
+  still missed on a real deck, twice, across two skills. That is precisely the failure mode SKILL.md's
+  own enforcement invariant warns about: *a MUST that lives only in reference prose is advisory in
+  practice*. Geometry linters cannot see it (it is a font property, not a layout fault) and render
+  thumbnails are too small to reveal it, so nothing downstream caught it either.
+- Wired end-to-end: the CRITICAL in `lint_layout`, a plain-language row in `troubleshooting-faq.md` §4,
+  the hard-fail list in `SKILL.md` updated from four items to five, and a **four-case regression test**
+  in `smoke_deckkit.py` covering both directions (Georgia/Palatino display numerals fail; Georgia body
+  prose and a lining-face numeral pass) — so the gate itself is verified to fire, not merely present.
+
+
 ### Added — composition / target / range components (native, editable)
 - **`native_chart` stacked & area kinds** — `column_stacked` · `column_stacked_100` · `bar_stacked` ·
   `bar_stacked_100` · `area` · `area_stacked` · `area_stacked_100`: real editable PowerPoint charts for

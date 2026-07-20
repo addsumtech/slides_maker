@@ -546,5 +546,22 @@ def _overflow_proof():
     dk.lint_layout(p2, strict=True)
 ok("overflow-proof components (meter_bar/scorecard/insight_banner/stat_row self-heal, lint-clean)", _overflow_proof)
 
+
+# --- OLDSTYLE_FIGURES: fires on a display numeral in a text-figure face, quiet in body prose ---
+def _oldstyle_figures():
+    def _lint(font, size, text):
+        p = dk.blank_deck(); s = dk.add_slide(p)
+        dk.text(s, 1.0, 1.0, 7.0, 1.4, [[(text, size, C("1B3A63"), True, False, font)]])
+        try:
+            dk.lint_layout(p, verbose=False, strict=True)
+            return False
+        except RuntimeError:
+            return True
+    assert _lint("Georgia", 58, "596,513"), "display numeral in Georgia must FAIL"
+    assert _lint("Palatino", 34, "2026"), "display numeral in Palatino must FAIL"
+    assert not _lint("Georgia", 13, "In 2026 the city grew."), "body prose in Georgia must PASS"
+    assert not _lint("Helvetica Neue", 58, "596,513"), "display numeral in a lining face must PASS"
+ok("OLDSTYLE_FIGURES gate (display numerals in text-figure faces fail; body prose passes)", _oldstyle_figures)
+
 print(f"\nsmoke_deckkit: {len(fails)} failure(s)" + ("" if not fails else " — " + "; ".join(n for n, _ in fails)))
 sys.exit(1 if fails else 0)

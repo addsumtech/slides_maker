@@ -1352,11 +1352,14 @@ A few rules that matter (see `references/design-principles.md`):
   the mechanical layout faults: it runs in-process in milliseconds, *before* the slow render +
   visual-critic round, and walks **every** shape — however it was placed, the grid helpers or raw
   coordinates — reasoning about each label's **ink** rectangle (where the glyphs actually land), so it
-  stays quiet on the generously-sized frames real builds use. It **hard-fails (CRITICAL)** on four
+  stays quiet on the generously-sized frames real builds use. It **hard-fails (CRITICAL)** on five
   things: content (text ink / a card / a non-bleed image) **off-canvas**, text **overflowing** a visible
-  box, **text-on-text** overlap, and **CJK runs with no `<a:ea>` font** (`CJK_NO_EA` — set
+  box, **text-on-text** overlap, **CJK runs with no `<a:ea>` font** (`CJK_NO_EA` — set
   `deckkit.EAFONT` before building; catching it here saves the render round-trip lint_deck previously
-  needed); it **warns** on a label/figure **escaping its card**, a **single
+  needed), and **display numerals in an OLD-STYLE figure face** (`OLDSTYLE_FIGURES` — Georgia,
+  Palatino, Baskerville, Constantia… set digits at mixed heights so a big number visibly bobs; route
+  runs containing digits to a lining face. Fires at ≥20pt only, so old-style figures inside running
+  prose — where they are correct — stay quiet); it **warns** on a label/figure **escaping its card**, a **single
   line left off-centre** in a card, content **reaching the footer**, and **two panels nearly
   touching** (`SLIVER_GAP` — a 0.005–0.10in seam between panels, or a panel and a picture: the
   hand-picked-pitch bug). (Each code's plain-language meaning + first fix:
