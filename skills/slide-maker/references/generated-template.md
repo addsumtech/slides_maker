@@ -174,8 +174,11 @@ only adds the divider variant, if wanted, and the 🔴 interior plate below.)*
   the **Codex CLI** `scripts/generate_images_codex.py --orientation landscape` if `codex` is installed
   (Codex/ChatGPT subscription, **no key** — shells `codex exec`, decodes the hosted image from the
   session rollout); **(3)** else, only as a fallback, the OpenAI API `scripts/generate_images_openai.py`
-  with `OPENAI_API_KEY`. **Don't prompt the user to choose or ask for a key when (1) or (2) is
-  available — just use it and say which; ask only if none exists.** Render at the deck's
+  with `OPENAI_API_KEY` — **metered, and gated: an available key is not consent. Ask before the first
+  paid call (🔴 stop, not waived by an auto directive), and if the user declines, fall back to a
+  non-generated look rather than spending** (the BILLING GATE in `image-generation.md`).
+  **Don't prompt the user to choose or ask for a key when (1) or (2) is
+  available — just use it and say which; the ask applies only to the paid rung.** Render at the deck's
   aspect (16:9 → e.g. `1536x864` / `2048x1152`). In Codex's native path, follow its save-path policy:
   generate first, then move/copy the selected output from `$CODEX_HOME/generated_images/...` into
   this deck's folder before referencing it in `style.py` or a build script.

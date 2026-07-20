@@ -343,8 +343,29 @@ One `codex exec` per image — the hosted tool's base64 lands in the Codex sessi
 (`~/.codex/sessions/.../rollout-*.jsonl`); the script decodes it to the PNG and verifies it (with a
 rollout-extraction fallback). ~30–90s/image; no key, no per-image cost.
 
-**3 · OpenAI API key — optional fallback, only if neither of the above is available.** Do **not**
+**What this means in Claude Code specifically** (the most common non-Codex host): CC has no native
+image tool, so rung 2 *is* the path — and it is **free on the user's Codex subscription**, needing
+`codex login` exactly once. The generated-template branch is therefore fully available in CC; it is
+not a degraded or paid experience. It degrades only if `codex` is absent, and then the correct move
+is `codex login` (free) — **not** a silent step down to the metered rung 3 below.
+
+**3 · OpenAI API key — a PAID fallback, and the one rung that must be ASKED FOR.** Do **not**
 request a key when native imagegen or `codex` is present.
+
+> **🔴 BILLING GATE — the single exception to "detection-first, never block."** Rungs 1 and 2 are
+> covered by the user's existing subscription and cost nothing per image, so they are used silently.
+> Rung 3 is **metered: every image is real money on the user's card.** Therefore:
+> - **A present `OPENAI_API_KEY` is NOT consent.** A key exported in the environment (or sitting in a
+>   dotfile) means the path is *possible*, not that spending was *authorised*. Detection-first stops
+>   at rung 2.
+> - **Ask before the first paid call, every deck.** State plainly that this path bills per image, how
+>   many images the plan needs (a generated template is typically 3–4; a style gate adds ~3), and that
+>   `codex login` is a free alternative. Then wait — this is a 🔴 stop, and it is NOT waived by a
+>   per-deck auto directive, which delegates *preferences*, never the user's money.
+> - **If the user declines or does not answer, do not spend.** Fall back to a non-generated route —
+>   branch (c) "design a clean one", a native `backdrop_motif` texture, or sourced Commons imagery —
+>   and say which you used. A deck that ships on a clean native look is a fine outcome; an unexpected
+>   bill is not.
 ```bash
 export OPENAI_API_KEY="sk-..."
 python scripts/generate_images_openai.py \
@@ -363,10 +384,11 @@ once: a 3-image generated template lands in roughly the time of one image, not t
 reported and the rest continue). This is the main multi-process win in slide generation — the deck
 *build* itself (python-pptx) is already fast and stays one script run.
 
-> **Detection-first; ask only when stuck.** Pick native tool call → Codex CLI → API key by what's
-> available, proceed, and tell the user which you used (one line). **Only ask** when *none* is available — then
-> point them to `codex login` (no key) or, as a last resort, an `OPENAI_API_KEY`. Never block on a
-> choice when a working path is already present.
+> **Detection-first for the FREE rungs; ask before the paid one.** Pick native tool call → Codex CLI
+> by what's available, proceed, and tell the user which you used (one line) — never block on a choice
+> when a *free* working path is already present. **Rung 3 is different:** an available API key does
+> not authorise spending, so when neither free rung exists, point the user to `codex login` (free)
+> and ask before any metered call — see the billing gate above.
 
 Do not paste API keys into prompts, slide text, source files, or manifests. Keep any key in the
 environment (`OPENAI_API_KEY`). The native and Codex paths need no key.

@@ -343,6 +343,14 @@ the direction gate** (the look is already decided). The four:
    **(a)** *"one of your saved templates (N registered)"* — the registry **rolled up as ONE option**
    · **(b)** *"a new template (I'll provide one)"* · **(c)** *"design a clean one"* · **(d)**
    *"generate a template with an image tool"* (a bespoke generated visual identity).
+   **🔴 Before offering (d), PROBE that a free image path exists** — inside Codex the native imagegen
+   tool counts; anywhere else (Claude Code included) run `command -v codex`. This costs one shell call
+   and prevents the one dead end in this question: a user picks (d), the whole look is planned around
+   generated imagery, and only at generation time does it emerge that nothing can generate. If no free
+   path is present, still offer (d) but name its one-time prerequisite in the option itself —
+   *"generate a template with an image tool (needs `codex login` once — free on your subscription)"* —
+   so the setup cost is visible **before** the choice, not after. Never silently substitute a paid
+   path for the missing free one; see the billing gate in `references/image-generation.md`.
    **Past work rolls up; general choices always stay.** Never enumerate the saved templates in the
    first question — a returning user's registry (which can hold many) would crowd the general
    choices out of a bounded-option UI, and the generic paths must stay visible on every deck. If the
