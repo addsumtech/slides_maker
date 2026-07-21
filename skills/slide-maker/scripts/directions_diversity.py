@@ -52,10 +52,29 @@ def _lum(rgb):
 def _face_class(stack):
     """Classify a CSS font stack by its FIRST family — that is what actually renders."""
     first = (stack or "").split(",")[0].strip().strip("'\"").lower()
+    # "sans-serif" CONTAINS "serif" — check the sans generics before any substring test, or a bare
+    # generic stack scores as a serif deck and two directions look more different than they are.
+    if first in ("sans-serif", "system-ui", "-apple-system", "ui-sans-serif") or "sans" in first:
+        return "sans"
     for names, cls in ((_MONO, "mono"), (_SLAB, "slab"), (_SERIF, "serif")):
         if any(n in first for n in names):
             return cls
     return "sans"
+
+
+# Kept in lockstep with archetypes_html.py's vocabulary ON PURPOSE: a typo used to pass HERE
+# (counting as a divergent composition) and only fail later in the renderer, so a collapsed set
+# could earn a divergence credit from a value that does not exist.
+_COVERS = ("centred", "low-left", "split-vertical", "full-bleed-type")
+_SKELETONS = ("statement", "split", "island", "band", "rail")
+
+
+def _checked(d, key, allowed):
+    v = d.get(key, allowed[0])
+    if v not in allowed:
+        raise ValueError("direction {!r}: {} must be one of {}, got {!r}".format(
+            d.get("name", "?"), key, allowed, v))
+    return v
 
 
 def _features(d):
@@ -68,7 +87,7 @@ def _features(d):
         # the PAIRING, not just the display face: serif-display-over-sans-body and an all-sans deck
         # are different type attitudes even when the display class alone matches.
         "type": (_face_class(disp), _face_class(body), _face_class(disp) == _face_class(body)),
-        "comp": (d.get("cover", "centred"), d.get("skeleton", "statement")),
+        "comp": (_checked(d, "cover", _COVERS), _checked(d, "skeleton", _SKELETONS)),
     }
 
 

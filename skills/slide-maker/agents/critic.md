@@ -96,7 +96,13 @@ something.
   locator, or the "visual-only — spoken content is a GAP" line: with the latter, any spoken-track
   claim presented as sourced fact is a finding), and
   the Design plan's declared contracts (skeleton rhythm map · WOW slide(s) · money slide ·
-  the `boldness:` dial + the `signature move:` line (what the distinctiveness axis judges) ·
+  the `boldness:` dial + the `signature move:` line INCLUDING its `carried_by:` slides (what the
+  distinctiveness axis judges — the dial sets this axis's SEVERITY, and on the named carry slides
+  judge whether the idea does structural work there or was merely stamped) · the branch's gate line
+  (`direction gate:` / `style gate:`, so a look that was never chosen from alternatives is visible
+  as such) · the `signature proof:` token (`slide N → <png>`, or `skipped: <carve>`) — compare the
+  SHIPPED signature slide against the frame approved before the rest of the deck existed; a proof
+  skipped with no named carve is itself a distinctiveness finding ·
   semantic-colour ledger · type tokens · motion manifest · the chosen preset name + its `guard`
   string verbatim (or `custom look — no preset guards`) (on the generated-template branch, plus the four identity-propagation contract lines — palette · type register · component geometry · surface) · the `logo plan:` line with its evidence
   token · the checkpoint motif line (device + meaning + legibility mode) · the approved image opt-in

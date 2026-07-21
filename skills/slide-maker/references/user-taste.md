@@ -131,7 +131,7 @@ a new registry subfolder and write a `profile.md` per the existing conventions
 (palette · fonts · build helpers · Origin), **distilling the final round's critic `strengths`
 and any cross-round recurring finding dimensions into the existing Notes field** — hand-off
 (after the critic loop) is the right moment because only then does the profile know what the
-vetted deck *proved*. This is the same single persist that collaborative mode's Gate A 6(b)
+vetted deck *proved*. This is the same single persist that collaborative mode's Gate A 7(b)
 names — one save, one owner, re-timed to hand-off. A look the user **explicitly praised**
 ("I love this one") additionally gets a `— praised` annotation on its LOOK-HISTORY line —
 those lines lead when Q4's "like one of my previous decks" expands.

@@ -127,6 +127,47 @@ def main():
                 pass
         ok("an unknown composition value fails loudly, not silently", _bad_value_is_loud)
 
+        def _sans_serif_generic():
+            """'sans-serif' CONTAINS 'serif' — a bare generic stack once scored as a SERIF deck,
+            making two all-sans directions look more different on the type axis than they are."""
+            sys.path.insert(0, HERE)
+            from directions_diversity import _face_class
+            assert _face_class("sans-serif") == "sans", "bare 'sans-serif' misclassified"
+            assert _face_class("Arial, sans-serif") == "sans"
+            assert _face_class("Georgia, serif") == "serif"
+            assert _face_class("Menlo, monospace") == "mono"
+        ok("type classifier: 'sans-serif' is sans, not serif", _sans_serif_generic)
+
+        def _shared_vocabulary():
+            """A typo'd composition used to PASS the diversity check (scoring as a divergent
+            composition) and only fail later in the renderer — so a collapsed set could earn a
+            divergence credit from a value that does not exist."""
+            sys.path.insert(0, HERE)
+            from directions_diversity import check as dcheck
+            try:
+                dcheck([{"name": "A", "cover": "diagnoal"}, {"name": "B"}])
+                raise AssertionError("a misspelled cover passed the diversity check")
+            except ValueError:
+                pass
+            import archetypes_html as ah
+            from directions_diversity import _COVERS, _SKELETONS
+            assert set(_COVERS) == set(ah._COVERS) and set(_SKELETONS) == set(ah._SKELETONS), \
+                "the two scripts' composition vocabularies have drifted apart"
+        ok("both scripts share ONE composition vocabulary", _shared_vocabulary)
+
+        def _callout_not_inside_body():
+            """.callout/.ftr are position:absolute against the SLIDE. If .sk-body wraps them, any
+            positioning on the body steals them and the callout floats into the bullet list."""
+            sys.path.insert(0, HERE)
+            import archetypes_html as ah
+            html = ah.build_directions_html(DIVERSE, os.path.join(d, "c.html"), "T") and \
+                open(os.path.join(d, "c.html"), encoding="utf-8").read()
+            body_start = html.index('<div class="sk-body">')
+            body_end = html.index("</div>", body_start)
+            assert 'class="callout' not in html[body_start:body_end], \
+                "the callout is inside .sk-body again — it will float out of place"
+        ok("the callout is a sibling of .sk-body, not a descendant", _callout_not_inside_body)
+
     print("smoke_directions: {} failure(s)".format(len(FAILS)))
     return 1 if FAILS else 0
 

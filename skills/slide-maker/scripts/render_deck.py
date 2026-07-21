@@ -276,7 +276,7 @@ def main(argv):
     fast = False
     # --slides N[,M]: render ONLY these 1-indexed slides. Unlike --fast (which DIFFS against a
     # cache and therefore renders everything on a first run), this is an explicit "show me page N"
-    # — the signature-move preview at Step 3.5, and any "just re-render the page I edited" loop.
+    # — the SIGNATURE PROOF that opens SKILL.md Step 4, and any "re-render the page I edited" loop.
     only = None
     argv = list(argv)
     while "--fast" in argv:

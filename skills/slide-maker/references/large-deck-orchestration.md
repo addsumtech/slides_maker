@@ -127,9 +127,17 @@ slides running, colour temperature jumping. After `assemble.py`, ONE mind (the c
 the assembled deck's rhythm map end-to-end — and the render-time lint's `sim↑` skeleton-similarity
 column + `LAYOUT SAMENESS` warning now measure exactly this across boundaries. Fix seams by reordering
 within a section or swapping one slide's skeleton, then re-render.
-- **The ONE deck-level `signature move` has a named owner.** It's a single deck-level beat (lands on
-  the cover / WOW / money slide), not a per-section decision, so the coordinator **assigns the section
-  that owns that slide to implement it and hands that author the `signature move:` line explicitly**
+- **The deck-level `signature move` has named owners — plural, because it is CARRIED.** The
+  `signature move:` line names a signature slide **and a `carried_by:` set of 2–3 slides** where the
+  same idea does structural work; on a fan-out those slides can sit in DIFFERENT sections, and an
+  idea carried by two authors who never compared notes is how a carry becomes a coincidence.
+  So the coordinator hands the full line — signature slide **plus every `carried_by:` slide** — to
+  **each** owning section, names which one is the signature slide, and requires the carry to be
+  structural (the motif becoming that slide's geometry), not a stamped repeat. **Run the Step-4
+  SIGNATURE PROOF once, centrally, on the signature slide BEFORE the sections fan out** — a proof
+  per section would race, and a wrong signature discovered after N sections are authored is exactly
+  the cost the proof exists to avoid. It's a single deck-level idea, not a per-section decision, so
+  the coordinator also **hands that author the `signature move:` line explicitly**
   (it lives in the deck-level Design language, not in the per-slide form·protagonist·motion rows the
   fan-out itemizes). This post-assembly pass then **confirms the ONE signature move landed** (or, on a
   `bold` dial, the ≤2 beats) and did not get duplicated per section — the whole-deck coherence critic's

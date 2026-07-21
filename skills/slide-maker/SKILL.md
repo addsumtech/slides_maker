@@ -635,8 +635,11 @@ the direction gate** (the look is already decided). The four:
      offer **2–3 directions** as a lighter opt-in. Either way it's the same machinery
      (collaborative mode Gate A, `references/collaborative-mode.md` + `scripts/archetypes_html.py`):
      **one HTML link** showing the archetype slides per direction, which the user opens and picks
-     from before the full build. **Skippable,
-     never forced.** A *registered or provided* template, **a generated template** (Q1's image-tool
+     from before the full build. **Scope differs by case, and the difference matters:** on case (a)
+     — the no-template branch — the gate **RUNS BY DEFAULT** and is skippable only via one of Q1(c)'s
+     NAMED carves, recorded on the checkpoint's `direction gate:` line (a design checkpoint on that
+     branch with no gate line is not ready). Only case (b), the lighter unsure/brand-defining offer,
+     is **skippable, never forced.** A *registered or provided* template, **a generated template** (Q1's image-tool
      branch), **or a Mode-A mimic example** (Q4 "reproduce the look")
      means the look is already decided — **don't offer the gate** in those cases. (A Mode-B mimic
      stays eligible for the lighter case-(b) offer — its palette/mood is re-chosen for the topic.)
@@ -1066,6 +1069,11 @@ Full list, fallbacks, and tofu recovery in `references/font-guidance.md`.
 >    in the default flow; under a per-deck AUTO WAIVER it downgrades to a posted FYI like every other
 >    approval stop — the waiver removes the wait, never the artifact.
 > 4. Then author the rest. If the proof is wrong you have re-authored ONE slide, not twenty.
+> 5. **Record it** — the run carries a `signature proof:` token to Step 5 on the critic contract
+>    card: `signature proof: slide N → <png path>` or `skipped: <the named carve>`. Without it the
+>    step is advisory by construction, which is the failure mode this whole batch exists to fix:
+>    the critic can then check the SHIPPED signature slide against the frame that was approved, and
+>    a silent skip is visible instead of invisible.
 >
 > **Skip only when:** `boldness: conservative` with its "deliberately restrained" clause recorded (no
 > risk was taken, so there is nothing to prove), or a 1–2 slide tiny-ask. A registered/provided template
@@ -1611,6 +1619,10 @@ comment block in `build_<deck>.py` remains the fallback for template-specific bu
 that don't use the scaffold.
 
 ### 🔴 PRE-FLIGHT — tick these 12 before the first render, EVERY deck, no exceptions
+*(The Step-4 SIGNATURE PROOF is not "the first render" in this sense — it is a one-slide probe of a
+deck that does not exist yet, so most of these 12 have nothing to check. Run the ones that apply to
+that single slide (legibility, no placeholder text, lining figures), and run the full 12 before the
+first WHOLE-deck render as always.)*
 This is the fixed boarding-pass between build and render. **Emit it as twelve literal ✓/✗ lines** (in
 your working notes or the build script's tail comment) — writing the ticks is what forces the checks
 to actually run; a deck with un-ticked pre-flight items is not ready to render. It exists because
@@ -1925,7 +1937,10 @@ Then run the **actor-critic loop** — this is the quality engine, and the criti
      merely stamped), **the branch's gate line** (`direction gate:` / `style gate:`, so a look that
      was never chosen from alternatives is visible as such), the semantic-colour
      ledger, the type tokens, the motion manifest, the **chosen preset name + its `guard` string
-     verbatim** (or `custom look — no preset guards`) (on the generated-template branch, plus the four identity-propagation contract lines — palette · type register · component geometry · surface), the **`logo plan:` line with its evidence
+     verbatim** (or `custom look — no preset guards`) (on the generated-template branch, plus the four identity-propagation contract lines — palette · type register · component geometry · surface), the **`signature proof:` token**
+     (`slide N → <png>` or `skipped: <carve>` — so the critic compares the SHIPPED signature slide
+     against the frame that was approved before the rest of the deck existed, and a silent skip is
+     visible), the **`logo plan:` line with its evidence
      token**, the **checkpoint motif line** (device + meaning + legibility mode), the **approved
      image opt-in rows with their per-row source tokens** (+ license/credit notes and any declared
      stylized deviation), and — **when a Q4 style example is in play** —
@@ -2026,6 +2041,9 @@ Then run the **actor-critic loop** — this is the quality engine, and the criti
    > taste finding that can hold a deck, it needs the user's own dial set to `bold`/`experimental`
    > to fire, and it is never a floor** (a bold idea that broke legibility is a floor finding first).
    > At `balanced+`/`conservative`, unchanged: one attempt, then ship with the note.
+   > **Record the outcome in the Step-6 hand-off note** — `distinctiveness: user waived (bold)` or
+   > `distinctiveness: resolved in round N`. Without it, "they accepted it" and "I never asked" are
+   > indistinguishable afterwards, which is exactly the hole the gate lines were added to close.
    > *(Owned by `agents/critic.md` distinctiveness axis + `references/review-rubrics.md`; all three
    > must say the same thing — this rule has a history of drifting apart across files.)* If the first render is already clean and the critic consents, you're done
    in one round — don't manufacture extra rounds. Otherwise apply the blocker+major
@@ -2114,7 +2132,7 @@ apply (`references/user-taste.md`): **(a) the save-this-look offer** — for a f
 <name>?"*; on an **explicit yes** persist the deck's `style.py` + a `profile.md` per the existing
 registry conventions, distilling the final round's critic `strengths` and any cross-round recurring
 finding dimensions into the profile's existing **Notes** field (hand-off, after the critic loop, is
-when the profile can carry what the vetted deck *proved* — this is collaborative mode's Gate A 6(b)
+when the profile can carry what the vetted deck *proved* — this is collaborative mode's Gate A 7(b)
 persist, re-timed: one save, one owner); **skip the offer entirely under a per-deck auto directive**
 — never an un-consented registry write; **(b) the taste write-back FYI** — whenever the Step-6 close
 below wrote anything to `taste.md`, one line: *"recorded to your taste profile: <X> — say the word

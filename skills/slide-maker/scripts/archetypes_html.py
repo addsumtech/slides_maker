@@ -172,8 +172,8 @@ def _slide_bullets(S):
       <div class="sk-body">
         {_title_bar(S, "How content slides read", "archetype")}
         <ul class="bullets">{bl}</ul>
-        {_callout(S, "TAKEAWAY", "One idea per slide, carried by the layout.")}
       </div>
+      {_callout(S, "TAKEAWAY", "One idea per slide, carried by the layout.")}
       {_footer(S, 2, "direction preview")}
     </div>'''
 
@@ -337,8 +337,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-s
 .cov-full-bleed-type .cover-sub{margin-top:14px}
 .cov-full-bleed-type .cover-tag{left:0;right:0;text-align:center}
 
-.sk-body{z-index:2;position:static}   /* NEVER position:relative — .callout/.ftr are anchored
-                                          to the SLIDE's bottom; re-parenting floats them up */
+/* z-index is INERT on a static element, so a bare z-index did NOT lift the body above the
+   absolutely-positioned band: the band painted over the title, and only looked survivable because
+   its tint is translucent. The body is positioned below (once the callout was moved out of it). */
+.sk-body{z-index:2}
 .sk-statement .sk-body{padding-top:2px}
 .sk-split{display:flex}
 .sk-split .sk-body{width:62%;margin-left:auto;padding-left:18px}
@@ -347,6 +349,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-s
   background:rgba(127,127,127,.055)}
 .sk-band .sk-band-el{position:absolute;left:0;right:0;top:0;height:30%;border-bottom:1px solid;
   background:rgba(127,127,127,.14);z-index:0}
+/* Safe to position now: .callout/.ftr are SIBLINGS of .sk-body, not descendants, so nothing
+   absolutely-positioned is re-parented by this. (They used to live inside the body, which is why
+   an earlier attempt at this floated the callout into the middle of the bullet list.) */
+.sk-body{position:relative}
+.callout,.ftr{z-index:3}
 .sk-band .sk-body{padding-top:10px}
 .sk-band .tbar{margin-bottom:16px}
 .sk-rail .sk-rail-el{position:absolute;left:0;top:0;bottom:0;width:6px;z-index:1}

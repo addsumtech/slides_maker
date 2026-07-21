@@ -43,9 +43,11 @@ exclusivity as `--fast` — not with `--deliverables`, and not with `--fast` its
 set for you. It deliberately writes NO cache: it rendered some pages, so recording fingerprints for
 all of them would let the next `--fast` call stale PNGs current. That means the run AFTER a
 `--slides` run does a full render — correct, and the reason is printed.
-It falls back to a full render, with the reason printed, whenever the page mapping could be wrong
-(slide count changed, every slide changed, auto slide-number fields, no cache) — a slow render is an
-acceptable outcome; a stale PNG that a critic then signs off on is not.
+**`--fast`** falls back to a full render, with the reason printed, whenever the page mapping could
+be wrong (slide count changed, every slide changed, auto slide-number fields, no cache) — a slow
+render is an acceptable outcome; a stale PNG that a critic then signs off on is not. **`--slides`
+does NOT fall back**: you named the pages, so a deck whose mapping is uncertain is an error, not a
+silent widening — it exits 1 and tells you to render the whole deck.
 
 ## What the deliverable folder contains
 The deck + `render/` PNGs, the build script (source of truth), the speaker-notes source,
