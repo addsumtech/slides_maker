@@ -190,7 +190,7 @@ tiles via `deckkit.scorecard`. For a single obvious number use a hero stat, not 
   lint still catches a real overflow).
 - **Numerals need LINING figures.** Set big numbers in a **lining-figure** face (uniform-height,
   baseline-aligned digits) — Helvetica Neue / Arial / Verdana, or Cambria / Times New Roman for serif.
-  A big number in an **old-style-figure** face (Georgia, Baskerville, Palatino, Constantia) shows
+  A big number in an **old-style-figure** face (Georgia, Constantia, Hoefler Text — verified from the installed font, not assumed) shows
   digits at different heights ("some smaller / higher / lower") and misaligns with adjacent CJK/Latin
   on the line. Full rule + face list in `references/font-guidance.md`. Verify digit alignment in the
   render — beside CJK (`中文 15亿`) and on pure-Latin lines.

@@ -547,90 +547,66 @@ def _overflow_proof():
 ok("overflow-proof components (meter_bar/scorecard/insight_banner/stat_row self-heal, lint-clean)", _overflow_proof)
 
 
-# --- OLDSTYLE_FIGURES: fires on a display numeral in a text-figure face, quiet in body prose ---
+# --- numerals: PREVENTED in the components, warned (not blocked) on hand-set runs ---
 def _oldstyle_figures():
-    def _lint(font, size, text):
-        p = dk.blank_deck(); s = dk.add_slide(p)
-        dk.text(s, 1.0, 1.0, 7.0, 1.4, [[(text, size, C("1B3A63"), True, False, font)]])
-        try:
-            dk.lint_layout(p, verbose=False, strict=True)
-            return False
-        except RuntimeError:
-            return True
-    # the defect: a big number whose digits visibly bob
-    assert _lint("Georgia", 58, "596,513"), "display numeral in Georgia must FAIL"
-    # NB: NOT Palatino — the installed Palatino measures as LINING (digit spread ~2/100pt), which
-    # is exactly why the blacklist was replaced by measurement. Hoefler Text really is old-style.
-    assert _lint("Hoefler Text", 34, "2026"), "display numeral in Hoefler Text must FAIL"
-    assert _lint("Georgia", 62, "\u00a54,508,824,075"), "currency hero numeral must FAIL"
-    # NOT the defect: body prose, and headings that merely contain a digit. Blocking these would
-    # hard-fail ordinary decks - a title like "2026 Roadmap" is a normal typographic choice.
-    assert not _lint("Georgia", 13, "In 2026 the city grew."), "body prose in Georgia must PASS"
-    assert not _lint("Georgia", 28, "2026 Roadmap"), "heading containing a year must PASS"
-    assert not _lint("Georgia", 28, "Q3 results"), "heading with one digit must PASS"
-    assert not _lint("Helvetica Neue", 58, "596,513"), "display numeral in a lining face must PASS"
+    import presets as _pr
+    saved = (dk.DISPLAY, dk.FONT)
 
-    # The skill's OWN components must survive its own gate. big_numeral/stat_row render nothing
-    # but digits, so an old-style default would fail every deck that uses them; a ghost numeral is
-    # decoration behind content and has no legibility stake. Lint them, not just build them - the
-    # suite previously constructed these shapes and never linted them, which is how a component the
-    # gate forbids shipped green.
-    def _lint_prs(fn):
+    def _codes(fn):
+        p = dk.blank_deck(); s = dk.add_slide(p); fn(s)
+        return [f[2] for f in (dk.lint_layout(p, verbose=False, strict=False) or [])]
+
+    def _builds(fn):
         p = dk.blank_deck(); s = dk.add_slide(p); fn(s)
         try:
-            dk.lint_layout(p, verbose=False, strict=True); return False
+            dk.lint_layout(p, verbose=False, strict=True); return True
         except RuntimeError:
-            return True
-    assert not _lint_prs(lambda s: dk.big_numeral(s, 1, 1, "01")), "big_numeral() default must PASS"
-    assert not _lint_prs(lambda s: dk.big_numeral(s, 1, 1, "03", mode="ghost", serif="Georgia")), \
-        "a ghost watermark must PASS even in an old-style face"
-    assert not _lint_prs(lambda s: dk.stat_row(s, 0.7, 2, 8.6, [("42%", "", "share"), ("2026", "", "yr")])), \
-        "stat_row() defaults must PASS"
-    # an INHERITED (unknown) size is not evidence of a display numeral and must never block a save
-    def _unsized(s):
-        tb = s.shapes.add_textbox(dk.Inches(1), dk.Inches(1), dk.Inches(6), dk.Inches(1))
-        r = tb.text_frame.paragraphs[0].add_run(); r.text = "1234"; r.font.name = "Georgia"
-    assert not _lint_prs(_unsized), "unsized Georgia digits must PASS"
+            return False
 
-    # Every shipped preset must survive its OWN numeral components. Four of them set a Georgia
-    # display face, and stat_row/kpi_card/scorecard previously hard-failed on their own output.
-    import presets as _pr
-    _saved = (dk.DISPLAY, dk.FONT)
-    for _nm in ("glassmorphism", "swiss", "editorial_paper", "editorial_report", "risograph",
-                "memphis", "brutalist", "blueprint", "ink_wash", "eastern_traditional",
-                "consulting", "dark_tech", "luxury_dark", "museum_memorial"):
-        _p = _pr.preset(_nm)
-        dk.DISPLAY = _p.get("display"); dk.FONT = _p.get("font") or dk.FONT
-        def _numerals(s, _p=_p):
-            dk.big_numeral(s, 0.6, 0.6, "03")
-            dk.stat_row(s, 0.6, 2.0, 8.8, [("596,513", "", "returns"), ("42%", "", "share")])
-            dk.scorecard(s, 0.6, 3.6, 2.2, 1.2, "REVENUE", "2,026")
-            dk.kpi_card(s, 3.2, 3.6, 2.2, 1.2, "USERS", "1,634")
-            dk.ghost_numeral(s, 6.0, 3.6, 3.0, 1.4, "07")
-        assert not _lint_prs(_numerals), "preset %s must survive its own numeral components" % _nm
-    # A PROVIDED template can make the BODY face Georgia (SKILL.md tells the builder to set
-    # deckkit.FONT to the template's font). The preset loop above cannot catch that, because every
-    # shipped preset uses a sans body face - scorecard/kpi_card/change_stat inherit FONT for their
-    # figures and hard-failed on their own output in exactly that configuration.
-    dk.DISPLAY = dk.FONT = "Georgia"
+    # 1) the rule NEVER blocks a build — it is a taste call, and its false-positive surface
+    #    (every component x font x string shape; "7" and "10x" are digit-dominant) is unbounded
+    for face, txt, size in (("Georgia", "596,513", 60), ("Hoefler Text", "2026", 34),
+                            ("Georgia", "7", 40), ("Georgia", "10x", 40)):
+        assert _builds(lambda s, f=face, t=txt, z=size: dk.text(
+            s, 1, 1, 8, 1.6, [[(t, z, C("1B3A63"), True, False, f)]])), \
+            "OLDSTYLE must never block a build (%s / %r)" % (face, txt)
+
+    # 2) but a hand-set wobbling numeral IS reported
+    assert "OLDSTYLE_FIGURES" in _codes(lambda s: dk.text(
+        s, 1, 1, 8, 1.6, [[("596,513", 60, C("1B3A63"), True, False, "Georgia")]])), \
+        "a hand-set Georgia hero numeral must be reported"
+    # body prose and word-bearing headings are silent
+    for txt, size in (("In 2026 the city grew.", 13), ("2026 Roadmap", 28), ("2026年展望", 28)):
+        assert "OLDSTYLE_FIGURES" not in _codes(lambda s, t=txt, z=size: dk.text(
+            s, 1, 1, 8, 1.6, [[(t, z, C("1B3A63"), True, False, "Georgia")]])), \
+            "prose/headings must stay silent (%r)" % txt
+
+    # 3) PREVENTION: components resolve a lining face themselves, under any preset AND under a
+    #    Georgia BODY face (the provided-template case no preset covers)
     def _figures(s):
-        dk.scorecard(s, 0.6, 1.0, 2.4, 1.3, "REVENUE", "596,513")
-        dk.kpi_card(s, 3.2, 1.0, 2.6, 1.3, "USERS", "1,634")
-        dk.change_stat(s, 0.6, 2.6, 5.0, 0.9, "4,461", "4,509")
-        dk.stat_row(s, 0.6, 3.8, 8.6, [("596,513", "", "returns")])
-        dk.big_numeral(s, 0.6, 4.8, "03")
-    assert not _lint_prs(_figures), "figure components must survive a Georgia BODY face"
-    dk.DISPLAY, dk.FONT = _saved
+        dk.big_numeral(s, 0.6, 0.6, "03")
+        dk.stat_row(s, 0.6, 1.9, 8.6, [("596,513", "", "returns")])
+        dk.scorecard(s, 0.6, 3.0, 2.4, 1.3, "REVENUE", "596,513")
+        dk.kpi_card(s, 3.2, 3.0, 2.6, 1.3, "USERS", "1,634")
+        dk.change_stat(s, 0.6, 4.5, 5.0, 0.9, "4,461", "4,509")
+        dk.ghost_numeral(s, 6.2, 4.4, 3.2, 1.0, "07")
+    for nm in ("editorial_paper", "editorial_report", "luxury_dark", "museum_memorial", "swiss"):
+        p = _pr.preset(nm); dk.DISPLAY = p.get("display"); dk.FONT = p.get("font") or dk.FONT
+        assert "OLDSTYLE_FIGURES" not in _codes(_figures), "preset %s emits a wobbling figure" % nm
+    dk.DISPLAY = dk.FONT = "Georgia"
+    assert "OLDSTYLE_FIGURES" not in _codes(_figures), "Georgia BODY face: components must self-resolve"
 
-    # The digit-share metric must not invert on CJK: a year inside a Chinese heading is a heading.
-    assert dk._digit_share("2026 Roadmap") < dk._OLDSTYLE_NUMERAL_SHARE
-    assert dk._digit_share("2026年展望") < dk._OLDSTYLE_NUMERAL_SHARE, "CJK heading must not read as a numeral"
-    assert dk._digit_share("2026 로드맵") < dk._OLDSTYLE_NUMERAL_SHARE
-    assert dk._digit_share("596,513") >= dk._OLDSTYLE_NUMERAL_SHARE
-    # Figure style is MEASURED from the installed font, not asserted from a list.
-    assert not dk.has_oldstyle_figures("Times New Roman")
-    assert dk.numeral_face("Palatino") == "Palatino", "a lining face must not be substituted"
-ok("OLDSTYLE_FIGURES gate (display numerals in text-figure faces fail; body prose passes)", _oldstyle_figures)
+    # 4) a WORD value must keep the deck's own font — resolving it split one card across two faces
+    assert dk.numeral_run_face("Excellent", fallback="Georgia") == "Georgia"
+    assert dk.numeral_run_face("596,513", fallback="Georgia") == dk.NUMERAL_SERIF
+    # 5) big_numeral follows the deck, and is not pinned to one face
+    dk.DISPLAY = dk.FONT = "Arial"
+    assert dk.numeral_face(None, fallback=dk.DISPLAY) == "Arial", "big_numeral must not be pinned"
+    # 6) face detection is measured, and the curated fallback is REACHABLE (it was shadowed once)
+    assert dk.has_oldstyle_figures("Georgia") and not dk.has_oldstyle_figures("Palatino")
+    assert dk.has_oldstyle_figures("Constantia"), "fallback list must be reachable for absent fonts"
+    dk.DISPLAY, dk.FONT = saved
+ok("numerals: prevented in components, warned (never blocked) on hand-set runs", _oldstyle_figures)
 
 print(f"\nsmoke_deckkit: {len(fails)} failure(s)" + ("" if not fails else " — " + "; ".join(n for n, _ in fails)))
 sys.exit(1 if fails else 0)

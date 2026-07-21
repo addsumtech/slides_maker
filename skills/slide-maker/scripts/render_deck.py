@@ -15,6 +15,7 @@ Override LibreOffice discovery with the SOFFICE env var (full path to the binary
 """
 import json
 import os
+import re
 import sys
 import shutil
 import tempfile
@@ -80,6 +81,11 @@ def _tail(text, limit=4000):
     if len(text) <= limit:
         return text
     return "...<truncated>...\n" + text[-limit:]
+
+
+# Exactly what a render writes: slide01.png … slideNN.png and the two bookend thumbnails. Used to
+# decide what may be deleted when the out dir is shared with the user's own files.
+_RENDER_PNG = re.compile(r"^(slide\d{2,}|thumb_first|thumb_last)\.png$")
 
 
 def _rels_targets(xml_bytes, base_dir):
@@ -401,6 +407,12 @@ def main(argv):
     import atexit
     atexit.register(shutil.rmtree, tmp_dir, True)       # a die() mid-render must not leak a deck copy
     pdf, result, cmd = _render_pdf(soffice, src_pptx, tmp_dir)
+    try:
+        import fitz  # pymupdf
+    except ImportError:
+        die("pymupdf not installed — run: {} -m pip install pymupdf".format(
+            os.path.basename(sys.executable) or "python"))
+
     if result.returncode != 0 or not os.path.isfile(pdf):
         detail = [
             "LibreOffice failed to convert {} (exit {}).".format(pptx, result.returncode)
@@ -420,7 +432,21 @@ def main(argv):
         )
         die("\n".join(detail))
 
-    # Clear the previous render only NOW, after LibreOffice has actually produced a PDF. Doing it
+    # Open the PDF BEFORE the cleanup: a non-zero exit and a missing file were already fatal, but a
+    # zero-exit run that writes a truncated/garbage PDF passed both checks, and the cleanup had
+    # already deleted the previous render by the time fitz raised.
+    try:
+        _probe = fitz.open(pdf)
+        _npages = _probe.page_count
+        _probe.close()
+    except Exception as exc:
+        die("LibreOffice produced an unreadable PDF from {} ({}). The previous render in {} was "
+            "left untouched.".format(pptx, exc, out))
+    if _npages < 1:
+        die("LibreOffice produced an empty PDF (0 pages) from {}. The previous render in {} was "
+            "left untouched.".format(pptx, out))
+
+    # Clear the previous render only NOW, after LibreOffice has actually produced a readable PDF. Doing it
     # earlier meant a failed conversion destroyed the last good render and left nothing at all —
     # the user lost working output to a run that produced none.
     # Wiping the render dir BEFORE deciding is what made --fast a no-op: every PNG looked
@@ -440,8 +466,11 @@ def main(argv):
             # out holds files that are NOT ours (worst case: the user passed "." — the pptx's own
             # directory). NEVER rmtree it; clear only our previous render products.
             for e in entries:
-                if e == "viewer.html" and _out_is_deck_dir:
-                    continue                    # that is the hand-off preview, not our render output
+                if _out_is_deck_dir and (e == "viewer.html" or not _RENDER_PNG.match(e)):
+                    # out IS the deck folder: only files matching our own strict output pattern
+                    # (slideNN.png / thumb_first|last.png) are ours. A user's slide_background.png
+                    # or thumb_hero.png sitting beside the deck was being deleted silently.
+                    continue
                 if (e.startswith(("slide", "thumb_")) and e.endswith(("png",))) or e == "viewer.html":
                     try:
                         os.remove(os.path.join(out, e))
@@ -449,11 +478,6 @@ def main(argv):
                         pass
     os.makedirs(out, exist_ok=True)
 
-    try:
-        import fitz  # pymupdf
-    except ImportError:
-        die("pymupdf not installed — run: {} -m pip install pymupdf".format(
-            os.path.basename(sys.executable) or "python"))
 
     doc = fitz.open(pdf)
     skip_cache = False
@@ -599,7 +623,7 @@ def main(argv):
     # Any render that is NOT the hand-off run leaves an already-delivered pair behind the deck.
     # This must fire on the full path too: re-rendering a delivered deck is the likeliest way to
     # end up with a PDF someone opens and reviews after it stopped matching the .pptx.
-    if not deliverables and not _out_is_deck_dir:
+    if not deliverables:
         _stale = [f for f in (os.path.splitext(os.path.basename(pptx))[0] + ".pdf", "viewer.html")
                   if os.path.isfile(os.path.join(_deck_dir, f))]
         if _stale:

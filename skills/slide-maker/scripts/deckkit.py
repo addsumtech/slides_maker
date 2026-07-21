@@ -249,7 +249,7 @@ _OLDSTYLE_FIGURE_FACES = {
 _FIGURE_STYLE_CACHE = {}
 
 
-def _font_file(face):
+def _numeral_font_file(face):
     """Best-effort path to an installed font file for `face` (macOS/Linux/Windows dirs)."""
     import glob
     import os
@@ -278,7 +278,7 @@ def has_oldstyle_figures(face):
     if face in _FIGURE_STYLE_CACHE:
         return _FIGURE_STYLE_CACHE[face]
     verdict = None
-    path = _font_file(face)
+    path = _numeral_font_file(face)
     if path:
         try:
             from PIL import ImageFont
@@ -297,6 +297,18 @@ def has_oldstyle_figures(face):
 # with lining figures, so an editorial deck keeps its register — swapping to a grotesque would
 # silently restyle four shipped presets that deliberately choose a serif display face.
 NUMERAL_SERIF = "Times New Roman"
+
+
+def numeral_run_face(value, preferred=None, fallback=None):
+    """`numeral_face` for a run, but only when the run really is a number.
+
+    A component's value slot takes numbers AND words — a scorecard reads "596,513" or "Excellent".
+    Resolving a lining face for the word case put two typefaces inside one card, with the value in
+    Times New Roman and its label in the deck's own font.
+    """
+    if _digit_share(str(value)) < _OLDSTYLE_NUMERAL_SHARE:
+        return preferred or fallback
+    return numeral_face(preferred, fallback)
 
 
 def numeral_face(preferred=None, fallback=None):
@@ -778,7 +790,8 @@ def scorecard(slide, x, y, w, h, label, value, *, delta=None, caption=None, good
     # the value is a FIGURE: resolve a lining face rather than inheriting a body font whose
     # digits sit at mixed heights (a Georgia body face made this tile fail its own build gate)
     tbv = text(slide, px, y + 0.5, w - 0.5, 0.8,
-               [[(str(value), vsz, val_c, True, False, numeral_face(fallback=FONT))]], space_after=0)
+               [[(str(value), vsz, val_c, True, False,
+                  numeral_run_face(value, fallback=FONT))]], space_after=0)
     tbv.text_frame.word_wrap = False                                      # never char-break the number
     cy = max(y + 1.32, y + 0.5 + vsz / 72.0 * 1.2 + 0.08)                 # airy floor when there's room
     if cy + delta_h + cap_h > y + h - 0.04:                              # ...compressed only when tight
@@ -866,7 +879,8 @@ def big_numeral(slide, x, y, n, *, mode="marker", color=MAGENTA, size=None, w=No
         sw, _ = _slide_size(slide)
         w = min(len(str(n)) * s / 72.0 * 1.0 + 0.5, sw - x - 0.1)   # wide enough to stay one line, but on-canvas
     tb = text(slide, x, y, w, s / 72.0 * 1.35,
-              [[(str(n), s, c, True, italic, numeral_face(serif, fallback=NUMERAL_SERIF))]],
+              [[(str(n), s, c, True, italic,
+                 numeral_face(serif, fallback=DISPLAY or FONT or NUMERAL_SERIF))]],
               space_after=0)
     tb.text_frame.word_wrap = False
     if mode != "marker":
@@ -889,7 +903,7 @@ def stat_row(slide, x, y, w, items, *, ink=DEEP, accent=MAGENTA, serif=None, div
         cx = x + i * (cw + gap)
         fsz = fig_size
         mruns = [(str(fig), True)] + ([(" " + str(unit), True)] if unit else [])
-        _nface = numeral_face(serif, fallback=FONT)   # keep stat_row's body-font default
+        _nface = numeral_run_face(fig, serif, fallback=FONT)   # only when the figure IS a number
         nat = _natural_width_in(mruns, fsz, _nface)
         if nat > cw:                              # the "-0.9 million" mid-number split bug
             fsz = max(15.0, fig_size * cw / nat * 0.98)
@@ -921,9 +935,9 @@ def change_stat(slide, x, y, w, h, before, after, *, accent=MAGENTA, ink=DEEP, b
     al = align if align is not None else PP_ALIGN.LEFT
     tb = text(slide, x, y, w, h,
               [[(f"{before} {arrow} ", before_size, ink, False, False,
-                 numeral_face(font, fallback=FONT)),
+                 numeral_run_face(before, font, fallback=FONT)),
                 (str(after), after_size, accent, True, False,
-                 numeral_face(font, fallback=FONT))]],
+                 numeral_run_face(after, font, fallback=FONT))]],
               align=al, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
     pct = max(0.0, 0.36 * (after_size - before_size) / max(1, before_size) * 100)  # centre small on big
     runs = tb.text_frame.paragraphs[0].runs
@@ -4116,7 +4130,7 @@ def kpi_card(slide, x, y, w, h, label, value, *, unit="", delta=None, delta_colo
         text(slide, x + w - dw - 0.16, y + 0.21, dw, 0.3,
              [[(str(delta), 10, dc, True, False, font)]],
              align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
-    _vface = numeral_face(value_font or font, fallback=FONT)   # the value is a figure
+    _vface = numeral_run_face(value, value_font or font, fallback=FONT)
     vparts = [(str(value), value_size, acc, True, False, _vface)]
     if unit:
         vparts.append((" " + unit, int(value_size * 0.5), acc, True, False, value_font or font))
@@ -5082,7 +5096,7 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
         # display numeral, where the number visibly bobs up and down and misaligns with adjacent
         # CJK/Latin. This rule was documented in five reference files and still shipped repeatedly —
         # prose is advisory, so it is a deterministic gate now (SKILL.md's enforcement invariant).
-        bad_fig, soft_fig = [], []
+        bad_fig = []
         for sh in slide.shapes:
             if not getattr(sh, "has_text_frame", False):
                 continue
@@ -5105,24 +5119,26 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
                             # break the registered-template branch and contradicts the documented
                             # ">=20pt" scope.
                             continue
-                        entry = (nm, run.text.strip()[:18], pts)
                         if _digit_share(run.text) >= _OLDSTYLE_NUMERAL_SHARE:
-                            bad_fig.append(entry)           # a display NUMERAL — the real defect
-                        else:
-                            soft_fig.append(entry)          # a heading that merely contains a digit
+                            # a display NUMERAL. A heading that merely contains a digit is not a
+                            # fault at all, so it is not reported — warning about a non-fault is
+                            # noise, and the message would have said as much.
+                            bad_fig.append((nm, run.text.strip()[:18], pts))
                     except Exception:
                         pass
-        if soft_fig and not bad_fig:
-            nm, txt, _p = soft_fig[0]
-            findings.append((n, "WARN", "OLDSTYLE_FIGURES",
-                             f"{len(soft_fig)} large run(s) in {nm}, an old-style figure face, contain "
-                             f"digits (e.g. '{txt}') — mixed-height digits inside a heading are a "
-                             "typographic choice, not a fault; if the NUMBER is the point, set that run "
-                             "in a lining face (references/font-guidance.md)"))
         if bad_fig:
             nm, txt, pts = bad_fig[0]
             sz = f"{pts:.0f}pt" if pts else "unsized"
-            findings.append((n, "CRITICAL", "OLDSTYLE_FIGURES",
+            # WARN, not CRITICAL. Four audit rounds showed this rule cannot be made safe as a
+            # build blocker: its false-positive surface is every component x every font x every
+            # string shape ("7" and "10x" are digit-dominant; a cover whose title IS a year has no
+            # fix), and it is structurally blind to tables and native charts (has_text_frame is
+            # False), so blocking could never be consistent anyway. The defect is now PREVENTED at
+            # the source instead — numeral_run_face() resolves a lining face inside every component
+            # that emits a figure — and this finding covers hand-set runs, where a warning is the
+            # honest severity for a taste call. A project that wants it fatal can assert over its
+            # own finished file, as the Tokyo build script does.
+            findings.append((n, "WARN", "OLDSTYLE_FIGURES",
                              f"{len(bad_fig)} display numeral run(s) set in {nm}, an OLD-STYLE figure "
                              f"face (e.g. '{txt}' at {sz}) — its digits sit at different heights, so the "
                              "number bobs. Route runs containing digits to a LINING-figure face "
