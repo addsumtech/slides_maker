@@ -124,7 +124,10 @@ an order of operations, and you guard it:
   Mode-A brief both exist, the later, more specific Mode-A brief wins — the gate should never
   have been offered), or a direction the user picked at a gate — the blank-canvas sketch explores
   *composition, form, and emphasis WITHIN that language*; it never re-litigates the palette,
-  fonts, or identity the user already approved. Branch-level 🔴 MUSTs travel with the branch and
+  fonts, or identity the user already approved. **And when the gate carried composition tokens
+  (`style.py`'s `# composition:` note), the sketch works WITHIN the picked home composition too:**
+  the cover keeps its chosen archetype, the picked skeleton stays the rhythm map's plurality — the
+  sketch varies everything else, never the one axis the user just chose from rendered options. Branch-level 🔴 MUSTs travel with the branch and
   count as floors here — e.g. the generated-template branch's frosted content blocks + faint
   interior plates (use the glass variants: `glass_card`, `kpi_card(fill="glass")`, `icon_tile`
   glass style — never an opaque white panel over imagery). Taste inside a locked language is
@@ -399,7 +402,11 @@ each slide in isolation and can't retrofit rhythm, so this is yours.
 - **Build the rhythm map** (`design-intelligence-addendum.md` §1.2) — one row per content slide:
   ***canvas skeleton** · density · background mode · visual protagonist · emotional register · role in
   rhythm* — and confirm **adjacent rows differ on more than one axis**, not just in title text. The
-  skeleton column (statement / split / island / dashboard / band / full-bleed / rail / gallery — §1.2)
+  skeleton column (statement / split / island / dashboard / band / full-bleed / rail / gallery — §1.2;
+  **when the direction gate chose a `skeleton` token** — check `style.py`'s `# composition:` note —
+  **that skeleton is the map's PLURALITY: the most-used home base, visibly the deck's default**,
+  while the ≥4-distinct rotation below still holds. The user picked a composition from rendered
+  options; a rhythm map that never favours it has quietly overridden their pick)
   rotates the page's *bone structure*, one level above the protagonist: a deck that rotates charts and
   diagrams inside the same title-top / one-zone / footer skeleton still reads as a template. **≥4
   distinct skeletons on an 8+-slide deck; never 3 consecutive slides on one skeleton** (render-time
@@ -561,6 +568,9 @@ hue to a named meaning; **no accent colour ships without a bound meaning**, and 
 everything means the plan is not ready. When a Q4 style example is in play, this section also records
 the **chosen mimic mode (A / B) + a pointer to the style brief** — the Step-4 build reads the mode
 from the plan; the critic receives it via the Step-5 contract card.
+On a direction-gate deck this section also carries **`composition (picked at gate): cover <token> ·
+home skeleton <token>`** — the built cover implements that cover archetype, and the rhythm map's
+plurality is that skeleton (the contract card hands both to the critic).
 This section always carries ONE required line — `taste profile: <n dials applied / none on file> ·
 freshness: varied <foundation> vs <last look-history line>`, or the alternate arm `look LOCKED
 (registered/provided template) — carve applies` — the line that makes the freshness rule checkable
@@ -578,7 +588,9 @@ mechanism: stable floors, one protected act of daring):
   the deck's whole form vocabulary is open to reinvention within the floors (brand-defining / art-forward
   only). Record which arm set it.
 - **`signature move: <the one deliberate aesthetic RISK> · lands on <cover | WOW | money slide #N> ·
-  adapts <the bold move borrowed from a sourced reference, §1 research> · fits because <one clause>`**
+  adapts <the bold move borrowed from a sourced reference, §1 research> · fits because <one clause> ·
+  carried_by: <the signature slide + 1–2 more where the idea does STRUCTURAL work>`** (structural =
+  the motif becomes that slide's own geometry, never a stamped badge — full rule in self-verify (h))
   — the single choice a template would NOT make (a form composed for this content, a dramatic scale
   play, a strong-concept cover, negative space as subject, an unexpected crop/type moment), SCOPED to
   where it lands so the rest of the deck stays disciplined. **A `signature move` that is just "a big

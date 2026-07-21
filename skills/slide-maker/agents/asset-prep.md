@@ -24,6 +24,13 @@ Per asset, the plan gives you a complete spec:
 - **Sourced photo:** the claimed subject + download URL/origin + license (the main loop resolved these at design time per the REFERENT RULE, `references/image-generation.md`) + the palette treatment (duotone/tint, crop ratio, scrim yes/no) + any required credit text.
 - **Icon:** the `spec` (family:name) + the palette colour to recolor to.
 
+## Ordering (one rule)
+**The signature slide's assets ship FIRST.** Step 4 opens with the SIGNATURE PROOF — the signature
+slide (named by the plan's `signature move:` line) is authored and rendered before any other slide
+exists — so its plate/figure/icons are the one set the build is actually WAITING on. Deliver those,
+then parallelize the rest freely. An asset queue that starves the proof is how the proof gets
+skipped "just this once".
+
 ## Jobs (each one independent — parallelize freely)
 - **Crop figures** with `scripts/extract_pdf.py` (`figure`/`figures`/`page`+`crop_helper.py`) to the
   plan's spec → whole, un-clipped PNG.

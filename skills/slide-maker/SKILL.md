@@ -420,8 +420,11 @@ the direction gate** (the look is already decided). The four:
        direction from that description** — regenerate the HTML link and show it alongside
        (iterate until they consent), rather than forcing one of your three guesses. The three
        are only your opening proposals; the author's own intention always outranks them. On the
-       pick, the chosen token-set becomes the deck's `style.py` — then **render ONE real slide
-       in it to confirm fidelity** before building. **Once they pick, delete the throwaway
+       pick, the chosen token-set becomes the deck's `style.py` **including its composition — the
+       `cover` token is BUILT as the cover's actual layout, and the `skeleton` token becomes the
+       rhythm map's plurality skeleton (`collaborative-mode.md` Gate A step 7; a style.py that
+       keeps the hexes and drops the composition has discarded half the pick)** — then **render ONE
+       real slide in it to confirm fidelity** before building. **Once they pick, delete the throwaway
        `_directions/` preview files + rejected token-sets** (keep only the chosen style), then
        build the full deck in it — don't leave demo files littering Downloads.
      - *Picks design-one (via a named carve)* → build a single look shaped to purpose, as above.
@@ -1081,7 +1084,17 @@ Full list, fallbacks, and tofu recovery in `references/font-guidance.md`.
 > deck either becomes designed or stays a template.
 >
 > *(Measured: build ≈ 1.8s, `--slides` render ≈ 4.7s vs 12.3s full. The proof costs less than one
-> critic round, and it is spent BEFORE the expensive authoring rather than after.)*
+> critic round, and it is spent BEFORE the expensive authoring rather than after. This does not
+> contradict "build the whole deck in one script run" below: the proof runs the SAME build script
+> while it still contains only the signature slide — you extend one script, you never maintain two.
+> Asset note: the signature slide's assets are the first thing asset-prep delivers, per its brief.
+> One render can serve several rituals: when Gate A's one-real-slide fidelity confirm has not yet
+> run, use the signature slide AS that confirm slide; on a large deck the proof doubles as the
+> early-render sample. Never run three separate single-slide ceremonies.
+> If the proof looks WRONG: revise the signature slide in the same build script and re-run the same
+> `--slides N` command — the loop is slide-level and costs seconds; slide N here is the slide's
+> CURRENT index, so if later authoring renumbers it, the `signature proof:` token records the final
+> number at hand-off.)*
 
 Write a small per-deck build script that imports `scripts/deckkit.py` (don't re-derive primitives;
 full signatures + behaviour are in its docstrings). **Build the approved Design plan** (form ledger,
@@ -1935,7 +1948,9 @@ Then run the **actor-critic loop** — this is the quality engine, and the criti
      judge whether the declared risk actually landed in the pixels or got sanded back to safe — and,
      on the named carry slides specifically, whether the idea does structural work there or was
      merely stamped), **the branch's gate line** (`direction gate:` / `style gate:`, so a look that
-     was never chosen from alternatives is visible as such), the semantic-colour
+     was never chosen from alternatives is visible as such) **with the picked composition tokens**
+     (`cover <token> · home skeleton <token>` — the design lens checks the BUILT cover against the
+     archetype the user picked, and the rhythm map's plurality against the picked skeleton), the semantic-colour
      ledger, the type tokens, the motion manifest, the **chosen preset name + its `guard` string
      verbatim** (or `custom look — no preset guards`) (on the generated-template branch, plus the four identity-propagation contract lines — palette · type register · component geometry · surface), the **`signature proof:` token**
      (`slide N → <png>` or `skipped: <carve>` — so the critic compares the SHIPPED signature slide
@@ -2123,7 +2138,10 @@ authoritative hand-off checklist; the owning rules point here):** the `provenanc
 confirmed · N fixed · N cut` line (research-sourced decks — the PRIMARY-SOURCE GATE's artifact), the
 per-slide **click order** (appear-builds opted in), **image licenses/credits** (sourced photos), the
 **GIF plays-in-slideshow** note (embedded GIFs), **accepted advisories** one plain-language line
-each, and on an auto-waiver deck the **delegated-picks recap** the user reacts to at hand-off — and —
+each, the **`distinctiveness:` line whenever Step 5's bold/experimental escalation fired**
+(`user waived (bold)` or `resolved in round N` — without it, "they accepted it" and "I never asked"
+are indistinguishable afterwards), and on an auto-waiver deck the **delegated-picks recap** the user
+reacts to at hand-off — and —
 optional, exactly one sentence — the critic's `ceiling`, verbatim, as one *"if you want to push it
 further:"* line (the terminal consent's recorded headroom; if the user adopts it, it flows through
 the normal post-delivery feedback loop). Two taste-ecosystem lines ride the same note when they

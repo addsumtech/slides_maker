@@ -87,6 +87,7 @@ def _features(d):
         # the PAIRING, not just the display face: serif-display-over-sans-body and an all-sans deck
         # are different type attitudes even when the display class alone matches.
         "type": (_face_class(disp), _face_class(body), _face_class(disp) == _face_class(body)),
+        "density": str(d.get("density", "minimal")).strip().lower(),
         "comp": (_checked(d, "cover", _COVERS), _checked(d, "skeleton", _SKELETONS)),
     }
 
@@ -94,14 +95,21 @@ def _features(d):
 def _pair(a, b):
     pal = (sum((a["bg"][i] - b["bg"][i]) ** 2 for i in range(3)) ** 0.5
            + sum((a["accent"][i] - b["accent"][i]) ** 2 for i in range(3)) ** 0.5)
+    # ONE axis list, identical to the prose rule in SKILL.md/collaborative-mode.md:
+    # {palette mood · type attitude · density/scale · composition}. Mode is folded INTO the
+    # palette axis (a light/dark flip IS a palette-mood divergence; scoring it separately
+    # double-counted one perceptual difference), and density is measured because it is in the
+    # token — an unmeasured axis lets the prose rule and the script reach opposite verdicts
+    # on the same pair.
     axes = {
-        "mode": a["mode"] == b["mode"],
-        "palette": pal < PALETTE_T,
+        "palette": a["mode"] == b["mode"] and pal < PALETTE_T,
         "type": a["type"] == b["type"],
+        "density": a["density"] == b["density"],
         "composition": a["comp"] == b["comp"],
     }
     matched = [k for k, v in axes.items() if v]
     return {"a": a["name"], "b": b["name"], "palette_distance": round(pal, 1),
+            "same_mode": a["mode"] == b["mode"],
             "matched_axes": matched, "too_similar": len(matched) >= 3,
             "a_comp": "/".join(a["comp"]), "b_comp": "/".join(b["comp"])}
 
@@ -137,8 +145,9 @@ def main():
             mark, p["a"], p["b"], p["palette_distance"], p["a_comp"], p["b_comp"],
             ", ".join(p["matched_axes"]) or "none"))
     if r["flagged"]:
-        print("[diversity] {} pair(s) read as one idea in {} skins.".format(
-            len(r["flagged"]), len(r["flagged"]) + 1))
+        involved = sorted({n for p in r["flagged"] for n in (p["a"], p["b"])})
+        print("[diversity] {} pair(s) read as skins of one idea (involving: {}).".format(
+            len(r["flagged"]), ", ".join(involved)))
         print("            REDIVERGE them, or keep the pair and record the reason on the")
         print("            `direction gate:` line (e.g. 'brand-locked accent — divergence moved")
         print("            to composition + type'). Never ship an unexplained collapse.")

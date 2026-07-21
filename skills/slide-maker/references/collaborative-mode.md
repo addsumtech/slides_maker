@@ -94,7 +94,14 @@ direction*; the single real render confirms *fidelity*.
    `archetypes_html.py` (a tweak = change a constant + regenerate the page — cheap, instant,
    no LibreOffice) until the user consents.
 7. On consent: **(a)** turn the chosen token-set into the deck's `style.py` (the standard
-   style-module interface), then **render ONE real slide in it** (deckkit + `render_deck`) and
+   style-module interface) — **including its COMPOSITION: the `cover` token is implemented as the
+   style's cover composition** (the deck has ONE cover and the user chose its shape; a style.py
+   that carries the palette but builds a default-centred cover has quietly discarded half the
+   pick), **and the `skeleton` token is recorded at the top of `style.py` as
+   `# composition: skeleton=<value> (rhythm-map plurality)` for the slide-design agent** — it
+   becomes the rhythm map's PLURALITY skeleton (the most-used home base; the ≥4-distinct-skeletons
+   rotation still holds — a direction's skeleton is its default, never a uniform). Then **render
+   ONE real slide in it** (deckkit + `render_deck`) and
    confirm it matches what they picked — this closes the HTML→pptx fidelity gap before the
    costly build; **(b)** optionally persist it to the active template registry (profile.md +
    the style module) so it's a reusable registered template next time — collaborative mode
@@ -120,7 +127,11 @@ This gate **is the design checkpoint surfaced as a gate** — present the **slid
 work: the **Design language** (the direction fixed at Gate A, now expanded into a full spec), the
 **form ledger** + **rhythm**, the **per-slide design**, and the **image opt-in list** (each row
 carrying its source token per the REFERENT RULE, `references/image-generation.md`), plus the
-**motif line** (device + meaning + how a stranger reads it) and — on a single-entity deck — the
+**motif line** (device + meaning + how a stranger reads it), the **`boldness:` +
+`signature move:` lines with the `carried_by:` slides** (the declared risk and where it does
+structural work — the fields the critic's distinctiveness axis will later hold the deck to), the
+branch's **gate line** (`direction gate:` with its `diversity:` verdict / `style gate:`) and — on a
+single-entity deck — the
 **`logo plan:` line WITH its evidence token**; Gate C shows the same fields as SKILL.md's
 🔴 CHECKPOINT — DESIGN spec. Approve
 before building all slides — this catches form / layout / motion direction errors before the

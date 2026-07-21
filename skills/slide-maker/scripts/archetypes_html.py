@@ -153,28 +153,73 @@ def _callout(S, label, body):
 
 
 def _slide_bullets(S):
-    bl = "".join([
+    """The CONTENT archetype — rendered per the direction's skeleton, faithfully to the canonical
+    vocabulary (design-intelligence-addendum §skeleton), so the user picks a composition the deck
+    will actually build, not a padding variation of one layout."""
+    sk = S["skeleton"]
+    tb = _title_bar(S, "How content slides read", "archetype")
+    bl3 = "".join([
         _bullet_row(S, "Terse points", "a few words each"),
         _bullet_row(S, "Emphasis", "where it matters"),
         _bullet_row(S, "Consistent", "spacing and rhythm"),
     ])
-    sk = S["skeleton"]
-    # NOTE the -el suffix: the slide itself carries `sk-<name>` as a MODIFIER, so an inner element
-    # may never reuse that exact class — doing so applied the element's rules to the whole slide.
-    # A tint OF THE DECK'S OWN GROUND, not a fixed near-white: on a dark direction a literal
-    # light band under light ink measures ~1.1:1. Mode-agnostic by construction.
-    band = (f'<div class="sk-band-el" style="border-color:{S["line"]}"></div>'
-            if sk == "band" else "")
-    rail = (f'<div class="sk-rail-el" style="background:{S["accent"]}"></div>'
-            if sk == "rail" else "")
-    return f'''<div class="slide sk-{sk}" style="background:{S['bg']}">
-      {band}{rail}
-      <div class="sk-body">
-        {_title_bar(S, "How content slides read", "archetype")}
-        <ul class="bullets">{bl}</ul>
-      </div>
-      {_callout(S, "TAKEAWAY", "One idea per slide, carried by the layout.")}
+    co = _callout(S, "TAKEAWAY", "One idea per slide, carried by the layout.")
+    fig = (f'<div class="mini-fig" style="background:{S["light"]};border-color:{S["line"]};'
+           f'color:{S["mute"]}">[ visual ]</div>')
+
+    if sk == "statement":
+        # one oversized sentence, centred, NOTHING else — no bullets, no callout
+        body = (f'<div class="st-kick" style="color:{S["accent"]}">ARCHETYPE</div>'
+                f'<div class="st-line" style="color:{S["ink"]}">One idea, stated at full size.</div>'
+                f'<div class="st-sub" style="color:{S["mute"]}">nothing else on the page</div>')
+        return f'''<div class="slide sk-statement" style="background:{S['bg']}">
+      <div class="sk-body">{body}</div>
       {_footer(S, 2, "direction preview")}
+    </div>'''
+
+    if sk == "split":
+        # two vertical fields, text <-> visual
+        body = (f'<div class="sp-l">{tb}<ul class="bullets">{bl3}</ul></div>'
+                f'<div class="sp-r">{fig}</div>')
+        return f'''<div class="slide sk-split" style="background:{S['bg']}">
+      <div class="sk-body">{body}</div>
+      {co}{_footer(S, 2, "direction preview")}
+    </div>'''
+
+    if sk == "island":
+        # one figure dominating the middle, annotations ORBITING it
+        body = (f'{tb}<div class="is-wrap">{fig}'
+                f'<div class="is-note is-a" style="color:{S["ink"]};border-color:{S["accent"]};background:{S["bg"]}">annotation</div>'
+                f'<div class="is-note is-b" style="color:{S["ink"]};border-color:{S["accent"]};background:{S["bg"]}">orbits the figure</div>'
+                f'</div>')
+        return f'''<div class="slide sk-island" style="background:{S['bg']}">
+      <div class="sk-body">{body}</div>
+      {_footer(S, 2, "direction preview")}
+    </div>'''
+
+    if sk == "band":
+        # a full-width horizontal axis with content hanging off it
+        chips = "".join(
+            f'<div class="bd-item"><span class="bd-dot" style="background:{S["accent"]}"></span>'
+            f'<span class="bd-t" style="color:{S["ink"]}">{t}</span></div>'
+            for t in ("first beat", "second beat", "third beat"))
+        body = (f'{tb}<div class="bd-axis" style="background:{S["line"]}"></div>'
+                f'<div class="bd-row">{chips}</div>')
+        return f'''<div class="slide sk-band" style="background:{S['bg']}">
+      <div class="sk-body">{body}</div>
+      {co}{_footer(S, 2, "direction preview")}
+    </div>'''
+
+    # rail — a NARROW SIDE RAIL (stat stack) + a wide main field
+    rail = (f'<div class="rl-rail" style="border-color:{S["line"]}">'
+            f'<div class="rl-stat" style="color:{S["accent"]}">42%</div>'
+            f'<div class="rl-cap" style="color:{S["mute"]}">context stat</div>'
+            f'<div class="rl-stat" style="color:{S["accent"]}">3&times;</div>'
+            f'<div class="rl-cap" style="color:{S["mute"]}">stacked in the rail</div></div>')
+    body = f'{rail}<div class="rl-main">{tb}<ul class="bullets">{bl3}</ul></div>'
+    return f'''<div class="slide sk-rail" style="background:{S['bg']}">
+      <div class="sk-body">{body}</div>
+      {co}{_footer(S, 2, "direction preview")}
     </div>'''
 
 
@@ -340,24 +385,54 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-s
 /* z-index is INERT on a static element, so a bare z-index did NOT lift the body above the
    absolutely-positioned band: the band painted over the title, and only looked survivable because
    its tint is translucent. The body is positioned below (once the callout was moved out of it). */
-.sk-body{z-index:2}
-.sk-statement .sk-body{padding-top:2px}
-.sk-split{display:flex}
-.sk-split .sk-body{width:62%;margin-left:auto;padding-left:18px}
-.sk-split .bullets li{font-size:13px}
-.sk-island .sk-body{margin:0 7%;padding:12px 16px 0;border-radius:10px;
-  background:rgba(127,127,127,.055)}
-.sk-band .sk-band-el{position:absolute;left:0;right:0;top:0;height:30%;border-bottom:1px solid;
-  background:rgba(127,127,127,.14);z-index:0}
-/* Safe to position now: .callout/.ftr are SIBLINGS of .sk-body, not descendants, so nothing
-   absolutely-positioned is re-parented by this. (They used to live inside the body, which is why
-   an earlier attempt at this floated the callout into the middle of the bullet list.) */
-.sk-body{position:relative}
+/* .callout/.ftr are SIBLINGS of .sk-body (never descendants — a positioned ancestor would steal
+   their slide-bottom anchoring; that bug shipped once). Each skeleton below implements its
+   CANONICAL meaning from design-intelligence-addendum §skeleton, so the preview teaches the same
+   vocabulary the deck will build. */
+.sk-body{position:relative;z-index:2}
 .callout,.ftr{z-index:3}
-.sk-band .sk-body{padding-top:10px}
-.sk-band .tbar{margin-bottom:16px}
-.sk-rail .sk-rail-el{position:absolute;left:0;top:0;bottom:0;width:6px;z-index:1}
-.sk-rail .sk-body{padding-left:18px}
+.mini-fig{display:flex;align-items:center;justify-content:center;border:1px dashed;
+  border-radius:8px;font-size:11px;font-style:italic;min-height:96px;height:100%}
+
+/* statement — one oversized sentence, centred, nothing else */
+.sk-statement .sk-body{display:flex;flex-direction:column;justify-content:center;height:100%;
+  text-align:center;padding:0 7%}
+.st-kick{font-size:10px;letter-spacing:.14em;font-weight:700;margin-bottom:12px}
+.st-line{font-family:var(--fd);font-size:27px;font-weight:800;line-height:1.15;
+  letter-spacing:-.01em}
+.st-sub{font-size:12px;margin-top:12px}
+
+/* split — two vertical fields, text <-> visual */
+.sk-split .sk-body{display:flex;gap:16px;height:100%}
+.sk-split .sp-l{width:58%}
+.sk-split .sp-r{width:42%;display:flex;align-items:stretch;padding:6px 0 44px}
+.sk-split .sp-r .mini-fig{flex:1;width:100%}   /* main-axis size — without it the fig shrinks to a
+                                                  sliver and the gate misrepresents the split */
+.sk-split .bullets li{font-size:13px}
+
+/* island — one figure dominating the middle, annotations orbiting */
+.sk-island .is-wrap{position:relative;margin:4px 12% 0}
+.sk-island .mini-fig{min-height:118px}
+.is-note{position:absolute;font-size:10.5px;padding:3px 8px;border:1px solid;border-radius:99px}
+.is-a{top:-6px;left:-9%}
+.is-b{bottom:8px;right:-10%}
+
+/* band — a full-width horizontal axis with content hanging off it */
+.sk-band .bd-axis{height:2px;margin:26px 0 0;border-radius:2px}
+.sk-band .bd-row{display:flex;justify-content:space-between;padding:0 4%;margin-top:-5px}
+.bd-item{display:flex;flex-direction:column;align-items:center;gap:7px;width:30%}
+.bd-dot{width:9px;height:9px;border-radius:99px}
+.bd-t{font-size:12px;font-weight:600;text-align:center}
+
+/* rail — a narrow side rail (stat stack) + a wide main field */
+.sk-rail .sk-body{display:flex;gap:14px;height:100%}
+.rl-rail{width:24%;border-right:1px solid;border-radius:8px 0 0 8px;padding:14px 12px 44px;
+  background:rgba(127,127,127,.13)}   /* a tint of the deck's OWN ground — a fixed light fill on a
+                                         dark direction shipped twice before this rule stuck */
+.rl-stat{font-size:24px;font-weight:800;line-height:1}
+.rl-cap{font-size:10px;margin:4px 0 14px}
+.rl-main{width:76%;padding-right:4px}
+.sk-rail .bullets li{font-size:13px}
 
 /* pick buttons + selection */
 .dir-foot{margin-top:14px;display:flex;justify-content:flex-end}

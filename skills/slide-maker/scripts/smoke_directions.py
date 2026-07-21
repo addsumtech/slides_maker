@@ -168,6 +168,31 @@ def main():
                 "the callout is inside .sk-body again — it will float out of place"
         ok("the callout is a sibling of .sk-body, not a descendant", _callout_not_inside_body)
 
+        def _prose_and_script_agree():
+            """The lens's counterexample: two light directions, near palettes, same type class,
+            but different DENSITY and different COMPOSITION — the prose rule blesses this pair
+            (differs on 2 of its 4 axes), so the script must too. Before unification the script
+            did not measure density and double-counted mode+palette, flagging it."""
+            sys.path.insert(0, HERE)
+            import importlib, directions_diversity as dd
+            importlib.reload(dd)
+            pair = [
+                {"name": "L1", "bg": "#FCFAF5", "accent": "#B0451F", "density": "minimal",
+                 "font_display": "Georgia, serif", "font_body": "Arial, sans-serif",
+                 "cover": "low-left", "skeleton": "rail"},
+                {"name": "L2", "bg": "#FBF8F2", "accent": "#A8471E", "density": "dense",
+                 "font_display": "'Times New Roman', serif", "font_body": "Arial, sans-serif",
+                 "cover": "full-bleed-type", "skeleton": "band"},
+            ]
+            r = dd.check(pair)
+            assert not r["flagged"], (
+                "density+composition divergence must satisfy the >=2-axis rule, matched: "
+                + str(r["pairs"][0]["matched_axes"]))
+            # and a true collapse (same density too) still flags
+            pair[1]["density"] = "minimal"; pair[1]["cover"] = "low-left"; pair[1]["skeleton"] = "rail"
+            assert dd.check(pair)["flagged"], "a 3-axis match must still flag"
+        ok("script axes == prose axes (density measured, mode folded into palette)", _prose_and_script_agree)
+
     print("smoke_directions: {} failure(s)".format(len(FAILS)))
     return 1 if FAILS else 0
 

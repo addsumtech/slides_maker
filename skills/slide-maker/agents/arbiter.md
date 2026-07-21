@@ -44,7 +44,10 @@ coordinator applies the rule.
   approved Source-coverage map** (completeness is scoped to its built-around/summarised set — a
   `cut` row is a conscious cut, not an omission), on a video-sourced deck the **transcript status**
   (supplied locator, or the visual-only GAP line), and the Design plan's declared contracts (rhythm map ·
-  WOW/money slide · the `boldness:` dial + the `signature move:` line (what the `dulled` check reads) ·
+  WOW/money slide · the `boldness:` dial + the `signature move:` line INCLUDING its `carried_by:`
+  slides (what the `dulled` check reads — a "dulled" verdict on a carry slide means the idea was
+  stamped there, not doing structural work) · the branch's gate line (`direction gate:` /
+  `style gate:`) · the `signature proof:` token (`slide N → <png>` or `skipped: <carve>`) ·
   semantic-colour ledger · type tokens · motion manifest · the chosen preset
   name + its `guard` string verbatim (or `custom look — no preset guards`) (on the generated-template branch, plus the four identity-propagation contract lines — palette · type register · component geometry · surface) · the `logo plan:` line
   with its evidence token · the checkpoint motif line (device + meaning + legibility mode) · the
