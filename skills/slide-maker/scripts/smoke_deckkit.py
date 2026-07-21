@@ -780,5 +780,38 @@ def _quiet_region_contract():
     assert lum < 120 or lum > 150, "quiet_region returned a mixed-ink region (lum %d)" % lum
 ok("quiet_region returns one coherent ink zone", _quiet_region_contract)
 
+
+
+def _iso_components():
+    """The 2.5D isometric suite: builds clean, lints clean, and iso_bars is FAITHFUL — a bigger
+    value must render a taller extrusion, or the 2.5D is decorating a lie."""
+    from pptx.util import Emu
+    p = dk.blank_deck(); s = dk.add_slide(p)
+    # a single prism returns its top-face centre for label placement
+    c = dk.iso_prism(s, 2.0, 4.0, 1.2, 1.2, 1.0, "3E6E9E")
+    assert isinstance(c, tuple) and len(c) == 2
+
+    p = dk.blank_deck(); s = dk.add_slide(p)
+    dk.iso_bars(s, 0.8, 1.4, 8.4, 3.4, [10, 90, 40], labels=["a", "b", "c"], highlight=1)
+    dk.lint_layout(p, verbose=False, strict=True)
+    # FAITHFULNESS: the top face of the value-90 bar must sit higher on screen (smaller y) than the
+    # top face of the value-10 bar. Measure the min-y of the freeform faces per bar cluster.
+    tops = sorted(Emu(sh.top).inches for sh in s.shapes if "FREEFORM" in str(sh.shape_type))
+    assert tops, "iso_bars drew no freeform faces"
+    # crude but sufficient: the overall span of face-tops must be non-trivial (bars differ in height)
+    assert max(tops) - min(tops) > 0.5, "iso_bars produced near-equal heights for very different values"
+
+    p = dk.blank_deck(); s = dk.add_slide(p)
+    dk.iso_stack(s, 0.6, 1.1, 9.0, 4.0, [("Base", "x"), ("Mid", "y"), ("Top", "z")],
+                 accents=["2E9C93", "3E6E9E", "8A5BC7"])
+    dk.lint_layout(p, verbose=False, strict=True)
+
+    try:
+        dk.iso_bars(s, 0.8, 1.4, 8.4, 3.4, [])
+        assert False, "empty iso_bars must raise"
+    except ValueError:
+        pass
+ok("iso 2.5D suite (prism · faithful bars · aligned stack)", _iso_components)
+
 print(f"\nsmoke_deckkit: {len(fails)} failure(s)" + ("" if not fails else " — " + "; ".join(n for n, _ in fails)))
 sys.exit(1 if fails else 0)

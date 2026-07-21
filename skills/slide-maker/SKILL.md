@@ -1155,6 +1155,15 @@ The helper set, by job:
   a huge bump looked identical) · **`position_map`** (N LABELLED items on two continuous axes — the
   within-cell position quadrant() throws away) · **`org_tree`** (tidy hierarchy: centroid parents,
   horizontal bus; raises when it can't fit legibly).
+- **2.5D isometric (native — no generated image):** **`iso_bars`** (a FAITHFUL 2.5D bar chart —
+  extrusion height is linear in the value and zero-based, so the depth never distorts the data) ·
+  **`iso_stack`** (a layered architecture / disclosure ladder / decision stack — floating isometric
+  slabs with labels aligned beside each one) · **`iso_prism`** (one extruded block as a hero).
+  Fixed projection (true 30° isometric, parallel not perspective) and one-light-source face shading,
+  so every 2.5D element in a deck reads as one system. **Dose like generated imagery** — a stack, a
+  hierarchy, or ONE hero chart, never every slide; text cannot be sheared onto a face, so labels sit
+  beside the geometry. When the 2.5D wants to be a rich atmospheric *scene* (not data), that is the
+  generated-image branch, not these.
 - **Placement by measurement:** `image_fx.quiet_region(path)` → the image's calmest ONE-INK region
   + its mean luminance (choose dark vs light ink from data, not eyeballing) · `deckkit.pic_alpha`
   (native picture opacity — a faint plate that keeps its own hues, no scrim shape) ·

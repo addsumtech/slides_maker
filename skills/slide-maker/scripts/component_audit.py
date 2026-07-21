@@ -43,7 +43,7 @@ def _emitting_components():
         name, start = m.group(1), m.start()
         nxt = re.search(r"^def ", src[start + 4:], re.M)
         body = src[start: start + 4 + (nxt.start() if nxt else len(src) - start)]
-        if re.search(r"\b(box|_flat|add_shape|node|icon_tile)\s*\(", body):
+        if re.search(r"\b(box|_flat|add_shape|node|icon_tile|build_freeform|_iso_poly|iso_prism)\s*\(", body):
             out.add(name)
     return out
 
@@ -75,6 +75,9 @@ FORM_GUARANTEE = {
     "org_tree": "centroid parents and a horizontal bus; raises when it cannot fit legibly",
     "position_map": "labelled 2-D positions with anti-collision labels",
     "small_multiples": "every panel pinned to ONE shared value axis",
+    "iso_bars": "a FAITHFUL 2.5D bar chart — height linear in the value, zero-based",
+    "iso_stack": "an isometric layered stack with labels aligned to each slab",
+    "iso_prism": "one extruded isometric block with fixed one-light-source face shading",
 }
 
 

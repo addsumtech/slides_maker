@@ -5790,6 +5790,162 @@ def fit_text_size(runs, w, h, start_size, *, font=None, min_size=9.0, line_h=_LI
     return min_size
 
 
+# ============================================ isometric 2.5D (native — no generated image)
+#
+# DESIGN DECISIONS, fixed here so every 2.5D element in a deck reads as one system:
+#   PROJECTION — true isometric (30 degrees), parallel not perspective. x = width -> right-and-down,
+#     y = depth -> left-and-down, z = height -> straight up. Parallel projection is the right call
+#     for slides: it is deterministic, tiles cleanly, and never distorts a value (a perspective bar
+#     chart would foreshorten the far bars and lie about the data).
+#   FACE SHADING — top = the base colour (brightest, catches the light); the right face (y=0) at
+#     x0.80; the left face (x=0) at x0.55. One light source, upper-front. These three ratios are the
+#     whole "3D" illusion; keep them fixed so a prism on slide 3 matches a slab on slide 9.
+#   TEXT — python-pptx cannot shear text onto an isometric face, so labels sit BESIDE the geometry,
+#     never on it. A value/label is placed at the shape's top-centre or to its side in flat type.
+#     This is a hard limit of the medium, not a style choice; do not fake sheared text with rotation.
+#   DOSE — 2.5D is eye-catching and cheap to overuse. It earns its place on a stack/hierarchy/one
+#     hero chart, not on every slide (the same discipline as generated imagery). iso_bars is FAITHFUL
+#     (height is linear in the value, zero-based) so it never becomes decoration that distorts data.
+
+_ISO_COS30 = 0.8660254037844387
+_ISO_SIN30 = 0.5
+
+
+def _iso_shade(color, f):
+    """Multiply an RGB colour toward black by f (the face-shading ratios above)."""
+    c = _as_rgb(color)
+    return RGBColor(max(0, min(255, int(c[0] * f))),
+                    max(0, min(255, int(c[1] * f))),
+                    max(0, min(255, int(c[2] * f))))
+
+
+def _iso_pt(x, y, z, ox, oy):
+    """3D (x=width, y=depth, z=height), in inches, -> 2D inches, offset to screen (ox, oy)."""
+    return (ox + (x - y) * _ISO_COS30, oy + (x + y) * _ISO_SIN30 - z)
+
+
+def _iso_poly(slide, pts, fill, *, line=None, lw=0.75):
+    """A filled polygon from inch coordinates, via python-pptx freeform. The theme shadow is
+    stripped (_flat) so an isometric face never carries a soft drop shadow that fights the
+    hand-shaded depth."""
+    fb = slide.shapes.build_freeform(Inches(pts[0][0]), Inches(pts[0][1]), scale=1)
+    fb.add_line_segments([(Inches(px), Inches(py)) for px, py in pts[1:]], close=True)
+    sh = fb.convert_to_shape()
+    _flat(sh)
+    sh.fill.solid(); sh.fill.fore_color.rgb = _as_rgb(fill)
+    if line is not None:
+        sh.line.color.rgb = _as_rgb(line); sh.line.width = Pt(lw)
+    else:
+        sh.line.fill.background()
+    return sh
+
+
+def iso_prism(slide, ox, oy, w, d, h, base, *, line=None):
+    """One extruded isometric box (a 2.5D bar / block / building).
+
+    (ox, oy) is the box's NEAR-BOTTOM corner in inches — the point closest to the viewer, which
+    sits at the bottom of the drawn shape. w/d/h are width/depth/height IN INCHES of projected
+    space (h is the extrusion — for a bar, h encodes the value). Draws three visible faces
+    (top, right, left) in the fixed shading ratios so it reads as lit from the upper front.
+    Returns the top-face centre (x, y) in inches, so a caller can place a flat label above it.
+    """
+    def P(x, y, z):
+        return _iso_pt(x, y, z, ox, oy)
+    top = [P(0, 0, h), P(w, 0, h), P(w, d, h), P(0, d, h)]
+    right = [P(0, 0, 0), P(w, 0, 0), P(w, 0, h), P(0, 0, h)]
+    left = [P(0, 0, 0), P(0, d, 0), P(0, d, h), P(0, 0, h)]
+    _iso_poly(slide, left, _iso_shade(base, 0.55), line=line)
+    _iso_poly(slide, right, _iso_shade(base, 0.80), line=line)
+    _iso_poly(slide, top, base, line=line)
+    cx = ox + (w - d) * _ISO_COS30 / 2.0
+    cy = oy + (w + d) * _ISO_SIN30 / 2.0 - h
+    return (cx, cy)
+
+
+def iso_bars(slide, x, y, w, h, values, *, labels=None, base=None, highlight=None,
+             depth=0.42, gap=0.30, font=None, label_size=11, value_fmt="{:g}"):
+    """A FAITHFUL isometric bar chart — bar height is linear in the value and zero-based, so the
+    2.5D never distorts the data (that is why perspective is refused above).
+
+    values — list of numbers. labels — optional per-bar captions (placed BELOW, flat). base —
+    fill (defaults to the theme BLUE); highlight — index drawn in MAGENTA/accent. The bars share
+    one z-scale; (x, y, w, h) is the footprint the whole chart is fitted into. Value labels sit
+    ABOVE each bar's top face in flat type (text cannot be sheared onto a face)."""
+    base = _as_rgb(base) if base is not None else BLUE
+    hi = _as_rgb(MAGENTA)
+    n = len(values)
+    if n == 0:
+        raise ValueError("iso_bars needs at least one value")
+    vmax = max(values) or 1.0
+    bw = max(0.30, min(0.58, (w - (n - 1) * gap) / n * 0.62))
+    hmax = h * 0.60                       # 0.60 not 0.72: reserve real headroom for value labels
+    pitch = bw + gap                      # bars step by this in SCREEN x -> a clean row
+    row_w = (n - 1) * pitch + bw
+    ox0 = x + (w - row_w) / 2.0 + depth * _ISO_COS30 * 0.5
+    oy0 = y + h - depth * _ISO_SIN30 - 0.30
+    for i, v in enumerate(values):
+        bh = hmax * (v / vmax)
+        ox, oy = ox0 + i * pitch, oy0
+        cx, cy = iso_prism(slide, ox, oy, bw, depth, max(bh, 0.02),
+                           hi if highlight == i else base)
+        # the top face's highest screen point is its far-back corner, ~ (bw+depth)/2*SIN30 above cy;
+        # clear the label above ALL of it, not just the centre, or it lands on the face.
+        top_apex = oy - bh - depth * _ISO_SIN30
+        text(slide, ox - 0.7, top_apex - 0.34, bw + 1.4, 0.3,
+             [[(value_fmt.format(v), label_size + 2, hi if highlight == i else _as_rgb(DEEP),
+                True, False, font or FONT)]], align=PP_ALIGN.CENTER, space_after=0, wrap=False)
+        if labels and i < len(labels):
+            base_y = oy + depth * _ISO_SIN30 + 0.08
+            text(slide, ox - 0.6, base_y, bw + 1.2, 0.3,
+                 [[(labels[i], label_size, _as_rgb(MUTE), False, False, font or FONT)]],
+                 align=PP_ALIGN.CENTER, space_after=0, wrap=False)
+    return y + h
+
+
+def iso_stack(slide, x, y, w, h, layers, *, base=None, accents=None, slab=0.14, gap=0.30,
+              font=None, label_size=12):
+    """An isometric LAYERED STACK — a tech stack, a disclosure ladder, a decision hierarchy, an
+    architecture in tiers. Each layer is a thin isometric slab; layers float with a gap so depth
+    reads. Labels sit to the RIGHT of each slab in flat type (never on the face).
+
+    layers — list of str (label) or (label, sub) tuples, BOTTOM-first (drawn bottom-up so the top
+    layer overlaps correctly). accents — per-layer fills (defaults to cycling ACCENTS); base
+    overrides to one hue. Returns the y just below the lowest slab."""
+    items = [(l if isinstance(l, tuple) else (l, None)) for l in layers]
+    n = len(items)
+    if n == 0:
+        raise ValueError("iso_stack needs at least one layer")
+    cols = ([_as_rgb(base)] * n if base is not None
+            else (accents or palette(n, ACCENTS)))
+    sw = min(w * 0.30, 1.7)               # slab footprint width in projected inches
+    sd = sw * 0.64
+    pitch = slab + max(gap, 0.58)         # vertical screen gap between slab tops (fits two lines)
+    # ONE slab's true screen extent: highest point is the top-face front corner (oy - slab);
+    # LOWEST is the bottom-face FAR corner P(w,d,0) at oy + (sw+sd)*SIN30 — this is the corner the
+    # first version forgot, which pushed the bottom slab off-canvas.
+    far = (sw + sd) * _ISO_SIN30
+    total = (n - 1) * pitch + far + slab            # full stack screen height
+    ox = x + sd * _ISO_COS30 + 0.25
+    oy_top = y + max(0.15, (h - total) / 2.0) + slab   # top slab's near corner
+    lx = ox + sw * _ISO_COS30 + 0.5
+    for i in range(n):
+        idx = n - 1 - i                   # draw TOP-first? no — front (lower) slabs must overpaint,
+        # so draw from the top slab DOWN, each lower slab painting over the one above it
+        label, sub = items[idx]
+        oy = oy_top + i * pitch
+        cx, cy = iso_prism(slide, ox, oy, sw, sd, slab, _as_rgb(cols[idx]))
+        # ANCHOR the label to the top-face centre the prism itself reports — no re-derivation
+        two = 0.30 if sub else 0.0
+        text(slide, lx, cy - 0.13 - two / 2, w - (lx - x) - 0.15, 0.3,
+             [[(label, label_size, _as_rgb(DEEP), True, False, font or FONT)]],
+             space_after=0, wrap=False)
+        if sub:
+            text(slide, lx, cy + 0.14, w - (lx - x) - 0.15, 0.3,
+                 [[(sub, label_size - 2.5, _as_rgb(MUTE), False, False, font or FONT)]],
+                 space_after=0, wrap=False)
+    return y + h
+
+
 # ============================================ taper stacks · roadmaps · rating grids · frames
 def tier_stack(slide, x, y, w, h, tiers, *, mode="pyramid", direction=None, accents=None,
                ink=None, values=None, labels="inside", font=None):

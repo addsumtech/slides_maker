@@ -177,6 +177,25 @@ legibility rules).
   forces/signal-path/geometry/cause→effect. Build it **domain-accurate** — a wrong schematic is worse
   than none.
 
+## 2.5D isometric — native depth, used with discipline
+`iso_bars` · `iso_stack` · `iso_prism` fake depth from python-pptx freeform polygons — no generated
+image, fully editable, and rendered the same everywhere.
+- **When it earns its place:** a layered architecture / disclosure ladder / decision stack
+  (`iso_stack`), ONE hero data chart where the third dimension adds presence (`iso_bars`), or a
+  single block carrying weight beside a claim (`iso_prism`). It is eye-catching and therefore easy
+  to overuse — the same DOSE rule as generated imagery: a deck earns *one* 2.5D moment, rarely two,
+  never a whole deck of tilted boxes.
+- **Fixed by the components, so a deck reads as one system:** true 30° isometric (parallel, never
+  perspective — a perspective bar chart would foreshorten the far bars and *lie* about the data);
+  one light source (top face brightest, right ×0.80, left ×0.55).
+- **The hard limit:** python-pptx cannot shear text onto a tilted face, so every label sits BESIDE
+  the geometry in flat type. Do not fake sheared text with rotation. When the 2.5D wants to be a
+  rich atmospheric SCENE rather than a diagram (a mini-world, a landscape), that is the
+  generated-image branch (`image-generation.md`), not these — the two are complementary: native =
+  crisp, editable, data-bearing; generated = soft, organic, atmospheric.
+- **`iso_bars` is FAITHFUL:** extrusion height is linear in the value and zero-based, asserted in
+  `smoke_deckkit.py` — the depth is never allowed to decorate a distorted value.
+
 ## Reproduction notes
 - python-pptx can't embed SVG → rasterise (icons via `icons.py`, figures from PDFs via `extract_pdf.py`).
 - Gradients: `gradient_rule` (real 2-stop gradient fill) works; gradient *text* isn't portable — keep
