@@ -9,6 +9,8 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+## [3.7.0] — 2026-07-21
+
 ### Added — design components the form catalogue kept prescribing and could not draw
 - **`deckkit.small_multiples`** — a grid of identical mini native charts on ONE SHARED value axis,
   with an optional hero panel. The cheapest correctness win in the set: `data-viz.md` and

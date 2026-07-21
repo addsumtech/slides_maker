@@ -232,7 +232,8 @@ DISPLAY = None            # optional DISPLAY/title font (Latin) — when set, ti
 
 # Default face for helpers whose payload is ENTIRELY digits (big_numeral, stat_row figures).
 # It must be a LINING-figure face: those components render nothing but a number, so an old-style
-# default guarantees the wobble every time — and, since v3.6.0, trips the deck's own build gate.
+# default guarantees the wobble every time. (v3.6.0 made this a build gate; v3.7.0 moved the
+# enforcement HERE — prevention in the component — and left the lint as a WARN.)
 # Georgia's italic display look is still available to any caller that passes serif="Georgia".
 # Faces BELIEVED to ship old-style (text) figures. This is only a FALLBACK: whenever the font file
 # can be found we MEASURE it instead, because a hand-maintained list is wrong sooner or later — this

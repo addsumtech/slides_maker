@@ -7,7 +7,7 @@
   },
   "metadata": {
     "description": "slide-maker skill — editable PPTX generation for academic talks, code repo presentations, and general decks",
-    "version": "3.6.0"
+    "version": "3.7.0"
   },
   "plugins": [
     {
