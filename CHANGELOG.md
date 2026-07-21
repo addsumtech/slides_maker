@@ -9,6 +9,81 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+### Added — design components the form catalogue kept prescribing and could not draw
+- **`deckkit.small_multiples`** — a grid of identical mini native charts on ONE SHARED value axis,
+  with an optional hero panel. The cheapest correctness win in the set: `data-viz.md` and
+  `form-selection.md` both prescribe shared scales, but composing `native_chart` per panel by hand
+  let PowerPoint auto-scale each one, so **a small bump and a huge bump rendered identically** — a
+  silent misreading no geometry lint could see. The regression asserts the axis contract itself.
+- **`deckkit.position_map`** — N labelled items on two continuous axes, with greedy label
+  anti-collision and a `ValueError` naming any pair it cannot separate. `quadrant()` returns four
+  cells and discards the within-cell position that is usually the whole argument; `native_bubble`
+  drops the labels.
+- **`deckkit.annotated_figure`** — a real figure + numbered fractional-coordinate markers + a
+  numbered caption rail + an optional magnified inset (via `Picture.crop_*`, no image processing).
+  The inset picks the first corner that covers no marker. This is the form the skill's own
+  integral-figure philosophy most insists on and least supported.
+- **`deckkit.org_tree`** — tidy hierarchy layout: post-order centroid placement (the part that stops
+  being hand-placeable at depth 3), horizontal bus connectors, and a hard `ValueError` when it cannot
+  fit legibly rather than silently squeezing.
+- **`image_fx.quiet_region(path)`** — grid luminance-variance scan returning the image's calmest
+  **single-ink** region plus its mean luminance, so title placement and ink colour are measured
+  rather than eyeballed. Two fixes found by running it on real photographs: the growth threshold
+  anchors on the image's own variance distribution (one flat cell otherwise made every gradient
+  neighbour look "busy"), and growth requires luminance coherence — a full-height column spanning
+  dark sky and light ground averages to a mid-luminance where *neither* ink is safe.
+- **`deckkit.design_intent(slide, envelope=, rhyme=, reason=)`** — the declared-register channel that
+  three lint messages already promised ("record the quiet-register exception") with nowhere to record
+  it. Stored as an invisible zero-ink tag shape, so intent travels **inside the .pptx** to the
+  render-time lint with no side-channel file. Abuse is audited (`INTENT INFLATION`).
+- **`deckkit.pic_alpha(picture, pct)`** — native picture opacity via `a:alphaModFix`. Against the
+  scrim-overlay approach the A/B is unambiguous: the image keeps its own hues instead of being tinted
+  toward the scrim colour, and there is no second full-bleed shape.
+
+### Added — `--fast` incremental render
+- **`render_deck.py --fast` re-renders only the slides that changed.** Profiling an 18-slide deck:
+  build 1.8s, LibreOffice→PDF 9.1s, rasterize 24.4s cold. Rasterization, not the PDF export, is the
+  larger cost. Measured: **12.3s → 4.7s** for a one-slide change, **0.07s** when nothing changed;
+  outputs byte-identical to a full render.
+- Each slide is fingerprinted (its XML + rels + the bytes of the media it references) and mixed with
+  a **deck-global digest** (presentation.xml, theme, masters, layouts). That digest closes a hole
+  found by testing: flipping the canvas 16:9→4:3 changes no slide XML, so `--fast` previously
+  reported "no slide changed" and left every PNG at the wrong aspect ratio.
+- **Correctness over speed throughout** — a stale PNG is worse than a slow render, because the lint
+  and the visual critic both trust `render/*.png` to BE the deck. Full-render fallbacks (each with a
+  printed reason) for: changed slide count, hidden slides, auto slide-number fields, or no cache.
+  Cache writes are atomic and **delete the cache on failure**.
+- Hardened against an adversarial audit (27 candidates → 5 must-fix, all reproduced): hidden slides
+  broke the page↔slide mapping on the pre-existing full path too; an unresolvable part hashed to a
+  constant so real edits stopped registering; the subset PDF collided between concurrent runs;
+  `--fast --deliverables` exited 0 having produced no PDF (now rejected at parse time); and media
+  owned by a layout/master/theme was invisible to the digest.
+
+### Added — deck-level design gates (the second design-capability tranche)
+- **`ENVELOPE MONOCULTURE`** — fires when >60% of interior slides end their content at the same
+  height. A deck can vary every form and still read as one template because every page fills the
+  same rectangle; this is judged as a *distribution*, not per slide.
+- **`REGISTRATION DRIFT`** — consecutive title tops drifting 0.02–0.12in. Identical is calm and a
+  deliberate jump is a decision; a sub-visible wobble is neither, and reads as a twitch when
+  advancing.
+- **`INHERITED_EFFECT`** — warns when a shape bypasses the theme-shadow strip (below).
+- **`DEAD BOTTOM`**'s per-slide floor drops 0.62 → 0.45, so only the genuine accident fires; the
+  0.45–0.62 band is a legitimate upper envelope and is now judged by the distribution check instead.
+
+### Changed — `OLDSTYLE_FIGURES` is a WARN; the defect is prevented in the components
+- **v3.6.0 shipped this as a hard build blocker. It is now a WARN**, and the defect is prevented at
+  the source instead: `numeral_run_face()` resolves a lining face inside every component that emits a
+  figure, so correct output is the default rather than a rule authors must satisfy.
+- **Why the architecture changed rather than the threshold:** a fourth audit round found *more*
+  defects than the third (12 non-minor vs 5), three self-inflicted by the previous fix round. As a
+  blocker the rule has an unbounded false-positive surface — every component × every font × every
+  string shape — while being structurally blind to where numbers most often live: tables and native
+  charts report `has_text_frame=False`, so their numeric cells and tick labels were never checked at
+  all. `"7"` (a single digit, which cannot bob), `"10x"` and `"H1 2026"` were blocked; a cover whose
+  title IS a year had no fix available to its author.
+- A project that wants it fatal asserts over its own finished file — which is what a build script can
+  now do in three lines.
+
 ### Changed — numeral faces resolve from the deck's design (visible change)
 - **`big_numeral`'s default face changed.** It was hard-coded `serif="Georgia"`; it now resolves
   through `deckkit.numeral_face()`, which keeps a lining SERIF (Times New Roman) by default. The
@@ -22,6 +97,72 @@ section is a distilled summary — the full notes live on the
   whose font is Georgia.
 - Which faces count as old-style is **measured from the installed font** rather than read off a
   list; the curated set is only a fallback for fonts the machine does not have.
+
+### Changed — the PDF and viewer.html are reserved hand-off deliverables
+- They were produced on **every** render and parked at the deck root. A deck is rebuilt each critic
+  round and then usually hand-edited in PowerPoint, so both went stale the moment the .pptx changed —
+  and **a stale PDF is worse than an absent one**, because someone opens it and reviews the wrong deck.
+- `render_deck.py` now takes **`--deliverables`** (alias `--final`), off by default. The PDF still
+  exists as a render intermediate inside `render/`; the flag is what promotes it to the deck root and
+  writes the viewer. The default run prints a one-line reminder of how to produce them at hand-off.
+  `--fast` and `--deliverables` are mutually exclusive, enforced at flag-parse time.
+
+### Security — the metered image rung asks before it bills
+- The generated-template branch had three rungs (native imagegen → codex CLI → `OPENAI_API_KEY`)
+  governed by one rule: *never block on a choice when a working path is present*. Right for the two
+  subscription rungs, **wrong for the third** — it treats a present API key as authorisation. On a
+  machine with no codex CLI but an exported key, the skill would have started billing per image
+  without asking.
+- **BILLING GATE:** rung 3 is metered, an available key is NOT consent, ask before the first paid
+  call — a red stop **explicitly not waived** by a per-deck auto directive (delegation covers
+  preferences, never the user's money) — and on a decline fall back to a native look rather than
+  spending. `agents/asset-prep.md` (a subagent brief, which could have spent money with no way to
+  ask) and `generate_images_codex.py`'s own failure message are corrected to match.
+- **Claude Code's real cost is now documented:** CC has no native image tool, so the codex CLI IS the
+  path there — free on the subscription, one `codex login`. Q1 probes for a free path *before*
+  offering the branch, so a user cannot pick a look nothing can generate.
+
+### Fixed — the inherited theme shadow under every generated shape
+- python-pptx stamps `<p:style><a:effectRef idx="2">` on every autoshape, connector and freeform,
+  resolving to the theme's soft drop shadow. `shadow.inherit = False` writes an empty `<a:effectLst/>`
+  into `spPr` — **PowerPoint honours that, LibreOffice does not**, and LibreOffice is what the render
+  loop and the visual critic look at.
+- Measured under a plain box: a ~10px grey gradient (185,185,185 → white) under every card, chip,
+  callout, tile, node and device frame **in every deck this skill has ever produced**. It is the
+  single artifact that most separates "2010 SmartArt" from flat editorial, and no author could have
+  seen it — the XML says there is no shadow. (It also explains an earlier round spent warming a
+  frosted tint because panels "read cool grey": the grey was largely this.)
+- `_flat()` removes the element at all 20 shape-creation sites. Deliberate shadows are unaffected
+  (`offset_shadow`, `glass_card`).
+
+### Fixed — a failed render reported as SUCCESS, and four lint false positives
+- **CRITICAL:** `_render_pdf` returned the *expected* path and `main` only checked
+  `os.path.isfile()`, never `returncode`. With `out` == the deck folder (where a `--deliverables` PDF
+  legitimately lives) a **stale file satisfied that check**: the run printed "rendered N slides",
+  exited 0, left the old PNGs, and wrote fresh fingerprints — so the next `--fast` said "no slide
+  changed" and the stale render became permanent. Conversion now always targets a private empty temp
+  dir, a non-zero exit is fatal, and the out-dir cleanup runs only after the PDF is verified readable.
+- **The old-style font blacklist was factually wrong.** Measured from the installed fonts: Palatino
+  digit top-spread 2/100pt, Baskerville 2 — both *lining*, both wrongly blocked. Replaced the list
+  with measurement. (The list had been copied from the skill's own prose without checking it.)
+- **The gate inverted on CJK:** `_digit_share` divided by raw character count, so `"2026 Roadmap"`
+  scored 0.36 (warn) while `"2026 年路线图"` scored 0.50 (build failure) — Chinese decks did not get
+  the carve-out SKILL.md promises. Now weighted by visual width, with the threshold re-measured into
+  the empty gap between word-bearing headings (≤0.40) and real display numerals (≥0.67).
+- **`_font_file` shadowing:** the numeral resolver was overridden by matplotlib's same-named helper
+  later in the module, so "measured" detection actually measured DejaVu for every uninstalled face —
+  on a host without Georgia the rule was silently dead.
+- Four lint checks were firing on correct design, all reproduced before and after: `FOOTER-ZONE`
+  judged the declared frame instead of the rendered ink; `CROWDED` counted a hero photograph's area
+  as reading density; `INVERTED TYPE` fired on every interior statement slide (a ≤12-word largest run
+  is the hero line, not a broken hierarchy); and `OVERLAP` flagged small textless markers riding a
+  line or ring — composition, not collision, and 13 of one deck's 24 standing findings.
+- **`position_map` hero labels are bound to their dot** — the hero claims its slot before the greedy
+  anti-collision pass, and its label takes the dot's own hue. Found by building a real deck: the hero
+  point's label had been nudged next to a *different* dot and read as that dot's subtitle. Bold alone
+  says "important"; it does not say "belongs to THAT one".
+- `_slide_fingerprints` re-hashed shared media once per referencing slide (40-slide deck sharing one
+  plate: **318ms → 35ms** via part memoization); the subset temp dir leaked on every failure path.
 
 ## [3.6.0] — 2026-07-20
 
