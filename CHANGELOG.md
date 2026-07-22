@@ -9,6 +9,17 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+## [3.9.0] — 2026-07-22
+
+### Security — hardened a docs API-key placeholder (no real key was ever present)
+- A multi-engine scan flagged a hardcoded `sk-` API key. Investigation confirmed **no credential
+  exposure**: the scripts read the key from an env var (`os.environ.get(...)`), no `.env`/secret files
+  are tracked, and git history carries no real key (nothing to revoke). The single hit was a docs
+  placeholder — `export OPENAI_API_KEY="sk-..."` in `references/image-generation.md` — which a scanner
+  can misread as a truncated key. Replaced it with the safer file/secret-manager pattern the FAQ already
+  recommends (`$(cat ~/.openai_key)`) plus an obvious `DUMMY_KEY_replace_at_runtime` fallback and a
+  never-hard-code comment. Re-scan clean (the only remaining `sk-` strings are CSS skeleton class names).
+
 ### Fixed — bold BESPOKE design is first-class again (the preset gate was a launchpad, not a menu)
 - A strict two-front audit (integration + bold-design) of the preset-driven gate found the gate
   *framing* had quietly demoted agent-invented styles: bespoke was licensed "only for a topic no
@@ -39,6 +50,12 @@ section is a distilled summary — the full notes live on the
   meaning-free, chrome-level) is part of the *repeating design SYSTEM* and is welcome on every slide;
   "never per-slide stamping" bites only the **loud signature motif** (the dosed 2–3-appearance daring
   device). Propagated to `slide-design.md`, `SKILL.md` PRE-FLIGHT 6, `critic.md`, `review-rubrics.md`.
+- **Comprehensive integration verification** (a 12-agent workflow — 5 dimension finders → adversarial
+  refute-each-finding → synthesis) returned **pass**: runtime, design-capability, and cross-references
+  all verified clean after four low-severity seams were fixed — the `midcentury`/`synthwave` preset
+  guards were carved to sanction the quiet every-slide register (they read "not per slide"), the
+  contract-card assembly list now echoes the `interior register:` field the critic reads, and two stale
+  doc/comment references were corrected.
 
 ### Added — the chosen style now runs through EVERY slide, not just the cover (的风格要走所有页)
 - A user reported a style that "只有首尾页" — lived only on the first/last page. Root cause: the
