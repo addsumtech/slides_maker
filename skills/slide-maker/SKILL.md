@@ -174,22 +174,27 @@ every **🔴 CHECKPOINT** is a hard stop.
 | ANY error / lint finding / env failure — symptom → cause → fix, plain language | `references/troubleshooting-faq.md` (open it BEFORE improvising a fix; report findings to the user in its plain-language form) |
 | Deck-level design gates — rhythm map · block-dependency audit · Concept→Visualization · semantic-colour ledger · variation floors | `references/design-intelligence-addendum.md` (Step 2's measured design targets) |
 
-The table above routes by *concern*. These ten route by *pipeline moment* — each holds the
-working detail of one step, and the step that needs it says so where it runs. They carry rules,
-not background: reaching a step and skipping its file is how a gate silently stops firing.
+The table above routes by *concern*. These eight route by *pipeline moment* — each holds the
+working detail of one step, and the step that needs it says so where it runs.
 
-| Read it at | Owner |
-|---|---|
-| Step 0, on a deck-build ask, before composing the four questions | `references/interview-protocol.md` |
-| Step 1, before writing the comprehension brief / checking the planner's | `references/content-plan-spec.md` |
-| End of Step 1 and end of Step 2, before posting either 🔴 checkpoint | `references/checkpoint-convention.md` |
-| Step 2, once the Content plan is approved and any asset is named | `references/asset-production.md` |
-| Step 3, on a non-16:9 surface or a supplied/official template | `references/deck-setup.md` |
-| Step 4, before writing the first slide-building call | `references/deckkit-components.md` |
-| Step 5, on any re-render, or when a render errors or produces nothing | `references/render-and-verify.md` |
-| Step 5, at every critic dispatch and on every returned review | `references/critic-panel.md` |
-| Step 6, before composing the hand-off message — every deck | `references/handoff-checklist.md` |
-| Any step, when you need a script's flags or a capability not routed above | `references/file-inventory.md` |
+**What is NOT here, and why.** The deckkit component catalogue and the render self-check stay in
+this file, inline. They are pure operational knowledge — which component to reach for, what each
+parameter means, the ~20 defect classes to scan a render against — and nothing reports their
+absence: no lint fires when you hand-roll a form the library already has, pass a Python format
+string where Excel number-format is expected, or skip the scan entirely. A rule whose omission is
+*silent* cannot live behind a read. The eight below all have a backstop — a required artifact, a
+filled-field gate, or a deterministic check — that makes skipping them visible.
+
+| Read it at | Owner | What catches you if you skip it |
+|---|---|---|
+| Step 0, on a deck-build ask, before composing the four questions | `references/interview-protocol.md` | the Step-0 picks FYI can't be written without it |
+| Step 1, before writing the comprehension brief | `references/content-plan-spec.md` | the comprehension gate rejects an unfilled brief |
+| End of Step 1 and Step 2, before posting either 🔴 checkpoint | `references/checkpoint-convention.md` | the checkpoint artifact is the thing it specifies |
+| Step 2, once the plan is approved and any asset is named | `references/asset-production.md` | PRE-FLIGHT 4 (charts) · 5 (evidence) · 12(e) (icons) |
+| Step 3, on a non-16:9 surface or a supplied template | `references/deck-setup.md` | `CJK_NO_EA` fails the build on a missing EA font |
+| Step 5, at every critic dispatch and returned review | `references/critic-panel.md` | `validate_review.py` rejects a non-conforming review |
+| Step 6, before composing the hand-off — every deck | `references/handoff-checklist.md` | the hand-off note is itself the visible artifact |
+| Any step, for a script's flags or an unrouted capability | `references/file-inventory.md` | lookup only — nothing depends on having read it |
 
 *(Full file/script inventory: see **Files** at the end.)*
 
@@ -564,8 +569,117 @@ generate 2-3 candidate forms and choose with the tie-breaker in `references/form
 > primitives ONLY for a form the library genuinely lacks — and *then* the burden is on you: **derive
 > every axis / baseline / track extent from the data** (`last_bar_x_end − axis_x`, never a hand-picked
 > width), and don't double-count (`references/design-principles.md` "Designed plots" + "Big numbers").
-
-**The full deckkit helper catalogue — every component by job (chrome · safe layout · text & blocks · colour · charts & data furniture · walkthrough/hierarchy · 2.5D isometric · decision grids · diagram kit + science-schematic carve · editorial furniture · micro-viz · publication & math · CJK accents · photo FX) — is in `references/deckkit-components.md`. Read it before you build any slide's form**, so the 🔴 rule above is actionable: you can only reach for the component that exists if you know it exists.
+The helper set, by job:
+- **Chrome:** `title_bar`/`content_slide`, `footer`, `editorial_header` (caps eyebrow + title +
+  hairline), `part_eyebrow`/`page_marker` (mono eyebrow + page marker), `logo` (persistent
+  brand/institution/product mark in a fixed corner on every page — see the brand-logo rule below).
+- **Safe layout — measure or anchor, never hand-pick a y:** `columns`/`rows` (equal **or
+  `weights=`-proportioned** split panels — a measured 1/3–2/3 or rail+main split — symmetric outer
+  margins either way), `content_band` (the SAFE rect below title / above footer), **`bottom_callout`**
+  (footer-safe bottom takeaway — anchors to the band, grows UP, can't collide), **`vstack(…, bottom=)`**
+  (measured stack: equal gaps + no overlap by construction, errors at build time on overflow) with the
+  `measure_callout/measure_bullets/measure_text` helpers, **`spaced_centers`** (evenly-spaced marker
+  centers for a timeline / tick row / numbered steps, **inset at the ends so a centered caption stays
+  co-centered with its end marker** — use it instead of hand-rolling a row of dots+captions, which
+  desyncs the first/last caption from its dot near a slide edge; `timeline` already uses it),
+  `picture` (`fit="contain"` keeps edges /
+  `"cover"` crops), `make_gif` (GENERATE a looping GIF from computed frames) + `gif` (embed the animated
+  GIF, undistorted + size/still warnings) + `gif_poster` (extract the first/representative frame to
+  verify what the render & PDF export show) — generate → embed → review, `icon`/`icon_tile`/
+  `icon_badge`/`icon_ghost`/`icon_card` (place an open-licensed SVG icon — recolored + rasterized via
+  `scripts/icons.py`, which also does **duotone** weights + **gradient-fill**; `icon_tile` is the
+  versatile container — circle/squircle/square × solid/gradient/glass tile, `icon_badge` a ring badge,
+  `icon_ghost` an oversized faint watermark, `icon_card` the upper-left feature-card pattern; vary the
+  treatment to fit the deck — see `references/icons.md` "Treatments"). *(These exist so you never
+  hardcode a low `y` — the recurring overlap/footer bug.)*
+- **Text & blocks:** `bullet`, `callout` (auto-grows), `chip`, `modbox` (a labelled MODULE box —
+  reach for it as the node when mapping architecture modules / code files / system parts joined by
+  `connector`, where a plain `node` is too bare; role word + optional filename/tag), `arrow`, `table` (highlight
+  the key row), `code_block`, `hrule`.
+- **Colour:** `palette(n, ACCENTS)` (n distinct, contrast-checked fills — warns on adjacent same-hue;
+  never a gray filler), `palette_from_image` (match a generated template's palette), `accent_one`
+  (one-accent discipline), `contrast_ratio` (verify ≥~4.5:1 before committing).
+- **Data furniture & charts:** `scorecard`/`leaderboard`/`takeaway_rail`, `change_stat` (baseline-
+  centred before→after), `stat_row`, `big_numeral`; **editable native charts** `native_chart` /
+  `native_dual_axis` / `native_donut` / `native_pareto` / `native_bubble` (feed them straight from a
+  spreadsheet with **`series_from_csv(path, x_col, y_cols)`** → `(categories, series)`, stdlib, no pandas),
+  plus the raster recipes in `scripts/designed_charts.py` (incl. **`waterfall`** — a total's rise/fall/
+  total walk, semantic up/down colour) — pick per `references/data-viz.md`.
+- **Walkthrough / hierarchy / comparison-grid:** **`annotated_figure`** (a real figure + numbered
+  markers + a numbered caption rail + optional magnified inset — the guided figure walkthrough the
+  integral-figure rule kept demanding by hand) · **`small_multiples`** (identical mini native charts
+  with a SHARED value axis — the documented recipe left each panel auto-scaling, so a small bump and
+  a huge bump looked identical) · **`position_map`** (N LABELLED items on two continuous axes — the
+  within-cell position quadrant() throws away) · **`org_tree`** (tidy hierarchy: centroid parents,
+  horizontal bus; raises when it can't fit legibly).
+- **2.5D isometric (native — no generated image):** **`iso_bars`** (a FAITHFUL 2.5D bar chart —
+  extrusion height is linear in the value and zero-based, so the depth never distorts the data) ·
+  **`iso_stack`** (a layered architecture / disclosure ladder / decision stack — floating isometric
+  slabs with labels aligned beside each one) · **`iso_prism`** (one extruded block as a hero).
+  Fixed projection (true 30° isometric, parallel not perspective) and one-light-source face shading,
+  so every 2.5D element in a deck reads as one system. **Dose like generated imagery** — a stack, a
+  hierarchy, or ONE hero chart, never every slide; text cannot be sheared onto a face, so labels sit
+  beside the geometry. When the 2.5D wants to be a rich atmospheric *scene* (not data), that is the
+  generated-image branch, not these.
+- **Placement by measurement:** `image_fx.quiet_region(path)` → the image's calmest ONE-INK region
+  + its mean luminance (choose dark vs light ink from data, not eyeballing) · `deckkit.pic_alpha`
+  (native picture opacity — a faint plate that keeps its own hues, no scrim shape) ·
+  `deckkit.design_intent(slide, envelope=…, rhyme=…)` (declare a deliberate quiet/baseline/bleed
+  register so the render-time lint audits intent instead of guessing it).
+- **Decision / plan / grid:** **`eval_matrix`** (options×criteria scoring grid — `harvey_ball` fifths-fill
+  glyphs or ✓/◐/✕ marks, `recommend=` tints the winner) · **`heat_matrix`** (category×category grid coloured
+  by value, `scale="seq"|"div"|"risk"`) · **`tier_stack`** (one taper: `mode="funnel"` drop-off /
+  `mode="pyramid"` layers, + `funnel()`/`pyramid()` wrappers) · **`gantt`** (dated task bars on a shared
+  `axis_scale`, `lanes=` swimlanes, `today=` marker — durations & overlap, where `timeline` shows only points).
+- **Diagrams / patterns:** `quadrant`, `hub_spoke`, `timeline`, `before_after`/`image_tab`/
+  `photo_triptych`, **`device_frame`** (a real screenshot in a `chrome="browser"`/`"phone"` bezel),
+  `wireframe_grid`+`spec_list`, `corner_frame`, `photo_card`, `backdrop_motif`,
+  `repeat_row` (N identical-except-index units as representatives + `…` + `×N`, shared detail said
+  once — never N duplicate blocks).
+- **Surface (dark / glass / print):** `glass_card`/`glow`/`scrim_overlay` (gradient+alpha fill),
+  `offset_shadow` (hard letterpress/riso shadow).
+- **Publication & math:** `cover`/`colophon` (bookend the deck), `sources_page`, `specimen_card`;
+  **`equation_native`** (EDITABLE LaTeX-subset math — real text runs, renders everywhere; the default) /
+  `equation_png` (rasterised LaTeX, for 2-D math: fractions/matrices) / `eq_par` (inline runs).
+- **East-Asian (CJK) accents:** `seal` (vermilion chop/印章 stamp — the one red accent on an ink deck),
+  `cjk_numeral` (壹·贰·叁 section markers vs Latin "01"). See `references/east-asian-aesthetic.md`.
+- **Diagram kit (general flowcharts):** `node` + `connector` / `flow_chain` (straight links between adjacent nodes) + `elbow_connector` /
+  `loop_path` (elbow / U-shaped paths for a feedback/repeat loop, a return, or a link between NON-adjacent
+  nodes) — any architecture from rounded-rect/pill/circle nodes (+ diamond/parallelogram/cylinder when
+  formal flowchart notation applies — see the Standard-notation crib in `design-gallery.md`) with
+  **stroke semantics** (solid=required
+  · dashed=optional · dotted=feedback) and **shape semantics** (straight=adjacent flow · elbow/U=loop /
+  return / non-adjacent), exactly one `hub` (hub optional in the system-architecture recipe — the
+  focal path can carry emphasis instead)  *(NB two similarly-named helpers: **`hub_spoke`** draws the
+  whole radial FIGURE — one centre + labelled spoke nodes on a ring; **`hub_spokes`** only draws the
+  CONNECTORS from an existing hub to existing nodes. Reach for `hub_spoke` to build the diagram,
+  `hub_spokes` to wire one you laid out yourself.)* the
+  focal path can carry emphasis instead); `diagram_island` (bright figure panel on a dark slide);
+  `concentric_rings` (nested framework); `step_list` (numbered process, vertical/horizontal).
+  - **This kit draws conceptual BOX-FLOW only — not physical science schematics.** For a
+    **labelled science schematic** explaining a principle / mechanism / experiment / definition (a
+    **free-body / force diagram, optics ray path, electric circuit, chemistry apparatus + reaction,
+    vector / coordinate geometry, wave / field** — physics · chemistry · biology · engineering · any
+    subject), NOT the node/connector kit. Two faithful build paths (pick by precision-vs-polish):
+    **matplotlib / a domain library** → transparent PNG (the safe default when the exact geometry/labels
+    ARE the meaning — deterministic, correct-by-construction), OR — for a **complex / fancy / generated-
+    template-matched** schematic whose geometry isn't load-bearing — the **OpenAI image tool for a
+    text-free styled visual with the labels overlaid as native editable text**. **Never bake labels or
+    unverifiable geometry into a generated image** (garbled text + wrong physics). Recipes, the
+    image-tool workflow, and the **domain-accuracy fidelity gate** are in
+    `references/schematic-diagrams.md` — build it correct (a wrong schematic misleads worse than none).
+- **Editorial / consulting furniture:** `insight_banner` (so-what bar), `bilingual_lockup` (CJK+tracked
+  Latin headline), `highlight` (inline `<k>keyword</k>` recolour), `ghost_numeral` (faint watermark
+  ordinal), `concept_equation` (ZINE=MAGAZINE word-equation), `pull_quote`/`standfirst`, `cta_button`/
+  `cta_pair`, `status_stamp`/`corner_tab`, `spec_card`, `year_badge`, `gradient_rule` (2-stop brand rule),
+  `catalogue_frame` (double-line specimen frame — museum/eastern presets).
+- **Micro-viz:** `dot_meter` (●●○), `tradeoff_list` (+/−), `segmented_bar` (cumulative 100%), `meter_bar`
+  (a single percentile/share/progress row — track + accent fill + a value label **vertically centered on
+  the bar**; use this instead of hand-building "track box + fill box + number", which is how value labels
+  end up floating off the bar's centerline; canvas-safe by construction — an overflowing value
+  auto-shortens the bar instead of leaving the slide).
+- **Photo on-brand (`scripts/image_fx.py`):** `duotone` / `grayscale` so a colour photo doesn't fight
+  the accent (riso/brutalist/ink/luxury/museum), then `picture(fit="cover")`.
 
 If the user gave a **style example** (Q4),
 build to your **style brief** of it *per the chosen mimic mode* (`references/style-analysis.md`) —
@@ -843,7 +957,19 @@ loop starts mostly geometry-clean. `lint_deck.py` below then re-checks that geom
 as a backstop and adds the render/parse-only faults; the rest is what needs real pixels (crop,
 contrast, balance, a tofu glyph, text on a busy image), which only the render shows.
 
-Re-rendering a deck you already rendered (fix rounds, post-delivery tweaks)? Read `references/render-and-verify.md` → "Re-rendering fast" before choosing `--fast` over a full render — it also lists the cases where `--fast` must not be trusted.
+**Iterating on a deck you already rendered? Add `--fast`.** `render_deck … --fast` fingerprints
+every slide (its XML + rels + the bytes of the media it references, mixed with a deck-global digest
+covering the theme/master/layouts/canvas size) against the previous run, then re-renders **only the
+slides that changed** — it subsets the pptx to those slides, converts that, and overwrites just their
+PNGs. Measured on an 18-slide deck: a full render is ~12s, a one-slide change is **~4.7s**, and a run
+where nothing changed is **0.07s**. Output is byte-identical to a full render (verified), so the
+critic and the render-time lint see exactly what they would have seen anyway. It falls back to a full
+render — and says why — whenever the mapping could be wrong: slide count changed, every slide changed,
+no cache, or the deck contains **auto slide-number fields** or **hidden slides** (LibreOffice drops
+hidden slides from the PDF, so page N stops being slide N — a full render now warns loudly and
+refuses to cache when the page count and slide count disagree). **Use it for the actor-critic fix rounds
+and for post-delivery tweaks** ("change slide 7 to a chart"); use a plain full render for the first
+render of a deck and whenever you pass `--deliverables`.
 
 First **render and look** (`bash scripts/render_deck.sh <deck.pptx>` → one PNG per
 slide). python-pptx writes blind — overflow, low contrast, a callout on the footer,
@@ -857,8 +983,10 @@ first: it maps every error surface (build exceptions · `lint_layout` codes · r
 you surface a finding to the user (in a checkpoint, FYI, or hand-off), say it in that page's
 plain language — *what broke, why, and the fix applied or proposed* — never as a raw lint code
 the user would need documentation to decode.
-
-**Render aborted or produced nothing even though `check_env` passed?** Read `references/render-and-verify.md` → "Codex sandbox aborts" — it is an environment permission issue, not a malformed deck, and the fix is a re-run of only the render command with unsandboxed execution.
+**Codex sandbox note:** LibreOffice may abort or produce no PDF when launched inside a managed
+sandbox even though `check_env.py` passes; in that case rerun only the render command with elevated /
+unsandboxed execution, then continue the normal render -> lint -> critic loop. This is an environment
+permission issue, not evidence that the deck is malformed.
 
 **Then run the layout lint** — `python scripts/lint_deck.py <deck.pptx>` (add `--json out.json` for a structured copy of findings + the stats block — hand THAT to dispatched critics instead of re-parsing console text; the lint auto-reads the `./render` PNGs beside the deck to add the colour/value-pacing row + the `FLAT RHYTHM` warn, or pass `--renders <dir>` — silently skipped when no renders exist, so it never changes a render-less run). `render_deck.sh` also emits `render/thumb_first.png` + `thumb_last.png` (~240px) for the critic's poster test. The build-time
 `dk.lint_layout` (Step 4) already cleared the pure-geometry faults *before* this render; **lint_deck.py
@@ -879,17 +1007,202 @@ include **TEXT ON IMAGE** — a render-pixel contrast estimate (<1.5:1) for text
 photo/gradient with no opaque backing, exactly the class solid-fill contrast checks can't see;
 its 1.5–3.0 band is the TEXT-ON-IMAGE CONTRAST `[warn]`.
 
-`lint_deck.py` then prints a **DECK STATS** block — read it, don't skim past it. `references/render-and-verify.md` → "The DECK STATS block" has the mode flags and what every `[stats]` warning names; treat each warning as that named design rule having failed measurably (fix it or write the one-clause exception), and **paste the stats block into the critic's input** — the review-validation gate below rejects any review without `stats_block_seen: true`.
+**It then prints a DECK STATS block — the measured form of the design targets. READ it, don't skim
+past it** (pass `--selfread` for a read-alone deck — it raises the TEXT WALL budget (~40→~90 words)
+and drops the presented-only SMALL TYPE / NO BUILDS warns; the other warns are mode-independent —
+`--surface` for a poster/single-canvas artifact, `--textheavy` when the user explicitly chose
+text-heavy density for a presented deck, or `--static` on a presented deck when the user opted OUT of
+appear-builds (silences NO BUILDS — a static presented deck was their choice, not an omission), so the
+budgets fit the delivery mode). Per slide it measures:
+reading **load** (latin words + CJK chars/2) vs the ~40-word presented budget · **text% / ink%
+coverage** vs the ~50–70% whitespace target · **max font pt** · shape/picture/chart counts ·
+**build** presence · **sim↑** (layout-skeleton similarity vs the previous slide); deck-wide it
+prints the **font histogram + type-drama ratio** and **builds/transitions n/N**. Its `[stats]`
+warnings name the rule they measure — **`TEXT WALL`** (word budget blown → cut copy to notes or
+split), **`CROWDED`** (occupancy past ~70% — role bands: cover 25–35 · exec 45–60 · technical 55–70 →
+subtract or split, don't shrink), **`LAYOUT SAMENESS`**
+(3 consecutive slides share one skeleton → the §1.2 skeleton-rotation rule failed), **`FLAT TYPE`**
+(no typographic hero → the type-scale drama rule failed), **`SMALL TYPE`** (body-median under the
+canvas-relative ≈18pt-equivalent floor → fewer words, bigger type), **`SIZE SPRAWL`** (>3–4 font sizes
+on one slide → use the declared type-scale tokens), **`NO BUILDS`** (presented deck with no
+appear-builds → the motion manifest failed *unless the user opted out of builds* — then pass
+`--static`), **`SKELETON VARIETY`** (<4 distinct layout skeletons
+across an 8+-slide deck → the canvas architecture barely rotates), **`TIMID COVER`** (slide 1's
+largest run under 2× body → the cover lacks poster scale), **`FLAT RHYTHM`** (when render PNGs are
+present via `--renders`/`./render`: no light/dark or colour-temperature event across the deck → the
+rhythm map's Background-mode column is single-note), and on CJK decks **`CJK TIGHT LEADING`** (multi-line
+CJK at ≤ single spacing → use the script-aware default) and **`CJK-LATIN SPACING`** (both 盘古之白
+conventions mixed → pick one deck-wide). Treat each `[stats]` warning as the NAMED design rule
+having failed measurably: fix it or write one clause of why this deck is the exception, and **paste
+the stats block into the critic's input** so the judges score numbers, not impressions. It's a safety
+net for the no-overlap / fits-its-box / density / rhythm rules, **not** a
+replacement for looking (it can't judge crop, balance, legibility, or fidelity).
 
 **Render self-check — scan EVERY slide for these before handing to the critic** (they're
 invisible in the build code and only appear in the pixels; catching them yourself saves a
 critic round — full rationale in `references/design-principles.md`):
+- **Overflow / contrast / footer / glyphs** — no clipped or spilling text, ≥4.5:1 contrast,
+  nothing jammed on the footer, no tofu/missing glyphs, and **no orphaned punctuation** (a lone 。/，
+  or single glyph stranded on its own row — set `deckkit.EAFONT` so PowerPoint's kinsoku keeps it
+  attached, and widen/reword if needed).
+- **No build/meta annotation visible** — scan for any text that describes *how the slide was made*
+  rather than its content: "（可点击编辑的原生图表）"/"(editable native chart)", "(AI-generated)", "(placeholder)",
+  "(draft/草稿)", "generated by…", TODO/FIXME. It must NOT be on a slide — delete it (it belongs in code
+  comments or the hand-off). A leaked meta-label ships broken.
+- **Stacked groups read as separate** — for stacked labelled groups (stat label+value+caption, stacked
+  cards), the gap *between* groups is clearly larger than the gaps *within* one (proximity); no caption
+  crowding the next group's label.
+- **Balance & suitable space** — every element has a comfortable margin on **all four sides**:
+  nothing crowds an edge, nothing strands a big dead gap (the right *degree* — not too tight,
+  not too loose). Split panels + flanking margins equal; no large dead-white band beside a
+  narrow element; a **figure beside text is anchored to its margin (not centred-and-far-
+  stranded)** with the text one gutter away; repeated blocks/connectors evenly spaced; grid-
+  aligned, nothing lopsided. **A column/stack inside a card fills the space below its header** — a
+  ladder, a list, stacked chips should **distribute evenly** to fill the available height; don't
+  bottom-/top-anchor and strand a visible gap between the header and the first item (compute the gap
+  from the region — `(region_h − n·item_h)/(n−1)` — or use `vstack`/`rows`, never a hand-picked offset).
+- **Block padding & no inflated filler** — text inside a chip/card/callout hugs the box with a
+  **modest, balanced** top/bottom margin (middle-anchored; not floating in a tall box, not cramped).
+  A short card must not leave a white strip at the bottom. **No oversized block faking a full slide:**
+  a single short line of small font swimming in a big box is a placeholder tell — either *add real
+  content* to fill it or *shrink the box to hug the text* and use the freed space; never inflate a
+  container to cover a gap.
+- **Font hierarchy (content < title)** — body/content/callout/label text is **visibly smaller** than
+  the slide title (clear step between levels, ~1.4–1.8×); no body, formula, or chip label set as large
+  as (or larger than) the title. The only thing that may exceed body size is a deliberate **hero**
+  element (the one big numeral or the slide-defining equation) — and even it stays below the title.
+- **Hero numerals read clean** — an **integral number stays on ONE line** (no "2026" broken into
+  "202"/"6" — use `wrap=False` or a wide-enough box); digits are **uniform-height & baseline-aligned**
+  (a lining-figure face — Helvetica Neue / Arial / Cambria — NOT an old-style-figure face like Georgia,
+  whose digits sit at different heights); and a numeral run **aligns** with adjacent CJK/Latin on its
+  line (`design-principles.md` "Big numbers", `font-guidance.md`).
+- **Chart axis spans every bar; a cumulative doesn't double-count** — a bar/waterfall/dot chart's
+  baseline/value-axis runs under **all** its bars (not stopping short of the last one), and a
+  cumulative/waterfall shows increments *or* their total, never both as peer bars (a "+8 / +8.3 /
+  +16.3" trio is a double-count); keep different quantity kinds in separate stacks. Prefer
+  `designed_charts.waterfall` over hand-rolled floating boxes (`design-principles.md` "Designed plots").
+- **Geometry matches the number** — read one bar/band/cell's *size or colour* against its *printed
+  value*: a magnitude column/bar starts at **0** (a cropped axis makes 210/220/230 read as a ~3×
+  cliff); a proportional shape (funnel band, bubble) is sized to `value/max`, not clamped up by a
+  min-size floor that contradicts its label; a diverging/signed scale reads its **sign** (a true 0
+  is neutral, not blue). deckkit defaults handle all three — flag any hand-rolled/matplotlib chart
+  that doesn't (`data-viz.md` "Chart anti-patterns", `design-principles.md` "Designed plots").
+- **Formula sized to content** — every equation's glyphs read at ≈ **body size** (not blown up to fill
+  the slide width, not illegibly shrunk), and **consistent across slides** (same placed height); any
+  inline variable/symbol is in **math format** (italic, real sub/superscript), never plain body letters
+  or Unicode super/subscripts.
+- **No rule/divider crossing text** — every hairline, divider and accent bar passes BETWEEN blocks,
+  never through one. The build-time `RULE_THROUGH_TEXT` gate catches this deterministically now; if you
+  see one in a render it means the rule was drawn at a hand-picked `y` computed from how long the text
+  happened to be at the time. Fix the *derivation*, not the coordinate.
+- **Footer collision / overlap** — no block crosses into the footer band and no two stacked
+  blocks overlap. If one does, the cause is almost always a hand-picked `y` for an auto-growing
+  callout/stack — fix it by switching to `bottom_callout()` / `vstack()` / `content_band()`, not
+  a one-off coordinate nudge (that just recurs when the text changes). **Look specifically at the
+  seam where content meets a bottom callout/bar:** a *wide* bar grazing the cards above it by even
+  a sliver clips their rounded corners — there must be a visible gap, so size content to the
+  callout's returned top minus a `GUTTER` (reserve its space before sizing content, don't add it last).
+- **Adjacent / stacked blocks — a VISIBLE gap, not a sliver** — between any two same-axis blocks
+  (stacked panels, side-by-side cards, pipeline nodes) the gap must read clearly: **≥ ~0.13in
+  (~⅓ `GUTTER`)**. A ~0.02in seam (three panels at pitch 1.04 with height 1.02) reads as touching —
+  a gap far smaller than the slide's own margins looks cramped even though nothing overlaps. Cause:
+  a hand-picked pitch that nearly equals the block height. Fix: **derive the pitch from the region** —
+  `rows(n)` / `vstack(..., bottom=…)` — so the gap is set by construction, never `block_h + 0.02`.
+  (The build-time lint's `SLIVER_GAP` warn catches this class deterministically — an unaddressed
+  one at render time means the build-time report was skipped.)
+- **Bar labels sit ON the bar** — for any track+fill row (percentile / share / progress / "want vs
+  have"), the value/percent label is **vertically centered on the bar's centerline**, not floating
+  above or below it, and doesn't overlap the track. Use `meter_bar()` (which centers the value by
+  construction) rather than hand-placing a number at a guessed `y`.
+- **Marker captions sit UNDER their marker** — on a timeline / tick row / numbered-step row, each
+  caption (date · title · sub) is **horizontally co-centered with its dot/marker**, *including the
+  first and last*. The classic bug: an end marker sits near the slide edge and its centered caption
+  gets clamped inward, so the caption drifts off to the side of its dot. Use `timeline()` or
+  `spaced_centers()` (which **inset the end markers** so every caption stays co-centered) — never
+  hand-roll a dots+captions row with a per-caption edge clamp.
+- **Diagrams** — arrows point the way the flow moves (down/up between stacked boxes); adjacent
+  blocks have a visible gap (never touching); a lone glyph/icon optically centred (ASCII, not
+  full-width, for a centred mark on a CJK deck). **A connector / loop label (e.g. a feedback-loop's
+  「修订」/「retry」) sits in the OPEN GAP next to the line — offset above a horizontal segment, or beside a
+  vertical one, with clearance — NOT inside an opaque chip that STANDS OUT over the line.** A chip that
+  contrasts with the slide reads as a band-aid; route the label into clear space so the line and text
+  simply don't collide. (On a PLAIN background a label that knocks the line OUT in the background colour —
+  the line breaking cleanly for the text — is fine; the band-aid is a *visible* chip, e.g. a white block on
+  a coloured/textured slide. Add a subtle *translucent* backing only if the label must cross a busy area.
+  See `references/design-principles.md` → "Connector labels".)
+- **Block colours** — in a sequence of chips/cards/stages, every block is a **distinct,
+  deliberately-contrasted hue**: no two adjacent blocks share a colour, and **no neutral gray
+  sits in the sequence as if it were a category** (use `palette()` — it warns on both). A vivid
+  block beside a gray one reads as half-finished.
+- **Mark-on-fill contrast — an icon glyph on its tile, a symbol/number on a coloured chip** — the
+  mark must stand out from the ground it sits ON (~3:1), not just from the slide. Zoom each icon tile:
+  a **same-hue pair** (teal glyph on aqua tile) or a **dark-on-dark pair** (coloured glyph on
+  near-black tile) is invisible — the exact bug a mid-tone tile hides. `icon_tile` auto-guards this
+  (white/near-white glyph on a deep tile, or deep glyph on a pale tile); a hand-placed icon-on-`box`
+  does not, so check it here.
+- **Titles** — a subtitle/definition line has a clear gap below the title's accent rule; the
+  kicker/eyebrow adds a section label, it doesn't echo a word the title already leads with. **The
+  title CHROME itself is not one fixed template repeated on every slide** — an identical
+  eyebrow + rule-under-the-title on all ~12 content slides is a template tell (creativity is a design
+  metric, not just correctness). **`lint_deck.py` now backstops the most common case deterministically —
+  `TITLE-RULE MONOCULTURE` fires when the same thin rule sits under the title at the same height on
+  >60% of content slides** (a `head()`-style helper that stamps one treatment deck-wide is exactly how
+  this regresses); the other treatments (tab/rail/ordinal) it can't measure stay on this self-check.
+  Rotate **2–3 title treatments** across the deck (e.g. a classic
+  accent-rule · an eyebrow in a filled tab/pill · a left vertical accent bar · a section ordinal ·
+  a motif mark) so no two adjacent slides share the exact chrome and no single treatment dominates —
+  the eyebrow-ornament analogue of the skeleton-rotation floor (`references/design-intelligence-addendum.md`).
+  This does **not** fight the Repetition principle: the visual SYSTEM stays constant (same palette,
+  type pairing, signature motif on every slide) — you rotate the *chrome treatment*, not the identity.
+  That IS "repeat the system, vary the protagonist" (`references/design-principles.md` C.R.A.P.), not a
+  license to make each title look unrelated.
+- **Images** — the key **subject is whole, not cropped** (`contain` vs `cover`); a generated
+  image of real things is **factually right** (relative size/proportion, count, colour); any
+  **labels sit under the feature** they name. A **sourced photo is aesthetically usable**, not just
+  subject-correct: reject an ugly / under-construction (cranes, scaffolding) / blurry / badly-lit /
+  cluttered / unrepresentative shot — re-source, or generate a **declared-stylized illustration**
+  instead (a beautiful accurate illustration beats an ugly real photo; `references/image-generation.md`
+  aesthetic gate + the `searched, found but low-quality → generated, flagged illustrative` rung).
+- **Text over an image (hero / photo / plate)** — read the title against the pixels behind it: **(a)**
+  no image **line / edge / motif / frame-ornament crosses the glyphs** (a scrim only *dims* a bright
+  Deco line — it stays visible; when the image carries linework where the title lands, cover it with a
+  **near-opaque panel** α ≥ 0.88, a lower-third band or corner card filled to the canvas edge, never
+  bleeding off-canvas); **(b)** every run — including a gold/tint **eyebrow** — clears ≥4.5:1 against
+  what's actually behind it; **(c)** an **unmistakable gap** separates the big title from its
+  subtitle/rule (a subtitle hugging the title's baseline reads as an error). Fix by strengthening the
+  backing, moving the text to an empty region, or re-spacing — treat a title fighting the image as a
+  real defect, like an overflow.
+- **PDF figures cropped precisely** — for every figure pulled from a paper, zoom **each of the four
+  edges** close-up (not a glance at the whole) and confirm: (a) none of the figure's own parts is
+  clipped **or flush** (flush = cut); (b) no page text bled in (its caption, a neighbour's caption
+  fragment, a running head, a page number, a stray body-text line); (c) the figure is
+  **self-contained — its own x/y axis labels are present**, not silently replaced by a legend you
+  added on the slide. The full element list + the plot-panel-bbox pitfall (the auto-detector's box
+  excludes the axis titles/ticks/legend, so an eyeballed crop near it drops them) are under **“Never
+  clip the figure's OWN parts”** in Step 4. A clipped, flush, or axis-label-missing crop is a real flaw, not a nitpick.
+- **Motion & images by taste** — what's there earns its place (emphasises/engages/guides),
+  nothing thoughtless; what's plain is fine.
+**On native Windows (PowerShell / cmd) there is no bash — call the Python entry points
+directly: `python scripts\render_deck.py <deck.pptx>` and `python scripts\check_env.py`.**
+The `.sh` files are just shims that forward to those `.py` scripts, so macOS / Linux /
+Git Bash / WSL keep working unchanged; everything else in the toolchain is already
+cross-platform Python.
 
-- **The scan list itself is `references/render-and-verify.md` → "Render self-check". Open it and walk every slide against it after each render, before dispatching any critic** — ~20 named defect classes (overflow · meta-annotation leak · proximity · balance · font hierarchy · hero numerals · chart geometry · formulas · rules · gaps · bar and marker labels · diagrams · block colour · mark-on-fill · titles · images · text-over-image · PDF crops) that cannot be run from memory.
+**If a render fails *after* `check_env.sh` passes** (a build/LibreOffice error mid-loop),
+isolate it rather than thrash: the **build script is the source of truth and re-runnable**,
+so comment out the suspect slide (or the shape you last added), rebuild + re-render to
+confirm the rest is fine, then fix that one slide and restore it. A frequent culprit is a
+bad asset path (a figure/GIF/equation PNG that doesn't exist) or a malformed `equation_png`
+string — the Python traceback names it. Don't ship a partially-rendered deck silently; if
+one slide can't render, tell the user which and why. (Symptom → cause → fix tables:
+`references/troubleshooting-faq.md` §5 for render failures, §3 for build tracebacks.)
 
-**On native Windows (no bash), or when one slide is breaking the render:** read `references/render-and-verify.md` → "Native Windows entry points, and isolating one bad slide" — the `python scripts\render_deck.py` / `check_env.py` entry points, and how to bisect to the one bad slide instead of thrashing.
-
-Deck has appear-builds? Read `references/render-and-verify.md` → "If the deck uses animation/builds" before judging the render — the PNGs and the critic only ever see the final built state.
+**If you used animation/builds:** the render (and the critic) see only the **final
+built state** — they can't play the sequence (the anim.py timing is verified to
+round-trip through real PowerPoint as native builds; LibreOffice just can't *play* it).
+So verify the fully-built PNG reads correctly on its own (run the loop as normal), and
+in step 6 **describe the click order** to the user. Builds are a layer on a correct
+static slide, never a fix for a cluttered one.
 
 Then run the **actor-critic loop** — this is the quality engine, and the critic is a
 *demanding* judge (see `agents/critic.md`), not a rubber stamp:

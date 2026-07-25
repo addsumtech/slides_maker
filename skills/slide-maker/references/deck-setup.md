@@ -1,4 +1,4 @@
-# Deck setup — non-16:9 surfaces, the template branch, and fonts (Step 3)
+# Deck setup
 
 ## Canvas format — non-default surfaces (4:3 · 小红书 3:4 · 1:1 · story 9:16 · A4)
 

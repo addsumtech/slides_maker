@@ -1,4 +1,4 @@
-# Checkpoint artifacts — the compact table you post at the 🔴 CONTENT and 🔴 DESIGN stops
+# Checkpoint convention
 
 ## The checkpoint artifact spec (CONTENT + DESIGN) and the auto-delegated Step-0 picks
 

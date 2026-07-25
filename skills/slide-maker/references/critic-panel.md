@@ -1,4 +1,4 @@
-# Critic panel — the Contract Card, panel composition, arbiter cross-validation, and the round cap (Step 5)
+# Critic panel
 
 ## The CONTRACT CARD — full field list
 

@@ -1,4 +1,4 @@
-# Content plan spec — comprehension brief, claim ledger, and the web-verification bar (Step 1)
+# Content plan spec
 
 ## Comprehension brief — the required fields and the claim-ledger columns
 

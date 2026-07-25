@@ -1,4 +1,4 @@
-# Interview protocol — the four questions, their branches, and the direction gate (Step 0)
+# Interview protocol
 
 ## Step 0 — personalization, Q1 (template), Q2 (purpose/venue), Q3 (source material)
 

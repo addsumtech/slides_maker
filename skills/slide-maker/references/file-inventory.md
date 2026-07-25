@@ -1,4 +1,4 @@
-# File inventory — every script, agent, reference, and design preset
+# File inventory
 
 ## Files — scripts · agents · references · registry
 

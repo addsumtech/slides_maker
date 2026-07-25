@@ -1,4 +1,4 @@
-# Asset production — evidence manifest, figure crops, equations, generated & sourced imagery (Step 2–4)
+# Asset production
 
 ## Evidence manifest — probing asset geometry before design
 

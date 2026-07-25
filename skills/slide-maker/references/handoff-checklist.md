@@ -1,4 +1,4 @@
-# Hand-off — deliverables, the minimal note, speaker notes, and safe iteration (Step 6)
+# Handoff checklist
 
 ## The hand-off note — what it must carry
 
