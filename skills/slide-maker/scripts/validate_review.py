@@ -10,9 +10,16 @@ ping-pong of one-error-at-a-time retries.
 
     python3 scripts/validate_review.py critic  review.json     # '-' reads stdin
     python3 scripts/validate_review.py arbiter verdicts.json
+    python3 scripts/validate_review.py critic review.json --record ~/Downloads/<deck>/
     python3 scripts/validate_review.py --selftest
 
 Exit 0 = valid ("OK — valid <kind> output"). Exit 1 = invalid, one line per problem.
+
+`--record <deck-dir>` additionally writes the hand-off gate record into
+`<deck-dir>/.deck-gates.json` DERIVED FROM THE VALIDATED REVIEW (verdict, blocker/major
+counts, the review file's path + sha256), so `render_deck.py --deliverables` can re-read the
+evidence instead of trusting a summary the model typed from memory. On an arbiter Job-2
+payload it records the confirmation pass under `critic.corroborated_by`.
 
 Stdlib only (no jsonschema): the contracts are transcribed by hand from the two agent
 files — when a contract changes there, change it here too.
@@ -32,7 +39,80 @@ better_fix required iff dulled), plus the OPTIONAL `escalated_unreviewed:
 [{slide, issue}]` escalation escape hatch — accepted on either job, never required.
 """
 import json
+import os
 import sys
+
+GATES_FILE = ".deck-gates.json"
+
+
+def _digest(path):
+    import hashlib
+    h = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(65536), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def record_gate(kind, obj, review_path, deck_dir):
+    """Write the hand-off gate record FROM THE VALIDATED REVIEW, not from memory.
+
+    The `.deck-gates.json` critic block is what `render_deck.py --deliverables` checks. If the
+    model types that block itself at hand-off, the record is self-certification — the same
+    failure the gate exists to prevent, because the model that skipped the loop writes the same
+    JSON as the model that ran it. So the record is produced HERE, as a side effect of the
+    validation the coordinator must run anyway before acting on any review, and it carries the
+    review file's path + sha256 so the gate can re-read the evidence instead of trusting a
+    summary. A hand-written block still passes (nothing breaks), but it is *labelled* as
+    self-reported — visible, rather than indistinguishable.
+    """
+    if review_path == "-":
+        return "not recorded: review came from stdin — pass a real file to --record"
+    gates_path = os.path.join(deck_dir, GATES_FILE)
+    try:
+        gates = json.load(open(gates_path, encoding="utf-8"))
+        if not isinstance(gates, dict):
+            raise ValueError("not a JSON object")
+    except FileNotFoundError:
+        gates = {}
+    except Exception as exc:
+        return "not recorded: {} exists but is unusable ({})".format(gates_path, exc)
+
+    rp = os.path.abspath(review_path)
+    if kind == "critic":
+        findings = obj.get("findings") or []
+        sev = [f.get("severity") for f in findings if isinstance(f, dict)]
+        prev = gates.get("critic") or {}
+        seen = prev.get("reviews") or []
+        if rp not in seen:
+            seen.append(rp)
+        gates["critic"] = {
+            "verdict": obj.get("verdict"),
+            "rounds": len(seen),
+            "blockers": sev.count("blocker"),
+            "majors": sev.count("major"),
+            "source": rp,
+            "sha256": _digest(rp),
+            "reviews": seen,
+            "recorded_by": "validate_review.py",
+        }
+        if prev.get("corroborated_by"):
+            gates["critic"]["corroborated_by"] = prev["corroborated_by"]
+    else:  # arbiter — a Job-2 payload is the confirmation pass high-stakes consent needs
+        if "checks" not in obj:
+            return "not recorded: only an arbiter Job-2 `checks` payload records a confirmation"
+        critic = gates.setdefault("critic", {})
+        corro = critic.setdefault("corroborated_by", [])
+        if rp not in corro:
+            corro.append(rp)
+        critic["dulled_reopened"] = sum(
+            1 for c in obj["checks"] if isinstance(c, dict) and (c.get("dulled") or not c.get("resolved")))
+
+    with open(gates_path, "w", encoding="utf-8") as fh:
+        json.dump(gates, fh, ensure_ascii=False, indent=1)
+        fh.write("\n")
+    return "recorded -> {}".format(gates_path)
+
 
 CRITIC_VERDICTS = ("consent", "revise")
 SEVERITIES = ("blocker", "major", "minor")
@@ -346,9 +426,18 @@ def _selftest():
 def main(argv):
     if argv == ["--selftest"]:
         return _selftest()
+    record_dir = None
+    if "--record" in argv:
+        i = argv.index("--record")
+        if i + 1 >= len(argv):
+            print("usage: --record needs the deck directory (where .deck-gates.json lives)",
+                  file=sys.stderr)
+            return 2
+        record_dir = argv[i + 1]
+        argv = argv[:i] + argv[i + 2:]
     if len(argv) != 2 or argv[0] not in ("critic", "arbiter"):
-        print("usage: validate_review.py critic|arbiter <file|->   (or --selftest)",
-              file=sys.stderr)
+        print("usage: validate_review.py critic|arbiter <file|-> [--record <deck-dir>]"
+              "   (or --selftest)", file=sys.stderr)
         return 2
     kind, path = argv
     raw = sys.stdin.read() if path == "-" else open(path, encoding="utf-8").read()
@@ -365,6 +454,8 @@ def main(argv):
             print("  - %s" % e, file=sys.stderr)
         return 1
     print("OK — valid %s output" % kind)
+    if record_dir is not None:
+        print("[gate] %s" % record_gate(kind, obj, path, record_dir))
     return 0
 
 

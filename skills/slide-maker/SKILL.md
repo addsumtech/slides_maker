@@ -1226,6 +1226,19 @@ Then run the **actor-critic loop** — this is the quality engine, and the criti
    arbiter's `escalated_unreviewed` entries are handed to the next round's fresh critic as
    candidate findings (or, at the round cap, surfaced to the user with the other open questions).
 
+   - **Record the consent as EVIDENCE, not as a claim — add `--record <deck-dir>` to the validation
+     you are already running:** `python3 scripts/validate_review.py critic <review.json> --record
+     ~/Downloads/<deck>/`. It writes the `critic` block of `.deck-gates.json` **from the validated
+     review itself** (verdict · blocker/major counts · the review file's path + sha256), and the
+     Step-6 gate then re-reads that artifact instead of trusting a summary — a moved, edited, or
+     revise-verdict review fails the hand-off. Run it on every round; `rounds` is the count of
+     distinct reviews recorded, so it cannot be inflated. On a high-stakes deck, `--record` on the
+     arbiter's Job-2 payload files the corroborating pass under `critic.corroborated_by`. **Why this
+     is not ceremony:** a record you TYPE at hand-off is self-certification — the model that skipped
+     the loop writes the same JSON as the model that ran it, so both produce identical prose and
+     only an artifact tells them apart. A hand-written record still passes, and is labelled
+     `SELF-REPORTED` when it does.
+
    - **The CONTRACT CARD's full field list is in `references/critic-panel.md` → "The CONTRACT CARD". Assemble it from the approved plans (declarations only, never rationale) at every critic dispatch — read the field list each time rather than reconstructing it**; an external/redesign deck with no Step-1 plan states "none-declared" instead. The validation gate above rejects any review without `contract_card_seen`.
 
    - **When a validated review comes back, read `references/critic-panel.md` → "Handling a returned review"**: the prior round's `strengths` as a do-not-harm ledger for the actor (and the rule that they are NEVER shown to the next fresh critic), the probes-vs-plan diff and its dispositions, and how a `ceiling` line is contained.
@@ -1319,6 +1332,9 @@ the refutation). A gate you deliberately skipped is **waived in writing** —
 visible instead of invisible. This file is the hand-off's evidence, not a formality: the model that
 skips a gate is the same model that would write the note claiming it ran, so both produce identical
 prose and only an artifact tells them apart (`references/handoff-checklist.md` lists it).
+The `critic` block is **written by `validate_review.py --record`, not by hand** (Step 5) — you supply
+only the two blocks no tool can produce for you: the design plan's four fields and the provenance
+pass's per-claim list.
 
 **Before you write the hand-off note, read `references/handoff-checklist.md` — every deck.** It is the ONE authoritative list of what the note carries (minimal caveats + next steps, never a recap or self-praise) and of the conditional REQUIRED lines the owning rules point here for: `provenance:`, click order, image licences, the GIF note, accepted advisories, `distinctiveness:`, the delegated-picks recap, the optional `ceiling` line, and the two taste-ecosystem offers — **including the save-this-look offer, which is skipped entirely under a per-deck auto directive: never an un-consented registry write.**
 

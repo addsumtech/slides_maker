@@ -10,7 +10,8 @@ authoritative hand-off checklist; the owning rules point here):** the `provenanc
 confirmed · N fixed · N cut` line (research-sourced decks — the PRIMARY-SOURCE GATE's artifact), the
 **`.deck-gates.json` written at the deck root** (the record `--deliverables` checks: critic verdict,
 the design plan's boldness/signature_move/carried_by/form_ledger, and the provenance pass's per-claim
-`claims` list — or a written `waived` reason for any gate deliberately skipped), the
+`claims` list — or a written `waived` reason for any gate deliberately skipped; the `critic` block
+is written by `validate_review.py … --record <deck-dir>` from the review itself, never typed here), the
 per-slide **click order** (appear-builds opted in), **image licenses/credits** (sourced photos), the
 **GIF plays-in-slideshow** note (embedded GIFs), **accepted advisories** one plain-language line
 each, the **`distinctiveness:` line whenever Step 5's bold/experimental escalation fired**

@@ -263,6 +263,15 @@ def _render_pdf(soffice, src, outdir):
     return (os.path.join(outdir, os.path.splitext(os.path.basename(src))[0] + ".pdf"), result, cmd)
 
 
+def _sha256(path):
+    import hashlib
+    h = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(65536), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
 GATES_FILE = ".deck-gates.json"
 
 
@@ -302,8 +311,11 @@ def check_handoff_gates(pptx):
             "  Missing: {}\n\n"
             "  The independent critic (Step 5) is the one that cannot be self-certified — you are "
             "not the final judge of your own deck.\n"
-            "  Write the file after the loop converges — this exact shape passes every check "
-            "below:\n\n"
+            "  Let the loop WRITE it, so the record is evidence and not a claim — one flag on a\n"
+            "  step you already run before acting on any review:\n\n"
+            "    python3 scripts/validate_review.py critic <review.json> --record {}\n\n"
+            "  (that fills `critic` from the review itself, with its path + sha256, and the gate\n"
+            "  re-reads it). Then add the two blocks only you can supply. Full shape:\n\n"
             '    {{"critic": {{"verdict": "consent", "rounds": 2}},\n'
             '     "design_plan": {{"boldness": "balanced+", "signature_move": "<the one risk>",\n'
             '                     "carried_by": [4, 6, 8], "form_ledger": "<family tally>"}},\n'
@@ -314,7 +326,7 @@ def check_handoff_gates(pptx):
             "  A gate you deliberately skipped is waived in writing, not omitted:\n\n"
             '    {{"critic": {{"waived": "why this deck does not need a critic round"}}}}\n\n'
             "  Renders without --deliverables are unaffected; iterate freely."
-            .format(path))
+            .format(path, os.path.dirname(path) or "."))
     try:
         gates = json.load(open(path, encoding="utf-8"))
     except Exception as e:
@@ -324,7 +336,47 @@ def check_handoff_gates(pptx):
     if critic.get("waived"):
         print("[gates] critic WAIVED — {}".format(critic["waived"]))
     elif critic.get("verdict") == "consent":
-        print("[gates] critic consented after {} round(s)".format(critic.get("rounds", "?")))
+        # A record the model TYPED at hand-off is self-certification: the model that skipped the
+        # loop writes the same JSON as the model that ran it. So when the record points at the
+        # review artifact (validate_review.py --record puts it there), re-read that artifact and
+        # verify it still says what the record claims. A hand-written record still passes — but it
+        # is LABELLED self-reported, so the two are distinguishable instead of identical.
+        src = critic.get("source")
+        if src:
+            if not os.path.isfile(src):
+                die("`critic.source` points at {} — which does not exist. The gate re-reads the "
+                    "review artifact rather than trusting the summary; restore the file, re-run "
+                    "`validate_review.py critic <review.json> --record <deck-dir>`, or waive in "
+                    "writing.".format(src))
+            digest = critic.get("sha256")
+            if digest and _sha256(src) != digest:
+                die("`critic.source` ({}) has changed since it was recorded — the sha256 no longer "
+                    "matches. Re-validate it with `validate_review.py critic <review.json> "
+                    "--record <deck-dir>` so the record and the evidence agree.".format(src))
+            try:
+                review = json.load(open(src, encoding="utf-8"))
+            except Exception as exc:
+                die("`critic.source` ({}) is not readable JSON: {}".format(src, exc))
+            if review.get("verdict") != "consent":
+                die("the recorded verdict says consent, but the review at {} says {!r}. The "
+                    "artifact wins.".format(src, review.get("verdict")))
+            hard = [f for f in (review.get("findings") or [])
+                    if isinstance(f, dict) and f.get("severity") in ("blocker", "major")]
+            if hard:
+                die("the review at {} consents while still carrying {} blocker/major finding(s) — "
+                    "that is a contract violation (agents/critic.md: any blocker/major -> revise). "
+                    "Fix them and re-review, or waive in writing.".format(src, len(hard)))
+            print("[gates] critic consented after {} round(s) — verified against {}".format(
+                critic.get("rounds", "?"), os.path.basename(src)))
+        else:
+            print("[gates] critic consented after {} round(s) — SELF-REPORTED (no review "
+                  "artifact).\n"
+                  "        The evidence-backed path is one flag on a step you already run:\n"
+                  "          python3 scripts/validate_review.py critic <review.json> --record {}"
+                  .format(critic.get("rounds", "?"), os.path.dirname(path) or "."))
+        if critic.get("corroborated_by"):
+            print("[gates] consent corroborated by {} arbiter pass(es)".format(
+                len(critic["corroborated_by"])))
     elif critic.get("verdict") == "revise":
         die("the last critic review returned verdict=revise. Fix the blockers and re-run the "
             "loop, or record a waiver with the reason you are shipping over it:\n"
