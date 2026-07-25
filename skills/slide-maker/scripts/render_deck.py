@@ -263,6 +263,82 @@ def _render_pdf(soffice, src, outdir):
     return (os.path.join(outdir, os.path.splitext(os.path.basename(src))[0] + ".pdf"), result, cmd)
 
 
+GATES_FILE = ".deck-gates.json"
+
+
+def check_handoff_gates(pptx):
+    """Refuse --deliverables until the quality gates have actually run.
+
+    The gates that guard a deck's quality — the design plan, the independent critic, the
+    primary-source spot-check — are all *self-reported prose artifacts*. The model that skipped
+    them is the same model that writes the hand-off note claiming they happened, so skipping is
+    invisible: the note reads identically either way. This skill's own enforcement invariant
+    ranks prose last for exactly that reason (deterministic lint > required-field > checklist >
+    prose), yet these three sat at the bottom of it.
+
+    So put the check where the incentive is. `--deliverables` produces the PDF and the preview
+    page — the artifacts the user actually asked for — which makes it the one step nobody skips.
+    Requiring evidence *here* costs nothing on a deck that ran its loop and blocks the shortcut on
+    one that didn't.
+
+    Evidence lives in `<deck-dir>/.deck-gates.json`:
+
+        {"critic": {"verdict": "consent", "rounds": 2, "review": "reviews/r2.json"},
+         "provenance": {"checked": 87, "confirmed": 85, "fixed": 2, "cut": 0}}
+
+    A gate may be waived — quick decks exist — but a waiver is a written reason that travels with
+    the deck, not a silence:
+
+        {"critic": {"waived": "1-slide fix to an already-reviewed deck"}}
+
+    Set SLIDE_MAKER_SKIP_GATES=1 to bypass entirely (CI smoke tests, throwaway renders).
+    """
+    if os.environ.get("SLIDE_MAKER_SKIP_GATES"):
+        return
+    path = os.path.join(os.path.dirname(os.path.abspath(pptx)) or ".", GATES_FILE)
+    if not os.path.isfile(path):
+        die("--deliverables is the hand-off run, and this deck has no record that its quality "
+            "gates ran.\n"
+            "  Missing: {}\n\n"
+            "  The independent critic (Step 5) is the one that cannot be self-certified — you are "
+            "not the final judge of your own deck.\n"
+            "  Write the file after the loop converges:\n\n"
+            '    {{"critic": {{"verdict": "consent", "rounds": 2}},\n'
+            '     "provenance": {{"checked": 87, "confirmed": 85, "fixed": 2, "cut": 0}}}}\n\n'
+            "  A gate you deliberately skipped is waived in writing, not omitted:\n\n"
+            '    {{"critic": {{"waived": "why this deck does not need a critic round"}}}}\n\n'
+            "  Renders without --deliverables are unaffected; iterate freely."
+            .format(path))
+    try:
+        gates = json.load(open(path, encoding="utf-8"))
+    except Exception as e:
+        die("{} is not readable JSON: {}".format(path, e))
+
+    critic = gates.get("critic") or {}
+    if critic.get("waived"):
+        print("[gates] critic WAIVED — {}".format(critic["waived"]))
+    elif critic.get("verdict") == "consent":
+        print("[gates] critic consented after {} round(s)".format(critic.get("rounds", "?")))
+    elif critic.get("verdict") == "revise":
+        die("the last critic review returned verdict=revise. Fix the blockers and re-run the "
+            "loop, or record a waiver with the reason you are shipping over it:\n"
+            '    {"critic": {"waived": "shipping over: <the surviving finding and why>"}}')
+    else:
+        die("{} has no usable `critic` record — needs {{\"verdict\": \"consent\"|\"revise\"}} or "
+            "{{\"waived\": \"<reason>\"}}".format(path))
+
+    prov = gates.get("provenance") or {}
+    if prov.get("waived"):
+        print("[gates] provenance WAIVED — {}".format(prov["waived"]))
+    elif prov:
+        print("[gates] provenance: {} checked · {} confirmed · {} fixed · {} cut".format(
+            prov.get("checked", "?"), prov.get("confirmed", "?"),
+            prov.get("fixed", "?"), prov.get("cut", "?")))
+    else:
+        print("[gates] no provenance record — fine for a deck built from the user's own material; "
+              "a research-sourced deck should carry one.")
+
+
 def main(argv):
     # --deliverables (alias --final): ALSO park the PDF beside the .pptx and write viewer.html.
     # OFF by default: while a deck is still being iterated, those two are pure churn — they are
@@ -319,6 +395,11 @@ def main(argv):
 
     if not os.path.isfile(pptx):
         die("no such file: " + pptx)
+
+    # Checked here, before LibreOffice runs — same reason the --fast/--slides conflicts are:
+    # failing after a successful render wastes the render and reads as a late surprise.
+    if deliverables:
+        check_handoff_gates(pptx)
 
     soffice = find_soffice()
     if not soffice:
