@@ -14,10 +14,28 @@ jobs:
         working-directory: skills/slide-maker
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the lossless guard diffs SKILL.md against the merge base
 
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      # A SKILL.md slimming PR must LAYER content into references/, not delete it. Both look
+      # identical in review — thousands of removed lines, every one of which *might* have landed
+      # somewhere. This checks that it actually did. Deliberate deletions go in the allowlist
+      # with a written reason; see the script's docstring.
+      - name: SKILL.md refactors are lossless (content moved, not deleted)
+        working-directory: ${{ github.workspace }}
+        run: |
+          git fetch -q origin main
+          BASE=$(git merge-base origin/main HEAD)
+          echo "comparing SKILL.md against merge base $BASE"
+          ALLOW=skills/slide-maker/.skill-lossless-allow.json
+          python skills/slide-maker/scripts/check_skill_lossless.py \
+            --baseline "${BASE}:skills/slide-maker/SKILL.md" \
+            $( [ -f "$ALLOW" ] && echo --allow "$ALLOW" ) \
+            --report /tmp/skill-lost.md
 
       - name: Manifest versions match (plugin.json vs marketplace.json)
         working-directory: ${{ github.workspace }}
