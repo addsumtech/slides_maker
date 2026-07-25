@@ -1309,6 +1309,17 @@ version — run `bash scripts/render_deck.sh <deck.pptx> --deliverables` (or
 never lags the deck. If you added any forward-looking content (per the fidelity rule), call that
 out explicitly here so they can confirm it.
 
+**`--deliverables` refuses to run until `<deck-dir>/.deck-gates.json` records that the Step-2
+design plan, the Step-5 critic and the Step-6 provenance pass actually ran.** Write it when the
+critic loop converges — `{"critic": {"verdict": "consent", "rounds": N}}`, the design plan's
+`boldness` / `signature_move` / `carried_by` / `form_ledger`, and the provenance pass's **per-claim
+`claims` list, never a summary tally** (a tally is written by the same pass that would have skipped
+the refutation). A gate you deliberately skipped is **waived in writing** —
+`{"critic": {"waived": "<reason>"}}` — never omitted; the tool prints the reason, so a skip is
+visible instead of invisible. This file is the hand-off's evidence, not a formality: the model that
+skips a gate is the same model that would write the note claiming it ran, so both produce identical
+prose and only an artifact tells them apart (`references/handoff-checklist.md` lists it).
+
 **Before you write the hand-off note, read `references/handoff-checklist.md` — every deck.** It is the ONE authoritative list of what the note carries (minimal caveats + next steps, never a recap or self-praise) and of the conditional REQUIRED lines the owning rules point here for: `provenance:`, click order, image licences, the GIF note, accepted advisories, `distinctiveness:`, the delegated-picks recap, the optional `ceiling` line, and the two taste-ecosystem offers — **including the save-this-look offer, which is skipped entirely under a per-deck auto directive: never an un-consented registry write.**
 
 **For a long deck (~15+ slides), show work at ~50%, not only at 100%.** When a build is large enough

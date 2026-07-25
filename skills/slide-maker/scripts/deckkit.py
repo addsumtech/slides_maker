@@ -2829,6 +2829,12 @@ def _theme_chart(ch, series, *, palette, dark, font, highlight, legend, value_fm
     except Exception:
         pass
     if value_fmt:
+        if "{" in str(value_fmt):
+            raise ValueError(
+                "native_chart(value_fmt={!r}): that is the PYTHON format dialect. This parameter is "
+                "written straight into the chart's EXCEL number-format code ('0.0%', '#,##0', "
+                "'0.0\"x\"'), so PowerPoint would print it raw onto the slide. The Python "
+                "'{{:...}}' dialect belongs to iso_bars/designed_charts, not here.".format(value_fmt))
         try:
             ch.value_axis.tick_labels.number_format = value_fmt
             ch.value_axis.tick_labels.number_format_is_linked = False

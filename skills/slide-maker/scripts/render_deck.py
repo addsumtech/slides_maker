@@ -302,9 +302,15 @@ def check_handoff_gates(pptx):
             "  Missing: {}\n\n"
             "  The independent critic (Step 5) is the one that cannot be self-certified — you are "
             "not the final judge of your own deck.\n"
-            "  Write the file after the loop converges:\n\n"
+            "  Write the file after the loop converges — this exact shape passes every check "
+            "below:\n\n"
             '    {{"critic": {{"verdict": "consent", "rounds": 2}},\n'
-            '     "provenance": {{"checked": 87, "confirmed": 85, "fixed": 2, "cut": 0}}}}\n\n'
+            '     "design_plan": {{"boldness": "balanced+", "signature_move": "<the one risk>",\n'
+            '                     "carried_by": [4, 6, 8], "form_ledger": "<family tally>"}},\n'
+            '     "provenance": {{"claims": [{{"claim": "<the claim>", "verdict": "CONFIRMED",\n'
+            '                                "url": "https://<primary source>"}}]}}}}\n\n'
+            "  (A summary tally like {{\"checked\": 87}} is REJECTED on purpose — a tally is "
+            "written by the same pass that would have skipped the refutation.)\n\n"
             "  A gate you deliberately skipped is waived in writing, not omitted:\n\n"
             '    {{"critic": {{"waived": "why this deck does not need a critic round"}}}}\n\n'
             "  Renders without --deliverables are unaffected; iterate freely."
