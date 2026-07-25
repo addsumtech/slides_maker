@@ -112,84 +112,8 @@ downstream artifact that consumed it (plan, contract card, built slides), post t
 resume — never finish the pass on a pick the user already rejected. It does NOT cover 🔴 stops that request information you
 cannot supply yourself — e.g. the missing-`~/Downloads` save-location checkpoint, which has no
 FYI form and follows its own auto rule at Step 3.
-**The waiver extends to the Step-0 interview — by DELEGATION, with a hard floor.** Under a full
-"decide everything yourself" directive you don't fire the four-question form; you ANSWER the
-questions yourself with defensible, purpose-derived picks (template → design a clean one shaped
-to the purpose, unless the request itself points elsewhere — an attached template, or explicit
-vivid/branded language that earns the image-tool branch; delivery/goal/density → derived from
-the stated purpose; **appear-builds → derived from delivery** (presented → builds ON, the
-recommended default; self-read → static); language → the user's own), and post the picks as the FIRST FYI — one
-compact block, one line per question — before any planning, so a wrong pick costs one glance to
-veto, not a build. The FLOOR: delegation covers *preferences*, never *information only the user
-has* — a missing TOPIC or unlocatable source material is still asked (that one question, not the
-form), same class as the save-location stop. Preference questions the request already answers
-are simply recorded, not re-picked.
-**Delegated picks are DERIVED, not defaulted — the waiver removes the asking, never the
-understanding.** Before picking, actually look at what they gave: scan provided material for its
-genre, register, density, and audience clues (a clinical paper, a pitch doc, and a course note
-want different answers to every question); read a terse few-sentence ask for its real intent.
-For a returning user, also read `taste.md` at the registry root (`references/user-taste.md`) and
-let its DIALS/NO-GOs seed the picks — evidenced past preference is exactly what deriving wants —
-naming the applied dials in the first-FYI pick block so a stale dial costs one glance to veto
-(no `taste.md` = nothing to seed; the request and material still outrank any dial).
-Then choose the way the sharpest person in the room would choose *for THIS deck* — the TASTE
-PROTOCOL applies to the picks themselves, and "a defensible default" that ignores what the
-material obviously wants is not defensible. Downstream, nothing relaxes: Step 1's deep-read /
-comprehension-brief bar, the no-source web-verification, the **full design intelligence** (a
-topical cover visual, harmonised + value-varied backgrounds, the design musts, the semantic-colour
-ledger — deciding with limited info is never a licence for a barren default-blue type deck), and
-the full critic loop all run at the
-same standard as an interviewed deck. And if the deep read later contradicts an initial pick
-(the material turns out self-read-shaped, denser, or more formal than the first scan suggested),
-REVISE the pick and say so in the next FYI — riding a wrong guess to delivery is the one failure
-delegation must never produce. Content checkpoint = the deck
-memory sentence + a 2-line brief/ledger DIGEST (the comprehension brief's one-sentence message +
-a claim-ledger tally, e.g. `ledger: 14 claims · 14 verified · 0 open` — full brief + ledger stay
-in the plan, posted on request or on any digest anomaly) + emotional-curve line + pace check +
-**(long source only) a 1-line Source-coverage DIGEST** (`source: 320 pp · built-around 4 ch ·
-summarised 3 · cut 5` + the chosen slice — full per-chapter map in the plan) + **(video source only)
-the transcript-status line** (supplied locator, or "visual-only — spoken content is a GAP") + ONE table (`# | 角色 | 记忆句(takeaway) |
-承载证据 | units` — **headers follow the conversation language**: on an English-conversation deck use
-`# | role | takeaway | carrying evidence | units`; the column MEANINGS are fixed, the header language
-is not) — the `units` column is the count of content units the row carries (the
-distribution pass's output): a `1` on a standalone content slide or a `6+` on a spoken beat is
-visible at a glance, so an about-to-be-empty or about-to-be-dense page gets caught at the
-checkpoint, not at the render. The table's takeaway column, read top to bottom, IS the Takeaway spine: append only
-the plan's one-line spine verdict, never the spine paragraph (new plan fields like the money
-slide / Spoken thread live in the FULL plan; at most a one-line marker appears here). **The 承载证据
-column carries a concrete SOURCE TRACE, not a vague label** — a locator ("Fig 3 / p.4 ¶2", a table
-cell, a short verbatim span) — so a watching auto-mode user can catch a per-slide grounding mismatch
-even though the checkpoint is an FYI, not a stop (this is the cheapest fidelity catch on the path
-delegation uses most; the comprehension gate still forbids shipping any unverified claim). Design
-checkpoint = look/palette/type/motif in ~4 lines (the **motif line states device + meaning + how a
-stranger reads it** — label/legend/figurative, the slide-design STRANGER TEST) + the rhythm-map table +
-the three design musts + a one-line Form-ledger/diversity verdict + the **`boldness:` + `signature
-move:` lines** (the dial + the one scoped aesthetic risk + the bold reference it adapts — even as an
-auto-waiver FYI, a timid "big number" signature move or a wrong dial should cost one glance to veto) +
-the image opt-in list (the
-few proposed images, for approval — **each row carries its source token**: `generated — <tool>` /
-`sourced — <origin> (<license>)` / `provided — …` / a `searched, none found → …` rung (full grammar:
-`references/image-generation.md` step 5), per the REFERENT RULE in `image-generation.md`) + the **`logo plan:` line with its evidence token**
-(`official asset — <source>` / `searched, none found → designed wordmark (flagged)` / `n/a — <reason>`; a bare
-"wordmark" with no recorded search on a single-entity deck = incomplete, even as an auto-waiver FYI)
-**+ one required GATE line naming the look-choice that was made — `direction gate:` on the
-design-clean branch (c), `style gate:` on the generated-template branch (d).** Branch (c):
-`picked A/B/C/D/E of 4 (html: <path>) · diversity: <ok | flagged <pair> → rediverged | justified: <reason>>`
-— **4 rendered directions (A–C = best-fit DNA presets, D = the colour-scheme option), E = describe-your-own**;
-the mechanical-check verdict rides on the same line, so a collapsed set cannot be posted as a
-choice without the collapse being spoken — or the named carve (e.g. `carve: user said just-go` /
-`carve: Mode-A mimic`). Branch (d): `picked <X> of 3 (gallery: <path>)`, **or**, when Auto/你决定
-skipped the gallery, `carve: auto-pick — ` **followed by all three candidate styles WITH the
-one-clause reason each loser lost** (e.g. `art-deco: 与 shanghai-city 撞档 · photo-collage: 无版权图源`).
-**A design checkpoint on branch (c) or (d) with no gate line is not ready.** Both are the gate
-artifact that keeps the choose-a-look step from silently vanishing — history: branch (c)'s gate was
-made a default precisely because an "offer" got skipped under momentum, and branch (d)'s gallery
-carried the same wording with no line to record it, so an Auto pick left NO trace that alternatives
-ever existed. The carve arm is what makes this cheap: Auto never has to *generate* three galleries,
-but it must always *name* what it rejected — the user's veto costs one glance either way. Keep each under ~25 lines — the user reads it in the
-terminal and answers in one click. Do **NOT** write `content-plan.md` / `design-plan.md` files
-into the deliverable folder (they clutter it; the conversation is the record) — unless the user
-explicitly asks for plan files.
+
+**→ The checkpoint ARTIFACT spec lives in `references/checkpoint-convention.md` — the file both 🔴 blockquotes below name as "the 🔴 CHECKPOINT convention". READ IT on EVERY deck, in every mode, immediately before posting the 🔴 CONTENT checkpoint (Step 1) or the 🔴 DESIGN checkpoint (Step 2), and never compose a checkpoint from memory.** It owns the required columns and lines — the `# | 角色 | 记忆句 | 承载证据 | units` table and its SOURCE-TRACE rule, the digests, the `boldness:` / `signature move:` / `logo plan:` lines, the required `direction gate:` (branch c) / `style gate:` (branch d) line and the rule that a branch-(c)/(d) design checkpoint with no gate line is NOT READY, the ~25-line budget, and the rule that plan files are never written into the deliverable folder. **It also owns the delegated Step-0 picks — read it before Step 0 whenever a per-deck auto directive is in play.**
 
 ## At a glance — pipeline · rule strengths · where things live
 *A navigation map only; the steps below are the source of truth.*
@@ -250,6 +174,23 @@ every **🔴 CHECKPOINT** is a hard stop.
 | ANY error / lint finding / env failure — symptom → cause → fix, plain language | `references/troubleshooting-faq.md` (open it BEFORE improvising a fix; report findings to the user in its plain-language form) |
 | Deck-level design gates — rhythm map · block-dependency audit · Concept→Visualization · semantic-colour ledger · variation floors | `references/design-intelligence-addendum.md` (Step 2's measured design targets) |
 
+The table above routes by *concern*. These ten route by *pipeline moment* — each holds the
+working detail of one step, and the step that needs it says so where it runs. They carry rules,
+not background: reaching a step and skipping its file is how a gate silently stops firing.
+
+| Read it at | Owner |
+|---|---|
+| Step 0, on a deck-build ask, before composing the four questions | `references/interview-protocol.md` |
+| Step 1, before writing the comprehension brief / checking the planner's | `references/content-plan-spec.md` |
+| End of Step 1 and end of Step 2, before posting either 🔴 checkpoint | `references/checkpoint-convention.md` |
+| Step 2, once the Content plan is approved and any asset is named | `references/asset-production.md` |
+| Step 3, on a non-16:9 surface or a supplied/official template | `references/deck-setup.md` |
+| Step 4, before writing the first slide-building call | `references/deckkit-components.md` |
+| Step 5, on any re-render, or when a render errors or produces nothing | `references/render-and-verify.md` |
+| Step 5, at every critic dispatch and on every returned review | `references/critic-panel.md` |
+| Step 6, before composing the hand-off message — every deck | `references/handoff-checklist.md` |
+| Any step, when you need a script's flags or a capability not routed above | `references/file-inventory.md` |
+
 *(Full file/script inventory: see **Files** at the end.)*
 
 ## Step 0 — Interview the user first (always)
@@ -292,335 +233,9 @@ source-material floor still gets asked);
 when in doubt, keep it. Never assume the **topic/content**, the **style**, or **which
 template** — confirm each.
 
-**Personalize options only from THIS user's own footprint — never a hardcoded or guessed
-domain — and roll past work up into ONE option, drilling in only on pick (Q1's two-stage
-pattern), so personalization never crowds out the general choices.** Any *suggestions* you pre-fill into a question — candidate topics, example
-subjects, registered templates — must come from what this user has actually given you:
-materials they provided (now or in a past session) or their saved registry / profile /
-memory. In Codex, prefer the registry root `~/.codex/slide-templates/`; in Claude Code,
-prefer `~/.claude/slide-templates/`. If only one exists, use it. **Read `taste.md` at that
-same registry root in the same pass** — the user's portable taste profile (schema +
-read/write protocol: `references/user-taste.md`): its DIALS/NO-GOs seed *delegated* picks
-under an auto directive, and its LOOK HISTORY supplies the substance of the two-stage
-rolled-up history options below — never new option shapes, never an auto-lock. **Precedence
-(🔴 MUST): current request > this interview's answers > `taste.md`** — the profile seeds
-defaults and options only and never overrides an explicit answer or checkpoint decision,
-because a memory that outranks the user's live words is a cage *(gate: the Design plan's
-required `taste profile:` line records what was applied, so an override is visible)*. A
-missing or empty `taste.md` is **silently skipped**. A **brand-new user has no footprint**, so do NOT seed a specific domain (e.g.
-don't offer "MRI reconstruction" or any field as a topic just because some *past* deck
-used it) or a prior user's branding — ask the subject **openly** (a genuinely open-ended
-topic is the one place free text beats options) and offer only the generic template/look
-choices: "provide a template", "design a clean one", and, when a more vivid custom identity
-would fit, "generate a template with an image tool". Personalizing from a *returning* user's
-own materials is good and encouraged; assuming a domain for someone who gave you nothing is
-the failure to avoid.
-**The TWO-STAGE rule governs past-work personalization in EVERY question, not just templates:**
-whatever the question, history enters as **ONE rolled-up option beside the always-present general
-choices**, and the specific past items are listed only in a follow-up if the user picks it.
-Instances — **Q1 template:** "one of your saved templates (N)" (worked mechanics in Q1 below) ·
-**topic/subject:** a returning user with known past projects gets ONE "continue one of my previous
-topics" option beside the open free-text ask — never their domains enumerated as competing options ·
-**Q4 style:** ONE "like one of my previous decks" option beside the generic density/tone choices,
-expanding to named past looks on pick — the named looks come from `taste.md`'s LOOK HISTORY
-(`— praised` lines first) plus the registered templates (`references/user-taste.md`) · same shape
-for any other history (past purposes, prior venues). Marking a *general* option "(Recommended)" is fine and unaffected — the rule bounds how
-PAST ITEMS enter, so they never crowd generic paths out of a bounded-option UI.
+**🔴 Read `references/interview-protocol.md` before you ask anything on a build ask** — it owns the rest of Step 0: two-stage personalization from THIS user's footprint + `taste.md` precedence (🔴 MUST: current request > this interview's answers > `taste.md`), scaling the interview to the ask, Q1's four template choices (a)–(d) — all four MUST be offered, never a hardcoded institution — with each branch, Q2's delivery · deck-length · appear-builds · primary-goal axes + per-purpose cases + venue research, and Q3's source-material routing per input format.
+> **One 🔴 CHECKPOINT lives in that file:** the Q1(d) generated-template **hero checkpoint** (show the hero + a sample content slide, iterate until the user confirms). The Q1(c) **direction gate** (4 rendered directions) RUNS BY DEFAULT on the design-a-clean-one branch — skippable only via its named carves, and recorded on the design checkpoint's `direction gate:` line.
 
-**Scale the interview to the ask:** a full deck needs
-all four; a genuinely tiny ask (a single slide, a quick infographic) still needs purpose
-and content confirmed, but you may collapse template/style to a sensible default *stated
-in one line* ("I'll do a clean minimal look — say if you have a template") rather than a
-full prompt. Scaling ≠ skipping — never infer purpose or content. Some answers trigger a quick follow-up *after* the
-batch: *a conference talk* → ask which venue, then research it; *a new template* → they
-hand over the file; *"design a clean one" (no template)* → run the **direction gate**
-(DEFAULT on this branch — see Q1's design-one branch for the named skip carves; a Q4 Mode-A
-mimic example decides the look and skips it) — show **4** rendered style directions to pick
-from before the full build (3 best-fit REAL-DNA presets + 1 pure colour-scheme direction —
-see Q1(c)); *"generate a template with an image tool"* → run the mini-interview + generation
-+ feedback loop in `references/generated-template.md` (its style gate shows **3** best-fit
-image-backed styles), then **skip the direction gate** (the look is already decided).
-**The count rule, by branch: no image tool → 4 offered; with image tool → 3 offered.** The
-four template choices:
-
-1. **Template / brand.** First **check this user's registered templates** — the
-   host-appropriate registry (`~/.codex/slide-templates/` in Codex, `~/.claude/slide-templates/`
-   in Claude Code; if only one exists, use it). Each subfolder is one template they've used before,
-   with a `profile.md`.
-   **⚠️ WHENEVER the template question is asked, it MUST present ALL FOUR standard choices — do not
-   silently drop one (especially the image-tool option, which is easy to forget). The question itself
-   may be skipped only per the named carves: the current request already answers Q1, or the tiny-ask
-   scale-down (default stated in one line) — and on the redesign path R0's keep/redesign answer
-   REPLACES this question (on "redesign the look" ask it as the follow-up — see
-   `references/redesign-existing-deck.md`):**
-   **(a)** *"one of your saved templates (N registered)"* — the registry **rolled up as ONE option**
-   · **(b)** *"a new template (I'll provide one)"* · **(c)** *"design a clean one"* · **(d)**
-   *"generate a template with an image tool"* (a bespoke generated visual identity).
-   **🔴 Before offering (d), PROBE that a free image path exists** — inside Codex the native imagegen
-   tool counts; anywhere else (Claude Code included) run `command -v codex`. This costs one shell call
-   and prevents the one dead end in this question: a user picks (d), the whole look is planned around
-   generated imagery, and only at generation time does it emerge that nothing can generate. If no free
-   path is present, still offer (d) but name its one-time prerequisite in the option itself —
-   *"generate a template with an image tool (needs `codex login` once — free on your subscription)"* —
-   so the setup cost is visible **before** the choice, not after. Never silently substitute a paid
-   path for the missing free one; see the billing gate in `references/image-generation.md`.
-   **Past work rolls up; general choices always stay.** Never enumerate the saved templates in the
-   first question — a returning user's registry (which can hold many) would crowd the general
-   choices out of a bounded-option UI, and the generic paths must stay visible on every deck. If the
-   user picks (a), ask a quick FOLLOW-UP listing the registered templates by name (+ a one-clause
-   hint each from `profile.md`) — with many, the few most recently used / best-fit first plus "show
-   the rest". Carve: exactly ONE registered template may be inlined directly in place of the
-   rolled-up option (no follow-up needed); an empty registry drops (a) entirely (brand-new user).
-   (This instantiates the two-stage personalization rule above — the same shape applies to topic,
-   style, and every other history-seeded question.) Then:
-   - *A registered template* → build on it using its saved `profile.md` (step 3).
-   - *A new template* → they give a `.pptx`/brand; build on it, AND after profiling it
-     (step 3) **save a new subfolder to the active template registry** (its
-     `profile.md`) so it becomes a remembered choice next time. The registry **grows
-     through conversation.**
-   - *Design a clean one* → build from preferences (brand colour/logo? formality?),
-     and **shape the look to the chosen purpose** (step 3 / `references/design-by-purpose.md`)
-     rather than always shipping the same default blue — a defense, an exec readout,
-     and a lecture should not look alike.
-     **Because the look is entirely yours to invent here, the direction gate RUNS BY
-     DEFAULT on this branch — a 🔴 checkpoint-grade step, not an optional offer.** This is
-     the one branch where preference, not just quality, is unresolved; history shows an
-     "offer" gets skipped under momentum (a whole deck shipped without the user ever seeing
-     a choice of looks), so the gate is the default and skipping is the exception. Named
-     carves (skip ONLY when one applies, and say so in one clause at the design checkpoint):
-     the user explicitly says "just design one and go / 你定"; a Q4 Mode-A mimic example
-     decides the look; the deck reuses a registered template; or a tiny-ask (1–2 slide)
-     edit. Under a full per-deck AUTO WAIVER, still GENERATE the four directions, auto-pick
-     the best fit, and post the rendered images + pick as the FYI (mirror of the Q1(d)
-     image-tool hero checkpoint) — the waiver removes the stop, never the artifact.
-     - *Running the gate* → run **Gate A** of `references/collaborative-mode.md`. **The directions
-       are REAL STYLES — a named preset OR a bespoke register with its own motif — never three shades
-       of one palette.** ("Synthesised" is not the enemy; a *motif-less colourway* is. A bespoke
-       register you invent for this content is a real style and a first-class peer of a preset — often
-       the more daring answer, see the launchpad note below.) Pick the **3 best-fit design languages** for
-       THIS topic/audience — presets from the 18-preset library (read each preset's `when` field in
-       `scripts/presets.py` / `references/design-gallery.md`; e.g. a technical talk → blueprint /
-       dark_tech / swiss, a culture deck → memphis / risograph / editorial_paper, a Chinese-heritage
-       deck → ink_wash / eastern_traditional / museum_memorial), then
-       **`archetypes_html.preset_directions([names])`** turns them into direction tokens that carry
-       each preset's real **DNA** (its signature motif — Swiss's ghost numeral, Memphis's scattered
-       shapes, blueprint's schematic grid, ink_wash's seal chop), rendered by
-       `scripts/archetypes_html.py` into **ONE self-contained HTML page** showing them in the
-       **same** representative slides (cover / points+callout / diagram / data). This is the fix for
-       "the 3 options were just different colours": a preset is a whole visual language, and the
-       preview now SHOWS it — **and the DNA runs through every preview slide, not just the cover**
-       (the ambient register signature; `_dna_ambient`), so the user sees a style that carries the
-       whole deck.
-       - 🔴 **On this no-image-tool branch, offer FOUR rendered directions, not three:** the 3
-         best-fit DNA presets (A/B/C) **plus a 4th "colour-scheme" direction (D)** — one tasteful
-         palette+type combination for THIS topic with **no motif**, the classic clean look (this is
-         itself a legitimate style; a user asked for it to stay on the menu). Build all four in one
-         call: `preset_directions(["p1","p2","p3", {colour_token}])` — a **dict** is passed through
-         verbatim as a no-`dna` colour direction (name it e.g. *"Signal — pure palette + type"*).
-         The HTML labels A–D as the four options and **E — describe your own** as the fifth slot (the
-         own-letter is dynamic, so no collision). *(With an image tool it's the OTHER branch — Q1(d)'s
-         style gate — which stays at 3.)*
-       - **Presets are the FLOOR you beat, not the menu you satisfy — PREFER a bespoke register when
-         the content has one.** Any of A–C may be a **bespoke synthesised direction** (a dict in the
-         `preset_directions` list, carrying its OWN motif so it renders real DNA) — and when THIS
-         content has a distinctive visual world of its own, *prefer* inventing that register over a
-         merely-adequate preset. A bespoke register with a named motif + palette + type + its own guard
-         + item-(q) all-pages carry is as legitimate as any preset and usually the bolder pick. Weigh it
-         on every design-clean deck — it is a default consideration, not a fallback for "a topic no
-         preset fits". The library raises the floor; your job is still to beat it.
-       - 🔴 **DIVERGENCE IS A PAIRWISE RULE, NOT AN EXHORTATION: any two directions must differ on
-         ≥2 of four axes — {palette mood · type attitude · density/scale · COMPOSITION ENVELOPE}.**
-         "Distinct light/dark, warm/cool, serif/sans" describes *knobs*; a dark version and a light
-         version of one layout are two coats on one design. The composition axis is the token set's
-         `cover` (`centred | low-left | split-vertical | full-bleed-type`) and `skeleton`
-         (`statement | split | island | band | rail`) — **where the ink sits**, which is what a
-         viewer reads first with the page squinted. *(Measured motivation: a real delivered deck had
-         8/12 pages on one composition signature and 55/66 page pairs under the "same shape" line —
-         while its FORMS varied correctly. Composition was never chosen, only defaulted.)*
-       - **LOCK-AND-REDIRECT.** When the user or a brand fixes an axis (a mandated accent, "match our
-         corporate look", a Q4 mimic), that axis LEAVES the divergence set and the ≥2 rule re-applies
-         to the ones that remain. A constraint relocates variance; it never licenses convergence.
-       - 🔴 **Run the mechanical check before you post the link:**
-         `python scripts/directions_diversity.py directions.json`. It scores four axes — **palette
-         mood** (a light/dark flip counts as a palette divergence, so mode is folded in) · **type
-         pairing** · **density** · **composition** — and flags any pair matching on ≥3 of the 4. **Exit 2 is
-         not an auto-kill** — REDIVERGE the flagged pair, or keep it and record the reason on the
-         `direction gate:` line ("brand-locked accent — divergence moved to composition + type").
-         The check exists because the agent that writes the directions is the same agent that
-         judges whether they differ; only an outside measurement catches several skins of one idea. **Hand the user the single `file://…
-       directions.html` link** to open in a browser, review side-by-side, and pick from — no
-       local pptx samples. Collect the pick + knobs. Present the pick as **A / B / C / D (the four
-       rendered directions) plus a final "E — describe your own" option**: if the user picks E, they
-       *type the look they have in mind* (a reference, a brand, a mood, a constraint) and you
-       **synthesize a new direction from that description** — regenerate the HTML link and show it
-       alongside (iterate until they consent), rather than forcing one of your four guesses. The four
-       are only your opening proposals; the author's own intention always outranks them. **The pick
-       fixes the REGISTER (palette · type · composition · the interior register signature), NOT the
-       daring — it is a launchpad, not a finished design.** "Picked a preset → rendered the preset" does
-       not discharge the design step: the boldness/signature-move gate still runs in full and the deck
-       still owes one `signature move` this preset would not have made (`agents/slide-design.md` §1,
-       self-verify (h)/(k); the critic's distinctiveness axis flags a faithful-preset-with-no-bespoke-move
-       as template-with-extra-steps). On the
-       pick, the chosen token-set becomes the deck's `style.py` **including its composition — the
-       `cover` token is BUILT as the cover's actual layout, and the `skeleton` token becomes the
-       rhythm map's plurality skeleton (`collaborative-mode.md` Gate A step 7; a style.py that
-       keeps the hexes and drops the composition has discarded half the pick)** — then **render ONE
-       real slide in it to confirm fidelity** before building. **Once they pick, delete the throwaway
-       `_directions/` preview files + rejected token-sets** (keep only the chosen style), then
-       build the full deck in it — don't leave demo files littering Downloads.
-     - *Picks design-one (via a named carve)* → build a single look shaped to purpose, as above.
-     The gate is the DEFAULT on this branch, skipped only via the named carves above — a
-     brand-new from-scratch deck is exactly when showing options pays off; "just design one
-     and go" remains one click away, but it is the user's exception, never your shortcut.
-   - *Generate a template with an image tool* → **a bespoke visual identity** — a styled, **text-free**
-     hero/divider illustration, then reproduced natively so every content block fits it — for a vivid,
-     designed deck (launch, event, brand, playful pitch) where a clean default isn't enough. **Follow
-     `references/generated-template.md`**: a mini-interview *now* (scenario/topic first — brand colours
-     fold into tailoring; **pick the 3 best-fit, deliberately DIVERSE styles for the TOPIC + CONTENT
-     from its Style library** (different visual languages — e.g. Swiss vs Manga vs Glassmorphism — never
-     colour-variations of one look), **GENERATE 1 real template image per candidate style (2 for the
-     front-runner) on this topic, and show them in ONE HTML gallery — the "style gate"** (one `file://`
-     link; the winner's image is reused as the deck's hero, so the cost is ~3–4 images; native
-     `archetypes_html.py` mockups are only the no-image-tool fallback), then the user picks. **Offer
-     these as first-class, peer choices in the prompt — A / B / C (a shown style) · "describe your own /
-     a reference" · and "Auto — let me pick the best-fit and just go" (an explicit option, not a
-     fallback).** On Auto (or "you decide"), YOU select & name the topic-best-fit style and may SKIP the
-     HTML gate, going straight to generate → the 🔴 hero checkpoint (still the real gate in the default
-     flow; a full per-deck "decide everything yourself" directive downgrades it to a posted FYI like the
-     other approval stops — "never a blind commit" is met by posting the renders, not by waiting)) →
-     generate the text-free hero with a calm title zone (**no key** — native imagegen in Codex, else
-     `generate_images_codex.py`; see `image-generation.md`) → **derive a matching `style.py`** (palette
-     via `deckkit.palette_from_image`, motif + component helpers, so native blocks match) → render the
-     cover + one real content slide and gate it:
-     > **🔴 CHECKPOINT** — show the hero + a sample content slide; iterate until the user confirms.
-     > *(A request to change the **atmosphere/mood/style** ⇒ RE-generate the imagery to embody it — new
-     > subject/composition/lighting/motifs — then re-derive `style.py`; don't just recolour the old plate.
-     > A minor palette/contrast tweak is a `style.py`-only change. See `references/generated-template.md`.)*
-     Then **the look is decided — SKIP the direction gate**, finish the interview normally, and build
-     (image cover/dividers with native title on top; content built natively in `style.py`. **🔴 MUST
-     (this generated/image-tool template branch ONLY — not provided-template or "design a clean one" decks),
-     not a default: also GENERATE a faint, TOPIC-RELATED interior-background PLATE (same style, the
-     deck's own subject-matter motifs — never generic texture) and place it (lightly scrimmed) on
-     every interior page — the shallow background is itself a generated image, not a flat/native fill —
-     AND make content blocks FROSTED / semi-transparent (~30–45% see-through, α≈0.55–0.72), never flat
-     opaque panels. Only the end pages — the cover, the section dividers, AND a closing/ending page that bookends the cover — carry full-strength imagery; interior
-     pages get the faint plate.** Carve: a deliberately minimal/flat style (Swiss/Scandinavian/Brutalist)
-     may use a faint native texture instead. Text kept ≥4.5:1; see `generated-template.md`); save the
-     confirmed template to the registry.
-
-   **Never hardcode or assume a specific institution's template.** This skill ships
-   to anyone: a brand-new user has an *empty* registry, so they see only generic choices
-   ("provide one", "design a clean one", and optionally "generate a template with an image
-   tool") — no prior user's branding is ever offered to them.
-
-2. **Purpose & audience.** "What's this deck for, and who's the audience?" Offer the
-   common cases since the bar differs sharply between them:
-   *research meeting with a supervisor* · *work status update to a manager/boss* ·
-   *academic conference talk* · *academic job talk / faculty interview* ·
-   *company/stakeholder readout* · *product description / pitch* · *thesis defense* ·
-   *teaching* · *webinar / online presentation*. Get the **time budget**. This selects
-   the critic's rubric (`references/review-rubrics.md`).
-   - **Also capture two axes that the purpose alone doesn't pin down — ASK, don't infer them**
-     (both change foundational design decisions *before* you build):
-     - **Delivery context — presented live to a room · shared/screen-shared in a meeting · sent
-       digitally / self-read.** This is the **single most design-determining answer**: it sets the
-       deck's **delivery mode** (`design-principles.md` "Delivery mode"). A *presented* deck wants few
-       words per slide + larger type + speaker notes; a *self-read* deck must be self-sufficient and can
-       carry more text per surface. The same purpose can go either way (a status update presented vs
-       emailed), so **don't infer it from the purpose or the density choice — ask it.** For self-read,
-       there's no talking-time, so also get the **deck length** directly (short ~5–8 / medium ~9–15 /
-       long 16+) instead of deriving it from minutes.
-       **Canvas format rides on this answer:** an ordinary talk/meeting/self-read deck is 16:9 —
-       never ask a format question there (16:9 is the unchanged default and every rule assumes it).
-       But when the deliverable is a **non-slide surface** — a rednote/小红书 image note, an Instagram
-       square post, a Story/Reels/Shorts vertical, an A4 print one-pager, or a venue demanding 4:3 —
-       **confirm the canvas format** (one option-line, or fold into this question) and build on the
-       matching `scripts/formats.py` preset: per-format safe zones, chrome policy, density, and
-       layout DNA live in `references/canvas-formats.md`. Same identity + components, recomposed —
-       never a 16:9 layout transplanted onto a portrait canvas.
-     - **Deck length is ALWAYS the user's choice — surface it, never silently derive it.** Make it an
-       explicit interview option: a **self-read** deck → ask **short ~5–8 / medium ~9–15 / long 16+**; a
-       **spoken** deck → the **time budget** sets the working count (~1 slide/min), but still **confirm the
-       resulting slide count** with the user at the Step-1 content checkpoint before building. Don't ship a
-       length the user never saw (e.g. quietly building 14 slides because the content "felt like 14").
-     - **Appear-builds (in-slide staged reveals) — the USER decides WHETHER; you decide WHERE.**
-       A *presented* deck can reveal a slide's content one beat at a time on click so the room follows
-       the speaker instead of reading ahead. **Whether to use builds at all is the user's call, offered
-       explicitly — not a silent skill default** (recommended ON for a live talk, since an audience
-       benefits, but a user who wants a plain click-through deck just says so). Ask this on **presented
-       decks only** — *self-read / screen-shared-to-read* decks are static by design, so don't ask.
-       If the user opts **IN**, YOU still choose WHERE (which slides earn a staged reveal) and each
-       chosen slide is staged **FULLY** — every content element reveals in a deliberate reading order,
-       nothing pre-shown but the title/frame (Step 4 / `references/animation.md`). If they opt **OUT**,
-       the deck is static: no builds, and no `NO BUILDS` pressure (run lint with `--static`). Carry the
-       choice into the design plan's motion manifest.
-     - **Primary goal / intent — inform & educate · support a decision · inspire / motivate action.**
-       This sets the **rhetorical arc**: *inform* builds to the evidence; *decide* leads with the
-       recommendation and the ask; *inspire* opens on stakes and closes on a call to action. Purpose
-       hints at it but doesn't fix it (a conference talk can inform *or* persuade) — so confirm it.
-   - *(Structure emphasis — data/trends vs narrative-insights vs sector/section breakdown — and the
-     fine-grained slide count are best steered at the **Step-1 content checkpoint**, where the user
-     approves the arc, rather than front-loaded here — keep this interview cheap.)*
-   - **Webinar / online presentation** = a talk delivered over video, watched in a shrunk
-     window on mixed-size screens. Build it like a conference talk but for a shared screen:
-     larger type, light background, content in the central safe area, more/lighter slides
-     to hold a remote audience, and "ask in the chat" prompts (see `design-by-purpose.md`).
-   - **Academic job talk / faculty interview** = a candidate selling their research
-     *program* + vision + fit to a hiring department (not one paper to peers). Unlike a
-     conference talk it's longer (~45 min), personal, and must connect past work into one
-     through-line and a concrete future agenda — so don't model it as a long conference talk.
-   - **Product description / pitch** = presenting or selling a *product* to
-     prospects, customers, or users (launch deck, sales pitch, product overview) —
-     distinct from a *stakeholder readout* (which reports business status/decisions).
-     Lead with the value proposition, sell benefits over features, show the real
-     product, and end on a call to action. If it targets a named market/event or has
-     a brand, treat that like a venue/template and research/honor it. **Confirm the
-     audience: an *investor* pitch (raising capital) is a distinct variant** — it sells
-     the company/opportunity (market, traction, business model, team, the ask), not just
-     the product, so ask "investors, customers/users, or internal stakeholders?" and judge
-     it against the investor overlay in `references/review-rubrics.md`.
-   - **Conference talk → ALWAYS identify and research the specific venue.** First
-     ask *which* conference and (if relevant) which track/format — oral, spotlight,
-     poster (e.g. MICCAI, ISMRM, NeurIPS, RSNA, CVPR). **This is required, not
-     optional: never build a "generic conference" deck.** Then **web-search the
-     named venue** even if you think you know it (guidelines change yearly) to learn:
-     talk length & slot, slide aspect ratio, file/format rules, whether an
-     **official template** exists (fetch & use it if so), the **audience**
-     composition (specialists vs. broad), and what a *strong talk at this venue*
-     looks like (single-message expectations, how technical, clinical vs. ML
-     framing, Q&A norms, any companion poster). Venue norms vary widely — a clinical
-     society ≠ an ML conference — so ground every choice in what you find, cite it
-     back to the user, and fold it into the plan, the build, and the critic's rubric.
-     If the host exposes no web tool, apply the same fallback as Step 1's no-source
-     rule: ask the USER for the venue specs (slot length, aspect ratio, official
-     template, audience) instead of searching — never guess them.
-     - *Poster, not a talk?* A conference **poster** is a different artifact — one large
-       single-canvas layout, not a sequence of slides — so the deck arc and the per-slide
-       rubric don't apply directly. `deckkit` can build a single large-canvas "slide"
-       (`blank_deck(w_in, h_in)` at the poster's real size, e.g. 33×47 in / A0), and the
-       craft rules still hold (whole figures, hierarchy, contrast, one clear story), but
-       say plainly that this skill is tuned for *talks* — confirm size/orientation and
-       the venue's poster spec before building.
-
-3. **Source material.** "Do you have content for me to work from — code, a paper, a PDF,
-   a Word/PowerPoint/Excel file, a doc, existing slides, figures/images, a video or recording?"
-   - *Yes* → **dig in deeply** (step 1, content branch): read it properly and build
-     from the real material. (But per "requirements first" above — if they didn't
-     ask you to reuse a provided deck's *content/wording* as-is, mine it for facts
-     and figures, don't inherit its structure or text.) **Route each format to its ingest
-     path (content-planner §1 "Input formats") — each dedicated extractor kept uncrossed:** a **`.docx`**
-     → `scripts/ingest.py doctext` (exact; a long/book-length one → `ingest.py office`→PDF so long-source
-     triage applies); **`.pptx`** → `extract_deck.py` (native — the redesign path); **`.xlsx`** →
-     `ingest.py sheet` (exact rows; NOT office→PDF, which drops data); **PDF** → `extract_pdf.py`; an
-     **image** → read with vision (understand + place the pixels freely; a number/quote you *type* off
-     it is `verified? = N` until confirmed — no OCR here); a **video** → **ask for a transcript** for the
-     spoken content + `ingest.py frames` for visuals (no speech-to-text, so narration you can't hear is a
-     gap, never invented); **audio-only / a cloud doc (Google/Notion/URL)** → ask for a transcript /
-     an exported file respectively. The fidelity floor: text extracts exactly; pixels/audio are
-     `verified? = N` until confirmed.
-   - *No* → **build the content yourself** from your knowledge, and **web-search to
-     ground it** (correct facts, current numbers, credible framing) rather than
-     inventing. Confirm the intended scope/outline with the user before building.
    - **Their own deck, to *improve*** (e.g. "redesign this", "my slides are too
      dense", "make my deck better") → this is a redesign, not a build-from-scratch, and
      it rewards a different front end. **Follow `references/redesign-existing-deck.md`**:
@@ -635,58 +250,7 @@ four template choices:
      silent ground-up replacement.
      > **🔴 CHECKPOINT** — show the diagnosis + proposed scope and get the user's OK before rebuilding their deck.
 
-4. **Style.** "How do you want it to look and feel?" Offer these (applies to *every*
-   purpose):
-   - **Density — ALWAYS a surfaced choice, defined by TEXT-PER-POINT (not "text vs no text").** EVERY
-     level has *both* text and visuals; what changes is how much each *point* says and how much the
-     diagram carries. Offer three concrete levels (this is the "text-heavy vs diagram-heavy" question):
-     - **Diagram-heavy** — *a phrase per point* (~3–7 words); a diagram / figure / chart carries the
-       idea, the text is a terse label or takeaway. Lets an audience follow a *speaker*. (Presented default.)
-     - **Balanced** — *one short sentence per point* + a supporting visual; scannable live, still mostly
-       clear when skimmed.
-     - **Text-heavy** — *2–3 self-contained sentences per point* (a short paragraph); the slide reads on
-       its own without a speaker, visuals support the prose. For a **read-without-a-speaker** artifact —
-       leave-behind, emailed/reference/appendix deck, board pre-read, **poster**, single-slide
-       **infographic** — that fuller text is the deliverable, not a flaw.
-     **Surface it explicitly (like deck length) and scale the options to delivery (Q2):** a **presented**
-     deck → *diagram-heavy (recommended) ↔ balanced* (a text-heavy presented deck is a wall of text —
-     steer away); a **self-read / poster** deck → *balanced ↔ text-heavy*. Don't silently decide it from
-     the purpose. (This sets the deck's **delivery mode** — see `references/design-principles.md`.)
-   - **"Mimic an example I'll provide"** — the user hands over a **whole deck, a few slides, or even ONE
-     slide / screenshot** whose design they want echoed. Different from a *template* (Q1): you do NOT
-     build on it or inherit its logos/content — you reproduce what they value in your own build.
-     **First ask which INTENT** (they mean one of two — the build differs):
-     - **(1) Reproduce the look** — same family: match the example's **palette, fonts, motifs, density**
-       (a faithful style clone, with the user's content).
-     - **(2) Borrow its components & layout, but redesign the style for MY topic** — keep the example's
-       *structure + component vocabulary* (its card style, callout, diagram/layout pattern, signature
-       motif) but **re-choose the palette / mood / type to fit the topic** and refill with the user's
-       content ("inspired by, not copied"). *This is the common ask* ("mimic but not copy, restyle for
-       the topic, apply some of its components").
-     Then **understand it before building** — a glance won't do (for a single slide, treat its treatment
-     as the deck-wide system, confirming with the user). Write the structured **style brief** (structure/
-     rhythm, grid, colour, type, decorations & motifs, the **2–4 components worth reusing**, tone) and
-     build per the chosen mode — **follow `references/style-analysis.md`** (Mode A reproduces; Mode B
-     borrows components + restyles to the topic), keeping the user's content + the craft rules. Composes
-     with everything (e.g. build on the user's template for branding, yet borrow an example's components).
-   - Plus any tone (academic, corporate, playful).
-   Honor their choice over your own habits; nudge toward concise + visual when
-   unsure; carry the choice into the plan (steps 1–2) and the build (step 4).
-   - **Direction gate (when to show rendered options first).** Two cases call for it:
-     (a) **"design a clean one" / no template** → it's the *recommended default* there —
-     offer **4** directions as described in Q1's design-one branch above (3 best-fit DNA presets +
-     1 colour-scheme direction); (b) any other case where the user is **unsure on style** or it's a
-     **brand-defining / high-stakes** deck → offer **2–3 directions** as a lighter opt-in. Either way it's the same machinery
-     (collaborative mode Gate A, `references/collaborative-mode.md` + `scripts/archetypes_html.py`):
-     **one HTML link** showing the archetype slides per direction, which the user opens and picks
-     from before the full build. **Scope differs by case, and the difference matters:** on case (a)
-     — the no-template branch — the gate **RUNS BY DEFAULT** and is skippable only via one of Q1(c)'s
-     NAMED carves, recorded on the checkpoint's `direction gate:` line (a design checkpoint on that
-     branch with no gate line is not ready). Only case (b), the lighter unsure/brand-defining offer,
-     is **skippable, never forced.** A *registered or provided* template, **a generated template** (Q1's image-tool
-     branch), **or a Mode-A mimic example** (Q4 "reproduce the look")
-     means the look is already decided — **don't offer the gate** in those cases. (A Mode-B mimic
-     stays eligible for the lighter case-(b) offer — its palette/mood is re-chosen for the topic.)
+**Q4 (style) — density levels, mimic modes, and the direction-gate scope are in `references/interview-protocol.md` (same file, later section). Read it before you offer the style question.** It owns the three DENSITY levels (diagram-heavy / balanced / text-heavy, defined by text-per-point) and the mimic-a-style-example modes — two user choices that exist ONLY here, so if this file is not opened they get silently defaulted.
 
 **Language (decide it, then hold it).** A deck is written in **one language
 throughout** — default to the language the *user* writes in. **When the source
@@ -739,18 +303,8 @@ Source-coverage map). See the long-source bullet below and `content-planner.md` 
 Then **write a comprehension brief — a REQUIRED, fixed-field, source-traced artifact** (the
 planner's `agents/content-planner.md` §1 is the spec); every field must trace to a locatable
 source span, not memory:
-- The **one-sentence message** + the verbatim source sentence it derives from (+ where).
-- The **contributions**, in their words, each with its source location.
-- The **method essence** at talk-altitude (+ the one key equation), and where it appears.
-- **One row per figure AND table:** `id | what it is FOR (the ONE comparison) | which exact
-  element carries it (row/column/curve/panel) | what it emphasises | the WRONG reading to avoid`.
-  A table exists to make one comparison obvious — foreground *that* (e.g. baseline vs +X), and
-  name the carrying element (it drives which row the build highlights + the assertion title).
-  A figure whose carrying element you cannot name is one you haven't understood.
-- Any **nuance/limitation** the authors stress, quoted.
-- A **claim ledger** (per `content-planner.md` §2): every number/date/name/citation/superlative/
-  dated-event as a row with source + verbatim value + verified?(Y/N) + as-of date; an unverifiable
-  claim is cut or marked open, never shipped.
+
+- **The field list is in `references/content-plan-spec.md` §Comprehension brief — read it before writing (or checking) the brief.** It holds the one-sentence message + its verbatim source sentence, the contributions, the method essence, the one-row-per-figure-AND-table spec, the nuance/limitation quotes, and the claim-ledger columns (same spec as `agents/content-planner.md` §1–2).
 
 **This is a hard gate, not a sanity check.** Self-verify the brief against the source; if any
 field is empty, hedged, or untraced — or the emphasis test fails (your one-sentence message
@@ -768,68 +322,9 @@ at *today's* date**: a paper's "state-of-the-art", an adoption number, a "first/
 latest" superlative may be stale by presentation day. Re-verifying a source claim is not
 inventing — it's fidelity to what's *true now*.
 
-- **No content:** draft an outline from your own expertise, then **ground *and verify*
-  it** with the host's available web search/fetch tools (Codex: use `web.run`) — treat this as a **fact-check, not just framing**.
-  List the deck's specific *falsifiable* claims (numbers, dates, names, citations, and
-  every "first/largest/state-of-the-art" assertion) and confirm each against its **primary**
-  source (the planner's PROVENANCE CONTRACT, `agents/content-planner.md` §2 — an aggregator
-  or news rewrite is not confirmation) before it lands on a slide; fix or cut anything you
-  can't verify, and never
-  present an unverifiable claim as established fact. This matters because a no-source deck
-  has **no paper to anchor it** — *you* are the only check on whether a confident-sounding
-  statement is actually true, and an expert audience spots a wrong "fact" instantly (the
-  failure mode here is being *wrong*, not just vague). **If the host exposes NO web tool** (no
-  search/fetch available), do not present falsifiable claims as established: mark each such claim
-  *open/unverified*, soften it to what you can defend, and **ask the user to confirm the numbers or
-  supply a source** — never ship an unchecked "fact" just because you couldn't check it.
-  - **Ground to *today* — the current day, not just the year — and re-verify on every build.**
-    You know today's date; use it: run **recency-bounded** searches (this month / the last few
-    weeks for fast-moving topics) and fold in material recent events. Re-check anything
-    **time-bound** *every* build (including a regeneration) — never reuse cached research for it
-    (cached is fine for *stable* facts): prices, counts, rankings, role-holders, versions,
-    status; "current / latest / upcoming" claims; "first / largest / record" superlatives; and
-    any **scheduled / dated event** (launch, release, ruling, earnings, election, deadline). For
-    a dated event, check whether it has **already happened as of today** and write the correct
-    status/tense — a "planned / upcoming" item whose date has passed is **completed**; a
-    "leading / latest" thing may since have been superseded. Date the deck **"as of \<day month
-    year\>"**; if the newest *full-year* metric is last year's, label it and add the current
-    year-to-date figure rather than presenting old data as current.
-  Carry the verified outline + source log into the **Content plan**, where the user
-  approves it — a no-source deck is gated the same as any other: once at the CONTENT
-  checkpoint (Step 1), then again at the DESIGN checkpoint (Step 2).
+- **No content — and any web fact-check on any deck:** draft the outline from your own expertise, then ground *and verify* every falsifiable claim against a **primary** source, and ground the deck to *today*. **Read `references/content-plan-spec.md` §Web verification & no-source decks before running any search or putting a falsifiable/time-bound claim on a slide** — it owns the PROVENANCE CONTRACT, the re-verify-on-every-build list, the dated-event tense rule, and the no-web-tool fallback.
 
-- **A long source (a book / very long PDF / large corpus / multi-volume set)** — one you can't read
-  faithfully in a single pass — is NOT read front-to-back: a faked linear read either overflows or,
-  worse, *fits* and goes shallow, then invents plausible-but-absent points. Run the planner's
-  **Long-source mode** (`agents/content-planner.md` §1): (1) **classify size deterministically** —
-  PDF/EPUB → `python scripts/extract_pdf.py map <src>` (CJK-correct load + token estimate); `.docx`/
-  `.md`/Google-Doc/web → convert to PDF first or use a `wc`-style count (**never raw `wc -w` on CJK
-  text — it undercounts ~6–30×; count CJK chars ÷ 2 + Latin words, or convert to PDF and let `map`
-  do it**); a code repo → size the file
-  tree; **multi-file → sum across files** (once the set is over-threshold, convert every non-PDF
-  member `office`→PDF so pages/provenance exist uniformly) — recorded as the brief's `source size:`
-  field; over
-  ~40–50 pp (or a token estimate that won't fit one pass) FORCES the mode, (2) anchor on purpose FIRST,
-  (3) **map the structure** — TOC/bookmarks + density; **no TOC? `extract_pdf.py headings <src>`**
-  reconstructs a skeleton by font-size outlier (recorded in the plan), (4) read **only the chapters
-  you'll build-around/summarise** into page-tagged notes (`extract_pdf.py text <src> <start> <end>`;
-  fan out the *reading*, synthesise as one mind; `cut` chapters are dispositioned from the skeleton,
-  unread), (5) **deep-read *verbatim* only the load-bearing ~20%**, tracing every slide-bound claim
-  to a real page (`<file>:p.NNN`; a chapter note is corroboration, not a source), extracting figures
-  **per page** from the plan's locators (never `autofig` the whole book). The plan then carries a
-  **Source-coverage map** (every skeleton section → built-around / summarised / cut) so the SELECTION
-  is explicit — on a book the biggest risk is building around the *wrong slice*, not misreading one
-  figure. **Dispatch mechanics — the selection FYI must land BEFORE the deep-read, so an
-  over-threshold source makes the planner dispatch TWO-PHASE:** phase 1 (steps 0–3) returns the
-  `source size:` + skeleton + draft coverage map, the coordinator posts the selection FYI in chat
-  (a stop normally, an FYI under the auto-waiver) and gets the slice confirmed/adjusted, THEN phase 2
-  (steps 4–6) runs the verbatim deep-read on the confirmed slice — a one-shot dispatch has no user
-  channel mid-run, so a single-phase dispatch silently converts the "early" FYI into a post-hoc one
-  (the plan records `selection FYI: posted <when> · slice confirmed/adjusted`, which the checkpoint
-  precondition checks). An inline-run planner just posts the FYI directly at the same point.
-  A **scanned / image-only or DRM-locked** PDF yields no extractable text (`map`/`text` print
-  a `⚠ NO extractable text` warning) — say so and ask for a text version, OCR, or the specific
-  chapters, never hallucinate the contents.
+- **A long source (a book / very long PDF / large corpus / multi-volume set)** is NOT read front-to-back — a faked linear read either overflows or, worse, *fits* and goes shallow. **The moment a source might exceed ~40–50 pp or not fit one pass, read `references/content-plan-spec.md` §Long-source mode** — deterministic size classification (`extract_pdf.py map`, CJK counting, multi-file sum), structure map, triage, the verbatim ~20% deep-read with page-traced claims, **page-scoped figure locators (never whole-document `autofig`)**, the Source-coverage map, the TWO-PHASE dispatch that posts the selection FYI *before* the deep-read, and the scanned/DRM no-text case.
 
 **End Step 1 at the 🔴 CONTENT checkpoint — pace-check first, then approve the story.** The
 Content plan is the cheapest place to fix a misread or a wrong emphasis, so present it *before any
@@ -873,16 +368,9 @@ user's edits to the story, then move to design (Step 2).
 > the coverage gate at book scale (also surfaced earlier as a cheap FYI, before the verbatim deep-read).
 
 ## Step 2 — Design the deck (use the slide-design agent)
-With the **Content plan approved**, first build the **Evidence manifest** — so the art director
-plans geometry with its eyes open, not blind to a 2400×700px figure destined for a half-column.
-When the approved plan's *Visual source* column names assets that exist or are locatable, emit
-one READ-ONLY line per named asset: `asset | locator | WxH (px/pt) | aspect class (wide >~1.6 /
-squarish / tall <~0.65) | table RxC | value range (optional)` — probed via PIL/`sips` for image
-files, `extract_pdf.py figures` bboxes for in-PDF figures (note in the manifest that the
-auto-bbox is the plot-panel extent, so the AR is an estimate), and header/row counts for CSVs.
-Probing NEVER materializes crops/equations/plates — asset-prep still runs only AFTER the design
-plan is approved (`agents/asset-prep.md`, unchanged); an unlocatable or to-be-generated asset is
-listed "dims unknown", and a no-asset deck skips the manifest entirely.
+
+With the **Content plan approved**, first build the **Evidence manifest** — one READ-ONLY probe line per asset the approved plan names, so the art director plans geometry with its eyes open (a no-asset deck skips it entirely). **Read `references/asset-production.md` §Evidence manifest before dispatching slide-design** for the line format, the probing tools, and the rule that probing NEVER materializes crops/equations/plates (asset-prep still runs only after the design plan is approved). That file is the asset lifecycle end-to-end — probe → image opt-in → crops → charts → logo/icons → equations.
+
 **The per-asset SPEC asset-prep consumes has a named producer:** the Design plan's per-slide rows
 (or its image opt-in list) carry, per asset, the crop spec (or `autofig index N` — **but on a
 long-source deck the locator must be page-scoped**: `figures <src> <page>` + the caption label,
@@ -963,26 +451,9 @@ category/entity-rich deck — every branch, incl. generated-template (self-verif
 quota — still smart about where/when). A plan that defaults its look, over-relies on one format, forgets
 icons, or — when builds are opted in — leaves a built slide half-staged or forgets builds where they'd
 clearly help is **not ready** — send it back to the art director.
-**The per-slide content-image opt-in is a CROSS-CUTTING choice, available on EVERY deck** — it is
-*not* tied to the template choice and is *separate from* Q1's "generate a template with an image
-tool" path (which makes the visual identity). Offer the opt-in whenever an image tool OR web access
-for sourced photos is available — generation rows need the tool; sourced rows need only the
-Commons/Openverse/press-kit search — regardless of how the deck was templated: a **registered**, **provided**, **clean**, or
-**generated** template can all carry generated *content* images. Three guardrails the art director
-enforces and the checkpoint shows: **(a) each proposed plate is *content-related* — it depicts THAT
-slide's actual subject, never generic "fancy" filler** (`image-generation.md`); **(b) it is
-SMART about where — plates only for the few slides that genuinely earn one, NEVER every slide, even
-when the user has opted into image generation** (the dose rule holds on photo-friendly topics too —
-only the PRESSURE inverts: a travel/city deck's temptation is wall-to-wall photos); and **(c) the
-REFERENT RULE picks the source for content images** (`references/image-generation.md` "Sourced real
-imagery" — the owning section: token grammar, scope carves for generated-template identity plates
-and cover mood, tie-breaks, and the `searched, none found → …` fallback rungs): a real-and-specific
-subject (a named place, real product, real person) gets a REAL license-clear sourced photo —
-generation *claiming photographic reality* of a real thing is a fidelity bug, while a declared
-stylized illustration is a nameable deviation; a generic-concrete subject may be generated; an
-abstract subject gets native forms, not photos. Every image row carries its source token per that
-grammar. The user then approves which (if any) are
-generated or sourced. Fold in the user's design edits, then set up the canvas (Step 3).
+
+**The per-slide content-image opt-in is a CROSS-CUTTING choice available on EVERY deck** — independent of the template decision and separate from Q1's generate-a-template path; offer it whenever an image tool OR web search for sourced photos is available. **Read `references/asset-production.md` §Per-slide content-image opt-in before writing the opt-in list** — the three guardrails (content-related, never every slide, and the REFERENT RULE that decides generated vs real sourced imagery) and the per-row source-token grammar. Fold in the user's design edits, then set up the canvas (Step 3).
+
 > **🔴 CHECKPOINT — DESIGN:** show the Design language + Form ledger + the 3 design musts + the
 > **`boldness:` line + the `signature move:` line** (the one scoped aesthetic risk + where it lands +
 > the bold reference it adapts — so a wrong dial or a timid/too-wild move costs one glance to veto) + the
@@ -1017,18 +488,7 @@ don't silently dump into `/tmp`. You'll remind them to open it in step 6.
 > `./<deck-name>/` in the working directory. Never `/tmp`. State the chosen location in chat the
 > moment you decide it — auto mode is never invisible — and repeat it in the hand-off.)*
 
-**Canvas format (only when the interview picked a non-default surface).** The default deck is
-16:9 via `deckkit.blank_deck()` — untouched, and everything below assumes it. When the interview
-confirmed a different surface (4:3 venue, 小红书 3:4, square 1:1, story 9:16, A4 print), start from
-`scripts/formats.py` instead: `FMT = formats.get("<name>")` → `prs = formats.blank_deck(FMT)`,
-take the safe content rect from `formats.band(FMT)` (it encodes the platform-UI safe zones — on
-story/rednote, text outside it is covered by the platform), honor `FMT.chrome` (social surfaces get NO
-deck footer/page numbers), branch stack-vs-split layouts on `FMT.columns_ok`, multiply only
-display/cover type by `FMT.display_scale`, and pass `FMT.lint_flags` to the Step-5 lint. Keep the
-SAME pt tokens for body/label type (canvas inches are chosen per format so relative size lands
-right — the inch-normalization principle) and the same components/identity throughout; per-surface
-layout DNA + the repurpose/batch pattern live in `references/canvas-formats.md`. The design plan
-records a `format:` line whenever it's not `wide`.
+**Canvas format.** The default deck is 16:9 via `deckkit.blank_deck()` — untouched, and everything below assumes it. **If the interview confirmed any non-16:9 surface (4:3 venue · 小红书 3:4 · square 1:1 · story 9:16 · A4 print) — or the design plan carries a `format:` line that isn't `wide` — read `references/deck-setup.md` §Canvas format BEFORE creating the presentation object**; it carries the `scripts/formats.py` contract (`band` safe rect · `chrome` · `columns_ok` · `display_scale` · `lint_flags`) and the rule that the design plan records a `format:` line whenever it isn't `wide`.
 
 **Keep the per-deck build script (`build_<deck>.py`) in that same folder, beside the
 `.pptx`.** The build script — not the rendered file — is the *source of truth* for the
@@ -1040,63 +500,11 @@ iterate without clobbering the user's manual edits. In that script, resolve deck
 relative to the script file (for example `ROOT = Path(__file__).resolve().parent`) rather
 than the current working directory, so `python /path/to/build_<deck>.py` works from anywhere.
 
-- **Template branch:** run `scripts/inspect_template.py <file.pptx>` to learn the
-  layout indices, placeholder ids, and where logos/brand live (they sit on the
-  layouts, so new slides inherit them). Then `deckkit.open_template()` loads the
-  deck and wipes old slides while keeping masters/layouts. Pull the brand colors
-  from the template and set `deckkit` palette/`FONT` to match. Save what you learn as
-  a `profile.md` under the active template registry so it's reusable next time
-  (a registered template's `profile.md` is a fully worked example of this).
-  - **Conference template:** if step 0 turned up an official conference template,
-    download it with the host's web fetch/download tool or `curl` and treat it exactly like a user template —
-    inspect it, then build on it so the talk matches the venue's required look and
-    aspect ratio.
+- **Template branch** — the user supplied a `.pptx`, or Step 0 found an official conference template: read `references/deck-setup.md` → "Template branch" BEFORE creating the deck object (inspect → `open_template()` → adopt the template's brand → register a reusable `profile.md`).
 
-- **No-template branch:** `deckkit.blank_deck()` + `deckkit.add_slide()`, and give
-  it consistent chrome with `deckkit.title_bar()` / `deckkit.footer()`. **Don't just
-  accept deckkit's default blue — design the look to fit the purpose.** Read
-  `references/design-by-purpose.md` for a per-purpose design language (palette mood,
-  density, layout, chrome) and set the palette via **`deckkit.set_palette(deep=…, blue=…, magenta=…,
-  mono=…, accents=[…])`** (call it ONCE right after import — a bare `deckkit.MAGENTA = …` does NOT
-  re-theme components whose signature default is that colour, since those defaults are bound at
-  import; `set_palette` rewrites them for you) + a **role-based font pairing** (`DISPLAY` title face
-  + `FONT` body + `MONO`; add `EADISPLAY`+`EAFONT` for CJK) to
-  match — or adopt a one-switch **`scripts/presets.py`** `preset(name)` (e.g. glassmorphism / swiss /
-  editorial_paper / editorial_report / risograph / memphis / bauhaus / midcentury / terminal /
-  synthwave — **18 total**, full catalogue with
-  when-to-use in `references/design-gallery.md`: palette + fonts + surface + image-prompt)
-  and tune it — then do a quick web-search for current, well-regarded examples of *this kind* of
-  deck and adapt concrete ideas. A status update should read as crisp and corporate,
-  a defense as sober and formal, a lecture as warm and clear — the design should
-  signal the right kind of document before a word is read.
-  - **Vary the look deliberately — don't default to one house style.** When *you* define
-    the style, treat each deck as a fresh visual identity: choose a palette, type pairing,
-    layout grid, and a signature motif that fit *this* purpose/audience/mood — and do NOT
-    reuse the last deck's scheme out of habit (not the deckkit default blue, not whatever
-    you built last time). Range widely across decks — warm vs cool, **light vs dark**,
-    serif vs sans, minimal vs bold, restrained vs vivid; `design-by-purpose.md` gives a
-    starting mood per purpose, but pick a *distinct, concrete* look within it. Unsure or
-    brand-defining? Show 2–3 direction archetypes in **one HTML preview link** and let the user
-    pick (collaborative mode, `scripts/archetypes_html.py`). Sameness across decks is the failure to
-    avoid; the only constant is the craft (contrast, hierarchy, one idea per slide).
+- **No-template branch** — you are designing the look yourself: read `references/deck-setup.md` → "No-template branch" BEFORE the first palette/preset/font call (`set_palette` semantics — a bare `deckkit.MAGENTA = …` does NOT re-theme components whose signature default binds at import · `scripts/presets.py` · `references/design-by-purpose.md` · `references/design-gallery.md`). Two rules that survive no matter what: **never ship deckkit's default blue, and never reuse the last deck's scheme** — each deck gets its own distinct identity.
 
-**Fonts for non-Latin languages (Chinese / Japanese / Korean)** — applies to both
-branches. The defaults are Latin-only, so set a script-appropriate font before
-building: `deckkit.EAFONT = "Hiragino Sans GB"` (macOS render-loop-safe; or Microsoft YaHei / Noto Sans
-CJK SC), keeping `FONT` for Latin/numbers. This tags every run with a CJK `<a:ea>` font
-so it renders correctly *and portably* (not an uncontrolled fallback), and mixed
-中文+English stays right. Pick the CJK font to the purpose, emphasize with weight/colour
-not italic (CJK has no true italic), and flag the font dependency at hand-off. Full
-guidance + RTL limits in `references/multilingual.md`.
-
-**Font portability (any deck).** A `.pptx` stores font *names*, not the fonts — pick fonts
-present on every machine that will open it (a missing font substitutes, shifting metrics
-or, for non-Latin, producing tofu). Default to cross-platform-safe fonts (Arial/Calibri,
-Georgia, Consolas), set `deckkit.FONT/MONO` accordingly (and `deckkit.EQ_MATHFONT` — STIX Two Math /
-Cambria Math — for native `equation_native` math; `EQFONT` only affects inline `eq_par` runs), and flag any brand-font
-dependency at hand-off. Editable `equation_native` math needs a **math font** (STIX Two Math / Cambria
-Math) for its glyphs — flag that dependency; `equation_png` is font-independent (rasterised).
-Full list, fallbacks, and tofu recovery in `references/font-guidance.md`.
+**Fonts (every deck, both branches).** A `.pptx` stores font *names*, not the fonts — before setting `deckkit.FONT`/`MONO`/`EAFONT`/`EQ_MATHFONT`, read `references/deck-setup.md` → "Fonts" (CJK `EAFONT` is required for any 中文/日本語/한국어 deck; portability, the `EQ_MATHFONT` / STIX / Cambria Math dependency to flag at hand-off, and tofu recovery live there) and flag any font dependency at hand-off.
 
 ## Step 4 — Build with deckkit
 
@@ -1156,117 +564,8 @@ generate 2-3 candidate forms and choose with the tie-breaker in `references/form
 > primitives ONLY for a form the library genuinely lacks — and *then* the burden is on you: **derive
 > every axis / baseline / track extent from the data** (`last_bar_x_end − axis_x`, never a hand-picked
 > width), and don't double-count (`references/design-principles.md` "Designed plots" + "Big numbers").
-The helper set, by job:
-- **Chrome:** `title_bar`/`content_slide`, `footer`, `editorial_header` (caps eyebrow + title +
-  hairline), `part_eyebrow`/`page_marker` (mono eyebrow + page marker), `logo` (persistent
-  brand/institution/product mark in a fixed corner on every page — see the brand-logo rule below).
-- **Safe layout — measure or anchor, never hand-pick a y:** `columns`/`rows` (equal **or
-  `weights=`-proportioned** split panels — a measured 1/3–2/3 or rail+main split — symmetric outer
-  margins either way), `content_band` (the SAFE rect below title / above footer), **`bottom_callout`**
-  (footer-safe bottom takeaway — anchors to the band, grows UP, can't collide), **`vstack(…, bottom=)`**
-  (measured stack: equal gaps + no overlap by construction, errors at build time on overflow) with the
-  `measure_callout/measure_bullets/measure_text` helpers, **`spaced_centers`** (evenly-spaced marker
-  centers for a timeline / tick row / numbered steps, **inset at the ends so a centered caption stays
-  co-centered with its end marker** — use it instead of hand-rolling a row of dots+captions, which
-  desyncs the first/last caption from its dot near a slide edge; `timeline` already uses it),
-  `picture` (`fit="contain"` keeps edges /
-  `"cover"` crops), `make_gif` (GENERATE a looping GIF from computed frames) + `gif` (embed the animated
-  GIF, undistorted + size/still warnings) + `gif_poster` (extract the first/representative frame to
-  verify what the render & PDF export show) — generate → embed → review, `icon`/`icon_tile`/
-  `icon_badge`/`icon_ghost`/`icon_card` (place an open-licensed SVG icon — recolored + rasterized via
-  `scripts/icons.py`, which also does **duotone** weights + **gradient-fill**; `icon_tile` is the
-  versatile container — circle/squircle/square × solid/gradient/glass tile, `icon_badge` a ring badge,
-  `icon_ghost` an oversized faint watermark, `icon_card` the upper-left feature-card pattern; vary the
-  treatment to fit the deck — see `references/icons.md` "Treatments"). *(These exist so you never
-  hardcode a low `y` — the recurring overlap/footer bug.)*
-- **Text & blocks:** `bullet`, `callout` (auto-grows), `chip`, `modbox` (a labelled MODULE box —
-  reach for it as the node when mapping architecture modules / code files / system parts joined by
-  `connector`, where a plain `node` is too bare; role word + optional filename/tag), `arrow`, `table` (highlight
-  the key row), `code_block`, `hrule`.
-- **Colour:** `palette(n, ACCENTS)` (n distinct, contrast-checked fills — warns on adjacent same-hue;
-  never a gray filler), `palette_from_image` (match a generated template's palette), `accent_one`
-  (one-accent discipline), `contrast_ratio` (verify ≥~4.5:1 before committing).
-- **Data furniture & charts:** `scorecard`/`leaderboard`/`takeaway_rail`, `change_stat` (baseline-
-  centred before→after), `stat_row`, `big_numeral`; **editable native charts** `native_chart` /
-  `native_dual_axis` / `native_donut` / `native_pareto` / `native_bubble` (feed them straight from a
-  spreadsheet with **`series_from_csv(path, x_col, y_cols)`** → `(categories, series)`, stdlib, no pandas),
-  plus the raster recipes in `scripts/designed_charts.py` (incl. **`waterfall`** — a total's rise/fall/
-  total walk, semantic up/down colour) — pick per `references/data-viz.md`.
-- **Walkthrough / hierarchy / comparison-grid:** **`annotated_figure`** (a real figure + numbered
-  markers + a numbered caption rail + optional magnified inset — the guided figure walkthrough the
-  integral-figure rule kept demanding by hand) · **`small_multiples`** (identical mini native charts
-  with a SHARED value axis — the documented recipe left each panel auto-scaling, so a small bump and
-  a huge bump looked identical) · **`position_map`** (N LABELLED items on two continuous axes — the
-  within-cell position quadrant() throws away) · **`org_tree`** (tidy hierarchy: centroid parents,
-  horizontal bus; raises when it can't fit legibly).
-- **2.5D isometric (native — no generated image):** **`iso_bars`** (a FAITHFUL 2.5D bar chart —
-  extrusion height is linear in the value and zero-based, so the depth never distorts the data) ·
-  **`iso_stack`** (a layered architecture / disclosure ladder / decision stack — floating isometric
-  slabs with labels aligned beside each one) · **`iso_prism`** (one extruded block as a hero).
-  Fixed projection (true 30° isometric, parallel not perspective) and one-light-source face shading,
-  so every 2.5D element in a deck reads as one system. **Dose like generated imagery** — a stack, a
-  hierarchy, or ONE hero chart, never every slide; text cannot be sheared onto a face, so labels sit
-  beside the geometry. When the 2.5D wants to be a rich atmospheric *scene* (not data), that is the
-  generated-image branch, not these.
-- **Placement by measurement:** `image_fx.quiet_region(path)` → the image's calmest ONE-INK region
-  + its mean luminance (choose dark vs light ink from data, not eyeballing) · `deckkit.pic_alpha`
-  (native picture opacity — a faint plate that keeps its own hues, no scrim shape) ·
-  `deckkit.design_intent(slide, envelope=…, rhyme=…)` (declare a deliberate quiet/baseline/bleed
-  register so the render-time lint audits intent instead of guessing it).
-- **Decision / plan / grid:** **`eval_matrix`** (options×criteria scoring grid — `harvey_ball` fifths-fill
-  glyphs or ✓/◐/✕ marks, `recommend=` tints the winner) · **`heat_matrix`** (category×category grid coloured
-  by value, `scale="seq"|"div"|"risk"`) · **`tier_stack`** (one taper: `mode="funnel"` drop-off /
-  `mode="pyramid"` layers, + `funnel()`/`pyramid()` wrappers) · **`gantt`** (dated task bars on a shared
-  `axis_scale`, `lanes=` swimlanes, `today=` marker — durations & overlap, where `timeline` shows only points).
-- **Diagrams / patterns:** `quadrant`, `hub_spoke`, `timeline`, `before_after`/`image_tab`/
-  `photo_triptych`, **`device_frame`** (a real screenshot in a `chrome="browser"`/`"phone"` bezel),
-  `wireframe_grid`+`spec_list`, `corner_frame`, `photo_card`, `backdrop_motif`,
-  `repeat_row` (N identical-except-index units as representatives + `…` + `×N`, shared detail said
-  once — never N duplicate blocks).
-- **Surface (dark / glass / print):** `glass_card`/`glow`/`scrim_overlay` (gradient+alpha fill),
-  `offset_shadow` (hard letterpress/riso shadow).
-- **Publication & math:** `cover`/`colophon` (bookend the deck), `sources_page`, `specimen_card`;
-  **`equation_native`** (EDITABLE LaTeX-subset math — real text runs, renders everywhere; the default) /
-  `equation_png` (rasterised LaTeX, for 2-D math: fractions/matrices) / `eq_par` (inline runs).
-- **East-Asian (CJK) accents:** `seal` (vermilion chop/印章 stamp — the one red accent on an ink deck),
-  `cjk_numeral` (壹·贰·叁 section markers vs Latin "01"). See `references/east-asian-aesthetic.md`.
-- **Diagram kit (general flowcharts):** `node` + `connector` / `flow_chain` (straight links between adjacent nodes) + `elbow_connector` /
-  `loop_path` (elbow / U-shaped paths for a feedback/repeat loop, a return, or a link between NON-adjacent
-  nodes) — any architecture from rounded-rect/pill/circle nodes (+ diamond/parallelogram/cylinder when
-  formal flowchart notation applies — see the Standard-notation crib in `design-gallery.md`) with
-  **stroke semantics** (solid=required
-  · dashed=optional · dotted=feedback) and **shape semantics** (straight=adjacent flow · elbow/U=loop /
-  return / non-adjacent), exactly one `hub` (hub optional in the system-architecture recipe — the
-  focal path can carry emphasis instead)  *(NB two similarly-named helpers: **`hub_spoke`** draws the
-  whole radial FIGURE — one centre + labelled spoke nodes on a ring; **`hub_spokes`** only draws the
-  CONNECTORS from an existing hub to existing nodes. Reach for `hub_spoke` to build the diagram,
-  `hub_spokes` to wire one you laid out yourself.)* the
-  focal path can carry emphasis instead); `diagram_island` (bright figure panel on a dark slide);
-  `concentric_rings` (nested framework); `step_list` (numbered process, vertical/horizontal).
-  - **This kit draws conceptual BOX-FLOW only — not physical science schematics.** For a
-    **labelled science schematic** explaining a principle / mechanism / experiment / definition (a
-    **free-body / force diagram, optics ray path, electric circuit, chemistry apparatus + reaction,
-    vector / coordinate geometry, wave / field** — physics · chemistry · biology · engineering · any
-    subject), NOT the node/connector kit. Two faithful build paths (pick by precision-vs-polish):
-    **matplotlib / a domain library** → transparent PNG (the safe default when the exact geometry/labels
-    ARE the meaning — deterministic, correct-by-construction), OR — for a **complex / fancy / generated-
-    template-matched** schematic whose geometry isn't load-bearing — the **OpenAI image tool for a
-    text-free styled visual with the labels overlaid as native editable text**. **Never bake labels or
-    unverifiable geometry into a generated image** (garbled text + wrong physics). Recipes, the
-    image-tool workflow, and the **domain-accuracy fidelity gate** are in
-    `references/schematic-diagrams.md` — build it correct (a wrong schematic misleads worse than none).
-- **Editorial / consulting furniture:** `insight_banner` (so-what bar), `bilingual_lockup` (CJK+tracked
-  Latin headline), `highlight` (inline `<k>keyword</k>` recolour), `ghost_numeral` (faint watermark
-  ordinal), `concept_equation` (ZINE=MAGAZINE word-equation), `pull_quote`/`standfirst`, `cta_button`/
-  `cta_pair`, `status_stamp`/`corner_tab`, `spec_card`, `year_badge`, `gradient_rule` (2-stop brand rule),
-  `catalogue_frame` (double-line specimen frame — museum/eastern presets).
-- **Micro-viz:** `dot_meter` (●●○), `tradeoff_list` (+/−), `segmented_bar` (cumulative 100%), `meter_bar`
-  (a single percentile/share/progress row — track + accent fill + a value label **vertically centered on
-  the bar**; use this instead of hand-building "track box + fill box + number", which is how value labels
-  end up floating off the bar's centerline; canvas-safe by construction — an overflowing value
-  auto-shortens the bar instead of leaving the slide).
-- **Photo on-brand (`scripts/image_fx.py`):** `duotone` / `grayscale` so a colour photo doesn't fight
-  the accent (riso/brutalist/ink/luxury/museum), then `picture(fit="cover")`.
+
+**The full deckkit helper catalogue — every component by job (chrome · safe layout · text & blocks · colour · charts & data furniture · walkthrough/hierarchy · 2.5D isometric · decision grids · diagram kit + science-schematic carve · editorial furniture · micro-viz · publication & math · CJK accents · photo FX) — is in `references/deckkit-components.md`. Read it before you build any slide's form**, so the 🔴 rule above is actionable: you can only reach for the component that exists if you know it exists.
 
 If the user gave a **style example** (Q4),
 build to your **style brief** of it *per the chosen mimic mode* (`references/style-analysis.md`) —
@@ -1288,128 +587,11 @@ A few rules that matter (see `references/design-principles.md`):
   *loses context and changes what the authors showed* — do it only when the whole is truly
   unusable on a slide, and prefer to **confirm with the user** before discarding panels.
   Build native diagrams only for structure with no source figure.
-  - **Never clip the figure's OWN parts. Crop the complete SEMANTIC object, not an arbitrary
-    rectangle.** The legend, colour bar, axis titles/labels/ticks, units, **error bars / CIs &
-    significance markers (`*`, p-values)**, **panel-strip headers**, **panel labels `(a) (b) (c)`**,
-    a sub-plot's own x-axis labels, and the outermost rows/columns are all *part of the figure* —
-    losing them is worse than showing the figure a touch smaller. **If one part is needed to read
-    another** (a colour key, a shared legend/axis, a side-input to a diagram), keep them together.
-    After every crop **and** after placing/scaling a figure on a slide, **re-view the result** and
-    confirm nothing of the figure is cut off (a half-cut legend at the top edge is the classic miss).
-    **A small margin, not blank padding:** keep just enough margin that nothing sits *flush* (a tick
-    label *touching* the boundary is already too tight) — but no *fat* blank border either, since the
-    figure is placed with `picture(fit="contain")` and a wide white margin makes it float small on the
-    slide. Crop **close to the figure's real content**: a small even margin, which is *not* the same as
-    cropping flush (flush is still a bug). When tick labels are **rotated** or a legend/colour-bar sits
-    *outside* the plot, extend the crop to **include those elements fully** — that extra room is to
-    *fit* them, not to pad with whitespace.
-    - **🔴 The auto-detector's bbox captures only the PLOT PANEL — expand beyond it.** A plotting
-      library (ggplot / matplotlib / seaborn) places the **axis titles, tick labels, panel-strip
-      headers, and legend OUTSIDE** that panel rectangle, so cropping to the detected box (or an
-      eyeballed fraction near it) **silently drops them** — the recurring "figure has no x-axis
-      labels" / "axis title sliced in half" bug. Treat the detected bbox as the *inner* extent and
-      **grow the crop outward** (down for the x-axis title + tick rows, left for the y-axis title,
-      right/bottom for the legend) until every peripheral part is inside **with a small margin**.
-    - **🔴 Zoom EACH of the four edges after every crop — a margin, not flush.** Don't just glance
-      at the whole crop; inspect each edge close-up and confirm each element (axis title, outermost
-      tick label, legend entry, panel border) is **fully present AND has clearance from the edge**.
-      An element *flush to* the image edge reads as clipped once the figure sits on a coloured slide
-      (its baseline/descenders butt the boundary) — treat flush the same as cut and re-crop.
-    - **🔴 A legend you add ON the slide does NOT substitute for the figure's own axis labels.**
-      Adding a colour legend beside a figure is fine, but it must not *mask* an over-crop that shaved
-      the figure's own x-axis category labels off the bottom: the placed figure must be **self-
-      contained** (its own axes readable) first; a slide-legend is an optional aid on top, not a
-      replacement for the axis the crop dropped.
-  - **Figure trapped in a PDF (paper/report)? Crop it FROM the paper — don't ask the user
-    for an original** (you may *offer* to use one if they have it, but you can get a clean,
-    precise crop yourself). The primary tool is `scripts/extract_pdf.py`'s auto-detection,
-    which anchors on captions and snaps to the figure's real extent:
-    `python extract_pdf.py figures paper.pdf` lists every detected figure (with `cov=`/`bodyov=`
-    checks and a `⚠ CHECK` flag on suspect ones); `extract_pdf.py figure paper.pdf <idx> out.png`
-    renders one (auto-trimmed); `autofig paper.pdf figs/` dumps them all. **Always view a
-    rendered crop before using it**, and for a `⚠`-flagged one (dense multi-figure pages can
-    mis-localise) fall back to the manual loop: `page` rasterises a whole page to high-DPI PNG
-    (composites vector+text+raster exactly as printed), then `crop_helper.py grid`→`crop` to
-    cut precisely. (`crop` by point/fraction box and `images` for embedded bitmaps still exist.)
-    Then place the PNG *whole*, like any other source figure.
-  - **When you DO crop, do it by looking, never by guessing.** The failure mode is cropping
-    **blind** — inventing fraction coordinates, clipping a column or a legend, and not
-    noticing. `scripts/crop_helper.py` removes the guessing with a **see-it loop**: `grid
-    img _g.png` overlays a labelled ruler → *view it* and read the box off the labels →
-    `crop img out.png x0 y0 x1 y1 --frac` → **view the crop and confirm** nothing's clipped
-    (adjust and redo if so). One or two looked-at iterations beat a single blind guess.
-  - **Dense comparison / panel grid (N methods × M examples)?** First consider showing it
-    **whole** on its own slide (the integral default above) — that is often what the user
-    wants. Only if you and the user agree the full grid is unusable, keep the columns/rows
-    that make the point and **reassemble** them, preserving the header row and row-label
-    column: `crop_helper.py panel fig.png _idx.png --grid RxC --xpad <left-label>
-    --ypad <top-header>` overlays numbered cells (*view it*, tune `--xpad/--ypad` until the
-    lines sit on the cell gaps), then add `--keep-cols 0,1,3,9 --keep-rows 0,2,3` to emit a
-    compact figure. View the result to confirm the kept headers still line up — this is also
-    a fidelity check (you can read each cell's numbers and confirm they're faithful). When the
-    user provides the *original* source images/PDFs, prefer working from those.
-- **Animated results (GIF / looping animations) → insert the GIF itself with `deckkit.gif()`**,
-  never reduce it to a single frame. **No GIF provided but the content IS inherently motion (a process /
-  algorithm / optimisation, a reconstruction or simulation converging, a transformation, cine/4D, a
-  rotating 3D)? You MAY generate one — `deckkit.make_gif` from frames you compute in the asset step —
-  but SPARINGLY:** only when motion conveys what a static frame can't (the "When a GIF earns its place"
-  rubric in `animation.md`; the slide-design agent makes the call), a deck carries **zero-to-a-few**
-  purposeful GIFs (never one per slide — keep concepts/tables/equations/charts static), and a generated
-  GIF must animate a **real computable change, never fabricated motion**. It embeds the real animated GIF (every frame preserved;
-  PowerPoint and Keynote **loop it in slideshow**), places it **whole and undistorted** (`contain` —
-  a square cine clip is never stretched), sets alt-text, and **warns on a heavy file** (a big cine GIF
-  bloats the `.pptx` and stutters live) or a single-frame still. For time-resolved / 4D / cine /
-  training-run results — in **any deck** (a product/UI demo in a pitch, an interaction in teaching, a
-  data-viz loop, a simulation or time-resolved result in a research/status deck) — a frozen frame
-  throws away the point. Integrate it like a figure: often the slide's **hero** (assertion
-  title + a one-line *"what to watch"* caption), or beside its quant panel in a `columns(2)` split;
-  two GIFs for before/after. **The first frame matters:** the render, the static critic, a **PDF/print
-  export**, and edit view all show frame 0 (a GIF has no separate poster) — so verify it's
-  representative with `deckkit.gif_poster(path, "first.png", frame="first")` and, if it's a blank /
-  black / loading frame, get a GIF that *starts* on a meaningful frame; `frame="auto"` extracts a
-  representative still to hand the critic. Don't misrepresent the dynamics (no meaning-changing frame
-  drops/speed-ups). Tell the user at hand-off that it animates in **slideshow** (still in edit/print).
-- **Data but no figure yet → make the chart, don't dump numbers.** If the source gives
-  raw data (a CSV, a metrics table, logged numbers) but no plot, turn it into the chart
-  that makes the comparison obvious rather than typing a wall of figures — generate it
-  with matplotlib or another available figure-making workflow — then place the result
-  *whole*, with a legend + takeaway, like any other figure. A bare number table is the
-  weakest way to show a trend. **Pick the chart TYPE that fits the argument, not always a
-  bar** — `references/data-viz.md` has a roster + ready recipes. **For a deck in ANY non-Latin language
-  (CJK · Cyrillic · Greek · …), or when the user will edit the chart, use an EDITABLE native chart** —
-  `deckkit.native_chart` (line/column/bar + stacked/area composition kinds) / `deckkit.native_dual_axis` (two-scale A↑ vs B↓): a real
-  PowerPoint chart that renders non-Latin labels via PowerPoint's fonts (**no tofu**) and is
-  click-editable (pass `font=` the script's font). For the richer raster types
-  (`scripts/designed_charts.py`: donut+KPI, dumbbell, slope, bubble+trend, Pareto) pass your palette /
-  `dark=True` (and `font=<the script's font>` on a non-Latin deck). Either way: a **single highlight** on the one series
-  that matters + a `deckkit.takeaway_rail` "so-what". For 3-6 headline metrics use
-  `deckkit.scorecard` tiles; key a ranked list to a chart with `deckkit.leaderboard`.
-- **Concept needs a domain image → show the real thing, not an abstract icon.** When an
-  idea has a concrete visual — a real data sample, a signal/waveform, a chart of the
-  actual numbers, a map, a microscopy/medical-image patch, a sample UI, or a *transformed*
-  version of any of these — **generate it with tools** (numpy / scipy / matplotlib /
-  scikit-image, or the domain's own libraries) or fetch a **license-clear** example,
-  rather than drawing a box-and-dot cartoon. Compute the **real** artifact so it's
-  faithful: actually run the operation the slide describes on a real input — e.g. FFT an
-  image to show its true frequency content, filter or downsample a signal to show the real
-  artifact, plot the real distribution from the data — so what you show is what genuinely
-  occurs, not a plausible-looking stand-in. Keep generated assets in the deck folder and
-  reproducible from the build.
-  - **Make the plot actually look CORRECT (then view it).** A computed plot is only faithful if it
-    *renders* right: **(a) sample continuous curves finely** — a smooth function must look smooth, so
-    use a dense `np.linspace` (a few hundred points / ≥~10× the highest frequency), never the integer
-    index steps; plotting a high-frequency sine at integer `x` *aliases* it into jagged zigzags (the
-    classic "sin curve looks weird" bug). **(b) The legend must NOT overlap the data — treat this as a
-    rule, not a nicety.** `loc='best'` and any in-axes corner routinely land the legend ON a curve on a
-    full/busy plot. The reliable fix is to put the legend **OUTSIDE the axes**: to the right
-    (`loc='center left', bbox_to_anchor=(1.02, 0.5)`) or **above** (`loc='lower center',
-    bbox_to_anchor=(0.5, 1.0), ncol=…`); use an in-axes corner ONLY when that corner is provably empty.
-    For a **dual-axis / twin-axis** plot don't draw two separate legends (they collide with each other and
-    the twin ticks) — collect both handle sets and draw **one combined legend above** (`h1+h2`,
-    `loc='lower center', bbox_to_anchor=(0.5,1.0), ncol=2`). It can't *always* be perfect on a dense plot
-    — when no empty region exists, going outside is the answer, never overlapping the data. *(In a tiny plot cell where an outside legend would shrink the axes too far, drop the legend and name the series in the native slide caption, or keep it inside a provably-empty corner.)* **(c) Always
-    view the rendered PNG** and fix anything off (aliasing, clipped labels, an **occluding legend**, a
-    squished aspect) — a wrong-looking plot misleads even when the math is right.
+
+  - **Cropping, PDF extraction (`extract_pdf.py`), the see-it `crop_helper.py` loop, and panel-grid reassembly → `references/asset-production.md` §Figures. Read it IN FULL before you crop, trim, or extract any figure**, including from a PDF — it holds the three 🔴 crop rules (crop the whole SEMANTIC object; the auto-detected bbox is only the plot panel; zoom each of the four edges afterwards), the rule that a legend you add on the slide does NOT substitute for the figure's own axis labels, and the never-crop-blind loop.
+
+- **Animated results (embedding + sparingly generating GIFs), turning raw data into the RIGHT chart type (editable native vs raster; non-Latin = native, no tofu), and computing a REAL domain visual — plus the plot-must-render-correctly rules (dense sampling, legend never over the data, always view the PNG) → `references/asset-production.md` §Charts, GIFs, and computed domain visuals. Read it before you produce any chart, GIF, or computed image.**
+
 - **Generated visual plates (atmosphere / conceptual) — by taste & purpose, opt-in; full mechanics in
   `references/image-generation.md`.** Generate where it genuinely helps (no quota), styled to the deck;
   **never bake words/numbers/labels/charts/logos into a plate** (those stay editable objects / real
@@ -1423,48 +605,9 @@ A few rules that matter (see `references/design-principles.md`):
   BILLING GATE), keep assets in
   `~/Downloads/<deck>/assets/generated/`, place with `deckkit.picture(fit="contain"|"cover")`, and
   render-check (calm space behind text, no pseudo-text/fake charts, subject whole, real things right).
-- **Brand logo on every page when the deck is ABOUT one company / institution / product.** A pitch,
-  product/launch, company or stakeholder readout, or a single institution's report reads as more
-  credible when that entity's **real logo is present on every slide** in a **consistent position** —
-  the way real corporate decks keep a mark in a fixed corner (top-right is the usual default; move it
-  to whichever corner the title/figures/motifs leave free, but keep it the same everywhere so it never
-  jumps). Use `deckkit.logo(slide, path, corner=..., h=...)` per slide on clean/generated decks; on a
-  **provided/registered template** the branding usually already lives on the layouts (don't double it).
-  Source the mark in order, stopping at the first you can get: the **real** logo (an image asset the
-  content-planner found or the user gave) → else a clean designed typographic **WORDMARK** in the deck's
-  own type — build it with `deckkit.wordmark(text, out_path, …)` then place it with `logo(slide, out_path,
-  …)` (**the sanctioned default** when no real logo was found, per `references/image-generation.md`
-  "Logo / brand mark") → and if even the wordmark doesn't fit the design, **ask the user for the
-  asset — never ship placeholder text on a slide** ("logo here" IS the meta-annotation PRE-FLIGHT 8
-  and the critic treat as a blocker). Never a
-  faked/recolored replica of a real entity's official mark. This does **not** apply to multi-organisation decks (surveys, landscapes) or
-  neutral academic talks — there, name entities inline. Full rule + the no-apply cases in
-  `references/image-generation.md` ("Real brand / product assets come first").
-- **SVG icons — ONE coherent open-licensed family, recolored, used with restraint (full rules — the
-  jobs icons do, the rule-of-thumb, + five quality marks — in `references/icons.md`).** An icon must
-  **reduce cognitive load, not decorate**: use one only where it does a real job (label a section /
-  category, mark a repeated entity, guide reading order, anchor a sparse slide, flag status) and it
-  passes the **rule-of-thumb** — answers *what is this / what does it do / why pay attention* before the
-  words; else cut it. **Don't hand-draw a set** (inconsistent = amateur) and don't sprinkle them as decoration. **Fetch from
-  one family** (Tabler/Lucide/Phosphor MIT-ISC; `simple:` CC0 for brand/tech logos) via
-  `scripts/icons.py` `icon_png(spec, out, color=ACCENT)` — it fetches, **recolors to the deck palette**,
-  and rasterizes to a transparent PNG (python-pptx can't embed SVG reliably; rasterizing renders the
-  same everywhere). **Don't default to a flat monochrome drop — vary the *treatment* to fit the deck**
-  (full gallery in `icons.md` "Treatments"): render it **duotone** (`phosphor-duotone:`) or
-  **gradient-filled** (`icon_png(..., gradient=(c0,c1))`), and place it in a styled container —
-  `deckkit.icon_tile()` (circle/squircle/square × solid/gradient/glass tile, optional sheen),
-  `icon_badge()` (ring badge), `icon_ghost()` (oversized faint watermark), `icon()` (bare or tinted
-  tile), or `icon_card()` (upper-left feature card). A duotone glyph on a gradient/glass disc, colour-
-  coded per category, is how polished decks look "designed" rather than clip-arty — but keep **one
-  treatment across siblings** (vary only the hue to colour-code). The
-  five quality marks (`icons.md`): **semantic fit** (the metaphor matches what it labels), **colour-coded
-  per category** (in a multi-category layout each category its own hue from `palette(n)`, carried by the
-  icon + label + tint — not one global accent), **contrast** (bright on dark / saturated on light, a
-  `disc=` tile if needed), **consistent** family/size/position across siblings (size **≤ the title**,
-  ≈0.32–0.5 in), and **style matching the deck** (outline vs filled). **Always pair an icon with a text
-  label.** Cache in `~/Downloads/<deck>/assets/icons/`. **Icons fit any topic** — the libraries are
-  diverse enough to match any register, so **match the style/weight and use fewer**, rather than ship a
-  mismatched zoo or one-per-bullet clutter (the flaw is wrong-style/decoration, not icons by subject).
+
+- **Brand logo / wordmark on every page (single-entity decks: real mark → `deckkit.wordmark` → ask; never a faked replica) and the SVG icon family (ONE open-licensed family, palette-recolored, the treatments, the rule-of-thumb + five quality marks) → `references/asset-production.md` §Brand logo and the SVG icon family. Read it before you place a logo or the first icon.** Craft detail also lives in the untouched `references/icons.md` / `references/image-generation.md` (routing table rows above).
+
 - **Speaker notes — for a PRESENTED deck, put the spoken script in the notes, not on the slide.**
   For any deck the user will *present* (especially a conference talk, defense, or lecture), move the
   full sentences off the slide into speaker notes with `deckkit.speaker_notes(slide, "…")`.
@@ -1570,62 +713,9 @@ A few rules that matter (see `references/design-principles.md`):
   **alt-text** on every informative figure — `deckkit.alt_text(shape, "one-line
   description")` after `add_picture()` — for screen readers; it doesn't render (invisible
   to the critic) so make it a build habit. More in `references/design-principles.md`.
-- **Equations — 🔴 default to EDITABLE native math (`equation_native()`); raster (`equation_png()`)
-  is the fallback for 2-D layout only.** A formula the audience reads should default to
-  **`deckkit.equation_native(slide, x, y, w, h, latex)`** — it renders a LaTeX-subset as **real,
-  click-editable TEXT runs** (italic variables · upright operators · true sub/superscripts · Greek &
-  math glyphs) in a math font, so it stays **editable** AND renders the same in PowerPoint / Keynote /
-  LibreOffice / PDF — *as long as the math font is present* (see below). This is the editability users
-  expect — a raster formula is a *frozen image they cannot fix*, so don't ship one where native math
-  works. Reach for **`equation_png()`** (rasterised LaTeX) for math `equation_native` can't render: it
-  supports a **common LaTeX subset (linear math)** and **raises `NotImplementedError`, naming the
-  construct, on anything else** — both **2-D layout** (`\frac`, matrices/`\begin`, `\sqrt`, `\overline`,
-  `\binom`, over/under-braces) **and any unmapped command** (`\mathscr`, `\overrightarrow`, `\stackrel`,
-  `\models`, …). It does NOT silently mangle — but a *display-style* stacked sum/integral with bounds
-  (`\sum_{i=1}^{N}`) still renders *inline* (bounds beside, not stacked), so use `equation_png` when the
-  stacked 2-D look matters. **Always view each native equation in the render** and switch that one
-  formula to `equation_png` if a glyph is missing. *(A true PowerPoint OMML equation OBJECT is editable
-  in PowerPoint but **invisible in the LibreOffice render & PDF export** — so it is NOT the default;
-  native runs are verifiable in the loop.)* **Never** paste Unicode super/subscripts (ᴴ ᵀ ᵣ) — tofu.
-  **Math font (a real dependency):** `equation_native` needs a math font for ℒ Σ ‖ … (`deckkit.EQ_MATHFONT`
-  = `'STIX Two Math'`; set `'Cambria Math'` for Office portability). **STIX ships on neither stock macOS
-  nor Windows, and Cambria Math needs MS Office** — so on a machine with NEITHER, the math glyphs **tofu**
-  in the render/PDF: install the math font, or **fall back to `equation_png` (font-independent)** for that
-  deck. **Flag this dependency at hand-off.** For `equation_png` pick its `mathfont` (`'cm'` formal ·
-  `'stixsans'` crisp).
-  - **Size the formula to the CONTENT text, not to fill the slide.** A formula's glyph
-    height should read like the deck's **body/content** size — *never* blown up to span
-    the slide width (which oversizes every glyph and breaks the title→content hierarchy),
-    never shrunk illegible. On the 10×5.625 canvas, set `equation_png`'s placed **height**
-    so a single-line equation lands ≈ **0.22–0.32 in** (≈ body text); scale *height* (not
-    width-to-fit) and keep the *same* target height across every equation in the deck so
-    they're visually consistent. The formula may be larger **only when it IS the slide's
-    hero** (a method slide whose one point is the equation) — otherwise it sits at content
-    size. Always confirm in the render that the formula glyphs aren't bigger than the slide
-    title's letters.
-  - **Even a single variable or symbol uses math format — and stays editable.** Any
-    variable/symbol that appears in running text or a bullet (e.g. *x*, *λ*, *σ*, `Aᵀ`,
-    *R*(*x*)) must be set in **proper math style** — italic variable + real sub/superscript
-    — not typed as plain upright body letters and never as Unicode super/subscripts. For one
-    or two inline symbols use **`eq_par()`/native runs** so the symbol stays **click-editable**
-    and inherits the surrounding body size; reach for **`equation_native()`** for a full expression
-    (still editable), and `equation_png` only for 2-D math. Keep the LaTeX source in the build script
-    either way — it's the reproducible source of truth (for a raster it's the *only* way to "edit"; for
-    native math it's what you re-parse).
-- **Formulas → TYPESET math (editable `equation_native`; `equation_png` for 2-D), never a cropped
-  image.** Unlike a figure or table (cropped *whole* from the PDF with `extract_pdf.py`), a needed
-  equation is **re-typeset**: write it as LaTeX and render with **`equation_native()`** (editable native
-  runs) — or `equation_png()` for 2-D math. A cropped formula bitmap is low-res, carries the source's
-  font/background, can't be restyled to the deck, and clips — a typeset one is crisp at any zoom and
-  on-brand.
-  - **From a paper → transcribe** the formula precisely (don't alter symbols/indices).
-  - **From code/other material → derive** the formula the code implements (a loss, update rule,
-    metric, transform, a pricing/unit-economics calc) when the content-planner judges it shows the
-    idea more directly than prose — useful for **any code-sourced technical deck** (lab meeting,
-    defense, conference method talk, teaching, an eng status readout). It must be a *correct*
-    expression of what the code computes (verify against the code), not invented or wrongly-simplified.
-  - Either way the **fidelity rule applies** — verify the rendered math against the source.
-  `extract_pdf.py` is for figures/tables; formulas go through `equation_native` (editable) / `equation_png` (2-D).
+
+- **Equations & inline math symbols → `references/asset-production.md` §Equations and inline math. Read it IN FULL the moment the deck needs any formula, variable, or math glyph** — it holds the 🔴 editable-`equation_native`-by-default rule and the `equation_png` 2-D carve, the math-font dependency to flag at hand-off (`references/deck-setup.md` §Fonts owns the font itself), formula sizing, the never-Unicode-super/subscript rule, and transcribe-from-paper / derive-from-code fidelity.
+
 - **One language.** Keep the whole deck in the chosen target language — don't drift
   (no stray English on a Chinese deck, no English headings over translated bullets).
   Technical terms / proper nouns / acronyms / units / code may stay original; only
@@ -1753,19 +843,7 @@ loop starts mostly geometry-clean. `lint_deck.py` below then re-checks that geom
 as a backstop and adds the render/parse-only faults; the rest is what needs real pixels (crop,
 contrast, balance, a tofu glyph, text on a busy image), which only the render shows.
 
-**Iterating on a deck you already rendered? Add `--fast`.** `render_deck … --fast` fingerprints
-every slide (its XML + rels + the bytes of the media it references, mixed with a deck-global digest
-covering the theme/master/layouts/canvas size) against the previous run, then re-renders **only the
-slides that changed** — it subsets the pptx to those slides, converts that, and overwrites just their
-PNGs. Measured on an 18-slide deck: a full render is ~12s, a one-slide change is **~4.7s**, and a run
-where nothing changed is **0.07s**. Output is byte-identical to a full render (verified), so the
-critic and the render-time lint see exactly what they would have seen anyway. It falls back to a full
-render — and says why — whenever the mapping could be wrong: slide count changed, every slide changed,
-no cache, or the deck contains **auto slide-number fields** or **hidden slides** (LibreOffice drops
-hidden slides from the PDF, so page N stops being slide N — a full render now warns loudly and
-refuses to cache when the page count and slide count disagree). **Use it for the actor-critic fix rounds
-and for post-delivery tweaks** ("change slide 7 to a chart"); use a plain full render for the first
-render of a deck and whenever you pass `--deliverables`.
+Re-rendering a deck you already rendered (fix rounds, post-delivery tweaks)? Read `references/render-and-verify.md` → "Re-rendering fast" before choosing `--fast` over a full render — it also lists the cases where `--fast` must not be trusted.
 
 First **render and look** (`bash scripts/render_deck.sh <deck.pptx>` → one PNG per
 slide). python-pptx writes blind — overflow, low contrast, a callout on the footer,
@@ -1779,10 +857,8 @@ first: it maps every error surface (build exceptions · `lint_layout` codes · r
 you surface a finding to the user (in a checkpoint, FYI, or hand-off), say it in that page's
 plain language — *what broke, why, and the fix applied or proposed* — never as a raw lint code
 the user would need documentation to decode.
-**Codex sandbox note:** LibreOffice may abort or produce no PDF when launched inside a managed
-sandbox even though `check_env.py` passes; in that case rerun only the render command with elevated /
-unsandboxed execution, then continue the normal render -> lint -> critic loop. This is an environment
-permission issue, not evidence that the deck is malformed.
+
+**Render aborted or produced nothing even though `check_env` passed?** Read `references/render-and-verify.md` → "Codex sandbox aborts" — it is an environment permission issue, not a malformed deck, and the fix is a re-run of only the render command with unsandboxed execution.
 
 **Then run the layout lint** — `python scripts/lint_deck.py <deck.pptx>` (add `--json out.json` for a structured copy of findings + the stats block — hand THAT to dispatched critics instead of re-parsing console text; the lint auto-reads the `./render` PNGs beside the deck to add the colour/value-pacing row + the `FLAT RHYTHM` warn, or pass `--renders <dir>` — silently skipped when no renders exist, so it never changes a render-less run). `render_deck.sh` also emits `render/thumb_first.png` + `thumb_last.png` (~240px) for the critic's poster test. The build-time
 `dk.lint_layout` (Step 4) already cleared the pure-geometry faults *before* this render; **lint_deck.py
@@ -1803,202 +879,17 @@ include **TEXT ON IMAGE** — a render-pixel contrast estimate (<1.5:1) for text
 photo/gradient with no opaque backing, exactly the class solid-fill contrast checks can't see;
 its 1.5–3.0 band is the TEXT-ON-IMAGE CONTRAST `[warn]`.
 
-**It then prints a DECK STATS block — the measured form of the design targets. READ it, don't skim
-past it** (pass `--selfread` for a read-alone deck — it raises the TEXT WALL budget (~40→~90 words)
-and drops the presented-only SMALL TYPE / NO BUILDS warns; the other warns are mode-independent —
-`--surface` for a poster/single-canvas artifact, `--textheavy` when the user explicitly chose
-text-heavy density for a presented deck, or `--static` on a presented deck when the user opted OUT of
-appear-builds (silences NO BUILDS — a static presented deck was their choice, not an omission), so the
-budgets fit the delivery mode). Per slide it measures:
-reading **load** (latin words + CJK chars/2) vs the ~40-word presented budget · **text% / ink%
-coverage** vs the ~50–70% whitespace target · **max font pt** · shape/picture/chart counts ·
-**build** presence · **sim↑** (layout-skeleton similarity vs the previous slide); deck-wide it
-prints the **font histogram + type-drama ratio** and **builds/transitions n/N**. Its `[stats]`
-warnings name the rule they measure — **`TEXT WALL`** (word budget blown → cut copy to notes or
-split), **`CROWDED`** (occupancy past ~70% — role bands: cover 25–35 · exec 45–60 · technical 55–70 →
-subtract or split, don't shrink), **`LAYOUT SAMENESS`**
-(3 consecutive slides share one skeleton → the §1.2 skeleton-rotation rule failed), **`FLAT TYPE`**
-(no typographic hero → the type-scale drama rule failed), **`SMALL TYPE`** (body-median under the
-canvas-relative ≈18pt-equivalent floor → fewer words, bigger type), **`SIZE SPRAWL`** (>3–4 font sizes
-on one slide → use the declared type-scale tokens), **`NO BUILDS`** (presented deck with no
-appear-builds → the motion manifest failed *unless the user opted out of builds* — then pass
-`--static`), **`SKELETON VARIETY`** (<4 distinct layout skeletons
-across an 8+-slide deck → the canvas architecture barely rotates), **`TIMID COVER`** (slide 1's
-largest run under 2× body → the cover lacks poster scale), **`FLAT RHYTHM`** (when render PNGs are
-present via `--renders`/`./render`: no light/dark or colour-temperature event across the deck → the
-rhythm map's Background-mode column is single-note), and on CJK decks **`CJK TIGHT LEADING`** (multi-line
-CJK at ≤ single spacing → use the script-aware default) and **`CJK-LATIN SPACING`** (both 盘古之白
-conventions mixed → pick one deck-wide). Treat each `[stats]` warning as the NAMED design rule
-having failed measurably: fix it or write one clause of why this deck is the exception, and **paste
-the stats block into the critic's input** so the judges score numbers, not impressions. It's a safety
-net for the no-overlap / fits-its-box / density / rhythm rules, **not** a
-replacement for looking (it can't judge crop, balance, legibility, or fidelity).
+`lint_deck.py` then prints a **DECK STATS** block — read it, don't skim past it. `references/render-and-verify.md` → "The DECK STATS block" has the mode flags and what every `[stats]` warning names; treat each warning as that named design rule having failed measurably (fix it or write the one-clause exception), and **paste the stats block into the critic's input** — the review-validation gate below rejects any review without `stats_block_seen: true`.
 
 **Render self-check — scan EVERY slide for these before handing to the critic** (they're
 invisible in the build code and only appear in the pixels; catching them yourself saves a
 critic round — full rationale in `references/design-principles.md`):
-- **Overflow / contrast / footer / glyphs** — no clipped or spilling text, ≥4.5:1 contrast,
-  nothing jammed on the footer, no tofu/missing glyphs, and **no orphaned punctuation** (a lone 。/，
-  or single glyph stranded on its own row — set `deckkit.EAFONT` so PowerPoint's kinsoku keeps it
-  attached, and widen/reword if needed).
-- **No build/meta annotation visible** — scan for any text that describes *how the slide was made*
-  rather than its content: "（可点击编辑的原生图表）"/"(editable native chart)", "(AI-generated)", "(placeholder)",
-  "(draft/草稿)", "generated by…", TODO/FIXME. It must NOT be on a slide — delete it (it belongs in code
-  comments or the hand-off). A leaked meta-label ships broken.
-- **Stacked groups read as separate** — for stacked labelled groups (stat label+value+caption, stacked
-  cards), the gap *between* groups is clearly larger than the gaps *within* one (proximity); no caption
-  crowding the next group's label.
-- **Balance & suitable space** — every element has a comfortable margin on **all four sides**:
-  nothing crowds an edge, nothing strands a big dead gap (the right *degree* — not too tight,
-  not too loose). Split panels + flanking margins equal; no large dead-white band beside a
-  narrow element; a **figure beside text is anchored to its margin (not centred-and-far-
-  stranded)** with the text one gutter away; repeated blocks/connectors evenly spaced; grid-
-  aligned, nothing lopsided. **A column/stack inside a card fills the space below its header** — a
-  ladder, a list, stacked chips should **distribute evenly** to fill the available height; don't
-  bottom-/top-anchor and strand a visible gap between the header and the first item (compute the gap
-  from the region — `(region_h − n·item_h)/(n−1)` — or use `vstack`/`rows`, never a hand-picked offset).
-- **Block padding & no inflated filler** — text inside a chip/card/callout hugs the box with a
-  **modest, balanced** top/bottom margin (middle-anchored; not floating in a tall box, not cramped).
-  A short card must not leave a white strip at the bottom. **No oversized block faking a full slide:**
-  a single short line of small font swimming in a big box is a placeholder tell — either *add real
-  content* to fill it or *shrink the box to hug the text* and use the freed space; never inflate a
-  container to cover a gap.
-- **Font hierarchy (content < title)** — body/content/callout/label text is **visibly smaller** than
-  the slide title (clear step between levels, ~1.4–1.8×); no body, formula, or chip label set as large
-  as (or larger than) the title. The only thing that may exceed body size is a deliberate **hero**
-  element (the one big numeral or the slide-defining equation) — and even it stays below the title.
-- **Hero numerals read clean** — an **integral number stays on ONE line** (no "2026" broken into
-  "202"/"6" — use `wrap=False` or a wide-enough box); digits are **uniform-height & baseline-aligned**
-  (a lining-figure face — Helvetica Neue / Arial / Cambria — NOT an old-style-figure face like Georgia,
-  whose digits sit at different heights); and a numeral run **aligns** with adjacent CJK/Latin on its
-  line (`design-principles.md` "Big numbers", `font-guidance.md`).
-- **Chart axis spans every bar; a cumulative doesn't double-count** — a bar/waterfall/dot chart's
-  baseline/value-axis runs under **all** its bars (not stopping short of the last one), and a
-  cumulative/waterfall shows increments *or* their total, never both as peer bars (a "+8 / +8.3 /
-  +16.3" trio is a double-count); keep different quantity kinds in separate stacks. Prefer
-  `designed_charts.waterfall` over hand-rolled floating boxes (`design-principles.md` "Designed plots").
-- **Geometry matches the number** — read one bar/band/cell's *size or colour* against its *printed
-  value*: a magnitude column/bar starts at **0** (a cropped axis makes 210/220/230 read as a ~3×
-  cliff); a proportional shape (funnel band, bubble) is sized to `value/max`, not clamped up by a
-  min-size floor that contradicts its label; a diverging/signed scale reads its **sign** (a true 0
-  is neutral, not blue). deckkit defaults handle all three — flag any hand-rolled/matplotlib chart
-  that doesn't (`data-viz.md` "Chart anti-patterns", `design-principles.md` "Designed plots").
-- **Formula sized to content** — every equation's glyphs read at ≈ **body size** (not blown up to fill
-  the slide width, not illegibly shrunk), and **consistent across slides** (same placed height); any
-  inline variable/symbol is in **math format** (italic, real sub/superscript), never plain body letters
-  or Unicode super/subscripts.
-- **No rule/divider crossing text** — every hairline, divider and accent bar passes BETWEEN blocks,
-  never through one. The build-time `RULE_THROUGH_TEXT` gate catches this deterministically now; if you
-  see one in a render it means the rule was drawn at a hand-picked `y` computed from how long the text
-  happened to be at the time. Fix the *derivation*, not the coordinate.
-- **Footer collision / overlap** — no block crosses into the footer band and no two stacked
-  blocks overlap. If one does, the cause is almost always a hand-picked `y` for an auto-growing
-  callout/stack — fix it by switching to `bottom_callout()` / `vstack()` / `content_band()`, not
-  a one-off coordinate nudge (that just recurs when the text changes). **Look specifically at the
-  seam where content meets a bottom callout/bar:** a *wide* bar grazing the cards above it by even
-  a sliver clips their rounded corners — there must be a visible gap, so size content to the
-  callout's returned top minus a `GUTTER` (reserve its space before sizing content, don't add it last).
-- **Adjacent / stacked blocks — a VISIBLE gap, not a sliver** — between any two same-axis blocks
-  (stacked panels, side-by-side cards, pipeline nodes) the gap must read clearly: **≥ ~0.13in
-  (~⅓ `GUTTER`)**. A ~0.02in seam (three panels at pitch 1.04 with height 1.02) reads as touching —
-  a gap far smaller than the slide's own margins looks cramped even though nothing overlaps. Cause:
-  a hand-picked pitch that nearly equals the block height. Fix: **derive the pitch from the region** —
-  `rows(n)` / `vstack(..., bottom=…)` — so the gap is set by construction, never `block_h + 0.02`.
-  (The build-time lint's `SLIVER_GAP` warn catches this class deterministically — an unaddressed
-  one at render time means the build-time report was skipped.)
-- **Bar labels sit ON the bar** — for any track+fill row (percentile / share / progress / "want vs
-  have"), the value/percent label is **vertically centered on the bar's centerline**, not floating
-  above or below it, and doesn't overlap the track. Use `meter_bar()` (which centers the value by
-  construction) rather than hand-placing a number at a guessed `y`.
-- **Marker captions sit UNDER their marker** — on a timeline / tick row / numbered-step row, each
-  caption (date · title · sub) is **horizontally co-centered with its dot/marker**, *including the
-  first and last*. The classic bug: an end marker sits near the slide edge and its centered caption
-  gets clamped inward, so the caption drifts off to the side of its dot. Use `timeline()` or
-  `spaced_centers()` (which **inset the end markers** so every caption stays co-centered) — never
-  hand-roll a dots+captions row with a per-caption edge clamp.
-- **Diagrams** — arrows point the way the flow moves (down/up between stacked boxes); adjacent
-  blocks have a visible gap (never touching); a lone glyph/icon optically centred (ASCII, not
-  full-width, for a centred mark on a CJK deck). **A connector / loop label (e.g. a feedback-loop's
-  「修订」/「retry」) sits in the OPEN GAP next to the line — offset above a horizontal segment, or beside a
-  vertical one, with clearance — NOT inside an opaque chip that STANDS OUT over the line.** A chip that
-  contrasts with the slide reads as a band-aid; route the label into clear space so the line and text
-  simply don't collide. (On a PLAIN background a label that knocks the line OUT in the background colour —
-  the line breaking cleanly for the text — is fine; the band-aid is a *visible* chip, e.g. a white block on
-  a coloured/textured slide. Add a subtle *translucent* backing only if the label must cross a busy area.
-  See `references/design-principles.md` → "Connector labels".)
-- **Block colours** — in a sequence of chips/cards/stages, every block is a **distinct,
-  deliberately-contrasted hue**: no two adjacent blocks share a colour, and **no neutral gray
-  sits in the sequence as if it were a category** (use `palette()` — it warns on both). A vivid
-  block beside a gray one reads as half-finished.
-- **Mark-on-fill contrast — an icon glyph on its tile, a symbol/number on a coloured chip** — the
-  mark must stand out from the ground it sits ON (~3:1), not just from the slide. Zoom each icon tile:
-  a **same-hue pair** (teal glyph on aqua tile) or a **dark-on-dark pair** (coloured glyph on
-  near-black tile) is invisible — the exact bug a mid-tone tile hides. `icon_tile` auto-guards this
-  (white/near-white glyph on a deep tile, or deep glyph on a pale tile); a hand-placed icon-on-`box`
-  does not, so check it here.
-- **Titles** — a subtitle/definition line has a clear gap below the title's accent rule; the
-  kicker/eyebrow adds a section label, it doesn't echo a word the title already leads with. **The
-  title CHROME itself is not one fixed template repeated on every slide** — an identical
-  eyebrow + rule-under-the-title on all ~12 content slides is a template tell (creativity is a design
-  metric, not just correctness). **`lint_deck.py` now backstops the most common case deterministically —
-  `TITLE-RULE MONOCULTURE` fires when the same thin rule sits under the title at the same height on
-  >60% of content slides** (a `head()`-style helper that stamps one treatment deck-wide is exactly how
-  this regresses); the other treatments (tab/rail/ordinal) it can't measure stay on this self-check.
-  Rotate **2–3 title treatments** across the deck (e.g. a classic
-  accent-rule · an eyebrow in a filled tab/pill · a left vertical accent bar · a section ordinal ·
-  a motif mark) so no two adjacent slides share the exact chrome and no single treatment dominates —
-  the eyebrow-ornament analogue of the skeleton-rotation floor (`references/design-intelligence-addendum.md`).
-  This does **not** fight the Repetition principle: the visual SYSTEM stays constant (same palette,
-  type pairing, signature motif on every slide) — you rotate the *chrome treatment*, not the identity.
-  That IS "repeat the system, vary the protagonist" (`references/design-principles.md` C.R.A.P.), not a
-  license to make each title look unrelated.
-- **Images** — the key **subject is whole, not cropped** (`contain` vs `cover`); a generated
-  image of real things is **factually right** (relative size/proportion, count, colour); any
-  **labels sit under the feature** they name. A **sourced photo is aesthetically usable**, not just
-  subject-correct: reject an ugly / under-construction (cranes, scaffolding) / blurry / badly-lit /
-  cluttered / unrepresentative shot — re-source, or generate a **declared-stylized illustration**
-  instead (a beautiful accurate illustration beats an ugly real photo; `references/image-generation.md`
-  aesthetic gate + the `searched, found but low-quality → generated, flagged illustrative` rung).
-- **Text over an image (hero / photo / plate)** — read the title against the pixels behind it: **(a)**
-  no image **line / edge / motif / frame-ornament crosses the glyphs** (a scrim only *dims* a bright
-  Deco line — it stays visible; when the image carries linework where the title lands, cover it with a
-  **near-opaque panel** α ≥ 0.88, a lower-third band or corner card filled to the canvas edge, never
-  bleeding off-canvas); **(b)** every run — including a gold/tint **eyebrow** — clears ≥4.5:1 against
-  what's actually behind it; **(c)** an **unmistakable gap** separates the big title from its
-  subtitle/rule (a subtitle hugging the title's baseline reads as an error). Fix by strengthening the
-  backing, moving the text to an empty region, or re-spacing — treat a title fighting the image as a
-  real defect, like an overflow.
-- **PDF figures cropped precisely** — for every figure pulled from a paper, zoom **each of the four
-  edges** close-up (not a glance at the whole) and confirm: (a) none of the figure's own parts is
-  clipped **or flush** (flush = cut); (b) no page text bled in (its caption, a neighbour's caption
-  fragment, a running head, a page number, a stray body-text line); (c) the figure is
-  **self-contained — its own x/y axis labels are present**, not silently replaced by a legend you
-  added on the slide. The full element list + the plot-panel-bbox pitfall (the auto-detector's box
-  excludes the axis titles/ticks/legend, so an eyeballed crop near it drops them) are under **“Never
-  clip the figure's OWN parts”** in Step 4. A clipped, flush, or axis-label-missing crop is a real flaw, not a nitpick.
-- **Motion & images by taste** — what's there earns its place (emphasises/engages/guides),
-  nothing thoughtless; what's plain is fine.
-**On native Windows (PowerShell / cmd) there is no bash — call the Python entry points
-directly: `python scripts\render_deck.py <deck.pptx>` and `python scripts\check_env.py`.**
-The `.sh` files are just shims that forward to those `.py` scripts, so macOS / Linux /
-Git Bash / WSL keep working unchanged; everything else in the toolchain is already
-cross-platform Python.
 
-**If a render fails *after* `check_env.sh` passes** (a build/LibreOffice error mid-loop),
-isolate it rather than thrash: the **build script is the source of truth and re-runnable**,
-so comment out the suspect slide (or the shape you last added), rebuild + re-render to
-confirm the rest is fine, then fix that one slide and restore it. A frequent culprit is a
-bad asset path (a figure/GIF/equation PNG that doesn't exist) or a malformed `equation_png`
-string — the Python traceback names it. Don't ship a partially-rendered deck silently; if
-one slide can't render, tell the user which and why. (Symptom → cause → fix tables:
-`references/troubleshooting-faq.md` §5 for render failures, §3 for build tracebacks.)
+- **The scan list itself is `references/render-and-verify.md` → "Render self-check". Open it and walk every slide against it after each render, before dispatching any critic** — ~20 named defect classes (overflow · meta-annotation leak · proximity · balance · font hierarchy · hero numerals · chart geometry · formulas · rules · gaps · bar and marker labels · diagrams · block colour · mark-on-fill · titles · images · text-over-image · PDF crops) that cannot be run from memory.
 
-**If you used animation/builds:** the render (and the critic) see only the **final
-built state** — they can't play the sequence (the anim.py timing is verified to
-round-trip through real PowerPoint as native builds; LibreOffice just can't *play* it).
-So verify the fully-built PNG reads correctly on its own (run the loop as normal), and
-in step 6 **describe the click order** to the user. Builds are a layer on a correct
-static slide, never a fix for a cluttered one.
+**On native Windows (no bash), or when one slide is breaking the render:** read `references/render-and-verify.md` → "Native Windows entry points, and isolating one bad slide" — the `python scripts\render_deck.py` / `check_env.py` entry points, and how to bisect to the one bad slide instead of thrashing.
+
+Deck has appear-builds? Read `references/render-and-verify.md` → "If the deck uses animation/builds" before judging the render — the PNGs and the critic only ever see the final built state.
 
 Then run the **actor-critic loop** — this is the quality engine, and the critic is a
 *demanding* judge (see `agents/critic.md`), not a rubber stamp:
@@ -2021,114 +912,16 @@ Then run the **actor-critic loop** — this is the quality engine, and the criti
    never acted on. Arbiter outputs validate the same way (`validate_review.py arbiter`); an
    arbiter's `escalated_unreviewed` entries are handed to the next round's fresh critic as
    candidate findings (or, at the round cap, surfaced to the user with the other open questions).
-   - **The CONTRACT CARD — assemble it at dispatch, from the approved plans (declarations only,
-     never rationale).** A compact artifact the coordinator builds for every pipeline-built deck:
-     the **deck memory sentence + emotional-curve line** (peak marked), the **per-slide
-     takeaway / role / question / beat table**, the **claim ledger**, the **per-figure
-     carrying-element rows**, **on a long-source deck the `source size:` line + the approved
-     Source-coverage map** (the per-section disposition rows + the verbatim-vs-skimmed line — the
-     critics judge completeness against its built-around/summarised set, NOT the whole book, and
-     read a `cut` row as a conscious cut), **on a video-sourced deck the transcript status**
-     (supplied-transcript locator, or the "video read visual-only — spoken content is a GAP" line),
-     and the Design plan's **declared contracts** — the skeleton rhythm
-     map, the WOW slide(s), the money slide (the slide the deck exists for), **the `boldness:` dial +
-     the `signature move:` line INCLUDING its `carried_by:` slides** (so the distinctiveness lens can
-     judge whether the declared risk actually landed in the pixels or got sanded back to safe — and,
-     on the named carry slides specifically, whether the idea does structural work there or was
-     merely stamped), **the branch's gate line** (`direction gate:` / `style gate:`, so a look that
-     was never chosen from alternatives is visible as such) **with the picked composition tokens**
-     (`cover <token> · home skeleton <token>` — the design lens checks the BUILT cover against the
-     archetype the user picked, and the rhythm map's plurality against the picked skeleton), the semantic-colour
-     ledger, the type tokens, the **`interior register:` cue** (the quiet register signature that
-     repeats on interior slides, or `none (flat by register — <reason>)` — the critic's
-     `register_interiors` check reads it), the motion manifest, the **chosen preset name + its `guard` string
-     verbatim** (or `custom look — no preset guards`) (on the generated-template branch, plus the four identity-propagation contract lines — palette · type register · component geometry · surface), the **`signature proof:` token**
-     (`slide N → <png>` or `skipped: <carve>` — so the critic compares the SHIPPED signature slide
-     against the frame that was approved before the rest of the deck existed, and a silent skip is
-     visible), the **`logo plan:` line with its evidence
-     token**, the **checkpoint motif line** (device + meaning + legibility mode), the **approved
-     image opt-in rows with their per-row source tokens** (+ license/credit notes and any declared
-     stylized deviation), and — **when a Q4 style example is in play** —
-     the **chosen mimic mode (A/B) + style-brief pointer** (so the design lens judges style against
-     the right bar: a Mode-B restyle's deliberately-different palette is correct, not a fidelity
-     miss). Like the motion manifest it extends, the
-     card carries **intent the pixels can't show**: the judges verify the RENDER honors what the
-     deck DECLARES — they never re-litigate the approved declarations themselves, and pixels
-     always win over a kept-but-bad promise. Fidelity stays **source-first**: a ledger row is
-     corroboration for a number, never a substitute for its source location.
-     **On any post-first round driven by user feedback**, also fold in that round's **`user-dials:`
-     line(s)** — a neutral record of *dimension → direction, layer — "the user's verbatim words"*
-     (NOT prior-critic output, so the fresh-critic-unanchored rule below is untouched); it is the
-     evidence the pendulum-overshoot check cites (`review-rubrics.md` §9), so the critic judges an
-     overshoot against the user's actual words, not a reconstruction. For an external
-     deck under review/redesign or a direction preview (no Step-1 plan exists), state
-     "none-declared" explicitly in the dispatch instead.
-   - **Consume the previous round's `strengths` as a do-not-harm ledger.** On every fix round,
-     pass the prior critic's `strengths` array to the ACTOR alongside the promoted fixes,
-     labeled: *"protected — do not degrade these while fixing; if a fix forces a trade-off
-     against a named strength, declare it in the change manifest rather than trading silently."*
-     Do NOT hand strengths to the next round's fresh critic — the whole-deck re-pass stays
-     unanchored.
-   - **Diff the critic's recorded probes against the plan (cheap, coordinator-side).** The
-     critic returns per-slide `{first_read, takeaway_guess}` thumbnails probes and a
-     `memory_sentence`. Flag a slide ONLY when its `takeaway_guess` is a bare topic label
-     carrying no message, or lands on a different message/emphasis than the plan's recorded
-     takeaway — a coarser-but-aligned guess passes; flag `memory_sentence` only when it "isn't
-     close to" the planned deck message (the rubric's own bar). Anti-fabrication tell: per-slide
-     guesses that echo the plan's takeaway phrasing verbatim/near-verbatim invalidate the probe,
-     the same way a `slides_opened` gap invalidates the review. Disposition — never auto-revise,
-     never a user stop: low-stakes → hand the mismatch back to the same critic in the same round
-     to reconcile (raise the finding, or state in one clause why the probe passes); high-stakes →
-     it enters the arbiter pass as a candidate finding like any other.
-   - **Ceilings are contained.** On a panel, keep the single strongest `ceiling` and discard the
-     rest (reason unrecorded — it is not a finding); ceilings are never sent to arbiters, never
-     enter the fix list, and never trigger or extend a round — their only consumer is the Step-6
-     hand-off line.
+
+   - **The CONTRACT CARD's full field list is in `references/critic-panel.md` → "The CONTRACT CARD". Assemble it from the approved plans (declarations only, never rationale) at every critic dispatch — read the field list each time rather than reconstructing it**; an external/redesign deck with no Step-1 plan states "none-declared" instead. The validation gate above rejects any review without `contract_card_seen`.
+
+   - **When a validated review comes back, read `references/critic-panel.md` → "Handling a returned review"**: the prior round's `strengths` as a do-not-harm ledger for the actor (and the rule that they are NEVER shown to the next fresh critic), the probes-vs-plan diff and its dispositions, and how a `ceiling` line is contained.
+
    - **Scale the critic to the stakes — and run it as a panel** (this is the main
      speed lever):
-     - *Low-stakes* (research/lab meeting, work status update, teaching) → **two FOCUSED lens
-       critics in parallel** — one **Lens A (content · fidelity · narrative)** and one **Lens B
-       (design · layout · legibility)** per `agents/critic.md` §2, each applying **only its lens**
-       (plus the shared high-recurrence box). Two focused agents catch far more than one generalist
-       wading through all ~30 checks, at the same wall-clock; **skip the arbiter pass** for low-stakes.
-     - *High-stakes* (conference, academic job talk / faculty interview, thesis
-       defense, exec/stakeholder/pitch) → dispatch a
-       **panel of 2–3 critics in parallel, each assigned ONE lens** from `critic.md` §2 (Lens A
-       content/fidelity, Lens B design/layout, + optionally a back-of-room/audience pass), then **merge
-       and de-dup** their findings — independent, *focused* reviewers catch far more than one, in
-       parallel at no extra wall-clock. **Each critic reads `critic.md` but applies only its assigned
-       lens, so no single agent carries the whole ~30-check brief** (the load split that prevents
-       missed checks). **Scale the panel *within* high-stakes by length & scope, not just
-       purpose:** a short single-paper talk (e.g. a ~10-min conference oral) takes the
-       **light** end — 2 critics, and **skip the arbiter pass** below; a long, career-
-       defining deck (a 45-min job talk, thesis defense, or investor pitch) earns the
-       **full** 2–3-critic panel **plus** that arbiter cross-validation. For a **large/sectioned deck**, add **per-section critics plus one
-       whole-deck critic for coherence/arc/seams**, then — after the arbiter pass below —
-       **route only the *promoted* findings** back to the section that owns each slide
-       (see `references/large-deck-orchestration.md`). Keep
-       every critic **independent** — it judges the rendered pixels, it doesn't
-       co-design; that independence is what makes consent mean something.
-     - **Then cross-validate the findings before acting on them (full-panel decks above).** A
-       merged panel is still a *union* of opinions: a critic can flag a number as wrong
-       when it's right, or demand a change that would crowd a slide already at its
-       legibility floor — and merging alone acts on that blindly. So add **one parallel
-       pass of independent arbiters** (`agents/arbiter.md`) over the candidate findings,
-       each judging only the rendered pixels + source — **handed the CONTRACT CARD too**
-       (the fidelity re-derivation in `arbiter.md` is defined against the claim ledger and
-       carrying-element rows it carries; the source stays ground truth): is the finding **real** (re-derive
-       it — recompute the number, look at the actual pixels), and would its fix **help or
-       hurt**? Promote to the fix list only what survives; **discard the rest with the
-       reason recorded, never silently.** Because the costs are asymmetric, a **blocker
-       survives unless arbiters actively refute it** (don't ship a wrong number because
-       two agents shrugged "unsure"), and a **lone finding on a critic's home turf** —
-       the content critic on a number, the design critic on overflow — is trusted even if
-       only one critic raised it, so a real flaw isn't drowned by de-dup; a *minor* is **not sent
-       to the arbiters** and the coordinator promotes it only when a clear majority of the
-       *critics* independently raised it; a finding that is **real but whose fix
-       hurts** is promoted with the arbiters' *better* fix, not dropped. The exact
-       promote/discard rule lives in `references/review-rubrics.md` so it stays
-       consistent. Net effect: the actor fixes real flaws, not phantoms. **Low-stakes
-       skips the arbiter/confirmation machinery** — just the two focused lens critics, merge, one consent.
+
+     - **Panel sizes, lens assignments and the arbiter cross-validation pass (including the asymmetric promote/discard rule) → `references/critic-panel.md` → "Panel composition by stakes". Read it at every dispatch, before choosing the panel.**
+
 2. **Decide.** Stop as soon as `verdict == "consent"` (the critic would present it
    as-is) — not merely when the last round's issues are fixed.
    **At ANY stakes, reaching the cap with a surviving blocker/major is never a silent ship:**
@@ -2183,24 +976,7 @@ this gate — there, fidelity is to the provided source, and item 10 already own
 source claim that §2(b) re-verification *updated or replaced* with a web-found current value counts
 as research-supplied, and pulls the gate in for those rows.
 
-**High-stakes only — verify the fixes and corroborate consent.** On re-render, the
-arbiters cheaply re-check each promoted finding against the actor's **change manifest**
-(what changed + which slides were touched): did the fix actually land *in the pixels*,
-and did it regress a neighbour? **Hand this pass the previous critic's `strengths` list +
-the manifest's declared trade-offs too — its Job-2 JSON carries a required `dulled` flag**
-(did the fix buy its resolution by subtracting declared drama — a named strength degraded,
-the hero/WOW demoted, a build removed?); `dulled: true` re-opens the finding with a
-`better_fix`, exactly like `resolved: false`. A fix that didn't land **stays open** instead of
-vanishing. And accept final consent only when the critic's `verdict == "consent"` **and**
-a confirmation pass — a panel member who didn't author this round's edits, or one fresh
-arbiter if the panel agreed in lockstep — sees no surviving blocker/major; consent should
-be *corroborated*, not one agent's say-so. **Fail loudly at the cap:** if rounds are
-exhausted and a *contested* blocker remains (the raiser calls it a blocker, the arbiters
-can't refute it, or the confirmation pass splits), don't silently ship — hand the user
-that one disagreement in step 6 as an honest question ("two reviewers disagree on whether
-the Table 2 number matches the source — please confirm"). Arbitration is parallel breadth
-*within* a round; it never adds rounds, and the caps above are unchanged. (Because it
-removes phantom fixes and slide-thrash, expected rounds-to-consent often *drops*.)
+**High-stakes decks:** after each fix round's re-render, read `references/critic-panel.md` → "Verify the fixes and corroborate consent" — the arbiter re-check of the change manifest (with its required `dulled` flag) and the corroborated-consent rule that gates shipping. *(This is the "fail loudly at the cap" passage the round-cap rule above points at.)*
 
 ## Step 6 — Show the user, then iterate on feedback
 Present the rendered slides (or a contact sheet) plus a short note: slides count,
@@ -2220,33 +996,7 @@ version — run `bash scripts/render_deck.sh <deck.pptx> --deliverables` (or
 never lags the deck. If you added any forward-looking content (per the fidelity rule), call that
 out explicitly here so they can confirm it.
 
-**Keep the hand-off minimal — caveats + next steps, not a recap.** The note should carry only what
-the user *acts on*: the folder path, the open-the-pptx check, the font/portability caveat, any
-forward-looking content you added, open questions (e.g. a missing real brand asset to supply) —
-**plus, when they apply, these REQUIRED-by-their-owning-rule lines (this list is the ONE
-authoritative hand-off checklist; the owning rules point here):** the `provenance: N checked · N
-confirmed · N fixed · N cut` line (research-sourced decks — the PRIMARY-SOURCE GATE's artifact), the
-per-slide **click order** (appear-builds opted in), **image licenses/credits** (sourced photos), the
-**GIF plays-in-slideshow** note (embedded GIFs), **accepted advisories** one plain-language line
-each, the **`distinctiveness:` line whenever Step 5's bold/experimental escalation fired**
-(`user waived (bold)` or `resolved in round N` — without it, "they accepted it" and "I never asked"
-are indistinguishable afterwards), and on an auto-waiver deck the **delegated-picks recap** the user
-reacts to at hand-off — and —
-optional, exactly one sentence — the critic's `ceiling`, verbatim, as one *"if you want to push it
-further:"* line (the terminal consent's recorded headroom; if the user adopts it, it flows through
-the normal post-delivery feedback loop). Two taste-ecosystem lines ride the same note when they
-apply (`references/user-taste.md`): **(a) the save-this-look offer** — for a freshly-designed look
-(Q1 branch (c), either sub-path) not yet registered, one line: *"save this look to your registry as
-<name>?"*; on an **explicit yes** persist the deck's `style.py` + a `profile.md` per the existing
-registry conventions, distilling the final round's critic `strengths` and any cross-round recurring
-finding dimensions into the profile's existing **Notes** field (hand-off, after the critic loop, is
-when the profile can carry what the vetted deck *proved* — this is collaborative mode's Gate A 7(b)
-persist, re-timed: one save, one owner); **skip the offer entirely under a per-deck auto directive**
-— never an un-consented registry write; **(b) the taste write-back FYI** — whenever the Step-6 close
-below wrote anything to `taste.md`, one line: *"recorded to your taste profile: <X> — say the word
-and I'll drop it"* (visibility + easy veto is what keeps a memory trustworthy). Do
-**not** narrate the deck slide-by-slide, restate what they can see in the render, or self-praise the
-result — a tight hand-off respects their time and reads as senior.
+**Before you write the hand-off note, read `references/handoff-checklist.md` — every deck.** It is the ONE authoritative list of what the note carries (minimal caveats + next steps, never a recap or self-praise) and of the conditional REQUIRED lines the owning rules point here for: `provenance:`, click order, image licences, the GIF note, accepted advisories, `distinctiveness:`, the delegated-picks recap, the optional `ceiling` line, and the two taste-ecosystem offers — **including the save-this-look offer, which is skipped entirely under a per-deck auto directive: never an un-consented registry write.**
 
 **For a long deck (~15+ slides), show work at ~50%, not only at 100%.** When a build is large enough
 that a wrong direction is expensive to unwind, render the first few finished slides (cover + a couple
@@ -2256,35 +1006,7 @@ palette/density/structure mismatch after all 20 are built. (A soft check-in, not
 per-deck auto directive, post the early renders as an FYI and continue without waiting; in the
 default flow, wait briefly for a reaction before finishing. Short decks: just build and run the critic.)
 
-**If the deck has speaker notes, tell them how to use the notes.** They render nowhere on
-the slide, so the user may not know they exist: "the spoken script is in the notes — open
-**Presenter View** (PowerPoint: Slide Show → Presenter View; Keynote: Play with a second
-display / rehearse mode) to see it while presenting." Offer to **export the notes** as a
-plain-text rehearsal script with `scripts/export_notes.py deck.pptx` if they'd rather
-rehearse away from the slides.
-
-**Tell them the deck is fully editable — and how to change it without losing work.**
-The `.pptx` is native (real text/shapes/images), so they can edit anything in
-PowerPoint/Keynote and save. But the build script *regenerates the file from scratch*,
-so a later rebuild would overwrite anything they hand-edited — the two don't merge. So
-give them the two non-conflicting lanes in one line: **(a)** take it from here in
-PowerPoint themselves (you won't rebuild over their file), or **(b)** tell you the
-changes and you edit the build script (reproducible, survives future iterations). Note
-the font/portability caveat if relevant. Full guidance — and the rule for iterating
-safely — is in `references/handoff-and-iteration.md`.
-
-Then **fold in the user's feedback** — treat their corrections as the highest-priority
-signal, re-run the build → render → critic loop, and keep going until **the user is
-satisfied**. **One safety rule when iterating after delivery:** before you re-run the
-build, check whether the user has hand-edited the delivered file (ask, or compare its
-mtime to your last build); if they have, **don't regenerate over it** — reconcile first
-(fold their edits back into the script via `scripts/extract_deck.py`, or edit their file
-in place). Never silently clobber edits you didn't make. Each round should make the deck
-more specifically theirs (their emphasis, their wording, their priorities), not just
-generically "better". On each user-feedback round, add one **`user-dials:`** line to the round
-record — `dimension → direction, layer — "verbatim user words"` (e.g. `colour: +vivid, content
-layer — "太素了"`) — WHY the round happened is the datum the taste profile promotes from, and the
-evidence the pendulum-overshoot check cites (`references/handoff-and-iteration.md` "Move the dial").
+**Presenting, editing, and iterating after delivery — `references/handoff-checklist.md` (same file, later section).** Read it at hand-off on **any deck that carries speaker notes** (Presenter View / `export_notes.py` / how to edit without losing work), and **always** before you re-run the build on the user's feedback — it holds the reconcile-don't-clobber procedure and the required `user-dials:` round-record line.
 
 **Step-6 close — the taste write-back (a named checklist, not prose; full protocol in
 `references/user-taste.md`):**
@@ -2342,90 +1064,5 @@ A checkable red-flag list; if a draft does any of these, stop and fix it before 
   deck (research the venue); **never** let the deck drift between languages.
 
 ## Files
-**Scripts** (`scripts/`):
-- `deckkit.py` — the build helpers (template & blank decks), **incl. the editable native charts**
-  (`native_chart`/`native_dual_axis`/`native_donut`/`native_pareto`/`native_bubble` — click-to-edit,
-  any-language-safe) **and the build-time geometry gate** (`lint_layout(prs, strict=True)` — run before `prs.save()`;
-  the in-process pre-render net for overflow/off-canvas/text-overlap/card-escape/footer/off-centre — plus
-  `fit_text_size`); the build's source of truth. Full signatures in its docstrings.
-- `component_audit.py` — did this deck hand-roll a form the library already implements? Reads the
-  build script (every import form: `dk.x()`, an alias, or `from deckkit import x`) + the finished
-  pptx (geometry signatures: bar rows, abutting 100% bands, tile rows, marker rows) and names the
-  component whose guarantee the hand-roll gave up. **Advisory, never a blocker** — a bespoke
-  composition is the signature move; what the tool states as fact is the usage ratio and the specific
-  match. Reporting is suppressed when the deck draws with a FORM component that emits the same
-  geometry (a component's own output must never be reported as a hand-roll); that set is **derived
-  from deckkit's source and intersected with the form catalogue** — it has been wrong twice as a
-  hand-kept list, and a primitive in it would silence the tool forever. Exits 1 and prints
-  `NOT CHECKED` rather than reporting clean when the deck could not be opened. ~50ms. Run it at
-  PRE-FLIGHT 12.
-- `directions_diversity.py` — mechanical divergence check for direction-gate candidates
-  (mode · palette distance · type pairing · composition), flagging any pair that matches on ≥3 of 4
-  axes. Exit 0 all diverge / 2 flagged / 1 unreadable. Never auto-kills: a flag means REDIVERGE **or**
-  record a named justification on the `direction gate:` line. Run it before posting the preview link.
-- `render_deck.py` — pptx → one PNG per slide (verify + critic loop). **`--slides N[,M]` renders ONLY
-  the named 1-indexed pages** — the Step-4 SIGNATURE PROOF and any "re-render just the page I edited"
-  loop; byte-identical to those pages from a full render, and it deliberately leaves NO cache (a cache
-  would claim every page is current). Mutually exclusive with `--fast` (which chooses the set for you)
-  and with `--deliverables` (which needs the whole deck). **`--fast` re-renders only the
-  slides whose content changed since the last run** (per-slide fingerprint + deck-global digest,
-  cached in `render/.render-cache.json`; subsets the pptx, output byte-identical to a full render,
-  auto-falls-back to full whenever the page mapping could be wrong) — ~12s → ~4.7s for a one-slide
-  edit, 0.07s when nothing changed. **`--deliverables` (alias
-  `--final`) additionally parks the PDF beside the pptx and writes `viewer.html`, a zero-dependency
-  flip-through preview** — off by default, so an in-progress deck never accumulates stale copies;
-  run it at hand-off once the user confirms the deck is final (PNGs always stay in `render/`); finds LibreOffice cross-platform
-  or set `SOFFICE` (`.sh` is a shim). `check_env.py` — preflight if a render fails. `inspect_template.py`
-  — a template's layouts/placeholders/logos. `requirements.txt` / `install_skill.py` — deps / installer.
-- `lint_deck.py` — deterministic **render-time** layout lint and complement to deckkit's build-time
-  `lint_layout`: re-checks geometry on the final file (off-slide overflow · block/image collision
-  [containment excluded] · footer-zone intrusion · text-past-card · uneven rows) AND adds the
-  render/parse-only faults (CJK kinsoku/widow · whole-page-image · orphan slides — plus missing EA font as the render-time BACKSTOP; `lint_layout` now catches it at build time as `CJK_NO_EA`);
-  run after render, before critic; non-zero on findings. `smoke_deckkit.py` — regression guard for the helpers.
-- `plan_wordcount.py` — advisory per-slide word-budget pass over the Content plan's table (the Step-1
-  comprehension-gate check; write the table to a scratch path, never the deliverable folder).
-  `validate_review.py` — stdlib schema validator for critic/arbiter JSON (`critic|arbiter <file|->`;
-  Step 5 runs it before acting on any review).
-- `anim.py` — PowerPoint click-builds/transitions (pair `references/animation.md`).
-- `formats.py` — named canvas-format registry (16:9 default · 4:3 · square 1:1 · 小红书 3:4 · story
-  9:16 · A4 print): dimensions, platform safe zones, chrome policy, density + lint flags, and the
-  `band()` safe-rect helper; opt-in — the 16:9 default never touches it (pair `references/canvas-formats.md`).
-- `designed_charts.py` — raster matplotlib chart recipes (dumbbell, slope, dual_axis, bubble_trend,
-  pareto, donut_kpi, **waterfall** — for a chart type with no native equivalent or a deliberate look;
-  prefer deckkit's native charts; `references/data-viz.md`). `maps.py` — **choropleth base maps**
-  (europe · world · china provinces) from public-domain geometry, value-shaded → PNG placed by
-  `deckkit.choropleth()` (which adds the native title + legend); `references/data-viz.md`. `presets.py` — named
-  design-language presets (glassmorphism · swiss · editorial_paper · editorial_report · risograph ·
-  memphis · brutalist · blueprint · ink_wash · eastern_traditional · **consulting** (MBB action-title) ·
-  **dark_tech** (engineering dark + diagram-island) · **luxury_dark** · **museum_memorial** ·
-  **bauhaus** · **midcentury** · **terminal** · **synthwave** — **18 total**; ink_wash/
-  eastern_traditional → `references/east-asian-aesthetic.md`; the full style+component catalogue →
-  `references/design-gallery.md`).
-- `image_prompts.py` (build the prompt manifest) → `generate_images_codex.py` (no-key, Codex CLI) /
-  `generate_images_openai.py` (**metered** API path — gated, see the BILLING GATE). `archetypes_html.py` (direction-gate previews as
-  **one HTML link** — `preset_directions([names])` turns best-fit preset names into direction tokens
-  carrying each preset's real DNA, so the options are STYLES not colour schemes (accepts a **dict** in
-  the list for the no-image-tool gate's 4th pure colour-scheme direction); `_dna_cover` renders each
-  preset's signature hero motif and `_dna_ambient` runs the quiet register signature on EVERY interior
-  preview slide so the style carries all pages, not just the cover; `archetypes.py` is the older
-  pptx-render variant + the post-pick one-slide fidelity confirm) · `assemble.py` (assemble a sectioned deck) · `export_notes.py` (notes →
-  rehearsal script).
-- `icons.py` — fetch an open-licensed SVG icon (Tabler/Lucide/Phosphor incl. **6 weights + duotone**/
-  Simple…), recolor OR **gradient-fill** to the deck palette, rasterize to a transparent PNG
-  (`icon_png(spec, out, color=…, gradient=(c0,c1), px)`); pair with the deckkit container helpers
-  `icon` / `icon_tile` (solid/gradient/glass tile) / `icon_badge` (ring) / `icon_ghost` (watermark) /
-  `icon_card`. See `references/icons.md` ("Treatments").
-- `image_fx.py` — `duotone(img, ink_a, ink_b)` / `grayscale(img)` — preprocess a colour photo to the
-  deck's ink so it doesn't fight the accent (riso/brutalist/ink/luxury/museum). See `design-gallery.md`.
-- `extract_pdf.py` (crop a figure from a PDF — `figures`/`figure`/`autofig` auto-detect, `page`/`crop`
-  manual; **plus the long-source trio `map` (TOC + CJK-aware word-density skeleton), `text` (page-range
-  dump for chunked reading), and `headings` (reconstruct a skeleton for a no-TOC book)** — the tooling
-  for the content-planner's long-source mode) · `crop_helper.py`
-  (crop/trim/panel **by looking, not guessing**) · `extract_deck.py` (pull content out of an existing
-  deck — the redesign path) · `ingest.py` (ingest a NON-PDF source — `doctext`/`office` for Word/Office,
-  `frames` for a video's visual track, `probe` to route — with the vision/audio fidelity floor).
-**Agents** (`agents/`): `content-planner.md` (Step-1 CONTENT deep-understand + claim ledger + per-slide message; the content checkpoint) · `slide-design.md` (the art director — Step-2 design language + per-slide form/layout/rhythm + icons + appear-animation + the Form ledger; the design checkpoint) · `critic.md` (independent critic brief — the two review lenses + JSON schema) · `arbiter.md` (high-stakes finding cross-validation + fix-verification; no-op low-stakes) · `asset-prep.md` (execution-only asset materializer — crops/equations/plates/icons after the design plan is approved; zero design decisions) · `openai.yaml` (Codex display metadata).
 
-**References** (`references/`, loaded on demand): `canvas-formats.md` (per-surface layout DNA for the non-16:9 formats — square/rednote/story/A4 — + the repurpose/batch pattern; pairs `scripts/formats.py`) · `design-principles.md` (the craft / the "why"; incl. the **C.R.A.P. framework** — Contrast · Repetition · Alignment · Proximity) · `design-gallery.md` (style+component catalogue mined from 21 pro decks — pick a preset, reach for the right component) · `semantic-color-contract.md` (bind a hue to a concept deck-wide) · `review-rubrics.md` (universal + per-purpose review criteria) · `design-by-purpose.md` (per-purpose look for "design a clean one") · `form-selection.md` (**content-shape → candidate FORMS** — the single design-decision map; generate a set, pick deliberately) · `schematic-diagrams.md` (**HOW to draw a labelled SCIENCE schematic** — force/ray/circuit/apparatus/vector/wave; matplotlib/domain-lib recipes for precise/label-critical ones, OR the image tool for complex/stylized/template-matched ones with labels overlaid native; + the domain-accuracy fidelity gate) · `data-viz.md` (pick the chart type; editable-native vs raster) · `image-generation.md` (when/how; topical, text-free, consistently placed) · `icons.md` (one coherent open-licensed icon family, recolored, restrained) · `generated-template.md` (Q1's image-tool template branch) · `style-analysis.md` (mimic a style example, Q4) · `font-guidance.md` (portable fonts, tofu recovery) · `multilingual.md` (non-Latin / CJK / RTL) · `east-asian-aesthetic.md` (Chinese ink / traditional looks — paper · seal · CJK numerals · `ink_wash`/`eastern_traditional`) · `animation.md` (when/why + `anim.py`) · `large-deck-orchestration.md` (section fan-out; default is single-author) · `collaborative-mode.md` (direction→outline→draft gates) · `redesign-existing-deck.md` (diagnose-then-rebuild) · `handoff-and-iteration.md` (delivery + iterate without clobbering edits) · `design-intelligence-addendum.md` (the deck-level design gates Step 2 measures against — rhythm map · block-dependency audit · Concept→Visualization table · semantic-colour ledger · variation floors) · `troubleshooting-faq.md` (**symptom → cause → fix for every error surface** — env · build exceptions · both lints · render · images · CJK — plus the FAQ; consult on any failure, and report findings to the user in its plain-language form) · `user-taste.md` (the registry-root `taste.md` — schema · read protocol · dial-ledger promotion + consented-look write-back) · `examples/` (`build_example_generic.py`, `style_example.py`, `section_example.py`).
-
-**Registry** (NOT part of the skill): `~/.codex/slide-templates/` (Codex) · `~/.claude/slide-templates/` (Claude Code) — the user's saved templates, **plus `taste.md` at the root** (the portable taste profile — schema + read/write protocol in `references/user-taste.md`); read for choices, write new `profile.md`s to the active host — a freshly-designed look saved at hand-off carries the vetted critic `strengths` distilled into its profile's Notes. Empty for a new user (no templates, no `taste.md` — silently skipped; no write until the first durable signal).
+Full inventory — every script and its flags, the agents, all reference files, the 18 `presets.py` design presets, and the template **Registry** paths — is in `references/file-inventory.md`. Read it whenever you need a capability the *Where things live* table above doesn't already route (an unfamiliar script's arguments, the preset list, which agent or reference owns a concern). Each script's own operating contract is also restated at the step that runs it, so this is a lookup, not a gate.
