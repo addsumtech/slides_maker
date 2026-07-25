@@ -327,13 +327,62 @@ def check_handoff_gates(pptx):
         die("{} has no usable `critic` record — needs {{\"verdict\": \"consent\"|\"revise\"}} or "
             "{{\"waived\": \"<reason>\"}}".format(path))
 
+    # The design plan is the art director's output (Step 2). Self-authoring one is indistinguishable
+    # from dispatching for it — unless the record has to carry the fields the dispatch produces.
+    DESIGN_FIELDS = ("boldness", "signature_move", "carried_by", "form_ledger")
+    design = gates.get("design_plan") or {}
+    if design.get("waived"):
+        print("[gates] design plan WAIVED — {}".format(design["waived"]))
+    elif design:
+        missing = [f for f in DESIGN_FIELDS if not design.get(f)]
+        if missing:
+            die("`design_plan` is missing {}. These are the art director's outputs "
+                "(agents/slide-design.md, Step 2) — a plan without them was not designed, it was "
+                "defaulted. Fill them, or waive with a reason.".format(", ".join(missing)))
+        cb = design["carried_by"]
+        if not isinstance(cb, list) or len(cb) < 2:
+            die("`carried_by` must name at least 2 slides where the signature move does structural "
+                "work. One brave slide among eleven safe ones is a tonal break, not a position.")
+        print("[gates] design plan: boldness={} · signature={} · carried_by={}".format(
+            design["boldness"], str(design["signature_move"])[:48], cb))
+    else:
+        die("no `design_plan` record. Step 2 dispatches agents/slide-design.md as the deck's art "
+            "director; nothing else decides deck rhythm or the signature move.\n"
+            '    {"design_plan": {"boldness": "balanced+", "signature_move": "...",\n'
+            '                     "carried_by": [4, 6, 8], "form_ledger": "..."}}\n'
+            '    or {"design_plan": {"waived": "<reason>"}}')
+
+    # Provenance: a self-filled tally proves nothing — the refutation pass is what the gate is FOR.
+    # Require per-claim verdicts, so "confirmed" means someone tried to break it and could not.
     prov = gates.get("provenance") or {}
     if prov.get("waived"):
         print("[gates] provenance WAIVED — {}".format(prov["waived"]))
     elif prov:
-        print("[gates] provenance: {} checked · {} confirmed · {} fixed · {} cut".format(
-            prov.get("checked", "?"), prov.get("confirmed", "?"),
-            prov.get("fixed", "?"), prov.get("cut", "?")))
+        claims = prov.get("claims")
+        if not isinstance(claims, list) or not claims:
+            die("`provenance` needs a per-claim `claims` list, not a summary tally. A tally is "
+                "written by the same pass that would have skipped the check.\n"
+                '    "claims": [{"claim": "...", "verdict": "CONFIRMED|WRONG|PARTLY-WRONG|'
+                'UNVERIFIABLE", "url": "https://..."}]')
+        ALLOWED = {"CONFIRMED", "WRONG", "PARTLY-WRONG", "UNVERIFIABLE"}
+        bad = [c for c in claims if c.get("verdict") not in ALLOWED]
+        if bad:
+            die("{} claim row(s) carry no valid verdict (one of {}).".format(
+                len(bad), " / ".join(sorted(ALLOWED))))
+        nourl = [c for c in claims if c.get("verdict") == "CONFIRMED" and not c.get("url")]
+        if nourl:
+            die("{} claim(s) are CONFIRMED with no primary-source URL. Confirmed-without-a-source "
+                "is the exact failure this gate exists to catch.".format(len(nourl)))
+        unresolved = [c for c in claims if c["verdict"] in ("WRONG", "PARTLY-WRONG")]
+        if unresolved:
+            die("{} claim(s) still verdict WRONG / PARTLY-WRONG. Fix or cut them before hand-off:\n"
+                "  - {}".format(len(unresolved),
+                                "\n  - ".join(str(c.get("claim"))[:90] for c in unresolved[:5])))
+        tally = {}
+        for c in claims:
+            tally[c["verdict"]] = tally.get(c["verdict"], 0) + 1
+        print("[gates] provenance: {} claim(s) adversarially checked — {}".format(
+            len(claims), " · ".join("{} {}".format(v, k) for k, v in sorted(tally.items()))))
     else:
         print("[gates] no provenance record — fine for a deck built from the user's own material; "
               "a research-sourced deck should carry one.")
