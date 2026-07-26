@@ -9,6 +9,74 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+## [4.0.0] — 2026-07-26
+
+**Why a major bump.** `render_deck.py --deliverables` now REFUSES to run until the deck carries a
+`.deck-gates.json` recording that its quality gates actually ran. Anything scripting `--deliverables`
+breaks until it writes that file (or a written waiver). That is the breaking change; everything else
+below is additive.
+
+### Added — review effort is a tier the user picks, not one the skill infers
+- The rule that scales the loop ("scale the critic to stakes") always existed but was never offered.
+  Measured on one low-stakes deck: **~32 subagents and ~2M tokens** across research + build + two
+  review rounds, with the user given no visibility and no choice. Step 0 now collects a one-word
+  **`review:` tier** — `fast` | `standard` | `thorough` — sizing BOTH cost centres, the research
+  fan-out and the review panel (they measured comparable: ~1.02M tokens of research against ~0.95M
+  of review).
+- **`standard` and `thorough` are pure ALIASES** for the low-stakes and high-stakes behaviour that
+  already existed — every cell of the tier table either restates the stakes section or defers to it.
+  **A deck whose user says nothing behaves exactly as before.** `fast` is the one genuinely new band
+  and is **opt-in only, never derived**: one generalist critic and one round is a real recall drop,
+  so it has to be asked for. Purpose decides the tier; SIZE never lowers it.
+- Floors no tier may move: the build-time geometry gate, the render lint, PRE-FLIGHT 12, at least one
+  independent critic, the EXISTENCE of the primary-source gate, and `.deck-gates.json`. Per-section
+  panels on large decks and corroborated consent on high-stakes decks are shapes, not weight, and are
+  unaffected by the tier. `fast` may not silently ship over a `revise` — it returns to the user.
+- The hand-off now carries `review:` and `cost:` lines. A dial whose bill is never shown builds no
+  intuition, so the next deck's choice is as blind as the last one's.
+- **Pass the approved claim ledger to critics WHOLE, never a summary retyped for the dispatch.** The
+  largest measured saving here: 7 of 8 "unsourced" findings in one round-2 review were briefing
+  artifacts, and the round they consumed was pure waste.
+- An earlier draft was rejected by a six-dimension adversarial audit (9 blockers, 27 majors) and
+  largely rewritten. Two invented optimisations were **dropped rather than patched** — "triggered
+  arbitration" at `standard` (it contradicted four surviving statements that low-stakes dispatches no
+  arbiter, including `agents/arbiter.md`'s own brief) and narrowing round 2 to the changed slides (the
+  review-validation gate's scope buckets are whole-deck and per-section only, so a scoped round 2
+  bounces and costs an extra round). Both are recorded in `critic-panel.md` as deliberate reversions
+  with their reasons.
+
+### Added — the hand-off gate, and a consent record that is evidence rather than a claim
+- `--deliverables` refuses without `.deck-gates.json`: a critic verdict, the design plan's
+  `boldness` / `signature_move` / `carried_by` / `form_ledger`, and the provenance pass's **per-claim**
+  `claims` list (a summary tally is rejected on purpose — a tally is written by the same pass that
+  would have skipped the refutation). Any gate deliberately skipped is **waived in writing**, and the
+  tool prints the reason, so a skip is visible instead of invisible.
+- `validate_review.py --record <deck-dir>` writes the `critic` block **from the validated review
+  itself** — verdict, blocker/major counts, the review file's path and sha256 — and `--deliverables`
+  re-reads that artifact. A record the model types at hand-off is self-certification: the model that
+  skipped the loop writes the same JSON as the model that ran it. Verified by execution across five
+  adversarial paths (review edited after recording → sha256 mismatch; file moved; record says consent
+  while the review says revise → "the artifact wins"; a review consenting with a blocker still open;
+  hand-written record with no source → still passes, labelled `SELF-REPORTED`). Backward compatible by
+  design: the old shape is not broken, it is made distinguishable.
+
+### Added — a CI guard that a SKILL.md slimming layers content instead of deleting it
+- `scripts/check_skill_lossless.py` + a CI step prove every substantive line of a baseline SKILL.md is
+  still findable somewhere in the skill tree after a refactor. Deliberate deletions go in an allowlist
+  keyed on a hash of the normalised line, so editing a line revokes its waiver.
+
+### Changed — SKILL.md layered into step-scoped references (228KB → 134KB), losslessly
+- Working detail moved into eight new step-scoped reference files, each with a live trigger at the
+  pipeline moment that needs it. **Two files were deliberately pulled BACK inline** — the deckkit
+  component catalogue and the render self-check — because their absence makes no noise: no lint fires
+  when you hand-roll a form the library already has or skip the scan entirely, so a rule whose omission
+  is silent cannot live behind a read. Verified 2298/2298 lines accounted for.
+
+### Fixed — `native_chart(value_fmt=...)` now rejects the wrong format dialect
+- `value_fmt` is written straight into the chart's EXCEL number-format code, while `iso_bars` takes the
+  Python dialect, and neither docstring said so — a `{:,.0f}` handed to `native_chart` was printed raw
+  onto a shipped slide. It now raises a named `ValueError`. Pre-existing, unrelated to the refactor.
+
 ### Added — `TITLE-RULE MONOCULTURE` lint (the title-chrome rotation rule is now GATED, not prose-only)
 - The render self-check has long said "the title CHROME is not one fixed template repeated on every
   slide — rotate 2-3 treatments", but it lived only in prose and got missed (a `head()`-style build
