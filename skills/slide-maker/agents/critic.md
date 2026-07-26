@@ -774,7 +774,12 @@ Do not just skim for the first few obvious issues. Run these passes:
      corner/size** across slides. *(Not for a multi-organisation deck — survey / landscape / review — or a
      neutral-academic talk, where house branding is noise; and don't double a logo a template already
      carries. Satisfying marks are exactly two: the **real official asset (untouched)**, or a **designed
-     wordmark whose plan `logo plan:` line carries `searched, none found → designed wordmark (flagged)`**.
+     wordmark whose plan `logo plan:` line carries `searched, none found → designed wordmark (flagged)`**,
+     or — on a **THIRD-PARTY ASSESSMENT** (about an entity, not from it, carrying what that entity would
+     not publish about itself: open recalls, a "first but not unique" correction, a limitations page) —
+     **no livery at all with `n/a — third-party assessment`**, which is the row's correct answer and not
+     an omission. On that row raise the INVERSE: a deck wearing its subject's mark while asserting what
+     the subject would not is a misattribution of authorship, and rates with an unsourced claim.
      A bare wordmark / "text only" with NO recorded-search token is a finding — name which LOGO-PRINCIPLE
      situation-table row the deck matches. A literal placeholder shipping in a final deck is not a
      satisfier — it's a meta-annotation blocker. Never a fabricated fake.)* Authoritative checks:

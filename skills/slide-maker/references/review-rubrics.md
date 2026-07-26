@@ -297,7 +297,13 @@ Score each dimension; cite specific slides.
    (`official asset — <source>` / `searched, none found → designed wordmark (flagged)` / `n/a — <reason>`) —
    the slide-design LOGO PRINCIPLE's situation table is the reference: name which row the deck
    matches and what the row's default demanded (a typeset wordmark with no recorded search is the
-   documented failure mode, not a pass); **sourced/generated image off-contract (REFERENT RULE)** —
+   documented failure mode, not a pass). **Carve — do NOT raise this on a THIRD-PARTY ASSESSMENT**:
+   when the deck is about an entity but not from it and carries what that entity would not publish
+   about itself (open recalls, a "first but not unique" correction, a limitations page), `n/a —
+   third-party assessment` is the row's correct answer and an absent logo is the finding avoided,
+   not the finding. Raise the INVERSE there: a third-party assessment wearing the subject's livery
+   is a misattribution of authorship and rates the same as an unsourced claim;
+   **sourced/generated image off-contract (REFERENT RULE)** —
    a content image whose source class fights its subject's referent per
    `references/image-generation.md` "Sourced real imagery": a generated image **passed off as
    photographic reality** of a real-and-specific subject (a named place, real product, real person)

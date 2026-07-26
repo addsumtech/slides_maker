@@ -481,6 +481,20 @@ quota — still smart about where/when). A plan that defaults its look, over-rel
 icons, or — when builds are opted in — leaves a built slide half-staged or forgets builds where they'd
 clearly help is **not ready** — send it back to the art director.
 
+**🔴 One row of the LOGO PRINCIPLE table decides BEFORE the search and overrides its result: a
+THIRD-PARTY ASSESSMENT.** The deck is *about* an entity but is not *from* it, and carries what that
+entity would not publish about itself — open recalls, a "first but not unique" correction, a
+limitations page, competitor counter-evidence. There the answer is `n/a — third-party assessment`
+plus the finding that makes it so: **no official livery on any page**, the entity's name set in the
+deck's own type. The test is authorship, not sentiment — a favourable independent review has the
+same problem as a critical one. A reader seeing the mark concludes the entity produced or endorsed
+this, and for an independent assessment that is a misattribution: the same class of error as an
+unsourced number, committed in the chrome instead of the body. Because it is a question about who
+wrote the deck, finding a real logo does not overturn it and "not found" is never its reason.
+*(Real: a briefing carrying two open Class I recalls and a "first, but not alone" correction was
+headed for build in its subject's brand colours; it was caught by hand and recorded as a named
+deviation. This row makes that the default instead of a save.)*
+
 **The per-slide content-image opt-in is a CROSS-CUTTING choice available on EVERY deck** — independent of the template decision and separate from Q1's generate-a-template path; offer it whenever an image tool OR web search for sourced photos is available. **Read `references/asset-production.md` §Per-slide content-image opt-in before writing the opt-in list** — the three guardrails (content-related, never every slide, and the REFERENT RULE that decides generated vs real sourced imagery) and the per-row source-token grammar. Fold in the user's design edits, then set up the canvas (Step 3).
 
 > **🔴 CHECKPOINT — DESIGN:** show the Design language + Form ledger + the 3 design musts + the

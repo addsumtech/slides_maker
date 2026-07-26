@@ -181,7 +181,11 @@ generated or sourced. Fold in the user's design edits, then set up the canvas (S
   asset — never ship placeholder text on a slide** ("logo here" IS the meta-annotation PRE-FLIGHT 8
   and the critic treat as a blocker). Never a
   faked/recolored replica of a real entity's official mark. This does **not** apply to multi-organisation decks (surveys, landscapes) or
-  neutral academic talks — there, name entities inline. Full rule + the no-apply cases in
+  neutral academic talks — there, name entities inline. **Nor to a THIRD-PARTY ASSESSMENT**: when the
+  deck is about an entity but not from it, and carries what that entity would not publish about itself
+  (open recalls, a "first but not unique" correction, a limitations page), it wears NO official livery
+  on any page and sets the entity's name in its own type. The test is authorship, not sentiment — a
+  favourable independent review has the same problem as a critical one. Full rule + the no-apply cases in
   `references/image-generation.md` ("Real brand / product assets come first").
 - **SVG icons — ONE coherent open-licensed family, recolored, used with restraint (full rules — the
   jobs icons do, the rule-of-thumb, + five quality marks — in `references/icons.md`).** An icon must
