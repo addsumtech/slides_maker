@@ -23,3 +23,10 @@ id_rsa*
 *_secret*
 *secrets.json
 credentials.json
+
+# ...but NOT the scanner itself. `*_secret*` above matches `scan_secrets.py`, so the credential
+# scanner was silently excluded from every commit: it ran clean locally, SECURITY.md told people
+# to run it, three CI steps invoked it, and no clone ever contained it. Over-matching is the
+# right default for credential patterns — so keep the pattern and name the exception.
+# `scripts/check_repo_integrity.py` fails the build if this class recurs.
+!scripts/scan_secrets.py

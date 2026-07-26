@@ -43,6 +43,15 @@ jobs:
       # wrong is a report everyone learns to ignore, which is worse than no report. This one
       # self-tests both directions before it scans, so a rule that stops catching real keys fails
       # the build rather than passing quietly.
+      # A file can exist on the author's disk, run clean locally, be documented, be invoked by
+      # CI — and still not be in the repo. That is exactly what happened: `.gitignore`'s
+      # `*_secret*` swallowed `scripts/scan_secrets.py`, the credential scanner itself, and every
+      # clone was missing it. No single layer looked wrong; only the intersection was. Runs first
+      # and needs nothing but git, so it reports before anything else can fail confusingly.
+      - name: Repo integrity (no ignored source files, every CI path tracked)
+        working-directory: ${{ github.workspace }}
+        run: python scripts/check_repo_integrity.py
+
       - name: No credentials by shape (working tree + full history)
         working-directory: ${{ github.workspace }}
         run: |
