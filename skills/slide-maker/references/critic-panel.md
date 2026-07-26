@@ -45,34 +45,58 @@
      deck under review/redesign or a direction preview (no Step-1 plan exists), state
      "none-declared" explicitly in the dispatch instead.
 
-## Survey on ONE image before opening any slide (every round, every tier)
+## Cutting a review's cost — what was MEASURED, and what was not
 
-A critic's dominant cost is not thinking, it is LOOKING: twelve renders opened as twelve
-images was ~44 tool calls and ~20 minutes per lens, and a second round paid that bill again
-from scratch. So **build a contact sheet first and open it once**:
+A controlled A/B on the skill's own 7-slide defect fixture (`tests/lint_fixture.py`, seven
+planted defects), two design critics, identical except for how they read:
 
-```bash
-python3 scripts/contact_sheet.py <render-dir>      # -> <render-dir>/_contact_sheet.png
-```
+| | A: open every slide, read rubric + design-principles | B: survey sheet first, rubric only |
+|---|---|---|
+| tokens | 93,918 | **68,416  (-27%)** |
+| wall clock | 159.5s | **124.7s  (-22%)** |
+| planted defects found | 5/5 | **5/5** |
 
-Then open individual slides at FULL SIZE only where the sheet shows something worth a closer
-look — plus any slide the rubric makes mandatory (the cover, the WOW, the money slide, the
-close). Measured: ~12 image reads down to ~4-6, with whole-deck coverage intact.
+Recall held. But the saving did **not** come from where it was expected:
 
-🔴 **The sheet narrows the COST, never the SCOPE.** Do not hand a fresh reviewer a list of
-slides to look at. A reviewer told "check 3, 6 and 8" cannot catch the regression you
-introduced on slide 10 — and a second round exists precisely because the first round's fixes
-are themselves unreviewed changes. The sheet shows ALL slides and the reviewer chooses where
-to go deep; that keeps the fresh-critic-unanchored property that makes round 2 worth running
-at all. (History: a scoped round 2 was proposed once and demolished in audit for exactly
-this reason. The saving belongs on cost-per-page, not on pages.)
+🔴 **The contact sheet saved nothing. B opened all seven slides at full size anyway**
+(`slides_opened_full: [1..7]`), because "open only what looks suspect" is prose with no
+backstop — exactly the class of instruction a model skips with nothing to report it. The
+-27% is almost entirely the reference load: `design-principles.md` (~20.5k tok) plus the
+rubric's per-purpose and high-stakes sections (~4.1k tok) = ~24.6k, against a measured
+delta of 25.5k.
 
-**What the mechanical layer should be catching instead of a critic.** Before spending a round
-on a defect class, check whether a lint can decide it. One measured example: a caption sized
-for one line that rendered as two, dropping its second line onto the footer, survived a full
-round-1 review and was found by round 2 — because `measure_text` was under-reporting bold
-width in font-collection families, so both the build-time assert and the build lint passed.
-Fixing the measurement moved that whole class to a build-time CRITICAL that fires in
+So: **the lever is what a critic READS, not how many images it opens.** Per critic, the
+standing reference load is ~62.6k tokens — `agents/critic.md` ~24.8k, `review-rubrics.md`
+~17.4k, `design-principles.md` ~20.5k — which on a four-lens round is ~250k spent
+re-reading three files. Images are ~1.5k each, so a whole 12-slide deck is ~18k: an order
+of magnitude less.
+
+**What is safe to act on today** (a deck needs exactly one of these, by construction):
+- the rubric's nine per-purpose sections — read only the one matching this deck's purpose
+- `## Finding-level cross-validation (high-stakes only)` — skip it at `fast` / `standard`
+
+**What is NOT yet established.** B also skipped `design-principles.md` entirely and still
+found 5/5 — but the fixture's planted defects are layout faults the Universal rubric already
+covers. That is one run on one deck; it is NOT evidence that a design lens can drop the craft
+reference on a deck with subtler problems. Do not generalise from it without a second
+experiment on a deck whose defects are craft-level rather than geometric.
+
+**If the contact sheet is to earn its place, it needs a backstop, not a paragraph** — the
+review schema would have to require `slides_opened_full` with a reason per slide, so the cost
+is auditable and opening all twelve has to be justified twelve times. Until that exists,
+treat `scripts/contact_sheet.py` as a convenience for a human skimming a deck, not as a
+critic-time optimisation.
+
+🔴 **Whatever you cut, cut COST, never SCOPE.** A fresh reviewer told "check 3, 6 and 8"
+cannot catch the regression you introduced on slide 10 — and a second round exists precisely
+because round 1's fixes are themselves unreviewed changes. (History: a scoped round 2 was
+proposed once and demolished in audit for exactly this reason.)
+
+**Before spending a round on a defect class, ask whether a lint could decide it.** Measured
+example: a caption sized for one line that rendered as two, dropping its second line onto the
+footer, survived a full round-1 review and was found only by round 2 — because `measure_text`
+under-reported bold width in font-collection families, so the build-time assert and the build
+lint both passed. Fixing the measurement moved that whole class to a CRITICAL that fires in
 milliseconds. A round spent finding what a lint could have decided is a round wasted.
 
 ## Handling a returned review — strengths, probes, and ceilings
