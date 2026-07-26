@@ -60,6 +60,31 @@ below is additive.
   hand-written record with no source → still passes, labelled `SELF-REPORTED`). Backward compatible by
   design: the old shape is not broken, it is made distinguishable.
 
+### Security — credentials are scanned by SHAPE, and the recurring `sk-*` false positive is documented
+- A third-party multi-engine scan reported a possible hardcoded `sk-` API key. Audited the full tree
+  and the **full history (1,645 blobs, all refs)**: **no credential exposure and nothing to revoke.**
+  Every hit is a CSS class name — the direction-gate preview names its classes after slide skeletons
+  (`sk-body`, `sk-split`, `sk-island`, `sk-band`, `sk-rail`, `sk-statement`), and `sk-` is short for
+  *skeleton*. A real key is `sk-` + ~48 high-entropy characters; these are `sk-` + four to nine
+  lowercase letters.
+- This was the second time that report had been filed and dismissed by hand (v3.9.0 was the first).
+  The false positive is not the expensive part — **a report that is always wrong teaches everyone to
+  ignore the scanner, and then the one true positive is ignored too.** So the dismissal is now a
+  command: `scripts/scan_secrets.py` discriminates by minimum length AND a Shannon-entropy floor
+  rather than by prefix, covering OpenAI, Anthropic, GitHub classic + fine-grained, AWS, GCP, Slack,
+  private-key blocks and generic `secret = "..."` assignments. It never prints a matched value —
+  only its location and a masked head — because a scanner that echoes what it found has published it
+  into your CI logs.
+- It **self-tests both directions before it scans** (real shapes must be caught, this repo's own
+  strings must not be), so a rule that silently stops matching fails the build instead of reporting
+  clean. Wired into CI on every push and PR: selftest → working tree → every blob in every commit
+  (a key deleted in a later commit is still leaked, so the tree alone is not an answer).
+- `.gitignore` now covers `.env*`, `*.key`, `*.pem`, `*.p12`, `id_rsa*`, `*_secret*` and
+  `credentials.json` — staying out of version control becomes a mechanism rather than a habit.
+  `image-generation.md` no longer shows any literal after `OPENAI_API_KEY=`; the documented pattern
+  reads from a local key file, because a scanner cannot tell a placeholder from a credential and
+  neither can a reader skimming a diff. New `SECURITY.md` records the audit and the ten-second check.
+
 ### Added — a CI guard that a SKILL.md slimming layers content instead of deleting it
 - `scripts/check_skill_lossless.py` + a CI step prove every substantive line of a baseline SKILL.md is
   still findable somewhere in the skill tree after a refactor. Deliberate deletions go in an allowlist
