@@ -228,6 +228,9 @@ Before I build, please give me:
 2. Purpose/audience/time: who is this for, how long — and is it presented live, screen-shared, sent to self-read, or presented live THEN sent around (hybrid: presented density on-slide, self-sufficient speaker notes)? Main goal: inform, support a decision, or inspire action? — If decide/inspire, one cheap follow-up: what exactly is the ASK, who says yes, and what's the biggest objection you expect? (Duarte's briefing trio; it sharpens the money slide and the close.)
 3. Source material: paper, deck, doc, figures, repo, or none? — When material IS provided, one follow-up: condense freely, preserve key phrasing verbatim, or hybrid (verbatim for claims/numbers, condense elsewhere)? Record the answer; it governs every rewrite downstream.
 4. Style/language: density (≈a phrase / one sentence / 2–3 sentences per point?), tone (minimal/corporate/academic/playful), and language (中文/English/etc.)?
+5. Review effort: `standard` (what your purpose derives) or `thorough`? Say `fast` if you want it
+   cheap and accept one generalist critic and a single round — this is the deck's cost dial, and
+   `fast` is the only tier you have to ask for.
 ```
 
 This batching is deliberate: the interview is non-negotiable, so it has to be *cheap*.
@@ -237,6 +240,21 @@ delegation and post the picks as the first FYI (see **the per-deck AUTO WAIVER**
 source-material floor still gets asked);
 when in doubt, keep it. Never assume the **topic/content**, the **style**, or **which
 template** — confirm each.
+
+**Ask the `review:` effort tier in the same batch — it is a first-class interview axis, not a
+footnote.** One word (`fast` | `standard` | `thorough`) scales BOTH cost centres, the research
+fan-out and the review panel, and its default is DERIVED from the purpose the same question
+already collects. 🔴 **`fast` is opt-in only and never derived**, so the derivation has just two
+rows — `standard` and `thorough` — and they are pure ALIASES for the low-stakes and high-stakes
+behaviour the skill already had. The full table (which purpose maps where, and the rule that
+purpose decides while SIZE never lowers a tier) is in `references/interview-protocol.md`; it and
+this sentence must agree — change one, change both. Aliasing rather than redefining is what makes
+the dial safe: **a user who says nothing gets the behaviour that predates it.** This
+axis exists because the scaling rule was always in the rubric and never on the menu — a single
+low-stakes deck measured ~32 subagents and ~2M tokens at full weight, and the user had no way to
+say "less". Options, the derivation table and the 🔴 rule that a downgrade must be stated and
+recorded: `references/interview-protocol.md`; what each tier dispatches:
+`references/critic-panel.md` → "Review effort tiers".
 
 **🔴 Read `references/interview-protocol.md` before you ask anything on a build ask** — it owns the rest of Step 0: two-stage personalization from THIS user's footprint + `taste.md` precedence (🔴 MUST: current request > this interview's answers > `taste.md`), scaling the interview to the ask, Q1's four template choices (a)–(d) — all four MUST be offered, never a hardcoded institution — with each branch, Q2's delivery · deck-length · appear-builds · primary-goal axes + per-purpose cases + venue research, and Q3's source-material routing per input format.
 > **One 🔴 CHECKPOINT lives in that file:** the Q1(d) generated-template **hero checkpoint** (show the hero + a sample content slide, iterate until the user confirms). The Q1(c) **direction gate** (4 rendered directions) RUNS BY DEFAULT on the design-a-clean-one branch — skippable only via its named carves, and recorded on the design checkpoint's `direction gate:` line.
@@ -292,6 +310,12 @@ planner is *one mind* — it may fan out *reading* across multiple documents, bu
 understanding, arc, and per-slide message itself; never split one paper across blind agents. For a
 quick, low-stakes deck you may do this pass inline yourself rather than dispatching — but
 the deep-understanding and planning standard below is the same either way.
+**Hand the planner the `review:` effort tier too** — the same one word collected at Step 0 sizes
+this research sweep and the Step-5 panel, because the two measured comparable on a real deck
+(~1.02M tokens of research against ~0.95M of review) and a user asking for speed means the
+pipeline, not half of it. What the tier narrows is BREADTH, never the fidelity floor: every claim
+that reaches a slide is still traced to a primary source at every tier. If no tier was collected,
+the planner works at `standard` and says so.
 
 The rest of this step is the **specification the planner works to** (and what
 you check its plan against). The bar — understand it deeply, don't skim:
@@ -1239,6 +1263,13 @@ Then run the **actor-critic loop** — this is the quality engine, and the criti
      only an artifact tells them apart. A hand-written record still passes, and is labelled
      `SELF-REPORTED` when it does.
 
+   - **Hand the critic the approved claim ledger WHOLE — never a summary you retyped for the
+     dispatch.** A critic can only check a slide against what it was handed, so every verified
+     fact compressed out of the brief comes back as a false "unsourced" finding. Measured on one
+     deck: **7 of 8 such findings in a round-2 review were briefing artifacts**, and the round
+     they consumed was pure waste — a larger loss than any panel-size choice. The ledger already
+     exists as an artifact at Step 1; pass the artifact, not your memory of it.
+
    - **The CONTRACT CARD's full field list is in `references/critic-panel.md` → "The CONTRACT CARD". Assemble it from the approved plans (declarations only, never rationale) at every critic dispatch — read the field list each time rather than reconstructing it**; an external/redesign deck with no Step-1 plan states "none-declared" instead. The validation gate above rejects any review without `contract_card_seen`.
 
    - **When a validated review comes back, read `references/critic-panel.md` → "Handling a returned review"**: the prior round's `strengths` as a do-not-harm ledger for the actor (and the rule that they are NEVER shown to the next fresh critic), the probes-vs-plan diff and its dispositions, and how a `ceiling` line is contained.
@@ -1255,6 +1286,19 @@ Then run the **actor-critic loop** — this is the quality engine, and the criti
    low-stakes analogue of high-stakes' "fail loudly at the cap" below. Cap the rounds by
    stakes so the loop converges fast: **low-stakes ≈ up to 2 rounds, high-stakes up
    to 3.**
+   **The user's `review:` tier (Step 0) is the same rule with a handle on it:** `fast` = 1 round,
+   `standard` = 2, `thorough` = 3. `standard` and `thorough` are pure ALIASES for the two stakes
+   classes above — same panel, same arbitration, same fresh whole-deck re-review on every round —
+   so a deck whose user says nothing behaves exactly as it did before the dial existed. `fast` is
+   the one genuinely new band and is 🔴 **opt-in only, never derived**. At `fast` there is no
+   second round to absorb a surviving blocker/major, so it goes back to the USER named, and the
+   run does not end until they answer: either they authorise one extra round (a recorded exception
+   to the cap) or the ship is recorded as *their* waiver, never the model's. Tier table:
+   `references/critic-panel.md` → "Review effort tiers".
+   *(The cap numbers live in TWO places on purpose — here, because a cap is coordinator-enforced and
+   nothing lints it, so layer 1 must carry it; and in `critic-panel.md`, which owns the rest. They
+   must agree: change one, change both — the same drift hazard the distinctiveness rule carries
+   below.)*
    > 🔴 **One exception to "surface it and ship": a surviving `timid` / `sanded-to-safe`
    > distinctiveness finding on a deck whose `boldness:` is `bold` or `experimental`.** There the
    > deck does **not** ship on your say-so — after the one improvement attempt, put the choice to the
@@ -1289,6 +1333,9 @@ ship; UNVERIFIABLE is hedged as unverified or cut — never shipped as establish
 there, verifiers also flag the planner's PROVENANCE CONTRACT breaks (spliced figures, quote-mark
 abuse — `agents/content-planner.md` §2, rubric item 10). Scale it to stakes like the critic itself
 (a quick deck: one verifier over the top ~10 claims; high-stakes: a fan-out over all of them) —
+**and the user's `review:` tier is the handle on that same scale** — `fast` = the top ~5 load-bearing
+claims, `standard` = the top ~10, `thorough` = all of them. The tier narrows the SAMPLE and never the
+gate; on a research-sourced deck the gate itself runs at every tier —
 but never skip it entirely on a research-sourced deck: this is the gate between "the slides match
 the ledger" and "the ledger matches reality." **Ordering:** run the
 verifier pass in parallel with (or immediately before) the FINAL critic round; any WRONG /
@@ -1336,7 +1383,7 @@ The `critic` block is **written by `validate_review.py --record`, not by hand** 
 only the two blocks no tool can produce for you: the design plan's four fields and the provenance
 pass's per-claim list.
 
-**Before you write the hand-off note, read `references/handoff-checklist.md` — every deck.** It is the ONE authoritative list of what the note carries (minimal caveats + next steps, never a recap or self-praise) and of the conditional REQUIRED lines the owning rules point here for: `provenance:`, click order, image licences, the GIF note, accepted advisories, `distinctiveness:`, the delegated-picks recap, the optional `ceiling` line, and the two taste-ecosystem offers — **including the save-this-look offer, which is skipped entirely under a per-deck auto directive: never an un-consented registry write.**
+**Before you write the hand-off note, read `references/handoff-checklist.md` — every deck.** It is the ONE authoritative list of what the note carries (minimal caveats + next steps, never a recap or self-praise) and of the conditional REQUIRED lines the owning rules point here for: `provenance:`, **`review:`** (the effort tier that ran + how it was reached) and **`cost:`** (subagents · tokens · wall-clock — a dial whose bill is never shown builds no intuition), click order, image licences, the GIF note, accepted advisories, `distinctiveness:`, the delegated-picks recap, the optional `ceiling` line, and the two taste-ecosystem offers — **including the save-this-look offer, which is skipped entirely under a per-deck auto directive: never an un-consented registry write.**
 
 **For a long deck (~15+ slides), show work at ~50%, not only at 100%.** When a build is large enough
 that a wrong direction is expensive to unwind, render the first few finished slides (cover + a couple

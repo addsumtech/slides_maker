@@ -69,6 +69,57 @@
      enter the fix list, and never trigger or extend a round — their only consumer is the Step-6
      hand-off line.
 
+## Review effort tiers — what the user's one word actually dispatches
+
+The stakes-derived composition below is the **default**. Step 0 collects a one-word `review:` tier
+(`fast` | `standard` | `thorough`, derived from purpose per `references/interview-protocol.md`)
+that may move it. The tier scales the **weight** of the loop; it can never scale away its
+**existence** — see the floors at the end of this section.
+
+| | `fast` | `standard` | `thorough` |
+|---|---|---|---|
+| critics per round | **1 generalist**, carrying BOTH lenses | **2 focused**, one lens each | exactly what "Panel composition by stakes" below already prescribes for high-stakes, including its light-vs-full sub-scaling by length and scope |
+| arbitration | none | **none** — identical to today's low-stakes | per that same section: skipped at the light end, full cross-validation on a long/career-defining deck |
+| round cap | **1** | 2 | 3 |
+| round-2 scope | n/a | a **full fresh** whole-deck re-review | a **full fresh** whole-deck re-review |
+| consent | the critic's own | the critic's own | corroborated, wherever that section already requires it |
+| provenance sample | top ~5 load-bearing claims | top ~10 | fan-out over all of them |
+| measured order of magnitude | ~6 subagents · ~250k tok | ~12 · ~600k | ~32 · ~2M |
+
+**`standard` and `thorough` are pure ALIASES for today's low-stakes and high-stakes — every cell
+above either restates that section or defers to it.** That is the whole safety property of this
+dial: it renames two behaviours the skill already had so a user can *reach* them by word, and adds
+exactly ONE genuinely new band, `fast`. Nothing about a deck whose user says nothing changes.
+🔴 **`fast` is therefore OPT-IN ONLY and is never DERIVED** — no purpose, however small the ask,
+defaults to it. A user has to ask for it, which is what makes the recall drop below a consented
+trade rather than a silent downgrade.
+*(An earlier draft also had `standard` narrow round-2 to the changed slides and gain a "triggered"
+arbiter pass. Both were dropped: the first is rejected by the review-validation gate, whose
+`slides_opened` scope buckets are whole-deck and per-section only, so a scoped round 2 bounces and
+costs an extra round instead of saving one; the second contradicts four surviving statements that
+low-stakes dispatches no arbiter at all, including `agents/arbiter.md`'s own brief. Either could
+return later as its own change that edits every one of those files — neither belongs in a dial
+whose value is that it changes nothing by default.)*
+
+**When no tier was collected — treat it as `standard`, and say so.** Three paths reach Step 5
+without Step 0's purpose question ever running: a redesign (whose R0 keep-or-restyle answers
+REPLACE the template question), a critique of an existing deck with no rebuild, and any external
+deck with no Step-1 plan. On all three the tier is `standard` and the hand-off records
+`review: standard (no tier collected — <which path>)`. A tier that is silently undefined is how a
+default becomes whatever the run happened to feel like.
+
+**🔴 Two shapes no tier may alter, because they are not weight.** (1) On a **large/sectioned
+deck**, the per-section critics plus the one whole-deck coherence critic run at EVERY tier
+(`references/large-deck-orchestration.md`) — the tier moves rounds and the provenance sample, never
+the sectioned panel shape; a 40-slide deck reviewed as one document is not a cheaper review, it is
+a different and worse one. (2) **Corroborated consent stays required wherever the stakes section
+requires it.** A user word may buy fewer rounds; it may not buy consent that nobody checked on the
+deck class where that check gates shipping.
+
+**Report the bill.** A dial the user sets but never sees the cost of builds no intuition, so the
+Step-6 hand-off carries a `cost:` line (subagents · tokens · wall-clock) beside the `review:`
+line — `references/handoff-checklist.md` owns both.
+
 ## Panel composition by stakes, and arbiter cross-validation
 
      - *Low-stakes* (research/lab meeting, work status update, teaching) → **two FOCUSED lens

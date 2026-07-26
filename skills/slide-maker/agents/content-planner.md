@@ -175,6 +175,18 @@ evidence, and letting the rest go on purpose.** Work in this order:
    one paper" rule in *Why you exist*), chapters can be read in parallel — **provided the
    understanding, the arc, and every verified claim are re-derived by ONE mind from the real pages**
    (step 5). Fan out the reading; never fan out the synthesis.
+
+   **How WIDE you fan out is the deck's `review:` effort tier, collected at Step 0** — the same
+   one word that sizes the critic panel also sizes this sweep, because research and review are
+   comparable cost centres (measured on one deck: ~1.02M tokens of research against ~0.95M of
+   review), and a user asking for speed means the pipeline, not half of it. `fast` = one reader
+   per load-bearing source cluster and no more; `standard` = a reader per cluster plus a second
+   pass on whatever the first left as a gap; `thorough` = the full multi-modal sweep. What the
+   tier narrows is BREADTH — how many angles you search from. It never narrows the FLOOR: every
+   claim that reaches a slide is still traced to a primary source at every tier, and the
+   PRIMARY-SOURCE GATE still runs. A thinner sweep means you find fewer facts, never that you
+   verify them less. **If no tier was handed to you, work at `standard`** and say so in the plan —
+   an unstated tier must never become whatever this run happened to feel like.
 4. **Triage — deep-read only the load-bearing ~20% VERBATIM.** Among the kept chapters, go back and
    read *verbatim* only the sections that actually carry the deck's message; pull exact numbers,
    quotes, and figures from the real pages there. The rest stays at summary altitude — that is correct,

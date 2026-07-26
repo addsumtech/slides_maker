@@ -268,6 +268,43 @@ four template choices:
        This sets the **rhetorical arc**: *inform* builds to the evidence; *decide* leads with the
        recommendation and the ask; *inspire* opens on stakes and closes on a call to action. Purpose
        hints at it but doesn't fix it (a conference talk can inform *or* persuade) — so confirm it.
+     - **Review effort — `fast` · `standard` · `thorough`. ASK IT, on the same line as purpose.**
+       This is the deck's COST DIAL, and it is the one axis the user previously had no handle on:
+       a single low-stakes deck run at full weight measured **~32 subagents and ~2M tokens across
+       research + build + two review rounds**. The rule that scales the loop already existed
+       ("scale the critic to stakes"), but it was inferred, never offered — so nobody knew they
+       could turn it down.
+       **The default is DERIVED, not fixed** — offer the derived value as the pre-selected option
+       so the common case is one click:
+       | purpose | derived default |
+       |---|---|
+       | research/lab meeting · work status update · teaching · webinar / online presentation · **any tiny ask (1–2 slides, an internal note)** | `standard` |
+       | academic conference talk · academic job talk / faculty interview · thesis defense · company/stakeholder readout · product description / pitch (customer, investor or internal) | `thorough` |
+       🔴 **`fast` is never derived — it is reachable only by the user asking for it.** The table has
+       two rows for a reason: those are the two classes the skill already had, so a derived tier can
+       only ever reproduce today's behaviour. A small ask does NOT lower the tier; **purpose decides,
+       size never does.** A one-slide exec readout derives `thorough`, and choosing `fast` there is a
+       recorded downgrade — which is exactly the case that most needs recording.
+       Deriving rather than defaulting to a constant is what makes this safe to add: **a user who
+       says nothing gets exactly the behaviour they got before this dial existed** (today's
+       low-stakes ≡ `standard`, today's high-stakes ≡ `thorough`), because those two tiers are pure
+       ALIASES rather than new behaviours. `fast` is the ONE genuinely new band, and it is opt-in
+       only — so the guarantee holds without an exception. The word exists so ONE word can move it.
+       **One word governs BOTH cost centres** — the research fan-out and the review panel. They are
+       comparable in size (measured on one deck: research ~1.02M tokens vs review ~0.95M), and a
+       user who asks for speed means the whole pipeline, not half of it. What `fast` narrows on the
+       research side is the **sample**, never the gate: the PRIMARY-SOURCE GATE still runs.
+       **Say the cost of `fast` in the option itself, never in a footnote:** it collapses the panel
+       to ONE generalist critic carrying both lenses, and a single agent wading all ~30 checks is
+       the exact failure mode the two-lens split was built to fix. Choosing it is accepting a known
+       recall drop, which is a legitimate trade — but only if it was stated.
+       🔴 **Choosing a tier BELOW the derived default is allowed and must be VISIBLE:** say in one
+       line what is being given up, and record it on the hand-off's `review:` line as
+       `fast (derived default was thorough — user chose)`. A downgrade nobody can see afterwards is
+       indistinguishable from a downgrade that was never offered.
+       *(What each tier actually dispatches — panel size, arbitration trigger, round cap and round-2
+       scope — is owned by `references/critic-panel.md` → "Review effort tiers". Do not restate the
+       mechanics here; this question only collects the word.)*
    - *(Structure emphasis — data/trends vs narrative-insights vs sector/section breakdown — and the
      fine-grained slide count are best steered at the **Step-1 content checkpoint**, where the user
      approves the arc, rather than front-loaded here — keep this interview cheap.)*

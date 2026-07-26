@@ -80,3 +80,13 @@ but it must always *name* what it rejected — the user's veto costs one glance 
 terminal and answers in one click. Do **NOT** write `content-plan.md` / `design-plan.md` files
 into the deliverable folder (they clutter it; the conversation is the record) — unless the user
 explicitly asks for plan files.
+
+**The delegated picks MUST include the `review:` effort tier**, written as the word plus its
+derivation — `review: standard (derived from purpose)` — and, when the pick sits BELOW the
+derived default, the reason. 🔴 **Under the auto waiver the coordinator records the DERIVED tier and
+runs it — it may never auto-pick BELOW it.** Delegation covers preferences the user would have
+expressed; it does not cover spending less care than the purpose calls for on a deck they never
+saw. `fast` is opt-in only, so in auto mode it is simply unreachable:
+`review: thorough (derived from purpose — auto)`. It is the deck's cost dial, so an auto run that never surfaces it spends the
+user's budget without ever showing them the lever; and a downgrade recorded nowhere is
+indistinguishable from a downgrade never made.

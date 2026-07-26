@@ -8,6 +8,12 @@ forward-looking content you added, open questions (e.g. a missing real brand ass
 **plus, when they apply, these REQUIRED-by-their-owning-rule lines (this list is the ONE
 authoritative hand-off checklist; the owning rules point here):** the `provenance: N checked · N
 confirmed · N fixed · N cut` line (research-sourced decks — the PRIMARY-SOURCE GATE's artifact), the
+**`review:` line** (the effort tier that ran, plus its derivation, and the reason whenever it sat
+below the derived default — `standard (derived from purpose)` / `fast (derived default was
+thorough — user chose speed)`) and the **`cost:` line** (subagents · tokens · wall-clock). The
+cost line is not bookkeeping: a dial the user sets but never sees the bill for builds no
+intuition, so the next deck's choice is as blind as the last one's. Report both even when the
+tier was derived rather than chosen. Then, as before: the
 **`.deck-gates.json` written at the deck root** (the record `--deliverables` checks: critic verdict,
 the design plan's boldness/signature_move/carried_by/form_ledger, and the provenance pass's per-claim
 `claims` list — or a written `waived` reason for any gate deliberately skipped; the `critic` block
