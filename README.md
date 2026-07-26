@@ -187,10 +187,20 @@ To be plain about it: it does not promise a perfect deck in one shot. It promise
 2. **It reads (or researches) the material.** Papers, docs, repos — and now Word / Excel / CSV / images / video, plus whole books via purpose-driven triage — are read faithfully: figures cropped from the PDF, key numbers verified line by line, nothing without a source on a slide. With only a topic, it researches current information online first, then works from that.
 3. **You approve the story, then the look — right in the chat.** The content-planner posts a compact per-slide table (what each slide says, which figure carries it, how the deck flows); once you confirm the story, the art director posts the design plan (look, palette, per-slide form, motion) the same way. Two quick confirmations at the two cheapest moments to change direction — no plan files to open.
 4. **It generates the PPTX.** Layout is guaranteed by code, with automatic layout checks both at build time and on the rendered output. Overflow, overlap, and font problems get caught there.
-5. **An independent critic reviews it.** Rendered slides go to the critic agent (with an arbiter cross-checking on high-stakes decks), judged against presentation standards. Fixes land, the deck is re-checked, and only then is it delivered to `~/Downloads/<deck-name>/`.
+5. **An independent critic reviews it.** Rendered slides go to the critic agent (with an arbiter cross-checking on high-stakes decks), judged against presentation standards. Fixes land, the deck is re-checked, and only then is it delivered to `~/Downloads/<deck-name>/`. The PDF and the browser preview are generated at hand-off rather than on every build (a deck still being edited makes them stale immediately) — and they are **gated on a record that the review actually ran**, because the model that skips a check is the same model that would write the note claiming it didn't.
 6. **You tune it in plain language.** Not perfect? Just say so in the chat ("turn slide 7 into a chart," "cut the intro," "warmer palette," "make it 10 slides," "shorten the notes") and it rebuilds cleanly from the same script. No dragging boxes by hand; keep refining until it's right.
 
-**What it costs:** the tool is free; you pay only your AI usage. The read-plan-build path is cheap; the independent review loop is the expensive part, and it scales with stakes: a quick internal deck gets a light single-pass check, while a conference-grade deck with a multi-critic panel can consume a few hundred thousand tokens. Say "light review" any time to trade polish for cost — the independent check itself always runs, just lighter.
+**What it costs:** the tool is free; you pay only your AI usage. Reading, planning and building is the cheap part — **the independent review loop is where the tokens go**, so it is a dial you set with one word in the interview:
+
+| `review:` | what runs | measured |
+| --- | --- | --- |
+| `fast` | 1 generalist critic, 1 round, top-5 claims fact-checked | ~6 subagents · ~250k tokens |
+| `standard` *(default)* | 2 focused critics (content + design), 2 rounds, top-10 claims | ~12 · ~600k |
+| `thorough` | multi-critic panel + arbiter cross-check, 3 rounds, every claim | ~32 · ~2M |
+
+The default is **derived from your purpose**, so saying nothing is always safe: a lab meeting or status update gets `standard`, a defense or investor pitch gets `thorough`. `fast` is the only tier you have to ask for — collapsing to one critic and one round is a real drop in what gets caught, so it is never chosen for you.
+
+**No tier removes the independent review**, and none of them touch the automatic layout checks, the pre-flight list, or the source-verification gate — the dial moves rounds, panel width and how many claims get fact-checked, never whether the deck is judged by someone other than its author. *(Figures measured on a 12-page research-sourced deck, July 2026; treat them as orders of magnitude — they move with the model and the deck.)*
 
 ---
 
@@ -260,7 +270,7 @@ The best, most reliable result comes from **invoking the skill and answering its
 /slide-maker
 ```
 
-The interview opens as a clickable, tabbed form (Topic · Template · Purpose & Audience · Style & Language): arrow keys to move, Enter to pick, and every question ships with ready-made options. It recognizes returning users, too: saved templates and past topics show up as one "use one of my previous ones" choice beside the general options, expanding only if you pick it. **Answering each question is what makes the deck yours instead of generic**: audience, length, live-vs-self-read, density, language, and look all steer the plan. Short answers are fine, and **"you decide" is always a valid answer**.
+The interview opens as a clickable, tabbed form (Topic · Template · Purpose & Audience · Style & Language): arrow keys to move, Enter to pick, and every question ships with ready-made options. Review effort rides along with Purpose & Audience, since your purpose is what sets its default. It recognizes returning users, too: saved templates and past topics show up as one "use one of my previous ones" choice beside the general options, expanding only if you pick it. **Answering each question is what makes the deck yours instead of generic**: audience, length, live-vs-self-read, density, language, look, and how hard you want it reviewed all steer the plan. Short answers are fine, and **"you decide" is always a valid answer**.
 
 **In a hurry? A one-liner works too, but treat it as a shortcut, not the best path:**
 
@@ -338,6 +348,12 @@ python3 ~/.claude/skills/slide-maker/scripts/check_env.py
 It prints the exact fix for anything missing.
 
 For everything beyond the environment — build errors, lint findings and what they mean in plain language, render failures, image sourcing, CJK issues — there is a dedicated symptom → cause → fix page: [**Troubleshooting & FAQ**](skills/slide-maker/references/troubleshooting-faq.md). Failing lint runs print a pointer to it. If a problem isn't covered there, open an issue with the error output.
+
+---
+
+## Security
+
+No credentials are stored or hardcoded anywhere in this repository, and CI scans every push — working tree *and* full history — for credential shapes rather than prefixes. If a scanner reported an `sk-` key here, it matched a CSS class name (`sk-body`, `sk-split`, `sk-rail` — `sk-` is short for *skeleton*); [**SECURITY.md**](SECURITY.md) shows how to confirm that in ten seconds, and how to report anything real.
 
 ---
 
