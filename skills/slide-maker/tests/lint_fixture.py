@@ -142,9 +142,51 @@ def build_fail():
     body(s, 1.4, "Sixteen or so words of body copy and nothing else at all on the whole canvas.")
     dk.footer(s, tag="fixture", page=7)
 
+    # 8-10 the PAINT-ORDER faults that a per-shape threshold cannot see. All three shipped on
+    # real decks with the gate reporting clean, and each was found by a human looking at a PNG.
+    # The shared cause: the old test asked whether ONE shape covered >=60% of a text block.
+
+    # 8 a field of 150 tiles over a caption — no single tile covers 1% of the text
+    s = prs.slides.add_slide(L); dk.box(s, 0, 0, 10, 5.625, fill=BG, line=None)
+    head(s, "Composite coverage")
+    dk.text(s, 0.6, 2.60, 8.8, 0.30,
+            [[("COMPOSITE TILES MUST NOT HIDE THIS CAPTION", 10, GREY, True, False, dk.FONT)]],
+            space_after=0)
+    cell, gp = 0.352, 0.05
+    for r in range(6):
+        for c in range(25):
+            dk.box(s, c * (cell + gp), 1.60 + r * (cell + gp), cell, cell, fill=LINE, line=None)
+    dk.footer(s, tag="fixture", page=8)
+
+    # 9 a DASHED rule — 40 separate boxes — struck through a footnote
+    s = prs.slides.add_slide(L); dk.box(s, 0, 0, 10, 5.625, fill=BG, line=None)
+    head(s, "A dashed rule is still a rule")
+    dk.text(s, 0.6, 2.40, 8.8, 0.44,
+            [[("a dashed rule of many boxes must be caught exactly like a solid one, because "
+               "the reader cannot tell them apart", 10, GREY, False, False, dk.FONT)]],
+            space_after=0)
+    seg, g2 = 0.10, 0.07
+    for k in range(int(8.8 // (seg + g2))):
+        dk.box(s, 0.6 + k * (seg + g2), 2.47, seg, 0.012, fill=LINE, line=None)
+    dk.footer(s, tag="fixture", page=9)
+
+    # 10 an opaque PICTURE over the first line only — unknowable from the XML, since nothing
+    #    in the file records a picture's alpha. Only the pixels can answer this one.
+    s = prs.slides.add_slide(L); dk.box(s, 0, 0, 10, 5.625, fill=BG, line=None)
+    head(s, "A picture over one line")
+    dk.text(s, 0.6, 2.30, 5.0, 0.34,
+            [[("an opaque picture over line one of this sentence hides it completely",
+               13, GREY, False, False, dk.FONT)]], space_after=0)
+    plate = OUT / "_fixture_plate.png"
+    if not plate.exists():
+        from PIL import Image
+        Image.new("RGB", (600, 90), (0x9A, 0xA6, 0xB4)).save(plate)
+    dk.picture(s, str(plate), 0.6, 2.26, 5.0, 0.30, fit="cover", alt="opaque plate")
+    dk.footer(s, tag="fixture", page=10)
+
     dk.lint_layout(prs, strict=False)     # this deck is SUPPOSED to be defective
     prs.save(str(OUT / "fx_fail.pptx"))
-    print("built fx_fail.pptx (7 slides — each carries one defect)")
+    print("built fx_fail.pptx (10 slides — each carries one defect)")
 
 
 if __name__ == "__main__":

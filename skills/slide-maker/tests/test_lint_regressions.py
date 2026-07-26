@@ -101,6 +101,14 @@ def main():
         ("OCCLUSION", "a panel painted over a sentence is caught"),
         ("LAYOUT SAMENESS", "UNdeclared sameness is still flagged (the waiver is not a blanket)"),
         ("UNDERFILLED", "an UNdeclared thin page is still flagged"),
+        # The three paint-order faults a PER-SHAPE threshold cannot see. Each shipped on a real
+        # deck with the gate reporting clean. Asserted on their own text so a generic finding
+        # elsewhere in the deck cannot stand in for them.
+        ("OCCLUSION: 'COMPOSITE TILES",
+         "150 tiles hiding a caption are caught (union coverage, not one shape at a time)"),
+        ("RULE THROUGH TEXT: a", "a rule assembled from 40 dashes is caught like a solid one"),
+        ("TEXT NOT VISIBLE: 'an opaque picture over l",
+         "a PICTURE over one line is caught from the pixels — unknowable from the XML"),
     ]:
         (ok if token in f_out else bad).append(
             what if token in f_out else f"FAIL deck: {token} was NOT raised — the check regressed")

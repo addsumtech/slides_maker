@@ -45,6 +45,7 @@ Checks (tuned for low false-positives):
   warns in the 1.5-3.0:1 band; only its hopeless <1.5:1 case (TEXT ON IMAGE) is a HARD finding.
 """
 import json
+import math
 import re
 import sys
 from pptx import Presentation
@@ -294,6 +295,53 @@ _SRGB = [(c / 255.0) / 12.92 if c / 255.0 <= 0.04045 else (((c / 255.0) + 0.055)
 
 def _px_lum(p):
     return 0.2126 * _SRGB[p[0]] + 0.7152 * _SRGB[p[1]] + 0.0722 * _SRGB[p[2]]
+
+
+def _glyph_bands(im, s, sw, sh):
+    """Per-LINE variation the render actually shows inside a text shape's ink rect, 0..1 each.
+
+    Per-BLOCK is not enough: a plate covering the first line of a two-line caption leaves the
+    second line to supply plenty of variation, and the block averages out to "fine". Measured
+    on exactly that case — a picture over line 1 — the block scored 0.257, indistinguishable
+    from healthy text. Split by line and the bands read 0.00 and 0.51.
+
+    Every XML-side occlusion rule is a taxonomy of causes — this shape type, painted then,
+    covering that much — and a taxonomy of causes is unbounded. Pictures are skipped because
+    alpha is unknowable from the file; groups, gradients and rotated shapes for their own
+    reasons; and anything assembled from many small parts slipped through a per-shape
+    threshold. Each exclusion is a hole, and three real decks shipped through them.
+
+    So this asks the opposite question, which has a bounded answer: is the text VISIBLE?
+    Rendered glyphs are high-frequency — 5-30% of the pixels in their own rect differ from the
+    field around them. A rect that is a flat wash contains no glyphs, whatever put it there.
+    Returns None when the crop is too small to judge.
+    """
+    rl, rt, rr, rb = _rbox(s)
+    W, H = im.size
+    x0 = max(0, min(W - 1, int(rl / sw * W))); x1 = max(x0 + 1, min(W, int(rr / sw * W)))
+    y0 = max(0, min(H - 1, int(rt / sh * H))); y1 = max(y0 + 1, min(H, int(rb / sh * H)))
+    if (x1 - x0) < 24 or (y1 - y0) < 8:
+        return None                                      # too few pixels to be evidence
+    line_h = max(s.get("size", 12), 1) / 72.0 * 1.2
+    n = max(1, min(12, int(round((rb - rt) / line_h))))
+    px = im.load()
+    out = []
+    for i in range(n):
+        by0 = y0 + int((y1 - y0) * i / float(n))
+        by1 = y0 + int((y1 - y0) * (i + 1) / float(n))
+        if by1 - by0 < 4:
+            return None                                  # bands too thin to judge
+        step = max(1, (x1 - x0) // 220)                   # cap the walk; glyph edges survive it
+        lums = [_px_lum(px[x, y]) for y in range(by0, by1) for x in range(x0, x1, step)]
+        if len(lums) < 60:
+            return None
+        buckets = {}                                     # modal luminance at 1/32 resolution
+        for v in lums:
+            k = int(v * 32)
+            buckets[k] = buckets.get(k, 0) + 1
+        modal = max(buckets, key=buckets.get) / 32.0
+        out.append(sum(1 for v in lums if abs(v - modal) > 0.10) / float(len(lums)))
+    return out
 
 
 def _region_bg_lum(im, s, sw, sh, ink_lum):
@@ -706,7 +754,8 @@ def _render_col_void(im):
 # "0 hard findings" into a sentence that means two different things, and the reader cannot tell
 # which one they got — the exact shape of the failure this skill exists to prevent.
 _SKIP = {}
-_PIXEL_CHECKS = ("TEXT-ON-IMAGE CONTRAST", "colour/value pacing", "FLAT RHYTHM")
+_PIXEL_CHECKS = ("TEXT NOT VISIBLE", "TEXT-ON-IMAGE CONTRAST", "colour/value pacing",
+                 "FLAT RHYTHM")
 
 
 def _report_pixel_skip():
@@ -1179,37 +1228,76 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
             _rl, _rt, _rr, _rb = _rbox(s)
             tb = {"l": _rl, "t": _rt, "r": _rr, "b": _rb}
             ta_ = max((_rr - _rl) * (_rb - _rt), 1e-6)
+            # Coverage is a UNION over every shape painted after the text, never one shape at a
+            # time. A per-shape ">=60% of the text" threshold is blind BY CONSTRUCTION to anything
+            # assembled from many small parts, and real decks shipped straight through that hole
+            # with the gate reporting clean: a 150-tile field erasing a caption (no single tile
+            # covers 1% of it) and a dashed rule of 40 boxes struck through a footnote. Rasterise
+            # the text's ink rect, accumulate, then ask what the UNION looks like — not what any
+            # one shape was. Enumerating occluder shapes is unbounded; measuring coverage is not.
+            # TWO grids, because "a thin SHAPE lying across the glyphs" and "a big shape whose
+            # INTERSECTION happens to be thin" are different faults and only the first is a rule.
+            # Conflating them regressed the skill's own reference deck: a card's bottom edge
+            # grazing the footer read as a strike-through. `cov` answers "how much is hidden",
+            # `rules` answers "is a line drawn across it" and only ever accepts shapes that are
+            # themselves thin — which is exactly what a dashed rule's 40 boxes each are.
+            GW, GH = 192, 32
+            cov = [bytearray(GW) for _ in range(GH)]
+            rules = [bytearray(GW) for _ in range(GH)]
+            rw_ = max(_rr - _rl, 1e-6)
+            rh_ = max(_rb - _rt, 1e-6)
             for k in range(ti + 1, len(bx)):             # shapes AFTER ti are painted above it
                 o = bx[k]
-                # Pictures are deliberately NOT treated as occluders: this pass reads the file, not
-                # the pixels, and nothing here knows a picture's ALPHA — deckkit.pic_alpha() places
-                # faint plates on purpose, and a transparent PNG covers nothing. Text over imagery
-                # is already owned by the render-time TEXT-ON-IMAGE check, which samples the actual
-                # pixels. Only an opaque SOLID FILL can hide text with certainty from the XML alone.
+                # Pictures stay out of this pass: it reads the FILE, not the pixels, and nothing
+                # here knows a picture's ALPHA — deckkit.pic_alpha() places faint plates on
+                # purpose and a transparent PNG covers nothing. Text over imagery is owned by the
+                # render-time checks, which sample actual pixels.
                 if o["text"] or o.get("bg") or o.get("unk") or o["pic"] or not o["fill"]:
                     continue
                 ix, iy = _inter(o, tb)
                 if ix <= 0 or iy <= 0:
                     continue
-                thin = min(o["w"], o["h"]) <= 0.06
-                if thin:
-                    # A rule is legal BELOW the glyphs (an underline) and illegal THROUGH them.
-                    # The old fixed symmetric pad spared both, which is exactly backwards: at body
-                    # size the pad exceeded the x-height, so a strike-through was exempt.
-                    line_h = max(s.get("size", 12), 1) / 72.0 * 1.25
-                    if o["t"] >= _rb - min(0.045, 0.30 * line_h):
-                        continue                          # sits at/below the baseline — underline
-                    if iy < 0.004 or ix < 0.25 * (_rr - _rl):
-                        continue                          # a grazing tick, not a rule across it
-                    finds.append(f"RULE THROUGH TEXT: a {o['w']:.2f}x{o['h']:.3f}in rule is painted "
-                                 f"OVER '{s['txt'][:28]}' — derive the rule's y from the measured end "
-                                 f"of the block above it, or draw it before the text")
-                    break                                 # one actionable finding per text block
-                elif ix * iy >= 0.60 * ta_:
-                    finds.append(f"OCCLUSION: '{s['txt'][:28]}' is {100*ix*iy/ta_:.0f}% covered by a "
-                                 f"shape painted after it — the text renders hidden; move the shape "
-                                 f"earlier in the build or out of the way")
-                    break
+                c0 = max(0, int((o["l"] - _rl) / rw_ * GW))
+                c1 = min(GW, int(math.ceil((o["r"] - _rl) / rw_ * GW)))
+                r0 = max(0, int((o["t"] - _rt) / rh_ * GH))
+                r1 = min(GH, int(math.ceil((o["b"] - _rt) / rh_ * GH)))
+                thin_shape = min(o["w"], o["h"]) <= 0.06
+                for rr in range(r0, max(r1, r0 + 1)):
+                    row, rrow = cov[rr], rules[rr]
+                    for cc in range(c0, max(c1, c0 + 1)):
+                        row[cc] = 1
+                        if thin_shape:
+                            rrow[cc] = 1
+            row_frac = [sum(r) / float(GW) for r in cov]
+            rule_frac = [sum(r) / float(GW) for r in rules]
+            total_frac = sum(row_frac) / float(GH)
+
+            if total_frac >= 0.60:
+                finds.append(f"OCCLUSION: '{s['txt'][:28]}' is {100*total_frac:.0f}% covered by "
+                             f"shape(s) painted after it — the text renders hidden; move them "
+                             f"earlier in the build or out of the way")
+            else:
+                # A thin BAND of union coverage across the glyphs is a rule through the text,
+                # however many shapes drew it. Legal BELOW the baseline (an underline), illegal
+                # THROUGH the x-height; the old symmetric pad spared both, which is backwards.
+                line_h = max(s.get("size", 12), 1) / 72.0 * 1.25
+                b0 = None
+                for i in range(GH + 1):
+                    hit = i < GH and rule_frac[i] >= 0.50
+                    if hit and b0 is None:
+                        b0 = i
+                    elif not hit and b0 is not None:
+                        band_t = _rt + (b0 / float(GH)) * rh_
+                        band_h = ((i - b0) / float(GH)) * rh_
+                        span = max(rule_frac[b0:i]) * rw_
+                        if (band_h <= min(0.06, 0.34 * rh_)
+                                and band_t < _rb - min(0.045, 0.30 * line_h)):
+                            finds.append(
+                                f"RULE THROUGH TEXT: a {span:.2f}x{band_h:.3f}in rule is painted "
+                                f"OVER '{s['txt'][:28]}' — derive the rule's y from the measured "
+                                f"end of the block above it, or draw it before the text")
+                            break
+                        b0 = None
             back = _backing_fill(bx, ti)
             if back == "UNKNOWN":
                 continue                                 # picture/gradient backing → unknowable, skip
@@ -1288,6 +1376,52 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
                     elif est < 3.0:
                         warns.append(f"TEXT-ON-IMAGE CONTRAST: '{snip}' est. {est:.2f}:1 (<3:1) over "
                                      f"an image — verify legibility; a scrim/panel usually fixes it")
+
+        # 1d) TEXT NOT VISIBLE (render-based, CAUSE-AGNOSTIC). Every XML-side occlusion rule is a
+        #     taxonomy of causes, and a taxonomy of causes is unbounded: pictures are skipped
+        #     because alpha is unknowable from the file, groups and gradients for their own
+        #     reasons, and anything built from many small parts slipped a per-shape threshold.
+        #     Each exclusion is a hole; real decks shipped through them with the gate clean.
+        #     This asks the one question with a bounded answer — is the text VISIBLE? — and it
+        #     does not care what covered it. A LINE whose pixels are a flat wash contains no
+        #     glyphs. Only flagged when a LIVE line follows a dead one (or every line is dead):
+        #     a dead band at the BOTTOM is ordinary slack between the ink rect and the box, and
+        #     treating that as a defect false-flags healthy decks.
+        if pngs:
+            im_v = None
+            for s in bx:
+                if not s["text"] or not s["runs"] or s["size"] < 8:
+                    continue
+                if not any(len(t) >= 4 for t, _c in s["runs"]):
+                    continue
+                if im_v is None:
+                    try:
+                        from PIL import Image
+                        im_v = Image.open(pngs[si]).convert("RGB")
+                    except Exception:
+                        im_v = False
+                if im_v is False:
+                    break
+                bands = _glyph_bands(im_v, s, sw, sh)
+                if not bands:
+                    continue
+                # Thresholds are RELATIVE to the block's own liveliest line, because a short
+                # line is legitimately quiet: a five-word last line across a wide rect scores
+                # ~0.04 while a full line scores ~0.3. An absolute floor either misses the
+                # short-line case or false-flags it. A HIDDEN line is not merely quiet — it is
+                # essentially zero, both absolutely and against its siblings.
+                mx = max(bands)
+                dead = [i for i, e in enumerate(bands)
+                        if e <= 0.02 and (mx <= 0.02 or e <= 0.12 * mx)]
+                live = [i for i, e in enumerate(bands) if e >= max(0.03, 0.25 * mx)]
+                hole = any(d < max(live) for d in dead) if live else len(dead) == len(bands)
+                if hole:
+                    where = ("every line" if not live
+                             else "line %d of %d" % (dead[0] + 1, len(bands)))
+                    finds.append(f"TEXT NOT VISIBLE: '{s['txt'][:28]}' — {where} renders as a flat "
+                                 f"field with no glyphs in it. Something is painted over the text, "
+                                 f"or it is the same colour as its ground; check the render")
+
         # 2) solid vs solid partial overlap (neither contained)
         sol = [s for s in bx if s["solid"] and not s["bg"]]
         for i in range(len(sol)):

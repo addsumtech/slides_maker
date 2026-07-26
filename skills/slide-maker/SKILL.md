@@ -1062,11 +1062,18 @@ the stats block into the critic's input** so the judges score numbers, not impre
 net for the no-overlap / fits-its-box / density / rhythm rules, **not** a
 replacement for looking (it can't judge crop, balance, legibility, or fidelity).
 
-**🔴 When the gate says clean and the pixels say broken, the PIXELS win.** The lint reasons about
-geometry from the file; it does not model **paint order**, so a shape added after a text box is
-drawn ON TOP of it with every check green (measured: a footer hairline painting over a sources line
-passed with 0 findings and was found only by sampling the PNG — two new hard checks, `OCCLUSION`
-and `RULE THROUGH TEXT`, now catch that class, but they are a net, not a proof). The model is also
+**🔴 When the gate says clean and the pixels say broken, the PIXELS win.** Paint order is the fault
+class that keeps proving this: a shape added after a text box is drawn ON TOP of it while every
+geometry check stays green. Three real decks shipped that way — a footer hairline over a sources
+line, a 150-tile field erasing a caption, a dashed rule of 40 boxes struck through a footnote — and
+each was found by a human looking at a PNG. The lesson was not "add another rule": the old check
+enumerated *causes* (this shape type, painted then, covering that much), and causes are unbounded,
+so every exclusion in it was a hole. `OCCLUSION` / `RULE THROUGH TEXT` now measure the **union** of
+everything painted over a text block, so a thing built from many small parts cannot slip a
+per-shape threshold; and `TEXT NOT VISIBLE` asks the one question with a bounded answer — *does
+this line render any glyphs at all?* — straight from the pixels, so it catches a picture, a group,
+a gradient or a same-colour-as-its-ground block without knowing which it was. Still a net, not a
+proof. The model remains
 blind to: **shapes inside groups** (imported SVG and user .pptx files on the redesign branch),
 **chart interiors** (neither linter opens a chart part, so a bad number-format code renders raw),
 **rotated shapes**, **text measured with a substituted font** (the lint says so and carries ~1 line
