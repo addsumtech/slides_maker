@@ -2337,13 +2337,60 @@ def _font_substituted(name):
     return _FONT_SUB_CACHE[name]
 
 
+_FACE_IDX_CACHE = {}
+
+
+def _face_index(path, bold):
+    """Which face inside a font COLLECTION (.ttc/.otc) to measure with.
+
+    macOS ships whole families as one .ttc — matplotlib resolves "Helvetica Neue" bold and
+    regular to the SAME file, and ``ImageFont.truetype(path, size)`` with no ``index=`` always
+    loads face 0, the Regular. Every bold run in such a family was therefore measured at
+    REGULAR width: ~3.9% narrow for Helvetica Neue (face 0 = 3871.9pt vs face 1 = 4022.9pt on
+    the same string). Under-measuring is the dangerous direction — a measure-then-place guard
+    silently passes and the renderer wraps the line anyway, which is how a caption sized for
+    one line landed a second line on top of a footer. Families with separate files per weight
+    (Arial.ttf / Arial Bold.ttf) were never affected, which is why this hid for so long.
+    """
+    if not path or not str(path).lower().endswith((".ttc", ".otc")):
+        return 0
+    key = (str(path), bold)
+    if key in _FACE_IDX_CACHE:
+        return _FACE_IDX_CACHE[key]
+    idx = 0
+    try:
+        from PIL import ImageFont
+        want = "bold" if bold else "regular"
+        for i in range(24):
+            try:
+                style = (ImageFont.truetype(path, 16, index=i).getname()[1] or "").lower()
+            except Exception:
+                break
+            if "italic" in style or "oblique" in style:
+                continue
+            if style == want:                      # exact: "Bold" / "Regular", never "Condensed Bold"
+                idx = i
+                break
+    except Exception:
+        idx = 0
+    _FACE_IDX_CACHE[key] = idx
+    return idx
+
+
 def _pil_font(name, size_pt, bold=False):
-    """A cached Pillow font for `name` at `size_pt` (loaded at size*PREC px)."""
+    """A cached Pillow font for `name` at `size_pt` (loaded at size*PREC px).
+
+    Picks the right FACE inside a collection — see :func:`_face_index`."""
     key = (name, bold, round(size_pt, 2))
     f = _PIL_FONT_CACHE.get(key)
     if f is None:
         from PIL import ImageFont
-        f = ImageFont.truetype(_font_file(name, bold), max(1, int(round(size_pt * _MEAS_PREC))))
+        path = _font_file(name, bold)
+        px = max(1, int(round(size_pt * _MEAS_PREC)))
+        try:
+            f = ImageFont.truetype(path, px, index=_face_index(path, bold))
+        except Exception:
+            f = ImageFont.truetype(path, px)
         _PIL_FONT_CACHE[key] = f
     return f
 

@@ -45,6 +45,36 @@
      deck under review/redesign or a direction preview (no Step-1 plan exists), state
      "none-declared" explicitly in the dispatch instead.
 
+## Survey on ONE image before opening any slide (every round, every tier)
+
+A critic's dominant cost is not thinking, it is LOOKING: twelve renders opened as twelve
+images was ~44 tool calls and ~20 minutes per lens, and a second round paid that bill again
+from scratch. So **build a contact sheet first and open it once**:
+
+```bash
+python3 scripts/contact_sheet.py <render-dir>      # -> <render-dir>/_contact_sheet.png
+```
+
+Then open individual slides at FULL SIZE only where the sheet shows something worth a closer
+look — plus any slide the rubric makes mandatory (the cover, the WOW, the money slide, the
+close). Measured: ~12 image reads down to ~4-6, with whole-deck coverage intact.
+
+🔴 **The sheet narrows the COST, never the SCOPE.** Do not hand a fresh reviewer a list of
+slides to look at. A reviewer told "check 3, 6 and 8" cannot catch the regression you
+introduced on slide 10 — and a second round exists precisely because the first round's fixes
+are themselves unreviewed changes. The sheet shows ALL slides and the reviewer chooses where
+to go deep; that keeps the fresh-critic-unanchored property that makes round 2 worth running
+at all. (History: a scoped round 2 was proposed once and demolished in audit for exactly
+this reason. The saving belongs on cost-per-page, not on pages.)
+
+**What the mechanical layer should be catching instead of a critic.** Before spending a round
+on a defect class, check whether a lint can decide it. One measured example: a caption sized
+for one line that rendered as two, dropping its second line onto the footer, survived a full
+round-1 review and was found by round 2 — because `measure_text` was under-reporting bold
+width in font-collection families, so both the build-time assert and the build lint passed.
+Fixing the measurement moved that whole class to a build-time CRITICAL that fires in
+milliseconds. A round spent finding what a lint could have decided is a round wasted.
+
 ## Handling a returned review — strengths, probes, and ceilings
 
    - **Consume the previous round's `strengths` as a do-not-harm ledger.** On every fix round,

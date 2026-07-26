@@ -116,6 +116,32 @@ def main():
         else:
             bad.append("reference example deck could not be built — the corpus check did not run")
 
+    # ── text MEASUREMENT must never under-estimate ────────────────────────────
+    # macOS ships a whole family as one .ttc, and matplotlib resolves bold and regular to
+    # the SAME path; Pillow's truetype(path, size) with no index= then loads face 0, the
+    # Regular. Every bold run in such a family was measured at REGULAR width — 3.9% narrow
+    # for Helvetica Neue. Under-measuring is the dangerous direction: a measure-then-place
+    # guard silently passes and the renderer wraps anyway, which is how a caption sized for
+    # one line landed its second line on top of a footer, on a deck the lint called clean.
+    sys.path.insert(0, str(SCRIPTS))
+    import deckkit as dk
+    fams = [f for f in ("Helvetica Neue", "Arial", "Helvetica", "DejaVu Sans")
+            if dk._font_file(f, False)]
+    if not fams:
+        ok.append("font measurement: skipped — no resolvable font on this host")
+    for fam in fams:
+        probe = "MEASURING WIDTH AT A GIVEN WEIGHT"
+        reg = dk._pil_font(fam, 100, False).getlength(probe)
+        bld = dk._pil_font(fam, 100, True).getlength(probe)
+        if bld < reg:
+            bad.append(f"{fam}: bold measures NARROWER than regular ({bld:.0f} < {reg:.0f}) — "
+                       f"the bold face was not selected inside the font file")
+        else:
+            ok.append(f"{fam}: bold measures >= regular ({bld / reg:.3f}x)")
+        path = str(dk._font_file(fam, True) or "")
+        if path.lower().endswith((".ttc", ".otc")) and dk._face_index(path, True) == 0:
+            bad.append(f"{fam} is a font collection but bold still maps to face 0")
+
     for line in ok:
         print("  ok   " + line)
     for line in bad:
