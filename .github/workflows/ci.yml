@@ -37,6 +37,19 @@ jobs:
             $( [ -f "$ALLOW" ] && echo --allow "$ALLOW" ) \
             --report /tmp/skill-lost.md
 
+      # Credential scan that discriminates by SHAPE (length + Shannon entropy), not by prefix.
+      # A prefix matcher flags this repo on every run, because the direction-gate preview names its
+      # CSS classes after slide skeletons — sk-body, sk-split, sk-rail. A report that is always
+      # wrong is a report everyone learns to ignore, which is worse than no report. This one
+      # self-tests both directions before it scans, so a rule that stops catching real keys fails
+      # the build rather than passing quietly.
+      - name: No credentials by shape (working tree + full history)
+        working-directory: ${{ github.workspace }}
+        run: |
+          python scripts/scan_secrets.py --selftest
+          python scripts/scan_secrets.py
+          python scripts/scan_secrets.py --history
+
       - name: Manifest versions match (plugin.json vs marketplace.json)
         working-directory: ${{ github.workspace }}
         run: |

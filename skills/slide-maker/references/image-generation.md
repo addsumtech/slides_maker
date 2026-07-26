@@ -367,10 +367,10 @@ request a key when native imagegen or `codex` is present.
 >   and say which you used. A deck that ships on a clean native look is a fine outcome; an unexpected
 >   bill is not.
 ```bash
-# Provide the key at runtime via an env var — NEVER hard-code a real key in source or docs.
-# Preferred (keeps it out of shell history and version control): read it from a local key file
-# or a secret manager. The value here is an OBVIOUS placeholder, not a real credential.
-export OPENAI_API_KEY="$(cat ~/.openai_key)"   # or: export OPENAI_API_KEY="DUMMY_KEY_replace_at_runtime"
+# Provide the key at runtime from a local key file — NEVER hard-code one in source or docs, and
+# never paste a literal after the `=` (that shape is what secret scanners flag, and a scanner
+# cannot tell your placeholder from a real credential).
+export OPENAI_API_KEY="$(cat ~/.openai_key)"
 python scripts/generate_images_openai.py \
   ~/Downloads/<deck>/assets/generated/image_prompt_manifest.json \
   --model gpt-image-2 --size 2048x1152 --quality medium

@@ -9,3 +9,17 @@ video/
 
 # 推广内容(私有,禁止随 push 公开)
 _promo/
+
+# 凭证 —— 让「不可能被提交」成为机制,而不是运气
+.env
+.env.*
+*.key
+*.pem
+*.p12
+*.pfx
+id_rsa*
+.openai_key
+.minimax_key
+*_secret*
+*secrets.json
+credentials.json
