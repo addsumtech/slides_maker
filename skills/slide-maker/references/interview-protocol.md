@@ -37,6 +37,34 @@ expanding to named past looks on pick — the named looks come from `taste.md`'s
 for any other history (past purposes, prior venues). Marking a *general* option "(Recommended)" is fine and unaffected — the rule bounds how
 PAST ITEMS enter, so they never crowd generic paths out of a bounded-option UI.
 
+**🔴 Emit a CAPABILITY LEDGER before the first question — four lines, from what you can observe
+about THIS host.** The skill is written for a host with a structured-choice UI, subagent dispatch,
+image input and web access; it runs on hosts with none of them. The danger is not that a weaker
+host produces a worse deck — it is that it produces a worse deck **while every report reads
+identically**, because the stages that degrade are the ones that self-certify. Measured: a run that
+read 3 of 10 reference files shipped zero icons and a raw format string on a slide, and every
+automated gate passed.
+
+    capability ledger
+      choice UI    : yes | no  → no = ask the four questions as plain text, never fake a form
+      subagents    : yes | no  → no = the planner/art-director/critic run inline; see below
+      image input  : yes | no  → no = the critic's DESIGN lens cannot see the render
+      web access   : yes | no  → no = no-web fallback (mark falsifiable claims open, ask the user)
+
+Carry it to the hand-off verbatim, beside `review:` and `cost:`. 🔴 **Where a capability is absent,
+say what was LOST, not that an equivalent ran** — `design lens: DEGRADED (no image input — judged
+from lint_deck --json structure, not from pixels)` is honest; silence is the failure this ledger
+exists to prevent. Two specific degradations must never be described as equivalent:
+- **No subagent dispatch.** "Run the same brief inline" preserves the WORDS and loses the property
+  that made the split worth having — a critic in the author's own context is the author grading
+  themselves, which is exactly what `.deck-gates.json` exists to make visible. Run it as a
+  deliberately fresh pass (state the brief, judge only the render and the lint JSON, do not consult
+  your build reasoning), and record `critic: inline (no dispatch on this host — not independent)`.
+- **No image input.** The design lens and the render self-check are both pixel work. Substitute the
+  structured surrogate (`lint_deck --json`: per-slide load, ink%, max pt, shape counts, contrast
+  findings) and **say it is a surrogate** — it cannot see crop, balance, a figure smothering text,
+  or anything in the paint-order blind list.
+
 **Scale the interview to the ask:** a full deck needs
 all four; a genuinely tiny ask (a single slide, a quick infographic) still needs purpose
 and content confirmed, but you may collapse template/style to a sensible default *stated

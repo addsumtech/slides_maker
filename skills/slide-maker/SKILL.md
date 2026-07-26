@@ -1062,6 +1062,23 @@ the stats block into the critic's input** so the judges score numbers, not impre
 net for the no-overlap / fits-its-box / density / rhythm rules, **not** a
 replacement for looking (it can't judge crop, balance, legibility, or fidelity).
 
+**🔴 When the gate says clean and the pixels say broken, the PIXELS win.** The lint reasons about
+geometry from the file; it does not model **paint order**, so a shape added after a text box is
+drawn ON TOP of it with every check green (measured: a footer hairline painting over a sources line
+passed with 0 findings and was found only by sampling the PNG — two new hard checks, `OCCLUSION`
+and `RULE THROUGH TEXT`, now catch that class, but they are a net, not a proof). The model is also
+blind to: **shapes inside groups** (imported SVG and user .pptx files on the redesign branch),
+**chart interiors** (neither linter opens a chart part, so a bad number-format code renders raw),
+**rotated shapes**, **text measured with a substituted font** (the lint says so and carries ~1 line
+of slack), and anything **LibreOffice draws differently** from what the XML implies. A clean lint
+means "nothing the model can see is wrong", never "the slide is right" — which is the entire reason
+this scan exists and why it is not optional.
+
+**Also read what the lint says it did NOT do.** With no renders beside the deck the pixel-backed
+families disable themselves; the run now prints one `[skipped] … NOT checked: …` line and carries
+`pixel_checks` in `--json`. `0 findings` with that line present is a different sentence from `0
+findings` without it, and only one of them means what it looks like.
+
 **Render self-check — scan EVERY slide for these before handing to the critic** (they're
 invisible in the build code and only appear in the pixels; catching them yourself saves a
 critic round — full rationale in `references/design-principles.md`):

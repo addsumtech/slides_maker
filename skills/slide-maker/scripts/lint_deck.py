@@ -702,6 +702,19 @@ def _render_col_void(im):
     return best / 96.0
 
 
+# Which pixel-backed checks did NOT run, and why. A gate that disables itself in silence turns
+# "0 hard findings" into a sentence that means two different things, and the reader cannot tell
+# which one they got — the exact shape of the failure this skill exists to prevent.
+_SKIP = {}
+_PIXEL_CHECKS = ("TEXT-ON-IMAGE CONTRAST", "colour/value pacing", "FLAT RHYTHM")
+
+
+def _report_pixel_skip():
+    if _SKIP.get("reason"):
+        print("  [skipped] %s — NOT checked: %s" % (_SKIP["reason"], ", ".join(_PIXEL_CHECKS)))
+    return dict(_SKIP)
+
+
 def _render_png_paths(path, renders_dir, n):
     """Sorted per-slide render PNGs, or None — the ONE discovery shared by the stats lum pass and
     the text-on-image contrast check. Silent no-op when Pillow is missing, the dir is absent, or
@@ -710,18 +723,22 @@ def _render_png_paths(path, renders_dir, n):
     try:
         from PIL import Image                            # noqa: F401 — every consumer needs Pillow
     except ImportError:
+        _SKIP["reason"] = "Pillow not installed"
         return None
     auto = renders_dir is None
     if renders_dir is None:
         cand = os.path.join(os.path.dirname(os.path.abspath(str(path))), "render")
         renders_dir = cand if os.path.isdir(cand) else None
     if not renders_dir or not os.path.isdir(renders_dir):
+        _SKIP["reason"] = "no render directory (pass --renders <dir>, or render beside the deck)"
         return None
     import glob
     # numeric sort: lexical sorting breaks at >=100 slides (slide100 between slide10 and slide11)
     pngs = sorted(glob.glob(os.path.join(renders_dir, "slide*.png")),
                   key=lambda p: int(re.sub(r"\D", "", os.path.basename(p)) or 0))
     if not pngs or len(pngs) != n:      # `not pngs` also guards the 0-slide deck: max() below
+        _SKIP["reason"] = ("no slide PNGs in %s" % renders_dir if not pngs
+                           else "%d PNGs for %d slides — re-render" % (len(pngs), n))
         return None                     # would raise on an empty iterable
     # stale-render guard (auto-discovered dir only — an explicit --renders is the user's contract):
     # a matching PNG COUNT from an older build of a different deck would silently feed wrong
@@ -729,8 +746,7 @@ def _render_png_paths(path, renders_dir, n):
     if auto:
         try:
             if max(os.path.getmtime(p) for p in pngs) < os.path.getmtime(str(path)) - 1:
-                print(f"  [stats] note: ignoring {renders_dir} — renders predate the deck "
-                      f"(re-render before linting to enable pixel checks)")
+                _SKIP["reason"] = "renders predate the deck — re-render"
                 return None
         except OSError:
             pass
@@ -795,7 +811,13 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False):
             a, b = rows[i - 1]["skel"], r["skel"]
             j = len(a & b) / max(1, len(a | b))
             sim = f"{j:.2f}"
-            sames = sames + 1 if j >= 0.75 else 0
+            # A DECLARED rhyme is the opposite of sameness: small multiples at deck scale, where
+            # the identical frame is what makes the one changing variable visible. deckkit's
+            # design_intent(rhyme=<group id>) documented this waiver long before anything read it.
+            rh_a = (rows[i - 1].get("intent") or {}).get("rhyme")
+            rh_b = (r.get("intent") or {}).get("rhyme")
+            rhymed = rh_a is not None and rh_a == rh_b
+            sames = 0 if rhymed else (sames + 1 if j >= 0.75 else 0)
             if sames >= 2:
                 warns.append(f"LAYOUT SAMENESS: slides {i-1}-{i+1} share ≥75% of their skeleton — "
                              f"vary the page structure, not just the words (rhythm / canvas-skeleton rule)")
@@ -856,10 +878,12 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False):
         # thin neighbours into one full slide), not stretching boxes. Cover/closing/dividers and
         # deliberately quiet registers are exempt — record the exception instead.
         if (mode != "surface" and 0 < i < len(rows) - 1 and r["load"] >= 15
-                and r["ink_cov"] < 0.25 and not r.get("big_pic_fg", r["n_pic"] > 0)):
+                and r["ink_cov"] < 0.25 and not r.get("big_pic_fg", r["n_pic"] > 0)
+                and not (r.get("intent") or {}).get("envelope")):
             warns.append(f"UNDERFILLED: slide {i+1} ink covers only {r['ink_cov']*100:.0f}% of the canvas "
-                         f"for a ~{r['load']}-word content slide — enrich the point, merge it with a thin "
-                         f"neighbour, or record the quiet-register exception (frame-fill rule)")
+                         f"for a ~{r['load']}-word content slide — strengthen the hero, or declare the "
+                         f"quiet register with design_intent(envelope=...) if the air is the point; "
+                         f"only then consider enriching or merging with a thin neighbour")
         # DEAD BOTTOM: an interior content slide whose content stops well above the footer — the
         # lower third reads as an accidental void even when overall ink% passes (a wide-but-shallow
         # layout). Charts and big fg imagery earn their own whitespace; text/panel slides don't.
@@ -1101,6 +1125,7 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
     j_findings, j_warns = [], []
     # discover the per-slide render PNGs ONCE — shared by the text-on-image contrast check
     # (per-slide, inside the loop) and the stats lum pass (after it)
+    _SKIP.clear()          # one owner for the skip reason: cleared here, only ever set below
     pngs = _render_png_paths(path, renders_dir, len(prs.slides))
     titles = []                                          # (slide#, normalized title, display snip)
     intent_map = {}                                      # si -> declared design intent (see design_intent)
@@ -1145,9 +1170,50 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
         for ti, s in enumerate(bx):
             if not s["text"] or not s["runs"]:
                 continue
+            # OCCLUSION / RULE THROUGH TEXT — the two faults that live in PAINT ORDER, which the
+            # build-time model does not represent at all: a shape added AFTER a text box is drawn
+            # ON TOP of it. The XML is well-formed and every geometry check passes, so both gates
+            # report clean while a sentence is partly or wholly invisible in the render. Measured:
+            # a footer hairline painting over a sources line passed lint_deck with 0 findings and
+            # was found only by sampling the PNG.
+            _rl, _rt, _rr, _rb = _rbox(s)
+            tb = {"l": _rl, "t": _rt, "r": _rr, "b": _rb}
+            ta_ = max((_rr - _rl) * (_rb - _rt), 1e-6)
+            for k in range(ti + 1, len(bx)):             # shapes AFTER ti are painted above it
+                o = bx[k]
+                # Pictures are deliberately NOT treated as occluders: this pass reads the file, not
+                # the pixels, and nothing here knows a picture's ALPHA — deckkit.pic_alpha() places
+                # faint plates on purpose, and a transparent PNG covers nothing. Text over imagery
+                # is already owned by the render-time TEXT-ON-IMAGE check, which samples the actual
+                # pixels. Only an opaque SOLID FILL can hide text with certainty from the XML alone.
+                if o["text"] or o.get("bg") or o.get("unk") or o["pic"] or not o["fill"]:
+                    continue
+                ix, iy = _inter(o, tb)
+                if ix <= 0 or iy <= 0:
+                    continue
+                thin = min(o["w"], o["h"]) <= 0.06
+                if thin:
+                    # A rule is legal BELOW the glyphs (an underline) and illegal THROUGH them.
+                    # The old fixed symmetric pad spared both, which is exactly backwards: at body
+                    # size the pad exceeded the x-height, so a strike-through was exempt.
+                    line_h = max(s.get("size", 12), 1) / 72.0 * 1.25
+                    if o["t"] >= _rb - min(0.045, 0.30 * line_h):
+                        continue                          # sits at/below the baseline — underline
+                    if iy < 0.004 or ix < 0.25 * (_rr - _rl):
+                        continue                          # a grazing tick, not a rule across it
+                    finds.append(f"RULE THROUGH TEXT: a {o['w']:.2f}x{o['h']:.3f}in rule is painted "
+                                 f"OVER '{s['txt'][:28]}' — derive the rule's y from the measured end "
+                                 f"of the block above it, or draw it before the text")
+                    break                                 # one actionable finding per text block
+                elif ix * iy >= 0.60 * ta_:
+                    finds.append(f"OCCLUSION: '{s['txt'][:28]}' is {100*ix*iy/ta_:.0f}% covered by a "
+                                 f"shape painted after it — the text renders hidden; move the shape "
+                                 f"earlier in the build or out of the way")
+                    break
             back = _backing_fill(bx, ti)
             if back == "UNKNOWN":
                 continue                                 # picture/gradient backing → unknowable, skip
+            _resolved_back = bool(back)
             if not back:
                 if dark_plate or unk_plate:
                     continue                             # unresolved / plate canvas → skip (no false positive)
@@ -1162,12 +1228,22 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
                                  + (" (no explicit colour, defaults to black)" if rc is None else "")
                                  + f" on fill #{back} — contrast {ratio:.2f}:1, unreadable")
                 elif ratio < 3.0:
-                    warns.append(f"LOW CONTRAST: '{snip}' ink #{ink} on fill #{back} — {ratio:.2f}:1 (< 3:1)")
+                    # 3:1 is WCAG's floor for text at ANY size — large-text and bold carve-outs
+                    # only relax the bar to 3.0, never below it. So a RESOLVED backing under 3.0 is
+                    # unreadable on every reading of the spec and is a hard finding; the promotion
+                    # needs no knowledge of size or weight, which is why it is safe to make here.
+                    msg = (f"LOW CONTRAST: '{snip}' ink #{ink} on fill #{back} — {ratio:.2f}:1 "
+                           f"(under 3:1, the floor for text at ANY size)")
+                    (finds if _resolved_back else warns).append(msg)
                 elif ratio < 4.5 and s["size"] >= 12:
-                    # body-size text is held to the full WCAG bar; small chrome (footers, tick
-                    # labels) may sit in the 3.0-4.5 band without a warn
+                    # The 3.0-4.5 band stays a WARN on purpose. WCAG relaxes the bar to 3:1 for
+                    # large text (>=18pt, or >=14pt BOLD) and this pass does not collect weight, so
+                    # a hard failure here would rest on a guess about whether a 12pt label is bold.
+                    # Measured: promoting this band hard-failed the skill's OWN reference deck four
+                    # times, on accent labels at 4.27:1 — a 0.23 shortfall on a kicker is a judgement
+                    # call, not a defect, and a gate that blocks on it teaches people to bypass it.
                     warns.append(f"BODY CONTRAST: '{snip}' ink #{ink} on fill #{back} — {ratio:.2f}:1 "
-                                 f"(body-size text targets ≥4.5:1)")
+                                 f"(body-size text targets >=4.5:1; large/bold text may sit here)")
         # 1c) TEXT-ON-IMAGE contrast (render-based): text whose backing resolves to a picture /
         #     gradient ("UNKNOWN") is exactly what 1b must skip — when renders exist, sample the
         #     pixels behind the text instead (_region_bg_lum's adversarial percentile; a scrim or
@@ -1487,6 +1563,7 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
     deck_stats = _print_stats(stats_rows, mode, sw, sh, lums=lums, static_ok=static_ok)
     tail = ("" if total else "  ✓ clean (no hard findings)") + (f"  ·  {warn_total} warning(s)" if warn_total else "")
     print(f"\n{path}: {total} layout finding(s){tail}")
+    _report_pixel_skip()   # "clean" must never mean "clean, but three checks never ran"
     if total:
         print("  fix guide (symptom → cause → fix, plain language): references/troubleshooting-faq.md §6")
     if deck_stats.get("warns"):
@@ -1510,7 +1587,11 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
                        "warnings": j_warns, "stats_warnings": deck_stats.get("warns", []),
                        "deck": {k: v for k, v in deck_stats.items() if k != "warns"},
                        "per_slide": per_slide,
-                       "counts": {"findings": total, "warnings": warn_total}}, f,
+                       "counts": {"findings": total, "warnings": warn_total},
+                       "pixel_checks": {"ran": not _SKIP.get("reason"),
+                                        "reason": _SKIP.get("reason"),
+                                        "not_checked": [] if not _SKIP.get("reason")
+                                                       else list(_PIXEL_CHECKS)}}, f,
                       ensure_ascii=False, indent=1)
         print(f"  [json] wrote {json_out}")
     return total

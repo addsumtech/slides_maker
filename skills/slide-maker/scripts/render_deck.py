@@ -387,7 +387,12 @@ def check_handoff_gates(pptx):
 
     # The design plan is the art director's output (Step 2). Self-authoring one is indistinguishable
     # from dispatching for it — unless the record has to carry the fields the dispatch produces.
-    DESIGN_FIELDS = ("boldness", "signature_move", "carried_by", "form_ledger")
+    # `icon_family` joins the four originals for one measured reason: a deck shipped with ZERO
+    # icons through every automated gate, while a missing LOGO was caught by a required
+    # checkpoint token. Icons are called a design must on every branch and had no field, no
+    # column and no check anywhere. The token grammar mirrors `logo plan:` — a family name or
+    # an explicit `none — <reason>` — so a deliberately icon-free deck is always satisfiable.
+    DESIGN_FIELDS = ("boldness", "signature_move", "carried_by", "form_ledger", "icon_family")
     design = gates.get("design_plan") or {}
     if design.get("waived"):
         print("[gates] design plan WAIVED — {}".format(design["waived"]))
@@ -478,6 +483,14 @@ def main(argv):
             if "=" not in a and raw in argv:
                 argv.remove(raw)
             break
+    # --gate-check runs the hand-off gates and exits, rendering nothing. The gates were reachable
+    # only through --deliverables, which Step 6 deliberately makes a decline-able OFFER ("want a PDF
+    # and a browser preview?"), so on every deck where the user said no, the strongest gate in the
+    # skill never ran at all. Step 6 now calls this unconditionally, whatever the user answers.
+    gate_only = False
+    if "--gate-check" in argv:
+        argv = [a for a in argv if a != "--gate-check"]
+        gate_only = True
     for flag in ("--deliverables", "--final"):
         while flag in argv:
             argv.remove(flag)
@@ -496,12 +509,17 @@ def main(argv):
         die("--slides and --fast both choose the slide set — pass one")
     if not argv:
         die("usage: python render_deck.py /path/to/deck.pptx [out_dir] "
-            "[--fast | --slides N[,M]] [--deliverables]")
+            "[--fast | --slides N[,M]] [--deliverables] [--gate-check]")
     pptx = argv[0]
     out = argv[1] if len(argv) > 1 else "./render"
 
     if not os.path.isfile(pptx):
         die("no such file: " + pptx)
+
+    if gate_only:
+        check_handoff_gates(pptx)
+        print("[gates] all hand-off gates pass — the deck may be handed over")
+        return 0
 
     # Checked here, before LibreOffice runs — same reason the --fast/--slides conflicts are:
     # failing after a successful render wastes the render and reads as a late surprise.

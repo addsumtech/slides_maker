@@ -8,6 +8,8 @@ forward-looking content you added, open questions (e.g. a missing real brand ass
 **plus, when they apply, these REQUIRED-by-their-owning-rule lines (this list is the ONE
 authoritative hand-off checklist; the owning rules point here):** the `provenance: N checked · N
 confirmed · N fixed · N cut` line (research-sourced decks — the PRIMARY-SOURCE GATE's artifact), the
+**capability ledger** (the four host lines from Step 0, plus what was LOST wherever a
+capability was absent — a degraded run must be legible as degraded), the
 **`review:` line** (the effort tier that ran, plus its derivation, and the reason whenever it sat
 below the derived default — `standard (derived from purpose)` / `fast (derived default was
 thorough — user chose speed)`) and the **`cost:` line** (subagents · tokens · wall-clock). The

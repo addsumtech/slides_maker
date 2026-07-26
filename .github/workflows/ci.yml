@@ -37,6 +37,14 @@ jobs:
             $( [ -f "$ALLOW" ] && echo --allow "$ALLOW" ) \
             --report /tmp/skill-lost.md
 
+      # Two-sided lint regression. Both directions are asserted because both have failed in
+      # production: a real deck shipped a hairline painted over its provenance line with the gate
+      # reporting clean, and a deliberate rhymed triptych was flagged as "layout sameness" while
+      # the documented waiver for it was dead code. A rule set that only guards one direction
+      # drifts toward catching craft instead of defects.
+      - name: Lint catches real defects and leaves declared craft alone
+        run: python tests/test_lint_regressions.py
+
       # Credential scan that discriminates by SHAPE (length + Shannon entropy), not by prefix.
       # A prefix matcher flags this repo on every run, because the direction-gate preview names its
       # CSS classes after slide skeletons — sk-body, sk-split, sk-rail. A report that is always
