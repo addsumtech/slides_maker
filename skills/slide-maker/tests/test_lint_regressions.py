@@ -175,6 +175,67 @@ def main():
         if path.lower().endswith((".ttc", ".otc")) and dk._face_index(path, True) == 0:
             bad.append(f"{fam} is a font collection but bold still maps to face 0")
 
+    # ── the measurement must agree with the RENDERER, not just with itself ────
+    # Every measure-then-place guard in this skill — head()'s title assert, bound()'s caption
+    # sizing, `assert measure_text(...) < h`, and _rbox(), which every geometry check is
+    # computed against — trusts one number: how wide the renderer will set this string. When
+    # that number came back 3.9% narrow for bold text in font-collection families, all of them
+    # silently PASSED while text wrapped anyway, and a caption sized for one line put its
+    # second line on top of a footer. The checks above cannot see that: they are computed from
+    # the same wrong number. So calibrate against the only authority there is — render real
+    # strings and measure the ink. Under-measuring is the dangerous direction; over-measuring
+    # only costs a little slack, so the bar is one-sided and tight on the side that hurts.
+    from PIL import Image
+    cal_fonts = [f for f in ("Helvetica Neue", "Arial", "Helvetica", "DejaVu Sans")
+                 if dk._font_file(f, False)]
+    CASES = [("Measuring width at a given weight", 10, False),
+             ("MEASURING WIDTH AT A GIVEN WEIGHT", 10, True),
+             ("Neither number tells you how this compares", 13, False),
+             ("Both numbers compare one thing to another.", 26, True),
+             ("Ask for the comparator.", 48, True),
+             ("1,356", 96, True)]
+    for fam in cal_fonts[:2]:                       # two families is enough to catch the class
+        prs = dk.blank_deck()
+        for txt, size, bold in CASES:
+            sl = prs.slides.add_slide(prs.slide_layouts[6])
+            dk.box(sl, 0, 0, 10, 5.625, fill=dk.WHITE, line=None)
+            dk.text(sl, 0.05, 2.2, 9.9, size / 72.0 * 1.6,
+                    [[(txt, size, dk.DEEP, bold, False, fam)]], space_after=0, wrap=False)
+        mp = tmp / ("cal_%s.pptx" % fam.replace(" ", ""))
+        prs.save(str(mp))
+        subprocess.run([sys.executable, str(SCRIPTS / "render_deck.py"), str(mp),
+                        str(tmp / ("cal_%s" % fam.replace(" ", "")))],
+                       cwd=tmp, capture_output=True)
+        worst = None
+        for i, (txt, size, bold) in enumerate(CASES, 1):
+            png = tmp / ("cal_%s" % fam.replace(" ", "")) / ("slide%02d.png" % i)
+            if not png.is_file():
+                continue
+            im = Image.open(png).convert("L").point(lambda v: 255 if v < 128 else 0)
+            bb = im.getbbox()
+            if not bb:
+                continue
+            rendered = (bb[2] - bb[0]) / (im.width / 10.0)
+            measured = dk._pil_font(fam, size, bold).getlength(txt) / dk._MEAS_PREC / 72.0
+            if measured <= 0:
+                continue
+            r = rendered / measured
+            if worst is None or r > worst[0]:
+                worst = (r, txt, size, bold)
+        if worst is None:
+            bad.append(f"font measurement vs render: {fam} produced no usable renders")
+        elif worst[0] > 1.005:
+            bad.append(f"{fam}: the renderer sets text {100*(worst[0]-1):.1f}% WIDER than the "
+                       f"measurement predicts (worst: {worst[2]}pt "
+                       f"{'bold' if worst[3] else 'regular'}, {worst[1]!r}). Every "
+                       f"measure-then-place guard in the skill silently passes when this drifts")
+        elif worst[0] < 0.80:
+            bad.append(f"{fam}: measurement over-estimates width by more than 20% "
+                       f"(ratio {worst[0]:.3f}) — layouts will be needlessly cramped")
+        else:
+            ok.append(f"{fam}: measurement matches the renderer (worst ratio {worst[0]:.3f}, "
+                      f"never under-measures)")
+
     for line in ok:
         print("  ok   " + line)
     for line in bad:

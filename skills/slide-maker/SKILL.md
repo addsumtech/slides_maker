@@ -774,6 +774,16 @@ A few rules that matter (see `references/design-principles.md`):
   **`vstack(..., bottom=…)`** (equal gaps + no overlap by construction, errors at build time on
   overflow). Use `measure_callout/measure_bullets/measure_text` when you must position manually.
   Then run the Step-5 render self-check.
+  - **Those measurements are CALIBRATED against the renderer in CI, and that is why you can lean
+    on them.** Everything here trusts one number — how wide the renderer will set this string —
+    and when that number drifted narrow (bold text in font-collection families measured at
+    regular width, 3.9% short), every guard built on it silently PASSED while the text wrapped
+    anyway: a caption sized for one line put its second line on top of a footer, and the lint
+    agreed with the build because both were computed from the same wrong number. `tests/` now
+    renders real strings and compares the ink against the prediction, one-sided and tight on the
+    side that hurts: the measurement may be a little conservative, never optimistic. So trust it
+    to the inch — and still keep a real gap, because an estimate that is *correct* is not the
+    same as one with margin.
   - **Reserve the bottom callout's space BEFORE sizing content above it — don't add it last.**
     `bottom_callout()` returns its TOP y; the recurring mistake is to hardcode tall panels/cards
     (e.g. `y=1.7, h=2.5`) and *then* drop a callout on top, so the bar overlaps the cards' bottom
