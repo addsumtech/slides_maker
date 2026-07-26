@@ -37,14 +37,6 @@ jobs:
             $( [ -f "$ALLOW" ] && echo --allow "$ALLOW" ) \
             --report /tmp/skill-lost.md
 
-      # Two-sided lint regression. Both directions are asserted because both have failed in
-      # production: a real deck shipped a hairline painted over its provenance line with the gate
-      # reporting clean, and a deliberate rhymed triptych was flagged as "layout sameness" while
-      # the documented waiver for it was dead code. A rule set that only guards one direction
-      # drifts toward catching craft instead of defects.
-      - name: Lint catches real defects and leaves declared craft alone
-        run: python tests/test_lint_regressions.py
-
       # Credential scan that discriminates by SHAPE (length + Shannon entropy), not by prefix.
       # A prefix matcher flags this repo on every run, because the direction-gate preview names its
       # CSS classes after slide skeletons — sk-body, sk-split, sk-rail. A report that is always
@@ -99,6 +91,25 @@ jobs:
           python scripts/render_deck.py /tmp/ci.pptx /tmp/ci_render
           test -f /tmp/ci_render/slide01.png
           python scripts/lint_deck.py /tmp/ci.pptx
+
+      # Two-sided lint regression. Both directions are asserted because both have failed in
+      # production: a real deck shipped a hairline painted over its provenance line with the gate
+      # reporting clean, and a deliberate rhymed triptych was flagged as "layout sameness" while
+      # the documented waiver for it was dead code. A rule set that only guards one direction
+      # drifts toward catching craft instead of defects.
+      # Placement matters: it imports deckkit and RENDERS, so it must come after both dep installs
+      # and after the minimal render smoke — it was originally slotted above `pip install` and
+      # every CI run since died on ModuleNotFoundError before reaching any assertion.
+      - name: Lint catches real defects and leaves declared craft alone
+        run: |
+          set -o pipefail
+          python tests/test_lint_regressions.py | tee /tmp/reg.log
+          # The suite exits 0 and prints SKIPPED when a dependency is absent — right on a
+          # developer's laptop, wrong here. In CI everything it needs is installed above, so a
+          # skip means the step order broke again. Assert it actually RAN: a gate that quietly
+          # disables itself is worse than one that fails.
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/reg.log || {
+            echo "::error::regression suite exited 0 without running to completion"; exit 1; }
 
       - name: Icon pipeline (fetch, recolor, ink guard)
         run: |

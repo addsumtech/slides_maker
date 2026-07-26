@@ -21,7 +21,14 @@ BG, INK, GREY, ACC = C("FFFFFF"), C("14181C"), C("5A6470"), C("1F6FB2")
 FAINT = C("9AA6B4")          # 2.9:1 on white — under the 4.5 body floor
 LINE = C("D6DCE2")
 OUT = pathlib.Path.cwd()          # write beside the caller, not beside this file
-dk.FONT = "Helvetica Neue"
+# A fixture that hard-codes a macOS-only face is not a portable test: on Linux the name
+# silently falls back to whatever matplotlib finds (DejaVu Sans is ~13.6% wider than
+# Helvetica Neue at the same size), so the PASS deck's margins shift under the assertions.
+# Pick the first face that genuinely resolves here, and say which one, so a platform-specific
+# failure is readable instead of mysterious.
+dk.FONT = next((f for f in ("Helvetica Neue", "Helvetica", "Arial", "Liberation Sans",
+                            "DejaVu Sans") if dk._font_file(f, False)), "DejaVu Sans")
+print("fixture font: %s" % dk.FONT)
 
 
 def head(s, t):

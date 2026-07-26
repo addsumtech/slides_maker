@@ -13,7 +13,7 @@ falsely flagged for craft. The two directions matter equally and are asserted se
 
 Run:  python3 tests/test_lint_regressions.py
 """
-import pathlib, subprocess, sys, tempfile
+import os, pathlib, shutil, subprocess, sys, tempfile
 
 HERE = pathlib.Path(__file__).resolve().parent
 SCRIPTS = HERE.parent / "scripts"
@@ -26,7 +26,32 @@ def lint(pptx, renders):
     return r.stdout + r.stderr
 
 
+def _require_deps():
+    """A missing dependency must read as a missing dependency.
+
+    This suite imports deckkit and RENDERS, so it needs python-pptx, Pillow, matplotlib and
+    LibreOffice. It was originally wired into CI ABOVE `pip install -r requirements.txt` and
+    every run since died on a bare ModuleNotFoundError traceback inside a subprocess — which
+    looks exactly like a lint regression and is not one. Fail with a sentence instead.
+    """
+    missing = []
+    for mod, why in (("pptx", "python-pptx"), ("PIL", "Pillow"), ("matplotlib", "matplotlib")):
+        try:
+            __import__(mod)
+        except ImportError:
+            missing.append(why)
+    if missing:
+        print("SKIPPED: this suite needs %s — install requirements.txt BEFORE running it "
+              "(in CI, this step must come after the dependency install)." % ", ".join(missing))
+        sys.exit(0)
+    if not shutil.which("soffice") and not os.path.exists(
+            "/Applications/LibreOffice.app/Contents/MacOS/soffice"):
+        print("SKIPPED: LibreOffice (soffice) not found — this suite renders decks.")
+        sys.exit(0)
+
+
 def main():
+    _require_deps()
     tmp = pathlib.Path(tempfile.mkdtemp(prefix="lintfx-"))
     subprocess.run([sys.executable, str(HERE / "lint_fixture.py")], cwd=tmp, check=True,
                    capture_output=True)
