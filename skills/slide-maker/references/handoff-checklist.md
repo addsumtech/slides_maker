@@ -12,10 +12,10 @@ confirmed · N fixed · N cut` line (research-sourced decks — the PRIMARY-SOUR
 capability was absent — a degraded run must be legible as degraded), the
 **`review:` line** (the effort tier that ran, plus its derivation, and the reason whenever it sat
 below the derived default — `standard (derived from purpose)` / `fast (derived default was
-thorough — user chose speed)`) and the **`cost:` line** (subagents · tokens · wall-clock). The
+thorough — user chose speed)`) and the **`cost:` line** (subagents · tokens · wall-clock · **web searches planned/spent**). Searches belong on this line because the cap is per SESSION and shared with every subagent: the deck that exhausts it is rarely the deck that suffers, so the only way the number ever becomes visible is if each deck reports what it took. The
 cost line is not bookkeeping: a dial the user sets but never sees the bill for builds no
 intuition, so the next deck's choice is as blind as the last one's. Report both even when the
-tier was derived rather than chosen. Then, as before: the
+tier was derived rather than chosen. Then, as before: **`render_deck.py <deck>.pptx --gate-check` run and reported** (every hand-off gate, no render, under a second — run it whether or not the user wants the PDF, because the gates used to ride on `--deliverables` and that is a decline-able offer), the
 **`.deck-gates.json` written at the deck root** (the record `--deliverables` checks: critic verdict,
 the design plan's boldness/signature_move/carried_by/form_ledger, and the provenance pass's per-claim
 `claims` list — or a written `waived` reason for any gate deliberately skipped; the `critic` block

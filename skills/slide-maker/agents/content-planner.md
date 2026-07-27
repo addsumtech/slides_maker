@@ -187,6 +187,16 @@ evidence, and letting the rest go on purpose.** Work in this order:
    PRIMARY-SOURCE GATE still runs. A thinner sweep means you find fewer facts, never that you
    verify them less. **If no tier was handed to you, work at `standard`** and say so in the plan —
    an unstated tier must never become whatever this run happened to feel like.
+
+   **A `search cap:` sizes the sweep just as hard as the tier does, and for a blunter reason: web
+   search is capped per SESSION and shared with every subagent you dispatch, so the budget you spend
+   is not yours.** State a per-reader cap **inside each dispatch prompt** — a reader not told a cap
+   searches until it is satisfied, and N of them do that at once. Keep the round under about half of
+   what REMAINS. Report `searches: planned N / spent N` in the plan so the number is a decision
+   somebody made rather than a wall somebody hit; a fan-out that quietly spends the session's whole
+   budget starves the small, late, NAMED lookups — a logo, a brand colour, one clearance number —
+   that the build genuinely cannot do without. If you are given no cap, ask for one rather than
+   assuming there is no ceiling.
 4. **Triage — deep-read only the load-bearing ~20% VERBATIM.** Among the kept chapters, go back and
    read *verbatim* only the sections that actually carry the deck's message; pull exact numbers,
    quotes, and figures from the real pages there. The rest stays at summary altitude — that is correct,

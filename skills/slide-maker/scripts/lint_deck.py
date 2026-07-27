@@ -356,6 +356,39 @@ def _page_ground(im):
     return max(b, key=b.get) / 32.0
 
 
+def _crop_ground(im, x0, x1, y0, y1, fallback):
+    """The backdrop of THIS crop, read from its own outer ring — not the page's.
+
+    A figure very often sits on paper of its own: a matplotlib `facecolor`, a white figure on a
+    tinted page, a figure inside a card. Judged against the PAGE modal, that whole figure reads
+    as one continuous block of ink, the panel count comes back as 1, and the alignment check
+    disqualifies itself in silence. A 4% luminance step was enough to do it — measured, 13 of 22
+    realistic multi-panel compositions carrying the identical defect went unreported that way.
+
+    Falls back to the page ground when the ring is not one flat colour (the crop bleeds image
+    content to its edge), because then the ring is not a backdrop and guessing from it is worse
+    than the page's answer.
+    """
+    px = im.load()
+    sx, sy = max(1, (x1 - x0) // 90), max(1, (y1 - y0) // 90)
+    ring = []
+    for d in range(3):
+        ring += [_px_lum(px[x, min(y1 - 1, y0 + d)]) for x in range(x0, x1, sx)]
+        ring += [_px_lum(px[x, max(y0, y1 - 1 - d)]) for x in range(x0, x1, sx)]
+        ring += [_px_lum(px[min(x1 - 1, x0 + d), y]) for y in range(y0, y1, sy)]
+        ring += [_px_lum(px[max(x0, x1 - 1 - d), y]) for y in range(y0, y1, sy)]
+    if len(ring) < 40:
+        return fallback
+    b = {}
+    for v in ring:
+        k = int(v * 32)
+        b[k] = b.get(k, 0) + 1
+    top = max(b, key=b.get)
+    if b[top] < 0.5 * len(ring):                         # ring is image content, not a backdrop
+        return fallback
+    return top / 32.0
+
+
 def _ink_cols(im, x0, x1, y0, y1, ground, min_w, max_gap):
     """Vertical ink RUNS in a crop of the render: [(x0,x1), ...] in pixels, left to right.
 
@@ -407,28 +440,49 @@ def _caption_align(im, bx, sw, sh):
     little bit wrong, the build gate is silent (nothing overlaps, nothing overflows), and the
     error is obvious to any human looking at the slide. Shipped exactly that way once.
 
-    Reading the panels out of the PIXELS is what makes this checkable at all: it does not
-    matter whether the panels are four pictures, one composite, or a chart with facets.
+    Reading the panels out of the PIXELS is what makes the ONE-picture case checkable at all.
+    Two figure shapes are covered: a single wide picture (panels found in its pixels), and a ROW
+    of 2..6 same-top, same-height pictures (which do have shape geometry — their declared rects
+    ARE the panel set, and no pixels are needed). A row of separate pictures used to fall through
+    both: each one is narrower than the 2.0in floor, and a lone picture always segments to one
+    run. Native CHARTS are still out of scope — they are GraphicFrames, not pictures, and their
+    interior is not read here.
 
-    Scoped narrowly on purpose — it runs only when the caption band under a picture segments
-    into the SAME number of runs as the picture does (2..6). That is the one configuration
-    whose intent is unambiguous: N labels for N panels, each belonging to the one above it.
-    One caption spanning a four-panel figure, or three captions under four panels, are legible
-    compositions with no single right answer, and guessing at them would cost false positives.
+    Scoped narrowly on purpose — it runs only when the caption band under a figure segments into
+    the SAME number of runs as the figure has panels (2..6). That is the one configuration whose
+    intent is unambiguous: N labels for N panels, each belonging to the one above it. One caption
+    spanning a four-panel figure, or three captions under four panels, are legible compositions
+    with no single right answer, and guessing at them would cost false positives.
     """
     out = []
     W, H = im.size
     px = im.load()
     pxin = W / float(sw)
     ground = _page_ground(im)
-    for p in bx:
-        if not p["pic"] or p["w"] < 2.0 or p["h"] < 0.6:
-            continue
-        x0, x1 = max(0, int(p["l"] * pxin)), min(W, int(p["r"] * pxin))
-        y0, y1 = max(0, int(p["t"] / sh * H)), min(H, int(p["b"] / sh * H))
+    pics = [p for p in bx if p["pic"] and p["w"] >= 0.6 and p["h"] >= 0.6]
+    targets = []                                         # (x0,x1,y0,y1, declared_panels|None)
+    for p in pics:                                       # one wide picture: panels live in pixels
+        if p["w"] >= 2.0:
+            targets.append((p["l"], p["r"], p["t"], p["b"], None))
+    # a ROW of pictures: same top, same height, left-to-right — their own rects are the panels
+    rows = {}
+    for p in pics:
+        rows.setdefault((round(p["t"], 2), round(p["h"], 2)), []).append(p)
+    for grp in rows.values():
+        if 2 <= len(grp) <= 6:
+            grp = sorted(grp, key=lambda q: q["l"])
+            targets.append((grp[0]["l"], grp[-1]["r"], grp[0]["t"], grp[0]["b"],
+                            [(int(q["l"] * pxin), int(q["r"] * pxin)) for q in grp]))
+    for pl, pr, pt, pb, declared in targets:
+        x0, x1 = max(0, int(pl * pxin)), min(W, int(pr * pxin))
+        y0, y1 = max(0, int(pt / sh * H)), min(H, int(pb / sh * H))
         if x1 - x0 < 200 or y1 - y0 < 50:
             continue
-        panels = _ink_cols(im, x0, x1, y0, y1, ground, int(0.35 * pxin), int(0.02 * pxin))
+        # Panels are judged against the FIGURE's own backdrop; captions, which sit on the page
+        # below it, against the page's. Using one ground for both was the check's biggest hole.
+        fg = _crop_ground(im, x0, x1, y0, y1, ground)
+        panels = declared or _ink_cols(im, x0, x1, y0, y1, fg,
+                                       int(0.35 * pxin), int(0.02 * pxin))
         if not 2 <= len(panels) <= 6:
             continue
         sx = max(1, (x1 - x0) // 120)
@@ -706,7 +760,17 @@ def _cjk_typography(slide):
 
 
 
-def _slide_stats(slide, bx, sw, sh):
+def reading_load(slide, bx, sh):
+    """One slide's reading load, in words. THE one definition — the TEXT WALL warning and the
+    hand-off DENSITY gate both call this, so the number in the warning and the number in the gate
+    can never be two different numbers.
+
+    Chrome is excluded by POSITION, not by length: a footer is small type in the footer band. An
+    earlier copy of this in render_deck.py skipped any paragraph `sz <= 10.5 and len(t) < 40`
+    anywhere on the slide, which is not a footer filter but a blanket amnesty for small type —
+    the same deck read 136 words to the lint and 4 to the gate, and a wall of 10.5pt prose sailed
+    through. A gate calibrated differently from the warning it enforces is worse than no gate.
+    """
     footer_y = sh - 0.6
     load = 0
     for s in bx:
@@ -714,6 +778,12 @@ def _slide_stats(slide, bx, sw, sh):
             load += _text_load(s["full"])
     if load == 0:                                        # grouped-content decks: fall back to run-walk
         load = sum(_text_load(r.text) for r in _walk_runs(slide.shapes) if r.text.strip())
+    return load
+
+
+def _slide_stats(slide, bx, sw, sh):
+    footer_y = sh - 0.6                                  # used by the half-occupancy checks below
+    load = reading_load(slide, bx, sh)
     sizes = []                                                             # (pt, chars) for every explicit-size run
     for r in _walk_runs(slide.shapes):
         if r.text.strip() and r.font.size:
@@ -874,6 +944,7 @@ def _render_col_void(im):
 # "0 hard findings" into a sentence that means two different things, and the reader cannot tell
 # which one they got — the exact shape of the failure this skill exists to prevent.
 _SKIP = {}
+_STATS_ERR = []            # (slide, "ExcType: msg") — per-slide statistics that DIED, never hidden
 _PIXEL_CHECKS = ("TEXT NOT VISIBLE", "CAPTION NOT ALIGNED", "TEXT-ON-IMAGE CONTRAST",
                  "colour/value pacing", "FLAT RHYTHM")
 
@@ -1310,8 +1381,14 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
         bx = _boxes(slide, sw, sh)
         try:
             stats_rows.append(_slide_stats(slide, bx, sw, sh))
-        except Exception:
-            pass
+        except Exception as exc:
+            # NEVER silently. This used to be `except Exception: pass`, and one refactor that
+            # deleted a local variable took TEXT WALL, LAYOUT SAMENESS, UNDERFILLED, FLAT RHYTHM
+            # and the density number off this deck while the report still printed "✓ clean".
+            # A check that can die without saying so is worse than a check that was never added:
+            # the first one lies. Same principle as _report_pixel_skip — "0 findings" and
+            # "0 findings, and here is what did not run" are different sentences.
+            _STATS_ERR.append((si + 1, "%s: %s" % (type(exc).__name__, exc)))
         finds = []
         warns = []
         # 1) overflow
@@ -1832,6 +1909,11 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
     tail = ("" if total else "  ✓ clean (no hard findings)") + (f"  ·  {warn_total} warning(s)" if warn_total else "")
     print(f"\n{path}: {total} layout finding(s){tail}")
     _report_pixel_skip()   # "clean" must never mean "clean, but three checks never ran"
+    if _STATS_ERR:
+        print("  [BROKEN] per-slide statistics crashed on %d slide(s) — NOT checked on them: "
+              "TEXT WALL, LAYOUT SAMENESS, UNDERFILLED, FLAT RHYTHM, body-size floor. This is a "
+              "bug in the lint, not in the deck — first: slide %d %s"
+              % (len(_STATS_ERR), _STATS_ERR[0][0], _STATS_ERR[0][1]))
     if total:
         print("  fix guide (symptom → cause → fix, plain language): references/troubleshooting-faq.md §6")
     if deck_stats.get("warns"):

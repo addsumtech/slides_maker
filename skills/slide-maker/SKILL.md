@@ -113,7 +113,7 @@ resume — never finish the pass on a pick the user already rejected. It does NO
 cannot supply yourself — e.g. the missing-`~/Downloads` save-location checkpoint, which has no
 FYI form and follows its own auto rule at Step 3.
 
-**→ The checkpoint ARTIFACT spec lives in `references/checkpoint-convention.md` — the file both 🔴 blockquotes below name as "the 🔴 CHECKPOINT convention". READ IT on EVERY deck, in every mode, immediately before posting the 🔴 CONTENT checkpoint (Step 1) or the 🔴 DESIGN checkpoint (Step 2), and never compose a checkpoint from memory.** It owns the required columns and lines — the `# | 角色 | 记忆句 | 承载证据 | units` table and its SOURCE-TRACE rule, the digests, the `boldness:` / `signature move:` / `logo plan:` lines, the required `direction gate:` (branch c) / `style gate:` (branch d) line and the rule that a branch-(c)/(d) design checkpoint with no gate line is NOT READY, the ~25-line budget, and the rule that plan files are never written into the deliverable folder. **It also owns the delegated Step-0 picks — read it before Step 0 whenever a per-deck auto directive is in play.**
+**→ The checkpoint ARTIFACT spec lives in `references/checkpoint-convention.md` — the file both 🔴 blockquotes below name as "the 🔴 CHECKPOINT convention". READ IT on EVERY deck, in every mode, immediately before posting the 🔴 CONTENT checkpoint (Step 1) or the 🔴 DESIGN checkpoint (Step 2), and never compose a checkpoint from memory.** It owns the required columns and lines — the `# | 角色 | 记忆句 | 承载证据 | units` table and its SOURCE-TRACE rule, the digests, the `boldness:` / `signature move:` / `logo plan:` / `density:` lines, the required `direction gate:` (branch c) / `style gate:` (branch d) line and the rule that a branch-(c)/(d) design checkpoint with no gate line is NOT READY, the ~25-line budget, and the rule that plan files are never written into the deliverable folder. **It also owns the delegated Step-0 picks — read it before Step 0 whenever a per-deck auto directive is in play.**
 
 ## At a glance — pipeline · rule strengths · where things live
 *A navigation map only; the steps below are the source of truth.*
@@ -296,7 +296,7 @@ constructive counterpart to the critic/arbiter judges. Give it the interview ans
 (purpose/audience/time, **delivery context** & **primary goal**, style/language, template
 decision, venue if any **plus the Step-0 venue-research findings — the planner builds on them
 (re-verify, don't re-research)**), the source material (or "none"), and the content references
-(`review-rubrics.md` — the content lens — and `multilingual.md`). *(The design references —
+(`review-rubrics.md` — the content lens — and `multilingual.md`), and the **`search cap:`** below. *(The design references —
 `design-principles.md`, `design-by-purpose.md`, `form-selection.md`, `schematic-diagrams.md`,
 `animation.md`, `image-generation.md` — belong to the slide-design agent in Step 2, not here.)*
 It returns a **Content plan** — message only, no design: a comprehension brief + a claim ledger
@@ -310,6 +310,19 @@ planner is *one mind* — it may fan out *reading* across multiple documents, bu
 understanding, arc, and per-slide message itself; never split one paper across blind agents. For a
 quick, low-stakes deck you may do this pass inline yourself rather than dispatching — but
 the deep-understanding and planning standard below is the same either way.
+**🔴 Hand the planner a `search cap:` too — and do the SMALL, NAMED lookups BEFORE dispatching it.**
+Web search is capped per SESSION, shared with every subagent, and it does not reset between decks in
+one conversation. Measured: one research fan-out — 12 agents plus 7 verifiers, none of them told a
+cap existed — spent all 200, and the bill arrived hours later when a single lookup for a company's
+official logo could not run and that deck shipped without it. The cheap, late, small queries starve
+because the big early fan-out took everything, so fix it in the order that buys the most: (1) run the
+handful of NAMED lookups first — the logo, the brand colours, the one clearance number — since they
+are few, they are exactly what starves, and Step 2 needs them anyway; (2) state a per-agent cap **in
+each dispatch prompt** — an agent not told a cap searches until satisfied, and N of them do it in
+parallel — keeping the whole round under about half of what REMAINS, not half of the original cap;
+(3) carry `searches: planned N / spent N` to the hand-off `cost:` line. If the budget does run out,
+say so on the deck's limitations page and in the hand-off: **"could not verify" must never be allowed
+to look like "does not exist"** (full rationale at Step 5's SEARCH BUDGET block).
 **Hand the planner the `review:` effort tier too** — the same one word collected at Step 0 sizes
 this research sweep and the Step-5 panel, because the two measured comparable on a real deck
 (~1.02M tokens of research against ~0.95M of review) and a user asking for speed means the
@@ -1471,6 +1484,17 @@ version — run `bash scripts/render_deck.sh <deck.pptx> --deliverables` (or
 `.pptx`, and surface the two `file://` links then. **Re-run it after any later change** so the pair
 never lags the deck. If you added any forward-looking content (per the fidelity rule), call that
 out explicitly here so they can confirm it.
+
+> **🔴 Run the gates on EVERY hand-off, whatever the user answers about the PDF:**
+> `python3 scripts/render_deck.py <deck>.pptx --gate-check` — it runs every hand-off gate, renders
+> nothing, and takes under a second. Add `--selfread` / `--textheavy` / `--surface` when that is the
+> deck's delivery mode, exactly as you would for `lint_deck.py`, so the text budget it enforces is
+> the budget that mode is actually held to.
+> **Why a separate flag exists at all:** the gates used to be reachable only through
+> `--deliverables`, and the paragraph above deliberately makes that a *decline-able offer*. So on
+> every deck where the user said "no PDF, thanks", the strongest gate in the skill never ran — and
+> nobody could see that it hadn't. A gate whose execution depends on an unrelated user preference is
+> not a gate.
 
 **`--deliverables` refuses to run until `<deck-dir>/.deck-gates.json` records that the Step-2
 design plan, the Step-5 critic and the Step-6 provenance pass actually ran.** Write it when the

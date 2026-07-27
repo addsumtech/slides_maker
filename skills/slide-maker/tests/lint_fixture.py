@@ -36,17 +36,29 @@ def head(s, t):
     dk.text(s, 0.6, 0.5, 8.8, 0.5, [[(t, 22, INK, True, False, dk.FONT)]])
 
 
-def _panel_png():
-    """A four-panel composite whose panels are UNEQUAL in width and separated by page-coloured
-    gutters — the shape a real multi-panel figure takes when its panels keep their own aspect
-    ratios. Gutters match the page so the render segments them as ground, not as ink."""
-    path = OUT / "_fixture_panels.png"
+def _panel_png(flat=False, face=(0xFF, 0xFF, 0xFF)):
+    """A four-panel composite whose panels are UNEQUAL in width and separated by gutters — the
+    shape a real multi-panel figure takes when its panels keep their own aspect ratios.
+
+    Two variants, because the ink test has two halves and each must be exercised by a fixture:
+    - default: panels inset vertically, so every panel column VARIES down the crop and the
+      `var > 0.04` branch alone segments it.
+    - flat=True: panels bleed top to bottom, so a panel column is perfectly uniform and ONLY the
+      `differs from ground` branch can see it. This is the shape a real MRI/photo strip takes.
+      Without it, deleting that branch left the suite 19/19 green while the real slide-3 defect
+      went completely undetected — a fixture that tests one half of a check reports the whole
+      check as covered.
+    `face` sets the figure's own paper: when it differs from the page, the crop-ground estimate
+    is the only thing keeping the figure from reading as one solid block.
+    """
+    tag = ("flat" if flat else "inset") + "-%02x%02x%02x" % face
+    path = OUT / ("_fixture_panels_%s.png" % tag)
     if not path.exists():
         from PIL import Image, ImageDraw
-        im = Image.new("RGB", (1200, 260), (0xFF, 0xFF, 0xFF))
+        im = Image.new("RGB", (1200, 260), face)
         d = ImageDraw.Draw(im)
         for x0, x1 in ((10, 260), (300, 520), (560, 780), (820, 1040)):
-            d.rectangle([x0, 8, x1, 252], fill=(0x22, 0x28, 0x30))
+            d.rectangle([x0, 0 if flat else 8, x1, 260 if flat else 252], fill=(0x22, 0x28, 0x30))
         im.save(path)
     return path
 
@@ -105,25 +117,9 @@ def build_pass():
     dk.design_intent(s, envelope="quiet", reason="deliberate pause slide before the turn")
     dk.footer(s, tag="fixture", page=7)
 
-    # 8 the SAME composite figure as FAIL slide 11, captioned CORRECTLY — each caption centred
-    #   on the panel it names, derived from where the panel actually is. Without this the
-    #   alignment check could drift into firing on every captioned figure and only the FAIL
-    #   deck would notice, which is the failure mode a one-sided fixture always has.
-    s = prs.slides.add_slide(L); dk.box(s, 0, 0, 10, 5.625, fill=BG, line=None)
-    head(s, "Captions centred on their panels")
-    pic = dk.picture(s, str(_panel_png()), 0.6, 2.00, 8.8, 8.8 * 260 / 1200.0, fit="contain",
-                     alt="four panels of unequal width")
-    px, pw = pic.left / 914400.0, pic.width / 914400.0
-    for (a, b), lab in zip(((10, 260), (300, 520), (560, 780), (820, 1040)),
-                           ("first", "second", "third", "fourth")):
-        c = px + (a + b) / 2.0 / 1200.0 * pw
-        dk.text(s, c - 0.75, 3.98, 1.5, 0.26, [[(lab, 11, GREY, True, False, dk.FONT)]],
-                align=PP_ALIGN.CENTER, space_after=0)
-    dk.footer(s, tag="fixture", page=8)
-
     dk.lint_layout(prs, strict=True)
     prs.save(str(OUT / "fx_pass.pptx"))
-    print("built fx_pass.pptx (8 slides — must stay clean)")
+    print("built fx_pass.pptx (7 slides — must stay clean)")
 
 
 # ───────────────────────────── FAIL deck ─────────────────────────────
@@ -216,25 +212,48 @@ def build_fail():
     dk.picture(s, str(plate), 0.6, 2.26, 5.0, 0.30, fit="cover", alt="opaque plate")
     dk.footer(s, tag="fixture", page=10)
 
-    # 11 captions laid out on the TEXT grid under a composite figure whose panels are not on
-    #    that grid. Nothing overlaps and nothing overflows, so every geometric rule is silent;
-    #    only the pixels know where the panels actually landed. Panel widths differ here on
-    #    purpose — that is what makes "column width over four" wrong in the first place.
-    s = prs.slides.add_slide(L); dk.box(s, 0, 0, 10, 5.625, fill=BG, line=None)
-    head(s, "Captions off the panels they name")
-    fig = _panel_png()
-    dk.picture(s, str(fig), 0.6, 2.00, 8.8, 8.8 * 260 / 1200.0, fit="contain",
-               alt="four panels of unequal width")
-    for i, lab in enumerate(("first", "second", "third", "fourth")):
-        dk.text(s, 0.6 + i * 2.2, 3.98, 2.2, 0.26,
-                [[(lab, 11, GREY, True, False, dk.FONT)]], align=PP_ALIGN.CENTER, space_after=0)
-    dk.footer(s, tag="fixture", page=11)
-
     dk.lint_layout(prs, strict=False)     # this deck is SUPPOSED to be defective
     prs.save(str(OUT / "fx_fail.pptx"))
-    print("built fx_fail.pptx (11 slides — each carries one defect)")
+    print("built fx_fail.pptx (10 slides — each carries one defect)")
+
+
+# ───────────────────── ALIGNMENT decks (their own pair, on purpose) ─────────────────────
+# CAPTION NOT ALIGNED needs figure slides, and LAYOUT SAMENESS / UNDERFILLED / FLAT RHYTHM are
+# DECK-level: they compare each slide against the deck it sits in. Adding two figure slides to
+# fx_fail moved its medians and silently switched both of those checks off — the suite went from
+# 19/19 to 18 passed, 2 failed, and neither failure had anything to do with alignment. A per-slide
+# fixture must never be able to change a deck-level statistic, so these get their own decks.
+def build_align():
+    for name, correct in (("fx_align_pass.pptx", True), ("fx_align_fail.pptx", False)):
+        prs = dk.blank_deck()
+        L = prs.slide_layouts[6]
+        for flat, page, face, labs in (
+                (False, "FFFFFF", (0xFF, 0xFF, 0xFF), ("first", "second", "third", "fourth")),
+                (True,  "F5F7FA", (0xFF, 0xFF, 0xFF), ("alpha", "beta", "gamma", "delta"))):
+            s = prs.slides.add_slide(L); dk.box(s, 0, 0, 10, 5.625, fill=C(page), line=None)
+            head(s, "Flat panels on their own paper" if flat else "Four panels, unequal widths")
+            pic = dk.picture(s, str(_panel_png(flat=flat, face=face)), 0.6, 2.00,
+                             8.8, 8.8 * 260 / 1200.0, fit="contain", alt="four panels")
+            px, pw = pic.left / 914400.0, pic.width / 914400.0
+            for i, ((a, b), lab) in enumerate(zip(((10, 260), (300, 520), (560, 780), (820, 1040)),
+                                                 labs)):
+                if correct:                       # centred on the panel it names
+                    c = px + (a + b) / 2.0 / 1200.0 * pw
+                    dk.text(s, c - 0.75, 3.98, 1.5, 0.26,
+                            [[(lab, 11, GREY, True, False, dk.FONT)]],
+                            align=PP_ALIGN.CENTER, space_after=0)
+                else:                             # the defect: the text grid, divided by four
+                    dk.text(s, 0.6 + i * 2.2, 3.98, 2.2, 0.26,
+                            [[(lab, 11, GREY, True, False, dk.FONT)]],
+                            align=PP_ALIGN.CENTER, space_after=0)
+            dk.footer(s, tag="fixture", page=1 if not flat else 2)
+        dk.lint_layout(prs, strict=False)
+        prs.save(str(OUT / name))
+        print("built %s (2 slides — %s)" % (name, "must stay clean" if correct
+                                            else "both must be caught"))
 
 
 if __name__ == "__main__":
     build_pass()
     build_fail()
+    build_align()

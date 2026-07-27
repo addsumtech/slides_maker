@@ -795,6 +795,14 @@ NOT a blanket per-slide quota):
   register — <reason>)` — so the critic's Lens-B `register_interiors` check (`agents/critic.md`,
   `references/review-rubrics.md`) can read it; a bare style whose register stops at the cover, with no
   named `none`-carve, is an interiors-bookends-only finding.
+- **(r) the `density:` line is on the checkpoint, as two NUMBERS the gate can be compared against** —
+  planned **median** words/slide, planned count **over 70**, and how many content slides have a
+  protagonist that is not text (`references/checkpoint-convention.md` owns the wording). Text-heavy
+  is the greedy default of every first draft, and it is the one design failure the user has raised
+  twice: on the second occasion 12 of 12 slides were over budget. The per-slide `TEXT WALL` warning
+  was correct both times and dismissed both times, so density is now hard-gated at hand-off
+  (`render_deck.py --gate-check`). This item is where the number gets DECIDED rather than discovered:
+  a design plan that never states its density has already chosen text by default.
 Fix any failing check before the DESIGN checkpoint.
 
 ### Design-critic checklist

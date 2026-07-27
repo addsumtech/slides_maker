@@ -82,8 +82,14 @@ into the deliverable folder (they clutter it; the conversation is the record) �
 explicitly asks for plan files.
 
 **The design checkpoint carries a `density:` line, and it is a NUMBER, not an adjective.**
-Write the planned per-slide reading load and the count of slides whose protagonist is NOT text —
-`density: ~35 words/slide · 4 of 11 content slides carry a figure or chart`. It exists because
+Write it in the SAME two quantities the gate measures, so plan and gate can be compared at all:
+the planned **median** load, and how many slides you expect to be **over 70** — plus the count of
+slides whose protagonist is NOT text.
+`density: median ~35 words/slide · 0-2 of 11 over 70 · 4 of 11 content slides carry a figure or chart`.
+A planned *median* against a gate that counts a *tail* is two different questions: a deck sitting at
+69 words on every single slide — 2x this example, 1.7x the budget — has a perfect tail count and
+passes cleanly, and the plan line would never have caught it either. Name both numbers or the plan
+teaches a value nothing can check. It exists because
 the density warning already existed, was already correct, and was already ignored: two
 consecutive decks shipped with 8/12 and then 12/12 slides over the presented budget (loads of
 81-144 words against ~40) while the per-slide `TEXT WALL` line was read and dismissed as

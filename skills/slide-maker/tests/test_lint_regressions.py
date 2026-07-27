@@ -55,7 +55,7 @@ def main():
     tmp = pathlib.Path(tempfile.mkdtemp(prefix="lintfx-"))
     subprocess.run([sys.executable, str(HERE / "lint_fixture.py")], cwd=tmp, check=True,
                    capture_output=True)
-    for d in ("fx_pass", "fx_fail"):
+    for d in ("fx_pass", "fx_fail", "fx_align_pass", "fx_align_fail"):
         subprocess.run([sys.executable, str(SCRIPTS / "render_deck.py"),
                         str(tmp / f"{d}.pptx"), str(tmp / f"{d}_render")],
                        cwd=tmp, capture_output=True)
@@ -72,6 +72,11 @@ def main():
             return False
         return True
 
+    # A crashed check must never read as a passed check. The per-slide statistics used to be
+    # wrapped in `except Exception: pass`, so one refactor that deleted a local variable took
+    # TEXT WALL, LAYOUT SAMENESS, UNDERFILLED and FLAT RHYTHM off every deck while the report
+    # still printed "✓ clean" — caught here only by luck, because two of those had tokens
+    # asserted below. This asserts the machinery itself, on every deck the suite touches.
     p_out = lint(tmp / "fx_pass.pptx", tmp / "fx_pass_render")
     if not ran(p_out, "PASS deck"):
         print("\n".join("  FAIL " + b for b in bad)); return 1
@@ -111,12 +116,50 @@ def main():
          "a PICTURE over one line is caught from the pixels — unknowable from the XML"),
         # A label must sit on the thing it labels. The panels of a composite figure have no
         # shape geometry, so nothing geometric can see this — and the PASS deck carries the
-        # same figure captioned correctly, so over-strictness fails there instead.
-        ("CAPTION NOT ALIGNED",
-         "captions laid out on the text grid under off-grid panels are caught"),
+        # same figures captioned correctly, so over-strictness fails there instead.
+        # BOTH slides are asserted by number, and that is the point: the ink test has two
+        # halves, slide 11 exercises only `var` and slide 12 only `differs from ground`. With a
+        # bare "CAPTION NOT ALIGNED" token, deleting the ground half left the suite green while
+        # the real defect (flat panels — an MRI/photo strip) went undetected. Verified by
+        # mutation: dropping either half now takes one of these two lines away.
     ]:
         (ok if token in f_out else bad).append(
             what if token in f_out else f"FAIL deck: {token} was NOT raised — the check regressed")
+
+    # ── ALIGNMENT pair, in its own decks. A label must sit on the thing it labels; the panels
+    # of a composite figure have no shape geometry, so nothing geometric can see this.
+    # Both slides are asserted BY NUMBER because the ink test has two halves and each slide
+    # exercises exactly one: slide 1's panels vary down their columns, slide 2's are flat and can
+    # only be found by differing from the figure's own ground. With a bare "CAPTION NOT ALIGNED"
+    # token, deleting the ground half left the suite green while the real defect — flat panels,
+    # i.e. every photo and MRI strip — went undetected. Verified by mutation: dropping either
+    # half now takes one of these two lines away.
+    a_out = lint(tmp / "fx_align_fail.pptx", tmp / "fx_align_fail_render")
+    if ran(a_out, "ALIGN-fail deck"):
+        for token, what in [
+                ("slide 1: CAPTION NOT ALIGNED",
+                 "captions on the text grid under INSET panels are caught (varying columns)"),
+                ("slide 2: CAPTION NOT ALIGNED",
+                 "the same defect on FLAT panels on their own paper is caught (crop ground)")]:
+            (ok if token in a_out else bad).append(
+                what if token in a_out
+                else f"ALIGN deck: {token} was NOT raised — the check regressed")
+    ap_out = lint(tmp / "fx_align_pass.pptx", tmp / "fx_align_pass_render")
+    if ran(ap_out, "ALIGN-pass deck"):
+        if "CAPTION NOT ALIGNED" in ap_out:
+            bad.append("ALIGN-pass deck: correctly centred captions were flagged — the check has "
+                       "drifted into over-strictness:\n"
+                       + "\n".join(l for l in ap_out.splitlines() if "CAPTION" in l))
+        else:
+            ok.append("correctly centred captions on both panel shapes stay clean")
+
+    for label, out in (("PASS", p_out), ("FAIL", f_out), ("ALIGN-fail", a_out),
+                       ("ALIGN-pass", ap_out)):
+        if "[BROKEN]" in out:
+            bad.append(f"{label} deck: the per-slide statistics CRASHED — checks silently "
+                       f"disabled:\n" + "\n".join(l for l in out.splitlines() if "[BROKEN]" in l))
+    if not any("[BROKEN]" in o for o in (p_out, f_out, a_out, ap_out)):
+        ok.append("per-slide statistics ran on every fixture deck (no silently-disabled checks)")
 
     # ── the corpus that matters most: the skill's OWN reference deck. A change that adds a hard
     # finding here is a change that would fail the file SKILL.md tells every builder to copy.
