@@ -81,6 +81,20 @@ terminal and answers in one click. Do **NOT** write `content-plan.md` / `design-
 into the deliverable folder (they clutter it; the conversation is the record) — unless the user
 explicitly asks for plan files.
 
+**The design checkpoint carries a `density:` line, and it is a NUMBER, not an adjective.**
+Write the planned per-slide reading load and the count of slides whose protagonist is NOT text —
+`density: ~35 words/slide · 4 of 11 content slides carry a figure or chart`. It exists because
+the density warning already existed, was already correct, and was already ignored: two
+consecutive decks shipped with 8/12 and then 12/12 slides over the presented budget (loads of
+81-144 words against ~40) while the per-slide `TEXT WALL` line was read and dismissed as
+advisory both times. The skill's own reference deck runs at a median of **27 words a slide**, so
+the budget is not the problem. A number on the checkpoint makes density a decision at plan time
+instead of a discovery at lint time — and `scripts/render_deck.py --deliverables` now refuses the
+hand-off when more than a third of slides are over, unless `.deck-gates.json` carries
+`"density": {"waived": "<why this deck is meant to be read, not presented>"}`.
+**Slides are a visual aid for a speaker; the sentences belong in the speaker notes, which a
+pipeline-built deck already has.**
+
 **The delegated picks MUST include the `review:` effort tier**, written as the word plus its
 derivation — `review: standard (derived from purpose)` — and, when the pick sits BELOW the
 derived default, the reason. 🔴 **Under the auto waiver the coordinator records the DERIVED tier and

@@ -450,6 +450,71 @@ def check_handoff_gates(pptx):
         print("[gates] no provenance record — fine for a deck built from the user's own material; "
               "a research-sourced deck should carry one.")
 
+    # ── DENSITY: a slide is a visual aid, not a document ────────────────────────
+    # This one is a gate rather than a warning because the warning already existed and was
+    # already ignored — twice, by the same author, on two consecutive decks. Measured: one
+    # deck shipped with 8 of 12 slides over the presented text budget, the next with 12 of 12
+    # (loads of 81-144 words against a budget of ~40), and both times the per-slide TEXT WALL
+    # line was read and dismissed as advisory. The skill's OWN reference deck — the file it
+    # tells every builder to copy — runs at a median of 27 words a slide, so the budget is not
+    # unrealistic; what failed was that nothing made ignoring it cost anything.
+    # A deck may legitimately be denser (a self-read leave-behind, a spec sheet). That is what
+    # the waiver is for: not a rule against text, a rule against text arriving by default.
+    txt = gates.get("density")
+    over, total, median = _density_stats(pptx)
+    if total:
+        if isinstance(txt, dict) and txt.get("waived"):
+            print("[gates] density: {}/{} slide(s) over the presented text budget, median {} "
+                  "words — WAIVED: {}".format(over, total, median, str(txt["waived"])[:110]))
+        elif over * 3 > total:
+            die("{} of {} slides are over the presented text budget (median {} words a slide; "
+                "budget ~40, warn >70). The skill's own reference deck runs at 27.\n"
+                "    A slide is a visual aid for a speaker — the sentences belong in the speaker "
+                "notes, which this deck already has.\n"
+                "    Cut the on-slide prose, or record the deliberate choice:\n"
+                '    "density": {{"waived": "why this deck is meant to be read, not presented"}}'
+                .format(over, total, median))
+        else:
+            print("[gates] density: {}/{} slide(s) over the text budget, median {} words a slide"
+                  .format(over, total, median))
+
+
+def _density_stats(pptx):
+    """(slides over the presented text budget, total slides, median load).
+
+    Reuses `lint_deck._text_load` rather than re-counting. Two counters would drift, and a
+    density gate calibrated differently from the density WARNING it is enforcing is worse
+    than none: an author would be told 71 by one and 141 by the other on the same deck.
+    The canonical formula is latin words + CJK chars / 2 — a 40-word budget and a
+    40-character budget are not the same thing, and Chinese decks must not be held to a
+    threshold that is silently twice as strict.
+    """
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from lint_deck import _text_load
+        from pptx import Presentation
+        prs = Presentation(pptx)
+    except Exception:
+        return 0, 0, 0
+    loads = []
+    for slide in prs.slides:
+        n = 0
+        for sh in slide.shapes:
+            if not getattr(sh, "has_text_frame", False):
+                continue
+            for para in sh.text_frame.paragraphs:
+                t = "".join(r.text or "" for r in para.runs)
+                sz = next((r.font.size.pt for r in para.runs
+                           if r.font.size is not None), 12)
+                if sz <= 10.5 and len(t) < 40:       # footer / page chrome is not reading load
+                    continue
+                n += _text_load(t)
+        loads.append(n)
+    if not loads:
+        return 0, 0, 0
+    loads.sort()
+    return sum(1 for x in loads if x > 70), len(loads), loads[len(loads) // 2]
+
 
 def main(argv):
     # --deliverables (alias --final): ALSO park the PDF beside the .pptx and write viewer.html.

@@ -1368,6 +1368,31 @@ Then run the **actor-critic loop** — this is the quality engine, and the criti
    issues). Converge; keep a short record of what changed each round so improvement is
    visible, not just churn.
 
+**🔴 THE SEARCH BUDGET IS A SHARED, SESSION-SCOPED, NON-RENEWABLE RESOURCE — spend it like one.**
+Web search is capped per SESSION (Claude Code: `CLAUDE_CODE_MAX_WEB_SEARCHES_PER_SESSION`,
+default 200), the cap is shared with every subagent you dispatch, and **it does not reset between
+decks in the same conversation.** Measured: one research fan-out — 12 research agents plus 7
+verifiers, each searching freely because nothing told them otherwise — consumed the entire 200.
+Nothing metered it and nothing warned; the exhaustion surfaced hours later, on a different task,
+when a single lookup for a company's official logo could not run. The deck that needed that logo
+shipped without it and said so on its own limitations page. That is the shape of the failure:
+**the cheap, late, small lookups starve, because the big early fan-out took everything.**
+
+Three rules, in order of how much they buy:
+
+1. **Do the SMALL, NAMED lookups FIRST — before any research fan-out.** The logo, the brand
+   colours, a licensed photo, one specific clearance number: these are a handful of searches, they
+   are the ones that get starved, and they are needed by Step 2 anyway. Front-loading them costs
+   nothing and removes the failure entirely.
+2. **Budget the fan-out explicitly and say the number in each dispatch.** An agent with no stated
+   cap searches until satisfied, and N of them do it in parallel. Write it into the prompt —
+   *"you have at most 6 searches; spend them on the claims you cannot resolve any other way"* —
+   and size the round so the whole fan-out stays under roughly **half** the session cap. Half, not
+   all: verification, mid-build fact-checks, and asset sourcing all still have to happen.
+3. **Record what you planned and what you spent**, so exhaustion is a number someone chose rather
+   than a wall someone hit. When the budget IS gone, say so in the deck's limitations and in the
+   hand-off — never let a missing fact read as an absent fact.
+
 **🔴 PRIMARY-SOURCE GATE — research-sourced decks only, before hand-off.** When the deck's
 load-bearing claims came from **web research** (every no-source deck, and any sourced deck where
 research supplied slide-level numbers/quotes), the content critic verifying slides *against the
