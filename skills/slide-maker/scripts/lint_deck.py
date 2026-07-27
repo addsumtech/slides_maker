@@ -344,6 +344,126 @@ def _glyph_bands(im, s, sw, sh):
     return out
 
 
+def _page_ground(im):
+    """Modal luminance of the render — the page ground, whatever colour the deck's paper is."""
+    px = im.load(); W, H = im.size
+    sx, sy = max(1, W // 160), max(1, H // 120)
+    b = {}
+    for y in range(0, H, sy):
+        for x in range(0, W, sx):
+            k = int(_px_lum(px[x, y]) * 32)
+            b[k] = b.get(k, 0) + 1
+    return max(b, key=b.get) / 32.0
+
+
+def _ink_cols(im, x0, x1, y0, y1, ground, min_w, max_gap):
+    """Vertical ink RUNS in a crop of the render: [(x0,x1), ...] in pixels, left to right.
+
+    A column counts as ink if it VARIES down its height or if its own value differs from the
+    page ground. Both tests are needed and neither alone works: a flat black panel varies not
+    at all (only the second test sees it), and a light chart on light paper barely differs from
+    the ground (only the first sees it). Deliberately NOT "differs from the crop's modal" — in
+    a four-panel figure the panels are 80% of the crop, so the crop's modal IS panel-black and
+    that test segments the GUTTERS instead, exactly inverted.
+    """
+    px = im.load()
+    sy = max(1, (y1 - y0) // 48)
+    rows = list(range(y0, y1, sy))
+    if len(rows) < 3:
+        return []
+    flags = []
+    for x in range(x0, x1):
+        col = [_px_lum(px[x, y]) for y in rows]
+        m = sorted(col)[len(col) // 2]
+        var = sum(1 for v in col if abs(v - m) > 0.10) / float(len(col))
+        flags.append(var > 0.04 or abs(m - ground) > 0.08)
+    runs = []
+    i = 0
+    while i < len(flags):
+        if flags[i]:
+            j = i
+            while j + 1 < len(flags) and flags[j + 1]:
+                j += 1
+            runs.append([x0 + i, x0 + j + 1])
+            i = j + 1
+        else:
+            i += 1
+    merged = []
+    for r in runs:                                       # bridge word gaps / thin seams
+        if merged and r[0] - merged[-1][1] <= max_gap:
+            merged[-1][1] = r[1]
+        else:
+            merged.append(r)
+    return [tuple(r) for r in merged if r[1] - r[0] >= min_w]
+
+
+def _caption_align(im, bx, sw, sh):
+    """Is each caption aligned to the PANEL it names? (render-based, geometry-agnostic)
+
+    The defect this exists for: a multi-panel figure is one picture, so its panels have no
+    shape geometry to align to. Captions then get laid out on the deck's text grid — column
+    width over four — while the panels sit wherever the plotting library put them, at widths
+    that differ whenever the panels have different aspect ratios. Every caption is then a
+    little bit wrong, the build gate is silent (nothing overlaps, nothing overflows), and the
+    error is obvious to any human looking at the slide. Shipped exactly that way once.
+
+    Reading the panels out of the PIXELS is what makes this checkable at all: it does not
+    matter whether the panels are four pictures, one composite, or a chart with facets.
+
+    Scoped narrowly on purpose — it runs only when the caption band under a picture segments
+    into the SAME number of runs as the picture does (2..6). That is the one configuration
+    whose intent is unambiguous: N labels for N panels, each belonging to the one above it.
+    One caption spanning a four-panel figure, or three captions under four panels, are legible
+    compositions with no single right answer, and guessing at them would cost false positives.
+    """
+    out = []
+    W, H = im.size
+    px = im.load()
+    pxin = W / float(sw)
+    ground = _page_ground(im)
+    for p in bx:
+        if not p["pic"] or p["w"] < 2.0 or p["h"] < 0.6:
+            continue
+        x0, x1 = max(0, int(p["l"] * pxin)), min(W, int(p["r"] * pxin))
+        y0, y1 = max(0, int(p["t"] / sh * H)), min(H, int(p["b"] / sh * H))
+        if x1 - x0 < 200 or y1 - y0 < 50:
+            continue
+        panels = _ink_cols(im, x0, x1, y0, y1, ground, int(0.35 * pxin), int(0.02 * pxin))
+        if not 2 <= len(panels) <= 6:
+            continue
+        sx = max(1, (x1 - x0) // 120)
+        cols = list(range(x0, x1, sx))
+
+        def rowink(y):
+            return sum(1 for x in cols if abs(_px_lum(px[x, y]) - ground) > 0.08) / float(len(cols))
+
+        ib = y1                                          # the picture's INK bottom, not its box
+        while ib > y0 + 1 and rowink(ib - 1) < 0.02:
+            ib -= 1
+        cy = None                                        # first ink row under it = the caption line
+        for y in range(min(H - 1, ib + 2), min(H, ib + int(0.62 * pxin))):
+            if rowink(y) > 0.006:
+                cy = y
+                break
+        if cy is None:
+            continue
+        caps = _ink_cols(im, x0, x1, cy, min(H, cy + int(0.30 * pxin)), ground,
+                         int(0.12 * pxin), int(0.14 * pxin))
+        if len(caps) != len(panels):
+            continue
+        for i, ((a0, a1), (c0, c1)) in enumerate(zip(panels, caps)):
+            pw = a1 - a0
+            tol = max(0.10 * pxin, 0.06 * pw)
+            d = min(abs(c0 - a0), abs(c1 - a1), abs((c0 + c1) / 2.0 - (a0 + a1) / 2.0))
+            if d > tol:
+                out.append("CAPTION NOT ALIGNED: panel %d of %d — its caption is %.2fin off the "
+                           "panel it names (neither left, centre nor right edge lines up). A "
+                           "caption's x must be DERIVED from where the panel actually landed, "
+                           "not from the text column divided by %d" % (i + 1, len(panels),
+                                                                       d / pxin, len(panels)))
+    return out
+
+
 def _region_bg_lum(im, s, sw, sh, ink_lum):
     """ADVERSARIAL background-luminance estimate behind a text shape, sampled from the slide
     render. Region = the text's RENDERED extent (alignment/anchor-aware) padded ~0.08in and
@@ -754,8 +874,8 @@ def _render_col_void(im):
 # "0 hard findings" into a sentence that means two different things, and the reader cannot tell
 # which one they got — the exact shape of the failure this skill exists to prevent.
 _SKIP = {}
-_PIXEL_CHECKS = ("TEXT NOT VISIBLE", "TEXT-ON-IMAGE CONTRAST", "colour/value pacing",
-                 "FLAT RHYTHM")
+_PIXEL_CHECKS = ("TEXT NOT VISIBLE", "CAPTION NOT ALIGNED", "TEXT-ON-IMAGE CONTRAST",
+                 "colour/value pacing", "FLAT RHYTHM")
 
 
 def _report_pixel_skip():
@@ -1421,6 +1541,20 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
                     finds.append(f"TEXT NOT VISIBLE: '{s['txt'][:28]}' — {where} renders as a flat "
                                  f"field with no glyphs in it. Something is painted over the text, "
                                  f"or it is the same colour as its ground; check the render")
+
+        # 1e) CAPTION NOT ALIGNED (render-based). A label must sit on the thing it labels. The
+        #     panels of a composite figure have no shape geometry, so captions get laid out on
+        #     the text grid instead and land wherever that grid happens to fall — a defect no
+        #     overlap/overflow rule can see, and one every viewer sees instantly.
+        if pngs and any(s["pic"] for s in bx):
+            if im_v is None:
+                try:
+                    from PIL import Image
+                    im_v = Image.open(pngs[si]).convert("RGB")
+                except Exception:
+                    im_v = False
+            if im_v is not False:
+                finds.extend(_caption_align(im_v, bx, sw, sh))
 
         # 2) solid vs solid partial overlap (neither contained)
         sol = [s for s in bx if s["solid"] and not s["bg"]]

@@ -15,6 +15,7 @@ SK = pathlib.Path(__file__).resolve().parent.parent / "scripts"
 sys.path.insert(0, str(SK))
 import deckkit as dk
 from pptx.dml.color import RGBColor
+from pptx.enum.text import PP_ALIGN
 
 C = lambda h: RGBColor.from_string(h)
 BG, INK, GREY, ACC = C("FFFFFF"), C("14181C"), C("5A6470"), C("1F6FB2")
@@ -33,6 +34,21 @@ print("fixture font: %s" % dk.FONT)
 
 def head(s, t):
     dk.text(s, 0.6, 0.5, 8.8, 0.5, [[(t, 22, INK, True, False, dk.FONT)]])
+
+
+def _panel_png():
+    """A four-panel composite whose panels are UNEQUAL in width and separated by page-coloured
+    gutters — the shape a real multi-panel figure takes when its panels keep their own aspect
+    ratios. Gutters match the page so the render segments them as ground, not as ink."""
+    path = OUT / "_fixture_panels.png"
+    if not path.exists():
+        from PIL import Image, ImageDraw
+        im = Image.new("RGB", (1200, 260), (0xFF, 0xFF, 0xFF))
+        d = ImageDraw.Draw(im)
+        for x0, x1 in ((10, 260), (300, 520), (560, 780), (820, 1040)):
+            d.rectangle([x0, 8, x1, 252], fill=(0x22, 0x28, 0x30))
+        im.save(path)
+    return path
 
 
 def body(s, y, txt, size=13, color=None):
@@ -89,9 +105,25 @@ def build_pass():
     dk.design_intent(s, envelope="quiet", reason="deliberate pause slide before the turn")
     dk.footer(s, tag="fixture", page=7)
 
+    # 8 the SAME composite figure as FAIL slide 11, captioned CORRECTLY — each caption centred
+    #   on the panel it names, derived from where the panel actually is. Without this the
+    #   alignment check could drift into firing on every captioned figure and only the FAIL
+    #   deck would notice, which is the failure mode a one-sided fixture always has.
+    s = prs.slides.add_slide(L); dk.box(s, 0, 0, 10, 5.625, fill=BG, line=None)
+    head(s, "Captions centred on their panels")
+    pic = dk.picture(s, str(_panel_png()), 0.6, 2.00, 8.8, 8.8 * 260 / 1200.0, fit="contain",
+                     alt="four panels of unequal width")
+    px, pw = pic.left / 914400.0, pic.width / 914400.0
+    for (a, b), lab in zip(((10, 260), (300, 520), (560, 780), (820, 1040)),
+                           ("first", "second", "third", "fourth")):
+        c = px + (a + b) / 2.0 / 1200.0 * pw
+        dk.text(s, c - 0.75, 3.98, 1.5, 0.26, [[(lab, 11, GREY, True, False, dk.FONT)]],
+                align=PP_ALIGN.CENTER, space_after=0)
+    dk.footer(s, tag="fixture", page=8)
+
     dk.lint_layout(prs, strict=True)
     prs.save(str(OUT / "fx_pass.pptx"))
-    print("built fx_pass.pptx (7 slides — must stay clean)")
+    print("built fx_pass.pptx (8 slides — must stay clean)")
 
 
 # ───────────────────────────── FAIL deck ─────────────────────────────
@@ -184,9 +216,23 @@ def build_fail():
     dk.picture(s, str(plate), 0.6, 2.26, 5.0, 0.30, fit="cover", alt="opaque plate")
     dk.footer(s, tag="fixture", page=10)
 
+    # 11 captions laid out on the TEXT grid under a composite figure whose panels are not on
+    #    that grid. Nothing overlaps and nothing overflows, so every geometric rule is silent;
+    #    only the pixels know where the panels actually landed. Panel widths differ here on
+    #    purpose — that is what makes "column width over four" wrong in the first place.
+    s = prs.slides.add_slide(L); dk.box(s, 0, 0, 10, 5.625, fill=BG, line=None)
+    head(s, "Captions off the panels they name")
+    fig = _panel_png()
+    dk.picture(s, str(fig), 0.6, 2.00, 8.8, 8.8 * 260 / 1200.0, fit="contain",
+               alt="four panels of unequal width")
+    for i, lab in enumerate(("first", "second", "third", "fourth")):
+        dk.text(s, 0.6 + i * 2.2, 3.98, 2.2, 0.26,
+                [[(lab, 11, GREY, True, False, dk.FONT)]], align=PP_ALIGN.CENTER, space_after=0)
+    dk.footer(s, tag="fixture", page=11)
+
     dk.lint_layout(prs, strict=False)     # this deck is SUPPOSED to be defective
     prs.save(str(OUT / "fx_fail.pptx"))
-    print("built fx_fail.pptx (10 slides — each carries one defect)")
+    print("built fx_fail.pptx (11 slides — each carries one defect)")
 
 
 if __name__ == "__main__":

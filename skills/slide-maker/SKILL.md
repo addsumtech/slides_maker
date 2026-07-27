@@ -808,6 +808,31 @@ A few rules that matter (see `references/design-principles.md`):
     **`SLIVER_GAP`** on panel-on-panel grazing — a 0.005–0.10in seam between panels or a panel and
     a picture — and the Step-5 render self-check still eyeballs the seam; reserving the space by
     construction remains the fix, the warn is the net.)
+- **Never hand-pick an x for a LABEL either — derive it from the thing the label names.** The
+  y-rule above has an x-twin, and it is the more common miss because nothing crashes: a caption,
+  a tag, a unit, a legend key, an axis note is *positioned* rather than *anchored*, and it lands
+  near its subject instead of on it. Every such element gets its x from one of exactly three
+  sources — the same grid column as its subject, its subject's own measured edge, or its
+  subject's centre — and never from an offset nudged off a neighbour until it "fits". **Two
+  measured failures, one class:**
+  - *Caption on the wrong grid.* A four-panel figure is ONE picture, so its panels have no shape
+    geometry to align to; the captions went onto the text grid (`ML + i*CW/4`) while the panels
+    sat where matplotlib put them, at **unequal widths** — each panel keeps its own aspect ratio,
+    so equal quarters are wrong by construction. Fix: have the plotting script export each
+    panel's span as a fraction of the figure (`ax.images[0].get_window_extent()` after
+    `fig.canvas.draw()`, over `fig.get_window_extent().width`) and place captions from the
+    picture's *placed* rect — `dk.picture` returns the shape, so `pic.left/914400` is the real x
+    after `fit="contain"` letterboxing. Backstopped by the **`CAPTION NOT ALIGNED`** render lint.
+  - *A tag nudged into a corner.* A Chinese gloss for an English product name was placed at
+    `(mx + 1.46, yy + 0.24)` — past the end of the rule, above the next row — giving one unit
+    three left edges and four baselines, so the eye could not tell what it belonged to. Fix: an
+    apposition is not a separate element. Same paragraph, same baseline, one left edge:
+    `[[(name, …, FONT), ("　", …), (tag, …, EAFONT)]]`.
+
+  The general rule behind both: **an element that annotates another element is not free to be
+  anywhere.** If you find yourself adding a constant to make a label sit nicely, the constant is
+  the bug — ask what edge it should share and compute that instead. Only the caption case has a
+  lint; the rest is on you, which is why it is also PRE-FLIGHT 9.
 - **🔴 Gate the geometry at BUILD time — end the build script with `dk.lint_layout(prs, strict=True)`
   before `prs.save()`.** `strict=True` makes it a *real* gate: an unresolved CRITICAL **raises and the
   deck is never saved**, so you can't accidentally ship a broken layout to the render/critic (plain
@@ -967,7 +992,7 @@ those here; read its report instead).
 6b. **Register carries all pages (的风格要走所有页)**: the quiet register signature reaches ordinary interior slides, not just the cover/dividers — the `interior register:` contract cue is present on interiors, or a `none (flat by register — <reason>)` carve is recorded. A style dressed only on the bookends fails.
 7. **Claims current**: every time-bound ledger row re-verified with as-of = TODAY; the deck carries its "as of" date.
 8. **Language & hygiene**: one language throughout; zero meta-annotations ("placeholder"/"TODO"/"AI-generated"); voice pass done on every line.
-9. **Eye path**: squint each slide — first look lands on the named hero, 3–4 hierarchy levels survive the blur.
+9. **Eye path & anchoring**: squint each slide — first look lands on the named hero, 3–4 hierarchy levels survive the blur. Then, un-squinted, **name the anchor of every label** — caption, tag, unit, legend key, axis note: which edge does it share with the thing it names (its subject's left / centre / right, or the same grid column)? **List the slides that carry labels and the anchor each uses.** A label whose x is a constant nobody can justify is the defect; `CAPTION NOT ALIGNED` only backstops the captions-under-panels case, and every other label on the deck has no lint at all.
 10. **Hand-off ready**: font/portability deps + per-slide click order noted for the hand-off; open questions carried, not dropped; output dir resolved + announced (`~/Downloads/<deck>/` or the user's stated choice); image licenses/credits noted (sourced photos).
 11. **Titles bound to takeaways**: every content slide's title IS the plan's takeaway or a compression keeping its subject + verb + claim; **list the slide numbers** of compressions and of noted exceptions (bare topic labels are fine on cover/divider/agenda/closing; a named exception covers: Mode A "match its title treatment", a registered user template with a fixed title register, or a slide whose planned takeaway demonstrably lands as its named hero / `insight_banner` / `takeaway_rail` — note which element carries it). Emitting the slide numbers, not just a ✓, is what forces the per-slide comparison.
 12. **Form diversity & frame fill — EMIT THE TALLY**: **first run
@@ -1133,6 +1158,11 @@ critic round — full rationale in `references/design-principles.md`):
   ladder, a list, stacked chips should **distribute evenly** to fill the available height; don't
   bottom-/top-anchor and strand a visible gap between the header and the first item (compute the gap
   from the region — `(region_h − n·item_h)/(n−1)` — or use `vstack`/`rows`, never a hand-picked offset).
+  **And every label sits ON the thing it labels** — a caption centred on its own panel (not on the
+  text column divided by N, which is wrong the moment the panels are unequal), a tag on its subject's
+  baseline and left edge. A label sharing no edge with its subject reads as floating even though
+  nothing overlaps and nothing overflows; PRE-FLIGHT 9 makes you name each anchor, and
+  `CAPTION NOT ALIGNED` backstops only the captions-under-panels case.
 - **Block padding & no inflated filler** — text inside a chip/card/callout hugs the box with a
   **modest, balanced** top/bottom margin (middle-anchored; not floating in a tall box, not cramped).
   A short card must not leave a white strip at the bottom. **No oversized block faking a full slide:**

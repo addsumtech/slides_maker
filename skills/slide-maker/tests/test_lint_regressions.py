@@ -109,6 +109,11 @@ def main():
         ("RULE THROUGH TEXT: a", "a rule assembled from 40 dashes is caught like a solid one"),
         ("TEXT NOT VISIBLE: 'an opaque picture over l",
          "a PICTURE over one line is caught from the pixels — unknowable from the XML"),
+        # A label must sit on the thing it labels. The panels of a composite figure have no
+        # shape geometry, so nothing geometric can see this — and the PASS deck carries the
+        # same figure captioned correctly, so over-strictness fails there instead.
+        ("CAPTION NOT ALIGNED",
+         "captions laid out on the text grid under off-grid panels are caught"),
     ]:
         (ok if token in f_out else bad).append(
             what if token in f_out else f"FAIL deck: {token} was NOT raised — the check regressed")
