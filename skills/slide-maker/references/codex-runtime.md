@@ -42,7 +42,11 @@ Read this before Step 2, then carry its evidence through the remaining steps.
    choose one icon family and use it where it clarifies those categories. For each categorical slide,
    record the actual icon asset and its hash. A zero-icon result is allowed only when that list is
    empty or every omitted slide has a slide-specific reason; icons do not replace a mechanism diagram
-   or evidence.
+   or evidence. **Do not use `qlmanage`, Quick Look, Preview thumbnails, screenshots, or crop-and-resize
+   workarounds to make icon PNGs.** Generate them through `scripts/icons.py` / `icon_png()` from the
+   source SVG, preserving transparent alpha; Codex evidence records the rasterizer and the gate rejects
+   a recorded icon whose shortest edge is below 256px or whose PNG has no alpha channel. This is a
+   Codex-only execution rule: it prevents thumbnail blur without changing the shared icon workflow.
 4. **Make component decisions auditable.** Run `component_audit.py --json` after the build. For every
    detected cluster, use one of the audit's suggested components in the mapped slide builder or record
    a waiver with the exact slide, pattern, and bespoke reason. A real component emitter is accepted when

@@ -24,7 +24,7 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def write_png(path: Path, width: int = 640, height: int = 360) -> None:
+def write_png(path: Path, width: int = 640, height: int = 360, *, alpha: bool = False) -> None:
     def chunk(kind: bytes, payload: bytes) -> bytes:
         return (
             struct.pack(">I", len(payload))
@@ -33,11 +33,13 @@ def write_png(path: Path, width: int = 640, height: int = 360) -> None:
             + struct.pack(">I", zlib.crc32(kind + payload) & 0xFFFFFFFF)
         )
 
-    pixels = b"\x00" + b"\xff\xff\xff" * width
+    pixel = b"\xff\xff\xff\xff" if alpha else b"\xff\xff\xff"
+    pixels = b"\x00" + pixel * width
     raw = pixels * height
+    color_type = 6 if alpha else 2
     path.write_bytes(
         b"\x89PNG\r\n\x1a\n"
-        + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
+        + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, color_type, 0, 0, 0))
         + chunk(b"IDAT", zlib.compress(raw, 9))
         + chunk(b"IEND", b"")
     )
@@ -118,7 +120,7 @@ def fixture(root: Path) -> tuple[dict, dict, dict, Path]:
     proof = root / "slide-1.png"
     icon = root / "feature.png"
     write_png(proof)
-    write_png(icon, 32, 32)
+    write_png(icon, 512, 512, alpha=True)
     build = root / "build_deck.py"
     build.write_text(
         "import deckkit as dk\n\n"
@@ -267,7 +269,15 @@ def fixture(root: Path) -> tuple[dict, dict, dict, Path]:
             },
         },
         "build": {"script": build.name, "sha256": sha256(build), "strict_layout": True},
-        "icons": [{"slide": 1, "family": "lucide", "asset": icon.name, "sha256": sha256(icon)}],
+        "icons": [
+            {
+                "slide": 1,
+                "family": "lucide",
+                "asset": icon.name,
+                "sha256": sha256(icon),
+                "rasterizer": "scripts/icons.py",
+            }
+        ],
         "visual_contract": {
             "manifest": visual_manifest.name,
             "sha256": sha256(visual_manifest),
@@ -306,6 +316,7 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="codex-gate-") as name:
         root = Path(name)
         evidence, lint, components, build = fixture(root)
+        icon = root / evidence["icons"][0]["asset"]
         errors = gate.evaluate(lint, components, build, evidence, root)
         failures = []
         if errors:
@@ -380,10 +391,33 @@ def main() -> int:
         if not any("signature_proof" in error for error in errors):
             failures.append("an empty signature proof passed the gate")
 
+        write_png(icon, 240, 240, alpha=True)
+        evidence["icons"][0]["sha256"] = sha256(icon)
+        errors = gate.evaluate(lint, components, build, evidence, root)
+        if not any("thumbnail blur" in error for error in errors):
+            failures.append("a low-resolution icon thumbnail passed the gate")
+
+        write_png(icon, 512, 512, alpha=False)
+        evidence["icons"][0]["sha256"] = sha256(icon)
+        errors = gate.evaluate(lint, components, build, evidence, root)
+        if not any("transparent alpha" in error for error in errors):
+            failures.append("a matted icon asset without alpha passed the gate")
+
+        write_png(icon, 512, 512, alpha=True)
+        evidence["icons"][0]["sha256"] = sha256(icon)
+        build.write_text(
+            build.read_text(encoding="utf-8") + "\nimport subprocess\nsubprocess.run(['qlmanage', '-t'], check=False)\n",
+            encoding="utf-8",
+        )
+        evidence["build"]["sha256"] = sha256(build)
+        errors = gate.evaluate(lint, components, build, evidence, root)
+        if not any("Quick Look thumbnail generation" in error for error in errors):
+            failures.append("a Quick Look icon rasterization workaround passed the gate")
+
         if failures:
             print("\n".join("FAIL: " + failure for failure in failures))
             return 1
-    print("ok - Codex delivery gate rejects the three historical bypasses")
+    print("ok - Codex delivery gate rejects icon-rasterization and historical bypasses")
     return 0
 
 

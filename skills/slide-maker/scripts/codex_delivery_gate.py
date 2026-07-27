@@ -130,6 +130,7 @@ TEMPLATE = {
             "family": "lucide",
             "asset": "assets/icons/feature.png",
             "sha256": "<sha256>",
+            "rasterizer": "scripts/icons.py",
         }
     ],
     "visual_contract": {
@@ -223,14 +224,21 @@ def check_hashed_file(
 
 
 def png_dimensions(path: Path) -> tuple[int, int] | None:
+    info = png_info(path)
+    return info[:2] if info is not None else None
+
+
+def png_info(path: Path) -> tuple[int, int, int, int] | None:
+    """Return PNG width, height, bit depth, and colour type without a Pillow dependency."""
     try:
         with path.open("rb") as handle:
-            header = handle.read(24)
+            header = handle.read(26)
     except OSError:
         return None
-    if len(header) != 24 or header[:8] != b"\x89PNG\r\n\x1a\n" or header[12:16] != b"IHDR":
+    if len(header) != 26 or header[:8] != b"\x89PNG\r\n\x1a\n" or header[12:16] != b"IHDR":
         return None
-    return struct.unpack(">II", header[16:24])
+    width, height = struct.unpack(">II", header[16:24])
+    return width, height, header[24], header[25]
 
 
 def slide_count_from_pptx(path: Path) -> int | None:
@@ -312,6 +320,37 @@ def parse_script(script_path: Path, errors: list[str]) -> tuple[dict[str, set[st
 
     Visitor().visit(tree)
     return dict(calls), strict_layout
+
+
+def forbidden_icon_rasterizer_calls(script_path: Path, errors: list[str]) -> list[str]:
+    """Find actual command invocations, not comments, that make preview thumbnails into icons."""
+    try:
+        tree = ast.parse(script_path.read_text(encoding="utf-8"), filename=str(script_path))
+    except (OSError, SyntaxError) as exc:
+        errors.append(f"cannot inspect build script for icon rasterization: {exc}")
+        return []
+
+    command_methods = {"run", "Popen", "call", "check_call", "check_output", "system", "popen"}
+    blocked: list[str] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if isinstance(node.func, ast.Name):
+            command_call = node.func.id in command_methods
+        elif isinstance(node.func, ast.Attribute):
+            command_call = node.func.attr in command_methods
+        else:
+            command_call = False
+        if not command_call:
+            continue
+        strings = [
+            value.value.lower()
+            for value in ast.walk(node)
+            if isinstance(value, ast.Constant) and isinstance(value.value, str)
+        ]
+        if any("qlmanage" in value for value in strings):
+            blocked.append("qlmanage")
+    return sorted(set(blocked))
 
 
 def check_lint(lint: dict[str, Any], delivery: str, evidence: dict[str, Any], errors: list[str]) -> None:
@@ -576,6 +615,10 @@ def check_build(
     if build.get("strict_layout") is not True:
         errors.append("build.strict_layout must be true")
     calls, has_strict_layout = parse_script(script, errors)
+    for token in forbidden_icon_rasterizer_calls(script, errors):
+        errors.append(
+            f"build script invokes macOS Quick Look thumbnail generation ({token}); use scripts/icons.py / icon_png for transparent high-resolution icon assets"
+        )
     if not has_strict_layout:
         errors.append("build script must call lint_layout(..., strict=True)")
     return script, calls
@@ -669,7 +712,24 @@ def check_icons(
         family = require_string(row.get("family"), f"{label}.family", errors)
         if family:
             families.add(family)
-        check_hashed_file(root, row.get("asset"), row.get("sha256"), label, errors, minimum_bytes=32)
+        asset = check_hashed_file(root, row.get("asset"), row.get("sha256"), label, errors, minimum_bytes=32)
+        rasterizer = require_string(row.get("rasterizer"), f"{label}.rasterizer", errors, minimum=3)
+        if rasterizer not in {"scripts/icons.py", "provided-hires"}:
+            errors.append(f"{label}.rasterizer must be scripts/icons.py or provided-hires")
+        if asset is not None:
+            info = png_info(asset)
+            if info is None:
+                errors.append(f"{label} must be a readable PNG icon asset")
+            else:
+                width, height, _bit_depth, color_type = info
+                if min(width, height) < 256:
+                    errors.append(
+                        f"{label} is only {width}x{height}px; Codex icon assets need a 256px minimum edge to avoid thumbnail blur"
+                    )
+                if color_type not in {4, 6}:
+                    errors.append(
+                        f"{label} must preserve transparent alpha (PNG colour type 4 or 6), not a matted thumbnail"
+                    )
         by_slide[row["slide"]].append(row)
     if len(families) > 1:
         errors.append("all icon evidence must use one coherent icon family")
