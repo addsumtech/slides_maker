@@ -54,75 +54,71 @@ Twelve directions, one set in English and one in Chinese. Each is a complete exa
 
 <table>
   <tr>
-    <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/transformer-talk"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_transformer-talk.png" alt="Lab Meeting / Paper Talk template preview"></a><br/>
-      <sub><strong>Lab Meeting / Paper Talk</strong><br/>paper reading, lab meeting, method overview, experiment report<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/transformer-talk">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/transformer-talk/template.pptx">Download .pptx</a></sub>
-    </td>
-    <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/nvidia-overview"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_nvidia-overview.png" alt="Company / Product Intro template preview"></a><br/>
-      <sub><strong>Company / Product Intro</strong><br/>company overview, product matrix, customer communication, fundraising intro<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/nvidia-overview">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/nvidia-overview/template.pptx">Download .pptx</a></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/nl-job-market-2026"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_nl-job-market-2026.png" alt="Data / Market Analysis template preview"></a><br/>
-      <sub><strong>Data / Market Analysis</strong><br/>industry research, trend explanation, structured analysis<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/nl-job-market-2026">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/nl-job-market-2026/template.pptx">Download .pptx</a></sub>
-    </td>
-    <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/solo-company-talk"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_solo-company-talk.png" alt="AI Trends / Solo Talk template preview"></a><br/>
-      <sub><strong>AI Trends / Solo Talk</strong><br/>trend talk, personal presentation, startup story<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/solo-company-talk">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/solo-company-talk/template.pptx">Download .pptx</a></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/kids-ai-explainer"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_kids-ai-explainer.png" alt="Teaching / Knowledge Sharing template preview"></a><br/>
-      <sub><strong>Teaching / Knowledge Sharing</strong><br/>class explanation, reading share, training material<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/kids-ai-explainer">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/kids-ai-explainer/template.pptx">Download .pptx</a></sub>
-    </td>
-    <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/chengdu"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_chengdu.png" alt="Visual Storytelling / Culture template preview"></a><br/>
-      <sub><strong>Visual Storytelling / Culture</strong><br/>city, culture, event, brand story<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/chengdu">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/chengdu/template.pptx">Download .pptx</a></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/standup-history"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_standup-history.png" alt="History / Evolution Narrative template preview"></a><br/>
-      <sub><strong>History / Evolution Narrative</strong><br/>historical arc, industry evolution, timeline story<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/standup-history">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/standup-history/template.pptx">Download .pptx</a></sub>
-    </td>
-    <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/michael-jackson-king-of-pop"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_michael-jackson-king-of-pop.png" alt="Biography / Brand Story template preview"></a><br/>
-      <sub><strong>Biography / Brand Story</strong><br/>public figure, brand archive, cultural retrospective<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/michael-jackson-king-of-pop">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/michael-jackson-king-of-pop/template.pptx">Download .pptx</a></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
+    <td align="center" width="33%">
       <a href="https://slides.addsum.top/viewer.html?deck=en/quarterly-review"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_quarterly-review.png" alt="Quarterly Review / Business Update template preview"></a><br/>
       <sub><strong>Quarterly Review / Business Update</strong><br/>quarterly review, business update, metrics dashboard, exec readout<br/>
       <a href="https://slides.addsum.top/viewer.html?deck=en/quarterly-review">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/quarterly-review/template.pptx">Download .pptx</a></sub>
     </td>
-    <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/startup-pitch"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_startup-pitch.png" alt="Startup Pitch / Fundraising template preview"></a><br/>
-      <sub><strong>Startup Pitch / Fundraising</strong><br/>seed pitch, investor meeting, fundraising deck, demo day<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/startup-pitch">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/startup-pitch/template.pptx">Download .pptx</a></sub>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=en/chengdu"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_chengdu.png" alt="Visual Storytelling / Culture template preview"></a><br/>
+      <sub><strong>Visual Storytelling / Culture</strong><br/>city, culture, event, brand story<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/chengdu">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/chengdu/template.pptx">Download .pptx</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=en/transformer-talk"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_transformer-talk.png" alt="Lab Meeting / Paper Talk template preview"></a><br/>
+      <sub><strong>Lab Meeting / Paper Talk</strong><br/>paper reading, lab meeting, method overview, experiment report<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/transformer-talk">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/transformer-talk/template.pptx">Download .pptx</a></sub>
     </td>
   </tr>
   <tr>
-    <td align="center" width="50%">
+    <td align="center" width="33%">
       <a href="https://slides.addsum.top/viewer.html?deck=en/product-launch"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_product-launch.png" alt="Product Launch / Keynote template preview"></a><br/>
       <sub><strong>Product Launch / Keynote</strong><br/>launch keynote, product reveal, spec walkthrough<br/>
       <a href="https://slides.addsum.top/viewer.html?deck=en/product-launch">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/product-launch/template.pptx">Download .pptx</a></sub>
     </td>
-    <td align="center" width="50%">
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=en/nvidia-overview"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_nvidia-overview.png" alt="Company / Product Intro template preview"></a><br/>
+      <sub><strong>Company / Product Intro</strong><br/>company overview, product matrix, customer communication, fundraising intro<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/nvidia-overview">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/nvidia-overview/template.pptx">Download .pptx</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=en/standup-history"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_standup-history.png" alt="History / Evolution Narrative template preview"></a><br/>
+      <sub><strong>History / Evolution Narrative</strong><br/>historical arc, industry evolution, timeline story<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/standup-history">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/standup-history/template.pptx">Download .pptx</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=en/startup-pitch"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_startup-pitch.png" alt="Startup Pitch / Fundraising template preview"></a><br/>
+      <sub><strong>Startup Pitch / Fundraising</strong><br/>seed pitch, investor meeting, fundraising deck, demo day<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/startup-pitch">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/startup-pitch/template.pptx">Download .pptx</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=en/michael-jackson-king-of-pop"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_michael-jackson-king-of-pop.png" alt="Biography / Brand Story template preview"></a><br/>
+      <sub><strong>Biography / Brand Story</strong><br/>public figure, brand archive, cultural retrospective<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/michael-jackson-king-of-pop">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/michael-jackson-king-of-pop/template.pptx">Download .pptx</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=en/nl-job-market-2026"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_nl-job-market-2026.png" alt="Data / Market Analysis template preview"></a><br/>
+      <sub><strong>Data / Market Analysis</strong><br/>industry research, trend explanation, structured analysis<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/nl-job-market-2026">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/nl-job-market-2026/template.pptx">Download .pptx</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
       <a href="https://slides.addsum.top/viewer.html?deck=en/corporate-training"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_corporate-training.png" alt="Corporate Training / Workshop template preview"></a><br/>
       <sub><strong>Corporate Training / Workshop</strong><br/>training deck, workshop, skills enablement, exercises<br/>
       <a href="https://slides.addsum.top/viewer.html?deck=en/corporate-training">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/corporate-training/template.pptx">Download .pptx</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=en/solo-company-talk"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_solo-company-talk.png" alt="AI Trends / Solo Talk template preview"></a><br/>
+      <sub><strong>AI Trends / Solo Talk</strong><br/>trend talk, personal presentation, startup story<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/solo-company-talk">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/solo-company-talk/template.pptx">Download .pptx</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=en/kids-ai-explainer"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_kids-ai-explainer.png" alt="Teaching / Knowledge Sharing template preview"></a><br/>
+      <sub><strong>Teaching / Knowledge Sharing</strong><br/>class explanation, reading share, training material<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/kids-ai-explainer">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/kids-ai-explainer/template.pptx">Download .pptx</a></sub>
     </td>
   </tr>
 </table>

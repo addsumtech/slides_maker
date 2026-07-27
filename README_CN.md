@@ -54,75 +54,71 @@
 
 <table>
   <tr>
-    <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/transformer-talk"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_transformer-talk.png" alt="组会 / 论文汇报模板预览"></a><br/>
-      <sub><strong>组会 / 论文汇报</strong><br/>论文精读、组会、方法综述、实验结果汇报<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/transformer-talk">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/transformer-talk/template.pptx">下载 .pptx</a></sub>
-    </td>
-    <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/nvidia-overview"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_nvidia-overview.png" alt="公司 / 产品介绍模板预览"></a><br/>
-      <sub><strong>公司 / 产品介绍</strong><br/>公司介绍、产品矩阵、客户沟通、融资介绍<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/nvidia-overview">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/nvidia-overview/template.pptx">下载 .pptx</a></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/nl-job-market-2026"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_nl-job-market-2026.png" alt="数据 / 市场分析模板预览"></a><br/>
-      <sub><strong>数据 / 市场分析</strong><br/>行业研究、趋势解读、结构化分析<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/nl-job-market-2026">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/nl-job-market-2026/template.pptx">下载 .pptx</a></sub>
-    </td>
-    <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/solo-company-talk"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_solo-company-talk.png" alt="AI 趋势 / 个人演讲模板预览"></a><br/>
-      <sub><strong>AI 趋势 / 个人演讲</strong><br/>趋势解读、个人表达、创业分享<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/solo-company-talk">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/solo-company-talk/template.pptx">下载 .pptx</a></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/kids-ai-explainer"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_kids-ai-explainer.png" alt="课程 / 知识分享模板预览"></a><br/>
-      <sub><strong>课程 / 知识分享</strong><br/>课程讲解、读书分享、培训材料<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/kids-ai-explainer">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/kids-ai-explainer/template.pptx">下载 .pptx</a></sub>
-    </td>
-    <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/chengdu"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_chengdu.png" alt="视觉叙事 / 文化介绍模板预览"></a><br/>
-      <sub><strong>视觉叙事 / 文化介绍</strong><br/>城市、文化、活动、品牌故事<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/chengdu">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/chengdu/template.pptx">下载 .pptx</a></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/standup-history"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_standup-history.png" alt="历史 / 演变叙事模板预览"></a><br/>
-      <sub><strong>历史 / 演变叙事</strong><br/>历史脉络、行业演进、时间线故事<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/standup-history">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/standup-history/template.pptx">下载 .pptx</a></sub>
-    </td>
-    <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/michael-jackson-king-of-pop"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_michael-jackson-king-of-pop.png" alt="人物 / 品牌故事模板预览"></a><br/>
-      <sub><strong>人物 / 品牌故事</strong><br/>名人传记、品牌档案、文化回顾<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/michael-jackson-king-of-pop">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/michael-jackson-king-of-pop/template.pptx">下载 .pptx</a></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
+    <td align="center" width="33%">
       <a href="https://slides.addsum.top/viewer.html?deck=zh/quarterly-review"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_quarterly-review.png" alt="季度复盘 / 经营汇报模板预览"></a><br/>
       <sub><strong>季度复盘 / 经营汇报</strong><br/>季度复盘、经营汇报、数据看板、管理层沟通<br/>
       <a href="https://slides.addsum.top/viewer.html?deck=zh/quarterly-review">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/quarterly-review/template.pptx">下载 .pptx</a></sub>
     </td>
-    <td align="center" width="50%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/startup-pitch"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_startup-pitch.png" alt="融资路演 / BP 模板预览"></a><br/>
-      <sub><strong>融资路演 / BP</strong><br/>种子轮路演、投资人沟通、创业 BP<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/startup-pitch">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/startup-pitch/template.pptx">下载 .pptx</a></sub>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/chengdu"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_chengdu.png" alt="视觉叙事 / 文化介绍模板预览"></a><br/>
+      <sub><strong>视觉叙事 / 文化介绍</strong><br/>城市、文化、活动、品牌故事<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/chengdu">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/chengdu/template.pptx">下载 .pptx</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/transformer-talk"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_transformer-talk.png" alt="组会 / 论文汇报模板预览"></a><br/>
+      <sub><strong>组会 / 论文汇报</strong><br/>论文精读、组会、方法综述、实验结果汇报<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/transformer-talk">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/transformer-talk/template.pptx">下载 .pptx</a></sub>
     </td>
   </tr>
   <tr>
-    <td align="center" width="50%">
+    <td align="center" width="33%">
       <a href="https://slides.addsum.top/viewer.html?deck=zh/product-launch"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_product-launch.png" alt="新品发布 / 产品上线模板预览"></a><br/>
       <sub><strong>新品发布 / 产品上线</strong><br/>发布会、新品介绍、产品上线沟通<br/>
       <a href="https://slides.addsum.top/viewer.html?deck=zh/product-launch">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/product-launch/template.pptx">下载 .pptx</a></sub>
     </td>
-    <td align="center" width="50%">
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/nvidia-overview"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_nvidia-overview.png" alt="公司 / 产品介绍模板预览"></a><br/>
+      <sub><strong>公司 / 产品介绍</strong><br/>公司介绍、产品矩阵、客户沟通、融资介绍<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/nvidia-overview">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/nvidia-overview/template.pptx">下载 .pptx</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/standup-history"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_standup-history.png" alt="历史 / 演变叙事模板预览"></a><br/>
+      <sub><strong>历史 / 演变叙事</strong><br/>历史脉络、行业演进、时间线故事<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/standup-history">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/standup-history/template.pptx">下载 .pptx</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/startup-pitch"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_startup-pitch.png" alt="融资路演 / BP 模板预览"></a><br/>
+      <sub><strong>融资路演 / BP</strong><br/>种子轮路演、投资人沟通、创业 BP<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/startup-pitch">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/startup-pitch/template.pptx">下载 .pptx</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/michael-jackson-king-of-pop"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_michael-jackson-king-of-pop.png" alt="人物 / 品牌故事模板预览"></a><br/>
+      <sub><strong>人物 / 品牌故事</strong><br/>名人传记、品牌档案、文化回顾<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/michael-jackson-king-of-pop">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/michael-jackson-king-of-pop/template.pptx">下载 .pptx</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/nl-job-market-2026"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_nl-job-market-2026.png" alt="数据 / 市场分析模板预览"></a><br/>
+      <sub><strong>数据 / 市场分析</strong><br/>行业研究、趋势解读、结构化分析<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/nl-job-market-2026">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/nl-job-market-2026/template.pptx">下载 .pptx</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
       <a href="https://slides.addsum.top/viewer.html?deck=zh/corporate-training"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_corporate-training.png" alt="企业内训 / 工作坊模板预览"></a><br/>
       <sub><strong>企业内训 / 工作坊</strong><br/>内训课件、工作坊、技能培训、练习引导<br/>
       <a href="https://slides.addsum.top/viewer.html?deck=zh/corporate-training">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/corporate-training/template.pptx">下载 .pptx</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/solo-company-talk"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_solo-company-talk.png" alt="AI 趋势 / 个人演讲模板预览"></a><br/>
+      <sub><strong>AI 趋势 / 个人演讲</strong><br/>趋势解读、个人表达、创业分享<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/solo-company-talk">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/solo-company-talk/template.pptx">下载 .pptx</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/kids-ai-explainer"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_kids-ai-explainer.png" alt="课程 / 知识分享模板预览"></a><br/>
+      <sub><strong>课程 / 知识分享</strong><br/>课程讲解、读书分享、培训材料<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/kids-ai-explainer">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/kids-ai-explainer/template.pptx">下载 .pptx</a></sub>
     </td>
   </tr>
 </table>
