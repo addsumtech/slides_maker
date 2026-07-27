@@ -9,6 +9,87 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+## [4.1.0] — 2026-07-27
+
+**One behaviour change to know about before upgrading.** `render_deck.py --deliverables` now also
+refuses on DENSITY — more than a third of slides over the text budget stops the hand-off unless
+`.deck-gates.json` carries a written `"density": {"waived": "<reason>"}`. Scripts that call
+`--deliverables` on text-heavy decks will start failing. Two escapes, both intended: pass the
+delivery mode (`--selfread` / `--textheavy` / `--surface`, the same flags `lint_deck.py` takes) so
+the deck is held to its own budget, or record the waiver. Everything else below is additive.
+
+### Added — the render decides, not a list of shape types
+- **`TEXT NOT VISIBLE`** asks the one question with a bounded answer — does this line render any
+  glyphs at all? — straight from the pixels. Every previous occlusion rule enumerated *causes* (this
+  shape type, painted then, covering that much), and causes are unbounded: pictures were skipped
+  because alpha is unknowable from the file, groups and gradients for their own reasons, and anything
+  assembled from many small parts slipped a per-shape threshold. Three real decks shipped through
+  those holes with the gate reporting clean.
+- **`OCCLUSION` / `RULE THROUGH TEXT` now measure the UNION** of everything painted over a text
+  block, so a 150-tile field erasing a caption and a rule assembled from 40 dashes are caught like
+  the single shapes they look like.
+- **`CAPTION NOT ALIGNED`** — a label must sit on the thing it labels. The panels of a composite
+  figure have no shape geometry, so captions get laid out on the text grid while the panels sit
+  where the plotting library put them, at widths that differ whenever the panels keep their own
+  aspect ratios. Read out of the pixels, so it works whether the panels are one composite or a row
+  of separate pictures. Ground is estimated per figure crop, not from the page, because a 4% grey
+  step between a figure's own paper and the page was enough to make the check disqualify itself.
+- **A skipped check is audible.** With no renders beside the deck the pixel-backed families disable
+  themselves and the run says so (`[skipped] … NOT checked: …`, plus `pixel_checks` in `--json`).
+  `0 findings` with that line present is a different sentence from `0 findings` without it.
+- **A CRASHED check is audible too.** The per-slide statistics were wrapped in
+  `except Exception: pass`; one refactor took TEXT WALL, LAYOUT SAMENESS, UNDERFILLED, FLAT RHYTHM
+  and the body-size floor off every deck while the report still printed `✓ clean`. It now prints
+  `[BROKEN] … NOT checked: …` and the suite asserts that line is absent on every fixture deck.
+
+### Added — hand-off gates that do not depend on what the user feels like accepting
+- **DENSITY** (above). Calibrated against the skill's own reference deck, which runs at a median of
+  **27 words a slide** — the budget was never the problem. It exists because the per-slide `TEXT
+  WALL` warning was correct and ignored on two consecutive decks (8/12, then 12/12 over budget).
+- **`render_deck.py <deck>.pptx --gate-check`** runs every hand-off gate, renders nothing, finishes
+  in under a second. The gates used to be reachable only through `--deliverables`, which Step 6
+  deliberately makes a *decline-able offer* — so on every deck where the user said "no PDF", the
+  strongest gate in the skill never ran, and nothing showed that it hadn't.
+- The design checkpoint now carries a **`density:` line as two numbers** the gate can be compared
+  against (planned median load, planned count over 70), so density is decided at plan time instead
+  of discovered at lint time.
+
+### Fixed — the measurement everything else is built on
+- **Bold text in font COLLECTIONS (.ttc/.otc) measured at regular width**, 3.9% short. Every guard
+  built on `measure_text` silently passed while the text wrapped anyway: a caption sized for one
+  line put its second on top of a footer, and the lint agreed with the build because both were
+  computed from the same wrong number. Fixed by selecting the right face index inside the
+  collection — and CI now **renders real strings and compares the ink against the prediction**,
+  one-sided: the measurement may be conservative, never optimistic.
+
+### Changed
+- **The critic's second round is scoped, and the cost is published.** Round 2 was a full fresh
+  whole-deck re-review; the measured A/B is in `references/critic-panel.md` — including a claim from
+  an earlier draft that the measurement did not support and that was removed rather than softened.
+- **A third-party assessment does not wear its subject's livery.** The LOGO PRINCIPLE situation
+  table gained the row for decks that evaluate an entity rather than speak for one.
+- **SEARCH BUDGET.** Web search is capped per SESSION and shared with every subagent; one research
+  fan-out (12 agents + 7 verifiers, none told a cap existed) spent all 200, and the bill arrived
+  hours later when a single lookup for a company's official logo could not run. Small NAMED lookups
+  go first, each dispatch states a per-agent cap, the round stays under half of what REMAINS (not
+  half the cap — the budget does not reset between decks), and `searches: planned/spent` reaches the
+  hand-off `cost:` line. Stated where the fan-out is DISPATCHED, not 1000 lines later.
+
+### CI / repository
+- The credential scanner was excluded from the repo by the very pattern it scans for (`*_secret*`);
+  `check_repo_integrity.py` now fails the build on any ignored source file or untracked CI path.
+- The regression suite ran ABOVE `pip install`, so every run died on a bare `ModuleNotFoundError`
+  that reads exactly like a lint regression. Moved after the installs, with an audible-skip backstop
+  so a silently skipped suite cannot pass.
+- Both READMEs realigned with the shipped skill.
+
+### Verification
+22 regression assertions (from 18), two-sided: a PASS corpus that must stay clean, a FAIL corpus
+where every defect must be caught, and the skill's own reference deck held at baseline. The lint
+changes in this release were then attacked by an adversarial audit that required a runnable repro
+for every claim — 20 raised, 5 confirmed, all 5 fixed here, including two claims in earlier commit
+messages that the audit proved false.
+
 ## [4.0.0] — 2026-07-26
 
 **Why a major bump.** `render_deck.py --deliverables` now REFUSES to run until the deck carries a
