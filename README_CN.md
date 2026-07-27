@@ -50,7 +50,7 @@
 
 ## 模板库
 
-八个方向，中英各一套。每套都是带真实内容的完整示例 deck，不是空占位。
+十二个方向，中英各一套。每套都是带真实内容的完整示例 deck，不是空占位。
 
 <table>
   <tr>
@@ -99,6 +99,30 @@
       <a href="https://slides.addsum.top/viewer.html?deck=zh/michael-jackson-king-of-pop"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_michael-jackson-king-of-pop.png" alt="人物 / 品牌故事模板预览"></a><br/>
       <sub><strong>人物 / 品牌故事</strong><br/>名人传记、品牌档案、文化回顾<br/>
       <a href="https://slides.addsum.top/viewer.html?deck=zh/michael-jackson-king-of-pop">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/michael-jackson-king-of-pop/template.pptx">下载 .pptx</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/quarterly-review"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_quarterly-review.png" alt="季度复盘 / 经营汇报模板预览"></a><br/>
+      <sub><strong>季度复盘 / 经营汇报</strong><br/>季度复盘、经营汇报、数据看板、管理层沟通<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/quarterly-review">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/quarterly-review/template.pptx">下载 .pptx</a></sub>
+    </td>
+    <td align="center" width="50%">
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/startup-pitch"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_startup-pitch.png" alt="融资路演 / BP 模板预览"></a><br/>
+      <sub><strong>融资路演 / BP</strong><br/>种子轮路演、投资人沟通、创业 BP<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/startup-pitch">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/startup-pitch/template.pptx">下载 .pptx</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/product-launch"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_product-launch.png" alt="新品发布 / 产品上线模板预览"></a><br/>
+      <sub><strong>新品发布 / 产品上线</strong><br/>发布会、新品介绍、产品上线沟通<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/product-launch">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/product-launch/template.pptx">下载 .pptx</a></sub>
+    </td>
+    <td align="center" width="50%">
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/corporate-training"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_corporate-training.png" alt="企业内训 / 工作坊模板预览"></a><br/>
+      <sub><strong>企业内训 / 工作坊</strong><br/>内训课件、工作坊、技能培训、练习引导<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/corporate-training">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/corporate-training/template.pptx">下载 .pptx</a></sub>
     </td>
   </tr>
 </table>

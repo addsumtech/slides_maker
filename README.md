@@ -50,7 +50,7 @@ Recent updates: it now also reads **Word, Excel, CSV, images, and video/audio** 
 
 ## Template gallery
 
-Eight directions, one set in English and one in Chinese. Each is a complete example deck with real content, not empty placeholders.
+Twelve directions, one set in English and one in Chinese. Each is a complete example deck with real content, not empty placeholders.
 
 <table>
   <tr>
@@ -99,6 +99,30 @@ Eight directions, one set in English and one in Chinese. Each is a complete exam
       <a href="https://slides.addsum.top/viewer.html?deck=en/michael-jackson-king-of-pop"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_michael-jackson-king-of-pop.png" alt="Biography / Brand Story template preview"></a><br/>
       <sub><strong>Biography / Brand Story</strong><br/>public figure, brand archive, cultural retrospective<br/>
       <a href="https://slides.addsum.top/viewer.html?deck=en/michael-jackson-king-of-pop">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/michael-jackson-king-of-pop/template.pptx">Download .pptx</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <a href="https://slides.addsum.top/viewer.html?deck=en/quarterly-review"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_quarterly-review.png" alt="Quarterly Review / Business Update template preview"></a><br/>
+      <sub><strong>Quarterly Review / Business Update</strong><br/>quarterly review, business update, metrics dashboard, exec readout<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/quarterly-review">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/quarterly-review/template.pptx">Download .pptx</a></sub>
+    </td>
+    <td align="center" width="50%">
+      <a href="https://slides.addsum.top/viewer.html?deck=en/startup-pitch"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_startup-pitch.png" alt="Startup Pitch / Fundraising template preview"></a><br/>
+      <sub><strong>Startup Pitch / Fundraising</strong><br/>seed pitch, investor meeting, fundraising deck, demo day<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/startup-pitch">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/startup-pitch/template.pptx">Download .pptx</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <a href="https://slides.addsum.top/viewer.html?deck=en/product-launch"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_product-launch.png" alt="Product Launch / Keynote template preview"></a><br/>
+      <sub><strong>Product Launch / Keynote</strong><br/>launch keynote, product reveal, spec walkthrough<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/product-launch">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/product-launch/template.pptx">Download .pptx</a></sub>
+    </td>
+    <td align="center" width="50%">
+      <a href="https://slides.addsum.top/viewer.html?deck=en/corporate-training"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_corporate-training.png" alt="Corporate Training / Workshop template preview"></a><br/>
+      <sub><strong>Corporate Training / Workshop</strong><br/>training deck, workshop, skills enablement, exercises<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/corporate-training">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/corporate-training/template.pptx">Download .pptx</a></sub>
     </td>
   </tr>
 </table>
