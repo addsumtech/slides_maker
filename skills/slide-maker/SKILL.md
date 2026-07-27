@@ -115,6 +115,15 @@ FYI form and follows its own auto rule at Step 3.
 
 **→ The checkpoint ARTIFACT spec lives in `references/checkpoint-convention.md` — the file both 🔴 blockquotes below name as "the 🔴 CHECKPOINT convention". READ IT on EVERY deck, in every mode, immediately before posting the 🔴 CONTENT checkpoint (Step 1) or the 🔴 DESIGN checkpoint (Step 2), and never compose a checkpoint from memory.** It owns the required columns and lines — the `# | 角色 | 记忆句 | 承载证据 | units` table and its SOURCE-TRACE rule, the digests, the `boldness:` / `signature move:` / `logo plan:` / `density:` lines, the required `direction gate:` (branch c) / `style gate:` (branch d) line and the rule that a branch-(c)/(d) design checkpoint with no gate line is NOT READY, the ~25-line budget, and the rule that plan files are never written into the deliverable folder. **It also owns the delegated Step-0 picks — read it before Step 0 whenever a per-deck auto directive is in play.**
 
+**Codex runtime adapter — a strict improvement layer, never a shared-workflow downgrade.** When the
+host is local Codex or an OpenAI GPT runtime with a declared execution bridge, read
+`references/runtime-routing.md` and `references/codex-runtime.md` before Step 2, then run the evidence
+gate before hand-off. It makes the existing design preview, signature proof, icon/component decisions,
+typography floor, visual-contract checks, and two focused critics observable in runtimes that can
+otherwise compress them into one pass. **Do not run this adapter or reinterpret
+`component_audit.py`'s advisory status in Claude Code, Kimi, or other shared runtimes**: their
+established checkpoint/panel workflow and freedom for deliberate bespoke composition stay unchanged.
+
 ## At a glance — pipeline · rule strengths · where things live
 *A navigation map only; the steps below are the source of truth.*
 
@@ -171,6 +180,7 @@ every **🔴 CHECKPOINT** is a hard stop.
 | Canvas formats (16:9 default · 4:3 · 1:1 · 小红书 3:4 · story 9:16 · A4) | `scripts/formats.py` (registry) · `references/canvas-formats.md` (per-surface layout DNA) |
 | The build helpers (source of truth) | `scripts/deckkit.py` (docstrings) |
 | Geometry lint — build-time · render-time | `deckkit.lint_layout(prs, strict=True)` (Step 4, pre-render) · `scripts/lint_deck.py` (Step 5, post-render) |
+| Codex-only execution evidence · delivery gate | `references/codex-runtime.md` · `scripts/codex_delivery_gate.py` |
 | ANY error / lint finding / env failure — symptom → cause → fix, plain language | `references/troubleshooting-faq.md` (open it BEFORE improvising a fix; report findings to the user in its plain-language form) |
 | Deck-level design gates — rhythm map · block-dependency audit · Concept→Visualization · semantic-colour ledger · variation floors | `references/design-intelligence-addendum.md` (Step 2's measured design targets) |
 
@@ -493,6 +503,11 @@ category/entity-rich deck — every branch, incl. generated-template (self-verif
 quota — still smart about where/when). A plan that defaults its look, over-relies on one format, forgets
 icons, or — when builds are opted in — leaves a built slide half-staged or forgets builds where they'd
 clearly help is **not ready** — send it back to the art director.
+
+**Codex only:** include `references/codex-runtime.md` in the art-director brief and begin its hidden
+`.codex-deck-evidence.json` once the design direction is known. Its per-slide ledger must mark which
+slides are categorical, bind those to one actual icon family or a slide-specific waiver, and name any
+early component carve; do not let either decision disappear into the builder's convenience.
 
 **🔴 One row of the LOGO PRINCIPLE table decides BEFORE the search and overrides its result: a
 THIRD-PARTY ASSESSMENT.** The deck is *about* an entity but is not *from* it, and carries what that
@@ -1026,6 +1041,10 @@ those here; read its report instead).
     component" as prose for a long time; it was violated dozens of times and detected zero times.)*
     Then write the deck's form-family tally as one literal line (`cards/panels: N · diagram: N · chart/proportional: N · big-type/editorial: N · timeline/roadmap: N · hero-image: N …`) and check six things against it: (a) **no family >~40% of content slides** — a first draft's greedy default is the card/panel, and per-slide checks can't see deck-level sameness, so this tally is the one place the crutch becomes visible; (b) every slide whose content is a RATIO / FLIP / DIVISION / PROCESS uses the form that *shows* it (a proportional bar, a topology diagram, a split, a roadmap), not a box that states it; (c) each interior slide **fills its frame** — a slide whose content ends in the top half either gets enriched, merged with its neighbour, or names its deliberate quiet register in one clause; (d) **one canvas system** — no background value/colour flip landing on exactly one interior slide (a flip must recur as a divider family or bookend; on the generated-template branch the plate stays on every content page and rhythm comes from imagery strength — `ONE-OFF CANVAS FLIP` lint is the render-time backstop); (e) **icons where content is categorical** — list the slides whose content names tools/entities/roles/pillars/categories; each such slide carries the planned icon family (one family, palette-recolored) or a one-clause waiver — "opt-in" never waives this silently (self-verify (g)); (f) **architecture rotation** — emit a second one-line tally of each content slide's TAKEAWAY SLOT (bottom-strip / side-rail / inline / headline / none) and CONTAINMENT (panelled / direct-on-canvas): no single takeaway slot on more than ~half the content slides (a bottom strip on every page is a template tell — `BOTTOM-STRIP MONOCULTURE` lint backstops it), and on a calm canvas at least ~1/3 of content slides put their protagonist directly on the canvas, un-panelled. Emitting the tallies + the (b)/(c)/(d)/(e)/(f) slide numbers, not just a ✓, is what forces the deck-level look a slide-by-slide build never takes.
 
+**Codex only:** after PRE-FLIGHT 12, follow `references/codex-runtime.md`. Its separate gate does
+not change the global audit's advisory classification; it merely requires Codex to either use a
+detected component or preserve a slide-specific bespoke rationale in the evidence record.
+
 **Gates never collapse.** A quick / low-stakes / inline run scales the *size* of each artifact
 (a 5-line content plan, a 10-line design plan), never the *existence* of the gates: interview →
 content plan → design plan (with self-verify) → pre-flight → lint+stats → critic. Every rule-miss
@@ -1123,6 +1142,12 @@ having failed measurably: fix it or write one clause of why this deck is the exc
 the stats block into the critic's input** so the judges score numbers, not impressions. It's a safety
 net for the no-overlap / fits-its-box / density / rhythm rules, **not** a
 replacement for looking (it can't judge crop, balance, legibility, or fidelity).
+
+**Codex only — close the execution loop before consent is treated as hand-off:** retain the final
+lint JSON and component-audit JSON, complete `.codex-deck-evidence.json`, then run
+`scripts/codex_delivery_gate.py` exactly as `references/codex-runtime.md` specifies. A clean hard-lint
+alone is not a pass: unresolved card dominance, type sprawl, CJK leading, or missing evidence stays
+blocked unless a precise, named waiver explains why this deck is the exception.
 
 **🔴 When the gate says clean and the pixels say broken, the PIXELS win.** Paint order is the fault
 class that keeps proving this: a shape added after a text box is drawn ON TOP of it while every
