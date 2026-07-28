@@ -44,6 +44,11 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   (mode · palette distance · type pairing · composition), flagging any pair that matches on ≥3 of 4
   axes. Exit 0 all diverge / 2 flagged / 1 unreadable. Never auto-kills: a flag means REDIVERGE **or**
   record a named justification on the `direction gate:` line. Run it before posting the preview link.
+- `preflight_check.py` — decides the MECHANICAL half of PRE-FLIGHT (items 1, 2, 3b, 4, 7, 8, 10)
+  and prints 5/6/6b/9/11 as still-yours rather than implying it covered them. Catches the defect
+  class nothing else does: `placeholder`/`TODO`/`(editable native chart)`/unfilled `<slot>` text
+  shipped on a slide. `--build <script>` adds the `build:`-docstring vs `Build.step` diff.
+  Exit 0 clean / 1 findings / 2 `NOT CHECKED`. Run it at the top of PRE-FLIGHT.
 - `render_deck.py` — pptx → one PNG per slide (verify + critic loop). **`--slides N[,M]` renders ONLY
   the named 1-indexed pages** — the Step-4 SIGNATURE PROOF and any "re-render just the page I edited"
   loop; byte-identical to those pages from a full render, and it deliberately leaves NO cache (a cache

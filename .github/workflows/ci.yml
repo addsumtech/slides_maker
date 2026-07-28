@@ -141,6 +141,17 @@ jobs:
       # renders a 100% opaque shape that erased a cover plate to pure black while every
       # existing lint reported clean. All four were invisible to CI until this step existed.
       # A gate without a test regresses the same silent way the bugs it catches do.
+      # Eleven of the twelve PRE-FLIGHT ticks were self-attested: the model wrote twelve
+      # checkmarks and nothing anywhere read them. This suite guards the tool that now decides
+      # the mechanical half — and, just as importantly, that it still refuses to imply it
+      # covered the five genuine judgment items.
+      - name: PRE-FLIGHT mechanical subset
+        run: |
+          set -o pipefail
+          python tests/test_preflight_check.py | tee /tmp/preflight.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/preflight.log || {
+            echo "::error::preflight suite did not run to completion"; exit 1; }
+
       - name: Critic waiver must be classified (shared path)
         run: |
           set -o pipefail

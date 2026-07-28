@@ -62,8 +62,8 @@ def slide_one_idea(prs):
 
 
 def slide_pipeline(prs):
-    """role=method | form=pipeline chips (colours rotate via ACCENTS) | build: stage-by-stage
-    with its arrow (wire with anim.Build in a real deck) | takeaway='Four stages, one flow'"""
+    """role=method | form=pipeline chips (colours rotate via ACCENTS) | static: scaffold —
+    wire anim.Build here, stage-by-stage-with-its-arrow, in a real deck | takeaway='Four stages, one flow'"""
     s = add_slide(prs)
     title_bar(s, "A pipeline diagram", kicker="method")
     footer(s, TAG, page=3)

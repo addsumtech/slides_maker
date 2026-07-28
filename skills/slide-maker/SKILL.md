@@ -1007,7 +1007,20 @@ that single slide (legibility, no placeholder text, lining figures), and run the
 first WHOLE-deck render as always.)*
 This is the fixed boarding-pass between build and render. **Emit it as twelve literal ✓/✗ lines** (in
 your working notes or the build script's tail comment) — writing the ticks is what forces the checks
-to actually run; a deck with un-ticked pre-flight items is not ready to render. It exists because
+to actually run; a deck with un-ticked pre-flight items is not ready to render.
+
+**🔴 First run `python3 scripts/preflight_check.py <deck>.pptx --build build_<deck>.py` and paste
+its block into the ticks** (add `--selfread` / `--static` to match the deck's mode). It decides the
+MECHANICAL half — speaker-notes coverage (1), build timing present/absent (2), every `build:`
+docstring actually having `Build.step` calls (3b), native charts + `equation_native` (4), the deck
+carrying an as-of date (7), **meta-annotations and unfilled `<slot>`/`{slot}` template text leaked
+onto a slide (8)**, and fonts that will not resolve on another machine (10). Exit 1 means not ready;
+`NOT CHECKED` + exit 2 means it could not run, which is never the same as clean.
+**It deliberately does NOT decide 5, 6, 6b, 9, 11** — those are judgment (is the figure the real
+artifact, does the first look land on the hero, is the title the takeaway) and it prints them as
+still-yours rather than implying coverage. Item 12 keeps its own script. *(Why: eleven of the twelve
+ticks were self-attested — the model wrote twelve checkmarks and nothing anywhere read them, which is
+the exact silent-skip class the checklist was written to prevent.)* It exists because
 these are the rules that history shows get *silently* skipped when they live only as prose — they are
 judgment calls the render-time lint cannot measure (lint already covers: word load, ink coverage,
 font drama, build presence, layout sameness, CJK ea-font, contrast, footer, overlaps — don't re-tick
