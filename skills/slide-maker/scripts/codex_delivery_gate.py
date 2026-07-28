@@ -40,6 +40,7 @@ TEMPLATE = {
     "runtime": "codex",
     "delivery": "presented",
     "review_effort": "standard",
+    "fast_opt_in": "<only when review_effort is fast: >=12 chars recording the user asking for it>",
     "deck": {
         "pptx": "deck.pptx",
         "sha256": "<sha256 of final deck.pptx>",

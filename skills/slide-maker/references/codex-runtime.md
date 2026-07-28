@@ -74,6 +74,20 @@ Read this before Step 2, then carry its evidence through the remaining steps.
    `thorough` panel, also preserve the arbiter's final fix-confirmation JSON; the original skill's
    `thorough light` route remains two focused critics.
 
+   🔴 **Write the effort tier into the evidence record, and its tier-specific companion field —
+   the gate reads them and no other file names them.** `review_effort` must be `fast` |
+   `standard` | `thorough`; it defaults to `standard` when absent, so a standard run needs
+   nothing extra. The other two tiers each require one more key:
+   - `fast` → **`fast_opt_in`**: a >=12-character record of the user asking for it. 🔴 `fast` is
+     opt-in only and never derived, so the gate refuses the tier without this. **This field is
+     not in the `--init` skeleton** — it is the one gate requirement that is otherwise
+     discoverable only by reading `codex_delivery_gate.py`, which is why it is named here.
+   - `thorough` → **`thorough_panel`**: `{scope: "light"|"full", record: "<>=12 chars>"}`.
+     `scope: "full"` additionally requires the **`arbiters`** entries the gate cross-checks.
+
+   Run `python3 scripts/codex_delivery_gate.py --init <path>` to get the rest of the skeleton
+   (`interview`, `arbiters`, `waivers`, …); it is the authoritative shape of the record.
+
 ## Evidence record and gate
 
 Create the hidden record beside the deck once the design direction is known:
