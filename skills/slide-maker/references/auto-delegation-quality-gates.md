@@ -71,23 +71,37 @@ When generating images for slides, enforce BOTH:
 
 **A. Hero/atmosphere plates (full-bleed backgrounds):**
 
+Use **`dk.scrim_overlay`** — the helper written for exactly this job. It emits a GRADIENT
+fill, which is the only way a scrim can carry transparency: `<a:alpha>` lives on gradient
+stops, and DrawingML's alpha scale is **0–100000**, not 0–255.
+
 ```python
-# ALWAYS add a scrim when text goes over a photo/generated image
-pic = dk.picture(slide, img_path, 0, 0, 10, 5.625, fit="cover", alt="")
+# 1. Place the plate
+dk.picture(slide, img_path, 0, 0, 10, 5.625, fit="cover", alt="<what it shows>")
 
-# Dark scrim for light text
-scrim = dk.box(slide, 0, 0, 10, 5.625, fill="#000000")
-scrim.fill.fore_color.alpha = int(0.6 * 255)  # 60% opacity minimum
+# 2. Graduated scrim, AIMED at the text (angle 0 = darker at left, 90 = darker at bottom).
+#    Size it to the text's zone — a flat slab over the whole slide flattens the image.
+dk.scrim_overlay(slide, 0, 0, 10, 5.625,
+                 stops=((0.0, 0.82), (0.55, 0.55), (1.0, 0.12)),
+                 color="0A1420", angle=0.0)
 
-# OR light scrim for dark text
-scrim = dk.box(slide, 0, 0, 10, 5.625, fill="#FFFFFF")  
-scrim.fill.fore_color.alpha = int(0.7 * 255)  # 70% opacity minimum
-
-# Then text on top
+# 3. Text on top
 ```
 
-**The scrim is NOT OPTIONAL.** Lint will flag TEXT-ON-IMAGE CONTRAST < 3:1. A decorative
-background that makes the title unreadable is a design failure, not a tradeoff.
+🔴 **Never write `shape.fill.fore_color.alpha = ...`.** python-pptx's `ColorFormat` has no
+`alpha` setter and no `__slots__`, so the assignment **silently creates a dead attribute** and
+raises nothing. The emitted XML is `<a:srgbClr val="000000"/>` with **no `<a:alpha>`** — a 100%
+**opaque** rectangle that erases the plate entirely. Measured on a real deck: brightest pixel in
+the image region **0/765**, and **every lint passed green** — text is painted last so
+`TEXT NOT VISIBLE`/`OCCLUSION` cannot fire, and white-on-pure-black scores ~21:1 so
+`TEXT-ON-IMAGE CONTRAST` reports the *best* number in the deck. A solid fill cannot be
+translucent; reach for the gradient helper, or `deckkit.pic_alpha` to fade the picture itself.
+
+**Text over a plate must be legible — but a scrim is only one way to get there, and not always
+the right one.** When the plate already carries a calm dark region where the type sits, a scrim
+subtracts from the image and adds nothing. Measure first with `image_fx.quiet_region(path)`,
+then decide. `TEXT-ON-IMAGE CONTRAST` backstops the too-light direction; **nothing backstops the
+too-heavy direction**, so that judgement is yours and it is the one that quietly ruins covers.
 
 **B. Side panels / content plates (images as visual support, not backgrounds):**
 
@@ -106,8 +120,10 @@ No scrim needed — text has its own opaque background (the slide fill).
 
 Small, non-decorative images that clarify content:
 ```python
-# Icon tile with background
-dk.icon_tile(slide, x, y, size, icon_path, tile_color=accent, glyph="white")
+# Icon tile with background — the param is `fill=`, not `tile_color=`.
+# icon_tile reads the icon's own ink and auto-nudges the tile to >=3:1, so prefer it
+# over hand-placing an icon on a raw box.
+dk.icon_tile(slide, x, y, size, icon_path, fill=accent, glyph="white")
 
 # Or inline diagram
 dk.picture(slide, diagram_path, x, y, w, h, fit="contain", alt="Architecture diagram")
@@ -163,27 +179,39 @@ dk.box(slide, x, y, w, h, fill=color)
 dk.text(slide, x+0.2, y+0.2, w-0.4, h-0.4, content)
 ```
 
-✅ **Do:**
+✅ **Do** — reach for a component that actually exists:
 ```python
-dk.card(slide, x, y, w, h, title, body, accent=color)
-# Pre-tested padding, contrast, responsive sizing
+dk.icon_card(slide, x, y, w, h, icon_png, title, body, accent=color)   # icon + title + body
+dk.callout(slide, x, y, w, h, label, body)                             # labelled block, auto-grows
+dk.spec_card(slide, x, y, w, h, rows, title="...")                     # key/value rows
 ```
+Pre-tested padding, contrast and sizing. **Check the signature in `scripts/deckkit.py` before
+you call it** — an invented helper or a guessed keyword fails at build time, and a guessed
+*value* (wrong units, wrong scale) fails silently, which is worse.
 
-Read `SKILL.md` component catalogue inline and `references/deckkit-component-guide.md`.
-The components exist to prevent the exact layout/contrast/spacing errors you'll make when
-hard-coding.
+The catalogue is the component list **inline in `SKILL.md`** plus
+`references/design-gallery.md`. There is no `deckkit-component-guide.md`.
 
 ## Critic panel: required in auto mode
 
 🔴 **Running the full critic panel is NOT OPTIONAL in auto mode.** It's the only independent
 verification that your auto-decisions produced a good deck.
 
-After build + render + lint:
-1. Run content critic (agent, `role=content-critic`)
-2. Run design critic (agent, `role=design-critic`)  
-3. Read both reports
-4. **If either reports medium/high issues, fix them** — don't hand off a deck with known
+After build + render + lint, dispatch per `references/critic-panel.md` — the panel is
+LENS-based, pointed at `agents/critic.md`; there is no `role=content-critic` parameter:
+1. Dispatch a critic subagent with the **content lens** (brief: `agents/critic.md`)
+2. Dispatch a second with the **design lens**, given the render PNGs + `lint_deck --json`
+3. Validate each returned review: `python3 scripts/validate_review.py critic <review.json>`
+   — a review failing schema/coverage is **rejected and re-dispatched once**, never acted on
+4. Record it as evidence, not as a claim:
+   `python3 scripts/validate_review.py critic <review.json> --record <deck-dir>`
+5. **If either reports blocker/major issues, fix them** — don't hand off a deck with known
    problems just because the user said "auto"
+
+🔴 **If the host cannot dispatch subagents, say what was lost.** Running the lenses inline is
+the author grading themselves — record `critic: inline (no dispatch on this host — not
+independent)` rather than reporting a pass. See the capability ledger in
+`references/interview-protocol.md`.
 
 The user delegated *choices*, not *quality*. A deck with contrast violations, text walls,
 or incoherent rhythm fails regardless of who made those mistakes.

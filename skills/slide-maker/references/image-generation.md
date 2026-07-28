@@ -259,90 +259,6 @@ atmosphere beats that deserve them.
 2. For generated plates, write the intended frame before prompting: full-bleed background,
    side panel, crop strip, texture block, or isolated object.
 
-## Text legibility over images — a hard floor, not a preference
-
-🔴 **When an image serves as a background with text overlaid, TEXT LEGIBILITY is non-negotiable.**
-The contrast floor (WCAG 1.4.3, 3:1 minimum for body text, 4.5:1 for small text) applies equally
-to text-over-solid and text-over-image. A beautiful atmospheric plate that makes the slide title
-unreadable is a **design failure**, not an acceptable tradeoff.
-
-### The scrim rule for full-bleed backgrounds
-
-**ANY full-bleed photo or generated image used as a slide background with text overlay REQUIRES an
-opaque scrim layer between the image and the text.** The scrim is a solid-fill shape (box) with
-transparency, drawn AFTER the image and BEFORE the text:
-
-```python
-# 1. Place the background image
-pic = dk.picture(slide, img_path, 0, 0, 10, 5.625, fit="cover", alt="")
-
-# 2. REQUIRED: Add scrim for legibility
-scrim = dk.box(slide, 0, 0, 10, 5.625, fill="#000000")  # dark scrim for light text
-scrim.fill.fore_color.alpha = int(0.6 * 255)  # 60% opacity minimum
-
-# OR for dark text on light scrim:
-# scrim = dk.box(slide, 0, 0, 10, 5.625, fill="#FFFFFF")
-# scrim.fill.fore_color.alpha = int(0.7 * 255)  # 70% opacity minimum
-
-# 3. Then place text on top
-dk.text(slide, 1.0, 2.0, 8.0, 1.5, [[("Title", 36, WHITE, True, False)]])
-```
-
-**The scrim is NOT OPTIONAL.** Even when the image has a "calm region" or uniform background:
-- Image compression artifacts create micro-variation that hurts contrast
-- Different displays/projectors render the same image with different brightness
-- A viewer in the back of a room needs higher contrast than your laptop screen shows
-
-**Scrim opacity guidelines:**
-- **Dark scrim (for white/light text):** 0.5–0.7 alpha (50-70% black)
-- **Light scrim (for dark text):** 0.6–0.8 alpha (60-80% white)
-- **Test by rendering** — if lint reports TEXT-ON-IMAGE CONTRAST < 3:1, increase opacity
-
-**Exception: Panel-based images** that sit BESIDE text (not under it) need no scrim, because the
-text has its own opaque background:
-
-```python
-# Image in right panel (40% of slide width)
-dk.picture(slide, img_path, 6.0, 1.0, 3.5, 4.0, fit="contain", alt="Supporting visual")
-
-# Text in left panel (60%), fully opaque slide background
-dk.text(slide, 0.8, 1.5, 5.0, 4.0, content)
-```
-
-### Prompt discipline for legibility
-
-When generating an image intended as a background, **build legibility INTO the prompt**:
-
-✅ **Good prompts for text-overlay backgrounds:**
-- "… with large calm uniform region in [top third / center / left side] for text overlay"
-- "… dark vignette at edges, bright center area"
-- "… gradient from [dark color] at bottom to [light color] at top"
-- "… soft unfocused background, sharp subject in foreground"
-
-❌ **Bad prompts (will fight text legibility):**
-- "… high contrast, intricate detail everywhere" (no calm zone)
-- "… vibrant colors across entire frame" (no uniform region)
-- "… centered subject filling the frame" (blocks title placement)
-
-**Even with a well-prompted image, the scrim is still required** — the prompt increases the chance
-of a calm region, but does not guarantee sufficient contrast across all display conditions.
-
-### When to avoid background images entirely
-
-Some slide types should NEVER use full-bleed photo/generated backgrounds:
-
-❌ **Dense content slides** (text walls, tables, code blocks) — backgrounds add visual noise
-❌ **Chart/data slides** — the chart IS the visual, atmosphere competes
-❌ **List-heavy slides** — bullet lists need high contrast, backgrounds dilute it
-
-**Use background images only for:**
-✅ Section dividers (title + minimal text)
-✅ Hero/cover slides (large type, few words)
-✅ Closing/summary slides (emotional beat, not information density)
-
-**Default to clean typography** — a well-composed slide with no image beats a poorly-composed
-slide with a distracting background.
-
 3. Build the prompt manifest from a sub-outline of **only the plate-worthy slides**, not the
    whole deck. Write a tiny `image-slides.md` with one heading per slide you decided needs a
    plate (or reuse just those headings), then run:
@@ -403,6 +319,116 @@ subject to sit well inside the central safe area, away from the edges.
 **Always re-view after placing.** Look at the rendered slide and confirm the key subject is
 whole and uncropped — for *every* `picture()`, generated or source. A cropped-out subject is
 the most common generated-image failure; the static render is where you catch it.
+
+
+## Text legibility over images — a hard floor, not a preference
+
+🔴 **When an image serves as a background with text overlaid, TEXT LEGIBILITY is non-negotiable.**
+The contrast floor (WCAG 1.4.3, 3:1 minimum for body text, 4.5:1 for small text) applies equally
+to text-over-solid and text-over-image. A beautiful atmospheric plate that makes the slide title
+unreadable is a **design failure**, not an acceptable tradeoff.
+
+### The scrim rule for full-bleed backgrounds
+
+**ANY full-bleed photo or generated image used as a slide background with text overlay REQUIRES an
+opaque scrim layer between the image and the text.** The scrim is a solid-fill shape (box) with
+transparency, drawn AFTER the image and BEFORE the text:
+
+Use **`dk.scrim_overlay`** — the helper written for exactly this job. It emits a GRADIENT
+fill, which is the only way a scrim can carry transparency: `<a:alpha>` lives on gradient
+stops, and DrawingML's alpha scale is **0–100000**, not 0–255.
+
+```python
+# 1. Place the plate
+dk.picture(slide, img_path, 0, 0, 10, 5.625, fit="cover", alt="<what it shows>")
+
+# 2. Graduated scrim, AIMED at the text (angle 0 = darker at left, 90 = darker at bottom).
+#    Size it to the text's zone — a flat slab over the whole slide flattens the image.
+dk.scrim_overlay(slide, 0, 0, 10, 5.625,
+                 stops=((0.0, 0.82), (0.55, 0.55), (1.0, 0.12)),
+                 color="0A1420", angle=0.0)
+
+# 3. Text on top
+```
+
+🔴 **Never write `shape.fill.fore_color.alpha = ...`.** python-pptx's `ColorFormat` has no
+`alpha` setter and no `__slots__`, so the assignment **silently creates a dead attribute** and
+raises nothing. The emitted XML is `<a:srgbClr val="000000"/>` with **no `<a:alpha>`** — a 100%
+**opaque** rectangle that erases the plate entirely. Measured on a real deck: brightest pixel in
+the image region **0/765**, and **every lint passed green** — text is painted last so
+`TEXT NOT VISIBLE`/`OCCLUSION` cannot fire, and white-on-pure-black scores ~21:1 so
+`TEXT-ON-IMAGE CONTRAST` reports the *best* number in the deck. A solid fill cannot be
+translucent; reach for the gradient helper, or `deckkit.pic_alpha` to fade the picture itself.
+
+**Text over a plate must be legible — but a scrim is only one way to get there, and not always
+the right one.** When the plate already carries a calm dark region where the type sits, a scrim
+subtracts from the image and adds nothing. Measure first with `image_fx.quiet_region(path)`,
+then decide. `TEXT-ON-IMAGE CONTRAST` backstops the too-light direction; **nothing backstops the
+too-heavy direction**, so that judgement is yours and it is the one that quietly ruins covers.
+
+**Do not trust a calm region you only eyeballed** — measure it, then size the scrim to what
+the measurement says. Three reasons the eye is optimistic here:
+- compression artifacts create micro-variation that hurts contrast
+- projectors and different displays render the same plate at different brightness
+- a viewer at the back of the room needs more contrast than your laptop shows
+
+So the rule is *measured legibility*, not *a slab by default*:
+- **Measured calm + dark region already ≥4.5:1 under the type** → no scrim; adding one only
+  dulls the plate. Record that you checked.
+- **Marginal or bright under the type** → a GRADUATED scrim aimed at the text
+  (`stops=((0.0, 0.8), (1.0, 0.1))`, `angle` pointed at the type), leaving the far side bright.
+- **Image linework crossing the glyphs** → a scrim will not save it: a scrim *dims* a bright
+  line, it does not remove it. Use a near-opaque panel (α ≥ 0.88) or move the text.
+- **Test by rendering** — if `TEXT-ON-IMAGE CONTRAST` reports < 3:1, deepen the stops nearest
+  the text. If the plate has gone muddy, you over-scrimmed: nothing will report that but you.
+
+**Exception: Panel-based images** that sit BESIDE text (not under it) need no scrim, because the
+text has its own opaque background:
+
+```python
+# Image in right panel (40% of slide width)
+dk.picture(slide, img_path, 6.0, 1.0, 3.5, 4.0, fit="contain", alt="Supporting visual")
+
+# Text in left panel (60%), fully opaque slide background
+dk.text(slide, 0.8, 1.5, 5.0, 4.0, content)
+```
+
+### Prompt discipline for legibility
+
+When generating an image intended as a background, **build legibility INTO the prompt**:
+
+✅ **Good prompts for text-overlay backgrounds:**
+- "… with large calm uniform region in [top third / center / left side] for text overlay"
+- "… dark vignette at edges, bright center area"
+- "… gradient from [dark color] at bottom to [light color] at top"
+- "… soft unfocused background, sharp subject in foreground"
+
+❌ **Bad prompts (will fight text legibility):**
+- "… high contrast, intricate detail everywhere" (no calm zone)
+- "… vibrant colors across entire frame" (no uniform region)
+- "… centered subject filling the frame" (blocks title placement)
+
+**Even with a well-prompted image, the scrim is still required** — the prompt increases the chance
+of a calm region, but does not guarantee sufficient contrast across all display conditions.
+
+### When to avoid background images entirely
+
+A full-bleed plate competes with whatever else the slide is asking the eye to do, so it earns
+its place most easily where there is little else:
+
+✅ **Natural fits** — section dividers · hero/cover · a closing beat (large type, few words)
+⚠️ **Usually fights the content** — dense text, tables, code, bullet lists, and especially
+   **chart/data slides**, where the chart already IS the visual
+
+That is a strong prior, not a prohibition: a faint, low-contrast interior plate behind a
+data slide is exactly what the generated-template branch mandates on every interior page
+(`references/generated-template.md`), and it works because it is *faint*. Judge the specific
+slide — and when you overrule the prior, say so in one clause in the design plan.
+
+**A well-composed slide with no image beats a poorly-composed slide with a distracting
+background** — but it does not beat a well-composed slide with the right one. Do not read this
+section as "default to plain typography".
+
 
 ## Generating the images — auto-detect the source (no API key needed)
 

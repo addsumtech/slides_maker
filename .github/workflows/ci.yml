@@ -120,6 +120,33 @@ jobs:
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/reg.log || {
             echo "::error::regression suite exited 0 without running to completion"; exit 1; }
 
+      # The Codex delivery gate is the strictest thing in the skill -- it is what stops a Codex
+      # run from calling a deck delivered without two schema-valid critic reviews. It shipped
+      # with 437 lines of tests wired to nothing. Script-style on purpose (matching
+      # test_lint_regressions.py), so pytest would collect zero from them: invoke directly.
+      - name: Codex delivery gate + visual contract
+        run: |
+          set -o pipefail
+          python tests/test_codex_delivery_gate.py | tee /tmp/codex_gate.log
+          grep -q "^ok - " /tmp/codex_gate.log || {
+            echo "::error::codex delivery gate suite exited 0 without asserting"; exit 1; }
+          python tests/test_codex_visual_contract.py | tee /tmp/codex_vc.log
+          grep -q "^ok - " /tmp/codex_vc.log || {
+            echo "::error::codex visual contract suite exited 0 without asserting"; exit 1; }
+
+      # Prose that teaches an API is still an API contract, and nothing used to check it.
+      # Measured: the shared references simultaneously taught `dk.card()` (no such helper),
+      # `icon_tile(tile_color=)` (the param is `fill=`), a dead `deckkit-component-guide.md`
+      # pointer, and `fore_color.alpha = ...` -- which raises nothing, writes nothing, and
+      # renders a 100% opaque shape that erased a cover plate to pure black while every
+      # existing lint reported clean. All four were invisible to CI until this step existed.
+      - name: Documented deckkit API actually exists
+        run: |
+          set -o pipefail
+          python scripts/check_reference_code.py | tee /tmp/refcode.log
+          grep -qE "^checked [0-9]+ markdown" /tmp/refcode.log || {
+            echo "::error::reference-code checker did not run"; exit 1; }
+
       - name: Icon pipeline (fetch, recolor, ink guard)
         run: |
           python - <<'EOF'
