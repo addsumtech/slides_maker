@@ -9,6 +9,79 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+## [4.2.0] — 2026-07-28
+
+**One behaviour change to know about before upgrading.** `render_deck.py --gate-check` /
+`--deliverables` now require a critic waiver to be CLASSIFIED, not merely written. A
+`.deck-gates.json` carrying `{"critic": {"waived": "<any string>"}}` used to print one line and
+pass; it now needs `waived_category` from a fixed set (`no-dispatch-on-host` /
+`already-reviewed-minor-edit` / `user-waived` / `external-deck`), a reason of real substance, and
+— for `no-dispatch-on-host` — an explicit `inline_ran` boolean. Existing scripts that waive the
+critic will start failing until they say which kind of skip it is. The `verdict: consent` path is
+untouched. Why: the Codex delivery gate had required a distinct schema-valid review artifact per
+lens for a while, and the shared path accepted any sentence — measured, a hand-typed waiver
+carried a whole 10-slide deck through `all hand-off gates pass` with no independent critic ever
+involved.
+
+### Added — the checklist now has something that reads it
+- **`scripts/preflight_check.py`** decides the mechanical half of PRE-FLIGHT and prints the other
+  half as explicitly NOT covered. Eleven of the twelve ticks were self-attested: the model wrote
+  twelve checkmarks and nothing anywhere read them, which is the exact silent-skip class the
+  checklist exists to prevent. It decides items 1 (speaker-notes coverage), 2 (build timing vs
+  `--static`), 3b (every `build:` docstring having matching `Build.step` calls, by AST), 4 (native
+  charts + `equation_native`), 7 (an as-of date), 8 (**meta-annotations and unfilled
+  `<slot>`/`{slot}` text leaked onto a slide**) and 10 (fonts that will not resolve elsewhere) —
+  and prints 5 / 6 / 6b / 9 / 11 as judgment calls that are still yours, so a tick never *looks*
+  covered. Items 2 and 7 are advisory rather than failures by construction: whether builds were
+  opted in and whether any claim is time-bound are user facts absent from the file, and a checker
+  that fails on what it cannot know is one people learn to ignore.
+- **`scripts/check_reference_code.py`** resolves every `deckkit.*` call taught in the skill's own
+  prose against the real module — unknown helper, bad keyword, dead `references/*.md` pointer, and
+  the silent `.fore_color.alpha = ...` no-op. Prose that teaches an API is still an API contract,
+  and nothing used to check it.
+- CI now runs both, plus the Codex gate's own 437 lines of tests, which shipped wired to nothing
+  (`grep -c codex ci.yml` was 0). Every new step asserts the suite RAN rather than merely exited 0.
+- `tests/test_critic_waiver_gate.py` (7 cases) and `tests/test_preflight_check.py` (11 cases). The
+  latter asserts both halves: that mechanical defects are caught, and that a clean run still says
+  the five judgment items are unticked.
+
+### Fixed — four wrong API facts were shipping in the shared references
+- **A scrim recipe that erased the image it was protecting.** Two unfenced shared references taught
+  `scrim.fill.fore_color.alpha = int(0.6 * 255)`. python-pptx's `ColorFormat` has no `alpha` setter
+  and no `__slots__`, so the assignment raises nothing, writes nothing, and yields a **100% opaque**
+  rectangle. Measured on a real deck: the full-bleed cover plate rendered pure black (brightest
+  pixel 0/765) and **every lint passed green** — text is painted last so `TEXT NOT VISIBLE` /
+  `OCCLUSION` cannot fire, and white-on-pure-black scores ~21:1 so `TEXT-ON-IMAGE CONTRAST` reported
+  the best number in the deck. Now `deckkit.scrim_overlay()`, whose gradient carries a real
+  `<a:alpha>` on DrawingML's 0–100000 scale (not 0–255, the other half of the original bug).
+- `dk.card(...)` — no such helper, and it was the checkmarked "Do" example while the crossed-out
+  "Don't" example was the one that actually worked. `icon_tile(tile_color=...)` — the parameter is
+  `fill=`. `references/deckkit-component-guide.md` — no such file. `role=content-critic` dispatch —
+  appears nowhere in the skill; the real contract is lens-based via `agents/critic.md` +
+  `validate_review.py`.
+- **`image-generation.md`'s "Planning workflow" list was split in half.** A 90-line section had been
+  inserted between steps 2 and 3, orphaning steps 3–6 — including the emphatic "Do NOT pass
+  `--count`" rule — under an unrelated heading. Moved verbatim; the list reads 1–6 again.
+- `codex-runtime.md` never named `review_effort` / `fast_opt_in` / `thorough_panel` / `arbiters`,
+  the keys its own delivery gate enforces — zero matches across every `.md` in the skill. Scoped
+  honestly: `review_effort` defaults to `standard`, so a standard-tier run was never blocked, and
+  `--init` already emitted most of them. The one real deadlock was `fast`, whose required
+  `fast_opt_in` appeared in no doc **and** was missing from the `--init` skeleton. Both closed.
+- `build_example_generic.py` promised a spot-check that each `build:` docstring has matching
+  `Build.step` calls, while its own `slide_pipeline` docstring declared `build:` and implemented
+  none — the example was teaching a docstring that lies.
+- `file-inventory.md` was missing three scripts and every test suite. An inventory that omits a
+  script is a navigation failure: the model cannot reach for a tool it cannot see.
+
+### Changed
+- The Codex / OpenAI adapter now lives on `main` rather than a side branch. One tree serves both
+  runtimes, separated by `Codex only:` fences and the `references/runtime-routing.md` profiles
+  (`shared` = Claude Code / Kimi; `codex` + `openai-gpt-bridged` = OpenAI). Routing is
+  capabilities-first, not provider-inferred. The pre-merge tree is preserved on the `cc_4.1.0`
+  branch.
+- Local install artifacts (`.agents/`, `.claude/`, `skills-lock.json`, `OPTIMIZATION_SUMMARY.md`)
+  are now ignored; a copy of the skill that drifts from `skills/` should not ship in the repo.
+
 ## [4.1.0] — 2026-07-27
 
 **One behaviour change to know about before upgrading.** `render_deck.py --deliverables` now also
