@@ -140,6 +140,14 @@ jobs:
       # pointer, and `fore_color.alpha = ...` -- which raises nothing, writes nothing, and
       # renders a 100% opaque shape that erased a cover plate to pure black while every
       # existing lint reported clean. All four were invisible to CI until this step existed.
+      # A gate without a test regresses the same silent way the bugs it catches do.
+      - name: Critic waiver must be classified (shared path)
+        run: |
+          set -o pipefail
+          python tests/test_critic_waiver_gate.py | tee /tmp/waiver.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/waiver.log || {
+            echo "::error::critic waiver gate suite did not run to completion"; exit 1; }
+
       - name: Documented deckkit API actually exists
         run: |
           set -o pipefail

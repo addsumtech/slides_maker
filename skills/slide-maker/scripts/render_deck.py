@@ -334,7 +334,46 @@ def check_handoff_gates(pptx, mode="presented"):
 
     critic = gates.get("critic") or {}
     if critic.get("waived"):
-        print("[gates] critic WAIVED — {}".format(critic["waived"]))
+        # A waiver is legitimate — quick decks and hosts without subagent dispatch are real —
+        # but an UNCLASSIFIED one is just a sentence, and the model that skipped the loop writes
+        # the same sentence as the model that ran it. The Codex delivery gate has required a
+        # distinct schema-valid review artifact per lens for a while; this path accepted any
+        # string. Measured: a hand-typed waiver carried a whole deck through `all hand-off gates
+        # pass` without an independent critic ever seeing it. So: name the category, and say
+        # whether the lenses ran at all.
+        WAIVER_KINDS = {
+            "no-dispatch-on-host":
+                "the runtime cannot dispatch a subagent (record it in the capability ledger too)",
+            "already-reviewed-minor-edit":
+                "a 1-2 slide edit to a deck that already passed its loop",
+            "user-waived":
+                "the user was asked and chose to ship over it",
+            "external-deck":
+                "a deck this skill did not author (redesign diagnosis / critique-only run)",
+        }
+        reason = critic["waived"]
+        kind = critic.get("waived_category")
+        if not isinstance(reason, str) or len(reason.strip()) < 24:
+            die("`critic.waived` must be a written reason that travels with the deck, not a "
+                "placeholder. Say what was skipped and why, in a sentence someone can disagree "
+                "with later.")
+        if kind not in WAIVER_KINDS:
+            die("`critic.waived_category` must name WHICH kind of skip this is — an unclassified "
+                "waiver is indistinguishable from never having run the loop. One of:\n"
+                + "\n".join("    {:28s} {}".format(k, v) for k, v in sorted(WAIVER_KINDS.items()))
+                + "\n\n  If none of these fit, the honest move is to run the critic.")
+        if kind == "no-dispatch-on-host" and "inline_ran" not in critic:
+            die("`waived_category: no-dispatch-on-host` must also record `\"inline_ran\": true|false` "
+                "— whether the content and design lenses were at least run inline. 'Ran inline in "
+                "the author's own context' and 'was never reviewed' are different claims, and the "
+                "hand-off note reads identically for both unless this file separates them.")
+        print("[gates] critic WAIVED [{}] — NOT INDEPENDENTLY REVIEWED".format(kind))
+        print("        {}".format(reason))
+        if kind == "no-dispatch-on-host":
+            print("        lenses run inline: {} — inline review is the author grading "
+                  "themselves.".format("yes" if critic.get("inline_ran") else "NO"))
+        print("        Say this in the hand-off note too; a waiver the user never sees is a "
+              "silence.")
     elif critic.get("verdict") == "consent":
         # A record the model TYPED at hand-off is self-certification: the model that skipped the
         # loop writes the same JSON as the model that ran it. So when the record points at the
