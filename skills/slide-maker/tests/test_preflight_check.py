@@ -90,6 +90,32 @@ def _(td):
     return code == 0 and "as of" in out.lower() and "advisory" in out.lower()
 
 
+@case("a font missing on THIS machine is advisory, not a failure")
+def _(td):
+    # The regression that broke CI: fixtures used Helvetica Neue, absent on Ubuntu, so item 10
+    # failed and every "expects a clean run" case failed with it. The deck was fine; the check
+    # was wrong. Uses a font guaranteed absent everywhere so the assertion is platform-stable.
+    import deckkit as dk
+    from pptx.dml.color import RGBColor
+    prs = dk.blank_deck(10, 5.625)
+    s = prs.slides.add_slide(prs.slide_layouts[6])
+    dk.text(s, 0.6, 1.0, 8, 0.6, [[("Title", 24, RGBColor.from_string("12395E"),
+            True, False, "Definitely Not An Installed Font")]])
+    dk.text(s, 0.6, 4.8, 8, 0.3, [[("as of 28 July 2026", 11,
+            RGBColor.from_string("646F7B"), False, False, "Definitely Not An Installed Font")]])
+    dk.speaker_notes(s, "x")
+    prs.save(str(td / "font.pptx"))
+    code, out = run(td / "font.pptx", "--static")
+    return code == 0 and "not installed on THIS machine" in out and "mechanical subset clean" in out
+
+
+@case("the suite's own fixtures do not depend on a platform-specific font")
+def _(td):
+    # A test that passes on macOS and fails on Linux is worse than no test.
+    code, out = run(build(td / "plat.pptx"), "--static")
+    return code == 0
+
+
 @case("advisory items are visually distinct from passes")
 def _(td):
     code, out = run(build(td / "adv.pptx", asof=False), "--static")

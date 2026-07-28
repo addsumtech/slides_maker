@@ -45,7 +45,8 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   axes. Exit 0 all diverge / 2 flagged / 1 unreadable. Never auto-kills: a flag means REDIVERGE **or**
   record a named justification on the `direction gate:` line. Run it before posting the preview link.
 - `preflight_check.py` — decides the MECHANICAL half of PRE-FLIGHT (items 1, 2, 3b, 4, 7, 8, 10)
-  and prints 5/6/6b/9/11 as still-yours rather than implying it covered them. Catches the defect
+  and prints 5/6/6b/9/11 as still-yours rather than implying it covered them. Items 2, 7 and 10
+  are advisory, not failures: they depend on facts the file does not carry. Catches the defect
   class nothing else does: `placeholder`/`TODO`/`(editable native chart)`/unfilled `<slot>` text
   shipped on a slide. `--build <script>` adds the `build:`-docstring vs `Build.step` diff.
   Exit 0 clean / 1 findings / 2 `NOT CHECKED`. Run it at the top of PRE-FLIGHT.

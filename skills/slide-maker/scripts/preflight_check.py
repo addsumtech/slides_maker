@@ -191,8 +191,14 @@ def item10_fonts(prs):
         return ("NOT CHECKABLE", f"fonts used: {sorted(used)}; could not enumerate installed fonts")
     missing = sorted(f for f in used if f not in have)
     if missing:
-        return ("FAIL", f"font(s) not installed here: {missing} - portability risk, "
-                        f"flag them at hand-off (used: {sorted(used)})")
+        # ADVISORY, not a failure. Whether a font is installed on the machine running this
+        # check says nothing about the machine the deck will be PRESENTED on - which is the
+        # only machine the portability rule is about. Item 10's own wording is "noted for the
+        # hand-off", i.e. flag it. Failing here fails perfectly good decks: CI (Ubuntu) has no
+        # Helvetica Neue, so every macOS-authored deck would be "not ready to render".
+        return ("ADVISORY", f"font(s) not installed on THIS machine: {missing} - may be fine "
+                            f"where the deck is presented, but name them in the hand-off "
+                            f"(used: {sorted(used)})")
     return ("PASS", f"all {len(used)} font(s) resolve locally: {sorted(used)}")
 
 

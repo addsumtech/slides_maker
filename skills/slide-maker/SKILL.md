@@ -1014,7 +1014,9 @@ its block into the ticks** (add `--selfread` / `--static` to match the deck's mo
 MECHANICAL half — speaker-notes coverage (1), build timing present/absent (2), every `build:`
 docstring actually having `Build.step` calls (3b), native charts + `equation_native` (4), the deck
 carrying an as-of date (7), **meta-annotations and unfilled `<slot>`/`{slot}` template text leaked
-onto a slide (8)**, and fonts that will not resolve on another machine (10). Exit 1 means not ready;
+onto a slide (8)**. Items 2, 7 and 10 are **advisory** — whether builds were opted in, whether
+any claim is time-bound, and whether a font exists on the PRESENTER's machine are all facts absent
+from the file, and a check that fails on what it cannot know is one people learn to ignore. Exit 1 means not ready;
 `NOT CHECKED` + exit 2 means it could not run, which is never the same as clean.
 **It deliberately does NOT decide 5, 6, 6b, 9, 11** — those are judgment (is the figure the real
 artifact, does the first look land on the hero, is the title the takeaway) and it prints them as
