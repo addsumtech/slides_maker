@@ -30,11 +30,15 @@ involved.
   checklist exists to prevent. It decides items 1 (speaker-notes coverage), 2 (build timing vs
   `--static`), 3b (every `build:` docstring having matching `Build.step` calls, by AST), 4 (native
   charts + `equation_native`), 7 (an as-of date), 8 (**meta-annotations and unfilled
-  `<slot>`/`{slot}` text leaked onto a slide**) and 10 (fonts that will not resolve elsewhere) —
+  `<slot>`/`{slot}` text leaked onto a slide**) and 10 (fonts that may not resolve elsewhere) —
   and prints 5 / 6 / 6b / 9 / 11 as judgment calls that are still yours, so a tick never *looks*
-  covered. Items 2 and 7 are advisory rather than failures by construction: whether builds were
-  opted in and whether any claim is time-bound are user facts absent from the file, and a checker
-  that fails on what it cannot know is one people learn to ignore.
+  covered. **Items 2, 7 and 10 are advisory rather than failures by construction**: whether builds
+  were opted in, whether any claim is time-bound, and whether a font exists on the *presenter's*
+  machine are all facts absent from the file, and a checker that fails on what it cannot know is
+  one people learn to ignore. (Item 10 learned this the hard way — it shipped as a failure, and CI
+  on Ubuntu promptly declared every macOS-authored deck "not ready to render". `item10_fonts` can
+  now return PASS / ADVISORY / NOT CHECKABLE and never FAIL, verified by AST over its own return
+  statements and by stubbing the installed-font list empty.)
 - **`scripts/check_reference_code.py`** resolves every `deckkit.*` call taught in the skill's own
   prose against the real module — unknown helper, bad keyword, dead `references/*.md` pointer, and
   the silent `.fore_color.alpha = ...` no-op. Prose that teaches an API is still an API contract,
