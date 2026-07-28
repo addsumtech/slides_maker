@@ -36,3 +36,11 @@ credentials.json
 skills/slide-maker/tests/fx_pass.pptx
 skills/slide-maker/tests/fx_fail.pptx
 skills/slide-maker/tests/_fixture_plate.png
+
+# 本地安装产物 / 工作笔记 —— 不进仓库
+# .agents/ 与 .claude/ 是 skill 被安装到本机后的副本（`npx skills add` / 符号链接目标），
+# 会与 skills/ 下的真身漂移（实测 17 个文件已不一致），提交它们等于发布一份过时的重复品。
+.agents/
+.claude/
+skills-lock.json
+OPTIMIZATION_SUMMARY.md
