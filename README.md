@@ -31,10 +31,7 @@ Most AI-PPT tools race to look pretty in seconds. slide-maker optimizes for the 
 - 🧑‍⚖️ **Reviewed before you see it.** A non-negotiable actor–critic loop: a *separate* critic tries to break the deck — cramped layout, weak contrast, a number that doesn't match the source — and sends fixes back. Not the author model grading its own homework.
 - 🎨 **Designed around your content, in any language — on any canvas.** Composed slide by slide — matching your template or designing a clean one — for a research talk, a thesis defense, or a product pitch. Not your text poured into a stock layout. And not only 16:9: the same skill recomposes to 4:3, square 1:1, rednote (小红书) 3:4 cards, 9:16 story covers, and A4 print one-pagers, each with its own safe zones and layout logic.
 
-<sub>Native-editable PPTX is now table stakes (several tools do it). What's rare is *editable **and** source-traced **and** critic-reviewed **and** bespoke* — together, in one file you own. Honest limits: no zero-setup cloud, no share links, no animated web backgrounds — it makes a **file**, run locally, that opens and edits cleanly in real PowerPoint/Keynote. See [what's different](#what-makes-slide-maker-different).</sub>
-
-> ### 🤖 New: use it in ChatGPT — no install, straight from the GPT Store
-> **[slide-maker (addsum studio) →](https://chatgpt.com/g/g-6a5b41f0a33881918be69e8b10f8b4ff-slide-maker-gpt)** inherits this skill's ability, so **making slides with ChatGPT is fully feasible**: open the link or search **"slide-maker (addsum studio)"** in the **GPT Store**, hand it a paper / doc / topic, and get your deck. (The local skill below remains the full-power path.)
+Native-editable PPTX is now table stakes (several tools do it). What's rare is *editable **and** source-traced **and** critic-reviewed **and** bespoke* — together, in one file you own. Honest limits: no zero-setup cloud, no share links, no animated web backgrounds — it makes a **file**, run locally, that opens and edits cleanly in real PowerPoint/Keynote. See [what's different](#what-makes-slide-maker-different).
 
 Recent updates: it now also reads **Word, Excel, CSV, images, and video/audio** (extraction-first — it never guesses a number off pixels), and handles a whole **book or very-long PDF** by triaging chapters around your deck's purpose instead of skimming.
 
