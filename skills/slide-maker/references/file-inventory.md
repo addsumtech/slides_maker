@@ -2,6 +2,14 @@
 
 ## Files — scripts · agents · references · registry
 
+**Tests** (`tests/`, script-style — `main()` + explicit exit, so `pytest` collects NOTHING from
+them; CI invokes each directly and asserts it RAN rather than merely exited 0):
+`test_lint_regressions.py` (two-sided: lint catches real defects AND leaves declared craft alone) ·
+`test_codex_delivery_gate.py` · `test_codex_visual_contract.py` (Codex gate behaviour) ·
+`test_critic_waiver_gate.py` (the shared-path critic waiver must be CLASSIFIED — a free-text
+waiver once carried a whole deck through `all hand-off gates pass` with no independent critic) ·
+`lint_fixture.py` (shared fixture, not a suite).
+
 **Scripts** (`scripts/`):
 - `deckkit.py` — the build helpers (template & blank decks), **incl. the editable native charts**
   (`native_chart`/`native_dual_axis`/`native_donut`/`native_pareto`/`native_bubble` — click-to-edit,
@@ -19,10 +27,19 @@
   hand-kept list, and a primitive in it would silence the tool forever. Exits 1 and prints
   `NOT CHECKED` rather than reporting clean when the deck could not be opened. ~50ms. Run it at
   PRE-FLIGHT 12.
+- `check_reference_code.py` — resolves every `deckkit.*` call TAUGHT IN THE SKILL'S PROSE against
+  the real module: unknown helper, bad keyword, dead `references/*.md` pointer, and the silent
+  `.fore_color.alpha = ...` no-op (python-pptx solid fills cannot carry alpha, so that assignment
+  raises nothing and renders a 100% OPAQUE shape). Exists because four wrong API facts shipped at
+  once in the shared references and nothing reported any of them — the build crashes at the
+  reader's desk, not in CI. Exit 0 clean / 1 findings / 2 could not run. Runs in CI.
 - `codex_delivery_gate.py` — **Codex-only** post-lint evidence gate. It verifies a v2 evidence chain:
   final PPTX/build hashes, source and claim ledger, direction/signature artifacts, per-slide component
   and icon provenance, plus two schema-valid focused critic reviews. It does **not** alter Claude Code's
   pipeline or `component_audit.py`'s advisory classification.
+- `codex_visual_contract.py` — **Codex-only** per-slide visual contract: local overlap and
+  icon-semantic drift, checked against the evidence record. Paired with `codex_delivery_gate.py`;
+  neither runs on the shared (Claude Code / Kimi) path.
 - `directions_diversity.py` — mechanical divergence check for direction-gate candidates
   (mode · palette distance · type pairing · composition), flagging any pair that matches on ≥3 of 4
   axes. Exit 0 all diverge / 2 flagged / 1 unreadable. Never auto-kills: a flag means REDIVERGE **or**
