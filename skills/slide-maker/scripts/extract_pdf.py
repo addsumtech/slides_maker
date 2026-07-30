@@ -314,8 +314,53 @@ def extract_images(pdf, page_no, out_dir, min_px=120):
 import re
 from collections import Counter
 
-_CAP = re.compile(r'^\s*(fig(?:ure)?|tab(?:le)?|scheme|algorithm)\.?\s*'
-                  r'(\d+|[ivxlc]+|[A-Z])\b', re.I)
+# Caption labels. Two things the plain `fig(?:ure)?\s*N\b` form got wrong on real papers:
+#
+# 1. SMALL CAPS MAPPED INTO THE PRIVATE USE AREA. Journals that set "FIG." in small caps often
+#    ship a font whose glyphs carry no Unicode mapping, so the text layer reads
+#    'F\uf769\uf767. 1. Illustration of...' -- an F followed by two PUA codepoints. `fig` cannot
+#    match that, and on one AAPM paper it took out ALL FOURTEEN captions: every figure came back
+#    labelled '(figure)', so nothing downstream knew which figure it was or what it showed. The
+#    leading real letter survives, so [FTSA] + a run of PUA recovers the label (and its kind);
+#    a wholly-PUA label falls back to the kindless form.
+#
+# 2. IN-TEXT REFERENCES matched as captions. A paragraph opening "Fig. 7 shows an example of..."
+#    or "Table 1 compares MoViD against baselines..." was taken as that figure's caption -- worse
+#    than a miss, because a body sentence then gets attached and reported as the caption. A real
+#    caption puts a DELIMITER after the number ("Fig. 1." / "Fig. 1:" / "Figure 1 |") or, in
+#    IEEE style, an all-caps title ("TABLE I QUANTITATIVE COMPARISON..."); an in-text reference
+#    continues with a lowercase verb. Hence the lookahead. `(?-i:[A-Z])` is scoped deliberately:
+#    under re.I a plain [A-Z] matches lowercase and re-admits every reference.
+#
+# Measured over 15 real papers (AAPM, IOP, Nature, arXiv/LNCS, IEEE-style): +14 real captions
+# recovered, -11 in-text references rejected, 0 real captions lost.
+_CAP = re.compile(r'^\s*(?:'
+                  r'(?P<word>fig(?:ure)?|tab(?:le)?|scheme|algorithm)\.?\s*'
+                  r'|(?P<sc>[FTSA])[\uE000-\uF8FF]{1,8}\.?\s*'
+                  r'|[\uE000-\uF8FF]{2,9}\.?\s*'
+                  r')(?P<num>\d+|[ivxlc]+|[A-Z])'
+                  r'(?=\s*[.:|)\]\-\u2013\u2014]|\s*$|\s+(?-i:[A-Z]))', re.I)
+
+# The small-caps branch recovers only the label's FIRST letter, and the kind has to come from it:
+# without this a PUA-mangled figure caption fell through to the table default, the table band-clamp
+# then pushed the box past the caption, every box came out empty, and a paper that had detected 14
+# figures detected NONE. A label recovered without its kind is worse than no label.
+_SC_KIND = {"f": "figure", "t": "table", "s": "scheme", "a": "algorithm"}
+
+
+def _cap_parse(m):
+    """(kind, label) from a _CAP match, whichever branch matched."""
+    num = m.group("num")
+    w = m.group("word")
+    if w:
+        wl = w.lower()
+        kind = "table" if wl.startswith("tab") else ("figure" if wl.startswith("fig") else wl)
+        return kind, f"{w.title().split('.')[0]} {num}"
+    sc = m.group("sc")
+    if sc:
+        kind = _SC_KIND.get(sc.lower(), "figure")
+        return kind, f"{kind.title()} {num}"
+    return "figure", f"Figure {num}"
 
 
 def _spans(b):
@@ -518,10 +563,9 @@ def find_figures(pdf, page_no=None):
         for b in blocks:
             m = _CAP.match(_first_line(b))
             if m:
-                kind = "table" if m.group(1).lower().startswith("tab") else \
-                       ("figure" if m.group(1).lower().startswith("fig") else m.group(1).lower())
+                kind, label = _cap_parse(m)
                 caps.append({"r": fitz.Rect(b["bbox"]), "kind": kind,
-                             "label": f"{m.group(1).title().split('.')[0]} {m.group(2)}",
+                             "label": label,
                              "text": _btext(b)[:140]})
         cap_rects = [c["r"] for c in caps]
         body = [fitz.Rect(b["bbox"]) for b in blocks
@@ -671,6 +715,23 @@ def find_figures(pdf, page_no=None):
                 side, rs = "below", bRs
             else:
                 side, rs = ("above", aRs) if aA >= bA else ("below", bRs)
+            # Restrict to the clusters in THIS caption's own band before unioning. `rs` is every
+            # cluster on the chosen side, so on a page with two stacked figures the lower caption
+            # sees both and the union spans from the upper figure to the lower one -- the band
+            # clamp then only trims the ends, leaving a box full of the body prose between them.
+            # Measured: a journal paper whose captions had been invisible (PUA small caps) started
+            # detecting them and its boxes went from cov=1.0/bodyov=0 to bodyov up to 0.98. The
+            # band has to be applied BEFORE the union, not after it.
+            _others = [o["r"] for o in caps if o is not c and _xshare(o["r"], cr) > 0.3]
+            if side == "above":
+                _lo = max([o.y1 for o in _others if o.y1 <= cr.y0 - 2] + [hdr])
+                _band = (_lo, cr.y0)
+            else:
+                _hi = min([o.y0 for o in _others if o.y0 >= cr.y1 + 2] + [ftr])
+                _band = (cr.y1, _hi)
+            _in = [r for r in rs if (r.y0 + r.y1) / 2 >= _band[0] and (r.y0 + r.y1) / 2 <= _band[1]]
+            if _in:
+                rs = _in
             box = fitz.Rect(rs[0])
             for r in rs[1:]:
                 box |= r
