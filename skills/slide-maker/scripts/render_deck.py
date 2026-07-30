@@ -318,7 +318,9 @@ def check_handoff_gates(pptx, mode="presented"):
             "  re-reads it). Then add the two blocks only you can supply. Full shape:\n\n"
             '    {{"critic": {{"verdict": "consent", "rounds": 2}},\n'
             '     "design_plan": {{"boldness": "balanced+", "signature_move": "<the one risk>",\n'
-            '                     "carried_by": [4, 6, 8], "form_ledger": "<family tally>"}},\n'
+            '                     "carried_by": [4, 6, 8], "form_ledger": "<family tally>",\n'
+            '                     "icon_family": "<family | none - reason>",\n'
+            '                     "palette": "<FILL vs TEXT-safe split, per palette_audit.py>"}},\n'
             '     "provenance": {{"claims": [{{"claim": "<the claim>", "verdict": "CONFIRMED",\n'
             '                                "url": "https://<primary source>"}}]}}}}\n\n'
             "  (A summary tally like {{\"checked\": 87}} is REJECTED on purpose — a tally is "
@@ -431,16 +433,33 @@ def check_handoff_gates(pptx, mode="presented"):
     # checkpoint token. Icons are called a design must on every branch and had no field, no
     # column and no check anywhere. The token grammar mirrors `logo plan:` — a family name or
     # an explicit `none — <reason>` — so a deliberately icon-free deck is always satisfiable.
-    DESIGN_FIELDS = ("boldness", "signature_move", "carried_by", "form_ledger", "icon_family")
+    # `palette` joins them for the same measured reason as `icon_family`. SKILL.md already
+    # states the two-token rule -- a hue used as TEXT must itself clear 4.5:1, so keep a bright
+    # FILL token and a darker TEXT twin. The rule is correct and still easy to break, because
+    # the check is per-PAIR and a build touches dozens of them. Measured on one deck: the author
+    # declared the rule in the design plan and then broke it FOUR times -- a vivid ochre set as a
+    # label on its own pale slab (2.34:1), coral emphasis text on a coral tint (4.19:1), a table
+    # highlight (4.19:1), a muted grey carrying real content on cream (4.26:1). None were
+    # reckless; each was a pair nobody was thinking about while computing contrast for a
+    # different pair, and each surfaced at render time or in review, a round later.
+    # `scripts/palette_audit.py` resolves the whole matrix in one call, so the field is cheap to
+    # fill honestly and cannot be filled at all without having run something.
+    DESIGN_FIELDS = ("boldness", "signature_move", "carried_by", "form_ledger", "icon_family",
+                     "palette")
     design = gates.get("design_plan") or {}
     if design.get("waived"):
         print("[gates] design plan WAIVED — {}".format(design["waived"]))
     elif design:
         missing = [f for f in DESIGN_FIELDS if not design.get(f)]
         if missing:
+            hint = ("\n    palette: the resolved FILL-only vs TEXT-safe split — run\n"
+                    "      python3 scripts/palette_audit.py --from-style <deck>/style.py\n"
+                    "    and paste what it hands back. A hue that works as a fill can read at\n"
+                    "    2-4:1 as text on the same tint; the matrix is what stops that being\n"
+                    "    found a render later." if "palette" in missing else "")
             die("`design_plan` is missing {}. These are the art director's outputs "
                 "(agents/slide-design.md, Step 2) — a plan without them was not designed, it was "
-                "defaulted. Fill them, or waive with a reason.".format(", ".join(missing)))
+                "defaulted. Fill them, or waive with a reason.{}".format(", ".join(missing), hint))
         cb = design["carried_by"]
         if not isinstance(cb, list) or len(cb) < 2:
             die("`carried_by` must name at least 2 slides where the signature move does structural "
@@ -451,7 +470,8 @@ def check_handoff_gates(pptx, mode="presented"):
         die("no `design_plan` record. Step 2 dispatches agents/slide-design.md as the deck's art "
             "director; nothing else decides deck rhythm or the signature move.\n"
             '    {"design_plan": {"boldness": "balanced+", "signature_move": "...",\n'
-            '                     "carried_by": [4, 6, 8], "form_ledger": "..."}}\n'
+            '                     "carried_by": [4, 6, 8], "form_ledger": "...",\n'
+            '                     "icon_family": "...", "palette": "..."}}\n'
             '    or {"design_plan": {"waived": "<reason>"}}')
 
     # Provenance: a self-filled tally proves nothing — the refutation pass is what the gate is FOR.

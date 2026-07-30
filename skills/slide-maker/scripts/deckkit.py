@@ -2350,6 +2350,62 @@ def _font_substituted(name):
     return _FONT_SUB_CACHE[name]
 
 
+def font_health():
+    """Which of the module's DECLARED faces are not installed on this machine.
+
+    Returns [(attr, face), ...] — empty when every declared face is present.
+
+    This matters more than it looks. The shipped defaults are FONT='Calibri' and MONO='Consolas',
+    chosen for Office portability; NEITHER ships with macOS, which is the primary platform for the
+    agents this skill runs inside. So a default macOS build measures every string in a
+    metric-incompatible substitute, and `_measure_lines` — which every fit/wrap/overflow guard is
+    built on — carries about a line of slack on all of it. Measured consequence: an install command
+    that fit its panel by 10% on paper still broke across three lines in the render, and copied as
+    a repo path that 404s.
+
+    The defaults are deliberately NOT changed here: FONT drives the look of every deck ever built
+    from this library, and silently re-theming them would be a worse bug than the one being fixed.
+    Instead the condition is made loud (lint_layout names it) and one call fixes it per deck.
+    """
+    out = []
+    for attr in ("FONT", "MONO", "DISPLAY", "EAFONT", "EADISPLAY", "EQ_MATHFONT"):
+        face = globals().get(attr)
+        if isinstance(face, str) and face and _font_substituted(face):
+            out.append((attr, face))
+    return out
+
+
+# Installed, metric-sane stand-ins per platform. Same register as the declared default: a
+# neo-grotesque body face and a fixed-advance mono, so switching changes measurement fidelity
+# rather than the deck's visual register.
+_PLATFORM_FONTS = {
+    "darwin": {"FONT": "Helvetica Neue", "MONO": "Menlo"},
+    "linux":  {"FONT": "DejaVu Sans",    "MONO": "DejaVu Sans Mono"},
+    "win32":  {"FONT": "Calibri",        "MONO": "Consolas"},
+}
+
+
+def use_platform_fonts(*, verbose=True):
+    """Point FONT/MONO at faces this machine actually has, and say what moved.
+
+    Call it once near the top of a build script when `font_health()` is non-empty. Only the
+    Latin body and mono faces are touched — CJK faces stay the caller's decision, because
+    `EAFONT` carries the deck's script register and there is no safe generic substitute.
+    """
+    import sys as _sys
+    key = ("darwin" if _sys.platform == "darwin"
+           else "win32" if _sys.platform.startswith("win") else "linux")
+    changed = []
+    for attr, face in _PLATFORM_FONTS[key].items():
+        cur = globals().get(attr)
+        if cur != face and not _font_substituted(face):
+            globals()[attr] = face
+            changed.append(f"{attr}: {cur} -> {face}")
+    if verbose and changed:
+        print("[deckkit] use_platform_fonts(" + key + "): " + " · ".join(changed))
+    return changed
+
+
 _FACE_IDX_CACHE = {}
 
 
@@ -5822,8 +5878,20 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
         crit = sum(1 for f in findings if f[1] == "CRITICAL")
         warn = len(findings) - crit
         if subbed_any:
-            print("[lint] note: a text font isn't installed for measurement (substituted) — wrap counts are "
-                  "approximate, so near-threshold flags carry ~1 line of slack")
+            # Named, not a footnote. This condition degrades EVERY fit/wrap/overflow guard in the
+            # library at once, because they all sit on _measure_lines. It was previously printed
+            # as a "note" and read as boilerplate: a deck shipped an install command that fit its
+            # panel by 10% under substituted metrics and still broke across three lines in the
+            # render. The fix is one call, so the message names it.
+            miss = font_health()
+            if miss:
+                print("[lint] FONT NOT INSTALLED  " + ", ".join(f"{a}={f!r}" for a, f in miss)
+                      + " — measurement falls back to a metric-INcompatible face, so every wrap "
+                        "and fit check below carries ~1 line of slack. Fix it for this deck with "
+                        "deckkit.use_platform_fonts(), or set the faces yourself.")
+            else:
+                print("[lint] note: a text font isn't installed for measurement (substituted) — wrap "
+                      "counts are approximate, so near-threshold flags carry ~1 line of slack")
         if not findings:
             print(f"[lint] ✓ no layout faults across {len(prs.slides._sldIdLst)} slides")
         else:

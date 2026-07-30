@@ -30,6 +30,7 @@ DESIGN_OK = {
     "carried_by": ["slide 3", "slide 4"],
     "form_ledger": "f" * 30,
     "icon_family": "tabler",
+    "palette": "FILL E2543A / TEXT BD4630 on cream, A3341F on tint",
 }
 PROV_OK = {"claims": [{"claim": "c", "verdict": "CONFIRMED", "url": "https://example.org"}]}
 
@@ -84,6 +85,18 @@ CASES = [
     ("the consent path is unchanged",
      {"critic": {"verdict": "consent", "rounds": 2}},
      True, "critic consented"),
+
+    # The two-token contrast rule was declared in a design plan and then broken four times on
+    # the same deck, each in a pair nobody was computing contrast for. `palette` is a required
+    # field so the split has to be resolved (palette_audit.py) rather than remembered.
+    ("a design plan with no resolved palette is refused",
+     {"critic": {"verdict": "consent", "rounds": 2},
+      "design_plan": {k: v for k, v in DESIGN_OK.items() if k != "palette"}},
+     False, "palette"),
+
+    ("a design plan carrying the palette split passes",
+     {"critic": {"verdict": "consent", "rounds": 2}, "design_plan": DESIGN_OK},
+     True, "design plan: boldness"),
 ]
 
 
