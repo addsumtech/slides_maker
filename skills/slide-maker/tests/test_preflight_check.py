@@ -164,6 +164,58 @@ def _(td):
     return "still unticked" in tail
 
 
+def _pitch(td, name, body):
+    p = td / name
+    p.write_text("import deckkit as dk\n" + body)
+    from preflight_check import check_handrolled_pitch
+    return check_handrolled_pitch(str(p))
+
+
+# A literal stride constant in a placement loop is the documented #1 geometry defect, and on one
+# measured deck the author called NONE of the derivers and shipped ~15 defects from that
+# arithmetic. Both spellings must be caught, and the correct derived form must never be.
+@case("a literal `y += 0.72` in a placement loop is caught")
+def _(td):
+    st, d = _pitch(td, "p1.py",
+                   "def s(prs):\n    y = 1.7\n    for a in X:\n"
+                   "        dk.box(prs, 0.7, y, 2.5, 0.6)\n        y += 0.72\n")
+    return st == "FAIL" and "y += 0.72" in d
+
+
+@case("`y = base + i * 0.5` is caught through enumerate's TUPLE target")
+def _(td):
+    st, d = _pitch(td, "p2.py",
+                   "def s(prs):\n    for i, (a, b) in enumerate(X):\n"
+                   "        yy = 1.68 + i * 0.5\n        dk.icon(prs, 0.7, yy, 0.3)\n")
+    return st == "FAIL" and "i * 0.5" in d
+
+
+@case("a stride DERIVED from the region is never flagged")
+def _(td):
+    st, _d = _pitch(td, "p3.py",
+                    "def s(prs):\n    top, gap, n = 2.9, 0.14, 3\n"
+                    "    bh = ((4.1 - top) - gap * (n - 1)) / n\n"
+                    "    for i, it in enumerate(X):\n        yy = top + i * (bh + gap)\n"
+                    "        dk.box(prs, 5.2, yy, 4.0, bh)\n")
+    return st == "PASS"
+
+
+@case("a function that uses a deriver is left alone")
+def _(td):
+    st, d = _pitch(td, "p4.py",
+                   "def s(prs):\n    for r in dk.rows(3, slide=prs):\n"
+                   "        dk.box(prs, *r)\n        y = 1.0 + 0.5\n")
+    return st == "PASS" and "rows" in d
+
+
+@case("a missing build script is NOT CHECKABLE, never clean")
+def _(td):
+    from preflight_check import check_handrolled_pitch
+    st, _d = check_handrolled_pitch(str(td / "nope.py"))
+    st2, _d2 = check_handrolled_pitch(None)
+    return st == "NOT CHECKABLE" and st2 == "NOT CHECKABLE"
+
+
 def main() -> int:
     passed = failed = 0
     with tempfile.TemporaryDirectory() as d:

@@ -357,6 +357,95 @@ def check_box_geometry(prs):
     return "PASS", "every text box has a usable interior"
 
 
+# Primitives that DERIVE a stack's geometry from the space available, so gaps and pitch come out
+# right by construction. SKILL.md's rule is "derive the stack pitch from the region — never
+# `block_h + 0.02`"; these are what "derive" means in code.
+DERIVERS = ("vstack", "rows", "columns", "content_band", "spaced_centers", "bottom_callout",
+            "measure_text", "measure_bullets", "measure_callout", "fit_text_size")
+_COORD = re.compile(r"^(x{1,2}|y{1,2}|c[xy]|[tblr]y|[tblr]x)$|_[xy]$")
+
+
+def check_handrolled_pitch(build_path):
+    """A LITERAL stride constant inside a placement loop — the documented #1 geometry defect.
+
+    SKILL.md warns about this at length and the warning is prose, so it gets read and then not
+    done. Measured on one deck: the author called ZERO of `vstack` / `rows` / `columns` /
+    `content_band` / `bottom_callout`, hand-rolled every stack as `y += 0.72` / `yy += 0.62`, and
+    shipped roughly fifteen geometry defects from that arithmetic — a negative-height text box, a
+    pitch that overran its panel, text past a card bottom, two footer intrusions. The two pages
+    built from a real component (`table`, `timeline`) had almost none. So the gap was never tool
+    availability; it was that nothing noticed the tool going unused.
+
+    The rule is deliberately narrow, and the narrowness is what makes it trustworthy: only a
+    LITERAL constant is a finding. A stride computed from the region —
+    `bh = ((bottom - top) - gap * (n - 1)) / n` then `y = top + i * (bh + gap)` — is exactly the
+    correct pattern and must never be flagged. That distinction is the same one SKILL.md draws.
+    """
+    if not build_path:
+        return "NOT CHECKABLE", "pass --build <build_x.py> to check the build script"
+    p = Path(build_path)
+    if not p.is_file():
+        return "NOT CHECKABLE", f"no such build script: {p}"
+    try:
+        tree = ast.parse(p.read_text(encoding="utf-8", errors="replace"))
+    except SyntaxError as e:
+        return "NOT CHECKABLE", f"could not parse {p.name}: {e}"
+
+    hits, used = [], set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+            if node.func.attr in DERIVERS:
+                used.add(node.func.attr)
+        elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+            if node.func.id in DERIVERS:
+                used.add(node.func.id)
+
+    for fn in [n for n in ast.walk(tree) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]:
+        # a function that already derives its geometry is not the target
+        derives_here = any(
+            (isinstance(c, ast.Call) and
+             ((isinstance(c.func, ast.Attribute) and c.func.attr in DERIVERS) or
+              (isinstance(c.func, ast.Name) and c.func.id in DERIVERS)))
+            for c in ast.walk(fn))
+        if derives_here:
+            continue
+        for loop in [n for n in ast.walk(fn) if isinstance(n, (ast.For, ast.While))]:
+            # `for i, (a, b) in enumerate(...)` binds a TUPLE, and that is the commonest form —
+            # reading only ast.Name here silently missed every `y = base + i * 0.5` in it.
+            tgts = {n.id for n in ast.walk(loop.target) if isinstance(n, ast.Name)} \
+                if getattr(loop, "target", None) is not None else set()
+            for n in ast.walk(loop):
+                # y += 0.62   (accumulate with a literal)
+                if (isinstance(n, ast.AugAssign) and isinstance(n.op, ast.Add)
+                        and isinstance(n.target, ast.Name) and _COORD.search(n.target.id)
+                        and isinstance(n.value, ast.Constant)
+                        and isinstance(n.value.value, (int, float))):
+                    hits.append((fn.name, n.lineno, f"{n.target.id} += {n.value.value}"))
+                # y = base + i * 0.50   (index stride with a literal)
+                if isinstance(n, ast.Assign) and isinstance(n.value, ast.BinOp):
+                    for b in ast.walk(n.value):
+                        if (isinstance(b, ast.BinOp) and isinstance(b.op, ast.Mult)
+                                and isinstance(b.right, ast.Constant)
+                                and isinstance(b.right.value, (int, float))
+                                and isinstance(b.left, ast.Name) and b.left.id in tgts):
+                            t0 = n.targets[0]
+                            if isinstance(t0, ast.Name) and _COORD.search(t0.id):
+                                hits.append((fn.name, n.lineno,
+                                             f"{t0.id} = … + {b.left.id} * {b.right.value}"))
+    if hits:
+        seen, uniq = set(), []
+        for h in hits:
+            if h[:1] + h[2:] not in seen:
+                seen.add(h[:1] + h[2:])
+                uniq.append(h)
+        detail = " · ".join(f"{f}():{ln} `{expr}`" for f, ln, expr in uniq[:4])
+        return "FAIL", (f"{len(uniq)} hand-picked stride constant(s) in placement loops — derive the "
+                        f"pitch from the region instead ({', '.join(DERIVERS[:4])}…); "
+                        f"used here: {sorted(used) or 'NONE of them'} — " + detail)
+    return "PASS", (f"no literal stride constants in placement loops"
+                    + (f" · derives via {sorted(used)}" if used else ""))
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("deck")
@@ -389,6 +478,7 @@ def main() -> int:
         ("mono wrap",        check_mono_wrap(prs)),
         ("Latin→full-width", check_latin_fullwidth(prs)),
         ("box geometry",     check_box_geometry(prs)),
+        ("derived pitch",    check_handrolled_pitch(a.build)),
     ]
 
     print(f"PRE-FLIGHT (mechanical subset) — {deck.name}")
