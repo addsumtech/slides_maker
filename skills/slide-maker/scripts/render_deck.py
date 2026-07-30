@@ -489,18 +489,23 @@ def check_handoff_gates(pptx, mode="presented"):
                 f'> body {scale["body"]} must hold, or the tiers do not rank and the hierarchy is '
                 f'decorative rather than structural.')
         proof = design["signature_proof"]
-        if not isinstance(proof, dict) or not proof.get("png") or not proof.get("slide"):
-            die('`signature_proof` must be {"slide": <n>, "png": "<rendered png>"} — the rendered '
-                'evidence that the signature move actually SURVIVED into the deck. A move that '
-                'exists only as a sentence in the plan is the documented failure: it gets sanded '
-                'back to the safe catalogue during the build and nobody notices, because the plan '
-                'still reads bravely.')
-        png = Path(proof["png"])
+        # `png` or `path`: the Codex delivery gate spells this key `path` in its own evidence file,
+        # and a Codex run keeps BOTH records (references/codex-runtime.md). Demanding one spelling
+        # here would reject the field an OpenAI-bridged run naturally writes — the same evidence,
+        # rejected for its key name.
+        proof_file = (proof or {}).get("png") or (proof or {}).get("path")
+        if not isinstance(proof, dict) or not proof_file or not proof.get("slide"):
+            die('`signature_proof` must be {"slide": <n>, "png": "<rendered png>"} (the key may also '
+                'be spelled "path", as the Codex delivery gate does) — the rendered evidence that '
+                'the signature move actually SURVIVED into the deck. A move that exists only as a '
+                'sentence in the plan is the documented failure: it gets sanded back to the safe '
+                'catalogue during the build and nobody notices, because the plan still reads bravely.')
+        png = Path(proof_file)
         if not png.is_absolute():
             png = Path(pptx).parent / png
         if not png.exists() or png.stat().st_size < 512:
-            die(f'`signature_proof.png` ({proof["png"]}) does not exist or is empty — render the '
-                f'slide first (render_deck.py <deck> <dir>) and point at the real PNG.')
+            die(f'`signature_proof` file ({proof_file}) does not exist or is empty — render '
+                f'the slide first (render_deck.py <deck> <dir>) and point at the real PNG.')
         cb = design["carried_by"]
         if not isinstance(cb, list) or len(cb) < 2:
             die("`carried_by` must name at least 2 slides where the signature move does structural "

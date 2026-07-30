@@ -131,6 +131,14 @@ CASES = [
       "design_plan": {k: v for k, v in DESIGN_OK.items() if k != "signature_proof"}},
      False, "signature_proof"),
 
+    # An OpenAI/Codex-bridged run keeps both .codex-deck-evidence.json and .deck-gates.json, and its
+    # own gate spells this key "path". Rejecting that spelling here would fail the same evidence for
+    # its key name alone.
+    ("the Codex spelling signature_proof.path is accepted",
+     {"critic": {"verdict": "consent", "rounds": 2},
+      "design_plan": dict(DESIGN_OK, signature_proof={"slide": 3, "path": "proof.png"})},
+     True, "design plan: boldness"),
+
     ("a signature_proof pointing at a MISSING png is refused",
      {"critic": {"verdict": "consent", "rounds": 2},
       "design_plan": dict(DESIGN_OK, signature_proof={"slide": 3, "png": "nope.png"})},

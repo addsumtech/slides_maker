@@ -2,6 +2,9 @@ python-pptx>=1.0.0
 PyMuPDF>=1.24.0
 Pillow>=10.0.0
 matplotlib>=3.8.0
+numpy>=1.24.0          # imported DIRECTLY by designed_charts.distribution/radar. It arrives
+                       # transitively with matplotlib today, but a direct import belongs in
+                       # the manifest rather than resting on someone else's dependency.
 
 # Optional (feature-gated; scripts degrade gracefully without them):
 #   cairosvg>=2.7      — SVG icon rasterization fallback when Chrome/Chromium is absent
