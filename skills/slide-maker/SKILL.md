@@ -1129,7 +1129,7 @@ photo/gradient with no opaque backing, exactly the class solid-fill contrast che
 its 1.5–3.0 band is the TEXT-ON-IMAGE CONTRAST `[warn]`.
 
 **It then prints a DECK STATS block — the measured form of the design targets. READ it, don't skim
-past it** (pass `--selfread` for a read-alone deck — it raises the TEXT WALL budget (~40→~90 words)
+past it** (pass `--selfread` for a read-alone deck — it raises the TEXT WALL budget (~40→~90 words); `--briefing` for an **editorial data briefing** — an FT/Economist-style dense read where ~150 words beside six charts is the FORM, which raises the word budget to ~150 and the occupancy band to 80% rather than removing either check the way `--textheavy` does
 and drops the presented-only SMALL TYPE / NO BUILDS warns; the other warns are mode-independent —
 `--surface` for a poster/single-canvas artifact, `--textheavy` when the user explicitly chose
 text-heavy density for a presented deck, or `--static` on a presented deck when the user opted OUT of

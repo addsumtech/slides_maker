@@ -978,16 +978,42 @@ def _render_col_void(im):
         samp = [px[1, r], px[2, r], px[93, r], px[94, r]]
         spread = max(sum(abs(a[k] - b[k]) for k in range(3)) for a in samp for b in samp)
         ref[r] = tuple(sorted(s_[k] for s_ in samp)[2] for k in range(3)) if spread <= 60 else canvas
+    # The "is this pixel content?" threshold has to be RELATIVE to the slide's own dynamic range.
+    # A fixed colour distance of 90 is a light-deck number: on a near-black canvas the whole
+    # palette lives in a narrow band (panels at #1A1F26 over a #0E1116 canvas differ by 42), so
+    # the panels — the bulk of the ink — read as blank and the check finds "voids" between glyph
+    # strokes. Measured on a professional dark briefing: the absolute test saw 1.9-5.1% of pixels
+    # as content where a relative one saw 14-37.5%, under-detecting by 4-9x, and STRETCHED THIN
+    # fired on 7 of 20 slides including one filled edge-to-edge with a chart. On LIGHT decks the
+    # two agree (3.0% vs 4.3%), so this barely moves them.
+    dists = [sum(abs(px[c, r][k] - ref[r][k]) for k in range(3))
+             for c in range(int(0.04 * 96), int(0.96 * 96)) for r in range(lo, hi)]
+    dists.sort()
+    p99 = dists[int(0.99 * (len(dists) - 1))] if dists else 0
+    thr = max(24.0, 0.12 * p99)                      # floor keeps sensor noise out of a blank slide
+    c0, c1 = int(0.04 * 96), int(0.96 * 96)
+    col = [sum(1 for r in range(lo, hi)
+               if sum(abs(px[c, r][k] - ref[r][k]) for k in range(3)) > thr) / max(1, hi - lo)
+           for c in range(96)]
     run = best = 0
-    for c in range(int(0.04 * 96), int(0.96 * 96)):
-        ink = sum(1 for r in range(lo, hi)
-                  if sum(abs(px[c, r][k] - ref[r][k]) for k in range(3)) > 90)
-        if ink / max(1, hi - lo) < 0.02:
+    bs = be = 0
+    st = c0
+    for c in range(c0, c1):
+        if col[c] < 0.02:
+            if run == 0:
+                st = c
             run += 1
-            best = max(best, run)
+            if run > best:
+                best, bs, be = run, st, c
         else:
             run = 0
-    return best / 96.0
+    # Ink on EACH SIDE of the widest void. A two-column comparison, or a divider with a numeral
+    # left and a graphic right, has substance on both flanks -- the channel between them is a
+    # GUTTER, which is composition, not emptiness. A genuinely thin slide has content hugging one
+    # side and ~nothing on the other. Measured: two-sided layouts 0.14, both thin controls 0.00.
+    left = col[c0:bs] or [0.0]
+    right = col[be + 1:c1] or [0.0]
+    return best / 96.0, min(sum(left) / len(left), sum(right) / len(right))
 
 
 # Which pixel-backed checks did NOT run, and why. A gate that disables itself in silence turns
@@ -1060,7 +1086,7 @@ def _load_render_lums(path, renders_dir, n, pngs=...):
     for p in pngs:
         try:
             im = Image.open(p).convert("RGB")
-            void = _render_col_void(im)
+            void, flank = _render_col_void(im)
             w, h = im.size
             im = im.resize((64, max(1, int(64 * h / w))))
             px = list(im.getdata())
@@ -1070,7 +1096,7 @@ def _load_render_lums(path, renders_dir, n, pngs=...):
             for r, g, b in px:
                 mx = max(r, g, b)
                 sat += 0.0 if mx == 0 else (mx - min(r, g, b)) / mx
-            out.append((lum, sat / m, void))
+            out.append((lum, sat / m, void, flank))
         except Exception:
             return None
     return out
@@ -1121,16 +1147,23 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False):
             dl = abs(lums[i][0] - lums[i - 1][0]) if i else 0.0
             line += f"  {lu:.2f}  {sa:.2f}  {dl:.2f}"
         print(line)
-        budget = 70 if mode == "presented" else 120
+        # `briefing`: the editorial data-briefing register -- an FT/Economist-style dense read
+        # where 150 words beside six charts is the FORM, not a wall. Measured on a professional
+        # 20-slide dark briefing: TEXT WALL fired on 5 slides (144-171 words) and CROWDED on 4
+        # (70-76% occupancy) while the deck was, by every hard check, clean. Without a register for
+        # it the only escape was `textheavy`, which waives the word budget entirely and takes the
+        # occupancy check with it; this raises both bars instead of removing them.
+        budget = 70 if mode == "presented" else (185 if mode == "briefing" else 120)
         # surface: a poster/single-canvas artifact has no per-slide word budget (judge density per
         # the fixed-surface overlay); textheavy: the user explicitly chose text-heavy density (Q4),
         # so the presented budget is waived — measurements still print, the warn is suppressed.
         if mode not in ("surface", "textheavy") and r["load"] > budget:
+            _tgt = "40" if mode == "presented" else ("150" if mode == "briefing" else "90")
             warns.append(f"TEXT WALL: slide {i+1} carries a reading load of ~{r['load']} words "
-                         f"({mode} budget ≈{'40' if mode=='presented' else '90'}, warn >{budget}) — move prose "
+                         f"({mode} budget ≈{_tgt}, warn >{budget}) — move prose "
                          f"to speaker notes or split the slide")
         if (mode not in ("surface", "textheavy") and r["load"] >= 15
-                and r["ink_cov_nopic"] > 0.70):
+                and r["ink_cov_nopic"] > (0.80 if mode == "briefing" else 0.70)):
             warns.append(f"CROWDED: slide {i+1} occupancy {r['ink_cov_nopic']*100:.0f}% — role bands: cover "
                          f"25-35 · exec/summary 45-60 · technical/dense 55-70; past ~70% the slide reads "
                          f"crowded — subtract or split, don't shrink")
@@ -1195,6 +1228,7 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False):
         # empty top to bottom. Interior content slides only; big imagery/charts earn their space.
         if (lums and mode != "surface" and 0 < i < len(rows) - 1 and r["load"] >= 15
                 and len(lums[i]) > 2 and lums[i][2] >= 0.18
+                and not (len(lums[i]) > 3 and lums[i][3] >= 0.08)
                 and r["n_chart"] == 0 and not r.get("big_pic_fg", r["n_pic"] > 0)):
             warns.append(f"STRETCHED THIN: slide {i+1} has a blank vertical channel spanning "
                          f"{lums[i][2]*100:.0f}% of the slide width through its interior — spacing few "
@@ -2022,6 +2056,9 @@ if __name__ == "__main__":
     mode = "selfread" if any(a in ("--mode=selfread", "--selfread") for a in argv) else "presented"
     if any(a in ("--mode=surface", "--surface") for a in argv):
         mode = "surface"          # poster / single-canvas artifact: no per-slide word/size budgets
+    elif any(a in ("--mode=briefing", "--briefing") for a in argv):
+        mode = "briefing"         # editorial data briefing: dense-by-design; raises the word and
+                                  # occupancy bars rather than removing them
     elif any(a in ("--mode=textheavy", "--textheavy") for a in argv):
         mode = "textheavy"        # user-chosen text-heavy presented deck: TEXT WALL waived only
     static_ok = any(a == "--static" for a in argv)   # user opted OUT of appear-builds: silence NO BUILDS
@@ -2041,6 +2078,6 @@ if __name__ == "__main__":
         elif a.startswith("--renders="):
             renders_dir = a.split("=", 1)[1]
     if not args:
-        print("usage: python lint_deck.py <deck.pptx> [--selfread] [--surface] [--textheavy] "
+        print("usage: python lint_deck.py <deck.pptx> [--selfread] [--briefing] [--surface] [--textheavy] "
               "[--static] [--renders dir] [--json out.json]"); sys.exit(2)
     sys.exit(1 if lint(args[0], mode, json_out, renders_dir, static_ok) > 0 else 0)
