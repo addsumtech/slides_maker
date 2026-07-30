@@ -448,6 +448,51 @@ def _waterfall():
 ok("dc.waterfall (floating step bars + dashed connectors)", _waterfall)
 raises("waterfall rejects an empty item list", lambda: dc.waterfall(os.path.join(TMP, "_x.png"), []))
 
+# --- sample data / two-dimension / profile / overlap: the four forms added after the reference-deck
+# --- comparison. Each carries a hard refusal, and a refusal that stops firing is a silent regression.
+_G18 = [("A", [0.80 + 0.01 * i for i in range(18)]),
+        ("B", [0.85 + 0.008 * i for i in range(18)])]
+ok("dc.distribution (auto -> box at n=18)",
+   lambda: dc.distribution(os.path.join(TMP, "_d1.png"), _G18, highlight=1, value_label="Dice",
+                           ref=0.88, ref_label="prior"))
+ok("dc.distribution (auto -> mean+/-error at n=4, ci95)",
+   lambda: dc.distribution(os.path.join(TMP, "_d2.png"),
+                           [("A", [.81, .84, .79, .86]), ("B", [.88, .91, .87, .90])], err="ci95"))
+raises("distribution refuses n<2 as a distribution",
+       lambda: dc.distribution(os.path.join(TMP, "_x.png"), [("A", [0.8, 0.9])]))
+raises("distribution refuses an unnamed error measure",
+       lambda: dc.distribution(os.path.join(TMP, "_x.png"), [("A", [1, 2, 3, 4, 5])], err="stdev"))
+raises("distribution refuses an empty group",
+       lambda: dc.distribution(os.path.join(TMP, "_x.png"), [("A", [])]))
+ok("dc.marimekko (width=size, height=share)",
+   lambda: dc.marimekko(os.path.join(TMP, "_mk.png"),
+                        [("Cloud", 190, [46, 30, 24]), ("Devices", 62, [18, 22, 60])],
+                        ["A", "B", "Others"], highlight=0, width_label="B"))
+raises("marimekko refuses a non-positive segment size",
+       lambda: dc.marimekko(os.path.join(TMP, "_x.png"), [("X", 0, [1, 2])], ["a", "b"]))
+raises("marimekko refuses a negative share",
+       lambda: dc.marimekko(os.path.join(TMP, "_x.png"), [("X", 5, [3, -1])], ["a", "b"]))
+ok("dc.radar (5 axes, 2 series, zero-anchored)",
+   lambda: dc.radar(os.path.join(TMP, "_rd.png"), ["a", "b", "c", "d", "e"],
+                    [("x", [1, 2, 3, 4, 5]), ("y", [5, 4, 3, 2, 1])], axis_range=(0, 5), highlight=1))
+raises("radar refuses 9 axes (use small_multiples)",
+       lambda: dc.radar(os.path.join(TMP, "_x.png"), [f"a{i}" for i in range(9)], [("s", [1] * 9)]))
+raises("radar refuses 4 overlaid series",
+       lambda: dc.radar(os.path.join(TMP, "_x.png"), ["a", "b", "c"],
+                        [("1", [1, 2, 3]), ("2", [1, 2, 3]), ("3", [1, 2, 3]), ("4", [1, 2, 3])]))
+ok("venn (3 sets, all 7 zones labelled)",
+   lambda: dk.venn(S(), 0.6, 1.1, 5.2, 4.0, ["A", "B", "C"],
+                   zones={"1": "one", "2": "two", "3": "three", "12": "ab", "13": "ac",
+                          "23": "bc", "123": "all"}))
+ok("venn (2 sets)", lambda: dk.venn(S(), 0.6, 1.1, 5.0, 3.8, ["Fast", "Right"],
+                                    zones={"1": "rush", "2": "late", "12": "spot"}))
+raises("venn refuses 4 sets", lambda: dk.venn(S(), 0.6, 1.1, 5, 3.8, ["a", "b", "c", "d"]))
+raises("venn refuses a zone that is not a region",
+       lambda: dk.venn(S(), 0.6, 1.1, 5, 3.8, ["a", "b"], zones={"123": "x"}))
+raises("venn refuses a zone label too long for its lens",
+       lambda: dk.venn(S(), 0.6, 1.1, 5, 3.8, ["A", "B", "C"],
+                       zones={"12": "a label far too long to fit inside a narrow lens region"}))
+
 # --- box/connector kit: every node() shape + all three arrowhead variants ---
 def _node_kit():
     s2 = S()
@@ -788,7 +833,13 @@ def _quiet_region_contract():
         "~/Downloads/slides_skill_test/tokyo-first-timers/assets/opt/hero_cover.jpg"))
     if not imgs:
         return
-    fx, fy, fw, fh, lum = quiet_region(imgs[0])
+    # macOS TCC can leave ~/Downloads LISTABLE but not READABLE, so the file globs fine and then
+    # Image.open raises PermissionError. That reported a FAILURE for an optional local fixture --
+    # noise that trains you to ignore the smoke output. Absent and unreadable are the same here.
+    try:
+        fx, fy, fw, fh, lum = quiet_region(imgs[0])
+    except (PermissionError, OSError):
+        return
     assert 0 <= fx <= 1 and 0 <= fy <= 1 and 0 < fw <= 1 and 0 < fh <= 1
     # ink-zone coherence: the region must not average dark sky with cream ground into an
     # unusable mid-lum (the exact failure the constraint was added for)

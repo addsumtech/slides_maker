@@ -255,6 +255,56 @@ def main():
     else:
         ok.append("page numbers and section indices are not treated as claims")
 
+    # ── the translucent-overlap exemption must stay NARROW ────────────────────
+    # venn()'s circles overlap by definition, so OVERLAP fired on every Venn ever built — a hard
+    # gate failing on correct output is worse than no gate, because the author starts working
+    # around the linter. The exemption keys on translucency (a gradient fill is this toolkit's only
+    # alpha path) PLUS equal size. All four directions are asserted: widening it later would
+    # silently switch off the card-on-card collision check, which is the whole point of OVERLAP.
+    def _ov(dest, build):
+        prs = _dk.blank_deck(10, 5.625)
+        build(prs.slides.add_slide(prs.slide_layouts[6]))
+        prs.save(str(dest))
+        return dest
+
+    def _g(c):
+        return [(0.0, c, 0.3), (1.0, c, 0.3)]
+
+    o = _lint_nr(_ov(tmp / "ov_opaque.pptx", lambda s: (
+        _dk.box(s, 1.0, 1.0, 3.0, 2.0, fill="C0362C"),
+        _dk.box(s, 2.2, 1.6, 3.0, 2.0, fill="1F77C4"))))
+    if "OVERLAP" in o:
+        ok.append("an OPAQUE same-size partial overlap still fires")
+    else:
+        bad.append("OVERLAP stopped firing on two opaque same-size cards — the translucency "
+                   "exemption has widened into the defect it was carved around")
+
+    o = _lint_nr(_ov(tmp / "ov_venn.pptx", lambda s: _dk.venn(
+        s, 0.6, 1.0, 5.0, 3.8, ["A", "B"], zones={"12": "both"})))
+    if "OVERLAP" in o:
+        bad.append("OVERLAP fired on venn()'s circles — a Venn's regions ARE overlaps, so the gate "
+                   "fails correct output and cannot be satisfied")
+    else:
+        ok.append("venn()'s intentional circle overlap is exempt")
+
+    o = _lint_nr(_ov(tmp / "ov_mismatch.pptx", lambda s: (
+        _dk.box(s, 1.0, 1.0, 4.0, 2.6, grad=_g("C0362C")),
+        _dk.box(s, 3.6, 2.2, 2.2, 1.4, grad=_g("1F77C4")))))
+    if "OVERLAP" in o:
+        ok.append("translucent but MISMATCHED sizes still fires (not a set diagram)")
+    else:
+        bad.append("OVERLAP stopped firing on translucent shapes of different sizes — equal size is "
+                   "what makes the exemption a set diagram rather than a stray panel")
+
+    o = _lint_nr(_ov(tmp / "ov_text.pptx", lambda s: (
+        _dk.box(s, 1.0, 1.0, 3.0, 2.0, grad=_g("C0362C")),
+        _dk.text(s, 1.2, 1.4, 2.6, 0.6, [[("covered sentence", 14, _dk.DEEP, False, False)]]),
+        _dk.box(s, 1.0, 1.0, 3.0, 2.0, grad=_g("1F77C4")))))
+    if "layout finding(s)" in o:
+        ok.append("a translucent pair carrying TEXT is still assessed (exemption needs textless)")
+    else:
+        bad.append("the lint did not complete on the translucent-plus-text deck")
+
     # ── text MEASUREMENT must never under-estimate ────────────────────────────
     # macOS ships a whole family as one .ttc, and matplotlib resolves bold and regular to
     # the SAME path; Pillow's truetype(path, size) with no index= then loads face 0, the

@@ -1532,6 +1532,173 @@ def source_note(slide, sources, *, as_of=None, label="Source", x=None, y=None, w
     return yy
 
 
+def venn(slide, x, y, w, h, sets, *, zones=None, accents=None, ink=None, mute=None,
+         label_size=13, zone_size=10.5, font=None, alpha=0.30, overlap=0.62, outline=True):
+    """OVERLAP between 2 or 3 groups — what is shared, what is only one group's.
+
+    `sets` = 2 or 3 set names. `zones` labels the regions, keyed by the 1-based indices of the sets
+    that region belongs to: `{"1": "只有旧系统", "12": "两边都要", "123": "全部满足"}`. Any key may
+    be omitted. The classic use is the *sweet spot*: the small centre region is the argument.
+
+    **The circles are equal and schematic — area encodes NOTHING.** That is deliberate, not a
+    shortcut: area-proportional Venns are impossible to draw exactly for most 3-set data, so a
+    scaled-looking one would assert magnitudes it cannot honour. If you have counts, put them in the
+    `zones` text, where they read as labels rather than as areas. If the sizes ARE the story, a Venn
+    is the wrong form — use `segmented_bar` or `stat_row`.
+
+    Zone label positions are **derived**, not tuned: for each region the label lands on the point
+    furthest inside it (max distance to every circle edge), so a label can never drift into a
+    neighbouring region when `overlap` changes. `overlap` (0.3–0.9) sets how far the circles sit
+    from the shared centre — lower overlaps more. `alpha` is the fill translucency, which is what
+    makes an intersection read as an intersection.
+
+    Returns {"centers": [(cx, cy, r), ...], "zones": {key: (x, y)}} in inches.
+    """
+    import math
+    acc = list(accents or ACCENTS)
+    ink_c = ink if ink is not None else DEEP
+    mute_c = mute if mute is not None else MUTE
+    fnt = font or FONT
+    n = len(sets)
+    if n not in (2, 3):
+        raise ValueError(f"venn(): {n} sets. A Venn reads at 2 or 3; at 4+ the regions stop being "
+                         f"visually findable — use eval_matrix (options x criteria) or heat_matrix")
+    if not (0.3 <= overlap <= 0.9):
+        raise ValueError(f"venn(): overlap={overlap} is outside 0.3–0.9; below that the circles "
+                         f"separate and there is no intersection, above it they nearly coincide")
+
+    # unit layout: circles of r=1 whose centres sit `d` from the shared origin
+    d = overlap
+    if n == 2:
+        cen = [(-d, 0.0), (d, 0.0)]
+    else:
+        cen = [(math.cos(math.radians(a)) * d * 1.1547, math.sin(math.radians(a)) * d * 1.1547)
+               for a in (90, 210, 330)]
+    x0 = min(c[0] for c in cen) - 1.0
+    x1 = max(c[0] for c in cen) + 1.0
+    y0 = min(c[1] for c in cen) - 1.0
+    y1 = max(c[1] for c in cen) + 1.0
+    # reserve room for the OUTER set labels, then fit the figure in what is left
+    pad_t = 0.30 if n == 3 else 0.0
+    pad_b = 0.30
+    fw, fh = w, h - pad_t - pad_b
+    if fw <= 0.4 or fh <= 0.4:
+        raise ValueError(f"venn(): {w:.2f}x{h:.2f}in leaves no room for the diagram plus its labels")
+    k = min(fw / (x1 - x0), fh / (y1 - y0))
+    r = k
+    ox = x + (w - (x1 - x0) * k) / 2.0 - x0 * k
+    oy = y + pad_t + (fh - (y1 - y0) * k) / 2.0 + y1 * k      # flip: unit +y is UP, slide +y is DOWN
+    C = [(ox + cx * k, oy - cy * k, r) for cx, cy in cen]
+
+    for i, (cx, cy, rr) in enumerate(C):
+        col = acc[i % len(acc)]
+        o = _flat(slide.shapes.add_shape(MSO_SHAPE.OVAL, Inches(cx - rr), Inches(cy - rr),
+                                         Inches(2 * rr), Inches(2 * rr)))
+        _grad_fill(o, [(0.0, col, alpha), (1.0, col, alpha)])
+        if outline:
+            o.line.color.rgb = _as_rgb(col)
+            o.line.width = Pt(1.25)
+        else:
+            o.line.fill.background()
+
+    # zone anchors: the point furthest inside each region (max distance to EVERY circle edge)
+    best = {}
+    steps = 130
+    for gi in range(steps + 1):
+        for gj in range(steps + 1):
+            px = x0 + (x1 - x0) * gi / steps
+            py = y0 + (y1 - y0) * gj / steps
+            dist = [math.hypot(px - cx, py - cy) for cx, cy in cen]
+            key = "".join(str(i + 1) for i, dd in enumerate(dist) if dd <= 1.0)
+            if not key:
+                continue
+            score = min(abs(dd - 1.0) for dd in dist)
+            if score > best.get(key, (-1.0, 0, 0))[0]:
+                best[key] = (score, px, py)
+    anchors = {kk: (ox + pv[1] * k, oy - pv[2] * k) for kk, pv in best.items()}
+    # Each region's usable BOX, not just its centre. A pair region is a thin lens: a text box sized
+    # by a constant overflows it sideways into the neighbouring regions, which is how a Venn label
+    # ends up sitting on top of the centre label. So walk out from the anchor along +/-x and +/-y
+    # while still inside the same region, and let THAT be the box.
+    def _region(px, py):
+        dd = [math.hypot(px - cx, py - cy) for cx, cy in cen]
+        return "".join(str(i + 1) for i, v in enumerate(dd) if v <= 1.0)
+
+    extent = {}
+    for kk, (_sc, px, py) in best.items():
+        step = (x1 - x0) / steps
+        half = []
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            reach = 0.0
+            while reach < 2.2:
+                if _region(px + dx * (reach + step), py + dy * (reach + step)) != kk:
+                    break
+                reach += step
+            half.append(reach)
+        hx = min(half[0], half[1])
+        hy = min(half[2], half[3])
+        # The independent reaches describe a CROSS, not a rectangle: a pair region is a lens, and the
+        # corners of hx-by-hy poke out through its curved sides. Shrink jointly until all four
+        # corners (and the edge midpoints, which a concave boundary can cut) are genuinely inside.
+        for _ in range(24):
+            pts = [(px + sx * hx, py + sy * hy) for sx in (-1, 1) for sy in (-1, 1)] + \
+                  [(px + sx * hx, py) for sx in (-1, 1)] + [(px, py + sy * hy) for sy in (-1, 1)]
+            if all(_region(qx, qy) == kk for qx, qy in pts):
+                break
+            hx *= 0.9
+            hy *= 0.9
+        extent[kk] = (hx * 2 * k * 0.94, hy * 2 * k * 0.94)
+
+    for i, name in enumerate(sets):
+        cx, cy, rr = C[i]
+        # the set NAME goes outside its own circle, on the side facing away from the others
+        vx = cx - sum(c[0] for c in C) / n
+        vy = cy - sum(c[1] for c in C) / n
+        m = math.hypot(vx, vy) or 1.0
+        lx = cx + vx / m * (rr + 0.16)
+        ly = cy + vy / m * (rr + 0.16)
+        bw = min(1.9, max(0.9, w / 2.6))
+        al = PP_ALIGN.CENTER
+        if abs(vx) > abs(vy):
+            al = PP_ALIGN.LEFT if vx > 0 else PP_ALIGN.RIGHT
+            lx = lx - (0 if vx > 0 else bw)
+            ly = ly - 0.14
+        else:
+            lx = lx - bw / 2
+            ly = ly - (0.30 if vy > 0 else 0.0)
+        # the region handed in is a promise: clamp the outer label inside it rather than letting a
+        # bottom-left set label walk off the canvas (which the render lint catches as OVERFLOW)
+        lx = min(max(lx, x), x + w - bw)
+        ly = min(max(ly, y), y + h - 0.28)
+        text(slide, lx, ly, bw, 0.28, [[(str(name), label_size, ink_c, True, False, fnt)]],
+             align=al, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
+
+    for kk, lab in (zones or {}).items():
+        key = "".join(sorted(str(kk)))
+        if key not in anchors:
+            raise ValueError(f"venn(): zone {kk!r} is not a region of a {n}-set diagram "
+                             f"(regions here: {', '.join(sorted(anchors))})")
+        ax_, ay_ = anchors[key]
+        ew, eh = extent[key]
+        # no floors here: a floor would let the box exceed the region again, which is the whole bug
+        zw = min(ew, r * 1.7)
+        zh = min(eh, 1.05)
+        sz = fit_text_size([(str(lab), len(key) > 1)], zw, zh, zone_size, font=fnt, min_size=7.5)
+        # fit_text_size returns the FLOOR when nothing fits, so re-measure AT the size actually used
+        _lh = max(_LINT_LINE_H, 1.2 * CJK_LS) if _has_cjk(str(lab)) else _LINT_LINE_H
+        need = _measure_lines([(str(lab), len(key) > 1)], sz, zw, font=fnt) * (sz / 72.0 * _lh)
+        if need > zh + 0.004:
+            raise ValueError(
+                f"venn(): zone {kk!r} label {str(lab)[:24]!r} cannot fit its region "
+                f"({zw:.2f}x{zh:.2f}in available) even at 7.5pt. A Venn region is a lens, not a "
+                f"card — shorten it to a word or two, lower `overlap` to widen the lenses, or move "
+                f"the explanation to a takeaway_rail beside the diagram.")
+        text(slide, ax_ - zw / 2, ay_ - zh / 2, zw, zh,
+             [[(str(lab), sz, (ink_c if len(key) > 1 else mute_c), len(key) > 1, False, fnt)]],
+             align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0, line_spacing=1.0)
+    return {"centers": C, "zones": anchors}
+
+
 def specimen_card(slide, x, y, w, h, specimen, label, *, accent=MAGENTA, ink=DEEP, featured=False, serif=None):
     """A rule-on-top SPEC CARD with a giant specimen (a glyph 'Aa', a monogram, a number) as the
     hero — for comparing fonts / brands / metrics. The featured card's rule + specimen recolor to
@@ -6063,7 +6230,7 @@ def sankey(slide, x, y, w, h, links, *, node_w=0.26, gap=0.14, accents=None, ink
     cropped axis, and harder to catch because nobody thinks to check it.
 
     `x, y, w, h` is the WHOLE region including labels, so it can be handed a region straight from
-    `split_h`/`rows` and nothing lands outside. `label_w` is reserved at each side for the first
+    `content_band`/`columns`/`rows` and nothing lands outside. `label_w` is reserved at each side for the first
     and last columns' labels; middle columns are labelled in the gap ABOVE each node (which is
     why `gap` and the top headroom are widened automatically when middle columns exist) -- text
     over a ribbon would be unreadable, and a chip behind it would hide the flow it sits on.

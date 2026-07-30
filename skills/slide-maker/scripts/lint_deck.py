@@ -49,6 +49,7 @@ import math
 import re
 import sys
 from pptx import Presentation
+from pptx.enum.dml import MSO_FILL
 from pptx.enum.shapes import MSO_SHAPE_TYPE, PP_PLACEHOLDER
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 from pptx.oxml.ns import qn
@@ -141,6 +142,11 @@ def _boxes(slide, sw, sh):
                 fill_unk = True
         except Exception:
             fill_rgb = None
+        is_grad = False                                  # gradient fill = the toolkit's ONLY alpha path
+        try:
+            is_grad = s.fill.type == MSO_FILL.GRADIENT
+        except Exception:
+            is_grad = False
         is_pic = str(s.shape_type).startswith("PICTURE")
         tph = False                                      # a TITLE/CENTER_TITLE placeholder (a11y title)
         try:
@@ -149,7 +155,7 @@ def _boxes(slide, sw, sh):
         except Exception:
             tph = False
         out.append({"l": l, "t": t, "w": w, "h": h, "r": l + w, "b": t + h, "zi": zi,
-                    "runs": run_colors, "fill": fill_rgb, "unk": fill_unk, "pic": is_pic,
+                    "runs": run_colors, "fill": fill_rgb, "unk": fill_unk, "pic": is_pic, "grad": is_grad,
                     "st": str(s.shape_type).split()[0], "txt": txt, "full": full, "size": size or 12.0,
                     "paras": paras, "solid": s.shape_type in SOLID, "align": align, "anchor": anchor,
                     "text": bool(s.has_text_frame and txt), "descr": descr, "mathfont": mathfont,
@@ -1806,6 +1812,19 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
                     both_freeform = (a["st"].startswith("FREEFORM") and b["st"].startswith("FREEFORM")
                                      and not a["text"] and not b["text"])
                     if both_freeform:
+                        continue
+                    # two SAME-SIZE textless shapes with GRADIENT fills that overlap are a
+                    # deliberate translucent composition — a Venn's circles, a stack of glass
+                    # panels — not a card-on-card collision. Translucency is the author saying
+                    # "these are meant to be seen through each other", and in this toolkit a
+                    # gradient fill is the ONLY way to express alpha (`_grad_fill`). Kept narrow
+                    # on purpose: an OPAQUE overlap still fires, a size MISMATCH still fires (a
+                    # big panel over a small chip is a defect, not a set diagram), and text under
+                    # a translucent shape is caught by OCCLUSION / TEXT NOT VISIBLE from the
+                    # pixels, which is where that class belongs.
+                    both_glass = (a["grad"] and b["grad"] and not a["text"] and not b["text"]
+                                  and abs(a["w"] - b["w"]) < 0.06 and abs(a["h"] - b["h"]) < 0.06)
+                    if both_glass:
                         continue
                     finds.append(f"OVERLAP {round(ix,2)}x{round(iy,2)}in  {a['st']}'{a['txt']}' x {b['st']}'{b['txt']}'"
                                  f" — move/shrink one so they separate (≥0.12in gap) or nest one fully inside the other")

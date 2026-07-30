@@ -745,6 +745,18 @@ The helper set, by job:
   ordinal), `concept_equation` (ZINE=MAGAZINE word-equation), `pull_quote`/`standfirst`, `cta_button`/
   `cta_pair`, `status_stamp`/`corner_tab`, `spec_card`, `year_badge`, `gradient_rule` (2-stop brand rule),
   `catalogue_frame` (double-line specimen frame — museum/eastern presets).
+- **Sample data / overlap:** **`designed_charts.distribution`** (SPREAD, not just the average —
+  `groups=[(label,[v,…]),…]`; `kind="auto"` gives a box plot at n≥5, mean ± error at n=3–4, and
+  **refuses n<3**; every observation overlaid; `err="sd"|"se"|"ci95"` is printed ON the figure).
+  **Reach for it whenever a value is a mean of MEASUREMENTS rather than a count** — per-subject Dice,
+  per-run latency, per-rater score. A bar chart of such means hides n, the shape and the outliers, and
+  is the one chart choice the literature calls a defect (Nature Methods, *Kick the bar chart habit*).
+  · **`designed_charts.marimekko`** (width = segment size, height = its split → cell **area** = the
+  absolute quantity; what a 100%-stacked bar throws away) · **`designed_charts.radar`** (profile across
+  3–8 axes, ≤3 series, zero-anchored spokes — raises outside that; prefer `small_multiples` for
+  "who wins per metric") · **`venn`** (2–3 sets, `zones={"1":…,"12":…,"123":…}` by set index; zone
+  labels are placed and SIZED from each region's own geometry, and one too long for its lens raises.
+  Circles are equal — area encodes nothing by design).
 - **Micro-viz:** `dot_meter` (●●○), `tradeoff_list` (+/−), `segmented_bar` (cumulative 100%), `meter_bar`
   (a single percentile/share/progress row — track + accent fill + a value label **vertically centered on
   the bar**; use this instead of hand-building "track box + fill box + number", which is how value labels

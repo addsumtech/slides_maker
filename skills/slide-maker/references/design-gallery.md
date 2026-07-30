@@ -160,7 +160,7 @@ legibility rules).
   exit arrows near the decision, coloured by the semantic contract (good=proceed · risk=reject);
   error/exception paths dashed in the risk colour; spine connectors full-strength, branch connectors
   blended/demoted so the main story reads first.
-  **Venn** — 2–3 translucent `glass_card`/`box` circles with labeled overlaps. **Agenda / section
+  **Venn** — **`deckkit.venn(slide, x, y, w, h, sets, zones=…)`** (derived zone-label placement + sizing; raises on a label too long for its lens). **Agenda / section
   tracker** — a quiet nav rail of sections with the current one accented (or `step_list(active_idx=…)`
   on an agenda page). **Geographic map** — a license-clear/computed base map as `picture` + native
   markers/labels on top (never bake labels into a generated map). (Recipes routed from `form-selection.md`.)

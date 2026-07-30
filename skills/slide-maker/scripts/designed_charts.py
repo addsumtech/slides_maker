@@ -23,6 +23,10 @@ Pick by argument (see references/data-viz.md):
   bubble_trend— x vs y with a third (size) dimension + a fair-value trend line
   pareto      — ranked bars + cumulative % (the "vital few")
   waterfall   — running total built from signed steps (start → +/- deltas → end); no native pptx form
+  distribution— SAMPLE data: box plot (n>=5) or mean+/-error (n=3-5) + every observation; the
+                form to use whenever a value is a mean of measurements rather than a count
+  marimekko   — two dimensions at once: column WIDTH = segment size, height = split within it
+  radar       — a multivariate profile across 3-8 axes for <=3 series (limits enforced)
 
 All emit a single highlight per the deck's one-accent discipline; pair each with a
 ``deckkit.takeaway_rail`` so the chart always carries its "so-what".
@@ -200,6 +204,323 @@ def dumbbell(out, rows, *, palette=None, dark=False, font=None, highlight=None, 
     for sp in ("top", "right", "left"): ax.spines[sp].set_visible(False)
     ax.spines["bottom"].set_color(muted); ax.tick_params(colors=muted)
     ax.xaxis.grid(True, color=grid, lw=0.7); ax.set_axisbelow(True)
+    return _save(fig, out)
+
+
+def distribution(out, groups, *, palette=None, dark=False, font=None, highlight=None,
+                 kind="auto", err="sd", value_label="", show_n=True, jitter=True,
+                 ref=None, ref_label="", figsize=(6.6, 4.0), seed=0):
+    """SAMPLE DATA — the spread, not just the average. groups = [(label, [v, v, ...]), ...].
+
+    Reach for this whenever a value is a **mean or median of measurements** (Dice per subject,
+    latency per run, score per rater) rather than a count. A bar chart of such means is the single
+    most-criticised figure in scientific publishing: the bar's weight implies the value fills the
+    range from zero, hides n, hides the shape, and hides outliers -- Nature Methods, "Kick the bar
+    chart habit" (2014) and PLOS Biology, "Beyond Bar and Line Graphs" (2015) both say to show the
+    distribution instead. Counts still belong in a bar chart; sample measurements do not.
+
+    `kind="auto"` applies that literature's own rule, so the choice is not left to memory:
+      * min n >= 5  -> **box plot** (median, IQR box, Tukey 1.5xIQR whiskers, outliers as points)
+      * 3 <= n < 5  -> **mean +/- error** (a box's quartiles are meaningless on four points)
+      * n < 3       -> refuses. Two values have no distribution; show them with `deckkit.dot_strip`
+                      or `deckkit.stat_row` and say n=2, rather than implying a shape.
+    Force one with `kind="box"` / `"mean_error"`.
+
+    `err` names the interval and is PRINTED on the figure ("sd" | "se" | "ci95"): an error bar whose
+    measure is not stated cannot be read, and the same drawn height means three different things.
+    `jitter=True` overlays EVERY observation, deterministically (`seed`), which is what makes n and
+    any clustering visible; the caption line records the box/whisker definition for the same reason.
+    `show_n` puts n under each group label. `ref`/`ref_label` draw a baseline (a prior SOTA, a
+    clinical threshold). `highlight` = index of the one group in the accent, the rest neutral.
+    """
+    import numpy as np
+    plt, ink, grid, muted = _mpl(dark, font)
+    pal = list(palette) if palette else ["#5B4BE0", "#00A6A6", "#F2A03D"]
+    neutral = "#9AA0AE"
+    if not groups:
+        raise ValueError("distribution(): no groups")
+    labels, data = [], []
+    for g in groups:
+        lab, vals = g[0], [float(v) for v in g[1]]
+        if not vals:
+            raise ValueError(f"distribution(): group {lab!r} has no values")
+        labels.append(lab)
+        data.append(vals)
+    nmin = min(len(v) for v in data)
+    if kind == "auto":
+        kind = "box" if nmin >= 5 else "mean_error"
+    if kind == "mean_error" and nmin < 3:
+        raise ValueError(
+            f"distribution(): the smallest group has n={nmin}. Two values are not a distribution -- "
+            f"an error bar or a box drawn over them asserts a spread the data cannot support. Show "
+            f"the individual values (deckkit.dot_strip / stat_row) and state n instead.")
+    if kind not in ("box", "mean_error"):
+        raise ValueError(f"distribution(): kind={kind!r} is not 'auto' | 'box' | 'mean_error'")
+    if err not in ("sd", "se", "ci95"):
+        raise ValueError(f"distribution(): err={err!r} is not 'sd' | 'se' | 'ci95' -- the interval "
+                         f"has to be named because the drawn height cannot say which it is")
+
+    fig, ax = plt.subplots(figsize=figsize)
+    xs = list(range(1, len(data) + 1))
+    col = [(pal[0] if (highlight is None or i == highlight) else neutral) for i in range(len(data))]
+
+    if kind == "box":
+        bp = ax.boxplot(data, positions=xs, widths=0.52, whis=1.5, showfliers=not jitter,
+                        patch_artist=True, medianprops=dict(color=ink, lw=1.6),
+                        whiskerprops=dict(color=muted, lw=1.1),
+                        capprops=dict(color=muted, lw=1.1),
+                        flierprops=dict(marker="o", markersize=3.5, markerfacecolor=neutral,
+                                        markeredgecolor="none"))
+        for patch, c in zip(bp["boxes"], col):
+            patch.set_facecolor(c)
+            patch.set_alpha(0.22)
+            patch.set_edgecolor(c)
+            patch.set_linewidth(1.4)
+        note = "box: median + IQR · whiskers 1.5×IQR"
+        if jitter:
+            note += " · every observation shown"
+    else:
+        rs = np.random.RandomState(seed)
+        means = [float(np.mean(v)) for v in data]
+        if err == "sd":
+            bars = [float(np.std(v, ddof=1)) if len(v) > 1 else 0.0 for v in data]
+            note = "error bars: ±1 SD"
+        elif err == "se":
+            bars = [float(np.std(v, ddof=1) / np.sqrt(len(v))) if len(v) > 1 else 0.0 for v in data]
+            note = "error bars: ±1 SEM"
+        else:
+            from math import sqrt
+            bars = []
+            for v in data:
+                if len(v) > 1:
+                    se = float(np.std(v, ddof=1) / sqrt(len(v)))
+                    bars.append(1.96 * se)      # normal approx; stated in the note, not implied
+                else:
+                    bars.append(0.0)
+            note = "error bars: 95% CI (normal approx.)"
+        for i, x in enumerate(xs):
+            ax.errorbar([x], [means[i]], yerr=[bars[i]], fmt="o", ms=9, color=col[i],
+                        ecolor=col[i], elinewidth=1.6, capsize=6, capthick=1.6, zorder=3)
+        if jitter:
+            note += " · every observation shown"
+
+    if jitter:
+        rs = np.random.RandomState(seed)
+        # On a box, the cloud belongs INSIDE the box (that is what shows where the mass sits). On a
+        # mean+/-error the summary is a single marker, so the cloud is offset beside it -- points
+        # drawn through the error bar hide the very interval they are there to justify.
+        off = 0.0 if kind == "box" else 0.19
+        for i, x in enumerate(xs):
+            xj = x + off + rs.uniform(-0.11, 0.11, size=len(data[i]))
+            ax.scatter(xj, data[i], s=16, color=col[i], alpha=0.55, linewidths=0, zorder=4)
+
+    if ref is not None:
+        ax.axhline(ref, color=muted, lw=1.1, ls="--", zorder=1)
+        if ref_label:
+            # ABOVE its own line: sitting on it puts the dash through the glyphs, which is the
+            # RULE THROUGH TEXT defect the deck lint fails a slide for.
+            ax.annotate(ref_label, xy=(1.0, ref), xycoords=("axes fraction", "data"),
+                        xytext=(-2, 3), textcoords="offset points", fontsize=9, color=muted,
+                        ha="right", va="bottom", annotation_clip=False)
+
+    ticks = [f"{lab}\nn={len(v)}" if show_n else lab for lab, v in zip(labels, data)]
+    ax.set_xticks(xs)
+    ax.set_xticklabels(ticks, fontsize=10.5, color=ink)
+    ax.set_xlim(0.45, len(data) + 0.55)
+    if value_label:
+        ax.set_ylabel(value_label, fontsize=10.5, color=ink)
+    for sp in ("top", "right"):
+        ax.spines[sp].set_visible(False)
+    for sp in ("bottom", "left"):
+        ax.spines[sp].set_color(muted)
+    ax.tick_params(colors=muted)
+    ax.yaxis.grid(True, color=grid, lw=0.7)
+    ax.set_axisbelow(True)
+    # The definition line is not decoration: an unlabelled error bar or whisker is unreadable, and
+    # a reader who cannot tell SD from SEM cannot judge the claim. Drawn, never left to a caption
+    # someone may not write.
+    ax.annotate(note, xy=(0.0, -0.16), xycoords="axes fraction", fontsize=8.5, color=muted,
+                ha="left", va="top", annotation_clip=False)
+    return _save(fig, out)
+
+
+def marimekko(out, columns, categories, *, palette=None, dark=False, font=None, highlight=None,
+              width_label="", gap=0.006, min_pct_label=6.0, show_width=True, figsize=(7.0, 4.2)):
+    """TWO dimensions at once: column WIDTH = how big the segment is, HEIGHT = how it splits.
+
+    `columns` = [(segment_label, size, [value_per_category, ...]), ...]; `categories` names the
+    stack. Each column is normalised to 100% internally, so the values may be shares or raw counts.
+
+    The form only works because **cell area = size x share = the absolute quantity**, which is the
+    one thing a plain 100% stacked bar throws away: it shows every segment as equally important. So
+    a mekko answers "who leads, and in a segment worth caring about" in one read -- the reason it is
+    a strategy staple (market share by segment, share of wallet, portfolio mix).
+
+    That also means the widths carry data and cannot be nudged for looks: they are laid out strictly
+    proportional to `size`, and a non-positive size is refused rather than drawn thin. `gap` is a
+    hairline separator taken out of each column's own width, not added between them, so the
+    proportions survive it. `width_label` (e.g. "$B") annotates the size axis; `show_width` prints
+    each segment's size under its label. `highlight` = index of the ONE category to keep in accent.
+    """
+    plt, ink, grid, muted = _mpl(dark, font)
+    pal = list(palette) if palette else ["#5B4BE0", "#00A6A6", "#F2A03D", "#D9463B", "#8A93A6"]
+    neutral = "#C2C6D2"
+    if not columns:
+        raise ValueError("marimekko(): no columns")
+    for lab, size, vals in columns:
+        if size is None or size <= 0:
+            raise ValueError(f"marimekko(): segment {lab!r} has size {size!r}; the column WIDTH "
+                             f"encodes it, so a non-positive size has no width to draw")
+        if len(vals) != len(categories):
+            raise ValueError(f"marimekko(): segment {lab!r} has {len(vals)} values for "
+                             f"{len(categories)} categories")
+        if sum(vals) <= 0:
+            raise ValueError(f"marimekko(): segment {lab!r} sums to {sum(vals)}; a column with no "
+                             f"positive total cannot be split into shares")
+        if any(v < 0 for v in vals):
+            raise ValueError(f"marimekko(): segment {lab!r} has a negative value; a stacked share "
+                             f"crosses zero and the height stops meaning the split")
+
+    total = float(sum(c[1] for c in columns))
+    fig, ax = plt.subplots(figsize=figsize)
+    # A stacked form cannot take the roster's usual "grey out the rest": two categories flattened to
+    # ONE grey give the legend two identical swatches and make their cells indistinguishable, which
+    # destroys the mix the chart exists to show (native_chart documents the same trap for its stacked
+    # kinds). So the de-emphasised categories keep a DISTINGUISHABLE neutral each -- still clearly
+    # secondary to the accent, still readable against one another.
+    _NEUTRAL_RAMP = ["#C9CDD6", "#A8AEBC", "#878FA1", "#6A7285", "#515869"]
+    cols, k = [], 0
+    for i in range(len(categories)):
+        if highlight is None:
+            cols.append(pal[i % len(pal)])
+        elif i == highlight:
+            cols.append(pal[0])
+        else:
+            cols.append(_NEUTRAL_RAMP[k % len(_NEUTRAL_RAMP)])
+            k += 1
+    x = 0.0
+    for lab, size, vals in columns:
+        w = size / total                                  # strictly proportional -- never tuned
+        dw = max(w - gap, w * 0.55)                       # separator taken OUT of the column
+        s = float(sum(vals))
+        y = 0.0
+        for ci, v in enumerate(vals):
+            hh = v / s
+            ax.add_patch(plt.Rectangle((x, y), dw, hh, facecolor=cols[ci], edgecolor="none"))
+            if hh * 100 >= min_pct_label and dw > 0.05:
+                em = highlight is None or ci == highlight
+                # pick ink by the cell's own luminance, not by whether it is the accent: the
+                # neutral ramp spans light to dark, so one fixed grey would fail at one end
+                fc = cols[ci].lstrip("#")
+                lum = (0.299 * int(fc[0:2], 16) + 0.587 * int(fc[2:4], 16)
+                       + 0.114 * int(fc[4:6], 16)) / 255.0
+                ax.text(x + dw / 2, y + hh / 2, f"{hh*100:.0f}%", ha="center", va="center",
+                        fontsize=9, color=("#22262E" if lum > 0.62 else "white"),
+                        fontweight="bold" if em else "normal")
+            y += hh
+        tick = f"{lab}\n{_numlabel(size)}{width_label}" if show_width else lab
+        ax.text(x + dw / 2, -0.035, tick, ha="center", va="top", fontsize=10, color=ink)
+        x += w
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.set_yticks([0, 0.25, 0.5, 0.75, 1.0])
+    ax.set_yticklabels(["0", "25", "50", "75", "100%"], fontsize=9.5, color=muted)
+    ax.set_xticks([])
+    for sp in ("top", "right", "bottom"):
+        ax.spines[sp].set_visible(False)
+    ax.spines["left"].set_color(muted)
+    ax.tick_params(colors=muted, length=0)
+    for i, c in enumerate(categories):
+        ax.add_patch(plt.Rectangle((0, 0), 0, 0, facecolor=cols[i], label=c))
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, 1.13), ncol=min(len(categories), 5),
+              frameon=False, fontsize=10, labelcolor=ink, handlelength=1.0, handleheight=1.0)
+    ax.annotate(f"column width = segment size{(' (' + width_label.strip() + ')') if width_label else ''}"
+                f" · height = share within the segment",
+                xy=(0.0, -0.155), xycoords="axes fraction", fontsize=8.5, color=muted,
+                ha="left", va="top", annotation_clip=False)
+    return _save(fig, out)
+
+
+def radar(out, axes_labels, series, *, palette=None, dark=False, font=None, highlight=None,
+          axis_range=None, value_fmt="{:g}", fill_alpha=0.13, figsize=(5.0, 4.6)):
+    """A MULTIVARIATE PROFILE across 3-8 axes -- the SHAPE of a trade-off, for <=3 things.
+
+    `axes_labels` names the spokes; `series` = [(name, [v per axis]), ...].
+
+    Radar is the one form in this roster that misleads by construction, so the limits are enforced
+    rather than advised:
+      * **<=3 series.** Four overlaid polygons cannot be read apart, whatever the palette does.
+      * **3-8 axes.** Two is a scatter; nine is a table.
+      * **every spoke is anchored at zero** by default (`axis_range=(lo, hi)` shared, or a list of
+        per-axis pairs). Per-axis min-max stretching is the usual radar cheat: it re-scales each
+        spoke to the observed range and turns a 2% gap into half the radius.
+    Note also that a polygon's AREA grows as the square of its values, so radar always overstates a
+    lead -- and the spoke ORDER changes the shape while the data stays identical. Both are inherent;
+    they are why this returns a profile-comparison picture and never a magnitude claim.
+
+    **Prefer something else when you can:** for "which method wins on each metric", `small_multiples`
+    or a per-metric `dot_strip`/`dumbbell` is read faster and cannot distort; for 4+ methods, they
+    are the only honest option. Reach for radar when the SHAPE of a profile -- balanced vs spiky --
+    is itself the message.
+    """
+    import numpy as np
+    plt, ink, grid, muted = _mpl(dark, font)
+    pal = list(palette) if palette else ["#5B4BE0", "#00A6A6", "#F2A03D"]
+    neutral = "#9AA0AE"
+    n = len(axes_labels)
+    if not (3 <= n <= 8):
+        raise ValueError(f"radar(): {n} axes. Below 3 there is no polygon (use a bar or a scatter); "
+                         f"above 8 the spokes crowd and the labels collide -- use small_multiples or "
+                         f"a per-metric dot_strip, which stay readable at any width")
+    if not series:
+        raise ValueError("radar(): no series")
+    if len(series) > 3:
+        raise ValueError(f"radar(): {len(series)} series. Four or more overlaid polygons cannot be "
+                         f"told apart -- use small_multiples (one panel per series, shared axis) or "
+                         f"a per-metric dumbbell/dot_strip instead")
+    for nm, vals in series:
+        if len(vals) != n:
+            raise ValueError(f"radar(): series {nm!r} has {len(vals)} values for {n} axes")
+
+    if axis_range is None:
+        hi = [max(max(s[1][i] for s in series), 0.0) for i in range(n)]
+        rng = [(0.0, (h if h > 0 else 1.0)) for h in hi]
+        note = "each spoke: 0 → its own max"
+    elif isinstance(axis_range[0], (list, tuple)):
+        if len(axis_range) != n:
+            raise ValueError(f"radar(): axis_range has {len(axis_range)} pairs for {n} axes")
+        rng = [(float(a), float(b)) for a, b in axis_range]
+        note = "per-axis ranges as given"
+    else:
+        rng = [(float(axis_range[0]), float(axis_range[1]))] * n
+        note = f"all spokes: {value_fmt.format(rng[0][0])} → {value_fmt.format(rng[0][1])}"
+    for i, (lo, hi_) in enumerate(rng):
+        if hi_ <= lo:
+            raise ValueError(f"radar(): axis {axes_labels[i]!r} has range ({lo}, {hi_})")
+
+    ang = [2 * np.pi * i / n for i in range(n)]
+    fig, ax = plt.subplots(figsize=figsize, subplot_kw=dict(polar=True))
+    ax.set_theta_offset(np.pi / 2)
+    ax.set_theta_direction(-1)
+    for si, (nm, vals) in enumerate(series):
+        em = highlight is None or si == highlight
+        c = pal[si % len(pal)] if em else neutral
+        r = [(float(v) - rng[i][0]) / (rng[i][1] - rng[i][0]) for i, v in enumerate(vals)]
+        ax.plot(ang + [ang[0]], r + [r[0]], color=c, lw=2.4 if em else 1.5,
+                zorder=3 if em else 2, label=nm)
+        ax.fill(ang + [ang[0]], r + [r[0]], color=c, alpha=fill_alpha if em else 0.06, zorder=1)
+        ax.scatter(ang, r, color=c, s=26 if em else 16, zorder=4)
+    ax.set_xticks(ang)
+    ax.set_xticklabels(axes_labels, fontsize=10, color=ink)
+    ax.set_yticks([0.25, 0.5, 0.75, 1.0])
+    ax.set_yticklabels([])                      # the rings are a grid, not a second value claim
+    ax.set_ylim(0, 1.06)
+    ax.grid(color=grid, lw=0.8)
+    ax.spines["polar"].set_color(grid)
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.06), ncol=min(len(series), 3),
+              frameon=False, fontsize=10, labelcolor=ink)
+    ax.annotate(note, xy=(0.5, -0.17), xycoords="axes fraction", fontsize=8.5, color=muted,
+                ha="center", va="top", annotation_clip=False)
     return _save(fig, out)
 
 
