@@ -1475,6 +1475,63 @@ def sources_page(slide, sources, *, title="Sources", cols=2, x=0.7, y=1.4, accen
             cy += 0.46
 
 
+def source_note(slide, sources, *, as_of=None, label="Source", x=None, y=None, w=None,
+                size=8.5, ink=None, font=None, sep="  ·  ", align=None):
+    """The PROVENANCE LINE for one slide — where THIS slide's numbers came from, on the slide.
+
+    `sources_page` is a colophon: it defends the deck. This defends the SLIDE, which is the unit
+    that actually travels -- screenshotted into a chat, pasted into a memo, shown out of order.
+    A chart whose source lives 14 pages away is unsourced at the moment anyone doubts it, and
+    "where's this from?" from the floor is the question that ends a briefing badly.
+
+    DEFAULT ON for the `briefing` density register and for any slide carrying numbers a reader
+    could act on; skip it on concept/section slides that assert nothing. `sources` is a string or
+    a list (joined with `sep`); `as_of` appends the data date -- pass it whenever a number moves
+    with time, since a stale figure with no date reads as a current one.
+
+    Sits in the bottom band and automatically lifts clear of anything already there (a `footer`
+    tag, a caption), so it can be called last without geometry bookkeeping. Returns the y used.
+
+    Set `label=""` for a bare line, or `label="来源"` on a Chinese deck.
+    """
+    sw, sh = _slide_size(slide)
+    fnt = font or FONT
+    ink_c = ink if ink is not None else MUTE
+    if isinstance(sources, str):
+        sources = [sources]
+    body = sep.join(str(s).strip() for s in sources if str(s).strip())
+    if not body:
+        raise ValueError("source_note(): no source text — an empty provenance line is worse than "
+                         "none, it looks sourced")
+    if as_of:
+        body = f"{body}{sep}as of {as_of}" if label else f"{body}{sep}{as_of}"
+    runs = ([(f"{label}: ", size, ink_c, True, False, fnt)] if label else []) + \
+           [(body, size, ink_c, False, False, fnt)]
+    lx = 0.62 if x is None else x
+    lw = (sw - lx - 0.55) if w is None else w
+    h = max(0.24, size / 54.0 + 0.10)
+    if y is None:
+        yy = sh - 0.30 - h
+        for _ in range(4):                       # lift clear of the footer / caption band
+            clash = False
+            for sh_ in slide.shapes:
+                if not getattr(sh_, "has_text_frame", False) or not sh_.text_frame.text.strip():
+                    continue
+                top = sh_.top / 914400.0
+                bot = top + sh_.height / 914400.0
+                if bot > yy - 0.02 and top < yy + h + 0.02:
+                    clash = True
+                    break
+            if not clash:
+                break
+            yy -= h + 0.06
+    else:
+        yy = y
+    text(slide, lx, yy, lw, h, [runs], space_after=0,
+         align=align if align is not None else PP_ALIGN.LEFT)
+    return yy
+
+
 def specimen_card(slide, x, y, w, h, specimen, label, *, accent=MAGENTA, ink=DEEP, featured=False, serif=None):
     """A rule-on-top SPEC CARD with a giant specimen (a glyph 'Aa', a monogram, a number) as the
     hero — for comparing fonts / brands / metrics. The featured card's rule + specimen recolor to
@@ -5977,6 +6034,162 @@ def _iso_poly(slide, pts, fill, *, line=None, lw=0.75):
     else:
         sh.line.fill.background()
     return sh
+
+
+def _bez(p0, p1, p2, p3, n=24):
+    """Cubic bezier sampled to n points (python-pptx freeforms take line segments only)."""
+    out = []
+    for i in range(n + 1):
+        s = i / float(n)
+        m = 1.0 - s
+        out.append((m*m*m*p0[0] + 3*m*m*s*p1[0] + 3*m*s*s*p2[0] + s*s*s*p3[0],
+                    m*m*m*p0[1] + 3*m*m*s*p1[1] + 3*m*s*s*p2[1] + s*s*s*p3[1]))
+    return out
+
+
+def sankey(slide, x, y, w, h, links, *, node_w=0.26, gap=0.14, accents=None, ink=None,
+           mute=None, value_fmt="{:.0f}", label_size=10.5, font=None, col_labels=None,
+           node_fill=None, curve=0.55, label_w=1.45):
+    """FLOW RIBBONS between staged nodes — where a quantity GOES, with width = how much.
+
+    `links` = [(source_label, target_label, value), ...]. Columns are derived from the link
+    graph (a node with no inbound link starts column 0), so a 1 -> N -> 1 shape such as
+    "$40B of equity out -> five AI labs -> compute committed back" needs no column bookkeeping.
+
+    The one rule that makes this a chart rather than decoration: **every width uses ONE scale.**
+    `units_per_inch` is derived from the BUSIEST column, so a ribbon twice as thick carries twice
+    the value, everywhere in the diagram. A flow picture whose widths do not match its numbers is
+    not a stylistic choice, it is a false chart -- the same class of defect as a bar chart with a
+    cropped axis, and harder to catch because nobody thinks to check it.
+
+    `x, y, w, h` is the WHOLE region including labels, so it can be handed a region straight from
+    `split_h`/`rows` and nothing lands outside. `label_w` is reserved at each side for the first
+    and last columns' labels; middle columns are labelled in the gap ABOVE each node (which is
+    why `gap` and the top headroom are widened automatically when middle columns exist) -- text
+    over a ribbon would be unreadable, and a chip behind it would hide the flow it sits on.
+
+    Reach for it when the story is CIRCULATION (money out and back, a supply chain, a budget
+    split, attrition through stages). For a simple part-of-whole use `segmented_bar`; for a
+    taper use `tier_stack`; for who-connects-to-whom without volume use `hub_spoke`.
+
+    Returns {"nodes": {label: (x, y, w, h)}, "scale": units_per_inch, "columns": [[labels]]}.
+    """
+    acc = list(accents or ACCENTS)
+    ink_c = ink if ink is not None else DEEP
+    mute_c = mute if mute is not None else MUTE
+    fnt = font or FONT
+
+    # ---- graph -> columns ------------------------------------------------------------------
+    src, dst, order = {}, {}, []
+    for a, b, v in links:
+        if v is None or v <= 0:
+            raise ValueError(f"sankey(): link {a!r}->{b!r} has value {v!r}; the widths ENCODE "
+                             f"value, so every link needs a positive one")
+        for nd in (a, b):
+            if nd not in order:
+                order.append(nd)
+        src.setdefault(a, []).append((b, float(v)))
+        dst.setdefault(b, []).append((a, float(v)))
+    col = {nd: 0 for nd in order if nd not in dst}
+    if not col:
+        raise ValueError("sankey(): every node has an inbound link -- the graph is cyclic, so "
+                         "there is no first column to lay out")
+    changed, guard = True, 0
+    while changed and guard < 64:
+        changed, guard = False, guard + 1
+        for a, outs in src.items():
+            if a not in col:
+                continue
+            for b, _v in outs:
+                if col.get(b, -1) < col[a] + 1:
+                    col[b], changed = col[a] + 1, True
+    if len(col) != len(order):
+        missing = [nd for nd in order if nd not in col]
+        raise ValueError(f"sankey(): {missing} are unreachable from any source node (a cycle "
+                         f"feeds them); flow diagrams need a direction")
+    ncol = max(col.values()) + 1
+    columns = [[nd for nd in order if col.get(nd) == c] for c in range(ncol)]
+
+    # ---- reserve the labels FIRST, derive the flow area from what is left -------------------
+    mid_labelled = any(columns[c] for c in range(1, ncol - 1))
+    lab_h = 0.26 if mid_labelled else 0.0
+    if mid_labelled:
+        gap = max(gap, lab_h + 0.04)
+    head = (0.32 if col_labels else 0.0) + lab_h
+    fx = x + label_w
+    fw = w - 2 * label_w
+    fy = y + head
+    fh = h - head
+    if fw < 1.0:
+        raise ValueError(f"sankey(): w={w:.2f}in leaves only {fw:.2f}in for ribbons after two "
+                         f"{label_w:.2f}in label gutters -- widen the region or lower label_w")
+
+    total = {nd: max(sum(v for _b, v in src.get(nd, [])),
+                     sum(v for _a, v in dst.get(nd, []))) for nd in order}
+    busiest = max(sum(total[nd] for nd in cl) for cl in columns if cl)
+    tallest = max(len(cl) for cl in columns)
+    avail = fh - gap * max(0, tallest - 1)
+    if avail <= 0.2:
+        raise ValueError(f"sankey(): {tallest} nodes at gap={gap:.2f} do not fit in "
+                         f"h={h:.2f}in (only {avail:.2f}in left for the bars themselves)")
+    upi = busiest / avail                                  # ONE scale for the whole diagram
+
+    # ---- node rects ------------------------------------------------------------------------
+    step = (fw - node_w) / max(1, ncol - 1) if ncol > 1 else 0.0
+    rects = {}
+    for c, cl in enumerate(columns):
+        used = sum(total[nd] / upi for nd in cl) + gap * max(0, len(cl) - 1)
+        cy = fy + (fh - used) / 2.0                        # centre each column
+        for nd in cl:
+            nh = total[nd] / upi
+            rects[nd] = (fx + c * step, cy, node_w, nh)
+            cy += nh + gap
+
+    # ---- ribbons (drawn first, so the nodes sit on top of their ends) ----------------------
+    key_col = columns[1] if ncol > 2 else columns[-1]
+    colour = {nd: acc[i % len(acc)] for i, nd in enumerate(key_col)}
+    out_cur = {nd: rects[nd][1] for nd in order}
+    in_cur = {nd: rects[nd][1] for nd in order}
+    # Stack each node's links in the order of the OTHER end's vertical position. This is the
+    # standard crossing-minimising rule: ribbons only cross when the graph forces them to, so a
+    # crossing that survives is information ("this money went somewhere out of order"), not noise.
+    ordered = sorted(links, key=lambda L: (col[L[0]], rects[L[0]][1], rects[L[1]][1]))
+    seam = min(0.02, node_w / 3.0)   # tuck the ends UNDER the node; abutting edges render a hairline
+    for a, b, v in ordered:
+        vh = float(v) / upi
+        ax = rects[a][0] + node_w - seam
+        bx = rects[b][0] + seam
+        a0, b0 = out_cur[a], in_cur[b]
+        out_cur[a] += vh
+        in_cur[b] += vh
+        cx = (bx - ax) * curve
+        top = _bez((ax, a0), (ax + cx, a0), (bx - cx, b0), (bx, b0))
+        bot = _bez((ax, a0 + vh), (ax + cx, a0 + vh), (bx - cx, b0 + vh), (bx, b0 + vh))
+        _iso_poly(slide, top + bot[::-1], colour.get(b) or colour.get(a) or acc[0])
+
+    # ---- nodes + labels --------------------------------------------------------------------
+    for nd in order:
+        nx, ny, nw, nh = rects[nd]
+        box(slide, nx, ny, nw, nh, fill=node_fill or colour.get(nd, mute_c))
+        lab = f"{nd}  {value_fmt.format(total[nd])}" if value_fmt else str(nd)
+        c = col[nd]
+        if c == 0:
+            text(slide, nx - label_w, ny, label_w - 0.12, max(nh, 0.24),
+                 [[(lab, label_size, ink_c, True, False, fnt)]],
+                 align=PP_ALIGN.RIGHT, anchor=MSO_ANCHOR.MIDDLE)
+        elif c == ncol - 1:
+            text(slide, nx + nw + 0.12, ny, label_w - 0.12, max(nh, 0.24),
+                 [[(lab, label_size, ink_c, True, False, fnt)]], anchor=MSO_ANCHOR.MIDDLE)
+        else:
+            text(slide, nx - 1.1, ny - lab_h, 2.2 + nw, lab_h,
+                 [[(lab, label_size, ink_c, True, False, fnt)]],
+                 align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.BOTTOM)
+
+    if col_labels:
+        for c, cl in enumerate(col_labels[:ncol]):
+            text(slide, fx + c * step - 0.5, y, node_w + 1.0, 0.28,
+                 [[(str(cl), 9.5, mute_c, True, False, fnt)]], align=PP_ALIGN.CENTER)
+    return {"nodes": rects, "scale": upi, "columns": columns}
 
 
 def iso_prism(slide, ox, oy, w, d, h, base, *, line=None):

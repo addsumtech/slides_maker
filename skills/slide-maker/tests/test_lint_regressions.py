@@ -197,6 +197,64 @@ def main():
         else:
             bad.append("reference example deck could not be built — the corpus check did not run")
 
+    # ── UNSOURCED NUMBER: two-sided, on its own mini-deck ─────────────────────
+    # Built separately on purpose: several assertions above name fx_fail slides BY NUMBER, so
+    # appending a slide there would silently re-point them. A check that never fires is worth
+    # nothing, and one that fires on a sourced deck is worse than nothing, so both directions
+    # are asserted. The recap case is the one that matters most — it is the whole reason this
+    # check is deck-level: a closing slide restating a figure sourced on its own page is good
+    # practice, and a per-slide test calls it a defect.
+    sys.path.insert(0, str(SCRIPTS))
+    import deckkit as _dk
+
+    def _prov_deck(dest, *slides):
+        prs = _dk.blank_deck(10, 5.625)
+        for lines, notes in slides:
+            s = prs.slides.add_slide(prs.slide_layouts[6])
+            for i, ln in enumerate(lines):
+                _dk.text(s, 0.6, 0.8 + i * 0.6, 8.6, 0.5,
+                         [[(ln, 18, _dk.DEEP, False, False)]])
+            if notes:
+                _dk.speaker_notes(s, notes)
+        prs.save(str(dest))
+        return dest
+
+    def _lint_nr(pptx):
+        r = subprocess.run([sys.executable, str(SCRIPTS / "lint_deck.py"), str(pptx), "--static"],
+                           capture_output=True, text=True)
+        return r.stdout + r.stderr
+
+    o = _lint_nr(_prov_deck(tmp / "prov_bare.pptx", (["Capex reached $400B this year"], None)))
+    if "UNSOURCED NUMBER" in o and "$400B" in o:
+        ok.append("a novel magnitude with no source anywhere is caught")
+    else:
+        bad.append("UNSOURCED NUMBER did not fire on a bare unsourced $400B — the check is dead")
+
+    o = _lint_nr(_prov_deck(tmp / "prov_notes.pptx",
+                            (["Capex reached $400B this year"], "Source: Crunchbase Q1 2026")))
+    if "UNSOURCED NUMBER" in o:
+        bad.append("UNSOURCED NUMBER fired although the citation is in the SPEAKER NOTES — a "
+                   "presented deck legitimately sources there and must not be flagged")
+    else:
+        ok.append("a citation in the speaker notes counts as provenance")
+
+    o = _lint_nr(_prov_deck(tmp / "prov_recap.pptx",
+                            (["Capex reached $400B", "来源: Crunchbase"], None),
+                            (["Takeaway: $400B of capex is the story"], None)))
+    if "UNSOURCED NUMBER" in o:
+        bad.append("UNSOURCED NUMBER fired on a RECAP slide restating a figure sourced earlier in "
+                   "the same deck — this is the false positive the deck-level design exists to "
+                   "prevent, and it is back")
+    else:
+        ok.append("a recap of a figure sourced elsewhere in the deck is not flagged")
+
+    o = _lint_nr(_prov_deck(tmp / "prov_chrome.pptx", (["Part III", "13 / 20", "Section 4"], None)))
+    if "UNSOURCED NUMBER" in o:
+        bad.append("UNSOURCED NUMBER fired on page chrome ('13 / 20') — bare integers are not "
+                   "claims, and counting them is what made the first cut fire on a good deck")
+    else:
+        ok.append("page numbers and section indices are not treated as claims")
+
     # ── text MEASUREMENT must never under-estimate ────────────────────────────
     # macOS ships a whole family as one .ttc, and matplotlib resolves bold and regular to
     # the SAME path; Pillow's truetype(path, size) with no index= then loads face 0, the

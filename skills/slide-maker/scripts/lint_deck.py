@@ -252,6 +252,40 @@ def _walk_runs(shapes):
             continue
 
 
+# A CLAIM number carries a magnitude or a percent — "$40B", "81%", "+46pt", "2.3x", "95 亿".
+# Bare integers are deliberately excluded: page chrome ("13 / 20"), section indices, years and
+# list markers are all bare, and counting them is what made a first cut of this check fire on
+# 4 of 20 slides of a professionally-made deck.
+_CLAIM_NUM = re.compile(r"[+\-−]?\$?\d[\d,\.]*\s*(?:%|pt\b|bn\b|[BMT]\b|万|亿|兆|"
+                        r"个百分点|百分点|倍|[xX]\b|美元|元)")
+# Provenance vocabulary, deliberately GENEROUS in both languages. A missed source phrase costs a
+# false alarm on an honest slide; an over-tight list is the failure mode that trains authors to
+# ignore the tool. Prose attributions count ("这是 README 举的例子", "per Crunchbase (2026)").
+_SRC_PHRASE = re.compile(
+    r"来源|來源|资料来源|數據來源|数据来源|出自|引自|据《|据\s*\w|援引|参见|參見|见\s*\[|"
+    r"研究|调查|調查|统计|統計|年报|年報|财报|財報|文档|文檔|官方|README|"
+    r"source[s]?\s*[:：]|sourced\s+from|\bvia\b|\bper\b\s+\S|\bcf\.|\bibid\b|"
+    r"n\s*=\s*\d|as\s+of\s|report|filing|survey|dataset|docs?\b|\(20\d\d\)|"
+    r"\bet\s+al\b|https?://|doi[:\s]", re.I)
+
+
+def _slide_provenance(slide):
+    """(claim numbers on this slide, is its provenance stated anywhere it travels).
+
+    Speaker notes COUNT as provenance: a presented deck legitimately keeps the citation in the
+    notes so the slide stays clean, and the speaker still has the answer when asked.
+    """
+    body = "\n".join(r.text or "" for r in _walk_runs(slide.shapes))
+    notes = ""
+    if getattr(slide, "has_notes_slide", False):
+        try:
+            notes = slide.notes_slide.notes_text_frame.text or ""
+        except Exception:
+            notes = ""
+    nums = {m.strip() for m in _CLAIM_NUM.findall(body)}
+    return nums, bool(_SRC_PHRASE.search(body) or _SRC_PHRASE.search(notes))
+
+
 def _run_cjk_no_ea(run):
     """True if the run has CJK glyphs but no <a:ea> font (→ no kinsoku + tofu/uncontrolled-font risk)."""
     try:
@@ -1452,6 +1486,7 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
     _SKIP.clear()          # one owner for the skip reason: cleared here, only ever set below
     pngs = _render_png_paths(path, renders_dir, len(prs.slides))
     titles = []                                          # (slide#, normalized title, display snip)
+    prov = []                                            # (slide#, claim numbers, sourced?)
     intent_map = {}                                      # si -> declared design intent (see design_intent)
     for si, slide in enumerate(prs.slides):
         for _sh in slide.shapes:
@@ -1887,6 +1922,7 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
         #     PowerPoint applies no kinsoku (避头尾), so a 。/，can start a line; also tofu/uncontrolled
         #     font). Checked across ANY text scenario — text boxes, TABLE cells, and grouped shapes —
         #     not just top-level boxes. Reliable, render-independent. Fix: set deckkit.EAFONT (+ EADISPLAY).
+        prov.append((si + 1,) + _slide_provenance(slide))
         bad_ea = [r for r in _walk_runs(slide.shapes) if _run_cjk_no_ea(r)]
         if bad_ea:
             sample = next((r.text.strip() for r in bad_ea if r.text.strip()), "")[:18]
@@ -2006,6 +2042,27 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
                  f"'{disp}' — screen readers navigate by title; make each unique")
             print(f"  slide {sns[0]}: [warn] {m}")
             j_warns.append({"slide": sns[0], "text": m})
+            warn_total += 1
+    # UNSOURCED NUMBER (deck-level, advisory): a slide asserting a magnitude that appears NOWHERE
+    # a source is stated. Deck-level on purpose — a recap or divider restating a figure that IS
+    # sourced on its own slide is normal and good, and a per-slide test cannot tell the two apart.
+    # Measured: 0 findings on a 20-slide professionally-made briefing deck; the numbers it did
+    # leave unsourced were all restatements. So a finding here means a genuinely novel magnitude.
+    sourced_nums = set()
+    for _sn, nums, srcd in prov:
+        if srcd:
+            sourced_nums |= nums
+    for sn, nums, srcd in prov:
+        novel = sorted(nums - sourced_nums)
+        if novel and not srcd:
+            m = (f"UNSOURCED NUMBER: {', '.join(novel[:4])}"
+                 f"{f' (+{len(novel) - 4} more)' if len(novel) > 4 else ''} appear(s) only here, with "
+                 f"no source on the slide or in its notes, and nowhere else in the deck is a source "
+                 f"stated for them — add deckkit.source_note(), or cite it in the speaker notes. "
+                 f"If the attribution is already in prose here, this is a false alarm; if you cannot "
+                 f"name where the figure came from, that is the actual problem")
+            print(f"  slide {sn}: [warn] {m}")
+            j_warns.append({"slide": sn, "text": m})
             warn_total += 1
     lums = _load_render_lums(path, renders_dir, len(stats_rows), pngs=pngs)
     deck_stats = _print_stats(stats_rows, mode, sw, sh, lums=lums, static_ok=static_ok)

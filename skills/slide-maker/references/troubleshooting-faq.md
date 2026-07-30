@@ -135,12 +135,28 @@ These fail the exit code and must reach **0** before hand-off. Plain-word dictio
 | `TEXT ON IMAGE` | Render-pixel estimate: text sits on a photo/gradient with est. contrast < 1.5:1 — unreadable (the class solid-fill checks can't see; needs renders) | Add an opaque panel or scrim behind the text, or move it off the busy region (pixel sampling already accounts for an existing scrim) |
 
 Render-time **advisory `[warn]`s** (never fail the exit code): `LOW CONTRAST` / `BODY CONTRAST`
-(1.8–4.5:1 bands), `MISSING ALT-TEXT`, `MATH-FONT TOFU RISK`, `GROUPED-ONLY` content — plus the
+(1.8–4.5:1 bands), `MISSING ALT-TEXT`, `MATH-FONT TOFU RISK`, `GROUPED-ONLY` content,
+**`UNSOURCED NUMBER`** — plus the
 **accessibility set**: `TEXT-ON-IMAGE CONTRAST` (the 1.5–3.0 band of the hard check above),
 `NO SLIDE TITLE` / `DUPLICATE SLIDE TITLES` (screen readers navigate by unique titles; an
 off-canvas-invisible title is the sanctioned trick for statement slides), `READING ORDER` (title
 should be first in z-order — add it first in the build code), and `NON-TEXT CONTRAST` (icons/lines
 < 3:1 vs backing, WCAG 1.4.11). Resolve or consciously accept per §7.
+
+**`UNSOURCED NUMBER` — how to read it.** It is *deck-level*: it fires only when a magnitude
+(`$400B`, `81%`, `+46pt`, `2.3x`, `95 亿`) appears on a slide with no source stated **and no source
+is stated anywhere in the deck for that same figure**. So a recap or divider restating a number
+sourced on its own page stays clean — that is normal, good practice, and the reason the check is not
+per-slide. Bare integers are excluded on purpose (page chrome `13 / 20`, section indices, years);
+counting them made a first cut fire on 4 of 20 slides of a professionally-made deck.
+- **Fix:** `deckkit.source_note(slide, "Crunchbase Q1 2026", as_of="30 July 2026")` — the per-slide
+  provenance line; or cite it in the **speaker notes**, which count (a presented deck legitimately
+  keeps the slide clean and the citation in the notes).
+- **If the attribution is already there in prose** ("这是 README 举的例子"), it is a false alarm —
+  the source-phrase vocabulary is deliberately generous but cannot be exhaustive. Accept and move on.
+- **If you cannot name where the figure came from, that is not a lint problem.** It is the
+  never-invent floor: source it, go qualitative, or ask. This is the one advisory whose finding may
+  mean the *content* is wrong rather than the formatting.
 
 **When a finding seems wrong:** each check has documented escapes (shadow pairs, chip labels,
 containment). Don't fight the linter in code — adjust the deck (rename, nudge 0.05 in) and move on;

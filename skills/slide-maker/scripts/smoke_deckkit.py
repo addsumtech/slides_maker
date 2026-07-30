@@ -77,6 +77,21 @@ ok("accent_one", lambda: dk.accent_one(["a", "b", "c"], 1, C("C0362C")))
 ok("cover", lambda: dk.cover(S(), "Title", issue_label="No 1", subtitle="sub"))
 ok("colophon (list credits)", lambda: dk.colophon(S(), "tag", credits=["a", "b"], tooling="x"))
 ok("sources_page", lambda: dk.sources_page(S(), [f"ref {i}" for i in range(6)]))
+ok("source_note", lambda: dk.source_note(S(), ["Crunchbase", "PitchBook"], as_of="30 July 2026"))
+ok("source_note (lifts clear of a footer)", lambda: (dk.footer(last(), "tag", 3),
+                                                     dk.source_note(last(), "Company filings")))
+raises("source_note (empty provenance)", lambda: dk.source_note(last(), ["", "  "]))
+ok("sankey (1->N->1 circulation)", lambda: dk.sankey(S(), 0.6, 1.2, 11.0, 4.0,
+    [("Chips", "LabA", 100), ("Chips", "LabB", 30), ("Cash", "LabA", 13),
+     ("LabA", "Compute", 113), ("LabB", "Compute", 30)],
+    value_fmt="${:.0f}B", col_labels=["out", "labs", "back"]))
+ok("sankey (2 columns, no middle labels)", lambda: dk.sankey(S(), 0.6, 1.2, 11.0, 4.0,
+    [("Budget", "R&D", 60), ("Budget", "Sales", 40)]))
+raises("sankey (zero-value link)", lambda: dk.sankey(S(), 0.6, 1.2, 11.0, 4.0, [("a", "b", 0)]))
+raises("sankey (cyclic graph)", lambda: dk.sankey(S(), 0.6, 1.2, 11.0, 4.0,
+                                                  [("a", "b", 5), ("b", "a", 5)]))
+raises("sankey (gutters eat the whole width)", lambda: dk.sankey(S(), 0.6, 1.2, 2.2, 4.0,
+                                                                 [("a", "b", 5)]))
 ok("part_eyebrow/page_marker", lambda: (dk.part_eyebrow(S(), 0.7, 0.5, "x"), dk.page_marker(last(), 2, 8)))
 ok("specimen_card", lambda: dk.specimen_card(S(), 1, 1, 2, 2.5, "Aa", "Sans"))
 ok("specimen_card (small h)", lambda: dk.specimen_card(last(), 4, 1, 1, 0.5, "Aa", "tiny"))

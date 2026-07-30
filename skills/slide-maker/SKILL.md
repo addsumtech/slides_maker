@@ -697,7 +697,12 @@ The helper set, by job:
   glyphs or ✓/◐/✕ marks, `recommend=` tints the winner) · **`heat_matrix`** (category×category grid coloured
   by value, `scale="seq"|"div"|"risk"`) · **`tier_stack`** (one taper: `mode="funnel"` drop-off /
   `mode="pyramid"` layers, + `funnel()`/`pyramid()` wrappers) · **`gantt`** (dated task bars on a shared
-  `axis_scale`, `lanes=` swimlanes, `today=` marker — durations & overlap, where `timeline` shows only points).
+  `axis_scale`, `lanes=` swimlanes, `today=` marker — durations & overlap, where `timeline` shows only points) ·
+  **`sankey`** (CIRCULATION — where a quantity GOES, ribbon width strictly proportional to value on ONE
+  deck-wide scale: money out and back, a supply chain, a budget split; `links=[(src,dst,value),…]`,
+  columns derived from the graph, `col_labels=` names the stages. It reserves `label_w` label gutters
+  and derives the ribbon area from what is LEFT, so hand it a whole region. Refuses a zero/negative
+  value or a cyclic graph rather than drawing a width that means nothing).
 - **Diagrams / patterns:** `quadrant`, `hub_spoke`, `timeline`, `before_after`/`image_tab`/
   `photo_triptych`, **`device_frame`** (a real screenshot in a `chrome="browser"`/`"phone"` bezel),
   `wireframe_grid`+`spec_list`, `corner_frame`, `photo_card`, `backdrop_motif`,
@@ -745,6 +750,11 @@ The helper set, by job:
   the bar**; use this instead of hand-building "track box + fill box + number", which is how value labels
   end up floating off the bar's centerline; canvas-safe by construction — an overflowing value
   auto-shortens the bar instead of leaving the slide).
+- **Provenance:** **`source_note`** (the per-SLIDE source line — `sources`, `as_of=`, `label="来源"` on a
+  CJK deck; auto-lifts clear of a `footer`, so call it last). `sources_page` defends the *deck*; this
+  defends the *slide*, which is the unit that actually travels — screenshotted, pasted into a memo, shown
+  out of order. **DEFAULT ON in the `briefing` register and on any slide whose numbers a reader could act
+  on;** a chart whose source sits 14 pages away is unsourced at the moment someone doubts it.
 - **Photo on-brand (`scripts/image_fx.py`):** `duotone` / `grayscale` so a colour photo doesn't fight
   the accent (riso/brutalist/ink/luxury/museum), then `picture(fit="cover")`.
 
