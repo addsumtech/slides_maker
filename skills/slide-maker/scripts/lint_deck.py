@@ -518,6 +518,56 @@ def _caption_align(im, bx, sw, sh):
     return out
 
 
+def _plate_visibility(im, bx, sw, sh):
+    """Std-dev of the EXPOSED part of a full-bleed background picture, in raw grey levels.
+
+    The generated-template branch requires a faint topical plate on every interior page, and its
+    own reference says the muting pressure is one-directional: "nothing backstops the too-heavy
+    direction". Over-scrim it and the page satisfies "a plate on every slide" in code while reading
+    as flat white -- the same failure as having no plate, and invisible to every contrast check
+    (a whiter background only makes dark text score better).
+
+    Sampled from the render, restricted to the picture's area MINUS every other shape's rect, so
+    panels/text/cards do not contribute their own edges. Measured on real LibreOffice renders of
+    the same plate: 1.58 as generated, 1.16 under a light 0.25 wash (both plainly visible), 0.21
+    scrimmed to near-white. Threshold 0.6 sits at ~2x margin on both sides.
+
+    Returns (std, exposed_fraction) or None when too little of the picture is exposed to judge.
+    """
+    try:
+        import numpy as np
+    except Exception:
+        return None
+    plate = None
+    for s in bx:
+        if s.get("pic") and s["w"] >= 0.95 * sw and s["h"] >= 0.95 * sh:
+            plate = s
+            break
+    if plate is None:
+        return None
+    W, H = im.size
+    g = np.asarray(im.convert("L"), dtype=float)
+    mask = np.ones((H, W), dtype=bool)
+    for s in bx:
+        if s is plate:
+            continue
+        # A SCRIM is itself full-bleed. Subtracting it leaves nothing exposed, so the check
+        # returned None on exactly the decks it was written for -- a properly built
+        # generated-template page always has one. A full-bleed wash is part of how the plate
+        # LOOKS (it is what the too-heavy direction is made of); only materially smaller shapes
+        # -- panels, cards, text -- are occluders.
+        if s["w"] >= 0.95 * sw and s["h"] >= 0.95 * sh:
+            continue
+        x0 = max(0, min(W, int(s["l"] / sw * W))); x1 = max(0, min(W, int(s["r"] / sw * W)))
+        y0 = max(0, min(H, int(s["t"] / sh * H))); y1 = max(0, min(H, int(s["b"] / sh * H)))
+        if x1 > x0 and y1 > y0:
+            mask[y0:y1, x0:x1] = False
+    frac = float(mask.mean())
+    if frac < 0.25:                                  # too little bare plate to judge
+        return None
+    return float(g[mask].std()), frac
+
+
 def _region_bg_lum(im, s, sw, sh, ink_lum):
     """ADVERSARIAL background-luminance estimate behind a text shape, sampled from the slide
     render. Region = the text's RENDERED extent (alignment/anchor-aware) padded ~0.08in and
@@ -1573,6 +1623,25 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
                     elif est < 3.0:
                         warns.append(f"TEXT-ON-IMAGE CONTRAST: '{snip}' est. {est:.2f}:1 (<3:1) over "
                                      f"an image — verify legibility; a scrim/panel usually fixes it")
+
+        # 1c-bis) PLATE NOT VISIBLE — the too-heavy direction the reference says nothing guards.
+        #     Interior pages only: the cover, dividers and closer carry full-strength imagery by
+        #     design, so their plate is supposed to be loud.
+        if pngs and 0 < si < len(pngs) - 1:
+            try:
+                from PIL import Image as _Im
+                _imp = _Im.open(pngs[si])
+            except Exception:
+                _imp = None
+            if _imp is not None:
+                _pv = _plate_visibility(_imp, bx, sw, sh)
+                if _pv and _pv[0] < 0.6:
+                    warns.append(
+                        f"PLATE NOT VISIBLE: the full-bleed background's exposed area varies by "
+                        f"only {_pv[0]:.2f} grey levels ({_pv[1]:.0%} of the page is bare plate) — "
+                        f"it has been scrimmed into a flat field, which satisfies 'a plate on every "
+                        f"page' while reading as none. Lift the scrim and recover text contrast with "
+                        f"the frosted blocks instead")
 
         # 1d) TEXT NOT VISIBLE (render-based, CAUSE-AGNOSTIC). Every XML-side occlusion rule is a
         #     taxonomy of causes, and a taxonomy of causes is unbounded: pictures are skipped

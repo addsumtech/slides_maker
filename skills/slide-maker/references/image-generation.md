@@ -363,7 +363,12 @@ translucent; reach for the gradient helper, or `deckkit.pic_alpha` to fade the p
 **Text over a plate must be legible — but a scrim is only one way to get there, and not always
 the right one.** When the plate already carries a calm dark region where the type sits, a scrim
 subtracts from the image and adds nothing. Measure first with `image_fx.quiet_region(path)`,
-then decide. `TEXT-ON-IMAGE CONTRAST` backstops the too-light direction; **nothing backstops the
+then decide. `TEXT-ON-IMAGE CONTRAST` backstops the too-light direction; the too-heavy one is now
+backed by `PLATE NOT VISIBLE` (interior pages; flags an exposed plate varying <0.6 grey levels —
+measured 1.58 as generated vs 0.21 scrimmed to near-white). What still has **no** backstop is
+image LINEWORK crossing the glyphs: a scrim dims a bright line without erasing it, and three
+attempts at an edge-density metric failed to separate it from a clean crop on real renders, so it
+stays an eye check. **Nothing backstops the too-heavy
 too-heavy direction**, so that judgement is yours and it is the one that quietly ruins covers.
 
 **Do not trust a calm region you only eyeballed** — measure it, then size the scrim to what

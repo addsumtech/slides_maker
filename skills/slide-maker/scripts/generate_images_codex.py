@@ -18,6 +18,7 @@ import argparse
 import base64
 import concurrent.futures as _cf
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -121,6 +122,74 @@ def _resolve_out(item, out_dir):
     return Path(out_dir) / item["filename"] if out_dir else Path(item.get("path") or item["filename"])
 
 
+# Words that carry STYLE or COLOUR rather than subject matter. A prompt built only from these
+# produces art that could sit under any deck -- which is precisely the FUSION gate's failure mode
+# (`generated-template.md`: "beautifully on-style but topically generic FAILS"). That gate is prose
+# and nothing read it, so a generic prompt cost a generation, a render and a review round before a
+# human noticed. This checks the PROMPT, before the spend. It cannot judge the resulting pixels'
+# semantics, and does not pretend to.
+_STYLE_WORDS = set("""
+abstract background backdrop gradient gradients texture textured gloss glossy matte gleam
+gleaming gentle soft softly warm cool cold vivid muted pastel gorgeous elegant beautiful modern
+minimal minimalist clean sleek premium luxury luxurious gritty grainy grain gauzy hazy gauze gauzed
+gaussian bokeh gauzier swoosh swooshes mesh meshes particles particle glow glowing radiant sheen
+lighting light lights lit shadow shadows shading composition composed frame framed framing
+photograph photographic photo photorealistic render rendered illustration illustrated illustrative
+style styled stylised stylized aesthetic vibe mood atmosphere atmospheric cinematic
+red orange yellow green blue indigo violet purple pink teal cyan magenta cream beige ivory tan
+brown grey gray black white gold golden silver bronze copper coral crimson scarlet vermilion navy
+azure emerald olive amber ochre sepia
+no text lettering logos labels annotations watermarks words numbers letters caption captions
+landscape portrait square wide tall high low left right upper lower centre center top bottom edge
+edges corner corners zone region area space negative empty calm quiet plain even uniform flat
+low-contrast contrast faint subtle whisper barely perceptible washed desaturated saturation
+the a an and or of for with in on at to from into over under across through by as is are be
+one two three four five six seven eight nine ten several few many lots plenty generous
+""".split())
+_WORD = re.compile(r"[A-Za-z][A-Za-z0-9'-]{2,}")
+
+
+def topic_terms(s):
+    """Content-bearing words in a string, with style/colour vocabulary removed.
+
+    Deliberately GENEROUS -- it lets some non-nouns through ('above', 'being'). That is the safe
+    direction: it inflates good prompts, while the failure case scores ~0 either way.
+    """
+    return {w.lower() for w in _WORD.findall(s or "")
+            if w.lower() not in _STYLE_WORDS and len(w) > 3}
+
+
+MIN_SUBJECT_NOUNS = 6
+
+
+def check_prompt_topicality(items, min_nouns=MIN_SUBJECT_NOUNS):
+    """(findings, ...) — prompts too thin on SUBJECT vocabulary to be depicting anything.
+
+    Measured across real and deliberately-generic prompts, style/colour words removed:
+
+        my shipped hero          38      "technology background"     1
+        my shipped plate         18      abstract blue gradient      0
+        a cardiac-MRI prompt     18      premium swoosh + bokeh      1
+        a garden-brand prompt    15
+
+    So the separation is ~15x and the threshold sits in open space. This counts DENSITY, not
+    topic agreement: an earlier version required >=2 shared words with a `--topic` string and
+    false-positived on both of my own good prompts, because a prompt says "slide-shaped paper
+    cards / vellum / ruler" while a topic line says "PowerPoint deck" -- lexical overlap cannot
+    bridge concrete visual nouns to abstract subject nouns. Density needs no topic string and has
+    no such failure.
+
+    What it CANNOT do is judge the generated pixels' semantics. It gates the prompt, which is
+    where the failure originates, and claims nothing more.
+    """
+    out = []
+    for i, it in enumerate(items):
+        nouns = sorted(topic_terms(it.get("prompt", "")))
+        if len(nouns) < min_nouns:
+            out.append((i, it.get("filename") or it.get("path") or "?", nouns))
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser(description="Generate images from a manifest via the Codex CLI (no API key).")
     ap.add_argument("manifest", help="Path to image_prompt_manifest.json.")
@@ -131,6 +200,8 @@ def main():
     ap.add_argument("--overwrite", action="store_true", help="Regenerate existing files (default: skip).")
     ap.add_argument("--timeout", type=int, default=360, help="Per-image timeout (seconds).")
     ap.add_argument("--dry-run", action="store_true", help="Print planned outputs without calling codex.")
+    ap.add_argument("--allow-generic", action="store_true",
+                    help="generate anyway when a prompt looks generic")
     ap.add_argument("--concurrency", type=int, default=2,
                     help="Images generated in parallel (each is a `codex exec` subprocess — 2 is a safe "
                          "default; raise on a beefy machine, set 1 to serialize). Speeds a multi-image deck.")
@@ -162,6 +233,22 @@ def main():
             return 2
     if args.limit is not None:
         items = items[: max(0, args.limit)]
+
+    # FUSION gate, before the spend: a generic prompt yields generic art, and one generation +
+    # render + review round is the cost of finding that out afterwards.
+    _thin = check_prompt_topicality(items)
+    if _thin:
+        print(f"PROMPT NOT TOPICAL — {len(_thin)} prompt(s) name fewer than {MIN_SUBJECT_NOUNS} "
+              f"subject things, so they describe a MOOD rather than this deck's subject:",
+              file=sys.stderr)
+        for i, fn, nouns in _thin:
+            print(f"  [{i}] {fn}  subject words: {nouns or '(none — style/colour only)'}",
+                  file=sys.stderr)
+        print("  A plate must depict THIS deck's topic — a stranger should be able to name it from\n"
+              "  the picture. Fold the deck's own subject nouns in, or pass --allow-generic.",
+              file=sys.stderr)
+        if not args.allow_generic:
+            return 2
 
     # partition first: skip / dry-run are instant; only real generations get parallelized
     ok = skipped = failed = 0
