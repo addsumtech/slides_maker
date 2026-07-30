@@ -217,6 +217,146 @@ JUDGMENT = {
 }
 
 
+# ── Three shipped-text defects that are decidable from the built file, and each of which cost
+#    a full render→critic round before this existed. They are grouped apart from the twelve
+#    because they are not PRE-FLIGHT items; they are the mechanical residue the render loop was
+#    being used to discover instead of confirm.
+
+MONO_FACES = ("menlo", "consolas", "courier", "monaco", "sf mono", "dejavu sans mono")
+FULLWIDTH_CLOSERS = "。，、；：！？）》」』】"
+# a HALF-WIDTH Latin/digit glyph immediately followed by a full-width mark: PowerPoint's and
+# LibreOffice's CJK/Latin auto-spacing then opens a gap BEFORE the punctuation, which
+# python-pptx cannot switch off. The only fix is to not write the adjacency.
+# The left class is deliberately ASCII-only — a full-width `）` before `：` is ordinary Chinese
+# punctuation with no script boundary, so including it produced false positives.
+LATIN_THEN_FW = re.compile(rf"([A-Za-z0-9%+\)\]])([{FULLWIDTH_CLOSERS}])")
+
+
+def _paras(slide):
+    """(shape, paragraph_text, max_pt, {font names}) for every non-empty text paragraph."""
+    for sh in slide.shapes:
+        if not sh.has_text_frame:
+            continue
+        for p in sh.text_frame.paragraphs:
+            txt = "".join(r.text for r in p.runs)
+            if not txt.strip():
+                continue
+            sizes = [r.font.size.pt for r in p.runs if r.font.size is not None]
+            fonts = {(r.font.name or "").lower() for r in p.runs if r.font.name}
+            yield sh, txt, (max(sizes) if sizes else None), fonts
+
+
+def _inner_width_in(sh) -> float:
+    tf = sh.text_frame
+    ml = (tf.margin_left or 0) / 914400
+    mr = (tf.margin_right or 0) / 914400
+    return sh.width / 914400 - ml - mr
+
+
+def _face_installed(name: str) -> bool:
+    """Is this font actually on this machine? Cheap, no matplotlib import."""
+    import glob
+    import os
+    stem = re.sub(r"[^a-z0-9]", "", name.lower())
+    if not stem:
+        return False
+    for d in ("/System/Library/Fonts", "/System/Library/Fonts/Supplemental", "/Library/Fonts",
+              os.path.expanduser("~/Library/Fonts"), "/usr/share/fonts", "/usr/local/share/fonts"):
+        for p in glob.glob(os.path.join(d, "**", "*"), recursive=True):
+            if stem in re.sub(r"[^a-z0-9]", "", os.path.basename(p).lower()):
+                return True
+    return False
+
+
+def check_mono_wrap(prs):
+    """A broken command line is not a cosmetic defect — it is a WRONG command.
+
+    Measured: a deck shipped `npx skills add addsumtech/slides_maker` in a code panel. In the
+    render it came out as three lines, and the visible text copied as
+    `…/slides_maker/slide-maker` — a repo path that 404s. The one line a persuaded reader must
+    transcribe correctly was the broken one, and nothing flagged it: `code_block` sets
+    word_wrap=False, so a too-long line OVERFLOWS its panel instead of wrapping, and an
+    overflow inside a panel is invisible to every geometry check.
+
+    Two things make this checkable, and the second is the one that actually bit:
+      1. width — monospace is fixed-advance, so `chars x advance x pt` against the box's own
+         inner width is exact. 0.62em is used deliberately: at or above every common mono face,
+         so the check errs toward warning early.
+      2. SUBSTITUTION — deckkit's default MONO is 'Consolas', a Windows face absent from macOS
+         and most Linux boxes. When it is missing the renderer picks something wider, so a line
+         that fits nominally still breaks. The historical failure fit with ~10% margin and
+         broke anyway. A line inside 15% of its box is therefore reported as tight, and a
+         missing mono face is reported outright.
+    """
+    over, tight, missing = [], [], set()
+    for i, s in enumerate(prs.slides, 1):
+        for sh, txt, pt, fonts in _paras(s):
+            mono = [f for f in fonts if any(m in f for m in MONO_FACES)]
+            if not pt or not mono:
+                continue
+            for f in mono:
+                if not _face_installed(f):
+                    missing.add(f)
+            avail = _inner_width_in(sh)
+            need = len(txt) * 0.62 * pt / 72.0
+            if need > avail:
+                over.append(f"s{i} needs {need:.2f}in in {avail:.2f}in: {txt[:40]!r}")
+            elif need > 0.85 * avail:
+                tight.append(f"s{i} {need:.2f}/{avail:.2f}in ({need/avail:.0%}): {txt[:40]!r}")
+    if over:
+        return "FAIL", (f"{len(over)} mono line(s) overflow their panel (word_wrap is off, so "
+                        f"they run off it silently) — " + " · ".join(over[:3]))
+    if missing:
+        return "FAIL", (f"mono face not installed: {', '.join(sorted(missing))} — the renderer "
+                        f"substitutes a different width, so the panel you checked is not the "
+                        f"panel a reader sees. Set deckkit.MONO to an installed face.")
+    if tight:
+        return "ADVISORY", (f"{len(tight)} mono line(s) fill >85% of the panel — a substituted "
+                            f"face will break them; drop a point or widen — " + " · ".join(tight[:2]))
+    return "PASS", "every monospace line fits its panel with margin, in an installed face"
+
+
+def check_latin_fullwidth(prs):
+    """A space appears BEFORE full-width punctuation that follows a Latin run.
+
+    Shipped on 5 of 12 slides in a real deck and found only by a human at 5x zoom: `原生 PPTX 。`,
+    `既搭 deck 、又给它打分`, `（第 3 、 5 步）`. The renderer's CJK/Latin auto-spacer inserts the gap
+    and python-pptx has no switch for it, so the adjacency itself is the defect — reword so a
+    CJK glyph precedes the mark, or drop the mark.
+    """
+    bad = []
+    for i, s in enumerate(prs.slides, 1):
+        for _sh, txt, _pt, _f in _paras(s):
+            for m in LATIN_THEN_FW.finditer(txt):
+                bad.append(f"s{i} '…{m.group(1)}{m.group(2)}…' in {txt[:30]!r}")
+    if bad:
+        return "FAIL", f"{len(bad)} Latin→full-width adjacency — " + " · ".join(bad[:3])
+    return "PASS", "no Latin glyph sits immediately before full-width punctuation"
+
+
+def check_box_geometry(prs):
+    """A text box with no usable interior — the silent class.
+
+    `h = card_h - 1.42` with card_h = 1.30 yields -0.12; python-pptx stores it, the run
+    overflows a box that has no inside, and every geometry check stays green because there is
+    nothing to overlap. deckkit.text() now raises on this at the call site; this catches decks
+    built by other means, and boxes too short to hold one line of their own type.
+    """
+    hard, soft = [], []
+    for i, s in enumerate(prs.slides, 1):
+        for sh, txt, pt, _f in _paras(s):
+            h = sh.height / 914400
+            if h <= 0 or sh.width / 914400 <= 0:
+                hard.append(f"s{i} {sh.width/914400:.2f}x{h:.2f}in {txt[:24]!r}")
+            elif pt and h < 0.60 * pt / 72.0:
+                soft.append(f"s{i} {h:.2f}in box for {pt:g}pt {txt[:24]!r}")
+    if hard:
+        return "FAIL", f"{len(hard)} non-positive text box(es) — " + " · ".join(hard[:3])
+    if soft:
+        return "ADVISORY", f"{len(soft)} box under half a line tall — " + " · ".join(soft[:2])
+    return "PASS", "every text box has a usable interior"
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("deck")
@@ -245,6 +385,12 @@ def main() -> int:
         (10, "Hand-off: fonts",        item10_fonts(prs)),
     ]
 
+    residue = [
+        ("mono wrap",        check_mono_wrap(prs)),
+        ("Latin→full-width", check_latin_fullwidth(prs)),
+        ("box geometry",     check_box_geometry(prs)),
+    ]
+
     print(f"PRE-FLIGHT (mechanical subset) — {deck.name}")
     fails = 0
     for n, name, (status, detail) in checks:
@@ -252,6 +398,13 @@ def main() -> int:
         if status == "FAIL":
             fails += 1
         print(f"  {mark} {n:>2}. {name:<22} {detail}")
+
+    print("\n  shipped-text residue (decidable here; each of these used to cost a render round):")
+    for name, (status, detail) in residue:
+        mark = {"PASS": "✓", "FAIL": "✗", "ADVISORY": "!", "NOT CHECKABLE": "—"}[status]
+        if status == "FAIL":
+            fails += 1
+        print(f"  {mark}  ·  {name:<22} {detail}")
 
     print("\n  ( ! = advisory: real but undecidable from the file alone — read it, do not ignore it )")
     print("\n  NOT CHECKABLE BY ANY PROGRAM — these stay YOUR ticks, and this tool")
