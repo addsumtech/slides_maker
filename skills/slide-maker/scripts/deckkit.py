@@ -4257,7 +4257,7 @@ def small_multiples(slide, x, y, w, h, panels, *, categories=None, cols=None, ki
     return y + rows_n * (ph + 0.24) + (rows_n - 1) * gap
 
 
-def design_intent(slide, *, envelope=None, rhyme=None, reason=""):
+def design_intent(slide, *, envelope=None, rhyme=None, weight=None, reason=""):
     """Declare a slide's DELIBERATE design register so the render-time lint can tell intent
     from accident (three of its messages say "record the quiet-register exception" — this is
     where it gets recorded).
@@ -4266,6 +4266,11 @@ def design_intent(slide, *, envelope=None, rhyme=None, reason=""):
               "lower" — content rides the baseline; "bleed" — content deliberately reaches the edge.
     rhyme:    an int group id — consecutive slides sharing it are an intentional visual rhyme
               (a Speed/Cost/Risk triptych), not layout sameness.
+    weight:   "left" | "right" | "asymmetric" — the composition is deliberately weighted to one
+              side, with the opposite half held as real air. This is the editorial/asymmetric
+              layout an art director reaches for on a statement beat, and it is the one register
+              whose lint advice ("rebalance") would actively destroy the design, so it has to be
+              declarable rather than argued with. It silences LOPSIDED for that slide only.
     reason:   one clause, for the human reading the lint output later.
 
     Implemented as an invisible zero-ink tag shape (name="deckkit-intent:{json}") so the intent
@@ -4273,7 +4278,10 @@ def design_intent(slide, *, envelope=None, rhyme=None, reason=""):
     audited: lint warns INTENT INFLATION when most slides declare exceptions.
     """
     import json as _json
-    payload = {k: v for k, v in (("envelope", envelope), ("rhyme", rhyme), ("reason", reason)) if v}
+    if weight is not None and weight not in ("left", "right", "asymmetric"):
+        raise ValueError(f"design_intent(): weight={weight!r} is not 'left' | 'right' | 'asymmetric'")
+    payload = {k: v for k, v in (("envelope", envelope), ("rhyme", rhyme), ("weight", weight),
+                                 ("reason", reason)) if v}
     tag = slide.shapes.add_textbox(Inches(0), Inches(0), Inches(0.01), Inches(0.01))
     tag.name = "deckkit-intent:" + _json.dumps(payload, ensure_ascii=False)
     tag.text_frame.word_wrap = False

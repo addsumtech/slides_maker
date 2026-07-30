@@ -320,7 +320,9 @@ def check_handoff_gates(pptx, mode="presented"):
             '     "design_plan": {{"boldness": "balanced+", "signature_move": "<the one risk>",\n'
             '                     "carried_by": [4, 6, 8], "form_ledger": "<family tally>",\n'
             '                     "icon_family": "<family | none - reason>",\n'
-            '                     "palette": "<FILL vs TEXT-safe split, per palette_audit.py>"}},\n'
+            '                     "palette": "<FILL vs TEXT-safe split, per palette_audit.py>",\n'
+            '                     "type_scale": {{"display": 34, "title": 24, "body": 14}},\n'
+            '                     "signature_proof": {{"slide": 6, "png": "render/slide06.png"}}}},\n'
             '     "provenance": {{"claims": [{{"claim": "<the claim>", "verdict": "CONFIRMED",\n'
             '                                "url": "https://<primary source>"}}]}}}}\n\n'
             "  (A summary tally like {{\"checked\": 87}} is REJECTED on purpose — a tally is "
@@ -444,8 +446,14 @@ def check_handoff_gates(pptx, mode="presented"):
     # different pair, and each surfaced at render time or in review, a round later.
     # `scripts/palette_audit.py` resolves the whole matrix in one call, so the field is cheap to
     # fill honestly and cannot be filled at all without having run something.
+    # type_scale and signature_proof were gated on the CODEX delivery path only, so on the shared
+    # path typography was the one pillar of the visual language nobody had to resolve (palette,
+    # icons and forms all had required fields), and the signature move was accepted as a SENTENCE
+    # with nothing showing it survived into the render. That asymmetry is the exact shape of a bug
+    # this repo already fixed once: the critic waiver was schema-checked for Codex and a hand-typed
+    # string everywhere else, and it carried a real deck through "all gates pass".
     DESIGN_FIELDS = ("boldness", "signature_move", "carried_by", "form_ledger", "icon_family",
-                     "palette")
+                     "palette", "type_scale", "signature_proof")
     design = gates.get("design_plan") or {}
     if design.get("waived"):
         print("[gates] design plan WAIVED — {}".format(design["waived"]))
@@ -460,6 +468,39 @@ def check_handoff_gates(pptx, mode="presented"):
             die("`design_plan` is missing {}. These are the art director's outputs "
                 "(agents/slide-design.md, Step 2) — a plan without them was not designed, it was "
                 "defaulted. Fill them, or waive with a reason.{}".format(", ".join(missing), hint))
+        scale = design["type_scale"]
+        if not isinstance(scale, dict) or not all(
+                isinstance(scale.get(k), (int, float)) for k in ("display", "title", "body")):
+            die('`type_scale` must resolve the three tiers as numbers, e.g. '
+                '{"display": 34, "title": 24, "body": 14}. SIZE SPRAWL tells authors to draw sizes '
+                '"from the deck\'s declared type-scale tokens" — this is where they get declared. '
+                'A deck with no scale does not have restrained typography, it has whatever each '
+                'slide happened to pick.')
+        # same floors the Codex delivery gate uses, so the two paths cannot disagree about what
+        # counts as legible body type
+        BODY_FLOORS = {"presented": 13.5, "textheavy": 13.5, "selfread": 12.0}
+        delivery = str(gates.get("delivery", "presented"))
+        floor = BODY_FLOORS.get(delivery, BODY_FLOORS["presented"])
+        if scale["body"] < floor:
+            die(f'`type_scale.body` is {scale["body"]}pt, under the {floor}pt floor for a '
+                f'{delivery} deck — that is a legibility floor, not a style choice.')
+        if not (scale["display"] > scale["title"] > scale["body"]):
+            die(f'`type_scale` is not a scale: display {scale["display"]} > title {scale["title"]} '
+                f'> body {scale["body"]} must hold, or the tiers do not rank and the hierarchy is '
+                f'decorative rather than structural.')
+        proof = design["signature_proof"]
+        if not isinstance(proof, dict) or not proof.get("png") or not proof.get("slide"):
+            die('`signature_proof` must be {"slide": <n>, "png": "<rendered png>"} — the rendered '
+                'evidence that the signature move actually SURVIVED into the deck. A move that '
+                'exists only as a sentence in the plan is the documented failure: it gets sanded '
+                'back to the safe catalogue during the build and nobody notices, because the plan '
+                'still reads bravely.')
+        png = Path(proof["png"])
+        if not png.is_absolute():
+            png = Path(pptx).parent / png
+        if not png.exists() or png.stat().st_size < 512:
+            die(f'`signature_proof.png` ({proof["png"]}) does not exist or is empty — render the '
+                f'slide first (render_deck.py <deck> <dir>) and point at the real PNG.')
         cb = design["carried_by"]
         if not isinstance(cb, list) or len(cb) < 2:
             die("`carried_by` must name at least 2 slides where the signature move does structural "

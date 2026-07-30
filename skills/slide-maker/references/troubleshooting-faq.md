@@ -168,6 +168,20 @@ mean ± error at n=3–4 for you, overlays every observation, and prints which i
 nothing in the file separates the two, which is why this is advisory and not a failure. It stays
 silent on a bar of counts and on a LINE of averages over time; both are legitimate.
 
+**`LOPSIDED` on a deliberately asymmetric slide.** An editorial composition weighted to one side,
+with the other half held as air, is a design choice — and "rebalance" is the one piece of advice that
+would wreck it. Declare it: `deckkit.design_intent(slide, weight="left", reason="…")` (also
+`"right"` / `"asymmetric"`); `envelope=` silences it too. Undeclared lopsidedness still flags, so the
+declaration is the record of a decision, not a mute button.
+
+**`[skipped] slide N: rotated/flipped group`.** That slide's shapes were **NOT geometry-checked** —
+overlap, overflow, occlusion, density and type-scale all skip it. A rotated group's children are no
+longer axis-aligned in slide space, and every check here reasons about axis-aligned boxes, so the
+lint refuses to guess rather than invent overlaps. Ungroup it (or drop the rotation) to have it
+examined. Note the related rule: two shapes **inside the same group** never raise `OVERLAP` — a group
+is an authored composition (a badge on a card, an icon on a panel), and that is how layering is built.
+A child colliding with anything OUTSIDE its group is still caught.
+
 **When a finding seems wrong:** each check has documented escapes (shadow pairs, chip labels,
 containment). Don't fight the linter in code — adjust the deck (rename, nudge 0.05 in) and move on;
 if it's genuinely a lint bug, note it in the hand-off rather than shipping a `✗`.

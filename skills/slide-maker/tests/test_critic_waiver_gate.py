@@ -31,6 +31,8 @@ DESIGN_OK = {
     "form_ledger": "f" * 30,
     "icon_family": "tabler",
     "palette": "FILL E2543A / TEXT BD4630 on cream, A3341F on tint",
+    "type_scale": {"display": 34, "title": 24, "body": 14},
+    "signature_proof": {"slide": 3, "png": "proof.png"},
 }
 PROV_OK = {"claims": [{"claim": "c", "verdict": "CONFIRMED", "url": "https://example.org"}]}
 
@@ -45,6 +47,13 @@ def build_deck(dest: Path) -> Path:
     out = dest / "t.pptx"
     prs.save(str(out))
     return out
+
+
+def write_proof(dest: Path) -> None:
+    """A real PNG next to the deck — signature_proof points at rendered evidence, not a promise."""
+    sys.path.insert(0, str(SKILL / "scripts"))
+    from PIL import Image
+    Image.new("RGB", (960, 540), (240, 240, 245)).save(dest / "proof.png")
 
 
 def run_gate(deck: Path, gates: dict) -> tuple[int, str]:
@@ -97,6 +106,35 @@ CASES = [
     ("a design plan carrying the palette split passes",
      {"critic": {"verdict": "consent", "rounds": 2}, "design_plan": DESIGN_OK},
      True, "design plan: boldness"),
+
+    # type_scale and signature_proof were gated on the CODEX path only. Typography was then the one
+    # pillar of the visual language the shared path never made anyone resolve, and the signature move
+    # was accepted as a sentence with nothing showing it survived the build. Same asymmetry as the
+    # critic-waiver bug above, which is why both directions are pinned here.
+    ("a design plan with no type_scale is refused",
+     {"critic": {"verdict": "consent", "rounds": 2},
+      "design_plan": {k: v for k, v in DESIGN_OK.items() if k != "type_scale"}},
+     False, "type_scale"),
+
+    ("a type_scale whose tiers do not rank is refused",
+     {"critic": {"verdict": "consent", "rounds": 2},
+      "design_plan": dict(DESIGN_OK, type_scale={"display": 18, "title": 24, "body": 14})},
+     False, "not a scale"),
+
+    ("a body size under the legibility floor is refused",
+     {"critic": {"verdict": "consent", "rounds": 2},
+      "design_plan": dict(DESIGN_OK, type_scale={"display": 34, "title": 24, "body": 9})},
+     False, "legibility floor"),
+
+    ("a design plan with no signature_proof is refused",
+     {"critic": {"verdict": "consent", "rounds": 2},
+      "design_plan": {k: v for k, v in DESIGN_OK.items() if k != "signature_proof"}},
+     False, "signature_proof"),
+
+    ("a signature_proof pointing at a MISSING png is refused",
+     {"critic": {"verdict": "consent", "rounds": 2},
+      "design_plan": dict(DESIGN_OK, signature_proof={"slide": 3, "png": "nope.png"})},
+     False, "does not exist"),
 ]
 
 
@@ -104,6 +142,7 @@ def main() -> int:
     passed = failed = 0
     with tempfile.TemporaryDirectory() as td:
         deck = build_deck(Path(td))
+        write_proof(Path(td))
         for name, critic_block, should_pass, needle in CASES:
             gates = dict(critic_block)
             gates.setdefault("design_plan", DESIGN_OK)

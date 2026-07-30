@@ -694,8 +694,11 @@ The helper set, by job:
 - **Placement by measurement:** `image_fx.quiet_region(path)` → the image's calmest ONE-INK region
   + its mean luminance (choose dark vs light ink from data, not eyeballing) · `deckkit.pic_alpha`
   (native picture opacity — a faint plate that keeps its own hues, no scrim shape) ·
-  `deckkit.design_intent(slide, envelope=…, rhyme=…)` (declare a deliberate quiet/baseline/bleed
-  register so the render-time lint audits intent instead of guessing it).
+  `deckkit.design_intent(slide, envelope=…, rhyme=…, weight=…)` (declare a deliberate quiet/baseline/bleed
+  register so the render-time lint audits intent instead of guessing it). **`weight="left"|"right"|
+  "asymmetric"`** declares a deliberately one-sided editorial composition — the art-director move where
+  the opposite half is held as real air. It is the one register whose lint advice ("rebalance") would
+  destroy the design, so it is declarable rather than argued with; undeclared lopsidedness still flags.
 - **Decision / plan / grid:** **`eval_matrix`** (options×criteria scoring grid — `harvey_ball` fifths-fill
   glyphs or ✓/◐/✕ marks, `recommend=` tints the winner) · **`heat_matrix`** (category×category grid coloured
   by value, `scale="seq"|"div"|"risk"`) · **`tier_stack`** (one taper: `mode="funnel"` drop-off /
@@ -1568,7 +1571,12 @@ out explicitly here so they can confirm it.
 **`--deliverables` refuses to run until `<deck-dir>/.deck-gates.json` records that the Step-2
 design plan, the Step-5 critic and the Step-6 provenance pass actually ran.** Write it when the
 critic loop converges — `{"critic": {"verdict": "consent", "rounds": N}}`, the design plan's
-`boldness` / `signature_move` / `carried_by` / `form_ledger`, and the provenance pass's **per-claim
+`boldness` / `signature_move` / `carried_by` / `form_ledger` / `icon_family` / `palette` /
+**`type_scale`** (the three tiers as numbers — SIZE SPRAWL tells authors to draw sizes "from the
+deck's declared type-scale tokens", and this is where they get declared) / **`signature_proof`**
+(`{"slide": N, "png": "<rendered png>"}` — the rendered evidence that the signature move SURVIVED
+the build; a move that exists only as a sentence gets sanded back to the safe catalogue and nobody
+notices, because the plan still reads bravely), and the provenance pass's **per-claim
 `claims` list, never a summary tally** (a tally is written by the same pass that would have skipped
 the refutation). A gate you deliberately skipped is **waived in writing** —
 `{"critic": {"waived": "<reason>"}}` — never omitted; the tool prints the reason, so a skip is

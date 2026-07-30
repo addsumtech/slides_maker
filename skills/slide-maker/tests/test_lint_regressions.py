@@ -255,6 +255,75 @@ def main():
     else:
         ok.append("page numbers and section indices are not treated as claims")
 
+    # ── grouped decks must be SEEN, not silently skipped ──────────────────────
+    # _boxes() walked slide.shapes only, so on a deck whose content lives in groups — every
+    # designer-tool export, and every deck handed over for redesign — it saw one shape per slide.
+    # OVERLAP vanished, OVERFLOW could only name "GROUP ''", and every stat derived from boxes
+    # (size clusters, text coverage, halves, skeleton, occupancy) read empty while the report still
+    # printed "✓ clean". Measured before the fix: identical content, 11 shapes seen ungrouped vs 1
+    # grouped.
+    def _grp(dest, build, group=True):
+        prs = _dk.blank_deck(10, 5.625)
+        s = prs.slides.add_slide(prs.slide_layouts[6])
+        build(s)
+        if group:
+            s.shapes.add_group_shape([x for x in list(s.shapes)])
+        prs.save(str(dest))
+        return dest
+
+    def _defects(s):
+        _dk.text(s, 0.6, 0.4, 8.8, 0.6, [[("Title", 28, _dk.DEEP, True, False)]])
+        _dk.box(s, 1.0, 1.2, 3.5, 2.2, fill="C0362C")
+        _dk.text(s, 7.6, 4.6, 3.2, 0.5, [[("runs off the right edge", 13, _dk.DEEP, False, False)]])
+
+    import sys as _sys
+    _sys.path.insert(0, str(SCRIPTS))
+    import lint_deck as _L
+    from pptx import Presentation as _P
+
+    a = sorted((round(b["l"], 3), round(b["t"], 3), round(b["w"], 3), round(b["h"], 3))
+               for b in _L._boxes(_P(str(_grp(tmp / "g_flat.pptx", _defects, False))).slides[0], 10, 5.625))
+    b = sorted((round(x["l"], 3), round(x["t"], 3), round(x["w"], 3), round(x["h"], 3))
+               for x in _L._boxes(_P(str(_grp(tmp / "g_grp.pptx", _defects, True))).slides[0], 10, 5.625))
+    if a and a == b:
+        ok.append("grouped and ungrouped decks yield IDENTICAL geometry (transform applied)")
+    else:
+        bad.append(f"grouped geometry does not match ungrouped: {len(a)} vs {len(b)} boxes; the "
+                   f"group transform (off/ext/chOff/chExt) is wrong or the walk stopped at the group")
+
+    o = _lint_nr(tmp / "g_grp.pptx")
+    if "OVERFLOW" in o and "GROUP" not in o.split("OVERFLOW")[1][:40]:
+        ok.append("OVERFLOW inside a group names the real shape, not the group")
+    else:
+        bad.append("OVERFLOW on a grouped deck did not resolve to the offending child shape")
+
+    # A group is an AUTHORED unit: a badge straddling a card corner is layering, not a collision.
+    def _composed(s):
+        _dk.box(s, 0.8, 1.5, 3.6, 2.2, fill="FFFFFF", line="DDDDDD")
+        _dk.box(s, 4.0, 1.32, 1.1, 0.42, fill="C0362C")      # badge over the card's top-right
+        _dk.text(s, 4.05, 1.36, 1.0, 0.34, [[("NEW", 10, _dk.WHITE, True, False)]])
+    o = _lint_nr(_grp(tmp / "g_composed.pptx", _composed, True))
+    if "OVERLAP" in o:
+        bad.append("OVERLAP fired INSIDE one group — a group is an authored composition (badge on a "
+                   "card, icon on a panel); flagging it makes the check useless on designed decks")
+    else:
+        ok.append("layering INSIDE one group is not flagged as a collision")
+
+    def _cross(s):
+        _dk.box(s, 1.0, 1.6, 3.0, 1.6, fill="F2F4F8")
+        _dk.text(s, 1.2, 1.8, 2.6, 0.5, [[("card", 12, _dk.DEEP, False, False)]])
+    prs = _dk.blank_deck(10, 5.625)
+    s = prs.slides.add_slide(prs.slide_layouts[6])
+    _cross(s)
+    s.shapes.add_group_shape([x for x in list(s.shapes)])
+    _dk.box(s, 2.2, 2.4, 3.4, 2.0, fill="C0362C")            # OUTSIDE the group
+    prs.save(str(tmp / "g_cross.pptx"))
+    if "OVERLAP" in _lint_nr(tmp / "g_cross.pptx"):
+        ok.append("a collision ACROSS a group boundary is still caught")
+    else:
+        bad.append("a shape colliding with a group's contents is no longer caught — the same-group "
+                   "exemption has widened past the composed unit it was carved for")
+
     # ── the translucent-overlap exemption must stay NARROW ────────────────────
     # venn()'s circles overlap by definition, so OVERLAP fired on every Venn ever built — a hard
     # gate failing on correct output is worse than no gate, because the author starts working

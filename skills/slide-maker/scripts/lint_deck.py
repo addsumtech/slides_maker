@@ -85,11 +85,71 @@ def _no_real_alt(descr):
     return d.endswith((".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".tif", ".tiff"))
 
 
-def _boxes(slide, sw, sh):
+_A = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
+_GROUP_SKIP = []          # (slide#, why) — groups whose geometry cannot be mapped, reported at the end
+
+
+def _group_tf(g):
+    """(dx, dy, sx, sy) mapping a group's CHILD coordinates to slide coordinates, or None.
+
+    A group's children are not in slide space: they live in the group's own child space, declared by
+    chOff/chExt, which the group then maps onto off/ext. Ignoring that is why grouped decks used to
+    read as a single shape — and why simply recursing without the transform would be worse than not
+    recursing, because it would place children confidently in the wrong spot.
+
+    Returns None for a ROTATED or FLIPPED group: the children's axis-aligned boxes no longer are
+    axis-aligned in slide space, and every geometry check here reasons about AABBs. Guessing there
+    would invent overlaps that do not exist, so those subtrees are reported as NOT checked instead.
+    """
+    x = g.find(f".//{_A}xfrm")
+    if x is None:
+        return None
+    if x.get("rot") not in (None, "0") or x.get("flipH") == "1" or x.get("flipV") == "1":
+        return None
+    off, ext = x.find(f"{_A}off"), x.find(f"{_A}ext")
+    cho, che = x.find(f"{_A}chOff"), x.find(f"{_A}chExt")
+    if off is None or ext is None or cho is None or che is None:
+        return None
+    try:
+        cecx, cecy = int(che.get("cx")), int(che.get("cy"))
+        if cecx <= 0 or cecy <= 0:
+            return None
+        sx, sy = int(ext.get("cx")) / cecx, int(ext.get("cy")) / cecy
+        return (int(off.get("x")) - int(cho.get("x")) * sx,
+                int(off.get("y")) - int(cho.get("y")) * sy, sx, sy)
+    except (TypeError, ValueError):
+        return None
+
+
+def _flat_shapes(shapes, tf=(0.0, 0.0, 1.0, 1.0), depth=0, slide_no=None, grp=None):
+    """Yield (leaf_shape, transform) in paint order, descending through groups.
+
+    Paint order is preserved because a group paints its children where the group itself sits in the
+    z-order, so a flat left-to-right walk reproduces it.
+    """
+    for s in shapes:
+        if s.shape_type == MSO_SHAPE_TYPE.GROUP:
+            g = _group_tf(s._element)
+            if g is None or depth >= 6:
+                _GROUP_SKIP.append((slide_no, "rotated/flipped group" if depth < 6
+                                    else "group nested more than 6 deep"))
+                continue
+            dx, dy, sx, sy = g
+            yield from _flat_shapes(s.shapes,
+                                    (tf[0] + tf[2] * dx, tf[1] + tf[3] * dy, tf[2] * sx, tf[3] * sy),
+                                    depth + 1, slide_no, id(s._element))
+        else:
+            yield s, tf, grp
+
+
+def _boxes(slide, sw, sh, slide_no=None):
     out = []
-    for zi, s in enumerate(slide.shapes):
+    for zi, (s, tf, grp) in enumerate(_flat_shapes(slide.shapes, slide_no=slide_no)):
         try:
-            l, t, w, h = s.left / EMU, s.top / EMU, s.width / EMU, s.height / EMU
+            dx, dy, sx, sy = tf
+            l = (s.left * sx + dx) / EMU
+            t = (s.top * sy + dy) / EMU
+            w, h = s.width * sx / EMU, s.height * sy / EMU
         except (TypeError, AttributeError):
             continue
         if not w or not h or w <= 0 or h <= 0:
@@ -159,7 +219,7 @@ def _boxes(slide, sw, sh):
                     "st": str(s.shape_type).split()[0], "txt": txt, "full": full, "size": size or 12.0,
                     "paras": paras, "solid": s.shape_type in SOLID, "align": align, "anchor": anchor,
                     "text": bool(s.has_text_frame and txt), "descr": descr, "mathfont": mathfont,
-                    "title_ph": tph, "bg": (w * h) >= 0.95 * (sw * sh)})
+                    "title_ph": tph, "bg": (w * h) >= 0.95 * (sw * sh), "grp": grp})
     return out
 
 
@@ -1065,6 +1125,26 @@ _PIXEL_CHECKS = ("TEXT NOT VISIBLE", "CAPTION NOT ALIGNED", "TEXT-ON-IMAGE CONTR
                  "colour/value pacing", "FLAT RHYTHM")
 
 
+def _report_group_skip():
+    """Say which slides' geometry could NOT be mapped, in the same voice as the pixel skip.
+
+    A rotated group's children are no longer axis-aligned in slide space, and every check here
+    reasons about axis-aligned boxes. Refusing to guess is right; refusing SILENTLY is not — a
+    "0 findings ✓ clean" that really means "this slide was never examined" is the single worst
+    thing this tool can print, because it is indistinguishable from a deck that is actually fine.
+    """
+    if not _GROUP_SKIP:
+        return []
+    by_slide = {}
+    for sn, why in _GROUP_SKIP:
+        by_slide.setdefault(sn, set()).add(why)
+    for sn in sorted(by_slide, key=lambda v: (v is None, v)):
+        print("  [skipped] slide %s: %s — its contents were NOT geometry-checked (overlap, overflow, "
+              "occlusion, density and type-scale all skip it). Ungroup it, or remove the rotation, "
+              "to have it examined." % (sn if sn is not None else "?", ", ".join(sorted(by_slide[sn]))))
+    return sorted((sn, sorted(w)) for sn, w in by_slide.items())
+
+
 def _report_pixel_skip():
     if _SKIP.get("reason"):
         print("  [skipped] %s — NOT checked: %s" % (_SKIP["reason"], ", ".join(_PIXEL_CHECKS)))
@@ -1225,8 +1305,14 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False):
         # genuinely extreme case (opposite half >80% full, this half <4%) and NOT on a quiet register
         # (cover / divider / single-hero-stat legitimately concentrate ink). Bottom-whitespace is normal
         # and deliberately NOT flagged; only a near-empty TOP or a near-empty LEFT/RIGHT.
+        # The comment above promised a quiet-register exemption that the code never implemented, so
+        # a deliberately asymmetric or quiet slide was flagged with no way to answer — and the advice
+        # ("rebalance") is the one piece of guidance that would wreck an editorial composition. Both
+        # envelope= and the explicit weight= now silence it, the same way UNDERFILLED reads envelope.
+        intent = r.get("intent") or {}
         hv = r.get("halves")
-        if mode != "surface" and i > 0 and r["load"] >= 8 and hv:
+        if (mode != "surface" and i > 0 and r["load"] >= 8 and hv
+                and not intent.get("weight") and not intent.get("envelope")):
             if hv["left"] < 0.05 and hv["right"] > 0.33:
                 warns.append(f"LOPSIDED: slide {i+1} content sits entirely in the RIGHT half — the left "
                              f"is a dead band; rebalance or use the space (rhythm/whitespace)")
@@ -1477,6 +1563,7 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False):
 
 
 def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=False):
+    _GROUP_SKIP.clear()          # a second lint() in one process must not inherit the first's skips
     try:
         prs = Presentation(path)
     except Exception:
@@ -1503,7 +1590,7 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
                 except Exception:
                     pass
                 break
-        bx = _boxes(slide, sw, sh)
+        bx = _boxes(slide, sw, sh, slide_no=si + 1)
         try:
             stats_rows.append(_slide_stats(slide, bx, sw, sh))
         except Exception as exc:
@@ -1826,6 +1913,15 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
                                   and abs(a["w"] - b["w"]) < 0.06 and abs(a["h"] - b["h"]) < 0.06)
                     if both_glass:
                         continue
+                    # SAME GROUP = one composed unit. Grouping is an authoring act: it says "these
+                    # shapes are one thing and move together", which is precisely how layering is
+                    # built — a badge straddling a card corner, an icon disc on a panel, a composed
+                    # illustration. Now that the walker descends into groups, flagging those pairs
+                    # would turn every designed deck into a wall of findings and make the check
+                    # useless on exactly the decks worth linting. A child colliding with anything
+                    # OUTSIDE its group is still caught, which is the collision that is not authored.
+                    if a["grp"] is not None and a["grp"] == b["grp"]:
+                        continue
                     finds.append(f"OVERLAP {round(ix,2)}x{round(iy,2)}in  {a['st']}'{a['txt']}' x {b['st']}'{b['txt']}'"
                                  f" — move/shrink one so they separate (≥0.12in gap) or nest one fully inside the other")
         # 3) footer-zone reservation: the bottom footer band is deck chrome — NO content block (solid
@@ -2088,6 +2184,7 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
     tail = ("" if total else "  ✓ clean (no hard findings)") + (f"  ·  {warn_total} warning(s)" if warn_total else "")
     print(f"\n{path}: {total} layout finding(s){tail}")
     _report_pixel_skip()   # "clean" must never mean "clean, but three checks never ran"
+    _report_group_skip()   # nor "clean, but one slide's shapes were never mapped"
     if _STATS_ERR:
         print("  [BROKEN] per-slide statistics crashed on %d slide(s) — NOT checked on them: "
               "TEXT WALL, LAYOUT SAMENESS, UNDERFILLED, FLAT RHYTHM, body-size floor. This is a "
