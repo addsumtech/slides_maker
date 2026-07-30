@@ -454,11 +454,39 @@ def _table_text_bbox(cap, side_by_kind, blocks, body, cap_rects, R, hdr, ftr):
     if not cand:
         return None
     cand.sort(key=lambda r: r.y0, reverse=(side == "above"))
+    # A SECTION HEADING is neither body prose nor a caption, so it passes every filter above and
+    # the contiguous run walks straight into it. Measured: a segmentation-results table absorbed
+    # the following "3.3 Ablation Study", and the crop showed a results table with a stray heading
+    # under it. Two cheap discriminators, either of which ends the run:
+    #   · SIZE — table cells are usually set smaller than body text (7.0pt vs a 10.0pt heading in
+    #     the measured case), so a row markedly larger than the run's first row is not a cell row;
+    #   · NUMBERING — "3.3" / "4.1.2" alone on a line is a section number, never a table cell.
+    # The size test alone would fail on a body-size table, and the numbering test alone would fail
+    # on an unnumbered heading, so both are applied.
+    def _row_size(r):
+        best = 0.0
+        for b in blocks:
+            if fitz.Rect(b["bbox"]) == r:
+                for l in b.get("lines", ()):
+                    for s in l.get("spans", ()):
+                        best = max(best, s.get("size", 0.0))
+        return best
+
+    def _looks_heading(r):
+        for b in blocks:
+            if fitz.Rect(b["bbox"]) == r:
+                first = _first_line(b).strip()
+                return bool(re.fullmatch(r"\d+(?:\.\d+)*\.?", first))
+        return False
+
     band = [cand[0]]                                  # contiguous run adjacent to the caption
+    base_size = _row_size(cand[0]) or 99.0
     for r in cand[1:]:
         prev = band[-1]
         gap = (r.y0 - prev.y1) if side == "below" else (prev.y0 - r.y1)
         if gap > 1.8 * max(prev.height, r.height):
+            break
+        if _row_size(r) > base_size + 1.5 or _looks_heading(r):
             break
         band.append(r)
     box = fitz.Rect(band[0])
@@ -507,8 +535,28 @@ def find_figures(pdf, page_no=None):
             r = fitz.Rect(b["bbox"])
             return len(b.get("lines", [])) <= 2 and (r.y0 < R.y0 + margin or r.y1 > R.y1 - margin)
 
+        def _is_heading(b):
+            """A SECTION HEADING is neither body prose, chrome, nor a caption, so it survives every
+            other filter and the grow step unions it into the figure. Measured: a segmentation
+            results table's crop absorbed the following "3.3 Ablation Study", so the slide showed a
+            results table with a stray heading beneath it.
+
+            Keyed on the section NUMBER *and* body-size type. The number alone would also match a
+            table cell that happens to read "3.3" (a Dice score); requiring body-size excludes it,
+            because cells are set smaller than body text (measured 7.0pt cells vs a 10.0pt
+            heading). A size/boldness test alone would match a bolded "Ours" row."""
+            first = _first_line(b).strip()
+            if not re.match(r"^\d+(?:\.\d+)*\.?(?:\s|$)", first):
+                return False
+            if len(b.get("lines", [])) > 2:
+                return False
+            big = max((s.get("size", 0.0) for l in b.get("lines", ())
+                       for s in l.get("spans", ())), default=0.0)
+            return big >= modal - 0.5
+
         nonbody = [fitz.Rect(b["bbox"]) for b in blocks
                    if not _is_body(b, modal, R.width) and not _is_chrome(b)
+                   and not _is_heading(b)
                    and not any(fitz.Rect(b["bbox"]).intersects(cr) for cr in cap_rects)]
         gfx = _graphics(page, R)
         hdr, ftr = R.y0 + 0.045 * R.height, R.y1 - 0.045 * R.height
@@ -660,7 +708,8 @@ def find_figures(pdf, page_no=None):
     return out
 
 
-def _emit(pi, label, kind, side, box, caption, gfx, body, R, cap_rects=(), self_cap=None):
+def _emit(pi, label, kind, side, box, caption, gfx, body, R, cap_rects=(), self_cap=None,
+          body_pt=8.0):
     """Package a detection + run cheap geometric validity checks so the caller can flag a
     suspect crop. The crucial mislocalization check is `foreign_caption`: if the crop
     swallows a DIFFERENT figure/table's caption it has bled into a neighbour — the silent
@@ -671,6 +720,17 @@ def _emit(pi, label, kind, side, box, caption, gfx, body, R, cap_rects=(), self_
     ar = box.width / box.height if box.height else 0
     foreign = any(cr is not self_cap and (cr & box).get_area() > 0.5 * cr.get_area()
                   for cr in cap_rects)
+    # How big this crop can get on a slide, and therefore whether it stays READABLE. A paper is
+    # read at 100% on A4; a slide is read across a room. The band is deckkit's own safe rect, so
+    # `mag` is the real magnification available and `slide_pt` is what the source's body type
+    # becomes at it. Measured on real papers: a paper table is ~4.8in wide, so width alone allows
+    # only ~1.78x -- HEIGHT is what binds, and past ~2.2in (about 12 rows incl. header) the crop
+    # falls under ~14pt and cannot be read projected. That is the crop-whole vs subset decision,
+    # and it is arithmetic rather than taste -- so it is printed instead of left to judgement.
+    BAND_W, BAND_H = 8.56, 3.80
+    w_in, h_in = box.width / 72.0, box.height / 72.0
+    mag = min(BAND_W / w_in, BAND_H / h_in) if w_in > 0 and h_in > 0 else 0.0
+    slide_pt = body_pt * mag
     checks = {
         "graphics_coverage": round(min(gcov, 1.0), 2),
         "body_text_overlap": round(bover, 2),
@@ -680,9 +740,21 @@ def _emit(pi, label, kind, side, box, caption, gfx, body, R, cap_rects=(), self_
     }
     checks["ok"] = (checks["graphics_coverage"] >= 0.40 and checks["body_text_overlap"] <= 0.20
                     and 0.08 <= ar <= 14 and checks["in_page"] and not foreign)
+    # A table's caption IS its meaning -- which metric, what bold denotes, which datasets. The
+    # body bbox deliberately excludes it (see _table_text_bbox), which is right for MEASURING the
+    # table and wrong for a slide: a cropped results table with no caption is an untitled table.
+    # So the caption-inclusive box travels alongside and the renderer can opt into it.
+    boxc = fitz.Rect(box)
+    if self_cap is not None:
+        boxc |= self_cap
+        boxc &= R
     return {"page": pi + 1, "label": label, "kind": kind, "side": side,
             "bbox": [round(box.x0, 1), round(box.y0, 1), round(box.x1, 1), round(box.y1, 1)],
-            "caption": caption, "checks": checks}
+            "bbox_caption": [round(boxc.x0, 1), round(boxc.y0, 1),
+                             round(boxc.x1, 1), round(boxc.y1, 1)],
+            "caption": caption, "checks": checks,
+            "fit": {"mag": round(mag, 2), "slide_pt": round(slide_pt, 1),
+                    "legible_cropped": bool(slide_pt >= 14.0)}}
 
 
 def _content_edges(png_path, edge_px=3, tol=26, frac=0.18):
@@ -714,7 +786,7 @@ def _content_edges(png_path, edge_px=3, tol=26, frac=0.18):
     return out
 
 
-def render_figure(pdf, bbox, out, dpi=300, pad=3, do_trim=True):
+def render_figure(pdf, bbox, out, dpi=300, pad=3, do_trim=True, keep_rect=None):
     """Render a detected figure bbox (page points) to PNG, then SELF-CHECK the actual pixels and
     auto-correct the two universal partial-crop failures before returning:
       • BLEED — shrink the box away from any caption / lone page-number text block that would
@@ -735,6 +807,12 @@ def render_figure(pdf, bbox, out, dpi=300, pad=3, do_trim=True):
         rb = fitz.Rect(b["bbox"]); txt = _first_line(b).strip()
         if not (_CAP.match(txt) or (txt.isdigit() and len(txt) <= 4)):
             continue
+        # the figure's OWN caption is content here, not bleed -- only FOREIGN captions get shrunk
+        # away. Without this, asking for a caption-inclusive crop silently gets the caption cut
+        # back off again by the bleed guard.
+        if keep_rect is not None and rb.intersects(keep_rect) \
+                and (rb & keep_rect).get_area() > 0.5 * rb.get_area():
+            continue
         infl = fitz.Rect(box.x0 - pad, box.y0 - pad, box.x1 + pad, box.y1 + pad)
         if not infl.intersects(rb):
             continue
@@ -743,8 +821,28 @@ def render_figure(pdf, bbox, out, dpi=300, pad=3, do_trim=True):
             box.y0 = max(box.y0, rb.y1 + 2); bled = True
         elif rb.y0 >= midy and rb.y0 - 1 < box.y1 + pad:      # below-ish → pull bottom up
             box.y1 = min(box.y1, rb.y0 - 2); bled = True
+    # --- pad CEILING: never grow the clip into FOREIGN text -------------------------------
+    # The CLIP guard below grows the pad whenever it sees content flush at an edge, and prose that
+    # merely sits next to the figure is content. Measured: a table crop grew downward and pulled in
+    # the next section heading ("3.3 Ablation Study"), so the slide showed a results table with a
+    # stray heading under it. Cap each side at the nearest text block that is strictly OUTSIDE the
+    # box and is not the caption we were asked to keep, so growth stops 2pt short of it.
+    ceil = {"top": pad + 30, "bottom": pad + 30, "left": pad + 30, "right": pad + 30}
+    for b in _text_blocks(page):
+        rb = fitz.Rect(b["bbox"])
+        if keep_rect is not None and rb.intersects(keep_rect) \
+                and (rb & keep_rect).get_area() > 0.5 * rb.get_area():
+            continue                                        # our own caption is not foreign
+        if rb.intersects(box):
+            continue                                        # part of the figure's own content
+        if rb.y0 >= box.y1 and _xshare(rb, box) > 0.15:
+            ceil["bottom"] = min(ceil["bottom"], max(0.0, rb.y0 - box.y1 - 2))
+        if rb.y1 <= box.y0 and _xshare(rb, box) > 0.15:
+            ceil["top"] = min(ceil["top"], max(0.0, box.y0 - rb.y1 - 2))
+
     # --- CLIP guard: render, read edges, grow pad on under-covered sides, retry ---
-    pads = {"top": pad, "bottom": pad, "left": pad, "right": pad}
+    pads = {"top": min(pad, ceil["top"]), "bottom": min(pad, ceil["bottom"]),
+            "left": pad, "right": pad}
     status = "ok"
     for _ in range(4):
         clip = fitz.Rect(box.x0 - pads["left"], box.y0 - pads["top"],
@@ -757,8 +855,8 @@ def render_figure(pdf, bbox, out, dpi=300, pad=3, do_trim=True):
               "left": clip.x0 <= R.x0 + 0.5, "right": clip.x1 >= R.x1 - 0.5}
         grew = False
         for e in edges:
-            if not at[e] and pads[e] < pad + 30:               # cap total growth
-                pads[e] += 10; grew = True
+            if not at[e] and pads[e] < ceil[e]:                # cap at foreign text, then total
+                pads[e] = min(pads[e] + 10, ceil[e]); grew = True
         if not grew:
             status = "CLIP?"                                   # flush at a page bound — genuine
             break
@@ -779,27 +877,121 @@ def render_figure(pdf, bbox, out, dpi=300, pad=3, do_trim=True):
     return out
 
 
+def print_tables(pdf, page_no=None):
+    """Structured table extraction via PyMuPDF's find_tables(), reported against the number of
+    `Table N` CAPTIONS in the document -- because the recall is not good enough to trust silently.
+
+    Measured on real papers: 5/6 tables on one, 0/5 on another whose tables are booktabs (rules
+    only, no cell grid). A tool that returns 0 and prints nothing else reads as "this paper has no
+    tables", which is the failure this gap report exists to prevent. So the caption count is the
+    denominator and the shortfall is stated in the output, not left for the caller to notice.
+
+    Use the rows for the 2-6 numbers a slide actually ASSERTS -- each is then verifiable verbatim
+    against the text layer. Do not retype a whole table from this: the structure is only as good
+    as the detector, and a value that lands in the wrong row is invisible once it is on a slide.
+    """
+    doc = _open(pdf)
+    pages = [page_no - 1] if page_no else range(doc.page_count)
+    caps, found, collapsed_tables = 0, 0, 0
+    for pi in pages:
+        page = doc[pi]
+        for b in _text_blocks(page):
+            m = re.match(r"\s*(TABLE|Table)\s+([IVX\d]+)", _first_line(b).strip())
+            if m:
+                caps += 1
+        try:
+            tabs = page.find_tables().tables
+        except Exception as e:
+            print(f"  p{pi + 1}: find_tables unavailable ({e})")
+            continue
+        for k, tb in enumerate(tabs):
+            found += 1
+            data = tb.extract()
+            bb = [round(v, 1) for v in tb.bbox]
+            # COLLAPSED grid: a cell holding several numeric tokens means the row/column split
+            # failed and the whole column landed in one string. Measured on a real paper:
+            # find_tables reported "1 rows x 3 cols" for a table with 15 visible rows, cells like
+            # '88.26 83.56 92.25 88'. Fed to deckkit.table() that is not a table, it is a lie with
+            # a grid drawn round it -- and every value is in the wrong place. Worth more than a
+            # row count, so it is flagged per table.
+            collapsed = sum(1 for row in data for c in row
+                            if len(re.findall(r"\d+\.\d+|\d+", c or "")) >= 3)
+            flag = ("   [COLLAPSED: {} cell(s) hold 3+ numbers -- the row/column split FAILED; "
+                    "do NOT use these as rows]".format(collapsed)) if collapsed else ""
+            print(f"[p{pi + 1} t{k}] {tb.row_count} rows x {tb.col_count} cols  bbox={bb}{flag}")
+            for row in data[: min(4, len(data))]:
+                print("      " + str([(c or "").strip()[:20] for c in row]))
+            if len(data) > 4:
+                print(f"      ... {len(data) - 4} more row(s)")
+            if collapsed:
+                collapsed_tables += 1
+    doc.close()
+    usable = found - collapsed_tables
+    print(f"\n{found} table(s) extracted structurally ({usable} with an intact grid, "
+          f"{collapsed_tables} collapsed) · {caps} `Table N` caption(s) present")
+    if caps > found:
+        print(f"⚠ SHORTFALL {caps - found}: that many captioned tables were NOT recovered as data "
+              f"(booktabs/rule-only tables defeat find_tables). For those, crop the region as "
+              f"evidence and retype only the numbers you assert — do NOT report this paper as "
+              f"having fewer tables than it has.")
+    elif found > caps:
+        print(f"note: {found - caps} more structures than captions — find_tables also picks up "
+              f"figure legends and layout grids; check each before using it as a table.")
+    return found, caps
+
+
 def _print_figures(pdf, page_no=None):
     figs = find_figures(pdf, page_no)
     if not figs:
         print("no figures detected (try `page`/`crop`, or the page may be text-only/scanned)")
     for i, f in enumerate(figs):
         warn = "" if f["checks"]["ok"] else "  ⚠ CHECK (verify by viewing)"
+        fit = f.get("fit") or {}
+        tag = ""
+        if fit:
+            tag = f" fit={fit['mag']}x->{fit['slide_pt']}pt"
+            if not fit["legible_cropped"]:
+                if (f["kind"] or "").startswith("tab"):
+                    tag += ("  [too small cropped WHOLE -> keep the crop as the evidence and "
+                            "retype ONLY the numbers you assert, or subset rows/cols natively]")
+                else:
+                    tag += ("  [the figure's own labels land near {:.0f}pt -> view the render; "
+                            "if unreadable, lift the ONE sub-panel that carries the point]"
+                            .format(fit["slide_pt"]))
         print(f"[{i}] p{f['page']} {f['label'] or '(figure)'} {f['bbox']} "
               f"cov={f['checks']['graphics_coverage']} bodyov={f['checks']['body_text_overlap']} "
-              f"ar={f['checks']['aspect']}{warn}")
+              f"ar={f['checks']['aspect']}{tag}{warn}")
         if f["caption"]:
             print(f"      {f['caption']!r}")
     return figs
 
 
-def _autofig(pdf, out_dir, dpi=300):
+def _crop_args(f, with_caption=None):
+    """Which bbox to render, and whether to protect the figure's own caption from the bleed guard.
+
+    A TABLE defaults to caption-INCLUDED: the caption is what says which metric, what bold means,
+    which datasets -- a cropped results table without it is an untitled table. A FIGURE defaults
+    to caption-excluded, which is the long-standing behaviour (its axis labels already sit inside
+    the box, and the prose caption belongs in the slide's own assertion line).
+    """
+    if with_caption is None:
+        with_caption = (f["kind"] or "").startswith("tab")
+    if with_caption and f.get("bbox_caption"):
+        bb = f["bbox_caption"]
+        keep = fitz.Rect(*bb)
+    else:
+        bb, keep = f["bbox"], None
+    return bb, keep
+
+
+def _autofig(pdf, out_dir, dpi=300, with_caption=None):
     os.makedirs(out_dir, exist_ok=True)
     figs = find_figures(pdf)
     for i, f in enumerate(figs):
         lab = (f["label"] or f"fig_{i}").replace(" ", "").replace(".", "")
         out = os.path.join(out_dir, f"p{f['page']}_{lab}.png")
-        render_figure(pdf, [f["page"], *f["bbox"]], out, dpi=dpi)
+        bb, keep = _crop_args(f, with_caption)
+        render_figure(pdf, [f["page"], *bb], out, dpi=dpi, keep_rect=keep)
         flag = "" if f["checks"]["ok"] else "  ⚠ verify"
         print(f"    -> {out}{flag}")
     return figs
@@ -819,6 +1011,10 @@ def _main(argv):
             flags["dpi"] = int(a[i + 1]); i += 2
         elif a[i] == "--frac":
             flags["frac"] = True; i += 1
+        elif a[i] == "--with-caption":
+            flags["with_caption"] = True; i += 1
+        elif a[i] == "--no-caption":
+            flags["no_caption"] = True; i += 1
         elif a[i] == "--min-px":
             flags["min_px"] = int(a[i + 1]); i += 2
         else:
@@ -855,6 +1051,8 @@ def _main(argv):
                     dpi=flags.get("dpi", 300), frac=flags.get("frac", False))
     elif cmd == "images":
         extract_images(pos[0], int(pos[1]), pos[2], min_px=flags.get("min_px", 120))
+    elif cmd == "tables":                        # structured table data + an explicit gap report
+        print_tables(pos[0], int(pos[1]) if len(pos) > 1 else None)
     elif cmd == "figures":                       # auto-detect figures (optionally one page)
         _print_figures(pos[0], int(pos[1]) if len(pos) > 1 else None)
     elif cmd == "figure":                        # render detected figure #idx -> out.png
@@ -864,7 +1062,10 @@ def _main(argv):
             print(f"index {idx} out of range (found {len(figs)} figures); run `figures` first")
             return 1
         f = figs[idx]
-        render_figure(pos[0], [f["page"], *f["bbox"]], pos[2], dpi=flags.get("dpi", 300))
+        wc = True if flags.get("with_caption") else (False if flags.get("no_caption") else None)
+        bb, keep = _crop_args(f, wc)
+        render_figure(pos[0], [f["page"], *bb], pos[2], dpi=flags.get("dpi", 300),
+                      keep_rect=keep)
     elif cmd == "autofig":                        # render ALL detected figures to a dir
         _autofig(pos[0], pos[1], dpi=flags.get("dpi", 300))
     else:
