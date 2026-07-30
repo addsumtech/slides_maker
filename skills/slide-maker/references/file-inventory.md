@@ -64,6 +64,7 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   run it at hand-off once the user confirms the deck is final (PNGs always stay in `render/`); finds LibreOffice cross-platform
   or set `SOFFICE` (`.sh` is a shim). `check_env.py` — preflight if a render fails. `inspect_template.py`
   — a template's layouts/placeholders/logos. `requirements.txt` / `install_skill.py` — deps / installer.
+- **`sigs.py`** — one lookup, many helpers: exact signature + docstring head for every named deckkit/designed_charts helper, plus the run-tuple and RGBColor call-shape contracts. `--search TERM` to find one, `--list` for all, `--full` for whole docstrings. Use it BEFORE writing a build script; reading deckkit.py one function at a time costs a round-trip per question.
 - `lint_deck.py` — deterministic **render-time** layout lint and complement to deckkit's build-time
   `lint_layout`: re-checks geometry on the final file (off-slide overflow · block/image collision
   [containment excluded] · footer-zone intrusion · text-past-card · uneven rows) AND adds the

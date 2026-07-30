@@ -477,6 +477,41 @@ ok("dc.radar (5 axes, 2 series, zero-anchored)",
                     [("x", [1, 2, 3, 4, 5]), ("y", [5, 4, 3, 2, 1])], axis_range=(0, 5), highlight=1))
 raises("radar refuses 9 axes (use small_multiples)",
        lambda: dc.radar(os.path.join(TMP, "_x.png"), [f"a{i}" for i in range(9)], [("s", [1] * 9)]))
+# sigs.py is the one-lookup call-contract tool. It must resolve real names, REFUSE unknown ones
+# (a typo reading as "no such helper" is how a helper gets hand-rolled), and cover BOTH modules.
+def _sigs(*args):
+    import subprocess
+    return subprocess.run(
+        [sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "sigs.py"), *args],
+        capture_output=True, text=True)
+
+
+def _sigs_resolves_deckkit():
+    r = _sigs("text")
+    assert r.returncode == 0, f"sigs failed on a real helper: {r.stderr[:120]}"
+    assert "deckkit.text(" in r.stdout, "signature line missing"
+
+
+def _sigs_resolves_designed_charts():
+    assert "designed_charts.distribution(" in _sigs("distribution").stdout
+
+
+def _sigs_always_prints_contracts():
+    assert "SIXTH item" in _sigs("box").stdout, "run-tuple contract missing"
+    assert "RGBColor" in _sigs("box").stdout, "colour-type contract missing"
+
+
+def _sigs_refuses_a_typo():
+    r = _sigs("sankeyy")
+    assert r.returncode == 1, "an unknown helper name exited 0 — a typo would read as 'no such helper'"
+    assert "did you mean sankey" in r.stderr, f"no near-miss suggestion: {r.stderr[:120]}"
+
+
+ok("sigs resolves a deckkit helper", _sigs_resolves_deckkit)
+ok("sigs resolves a designed_charts helper", _sigs_resolves_designed_charts)
+ok("sigs prints the call-shape contracts every time", _sigs_always_prints_contracts)
+ok("sigs REFUSES an unknown name and suggests the near miss", _sigs_refuses_a_typo)
+
 # TOFU GATE: matplotlib draws a hollow box for a glyph the font lacks and only WARNS, so a caption
 # or a caller-supplied label can ship as ▯▯▯ with every gate green — radar's own range note did
 # exactly that. Both directions matter: the gate is worthless if it stops firing, and unusable if
