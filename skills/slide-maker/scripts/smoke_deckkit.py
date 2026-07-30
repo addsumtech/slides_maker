@@ -477,6 +477,36 @@ ok("dc.radar (5 axes, 2 series, zero-anchored)",
                     [("x", [1, 2, 3, 4, 5]), ("y", [5, 4, 3, 2, 1])], axis_range=(0, 5), highlight=1))
 raises("radar refuses 9 axes (use small_multiples)",
        lambda: dc.radar(os.path.join(TMP, "_x.png"), [f"a{i}" for i in range(9)], [("s", [1] * 9)]))
+# TOFU GATE: matplotlib draws a hollow box for a glyph the font lacks and only WARNS, so a caption
+# or a caller-supplied label can ship as ▯▯▯ with every gate green — radar's own range note did
+# exactly that. Both directions matter: the gate is worthless if it stops firing, and unusable if
+# it fires on text the font can actually draw.
+# U+E000 (Private Use Area) is unmapped in every font, so this assertion is platform-STABLE. The
+# obvious test — CJK text with a Latin font — is not: it passes on macOS (Times New Roman exists, so
+# matplotlib resolves it and drops the CJK) and would fail on a CI box where that face is absent and
+# the stack falls through to Noto CJK, which draws the glyphs fine. Same code path, portable input.
+raises("a glyph the resolved font cannot draw is refused, not shipped as tofu",
+       lambda: dc.distribution(os.path.join(TMP, "_x.png"),
+                               [("label" + chr(0xE000), [1, 2, 3, 4, 5])]))
+raises("the tofu gate covers CALLER-supplied labels in any recipe, not just captions",
+       lambda: dc.marimekko(os.path.join(TMP, "_x.png"), [("seg" + chr(0xE000), 10, [5, 5])],
+                            ["x", "y"]))
+ok("plain ASCII chart text still saves",
+   lambda: dc.distribution(os.path.join(TMP, "_tf.png"), [("before-after", [1, 2, 3, 4, 5])]))
+ok("radar's own range note carries no symbol glyph",
+   lambda: dc.radar(os.path.join(TMP, "_tf2.png"), ["a", "b", "c"], [("s", [1, 2, 3])],
+                    axis_range=(0, 3)))
+# A polar axis MIRRORS a negative radius onto the opposite spoke and runs a too-large one off the
+# ring — the drawn shape stops matching the data while still looking plausible.
+raises("radar refuses a value below the declared range",
+       lambda: dc.radar(os.path.join(TMP, "_x.png"), ["a", "b", "c"], [("s", [-5, 1, 2])],
+                        axis_range=(0, 3)))
+raises("radar refuses a value above the declared range",
+       lambda: dc.radar(os.path.join(TMP, "_x.png"), ["a", "b", "c"], [("s", [1, 2, 7])],
+                        axis_range=(0, 3)))
+ok("radar accepts values exactly on both bounds",
+   lambda: dc.radar(os.path.join(TMP, "_rb.png"), ["a", "b", "c"], [("s", [0, 1.5, 3])],
+                    axis_range=(0, 3)))
 raises("radar refuses 4 overlaid series",
        lambda: dc.radar(os.path.join(TMP, "_x.png"), ["a", "b", "c"],
                         [("1", [1, 2, 3]), ("2", [1, 2, 3]), ("3", [1, 2, 3]), ("4", [1, 2, 3])]))

@@ -671,7 +671,10 @@ The helper set, by job:
   `native_dual_axis` / `native_donut` / `native_pareto` / `native_bubble` (feed them straight from a
   spreadsheet with **`series_from_csv(path, x_col, y_cols)`** → `(categories, series)`, stdlib, no pandas),
   plus the raster recipes in `scripts/designed_charts.py` (incl. **`waterfall`** — a total's rise/fall/
-  total walk, semantic up/down colour) — pick per `references/data-viz.md`.
+  total walk, semantic up/down colour; **`distribution`** — the form to use when a value is a mean of
+  MEASUREMENTS rather than a count, since a bar of sample means hides n, shape and outliers;
+  **`marimekko`** — size *and* share at once; **`radar`** — a profile across 3–8 axes, ≤3 series)
+  — pick per `references/data-viz.md`.
 - **Walkthrough / hierarchy / comparison-grid:** **`annotated_figure`** (a real figure + numbered
   markers + a numbered caption rail + optional magnified inset — the guided figure walkthrough the
   integral-figure rule kept demanding by hand) · **`small_multiples`** (identical mini native charts
@@ -1036,7 +1039,10 @@ its block into the ticks** (add `--selfread` / `--static` to match the deck's mo
 MECHANICAL half — speaker-notes coverage (1), build timing present/absent (2), every `build:`
 docstring actually having `Build.step` calls (3b), native charts + `equation_native` (4), the deck
 carrying an as-of date (7), **meta-annotations and unfilled `<slot>`/`{slot}` template text leaked
-onto a slide (8)**. Items 2, 7 and 10 are **advisory** — whether builds were opted in, whether
+onto a slide (8)**. With `--build` it also reads the SCRIPT: a literal stride constant in a placement
+loop (the #1 geometry defect), and a **bar of sample means** — a computed mean/median fed to a
+column/bar `native_chart`, which hides n, the spread and the outliers; the fix is
+`designed_charts.distribution`. Items 2, 7 and 10 are **advisory** — whether builds were opted in, whether
 any claim is time-bound, and whether a font exists on the PRESENTER's machine are all facts absent
 from the file, and a check that fails on what it cannot know is one people learn to ignore. Exit 1 means not ready;
 `NOT CHECKED` + exit 2 means it could not run, which is never the same as clean.

@@ -360,6 +360,69 @@ def check_box_geometry(prs):
 # Primitives that DERIVE a stack's geometry from the space available, so gaps and pitch come out
 # right by construction. SKILL.md's rule is "derive the stack pitch from the region — never
 # `block_h + 0.02`"; these are what "derive" means in code.
+_MEAN_FNS = {"mean", "average", "avg", "nanmean", "median", "nanmedian"}
+
+
+def check_bar_of_means(build_path):
+    """A BAR of sample means — the one chart choice the literature calls a defect, not a taste.
+
+    A bar's length encodes a value filling the range from zero, which is a claim about a COUNT. When
+    the value is instead the mean of measurements, the bar hides n, the shape of the spread and any
+    outlier, and invites reading two bar heights as if the underlying samples did not overlap
+    (Nature Methods, *Kick the bar chart habit*; PLOS Biology, *Beyond Bar and Line Graphs*).
+    `designed_charts.distribution` is the replacement, and it picks box vs mean±error by n itself.
+
+    Detected structurally, not by naming convention: the script computes a mean/median AND feeds that
+    same variable to a column/bar `native_chart`. Deliberately narrow — a bar of COUNTS never trips
+    it, and a LINE of means (a trend of averages, entirely legitimate) never trips it either.
+
+    ADVISORY, not FAIL: a mean over a full POPULATION rather than a sample is a fair bar, and nothing
+    in the file distinguishes the two. Failing on that would train people to ignore the tool.
+    """
+    if not build_path:
+        return "NOT CHECKABLE", "no --build script given"
+    try:
+        src = Path(build_path).read_text()
+        tree = ast.parse(src)
+    except (OSError, SyntaxError) as e:
+        return "NOT CHECKABLE", f"build script unreadable ({type(e).__name__})"
+
+    mean_vars = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Assign):
+            continue
+        calls = [c for c in ast.walk(node.value) if isinstance(c, ast.Call)]
+        names = {(c.func.attr if isinstance(c.func, ast.Attribute)
+                  else c.func.id if isinstance(c.func, ast.Name) else "") for c in calls}
+        if names & _MEAN_FNS:
+            for tgt in node.targets:
+                mean_vars |= {s.id for s in ast.walk(tgt) if isinstance(s, ast.Name)}
+
+    hits = []
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "native_chart"):
+            continue
+        kind = next((k.value.value for k in node.keywords
+                     if k.arg == "kind" and isinstance(k.value, ast.Constant)), "line_markers")
+        if not str(kind).startswith(("column", "bar")):
+            continue
+        used = {s.id for a in node.args for s in ast.walk(a) if isinstance(s, ast.Name)}
+        used |= {s.id for k in node.keywords for s in ast.walk(k.value) if isinstance(s, ast.Name)}
+        shared = sorted(used & mean_vars)
+        if shared:
+            hits.append((node.lineno, kind, shared))
+    if not hits:
+        return "PASS", ("no bar/column chart is fed a computed mean"
+                        if mean_vars else "no means computed in the build")
+    ln, kind, shared = hits[0]
+    return "ADVISORY", (f"line {ln}: native_chart(kind={kind!r}) is fed {', '.join(shared)}, which "
+                        f"holds a computed mean/median — a bar of SAMPLE means hides n, the spread "
+                        f"and outliers. Use designed_charts.distribution (box at n>=5, mean+/-error "
+                        f"at n=3-4). Ignore only if these are POPULATION means, not a sample"
+                        + (f"; {len(hits)-1} more" if len(hits) > 1 else ""))
+
+
 DERIVERS = ("vstack", "rows", "columns", "content_band", "spaced_centers", "bottom_callout",
             "measure_text", "measure_bullets", "measure_callout", "fit_text_size")
 _COORD = re.compile(r"^(x{1,2}|y{1,2}|c[xy]|[tblr]y|[tblr]x)$|_[xy]$")
@@ -479,6 +542,7 @@ def main() -> int:
         ("Latin→full-width", check_latin_fullwidth(prs)),
         ("box geometry",     check_box_geometry(prs)),
         ("derived pitch",    check_handrolled_pitch(a.build)),
+        ("bar of means",     check_bar_of_means(a.build)),
     ]
 
     print(f"PRE-FLIGHT (mechanical subset) — {deck.name}")

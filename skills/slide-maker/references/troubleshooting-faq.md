@@ -158,6 +158,16 @@ counting them made a first cut fire on 4 of 20 slides of a professionally-made d
   never-invent floor: source it, go qualitative, or ask. This is the one advisory whose finding may
   mean the *content* is wrong rather than the formatting.
 
+**`bar of means` (pre-flight, advisory — needs `--build`).** The build script computes a mean or
+median and feeds that variable to a column/bar `native_chart`. A bar's length asserts "this value
+fills the range from zero", which is a claim about a COUNT; over sample measurements it hides n, the
+shape of the spread and any outlier, and invites reading two bar heights as if the samples did not
+overlap. **Fix:** `designed_charts.distribution(out, groups, ...)` — it picks a box plot at n≥5 and
+mean ± error at n=3–4 for you, overlays every observation, and prints which interval it drew.
+**Ignore it only if these are POPULATION means rather than a sample** — that is a fair bar, and
+nothing in the file separates the two, which is why this is advisory and not a failure. It stays
+silent on a bar of counts and on a LINE of averages over time; both are legitimate.
+
 **When a finding seems wrong:** each check has documented escapes (shadow pairs, chip labels,
 containment). Don't fight the linter in code — adjust the deck (rename, nudge 0.05 in) and move on;
 if it's genuinely a lint bug, note it in the hand-off rather than shipping a `✗`.

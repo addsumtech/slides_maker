@@ -208,6 +208,64 @@ def _(td):
     return st == "PASS" and "rows" in d
 
 
+def _means(td, name, body):
+    p = td / name
+    p.write_text(body)
+    from preflight_check import check_bar_of_means
+    return check_bar_of_means(str(p))
+
+
+# A bar's length claims "this value fills the range from zero", which is a statement about a COUNT.
+# Fed a mean of measurements it hides n, the spread and the outliers — the one chart choice the
+# literature calls a defect rather than a preference. The check keys on STRUCTURE (a computed mean
+# reaching a bar), not on variable names, and it must stay silent on the two legitimate neighbours
+# or it becomes noise: a bar of counts, and a LINE of averages over time.
+@case("a bar/column chart fed a computed mean is flagged")
+def _(td):
+    st, d = _means(td, "m1.py",
+                   "import statistics, deckkit as dk\n"
+                   "per = {'a': [.8, .84]}\n"
+                   "means = [statistics.mean(v) for v in per.values()]\n"
+                   "dk.native_chart(s, 1, 1, 8, 3, list(per), [('Dice', means)], kind='column')\n")
+    return st == "ADVISORY" and "distribution" in d
+
+
+@case("a bar of COUNTS is never flagged")
+def _(td):
+    st, _d = _means(td, "m2.py",
+                    "import deckkit as dk\n"
+                    "counts = [12, 40, 7]\n"
+                    "dk.native_chart(s, 1, 1, 8, 3, ['a','b','c'], [('n', counts)], kind='column')\n")
+    return st == "PASS"
+
+
+@case("a LINE of averages over time is never flagged")
+def _(td):
+    st, _d = _means(td, "m3.py",
+                    "import numpy as np, deckkit as dk\n"
+                    "means = [np.mean(x) for x in series]\n"
+                    "dk.native_chart(s, 1, 1, 8, 3, qs, [('avg', means)], kind='line')\n")
+    return st == "PASS"
+
+
+@case("the flag is ADVISORY, not a FAIL (population means are a fair bar)")
+def _(td):
+    # Nothing in the file separates a sample mean from a population mean, and failing on the
+    # latter would train people to ignore the tool — the same reasoning as the as-of-date item.
+    st, _d = _means(td, "m4.py",
+                    "import statistics, deckkit as dk\n"
+                    "avg = statistics.mean(xs)\n"
+                    "dk.native_chart(s, 1, 1, 8, 3, c, [('m', avg)], kind='bar')\n")
+    return st == "ADVISORY"
+
+
+@case("no build script is NOT CHECKABLE for the bar-of-means item too")
+def _(td):
+    from preflight_check import check_bar_of_means
+    st, _d = check_bar_of_means(None)
+    return st == "NOT CHECKABLE"
+
+
 @case("a missing build script is NOT CHECKABLE, never clean")
 def _(td):
     from preflight_check import check_handrolled_pitch

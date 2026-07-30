@@ -84,9 +84,30 @@ def _mpl(dark, font=None):
 
 
 def _save(fig, out, transparent=True):
-    fig.savefig(out, bbox_inches="tight", transparent=transparent, dpi=200)
+    """Rasterise — and refuse to ship TOFU.
+
+    matplotlib does not fail on a glyph the resolved font lacks: it draws a hollow box and emits a
+    UserWarning nobody reads, so a chart caption or a CJK label can go out as ▯▯▯ with every gate
+    green (a radar's own range note shipped "0 ▯ 3" this way). The warning is the only signal there
+    is, so it is promoted to an error here, once, for every recipe — including labels the CALLER
+    supplied, which is the case no amount of care inside these functions can cover.
+    """
+    import warnings
     import matplotlib.pyplot as plt
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        fig.savefig(out, bbox_inches="tight", transparent=transparent, dpi=200)
+    missing = sorted({str(w.message).split("Glyph ")[1].split(" ")[0]
+                      for w in caught if "Glyph" in str(w.message)
+                      and "missing from font" in str(w.message)})
     plt.close(fig)
+    if missing:
+        raise ValueError(
+            f"designed_charts: the chart text uses {len(missing)} character(s) the resolved font "
+            f"cannot draw (codepoint(s) {', '.join(missing)}), so they would render as tofu boxes. "
+            f"Pass font='<a face that has them>' (for CJK, your deckkit.EAFONT), or write the label "
+            f"with characters the deck's font actually carries. Arrows/symbols such as → ← ✓ are "
+            f"the usual culprits: most text faces omit them even though the deck font looks fine.")
     return out
 
 
@@ -485,7 +506,7 @@ def radar(out, axes_labels, series, *, palette=None, dark=False, font=None, high
     if axis_range is None:
         hi = [max(max(s[1][i] for s in series), 0.0) for i in range(n)]
         rng = [(0.0, (h if h > 0 else 1.0)) for h in hi]
-        note = "each spoke: 0 → its own max"
+        note = "each spoke: 0 to its own max"
     elif isinstance(axis_range[0], (list, tuple)):
         if len(axis_range) != n:
             raise ValueError(f"radar(): axis_range has {len(axis_range)} pairs for {n} axes")
@@ -493,10 +514,22 @@ def radar(out, axes_labels, series, *, palette=None, dark=False, font=None, high
         note = "per-axis ranges as given"
     else:
         rng = [(float(axis_range[0]), float(axis_range[1]))] * n
-        note = f"all spokes: {value_fmt.format(rng[0][0])} → {value_fmt.format(rng[0][1])}"
+        note = f"all spokes: {value_fmt.format(rng[0][0])} to {value_fmt.format(rng[0][1])}"
     for i, (lo, hi_) in enumerate(rng):
         if hi_ <= lo:
             raise ValueError(f"radar(): axis {axes_labels[i]!r} has range ({lo}, {hi_})")
+    # A polar axis does not clip out-of-range values, it MIRRORS them: r < 0 lands the point on the
+    # opposite spoke, and r > 1 walks outside the ring. Either way the drawn shape stops matching
+    # the data while looking perfectly plausible -- the exact failure this whole roster refuses.
+    for nm, vals in series:
+        for i, v in enumerate(vals):
+            lo, hi_ = rng[i]
+            if not (lo <= float(v) <= hi_):
+                raise ValueError(
+                    f"radar(): {nm!r} has {v} on axis {axes_labels[i]!r}, outside the declared "
+                    f"range ({lo:g}, {hi_:g}). A polar plot mirrors a negative radius onto the "
+                    f"opposite spoke and runs a too-large one off the ring, so this would draw a "
+                    f"shape that is not the data. Widen axis_range, or drop the axis.")
 
     ang = [2 * np.pi * i / n for i in range(n)]
     fig, ax = plt.subplots(figsize=figsize, subplot_kw=dict(polar=True))
