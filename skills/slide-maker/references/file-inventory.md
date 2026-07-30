@@ -104,7 +104,18 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   `icon_card`. See `references/icons.md` ("Treatments").
 - `image_fx.py` — `duotone(img, ink_a, ink_b)` / `grayscale(img)` — preprocess a colour photo to the
   deck's ink so it doesn't fight the accent (riso/brutalist/ink/luxury/museum). See `design-gallery.md`.
-- `extract_pdf.py` (crop a figure from a PDF — `figures`/`figure`/`autofig` auto-detect, `page`/`crop`
+- `palette_audit.py` — resolve a palette into FILL-only vs TEXT-safe tokens ONCE, before the build,
+  with the darkened twin per ground (`--inks`/`--grounds`, or `--from-style <deck>/style.py`). The
+  two-token rule already exists in SKILL.md and is still easy to break because the check is
+  per-PAIR and a build touches dozens; `render_deck.py --gate-check` therefore requires the
+  resolved split as `design_plan.palette`.
+- `trace_composed.py` — split a built deck's shipped lines into SOURCE-QUOTED vs AUTHOR-COMPOSED
+  against the source files (`--source a.md,b.md`), so a content review aims at the composed set
+  instead of re-reading every page. Deliberately NOT a fabrication detector (that version was
+  measured at ~8% precision and dropped); Latin identifiers and numbers get an exact test instead,
+  which is precise. Run it before dispatching the content critic and hand it the composed list.
+- `extract_pdf.py` (crop a figure from a PDF — `figures`/`figure`/`autofig` auto-detect, `tables`
+  for structured table data with an explicit shortfall report, `page`/`crop`
   manual; **plus the long-source trio `map` (TOC + CJK-aware word-density skeleton), `text` (page-range
   dump for chunked reading), and `headings` (reconstruct a skeleton for a no-TOC book)** — the tooling
   for the content-planner's long-source mode) · `crop_helper.py`

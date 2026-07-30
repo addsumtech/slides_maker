@@ -2,6 +2,18 @@
 
 ## The CONTRACT CARD — full field list
 
+**Before dispatching the CONTENT lens on a source-backed deck, run
+`python3 scripts/trace_composed.py <deck>.pptx --source <the source files>` and hand the critic
+its COMPOSED list.** It splits the shipped lines into source-quoted and author-composed, and the
+content defects live in the second set: on one measured deck all three of the worst — an invented
+product mechanism, a process gate attributed to the wrong step, a required install line silently
+dropped — were lines written from memory of the source hours after reading it, while every
+verbatim-quoted line was clean. Aiming the lens at those lines instead of re-reading twelve pages
+is the cheapest real reduction available in this loop. It also reports, exactly rather than
+heuristically, any NUMBER or identifier on a slide that appears nowhere in the source — that class
+caught a wrapped install command whose visible text copied as a 404 path. It is triage, not a
+verdict: a composed line is not wrong, it is simply unquoted, so nothing but a reader can confirm it.
+
    - **The CONTRACT CARD — assemble it at dispatch, from the approved plans (declarations only,
      never rationale).** A compact artifact the coordinator builds for every pipeline-built deck:
      the **deck memory sentence + emotional-curve line** (peak marked), the **per-slide

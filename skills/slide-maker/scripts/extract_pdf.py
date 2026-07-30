@@ -545,7 +545,7 @@ def _table_text_bbox(cap, side_by_kind, blocks, body, cap_rects, R, hdr, ftr):
     return box if not box.is_empty else None
 
 
-def find_figures(pdf, page_no=None):
+def find_figures(pdf, page_no=None, fmt="wide"):
     """Detect figure/table regions in a born-digital PDF by anchoring on captions
     ("Figure N" / "Fig. N" / "Table N") and growing into the adjacent graphics, bounded by
     body text. Returns a list of dicts: {page, label, kind, side, bbox(points), caption,
@@ -602,6 +602,10 @@ def find_figures(pdf, page_no=None):
                    if not _is_body(b, modal, R.width) and not _is_chrome(b)
                    and not _is_heading(b)
                    and not any(fitz.Rect(b["bbox"]).intersects(cr) for cr in cap_rects)]
+        spans = [(fitz.Rect(s["bbox"]), s.get("size", 0.0))
+                 for b in page.get_text("dict")["blocks"] if b["type"] == 0
+                 for l in b.get("lines", ()) for s in l.get("spans", ())
+                 if (s.get("text") or "").strip()]
         gfx = _graphics(page, R)
         hdr, ftr = R.y0 + 0.045 * R.height, R.y1 - 0.045 * R.height
         accepted = []                      # boxes already taken on this page (no overlap)
@@ -616,7 +620,8 @@ def find_figures(pdf, page_no=None):
 
         if not caps:                       # figure-only page: emit graphics clusters
             for g in sorted(gfx, key=lambda r: (r.y0, r.x0)):
-                _take(_emit(pi, None, "figure", None, g, "", gfx, body, R, cap_rects))
+                _take(_emit(pi, None, "figure", None, g, "", gfx, body, R, cap_rects,
+                            None, modal, _slide_band(fmt), spans))
             continue
 
         # Caption convention: does the captioned element sit ABOVE its caption (caption-below,
@@ -666,7 +671,7 @@ def find_figures(pdf, page_no=None):
                             box.y0 = max(box.y0, bb.y1 + 1)
                 box.y0 = max(box.y0, hdr); box.y1 = min(box.y1, ftr); box &= R
                 if not box.is_empty and box.width > 12 and box.height > 12:
-                    _take(_emit(pi, c["label"], c["kind"], "around", box, c["text"], gfx, body, R, cap_rects, c["r"]))
+                    _take(_emit(pi, c["label"], c["kind"], "around", box, c["text"], gfx, body, R, cap_rects, c["r"], modal, _slide_band(fmt), spans))
                 continue
 
             def collect(side):
@@ -694,7 +699,7 @@ def find_figures(pdf, page_no=None):
                     if c["kind"] == "table" else None
                 if tbox is not None and tbox.width > 12 and tbox.height > 12:
                     _take(_emit(pi, c["label"], c["kind"], side_by_kind.get("table", "below"),
-                                tbox, c["text"], gfx, body, R, cap_rects, c["r"]))
+                                tbox, c["text"], gfx, body, R, cap_rects, c["r"], modal, _slide_band(fmt), spans))
                 continue                            # else: a caption with no extractable content
             # Choose the side the captioned element is on. PER-CAPTION GEOMETRY WINS: if one
             # side's graphics clearly hug the caption (gap < 0.6x the other), trust that. Only
@@ -752,7 +757,7 @@ def find_figures(pdf, page_no=None):
             # bound the figure to its OWN band: between this caption and the nearest other
             # caption (same column) on the figure side — stops a caption grabbing a
             # neighbour's figure/table on dense multi-element pages.
-            others = [o["r"] for o in caps if o is not c and _xshare(o["r"], cr) > 0.3]
+            others = _others                       # computed once, above the union
             # Clamp to the figure's own band with a 5pt gap from EVERY caption (its own and
             # the neighbour's) so the render pad can't bleed back into adjacent caption text.
             if side == "above":
@@ -764,13 +769,44 @@ def find_figures(pdf, page_no=None):
             box &= R
             if box.is_empty or box.width < 12 or box.height < 12:
                 continue
-            _take(_emit(pi, c["label"], c["kind"], side, box, c["text"], gfx, body, R, cap_rects, c["r"]))
+            _take(_emit(pi, c["label"], c["kind"], side, box, c["text"], gfx, body, R, cap_rects, c["r"], modal, _slide_band(fmt), spans))
     doc.close()
     return out
 
 
+_BAND_CACHE = {}
+
+
+def _slide_band(fmt="wide"):
+    """The usable content rect (inches) of a deck canvas -- the space a crop can actually occupy.
+
+    Hardcoding 16:9 here was wrong: the skill ships six canvases, and on `story` (5.625x10.0in) a
+    hardcoded 8.56in-wide band is 52% too wide, so the magnification and the legibility verdict
+    were simply false. Derived from scripts/formats.py so the two cannot drift.
+    """
+    if fmt in _BAND_CACHE:
+        return _BAND_CACHE[fmt]
+    w, h = 8.56, 3.80                                    # 16:9 fallback if formats is unavailable
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import formats as _F
+        f = _F.FORMATS.get(fmt) or _F.FORMATS["wide"]
+        m = getattr(f, "margin", 0.55)
+        w = f.w_in - 2 * m
+        # formats' safe_top/safe_bottom are PLATFORM UI zones (a Story's caption bar) and are 0.0
+        # on `wide`; the title band and footer are deckkit's own convention (content_band's
+        # top=1.15 / footer 0.55). Take whichever is larger, or a 16:9 crop is measured against the
+        # full canvas height and every magnification comes out ~45% too generous.
+        h = f.h_in - max(getattr(f, "safe_top", 0.0) or 0.0, 1.15) \
+                   - max(getattr(f, "safe_bottom", 0.0) or 0.0, 0.55)
+    except Exception:
+        pass
+    _BAND_CACHE[fmt] = (max(w, 1.0), max(h, 1.0))
+    return _BAND_CACHE[fmt]
+
+
 def _emit(pi, label, kind, side, box, caption, gfx, body, R, cap_rects=(), self_cap=None,
-          body_pt=8.0):
+          body_pt=8.0, band=None, spans=()):
     """Package a detection + run cheap geometric validity checks so the caller can flag a
     suspect crop. The crucial mislocalization check is `foreign_caption`: if the crop
     swallows a DIFFERENT figure/table's caption it has bled into a neighbour — the silent
@@ -788,10 +824,16 @@ def _emit(pi, label, kind, side, box, caption, gfx, body, R, cap_rects=(), self_
     # only ~1.78x -- HEIGHT is what binds, and past ~2.2in (about 12 rows incl. header) the crop
     # falls under ~14pt and cannot be read projected. That is the crop-whole vs subset decision,
     # and it is arithmetic rather than taste -- so it is printed instead of left to judgement.
-    BAND_W, BAND_H = 8.56, 3.80
+    BAND_W, BAND_H = band or _slide_band()
+    ref_pt = body_pt
+    if spans:
+        inside = [s for (r, s) in spans if box.intersects(r)]
+        if inside:
+            from collections import Counter
+            ref_pt = Counter(round(v, 1) for v in inside).most_common(1)[0][0] or body_pt
     w_in, h_in = box.width / 72.0, box.height / 72.0
     mag = min(BAND_W / w_in, BAND_H / h_in) if w_in > 0 and h_in > 0 else 0.0
-    slide_pt = body_pt * mag
+    slide_pt = ref_pt * mag
     checks = {
         "graphics_coverage": round(min(gcov, 1.0), 2),
         "body_text_overlap": round(bover, 2),

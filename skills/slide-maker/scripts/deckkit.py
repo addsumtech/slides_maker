@@ -547,7 +547,12 @@ def text(slide, x, y, w, h, runs, align=PP_ALIGN.LEFT, anchor=MSO_ANCHOR.TOP,
     Vertical centring: to centre text inside a filled box/card, pass anchor=MSO_ANCHOR.MIDDLE
     AND give this textbox the SAME (x, y, w, h) as the box. A y-offset (e.g. y+0.07) combined
     with the box's full height pushes the centre below the box's true middle — text then reads
-    "a bit low". Want top padding? Use margin_top, not a y-offset with unchanged height."""
+    "a bit low". Want top padding? Use margin_top, not a y-offset with unchanged height.
+
+    RAISES ValueError when w or h is <= 0. A derived box that collapses is always a bug (the
+    text overflows a box with no interior and no geometry check can see it, because there is
+    nothing to overlap), so it fails at the call site where the arithmetic lives rather than in
+    the render. Reserve the fixed elements first and derive the rest from what is left."""
     if w <= 0 or h <= 0:
         # A derived box can collapse to zero or NEGATIVE size when the arithmetic that sized
         # it is wrong — `h = card_h - 1.42` with card_h = 1.30 gives -0.12. python-pptx accepts

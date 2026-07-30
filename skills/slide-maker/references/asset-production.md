@@ -75,12 +75,36 @@ generated or sourced. Fold in the user's design edits, then set up the canvas (S
     precise crop yourself). The primary tool is `scripts/extract_pdf.py`'s auto-detection,
     which anchors on captions and snaps to the figure's real extent:
     `python extract_pdf.py figures paper.pdf` lists every detected figure (with `cov=`/`bodyov=`
-    checks and a `⚠ CHECK` flag on suspect ones); `extract_pdf.py figure paper.pdf <idx> out.png`
+    checks, a `fit=<mag>x→<pt>` legibility number, and a `⚠ CHECK` flag on suspect ones); `extract_pdf.py figure paper.pdf <idx> out.png`
     renders one (auto-trimmed); `autofig paper.pdf figs/` dumps them all. **Always view a
     rendered crop before using it**, and for a `⚠`-flagged one (dense multi-figure pages can
     mis-localise) fall back to the manual loop: `page` rasterises a whole page to high-DPI PNG
     (composites vector+text+raster exactly as printed), then `crop_helper.py grid`→`crop` to
     cut precisely. (`crop` by point/fraction box and `images` for embedded bitmaps still exist.)
+
+    **`fit=` decides crop-whole vs subset, and it is arithmetic rather than taste.** It is the
+    magnification the crop can still get inside the deck's own content band (derived per canvas
+    from `formats.py`, so a 3:4 rednote or 9:16 story canvas gets its own number), times the modal
+    type size INSIDE the box. Measured on real papers: a table is ~4.8in wide so width alone allows
+    only ~1.8x, which means HEIGHT binds, and past ~2.2in (about 12 rows incl. header) the crop
+    lands under ~14pt and cannot be read projected. Under that, don't shrink it onto a slide —
+    keep the crop as the evidence and retype ONLY the 2–6 numbers the slide asserts, or subset
+    rows/columns natively. A figure gets a different verdict line, because a figure cannot be
+    retyped: it is told its labels' effective pt, and to lift the one sub-panel carrying the point.
+
+    **A TABLE crop includes its caption** (`bbox_caption`, the default for `kind=table`) — the
+    caption is what states the metric, what bold denotes, and which datasets, so a results table
+    without it is an untitled table. Pass `--no-caption` to opt out, `--with-caption` to force it
+    on a figure.
+
+    **Table DATA — `extract_pdf.py tables paper.pdf`** exposes PyMuPDF's structured extractor, and
+    is deliberately NOT the main path: measured recall was 5/6 tables on one paper and 0/5 on
+    another whose tables are booktabs (rules only, no cell grid), and of 11 captioned tables across
+    two papers exactly ONE came out with an intact grid. So it reports the `Table N` caption count
+    as the denominator, states the shortfall, and flags a COLLAPSED grid (a cell holding 3+ numbers
+    means the row/column split failed — measured, it reported "1 rows x 3 cols" for a 15-row table
+    with cells like `'88.26 83.56 92.25 88'`). Use it to READ the few numbers a slide asserts, each
+    then verifiable verbatim against the text layer. Never rebuild a whole `deckkit.table` from it.
     Then place the PNG *whole*, like any other source figure.
   - **When you DO crop, do it by looking, never by guessing.** The failure mode is cropping
     **blind** — inventing fraction coordinates, clipping a column or a legend, and not
