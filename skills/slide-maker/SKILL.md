@@ -80,7 +80,7 @@ Two time sinks compress well: ingesting material/assets, and the critic loop.
 - **Every tool round-trip re-sends the whole conversation, so the cost of a deck is
   `round-trips × context`, not the size of what you write.** Measured on one 12-page build: 122
   calls, 37M tokens, of which **98.5% was context re-sent** and 0.6% was actual output; context ran
-  ~302k per call by mid-build. Three habits follow, and they cost nothing in quality:
+  ~302k per call by mid-build. Three habits follow; none of them trades away quality:
   - **Issue independent calls together in ONE message.** That same build averaged *1.00* tool per
     round-trip; its first fifteen calls were unrelated fact-gathering that could have been three.
     Anything without a data dependency — separate greps, separate file reads, a verification sweep —
@@ -90,8 +90,9 @@ Two time sinks compress well: ingesting material/assets, and the critic loop.
     docstring head, and the two call-shape contracts that have actually gone wrong (run-tuple order;
     RGBColor vs hex). Reading `deckkit.py` one function at a time answers one question per
     round-trip and still missed both.
-  - **Repair with `Edit`, never by re-writing the whole build script.** One repair re-sent 12k
-    tokens of script that was already in context, and every later call carried the duplicate.
+  - **Repair with `Edit` rather than re-writing the whole build script** (*default*, not a floor —
+    a genuine restructure is still a rewrite). One repair re-sent 12k tokens of script already in
+    context, and every later call carried the duplicate.
 - **Scale the critic to stakes** (step 5): two focused **lens** critics (content · design) even for a
   quick deck; the larger multi-critic + arbiter, multi-round panel for high-stakes. The loop is
   non-negotiable; its *weight* is what you tune.

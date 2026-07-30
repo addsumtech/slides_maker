@@ -67,17 +67,33 @@ def check_save_locations():
              ("~/Documents", os.path.join(home, "Documents")),
              ("cwd", os.getcwd())]
     usable = []
+    seen = set()
     for label, d in cands:
         if not os.path.isdir(d):
             continue
+        try:                              # cwd is frequently one of the named dirs; listing the same
+            key = os.path.realpath(d)     # place twice reads as two options when there is one
+        except OSError:
+            key = d
+        if key in seen:
+            continue
+        seen.add(key)
+        probe = None
         try:
             fd, probe = tempfile.mkstemp(prefix=".slide-maker-probe-", dir=d)
             os.close(fd)
-            os.unlink(probe)
-            usable.append(label)
+            usable.append(label)          # the CREATE is the test; cleanup is not part of the verdict
         except Exception as e:
             print("  [blocked] {:<12} not writable ({}) — do not offer it as a save location"
                   .format(label, type(e).__name__))
+        finally:
+            # best-effort, and deliberately outside the verdict: a cleanup failure would otherwise
+            # report a perfectly writable directory as blocked AND strand the probe file there.
+            if probe:
+                try:
+                    os.unlink(probe)
+                except OSError:
+                    pass
     if usable:
         print("  [ok]  writable save locations: {}".format(", ".join(usable)))
     else:
