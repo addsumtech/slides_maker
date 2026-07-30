@@ -324,6 +324,29 @@ def main():
         bad.append("a shape colliding with a group's contents is no longer caught — the same-group "
                    "exemption has widened past the composed unit it was carved for")
 
+    # An unmappable group must be reported ONCE, and must not take the run down with it. Both of
+    # these were live bugs: the stats walks re-traversed the same tree and re-reported every rotated
+    # group as "slide ?", and _report_group_skip sorted int slide numbers against that None, raising
+    # a TypeError at the very END of lint() — discarding a whole completed run.
+    A_NS = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
+    prs = _dk.blank_deck(10, 5.625)
+    s = prs.slides.add_slide(prs.slide_layouts[6])
+    _dk.box(s, 1.0, 1.0, 2.0, 1.0, fill="C0362C")
+    g = s.shapes.add_group_shape([x for x in list(s.shapes)])
+    g._element.find(f".//{A_NS}xfrm").set("rot", "2700000")
+    prs.save(str(tmp / "g_rot.pptx"))
+    o = _lint_nr(tmp / "g_rot.pptx")
+    n_rot = o.count("rotated/flipped group")
+    if n_rot == 1:
+        ok.append("an unmappable group is reported exactly once, with its slide number")
+    else:
+        bad.append(f"the rotated-group skip was printed {n_rot}x (want 1) — the stats walks are "
+                   f"re-recording it, which also reintroduces the None-vs-int sort crash")
+    if "layout finding(s)" in o and "slide ?" not in o:
+        ok.append("lint completes on a deck whose group cannot be mapped")
+    else:
+        bad.append("lint did not complete cleanly on an unmappable-group deck (or printed 'slide ?')")
+
     # ── the translucent-overlap exemption must stay NARROW ────────────────────
     # venn()'s circles overlap by definition, so OVERLAP fired on every Venn ever built — a hard
     # gate failing on correct output is worse than no gate, because the author starts working

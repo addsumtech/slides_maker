@@ -49,9 +49,43 @@ def load_deck(path: Path):
     return Presentation(str(path))
 
 
+_A_NS = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
+
+
+def _leaves(shapes, sx=1.0, sy=1.0, depth=0):
+    """Yield (leaf_shape, sx, sy) through GROUPS, with the accumulated size scale.
+
+    Every walk in this file used to stop at slide.shapes, so a deck whose content lives in groups —
+    every designer-tool export, and every deck handed over for redesign — escaped the WHOLE
+    mechanical subset: the meta-annotation leak check (a hard FAIL), the unfilled-<slot> check, the
+    font inventory, the native-chart count and the box-geometry check all saw nothing and reported
+    clean. `sx`/`sy` are carried because a group rescales its children, so a child's stored height
+    is not its rendered height, and box geometry is judged in rendered inches.
+    """
+    from pptx.enum.shapes import MSO_SHAPE_TYPE
+    for s in shapes:
+        if s.shape_type == MSO_SHAPE_TYPE.GROUP:
+            if depth >= 12:
+                continue
+            x = s._element.find(f".//{_A_NS}xfrm")
+            csx = csy = 1.0
+            if x is not None:
+                ext, che = x.find(f"{_A_NS}ext"), x.find(f"{_A_NS}chExt")
+                try:
+                    if ext is not None and che is not None and int(che.get("cx")) > 0 \
+                            and int(che.get("cy")) > 0:
+                        csx = int(ext.get("cx")) / int(che.get("cx"))
+                        csy = int(ext.get("cy")) / int(che.get("cy"))
+                except (TypeError, ValueError):
+                    csx = csy = 1.0
+            yield from _leaves(s.shapes, sx * csx, sy * csy, depth + 1)
+        else:
+            yield s, sx, sy
+
+
 def slide_text(slide) -> list[str]:
     out = []
-    for sh in slide.shapes:
+    for sh, _sx, _sy in _leaves(slide.shapes):
         if sh.has_text_frame:
             for p in sh.text_frame.paragraphs:
                 t = "".join(r.text for r in p.runs).strip()
@@ -131,7 +165,8 @@ def item3b_build_docstrings(build_path):
 
 
 def item4_charts_equations(prs, build_path):
-    native = sum(1 for s in prs.slides for sh in s.shapes if getattr(sh, "has_chart", False))
+    native = sum(1 for s in prs.slides for sh, _x, _y in _leaves(s.shapes)
+                 if getattr(sh, "has_chart", False))
     notes = [f"{native} editable-native chart(s)"]
     findings = []
     if build_path and Path(build_path).is_file():
@@ -176,7 +211,7 @@ def item8_hygiene(prs):
 def item10_fonts(prs):
     used = set()
     for s in prs.slides:
-        for sh in s.shapes:
+        for sh, _sx, _sy in _leaves(s.shapes):
             if sh.has_text_frame:
                 for p in sh.text_frame.paragraphs:
                     for r in p.runs:
@@ -233,8 +268,8 @@ LATIN_THEN_FW = re.compile(rf"([A-Za-z0-9%+\)\]])([{FULLWIDTH_CLOSERS}])")
 
 
 def _paras(slide):
-    """(shape, paragraph_text, max_pt, {font names}) for every non-empty text paragraph."""
-    for sh in slide.shapes:
+    """(shape, paragraph_text, max_pt, {font names}, sy) for every non-empty text paragraph."""
+    for sh, _sx, sy in _leaves(slide.shapes):
         if not sh.has_text_frame:
             continue
         for p in sh.text_frame.paragraphs:
@@ -243,7 +278,7 @@ def _paras(slide):
                 continue
             sizes = [r.font.size.pt for r in p.runs if r.font.size is not None]
             fonts = {(r.font.name or "").lower() for r in p.runs if r.font.name}
-            yield sh, txt, (max(sizes) if sizes else None), fonts
+            yield sh, txt, (max(sizes) if sizes else None), fonts, sy
 
 
 def _inner_width_in(sh) -> float:
@@ -290,7 +325,7 @@ def check_mono_wrap(prs):
     """
     over, tight, missing = [], [], set()
     for i, s in enumerate(prs.slides, 1):
-        for sh, txt, pt, fonts in _paras(s):
+        for sh, txt, pt, fonts, _sy in _paras(s):
             mono = [f for f in fonts if any(m in f for m in MONO_FACES)]
             if not pt or not mono:
                 continue
@@ -326,7 +361,7 @@ def check_latin_fullwidth(prs):
     """
     bad = []
     for i, s in enumerate(prs.slides, 1):
-        for _sh, txt, _pt, _f in _paras(s):
+        for _sh, txt, _pt, _f, _sy in _paras(s):
             for m in LATIN_THEN_FW.finditer(txt):
                 bad.append(f"s{i} '…{m.group(1)}{m.group(2)}…' in {txt[:30]!r}")
     if bad:
@@ -344,8 +379,9 @@ def check_box_geometry(prs):
     """
     hard, soft = [], []
     for i, s in enumerate(prs.slides, 1):
-        for sh, txt, pt, _f in _paras(s):
-            h = sh.height / 914400
+        for sh, txt, pt, _f, sy in _paras(s):
+            # rendered height, not stored height: a group rescales its children
+            h = sh.height * sy / 914400
             if h <= 0 or sh.width / 914400 <= 0:
                 hard.append(f"s{i} {sh.width/914400:.2f}x{h:.2f}in {txt[:24]!r}")
             elif pt and h < 0.60 * pt / 72.0:

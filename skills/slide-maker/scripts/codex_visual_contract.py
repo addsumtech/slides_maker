@@ -73,10 +73,26 @@ def union(rects: list[tuple[float, float, float, float]]) -> tuple[float, float,
     return left, top, right - left, bottom - top
 
 
+def _leaf_shapes(shapes: Any) -> Any:
+    """Every shape, descending through GROUPS.
+
+    A top-level-only walk reported "text target not found" for any target inside a group, which on
+    a designer-tool export or a redesign input is most of the deck — and the contract then failed
+    for a reason that had nothing to do with the layout it was asserting. lint_deck's walker
+    descends; this one has to agree with it or the two paths disagree about what is on the slide.
+    """
+    from pptx.enum.shapes import MSO_SHAPE_TYPE
+    for shape in shapes:
+        if shape.shape_type == MSO_SHAPE_TYPE.GROUP:
+            yield from _leaf_shapes(shape.shapes)
+        else:
+            yield shape
+
+
 def text_shapes(slide: Any, needle: str) -> list[tuple[float, float, float, float]]:
     return [
         bbox(shape)
-        for shape in slide.shapes
+        for shape in _leaf_shapes(slide.shapes)
         if getattr(shape, "has_text_frame", False) and (shape.text or "").strip() == needle
     ]
 

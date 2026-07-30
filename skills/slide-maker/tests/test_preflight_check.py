@@ -208,6 +208,45 @@ def _(td):
     return st == "PASS" and "rows" in d
 
 
+def build_grouped(path: Path):
+    """A deck carrying two hard-FAIL leaks, with every shape inside a GROUP."""
+    import deckkit as dk
+    from pptx.dml.color import RGBColor
+    C = lambda h: RGBColor.from_string(h)
+    prs = dk.blank_deck(10, 5.625)
+    s = prs.slides.add_slide(prs.slide_layouts[6])
+    seen = set(id(x) for x in s.shapes)
+    dk.text(s, 0.6, 1.0, 8, 0.6, [[("Results (editable native chart)", 24, C("12395E"), True, False)]])
+    dk.text(s, 0.6, 2.0, 8, 0.6, [[("Cost was <amount> per run", 20, C("12395E"), False, False)]])
+    dk.text(s, 0.6, 4.8, 8, 0.3, [[("Figures as of 28 July 2026", 11, C("646F7B"), False, False)]])
+    s.shapes.add_group_shape([x for x in list(s.shapes) if id(x) not in seen])
+    dk.speaker_notes(s, "spoken thread")
+    prs.save(str(path))
+    return path
+
+
+# Every walk in preflight_check stopped at slide.shapes, so a deck whose content lives in GROUPS —
+# every designer-tool export, and every deck handed over for redesign — escaped the whole mechanical
+# subset and exited 0. Measured before the fix: the top-level walk saw 0 text shapes on this deck.
+@case("a meta-annotation leak INSIDE a group is caught")
+def _(td):
+    code, out = run(build_grouped(td / "grp1.pptx"), "--static")
+    return code == 1 and "editable native chart" in out
+
+
+@case("an unfilled <slot> INSIDE a group is caught")
+def _(td):
+    code, out = run(build_grouped(td / "grp2.pptx"), "--static")
+    return code == 1 and "<amount>" in out
+
+
+@case("an as-of date INSIDE a group counts as present")
+def _(td):
+    # the flip side: recursion must not only find faults, it must find the things that CLEAR a check
+    code, out = run(build_grouped(td / "grp3.pptx"), "--static")
+    return "!  7." not in out
+
+
 def _means(td, name, body):
     p = td / name
     p.write_text(body)

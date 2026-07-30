@@ -121,7 +121,8 @@ def _group_tf(g):
         return None
 
 
-def _flat_shapes(shapes, tf=(0.0, 0.0, 1.0, 1.0), depth=0, slide_no=None, grp=None):
+def _flat_shapes(shapes, tf=(0.0, 0.0, 1.0, 1.0), depth=0, slide_no=None, grp=None,
+                 record=True):
     """Yield (leaf_shape, transform) in paint order, descending through groups.
 
     Paint order is preserved because a group paints its children where the group itself sits in the
@@ -130,14 +131,18 @@ def _flat_shapes(shapes, tf=(0.0, 0.0, 1.0, 1.0), depth=0, slide_no=None, grp=No
     for s in shapes:
         if s.shape_type == MSO_SHAPE_TYPE.GROUP:
             g = _group_tf(s._element)
-            if g is None or depth >= 6:
-                _GROUP_SKIP.append((slide_no, "rotated/flipped group" if depth < 6
-                                    else "group nested more than 6 deep"))
+            if g is None or depth >= 12:
+                # recorded ONCE per slide, by the _boxes walk that carries slide_no. The stats
+                # walks re-traverse the same tree; without this guard they re-reported every
+                # rotated group a second time, as "slide ?".
+                if record:
+                    _GROUP_SKIP.append((slide_no, "rotated/flipped group" if g is None
+                                        else "group nested more than 12 deep"))
                 continue
             dx, dy, sx, sy = g
             yield from _flat_shapes(s.shapes,
                                     (tf[0] + tf[2] * dx, tf[1] + tf[3] * dy, tf[2] * sx, tf[3] * sy),
-                                    depth + 1, slide_no, id(s._element))
+                                    depth + 1, slide_no, id(s._element), record)
         else:
             yield s, tf, grp
 
@@ -897,7 +902,7 @@ def _cjk_typography(slide):
                     break
         spaced += len(_SPACED.findall(txt))
         unspaced += len(_UNSPACED.findall(txt))
-    for s in slide.shapes:                                # table cells: spacing tally only
+    for s, _tf, _g in _flat_shapes(slide.shapes, record=False):   # table cells: spacing tally
         try:
             if getattr(s, "has_table", False):
                 for row in s.table.rows:
@@ -1048,7 +1053,13 @@ def _slide_stats(slide, bx, sw, sh):
                                 and not (s["text"] and s["size"] <= 10.5 and s["t"] > sh - 1.2)
                                 and not (not s["text"] and s["w"] < 0.4 and s["h"] > 0.5 * sh)),
                                default=0.0) / sh),
-        "n_chart": len([s for s in slide.shapes if getattr(s, "has_chart", False)]),
+        # counted through GROUPS, like n_pic/n_shapes above (which come from bx). A chart inside a
+        # group used to count as zero, and n_chart gates three density exemptions — so a grouped
+        # chart slide lost its exemption and drew DEAD BOTTOM / TEXT WALL findings it had earned
+        # its way out of. Mixing a recursive and a non-recursive walk in one stats row is worse
+        # than either alone: the numbers stop describing the same slide.
+        "n_chart": len([s for s, _tf, _g in _flat_shapes(slide.shapes, record=False)
+                        if getattr(s, "has_chart", False)]),
         "build": has_timing,
         "trans": has_trans,
         "skel": _skeleton(bx),
@@ -1142,7 +1153,10 @@ def _report_group_skip():
         print("  [skipped] slide %s: %s — its contents were NOT geometry-checked (overlap, overflow, "
               "occlusion, density and type-scale all skip it). Ungroup it, or remove the rotation, "
               "to have it examined." % (sn if sn is not None else "?", ", ".join(sorted(by_slide[sn]))))
-    return sorted((sn, sorted(w)) for sn, w in by_slide.items())
+    # None-safe: a slide number and a None cannot be compared, and this ran at the END of lint(),
+    # so the TypeError would have discarded a whole clean run's result.
+    return sorted(((sn, sorted(w)) for sn, w in by_slide.items()),
+                  key=lambda kv: (kv[0] is None, kv[0]))
 
 
 def _report_pixel_skip():
@@ -1315,10 +1329,12 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False):
                 and not intent.get("weight") and not intent.get("envelope")):
             if hv["left"] < 0.05 and hv["right"] > 0.33:
                 warns.append(f"LOPSIDED: slide {i+1} content sits entirely in the RIGHT half — the left "
-                             f"is a dead band; rebalance or use the space (rhythm/whitespace)")
+                             f"is a dead band; rebalance or use the space, or declare the deliberate "
+                             f"composition with design_intent(weight='right')")
             elif hv["right"] < 0.05 and hv["left"] > 0.33:
                 warns.append(f"LOPSIDED: slide {i+1} content sits entirely in the LEFT half — the right "
-                             f"is a dead band; rebalance or use the space (rhythm/whitespace)")
+                             f"is a dead band; rebalance or use the space, or declare the deliberate "
+                             f"composition with design_intent(weight='left')")
             elif hv["top"] < 0.05 and hv["bottom"] > 0.33:
                 warns.append(f"LOPSIDED: slide {i+1} content sank to the BOTTOM half with an empty top — "
                              f"check for a missing title / add a header, or recenter")
