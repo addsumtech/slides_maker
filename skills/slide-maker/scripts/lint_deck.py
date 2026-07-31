@@ -1558,6 +1558,26 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False):
                          f"template even when forms vary. Let a statement slide stop high with real "
                          f"void, let a grounded slide ride the baseline (aim ~1/3 default / 1/3 upper "
                          f"/ 1/3 low; declare deliberate ones with deckkit.design_intent)")
+        # SHALLOW BAND: the defect that fell exactly BETWEEN the two checks above. Measured on a real
+        # 12-page build: five interior slides left 24–37% of the canvas empty below their content
+        # (content_bottom 0.63–0.76). Too high for per-slide DEAD BOTTOM (fires under 0.45, tuned for
+        # the catastrophically empty page) and too spread out for ENVELOPE MONOCULTURE (needs ±4% of a
+        # median), so a deck that visibly parked every page in one shallow band passed every gate and
+        # the user's first note was "一些页偏空旷". One airy page is composition; a THIRD of the deck
+        # ending high is a content band applied without deciding, which is why this is a deck-level
+        # share and not a per-slide floor. Declared envelopes are excluded before the share is taken —
+        # a page that MEANT to stop high is design, and only the undeclared ones count.
+        undecl = [r for r in interior
+                  if r.get("content_bottom", 1.0) < 0.78
+                  and r.get("intent", {}).get("envelope") not in ("upper", "bleed")]
+        if len(undecl) >= max(3, 0.40 * len(interior)):
+            hi = sorted(round(r.get("content_bottom", 1.0) * 100) for r in undecl)
+            warns.append(f"SHALLOW BAND: {len(undecl)} of {len(interior)} interior slides stop at "
+                         f"{hi[0]}–{hi[-1]}% of the canvas with nothing below and no declared envelope "
+                         f"— that is one content band reused, not {len(undecl)} compositions. Per page: "
+                         f"pull a supporting row down, run the form full-bleed, or open the leading so "
+                         f"the column fills; where the void IS the point, say so with "
+                         f"deckkit.design_intent(envelope='upper')")
         n_intent = sum(1 for r in interior if r.get("intent"))
         if n_intent > max(2, len(interior) // 2):
             warns.append(f"INTENT INFLATION: {n_intent} of {len(interior)} interior slides declare a "

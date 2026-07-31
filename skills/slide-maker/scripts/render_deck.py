@@ -76,6 +76,127 @@ def die(msg, code=1):
     sys.exit(code)
 
 
+def _report_carried_by(pptx_path, cb):
+    """Say, as a number, how many `carried_by` slides are structurally distinct from the deck.
+
+    WHY. `carried_by` was presence-checked only: a list of ≥2 slide numbers passed. Naming a slide
+    is free, so the cheapest way to satisfy the field is to list three and put a token of the motif
+    — a stripe, a matching hue — on two of them, while the actual structural work happens on one.
+    Measured on a real build: carried_by=[1, 9, 12], and only slide 9 had a skeleton the deck did
+    not otherwise use. The plan read bravely and the deck read safe, which is precisely the failure
+    `boldness`/`signature_move` exist to prevent.
+
+    NOT A FAILURE, deliberately. A signature move can legitimately live on colour, type or concept
+    and touch no geometry at all — dying on that would push authors toward layout stunts. So this
+    prints the count and warns; the author has to look at a number instead of at their own sentence.
+    """
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import lint_deck as _ld
+        from pptx import Presentation as _P
+        prs = _P(str(pptx_path))
+        sw = prs.slide_width / 914400.0
+        sh = prs.slide_height / 914400.0
+        skels = [_ld._skeleton(_ld._boxes(s, sw, sh)) for s in prs.slides]
+    except Exception as e:                      # never let a measurement break the delivery gate
+        print(f"[gates] carried_by: not measurable on this deck ({type(e).__name__}) — "
+              f"check by eye that each named slide is structurally distinct")
+        return
+    if not skels:
+        return
+
+    def _same(a, b):
+        return len(a & b) / max(1, len(a | b)) >= 0.75
+
+    # the deck's default page = the skeleton the most slides share
+    modal, best = skels[0], 0
+    for cand in skels:
+        c = sum(1 for k in skels if _same(cand, k))
+        if c > best:
+            modal, best = cand, c
+    distinct = [i for i in cb
+                if isinstance(i, int) and 1 <= i <= len(skels) and not _same(skels[i - 1], modal)]
+    print(f"[gates] carried_by structure: {len(distinct)}/{len(cb)} named slide(s) differ from the "
+          f"deck's default skeleton (distinct: {distinct or 'none'})")
+    if len(distinct) < 2:
+        print("        ⚠ the signature move is doing structural work on fewer than 2 of the slides "
+              "that claim it. If it lives on colour/type/concept instead, fine — say which in the "
+              "hand-off. If it does not, the deck is safer than its plan and this is the moment to "
+              "fix that, not after the user says '不够大胆'.")
+
+
+def _report_icon_waiver(pptx_path, fam):
+    """Name the slides that contradict an `icon_family: none - <reason>` waiver.
+
+    WHY. The waiver is meant to stay satisfiable — a deliberately icon-free deck is a real choice.
+    But the reason is free text written at PLAN time, before any slide exists, and nothing ever
+    revisits it. Measured on a real build: the plan said 'none — 概念性内容,图标会变装饰', and the
+    deck then shipped three category slides (church vs market · pronk vs vanitas · four genres)
+    that are exactly the entity-rich case SKILL.md calls a design must. The waiver was not a lie
+    when written; it was never re-tested against what got built. So test it against the built file.
+
+    A peer group = 3+ text boxes at the same size, aligned in a row or a column: the shape of a
+    category set. It over-counts (tables, timelines), which is why this prints slides and does not
+    die — but naming '2, 6, 7' is much harder to wave past than a general nag.
+    """
+    if not isinstance(fam, str) or not fam.strip().lower().startswith("none"):
+        return
+    # Caught on its first run: a rebuild ADDED icons and the plan record still said `none`, because
+    # nothing ever compares the record to the file. Say so before looking for peer groups — a record
+    # that disagrees with the deck makes every other field in it suspect too.
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import lint_deck as _ld0
+        from pptx import Presentation as _P0
+        _prs0 = _P0(str(pptx_path))
+        _sw0, _sh0 = _prs0.slide_width / 914400.0, _prs0.slide_height / 914400.0
+        n_ic = 0
+        for _s0 in _prs0.slides:
+            for _b0 in _ld0._boxes(_s0, _sw0, _sh0):
+                if _b0.get("pic") and not _b0.get("bg") and _b0["w"] < 1.2 and _b0["h"] < 1.2:
+                    n_ic += 1
+        if n_ic >= 2:
+            print(f"[gates] icon waiver: the plan says `icon_family: none` but the deck contains "
+                  f"{n_ic} icon-sized image(s) — the record is stale. Update it to the family you "
+                  f"actually shipped; a plan that disagrees with the file is not a record of anything.")
+            return
+    except Exception:
+        pass
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import lint_deck as _ld
+        from pptx import Presentation as _P
+        prs = _P(str(pptx_path))
+        sw, sh = prs.slide_width / 914400.0, prs.slide_height / 914400.0
+    except Exception:
+        return
+    hits = []
+    for i, s in enumerate(prs.slides, 1):
+        try:
+            bx = [b for b in _ld._boxes(s, sw, sh) if b.get("text") and not b.get("bg")]
+        except Exception:
+            continue
+        groups = {}
+        for b in bx:
+            if not (b.get("full") or "").strip() or len((b.get("full") or "").split()) > 8:
+                continue                        # a peer LABEL is short; a paragraph is not a peer
+            groups.setdefault(round(b.get("size", 0) or 0, 1), []).append(b)
+        for _sz, g in groups.items():
+            if len(g) < 3:
+                continue
+            rows = sum(1 for b in g if abs(b["t"] - g[0]["t"]) < 0.15)
+            cols = sum(1 for b in g if abs(b["l"] - g[0]["l"]) < 0.15)
+            if max(rows, cols) >= 3:
+                hits.append(i)
+                break
+    if len(hits) >= 2:
+        print(f"[gates] icon waiver: `icon_family: none` but slides {hits} carry parallel label sets "
+              f"(3+ peers in a row/column) — the entity-rich case SKILL.md calls a design must.")
+        print("        ⚠ Re-decide NOW against the built slides, not against the plan sentence: either "
+              "give these a family, or restate in the hand-off why THESE specific slides are better "
+              "without one. A plan-time waiver that was never re-tested is how a deck ships zero icons.")
+
+
 def _tail(text, limit=4000):
     text = (text or "").strip()
     if len(text) <= limit:
@@ -536,6 +657,8 @@ def check_handoff_gates(pptx, mode="presented"):
                 "work. One brave slide among eleven safe ones is a tonal break, not a position.")
         print("[gates] design plan: boldness={} · signature={} · carried_by={}".format(
             design["boldness"], str(design["signature_move"])[:48], cb))
+        _report_carried_by(pptx, cb)
+        _report_icon_waiver(pptx, design.get("icon_family"))
     else:
         die("no `design_plan` record. Step 2 dispatches agents/slide-design.md as the deck's art "
             "director; nothing else decides deck rhythm or the signature move.\n"

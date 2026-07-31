@@ -644,6 +644,46 @@ def main():
             ok.append(f"{fam}: measurement matches the renderer (worst ratio {worst[0]:.3f}, "
                       f"never under-measures)")
 
+    # ── SHALLOW BAND: the band between DEAD BOTTOM (per-slide, fires under 0.45) and ENVELOPE
+    # MONOCULTURE (deck-level, needs bottoms within ±4%). A real 12-page build parked five interior
+    # slides at 0.63–0.76 — visibly empty, spread too wide to be monoculture, too full to be dead —
+    # and passed every gate. Both shapes are asserted: the one that shipped the defect must fire,
+    # and the corrected rebuild of the SAME deck must stay silent, or the check is just a nag.
+    sys.path.insert(0, str(SCRIPTS))
+    import deckkit as _dk
+
+    def _band_deck(bottoms, path):
+        prs = _dk.blank_deck()
+        for frac in [1.0] + bottoms + [1.0]:
+            s = _dk.add_slide(prs)
+            _dk.text(s, 0.6, 0.4, 8.8, 0.6, [[("A title for this slide here", 28,
+                                               _dk.RGBColor(0, 0, 0), True, False, "Helvetica Neue")]])
+            y, bot = 1.2, frac * 5.625            # ~20+ words so the slide clears the load >= 15 gate
+            while y + 0.34 <= bot:
+                _dk.text(s, 0.6, y, 8.8, 0.32,
+                         [[("body copy line that carries several real words here", 14,
+                            _dk.RGBColor(50, 50, 50), False, False, "Helvetica Neue")]], space_after=0)
+                y += 0.34
+        prs.save(str(path))
+
+    for label, bottoms, want in [
+            ("the shipped-defect shape", [0.76, 0.63, 0.68, 0.72, 0.66, 0.95, 0.97, 0.93, 0.96, 0.94], True),
+            ("the corrected rebuild",    [0.87, 0.83, 0.89, 0.91, 0.86, 0.93, 0.95, 0.97, 0.90, 0.94], False)]:
+        pth = tmp / f"fx_band_{int(want)}.pptx"
+        _band_deck(bottoms, pth)
+        out = lint(pth, tmp / "no_such_render_dir")
+        if not ran(out, f"SHALLOW BAND deck ({label})"):
+            continue
+        fired = "SHALLOW BAND" in out
+        if fired == want:
+            ok.append(f"SHALLOW BAND {'fires on' if want else 'is silent on'} {label}")
+        elif want:
+            bad.append("SHALLOW BAND did not fire on the shape that shipped the defect — five of ten "
+                       "interior slides ending at 63–76% of the canvas is invisible again")
+        else:
+            bad.append("SHALLOW BAND fired on the corrected rebuild — the threshold now flags decks "
+                       "that fixed the problem, which makes the finding noise")
+
     for line in ok:
         print("  ok   " + line)
     for line in bad:
