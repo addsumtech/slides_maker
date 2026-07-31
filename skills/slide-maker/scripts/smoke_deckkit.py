@@ -477,6 +477,33 @@ ok("dc.radar (5 axes, 2 series, zero-anchored)",
                     [("x", [1, 2, 3, 4, 5]), ("y", [5, 4, 3, 2, 1])], axis_range=(0, 5), highlight=1))
 raises("radar refuses 9 axes (use small_multiples)",
        lambda: dc.radar(os.path.join(TMP, "_x.png"), [f"a{i}" for i in range(9)], [("s", [1] * 9)]))
+# EVERY scaffold sigs.py hands out must RUN. A scaffold that does not is worse than none: it gets
+# copied once, fails, and teaches that the tool cannot be trusted — after which the author hand-rolls
+# the form, which is the exact behaviour the scaffolds exist to prevent. Two of the first twenty-two
+# were wrong (segmented_bar takes a plain value list; eval_matrix cells are criteria x options and
+# 0..4 in ball mode) and only executing them found it.
+def _every_scaffold_runs():
+    import sigs as _sigs
+    bad = []
+    for name, code in sorted(_sigs.EXAMPLES.items()):
+        p = dk.blank_deck(10, 5.625)
+        sl = p.slides.add_slide(p.slide_layouts[6])
+        try:
+            exec(compile(code, f"<scaffold:{name}>", "exec"), {"dk": dk, "s": sl})
+        except Exception as e:
+            bad.append(f"{name}: {type(e).__name__}: {e}")
+    assert not bad, "scaffolds that do not run: " + " | ".join(bad[:3])
+
+
+def _scaffolds_cover_the_form_components():
+    import sigs as _sigs, component_audit as _ca
+    missing = sorted(set(_ca.FORM_GUARANTEE) - set(_sigs.EXAMPLES))
+    assert not missing, f"form components with no runnable scaffold: {missing}"
+
+
+ok("every sigs.py scaffold actually runs", _every_scaffold_runs)
+ok("every form component has a scaffold", _scaffolds_cover_the_form_components)
+
 # sigs.py is the one-lookup call-contract tool. It must resolve real names, REFUSE unknown ones
 # (a typo reading as "no such helper" is how a helper gets hand-rolled), and cover BOTH modules.
 def _sigs(*args):

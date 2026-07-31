@@ -1136,6 +1136,91 @@ _PIXEL_CHECKS = ("TEXT NOT VISIBLE", "CAPTION NOT ALIGNED", "TEXT-ON-IMAGE CONTR
                  "colour/value pacing", "FLAT RHYTHM")
 
 
+def _declared_scale(deck_path, gates_path=None):
+    """The `type_scale` the deck's own .deck-gates.json declares, or None.
+
+    render_deck --gate-check REQUIRES this field; nothing ever compared it to the deck. A deck
+    could declare {34, 24, 14} and set 31/22/17 throughout, and both gates passed clean (measured).
+    A required field that constrains nothing is worse than no field: it reads as a resolved
+    decision in the record while the artifact went its own way.
+    """
+    # the module-level import is `os as _os`; import locally, as _render_png_paths does
+    import json, os
+    cand = gates_path or os.path.join(
+        os.path.dirname(os.path.abspath(deck_path)), ".deck-gates.json")
+    try:
+        with open(cand, encoding="utf-8") as fh:
+            plan = (json.load(fh).get("design_plan") or {})
+    except (OSError, ValueError):
+        return None
+    sc = plan.get("type_scale")
+    if not isinstance(sc, dict):
+        return None
+    out = {}
+    for k in ("display", "title", "body"):
+        v = sc.get(k)
+        if isinstance(v, (int, float)):
+            out[k] = float(v)
+    return out or None
+
+
+def _size_volume(prs):
+    """{point size: characters set at it} across the deck — weight by TEXT VOLUME, not by count.
+
+    Which sizes a deck *contains* says little: a page number appears on every slide and carries
+    nothing. Which sizes carry its WORDS is the question a type scale answers.
+    """
+    vol = {}
+    for s in prs.slides:
+        for r in _walk_runs(s.shapes):
+            txt = (r.text or "").strip()
+            if not txt:
+                continue
+            try:
+                pt = r.font.size.pt if r.font.size else None
+            except Exception:
+                pt = None
+            if pt:
+                k = round(float(pt) * 2) / 2.0
+                vol[k] = vol.get(k, 0) + len(txt)
+    return vol
+
+
+def scale_drift(prs, declared, tol=1.0):
+    """Findings where the DECLARED scale and the deck disagree. Deliberately narrow.
+
+    Two checks only, because a real deck legitimately carries a long tail of sizes — the skill's
+    own five-slide example uses twelve, so any rule of the form "every size must be a declared
+    tier" fires on correct work and would be abandoned within a deck:
+      · `body` must be the size actually carrying the most text. Declaring 14pt and setting 17pt
+        everywhere is the declaration being fiction, not a tail.
+      · `display`/`title` must at least APPEAR (within `tol`). A tier nothing is set in was never
+        a decision.
+    A hero number, a page number, a caption — anything off-scale but low-volume — is untouched.
+    """
+    vol = _size_volume(prs)
+    if not vol or not declared:
+        return []
+    out = []
+    total = sum(vol.values()) or 1
+    dominant = max(vol.items(), key=lambda kv: kv[1])[0]
+    body = declared.get("body")
+    if body is not None and abs(dominant - body) > tol:
+        out.append("SCALE DRIFT: the deck declares body={:g}pt, but the size carrying the most "
+                   "text is {:g}pt ({:.0f}% of all characters) — either the declared scale is "
+                   "fiction or the build drifted off it; they cannot both be right"
+                   .format(body, dominant, 100 * vol[dominant] / total))
+    for tier in ("display", "title"):
+        v = declared.get(tier)
+        if v is None:
+            continue
+        if not any(abs(k - v) <= tol for k in vol):
+            out.append("SCALE DRIFT: {}={:g}pt is declared but no text in the deck is set at it "
+                       "(nearest is {:g}pt) — a tier nothing uses was not a decision"
+                       .format(tier, v, min(vol, key=lambda k: abs(k - v))))
+    return out
+
+
 def _report_group_skip():
     """Say which slides' geometry could NOT be mapped, in the same voice as the pixel skip.
 
@@ -1578,7 +1663,8 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False):
             "transitions": transd, "avg_occupancy": round(avg_ink, 3)}
 
 
-def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=False):
+def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=False,
+         gates_path=None):
     _GROUP_SKIP.clear()          # a second lint() in one process must not inherit the first's skips
     try:
         prs = Presentation(path)
@@ -2195,6 +2281,12 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
             print(f"  slide {sn}: [warn] {m}")
             j_warns.append({"slide": sn, "text": m})
             warn_total += 1
+    # SCALE DRIFT (deck-level, advisory): the declared type_scale vs the type actually set. The
+    # gate requires the field; until now nothing compared it to the artifact.
+    for m in scale_drift(prs, _declared_scale(path, gates_path)):
+        print(f"  [warn] {m}")
+        j_warns.append({"slide": 0, "text": m})
+        warn_total += 1
     lums = _load_render_lums(path, renders_dir, len(stats_rows), pngs=pngs)
     deck_stats = _print_stats(stats_rows, mode, sw, sh, lums=lums, static_ok=static_ok)
     tail = ("" if total else "  ✓ clean (no hard findings)") + (f"  ·  {warn_total} warning(s)" if warn_total else "")
@@ -2253,6 +2345,7 @@ if __name__ == "__main__":
     static_ok = any(a == "--static" for a in argv)   # user opted OUT of appear-builds: silence NO BUILDS
     json_out = None
     renders_dir = None
+    gates_path = None          # defaults to .deck-gates.json beside the deck
     for i, a in enumerate(argv):
         if a == "--json" and i + 1 < len(argv):
             json_out = argv[i + 1]
@@ -2266,7 +2359,13 @@ if __name__ == "__main__":
                 args.remove(renders_dir)
         elif a.startswith("--renders="):
             renders_dir = a.split("=", 1)[1]
+        elif a == "--gates" and i + 1 < len(argv):
+            gates_path = argv[i + 1]
+            if gates_path in args:
+                args.remove(gates_path)
+        elif a.startswith("--gates="):
+            gates_path = a.split("=", 1)[1]
     if not args:
         print("usage: python lint_deck.py <deck.pptx> [--selfread] [--briefing] [--surface] [--textheavy] "
-              "[--static] [--renders dir] [--json out.json]"); sys.exit(2)
-    sys.exit(1 if lint(args[0], mode, json_out, renders_dir, static_ok) > 0 else 0)
+              "[--static] [--renders dir] [--gates .deck-gates.json] [--json out.json]"); sys.exit(2)
+    sys.exit(1 if lint(args[0], mode, json_out, renders_dir, static_ok, gates_path) > 0 else 0)

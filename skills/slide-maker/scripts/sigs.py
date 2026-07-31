@@ -43,6 +43,60 @@ CALL-SHAPE CONTRACTS (the two that have actually gone wrong):
 """
 
 
+# A RUNNABLE call per form component. Only 1 of 19 docstrings carried a copyable call, which is the
+# gap between "form-selection.md told me to use a timeline" and "I hand-rolled a timeline out of box
+# + text" — and a hand-rolled form re-introduces exactly the geometry the component guarantees away.
+#
+# Every one of these is EXECUTED by scripts/smoke_deckkit.py. A scaffold that does not run is worse
+# than none: it is copied once, fails, and teaches that the tool cannot be trusted. The test is the
+# guarantee; the author of this dict is not.
+EXAMPLES = {
+    "timeline": 'dk.timeline(s, 0.7, 2.0, 8.6, [("1979", "first"), ("2026", "now", "caption")],\n'
+                '            highlight=1)',
+    "stat_row": 'dk.stat_row(s, 0.7, 2.0, 8.6, [("8", "x", "faster"), ("99", "%", "coverage")])',
+    "step_list": 'dk.step_list(s, 0.8, 1.0, 8.0, [("Collect", "gather the inputs"),\n'
+                 '                                ("Train", "fit the model")])',
+    "segmented_bar": 'dk.segmented_bar(s, 0.8, 2.0, 8.4, 0.5, [46, 30, 24],\n'
+                     '                 labels=["Cloud", "Devices", "Other"])',
+    "tier_stack": 'dk.tier_stack(s, 1.0, 1.0, 6.0, 3.4,\n'
+                  '              [("Visitors", "12k"), ("Trials", "3k"), ("Paid", "410")],\n'
+                  '              mode="funnel")',
+    "leaderboard": 'dk.leaderboard(s, 0.6, 1.0, 5.0,\n'
+                   '               [(dk.ACCENTS[0], "alpha", 42), (dk.ACCENTS[1], "beta", "18", "sub")])',
+    "scorecard": 'dk.scorecard(s, 0.6, 1.0, 2.5, 1.8, "Users", 1234, delta="3.2pp")',
+    "meter_bar": 'dk.meter_bar(s, 0.6, 2.0, 4.7, 0.62, value="62%")',
+    "dot_strip": 'dk.dot_strip(s, 0.6, 2.0, 8.0, [("A", 70), ("B", 100), ("C", 180)], 0, 200)',
+    # cells is cells[row][col] = criteria x options, and 0..4 in the default ball mode
+    "eval_matrix": 'dk.eval_matrix(s, 0.8, 1.6, 8.4, ["Option A", "Option B"],\n'
+                   '               ["speed", "cost", "risk"],\n'
+                   '               [[4, 2], [3, 4], [1, 3]], recommend=1)',
+    "heat_matrix": 'dk.heat_matrix(s, 1.2, 1.4, 6.2, 3.2, [[10, 20, 30], [40, 50, 60]],\n'
+                   '               ["r1", "r2"], ["c1", "c2", "c3"], scale="div")',
+    "table": 'dk.table(s, 0.6, 1.5, 6.0, [["Metric", "Value"], ["Dice", "0.91"]], highlight=1)',
+    "native_chart": 'dk.native_chart(s, 0.6, 1.0, 6.0, 3.2, ["Q1", "Q2", "Q3"],\n'
+                    '                [("revenue", [3, 5, 4])], kind="column")',
+    "org_tree": 'dk.org_tree(s, 0.6, 0.6, 8.8, 4.4,\n'
+                '            ("CEO", [("Eng", [("Web", [])]), ("Sales", [])]))',
+    "position_map": 'dk.position_map(s, 0.8, 0.8, 8.4, 4.2,\n'
+                    '                [("A", 1, 1), ("B", 9, 8), ("C", 5, 2)], highlight=1)',
+    "small_multiples": 'dk.small_multiples(s, 0.6, 0.6, 8.8, 4.2,\n'
+                       '                   [("A", [1, 2, 3]), ("B", [2, 2, 2]), ("C", [1, 5, 9])],\n'
+                       '                   categories=["x", "y", "z"], highlight=2)',
+    "iso_bars": 'dk.iso_bars(s, 0.8, 1.4, 8.4, 3.4, [10, 90, 40],\n'
+                '            labels=["a", "b", "c"], highlight=1)',
+    "iso_stack": 'dk.iso_stack(s, 0.6, 1.1, 9.0, 4.0,\n'
+                 '             [("Base", "x"), ("Mid", "y"), ("Top", "z")])',
+    "iso_prism": 'dk.iso_prism(s, 2.0, 4.0, 1.2, 1.2, 1.0, "3E6E9E")',
+    "sankey": 'dk.sankey(s, 0.5, 1.1, 9.0, 3.8,\n'
+              '          [("Capital", "LabA", 100), ("Capital", "LabB", 30),\n'
+              '           ("LabA", "Compute", 100), ("LabB", "Compute", 30)],\n'
+              '          value_fmt="${:.0f}B", col_labels=["out", "labs", "back"])',
+    "venn": 'dk.venn(s, 0.6, 1.1, 5.2, 4.0, ["Fast", "Cheap", "Good"],\n'
+            '        zones={"123": "pick two"})',
+    "source_note": 'dk.source_note(s, "Crunchbase Q1 2026", as_of="30 July 2026")',
+}
+
+
 def load():
     out = {}
     for m in MODULES:
@@ -58,6 +112,15 @@ def load():
                 continue
             out.setdefault(name, (m, fn))
     return out
+
+
+def _guarantee(name):
+    """The one geometric promise the component makes and a hand-roll loses."""
+    try:
+        import component_audit
+        return component_audit.FORM_GUARANTEE.get(name, "a form component")
+    except Exception:
+        return "a form component"
 
 
 def show(name, mod, fn, full=False):
@@ -84,6 +147,8 @@ def main(argv=None):
     ap.add_argument("--search", metavar="TERM", help="find helpers whose name or docstring matches")
     ap.add_argument("--full", action="store_true", help="print whole docstrings")
     ap.add_argument("--list", action="store_true", help="list every helper name")
+    ap.add_argument("--example", action="store_true",
+                    help="print a RUNNABLE call for each named form component")
     a = ap.parse_args(argv)
     reg = load()
     if not reg:
@@ -113,6 +178,17 @@ def main(argv=None):
     if not a.names:
         ap.print_help()
         return 2
+
+    if a.example:
+        miss = [n for n in a.names if n not in EXAMPLES]
+        for n in a.names:
+            if n in EXAMPLES:
+                print(f"\n# {n} — {_guarantee(n)}\n{EXAMPLES[n]}")
+        for n in miss:
+            print(f"sigs: no scaffold for {n!r}"
+                  + (" (it is a primitive — you supply the geometry)" if n in reg else ""),
+                  file=sys.stderr)
+        return 1 if miss else 0
 
     missing = []
     for n in a.names:

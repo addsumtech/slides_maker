@@ -89,7 +89,10 @@ Two time sinks compress well: ingesting material/assets, and the critic loop.
     `python3 scripts/sigs.py text box native_chart takeaway_rail …` prints each signature, its
     docstring head, and the two call-shape contracts that have actually gone wrong (run-tuple order;
     RGBColor vs hex). Reading `deckkit.py` one function at a time answers one question per
-    round-trip and still missed both.
+    round-trip and still missed both. **`--example <form…>` hands back a RUNNABLE call** for any form
+    component plus the guarantee it makes — the step between "form-selection said timeline" and
+    hand-rolling one out of `box`+`text`. Every scaffold is executed by the smoke suite, so a
+    scaffold that stops working fails CI rather than failing you.
   - **Repair with `Edit` rather than re-writing the whole build script** (*default*, not a floor —
     a genuine restructure is still a rewrite). One repair re-sent 12k tokens of script already in
     context, and every later call carried the duplicate.
@@ -221,7 +224,7 @@ filled-field gate, or a deterministic check — that makes skipping them visible
 | Step 3, on a non-16:9 surface or a supplied template | `references/deck-setup.md` | `CJK_NO_EA` fails the build on a missing EA font |
 | Step 5, at every critic dispatch and returned review | `references/critic-panel.md` | `validate_review.py` rejects a non-conforming review |
 | Step 6, before composing the hand-off — every deck | `references/handoff-checklist.md` | the hand-off note is itself the visible artifact |
-| A helper's exact call contract, before writing build code | `scripts/sigs.py <names…>` (one lookup, many helpers) |
+| A helper's exact call contract, before writing build code | `scripts/sigs.py <names…>` (one lookup, many helpers; `--example` for a runnable call) |
 | Any step, for a script's flags or an unrouted capability | `references/file-inventory.md` | lookup only — nothing depends on having read it |
 
 *(Full file/script inventory: see **Files** at the end.)*

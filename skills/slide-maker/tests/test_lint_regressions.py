@@ -347,6 +347,70 @@ def main():
     else:
         bad.append("lint did not complete cleanly on an unmappable-group deck (or printed 'slide ?')")
 
+    # ── the declared type_scale must actually bind ────────────────────────────
+    # render_deck --gate-check requires design_plan.type_scale; nothing compared it to the deck, so
+    # a deck could declare {34,24,14}, set 31/22/17 throughout, and pass both gates clean (measured).
+    # The rule has to stay narrow: the skill's own 5-slide example uses TWELVE distinct sizes, so
+    # "every size must be a declared tier" would fire on correct work and be abandoned immediately.
+    import json as _json
+
+    def _scaled(dest, sizes, declared):
+        prs = _dk.blank_deck(10, 5.625)
+        for i in range(3):
+            s = prs.slides.add_slide(prs.slide_layouts[6])
+            _dk.text(s, 0.6, 0.5, 8.8, 0.7, [[(f"Title {i+1}", sizes[0], _dk.DEEP, True, False)]])
+            _dk.text(s, 0.6, 1.5, 8.8, 0.5, [[("Subhead", sizes[1], _dk.DEEP, False, False)]])
+            _dk.text(s, 0.6, 2.3, 8.8, 1.5,
+                     [[("Body copy carrying most of this deck's characters by a wide margin.",
+                        sizes[2], _dk.MUTE, False, False)]])
+        d = dest.parent / dest.stem
+        d.mkdir(exist_ok=True)
+        out = d / "t.pptx"
+        prs.save(str(out))
+        if declared:
+            (d / ".deck-gates.json").write_text(_json.dumps({"design_plan": {"type_scale": declared}}))
+        return out
+
+    o = _lint_nr(_scaled(tmp / "sc_ok.pptx", (34, 24, 14), {"display": 34, "title": 24, "body": 14}))
+    if "SCALE DRIFT" in o:
+        bad.append("SCALE DRIFT fired on a deck that sets exactly what it declares")
+    else:
+        ok.append("a deck that honours its declared type scale is silent")
+
+    o = _lint_nr(_scaled(tmp / "sc_drift.pptx", (31, 22, 17), {"display": 34, "title": 24, "body": 14}))
+    if "SCALE DRIFT" in o and "body=14" in o:
+        ok.append("a deck that declares one scale and sets another is caught")
+    else:
+        bad.append("SCALE DRIFT missed a deck declaring 34/24/14 while setting 31/22/17 — the "
+                   "required field constrains nothing again")
+
+    o = _lint_nr(_scaled(tmp / "sc_none.pptx", (34, 24, 14), None))
+    if "SCALE DRIFT" in o:
+        bad.append("SCALE DRIFT fired with no .deck-gates.json — it must be silent when nothing "
+                   "was declared, or every deck without a gates file gains a warning")
+    else:
+        ok.append("no declaration means no drift finding")
+
+    # a hero number way off the scale is normal and must not read as drift
+    prs = _dk.blank_deck(10, 5.625)
+    for i in range(3):
+        s = prs.slides.add_slide(prs.slide_layouts[6])
+        _dk.text(s, 0.6, 0.5, 8.8, 0.8, [[(f"Title {i+1}", 34, _dk.DEEP, True, False)]])
+        _dk.text(s, 0.6, 1.6, 8.8, 0.6, [[("Subhead", 24, _dk.DEEP, False, False)]])
+        _dk.text(s, 0.6, 2.4, 8.8, 1.6,
+                 [[("Body copy carrying most of the characters in this deck.", 14, _dk.MUTE, False, False)]])
+    s = prs.slides[1]
+    _dk.text(s, 6.6, 3.6, 3.0, 1.2, [[("97%", 96, _dk.DEEP, True, False)]])   # deliberate hero
+    d = tmp / "sc_hero"; d.mkdir(exist_ok=True)
+    prs.save(str(d / "t.pptx"))
+    (d / ".deck-gates.json").write_text(_json.dumps(
+        {"design_plan": {"type_scale": {"display": 34, "title": 24, "body": 14}}}))
+    if "SCALE DRIFT" in _lint_nr(d / "t.pptx"):
+        bad.append("SCALE DRIFT fired on a deliberate off-scale hero number — the check must key on "
+                   "the size carrying the TEXT, not on every size present")
+    else:
+        ok.append("a deliberate off-scale hero number is not drift")
+
     # ── the translucent-overlap exemption must stay NARROW ────────────────────
     # venn()'s circles overlap by definition, so OVERLAP fired on every Venn ever built — a hard
     # gate failing on correct output is worse than no gate, because the author starts working

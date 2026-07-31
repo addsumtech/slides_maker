@@ -59,6 +59,8 @@ EMITTERS = set()
 
 # form components + the concrete guarantee each one gives that a hand-roll does not
 FORM_GUARANTEE = {
+    "sankey": "ribbon width strictly proportional to value on ONE deck-wide scale",
+    "venn": "zone labels placed and SIZED from each region's own geometry",
     "native_chart": "a real editable chart; axis derived from the data, non-Latin labels render",
     "segmented_bar": "parts are normalised to sum, and each segment's label is fitted to its width",
     "meter_bar": "the value label is centered ON the bar's centerline by construction",

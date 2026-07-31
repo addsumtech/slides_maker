@@ -182,6 +182,17 @@ examined. Note the related rule: two shapes **inside the same group** never rais
 is an authored composition (a badge on a card, an icon on a panel), and that is how layering is built.
 A child colliding with anything OUTSIDE its group is still caught.
 
+**`SCALE DRIFT` (deck-level, advisory).** The `type_scale` in `.deck-gates.json` and the type the
+deck actually sets disagree. `render_deck --gate-check` requires that field; nothing used to compare
+it to the artifact, so a deck could declare `{34, 24, 14}`, set 31/22/17 throughout, and pass both
+gates clean. Two narrow checks only: **body** must be the size carrying the most text (a declared
+14pt against a deck set at 17pt is the declaration being fiction), and **display/title** must at
+least appear somewhere. A long tail of other sizes is NOT flagged — the skill's own five-slide
+example uses twelve sizes, and any "every size must be a declared tier" rule would fire on correct
+work. A hero number, a page number, a caption are all untouched.
+- **Fix:** correct whichever is wrong — usually the declaration, written early and never revisited.
+- Pass `--gates <path>` to point at a gates file elsewhere; with no file, the check is silent.
+
 **When a finding seems wrong:** each check has documented escapes (shadow pairs, chip labels,
 containment). Don't fight the linter in code — adjust the deck (rename, nudge 0.05 in) and move on;
 if it's genuinely a lint bug, note it in the hand-off rather than shipping a `✗`.
