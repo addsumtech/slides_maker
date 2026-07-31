@@ -192,6 +192,11 @@ example uses twelve sizes, and any "every size must be a declared tier" rule wou
 work. A hero number, a page number, a caption are all untouched.
 - **Fix:** correct whichever is wrong — usually the declaration, written early and never revisited.
 - Pass `--gates <path>` to point at a gates file elsewhere; with no file, the check is silent.
+- **`SCALE DRIFT NOT CHECKED`** means most of the deck's text INHERITS its size from the
+  layout/theme rather than setting it on the run, so there is too little explicitly-sized text
+  to say which size is the body. It is reported rather than passed over in silence, because a
+  silent skip is indistinguishable from a clean result. Set sizes on the runs (deckkit's
+  `text()` always does) or read the scale by eye.
 
 **When a finding seems wrong:** each check has documented escapes (shadow pairs, chip labels,
 containment). Don't fight the linter in code — adjust the deck (rename, nudge 0.05 in) and move on;

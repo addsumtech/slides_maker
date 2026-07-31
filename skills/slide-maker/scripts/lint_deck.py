@@ -1165,17 +1165,25 @@ def _declared_scale(deck_path, gates_path=None):
 
 
 def _size_volume(prs):
-    """{point size: characters set at it} across the deck — weight by TEXT VOLUME, not by count.
+    """({point size: characters set at it}, total characters) — weighted by TEXT VOLUME.
 
     Which sizes a deck *contains* says little: a page number appears on every slide and carries
     nothing. Which sizes carry its WORDS is the question a type scale answers.
+
+    The total is returned alongside because a run can INHERIT its size from the layout or theme and
+    report none. A template-based deck can leave most of its body unmeasurable here, and judging
+    "which size carries the most text" from the remainder reads a caption as the body — measured: a
+    deck with >1000 inherited characters and one 28-character caption produced three findings, all
+    from those 28 characters.
     """
     vol = {}
+    total = 0
     for s in prs.slides:
         for r in _walk_runs(s.shapes):
             txt = (r.text or "").strip()
             if not txt:
                 continue
+            total += len(txt)
             try:
                 pt = r.font.size.pt if r.font.size else None
             except Exception:
@@ -1183,7 +1191,7 @@ def _size_volume(prs):
             if pt:
                 k = round(float(pt) * 2) / 2.0
                 vol[k] = vol.get(k, 0) + len(txt)
-    return vol
+    return vol, total
 
 
 def scale_drift(prs, declared, tol=1.0):
@@ -1198,16 +1206,24 @@ def scale_drift(prs, declared, tol=1.0):
         a decision.
     A hero number, a page number, a caption — anything off-scale but low-volume — is untouched.
     """
-    vol = _size_volume(prs)
-    if not vol or not declared:
+    if not declared:
         return []
+    vol, all_chars = _size_volume(prs)
+    measured = sum(vol.values())
+    # Refuse to judge from a thin sample. Below this the dominant size is as likely to be a caption
+    # as the body, and a confident wrong finding is worse than none — the author stops reading them.
+    if measured < 200 or not all_chars or measured < 0.60 * all_chars:
+        return ["SCALE DRIFT NOT CHECKED: only {} of {} characters carry an explicit size (the rest "
+                "inherit from the layout/theme), which is too thin a sample to say which size is the "
+                "body — set sizes on the runs, or read the type scale by eye"
+                .format(measured, all_chars)] if all_chars else []
     out = []
-    total = sum(vol.values()) or 1
+    total = measured
     dominant = max(vol.items(), key=lambda kv: kv[1])[0]
     body = declared.get("body")
     if body is not None and abs(dominant - body) > tol:
         out.append("SCALE DRIFT: the deck declares body={:g}pt, but the size carrying the most "
-                   "text is {:g}pt ({:.0f}% of all characters) — either the declared scale is "
+                   "text is {:g}pt ({:.0f}% of the explicitly-sized text) — either the declared scale is "
                    "fiction or the build drifted off it; they cannot both be right"
                    .format(body, dominant, 100 * vol[dominant] / total))
     for tier in ("display", "title"):
@@ -2285,6 +2301,9 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
     # gate requires the field; until now nothing compared it to the artifact.
     for m in scale_drift(prs, _declared_scale(path, gates_path)):
         print(f"  [warn] {m}")
+        # slide 0 = DECK-level, deliberately: unlike DUPLICATE SLIDE TITLES this cannot be pinned to
+        # one slide — the scale is a property of the whole deck, and naming an arbitrary slide would
+        # send a reader to a page where nothing is wrong.
         j_warns.append({"slide": 0, "text": m})
         warn_total += 1
     lums = _load_render_lums(path, renders_dir, len(stats_rows), pngs=pngs)

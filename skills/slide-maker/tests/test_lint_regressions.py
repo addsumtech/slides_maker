@@ -411,6 +411,31 @@ def main():
     else:
         ok.append("a deliberate off-scale hero number is not drift")
 
+    # A run can INHERIT its size from the layout/theme and report none, so a template-based deck can
+    # leave most of its body unmeasurable. Judging "which size carries the most text" from what is
+    # left reads a caption as the body: measured, a deck with 1200 inherited characters and one
+    # 28-character 9pt caption produced THREE confident findings from those 28 characters.
+    prs = _dk.blank_deck(10, 5.625)
+    from pptx.util import Inches as _In
+    for _i in range(4):
+        s = prs.slides.add_slide(prs.slide_layouts[6])
+        tb = s.shapes.add_textbox(_In(0.6), _In(1), _In(8.6), _In(2))
+        tb.text_frame.text = "Body copy that inherits its size from the theme. " * 6
+        _dk.text(s, 0.6, 3.6, 3, 0.4, [[("caption", 9, _dk.MUTE, False, False)]])
+    d = tmp / "sc_inherit"; d.mkdir(exist_ok=True)
+    prs.save(str(d / "t.pptx"))
+    (d / ".deck-gates.json").write_text(_json.dumps(
+        {"design_plan": {"type_scale": {"display": 34, "title": 24, "body": 14}}}))
+    o = _lint_nr(d / "t.pptx")
+    if "SCALE DRIFT NOT CHECKED" in o:
+        ok.append("a deck whose type is mostly INHERITED refuses to be judged, and says so")
+    elif "SCALE DRIFT" in o:
+        bad.append("SCALE DRIFT judged a deck from a thin sample of explicitly-sized text — a "
+                   "caption was read as the body, which is a confident wrong finding")
+    else:
+        bad.append("a deck with unmeasurable type went silent instead of reporting NOT CHECKED — "
+                   "silence here is indistinguishable from a pass")
+
     # ── the translucent-overlap exemption must stay NARROW ────────────────────
     # venn()'s circles overlap by definition, so OVERLAP fired on every Venn ever built — a hard
     # gate failing on correct output is worse than no gate, because the author starts working
