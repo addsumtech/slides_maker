@@ -93,6 +93,8 @@ EXAMPLES = {
               '          value_fmt="${:.0f}B", col_labels=["out", "labs", "back"])',
     "venn": 'dk.venn(s, 0.6, 1.1, 5.2, 4.0, ["Fast", "Cheap", "Good"],\n'
             '        zones={"123": "pick two"})',
+    "unit_grid": 'dk.unit_grid(s, 0.6, 1.7, 8.8, 3.2, 34, "1 square = 1 attributed painting",\n'
+                 '             filled=34, fill="A63A2A")',
     "source_note": 'dk.source_note(s, "Crunchbase Q1 2026", as_of="30 July 2026")',
 }
 

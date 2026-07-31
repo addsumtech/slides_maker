@@ -63,6 +63,7 @@ FORM_GUARANTEE = {
     "venn": "zone labels placed and SIZED from each region's own geometry",
     "native_chart": "a real editable chart; axis derived from the data, non-Latin labels render",
     "segmented_bar": "parts are normalised to sum, and each segment's label is fitted to its width",
+    "unit_grid": "square cells sized to fit w x h, a countable row length, and a mandatory unit label",
     "meter_bar": "the value label is centered ON the bar's centerline by construction",
     "stat_row": "even column pitch and one baseline for every figure",
     "scorecard": "equal tiles with one hero, from the region — not a hand-picked pitch",

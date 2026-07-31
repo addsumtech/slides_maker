@@ -5274,6 +5274,101 @@ def tradeoff_list(slide, x, y, w, plus, minus, *, pos=None, neg=None, recommende
     return cy
 
 
+def unit_grid(slide, x, y, w, h, total, unit_label, *, filled=None, cols=None, gap_frac=0.22,
+              fill=None, empty=None, ink=None, label_size=10.5, font=None, max_cells=400,
+              alt=None):
+    """A UNIT / waffle chart: ``total`` identical cells, ``filled`` of them highlighted.
+
+    THE FORM. One square = one thing. It is how you make a count *felt* rather than read — "34
+    paintings" is a number, thirty-four squares is a quantity you can see is small. It is also the
+    honest way to show a tiny share: a 1%-of-1000 sliver on a bar is a hairline, but one dark cell
+    in a field of a hundred is unmistakable. Reach for it when the count IS the point (a lifetime's
+    output, survivors, 3 of 12 experiments) and for the "N in 100" framing. Do NOT use it when the
+    total is large and arbitrary — 8,412 cells is a texture, not a count.
+
+    WHY IT IS HERE. This was the one editorial form the catalogue lacked, and its absence was
+    measured: a narrative deck hand-rolled a 34-square grid out of `box` in a loop with a literal
+    stride, which is the exact geometry defect `check_handrolled_pitch` exists to catch. The
+    catalogue skewed to business/data forms (leaderboard, funnel, scorecard), so a humanities deck
+    fell out of it entirely and back onto primitives.
+
+    ``unit_label`` IS POSITIONAL AND REQUIRED, on purpose. A field of identical squares is
+    meaningless until the viewer is told what one square is, and that sentence has to be on the
+    slide, not in the caption below or in the speaker's mouth. Passing an empty one raises: a
+    decorative grid of squares is precisely the un-decodable "frame furniture" this skill treats as
+    a defect. Write the unit, e.g. ``"一个方块 = 一幅公认真迹"`` / ``"1 square = 1 shipped feature"``.
+
+    Cells are square and sized to the LARGEST that fits ``w`` x ``h`` (the label's line included in
+    the budget), sweeping every column count rather than guessing one. Cell size and stride are
+    DERIVED from the region, never constants. Returns bottom y, always <= ``y + h``.
+    """
+    if not isinstance(total, int) or total <= 0:
+        raise ValueError(f"unit_grid: total must be a positive int, got {total!r}")
+    if total > max_cells:
+        raise ValueError(
+            f"unit_grid: {total} cells is a texture, not a countable quantity (cap {max_cells}). "
+            f"Either scale the unit so one cell = many things (say so in unit_label), or use a bar.")
+    if not (unit_label or "").strip():
+        raise ValueError(
+            "unit_grid: unit_label is required — a grid of identical squares means nothing until "
+            "the slide says what one square is. Pass e.g. '1 square = 1 painting'.")
+    if filled is not None and not (0 <= filled <= total):
+        raise ValueError(f"unit_grid: filled={filled} outside 0..{total}")
+
+    # The region is w x h MINUS the unit label's own line — the label is part of the component, so
+    # it must be budgeted, not added on afterwards. Deriving the cell from w alone was the first
+    # cut's bug: 34 cells across 8.8in produced a 5.4in-tall grid that ran off a 5.625in canvas and
+    # drew five OVERFLOW findings. A form component that can overflow guarantees nothing.
+    lab_h = label_size / 72.0 * 1.9
+    grid_h = max(0.2, h - 0.14 - lab_h)
+
+    def _fit(nc):
+        """cell size and row count for nc columns, respecting BOTH w and the grid's height."""
+        nc = max(1, min(int(nc), total))
+        nr = int(math.ceil(total / float(nc)))
+        c_w = w / (nc + gap_frac * (nc - 1))                  # widest cell this many columns allows
+        c_h = grid_h / (nr + gap_frac * (nr - 1))             # tallest cell this many rows allows
+        return nc, nr, min(c_w, c_h)                          # square cells: the binding limit wins
+
+    if cols:
+        ncol, nrow, cell = _fit(cols)
+    else:
+        # pick the column count that yields the LARGEST square cell inside w x grid_h. Sweeping is
+        # exact and cheap (total <= max_cells), and beats a sqrt guess that ignores the height.
+        cands = [_fit(nc) for nc in range(1, total + 1)]
+        best = max(c[2] for c in cands)
+        # …then prefer a COUNTABLE row length. The point of a unit chart is that the viewer reads
+        # the quantity off the grid; 34 as 12+12+10 has to be counted square by square, while
+        # 10+10+10+4 is read at a glance. So among column counts within 12% of the largest cell,
+        # take a multiple of ten, else of five. Ties break toward more columns (a shallower block
+        # reads as one quantity; a tall one reads as a list).
+        near = [c for c in cands if c[2] >= best * 0.88]
+        for pref in (lambda n: n % 10 == 0, lambda n: n % 5 == 0):
+            tier = [c for c in near if pref(c[0])]
+            if tier:
+                near = tier
+                break
+        ncol, nrow, cell = max(near, key=lambda r: r[0])
+    gap = cell * gap_frac
+    fc = fill if fill is not None else ACCENTS[0]
+    ec = empty if empty is not None else "D9D5CE"
+    for k in range(total):
+        r, c = divmod(k, ncol)
+        on = True if filled is None else (k < filled)
+        box(slide, x + c * (cell + gap), y + r * (cell + gap), cell, cell,
+            fill=(fc if on else ec), round=False)
+    yb = y + nrow * cell + (nrow - 1) * gap
+    text(slide, x, yb + 0.14, w, lab_h,
+         [[(unit_label, label_size, (ink if ink is not None else MUTE), False, False, font)]],
+         space_after=0)
+    if alt:
+        try:
+            alt_text(slide.shapes[-1], alt)
+        except Exception:
+            pass
+    return yb + 0.14 + lab_h
+
+
 def segmented_bar(slide, x, y, w, h, parts, *, labels=None, accents=None, show_pct=True, legend="auto"):
     """A cumulative 100% SEGMENTED bar. parts = list of values (auto-normalised). Distinct hues.
     On-bar labels AUTO-FIT their segment; a segment too thin to carry a label (< 0.5in) is NOT

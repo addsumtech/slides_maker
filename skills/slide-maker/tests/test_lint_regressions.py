@@ -684,6 +684,38 @@ def main():
             bad.append("SHALLOW BAND fired on the corrected rebuild — the threshold now flags decks "
                        "that fixed the problem, which makes the finding noise")
 
+    # ── unit_grid's guarantee IS containment: square cells sized to fit w x h with the unit label
+    # budgeted in. The first cut derived the cell from w alone, so 34 cells across 8.8in produced a
+    # 5.4in-tall grid on a 5.625in canvas and drew five OVERFLOW findings — a form component that
+    # can overflow guarantees nothing, which is the whole reason to prefer it over hand-placed boxes.
+    ug_bad = 0
+    for total in (1, 3, 7, 12, 34, 60, 100, 137, 250, 400):
+        for w, h in ((8.8, 3.4), (3.0, 3.0), (9.4, 1.2), (2.0, 4.2), (5.0, 0.9)):
+            prs = _dk.blank_deck()
+            s = prs.slides.add_slide(prs.slide_layouts[6])
+            yb = _dk.unit_grid(s, 0.4, 0.9, w, h, total, "1 = 1")
+            cells = [sh for sh in s.shapes if not sh.has_text_frame or not sh.text_frame.text]
+            right = max(sh.left / 914400.0 + sh.width / 914400.0 for sh in s.shapes)
+            bottom = max(sh.top / 914400.0 + sh.height / 914400.0 for sh in s.shapes)
+            if (len(cells) != total or right > 0.4 + w + 0.01
+                    or bottom > 0.9 + h + 0.01 or yb > 0.9 + h + 0.01):
+                ug_bad += 1
+    if ug_bad:
+        bad.append(f"unit_grid escaped its region or drew the wrong cell count in {ug_bad} of 50 "
+                   f"total/region combinations — the containment guarantee is broken")
+    else:
+        ok.append("unit_grid: exact cell count, always inside w x h (50 total/region combos)")
+    for why, call in [("total <= 0", lambda s: _dk.unit_grid(s, 0.4, 0.9, 5, 2, 0, "1 = 1")),
+                      ("a texture, not a count", lambda s: _dk.unit_grid(s, 0.4, 0.9, 5, 2, 9999, "1 = 1")),
+                      ("filled out of range", lambda s: _dk.unit_grid(s, 0.4, 0.9, 5, 2, 10, "1 = 1", filled=11)),
+                      ("a blank unit label", lambda s: _dk.unit_grid(s, 0.4, 0.9, 5, 2, 34, "  "))]:
+        prs = _dk.blank_deck()
+        try:
+            call(prs.slides.add_slide(prs.slide_layouts[6]))
+            bad.append(f"unit_grid accepted {why} — the refusal is decorative")
+        except ValueError:
+            ok.append(f"unit_grid refuses {why}")
+
     for line in ok:
         print("  ok   " + line)
     for line in bad:

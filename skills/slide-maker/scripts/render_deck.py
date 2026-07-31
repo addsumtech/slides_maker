@@ -125,6 +125,44 @@ def _report_carried_by(pptx_path, cb):
               "fix that, not after the user says '不够大胆'.")
 
 
+def _report_form_reach(pptx_path):
+    """Say how much of the CATALOGUE the build actually reached for, at the moment of hand-off.
+
+    WHY, measured on this skill's own last deck. The library exposes ~174 helpers. The build called
+    15, of which exactly one (`stat_row`) was a composed form; the other 59 shapes were raw
+    `box`/`text`. `component_audit.py` reports precisely this and SKILL.md's pre-flight points at
+    it — but the pointer is prose, and the author (me) never ran it. The cost was concrete: slide 3
+    hand-built a track + fill + label out of two boxes, and `meter_bar`'s docstring opens by calling
+    itself "the correct, reusable form of the hand-built 'track + fill + number' row".
+
+    Bespoke composition is NOT the failure — a Mondrian page and a tessellation cannot come from a
+    catalogue, and forcing components onto them would make the deck worse. The failure is never
+    having LOOKED, which is invisible unless somebody prints the number. So this prints it and
+    names the one command that answers it, and never blocks.
+    """
+    try:
+        here = Path(__file__).resolve().parent
+        sys.path.insert(0, str(here))
+        import component_audit as _ca
+        # the build script sits next to the deck by convention (build_deck.py / build_<name>.py)
+        cands = sorted(Path(pptx_path).parent.glob("build*.py"))
+        if not cands:
+            return
+        called = _ca._script_calls(str(cands[0]))
+    except Exception:
+        return
+    forms = sorted(set(called) & set(_ca.FORM_GUARANTEE))
+    prims = sum(1 for n in ("box", "text") if n in called)
+    if len(forms) >= 3 or not prims:
+        print(f"[gates] form reach: {len(forms)} named component(s) — {', '.join(forms) or 'none'}")
+        return
+    print(f"[gates] form reach: {len(forms)} of {len(_ca.FORM_GUARANTEE)} named components "
+          f"({', '.join(forms) or 'none'}); the rest of {cands[0].name} is raw box/text.")
+    print("        Bespoke composition is legitimate and often right — but confirm it was CHOSEN, "
+          "not defaulted to: `python3 scripts/sigs.py --list` (or --search <shape>) is one call and "
+          "answers it. Measured cost of skipping it once: a meter_bar rebuilt out of two boxes.")
+
+
 def _report_icon_waiver(pptx_path, fam):
     """Name the slides that contradict an `icon_family: none - <reason>` waiver.
 
@@ -150,11 +188,20 @@ def _report_icon_waiver(pptx_path, fam):
         from pptx import Presentation as _P0
         _prs0 = _P0(str(pptx_path))
         _sw0, _sh0 = _prs0.slide_width / 914400.0, _prs0.slide_height / 914400.0
-        n_ic = 0
+        # A repeated LOGO is icon-SIZED and would be miscounted as an icon family — measured: a
+        # deck stamping one 0.6in mark on 8 slides counted 8 "icons" and would have been told its
+        # record was stale. Chrome repeats at the same geometry; content does not. Drop any picture
+        # whose position+size recurs on 3+ slides before counting.
+        _sig, _n_sl = {}, len(_prs0.slides) or 1
         for _s0 in _prs0.slides:
             for _b0 in _ld0._boxes(_s0, _sw0, _sh0):
                 if _b0.get("pic") and not _b0.get("bg") and _b0["w"] < 1.2 and _b0["h"] < 1.2:
-                    n_ic += 1
+                    _k = (round(_b0["l"], 1), round(_b0["t"], 1), round(_b0["w"], 1), round(_b0["h"], 1))
+                    _sig[_k] = _sig.get(_k, 0) + 1
+        # Chrome repeats on MOST slides; a content icon set appears on a minority of them. A bare
+        # ">=3 occurrences = chrome" rule was wrong in both directions (measured): it cleared a
+        # 3-icon row that recurred on 3 of 8 slides, which is content, while a logo on 8 of 8 is not.
+        n_ic = sum(c for c in _sig.values() if c <= max(2, 0.5 * _n_sl))
         if n_ic >= 2:
             print(f"[gates] icon waiver: the plan says `icon_family: none` but the deck contains "
                   f"{n_ic} icon-sized image(s) — the record is stale. Update it to the family you "
@@ -184,10 +231,20 @@ def _report_icon_waiver(pptx_path, fam):
         for _sz, g in groups.items():
             if len(g) < 3:
                 continue
-            rows = sum(1 for b in g if abs(b["t"] - g[0]["t"]) < 0.15)
-            cols = sum(1 for b in g if abs(b["l"] - g[0]["l"]) < 0.15)
-            if max(rows, cols) >= 3:
-                hits.append(i)
+            # ROWS ONLY, and they must actually span the page. A vertical stack of short lines at one
+            # left edge is a bullet list, not a category set — counting columns made every deck with
+            # a 3-line body block "entity-rich" (measured: fired on all 8 slides of a fixture whose
+            # only pictures were one repeated logo). A category set reads ACROSS: 3+ peers sharing a
+            # baseline, spread over at least half the canvas.
+            for anchor in g:
+                row = [b for b in g if abs(b["t"] - anchor["t"]) < 0.15]
+                if len(row) < 3:
+                    continue
+                spread = max(b["l"] for b in row) - min(b["l"] for b in row)
+                if spread >= 0.45 * sw:
+                    hits.append(i)
+                    break
+            if hits and hits[-1] == i:
                 break
     if len(hits) >= 2:
         print(f"[gates] icon waiver: `icon_family: none` but slides {hits} carry parallel label sets "
@@ -638,7 +695,10 @@ def check_handoff_gates(pptx, mode="presented"):
             # and a Codex run keeps BOTH records (references/codex-runtime.md). Demanding one spelling
             # here would reject the field an OpenAI-bridged run naturally writes — the same evidence,
             # rejected for its key name.
-            proof_file = (proof or {}).get("png") or (proof or {}).get("path")
+            # isinstance FIRST: this guard used to run one line after the .get() it protects, so the
+            # natural shorthand `"signature_proof": "sig.png"` raised AttributeError and printed a
+            # traceback instead of the message below, which says exactly what to write.
+            proof_file = proof.get("png") or proof.get("path") if isinstance(proof, dict) else None
             if not isinstance(proof, dict) or not proof_file or not proof.get("slide"):
                 die('`signature_proof` must be {"slide": <n>, "png": "<rendered png>"} (the key may also '
                     'be spelled "path", as the Codex delivery gate does) — the rendered evidence that '
@@ -659,6 +719,7 @@ def check_handoff_gates(pptx, mode="presented"):
             design["boldness"], str(design["signature_move"])[:48], cb))
         _report_carried_by(pptx, cb)
         _report_icon_waiver(pptx, design.get("icon_family"))
+        _report_form_reach(pptx)
     else:
         die("no `design_plan` record. Step 2 dispatches agents/slide-design.md as the deck's art "
             "director; nothing else decides deck rhythm or the signature move.\n"

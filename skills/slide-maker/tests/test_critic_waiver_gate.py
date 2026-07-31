@@ -189,6 +189,52 @@ CASES = [
 ]
 
 
+def build_icon_deck(dest: Path, *, logo_every=False, icon_slides=(), label_row=False, n=8) -> None:
+    """A deck shaped to probe one branch of the icon waiver at a time."""
+    sys.path.insert(0, str(SKILL / "scripts"))
+    import deckkit as dk
+    from PIL import Image
+    lg = dest.parent / "iconfx_logo.png"
+    Image.new("RGB", (64, 64), (30, 60, 120)).save(lg)
+    prs = dk.blank_deck(10, 5.625)
+    for i in range(n):
+        s = prs.slides.add_slide(prs.slide_layouts[6])
+        dk.text(s, 0.6, 0.4, 8.8, 0.6, [[(f"Title of slide {i+1}", 28, dk.DEEP, True, False)]])
+        for k in range(6):                                   # ordinary body copy: NOT a category set
+            dk.text(s, 0.6, 1.3 + k * 0.34, 8.8, 0.32,
+                    [[("body copy line carrying several real words", 14, dk.DEEP, False, False)]],
+                    space_after=0)
+        if logo_every:
+            dk.logo(s, str(lg), corner="tr", h=0.6)
+        if label_row and i in (1, 3, 5):                     # 4 short labels ACROSS the page
+            for j, lab in enumerate(("Portrait", "Genre", "Still life", "Landscape")):
+                dk.text(s, 0.6 + j * 2.2, 4.6, 2.0, 0.34, [[(lab, 15, dk.DEEP, True, False)]],
+                        space_after=0)
+        if i + 1 in icon_slides:
+            for j in range(3):
+                p = dest.parent / f"iconfx_{i}{j}.png"
+                Image.new("RGB", (64, 64), (200, 40, 40)).save(p)
+                dk.picture(s, str(p), 0.7 + j * 2.6, 3.9, 0.5, 0.5)
+    prs.save(str(dest))
+
+
+ICON_CASES = [
+    # (name, deck shape, icon_family, must the waiver fire?)
+    ("icon waiver: a LOGO repeated on every slide is not an icon family",
+     {"tag": "ic_logo", "logo_every": True}, "none - brand allows only the logo", False),
+    ("icon waiver: plain body copy is not a category set",
+     {"tag": "ic_plain"}, "none - narrative deck, no entities", False),
+    ("icon waiver: a real icon set contradicts a `none` record",
+     {"tag": "ic_real", "icon_slides": (2, 4, 6)}, "none - conceptual content", True),
+    ("icon waiver: a logo does not mask a real icon set",
+     {"tag": "ic_both", "logo_every": True, "icon_slides": (2, 4, 6)}, "none - x", True),
+    ("icon waiver: label ROWS across the page do contradict `none`",
+     {"tag": "ic_rows", "label_row": True}, "none - concepts, icons would decorate", True),
+    ("icon waiver: a declared family is never second-guessed",
+     {"tag": "ic_decl", "icon_slides": (2, 4, 6)}, "tabler outline 1.75px", False),
+]
+
+
 def main() -> int:
     passed = failed = 0
     with tempfile.TemporaryDirectory() as td:
@@ -208,6 +254,31 @@ def main() -> int:
                 print(f"  FAIL {name}: exit={code} (wanted pass={should_pass}), "
                       f"missing {needle!r}")
                 print("       " + out.strip().replace("\n", "\n       ")[:400])
+        # ── the `icon waiver` gate. `icon_family: "none - <reason>"` is free text written at PLAN
+        # time, before any slide exists, and nothing revisited it: one real build shipped ZERO icons
+        # past every gate on a deck of category slides. It must stay satisfiable for a genuinely
+        # icon-free deck, so both FALSE-POSITIVE cases below matter at least as much as the true
+        # ones — every one of them was a live bug in the first cut of this check.
+        for name, kw, fam, want in ICON_CASES:
+            d2 = Path(td) / (kw["tag"] + ".pptx")
+            build_icon_deck(d2, **{k: v for k, v in kw.items() if k != "tag"})
+            g = {"critic": {"verdict": "consent", "rounds": 2},
+                 "design_plan": dict(DESIGN_OK, icon_family=fam, carried_by=[2, 3]),
+                 "provenance": PROV_OK}
+            code, out = run_gate(d2, g)
+            if "hand-off gates pass" not in out and "icon waiver" not in out:
+                failed += 1
+                print(f"  FAIL {name}: the gate aborted before the icon check ran, so this "
+                      f"assertion means nothing\n       " + out.strip().splitlines()[-1][:160])
+                continue
+            fired = "icon waiver" in out
+            if fired == want:
+                passed += 1
+                print(f"  ok   {name}")
+            else:
+                failed += 1
+                print(f"  FAIL {name}: icon waiver {'fired' if fired else 'stayed silent'}, "
+                      f"wanted the opposite")
     print(f"\n{passed} passed, {failed} failed")
     return 1 if failed else 0
 
