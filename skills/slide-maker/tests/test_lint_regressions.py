@@ -716,6 +716,39 @@ def main():
         except ValueError:
             ok.append(f"unit_grid refuses {why}")
 
+    # ── meter_bar drew the fill at `max(w*frac, h)` so a rounded cap never degenerated. Cosmetic
+    # for a 62% progress row; a LIE for a small fraction — measured, frac=0.01 on a 9.7in bar drew
+    # 0.46in, 4.7x the true width, and rendered as roughly 7%. A mark that overstates its own value
+    # is a fidelity defect, and fidelity is a floor taste does not override.
+    from pptx import Presentation as _Pres
+    FR = (0.005, 0.01, 0.05, 0.25, 0.62, 1.0)
+    prs = _dk.blank_deck()
+    s = prs.slides.add_slide(prs.slide_layouts[6])
+    for i, f in enumerate(FR):
+        _dk.meter_bar(s, 0.6, 0.35 + i * 0.85, 7.4, f, value=f"{f*100:.1f}%",
+                      accent=_dk.RGBColor(0xA6, 0x3A, 0x2A), track=_dk.RGBColor(0xDD, 0xD5, 0xC8))
+    mb = tmp / "fx_meter.pptx"
+    prs.save(str(mb))
+    seen, mism = 0, []
+    for sh in _Pres(str(mb)).slides[0].shapes:
+        try:
+            if str(sh.fill.fore_color.rgb) != "A63A2A":
+                continue
+        except Exception:
+            continue
+        idx = int(round((sh.top / 914400.0 - 0.35 - 0.34) / 0.85))
+        seen += 1
+        drawn, true = sh.width / 914400.0, 7.4 * FR[idx]
+        if abs(drawn - true) > 0.005:
+            mism.append(f"frac={FR[idx]} drew {drawn:.3f}in for a true {true:.3f}in")
+    if seen != len(FR):
+        bad.append(f"meter_bar fidelity check found {seen} fills, expected {len(FR)} — the probe "
+                   f"is not measuring what it thinks it is")
+    elif mism:
+        bad.append("meter_bar overstates small fractions again: " + "; ".join(mism))
+    else:
+        ok.append("meter_bar: fill width == frac x track at every fraction incl. 0.5% (no cap floor)")
+
     for line in ok:
         print("  ok   " + line)
     for line in bad:

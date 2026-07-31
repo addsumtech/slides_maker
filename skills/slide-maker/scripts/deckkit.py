@@ -5337,18 +5337,24 @@ def unit_grid(slide, x, y, w, h, total, unit_label, *, filled=None, cols=None, g
         # exact and cheap (total <= max_cells), and beats a sqrt guess that ignores the height.
         cands = [_fit(nc) for nc in range(1, total + 1)]
         best = max(c[2] for c in cands)
-        # …then prefer a COUNTABLE row length. The point of a unit chart is that the viewer reads
-        # the quantity off the grid; 34 as 12+12+10 has to be counted square by square, while
-        # 10+10+10+4 is read at a glance. So among column counts within 12% of the largest cell,
-        # take a multiple of ten, else of five. Ties break toward more columns (a shallower block
-        # reads as one quantity; a tall one reads as a list).
+        # …then prefer a COUNTABLE row length among the near-largest cells. The point of a unit
+        # chart is that the viewer reads the quantity off the grid: 10+10+10+4 is read at a glance,
+        # 12+12+10 has to be counted square by square. Preference order, best first:
+        #   0  a multiple of ten   — decades count themselves
+        #   1  a multiple of five  — the same trick, coarser
+        #   2  an exact divisor    — no ragged row at all; the block is a clean rectangle
+        #   3  anything else
+        # Ties inside a tier go to the LARGEST cell. An earlier cut broke ties on column count
+        # instead, and in a short wide band (8.4 x 1.5in) that picked 19 columns — 19+15, the least
+        # countable option available — over 17, which is both a divisor (two full rows) and the
+        # biggest cell. Countability was the entire reason for this block, and the tie-break was
+        # quietly discarding it.
+        def _rank(c):
+            nc = c[0]
+            tier = 0 if nc % 10 == 0 else 1 if nc % 5 == 0 else 2 if total % nc == 0 else 3
+            return (tier, -c[2])
         near = [c for c in cands if c[2] >= best * 0.88]
-        for pref in (lambda n: n % 10 == 0, lambda n: n % 5 == 0):
-            tier = [c for c in near if pref(c[0])]
-            if tier:
-                near = tier
-                break
-        ncol, nrow, cell = max(near, key=lambda r: r[0])
+        ncol, nrow, cell = min(near, key=_rank)
     gap = cell * gap_frac
     fc = fill if fill is not None else ACCENTS[0]
     ec = empty if empty is not None else "D9D5CE"
@@ -5560,7 +5566,14 @@ def meter_bar(slide, x, y, w, frac, *, label=None, value=None, value_unit=None,
              anchor=MSO_ANCHOR.BOTTOM, space_after=0)
     box(slide, x, yt, w, h, fill=tr, round=True, r=h / 2)
     if f > 0:
-        box(slide, x, yt, max(w * f, h), h, fill=acc, round=True, r=h / 2)
+        # FIDELITY over the pill. The fill used to be floored at `h` so a rounded cap never
+        # degenerated — which silently overstated every small fraction: measured, frac=0.01 on a
+        # 9.7in bar drew 0.46in, 4.7x the true width, and the render read as ~7%. A bar that
+        # overstates its own value is a fidelity defect, and fidelity is a floor taste does not
+        # override. Draw the true width and shrink the corner radius to match; a thin sliver ends
+        # up effectively square, which is correct — a 1% mark SHOULD look like a 1% mark.
+        fw = w * f
+        box(slide, x, yt, fw, h, fill=acc, round=True, r=min(h, fw) / 2)
     if value is not None:
         vx = (x + w + value_pad) if value_pos == "right" else (x + w * f + value_pad)
         runs = [(str(value), value_size, vink, True, False, value_font or font)]
