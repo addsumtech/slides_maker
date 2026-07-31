@@ -315,8 +315,11 @@ Score each dimension; cite specific slides.
    never verified against its caption/geotag, a **watermarked** sourced image (a stock-preview
    overlay, photographer stamp, or site logo — or crop/blur/inpaint traces where a mark was hidden:
    a watermark is an unlicensed-preview tell, and removing it is license circumvention, not
-   cleanup), an image row with no source token from that section's
-   grammar, a required credit missing, photographic supplements stacked onto an abstract subject
+   cleanup), **a clinical/medical image showing a burned-in patient identifier** (name, MRN,
+   accession, DOB, study date, institution — check the edges and any overlay strip, not the
+   middle; the fix is a de-identified export, never a crop or blur over the mark, and this is
+   a MAJOR the moment the deck leaves the room), an image row with no source token from that
+   section's grammar, a required credit missing, photographic supplements stacked onto an abstract subject
    that native forms should carry — and on photo-friendly topics, wall-to-wall photos where the
    opt-in discipline should have held; **identity-propagation break (generated-template branch)** —
    the generated identity lives only in the background: native type off-register (a neo-grotesque

@@ -240,6 +240,8 @@ def item10_fonts(prs):
 JUDGMENT = {
     5:  ("Evidence real", "is every figure the REAL artifact, are PDF crops clean on all four "
                           "edges, are sourced photos licensed/watermark-free/aesthetically vetted, "
+                          "is any CLINICAL image free of burned-in patient identifiers (name, "
+                          "MRN, DOB, study date) on every edge and overlay, "
                           "is text over every hero legible against the pixels"),
     6:  ("Colour keyed", "is each accent taught on-slide at first use and used for one meaning; "
                          "loud motif <=3 appearances; the preset's `guard` line holds"),

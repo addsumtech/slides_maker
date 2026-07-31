@@ -46,6 +46,14 @@ generated or sourced. Fold in the user's design edits, then set up the canvas (S
     another** (a colour key, a shared legend/axis, a side-input to a diagram), keep them together.
     After every crop **and** after placing/scaling a figure on a slide, **re-view the result** and
     confirm nothing of the figure is cut off (a half-cut legend at the top edge is the classic miss).
+    **On a CLINICAL image, that same re-view is also the de-identification check.** A scan, a PACS
+    screenshot or a viewer capture can carry a burned-in patient identifier — name, MRN/ID,
+    accession, DOB, study date, institution — usually in a corner or an overlay strip rather than the
+    middle, so read all four edges and any header/footer band, not just the anatomy. Risk is highest
+    on a user-supplied export; a published figure is normally de-identified already but is still
+    read. **If an identifier is present, ask for a de-identified export — do NOT crop or blur it out
+    and carry on**: a crop can miss a second identifier burned into another corner, and a blur is not
+    a guarantee. Unlike a clipped legend, this one cannot be fixed after the deck is sent.
     **A small margin, not blank padding:** keep just enough margin that nothing sits *flush* (a tick
     label *touching* the boundary is already too tight) — but no *fat* blank border either, since the
     figure is placed with `picture(fit="contain")` and a wide white margin makes it float small on the
