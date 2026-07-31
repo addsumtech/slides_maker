@@ -1356,6 +1356,15 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False):
     print(hdr)
     warns = []
     sames = 0
+    # Where the backup/appendix run starts, from the FIRST slide declaring design_intent(role=
+    # "appendix"). Everything from there is reference material; `last_body` is the index one past
+    # the real closing slide, so the closer keeps the exemption a trailing appendix would steal.
+    appendix_at = next((k for k, rr in enumerate(rows)
+                        if (rr.get("intent") or {}).get("role") == "appendix"), None)
+    last_body = (appendix_at - 1) if appendix_at else len(rows) - 1
+    if appendix_at is not None:
+        print(f"     appendix: slides {appendix_at+1}-{len(rows)} declared reference material — "
+              f"read at briefing density, and slide {appendix_at} treated as the closer")
     for i, r in enumerate(rows):
         sim = ""
         if i:
@@ -1388,17 +1397,28 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False):
         # (70-76% occupancy) while the deck was, by every hard check, clean. Without a register for
         # it the only escape was `textheavy`, which waives the word budget entirely and takes the
         # occupancy check with it; this raises both bars instead of removing them.
-        budget = 70 if mode == "presented" else (185 if mode == "briefing" else 120)
+        # APPENDIX RUN. A deck told to "plan for backup/appendix slides for Q&A" (thesis defense)
+        # ends with reference material read on demand, which is dense ON PURPOSE. Judged as
+        # presented content every one of those slides drew TEXT WALL + CROWDED (measured: 6 findings
+        # on 3 backup slides), and the trailing run also stole the closing slide's exemption by
+        # making a backup slide the last one. From the declared marker onward, read them the way a
+        # self-read deck is read; `last_body` restores the closer's exemption.
+        # `briefing`, not `selfread`: that register exists for a deck read WITHOUT a speaker and
+        # carries the higher word budget AND the higher occupancy bar (0.80). An appendix is exactly
+        # that — design-by-purpose calls dense "correct on these surfaces … but typed and organised,
+        # never freeform cramming", which is what the remaining 0.80 ceiling still catches.
+        eff_mode = "briefing" if (appendix_at is not None and i >= appendix_at) else mode
+        budget = 70 if eff_mode == "presented" else (185 if eff_mode == "briefing" else 120)
         # surface: a poster/single-canvas artifact has no per-slide word budget (judge density per
         # the fixed-surface overlay); textheavy: the user explicitly chose text-heavy density (Q4),
         # so the presented budget is waived — measurements still print, the warn is suppressed.
-        if mode not in ("surface", "textheavy") and r["load"] > budget:
-            _tgt = "40" if mode == "presented" else ("150" if mode == "briefing" else "90")
+        if eff_mode not in ("surface", "textheavy") and r["load"] > budget:
+            _tgt = "40" if eff_mode == "presented" else ("150" if eff_mode == "briefing" else "90")
             warns.append(f"TEXT WALL: slide {i+1} carries a reading load of ~{r['load']} words "
-                         f"({mode} budget ≈{_tgt}, warn >{budget}) — move prose "
+                         f"({eff_mode} budget ≈{_tgt}, warn >{budget}) — move prose "
                          f"to speaker notes or split the slide")
-        if (mode not in ("surface", "textheavy") and r["load"] >= 15
-                and r["ink_cov_nopic"] > (0.80 if mode == "briefing" else 0.70)):
+        if (eff_mode not in ("surface", "textheavy") and r["load"] >= 15
+                and r["ink_cov_nopic"] > (0.80 if eff_mode == "briefing" else 0.70)):
             warns.append(f"CROWDED: slide {i+1} occupancy {r['ink_cov_nopic']*100:.0f}% — role bands: cover "
                          f"25-35 · exec/summary 45-60 · technical/dense 55-70; past ~70% the slide reads "
                          f"crowded — subtract or split, don't shrink")
@@ -1443,7 +1463,7 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False):
         # floating in a frame it doesn't earn. The fix is upstream (enrich the point, or merge two
         # thin neighbours into one full slide), not stretching boxes. Cover/closing/dividers and
         # deliberately quiet registers are exempt — record the exception instead.
-        if (mode != "surface" and 0 < i < len(rows) - 1 and r["load"] >= 15
+        if (mode != "surface" and 0 < i < last_body and r["load"] >= 15
                 and r["ink_cov"] < 0.25 and not r.get("big_pic_fg", r["n_pic"] > 0)
                 and not (r.get("intent") or {}).get("envelope")):
             warns.append(f"UNDERFILLED: slide {i+1} ink covers only {r['ink_cov']*100:.0f}% of the canvas "
@@ -1458,7 +1478,7 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False):
         # (slides-to-video's envelope model prescribes ~1/3 of a deck there). Whether the DECK
         # overuses any one envelope is judged as a distribution, below. A declared intent
         # (deckkit.design_intent(envelope="upper"/"bleed")) waives even the accident floor.
-        if (mode != "surface" and 0 < i < len(rows) - 1 and r["load"] >= 15
+        if (mode != "surface" and 0 < i < last_body and r["load"] >= 15
                 and r.get("content_bottom", 1.0) < 0.45
                 and r.get("intent", {}).get("envelope") not in ("upper", "bleed")
                 and r["n_chart"] == 0 and not r.get("big_pic_fg", r["n_pic"] > 0)):
@@ -1469,7 +1489,7 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False):
         # This is how sparse content evades the ink-coverage checks — a few items spaced out, or all
         # content hugging one side, covers enough total area while a whole column of canvas stays
         # empty top to bottom. Interior content slides only; big imagery/charts earn their space.
-        if (lums and mode != "surface" and 0 < i < len(rows) - 1 and r["load"] >= 15
+        if (lums and mode != "surface" and 0 < i < last_body and r["load"] >= 15
                 and len(lums[i]) > 2 and lums[i][2] >= 0.18
                 and not (len(lums[i]) > 3 and lums[i][3] >= 0.08)
                 and r["n_chart"] == 0 and not r.get("big_pic_fg", r["n_pic"] > 0)):
@@ -1526,7 +1546,7 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False):
     # every interior slide ending its content on the SAME line. Monoculture, not any single page,
     # is the defect — a deck needs default-band pages AND some that stop high AND some that ride low.
     interior = [r for i, r in enumerate(rows)
-                if 0 < i < len(rows) - 1 and r["load"] >= 15
+                if 0 < i < last_body and r["load"] >= 15
                 and r["n_chart"] == 0 and not r.get("big_pic_fg", r["n_pic"] > 0)]
     if len(interior) >= 6:
         bots = sorted(r.get("content_bottom", 1.0) for r in interior)

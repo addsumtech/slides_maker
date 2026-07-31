@@ -208,6 +208,16 @@ escape is the one `agents/slide-design.md` already documents, now honoured by th
 conservative dial. Do NOT reach for `{"design_plan": {"waived": …}}` for this — that switches off
 palette contrast and the type scale as well.
 
+**`TEXT WALL` / `CROWDED` on backup or appendix slides, or `UNDERFILLED` on the closing slide of a
+deck that has them.** A thesis defense is told to "plan for backup/appendix slides for Q&A", and
+that material is dense on purpose — judged as presented content it draws a finding on every backup
+slide, and the trailing run also steals the closer's exemption by making a backup slide the last
+one. Mark the start: `deckkit.design_intent(slide, role="appendix", reason="…")`. From there the
+run is read at *briefing* density and the slide before it is treated as the closer. The bar RISES,
+it does not vanish — a genuinely crammed appendix slide is still caught, which is what
+design-by-purpose means by "dense is correct on these surfaces … but typed and organised, never
+freeform cramming".
+
 **When a finding seems wrong:** each check has documented escapes (shadow pairs, chip labels,
 containment). Don't fight the linter in code — adjust the deck (rename, nudge 0.05 in) and move on;
 if it's genuinely a lint bug, note it in the hand-off rather than shipping a `✗`.

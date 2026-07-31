@@ -4257,7 +4257,7 @@ def small_multiples(slide, x, y, w, h, panels, *, categories=None, cols=None, ki
     return y + rows_n * (ph + 0.24) + (rows_n - 1) * gap
 
 
-def design_intent(slide, *, envelope=None, rhyme=None, weight=None, reason=""):
+def design_intent(slide, *, envelope=None, rhyme=None, weight=None, role=None, reason=""):
     """Declare a slide's DELIBERATE design register so the render-time lint can tell intent
     from accident (three of its messages say "record the quiet-register exception" — this is
     where it gets recorded).
@@ -4271,6 +4271,12 @@ def design_intent(slide, *, envelope=None, rhyme=None, weight=None, reason=""):
               layout an art director reaches for on a statement beat, and it is the one register
               whose lint advice ("rebalance") would actively destroy the design, so it has to be
               declarable rather than argued with. It silences LOPSIDED for that slide only.
+    role:     "appendix" — this slide STARTS the backup/appendix run, and every slide after it is
+              reference material read on demand. A defense is told to "plan for backup/appendix
+              slides for Q&A", and those are dense ON PURPOSE; judged as presented content they draw
+              TEXT WALL and CROWDED on every one (measured: 6 findings on 3 backup slides). It also
+              restores the closing slide's exemption, which a trailing appendix otherwise steals by
+              making some backup slide the last one.
     reason:   one clause, for the human reading the lint output later.
 
     Implemented as an invisible zero-ink tag shape (name="deckkit-intent:{json}") so the intent
@@ -4280,8 +4286,11 @@ def design_intent(slide, *, envelope=None, rhyme=None, weight=None, reason=""):
     import json as _json
     if weight is not None and weight not in ("left", "right", "asymmetric"):
         raise ValueError(f"design_intent(): weight={weight!r} is not 'left' | 'right' | 'asymmetric'")
+    if role is not None and role != "appendix":
+        raise ValueError(f"design_intent(): role={role!r} is not 'appendix' (the only role that "
+                         f"changes how the lint reads a slide)")
     payload = {k: v for k, v in (("envelope", envelope), ("rhyme", rhyme), ("weight", weight),
-                                 ("reason", reason)) if v}
+                                 ("role", role), ("reason", reason)) if v}
     tag = slide.shapes.add_textbox(Inches(0), Inches(0), Inches(0.01), Inches(0.01))
     tag.name = "deckkit-intent:" + _json.dumps(payload, ensure_ascii=False)
     tag.text_frame.word_wrap = False

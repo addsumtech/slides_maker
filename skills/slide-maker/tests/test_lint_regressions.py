@@ -436,6 +436,77 @@ def main():
         bad.append("a deck with unmeasurable type went silent instead of reporting NOT CHECKED — "
                    "silence here is indistinguishable from a pass")
 
+    # ── the APPENDIX run ──────────────────────────────────────────────────────
+    # A thesis defense is told to "plan for backup/appendix slides for Q&A", and those are dense ON
+    # PURPOSE. Judged as presented content they drew TEXT WALL + CROWDED on every one (measured: 6
+    # findings on 3 backup slides), and the trailing run also stole the closing slide's exemption by
+    # making a backup slide the last one. Declaring the run must fix both — and must not become a
+    # free pass for cramming.
+    def _defense(dest, declare):
+        prs = _dk.blank_deck(10, 5.625)
+        _dk.text(prs.slides.add_slide(prs.slide_layouts[6]), 1, 2, 8, 1,
+                 [[("Defense", 34, _dk.DEEP, True, False)]])
+        for k in range(2):
+            s = prs.slides.add_slide(prs.slide_layouts[6])
+            _dk.text(s, 0.6, 0.5, 8.8, 0.6, [[(f"Result {k+1}", 24, _dk.DEEP, True, False)]])
+            _dk.text(s, 0.6, 1.5, 8.8, 1.0, [[("One clear finding.", 15, _dk.MUTE, False, False)]])
+        s = prs.slides.add_slide(prs.slide_layouts[6])          # the real closer: thin by design
+        # >=15 words on purpose: UNDERFILLED only looks at slides carrying real text, so a shorter
+        # closer would never exercise the exemption this test exists to check.
+        _dk.text(s, 0.6, 1.8, 8.8, 1.2,
+                 [[("Contributions: a faithful reconstruction method, validated on three separate "
+                    "cohorts, with limitations stated plainly and the code released for reproduction.",
+                    18, _dk.DEEP, True, False)]])
+        for k in range(3):                                       # dense backup material
+            b = prs.slides.add_slide(prs.slide_layouts[6])
+            if declare and k == 0:
+                _dk.design_intent(b, role="appendix", reason="backup slides for Q&A")
+            _dk.text(b, 0.6, 0.4, 8.8, 0.5, [[(f"Backup {k+1}", 20, _dk.DEEP, True, False)]])
+            _dk.text(b, 0.6, 1.1, 8.8, 4.0,
+                     [[(("Full ablation detail with every hyperparameter, dataset split, random seed "
+                         "and per-cohort breakdown, kept off the main line but ready. ") * 4,
+                        12, _dk.MUTE, False, False)]])
+        prs.save(str(dest))
+        return dest
+
+    o = _lint_nr(_defense(tmp / "ap_undeclared.pptx", False))
+    if "TEXT WALL" in o and "UNDERFILLED" in o:
+        ok.append("an UNDECLARED trailing appendix is still judged as presented content")
+    else:
+        bad.append("the appendix exemption applies without being declared — it must not be free")
+
+    o = _lint_nr(_defense(tmp / "ap_declared.pptx", True))
+    if "TEXT WALL" in o:
+        bad.append("dense backup slides still draw TEXT WALL after declaring role='appendix' — "
+                   "reference material read on demand is dense on purpose")
+    elif "UNDERFILLED" in o:
+        bad.append("the closing slide still loses its exemption to a trailing appendix — last_body "
+                   "is not being honoured")
+    else:
+        ok.append("a declared appendix reads at briefing density and gives the closer back its exemption")
+
+    # the exemption RAISES the bar, it does not remove it
+    prs = _dk.blank_deck(10, 5.625)
+    _dk.text(prs.slides.add_slide(prs.slide_layouts[6]), 1, 2, 8, 1,
+             [[("Cover", 34, _dk.DEEP, True, False)]])
+    for k in range(2):
+        s = prs.slides.add_slide(prs.slide_layouts[6])
+        _dk.text(s, 0.6, 0.5, 8.8, 0.6, [[(f"R{k+1}", 24, _dk.DEEP, True, False)]])
+        _dk.text(s, 0.6, 1.5, 8.8, 1.0, [[("One finding.", 15, _dk.MUTE, False, False)]])
+    s = prs.slides.add_slide(prs.slide_layouts[6])
+    _dk.text(s, 0.6, 1.8, 8.8, 1.0, [[("Contributions and limitations owned.", 20, _dk.DEEP, True, False)]])
+    b = prs.slides.add_slide(prs.slide_layouts[6])
+    _dk.design_intent(b, role="appendix", reason="Q&A")
+    _dk.box(b, 0.2, 0.2, 9.6, 5.2, fill="EEF2F7")
+    _dk.text(b, 0.3, 0.3, 9.4, 5.0,
+             [[(("Freeform cramming with no structure at all. " * 30), 11, _dk.MUTE, False, False)]])
+    prs.save(str(tmp / "ap_crammed.pptx"))
+    if "TEXT WALL" in _lint_nr(tmp / "ap_crammed.pptx"):
+        ok.append("a CRAMMED appendix slide is still caught — the bar rises, it does not vanish")
+    else:
+        bad.append("role='appendix' silenced a genuinely crammed slide — dense is correct there, "
+                   "freeform cramming is not")
+
     # ── the translucent-overlap exemption must stay NARROW ────────────────────
     # venn()'s circles overlap by definition, so OVERLAP fired on every Venn ever built — a hard
     # gate failing on correct output is worse than no gate, because the author starts working
