@@ -52,7 +52,9 @@ cell, a short verbatim span) — so a watching auto-mode user can catch a per-sl
 even though the checkpoint is an FYI, not a stop (this is the cheapest fidelity catch on the path
 delegation uses most; the comprehension gate still forbids shipping any unverified claim). Design
 checkpoint = look/palette/type/motif in ~4 lines (the **motif line states device + meaning + how a
-stranger reads it** — label/legend/figurative, the slide-design STRANGER TEST) + the rhythm-map table +
+stranger reads it AT FIRST APPEARANCE** — label/legend/figurative, the slide-design STRANGER TEST;
+a reading that defers to a later slide is a FAILED test written as a passing sentence, and the fix is
+a label at first use or removing the device, never a promise that it lands later) + the rhythm-map table +
 the three design musts + a one-line Form-ledger/diversity verdict + the **`boldness:` + `signature
 move:` lines** (the dial + the one scoped aesthetic risk + the bold reference it adapts — even as an
 auto-waiver FYI, a timid "big number" signature move or a wrong dial should cost one glance to veto) +

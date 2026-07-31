@@ -234,6 +234,24 @@ feel art-directed rather than defaulted, and it's yours to set once and hold. Pi
   checkpoint's motif line must state the meaning in words ("twin rails = the two engines"), so the
   user can veto an opaque device before the build. Self-check: ask what a stranger would call the
   shape — "two ellipses" instead of "the two engines" = fail; label it.
+  **Three things this rule did NOT catch, measured on a real deck (user feedback, 2026-07-31 — a
+  low horizontal rule on nine pages that the user had to ask the meaning of):**
+  - **A reading that DEFERS is not a reading.** The motif line said "it is the same line throughout;
+    they understand it on slide 9" — meaning arriving eight pages after first appearance, which is
+    the definition of failing at first appearance. If the stated reading contains *later / by page N /
+    once they see X*, the device is unlabelled and the test is FAILED, however confident the sentence
+    sounds. A viewer decodes what is in front of them now, or not at all.
+  - **Removal is a first-class fix, usually the better one.** This rule listed label / figurative /
+    legend and framed the remedy as "label it", so an opaque device gets a caption bolted on to
+    justify keeping it. State it plainly instead: **make it read, or take it out.** A motif that needs
+    a sentence of explanation to earn its place has already told you the answer — and a deck loses
+    nothing when unreadable furniture leaves, because it was carrying no meaning to begin with.
+  - **Position dictates reading, and it outranks intent.** A thin rule low on the page reads as a
+    divider or footer rule, because that slot already has an established meaning in every deck the
+    viewer has seen; a strip down one side reads as a sidebar; a mark in a corner reads as chrome.
+    You cannot assign a new meaning to a position that is already spoken for — a horizon needs
+    content ABOVE it and real sky, not a line under the body text. Ask what the SLOT says before
+    asking what the shape says.
 - **Declare the TYPE SCALE as a contract — with real drama and a real floor.** Fix the deck's modular
   scale once, as named tokens the builder must use (e.g. on the default 10×5.625in canvas:
   `display 40 · title 22 · body 14 · caption 9.5`), instead of improvising sizes per slide (the

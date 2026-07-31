@@ -291,7 +291,12 @@ Score each dimension; cite specific slides.
    name from the canvas alone: no label at first appearance, not figurative enough to read unaided,
    and no on-canvas legend (`agents/slide-design.md` §1 STRANGER TEST) — describe what a stranger
    would call the shape vs what the plan says it means, and require a label/legend at the cover
-   appearance; **logo missing or unevidenced on a single-entity deck** — the deck's subject is one
+   appearance **or its REMOVAL, which is the better call whenever the only way to keep the device is
+   to caption it** (a motif needing a sentence to earn its place has answered the question). Two
+   tells, measured: a stated reading that DEFERS (*"they get it by slide 9"*) is not a reading — it
+   concedes the device is opaque where it first appears; and a device sitting in a slot whose meaning
+   is already spoken for (a thin rule low on the page = divider/footer, a side strip = sidebar, a
+   corner mark = chrome) reads as that slot, not as the intent, however the plan describes it; **logo missing or unevidenced on a single-entity deck** — the deck's subject is one
    company / product / brand / institution (stakeholder readout, pitch, org report) yet no official
    logo appears on the cover and the plan's `logo plan:` line carries no evidence token
    (`official asset — <source>` / `searched, none found → designed wordmark (flagged)` / `n/a — <reason>`) —
