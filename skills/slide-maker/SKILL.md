@@ -487,7 +487,10 @@ signature motif + a deliberately-chosen palette/type, not a defaulted light/mini
 file> · freshness: varied <foundation> vs <last look-history line>`, or the alternate arm `look
 LOCKED (registered/provided template) — carve applies` — the line that makes the freshness rule
 checkable and any profile override visible (`references/user-taste.md`), **a `boldness:` line
-(conservative | balanced+ | bold | experimental — default balanced+) AND a real `signature move:`
+(conservative | balanced+ | bold | experimental — default balanced+; **at `conservative` the risk is
+OPTIONAL — take a modest restrained move, or fill the field with the one-clause `deliberately
+restrained: <why>`, and then `signature_proof` is not required because there is no risk to prove.
+Every other field still is, and above `conservative` a real move is required, not optional**) AND a real `signature move:`
 line** — the ONE deliberate aesthetic RISK a template wouldn't make, scoped to where it lands (cover /
 WOW / money slide) and adapting a named bold reference, **plus a `carried_by:` clause naming 2–3
 slides (the signature slide + ≥1 more) where the same idea does STRUCTURAL work** — one brave slide

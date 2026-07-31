@@ -198,6 +198,16 @@ work. A hero number, a page number, a caption are all untouched.
   silent skip is indistinguishable from a clean result. Set sizes on the runs (deckkit's
   `text()` always does) or read the scale by eye.
 
+**`design_plan` is missing `signature_proof` on a deliberately plain deck.** A working session —
+a lab meeting, a status update — is told by `design-by-purpose.md` to "optimise for fast technical
+read, not polish", so it takes no aesthetic risk and has nothing to prove with a rendered PNG. The
+escape is the one `agents/slide-design.md` already documents, now honoured by the gate: set
+`"boldness": "conservative"` and write the signature move as **`deliberately restrained: <why>`**.
+`signature_proof` then drops; `signature_move`, `carried_by`, `palette`, `type_scale`,
+`icon_family` and `form_ledger` all stay required, and the phrase buys nothing above the
+conservative dial. Do NOT reach for `{"design_plan": {"waived": …}}` for this — that switches off
+palette contrast and the type scale as well.
+
 **When a finding seems wrong:** each check has documented escapes (shadow pairs, chip labels,
 containment). Don't fight the linter in code — adjust the deck (rename, nudge 0.05 in) and move on;
 if it's genuinely a lint bug, note it in the hand-off rather than shipping a `✗`.

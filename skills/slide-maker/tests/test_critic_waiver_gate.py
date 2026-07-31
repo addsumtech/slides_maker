@@ -139,6 +139,49 @@ CASES = [
       "design_plan": dict(DESIGN_OK, signature_proof={"slide": 3, "path": "proof.png"})},
      True, "design plan: boldness"),
 
+    # THE RESTRAINT CARVE, on the escape agents/slide-design.md already documents: under a
+    # *conservative* dial the risk is OPTIONAL — take a modest move, or write the one-clause
+    # "deliberately restrained: <why>" so the field is never blank. That existed only in prose, so an
+    # honest 5-minute lab-meeting plan was rejected for lacking a rendered proof of a risk it never
+    # took, and the only escape ({"waived": …}) also switches off palette/type_scale/icon_family.
+    # The carve must stay narrow, so every direction is pinned.
+    ("conservative + a 'deliberately restrained:' move drops only signature_proof",
+     {"critic": {"verdict": "consent", "rounds": 2},
+      "design_plan": {k: v for k, v in DESIGN_OK.items() if k != "signature_proof"}
+      | {"boldness": "conservative",
+         "signature_move": "deliberately restrained: 5-minute working update; one accent is "
+                           "reserved for the new result and nothing competes with it"}},
+     True, "signature_proof not required"),
+
+    # at balanced+ and above a real signature move is required, not optional — the phrase alone
+    # must not buy the exemption
+    ("the 'deliberately restrained:' phrase does NOT work above the conservative dial",
+     {"critic": {"verdict": "consent", "rounds": 2},
+      "design_plan": {k: v for k, v in DESIGN_OK.items() if k != "signature_proof"}
+      | {"signature_move": "deliberately restrained: trying to dodge the proof"}},
+     False, "signature_proof"),
+
+    ("a conservative deck that took a REAL move still owes the proof",
+     {"critic": {"verdict": "consent", "rounds": 2},
+      "design_plan": {k: v for k, v in DESIGN_OK.items() if k != "signature_proof"}
+      | {"boldness": "conservative"}},
+     False, "signature_proof"),
+
+    ("the carved plan still needs a NON-BLANK signature_move",
+     {"critic": {"verdict": "consent", "rounds": 2},
+      "design_plan": {k: v for k, v in DESIGN_OK.items()
+                      if k not in ("signature_proof", "signature_move")}
+      | {"boldness": "conservative"}},
+     False, "signature_move"),
+
+    ("the carve is not a blanket exemption — type_scale is still required",
+     {"critic": {"verdict": "consent", "rounds": 2},
+      "design_plan": {k: v for k, v in DESIGN_OK.items()
+                      if k not in ("signature_proof", "type_scale")}
+      | {"boldness": "conservative",
+         "signature_move": "deliberately restrained: sober status readout"}},
+     False, "type_scale"),
+
     ("a signature_proof pointing at a MISSING png is refused",
      {"critic": {"verdict": "consent", "rounds": 2},
       "design_plan": dict(DESIGN_OK, signature_proof={"slide": 3, "png": "nope.png"})},

@@ -454,11 +454,31 @@ def check_handoff_gates(pptx, mode="presented"):
     # string everywhere else, and it carried a real deck through "all gates pass".
     DESIGN_FIELDS = ("boldness", "signature_move", "carried_by", "form_ledger", "icon_family",
                      "palette", "type_scale", "signature_proof")
+    # THE RESTRAINT CARVE — built on the escape the skill ALREADY documents, not a new one.
+    # agents/slide-design.md: under a *conservative* dial (user-requested or purpose-defaulted for a
+    # sober defense / regulatory / status deck) "the risk is OPTIONAL: take a modest, restrained
+    # signature move if one fits, OR — if none does — fill the field with the one-clause
+    # `deliberately restrained: <why>` so the field is never blank either way."
+    #
+    # That escape existed in prose and nowhere in the gate, so an honest 5-minute lab-meeting plan
+    # was rejected for lacking a rendered `signature_proof` — a PNG proving an aesthetic risk
+    # survived the build, for a deck that deliberately took none. The only way out was
+    # {"waived": …}, which also switches off palette, type_scale and icon_family: the real choice
+    # was "invent a risk" or "abandon all design gating", and both corrupt the record.
+    #
+    # What it deliberately does NOT do: it does not relax `signature_move` (the field is still never
+    # blank — you must WRITE why restraint is the position) and it does not relax `carried_by`,
+    # `palette`, `type_scale`, `icon_family` or `form_ledger`. And it cannot be claimed above the
+    # conservative dial: at balanced+ and above a real signature move is required, not optional.
     design = gates.get("design_plan") or {}
+    _dial = str(design.get("boldness", "")).strip().lower()
+    _move = str(design.get("signature_move", "")).strip().lower()
+    _carved = _dial == "conservative" and _move.startswith("deliberately restrained")
     if design.get("waived"):
         print("[gates] design plan WAIVED — {}".format(design["waived"]))
     elif design:
-        missing = [f for f in DESIGN_FIELDS if not design.get(f)]
+        required = [f for f in DESIGN_FIELDS if not (_carved and f == "signature_proof")]
+        missing = [f for f in required if not design.get(f)]
         if missing:
             hint = ("\n    palette: the resolved FILL-only vs TEXT-safe split — run\n"
                     "      python3 scripts/palette_audit.py --from-style <deck>/style.py\n"
@@ -488,24 +508,28 @@ def check_handoff_gates(pptx, mode="presented"):
             die(f'`type_scale` is not a scale: display {scale["display"]} > title {scale["title"]} '
                 f'> body {scale["body"]} must hold, or the tiers do not rank and the hierarchy is '
                 f'decorative rather than structural.')
-        proof = design["signature_proof"]
-        # `png` or `path`: the Codex delivery gate spells this key `path` in its own evidence file,
-        # and a Codex run keeps BOTH records (references/codex-runtime.md). Demanding one spelling
-        # here would reject the field an OpenAI-bridged run naturally writes — the same evidence,
-        # rejected for its key name.
-        proof_file = (proof or {}).get("png") or (proof or {}).get("path")
-        if not isinstance(proof, dict) or not proof_file or not proof.get("slide"):
-            die('`signature_proof` must be {"slide": <n>, "png": "<rendered png>"} (the key may also '
-                'be spelled "path", as the Codex delivery gate does) — the rendered evidence that '
-                'the signature move actually SURVIVED into the deck. A move that exists only as a '
-                'sentence in the plan is the documented failure: it gets sanded back to the safe '
-                'catalogue during the build and nobody notices, because the plan still reads bravely.')
-        png = Path(proof_file)
-        if not png.is_absolute():
-            png = Path(pptx).parent / png
-        if not png.exists() or png.stat().st_size < 512:
-            die(f'`signature_proof` file ({proof_file}) does not exist or is empty — render '
-                f'the slide first (render_deck.py <deck> <dir>) and point at the real PNG.')
+        if _carved:
+            print("[gates] boldness=conservative with a 'deliberately restrained:' signature move — "
+                  "signature_proof not required (there is no risk to prove); every other field is")
+        proof = None if _carved else design["signature_proof"]
+        if proof is not None:
+            # `png` or `path`: the Codex delivery gate spells this key `path` in its own evidence file,
+            # and a Codex run keeps BOTH records (references/codex-runtime.md). Demanding one spelling
+            # here would reject the field an OpenAI-bridged run naturally writes — the same evidence,
+            # rejected for its key name.
+            proof_file = (proof or {}).get("png") or (proof or {}).get("path")
+            if not isinstance(proof, dict) or not proof_file or not proof.get("slide"):
+                die('`signature_proof` must be {"slide": <n>, "png": "<rendered png>"} (the key may also '
+                    'be spelled "path", as the Codex delivery gate does) — the rendered evidence that '
+                    'the signature move actually SURVIVED into the deck. A move that exists only as a '
+                    'sentence in the plan is the documented failure: it gets sanded back to the safe '
+                    'catalogue during the build and nobody notices, because the plan still reads bravely.')
+            png = Path(proof_file)
+            if not png.is_absolute():
+                png = Path(pptx).parent / png
+            if not png.exists() or png.stat().st_size < 512:
+                die(f'`signature_proof` file ({proof_file}) does not exist or is empty — render '
+                    f'the slide first (render_deck.py <deck> <dir>) and point at the real PNG.')
         cb = design["carried_by"]
         if not isinstance(cb, list) or len(cb) < 2:
             die("`carried_by` must name at least 2 slides where the signature move does structural "

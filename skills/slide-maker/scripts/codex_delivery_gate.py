@@ -541,15 +541,32 @@ def check_design(
         if isinstance(scale.get("body"), (int, float)) and scale["body"] < BODY_FLOORS[evidence.get("delivery", "presented")]:
             errors.append("design.type_scale.body is below the delivery floor")
 
-    if design.get("boldness") not in {"balanced+", "bold", "experimental", "deliberately-restrained"}:
-        errors.append("design.boldness must declare a supported direction")
+    # The documented dial is <conservative | balanced+ | bold | experimental> (SKILL.md,
+    # agents/slide-design.md, review-rubrics.md). This set had `conservative` MISSING and
+    # `deliberately-restrained` in its place — but that string is a value for the signature_move
+    # FIELD ("deliberately restrained: <why>", the conservative dial's documented escape), never a
+    # dial. So the one word an author is actually told to write failed this gate, and a field value
+    # passed as a dial. The legacy string stays accepted so existing evidence files still load.
+    if design.get("boldness") not in {"conservative", "balanced+", "bold", "experimental",
+                                      "deliberately-restrained"}:
+        errors.append("design.boldness must declare a supported direction "
+                      "(conservative | balanced+ | bold | experimental)")
     require_string(design.get("signature_move"), "design.signature_move", errors, minimum=12)
     carried_by = design.get("carried_by")
     if not isinstance(carried_by, list) or len(set(carried_by) & expected_slides) < min(2, len(expected_slides)):
         errors.append("design.carried_by must show the signature move on at least two slides")
 
+    # Mirrors render_deck.py's carve with the SAME condition — the two gate paths disagreeing about
+    # what an honest plan looks like has already cost this repo once (this key was spelled `path`
+    # here and `png` there, so a bridged run wrote the field its own gate demanded and the other
+    # rejected it).
+    carved = (str(design.get("boldness", "")).strip().lower() == "conservative"
+              and str(design.get("signature_move", "")).strip().lower()
+                  .startswith("deliberately restrained"))
     proof = design.get("signature_proof")
-    if not isinstance(proof, dict):
+    if carved and proof is None:
+        pass                          # a conservative deck that declared it took no risk
+    elif not isinstance(proof, dict):
         errors.append("design.signature_proof missing")
     else:
         proof_slide = proof.get("slide")
