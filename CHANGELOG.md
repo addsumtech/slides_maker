@@ -9,6 +9,58 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+## [4.3.0] — 2026-07-31
+
+**One behaviour change to know about before upgrading.** `render_deck.py --gate-check` /
+`--deliverables` now require two more `design_plan` fields: **`type_scale`** (`{display, title,
+body}` as numbers, tiers that actually rank, body at or above the delivery floor) and
+**`signature_proof`** (`{"slide": N, "png": "<rendered png>"}`, the key may also be spelled `path`
+as the Codex delivery gate does). Both were gated on the Codex path only, so on the shared path
+typography was the one pillar of the visual language nobody had to resolve, and the signature move
+was accepted as a sentence with nothing showing it survived the build. Existing `.deck-gates.json`
+files will fail until both are filled.
+
+### Added
+- **New forms.** `sankey` (flow ribbons, width strictly proportional to value on one deck-wide
+  scale), `venn` (2–3 sets; zone labels placed and sized from each region's own geometry),
+  `designed_charts.distribution` (box plot at n≥5, mean ± error at n=3–4, every observation
+  overlaid, the interval named on the figure — the form for sample data, where a bar of means
+  hides n, shape and outliers), `designed_charts.marimekko` (width = segment size, height = its
+  split, so cell area is the absolute quantity) and `designed_charts.radar` (3–8 axes, ≤3 series,
+  zero-anchored spokes; raises outside those limits).
+- **`source_note`** — the per-slide provenance line. `sources_page` defends the deck; this defends
+  the slide, which is the unit that actually travels.
+- **`scripts/sigs.py`** — one lookup for many helpers: signature, docstring head, and the two
+  call-shape contracts that have actually gone wrong. `--example` returns a RUNNABLE call for every
+  form component; the smoke suite executes all of them.
+- **`design_intent(weight="left"|"right"|"asymmetric")`** — declare a deliberately one-sided
+  editorial composition. `LOPSIDED`'s comment had promised this exemption for a long time while its
+  code never read intent at all.
+- **`--briefing`** density register, for a deck read without a speaker.
+
+### Fixed
+- **Grouped decks were never examined.** `lint_deck` walked top-level shapes only, so on a deck
+  whose content lives in groups — every designer-tool export, and every deck handed over for
+  redesign — it saw one shape per slide: measured, 11 shapes seen ungrouped versus 1 grouped, an
+  opaque overlap reported in one and not the other, and every stat derived from the box list
+  reading empty while the report printed "✓ clean". The walker now applies the real
+  off/ext/chOff/chExt transform through nested groups; a rotated group is refused *out loud*
+  rather than guessed. `preflight_check` was blind the same way and worse — a grouped deck escaped
+  the whole mechanical subset, including two hard-FAIL checks.
+- **Shipped tofu.** `radar`'s own range note used a glyph Helvetica Neue lacks, printing a hollow
+  box on every chart with a shared axis range. matplotlib only warns; that warning is now an error
+  across all ten recipes, including caller-supplied labels.
+- Several first-draft defect classes now fail before the render loop rather than after it:
+  non-positive text boxes, literal stride constants in placement loops, mono/full-width residue,
+  a bar of sample means, and unsourced numbers.
+
+### Changed
+- `check_env.py` probes each candidate save location by actually creating a file — macOS TCC is
+  not expressible in permission bits, and `os.access()` reports a directory writable that `open()`
+  then refuses.
+- `SCALE DRIFT` compares the declared type scale against the type the deck actually sets, and
+  refuses to judge from a thin sample of explicitly-sized text.
+
 ## [4.2.0] — 2026-07-28
 
 **One behaviour change to know about before upgrading.** `render_deck.py --gate-check` /
