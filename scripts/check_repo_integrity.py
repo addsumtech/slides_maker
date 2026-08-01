@@ -48,8 +48,16 @@ def ignored_source_files():
         if not os.path.isdir(base):
             continue
         for dirpath, dirnames, filenames in os.walk(base):
+            # Tool-generated cache directories, pruned at the DIRECTORY level. `.pytest_cache` is
+            # here for the same reason `__pycache__` is: pytest writes it (with its own `.gitignore`
+            # holding `*`) into whatever directory it is run from, so anyone who runs the suite
+            # locally turns this check red — on a README.md pytest itself authored. CI never sees it
+            # (integrity runs on a fresh checkout, before any test step), so the finding was local,
+            # recurring, and always wrong. This repo's own rule for that: "a report that is always
+            # wrong is a report everyone learns to ignore, which is worse than no report."
             dirnames[:] = [x for x in dirnames
-                           if x not in ("__pycache__", "node_modules", ".venv", "extracted")]
+                           if x not in ("__pycache__", ".pytest_cache", "node_modules",
+                                        ".venv", "extracted")]
             for fn in filenames:
                 if os.path.splitext(fn)[1].lower() not in SOURCE_EXT:
                     continue
