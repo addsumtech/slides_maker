@@ -185,6 +185,26 @@ jobs:
           grep -qE "^checked [0-9]+ self-verify items" /tmp/designcontracts.log || {
             echo "::error::design-contract checker did not run"; exit 1; }
 
+      # The five files where the USER'S artifacts enter and leave. The four that produce and police
+      # the skill's OWN output (deckkit, lint_deck, render_deck, codex_delivery_gate) are ~12k lines
+      # with five suites, three meta-checkers and a CI job that asserts its own assertions ran. These
+      # five -- extract_deck (their deck), inspect_template (their template), export_notes (their
+      # rehearsal script), assemble (their sectioned deck), anim (what they actually click through) --
+      # were ~455 lines with NO tests and were never executed by CI at all. Every one of them failed
+      # SILENTLY when run: charts and speaker notes vanished under a success message, a chart-only
+      # slide was reported as "(empty / decorative only)", a real .potx died on a raw library
+      # ValueError with the string "potx" appearing nowhere in the skill, a rehearsal script came out
+      # with no titles, a second deck inherited the first's palette, a requested transition became a
+      # fade. Every gate this skill owns measures the deck against ITSELF, and internal consistency is
+      # exactly the property that cannot detect a wrong input. These assertions face outward.
+      # Mutation-verified: the suite fails on the pre-fix tree.
+      - name: Boundary I/O (their deck, their template, their notes, their sections)
+        run: |
+          set -o pipefail
+          python tests/test_boundary_io.py | tee /tmp/boundary.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/boundary.log || {
+            echo "::error::boundary I/O suite did not run to completion"; exit 1; }
+
       # A parameter accepted and never read is the quietest defect this library can ship: the caller
       # writes the call the docs describe, nothing raises, no lint fires, and the setting is simply
       # discarded. Three were found by hand, in three different files, over three separate audits --

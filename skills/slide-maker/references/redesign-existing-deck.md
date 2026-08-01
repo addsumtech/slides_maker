@@ -49,9 +49,14 @@ The natural first move when optimizing is to find out what's actually wrong — 
 with the user on it before spending effort. So:
 
 1. **Render their deck** — `bash scripts/render_deck.sh their_deck.pptx` → one PNG per slide.
-2. **Extract their content** — `python3 scripts/extract_deck.py their_deck.pptx <dir>` → a
-   `content.md` (per-slide text + tables + image filenames) and every embedded figure saved
-   whole to `assets/`. This is what you carry forward; reuse their figures, don't redraw them.
+2. **Extract their content** — `python3 scripts/extract_deck.py their_deck.pptx <dir>` (accepts
+   `.potx`) → a `content.md` carrying, per slide, the text, the tables, **every native chart's real
+   CATEGORIES AND SERIES** (rebuild those with `native_chart` — never re-read the numbers off the
+   picture) and **the speaker notes** (their planned narration — carry it into the rebuild's notes,
+   don't re-draft it), plus every embedded figure saved whole to `assets/`. This is what you carry
+   forward; reuse their figures, don't redraw them. **Read the `⚠ UNEXTRACTED` lines if there are
+   any** — a shape the script could not read is listed with its type rather than dropped, so a lossy
+   extraction says so instead of looking complete.
 3. **Critique the current deck** — run the **same critic** (`agents/critic.md`) on the rendered
    PNGs against the deck's purpose + audience (and the source material, if they gave any). This
    produces a concrete, per-slide weakness list — the diagnosis.

@@ -17,7 +17,10 @@ records a `format:` line whenever it's not `wide`.
 
 ## Template branch — build on the user's (or the conference's) .pptx
 
-- **Template branch:** run `scripts/inspect_template.py <file.pptx>` to learn the
+- **Template branch:** run `scripts/inspect_template.py <file.pptx>` — **a `.potx` works too**
+  (institutions ship their brand template as `.potx`; python-pptx refuses that content type, so
+  every entry point routes through `deckkit.open_presentation`, which rewrites it into a temp
+  `.pptx` copy and leaves the user's file untouched) — to learn the
   layout indices, placeholder ids, and where logos/brand live (they sit on the
   layouts, so new slides inherit them). Then `deckkit.open_template()` loads the
   deck and wipes old slides while keeping masters/layouts. Pull the brand colors

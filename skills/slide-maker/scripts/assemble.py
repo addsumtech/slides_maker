@@ -39,16 +39,48 @@ if _HERE not in sys.path:
     sys.path.insert(0, _HERE)
 
 
+def _bind_style(deck_dir):
+    """Make `import style` inside a section resolve to THIS deck's style.py.
+
+    The sys.modules cache is what guarantees coherence WITHIN a deck — every section gets the
+    identical palette object, so they cannot drift. It is also, ACROSS decks, contamination:
+    build two decks in one interpreter and the second silently inherits the first's style,
+    because `import style` finds the cached module and never looks at disk again.
+
+    Measured: two directories with `PALETTE = "DECK-A-MAGENTA"` and `PALETTE = "DECK-B-TEAL"`,
+    `build_deck` called twice in one process, printed
+        deckA section sees PALETTE = DECK-A-MAGENTA
+        deckB section sees PALETTE = DECK-A-MAGENTA
+    and no gate could see it, because the second deck is internally CONSISTENT — every slide is
+    wrong together, which is the one shape a coherence check is blind to. A coordinator assembling
+    two decks in one session (a redesign plus its before/after, a deck and its appendix) got the
+    first deck's colours in the second and nothing said so.
+
+    Evicting the cached `style` before each deck keeps the within-deck guarantee (all of ONE
+    deck's sections still import the same module object) and drops the across-deck leak.
+    """
+    cached = sys.modules.get("style")
+    if cached is not None:
+        origin = os.path.dirname(os.path.abspath(getattr(cached, "__file__", "") or ""))
+        if origin != os.path.abspath(deck_dir):
+            del sys.modules["style"]
+    if deck_dir and deck_dir not in sys.path:
+        sys.path.insert(0, deck_dir)
+    elif deck_dir:
+        # a stale earlier deck dir earlier in the path would still win the lookup
+        sys.path.remove(deck_dir)
+        sys.path.insert(0, deck_dir)
+
+
 def _load(path):
     """Import a section module from a file path (unique module name per file)."""
     path = os.path.abspath(path)
     name = "section_" + os.path.splitext(os.path.basename(path))[0]
     spec = importlib.util.spec_from_file_location(name, path)
     mod = importlib.util.module_from_spec(spec)
-    # ensure the section's own dir is importable (so `import style` resolves)
-    sec_dir = os.path.dirname(path)
-    if sec_dir not in sys.path:
-        sys.path.insert(0, sec_dir)
+    # ensure the section's own dir is importable (so `import style` resolves) AND that a style
+    # cached from a DIFFERENT deck cannot answer that import
+    _bind_style(os.path.dirname(path))
     spec.loader.exec_module(mod)
     if not hasattr(mod, "build_section"):
         raise AttributeError(f"{path} defines no build_section(prs)")

@@ -106,9 +106,15 @@ image credits live there; this file adds the iterate-safely mechanics only.)
   re-run the critic. This is the normal iteration loop.
 - **They HAVE hand-edited** → **do not regenerate over their file.** Reconcile instead:
   - *Preferred:* recover their changes with `python3 scripts/extract_deck.py
-    <their_deck.pptx>` (pulls their current text/tables/figures), fold those edits back
-    into the build script so the script matches reality, *then* make the new change and
-    rebuild. Now the script is the source of truth again.
+    <their_deck.pptx>` (their current text, tables, **chart data, speaker notes** and figures),
+    fold those edits back into the build script so the script matches reality, *then* make the new
+    change and rebuild. Now the script is the source of truth again.
+    **Check the `⚠ UNEXTRACTED` lines before you rebuild.** This step ends by declaring the build
+    script canonical, so anything the extractor missed is not merely absent from a report — it is
+    deleted from the user's deck by the very procedure that exists to protect it. (Speaker notes and
+    native charts were both silently dropped here until they were fixed: a user who hand-added a
+    results chart and rewrote three slides' narration got a `content.md` with neither, and the
+    procedure then called the script the source of truth.)
   - *Or, for a small tweak:* open **their** edited file and make the change in place
     (python-pptx or by hand), leaving the rest untouched — and don't run the generator.
   - Either way, **confirm which version is canonical before overwriting anything you

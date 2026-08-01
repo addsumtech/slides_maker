@@ -7,12 +7,14 @@ title and content slides, their placeholder ids/types/geometry, and which media
 
 Usage:  python3 inspect_template.py /path/to/template.pptx
 """
-import sys, zipfile, re
-from pptx import Presentation
+import sys, os, zipfile, re
 from pptx.util import Emu
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from deckkit import open_presentation           # accepts .potx, which is how institutions ship
+
 path = sys.argv[1]
-prs = Presentation(path)
+prs = open_presentation(path)
 
 print(f"slide size: {Emu(prs.slide_width).inches:.2f} x {Emu(prs.slide_height).inches:.2f} in")
 

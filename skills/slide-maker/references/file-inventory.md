@@ -27,6 +27,11 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   hand-kept list, and a primitive in it would silence the tool forever. Exits 1 and prints
   `NOT CHECKED` rather than reporting clean when the deck could not be opened. ~50ms. Run it at
   PRE-FLIGHT 12.
+- `check_param_reach.py` — AST pass asserting every keyword parameter a public helper ACCEPTS is
+  READ by its own body. Found ten, seven of them unknown: `node(fill=)` drew white whatever you
+  passed, `backdrop_motif(kind=)` always drew the grid its docstring said was one of two modes,
+  `native_bubble(xlabel=/ylabel=)` dropped documented axis titles, `slide_transition(kind=)`
+  turned every transition into a fade. Deliberate no-ops go in `EXPECTED_UNREAD` with a reason.
 - `check_reference_code.py` — resolves every `deckkit.*` call TAUGHT IN THE SKILL'S PROSE against
   the real module: unknown helper, bad keyword, dead `references/*.md` pointer, and the silent
   `.fore_color.alpha = ...` no-op (python-pptx solid fills cannot carry alpha, so that assignment

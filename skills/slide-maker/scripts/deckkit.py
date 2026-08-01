@@ -3783,12 +3783,57 @@ def equation_native(slide, x, y, w, h, latex, *, size=20, color=DEEP, font=None,
 
 
 # ================================================================ template reuse
+_TEMPLATE_CT = b"presentationml.template.main+xml"
+_DECK_CT = b"presentationml.presentation.main+xml"
+
+
+def open_presentation(path):
+    """`Presentation(path)`, but a real .potx opens instead of raising.
+
+    Institutions distribute their template as a .potx — that is what a university or a company
+    hands you — and python-pptx refuses it outright: `ValueError: file '...' is not a PowerPoint
+    file, content type is '...presentationml.template.main+xml'`. The difference is ONE string in
+    [Content_Types].xml; the parts, masters, layouts and theme are identical. Every entry point
+    into a supplied template (`inspect_template.py`, `extract_deck.py`, `open_template`,
+    `render_deck.py`) died on the same raw library traceback, and the string "potx" appeared
+    nowhere in the skill — no FAQ row, no shim, no mention — so the first command of the template
+    branch failed with an error that reads like a corrupt file rather than an unsupported wrapper.
+
+    Rewrites the content type into a temp copy and opens that; the caller's file is never touched.
+    """
+    try:
+        return Presentation(path)
+    except ValueError as exc:
+        if "template.main" not in str(exc):
+            raise
+    import os as _os
+    import tempfile as _tf
+    import zipfile as _zf
+    tmp = _tf.NamedTemporaryFile(suffix=".pptx", delete=False)
+    tmp.close()
+    with _zf.ZipFile(path) as zin, _zf.ZipFile(tmp.name, "w", _zf.ZIP_DEFLATED) as zout:
+        for item in zin.infolist():
+            data = zin.read(item.filename)
+            if item.filename == "[Content_Types].xml":
+                data = data.replace(_TEMPLATE_CT, _DECK_CT)
+            zout.writestr(item, data)
+    try:
+        return Presentation(tmp.name)
+    finally:
+        try:
+            _os.unlink(tmp.name)
+        except OSError:
+            pass
+
+
 def open_template(path):
     """Open the user's deck and delete its slides while KEEPING masters/layouts.
     A template's branding (header band, logos, footer) lives on the layouts, so new
     slides added afterwards inherit all of it automatically. Dropping the slide
-    relationships also prunes the old slides' heavy media (e.g. GIFs) on save."""
-    prs = Presentation(path)
+    relationships also prunes the old slides' heavy media (e.g. GIFs) on save.
+
+    Accepts a .potx as well as a .pptx — see :func:`open_presentation`."""
+    prs = open_presentation(path)
     sldIdLst = prs.slides._sldIdLst
     for sldId in list(sldIdLst):
         prs.part.drop_rel(sldId.get(qn('r:id')))
