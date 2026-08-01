@@ -35,14 +35,26 @@ MODULES = ("deckkit", "designed_charts")
 # the API that no single signature line states, so they are printed with every lookup rather than
 # left in one helper's docstring where only that helper's reader would find them.
 CONTRACTS = """\
-CALL-SHAPE CONTRACTS (the three that have actually gone wrong):
+CALL-SHAPE CONTRACTS (the five that have actually gone wrong):
   · a text RUN is (text, size, color, bold, italic[, font])  — font is the SIXTH item. Runs live in
     paragraphs: text(slide, x, y, w, h, [[run, run], [run]]) is TWO paragraphs.
+  · MEASURING takes a DIFFERENT run shape than PLACING. measure_text(runs, w, size) wants a FLAT
+    list of (text, bold) 2-tuples — not the paragraphs text() takes. SKILL.md tells you to use the
+    pair together ("measure or anchor, never hand-pick a y"), so the mismatch is hit on the first
+    honest attempt: passing text()'s paragraphs raises `not enough values to unpack (expected 2)`.
+        h = dk.measure_text([(body, False)], w, 14)      # measure
+        dk.text(s, x, y, w, h, [[(body, 14, dk.DEEP, False, False, dk.FONT)]])   # place
   · colours passed to set_font / box(line=) / anything typed RGBColor must BE RGBColor, not "RRGGBB".
     box(fill=) and box(grad=) do accept a hex string. When unsure, wrap: RGBColor.from_string(h).
   · picture(slide, PATH, x, y, w, h, fit=…) takes the path SECOND — before the geometry, unlike
     every other placing helper. Passing it after w/h raises a `stat: path should be string … not
     float`, which reads as a broken file rather than a swapped argument.
+  · value_fmt IS TWO DIALECTS, split by who renders the number. native_chart / native_dual_axis /
+    native_donut / native_pareto hand it to POWERPOINT, so it is an EXCEL number-format code
+    ('0.0%', '#,##0', '0.0"x"') — and native_chart raises a lecture if you pass '{...}'. sankey,
+    iso_bars and the designed_charts recipes format in PYTHON, so there it is a format STRING
+    ('{:.0f}', '{:.0%}'). Crossing them is silent on the sankey/iso side: the literal text
+    '0%' is printed onto every node. Excel dialect for native_*, Python dialect for everything else.
 """
 
 

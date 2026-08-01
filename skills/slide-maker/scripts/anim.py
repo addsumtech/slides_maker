@@ -143,15 +143,36 @@ class Build:
         return len(self.steps)
 
 
+# The slide-level transitions this writes. Deliberately short: SKILL.md's motion rule is that
+# transitions are "optional, secondary, off the critical path" and a deck with none plus good
+# appear-builds beats one with a fade on every slide — so this is a small set of calm, widely
+# supported elements, not a catalogue. `cut` is the honest way to say "no transition, explicitly".
+_TRANSITIONS = {
+    "fade": "<p:fade/>",
+    "cut": "<p:cut/>",
+    "wipe": '<p:wipe dir="d"/>',
+    "push": '<p:push dir="u"/>',
+}
+
+
 def slide_transition(slide, kind="fade", duration=0.5):
     """Add a simple slide-level transition (subtle; 'fade' is the safe default).
-    Goes before <p:timing> in the slide; call before Build.apply() if you use both."""
+
+    `kind` is one of 'fade' | 'cut' | 'wipe' | 'push'. Goes before <p:timing> in the slide; call
+    before Build.apply() if you use both."""
+    if kind not in _TRANSITIONS:
+        # Raise rather than fall back. `kind` was accepted and never read for as long as this
+        # function existed — grep found it exactly once in the file, in the signature — while the
+        # body hardcoded <p:fade/>, so every deck that asked for 'push' silently got a fade and
+        # nothing anywhere said so. A wrong name must now be louder than a wrong result.
+        raise ValueError("slide_transition(kind={!r}): unknown transition. One of: {}."
+                         .format(kind, " · ".join(sorted(_TRANSITIONS))))
     dur_ms = int(duration * 1000)
-    # PowerPoint transition element; p14 fade is widely supported
+    # PowerPoint transition element; p14 timing attr is widely supported
     xml = (
         f'<p:transition xmlns:p="{P_NS}" '
         f'xmlns:p14="http://schemas.microsoft.com/office/powerpoint/2010/main" '
-        f'spd="med" p14:dur="{dur_ms}"><p:fade/></p:transition>'
+        f'spd="med" p14:dur="{dur_ms}">{_TRANSITIONS[kind]}</p:transition>'
     )
     el = parse_xml(xml)
     # insert before timing if present, else append

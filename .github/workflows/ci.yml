@@ -185,6 +185,23 @@ jobs:
           grep -qE "^checked [0-9]+ self-verify items" /tmp/designcontracts.log || {
             echo "::error::design-contract checker did not run"; exit 1; }
 
+      # A parameter accepted and never read is the quietest defect this library can ship: the caller
+      # writes the call the docs describe, nothing raises, no lint fires, and the setting is simply
+      # discarded. Three were found by hand, in three different files, over three separate audits --
+      # gantt(accents=) drawing every bar in the default blue (a silent breach of SKILL.md's RED
+      # "never ship deckkit's default blue"), anim.slide_transition(kind=) turning every requested
+      # transition into a fade, native_bubble(xlabel=/ylabel=) dropping documented axis titles. One
+      # AST pass over the module bodies found seven MORE, including node(fill=) and
+      # backdrop_motif(kind=) whose own docstring advertised the modes it never implemented.
+      # Whether a parameter is read is decidable by a program, so it belongs here rather than in a
+      # docstring nobody re-reads. Deliberate no-ops go in EXPECTED_UNREAD with a written reason.
+      - name: Every accepted parameter is read by its own body
+        run: |
+          set -o pipefail
+          python scripts/check_param_reach.py | tee /tmp/paramreach.log
+          grep -qE "^checked [0-9]+ module" /tmp/paramreach.log || {
+            echo "::error::param-reach checker did not run"; exit 1; }
+
       - name: Icon pipeline (fetch, recolor, ink guard)
         run: |
           python - <<'EOF'

@@ -1751,13 +1751,28 @@ def photo_card(slide, x, y, w, h, *, role="info", accent=MAGENTA, r=0.1, alpha=0
 
 def backdrop_motif(slide, *, kind="grid", color=None, spacing=0.6, accent_disc=None,
                    disc_at=None, disc_r=0.7):
-    """A FAINT full-bleed texture (grid / graph-paper) + optional accent disc, to bookend a deck on
-    its cover and closer as one object. Keep it faint (≈#EEE) so it never fights body content."""
+    """A FAINT full-bleed texture + optional accent disc, to bookend a deck on its cover and closer
+    as one object. Keep it faint (≈#EEE) so it never fights body content.
+
+    `kind='grid'` (default) = evenly-weighted rules at `spacing`. `kind='graph'` = graph paper:
+    the same rules with every 5th one drawn heavier, so the surface reads as squared paper rather
+    than a screen grid. `kind='rule'` = horizontal rules only (a ledger/manuscript ground)."""
+    if kind not in ("grid", "graph", "rule"):
+        # Raise rather than default to 'grid'. `kind` sat in the signature unread while the
+        # docstring advertised "grid / graph-paper", so a deck that asked for graph paper got a
+        # screen grid and nothing said so. A wrong name is now louder than a wrong texture.
+        raise ValueError("backdrop_motif(kind={!r}): unknown motif. One of: grid · graph · rule."
+                         .format(kind))
     sw, sh = _slide_size(slide)
     c = color or RGBColor(0xEE, 0xEE, 0xEE)
-    n = int(sw / spacing) + 1
-    for i in range(n): box(slide, i * spacing - 0.004, 0, 0.008, sh, fill=c)
-    for j in range(int(sh / spacing) + 1): box(slide, 0, j * spacing - 0.004, sw, 0.008, fill=c)
+    major = _blend(c, DEEP, 0.28)                   # graph paper's every-5th rule, a touch darker
+    if kind != "rule":
+        for i in range(int(sw / spacing) + 1):
+            hv = kind == "graph" and i % 5 == 0
+            box(slide, i * spacing - 0.004, 0, 0.014 if hv else 0.008, sh, fill=major if hv else c)
+    for j in range(int(sh / spacing) + 1):
+        hv = kind == "graph" and j % 5 == 0
+        box(slide, 0, j * spacing - 0.004, sw, 0.014 if hv else 0.008, fill=major if hv else c)
     if accent_disc is not None:
         cx, cy = disc_at or (sw - 1.6, 1.4)
         o = _flat(slide.shapes.add_shape(MSO_SHAPE.OVAL, Inches(cx - disc_r), Inches(cy - disc_r), Inches(2 * disc_r), Inches(2 * disc_r)))
@@ -3379,9 +3394,21 @@ def native_bubble(slide, x, y, w, h, points, *, palette=None, dark=False, font=N
         pass
     for ax in (ch.category_axis, ch.value_axis):
         try:
-            ax.tick_labels.font.color.rgb = ink; ax.tick_labels.font.name = fname
+            ax.tick_labels.font.color.rgb = ink; ax.tick_labels.font.name = numeral_face(font, fallback=fname)
             ax.format.line.color.rgb = grid
             ax.major_gridlines.format.line.color.rgb = grid; ax.major_gridlines.format.line.width = Pt(0.5)
+        except Exception:
+            pass
+    # `xlabel`/`ylabel` were accepted, documented, and discarded — a scatter with no axis titles is
+    # unreadable ("bubble size = what? x = what?"), and the caller who passed them had no way to
+    # know they had been dropped. Written as real axis titles in the deck's own font.
+    for ax, lab in ((ch.category_axis, xlabel), (ch.value_axis, ylabel)):
+        try:
+            if lab:
+                ax.has_title = True
+                ax.axis_title.text_frame.text = lab
+                f = ax.axis_title.text_frame.paragraphs[0].runs[0].font
+                f.size = Pt(10); f.bold = False; f.name = fname; f.color.rgb = ink
         except Exception:
             pass
     return ch
@@ -4416,13 +4443,18 @@ def node(slide, x, y, w, h, label, *, shape="roundrect", fill=None, line=None, l
           "cylinder": MSO_SHAPE.CAN}.get(shape, MSO_SHAPE.ROUNDED_RECTANGLE)
     o = _flat(slide.shapes.add_shape(sh, Inches(x), Inches(y), Inches(w), Inches(h)))
     o.shadow.inherit = False
+    # `fill` was in the signature and never read: the body picked WHITE (or the hub accent) no
+    # matter what the caller passed, so node(fill=<colour>) drew a white node and said nothing.
+    # An explicit fill now wins over both defaults, and the label ink is derived from the colour
+    # actually painted — otherwise a dark custom fill would take DEEP text and vanish.
     if hub:
-        o.fill.solid(); o.fill.fore_color.rgb = acc; o.line.fill.background()
-        tc = tcolor if tcolor is not None else (_legible_ink(acc))
+        ground = fill if fill is not None else acc
+        o.fill.solid(); o.fill.fore_color.rgb = _as_rgb(ground); o.line.fill.background()
+        tc = tcolor if tcolor is not None else _legible_ink(_as_rgb(ground))
     else:
-        o.fill.solid(); o.fill.fore_color.rgb = WHITE
+        o.fill.solid(); o.fill.fore_color.rgb = _as_rgb(fill) if fill is not None else WHITE
         o.line.color.rgb = ln; o.line.width = Pt(line_w)
-        tc = tcolor if tcolor is not None else DEEP
+        tc = tcolor if tcolor is not None else (_legible_ink(_as_rgb(fill)) if fill is not None else DEEP)
     if dashed and not hub:
         el = o.line._get_or_add_ln(); el.append(parse_xml(f'<a:prstDash {nsdecls("a")} val="dash"/>'))
     if shape == "pill":
@@ -4771,7 +4803,7 @@ def insight_banner(slide, x, y, w, body, *, label="INSIGHT", fill=None, accent=N
 
 
 def bilingual_lockup(slide, x, y, w, zh, en, *, zh_size=30, en_size=11, ink=None, accent=None,
-                     rule=True, zh_font=None, en_font=None, anchor_top=True):
+                     rule=True, zh_font=None, en_font=None):
     """A CJK (or any) heavy display headline auto-paired with a wide-tracked ALL-CAPS Latin/pinyin
     strap line beneath — the most universal 'instantly professional' lockup. Optional short accent
     rule between. Returns bottom y."""
@@ -5283,7 +5315,7 @@ def dot_meter(slide, x, y, n, total, *, accent=None, off=None, d=0.13, gap=0.07)
         box(slide, x + i * (d + gap), y, d, d, fill=acc if i < n else of, round=True, r=d / 2)
 
 
-def tradeoff_list(slide, x, y, w, plus, minus, *, pos=None, neg=None, recommended=False):
+def tradeoff_list(slide, x, y, w, plus, minus, *, pos=None, neg=None):
     """A +/− trade-off list: green '+' pros and red '−' cons. plus/minus = lists of strings."""
     pc = pos if pos is not None else GREEN
     nc = neg if neg is not None else RGBColor(0xD0, 0x3A, 0x2E)
@@ -6761,7 +6793,8 @@ def funnel(slide, x, y, w, h, tiers, **kw):
 
 
 def gantt(slide, x, y, w, tasks, *, axis_min=None, axis_max=None, ticks=None, tick_labels=None,
-          lanes=None, today=None, row_h=0.42, label_w=2.4, accents=None, highlight=None, font=None):
+          lanes=None, today=None, today_label="TODAY", row_h=0.42, label_w=2.4,
+          accents=None, highlight=None, font=None):
     """A dated task-bar / swimlane ROADMAP — a left label column, a quarter/month tick grid, and one
     rounded bar per task row, all keyed to the SHARED ``axis_scale`` value→x mapper so bar geometry
     can never drift. ``tasks = [(label, start, end)]`` or ``(label, start, end, lane_or_accent_idx)``
@@ -6771,7 +6804,8 @@ def gantt(slide, x, y, w, tasks, *, axis_min=None, axis_max=None, ticks=None, ti
     the vertical grid (e.g. quarter boundaries labelled ``Q1 Q2 …`` — the categorical roadmap-board
     mode uses this SAME path). ``lanes`` (a list of lane names) groups rows into faintly-tinted,
     labelled swimlane bands — then a task's 4th element is its LANE index; without ``lanes`` the 4th
-    element is an ACCENT index into ``accents``. ``today`` drops a vertical marker line; ``highlight``
+    element is an ACCENT index into ``accents``. ``today`` drops a vertical marker line, captioned ``today_label`` (default "TODAY" — set it
+    on a non-English deck, e.g. ``today_label="今天"``; it was the library's only hardcoded UI string); ``highlight``
     (a flat task index) recolours one bar. **Fails loudly** (``ValueError``) if a bar falls off the
     axis, on the ``timeline``/``vstack`` precedent.
 
@@ -6859,7 +6893,13 @@ def gantt(slide, x, y, w, tasks, *, axis_min=None, axis_max=None, ticks=None, ti
         elif len(t) > 3 and t[3] is not None:
             col = pool[int(t[3]) % len(pool)]
         else:
-            col = BLUE
+            # `pool`, not BLUE. A plain 3-tuple task took the hardcoded default while `accents=`
+            # was honoured only on the lane / 4th-element paths, so gantt(accents=[<deck accent>])
+            # with ordinary tasks drew every bar in deckkit's default blue — a silent breach of
+            # SKILL.md's 🔴 "never ship deckkit's default blue", with no backstop anywhere.
+            # Behaviour is unchanged when nothing is passed: ACCENTS[0] IS BLUE, so an un-themed
+            # deck renders byte-identically and a themed one finally gets its own colour.
+            col = pool[0]
         box(slide, bx0, by, max(bx1 - bx0, 0.06), bar_h, fill=col, round=True, r=bar_h / 2.0)
         text(slide, x, row_top, label_w - 0.12, row_h,
              [[(str(lab), 11.5, ink, ti == highlight, False, font)]],
@@ -6867,7 +6907,8 @@ def gantt(slide, x, y, w, tasks, *, axis_min=None, axis_max=None, ticks=None, ti
     bottom = chart_bottom
     if today is not None:
         text(slide, X(today) - 0.6, chart_bottom + 0.04, 1.2, 0.24,
-             [[("TODAY", 8, MAGENTA, True, False, font)]], align=PP_ALIGN.CENTER, space_after=0)
+             [[(str(today_label), 8, MAGENTA, True, False, font)]],
+             align=PP_ALIGN.CENTER, space_after=0)
         bottom = chart_bottom + 0.3
     return bottom
 
@@ -7079,8 +7120,10 @@ def device_frame(slide, path, x, y, w, h, *, chrome="browser", url=None, accent=
     rectangle. ``chrome='browser'`` = a rounded window + a top chrome bar with 3 traffic-light dots and
     a URL pill (``url`` text); ``chrome='phone'`` = a dark rounded bezel with a notch. The real
     screenshot is placed with ``picture(fit='cover', round=...)`` clipped to the inner rounded rect
-    (via :func:`_round_pic_geom`). ``dark=True`` themes the browser chrome dark; ``accent`` is
-    available for theming. Returns the inner picture rect ``(x, y, w, h)``."""
+    (via :func:`_round_pic_geom`). ``dark=True`` themes the browser chrome dark. ``accent`` is
+    ACCEPTED AND CURRENTLY UNUSED — the bezel is deliberately neutral so the screenshot inside it
+    is the only coloured thing on the slide; it is kept in the signature for call-compatibility
+    with the other framing helpers. Returns the inner picture rect ``(x, y, w, h)``."""
     if chrome == "phone":
         bezel = RGBColor(0x14, 0x16, 0x1C)
         box(slide, x, y, w, h, fill=bezel, round=True, r=min(0.28, w * 0.12, h * 0.12))
