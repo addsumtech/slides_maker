@@ -3120,7 +3120,8 @@ def native_chart(slide, x, y, w, h, categories, series, *, kind="line_markers",
                                 Inches(x), Inches(y), Inches(w), Inches(h), cd)
     ch = gf.chart
     _theme_chart(ch, series, palette=palette, dark=dark, font=font, highlight=highlight,
-                 legend=legend, value_fmt=value_fmt, smooth=smooth, kind=kind)
+                 legend=legend, value_fmt=value_fmt, smooth=smooth, kind=kind,
+                 categories=categories)
     # honest magnitude: a column/bar's LENGTH must encode value, so pin the axis to 0 (a non-zero
     # auto-min makes a bar encode value−min — the 'cropped-axis drama' that misreads magnitude).
     if zero_base and kind in ("column", "bar", "column_stacked", "bar_stacked"):
@@ -3144,13 +3145,22 @@ def native_chart(slide, x, y, w, h, categories, series, *, kind="line_markers",
     return ch
 
 
-def _theme_chart(ch, series, *, palette, dark, font, highlight, legend, value_fmt, smooth, kind):
+def _theme_chart(ch, series, *, palette, dark, font, highlight, legend, value_fmt, smooth, kind,
+                 categories=None):
     from pptx.enum.chart import XL_LEGEND_POSITION
     ink = RGBColor(0xEA, 0xF2, 0xFF) if dark else RGBColor(0x22, 0x2A, 0x37)
     grid = RGBColor(0x2A, 0x35, 0x55) if dark else RGBColor(0xE7, 0xE9, 0xF0)
     muted = RGBColor(0x8A, 0x93, 0xA6) if dark else RGBColor(0xB8, 0xBE, 0xCC)
     pal = [_as_rgb(c) for c in (palette or ACCENTS)]
     fname = font or EAFONT or FONT          # the deck's script font → non-Latin labels render (no tofu)
+    # Lining figures inside the chart. lint_deck's OLDSTYLE_FIGURES warn is structurally blind here
+    # (a chart is a GraphicFrame — has_text_frame is False), so this is the "prevented at the source"
+    # half of that rule, and it has to live in the component. Resolve the numeric slots and the word
+    # slots SEPARATELY: the value axis and the data labels are always numbers, the category axis only
+    # sometimes (years/quarters yes, month names no), and the legend/series names never. A deck on a
+    # serif display face therefore keeps its register on the words and stops bobbing on the digits.
+    nfname = numeral_face(font, fallback=fname)
+    cfname = numeral_run_face("".join(str(c) for c in (categories or [])), font, fallback=fname)
     try:
         ch.font.name = fname; ch.font.size = Pt(11); ch.font.color.rgb = ink
     except Exception:
@@ -3161,12 +3171,18 @@ def _theme_chart(ch, series, *, palette, dark, font, highlight, legend, value_fm
     if ch.has_legend:
         ch.legend.position = XL_LEGEND_POSITION.TOP; ch.legend.include_in_layout = False
         ch.legend.font.color.rgb = ink; ch.legend.font.name = fname
-    for ax in (ch.category_axis, ch.value_axis):
+    for ax, axface in ((ch.category_axis, cfname), (ch.value_axis, nfname)):
         try:
-            ax.tick_labels.font.color.rgb = ink; ax.tick_labels.font.name = fname; ax.tick_labels.font.size = Pt(10)
+            ax.tick_labels.font.color.rgb = ink; ax.tick_labels.font.name = axface; ax.tick_labels.font.size = Pt(10)
             ax.format.line.color.rgb = grid
         except Exception:
             pass
+    try:                                    # data labels, when a caller turned them on, are numbers
+        for plot in ch.plots:
+            if plot.has_data_labels:
+                plot.data_labels.font.name = nfname
+    except Exception:
+        pass
     try:
         ch.value_axis.major_gridlines.format.line.color.rgb = grid
         ch.value_axis.major_gridlines.format.line.width = Pt(0.5)
@@ -3472,9 +3488,10 @@ def table(slide, x, y, w, rows, col_w=None, header=True, highlight=None,
         is_hi = (i == hi_row)
         for j in range(ncol):
             cell = tbl.cell(i, j)
+            raw = rows[i][j] if j < len(rows[i]) else ""
             # table cells count toward lint's 盘古之白 tally, so the opt-in CJK_SPACING
             # normalizer covers them too (pangu() is a no-op when the flag is unset)
-            cell.text = pangu(rows[i][j]) if j < len(rows[i]) else ""
+            cell.text = pangu(raw)
             cell.margin_left = cell.margin_right = Pt(7)
             cell.margin_top = cell.margin_bottom = Pt(2)
             cell.vertical_anchor = MSO_ANCHOR.MIDDLE
@@ -3485,8 +3502,13 @@ def table(slide, x, y, w, rows, col_w=None, header=True, highlight=None,
             p = cell.text_frame.paragraphs[0]
             p.alignment = PP_ALIGN.RIGHT if j in numeric else PP_ALIGN.LEFT
             col = head_c if is_head else (hi_c if is_hi else body_c)
+            # A results table is mostly digits, and lint_deck's OLDSTYLE_FIGURES warn cannot see
+            # into a table (has_text_frame is False on a GraphicFrame), so the guard has to be here.
+            # Per CELL, not per table: "0.9153" gets a lining face while the "method" column keeps
+            # the deck's own font, so a serif deck stays a serif deck and only the numbers stop bobbing.
+            cfont = numeral_run_face(raw, font, fallback=font or FONT)
             for r in p.runs:
-                set_font(r, size, col, bold=is_head or is_hi, font=font)
+                set_font(r, size, col, bold=is_head or is_hi, font=cfont)
     # booktabs rules: \toprule, \midrule (under header), \bottomrule — nothing else
     spec = {}
     for j in range(ncol):
@@ -5973,11 +5995,19 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
             # build blocker: its false-positive surface is every component x every font x every
             # string shape ("7" and "10x" are digit-dominant; a cover whose title IS a year has no
             # fix), and it is structurally blind to tables and native charts (has_text_frame is
-            # False), so blocking could never be consistent anyway. The defect is now PREVENTED at
-            # the source instead — numeral_run_face() resolves a lining face inside every component
-            # that emits a figure — and this finding covers hand-set runs, where a warning is the
-            # honest severity for a taste call. A project that wants it fatal can assert over its
-            # own finished file, as the Tokyo build script does.
+            # False), so blocking could never be consistent anyway. The defect is PREVENTED at the
+            # source instead — and because that prevention is the ONLY cover for the blind spot, the
+            # components are NAMED here rather than waved at as "every component that emits a figure":
+            #   big_numeral · stat_row · scorecard · change_stat · meter_bar ·
+            #   table (per cell) · native_chart (value axis · data labels · numeric category axis)
+            # Add a component to the blind class (a table, a chart, anything with no text frame) and
+            # it must be added to that list too. The sentence that used to stand here claimed the
+            # coverage was universal; it was false for table() and native_chart() the entire time it
+            # stood, and a results deck puts almost all of its digits through exactly those two. A
+            # named list makes the next gap visible; an adjective did not.
+            # This finding covers hand-set runs, where a warning is the honest severity for a taste
+            # call. A project that wants it fatal can assert over its own finished file, as the
+            # Tokyo build script does.
             findings.append((n, "WARN", "OLDSTYLE_FIGURES",
                              f"{len(bad_fig)} display numeral run(s) set in {nm}, an OLD-STYLE figure "
                              f"face (e.g. '{txt}' at {sz}) — its digits sit at different heights, so the "
