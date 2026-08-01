@@ -18,12 +18,17 @@ intuition, so the next deck's choice is as blind as the last one's. Report both 
 tier was derived rather than chosen. Then, as before: **`render_deck.py <deck>.pptx --gate-check` run and reported** (every hand-off gate, no render, under a second — run it whether or not the user wants the PDF, because the gates used to ride on `--deliverables` and that is a decline-able offer), the
 **`.deck-gates.json` written at the deck root** (the record `--deliverables` checks: critic verdict,
 the design plan's **boldness · signature_move · carried_by · form_ledger · icon_family · palette ·
-type_scale · signature_proof** — all eight, since the four that were added are exactly the ones whose
-absence let a deck ship with zero icons through every automated gate — and the provenance pass's
+type_scale · signature_proof** — all eight (on `boldness: conservative` with a recorded
+`deliberately restrained:` move, `signature_proof` drops and the other seven still bind);
+`icon_family` was added because a deck shipped with ZERO icons through every automated gate,
+`palette` after contrast failures inside one deck, and `type_scale`/`signature_proof` because
+they had been gated on the Codex path only — and the provenance pass's
 per-claim `claims` list, never a summary tally — or, for any gate deliberately skipped, a written
-`waived` reason **plus its `waived_category`** (`no-dispatch-on-host` — which also requires
-`inline_ran: true|false` — `already-reviewed-minor-edit`, `user-waived`, `external-deck`); an
-unclassified waiver is rejected, because it is indistinguishable from never having run the loop. The
+`waived` reason — and for the CRITIC gate specifically, **plus its `waived_category`**
+(`no-dispatch-on-host` — which also requires `inline_ran: true|false` —
+`already-reviewed-minor-edit`, `user-waived`, `external-deck`); an unclassified CRITIC waiver is
+rejected, because it is indistinguishable from never having run the loop. The `design_plan`,
+`provenance` and `density` waivers take a written reason only. The
 `critic` block on the CONSENT path is written by `validate_review.py … --record <deck-dir>` from the
 review itself, never typed here; a waiver is always hand-written, which is why it must be
 classified), the

@@ -87,9 +87,9 @@ Two time sinks compress well: ingesting material/assets, and the critic loop.
     goes in one message. A dependency chain (build → render → lint → look) obviously cannot.
   - **Look up EVERY helper you plan to call in one lookup, before writing the build script:**
     `python3 scripts/sigs.py text box native_chart takeaway_rail …` prints each signature, its
-    docstring head, and the two call-shape contracts that have actually gone wrong (run-tuple order;
-    RGBColor vs hex). Reading `deckkit.py` one function at a time answers one question per
-    round-trip and still missed both. **`--example <form…>` hands back a RUNNABLE call** for every
+    docstring head, and the three call-shape contracts that have actually gone wrong (run-tuple
+    order; RGBColor vs hex; `picture()` takes the path SECOND). Reading `deckkit.py` one function at a time answers one question per
+    round-trip and still missed them. **`--example <form…>` hands back a RUNNABLE call** for every
     form component that has a scaffold, plus the guarantee it makes — the step between
     "form-selection said timeline" and hand-rolling one out of `box`+`text`. Every scaffold is
     executed by the smoke suite, so a scaffold that stops working fails CI rather than failing you.
@@ -809,9 +809,12 @@ The helper set, by job:
   end up floating off the bar's centerline; canvas-safe by construction — an overflowing value
   auto-shortens the bar instead of leaving the slide) · **`unit_grid`** (an isotype/waffle field —
   N square cells sized to fit the region, `filled=` of them accented, plus a **mandatory unit label**
-  saying what one cell IS. Reach for it when the COUNT is small enough to be counted and the point is
-  *how many*, not a percentage — 34 attributed paintings, 12 of 40 sites. It refuses a texture rather
-  than a count, and refuses a blank unit label, because an unlabelled grid of squares means nothing) ·
+  saying what one cell IS. Reach for it when the COUNT is the point — 34 attributed paintings, 12 of
+  40 sites, the "N in 100" framing — and ALSO when a share is so TINY a bar would hide it: a 1%
+  sliver is a hairline, one dark cell in a field of a hundred is unmistakable. Use `meter_bar` for a
+  single large percentage/progress row instead. It refuses a texture rather
+  than a count (8,412 cells is a texture), and refuses a blank unit label, because an unlabelled grid
+  of squares means nothing) ·
   **`range_bars`** (the "football field" — floating min–max bars per row on a SHARED axis, for a value
   RANGE per category: a valuation band, a forecast spread, a min–max estimate. Use `dot_strip` instead
   when each row is really one best-estimate point).
@@ -1624,9 +1627,10 @@ the build; a move that exists only as a sentence gets sanded back to the safe ca
 notices, because the plan still reads bravely), and the provenance pass's **per-claim
 `claims` list, never a summary tally** (a tally is written by the same pass that would have skipped
 the refutation). A gate you deliberately skipped is **waived in writing** — never omitted; the tool
-prints the reason, so a skip is visible instead of invisible. 🔴 **A waiver must be CLASSIFIED, not
-just written** — an unclassified one is indistinguishable from never having run the loop, so the
-gate rejects it:
+prints the reason, so a skip is visible instead of invisible. 🔴 **The CRITIC waiver must be
+CLASSIFIED, not just written** — an unclassified one is indistinguishable from never having run
+the loop, so the gate rejects it (the `design_plan`, `provenance` and `density` waivers take a
+written reason only — the category is required for the critic alone):
 ```json
 {"critic": {"waived": "<a sentence someone can disagree with later — ≥24 chars>",
             "waived_category": "no-dispatch-on-host | already-reviewed-minor-edit | user-waived | external-deck",

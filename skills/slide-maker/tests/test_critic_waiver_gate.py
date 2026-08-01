@@ -56,12 +56,59 @@ def write_proof(dest: Path) -> None:
     Image.new("RGB", (960, 540), (240, 240, 245)).save(dest / "proof.png")
 
 
-def run_gate(deck: Path, gates: dict) -> tuple[int, str]:
+def run_gate(deck: Path, gates: dict, *flags: str) -> tuple[int, str]:
     (deck.parent / ".deck-gates.json").write_text(json.dumps(gates))
     p = subprocess.run(
-        [sys.executable, str(RENDER), str(deck), "--gate-check", "--static"],
+        [sys.executable, str(RENDER), str(deck), "--gate-check", "--static", *flags],
         capture_output=True, text=True)
     return p.returncode, p.stdout + p.stderr
+
+
+# The delivery a gate enforces comes from two places — a recorded `delivery` key and the CLI mode
+# flags — and they used to be read INDEPENDENTLY: the type-scale floor read the key, the density
+# gate read the flag. One run could therefore enforce two different deliveries, and --selfread was
+# INERT for the floor (a self-read deck with 12pt body died citing the *presented* floor).
+# The rule now: a recorded key wins, the flag is the fallback, an unrecognised recorded value DIES
+# rather than falling back to a floor it was never meant to be held to, and both gates read the one
+# resolved value. Body is 12.0 throughout, which is legal for selfread/surface and illegal for
+# presented/textheavy — so each cell's outcome is decided purely by the resolved delivery.
+DELIVERY_CASES = [
+    # (name,                          recorded,      flags,           expect_floor_death)
+    ("no key + no flag = presented",  None,          (),              True),
+    ("no key + --selfread applies",   None,          ("--selfread",), False),
+    ("no key + --surface applies",    None,          ("--surface",),  False),
+    ("recorded presented wins",       "presented",   (),              True),
+    ("recorded presented beats flag", "presented",   ("--selfread",), True),
+    ("recorded selfread applies",     "selfread",    (),              False),
+    ("recorded selfread beats flag",  "selfread",    ("--textheavy",), False),
+    ("unknown recorded value dies",   "briefing",    (),              None),
+]
+
+
+def check_delivery(deck: Path) -> tuple[int, int]:
+    ok = bad = 0
+    for name, recorded, flags, want_death in DELIVERY_CASES:
+        g = {"critic": {"verdict": "consent", "rounds": 2},
+             "design_plan": dict(DESIGN_OK, type_scale={"display": 34, "title": 24, "body": 12}),
+             "provenance": PROV_OK}
+        if recorded:
+            g["delivery"] = recorded
+        _, out = run_gate(deck, g, *flags)
+        if want_death is None:                       # unknown value must be REFUSED, not defaulted
+            good = "not a delivery mode" in out
+            why = "died on the unknown delivery" if good else "silently accepted an unknown delivery"
+        else:
+            died = "legibility floor, not a style choice" in out
+            good = died == want_death
+            why = ("enforced the floor" if died else "let 12pt through")
+        if good:
+            ok += 1
+            print("  ok   delivery: {} -> {}".format(name, why))
+        else:
+            bad += 1
+            print("  FAIL delivery: {} -> {}\n       {}".format(
+                name, why, out.strip().splitlines()[-1][:150] if out.strip() else "(no output)"))
+    return ok, bad
 
 
 CASES = [
@@ -279,6 +326,9 @@ def main() -> int:
                 failed += 1
                 print(f"  FAIL {name}: icon waiver {'fired' if fired else 'stayed silent'}, "
                       f"wanted the opposite")
+        o, b = check_delivery(deck)
+        passed += o
+        failed += b
     print(f"\n{passed} passed, {failed} failed")
     return 1 if failed else 0
 

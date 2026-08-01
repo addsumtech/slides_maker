@@ -518,10 +518,37 @@ def check_handoff_gates(pptx, mode="presented"):
             "  (`inline_ran` is required only for `no-dispatch-on-host`.)\n\n"
             "  Renders without --deliverables are unaffected; iterate freely."
             .format(path, os.path.dirname(path) or "."))
+    # --- resolve the DELIVERY once, above every gate that keys off it -------------------------
+    # Measured divergence: the type-scale floor read a `delivery` key out of this JSON while the
+    # density gate three blocks below read the raw `mode` the CLI flags set. One run could
+    # therefore enforce two different deliveries, and a NOTE claiming "using the recorded value"
+    # was true of only one of them. Resolve it here, once, and hand the SAME value to both.
+    #
+    # `mode` is what --selfread / --surface / --textheavy set. A recorded key wins over it, since
+    # it travels with the deck; an unrecognised recorded value dies rather than silently falling
+    # back to the presented floor, which would be a legibility floor quietly not applied.
+    # BODY_FLOORS is deliberately the SAME three keys the Codex delivery gate validates, so the
+    # two paths cannot disagree; `surface` is a CLI mode rather than a recorded delivery, and it
+    # maps to `selfread` because a poster is read up close — the same reason --surface already
+    # exempts it from the presented density budget.
+    _KNOWN_DELIVERY = ("presented", "textheavy", "selfread", "surface")
+    _DELIVERY_ALIAS = {"surface": "selfread"}
     try:
         gates = json.load(open(path, encoding="utf-8"))
     except Exception as e:
         die("{} is not readable JSON: {}".format(path, e))
+
+    _recorded = str(gates.get("delivery") or "").strip()
+    if _recorded and _recorded not in _KNOWN_DELIVERY:
+        die("`delivery` in {} is {!r}, which is not a delivery mode. One of: {}. An unrecognised "
+            "value used to fall through to the presented floor, i.e. a legibility floor silently "
+            "not applied to the deck it was recorded for."
+            .format(path, _recorded, ", ".join(_KNOWN_DELIVERY)))
+    if _recorded and mode != "presented" and _recorded != mode:
+        print("[gates] NOTE: {} records delivery={!r} but you passed {!r} — using the RECORDED "
+              "value for every gate in this run. Fix whichever is wrong; the two must not "
+              "disagree about which deck this is.".format(path, _recorded, mode))
+    delivery = _recorded or mode          # one of _KNOWN_DELIVERY, un-aliased
 
     critic = gates.get("critic") or {}
     if critic.get("waived"):
@@ -688,18 +715,11 @@ def check_handoff_gates(pptx, mode="presented"):
         # same floors the Codex delivery gate uses, so the two paths cannot disagree about what
         # counts as legible body type
         BODY_FLOORS = {"presented": 13.5, "textheavy": 13.5, "selfread": 12.0}
-        # The recorded key wins when it exists (the Codex path seeds it via
-        # codex_delivery_gate.py --init); `mode` — what --selfread/--textheavy set on the command
-        # line — is the fallback. Hardcoding "presented" here made those flags INERT for this
-        # floor: a self-read deck with body 12pt died citing the *presented* floor, while the same
-        # flag correctly drove the density gate below. A flag the docs tell you to pass must reach
-        # every gate it names.
-        delivery = str(gates.get("delivery") or mode)
-        if gates.get("delivery") and mode != "presented" and gates["delivery"] != mode:
-            print("[gates] NOTE: .deck-gates.json records delivery={!r} but you passed {!r} — "
-                  "using the recorded value. Fix whichever is wrong; the two must not disagree "
-                  "about which deck this is.".format(gates["delivery"], mode))
-        floor = BODY_FLOORS.get(delivery, BODY_FLOORS["presented"])
+        # `delivery` is resolved ONCE at the top of this function (recorded key > CLI mode, with
+        # surface aliased to selfread) and is the same value the density gate uses. Hardcoding
+        # "presented" here made --selfread INERT for this floor: a self-read deck with body 12pt
+        # died citing the *presented* floor while the same flag correctly drove density.
+        floor = BODY_FLOORS[_DELIVERY_ALIAS.get(delivery, delivery)]
         if scale["body"] < floor:
             die(f'`type_scale.body` is {scale["body"]}pt, under the {floor}pt floor for a '
                 f'{delivery} deck — that is a legibility floor, not a style choice.')
@@ -744,9 +764,12 @@ def check_handoff_gates(pptx, mode="presented"):
     else:
         die("no `design_plan` record. Step 2 dispatches agents/slide-design.md as the deck's art "
             "director; nothing else decides deck rhythm or the signature move.\n"
-            '    {"design_plan": {"boldness": "balanced+", "signature_move": "...",\n'
-            '                     "carried_by": [4, 6, 8], "form_ledger": "...",\n'
-            '                     "icon_family": "...", "palette": "..."}}\n'
+            # Built from DESIGN_FIELDS so this template cannot drift behind the gate again — it
+            # listed SIX of the eight for a while, so copying it verbatim produced a record that
+            # died on "missing type_scale, signature_proof".
+            + "    {\"design_plan\": {" + ", ".join('"%s": ...' % f for f in DESIGN_FIELDS) + "}}\n"
+            '    (type_scale is {"display": 34, "title": 24, "body": 14}; signature_proof is\n'
+            '     {"slide": N, "png": "render/slideNN.png"} — the rendered evidence the move survived)\n'
             '    or {"design_plan": {"waived": "<reason>"}}')
 
     # Provenance: a self-filled tally proves nothing — the refutation pass is what the gate is FOR.
@@ -801,11 +824,13 @@ def check_handoff_gates(pptx, mode="presented"):
     # interview offers, the rubric protects and the lint deliberately passes does not enforce
     # anything for long — it teaches the author to paste a waiver, and after that it is decoration.
     txt = gates.get("density")
-    if mode in ("surface", "textheavy"):
+    # the SAME resolved delivery the type floor used — reading raw `mode` here is how one run
+    # enforced two different deliveries
+    if delivery in ("surface", "textheavy"):
         print("[gates] density: not applied — %s deck (the user chose this density, or the "
-              "surface has no per-slide budget)" % mode)
+              "surface has no per-slide budget)" % delivery)
         return
-    over, total, median = _density_stats(pptx, budget=70 if mode == "presented" else 120)
+    over, total, median = _density_stats(pptx, budget=70 if delivery == "presented" else 120)
     if total:
         if isinstance(txt, dict) and txt.get("waived"):
             print("[gates] density: {}/{} slide(s) over the presented text budget, median {} "
@@ -817,7 +842,7 @@ def check_handoff_gates(pptx, mode="presented"):
                 "notes, which this deck already has.\n"
                 "    Cut the on-slide prose, or record the deliberate choice:\n"
                 '    "density": {{"waived": "why this deck is meant to be read, not presented"}}'
-                .format(over, total, mode, median, 70 if mode == "presented" else 120))
+                .format(over, total, delivery, median, 70 if delivery == "presented" else 120))
         else:
             print("[gates] density: {}/{} slide(s) over the text budget, median {} words a slide"
                   .format(over, total, median))

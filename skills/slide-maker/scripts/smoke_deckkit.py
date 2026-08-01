@@ -498,7 +498,18 @@ def _every_scaffold_runs():
             bad.append(f"{name}: {type(e).__name__}: {e}")
         finally:
             os.chdir(cwd)
-    assert not bad, "scaffolds that do not run: " + " | ".join(bad[:3])
+        # RUNNING is not the same as being RIGHT. The tier_stack scaffold passed this suite for
+        # months while painting "('Visitors', '12k')" onto the band — tiers are label STRINGS and
+        # values= is a separate kwarg, so a 2-tuple gets str()'d straight onto the slide. Nothing
+        # raised, lint_layout reported no faults, and the bug was then copied into two new
+        # scaffolds. A shape-level assertion is what "it executed" cannot give you.
+        for sh in sl.shapes:
+            if not getattr(sh, "has_text_frame", False):
+                continue
+            t = sh.text_frame.text
+            if "('" in t or '("' in t or "', '" in t:
+                bad.append("{}: rendered Python source onto the slide: {!r}".format(name, t[:60]))
+    assert not bad, "scaffolds that do not run, or draw their own source: " + " | ".join(bad[:3])
 
 
 def _scaffolds_cover_the_form_components():

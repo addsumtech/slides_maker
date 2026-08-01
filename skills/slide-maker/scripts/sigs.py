@@ -31,11 +31,11 @@ sys.path.insert(0, HERE)
 
 MODULES = ("deckkit", "designed_charts")
 
-# The two call-shape errors that actually cost round-trips on a real build. They are properties of
+# The three call-shape errors that actually cost round-trips on a real build. They are properties of
 # the API that no single signature line states, so they are printed with every lookup rather than
 # left in one helper's docstring where only that helper's reader would find them.
 CONTRACTS = """\
-CALL-SHAPE CONTRACTS (the two that have actually gone wrong):
+CALL-SHAPE CONTRACTS (the three that have actually gone wrong):
   · a text RUN is (text, size, color, bold, italic[, font])  — font is the SIXTH item. Runs live in
     paragraphs: text(slide, x, y, w, h, [[run, run], [run]]) is TWO paragraphs.
   · colours passed to set_font / box(line=) / anything typed RGBColor must BE RGBColor, not "RRGGBB".
@@ -61,8 +61,11 @@ EXAMPLES = {
                  '                                ("Train", "fit the model")])',
     "segmented_bar": 'dk.segmented_bar(s, 0.8, 2.0, 8.4, 0.5, [46, 30, 24],\n'
                      '                 labels=["Cloud", "Devices", "Other"])',
+    # tiers are LABEL STRINGS; `values=` is the SEPARATE display kwarg — and when numeric it is what
+    # makes the taper value-proportional, which is the whole guarantee. Passing (label, value) tuples
+    # paints "('Visitors', '12k')" onto the band: tier_stack renders each tier with str(lab).
     "tier_stack": 'dk.tier_stack(s, 1.0, 1.0, 6.0, 3.4,\n'
-                  '              [("Visitors", "12k"), ("Trials", "3k"), ("Paid", "410")],\n'
+                  '              ["Visitors", "Trials", "Paid"], values=[12000, 3000, 410],\n'
                   '              mode="funnel")',
     "leaderboard": 'dk.leaderboard(s, 0.6, 1.0, 5.0,\n'
                    '               [(dk.ACCENTS[0], "alpha", 42), (dk.ACCENTS[1], "beta", "18", "sub")])',
@@ -104,28 +107,29 @@ EXAMPLES = {
     # supply the geometry", i.e. the tool told the author to do the one thing the rule forbids.
     "gantt": 'dk.gantt(s, 0.6, 1.4, 8.8,\n'
              '         [("Design", 0, 3), ("Build", 2, 7), ("Ship", 7, 9)],\n'
-             '         axis_min=0, axis_max=10, today=6)',
+             '         axis_min=0, axis_max=10, ticks=[0, 2.5, 5, 7.5, 10],\n'
+             '         tick_labels=["Q1", "Q2", "Q3", "Q4", ""], today=6)',
     # rows = (name, sub, v_before, v_after, scale_lo, scale_hi, unit) — SEVEN items, per-row scale
     "dumbbell_board": 'dk.dumbbell_board(s, 0.6, 1.4, 8.8,\n'
                       '                  [("Latency", "p95", 120, 48, 0, 140, "ms"),\n'
                       '                   ("Cost", "per run", 90, 61, 0, 100, "$")])',
     "funnel": 'dk.funnel(s, 1.0, 1.0, 6.0, 3.4,\n'
-              '          [("Visitors", "12k"), ("Trials", "3k"), ("Paid", "410")])',
+              '          ["Visitors", "Trials", "Paid"], values=[12000, 3000, 410])',
     "pyramid": 'dk.pyramid(s, 1.0, 1.0, 6.0, 3.4,\n'
-               '           [("Vision", ""), ("Strategy", ""), ("Execution", "")])',
+               '           ["Vision", "Strategy", "Execution"])',
     # designed_charts forms render a transparent PNG you then place with dk.picture(fit="contain").
     # `dc` is `import designed_charts as dc`; the path is yours.
     "waterfall": 'dc.waterfall("waterfall.png",\n'
-                 '             [("Start", None), ("Q1", 25), ("Q2", -12), ("End", None)],\n'
+                 '             [("Start", 120), ("Q1", 25), ("Q2", -12), ("", None)],\n'
                  '             total_label="End")\n'
                  'dk.picture(s, "waterfall.png", 0.8, 1.2, 8.4, 3.6, fit="contain")',
     "distribution": 'dc.distribution("dice.png",\n'
                     '                [("baseline", [0.81, 0.86, 0.79, 0.9, 0.84]),\n'
                     '                 ("ours", [0.88, 0.92, 0.9, 0.94, 0.89])],\n'
-                    '                value_label="Dice", err="ci95", highlight=1)\n'
+                    '                value_label="Dice", highlight=1)\n'
                     'dk.picture(s, "dice.png", 0.8, 1.2, 8.4, 3.6, fit="contain")',
     "marimekko": 'dc.marimekko("mix.png", [("EU", 5, [3, 2]), ("US", 9, [4, 5])],\n'
-                 '             ["hardware", "services"], width_label="revenue")\n'
+                 '             ["hardware", "services"], width_label="$B")\n'
                  'dk.picture(s, "mix.png", 0.8, 1.2, 8.4, 3.6, fit="contain")',
     "radar": 'dc.radar("profile.png", ["speed", "cost", "risk", "reach", "effort"],\n'
              '         [("baseline", [2, 4, 3, 2, 5]), ("ours", [5, 3, 2, 4, 3])],\n'
@@ -151,13 +155,37 @@ def load():
     return out
 
 
+# Guarantees for forms that have a scaffold but are NOT in component_audit.FORM_GUARANTEE (that
+# dict drives the geometry audit's EMITTERS set, so adding names to it changes what the audit
+# suppresses — a separate concern from what --example prints). Without these, --example printed the
+# filler "a form component" while SKILL.md promises "plus the guarantee it makes".
+_EXTRA_GUARANTEES = {
+    "gantt": "every bar keyed to ONE shared axis_scale, so durations are comparable across lanes",
+    "dumbbell_board": "a per-row scale, and direction-aware value labels placed OUTWARD so they "
+                      "cannot collide with the dumbbell",
+    "funnel": "a taper whose band width tracks value/max — a 5% tier is drawn at 5%, not clamped "
+              "up to a legible minimum that would contradict its own label",
+    "pyramid": "the same value-proportional taper as funnel, narrow-top-first",
+    "waterfall": "floating step bars on the running cumulative, with rises/falls/totals coloured "
+                 "distinctly and no increment double-counted against its own total",
+    "distribution": "the SPREAD, not just the mean — every observation overlaid, n printed, and a "
+                    "refusal below n=3 rather than a bar that hides the sample",
+    "marimekko": "cell AREA = the absolute quantity (width = size, height = its split), which a "
+                 "100%-stacked bar throws away",
+    "radar": "zero-anchored spokes on a shared range, so profile area is not inflated by a "
+             "cropped axis",
+}
+
+
 def _guarantee(name):
-    """The one geometric promise the component makes and a hand-roll loses."""
+    """The one geometric promise the component makes and a hand-roll loses, or None."""
+    if name in _EXTRA_GUARANTEES:
+        return _EXTRA_GUARANTEES[name]
     try:
         import component_audit
-        return component_audit.FORM_GUARANTEE.get(name, "a form component")
+        return component_audit.FORM_GUARANTEE.get(name)
     except Exception:
-        return "a form component"
+        return None
 
 
 def show(name, mod, fn, full=False):
@@ -220,7 +248,8 @@ def main(argv=None):
         miss = [n for n in a.names if n not in EXAMPLES]
         for n in a.names:
             if n in EXAMPLES:
-                print(f"\n# {n} — {_guarantee(n)}\n{EXAMPLES[n]}")
+                g = _guarantee(n)
+                print(f"\n# {n}" + (f" — {g}" if g else "") + f"\n{EXAMPLES[n]}")
         # A real helper with no scaffold is NOT a licence to hand-roll it — that is the exact
         # failure this tool exists to prevent, and SKILL.md's 🔴 component rule forbids it by name.
         # Only a name that resolves to no helper at all is "you supply the geometry".
