@@ -166,6 +166,25 @@ jobs:
           grep -qE "^checked [0-9]+ markdown" /tmp/refcode.log || {
             echo "::error::reference-code checker did not run"; exit 1; }
 
+      # The design pipeline's RULES were sound and its INDEXES had drifted. A whole-skill audit found
+      # the self-verify header claiming "(a-q)" while the list ran to (r) -- and (r) is the density
+      # line, the one self-verify item with a hard deterministic backstop, so an agent sweeping the
+      # declared range stopped one item short of the gated one. Same class: PRE-FLIGHT 12(a) said
+      # ">~40%" where eight other files said "~40-50%", and `interior register:` was required by
+      # self-verify (q), PRE-FLIGHT 6b AND the critic contract card while appearing nowhere in the
+      # file SKILL.md names as the OWNER of the checkpoint's required lines.
+      # None of that is catchable by reading -- they are agreements BETWEEN files, and every one is
+      # decidable by a program. Verified: this check flags all five on the pre-fix tree and is clean
+      # on the fixed one. --selftest runs first so a check that has stopped being able to fail is
+      # itself a build failure.
+      - name: Design stack indexes agree (self-verify letters, shared thresholds, checkpoint owner)
+        run: |
+          set -o pipefail
+          python scripts/check_design_contracts.py --selftest
+          python scripts/check_design_contracts.py | tee /tmp/designcontracts.log
+          grep -qE "^checked [0-9]+ self-verify items" /tmp/designcontracts.log || {
+            echo "::error::design-contract checker did not run"; exit 1; }
+
       - name: Icon pipeline (fetch, recolor, ink guard)
         run: |
           python - <<'EOF'

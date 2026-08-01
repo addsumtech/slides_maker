@@ -56,13 +56,26 @@ stranger reads it AT FIRST APPEARANCE** — label/legend/figurative, the slide-d
 a reading that defers to a later slide is a FAILED test written as a passing sentence, and the fix is
 a label at first use or removing the device, never a promise that it lands later) + the rhythm-map table +
 the three design musts + a one-line Form-ledger/diversity verdict + the **`boldness:` + `signature
-move:` lines** (the dial + the one scoped aesthetic risk + the bold reference it adapts — even as an
-auto-waiver FYI, a timid "big number" signature move or a wrong dial should cost one glance to veto) +
+move:` lines, the latter carrying its `carried_by:` clause** (the dial + the one scoped aesthetic risk
++ the bold reference it adapts + the 2–3 slides where the same idea does STRUCTURAL work — even as an
+auto-waiver FYI, a timid "big number" signature move, a wrong dial, or a risk that lands on exactly
+one slide should cost one glance to veto) + the **`interior register:` line** — the quiet cue that
+carries the style onto ORDINARY INTERIOR pages (a faint grid/scanline, a corner numeral system, a thin
+edge rule, a small seal), or the explicit carve `none (flat by register — <reason>)`. It is a required
+line, not an optional one: self-verify (q), PRE-FLIGHT 6b and the critic's Lens-B `register_interiors`
+check all READ this field, and a deck whose style lives only on the cover and dividers fails all
+three — 的风格要走所有页. Do not confuse it with the loud signature motif, whose ≤3-appearance budget
+still binds; this one is the chrome-quiet echo that MAY repeat on every page. + the **`density:`
+line as two numbers** (planned median words/slide, planned count over 70, and how many content slides
+have a non-text protagonist — self-verify (r); the hand-off density gate is compared against these) +
 the image opt-in list (the
 few proposed images, for approval — **each row carries its source token**: `generated — <tool>` /
 `sourced — <origin> (<license>)` / `provided — …` / a `searched, none found → …` rung (full grammar:
 `references/image-generation.md` step 5), per the REFERENT RULE in `image-generation.md`) + the **`logo plan:` line with its evidence token**
-(`official asset — <source>` / `searched, none found → designed wordmark (flagged)` / `n/a — <reason>`; a bare
+(`official asset — <source>` / `searched, none found → designed wordmark (flagged)` / `n/a — <reason>`,
+where the reasons include **`third-party assessment`** — a deck ABOUT an entity but not FROM it,
+carrying what that entity would not publish about itself; that row is decided before the search and a
+found logo does not overturn it; a bare
 "wordmark" with no recorded search on a single-entity deck = incomplete, even as an auto-waiver FYI)
 **+ one required GATE line naming the look-choice that was made — `direction gate:` on the
 design-clean branch (c), `style gate:` on the generated-template branch (d).** Branch (c):

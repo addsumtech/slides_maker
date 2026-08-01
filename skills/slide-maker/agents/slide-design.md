@@ -413,7 +413,7 @@ each slide in isolation and can't retrofit rhythm, so this is yours.
   PNGs** at the design checkpoint and letting the user pick via option prompt — slides are code,
   so a second take on the ONE slide that decides the meeting costs minutes, not hours (never do
   this for every slide; one or two beats at most).
-- **~50–70% whitespace target — but whitespace must be DESIGNED, not leftover.** When a slide feels
+- **Occupancy band by role (~25–35 cover · ~45–60 exec · ~55–70 technical, measured as INK by the render-time lint) — and whitespace must be DESIGNED, not leftover.** When a slide feels
   thin, diagnose which failure it is: **(a) the point is under-served** — the far more common case —
   fix it UPSTREAM with substance (send it back to the content plan: add the supporting detail,
   example, stat, or mini-diagram the point deserves, or merge two thin neighbours — the frame-fill
@@ -781,12 +781,21 @@ NOT a blanket per-slide quota):
   canvas value flip appears exactly once (any flip recurs as a divider family or bookend; on the
   generated-template branch, no canvas flip at all — imagery-strength beats only).
 - **(n) motif passes the STRANGER TEST** — the plan's motif line states the device AND its meaning in
-  words ("twin rails = the two engines"), and names HOW a first-time viewer learns it: labeled at
-  first appearance / figurative enough to read unaided / on-canvas legend (§1 STRANGER TEST). A motif
-  whose meaning appears only in the plan text fails.
+  words ("twin rails = the two engines"), and names HOW a first-time viewer learns it. **FOUR arms,
+  not three** (§1 STRANGER TEST): labeled at first appearance / figurative enough to read unaided /
+  on-canvas legend / **REMOVED — and removal is first-class, usually the better fix**. A motif
+  whose meaning appears only in the plan text fails. Two tells that a passing sentence is really a
+  failing one: **a reading that DEFERS is not a reading** ("it becomes clear on slide 7" is a failed
+  test written as a promise — label it at first use or take it out), and **position dictates reading,
+  and it outranks intent** (if where the device sits says something other than what you meant, the
+  viewer reads the position). *(This item lists three arms in earlier drafts; the fourth is the one
+  the shipped failure needed, and `references/checkpoint-convention.md` already spells it out — the
+  tick you write here must match the checkpoint spec you post.)*
 - **(o) logo plan carries evidence** — the `logo plan:` line matches the LOGO PRINCIPLE's situation
   table AND carries its evidence token (`official asset — <source>` / `searched, none found →
-  designed wordmark (flagged)` / `n/a — <reason>`). On a single-entity deck a bare "wordmark", "text only",
+  designed wordmark (flagged)` / `n/a — <reason>`, the reasons including **`third-party assessment`** —
+  a deck ABOUT an entity but not FROM it, decided BEFORE the search, which a found logo does not
+  overturn). On a single-entity deck a bare "wordmark", "text only",
   or missing line fails — the search was not run or not recorded.
 - **(p) image rows carry source tokens on-contract — split by owner:** at YOUR (agent) time, every
   Image opt-in row declares its depicted-subject **referent class + INTENDED source class** from the

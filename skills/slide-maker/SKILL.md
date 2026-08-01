@@ -517,7 +517,10 @@ deck-level variation** (`references/design-intelligence-addendum.md`) — plus, 
 single-entity** deck (its subject IS one org / product / brand / institution, or a talk naming a
 tool/framework/model), a **logo plan WITH EVIDENCE** per the slide-design LOGO PRINCIPLE's situation
 table: the line must read `official asset — <source>`, `searched, none found → designed wordmark
-(flagged)`, or `n/a — <multi-entity | template carries it | user opted out>` — a bare "wordmark"/
+(flagged)`, or `n/a — <multi-entity | template carries it | user opted out | third-party assessment>`
+— **`third-party assessment` is a full member of this set, not a footnote**: it is decided BEFORE the
+search and overrides its result (the 🔴 row below), so a deck that qualifies for it must be able to
+name it here — a bare "wordmark"/
 "text only" with no recorded search, or a missing line on a single-entity deck, makes the plan
 **incomplete** (send it back; self-verify (o) owns this) — and the **THREE
 DESIGN MUSTS** addressed (`slide-design.md`'s three design musts) —
@@ -553,16 +556,24 @@ deviation. This row makes that the default instead of a save.)*
 **The per-slide content-image opt-in is a CROSS-CUTTING choice available on EVERY deck** — independent of the template decision and separate from Q1's generate-a-template path; offer it whenever an image tool OR web search for sourced photos is available. **Read `references/asset-production.md` §Per-slide content-image opt-in before writing the opt-in list** — the three guardrails (content-related, never every slide, and the REFERENT RULE that decides generated vs real sourced imagery) and the per-row source-token grammar. Fold in the user's design edits, then set up the canvas (Step 3).
 
 > **🔴 CHECKPOINT — DESIGN:** show the Design language + Form ledger + the 3 design musts + the
-> **`boldness:` line + the `signature move:` line** (the one scoped aesthetic risk + where it lands +
-> the bold reference it adapts — so a wrong dial or a timid/too-wild move costs one glance to veto) + the
+> **`boldness:` line + the `signature move:` line with its `carried_by:` clause** (the one scoped
+> aesthetic risk + where it lands + the bold reference it adapts + the 2–3 slides where the same idea
+> does STRUCTURAL work — so a wrong dial, a timid/too-wild move, or a risk that lives on exactly one
+> slide costs one glance to veto) + the
 > image opt-in list (each row with its `generated — <tool>` / `sourced — <origin> (<license>)` /
 > `provided — …` / `searched, none found → …` rung — full grammar: `references/image-generation.md`
 > step 5 — source token) + (for a company/product/single-entity deck) the **`logo plan:` line WITH its
 > evidence token** (`official asset — <source>` / `searched, none found → designed wordmark (flagged)` /
-> `n/a — <reason>`) + the **motif line stating the device AND its meaning + how it's made legible**
-> (label / legend / figurative — the STRANGER TEST) — presented as the compact checkpoint artifact from the 🔴 CHECKPOINT convention block
-> (same fields, incl. the rhythm-map table and the `direction gate:` line — picked direction or
-> named carve) — and get the user's OK before building.
+> `n/a — <reason, incl. third-party assessment>`) + the **motif line stating the device AND its meaning
+> + how it's made legible**
+> (label / legend / figurative / **removed** — the STRANGER TEST; a reading that DEFERS to a later
+> slide is a failed test written as a passing sentence) + the **`interior register:` line** (the quiet
+> cue that carries the style onto ordinary interior pages, or `none (flat by register — <reason>)` —
+> self-verify (q) · PRE-FLIGHT 6b · the critic's `register_interiors` check all read this field, and a
+> style dressed only on the bookends fails) + the **`density:` line as two numbers**
+> — presented as the compact checkpoint artifact from the 🔴 CHECKPOINT convention block
+> (same fields, incl. the rhythm-map table and the branch **gate line** — `direction gate:` on branch
+> (c), `style gate:` on branch (d); picked look or named carve) — and get the user's OK before building.
 
 ## Step 3 — Set up the canvas
 **First, decide where the deck lands.** Deliver each deck as one self-contained
@@ -1201,7 +1212,7 @@ text-heavy density for a presented deck, or `--static` on a presented deck when 
 appear-builds (silences NO BUILDS — a static presented deck was their choice, not an omission), so the
 budgets fit the delivery mode). Per slide it measures:
 reading **load** (latin words + CJK chars/2) vs the ~40-word presented budget · **text% / ink%
-coverage** vs the ~50–70% whitespace target · **max font pt** · shape/picture/chart counts ·
+coverage** vs its role's OCCUPANCY band (cover/divider ~25–35 · exec/summary ~45–60 · technical/evidence ~55–70; past ~70–75 is `CROWDED`) — note the lint measures INK, so read the bands as ink, not as their whitespace complement · **max font pt** · shape/picture/chart counts ·
 **build** presence · **sim↑** (layout-skeleton similarity vs the previous slide); deck-wide it
 prints the **font histogram + type-drama ratio** and **builds/transitions n/N**. Its `[stats]`
 warnings name the rule they measure — **`TEXT WALL`** (word budget blown → cut copy to notes or

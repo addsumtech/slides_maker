@@ -143,7 +143,7 @@ Whitespace estimate: ~55% / ~65% / ~70%
 Density decision: keep airy because … / split because … / compress only if …
 ```
 
-Target band is ~50–70% whitespace (the operational figure here for `design-principles.md`'s *generous whitespace*). "Compress" is the last resort and must be
+State the dial as OCCUPANCY (ink), in the same direction the render-time lint measures it — the role bands below are the operational figure for `design-principles.md`'s *generous whitespace*. (~50–70% whitespace is the same target read backwards, i.e. ~30–50% ink; giving one dial two directions four lines apart is how a plan ends up aiming at the complement of what the gate reads.) "Compress" is the last resort and must be
 justified; the first two moves are **strengthen the hero** and **split the slide** (never shrink to
 illegible).
 
