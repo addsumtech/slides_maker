@@ -1550,8 +1550,12 @@ Three rules, in order of how much they buy:
 2. **Budget the fan-out explicitly and say the number in each dispatch.** An agent with no stated
    cap searches until satisfied, and N of them do it in parallel. Write it into the prompt —
    *"you have at most 6 searches; spend them on the claims you cannot resolve any other way"* —
-   and size the round so the whole fan-out stays under roughly **half** the session cap. Half, not
-   all: verification, mid-build fact-checks, and asset sourcing all still have to happen.
+   and size the round so the whole fan-out stays under roughly **half of what REMAINS — not half of
+   the original cap**. Half, not all: verification, mid-build fact-checks, and asset sourcing all
+   still have to happen. *(Remains, not original, because the cap is SESSION-scoped and does not
+   reset between decks: on the second deck of a conversation "half the cap" can be more than
+   everything left. Step 1's dispatch rule says the same thing in the same words — they are one
+   rule stated at the two moments it binds, so change one, change both.)*
 3. **Record what you planned and what you spent**, so exhaustion is a number someone chose rather
    than a wall someone hit. When the budget IS gone, say so in the deck's limitations and in the
    hand-off — never let a missing fact read as an absent fact.
