@@ -471,12 +471,17 @@ def check_handoff_gates(pptx, mode="presented"):
     Evidence lives in `<deck-dir>/.deck-gates.json`:
 
         {"critic": {"verdict": "consent", "rounds": 2, "review": "reviews/r2.json"},
-         "provenance": {"checked": 87, "confirmed": 85, "fixed": 2, "cut": 0}}
+         "provenance": {"claims": [{"claim": "<the claim>", "verdict": "CONFIRMED",
+                                    "url": "https://<primary source>"}]}}
+
+    (A summary tally like {"checked": 87} is REJECTED on purpose — a tally is written by the same
+    pass that would have skipped the refutation.)
 
     A gate may be waived — quick decks exist — but a waiver is a written reason that travels with
-    the deck, not a silence:
+    the deck AND names which kind of skip it is, not a silence:
 
-        {"critic": {"waived": "1-slide fix to an already-reviewed deck"}}
+        {"critic": {"waived": "1-slide fix to an already-reviewed deck",
+                    "waived_category": "already-reviewed-minor-edit"}}
 
     Set SLIDE_MAKER_SKIP_GATES=1 to bypass entirely (CI smoke tests, throwaway renders).
     """
@@ -505,8 +510,12 @@ def check_handoff_gates(pptx, mode="presented"):
             '                                "url": "https://<primary source>"}}]}}}}\n\n'
             "  (A summary tally like {{\"checked\": 87}} is REJECTED on purpose — a tally is "
             "written by the same pass that would have skipped the refutation.)\n\n"
-            "  A gate you deliberately skipped is waived in writing, not omitted:\n\n"
-            '    {{"critic": {{"waived": "why this deck does not need a critic round"}}}}\n\n'
+            "  A gate you deliberately skipped is waived in writing AND CLASSIFIED, not omitted:\n\n"
+            '    {{"critic": {{"waived": "why this deck does not need a critic round",\n'
+            '                 "waived_category": "no-dispatch-on-host | already-reviewed-minor-edit'
+            ' | user-waived | external-deck",\n'
+            '                 "inline_ran": true}}}}\n\n'
+            "  (`inline_ran` is required only for `no-dispatch-on-host`.)\n\n"
             "  Renders without --deliverables are unaffected; iterate freely."
             .format(path, os.path.dirname(path) or "."))
     try:
@@ -601,10 +610,12 @@ def check_handoff_gates(pptx, mode="presented"):
     elif critic.get("verdict") == "revise":
         die("the last critic review returned verdict=revise. Fix the blockers and re-run the "
             "loop, or record a waiver with the reason you are shipping over it:\n"
-            '    {"critic": {"waived": "shipping over: <the surviving finding and why>"}}')
+            '    {"critic": {"waived": "shipping over: <the surviving finding and why>",\n'
+            '                "waived_category": "user-waived"}}')
     else:
         die("{} has no usable `critic` record — needs {{\"verdict\": \"consent\"|\"revise\"}} or "
-            "{{\"waived\": \"<reason>\"}}".format(path))
+            "{{\"waived\": \"<reason>\", \"waived_category\": \"<one of the four kinds>\"}}"
+            .format(path))
 
     # The design plan is the art director's output (Step 2). Self-authoring one is indistinguishable
     # from dispatching for it — unless the record has to carry the fields the dispatch produces.
@@ -677,7 +688,17 @@ def check_handoff_gates(pptx, mode="presented"):
         # same floors the Codex delivery gate uses, so the two paths cannot disagree about what
         # counts as legible body type
         BODY_FLOORS = {"presented": 13.5, "textheavy": 13.5, "selfread": 12.0}
-        delivery = str(gates.get("delivery", "presented"))
+        # The recorded key wins when it exists (the Codex path seeds it via
+        # codex_delivery_gate.py --init); `mode` — what --selfread/--textheavy set on the command
+        # line — is the fallback. Hardcoding "presented" here made those flags INERT for this
+        # floor: a self-read deck with body 12pt died citing the *presented* floor, while the same
+        # flag correctly drove the density gate below. A flag the docs tell you to pass must reach
+        # every gate it names.
+        delivery = str(gates.get("delivery") or mode)
+        if gates.get("delivery") and mode != "presented" and gates["delivery"] != mode:
+            print("[gates] NOTE: .deck-gates.json records delivery={!r} but you passed {!r} — "
+                  "using the recorded value. Fix whichever is wrong; the two must not disagree "
+                  "about which deck this is.".format(gates["delivery"], mode))
         floor = BODY_FLOORS.get(delivery, BODY_FLOORS["presented"])
         if scale["body"] < floor:
             die(f'`type_scale.body` is {scale["body"]}pt, under the {floor}pt floor for a '

@@ -17,9 +17,16 @@ cost line is not bookkeeping: a dial the user sets but never sees the bill for b
 intuition, so the next deck's choice is as blind as the last one's. Report both even when the
 tier was derived rather than chosen. Then, as before: **`render_deck.py <deck>.pptx --gate-check` run and reported** (every hand-off gate, no render, under a second — run it whether or not the user wants the PDF, because the gates used to ride on `--deliverables` and that is a decline-able offer), the
 **`.deck-gates.json` written at the deck root** (the record `--deliverables` checks: critic verdict,
-the design plan's boldness/signature_move/carried_by/form_ledger, and the provenance pass's per-claim
-`claims` list — or a written `waived` reason for any gate deliberately skipped; the `critic` block
-is written by `validate_review.py … --record <deck-dir>` from the review itself, never typed here), the
+the design plan's **boldness · signature_move · carried_by · form_ledger · icon_family · palette ·
+type_scale · signature_proof** — all eight, since the four that were added are exactly the ones whose
+absence let a deck ship with zero icons through every automated gate — and the provenance pass's
+per-claim `claims` list, never a summary tally — or, for any gate deliberately skipped, a written
+`waived` reason **plus its `waived_category`** (`no-dispatch-on-host` — which also requires
+`inline_ran: true|false` — `already-reviewed-minor-edit`, `user-waived`, `external-deck`); an
+unclassified waiver is rejected, because it is indistinguishable from never having run the loop. The
+`critic` block on the CONSENT path is written by `validate_review.py … --record <deck-dir>` from the
+review itself, never typed here; a waiver is always hand-written, which is why it must be
+classified), the
 per-slide **click order** (appear-builds opted in), **image licenses/credits** (sourced photos), the
 **GIF plays-in-slideshow** note (embedded GIFs), **accepted advisories** one plain-language line
 each, the **`distinctiveness:` line whenever Step 5's bold/experimental escalation fired**

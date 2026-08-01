@@ -485,13 +485,19 @@ raises("radar refuses 9 axes (use small_multiples)",
 def _every_scaffold_runs():
     import sigs as _sigs
     bad = []
+    # The designed_charts scaffolds write a PNG to a RELATIVE path (that is what makes them
+    # copy-pasteable), so run them inside TMP and put the cwd back afterwards.
+    cwd = os.getcwd()
     for name, code in sorted(_sigs.EXAMPLES.items()):
         p = dk.blank_deck(10, 5.625)
         sl = p.slides.add_slide(p.slide_layouts[6])
         try:
-            exec(compile(code, f"<scaffold:{name}>", "exec"), {"dk": dk, "s": sl})
+            os.chdir(TMP)
+            exec(compile(code, f"<scaffold:{name}>", "exec"), {"dk": dk, "s": sl, "dc": dc})
         except Exception as e:
             bad.append(f"{name}: {type(e).__name__}: {e}")
+        finally:
+            os.chdir(cwd)
     assert not bad, "scaffolds that do not run: " + " | ".join(bad[:3])
 
 

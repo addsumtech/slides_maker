@@ -40,6 +40,9 @@ CALL-SHAPE CONTRACTS (the two that have actually gone wrong):
     paragraphs: text(slide, x, y, w, h, [[run, run], [run]]) is TWO paragraphs.
   · colours passed to set_font / box(line=) / anything typed RGBColor must BE RGBColor, not "RRGGBB".
     box(fill=) and box(grad=) do accept a hex string. When unsure, wrap: RGBColor.from_string(h).
+  · picture(slide, PATH, x, y, w, h, fit=…) takes the path SECOND — before the geometry, unlike
+    every other placing helper. Passing it after w/h raises a `stat: path should be string … not
+    float`, which reads as a broken file rather than a swapped argument.
 """
 
 
@@ -96,6 +99,38 @@ EXAMPLES = {
     "unit_grid": 'dk.unit_grid(s, 0.6, 1.7, 8.8, 3.2, 34, "1 square = 1 attributed painting",\n'
                  '             filled=34, fill="A63A2A")',
     "source_note": 'dk.source_note(s, "Crunchbase Q1 2026", as_of="30 July 2026")',
+    # SKILL.md's 🔴 "when a COMPONENT exists, BUILD that component" rule names waterfall, gantt and
+    # dumbbell_board BY NAME. They had no scaffold, and --example answered "it is a primitive — you
+    # supply the geometry", i.e. the tool told the author to do the one thing the rule forbids.
+    "gantt": 'dk.gantt(s, 0.6, 1.4, 8.8,\n'
+             '         [("Design", 0, 3), ("Build", 2, 7), ("Ship", 7, 9)],\n'
+             '         axis_min=0, axis_max=10, today=6)',
+    # rows = (name, sub, v_before, v_after, scale_lo, scale_hi, unit) — SEVEN items, per-row scale
+    "dumbbell_board": 'dk.dumbbell_board(s, 0.6, 1.4, 8.8,\n'
+                      '                  [("Latency", "p95", 120, 48, 0, 140, "ms"),\n'
+                      '                   ("Cost", "per run", 90, 61, 0, 100, "$")])',
+    "funnel": 'dk.funnel(s, 1.0, 1.0, 6.0, 3.4,\n'
+              '          [("Visitors", "12k"), ("Trials", "3k"), ("Paid", "410")])',
+    "pyramid": 'dk.pyramid(s, 1.0, 1.0, 6.0, 3.4,\n'
+               '           [("Vision", ""), ("Strategy", ""), ("Execution", "")])',
+    # designed_charts forms render a transparent PNG you then place with dk.picture(fit="contain").
+    # `dc` is `import designed_charts as dc`; the path is yours.
+    "waterfall": 'dc.waterfall("waterfall.png",\n'
+                 '             [("Start", None), ("Q1", 25), ("Q2", -12), ("End", None)],\n'
+                 '             total_label="End")\n'
+                 'dk.picture(s, "waterfall.png", 0.8, 1.2, 8.4, 3.6, fit="contain")',
+    "distribution": 'dc.distribution("dice.png",\n'
+                    '                [("baseline", [0.81, 0.86, 0.79, 0.9, 0.84]),\n'
+                    '                 ("ours", [0.88, 0.92, 0.9, 0.94, 0.89])],\n'
+                    '                value_label="Dice", err="ci95", highlight=1)\n'
+                    'dk.picture(s, "dice.png", 0.8, 1.2, 8.4, 3.6, fit="contain")',
+    "marimekko": 'dc.marimekko("mix.png", [("EU", 5, [3, 2]), ("US", 9, [4, 5])],\n'
+                 '             ["hardware", "services"], width_label="revenue")\n'
+                 'dk.picture(s, "mix.png", 0.8, 1.2, 8.4, 3.6, fit="contain")',
+    "radar": 'dc.radar("profile.png", ["speed", "cost", "risk", "reach", "effort"],\n'
+             '         [("baseline", [2, 4, 3, 2, 5]), ("ours", [5, 3, 2, 4, 3])],\n'
+             '         axis_range=(0, 5), highlight=1)\n'
+             'dk.picture(s, "profile.png", 0.8, 1.2, 8.4, 3.6, fit="contain")',
 }
 
 
@@ -186,10 +221,21 @@ def main(argv=None):
         for n in a.names:
             if n in EXAMPLES:
                 print(f"\n# {n} — {_guarantee(n)}\n{EXAMPLES[n]}")
+        # A real helper with no scaffold is NOT a licence to hand-roll it — that is the exact
+        # failure this tool exists to prevent, and SKILL.md's 🔴 component rule forbids it by name.
+        # Only a name that resolves to no helper at all is "you supply the geometry".
         for n in miss:
-            print(f"sigs: no scaffold for {n!r}"
-                  + (" (it is a primitive — you supply the geometry)" if n in reg else ""),
-                  file=sys.stderr)
+            if n in reg:
+                m, f = reg[n]
+                print(f"sigs: no copy-paste scaffold for {n!r} yet — its signature and docstring "
+                      f"are below. Build the COMPONENT from them; do NOT hand-roll a substitute "
+                      f"out of box/text (SKILL.md Step 4, 🔴 component rule).", file=sys.stderr)
+                show(n, m, f, a.full)
+            else:
+                near = difflib.get_close_matches(n, reg, n=3, cutoff=0.6)
+                print(f"sigs: no helper named {n!r}"
+                      + (f" — did you mean {', '.join(near)}?" if near else
+                         " — check `--list` before you build it yourself"), file=sys.stderr)
         return 1 if miss else 0
 
     missing = []

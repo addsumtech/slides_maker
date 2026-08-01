@@ -134,7 +134,7 @@ an order of operations, and you guard it:
   exactly where the art director earns the fee.
 
 **This design intelligence is HOW you design — it runs on EVERY deck / each case, never opt-in per
-deck.** The design self-verify (a–q) and the `references/design-intelligence-addendum.md` gates
+deck.** The design self-verify (a–r, incl. h2) and the `references/design-intelligence-addendum.md` gates
 (concept→viz reasoning, block audit, evenness / one-hero-per-slide, semantic colour where colour is
 used, rhythm, WOW) apply to every deck and **scale down gracefully** — a 4-slide deck still gets one
 hero per slide, no card-grid reflex, semantic colour, and one memorable moment; you just do less of it,
@@ -698,7 +698,7 @@ Then run the **Block Dependency Audit** (the parallel/unordered/equal-weight/ind
 passes · the non-block alternative considered · keep-or-redesign*. This qualitative gate catches the
 visual sameness the family count misses, so it and the diversity gate both must pass.
 
-### Design self-verify (a–q)
+### Design self-verify (a–r, plus h2 — NINETEEN checks)
 State the plan is **not ready** unless these DISTINCT checks pass — each weighed with judgment
 (considered + applied where it helps, one-clause-justified where a slide legitimately doesn't need it,
 NOT a blanket per-slide quota):
@@ -821,7 +821,10 @@ NOT a blanket per-slide quota):
   was correct both times and dismissed both times, so density is now hard-gated at hand-off
   (`render_deck.py --gate-check`). This item is where the number gets DECIDED rather than discovered:
   a design plan that never states its density has already chosen text by default.
-Fix any failing check before the DESIGN checkpoint.
+Fix any failing check before the DESIGN checkpoint. **Nineteen checks — (a)…(r) plus (h2). If your
+sweep stopped at (q), you skipped (r), the density line, which is the one item here with a hard
+deterministic backstop (`render_deck.py --gate-check` dies at hand-off when the plan carries no
+`type_scale`, and on density when too many slides run over budget).**
 
 ### Design-critic checklist
 Confirm the deck answers the 10 checks the critic's design lens will apply (design bible):

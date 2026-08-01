@@ -89,10 +89,13 @@ Two time sinks compress well: ingesting material/assets, and the critic loop.
     `python3 scripts/sigs.py text box native_chart takeaway_rail …` prints each signature, its
     docstring head, and the two call-shape contracts that have actually gone wrong (run-tuple order;
     RGBColor vs hex). Reading `deckkit.py` one function at a time answers one question per
-    round-trip and still missed both. **`--example <form…>` hands back a RUNNABLE call** for any form
-    component plus the guarantee it makes — the step between "form-selection said timeline" and
-    hand-rolling one out of `box`+`text`. Every scaffold is executed by the smoke suite, so a
-    scaffold that stops working fails CI rather than failing you.
+    round-trip and still missed both. **`--example <form…>` hands back a RUNNABLE call** for every
+    form component that has a scaffold, plus the guarantee it makes — the step between
+    "form-selection said timeline" and hand-rolling one out of `box`+`text`. Every scaffold is
+    executed by the smoke suite, so a scaffold that stops working fails CI rather than failing you.
+    **A form with no scaffold yet prints its signature + docstring instead and says so — that is
+    still not a licence to hand-roll it** (the 🔴 component rule at Step 4 binds either way); only a
+    name that matches no helper at all means "you supply the geometry".
   - **Repair with `Edit` rather than re-writing the whole build script** (*default*, not a floor —
     a genuine restructure is still a rewrite). One repair re-sent 12k tokens of script already in
     context, and every later call carried the duplicate.
@@ -758,8 +761,7 @@ The helper set, by job:
   focal path can carry emphasis instead)  *(NB two similarly-named helpers: **`hub_spoke`** draws the
   whole radial FIGURE — one centre + labelled spoke nodes on a ring; **`hub_spokes`** only draws the
   CONNECTORS from an existing hub to existing nodes. Reach for `hub_spoke` to build the diagram,
-  `hub_spokes` to wire one you laid out yourself.)* the
-  focal path can carry emphasis instead); `diagram_island` (bright figure panel on a dark slide);
+  `hub_spokes` to wire one you laid out yourself.)*; `diagram_island` (bright figure panel on a dark slide);
   `concentric_rings` (nested framework); `step_list` (numbered process, vertical/horizontal).
   - **This kit draws conceptual BOX-FLOW only — not physical science schematics.** For a
     **labelled science schematic** explaining a principle / mechanism / experiment / definition (a
@@ -794,7 +796,14 @@ The helper set, by job:
   (a single percentile/share/progress row — track + accent fill + a value label **vertically centered on
   the bar**; use this instead of hand-building "track box + fill box + number", which is how value labels
   end up floating off the bar's centerline; canvas-safe by construction — an overflowing value
-  auto-shortens the bar instead of leaving the slide).
+  auto-shortens the bar instead of leaving the slide) · **`unit_grid`** (an isotype/waffle field —
+  N square cells sized to fit the region, `filled=` of them accented, plus a **mandatory unit label**
+  saying what one cell IS. Reach for it when the COUNT is small enough to be counted and the point is
+  *how many*, not a percentage — 34 attributed paintings, 12 of 40 sites. It refuses a texture rather
+  than a count, and refuses a blank unit label, because an unlabelled grid of squares means nothing) ·
+  **`range_bars`** (the "football field" — floating min–max bars per row on a SHARED axis, for a value
+  RANGE per category: a valuation band, a forecast spread, a min–max estimate. Use `dot_strip` instead
+  when each row is really one best-estimate point).
 - **Provenance:** **`source_note`** (the per-SLIDE source line — `sources`, `as_of=`, `label="来源"` on a
   CJK deck; auto-lifts clear of a `footer`, so call it last). `sources_page` defends the *deck*; this
   defends the *slide*, which is the unit that actually travels — screenshotted, pasted into a memo, shown
@@ -925,14 +934,12 @@ A few rules that matter (see `references/design-principles.md`):
   the mechanical layout faults: it runs in-process in milliseconds, *before* the slow render +
   visual-critic round, and walks **every** shape — however it was placed, the grid helpers or raw
   coordinates — reasoning about each label's **ink** rectangle (where the glyphs actually land), so it
-  stays quiet on the generously-sized frames real builds use. It **hard-fails (CRITICAL)** on five
+  stays quiet on the generously-sized frames real builds use. It **hard-fails (CRITICAL)** on six
   things: content (text ink / a card / a non-bleed image) **off-canvas**, text **overflowing** a visible
   box, **text-on-text** overlap, a **connector routed through a block** (`CONNECTOR_IN_BOX`), a **decorative RULE
   drawn through a text block's ink** (`RULE_THROUGH_TEXT` — a divider/hairline placed at a hand-picked `y`
   that the text above it later grew into; derive the rule from the block's measured end, never a guessed
-  coordinate), **CJK runs with no `<a:ea>` font** (`CJK_NO_EA` — set
-  `deckkit.EAFONT` before building; catching it here saves the render round-trip lint_deck previously
-  needed), and **CJK runs with no `<a:ea>` font** (`CJK_NO_EA` — set
+  coordinate), and **CJK runs with no `<a:ea>` font** (`CJK_NO_EA` — set
   `deckkit.EAFONT` before building; catching it here saves the render round-trip lint_deck previously
   needed); it **warns** on **display numerals in an old-style figure face** (`OLDSTYLE_FIGURES` — digits at mixed heights make a big number visibly bob; the figure components resolve a lining face themselves via `deckkit.numeral_run_face`, so this fires only on hand-set runs — a taste call, deliberately not a build blocker), on a label/figure **escaping its card**, a **single
   line left off-centre** in a card, content **reaching the footer**, and **two panels nearly
@@ -1113,7 +1120,7 @@ those here; read its report instead).
     the geometry bugs — a baseline short of the last bar, a value label off the bar's centreline —
     that the components were written to fix. SKILL.md had said "when a COMPONENT exists, BUILD that
     component" as prose for a long time; it was violated dozens of times and detected zero times.)*
-    Then write the deck's form-family tally as one literal line (`cards/panels: N · diagram: N · chart/proportional: N · big-type/editorial: N · timeline/roadmap: N · hero-image: N …`) and check six things against it: (a) **no family >~40% of content slides** — a first draft's greedy default is the card/panel, and per-slide checks can't see deck-level sameness, so this tally is the one place the crutch becomes visible; (b) every slide whose content is a RATIO / FLIP / DIVISION / PROCESS uses the form that *shows* it (a proportional bar, a topology diagram, a split, a roadmap), not a box that states it; (c) each interior slide **fills its frame** — a slide whose content ends in the top half either gets enriched, merged with its neighbour, or names its deliberate quiet register in one clause; (d) **one canvas system** — no background value/colour flip landing on exactly one interior slide (a flip must recur as a divider family or bookend; on the generated-template branch the plate stays on every content page and rhythm comes from imagery strength — `ONE-OFF CANVAS FLIP` lint is the render-time backstop); (e) **icons where content is categorical** — list the slides whose content names tools/entities/roles/pillars/categories; each such slide carries the planned icon family (one family, palette-recolored) or a one-clause waiver — "opt-in" never waives this silently (self-verify (g)); (f) **architecture rotation** — emit a second one-line tally of each content slide's TAKEAWAY SLOT (bottom-strip / side-rail / inline / headline / none) and CONTAINMENT (panelled / direct-on-canvas): no single takeaway slot on more than ~half the content slides (a bottom strip on every page is a template tell — `BOTTOM-STRIP MONOCULTURE` lint backstops it), and on a calm canvas at least ~1/3 of content slides put their protagonist directly on the canvas, un-panelled. Emitting the tallies + the (b)/(c)/(d)/(e)/(f) slide numbers, not just a ✓, is what forces the deck-level look a slide-by-slide build never takes.
+    Then write the deck's form-family tally as one literal line (`cards/panels: N · diagram: N · chart/proportional: N · big-type/editorial: N · timeline/roadmap: N · hero-image: N …`) and check six things against it: (a) **no family >~40–50% of content slides** (the same band the Step-2 form-ledger diversity gate, the critic and `form-selection.md` use — a family landing inside the band needs the one-clause content reason the plan-time gate asks for, not a silent ✗) — a first draft's greedy default is the card/panel, and per-slide checks can't see deck-level sameness, so this tally is the one place the crutch becomes visible; (b) every slide whose content is a RATIO / FLIP / DIVISION / PROCESS uses the form that *shows* it (a proportional bar, a topology diagram, a split, a roadmap), not a box that states it; (c) each interior slide **fills its frame** — a slide whose content ends in the top half either gets enriched, merged with its neighbour, or names its deliberate quiet register in one clause; (d) **one canvas system** — no background value/colour flip landing on exactly one interior slide (a flip must recur as a divider family or bookend; on the generated-template branch the plate stays on every content page and rhythm comes from imagery strength — `ONE-OFF CANVAS FLIP` lint is the render-time backstop); (e) **icons where content is categorical** — list the slides whose content names tools/entities/roles/pillars/categories; each such slide carries the planned icon family (one family, palette-recolored) or a one-clause waiver — "opt-in" never waives this silently (self-verify (g)); (f) **architecture rotation** — emit a second one-line tally of each content slide's TAKEAWAY SLOT (bottom-strip / side-rail / inline / headline / none) and CONTAINMENT (panelled / direct-on-canvas): no single takeaway slot on more than ~half the content slides (a bottom strip on every page is a template tell — `BOTTOM-STRIP MONOCULTURE` lint backstops it), and on a calm canvas at least ~1/3 of content slides put their protagonist directly on the canvas, un-panelled. Emitting the tallies + the (b)/(c)/(d)/(e)/(f) slide numbers, not just a ✓, is what forces the deck-level look a slide-by-slide build never takes.
 
 **Codex only:** after PRE-FLIGHT 12, follow `references/codex-runtime.md`. Its separate gate does
 not change the global audit's advisory classification; it merely requires Codex to either use a
@@ -1605,14 +1612,30 @@ deck's declared type-scale tokens", and this is where they get declared) / **`si
 the build; a move that exists only as a sentence gets sanded back to the safe catalogue and nobody
 notices, because the plan still reads bravely), and the provenance pass's **per-claim
 `claims` list, never a summary tally** (a tally is written by the same pass that would have skipped
-the refutation). A gate you deliberately skipped is **waived in writing** —
-`{"critic": {"waived": "<reason>"}}` — never omitted; the tool prints the reason, so a skip is
-visible instead of invisible. This file is the hand-off's evidence, not a formality: the model that
+the refutation). A gate you deliberately skipped is **waived in writing** — never omitted; the tool
+prints the reason, so a skip is visible instead of invisible. 🔴 **A waiver must be CLASSIFIED, not
+just written** — an unclassified one is indistinguishable from never having run the loop, so the
+gate rejects it:
+```json
+{"critic": {"waived": "<a sentence someone can disagree with later — ≥24 chars>",
+            "waived_category": "no-dispatch-on-host | already-reviewed-minor-edit | user-waived | external-deck",
+            "inline_ran": true}}
+```
+`no-dispatch-on-host` = the runtime cannot dispatch a subagent (and it **additionally requires
+`inline_ran: true|false`** — "ran inline in my own context" and "was never reviewed" are different
+claims, and the hand-off note reads identically for both unless this file separates them) ·
+`already-reviewed-minor-edit` = a 1–2 slide edit to a deck that already passed its loop ·
+`user-waived` = the user was asked and chose to ship over it · `external-deck` = a deck this skill
+did not author (redesign diagnosis / critique-only run). **If none of the four fits, the honest move
+is to run the critic.**
+This file is the hand-off's evidence, not a formality: the model that
 skips a gate is the same model that would write the note claiming it ran, so both produce identical
 prose and only an artifact tells them apart (`references/handoff-checklist.md` lists it).
 The `critic` block is **written by `validate_review.py --record`, not by hand** (Step 5) — you supply
-only the two blocks no tool can produce for you: the design plan's four fields and the provenance
-pass's per-claim list.
+only the two blocks no tool can produce for you: the whole `design_plan` block enumerated above and
+the provenance pass's per-claim list. *(The one exception: `--record` writes a CONSENT record from a
+real review, so it cannot produce the waiver shape above — a waiver is always hand-written, which is
+exactly why it must carry its category.)*
 
 **Before you write the hand-off note, read `references/handoff-checklist.md` — every deck.** It is the ONE authoritative list of what the note carries (minimal caveats + next steps, never a recap or self-praise) and of the conditional REQUIRED lines the owning rules point here for: `provenance:`, **`review:`** (the effort tier that ran + how it was reached) and **`cost:`** (subagents · tokens · wall-clock — a dial whose bill is never shown builds no intuition), click order, image licences, the GIF note, accepted advisories, `distinctiveness:`, the delegated-picks recap, the optional `ceiling` line, and the two taste-ecosystem offers — **including the save-this-look offer, which is skipped entirely under a per-deck auto directive: never an un-consented registry write.**
 
