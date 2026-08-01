@@ -105,8 +105,24 @@ def record_gate(kind, obj, review_path, deck_dir):
         corro = critic.setdefault("corroborated_by", [])
         if rp not in corro:
             corro.append(rp)
-        critic["dulled_reopened"] = sum(
-            1 for c in obj["checks"] if isinstance(c, dict) and (c.get("dulled") or not c.get("resolved")))
+        # A Job-2 payload can say the OPPOSITE of corroboration — the fix did not land, it dulled a
+        # named strength, it regressed a neighbour. Recording only a COUNT lost that: `--gate-check`
+        # printed "consent corroborated by 1 arbiter pass(es)" and exited 0 on a payload reporting
+        # resolved=False + dulled=True + a regression, because the count was written by one line and
+        # read by none. Keep the count (back-compatible) AND carry the open items themselves, so the
+        # hand-off gate can refuse a corroboration that corroborates nothing.
+        _open = [c for c in obj["checks"]
+                 if isinstance(c, dict) and (c.get("dulled") or not c.get("resolved")
+                                             or c.get("regressions"))]
+        critic["dulled_reopened"] = len(_open)
+        critic["arbiter_open"] = [{
+            "finding_ref": c.get("finding_ref"),
+            "resolved": bool(c.get("resolved")),
+            "dulled": bool(c.get("dulled")),
+            "still_wrong": c.get("still_wrong"),
+            "regressions": c.get("regressions") or [],
+            "from": rp,
+        } for c in _open]
 
     with open(gates_path, "w", encoding="utf-8") as fh:
         json.dump(gates, fh, ensure_ascii=False, indent=1)

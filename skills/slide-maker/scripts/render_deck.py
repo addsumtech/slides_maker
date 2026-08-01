@@ -453,7 +453,22 @@ def _sha256(path):
 GATES_FILE = ".deck-gates.json"
 
 
-def check_handoff_gates(pptx, mode="presented"):
+def _deck_slide_count(pptx):
+    """How many slides the deck ACTUALLY has — the number a coverage claim is checked against.
+
+    Deliberately fails loud rather than returning 0: a count of zero would make every coverage
+    claim vacuously complete, which is the failure mode this number exists to close.
+    """
+    from pptx import Presentation
+    try:
+        return len(Presentation(pptx).slides)
+    except Exception as exc:
+        die("cannot read {} to count its slides ({}). The coverage gate compares the critic's "
+            "`slides_opened` against the real deck, so an unreadable deck is not a pass."
+            .format(pptx, exc))
+
+
+def check_handoff_gates(pptx, mode="presented", gate_check=False):
     """Refuse --deliverables until the quality gates have actually run.
 
     The gates that guard a deck's quality — the design plan, the independent critic, the
@@ -486,6 +501,17 @@ def check_handoff_gates(pptx, mode="presented"):
     Set SLIDE_MAKER_SKIP_GATES=1 to bypass entirely (CI smoke tests, throwaway renders).
     """
     if os.environ.get("SLIDE_MAKER_SKIP_GATES"):
+        # Say so, and never let the caller print a pass. Measured: with this variable set on a deck
+        # carrying NO .deck-gates.json at all, `--gate-check` exited 0 under the line "all hand-off
+        # gates pass — the deck may be handed over". A bypass is legitimate for CI smoke renders and
+        # throwaway previews; asserting that skipped gates PASSED is the one thing it must not do,
+        # because that sentence is the artifact a hand-off note is written from.
+        print("[gates] SKIPPED — SLIDE_MAKER_SKIP_GATES=1 is set. NOTHING was checked: not the "
+              "critic record, not the design plan, not provenance, not density.")
+        if gate_check:
+            die("`--gate-check` is the hand-off gate itself, so bypassing it has no honest meaning. "
+                "Unset SLIDE_MAKER_SKIP_GATES (it exists for CI smoke renders), or record a written, "
+                "classified waiver in .deck-gates.json — a waiver is visible, an env var is not.")
         return
     path = os.path.join(os.path.dirname(os.path.abspath(pptx)) or ".", GATES_FILE)
     if not os.path.isfile(path):
@@ -623,8 +649,41 @@ def check_handoff_gates(pptx, mode="presented"):
                 die("the review at {} consents while still carrying {} blocker/major finding(s) — "
                     "that is a contract violation (agents/critic.md: any blocker/major -> revise). "
                     "Fix them and re-review, or waive in writing.".format(src, len(hard)))
-            print("[gates] critic consented after {} round(s) — verified against {}".format(
-                critic.get("rounds", "?"), os.path.basename(src)))
+            # --- bind the coverage claim to the DECK, not just to the file --------------------
+            # Until this ran, "verified" meant only "the artifact exists and still hashes to what
+            # was recorded". Measured: a schema-valid review of a 15-slide deck declaring
+            # slides_opened=[1] was accepted, recorded with a sha256, and printed as verified, and
+            # every hand-off gate passed. `slides_opened` is the anti-skim field; nothing compared
+            # it to the deck it claims to have read. SKILL.md Step 5 already tells the coordinator
+            # to make this comparison by hand ("lists every slide in the critic's ASSIGNED scope —
+            # whole deck for a sole critic; its section's range for a per-section critic"); the
+            # Codex delivery gate already mechanises it. This is the shared path catching up.
+            _cov = review.get("coverage") or {}
+            _opened = {v for v in (_cov.get("slides_opened") or []) if isinstance(v, int)}
+            _scope = _cov.get("scope")
+            if isinstance(_scope, (list, tuple)) and len(_scope) == 2 \
+                    and all(isinstance(v, int) for v in _scope):
+                _expect = set(range(_scope[0], _scope[1] + 1))
+                _what = "its declared scope (slides {}-{})".format(*_scope)
+            else:
+                _expect = set(range(1, _deck_slide_count(pptx) + 1))
+                _what = "the whole deck ({} slides)".format(len(_expect))
+            _missing = sorted(_expect - _opened)
+            if _missing:
+                die("the review at {} consents for {}, but `coverage.slides_opened` never lists "
+                    "slide(s) {}{}.\n"
+                    "  A critic can only judge what it opened, and consent on an unopened slide is "
+                    "not a verdict — it is a gap the record renders as a pass.\n"
+                    "  Re-dispatch the critic over the missing slides, or — for a per-section "
+                    "critic — declare the range it was assigned:\n"
+                    '      "coverage": {{"scope": [4, 9], "slides_opened": [4,5,6,7,8,9], ...}}'
+                    .format(src, _what,
+                            ", ".join(str(m) for m in _missing[:12]),
+                            " (+{} more)".format(len(_missing) - 12) if len(_missing) > 12 else ""))
+            print("[gates] critic consented after {} round(s) — verified against {} "
+                  "(opened {}/{} slides)".format(
+                      critic.get("rounds", "?"), os.path.basename(src),
+                      len(_opened & _expect), len(_expect)))
         else:
             print("[gates] critic consented after {} round(s) — SELF-REPORTED (no review "
                   "artifact).\n"
@@ -632,7 +691,30 @@ def check_handoff_gates(pptx, mode="presented"):
                   "          python3 scripts/validate_review.py critic <review.json> --record {}"
                   .format(critic.get("rounds", "?"), os.path.dirname(path) or "."))
         if critic.get("corroborated_by"):
-            print("[gates] consent corroborated by {} arbiter pass(es)".format(
+            # An arbiter pass is only corroboration when it CORROBORATES. Read what it actually
+            # said: a Job-2 payload reporting an unresolved finding, a dulled strength, or a
+            # regressed neighbour is the opposite of a confirmation, and printing it as one is how
+            # a failed verification round became a hand-off credential.
+            _open = critic.get("arbiter_open") or []
+            if _open:
+                _lines = []
+                for c in _open[:6]:
+                    bits = []
+                    if not c.get("resolved"):
+                        bits.append("NOT resolved" + (": " + c["still_wrong"] if c.get("still_wrong") else ""))
+                    if c.get("dulled"):
+                        bits.append("dulled a named strength")
+                    if c.get("regressions"):
+                        bits.append("regressed " + "; ".join(map(str, c["regressions"])))
+                    _lines.append("    - {}: {}".format(c.get("finding_ref") or "?", " · ".join(bits)))
+                die("the arbiter pass recorded against this deck reports {} item(s) that are still "
+                    "open, so it is not a corroboration:\n{}\n\n"
+                    "  Fix them and re-run the round, or — if you are shipping over it — say so in "
+                    "writing where the user can see it:\n"
+                    '    {{"critic": {{"waived": "shipping over: <the open item and why>",\n'
+                    '                 "waived_category": "user-waived"}}}}'
+                    .format(len(_open), "\n".join(_lines)))
+            print("[gates] consent corroborated by {} arbiter pass(es), no open items".format(
                 len(critic["corroborated_by"])))
     elif critic.get("verdict") == "revise":
         die("the last critic review returned verdict=revise. Fix the blockers and re-run the "
@@ -756,6 +838,26 @@ def check_handoff_gates(pptx, mode="presented"):
         if not isinstance(cb, list) or len(cb) < 2:
             die("`carried_by` must name at least 2 slides where the signature move does structural "
                 "work. One brave slide among eleven safe ones is a tonal break, not a position.")
+        # SKILL.md, slide-design.md and review-rubrics.md all name the same three answers as the
+        # SAFE CATALOGUE rather than a signature move. Nothing checked, so the literal example
+        # passed: a plan whose signature_move was the string "a big number" was accepted and
+        # printed approvingly by this gate. A denylist is trivially evaded by paraphrase and that
+        # is fine — what it closes is the case that actually happens, the example copied verbatim
+        # because it was the nearest words to hand. Judging whether a REAL move is bold stays the
+        # critic's distinctiveness axis; this only refuses the three the skill already disowned.
+        _sm = " ".join(str(design["signature_move"]).lower().split())
+        _CATALOGUE = ("a big number", "a nice gradient", "a full-bleed photo", "a full bleed photo")
+        if any(_sm == c or _sm.rstrip(".") == c for c in _CATALOGUE):
+            die('`signature_move` is {!r} — the skill names that (with "a nice gradient" and "a '
+                'full-bleed photo") as the SAFE CATALOGUE, explicitly NOT a signature move '
+                '(SKILL.md Step 2 · agents/slide-design.md self-verify (h) · '
+                'references/review-rubrics.md distinctiveness).\n'
+                "  The field wants the ONE aesthetic RISK a template would not take, scoped to "
+                "where it lands, and doing structural work on the carried_by slides — the motif "
+                "becoming the shape of the content, not a decoration repeated.\n"
+                "  If this deck genuinely takes no risk, that is a legitimate answer with its own "
+                'arm: set `boldness: conservative` and write `signature_move: "deliberately '
+                'restrained: <why>"`.'.format(design["signature_move"]))
         print("[gates] design plan: boldness={} · signature={} · carried_by={}".format(
             design["boldness"], str(design["signature_move"])[:48], cb))
         _report_carried_by(pptx, cb)
@@ -950,7 +1052,7 @@ def main(argv):
         die("no such file: " + pptx)
 
     if gate_only:
-        check_handoff_gates(pptx, mode)
+        check_handoff_gates(pptx, mode, gate_check=True)
         print("[gates] all hand-off gates pass — the deck may be handed over")
         return 0
 

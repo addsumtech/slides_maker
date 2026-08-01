@@ -938,6 +938,7 @@ line it audits).
   "purpose": "<echo the purpose you reviewed against>",
   "coverage": {
     "slides_opened": [1, 2, "...every slide number whose PNG you actually Read — a missing number means the review is INVALID, not that the slide was fine. SCOPE: every slide in your ASSIGNED scope — the whole deck for a sole/whole-deck critic; your section's page range for a per-section critic (echo the range you were given); the coordinator rejects gaps against the scope, not the whole deck"],
+    "scope": "<OMIT on a whole-deck review. A per-section critic MUST set it to its assigned range, [first, last] — e.g. [4, 9]. This is not bookkeeping: render_deck.py --gate-check counts the deck's real slides and refuses a consent whose slides_opened does not reach them, so a section review that does not state its range is read as a whole-deck review full of holes and bounces>",
     "passes": ["<name each lens pass you ran, e.g. 'content lens (full deck)', 'design lens (full deck)' — a sole critic lists TWO; round 2+ adds 'fresh whole-deck re-pass'>"],
     "stats_block_seen": true,
     "contract_card_seen": "true | false | 'none-declared' — true = the card was in your input; 'none-declared' = the dispatch explicitly stated no plans exist (external deck / redesign diagnosis / direction preview — legitimate); false = card absent with no statement, which obliges the main loop to re-dispatch with it before the review counts"

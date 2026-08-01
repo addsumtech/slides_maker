@@ -79,9 +79,12 @@ by an independent critic panel.
    `build_deck()` (and `preview_section()`) run the 🔴 build-time geometry gate —
    `deckkit.lint_layout(prs, strict=True)` — before saving, so the sectioned path has the same
    never-save-with-CRITICALs floor as a single-author build (`lint=False` is debugging-only).
-   Per-section critics list their SECTION's page range in `slides_opened` (the coverage gate is
-   scoped to the assigned range — `agents/critic.md`); the whole-deck coherence critic covers
-   every slide.
+   Per-section critics list their SECTION's page range in `slides_opened` **and DECLARE that range
+   as `coverage.scope`** — `"coverage": {"scope": [4, 9], "slides_opened": [4,5,6,7,8,9], …}`. The
+   coverage gate is scoped to the assigned range (`agents/critic.md`), but it can only be scoped to
+   a range the review states: `render_deck.py --gate-check` compares `slides_opened` against the
+   deck's real slide count, so an undeclared section review reads as a whole-deck review full of
+   holes and is refused. The whole-deck coherence critic covers every slide and needs no `scope`.
 
 ## Critic side — independent panel + routing (the "second orchestrator")
 

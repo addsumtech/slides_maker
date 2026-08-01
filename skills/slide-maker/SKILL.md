@@ -1457,7 +1457,16 @@ Then run the **actor-critic loop** — this is the quality engine, and the criti
    sole critic; its section's range for a per-section critic), `passes` covers both lenses on a
    sole critic, `stats_block_seen: true`, and `contract_card_seen` is not false when a card was
    sent. A review failing any of these is **rejected and re-dispatched once** with the gap named —
-   never acted on. Arbiter outputs validate the same way (`validate_review.py arbiter`); an
+   never acted on.
+   **The coverage half of that check is now MECHANICAL, at hand-off** — `render_deck.py
+   --gate-check` re-opens the recorded review, counts the deck's real slides, and refuses a consent
+   whose `slides_opened` does not reach them. So a **per-section critic MUST declare its range** or
+   the gate reads it as a whole-deck review with holes: `"coverage": {"scope": [4, 9],
+   "slides_opened": [4,5,6,7,8,9], …}`. (Why it was added: a schema-valid review of a 15-slide deck
+   declaring `slides_opened: [1]` was accepted, recorded with a sha256, printed as *verified*, and
+   passed every hand-off gate — "verified" meant the FILE still hashed to what was recorded, never
+   that the DECK had been looked at. `slides_opened` is the anti-skim field; nothing compared it to
+   the deck. The Codex delivery gate already bound it; this is the shared path catching up.) Arbiter outputs validate the same way (`validate_review.py arbiter`); an
    arbiter's `escalated_unreviewed` entries are handed to the next round's fresh critic as
    candidate findings (or, at the round cap, surfaced to the user with the other open questions).
 

@@ -282,6 +282,162 @@ ICON_CASES = [
 ]
 
 
+# ── The consent record must be evidence about the DECK, not only about the FILE ──────────────
+# Until the coverage gate existed, "verified against <review>.json" meant the artifact was present
+# and still hashed to what was recorded. Measured on a 15-slide deck: a SCHEMA-VALID review
+# declaring `slides_opened: [1]` was accepted by validate_review.py, recorded with a sha256, and
+# printed as verified, and `--gate-check` exited 0 under "all hand-off gates pass". `slides_opened`
+# is the anti-skim field and nothing compared it to the deck it claims to have read.
+# Both directions matter. A per-section critic legitimately opens a RANGE, so the escape has to
+# work — it just has to be DECLARED (`coverage.scope`) rather than inferred from a short list,
+# because "short list" and "skimmed" are the same bytes.
+def _record_review(deck: Path, review: dict, name: str = "review.json") -> dict:
+    """A critic block as `validate_review.py --record` writes it: path + sha256 + verdict."""
+    import hashlib
+    rp = deck.parent / name
+    rp.write_text(json.dumps(review))
+    h = hashlib.sha256(rp.read_bytes()).hexdigest()
+    return {"verdict": "consent", "rounds": 1, "blockers": 0, "majors": 0,
+            "source": str(rp), "sha256": h, "reviews": [str(rp)],
+            "recorded_by": "validate_review.py"}
+
+
+def _review(opened, scope=None) -> dict:
+    cov = {"slides_opened": list(opened), "passes": ["content lens", "design lens"],
+           "stats_block_seen": True, "contract_card_seen": True}
+    if scope is not None:
+        cov["scope"] = list(scope)
+    return {"purpose": "lab meeting", "coverage": cov, "plan_audit": None,
+            "verdict": "consent", "summary": "ok", "strengths": ["clear"], "findings": []}
+
+
+# (name, slides_opened, scope, should_pass, needle) — deck built by build_deck() has 3 slides
+COVERAGE_CASES = [
+    ("whole-deck review covering every slide passes", [1, 2, 3], None, True,
+     "opened 3/3 slides"),
+    ("a review that opened 1 of 3 is refused", [1], None, False,
+     "never lists slide(s) 2, 3"),
+    ("a review missing one middle slide is refused", [1, 3], None, False,
+     "never lists slide(s) 2"),
+    ("a DECLARED per-section scope passes", [2, 3], (2, 3), True,
+     "opened 2/2 slides"),
+    ("a declared scope with a hole inside it is still refused", [2], (2, 3), False,
+     "never lists slide(s) 3"),
+]
+
+
+def check_coverage(deck: Path) -> tuple[int, int]:
+    ok = bad = 0
+    for name, opened, scope, should_pass, needle in COVERAGE_CASES:
+        g = {"critic": _record_review(deck, _review(opened, scope)),
+             "design_plan": DESIGN_OK, "provenance": PROV_OK}
+        code, out = run_gate(deck, g)
+        good = (code == 0) == should_pass and needle in out
+        if good:
+            ok += 1
+            print(f"  ok   {name}")
+        else:
+            bad += 1
+            print(f"  FAIL {name}: exit={code} (wanted pass={should_pass}), missing {needle!r}")
+            print("       " + out.strip().replace("\n", "\n       ")[:400])
+    return ok, bad
+
+
+# ── An arbiter pass is corroboration only when it CORROBORATES ────────────────────────────────
+# `dulled_reopened` was written by one line of validate_review.py and read by nothing, so a Job-2
+# payload reporting resolved=False + dulled=True + a regressed neighbour printed as "consent
+# corroborated by 1 arbiter pass(es)" and exited 0. A failed verification round became a hand-off
+# credential. The clean pass must keep working, or the fix would just make arbitration unusable.
+ARBITER_CASES = [
+    ("an arbiter pass with nothing open corroborates", [], True, "no open items"),
+    ("an unresolved finding is not corroboration",
+     [{"finding_ref": "F1", "resolved": False, "still_wrong": "callout still on the footer",
+       "regressions": [], "from": "a.json"}], False, "NOT resolved"),
+    ("a dulled strength is not corroboration",
+     [{"finding_ref": "F2", "resolved": True, "dulled": True, "regressions": [],
+       "from": "a.json"}], False, "dulled a named strength"),
+    ("a regressed neighbour is not corroboration",
+     [{"finding_ref": "F3", "resolved": True, "dulled": False,
+       "regressions": ["slide 4 lost its hero"], "from": "a.json"}], False, "regressed"),
+]
+
+
+def check_arbiter(deck: Path) -> tuple[int, int]:
+    ok = bad = 0
+    for name, open_items, should_pass, needle in ARBITER_CASES:
+        critic = _record_review(deck, _review([1, 2, 3]))
+        critic["corroborated_by"] = [str(deck.parent / "a.json")]
+        critic["dulled_reopened"] = len(open_items)
+        critic["arbiter_open"] = open_items
+        g = {"critic": critic, "design_plan": DESIGN_OK, "provenance": PROV_OK}
+        code, out = run_gate(deck, g)
+        good = (code == 0) == should_pass and needle in out
+        if good:
+            ok += 1
+            print(f"  ok   {name}")
+        else:
+            bad += 1
+            print(f"  FAIL {name}: exit={code} (wanted pass={should_pass}), missing {needle!r}")
+            print("       " + out.strip().replace("\n", "\n       ")[:400])
+    return ok, bad
+
+
+# ── The three answers the skill itself disowns are not signature moves ────────────────────────
+# SKILL.md Step 2, slide-design self-verify (h) and review-rubrics all name "a big number / a nice
+# gradient / a full-bleed photo" as the SAFE CATALOGUE. Nothing checked, so the literal example
+# passed the gate. Paraphrase evades this trivially and that is fine — the case it closes is the
+# example copied verbatim because it was the nearest words to hand.
+SIGNATURE_CASES = [
+    ("the literal safe-catalogue answer is refused", "a big number", False),
+    ("...with a trailing period too", "A Big Number.", False),
+    ("a nice gradient is refused", "a nice gradient", False),
+    ("a full-bleed photo is refused", "a full-bleed photo", False),
+    ("a real move passes", "an off-grid k-space band that runs past its own axis", True),
+    ("a move that merely CONTAINS the phrase passes",
+     "a big number set into the negative space the sampling mask leaves open", True),
+]
+
+
+def check_signature(deck: Path) -> tuple[int, int]:
+    ok = bad = 0
+    for name, move, should_pass in SIGNATURE_CASES:
+        g = {"critic": _record_review(deck, _review([1, 2, 3])),
+             "design_plan": dict(DESIGN_OK, signature_move=move), "provenance": PROV_OK}
+        code, out = run_gate(deck, g)
+        good = (code == 0) == should_pass and (should_pass or "SAFE CATALOGUE" in out)
+        if good:
+            ok += 1
+            print(f"  ok   {name}")
+        else:
+            bad += 1
+            print(f"  FAIL {name}: exit={code} (wanted pass={should_pass})")
+            print("       " + out.strip().replace("\n", "\n       ")[:300])
+    return ok, bad
+
+
+# ── A bypass may skip the gates; it may not assert they passed ────────────────────────────────
+def check_skip_env(deck: Path) -> tuple[int, int]:
+    import os
+    env = dict(os.environ, SLIDE_MAKER_SKIP_GATES="1")
+    (deck.parent / ".deck-gates.json").unlink(missing_ok=True)   # no record AT ALL
+    p = subprocess.run([sys.executable, str(RENDER), str(deck), "--gate-check", "--static"],
+                       capture_output=True, text=True, env=env)
+    out = p.stdout + p.stderr
+    ok = bad = 0
+    for name, cond in (
+            ("SKIP_GATES says it skipped", "SKIPPED" in out),
+            ("SKIP_GATES never claims a pass", "all hand-off gates pass" not in out),
+            ("SKIP_GATES fails --gate-check rather than blessing it", p.returncode != 0)):
+        if cond:
+            ok += 1
+            print(f"  ok   {name}")
+        else:
+            bad += 1
+            print(f"  FAIL {name}: exit={p.returncode}\n       "
+                  + out.strip().replace("\n", "\n       ")[:300])
+    return ok, bad
+
+
 def main() -> int:
     passed = failed = 0
     with tempfile.TemporaryDirectory() as td:
@@ -329,6 +485,10 @@ def main() -> int:
         o, b = check_delivery(deck)
         passed += o
         failed += b
+        for fn in (check_coverage, check_arbiter, check_signature, check_skip_env):
+            o, b = fn(deck)
+            passed += o
+            failed += b
     print(f"\n{passed} passed, {failed} failed")
     return 1 if failed else 0
 
