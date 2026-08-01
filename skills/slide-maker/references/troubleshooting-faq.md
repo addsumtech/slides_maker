@@ -110,6 +110,7 @@ already know which — neither combines with `--deliverables` or with each other
 
 | Symptom | Cause | Fix |
 |---|---|---|
+| `bash: command not found` / `render_deck.sh` won't run (native Windows PowerShell or cmd) | There is no bash. The `.sh` files are thin shims that forward to the `.py` entry points; everything else in the toolchain is already cross-platform Python | Call the Python directly: `python scripts\render_deck.py <deck.pptx>` and `python scripts\check_env.py`. macOS / Linux / Git Bash / WSL keep using the `.sh` wrappers unchanged |
 | `no such file: … .pptx` | The path didn't resolve — **most often a previous shell `cd`-ed somewhere else** and a relative path now points nowhere | Re-run from the deck folder, or pass the absolute path |
 | `LibreOffice produced no PDF from … .pptx` (render_deck.py prints the soffice command, exit code, and stderr) | soffice failed — the deck is open in another app, or a **sandboxed runtime blocked soffice** (see SKILL.md's Codex sandbox note) | Read the captured stderr it printed; close any open copy of the file; in a sandbox, rerun just the render command with elevated/unsandboxed execution. Last resort: `pkill -f soffice`, wait 2 s, retry (each run already uses its own temp profile, so this is rarely the cause) |
 | Renders look blurry when zooming into crops | Rasterization is a fixed 2× (~144 DPI, `fitz.Matrix(2, 2)` in `render_deck.py`) — plenty for the lint/critic loop | Zoom the pptx/PDF itself for fine inspection; the deck is unaffected — the PNG is only a preview. (If you must, raise the Matrix zoom in `render_deck.py`) |
@@ -142,6 +143,23 @@ Render-time **advisory `[warn]`s** (never fail the exit code): `LOW CONTRAST` / 
 off-canvas-invisible title is the sanctioned trick for statement slides), `READING ORDER` (title
 should be first in z-order — add it first in the build code), and `NON-TEXT CONTRAST` (icons/lines
 < 3:1 vs backing, WCAG 1.4.11). Resolve or consciously accept per §7.
+
+**Paint-order and deck-level codes `lint_deck.py` also prints, which this page used to omit.**
+SKILL.md routes ANY finding here and tells you to report it in this page's plain language, so a code
+the linter emits and this page never names sends you back to reading source. The first three are
+PIXEL-BACKED — they disable themselves with a `[skipped] … NOT checked:` line when no renders sit
+beside the deck, and `0 findings` with that line present is a different sentence from `0 findings`
+without it.
+
+| You see | What it means | First fix |
+|---|---|---|
+| `TEXT NOT VISIBLE` ✗ | Asked straight from the pixels: does this text line render ANY glyphs at all? Deliberately cause-agnostic, so it catches a picture, a group, a gradient, or a same-colour-as-its-ground block covering the text without needing to know which it was | Find what is painted over that line and move it, restyle it, or reorder it. Paint order is the usual cause: a shape added AFTER a text box draws on top of it while every geometry check stays green |
+| `OCCLUSION` ✗ | A text block is N% covered by the **union** of everything painted over it — union, because the old per-shape threshold was slipped by a thing built from many small parts (a 150-tile field erasing a caption, a dashed rule of 40 boxes struck through a footnote) | Same as above. Do not chase the individual shape; look at what the region accumulates |
+| `CAPTION NOT ALIGNED` ✗ | A caption under a multi-panel figure is off its panel's centre. The panels are ONE picture at unequal widths, so captions placed on the text grid (`ML + i*CW/4`) cannot line up by construction | Export each panel's span from the plotting script and place captions from the picture's PLACED rect (`dk.picture` returns the shape; `pic.left/914400` is the real x after `fit="contain"` letterboxing). PRE-FLIGHT 9 covers every OTHER label — this lint backstops only the captions-under-panels case |
+| `TITLE-RULE MONOCULTURE` • | The same thin rule sits under the title at the same height on >60% of content slides — a `head()`-style helper stamped one treatment deck-wide | Rotate 2–3 title treatments (accent rule · eyebrow in a filled tab · left vertical bar · section ordinal · motif mark). The visual SYSTEM stays constant; you rotate the chrome, not the identity |
+| `ONE-OFF CANVAS FLIP` • | Exactly ONE interior slide's canvas value departs sharply from the rest — reads as a mistake rather than a rhythm event | Make the flip RECUR as a divider family or a bookend, or return that slide to the deck's canvas. On the generated-template branch the plate stays on every content page and rhythm comes from imagery strength instead |
+| `FLAT RHYTHM` • | With renders present: no light/dark or colour-temperature event anywhere across the deck — the rhythm map's Background-mode column is single-note | Give the deck at least one value event (a dark divider, a full-bleed hero, a warm-accent conflict page). Needs `./render` PNGs beside the deck or `--renders <dir>`; without them the check silently does not run |
+| `FLAT TYPE` • | No run anywhere reaches 2× the body size — the deck has no typographic hero | Let one thing win per slide (the squint test). This is the type-scale drama rule failing measurably, not a style opinion |
 
 **`UNSOURCED NUMBER` — how to read it.** It is *deck-level*: it fires only when a magnitude
 (`$400B`, `81%`, `+46pt`, `2.3x`, `95 亿`) appears on a slide with no source stated **and no source
