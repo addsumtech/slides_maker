@@ -585,7 +585,15 @@ deviation. This row makes that the default instead of a save.)*
 > evidence token** (`official asset — <source>` / `searched, none found → designed wordmark (flagged)` /
 > `n/a — <reason, incl. third-party assessment>`) + the **motif line stating the device AND its meaning
 > + how it's made legible**
-> (label / legend / figurative / **removed** — the STRANGER TEST; a reading that DEFERS to a later
+> (label / legend / figurative / **removed** — the STRANGER TEST; **a motif may be a CONSTRUCTED
+> OBJECT rather than a shape** — something this deck's own material would BUILD, gaining a part per
+> beat instead of appearing again per beat, which is what makes `carried_by` structural rather than
+> stamped. Derive it from this content; there is deliberately no menu, because a menu of objects
+> becomes the next house style. The test: *could this object belong to any other deck?* And it is
+> the right answer only when the argument ACCUMULATES — a comparison, a set of independent findings,
+> or a sober regulatory register wants the abstract device instead, and picking that deliberately is
+> the same judgement working, not a failure to be bold. Full when/when-not:
+> `agents/slide-design.md`; a reading that DEFERS to a later
 > slide is a failed test written as a passing sentence) + the **`interior register:` line** (the quiet
 > cue that carries the style onto ordinary interior pages, or `none (flat by register — <reason>)` —
 > self-verify (q) · PRE-FLIGHT 6b · the critic's `register_interiors` check all read this field, and a

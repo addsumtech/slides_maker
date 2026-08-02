@@ -244,6 +244,40 @@ feel art-directed rather than defaulted, and it's yours to set once and hold. Pi
   *across decks* is the same failure as one template *across slides*. (Skip this cross-deck variation
   when the look is LOCKED per §0 — a registered/provided template the user chose is *meant* to repeat
   across decks; vary only the unlocked foundations, e.g. signature device and per-deck motifs.)
+- **A motif may be a CONSTRUCTED OBJECT, not only a shape (user feedback, 2026-08).** Every
+  content-born example above — ring, taper, axis, lockup — is an abstract diagram shape, and a deck
+  whose motif is an abstract shape tends to *repeat* it. The other class is an object made of this
+  deck's own subject, **assembled across the deck**: it gains a part per beat instead of appearing
+  again per beat. That is the difference between a badge and a motif that does structural work, and
+  it is what `carried_by` asks for and rarely gets — the object's next part IS the slide's content,
+  so the geometry cannot be stamped on afterwards.
+  **Derive it from THIS deck, and do not shop from a list.** There is deliberately no catalogue here:
+  a menu of objects would become the next house style, which is the failure this whole section
+  exists to prevent. The question is what this material would build if you built it — a thing that
+  grows, a thing that is dismantled, a thing that gets crossed, a thing assembled from parts, a body
+  that gains a capability, a route walked end to end. Whatever the answer is, the test is the same:
+  **could this object belong to any other deck?** If yes, it is an ornament and you have not
+  answered the question yet.
+  Two constraints keep it honest and both already exist: it must pass the STRANGER TEST below (an
+  object nobody can name is worse than no motif), and building it must not cost fidelity — the
+  object carries the argument's SHAPE, never its numbers.
+  **WHEN it is the right answer.** The class fits when the argument ACCUMULATES — a system assembled
+  stage by stage, a capability that grows, a route walked end to end, something dismantled to show
+  what is inside. There the object is not an illustration of the content, it *is* the content's
+  shape, and each slide has an obvious next part.
+  **WHEN it is the wrong answer, which is more of the time.** (a) The argument is a COMPARISON —
+  this against that, four methods on one metric. An object cannot hold a comparison; a grid or a
+  split can, and forcing one is how a motif becomes a costume. (b) The findings are INDEPENDENT —
+  nothing accumulates, so any object you pick is arbitrary and the deck would carry it as decoration.
+  (c) The register is sober by purpose — a regulatory readout, a safety case, a defense's results
+  section — where a built object reads as whimsy against the room's expectation
+  (`references/design-by-purpose.md`). (d) The object would need structure the material does not
+  have: if you find yourself inventing a stage so the tower gets its fifth floor, stop — that is the
+  fidelity floor, and it does not yield to a motif.
+  In those cases the abstract content-born device (a taper, an axis, a rail, a ring) or a quiet
+  register signature is the correct answer, and choosing it deliberately is not a failure to be bold
+  — it is the same judgement working. **What generalises here is the QUESTION — "what would this
+  material build, and does anything actually accumulate?" — never the objects in the examples.**
 - **The STRANGER TEST — a motif must be legible, not just topical (user feedback, 2026-07).** Being
   content-born is necessary but not sufficient: a first-time viewer should be able to say what the
   motif *means* without the presenter explaining. Abstract encodings (two glows = two strategy
