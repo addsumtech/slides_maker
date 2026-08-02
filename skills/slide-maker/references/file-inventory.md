@@ -110,6 +110,21 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   comprehension-gate check; write the table to a scratch path, never the deliverable folder).
   `validate_review.py` — stdlib schema validator for critic/arbiter JSON (`critic|arbiter <file|->`;
   Step 5 runs it before acting on any review).
+- `slide_index.py` — `slide N -> file:line function` + each slide's plan-row docstring, for one
+  build script or a set of section modules. Run it at the top of the Step-5 fix loop on any
+  fanned-out deck: section fan-out means the coordinator did NOT write the code, so a finding on
+  slide 7 otherwise begins with grepping modules it has never read (measured: 33 round-trips /
+  ~30,000 output tokens / ~9 min on one build, re-deriving a map the authors already had). Prefers
+  an explicit `SLIDES` registry, falls back to source order; names any module it could not import
+  instead of failing the run, because a partial map still beats grepping.
+- `dispatch_brief.py` — write the deck brief ONCE, point every dispatch at it. `init --deck <dir>`
+  creates the skeleton (in a scratch path, never the deck folder); `check --brief <p>` gates that
+  every required section is filled; `prompt --brief <p> --role critic|section|planner|design
+  [--lens A|B] [--round N] [--section N --slides a-b]` prints the dispatch prompt. Exists because
+  nine dispatches on one measured build cost 41,203 output tokens (~12.5 min) at ~4,600 each, and
+  almost all of it was the same interview answers, paths, cap and CONTRACT CARD retyped nine times;
+  the generated prompt is ~220 tokens. Second reason: it makes the contract card ONE artifact
+  instead of nine reconstructions. Refuses to emit a prompt while the brief has unfilled sections.
 - `roundtrip_budget.py` — measures the build's actual cost from the session transcript: round-trips,
   the batching ratio (tool calls per round-trip), median context re-sent, and whether the render
   self-check read the slide PNGs in one message or one at a time. Step 6 runs it to fill the

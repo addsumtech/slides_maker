@@ -96,6 +96,14 @@ Two time sinks compress well: ingesting material/assets, and the critic loop.
     **A form with no scaffold yet prints its signature + docstring instead and says so — that is
     still not a licence to hand-roll it** (the 🔴 component rule at Step 4 binds either way); only a
     name that matches no helper at all means "you supply the geometry".
+  - **Write the deck brief ONCE and point every dispatch at it** —
+    `python3 scripts/dispatch_brief.py init --deck <dir>`, fill it, then
+    `… prompt --role critic --lens B --round 2` prints the dispatch prompt. Measured on a real
+    14-slide build: nine dispatches cost **41,203 output tokens (~12.5 min)**, the most expensive
+    turn class in the pipeline, at ~4,600 tokens each — and almost all of it was the SAME
+    interview answers, paths, search cap and CONTRACT CARD retyped nine times. The generated
+    prompt is ~220 tokens. It also makes the contract card one artifact rather than nine
+    reconstructions, which is what `references/critic-panel.md` asks for and cannot check.
   - **Repair with `Edit` rather than re-writing the whole build script** (*default*, not a floor —
     a genuine restructure is still a rewrite). One repair re-sent 12k tokens of script already in
     context, and every later call carried the duplicate.
@@ -1543,6 +1551,15 @@ static slide, never a fix for a cluttered one.
 
 Then run the **actor-critic loop** — this is the quality engine, and the critic is a
 *demanding* judge (see `agents/critic.md`), not a rubber stamp:
+> 🔴 **Do not retype the dispatch below.** `python3 scripts/dispatch_brief.py prompt --brief <path>
+> --role critic --lens A|B --round N --deck <dir>` prints it — ~220 tokens against the ~4,600 a
+> hand-written one measured, and the CONTRACT CARD then comes from the one file every critic reads
+> rather than being reconstructed at each dispatch (the reconstruction this step warns about
+> below). The brief is written once, at Step 1, with `dispatch_brief.py init`; the tool refuses to
+> emit a prompt while any required section is unfilled, so a hollow brief fails loudly instead of
+> dispatching a critic that was told nothing. Everything the numbered item asks for still has to be
+> in the brief — the tool changes where it is written, never whether it is.
+
 1. **Critique.** Dispatch an independent critic subagent through the host's available
    multi-agent/subagent tool, pointed at `agents/critic.md`, giving it the rendered PNGs, the deck's **purpose + audience**
    (plus the interview's recorded **delivery mode + density choice**, so the rubric's density carves can apply),
@@ -1638,6 +1655,12 @@ Then run the **actor-critic loop** — this is the quality engine, and the criti
    > must say the same thing — this rule has a history of drifting apart across files.)* If the first render is already clean and the critic consents, you're done
    in one round — don't manufacture extra rounds. Otherwise apply the blocker+major
    fixes, rebuild, re-render.
+   > 🔴 **On a fanned-out deck, get the slide map before you fix anything** —
+   > `python3 scripts/slide_index.py section_*.py` prints `slide N -> file:line function` plus each
+   > slide's plan-row docstring. Section fan-out means YOU DID NOT WRITE THIS CODE, so a finding on
+   > slide 7 otherwise starts with grepping three modules you have never read: on one measured
+   > build that search cost 33 round-trips and ~30,000 output tokens (~9 min), re-deriving a map the
+   > section authors already had. Read the map once; open files at lines after that.
    > 🔴 **Apply the whole promoted fix list in ONE message, then rebuild + re-render + re-lint in
    > ONE chained command** (`python3 build_<deck>.py && python3 scripts/render_deck.py <deck>.pptx
    > render --fast && python3 scripts/lint_deck.py <deck>.pptx --renders render`). The promoted
