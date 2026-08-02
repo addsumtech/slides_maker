@@ -23,7 +23,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 from deckkit import (  # noqa: E402
     blank_deck, add_slide, title_bar, footer,
-    box, text, bullet, callout, arrow, chip, modbox, equation_native, equation_png,
+    box, text, bullet, callout, bottom_callout, arrow, chip, modbox, equation_native,
+    equation_png,
     columns, picture, lint_layout,
     set_font, Inches, PP_ALIGN, MSO_ANCHOR,
     DEEP, BLUE, TEAL, MAGENTA, SLATE, MUTE, TINT, LIGHT, WHITE,
@@ -88,10 +89,17 @@ def slide_equation(prs):
     equation_native(s, 0.8, 2.2, 8.4, 0.7,
                     r"\hat{x} = \arg\min_x \|A x - y\|_2^2 + \lambda R(x)",
                     size=20, align=PP_ALIGN.CENTER)
-    callout(s, 0.6, 4.3, 8.8, 0.6, "WHY",
-            "equation_native typesets real math as EDITABLE text runs (italic variables, true "
-            "sub/superscripts) — click-editable and renders everywhere; reach for equation_png only for "
-            "2-D math (fractions/matrices), and eq_par for one inline symbol.")
+    # bottom_callout, NOT callout at a hand-picked y. `callout` auto-grows DOWN, so a long body
+    # placed at an eyeballed y=4.3 grew straight into the footer band — this file shipped that way,
+    # and it is the exact defect SKILL.md calls "the #1 recurring layout bug", demonstrated in the
+    # example it tells you to copy. Measured on the built deck: FOOTER collision · FOOTER-ZONE
+    # intrusion · TEXT PADDING past the card bottom, all three on this slide.
+    # bottom_callout anchors to the footer band and grows UP, so it cannot collide by construction,
+    # and it returns its own TOP y for sizing whatever sits above it.
+    bottom_callout(s, 0.6, 8.8, "WHY",
+                   "equation_native typesets real math as EDITABLE text runs (italic variables, true "
+                   "sub/superscripts) — click-editable and renders everywhere; reach for equation_png "
+                   "only for 2-D math (fractions/matrices), and eq_par for one inline symbol.")
 
 
 def slide_split(prs):

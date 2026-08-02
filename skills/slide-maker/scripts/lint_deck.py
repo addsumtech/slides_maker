@@ -1132,8 +1132,56 @@ def _render_col_void(im):
 # which one they got — the exact shape of the failure this skill exists to prevent.
 _SKIP = {}
 _STATS_ERR = []            # (slide, "ExcType: msg") — per-slide statistics that DIED, never hidden
+# Every check that silently does nothing without render PNGs. This list is the ONLY thing that
+# turns "0 findings" into the honest sentence — SKILL.md: "`0 findings` with that line present is a
+# different sentence from `0 findings` without it, and only one of them means what it looks like."
+# An UNDER-reported list makes it a third sentence, and a wrong one: the reader is told exactly
+# which checks stood down, believes the rest ran, and two of them had not. STRETCHED THIN (guarded
+# by `lums` at the per-slide loop) and ONE-OFF CANVAS FLIP (`if lums and n >= 6`) were both missing.
+# When adding any check gated on `lums`, add it here in the same edit.
 _PIXEL_CHECKS = ("TEXT NOT VISIBLE", "CAPTION NOT ALIGNED", "TEXT-ON-IMAGE CONTRAST",
-                 "colour/value pacing", "FLAT RHYTHM")
+                 "colour/value pacing", "FLAT RHYTHM", "STRETCHED THIN", "ONE-OFF CANVAS FLIP")
+
+# ── the deck-level SAMENESS vocabulary — the single owner of these strings ────────────────────
+# It lives here, beside the f-strings that produce them, because the hand-off gate identifies a
+# signal by `w.split(":")[0]`. That is a stringly-typed contract: reword one f-string and a signal
+# silently stops existing with every test still green. tests/test_critic_waiver_gate.py asserts
+# each literal is still present in this file — that assertion is the contract's only guard.
+#
+# COUNTED is deliberately 7, not all 11 deck-level warns:
+#   TIMID COVER / FLAT TYPE  — one fact counted twice (`drama` is the max of max_pt/body_med over
+#       ALL slides, and TIMID COVER tests slide 1 against the same 2.0x bar, so drama<2 forces it).
+#       Decisive: the repo's own must-stay-clean PASS fixture emits BOTH, so counting them would
+#       start the asserted-good deck at 2 of 7. Type drama is also a different axis — "no
+#       typographic hero" is not "every page looks the same".
+#   SHALLOW BAND — measures a LEVEL, not a uniformity: it fires on a deck whose slides all stop
+#       high at DIFFERENT heights. A sameness composite may only count shares of slides agreeing
+#       with each other.
+#   ONE-OFF CANVAS FLIP — anti-sameness. It fires when the deck varied its canvas EXACTLY once,
+#       is mutually exclusive with FLAT RHYTHM by construction, and its fix is the opposite one.
+#   INTENT INFLATION — a trapdoor: it fires on decks that used the sanctioned design_intent
+#       escapes, so counting it would mean declaring your way out of two signals re-fires the gate.
+#   REGISTRATION DRIFT — a precision fault, and it asks for MORE uniformity, not less.
+#   SIZE SPRAWL / UNDERFILLED — per-slide, not deck-level: one fact repeated is four warns.
+SAMENESS_CODES = ("LAYOUT SAMENESS", "SKELETON VARIETY", "CARD DOMINANCE",
+                  "BOTTOM-STRIP MONOCULTURE", "TITLE-RULE MONOCULTURE",
+                  "ENVELOPE MONOCULTURE", "FLAT RHYTHM")
+# At least one of these must be among the fired codes before the gate blocks. The only 4-code set
+# with no structural member is {BOTTOM-STRIP, TITLE-RULE, ENVELOPE MONOCULTURE, FLAT RHYTHM} —
+# same frame, same value, VARIED bodies. That is a consistent editorial system, not a samey deck.
+SAMENESS_STRUCTURAL = ("LAYOUT SAMENESS", "SKELETON VARIETY", "CARD DOMINANCE")
+SAMENESS_RENDER_DEPENDENT = ("FLAT RHYTHM",)
+
+
+def sameness_codes(warns):
+    """The DISTINCT sameness codes present in `warns`, in a stable order.
+
+    Distinct codes, never warn lines: LAYOUT SAMENESS resets its counter after each warning, so a
+    fully uniform 20-slide deck emits ~9 lines from ONE fault. Counting lines would collapse the
+    composite into a single-signal gate.
+    """
+    seen = {str(w).split(":", 1)[0].strip() for w in warns}
+    return tuple(c for c in SAMENESS_CODES if c in seen)
 
 
 def _declared_scale(deck_path, gates_path=None):
@@ -1716,11 +1764,24 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False):
         print(f"  [stats] {w}")
     return {"warns": warns, "body_median_pt": body_med, "type_drama": round(drama, 2),
             "size_tokens": len(tokens), "distinct_skeletons": n_skel, "builds": builds,
-            "transitions": transd, "avg_occupancy": round(avg_ink, 3)}
+            "transitions": transd, "avg_occupancy": round(avg_ink, 3),
+            # the two the hand-off sameness gate reads. body_n is lint's OWN body run — cover and
+            # closer excluded, and any design_intent(role="appendix") run excluded via last_body —
+            # so the gate and the [stats] block cannot disagree about how big the deck is.
+            "body_n": max(0, last_body - 1),
+            "sameness_codes": list(sameness_codes(warns))}
 
 
 def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=False,
-         gates_path=None):
+         gates_path=None, stats_out=None):
+    """Lint a deck. Returns the count of HARD layout findings (the exit code's source).
+
+    `stats_out`, when given a dict, is filled with the deck-stats measurement — including
+    `sameness_codes` and `body_n`. It exists so the hand-off gate can read THIS run's numbers
+    instead of re-deriving them: the number in the [stats] line and the number in the gate have to
+    be one number by construction, which is the lesson `_density_stats` records after lint said
+    136 words a slide and the gate said 4. Read-only channel; nothing about lint changes.
+    """
     _GROUP_SKIP.clear()          # a second lint() in one process must not inherit the first's skips
     try:
         prs = Presentation(path)
@@ -2348,6 +2409,13 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
         warn_total += 1
     lums = _load_render_lums(path, renders_dir, len(stats_rows), pngs=pngs)
     deck_stats = _print_stats(stats_rows, mode, sw, sh, lums=lums, static_ok=static_ok)
+    if stats_out is not None:
+        stats_out.update(deck_stats)
+        # Whether the render-backed members of SAMENESS_CODES could run at all. A gate that cannot
+        # tell "did not fire" from "never ran" is the failure `_report_pixel_skip` exists to stop.
+        stats_out["render_signals_ran"] = bool(lums)
+        stats_out["render_skip_reason"] = (
+            _SKIP.get("reason") or (None if lums else "no render directory beside the deck"))
     tail = ("" if total else "  ✓ clean (no hard findings)") + (f"  ·  {warn_total} warning(s)" if warn_total else "")
     print(f"\n{path}: {total} layout finding(s){tail}")
     _report_pixel_skip()   # "clean" must never mean "clean, but three checks never ran"

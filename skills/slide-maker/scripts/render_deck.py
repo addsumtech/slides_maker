@@ -771,6 +771,16 @@ def check_handoff_gates(pptx, mode="presented", gate_check=False):
     design = gates.get("design_plan") or {}
     _dial = str(design.get("boldness", "")).strip().lower()
     _move = str(design.get("signature_move", "")).strip().lower()
+    # Validate the enum. Every dial-keyed branch in this file and in codex_delivery_gate.py is an
+    # equality test against "conservative", so an unrecognised value is not a loud error — it is a
+    # SILENT demotion to "not carved, not conservative". Verified: `"boldness": "BANANA"` printed
+    # "all hand-off gates pass". A typo must not be a way out of a dial-keyed rule.
+    _DIALS = ("conservative", "balanced+", "bold", "experimental")
+    if design and not design.get("waived") and _dial and _dial not in _DIALS:
+        die("`design_plan.boldness` is {!r}, which is not a dial. One of: {}.\n"
+            "  (Every dial-keyed rule tests for `conservative`, so an unrecognised value silently "
+            "reads as 'not conservative' rather than failing — which makes a typo an escape.)"
+            .format(design.get("boldness"), " | ".join(_DIALS)))
     _carved = _dial == "conservative" and _move.startswith("deliberately restrained")
     if design.get("waived"):
         print("[gates] design plan WAIVED — {}".format(design["waived"]))
@@ -909,6 +919,17 @@ def check_handoff_gates(pptx, mode="presented", gate_check=False):
         print("[gates] no provenance record — fine for a deck built from the user's own material; "
               "a research-sourced deck should carry one.")
 
+    # ── SAMENESS: the deck-level monotony the [stats] block measured and nobody read ──────────
+    # Every deck-level "this deck is one page repeated" signal the linter computes is a
+    # `warns.append` printed under a line that says the stats are advisory; `lint()` returns only
+    # the hard-finding count, and nothing on this path ever read the warns. So blandness was
+    # DETECTED deterministically and blocked nothing. This turns the measurement into a gate —
+    # and only the measurement: whether a deck is TIMID stays the critic's taste call (which the
+    # skill deliberately caps as non-blocking), whether it is REPETITIVE is a share of slides
+    # agreeing with each other, which is a defect with a concrete fix. `agents/critic.md` states
+    # that exact test, and it is why this can hold a deck while the distinctiveness axis cannot.
+    _check_sameness(pptx, delivery, gates)
+
     # ── DENSITY: a slide is a visual aid, not a document ────────────────────────
     # This one is a gate rather than a warning because the warning already existed and was
     # already ignored — twice, by the same author, on two consecutive decks. Measured: one
@@ -948,6 +969,174 @@ def check_handoff_gates(pptx, mode="presented", gate_check=False):
         else:
             print("[gates] density: {}/{} slide(s) over the text budget, median {} words a slide"
                   .format(over, total, median))
+
+
+SAMENESS_WAIVER_KINDS = {
+    "series-frame":
+        "a carousel / board / poster series where the REPEATED FRAME is the artifact",
+    "register-uniform":
+        "a deliberately single-register deck (留白 / ink-wash, a uniformly dark editorial briefing)",
+    "template-locked":
+        "a registered or provided template whose grid this deck may not break",
+    "reference-run":
+        "the repeated pages are reference material (first try design_intent(role='appendix') — "
+        "that is the real fix, and it takes those pages out of the count)",
+    "user-waived":
+        "the user was shown the finding and chose to ship over it",
+}
+
+
+def _sameness_stats(pptx, delivery):
+    """The deck-level sameness codes, taken from lint_deck's OWN measurement.
+
+    Same reason `_density_stats` calls `reading_load`: the number in the [stats] line and the
+    number in this gate have to be ONE number by construction. Nothing is re-implemented here —
+    a second implementation is how lint came to say 136 words a slide while the gate said 4.
+
+    `renders_dir=None` keeps lint's normal auto-discovery of ./render beside the deck, INCLUDING
+    its staleness guard, so the gate inherits the same freshness rule the CLI has.
+    """
+    import contextlib
+    import io
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import lint_deck as _ld
+    from pptx import Presentation
+    try:
+        prs = Presentation(pptx)
+        aspect = (prs.slide_width / float(prs.slide_height)) if prs.slide_height else 0.0
+    except Exception as exc:
+        die("the sameness gate could not open {} ({}). An unreadable deck is not a pass."
+            .format(pptx, exc))
+    stats, buf = {}, io.StringIO()
+    gates_path = os.path.join(os.path.dirname(os.path.abspath(pptx)) or ".", GATES_FILE)
+    try:
+        with contextlib.redirect_stdout(buf):        # lint prints its whole report; we want the data
+            _ld.lint(pptx, mode=delivery, renders_dir=None, static_ok=True,
+                     gates_path=gates_path, stats_out=stats)
+    except SystemExit as exc:
+        die("the sameness gate could not lint {} (lint_deck exited {}). An unreadable deck is not "
+            "a pass.".format(pptx, exc.code))
+    return stats, aspect
+
+
+def _check_sameness(pptx, delivery, gates):
+    """Block a hand-off when the deck measurably repeats itself, unless the repetition is declared.
+
+    Scope and threshold are calibrated against 11 decks BUILT AND LINTED in the registers this
+    skill itself prescribes, not against intuition. The raw signal count is a bad gate: a 6-slide
+    template-locked status update with ZERO hard findings already reaches 3 families, a 9-card
+    小红书 carousel built exactly to canvas-formats.md's DNA reaches 7, and an appendix-heavy
+    defense deck reaches 5. Each of those is a deck the skill tells you to build.
+
+    So the scope is three DETERMINISTIC properties of the deck rather than a taxonomy of registers
+    (the registers have no working wire today: --briefing / --selfread / --textheavy relieve
+    nothing on the sameness side, and --surface relieves three signals only at n=1):
+        body_n >= 8    — lint's own body run, cover/closer/appendix excluded. Kills the whole
+                         status-update class, whose measured cliff was SIX total slides.
+        landscape      — kills the carousel class, whose repeated frame IS the artifact.
+        not surface    — a single canvas has no deck-level rhythm to vary.
+    and the threshold is >= 4 distinct codes WITH at least one structural code. Three is where a
+    competent consistent system lands (repeated layout + one card + one footer strip); the
+    structural requirement excludes the one 4-code set that means "same frame, varied bodies".
+    """
+    if not isinstance(gates, dict):
+        gates = {}
+    waiver = gates.get("sameness") or {}
+    stats, aspect = _sameness_stats(pptx, delivery)
+    fired = tuple(stats.get("sameness_codes") or ())
+    body_n = int(stats.get("body_n") or 0)
+    ran = bool(stats.get("render_signals_ran"))
+    skip_reason = stats.get("render_skip_reason")
+    total = len(_LD_SAMENESS_CODES())
+    could_run = total if ran else total - len(_LD_SAMENESS_RENDER_DEPENDENT())
+    tail = "" if ran else "  · NOT CHECKED: {} ({})".format(
+        " · ".join(_LD_SAMENESS_RENDER_DEPENDENT()), skip_reason or "no renders beside the deck")
+
+    if delivery == "surface" or aspect < 1.2 or body_n < 8:
+        why = ("a single-canvas surface" if delivery == "surface"
+               else "a portrait/square canvas — a series' repeated frame is the artifact"
+               if aspect < 1.2 else "%d content slide(s), under the 8 this is calibrated for" % body_n)
+        print("[gates] sameness: not applied — {} (the per-signal [stats] warnings still print)"
+              .format(why))
+        return
+
+    structural = [c for c in fired if c in _LD_SAMENESS_STRUCTURAL()]
+    blocks = len(fired) >= 4 and bool(structural)
+    listed = " · ".join(fired) if fired else "none"
+
+    if waiver:
+        reason = waiver.get("waived")
+        kind = waiver.get("waived_category")
+        if not isinstance(reason, str) or len(reason.strip()) < 40:
+            die("`sameness.waived` must be a written reason that names the REGISTER this deck is "
+                "in, not a circumstance — a sentence someone can disagree with later (>=40 chars).")
+        if kind not in SAMENESS_WAIVER_KINDS:
+            die("`sameness.waived_category` must name WHICH kind of deliberate repetition this "
+                "is. One of:\n" + "\n".join("    {:18s} {}".format(k, v)
+                                            for k, v in sorted(SAMENESS_WAIVER_KINDS.items())))
+        recorded = waiver.get("codes")
+        if not isinstance(recorded, list) or set(recorded) != set(fired):
+            die("`sameness.codes` records {} but this deck now fires {}. A waiver written for a "
+                "different state of the deck does not certify this one — re-read the measurement "
+                "and rewrite the reason against it.\n    codes: {}"
+                .format(sorted(recorded) if isinstance(recorded, list) else recorded,
+                        sorted(fired) or "nothing", json.dumps(sorted(fired))))
+        if not blocks:
+            print("[gates] sameness: recorded waiver is NOT needed — {} of {} signal(s) fired ({})"
+                  .format(len(fired), could_run, listed) + tail)
+        else:
+            print("[gates] sameness: WAIVED [{}] — {} of {} fired: {}".format(
+                kind, len(fired), could_run, listed) + tail)
+            print("        {}".format(reason.strip()))
+        return
+
+    if blocks:
+        die("SAMENESS: {} of {} deck-level signals fired across {} content slides —\n"
+            "        {}\n\n"
+            "  Each is a MEASURED share, not a taste call: this deck repeats one page structure, "
+            "one content vehicle, one piece of chrome or one vertical envelope across most of its "
+            "pages.\n"
+            "  Fix the deck — rotate the canvas architecture, break the card grid on the WOW "
+            "slide, move the takeaway off the bottom strip on some pages, let one page bleed —\n"
+            "  or record why the repetition IS the design:\n\n"
+            '    "sameness": {{"waived": "<why this deck repeats on purpose>",\n'
+            '                 "waived_category": "{}",\n'
+            '                 "codes": {}}}\n\n'
+            "  Categories: {}"
+            .format(len(fired), could_run, body_n, " · ".join(fired),
+                    " | ".join(sorted(SAMENESS_WAIVER_KINDS)), json.dumps(sorted(fired)),
+                    "; ".join("{} = {}".format(k, v)
+                              for k, v in sorted(SAMENESS_WAIVER_KINDS.items()))))
+
+    # The boundary the count cannot decide: one more signal would have crossed the line, and one
+    # signal did not run. Passing here would be a verdict about a measurement that was never taken.
+    if len(fired) == 3 and structural and not ran:
+        die("SAMENESS: 3 of the {} signals that could run fired ({}), and {} did not run ({}).\n"
+            "  At three fired the verdict turns on the signal that is missing, so this deck cannot "
+            "be decided as it stands.\n"
+            "  Render it —  python3 scripts/render_deck.py {} <out>  — and re-run --gate-check, "
+            "or record the waiver."
+            .format(could_run, listed, " · ".join(_LD_SAMENESS_RENDER_DEPENDENT()),
+                    skip_reason or "no renders beside the deck", pptx))
+
+    print("[gates] sameness: {} of {} deck-level signal(s) fired across {} content slides{}"
+          .format(len(fired), could_run, body_n,
+                  " — " + listed if fired else "") + tail)
+
+
+def _LD_SAMENESS_CODES():
+    import lint_deck as _ld
+    return _ld.SAMENESS_CODES
+
+
+def _LD_SAMENESS_STRUCTURAL():
+    import lint_deck as _ld
+    return _ld.SAMENESS_STRUCTURAL
+
+
+def _LD_SAMENESS_RENDER_DEPENDENT():
+    import lint_deck as _ld
+    return _ld.SAMENESS_RENDER_DEPENDENT
 
 
 def _density_stats(pptx, budget=70):

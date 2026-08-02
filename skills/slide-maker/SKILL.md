@@ -490,7 +490,14 @@ signature motif + a deliberately-chosen palette/type, not a defaulted light/mini
 file> · freshness: varied <foundation> vs <last look-history line>`, or the alternate arm `look
 LOCKED (registered/provided template) — carve applies` — the line that makes the freshness rule
 checkable and any profile override visible (`references/user-taste.md`), **a `boldness:` line
-(conservative | balanced+ | bold | experimental — default balanced+; **at `conservative` the risk is
+(conservative | balanced+ | bold | experimental — **DERIVED, not a flat default**: explicit user
+request > `taste.md`'s promoted dial > the purpose — *conservative* for a sober defense / regulatory
+/ status readout unless asked otherwise, *bold* for a pitch / launch / brand / culture deck,
+**balanced+** for everything else; record which arm set it (`agents/slide-design.md` owns the full
+table). This derivation used to live ONLY in the art-director's own file, so an inline run — which
+never opens it — gave a launch deck and a status readout the same middling dial, and then judged
+both against it: the pitch was never asked to be brave and the status readout was told off for not
+being. Layer 1 has to carry the mapping because layer 1 is what an inline run reads; **at `conservative` the risk is
 OPTIONAL — take a modest restrained move, or fill the field with the one-clause `deliberately
 restrained: <why>`, and then `signature_proof` is not required because there is no risk to prove.
 Every other field still is, and above `conservative` a real move is required, not optional**) AND a real `signature move:`
@@ -1623,6 +1630,31 @@ out explicitly here so they can confirm it.
 > nothing, and takes under a second. Add `--selfread` / `--textheavy` / `--surface` when that is the
 > deck's delivery mode, exactly as you would for `lint_deck.py`, so the text budget it enforces is
 > the budget that mode is actually held to.
+>
+> **One of those gates is SAMENESS, and it is the one that can send you back to the build.** The
+> deck-level monotony signals (`LAYOUT SAMENESS` · `SKELETON VARIETY` · `CARD DOMINANCE` ·
+> `BOTTOM-STRIP MONOCULTURE` · `TITLE-RULE MONOCULTURE` · `ENVELOPE MONOCULTURE` · `FLAT RHYTHM`)
+> were measured on every deck and blocked nothing — printed as advisories under a line saying they
+> were advisory. **≥4 distinct ones, with at least one structural, now block the hand-off.** It
+> applies only to a deck that is ≥8 CONTENT slides (cover, closer and any declared
+> `design_intent(role="appendix")` run excluded), landscape, and not `--surface` — calibrated by
+> building and linting decks in the registers this skill itself prescribes, where a 6-slide status
+> update, a 小红书 carousel and an appendix-heavy defense deck all trip 3+ signals *legitimately*.
+> **Repetition alone does not block; four independent kinds of it do.** Type drama (`TIMID COVER` /
+> `FLAT TYPE`) is deliberately NOT counted — it is one fact twice, and the skill's own
+> must-stay-clean fixture emits both.
+> Where the repetition IS the design, say so — the escape is a written reason, not a flag:
+> ```json
+> "sameness": {"waived": "<why this deck repeats on purpose — name the register>",
+>              "waived_category": "series-frame | register-uniform | template-locked | reference-run | user-waived",
+>              "codes": ["<exactly the codes the gate reported>"]}
+> ```
+> The `codes` list is the freshness binding, the cheap version of `critic.sha256`: a waiver written
+> for a different state of the deck does not certify this one. **This gate is deliberately about
+> MEASUREMENT, never taste** — whether a deck is *timid* stays the critic's distinctiveness axis and
+> stays non-blocking at `balanced+`; whether it *repeats itself* is a share of slides agreeing with
+> each other, which is a defect with a concrete fix. That is the skill's own test for what may hold
+> a deck (`agents/critic.md`), and it is why these two live on opposite sides of it.
 > **Why a separate flag exists at all:** the gates used to be reachable only through
 > `--deliverables`, and the paragraph above deliberately makes that a *decline-able offer*. So on
 > every deck where the user said "no PDF, thanks", the strongest gate in the skill never ran — and

@@ -438,6 +438,203 @@ def check_skip_env(deck: Path) -> tuple[int, int]:
     return ok, bad
 
 
+# ── SAMENESS: the deck-level monotony the [stats] block measured and nobody read ──────────────
+# Calibrated against 11 decks BUILT AND LINTED in the registers this skill prescribes. The raw
+# signal count is a bad gate: a 6-slide template-locked status update with ZERO hard findings
+# already reaches 3 families, a 9-card 小红书 carousel built exactly to canvas-formats.md's DNA
+# reaches 7, an appendix-heavy defense deck reaches 5. Every one is a deck the skill tells you to
+# build, so the scope is three deterministic properties (body_n>=8, landscape, not surface) rather
+# than a taxonomy of registers — and the threshold is >=4 DISTINCT codes with >=1 structural.
+# The false-positive direction matters more than the true-positive one here: a blocking gate that
+# fires on a good deck is worse than no gate ("a report that is always wrong is a report everyone
+# learns to ignore" — ci.yml).
+def _R(t, size=20, c=None, b=True):
+    import deckkit as _dk
+    return (t, size, c or _dk.DEEP, b, False, _dk.FONT)
+
+
+def build_samey(dest: Path, n=12, portrait=False, appendix_at=None) -> Path:
+    """cover + identical body pages + closer: one skeleton, one card grid, one strip, one rule."""
+    import deckkit as dk
+    prs = dk.blank_deck(7.5, 10.0) if portrait else dk.blank_deck()
+    W = 7.5 if portrait else 10.0
+    s = dk.add_slide(prs)
+    dk.text(s, 0.5, 2.0, W - 1, 1.0, [[_R("Cover", 44)]])
+    for i in range(n - 2):
+        s = dk.add_slide(prs)
+        if appendix_at is not None and i + 2 == appendix_at:
+            dk.design_intent(s, role="appendix", reason="backup slides")
+        dk.text(s, 0.5, 0.35, W - 1, 0.5, [[_R("Section %d" % (i + 1), 20)]])
+        dk.hrule(s, 0.5, 0.95, W - 1)
+        for (cx, cy, cw, _h) in dk.columns(3, slide=s, top=1.2, bottom=1.1):
+            dk.box(s, cx, cy, cw, 2.2, fill="F2F4F7", round=True)
+            dk.text(s, cx + 0.15, cy + 0.2, cw - 0.3, 1.6, [[_R("card body text", 12, dk.SLATE, False)]])
+        dk.bottom_callout(s, 0.5, W - 1, "TAKEAWAY", "the same strip on every page")
+    s = dk.add_slide(prs)
+    dk.text(s, 0.5, 2.0, W - 1, 1.0, [[_R("Closing", 40)]])
+    out = dest / "samey.pptx"
+    prs.save(str(out))
+    return out
+
+
+def build_varied(dest: Path) -> Path:
+    """cover + 8 distinct skeletons + closer — what the skill actually asks for."""
+    import deckkit as dk
+    prs = dk.blank_deck()
+    s = dk.add_slide(prs); dk.box(s, 0, 0, 10, 5.625, fill=dk.DEEP)
+    dk.text(s, 0.7, 2.0, 8.6, 1.2, [[_R("Cover", 44, dk.WHITE)]])
+    s = dk.add_slide(prs); dk.text(s, 0.5, 0.35, 9, 0.5, [[_R("Hero", 20)]]); dk.big_numeral(s, 3.5, 1.8, "34")
+    s = dk.add_slide(prs); dk.text(s, 0.5, 0.35, 9, 0.5, [[_R("Diagram", 20)]])
+    dk.node(s, 1, 2, 2, 0.9, "In"); dk.node(s, 4, 2, 2, 0.9, "Model", hub=True); dk.node(s, 7, 2, 2, 0.9, "Out")
+    s = dk.add_slide(prs); dk.text(s, 0.5, 0.35, 9, 0.5, [[_R("Chart", 20)]])
+    dk.native_chart(s, 0.8, 1.2, 8.4, 3.4, ["A", "B", "C"], [("v", [3, 5, 9])], kind="column")
+    s = dk.add_slide(prs); dk.text(s, 0.5, 0.35, 9, 0.5, [[_R("Table", 20)]])
+    dk.table(s, 0.8, 1.4, 8.0, [["a", "b"], ["1", "2"], ["3", "4"]])
+    s = dk.add_slide(prs); dk.text(s, 0.5, 0.35, 9, 0.5, [[_R("Timeline", 20)]])
+    dk.timeline(s, 0.8, 2.4, 8.4, [("Q1", "a", "x"), ("Q2", "b", "y"), ("Q3", "c", "z")])
+    s = dk.add_slide(prs); dk.text(s, 0.5, 0.35, 9, 0.5, [[_R("Two up", 20)]])
+    L, Rr = dk.columns(2, slide=s, bottom=0.8)
+    dk.bullet(s, L[0], L[1], L[2], [("one ", "x"), ("two ", "y")], size=16)
+    dk.box(s, Rr[0], Rr[1], Rr[2], 2.4, fill="EEF2F7", round=True)
+    s = dk.add_slide(prs); dk.text(s, 0.5, 0.35, 9, 0.5, [[_R("Quote", 20)]])
+    dk.pull_quote(s, 1.0, 1.8, 8.0, "A line that matters.")
+    s = dk.add_slide(prs); dk.text(s, 0.5, 0.35, 9, 0.5, [[_R("Meter", 20)]])
+    dk.meter_bar(s, 1.0, 2.2, 7.5, 0.62, label="share", value="62%")
+    s = dk.add_slide(prs); dk.box(s, 0, 0, 10, 5.625, fill=dk.DEEP)
+    dk.text(s, 0.7, 2.3, 8.6, 0.9, [[_R("Closing", 38, dk.WHITE)]])
+    out = dest / "varied.pptx"
+    prs.save(str(out))
+    return out
+
+
+def _fired(deck: Path):
+    """The codes this deck actually fires — the same call the gate makes."""
+    import io, contextlib
+    import lint_deck as ld
+    stats, buf = {}, io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        ld.lint(str(deck), mode="presented", static_ok=True, stats_out=stats)
+    return tuple(stats.get("sameness_codes") or ()), int(stats.get("body_n") or 0)
+
+
+def check_sameness(deck_path: Path) -> tuple[int, int]:
+    td = deck_path.parent
+    import lint_deck as ld
+    ok_n = bad_n = 0
+
+    def one(name, cond, detail=""):
+        nonlocal ok_n, bad_n
+        if cond:
+            ok_n += 1
+            print("  ok   " + name)
+        else:
+            bad_n += 1
+            print("  FAIL " + name + (("\n       " + str(detail)[:400]) if detail else ""))
+
+    base = {"critic": {"waived": "No subagent dispatch on this host; both lenses ran inline.",
+                       "waived_category": "no-dispatch-on-host", "inline_ran": True},
+            "design_plan": DESIGN_OK, "provenance": PROV_OK}
+
+    d = td / "sm"; d.mkdir()
+    samey = build_samey(d, n=12)
+    write_proof(d)
+    fired, body_n = _fired(samey)
+    one("samey deck fires >=4 codes with a structural member (%d: %s)" % (len(fired), ",".join(fired)),
+        len(fired) >= 4 and any(c in ld.SAMENESS_STRUCTURAL for c in fired), fired)
+    code, out = run_gate(samey, dict(base))
+    one("samey deck BLOCKS the hand-off", code != 0 and "SAMENESS:" in out, out[-400:])
+    one("...and the message names the fired codes", all(c in out for c in fired), out[-400:])
+
+    dv = td / "vr"; dv.mkdir()
+    varied = build_varied(dv)
+    write_proof(dv)
+    vf, _ = _fired(varied)
+    code, out = run_gate(varied, dict(base))
+    one("a varied deck PASSES (fired %d)" % len(vf), code == 0 and "hand-off gates pass" in out, out[-400:])
+
+    # THE load-bearing false-positive test: repetition ALONE must not block.
+    one("a deck firing <4 codes passes even though it repeats", len(vf) < 4, vf)
+
+    ds = td / "sml"; ds.mkdir()
+    small = build_samey(ds, n=8)
+    write_proof(ds)
+    code, out = run_gate(small, dict(base))
+    one("too small => not applied (body_n<8)", code == 0 and "not applied" in out, out[-300:])
+
+    dp = td / "prt"; dp.mkdir()
+    port = build_samey(dp, n=12, portrait=True)
+    write_proof(dp)
+    code, out = run_gate(port, dict(base))
+    one("portrait/carousel => not applied", code == 0 and "not applied" in out, out[-300:])
+
+    code, out = run_gate(samey, dict(base, delivery="surface"), "--surface")
+    one("surface => not applied", code == 0 and "not applied" in out, out[-300:])
+
+    da = td / "apx"; da.mkdir()
+    apx = build_samey(da, n=12, appendix_at=6)
+    write_proof(da)
+    _, apx_body = _fired(apx)
+    code, out = run_gate(apx, dict(base))
+    one("declared appendix shrinks the body run (body_n=%d)" % apx_body,
+        apx_body < 8 and code == 0 and "not applied" in out, out[-300:])
+
+    # waivers
+    good = "This is a registered corporate template whose grid the deck may not break."
+    code, out = run_gate(samey, dict(base, sameness={
+        "waived": good, "waived_category": "template-locked", "codes": list(fired)}))
+    one("a complete waiver passes and is announced", code == 0 and "sameness: WAIVED" in out, out[-400:])
+    code, out = run_gate(samey, dict(base, sameness={
+        "waived": good, "waived_category": "template-locked", "codes": list(fired)[:-1]}))
+    one("a waiver written for a DIFFERENT code set dies", code != 0 and "does not certify" in out, out[-300:])
+    code, out = run_gate(samey, dict(base, sameness={
+        "waived": "too short", "waived_category": "template-locked", "codes": list(fired)}))
+    one("a thin waiver reason dies", code != 0, out[-200:])
+    code, out = run_gate(samey, dict(base, sameness={"waived": good, "codes": list(fired)}))
+    one("an uncategorised waiver dies", code != 0 and "waived_category" in out, out[-200:])
+    code, out = run_gate(varied, dict(base, sameness={
+        "waived": good, "waived_category": "template-locked", "codes": list(vf)}))
+    one("an unneeded waiver is NOISY, not fatal", code == 0 and "NOT needed" in out, out[-300:])
+
+    # the stringly-typed contract this whole gate rests on
+    src = (SKILL / "scripts" / "lint_deck.py").read_text(encoding="utf-8")
+    missing = [c for c in ld.SAMENESS_CODES if ('"%s: ' % c) not in src and ("'%s: " % c) not in src]
+    one("every counted code is still emitted by lint_deck's own f-strings", not missing, missing)
+    one("structural codes are a subset of the counted set",
+        set(ld.SAMENESS_STRUCTURAL) <= set(ld.SAMENESS_CODES))
+    one("every render-dependent code is declared in _PIXEL_CHECKS",
+        set(ld.SAMENESS_RENDER_DEPENDENT) <= set(ld._PIXEL_CHECKS))
+
+    # The deck this repo asserts is good must score ZERO. lint_fixture's own docstring: these
+    # slides "pass the gates TODAY and must still pass afterwards. If a change breaks one of
+    # these, the change is wrong." It is also the empirical reason TIMID COVER and FLAT TYPE are
+    # NOT counted — this fixture emits both, so a composite that counted type drama would start
+    # the asserted-good deck at 2 of 7 before looking at a single repeated page.
+    import contextlib, io
+    sys.path.insert(0, str(HERE))
+    import lint_fixture
+    # lint_fixture binds OUT = Path.cwd() at IMPORT time, so chdir-ing afterwards does not move
+    # where it writes. Ask it where it put the file instead of assuming.
+    with contextlib.redirect_stdout(io.StringIO()):
+        lint_fixture.build_pass()
+    fx_pass = lint_fixture.OUT / "fx_pass.pptx"
+    st, buf = {}, io.StringIO()
+    try:
+        with contextlib.redirect_stdout(buf):
+            ld.lint(str(fx_pass), mode="presented", static_ok=True, stats_out=st)
+    finally:
+        try:                      # do not leave a fixture deck in whatever dir CI ran from
+            fx_pass.unlink()
+        except OSError:
+            pass
+    one("the repo's must-stay-clean PASS fixture scores ZERO sameness codes",
+        not st.get("sameness_codes"), st.get("sameness_codes"))
+    one("...and it DOES emit TIMID COVER / FLAT TYPE, which is why they are excluded",
+        any(w.startswith("TIMID COVER") for w in st.get("warns", []))
+        and any(w.startswith("FLAT TYPE") for w in st.get("warns", [])),
+        [w.split(":")[0] for w in st.get("warns", [])])
+    return ok_n, bad_n
+
+
 def main() -> int:
     passed = failed = 0
     with tempfile.TemporaryDirectory() as td:
@@ -485,7 +682,8 @@ def main() -> int:
         o, b = check_delivery(deck)
         passed += o
         failed += b
-        for fn in (check_coverage, check_arbiter, check_signature, check_skip_env):
+        for fn in (check_coverage, check_arbiter, check_signature, check_skip_env,
+                   check_sameness):
             o, b = fn(deck)
             passed += o
             failed += b
