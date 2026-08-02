@@ -358,8 +358,19 @@ Score each dimension; cite specific slides.
    slides (adjacent slides not differing on density / colour mode / protagonist); and a **WOW that isn't
    memorable** — a hero beat that is merely a *large* element, not one that contrasts with its neighbours
    and stays memorable after the deck is closed. **DISTINCTIVENESS (the upward axis — blandness is a
-   defect, not just brokenness):** the contract card carries a `boldness:` dial + a declared `signature
-   move:`. Flag when **the signature move didn't land** — it was sanded back to the safe catalogue
+   defect, not just brokenness):** the contract card carries a **`concept:`** line, a `boldness:` dial
+   and a declared `signature move:`.
+   **CONCEPT first, because it is the widest question and the newest one.** The card names what this
+   deck's idea is a PICTURE of. Ask whether the BUILT deck looks like that picture: is the concept
+   visible in the motif, the colour logic, the cover AND at least one diagram? A concept that reached
+   only the cover **decorated**; it did not govern. Report `carried: <how>` or
+   `nominal: <what you see instead>`, and **a page you could re-title for a different concept without
+   noticing is nominal** — that is the finding, and it is not the same finding as a sanded signature
+   move. The move is one scoped RISK; the concept is what the whole deck is a picture of, and a deck
+   can land the move while the concept never arrives. Severity follows the same dial rule as the rest
+   of this axis (MAJOR at most at `conservative`/`balanced+`), and it stands down entirely when no
+   concept was declared — an external or redesign deck has none.
+   Then the move itself: Flag when **the signature move didn't land** — it was sanded back to the safe catalogue
    ("a big number / a nice gradient / a full-bleed photo" is NOT a signature move), and, at
    `boldness: balanced+` or higher, when the honest answer to *"what's the one thing a viewer remembers
    tomorrow?"* is **"a clean competent deck"** (forgettableness is itself the finding). Hold this to the

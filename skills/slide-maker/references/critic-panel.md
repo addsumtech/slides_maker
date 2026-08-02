@@ -23,7 +23,13 @@ verdict: a composed line is not wrong, it is simply unquoted, so nothing but a r
      critics judge completeness against its built-around/summarised set, NOT the whole book, and
      read a `cut` row as a conscious cut), **on a video-sourced deck the transcript status**
      (supplied-transcript locator, or the "video read visual-only — spoken content is a GAP" line),
-     and the Design plan's **declared contracts** — the skeleton rhythm
+     and the Design plan's **declared contracts** — **the `concept:` line (what this deck's idea is a
+     PICTURE of, plus the two pictures it beat)**, so the distinctiveness lens can ask the one
+     question nothing else in the loop asks: *does the built deck look like the picture it said it
+     was?* Without it the concept is a field that gets filled at plan time and is never tested
+     against pixels — the exact aspiration-without-enforcement shape this skill keeps rediscovering,
+     and the reason `signature move` grew a `signature_proof` and `carried_by` grew a structural
+     count. The skeleton rhythm
      map, the WOW slide(s), the money slide (the slide the deck exists for), **the `boldness:` dial +
      the `signature move:` line INCLUDING its `carried_by:` slides** (so the distinctiveness lens can
      judge whether the declared risk actually landed in the pixels or got sanded back to safe — and,
