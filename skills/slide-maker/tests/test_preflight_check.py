@@ -313,6 +313,54 @@ def _(td):
     return st == "NOT CHECKABLE" and st2 == "NOT CHECKABLE"
 
 
+# --- mono-wrap precision: the check FAILs a build, so a false FAIL teaches the builder to
+# --- route around the one defect it exists for (a shipped command that 404s).
+
+@case("mono wrap: a too-long line in a NON-wrapping panel still FAILs")
+def _(td):
+    import deckkit as dk
+    dk.FONT, dk.MONO = "Helvetica", "Courier New"
+    prs = dk.blank_deck(10, 5.625)
+    s = dk.add_slide(prs)
+    dk.code_block(s, 0.5, 1.0, 2.6, "npx skills add addsumtech/slides_maker")
+    f = td / "mono_fail.pptx"
+    prs.save(str(f))
+    code, out = run(f, "--static")
+    return code == 1 and "word_wrap OFF" in out
+
+
+@case("mono wrap: mixed proportional+mono runs that FIT are not reported")
+def _(td):
+    import deckkit as dk
+    dk.FONT, dk.MONO = "Helvetica", "Courier New"
+    prs = dk.blank_deck(10, 5.625)
+    s = dk.add_slide(prs)
+    tb = dk.text(s, 0.5, 1.0, 6.0, 0.6,
+                 [[("Run this: ", 12, dk.DEEP, False, False, "Helvetica"),
+                   ("pip install x", 12, dk.DEEP, False, False, "Courier New")]])
+    tb.text_frame.word_wrap = True
+    f = td / "mono_mixed.pptx"
+    prs.save(str(f))
+    _code, out = run(f, "--static")
+    return "mono line(s) overflow" not in out
+
+
+@case("mono wrap: an over-wide line in a WRAPPING box is advisory, not a silent-clip FAIL")
+def _(td):
+    import deckkit as dk
+    dk.FONT, dk.MONO = "Helvetica", "Courier New"
+    prs = dk.blank_deck(10, 5.625)
+    s = dk.add_slide(prs)
+    tb = dk.text(s, 0.5, 1.0, 1.6, 0.6,
+                 [[("npx skills add addsumtech/slides_maker", 12, dk.DEEP,
+                    False, False, "Courier New")]])
+    tb.text_frame.word_wrap = True
+    f = td / "mono_wraps.pptx"
+    prs.save(str(f))
+    _code, out = run(f, "--static")
+    return "word_wrap OFF" not in out and "WRAPS" in out
+
+
 def main() -> int:
     passed = failed = 0
     with tempfile.TemporaryDirectory() as d:

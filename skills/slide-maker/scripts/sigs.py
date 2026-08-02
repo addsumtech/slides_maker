@@ -44,6 +44,13 @@ CALL-SHAPE CONTRACTS (the five that have actually gone wrong):
     honest attempt: passing text()'s paragraphs raises `not enough values to unpack (expected 2)`.
         h = dk.measure_text([(body, False)], w, 14)      # measure
         dk.text(s, x, y, w, h, [[(body, 14, dk.DEEP, False, False, dk.FONT)]])   # place
+    🔴 The measure and the place must name the SAME face. measure_text takes `font=` — pass it
+    whenever you place in anything but the deck default, above all MONO. Measured: the same
+    command string is 4.04in in Helvetica and 5.44in in Courier, so measuring mono text in the
+    default face under-reports it by 26% and the box is then built to the wrong size, which every
+    later check happily agrees with.
+        h = dk.measure_text([(cmd, False)], w, 12, font=dk.MONO)                 # measure IN MONO
+        dk.text(s, x, y, w, h, [[(cmd, 12, dk.DEEP, False, False, dk.MONO)]])    # place
   · colours passed to set_font / box(line=) / anything typed RGBColor must BE RGBColor, not "RRGGBB".
     box(fill=) and box(grad=) do accept a hex string. When unsure, wrap: RGBColor.from_string(h).
   · picture(slide, PATH, x, y, w, h, fit=…) takes the path SECOND — before the geometry, unlike

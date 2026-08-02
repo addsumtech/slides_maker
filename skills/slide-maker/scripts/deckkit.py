@@ -2864,12 +2864,20 @@ def measure_bullets(items, w, size=17, gap=0.26):
     return total
 
 
-def measure_text(runs, w, size, *, line_h_factor=1.12, pad=0.0):
+def measure_text(runs, w, size, *, line_h_factor=1.12, pad=0.0, font=None):
     """Height (inches) a plain :func:`text` block of ``runs`` = [(text, bold), ...] needs at
     ``size`` within width ``w``. ``pad`` adds top+bottom slack. CJK-aware: when the runs carry
     CJK, the per-line factor rises to ``1.2 × CJK_LS`` (the pitch text()'s script-aware default
-    actually renders), so measure-then-place callers reserve enough height."""
-    nlines = _measure_lines(runs, size, w)
+    actually renders), so measure-then-place callers reserve enough height.
+
+    🔴 ``font`` is the face the text will actually be PLACED in — pass it whenever that is not
+    the deck default, above all for ``MONO``. Without it this measures in ``FONT`` and a
+    monospace line comes back far too short: measured here, the same command string is 4.04in
+    in Helvetica and 5.44in in Courier — **26% narrow**, enough to report a 9.2in line as
+    fitting an 8.25in box. Nothing downstream can catch that, because the box is then built to
+    the wrong size and every later check agrees with the box. ``fit_text_size`` has always
+    taken ``font``; this signature was the asymmetry."""
+    nlines = _measure_lines(runs, size, w, font=font)
     factor = line_h_factor
     if any(_has_cjk(t) for (t, *_r) in runs):
         factor = max(factor, 1.2 * CJK_LS)
@@ -3650,6 +3658,22 @@ def code_block(slide, x, y, w, code, size=12, lang=None, highlight_lines=None,
     tb.text_frame.word_wrap = False   # a long line clips instead of wrapping (which would
     #                                   break indentation and the height estimate) — the
     #                                   docstring's "keep snippets short" is the real fix.
+    # ...but a clip is INVISIBLE to every gate: word_wrap=False means the height model stays
+    # right, the box stays on canvas, and lint_layout sees a well-behaved shape while the end of
+    # the line simply is not on the slide. That is the same silent class as a mis-measured mono
+    # width, so measure it here — in MONO, the face it is actually set in — and say so.
+    _avail = w - 2 * pad - gutter_w
+    _over = []
+    for _k, _ln in enumerate(lines, start=1):
+        if not _ln.strip():
+            continue
+        if _measure_lines([(_ln, _k in hl)], size, _avail, font=MONO) > 1:
+            _over.append(_k)
+    if _over:
+        _shown = ", ".join(str(k) for k in _over[:4]) + ("…" if len(_over) > 4 else "")
+        print("[deckkit] code_block: line(s) {} exceed {:.2f}in at {}pt and will CLIP "
+              "(word_wrap is off so indentation survives) — shorten the line, lower `size`, "
+              "widen `w`, or elide with '# ...'".format(_shown, _avail, size))
     if line_numbers:
         nruns = [[(str(k), size, text_c, False, False, MONO)] for k in range(1, len(lines) + 1)]
         text(slide, x + pad - 0.02, y + pad, gutter_w, h, nruns,

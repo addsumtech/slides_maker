@@ -283,6 +283,22 @@ def _paras(slide):
             yield sh, txt, (max(sizes) if sizes else None), fonts, sy
 
 
+def _mono_paras(slide):
+    """(shape, paragraph, max_pt) for every non-empty text paragraph — keeps the PARAGRAPH so a
+    caller can measure run by run. `_paras` flattens runs into one string, which is fine for
+    checks that only need the text but wrong for width: a paragraph mixing a Courier command
+    with Helvetica prose is not monospace throughout, and charging every character the monospace
+    advance over-reports it."""
+    for sh, _sx, _sy in _leaves(slide.shapes):
+        if not sh.has_text_frame:
+            continue
+        for p in sh.text_frame.paragraphs:
+            if not "".join(r.text for r in p.runs).strip():
+                continue
+            sizes = [r.font.size.pt for r in p.runs if r.font.size is not None]
+            yield sh, p, (max(sizes) if sizes else None)
+
+
 def _inner_width_in(sh) -> float:
     tf = sh.text_frame
     ml = (tf.margin_left or 0) / 914400
@@ -324,29 +340,66 @@ def check_mono_wrap(prs):
          that fits nominally still breaks. The historical failure fit with ~10% margin and
          broke anyway. A line inside 15% of its box is therefore reported as tight, and a
          missing mono face is reported outright.
+
+    Two false-positive sources were removed after a real build hit both (3 of this check's
+    findings on that deck were wrong, and separating them from the true one cost real time):
+      - MIXED FACES. Charging the whole paragraph the monospace advance because ONE run was
+        monospace over-reports a `label: <command>` line by ~20%. Each run is now charged its
+        own advance.
+      - WRAPPING BOXES. The FAIL exists because word_wrap=False CLIPS, silently. A box with
+        wrapping on does not clip — it re-flows — so it is no longer reported as though it
+        did, and the message no longer asserts "word_wrap is off" without having looked.
+        It is still ADVISORY, because a command split across two lines is still one a reader
+        cannot copy in a single selection.
+    A check that cries wolf gets routed around, and the defect it exists for is one that ships
+    a 404 command to a persuaded reader — so precision here is load-bearing, not tidiness.
     """
-    over, tight, missing = [], [], set()
+    over, wrapped, tight, missing = [], [], [], set()
     for i, s in enumerate(prs.slides, 1):
-        for sh, txt, pt, fonts, _sy in _paras(s):
-            mono = [f for f in fonts if any(m in f for m in MONO_FACES)]
+        for sh, p, pt in _mono_paras(s):
+            runs = [(r.text, (r.font.name or "").lower()) for r in p.runs if r.text]
+            mono = [f for _t, f in runs if any(m in f for m in MONO_FACES)]
             if not pt or not mono:
                 continue
-            for f in mono:
+            for f in set(mono):
                 if not _face_installed(f):
                     missing.add(f)
             avail = _inner_width_in(sh)
-            need = len(txt) * 0.62 * pt / 72.0
-            if need > avail:
+            # Charge each run its OWN advance. The old code multiplied the whole paragraph by the
+            # monospace 0.62em whenever ANY run was monospace, so `Run: <cmd>` — a Helvetica label
+            # plus a Courier command — was reported ~20% wider than it renders. Over-reporting is
+            # not harmless here: this check FAILs a build, and a builder who has learned it cries
+            # wolf starts routing around it, which is how the real 404-command defect gets through.
+            need = sum(len(t) * (0.62 if any(m in f for m in MONO_FACES) else 0.50) * pt / 72.0
+                       for t, f in runs)
+            txt = "".join(t for t, _f in runs)
+            if need <= avail:
+                if need > 0.85 * avail:
+                    tight.append(f"s{i} {need:.2f}/{avail:.2f}in ({need/avail:.0%}): {txt[:40]!r}")
+                continue
+            # Only a box with wrapping OFF clips silently — which is the whole reason this is a
+            # FAIL. code_block sets word_wrap=False deliberately; an ordinary text box leaves it
+            # on, and there the same overrun simply wraps to another line. Reporting "word_wrap is
+            # off, so they run off it silently" about a box whose wrapping is ON is a false
+            # statement in a FAIL message, and it was being made.
+            ww = sh.text_frame.word_wrap
+            if ww is False:
                 over.append(f"s{i} needs {need:.2f}in in {avail:.2f}in: {txt[:40]!r}")
-            elif need > 0.85 * avail:
-                tight.append(f"s{i} {need:.2f}/{avail:.2f}in ({need/avail:.0%}): {txt[:40]!r}")
+            else:
+                state = "on" if ww else "inherited"
+                wrapped.append(f"s{i} {need:.2f}/{avail:.2f}in (wrap {state}): {txt[:40]!r}")
     if over:
-        return "FAIL", (f"{len(over)} mono line(s) overflow their panel (word_wrap is off, so "
-                        f"they run off it silently) — " + " · ".join(over[:3]))
+        return "FAIL", (f"{len(over)} mono line(s) overflow a panel with word_wrap OFF, so they "
+                        f"run off it silently — " + " · ".join(over[:3]))
     if missing:
         return "FAIL", (f"mono face not installed: {', '.join(sorted(missing))} — the renderer "
                         f"substitutes a different width, so the panel you checked is not the "
                         f"panel a reader sees. Set deckkit.MONO to an installed face.")
+    if wrapped:
+        return "ADVISORY", (f"{len(wrapped)} mono line(s) are wider than their box, but it WRAPS "
+                            f"— they re-flow onto another line rather than clipping. A wrapped "
+                            f"command is still a command a reader cannot copy in one piece, so "
+                            f"check the render — " + " · ".join(wrapped[:2]))
     if tight:
         return "ADVISORY", (f"{len(tight)} mono line(s) fill >85% of the panel — a substituted "
                             f"face will break them; drop a point or widen — " + " · ".join(tight[:2]))

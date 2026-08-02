@@ -1221,5 +1221,43 @@ ok("image_grid (real-rect labels · one AR · 11 refusals · nothing drawn on re
 ok("structural tokens (set_geometry no-op at default · reaches box · presets carry them)",
    _structural_tokens)
 
+def _mono_measurement():
+    """measure_text must be able to see the face the text is PLACED in, and code_block must say
+    when a line will clip. Both were silent: measure_text always measured in FONT, so a mono line
+    came back ~26% short (Helvetica 4.04in vs Courier 5.44in for the same string), and code_block
+    sets word_wrap=False so the overrun leaves the panel with every geometry check still green."""
+    import io, contextlib
+    old_font, old_mono = dk.FONT, dk.MONO
+    try:
+        dk.FONT, dk.MONO = "Helvetica", "Courier New"
+        line = "python3 scripts/render_deck.py deck.pptx render --fast"
+        default = dk.measure_text([(line, False)], 4.5, 12)
+        mono = dk.measure_text([(line, False)], 4.5, 12, font=dk.MONO)
+        assert mono > default, (
+            "measure_text(font=MONO) must reserve more height than the proportional default "
+            "for a monospace line — got %.3f vs %.3f" % (mono, default))
+
+        prs = dk.blank_deck(10, 5.625)
+        s = dk.add_slide(prs)
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            dk.code_block(s, 0.5, 1.0, 2.6, line)
+        assert "CLIP" in buf.getvalue(), (
+            "code_block must warn when a line overruns a non-wrapping panel, got %r"
+            % buf.getvalue())
+
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            dk.code_block(s, 0.5, 3.0, 9.0, "a = 1\nb = 2")
+        assert "CLIP" not in buf.getvalue(), (
+            "code_block must stay silent when every line fits, got %r" % buf.getvalue())
+    finally:
+        dk.FONT, dk.MONO = old_font, old_mono
+
+
+ok("mono measurement (measure_text font= reaches the metric · code_block clip is spoken)",
+   _mono_measurement)
+
+
 print(f"\nsmoke_deckkit: {len(fails)} failure(s)" + ("" if not fails else " — " + "; ".join(n for n, _ in fails)))
 sys.exit(1 if fails else 0)
