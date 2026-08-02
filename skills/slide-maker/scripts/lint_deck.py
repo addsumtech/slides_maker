@@ -75,6 +75,11 @@ try:                                                  # reuse deckkit's font-ava
 except Exception:
     def _fsub(_name):                                 # can't check → never warn (no false positive)
         return False
+try:                                                  # real glyph advances, same metrics the build uses
+    from deckkit import _pil_font as _dk_pil_font, _MEAS_PREC as _dk_prec
+except Exception:
+    _dk_pil_font = None
+    _dk_prec = 1.0
 
 def _no_real_alt(descr):
     # python-pptx auto-sets a picture's descr to its FILE NAME; treat that (or None) as no real
@@ -162,17 +167,31 @@ def _boxes(slide, sw, sh, slide_no=None):
         full = s.text_frame.text.strip() if s.has_text_frame else ""
         txt = full.replace("\n", " ")[:26]
         paras, size, align, anchor, mathfont = [], 0.0, None, None, None
+        _face, _bold = None, False
         if s.has_text_frame:
             size = max((r.font.size.pt for p in s.text_frame.paragraphs for r in p.runs if r.font.size),
                        default=12.0)
+            # The FACE and WEIGHT are captured here because the width estimate needs them: this
+            # loop already reads `r.font`, and used to take only the size, after which every Latin
+            # character was charged a flat 0.52 em regardless of the typeface the file names. The
+            # dominant face (by character count) is enough — a text box is almost always set in one
+            # — and a mixed box falls back to whichever face carries most of it.
+            _faces = {}
             for p in s.text_frame.paragraphs:
                 pr = []
                 for r in p.runs:
                     pr.append((r.text, (r.font.size.pt if r.font.size else size)))
+                    if r.font.name and r.text:
+                        _faces[(r.font.name, bool(r.font.bold))] = \
+                            _faces.get((r.font.name, bool(r.font.bold)), 0) + len(r.text)
                     if mathfont is None and r.font.name in MATH_FONTS:
                         mathfont = r.font.name           # an equation_native run in a math font
                 if pr:
                     paras.append(pr)
+            if _faces:
+                (_face, _bold) = max(_faces, key=_faces.get)
+            else:
+                _face, _bold = None, False
             try: anchor = s.text_frame.vertical_anchor
             except Exception: anchor = None
             try: align = s.text_frame.paragraphs[0].alignment if s.text_frame.paragraphs else None
@@ -223,15 +242,47 @@ def _boxes(slide, sw, sh, slide_no=None):
                     "runs": run_colors, "fill": fill_rgb, "unk": fill_unk, "pic": is_pic, "grad": is_grad,
                     "st": str(s.shape_type).split()[0], "txt": txt, "full": full, "size": size or 12.0,
                     "paras": paras, "solid": s.shape_type in SOLID, "align": align, "anchor": anchor,
+                    "font": _face, "bold": _bold,
                     "text": bool(s.has_text_frame and txt), "descr": descr, "mathfont": mathfont,
                     "title_ph": tph, "bg": (w * h) >= 0.95 * (sw * sh), "grp": grp})
     return out
 
 
-def _est_lines(paras, width_in):
+def _text_w(text, size_pt, face=None, bold=False):
+    """Width in INCHES of `text` at `size_pt` — real glyph advances when the face is known.
+
+    The linter used to charge every Latin character a flat 0.52 em while the file it was measuring
+    said which typeface it was set in. Both error directions are real and both were reproduced on
+    Helvetica Neue: uppercase averages 0.662 em, so an ALL-CAPS title is under-measured by ~21% and
+    a genuine collision renders under a `0 findings ✓ clean`; narrow glyphs and spaces run 0.264 and
+    0.278 em, so text rich in them is over-measured by ~90% and a visibly clean two-line title draws
+    a hard TEXT COLLISION. The second direction is the expensive one — on the measured build the
+    author rewrote two correct titles to satisfy a wrong measurement, which is rework caused by the
+    gate itself. This is the same defect class as `deckkit.measure_text` ignoring `font=`, one file
+    over, and it is fixed the same way: ask the face.
+
+    CJK stays on the 1 em rule by definition (deckkit measures it that way too, and that behaviour
+    was tuned against renders); only the non-CJK part is measured. Falls back to the old flat
+    estimate whenever Pillow or the face is unavailable, so a lint never breaks over measurement."""
+    if not text:
+        return 0.0
+    cjk = [ch for ch in text if ord(ch) > 0x2E80]
+    rest = "".join(ch for ch in text if ord(ch) <= 0x2E80)
+    w = len(cjk) * (size_pt / 72.0)
+    if not rest:
+        return w
+    if _dk_pil_font is not None and face:
+        try:
+            return w + _dk_pil_font(face, size_pt, bold).getlength(rest) / _dk_prec / 72.0
+        except Exception:
+            pass
+    return w + len(rest) * (size_pt / 72.0) * 0.52
+
+
+def _est_lines(paras, width_in, face=None, bold=False):
     """CJK-aware estimate of total wrapped line count across paragraphs, using each RUN's own font
     size (so a mixed-size 'small label + big value' stat line counts as one line, not two). CJK glyph
-    ≈ 1 em, Latin ≈ 0.52 em."""
+    ≈ 1 em; Latin measured with the REAL face when `face` is known (see `_text_w`), else ≈ 0.52 em."""
     if width_in <= 0 or not paras:
         return 1
     total = 0
@@ -242,7 +293,7 @@ def _est_lines(paras, width_in):
             for ch in text:
                 if ch == "\n":
                     lines += 1; w = 0.0; continue
-                cw = em * (1.0 if ord(ch) > 0x2E80 else 0.52)
+                cw = _text_w(ch, size_pt, face, bold)
                 if w + cw > width_in and w > 0:
                     lines += 1; w = cw
                 else:
@@ -251,7 +302,7 @@ def _est_lines(paras, width_in):
     return total or 1
 
 
-def _last_line(paras, width_in):
+def _last_line(paras, width_in, face=None, bold=False):
     """Return the text on the LAST wrapped visual line (same CJK-aware wrap estimate as _est_lines) —
     so we can catch a lone trailing punctuation mark or a single orphaned glyph (避头尾 / widow)."""
     if width_in <= 0 or not paras:
@@ -264,7 +315,7 @@ def _last_line(paras, width_in):
             for ch in text:
                 if ch == "\n":
                     line, w = "", 0.0; continue
-                cw = em * (1.0 if ord(ch) > 0x2E80 else 0.52)
+                cw = _text_w(ch, size_pt, face, bold)
                 if w + cw > width_in and w > 0:
                     line, w = ch, cw          # this char starts a new line
                 else:
@@ -280,11 +331,12 @@ def _cjk(t): return any(ord(ch) > 0x2E80 for ch in t["full"])
 
 
 def _txt_h(t):
-    return _est_lines(t["paras"], t["w"]) * (t["size"] / 72.0) * (1.4 if _cjk(t) else 1.25)
+    return _est_lines(t["paras"], t["w"], t.get("font"), t.get("bold", False)) * (t["size"] / 72.0) * (1.4 if _cjk(t) else 1.25)
 
 
 def _nat_width(t):                                       # natural one-line width of the widest paragraph
-    return max((sum((sz / 72.0) * (1.0 if ord(ch) > 0x2E80 else 0.52) for s_, sz in pr for ch in s_)
+    face, bold = t.get("font"), t.get("bold", False)
+    return max((sum(_text_w(s_, sz, face, bold) for s_, sz in pr)
                 for pr in t["paras"]), default=0.0)
 
 
@@ -958,16 +1010,31 @@ def _slide_stats(slide, bx, sw, sh):
     # inverted-hierarchy inputs: the TITLE candidate = biggest SHORT text box in the top band;
     # the BODY tier = char-weighted median run size, dropping footer/caption chrome (≤11pt) and the
     # single largest run (a per-slide hero numeral / statement) so a legit hero doesn't mask a title.
+    # 🔴 ONE definition of "the title". This scan used to answer that question on its own — top
+    # 20% of the canvas, biggest SHORT box, no size floor — while `_find_title` (which every
+    # title-derived FINDING uses) answers it as "a TITLE placeholder, else the first text >=14.5pt
+    # in the top 28%". Two bands and one missing floor, so the two disagreed on real decks:
+    # reproduced with a 30pt title at t=1.30in (inside 28% = 1.575in, OUTSIDE 20% = 1.125in) and a
+    # 9.5pt margin word at t=0.52in — `_find_title` returned the title, this scan returned 'FIRES'.
+    # That mattered far beyond the stats block, because title_txt feeds the TITLE SPINE, which the
+    # coordinator and BOTH critic lenses read as the deck's argument: one measured deck presented
+    # its argument as three pieces of margin chrome. It also fed INVERTED TYPE HIERARCHY, which
+    # then advised that a correct 30pt title was "smaller than its body tier".
+    # So: defer to `_find_title`, and keep the old scan only for slides where it finds nothing.
     top_band = 0.20 * sh
     title_pt = 0.0
     title_txt = ""
     title_top = None
-    for s in bx:
-        if s["text"] and not s["bg"] and s["t"] < top_band and s["full"]:
-            wc = len(s["full"].split())
-            if 0 < wc <= 12 and s["size"] > title_pt:
-                title_pt, title_txt = s["size"], s["full"]
-                title_top = s["t"]
+    _ti = _find_title(bx, sh)
+    if _ti is not None and bx[_ti].get("full"):
+        title_pt, title_txt, title_top = bx[_ti]["size"], bx[_ti]["full"], bx[_ti]["t"]
+    else:
+        for s in bx:
+            if s["text"] and not s["bg"] and s["t"] < top_band and s["full"]:
+                wc = len(s["full"].split())
+                if 0 < wc <= 12 and s["size"] > title_pt:
+                    title_pt, title_txt = s["size"], s["full"]
+                    title_top = s["t"]
     # char-weighted median of body-class runs (>11pt, excludes footer/caption chrome). Char-weighting
     # already downweights a short hero numeral (a 2-char "96" barely counts vs a body paragraph), so
     # no run needs dropping — the median lands on the tier the reader actually reads.
@@ -2267,7 +2334,7 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
             if not host:
                 continue
             rl, rt, rr, rb = _rbox(t)
-            nlines = _est_lines(t["paras"], t["w"])
+            nlines = _est_lines(t["paras"], t["w"], t.get("font"), t.get("bold", False))
             if rb > host["b"] - PAD:                          # rendered text crammed against / past the card bottom
                 kind = "runs PAST" if rb > host["b"] + 0.03 else "is cramped against (< pad)"
                 finds.append(f"TEXT PADDING: '{t['txt']}' (~{nlines} lines) {kind} the card bottom "
@@ -2279,7 +2346,7 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
             pill = next((c for c in fills if abs(c["l"] - t["l"]) < 0.06 and abs(c["t"] - t["t"]) < 0.06
                          and abs(c["w"] - t["w"]) < 0.16 and abs(c["h"] - t["h"]) < 0.16), None)
             if pill:
-                nl = _est_lines(t["paras"], t["w"] - 0.10)         # inner pad
+                nl = _est_lines(t["paras"], t["w"] - 0.10, t.get("font"), t.get("bold", False))         # inner pad
                 if nl * (t["size"] / 72.0) * (1.4 if _cjk(t) else 1.25) > t["h"] - 0.02:
                     finds.append(f"CHIP/LABEL TOO SMALL: '{t['txt']}' (~{nl} lines) overruns its "
                                  f"{round(t['w'],2)}×{round(t['h'],2)}in pill — size the chip to its text (or shorten)")
@@ -2303,9 +2370,9 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
         # 6b) orphaned punctuation / widow: a wrapped box whose LAST line is just a punctuation mark
         #     (the 避头尾 bug — a lone 。/，pushed to its own row) or a single orphaned CJK glyph
         for t in [s for s in bx if s["text"] and s["w"] > 0]:
-            if _est_lines(t["paras"], t["w"]) < 2:
+            if _est_lines(t["paras"], t["w"], t.get("font"), t.get("bold", False)) < 2:
                 continue
-            ll = _last_line(t["paras"], t["w"]).strip()
+            ll = _last_line(t["paras"], t["w"], t.get("font"), t.get("bold", False)).strip()
             if ll and all(c in _CLOSERS for c in ll):
                 finds.append(f"ORPHANED PUNCTUATION: the last line of '{t['txt']}' is just '{ll}' — "
                              f"widen the box / lower the size / reword so the mark stays attached (避头尾)")

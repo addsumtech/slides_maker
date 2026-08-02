@@ -749,6 +749,77 @@ def main():
     else:
         ok.append("meter_bar: fill width == frac x track at every fraction incl. 0.5% (no cap floor)")
 
+    # --- Two measurements that could not see what they were measuring. Both shipped, both were
+    # --- reproduced here, and each is asserted in BOTH directions because each was wrong in both.
+
+    # (1) ONE definition of "the title". `_find_title` looks for >=14.5pt in the top 28%; the
+    # deck-stats scan used to run its own search over the top 20% with no size floor. A title
+    # between the two bands was invisible to the stats scan, so the margin chrome above it won —
+    # and title_txt feeds the TITLE SPINE that the coordinator and both critic lenses read as the
+    # deck's argument. One measured deck presented its argument as three pieces of chrome.
+    import deckkit as _dk
+    _dk.FONT = "Helvetica"
+    _prs = _dk.blank_deck(10, 5.625)
+    for _c, _t in (("FIRES", "The gate reported clean"),
+                   ("SILENT", "The lint could not see it"),
+                   ("ADVISORY", "Bind the claim to an artifact")):
+        _s = _dk.add_slide(_prs)
+        _dk.text(_s, 0.5, 0.52, 2.0, 0.3, [[(_c, 9.5, _dk.MUTE, False, False, "Helvetica")]],
+                 space_after=0)
+        _dk.text(_s, 0.5, 1.30, 8.5, 0.7, [[(_t, 30, _dk.DEEP, False, False, "Helvetica")]],
+                 space_after=0)
+        _dk.text(_s, 0.5, 2.40, 8.5, 1.5,
+                 [[("Body copy at eighteen point with enough words to form a real body tier.",
+                    18, _dk.SLATE, False, False, "Helvetica")]], space_after=0)
+    _prs.save(str(tmp / "fx_title.pptx"))
+    _o = lint(tmp / "fx_title.pptx", tmp / "fx_title_render")
+    if ran(_o, "title spine"):
+        if "1. FIRES" in _o or "1. SILENT" in _o:
+            bad.append("the title spine names margin chrome as the deck's argument again — the "
+                       "deck-stats scan has stopped deferring to _find_title")
+        elif "The gate reported clean" not in _o:
+            bad.append("the title spine no longer carries the real 30pt titles: " + _o[:300])
+        else:
+            ok.append("title spine reads the real titles, not the chrome above them")
+
+    # (2) Text width measured in the face the file actually names. A flat 0.52em per Latin char
+    # under-measures uppercase (~0.66em real) and over-measures narrow glyphs and spaces
+    # (~0.26em real), so it both MISSED real collisions and INVENTED them. The false positive is
+    # the expensive one: on the measured build an author rewrote two correct titles to satisfy it.
+    _F = "Helvetica Neue"
+    _dk.FONT = _F
+    _prs = _dk.blank_deck(10, 5.625); _s = _dk.add_slide(_prs)
+    _dk.text(_s, 0.5, 1.0, 6.0, 0.55,
+             [[("MEASUREMENT THAT CANNOT SEE THE FACE IS NOT MEASUREMENT", 26, _dk.DEEP,
+                True, False, _F)]], space_after=0)
+    _dk.text(_s, 0.5, 2.05, 6.0, 1.2,
+             [[("The body sits directly beneath and the caps title wraps into it.", 16,
+                _dk.SLATE, False, False, _F)]], space_after=0)
+    _prs.save(str(tmp / "fx_caps.pptx"))
+    _o = lint(tmp / "fx_caps.pptx", tmp / "fx_caps_render")
+    if ran(_o, "caps collision"):
+        if "COLLISION" in _o:
+            ok.append("an ALL-CAPS title that really does collide is caught (was invisible under "
+                      "the flat 0.52em estimate)")
+        else:
+            bad.append("ALL-CAPS under-measurement is back: a real collision reads clean")
+
+    _prs = _dk.blank_deck(10, 5.625); _s = _dk.add_slide(_prs)
+    _dk.text(_s, 0.5, 1.0, 3.6, 0.42,
+             [[("illicit if it fits, it fits", 26, _dk.DEEP, False, False, _F)]], space_after=0)
+    _dk.text(_s, 0.5, 1.5, 6.0, 1.0,
+             [[("Body copy immediately beneath the single-line title.", 16, _dk.SLATE,
+                False, False, _F)]], space_after=0)
+    _prs.save(str(tmp / "fx_narrow.pptx"))
+    _o = lint(tmp / "fx_narrow.pptx", tmp / "fx_narrow_render")
+    if ran(_o, "narrow-glyph false positive"):
+        if "COLLISION" in _o:
+            bad.append("narrow-glyph over-measurement is back: a title that fits on one line is "
+                       "reported as colliding, which is what made an author rewrite correct titles")
+        else:
+            ok.append("narrow glyphs and spaces no longer invent a collision (0.26em real vs "
+                      "0.52em assumed)")
+
     for line in ok:
         print("  ok   " + line)
     for line in bad:
