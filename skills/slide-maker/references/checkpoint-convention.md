@@ -79,7 +79,14 @@ found logo does not overturn it; a bare
 "wordmark" with no recorded search on a single-entity deck = incomplete, even as an auto-waiver FYI)
 **+ one required GATE line naming the look-choice that was made — `direction gate:` on the
 design-clean branch (c), `style gate:` on the generated-template branch (d).** Branch (c):
-`picked A/B/C/D/E of 4 (html: <path>) · diversity: <ok | flagged <pair> → rediverged | justified: <reason>>`
+`picked A/B/C/D/E of 4 (html: <path>) · said: "<the user's verbatim paste-back line>" · diversity: <ok | flagged <pair> → rediverged | justified: <reason>>`
+— the `said:` field quotes the line the directions page copied to the user's clipboard (`I pick
+direction B — Keynote`, or `I pick E (my own): <text>`) **verbatim, or the carve**. It exists because
+the gate is now rendered CONCURRENTLY with the Step-1 planner rather than blocking it, and a gate
+that no longer blocks is a gate that can quietly become self-attested — "picked B" is a claim the
+coordinator can write without any user having chosen anything, whereas a quoted paste-back line is
+evidence a person acted. Under the AUTO WAIVER write `said: auto-pick (waiver)` — the waiver removes
+the stop, never the record.
 — **4 rendered directions (A–C = best-fit DNA presets, D = the colour-scheme option), E = describe-your-own**;
 the mechanical-check verdict rides on the same line, so a collapsed set cannot be posted as a
 choice without the collapse being spoken — or the named carve (e.g. `carve: user said just-go` /

@@ -121,7 +121,18 @@ four template choices:
      rather than always shipping the same default blue — a defense, an exec readout,
      and a lecture should not look alike.
      **Because the look is entirely yours to invent here, the direction gate RUNS BY
-     DEFAULT on this branch — a 🔴 checkpoint-grade step, not an optional offer.** This is
+     DEFAULT on this branch — a 🔴 checkpoint-grade step, not an optional offer.**
+     🔴 **Post it in the SAME turn that dispatches the Step-1 content planner, and collect the pick
+     at the CONTENT checkpoint** — do not stand still waiting for it. The directions page is
+     provably content-free (`archetypes_html.py` renders fixed sample copy; `build_directions_html`
+     takes only `deck_title`), so the planner consumes nothing the user is about to choose, and the
+     look is not consumed until Step 2 builds `style.py`. Two things the user does in parallel
+     therefore cost one wait instead of two. **What must NOT change: the gate is still a gate.** The
+     design checkpoint still cannot be posted without its `direction gate:` line, and that line now
+     carries the user's verbatim paste-back words (`references/checkpoint-convention.md`) precisely
+     because a step that no longer blocks is the kind that quietly collapses into the checkpoint
+     after it. If the pick has not arrived by the time Step 2 needs it, **stop there and wait** —
+     overlapping the wait is allowed, proceeding without the answer is not. This is
      the one branch where preference, not just quality, is unresolved; history shows an
      "offer" gets skipped under momentum (a whole deck shipped without the user ever seeing
      a choice of looks), so the gate is the default and skipping is the exception. Named

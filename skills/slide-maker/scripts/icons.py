@@ -194,6 +194,70 @@ def _find_chrome():
     return None
 
 
+# Every backend renders at this multiple of the requested `px`. It exists because the Chrome
+# backend has ALWAYS supersampled (--force-device-scale-factor=3) while cairosvg and rsvg-convert
+# rendered at 1x — so the same call produced a 480px PNG on a Chrome machine and a 160px PNG on a
+# cairo machine, and the cairo one was placed at a third of the resolution with nothing reporting
+# it. Icon crispness is invisible to every lint and to the render self-check at slide scale, which
+# is exactly why it has to be a constant here rather than a rule someone remembers. Measured
+# equivalent: at matched 3x, cairosvg vs Chrome differ by <=0.0002 in ink coverage.
+_SUPERSAMPLE = 3
+
+_cairosvg_cache = []
+
+
+def _cairosvg():
+    """Import cairosvg, teaching it where the native cairo lives if the default lookup fails.
+
+    cairocffi finds libcairo through `ctypes.util.find_library`, which on macOS does not search
+    Homebrew's prefix — so a machine with `brew install cairo` still falls through to the Chrome
+    backend at ~5s per icon instead of ~0.016s (measured: 5.05s -> 0.016s, a 316x difference on a
+    real 5-icon run). That is a pure environment mismatch, not a missing dependency, so we resolve
+    it here rather than making every deck pay for it. Returns the module, or None if cairo really
+    is absent — in which case the backends below take over exactly as before."""
+    if _cairosvg_cache:
+        return _cairosvg_cache[0]
+    mod = None
+    try:
+        import cairosvg as mod
+    except Exception:
+        import ctypes.util
+        import glob
+        _orig = ctypes.util.find_library
+
+        def _find(name):
+            hit = _orig(name)
+            if hit:
+                return hit
+            for d in ("/opt/homebrew/lib", "/usr/local/lib", "/opt/local/lib",
+                      "/usr/lib/x86_64-linux-gnu", "/usr/lib64"):
+                for pat in ("lib%s.*dylib" % name, "lib%s.so*" % name):
+                    found = sorted(glob.glob(os.path.join(d, pat)))
+                    if found:
+                        return found[0]
+            return None
+
+        ctypes.util.find_library = _find
+        try:
+            import cairosvg as mod
+        except Exception:
+            mod = None
+        finally:
+            ctypes.util.find_library = _orig
+    _cairosvg_cache.append(mod)
+    return mod
+
+
+def _raster_cache_path(svg, px):
+    """Cache key for a RASTERIZED icon. The SVG text already encodes the colour/gradient recolor
+    (recolor() rewrites the markup before rasterize() sees it), so the text plus the pixel size is
+    the whole input. Distinct from the SVG cache above, which only saves the CDN fetch: without
+    this, every rebuild of the same deck re-rasterizes every icon from scratch."""
+    import hashlib
+    key = hashlib.sha256(("%d|%d|" % (px, _SUPERSAMPLE)).encode() + svg.encode("utf-8")).hexdigest()
+    return os.path.join(_CACHE, "raster", key + ".png")
+
+
 def _check_ink(out_png):
     """Refuse to hand back a fully-transparent PNG — the silent-failure mode where a bad colour
     or a broken rasterizer 'succeeds' with an invisible icon that no lint catches."""
@@ -253,31 +317,60 @@ def sanitize_svg(svg):
 
 
 def rasterize(svg, out_png, px=160):
-    """Render recolored SVG text to a transparent PNG, `px`×`px`. Tries cairosvg → rsvg-convert
-    → headless Chrome (whichever is present). Sizes the SVG to fill the square. The SVG is sanitized
-    (sanitize_svg) first so an attacker-supplied icon can't read local files or run JS/SSRF."""
+    """Render recolored SVG text to a transparent PNG. Tries cairosvg → rsvg-convert → headless
+    Chrome (whichever is present). Sizes the SVG to fill the square. The SVG is sanitized
+    (sanitize_svg) first so an attacker-supplied icon can't read local files or run JS/SSRF.
+
+    The PNG comes back at `px * _SUPERSAMPLE` on EVERY backend — pass the placed size as `px` and
+    let this supersample it, the same way the Chrome backend always has. Results are cached on
+    disk by (svg text, px), so rebuilding a deck re-uses the rasterized glyph instead of paying
+    for it again."""
     out_png = os.path.abspath(out_png)
     os.makedirs(os.path.dirname(out_png) or ".", exist_ok=True)
     svg = sanitize_svg(svg)          # strip active/external content before ANY backend sees it
     # ensure the <svg> carries width/height so every backend sizes it consistently
     svg2 = re.sub(r"<svg\b", f'<svg width="{px}" height="{px}"', svg, count=1) \
         if not re.search(r"<svg[^>]*\bwidth=", svg) else svg
+    # Every backend below emits this many pixels; see _SUPERSAMPLE.
+    out_px = px * _SUPERSAMPLE
+    # cache hit — sanitize/recolor already applied, so the text is the whole key
+    cached = _raster_cache_path(svg2, px)
+    if os.path.exists(cached) and os.path.getsize(cached) > 0:
+        try:
+            shutil.copyfile(cached, out_png)
+            return _check_ink(out_png)
+        except OSError:
+            pass                       # unreadable cache entry must never break a build
+
+    def _save(path):
+        """Populate the raster cache atomically — it is shared across concurrent section builds."""
+        try:
+            os.makedirs(os.path.dirname(cached), exist_ok=True)
+            tmp = cached + ".%d.tmp" % os.getpid()
+            shutil.copyfile(path, tmp)
+            os.replace(tmp, cached)
+        except OSError:
+            pass                       # caching is an optimisation, never a precondition
+        return _check_ink(path)
+
     # backend 1 — cairosvg (best quality, transparent by default)
-    try:
-        import cairosvg
-        cairosvg.svg2png(bytestring=svg2.encode("utf-8"), write_to=out_png,
-                         output_width=px, output_height=px)
-        return _check_ink(out_png)
-    except Exception:
-        pass
+    cairosvg = _cairosvg()
+    if cairosvg is not None:
+        try:
+            cairosvg.svg2png(bytestring=svg2.encode("utf-8"), write_to=out_png,
+                             output_width=out_px, output_height=out_px)
+            return _save(out_png)
+        except Exception:
+            pass
     # backend 2 — rsvg-convert
     if shutil.which("rsvg-convert"):
         with tempfile.NamedTemporaryFile("w", suffix=".svg", delete=False) as f:
             f.write(svg2); src = f.name
         try:
-            subprocess.run(["rsvg-convert", "-w", str(px), "-h", str(px), "-o", out_png, src],
+            subprocess.run(["rsvg-convert", "-w", str(out_px), "-h", str(out_px),
+                            "-o", out_png, src],
                            check=True, capture_output=True, timeout=60)
-            return _check_ink(out_png)
+            return _save(out_png)
         finally:
             os.unlink(src)
     # backend 3 — headless Chrome (transparent screenshot of an HTML wrapper)
@@ -297,10 +390,11 @@ def rasterize(svg, out_png, px=160):
             # because it silently breaks the headless screenshot on current Chrome (produces no file).
             subprocess.run([chrome, "--headless", "--disable-gpu", f"--screenshot={out_png}",
                             "--disable-remote-fonts",
-                            f"--window-size={px},{px}", "--force-device-scale-factor=3",
+                            f"--window-size={px},{px}",
+                            f"--force-device-scale-factor={_SUPERSAMPLE}",
                             "--default-background-color=00000000", "--hide-scrollbars",
                             f"file://{src}"], check=True, capture_output=True, timeout=60)
-            return _check_ink(out_png)
+            return _save(out_png)
         finally:
             os.unlink(src)
     raise RuntimeError(

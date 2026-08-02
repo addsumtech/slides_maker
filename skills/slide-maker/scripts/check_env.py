@@ -114,9 +114,14 @@ def main():
     # Chromium-family browser. cairosvg importing cleanly is NOT enough: it dies at call time
     # when libcairo is missing, so probe the native lib too.
     rasterizer = None
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     try:
-        import cairosvg  # noqa: F401
-        rasterizer = "cairosvg"
+        # Resolve it the way icons.py does, not with a bare import: icons._cairosvg() also
+        # teaches cairocffi where a Homebrew/MacPorts libcairo lives, and a check that answers
+        # differently from the code under test is worse than no check.
+        from icons import _cairosvg
+        if _cairosvg() is not None:
+            rasterizer = "cairosvg"
     except Exception:
         pass
     if not rasterizer:
@@ -124,14 +129,22 @@ def main():
         if _sh.which("rsvg-convert"):
             rasterizer = "rsvg-convert"
     if not rasterizer:
-        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
         try:
             from icons import _find_chrome
             if _find_chrome():
                 rasterizer = "headless Chrome/Edge"
         except Exception:
             pass
-    if rasterizer:
+    if rasterizer == "headless Chrome/Edge":
+        # Green, but it is the SLOWEST backend by two orders of magnitude — measured on a real
+        # 5-icon run: 5.05s per icon through Chrome vs 0.016s through cairosvg, identical output
+        # (ink coverage within 0.0002). A deck with a dozen icons pays a full minute for nothing,
+        # and the old check reported this as plain [ok] with no way to know.
+        print("  [ok]  SVG rasterizer (headless Chrome/Edge)  ->  WORKS, but ~300x slower than "
+              "cairosvg (~5s vs ~0.02s per icon). For faster builds: "
+              "macOS: brew install cairo | Ubuntu: sudo apt install libcairo2 | "
+              "then pip install cairosvg")
+    elif rasterizer:
         print("  [ok]  SVG rasterizer ({})".format(rasterizer))
     else:
         print("  [MISSING]  SVG rasterizer (icons will FAIL)  ->  "

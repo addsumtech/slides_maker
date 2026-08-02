@@ -325,7 +325,10 @@ systematically (same pairing on every slide). See `references/multilingual.md`.
 **Use `agents/content-planner.md` for this step — the CONTENT only** — dispatch
 it through an available multi-agent/subagent tool when the host exposes one (in Codex,
 discover multi-agent tools with `tool_search` if needed), otherwise run the same planner
-brief inline yourself. It is the
+brief inline yourself. **On the design-a-clean-one branch, dispatch it in the SAME message that
+posts the direction-gate link** — the directions page carries no content, so the two waits overlap
+into one (`references/interview-protocol.md`); the gate itself is unchanged and still blocks Step 2.
+It is the
 constructive counterpart to the critic/arbiter judges. Give it the interview answers
 (purpose/audience/time, **delivery context** & **primary goal**, style/language, template
 decision, venue if any **plus the Step-0 venue-research findings — the planner builds on them
@@ -1069,11 +1072,17 @@ docstring `role=… | form=… | build:…/static:… | takeaway='…'` → an o
 `main()`): the docstrings make plan↔code correspondence greppable instead of remembered, and it
 does not change "build the whole deck in one script run" — `main()` always builds every slide.
 
-**Scaling up — section fan-out for large decks (optional).** For a normal deck
-(~6–14 slides), one author writing one build script is both faster and more coherent —
-**that's the default** (and stays the single-author default up to ~14 slides). Only fan
-out when it genuinely pays: **large decks (15+ slides)** or **independently-sourced sections**
-(different papers/datasets/areas). The
+**Scaling up — section fan-out.** For a **short deck (~≤8 slides)** one author writing one build
+script is both cheaper and more coherent — **that's the default there**. From **~9 slides up**,
+fan out; also fan out at any size for **independently-sourced sections** (different
+papers/datasets/areas). *(This threshold used to be 15+. It moved because the old rule was
+weighed on TOKEN cost, where one author is genuinely cheaper — no context is duplicated — and
+wall clock was never on the scale. Measured across five real build sessions, the build step is
+40–71% of all model-active minutes, and it is one agent generating serially into a context that
+runs ~500k by mid-build. Fan-out does not make the deck cost fewer tokens; it makes the tokens
+happen at the same time, and it gives each author a fresh ~60k context instead of the
+coordinator's saturated one — which also buys better rule-following, since a 500k context is
+where instructions start getting missed.)* The
 rule that keeps quality high: **centralize coherence, parallelize only the independent
 work.** The coordinator (you) keeps the comprehension brief, the arc, and a single
 shared `style.py` (palette/font/chrome — copy `references/examples/style_example.py`);
@@ -1085,6 +1094,13 @@ fragile .pptx merging). Don't do one-agent-per-slide-with-neighbour-chat — it 
 fights the single-file artifact, and doesn't speed up the parts that actually cost
 time. Full workflow (incl. the critic panel + finding-routing) in
 `references/large-deck-orchestration.md`.
+🔴 **Fanning out the BUILD does not change the REVIEW shape.** The sectioned critic panel
+(per-section critics + one whole-deck coherence critic, at every tier — `references/critic-panel.md`)
+belongs to a **large** deck, ~15+ slides, because a 40-slide deck read as one document is a worse
+review. It is not triggered by having used section authors: a 10-slide deck built by three authors
+is still reviewed by the normal two focused lens critics reading the whole deck. Keep the two
+thresholds apart deliberately — wiring them together would quietly add critics to every mid-sized
+deck and spend the wall clock this fan-out just saved.
 
 **Motion & builds — the animation that matters is in-slide "appear" builds, NOT slide transitions.**
 🔴 **Do not "animate" a deck by putting a fade transition on every slide — that adds nothing and is the
@@ -1223,6 +1239,12 @@ render of a deck and whenever you pass `--deliverables`.
 First **render and look** (`bash scripts/render_deck.sh <deck.pptx>` → one PNG per
 slide). python-pptx writes blind — overflow, low contrast, a callout on the footer,
 or a missing glyph only show up in the image. Fix mechanical issues and re-render.
+**Chain build → render → lint into ONE command** — `python3 build_<deck>.py && bash
+scripts/render_deck.sh <deck>.pptx && python3 scripts/lint_deck.py <deck>.pptx --renders render`.
+They are a strict dependency chain, so they cannot run in parallel, but they also need no
+decision between them: running them as three messages buys nothing and pays the full
+conversation context three times instead of once. `&&` already stops the chain at the first
+failure, which is the same place you would have stopped anyway.
 (First time on a machine, or a render errors? `bash scripts/check_env.sh` verifies
 LibreOffice + the python deps and prints the fix for anything missing.)
 **When anything in this step fails or flags** — a build exception, a lint finding you don't
@@ -1320,6 +1342,17 @@ findings` without it, and only one of them means what it looks like.
 **Render self-check — scan EVERY slide for these before handing to the critic** (they're
 invisible in the build code and only appear in the pixels; catching them yourself saves a
 critic round — full rationale in `references/design-principles.md`):
+
+> 🔴 **Read the slide PNGs in ONE message — every slide, one tool block — then judge them one at a
+> time.** This is the preamble's `round-trips × context` rule at the place it binds hardest: reading
+> N slides in N messages re-sends the whole conversation N times, and by mid-build that context runs
+> ~300k, so a 14-slide deck spends ~4.2M tokens to look at ~21k tokens of image. Reading them
+> together costs the images once. **Batching the READS must not blur the JUDGMENTS:** walk the
+> slides in order afterwards and **record a one-line verdict for EVERY slide** — `s07: ok` /
+> `s07: teal glyph on aqua tile, <3:1` — because one aggregate impression over fourteen images is
+> not the same act as fourteen scans, and the zoom-level checks this list demands (each icon tile at
+> ~3:1 on its own ground; all four edges of every PDF crop) still need their own look. The verdict
+> lines are the artifact that shows the scan happened; a slide with no line was not checked.
 - **Overflow / contrast / footer / glyphs** — no clipped or spilling text, ≥4.5:1 contrast,
   nothing jammed on the footer, no tofu/missing glyphs, and **no orphaned punctuation** (a lone 。/，
   or single glyph stranded on its own row — set `deckkit.EAFONT` so PowerPoint's kinsoku keeps it
@@ -1585,6 +1618,16 @@ Then run the **actor-critic loop** — this is the quality engine, and the criti
    > must say the same thing — this rule has a history of drifting apart across files.)* If the first render is already clean and the critic consents, you're done
    in one round — don't manufacture extra rounds. Otherwise apply the blocker+major
    fixes, rebuild, re-render.
+   > 🔴 **Apply the whole promoted fix list in ONE message, then rebuild + re-render + re-lint in
+   > ONE chained command** (`python3 build_<deck>.py && python3 scripts/render_deck.py <deck>.pptx
+   > render --fast && python3 scripts/lint_deck.py <deck>.pptx --renders render`). The promoted
+   > findings arrive as a list and have no data dependency on each other, so one `Edit` per finding
+   > is the preamble's *1.00 tool per round-trip* failure with a fresh name: ~18 findings across a
+   > standard two-round loop, each re-sending ~300k of context, is ~5.4M tokens spent to emit a few
+   > hundred. Fixes that genuinely conflict (two findings on the same block, where the second edit
+   > depends on how the first landed) are the exception — do those in a second message and say why.
+   > This changes only how the edits are *transmitted*: every promoted finding is still applied,
+   > still individually, and the change manifest still lists them one by one.
 3. **Repeat.** The critic **re-reviews the whole deck fresh** (fixes introduce new
    issues). Converge; keep a short record of what changed each round so improvement is
    visible, not just churn.

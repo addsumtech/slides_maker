@@ -1,13 +1,32 @@
 # Orchestration — parallel section fan-out for large decks
 
-**Default: don't.** For a normal deck (~6–14 slides) a *single* author writing one
-build script is both faster and higher-quality — the cost is thinking and reviewing,
-not writing the file, and one author keeps the palette, grid, chrome, narrative arc,
-and one-message thread coherent for free. Reach for fan-out only when it actually
-pays:
-- **Large decks (~15+ slides)**, where authoring the slides genuinely dominates time.
+**Default below ~9 slides: don't.** For a short deck a *single* author writing one build script is
+both cheaper and higher-quality — one author keeps the palette, grid, chrome, narrative arc, and
+one-message thread coherent for free, and no context is duplicated. Reach for fan-out when it
+actually pays:
+- **~9+ slides**, where authoring the slides genuinely dominates wall clock.
 - **Independently-sourced sections** (different papers / datasets / product areas)
-  that can be researched and drafted in parallel.
+  that can be researched and drafted in parallel — at any size.
+
+> **Why the threshold moved from 15+ to ~9+.** The old rule reasoned that "the cost is thinking and
+> reviewing, not writing the file". The first half is right and the conclusion did not follow:
+> thinking is exactly what fans out, because each section author thinks about its own slides at the
+> same time as the others. What the old rule actually optimised was TOKEN cost — where one author
+> genuinely wins, since fan-out duplicates the brief and the style into every worker. Wall clock was
+> never on the scale. Measured across five real build sessions, the build step is 40–71% of all
+> model-active minutes, generated serially by one agent whose context reaches ~500k by mid-build.
+> Fan-out spends the same tokens concurrently and hands each author a fresh ~60k context — which
+> also buys better instruction-following, since a saturated context is where rules start getting
+> missed. **If you are optimising for tokens rather than wall clock, the old threshold was correct
+> and you should say so and use it.**
+
+> 🔴 **This threshold governs the BUILD only — the review shape has its own.** The sectioned critic
+> panel below (per-section critics + one whole-deck coherence critic, at every tier) is for a
+> genuinely **large** deck, ~15+ slides, where one reviewer reading the whole document reviews it
+> worse. A 10-slide deck authored by three section agents is reviewed normally: two focused lens
+> critics, whole deck, as `references/critic-panel.md` prescribes for its stakes. Do not couple the
+> two — coupling them adds critics to every mid-sized deck and gives back the wall clock the
+> fan-out saved.
 
 When you do fan out, the rule that protects quality is: **centralize coherence, fan
 out only the independent work.** One coordinator owns the comprehension brief, the

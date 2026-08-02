@@ -89,6 +89,13 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   comprehension-gate check; write the table to a scratch path, never the deliverable folder).
   `validate_review.py` — stdlib schema validator for critic/arbiter JSON (`critic|arbiter <file|->`;
   Step 5 runs it before acting on any review).
+- `roundtrip_budget.py` — measures the build's actual cost from the session transcript: round-trips,
+  the batching ratio (tool calls per round-trip), median context re-sent, and whether the render
+  self-check read the slide PNGs in one message or one at a time. Step 6 runs it to fill the
+  hand-off `cost:` line with a measured number (`--slides <N>`, `--json` for machine use). It is the
+  backstop for the batching rules in the preamble and Step 5, which are otherwise prose that fails
+  silently — a run can cost 4x its budget while every lint passes and the critic consents. Reports
+  only; it never fails a build.
 - `anim.py` — PowerPoint click-builds/transitions (pair `references/animation.md`).
 - `formats.py` — named canvas-format registry (16:9 default · 4:3 · square 1:1 · 小红书 3:4 · story
   9:16 · A4 print): dimensions, platform safe zones, chrome policy, density + lint flags, and the

@@ -180,8 +180,8 @@ deck with no Step-1 plan. On all three the tier is `standard` and the hand-off r
 `review: standard (no tier collected — <which path>)`. A tier that is silently undefined is how a
 default becomes whatever the run happened to feel like.
 
-**🔴 Two shapes no tier may alter, because they are not weight.** (1) On a **large/sectioned
-deck**, the per-section critics plus the one whole-deck coherence critic run at EVERY tier
+**🔴 Two shapes no tier may alter, because they are not weight.** (1) On a **large deck (~15+
+slides)**, the per-section critics plus the one whole-deck coherence critic run at EVERY tier
 (`references/large-deck-orchestration.md`) — the tier moves rounds and the provenance sample, never
 the sectioned panel shape; a 40-slide deck reviewed as one document is not a cheaper review, it is
 a different and worse one. (2) **Corroborated consent stays required wherever the stakes section
@@ -210,7 +210,7 @@ line — `references/handoff-checklist.md` owns both.
        purpose:** a short single-paper talk (e.g. a ~10-min conference oral) takes the
        **light** end — 2 critics, and **skip the arbiter pass** below; a long, career-
        defining deck (a 45-min job talk, thesis defense, or investor pitch) earns the
-       **full** 2–3-critic panel **plus** that arbiter cross-validation. For a **large/sectioned deck**, add **per-section critics plus one
+       **full** 2–3-critic panel **plus** that arbiter cross-validation. For a **large deck (~15+ slides)** — a size threshold, NOT "was it built by section authors": from ~9 slides the BUILD fans out (`references/large-deck-orchestration.md`) while the review stays whole-deck — add **per-section critics plus one
        whole-deck critic for coherence/arc/seams**, then — after the arbiter pass below —
        **route only the *promoted* findings** back to the section that owns each slide
        (see `references/large-deck-orchestration.md`). Keep
