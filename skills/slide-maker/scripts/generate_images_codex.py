@@ -18,6 +18,7 @@ import argparse
 import base64
 import concurrent.futures as _cf
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -25,6 +26,22 @@ import sys
 from pathlib import Path
 
 SESSIONS = Path.home() / ".codex" / "sessions"
+
+
+def _default_concurrency():
+    """How many `codex exec` image jobs to run at once.
+
+    The old default was a flat 2, described as "safe" — but the work each job does is almost
+    entirely WAITING on a hosted image model, not burning a local core, so 2 left a multi-image
+    deck serialised against nothing. Scaling with the machine keeps the old behaviour on a small
+    box (a 4-core CI runner still gets 2) while a workstation stops queueing. Capped at 4 because
+    the constraint above ~4 stops being local and becomes the service's own rate limit, which this
+    script cannot see — `--concurrency 1` remains the escape hatch when a batch starts erroring."""
+    try:
+        cores = os.cpu_count() or 4
+    except Exception:
+        cores = 4
+    return max(2, min(4, cores // 3))
 
 INSTR = (
     "Generate ONE image using your hosted image_generation tool (the 'image_generation' feature is "
@@ -202,9 +219,10 @@ def main():
     ap.add_argument("--dry-run", action="store_true", help="Print planned outputs without calling codex.")
     ap.add_argument("--allow-generic", action="store_true",
                     help="generate anyway when a prompt looks generic")
-    ap.add_argument("--concurrency", type=int, default=2,
-                    help="Images generated in parallel (each is a `codex exec` subprocess — 2 is a safe "
-                         "default; raise on a beefy machine, set 1 to serialize). Speeds a multi-image deck.")
+    ap.add_argument("--concurrency", type=int, default=_default_concurrency(),
+                    help="Images generated in parallel (each is a `codex exec` subprocess). Default "
+                         "scales with the machine (cores//3, clamped to 2-4); set 1 to serialize if "
+                         "you hit rate limits. Speeds a multi-image deck.")
     args = ap.parse_args()
 
     if not args.dry_run and not _have_codex():
