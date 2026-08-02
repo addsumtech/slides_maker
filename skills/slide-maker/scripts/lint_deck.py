@@ -1385,6 +1385,38 @@ def _load_render_lums(path, renders_dir, n, pngs=...):
     return out
 
 
+def _composed_void(r):
+    """True when this slide's emptiness is a COMPOSITION rather than a shortfall.
+
+    The two look identical to an ink-coverage number and completely different to a reader:
+
+      COMPOSED — one protagonist, vast air around it. A 60pt statement over an empty lower half is
+                 the oldest move in editorial design ("one dominant visual"; "fewer but stronger
+                 elements"). The air is the frame the hero is mounted in.
+      LEFTOVER — a grid that ran out of content. Flat type, many peers, and a band of nothing at the
+                 bottom because the last row had nothing to put there.
+
+    UNDERFILLED and DEAD BOTTOM measured only the ink and fired on both, then asked the author to
+    declare `design_intent(envelope=...)` to get out. That is backwards twice over: it makes the
+    designer justify the composition rather than the shortfall, and INTENT INFLATION then punishes
+    the very declarations it forced. It is also the rule the author's own bible objects to — "Empty
+    space is an intentional design element" — while their taste.md, from two real decks, objects to
+    the opposite ("some pages have some clear space left … include more contents"). Both are right,
+    about different pages. This is the line between them, and it is decidable:
+
+      typographic dominance   the slide's own biggest run is >= 2x its body tier — a hero exists
+      few objects             <= 6 foreground shapes — the hero is not competing with a crowd
+
+    Both must hold. Dominance alone on a busy slide is a big title on a full page; few objects alone
+    with flat type is just a sparse page. A declared envelope still waives independently, and a big
+    foreground picture or a chart is already exempt upstream.
+    """
+    body = r.get("body_tier") or 0.0
+    dominant = body > 0 and r.get("max_pt", 0.0) >= 2.0 * body
+    sparse = r.get("n_shapes", 99) <= 6
+    return bool(dominant and sparse)
+
+
 def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False):
     if not rows:
         return {}
@@ -1513,7 +1545,8 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False):
         # deliberately quiet registers are exempt — record the exception instead.
         if (mode != "surface" and 0 < i < last_body and r["load"] >= 15
                 and r["ink_cov"] < 0.25 and not r.get("big_pic_fg", r["n_pic"] > 0)
-                and not (r.get("intent") or {}).get("envelope")):
+                and not (r.get("intent") or {}).get("envelope")
+                and not _composed_void(r)):
             warns.append(f"UNDERFILLED: slide {i+1} ink covers only {r['ink_cov']*100:.0f}% of the canvas "
                          f"for a ~{r['load']}-word content slide — strengthen the hero, or declare the "
                          f"quiet register with design_intent(envelope=...) if the air is the point; "
@@ -1529,7 +1562,8 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False):
         if (mode != "surface" and 0 < i < last_body and r["load"] >= 15
                 and r.get("content_bottom", 1.0) < 0.45
                 and r.get("intent", {}).get("envelope") not in ("upper", "bleed")
-                and r["n_chart"] == 0 and not r.get("big_pic_fg", r["n_pic"] > 0)):
+                and r["n_chart"] == 0 and not r.get("big_pic_fg", r["n_pic"] > 0)
+                and not _composed_void(r)):
             warns.append(f"DEAD BOTTOM: slide {i+1} content stops at {r['content_bottom']*100:.0f}% of the "
                          f"canvas height — the bottom band is a void; enrich the point, pull a supporting "
                          f"row/banner down into it, or record the quiet-register exception (frame-fill rule)")
@@ -1537,9 +1571,23 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False):
         # This is how sparse content evades the ink-coverage checks — a few items spaced out, or all
         # content hugging one side, covers enough total area while a whole column of canvas stays
         # empty top to bottom. Interior content slides only; big imagery/charts earn their space.
+        # The escape this warning NAMES did not exist. Its own message ends "or record the
+        # quiet-register exception (frame-fill rule)" and troubleshooting-faq.md tells the author to
+        # "declare the quiet register with design_intent(envelope=…)" — and the condition below had
+        # no `intent` term at all, so the declaration was ignored and the slide flagged forever.
+        # That is the identical bug fixed ~60 lines above for LOPSIDED, whose comment is still there:
+        # "promised a quiet-register exemption that the code never implemented … and the advice
+        # ('rebalance') is the one piece of guidance that would wreck an editorial composition."
+        # STRETCHED THIN is the check most precisely aimed at a deliberate one-sided composition —
+        # a full-bleed band with one small element beside it IS an 18%-wide void with ink on one
+        # flank — so a phantom escape hurt most exactly where it was most needed. It now reads the
+        # same two keys LOPSIDED does. `weight=` is the right one here: this warning is about a
+        # blank vertical CHANNEL, which is what a declared one-sided composition has by definition.
+        _si = r.get("intent") or {}
         if (lums and mode != "surface" and 0 < i < last_body and r["load"] >= 15
                 and len(lums[i]) > 2 and lums[i][2] >= 0.18
                 and not (len(lums[i]) > 3 and lums[i][3] >= 0.08)
+                and not _si.get("weight") and not _si.get("envelope")
                 and r["n_chart"] == 0 and not r.get("big_pic_fg", r["n_pic"] > 0)):
             warns.append(f"STRETCHED THIN: slide {i+1} has a blank vertical channel spanning "
                          f"{lums[i][2]*100:.0f}% of the slide width through its interior — spacing few "

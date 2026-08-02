@@ -510,7 +510,7 @@ ask of each element "is there suitable, balanced space around it, or is it crowd
   it): tie every flip to a repeating family (all dividers dark, dark cover+closer bookends). On a
   generated-identity deck the rule is stricter still — see generated-template.md: rhythm comes from
   imagery strength, never from abandoning the plate on one page.
-- **No large empty region — fill the slide, balanced.** A slide that's mostly blank (content
+- **No large LEFTOVER empty region — fill the slide, balanced.** *(The qualifier is load-bearing: a composed void — one dominant element with air deliberately around it — is design, and the lint now tells the two apart by typographic dominance + object count rather than by ink alone. What follows is about the leftover kind.)*  A slide that's mostly blank (content
   huddled in one corner or the top third, a wide empty band down a side or across the bottom) reads
   as unfinished — don't ship it. **Default fix: ENRICH the content** — add the supporting detail,
   example, sub-point, caption, mini-diagram, or data the point actually deserves so the slide earns

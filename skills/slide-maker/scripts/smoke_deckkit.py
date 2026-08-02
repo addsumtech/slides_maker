@@ -1127,6 +1127,95 @@ def _image_grid():
     except ValueError:
         pass
     assert len(s2.shapes) == before, "a refusal must not leave a half-drawn slide"
+def _design_strategy_escapes():
+    """Two moves ordinary editorial design makes, which the gates used to refuse outright.
+
+    Both directions matter more than usual here: the point is NOT to loosen a floor, it is to let a
+    COMPOSITION through while an ACCIDENT still fails. If the accident stops failing, the change was
+    a regression dressed as a feature.
+    """
+    import io, contextlib
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import lint_deck as _ld
+
+    def build(fn):
+        prs = dk.blank_deck(); sl = dk.add_slide(prs); fn(sl)
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                dk.lint_layout(prs, verbose=False, strict=True)
+            return True
+        except Exception:
+            return False
+
+    def giant(sl, declare):
+        big = dk.text(sl, 0.4, 1.2, 9.2, 2.4,
+                      [[("SCALE", 150, dk.TINT, True, False, dk.DISPLAY or dk.FONT)]], space_after=0)
+        if declare:
+            dk.overlap_intent(big, "the display word is the ground the caption rides — scale contrast")
+        dk.text(sl, 1.2, 2.6, 5.0, 0.5,
+                [[("a caption riding the giant", 13, dk.DEEP, False, False, dk.FONT)]], space_after=0)
+
+    def collision(sl):
+        # Deliberately a NEAR-TOTAL overlap. TEXT_OVERLAP deflates each ink box by that run's
+        # font-substitution slack, to keep the "never fabricates when fonts are substituted"
+        # promise — so a marginal collision detects differently on a machine with the deck's fonts
+        # than without. A fixture that must fail everywhere has to clear that slack by a mile.
+        blk = [[("Body copy that is long enough to fill several lines of the block it sits in, "
+                 "twice over, so the ink rectangles genuinely coincide.", 15, dk.DEEP, False,
+                 False, dk.FONT)]]
+        dk.text(sl, 1.0, 2.0, 5.0, 1.6, blk, space_after=0)
+        dk.text(sl, 1.05, 2.05, 5.0, 1.6, blk, space_after=0)
+
+    assert not build(lambda sl: giant(sl, False)), "an UNdeclared overlap must still be refused"
+    assert build(lambda sl: giant(sl, True)), "a DECLARED composed overlap must build"
+    assert not build(collision), "an accidental text collision must still fail after the escape"
+    for bad in ("", "because", 42):
+        try:
+            prs = dk.blank_deck(); sl = dk.add_slide(prs)
+            t = dk.text(sl, 1, 1, 3, 1, [[("x", 20, dk.DEEP, False, False, dk.FONT)]])
+            dk.overlap_intent(t, bad)
+            assert False, "overlap_intent must demand a real reason, got %r" % (bad,)
+        except (ValueError, TypeError):
+            pass
+
+    # COMPOSED vs LEFTOVER whitespace — the same void, judged by whether a protagonist earns it
+    def hero(sl):
+        dk.text(sl, 0.7, 1.3, 8.6, 1.6,
+                [[("Four times faster than the clinical protocol", 60, dk.DEEP, True, False, dk.FONT)]],
+                space_after=0)
+        dk.text(sl, 0.7, 3.3, 5.4, 0.5,
+                [[("at eight-fold undersampling on held-out subjects", 15, dk.SLATE, False, False,
+                   dk.FONT)]], space_after=0)
+
+    def crowd(sl):
+        dk.text(sl, 0.6, 0.45, 8.8, 0.4,
+                [[("Section overview of the current status", 18, dk.DEEP, True, False, dk.FONT)]],
+                space_after=0)
+        for k in range(8):
+            dk.text(sl, 0.6 + (k % 4) * 2.2, 1.15 + (k // 4) * 0.5, 2.0, 0.35,
+                    [[("workstream %d ongoing" % (k + 1), 13, dk.SLATE, False, False, dk.FONT)]],
+                    space_after=0)
+
+    def voids(fn):
+        prs = dk.blank_deck()
+        c = dk.add_slide(prs)
+        dk.text(c, 0.6, 2.2, 8.8, 1.0, [[("Cover", 40, dk.DEEP, True, False, dk.FONT)]])
+        for _ in range(3):
+            fn(dk.add_slide(prs))
+        z = dk.add_slide(prs)
+        dk.text(z, 0.6, 2.2, 8.8, 1.0, [[("Closing", 36, dk.DEEP, True, False, dk.FONT)]])
+        f = os.path.join(TMP, "voidprobe.pptx"); prs.save(f)
+        st = {}
+        with contextlib.redirect_stdout(io.StringIO()):
+            _ld.lint(f, mode="presented", static_ok=True, stats_out=st)
+        return [w.split(":")[0] for w in st.get("warns", [])
+                if w.startswith(("UNDERFILLED", "DEAD BOTTOM"))]
+
+    assert not voids(hero), "a 60pt protagonist with two objects earns its air — got %s" % voids(hero)
+    assert voids(crowd), "flat type with nine peers and the same void is LEFTOVER, and must warn"
+ok("design-strategy escapes (declared overlap · composed vs leftover void)",
+   _design_strategy_escapes)
+
 ok("image_grid (real-rect labels · one AR · 11 refusals · nothing drawn on refuse)", _image_grid)
 
 ok("structural tokens (set_geometry no-op at default · reaches box · presets carry them)",

@@ -328,6 +328,9 @@ def numeral_face(preferred=None, fallback=None):
 
 # Shape-name marker for decorative background numerals (ghost_numeral / big_numeral mode='ghost').
 WATERMARK_TAG = "deckkit-watermark"
+# Prefix for a DELIBERATE overlap. The reason travels in the shape name, so the declaration is
+# evidence carried by the artifact rather than a claim in a plan file nobody re-reads.
+OVERLAP_TAG = "deckkit-overlap:"
                           # to FONT. Pairing roles (display / body / mono) beats one font for the
                           # whole deck — see references/font-guidance.md ("Type pairing").
 EADISPLAY = None          # optional CJK DISPLAY/title font (e.g. "Hiragino Sans GB" titles over a
@@ -4594,6 +4597,40 @@ def small_multiples(slide, x, y, w, h, panels, *, categories=None, cols=None, ki
     return y + rows_n * (ph + 0.24) + (rows_n - 1) * gap
 
 
+def overlap_intent(shape, reason):
+    """Declare that THIS element is meant to sit under (or over) other text — a composed overlap.
+
+    `lint_layout`'s TEXT_OVERLAP is a CRITICAL that refuses to save, and it is right to be: two text
+    blocks colliding is the single most common way a build ships unreadable. But it also blocks two
+    moves that are ordinary editorial design — a giant display word with a small line riding it, and
+    background geometry running through a paragraph — and there was no way to say "this one is on
+    purpose". Measured: both compositions were refused at build time, so the deck could not be saved
+    at all.
+
+    The escape is a TAG, not a threshold, and that decision is already made in this file:
+    `ghost_numeral` is excluded from the old-style-figures check by an exact tag, with the reason
+    written beside it — "Guessing from size either waves through a real defect or blocks a legitimate
+    watermark." The same logic holds here. A size or opacity heuristic would wave through a real
+    collision on the day a title happened to be large.
+
+    `reason` is required and must be a sentence someone can disagree with later, because that is what
+    separates a decision from a reflex — and the count of declared overlaps is printed by the lint,
+    so a deck that declares its way out of everything is visible (the INTENT INFLATION lesson).
+
+        big = dk.text(s, 0.4, 1.2, 9.2, 2.4, [[("SCALE", 150, dk.TINT, True, False, dk.DISPLAY)]])
+        dk.overlap_intent(big, "the display word is the ground the caption rides — scale contrast")
+        dk.text(s, 1.2, 2.6, 5.0, 0.5, [[("a caption on the giant", 13, dk.DEEP, False, False)]])
+
+    Legibility is NOT waived by this. The declaration says the geometry is intended; contrast,
+    TEXT NOT VISIBLE and the render-time occlusion checks still apply, and they are the floor.
+    """
+    if not isinstance(reason, str) or len(reason.strip()) < 16:
+        raise ValueError("overlap_intent(reason=%r): write why this overlap is composed, in a "
+                         "sentence someone can disagree with later (>=16 chars). An undeclared "
+                         "collision and a declared composition must not read the same." % (reason,))
+    shape.name = OVERLAP_TAG + " ".join(str(reason).strip().split())[:120]
+    return shape
+
 def design_intent(slide, *, envelope=None, rhyme=None, weight=None, role=None, reason=""):
     """Declare a slide's DELIBERATE design register so the render-time lint can tell intent
     from accident (three of its messages say "record the quiet-register exception" — this is
@@ -6561,8 +6598,15 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
         def _deflate(t):
             ink, s = t[1], t[3]
             return (ink[0], ink[1]+s/2.0, ink[2], max(0.03, ink[3]-s))
+        def _declared(t):
+            return (getattr(t[0], "name", "") or "").startswith(OVERLAP_TAG)
         for i in range(len(text_inks)):
             for j in range(i+1, len(text_inks)):
+                # a DECLARED overlap is a composition, not a collision. Either side may carry it —
+                # the giant display word or the line riding it. Legibility is unaffected: contrast
+                # and the render-time occlusion checks are floors and still apply.
+                if _declared(text_inks[i]) or _declared(text_inks[j]):
+                    continue
                 a, b = _deflate(text_inks[i]), _deflate(text_inks[j])
                 ov = _overlap_area(a, b)
                 if ov > overlap_tol and ov > 0.22*min(a[2]*a[3], b[2]*b[3]):
