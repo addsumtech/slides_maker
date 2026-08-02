@@ -758,19 +758,18 @@ def main():
     # and title_txt feeds the TITLE SPINE that the coordinator and both critic lenses read as the
     # deck's argument. One measured deck presented its argument as three pieces of chrome.
     import deckkit as _dk
-    _dk.FONT = "Helvetica"
     _prs = _dk.blank_deck(10, 5.625)
     for _c, _t in (("FIRES", "The gate reported clean"),
                    ("SILENT", "The lint could not see it"),
                    ("ADVISORY", "Bind the claim to an artifact")):
         _s = _dk.add_slide(_prs)
-        _dk.text(_s, 0.5, 0.52, 2.0, 0.3, [[(_c, 9.5, _dk.MUTE, False, False, "Helvetica")]],
+        _dk.text(_s, 0.5, 0.52, 2.0, 0.3, [[(_c, 9.5, _dk.MUTE, False, False, _dk.FONT)]],
                  space_after=0)
-        _dk.text(_s, 0.5, 1.30, 8.5, 0.7, [[(_t, 30, _dk.DEEP, False, False, "Helvetica")]],
+        _dk.text(_s, 0.5, 1.30, 8.5, 0.7, [[(_t, 30, _dk.DEEP, False, False, _dk.FONT)]],
                  space_after=0)
         _dk.text(_s, 0.5, 2.40, 8.5, 1.5,
                  [[("Body copy at eighteen point with enough words to form a real body tier.",
-                    18, _dk.SLATE, False, False, "Helvetica")]], space_after=0)
+                    18, _dk.SLATE, False, False, _dk.FONT)]], space_after=0)
     _prs.save(str(tmp / "fx_title.pptx"))
     _o = lint(tmp / "fx_title.pptx", tmp / "fx_title_render")
     if ran(_o, "title spine"):
@@ -786,13 +785,27 @@ def main():
     # under-measures uppercase (~0.66em real) and over-measures narrow glyphs and spaces
     # (~0.26em real), so it both MISSED real collisions and INVENTED them. The false positive is
     # the expensive one: on the measured build an author rewrote two correct titles to satisfy it.
-    _F = "Helvetica Neue"
-    _dk.FONT = _F
+    # The BOX WIDTHS below are computed from whatever face this machine actually resolves, not
+    # hardcoded. A fixture tuned to macOS Helvetica silently stops discriminating on a CI runner
+    # that has neither Helvetica nor Courier and falls everything back to DejaVu Sans — it still
+    # passes, while testing nothing. Both error DIRECTIONS survive substitution (measured: caps
+    # +17..+22%, narrow -34..-46% across Helvetica Neue / Helvetica / Calibri / DejaVu Sans); only
+    # the magnitudes move, so the widths have to move with them.
+    import lint_deck as _L
+    _F = _dk.FONT
+    _caps = "MEASUREMENT THAT CANNOT SEE THE FACE IS NOT MEASUREMENT"
+    _flat_caps = len(_caps) * (26 / 72.0) * 0.52
+    _real_caps = _L._text_w(_caps, 26, _F, True)
+    _w_caps = (_flat_caps + _real_caps) / 2.0      # flat says it fits; the real face says it wraps
+    # Place the body BETWEEN the one-line and two-line bottoms, using the linter's own line height
+    # (_est_lines x size/72 x 1.25 for non-CJK). Then the flat estimate — which believes the title
+    # fits on one line — sees clear space, and the real face, which wraps it to two, sees a
+    # collision. That is the discrimination; a body parked well below both would pass either way.
+    _lh = (26 / 72.0) * 1.25
     _prs = _dk.blank_deck(10, 5.625); _s = _dk.add_slide(_prs)
-    _dk.text(_s, 0.5, 1.0, 6.0, 0.55,
-             [[("MEASUREMENT THAT CANNOT SEE THE FACE IS NOT MEASUREMENT", 26, _dk.DEEP,
-                True, False, _F)]], space_after=0)
-    _dk.text(_s, 0.5, 2.05, 6.0, 1.2,
+    _dk.text(_s, 0.5, 1.0, _w_caps, 0.55,
+             [[(_caps, 26, _dk.DEEP, True, False, _F)]], space_after=0)
+    _dk.text(_s, 0.5, 1.0 + 1.5 * _lh, _w_caps, 1.2,
              [[("The body sits directly beneath and the caps title wraps into it.", 16,
                 _dk.SLATE, False, False, _F)]], space_after=0)
     _prs.save(str(tmp / "fx_caps.pptx"))
@@ -804,9 +817,13 @@ def main():
         else:
             bad.append("ALL-CAPS under-measurement is back: a real collision reads clean")
 
+    _narrow = "illicit if it fits, it fits"
+    _flat_n = len(_narrow) * (26 / 72.0) * 0.52
+    _real_n = _L._text_w(_narrow, 26, _F, False)
+    _w_narrow = (_real_n + _flat_n) / 2.0          # the real face fits on one line; flat says wrap
     _prs = _dk.blank_deck(10, 5.625); _s = _dk.add_slide(_prs)
-    _dk.text(_s, 0.5, 1.0, 3.6, 0.42,
-             [[("illicit if it fits, it fits", 26, _dk.DEEP, False, False, _F)]], space_after=0)
+    _dk.text(_s, 0.5, 1.0, _w_narrow, 0.42,
+             [[(_narrow, 26, _dk.DEEP, False, False, _F)]], space_after=0)
     _dk.text(_s, 0.5, 1.5, 6.0, 1.0,
              [[("Body copy immediately beneath the single-line title.", 16, _dk.SLATE,
                 False, False, _F)]], space_after=0)

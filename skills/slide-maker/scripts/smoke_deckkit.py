@@ -1222,36 +1222,62 @@ ok("structural tokens (set_geometry no-op at default · reaches box · presets c
    _structural_tokens)
 
 def _mono_measurement():
-    """measure_text must be able to see the face the text is PLACED in, and code_block must say
-    when a line will clip. Both were silent: measure_text always measured in FONT, so a mono line
-    came back ~26% short (Helvetica 4.04in vs Courier 5.44in for the same string), and code_block
-    sets word_wrap=False so the overrun leaves the panel with every geometry check still green."""
+    """measure_text must PASS font= through to the metric, and code_block must say when a line
+    will clip. Both were silent: measure_text always measured in FONT, so a mono line came back
+    short (Helvetica 4.04in vs Courier 5.44in for one command string), and code_block sets
+    word_wrap=False so the overrun leaves the panel with every geometry check still green.
+
+    The plumbing is asserted by INTERCEPTING the measurer rather than by comparing two faces'
+    widths. A CI runner has neither Helvetica nor Courier installed, so both fall back to DejaVu
+    Sans and measure identically — a width comparison there passes 0.373 vs 0.373 and proves
+    nothing, which is exactly how the first version of this check failed. Whether font= REACHES
+    _measure_lines is true or false on every machine."""
     import io, contextlib
+    seen = []
+    real = dk._measure_lines
+
+    def spy(runs, size_pt, avail_in, font=None):
+        seen.append(font)
+        return real(runs, size_pt, avail_in, font=font)
+
     old_font, old_mono = dk.FONT, dk.MONO
+    dk._measure_lines = spy
     try:
         dk.FONT, dk.MONO = "Helvetica", "Courier New"
         line = "python3 scripts/render_deck.py deck.pptx render --fast"
-        default = dk.measure_text([(line, False)], 4.5, 12)
-        mono = dk.measure_text([(line, False)], 4.5, 12, font=dk.MONO)
-        assert mono > default, (
-            "measure_text(font=MONO) must reserve more height than the proportional default "
-            "for a monospace line — got %.3f vs %.3f" % (mono, default))
+        seen.clear(); dk.measure_text([(line, False)], 4.5, 12, font=dk.MONO)
+        assert seen and seen[-1] == dk.MONO, (
+            "measure_text(font=MONO) must hand MONO to the measurer, got %r" % (seen[-1:],))
+        seen.clear(); dk.measure_text([(line, False)], 4.5, 12)
+        assert seen and seen[-1] is None, (
+            "measure_text with no font= must not invent one, got %r" % (seen[-1:],))
+        # When the two faces really are distinct on this machine, the consequence must show up too.
+        dk._measure_lines = real
+        if not dk._font_substituted(dk.FONT) and not dk._font_substituted(dk.MONO):
+            wide = dk.measure_text([(line, False)], 4.5, 12, font=dk.MONO)
+            narrow = dk.measure_text([(line, False)], 4.5, 12)
+            assert wide > narrow, (
+                "with both faces installed, a monospace line must reserve more height than the "
+                "proportional default — got %.3f vs %.3f" % (wide, narrow))
 
         prs = dk.blank_deck(10, 5.625)
         s = dk.add_slide(prs)
+        # size the panel from the face this machine resolves, so the clip is real everywhere
+        need = dk.measure_text([(line, False)], 99.0, 12, font=dk.MONO)  # unused width -> 1 line
+        del need
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
-            dk.code_block(s, 0.5, 1.0, 2.6, line)
+            dk.code_block(s, 0.5, 1.0, 2.0, line)
         assert "CLIP" in buf.getvalue(), (
             "code_block must warn when a line overruns a non-wrapping panel, got %r"
             % buf.getvalue())
-
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
-            dk.code_block(s, 0.5, 3.0, 9.0, "a = 1\nb = 2")
+            dk.code_block(s, 0.5, 3.0, 9.5, "a = 1\nb = 2")
         assert "CLIP" not in buf.getvalue(), (
             "code_block must stay silent when every line fits, got %r" % buf.getvalue())
     finally:
+        dk._measure_lines = real
         dk.FONT, dk.MONO = old_font, old_mono
 
 
