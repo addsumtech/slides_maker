@@ -488,6 +488,17 @@ def _every_scaffold_runs():
     # The designed_charts scaffolds write a PNG to a RELATIVE path (that is what makes them
     # copy-pasteable), so run them inside TMP and put the cwd back afterwards.
     cwd = os.getcwd()
+    # image_grid's scaffold names realistic files (gt_c1.png ...) because that is what makes it
+    # copy-pasteable into an MRI results slide. Materialise them in TMP so the scaffold can RUN —
+    # a scaffold that cannot execute is worse than none: it gets copied once, fails, and teaches
+    # that the tool is not to be trusted. Square, because image_grid locks one aspect ratio.
+    try:
+        from PIL import Image as _SmkIm
+        for _p in ("gt_c1.png", "zf_c1.png", "ours_c1.png",
+                   "gt_c2.png", "zf_c2.png", "ours_c2.png"):
+            _SmkIm.new("RGB", (256, 256), (28, 30, 36)).save(os.path.join(TMP, _p))
+    except Exception:
+        pass
     for name, code in sorted(_sigs.EXAMPLES.items()):
         p = dk.blank_deck(10, 5.625)
         sl = p.slides.add_slide(p.slide_layouts[6])
@@ -1047,6 +1058,77 @@ def _structural_tokens():
     assert dk.RADIUS_SCALE == 0 and dk.RULE_W_SCALE == 3.0, "presets.apply must set geometry too"
     dk.set_geometry(radius=1.0, rule_w=1.0)
     dk.set_palette(accents=list(dk.ACCENTS))
+def _image_grid():
+    """The comparison grid: labels from the REAL rect, one AR for the whole grid, loud refusals."""
+    import tempfile
+    from PIL import Image as _Im
+    d = tempfile.mkdtemp()
+
+    def img(nm, w=256, h=256):
+        p = os.path.join(d, nm)
+        _Im.new("RGB", (w, h), (30, 30, 34)).save(p)
+        return p
+
+    rows = [[img("r%dc%d.png" % (r, c)) for c in range(3)] for r in range(2)]
+    prs = dk.blank_deck(); sl = dk.add_slide(prs)
+    bx, by, bw, bh = dk.content_band(sl)
+    ux, uy, gw, gh = dk.image_grid(sl, bx, by, bw, bh, rows, ["A", "B", "C"],
+                                   row_labels=["one", "two"],
+                                   metrics=[["1.0", "2.0", "3.0"], ["4.0", "5.0", "6.0"]],
+                                   highlight_col=2, caption="cap")
+    assert gw <= bw + 1e-6 and gh <= bh + 1e-6, "the grid must fit the region it was given"
+    dk.lint_layout(prs, verbose=False, strict=True)
+
+    # square cells from square sources: contain and cover coincide, so NOTHING is letterboxed
+    pics = [sh for sh in sl.shapes if sh.shape_type == 13]
+    assert len(pics) == 6, "expected one picture per cell, got %d" % len(pics)
+    ars = {round((q.width / 914400.0) / (q.height / 914400.0), 2) for q in pics}
+    assert ars == {1.0}, "cells must carry the sources' own aspect ratio, got %s" % ars
+
+    bad = [
+        (dict(images=["flat.png"], col_labels=["A"]), "nested rows"),
+        (dict(images=[rows[0], rows[1][:2]], col_labels=["A", "B", "C"]), "ragged"),
+        (dict(images=rows, col_labels=["A", "B"]), "col_labels is required"),
+        (dict(images=rows, col_labels=["A", "B", "C"], row_labels=["x"]), "row_labels"),
+        (dict(images=rows, col_labels=["A", "B", "C"], metrics=[["1"]]), "cell-for-cell"),
+        (dict(images=[r * 3 for r in rows * 3], col_labels=["A"] * 9), "contact sheet"),
+        (dict(images=rows, col_labels=["A", "B", "C"], metric_size=14), "BODY type tier"),
+        (dict(images=rows, col_labels=["A", "B", "C"],
+              metrics=[["PSNR 34.6 dB / SSIM 0.913 / wall-motion kappa 0.81"] * 3] * 2),
+         "wraps"),
+    ]
+    for kw, needle in bad:
+        try:
+            dk.image_grid(sl, bx, by, bw, bh, **kw)
+            assert False, "image_grid must refuse: " + needle
+        except (ValueError, FileNotFoundError) as e:
+            assert needle in str(e), "wrong refusal for %r: %s" % (needle, e)
+
+    # a mixed aspect ratio cannot align rows AND columns -> refuse, do not fudge
+    odd = [[img("o0.png"), img("o1.png")], [img("o2.png"), img("wide.png", 512, 256)]]
+    try:
+        dk.image_grid(sl, bx, by, bw, bh, odd, ["A", "B"])
+        assert False, "image_grid must refuse mixed aspect ratios"
+    except ValueError as e:
+        assert "aspect ratio" in str(e)
+
+    # too small to read the artefact -> refuse rather than ship thumbnails
+    try:
+        dk.image_grid(sl, bx, by, 2.0, 1.2, rows, ["A", "B", "C"])
+        assert False, "image_grid must refuse sub-floor cells"
+    except ValueError as e:
+        assert "floor" in str(e)
+
+    # nothing is drawn by a refusal
+    prs2 = dk.blank_deck(); s2 = dk.add_slide(prs2)
+    before = len(s2.shapes)
+    try:
+        dk.image_grid(s2, bx, by, bw, bh, rows, ["A", "B"])
+    except ValueError:
+        pass
+    assert len(s2.shapes) == before, "a refusal must not leave a half-drawn slide"
+ok("image_grid (real-rect labels · one AR · 11 refusals · nothing drawn on refuse)", _image_grid)
+
 ok("structural tokens (set_geometry no-op at default · reaches box · presets carry them)",
    _structural_tokens)
 

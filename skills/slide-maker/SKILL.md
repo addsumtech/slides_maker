@@ -719,7 +719,17 @@ The helper set, by job:
   MEASUREMENTS rather than a count, since a bar of sample means hides n, shape and outliers;
   **`marimekko`** — size *and* share at once; **`radar`** — a profile across 3–8 axes, ≤3 series)
   — pick per `references/data-viz.md`.
-- **Walkthrough / hierarchy / comparison-grid:** **`annotated_figure`** (a real figure + numbered
+- **Walkthrough / hierarchy / comparison-grid:** **`image_grid`** (an N×M LABELLED IMAGE
+  COMPARISON — methods across the columns, cases down the rows, a metric under each cell. THE
+  results slide of an image/reconstruction talk, and the one image idiom where a grid IS the
+  argument, so `form-selection.md`'s "one strong image beats a grid of small ones" does not apply.
+  It reads each picture's REAL placed rect back and derives every label from it, and locks ONE
+  aspect ratio for the whole grid so `contain` and `cover` coincide — zero letterbox, zero crop, by
+  construction. Refuses mixed FOVs, ragged rows, a missing `col_labels`, >16 cells, sub-0.8in cells
+  and a metric that wraps, rather than shipping unreadable thumbnails. Measured on the hand-rolled
+  version it replaces: every label 0.67in off the panel it named, 65% of each cell lost to
+  letterbox — and `lint_deck` reported `0 findings ✓ clean`, because `CAPTION NOT ALIGNED`
+  structurally cannot fire on a multi-row grid) · **`annotated_figure`** (a real figure + numbered
   markers + a numbered caption rail + optional magnified inset — the guided figure walkthrough the
   integral-figure rule kept demanding by hand) · **`small_multiples`** (identical mini native charts
   with a SHARED value axis — the documented recipe left each panel auto-scaling, so a small bump and

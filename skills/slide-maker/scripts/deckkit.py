@@ -4354,6 +4354,187 @@ def position_map(slide, x, y, w, h, points, *, x_labels=("low", "high"), y_label
     return y + h
 
 
+def image_grid(slide, x, y, w, h, images, col_labels, *,
+               row_labels=None, metrics=None,
+               highlight_col=None, highlight_row=None, caption=None,
+               accent=None, ink=None, mute=None,
+               label_size=10.0, metric_size=None, font=None,
+               ar_tol=0.06, max_cells=16, min_cell=0.80, gap=None, alt=None):
+    """An N×M LABELLED IMAGE COMPARISON GRID — methods across the columns, cases down the rows.
+
+    The results slide of an image-reconstruction talk: reference · zero-filled · baseline · ours,
+    over two or three cases, each cell carrying its own metric. `images[row][col]` are paths;
+    `col_labels` is POSITIONAL because an unlabelled comparison grid says nothing about what is
+    being compared (the same reason `unit_grid` demands its unit label).
+
+    Two things it guarantees that a hand-rolled grid does not, both measured on a real hand-roll:
+
+    **Every label is placed from the image's REAL rect**, read back after placement, never from the
+    cell frame. The hand-roll put every column header and every per-cell metric 0.672in from the
+    panel it named — and no lint could catch it: `CAPTION NOT ALIGNED` bails on a multi-row grid,
+    because the next image row falls inside its caption scan band.
+
+    **One aspect ratio governs the whole grid** — the median of the images' own. The cell is then
+    built at that ratio, so `fit="contain"` and `fit="cover"` coincide and there is ZERO letterbox
+    and ZERO crop by construction; neither operation is ever performed. The hand-roll wasted 65% of
+    every cell to letterbox; `photo_triptych` takes the other branch and silently crops 12–24% off
+    scientific data. Images that do not share that ratio are REFUSED rather than fudged (`ar_tol`):
+    mixed aspect ratios cannot align rows AND columns, and the honest fix is a common FOV crop.
+
+    Returns the grid's ACTUALLY USED rect `(x, y, w, h)` in inches — it is aspect-locked, so it
+    rarely fills a 16:9 region, and the caller wants the leftover for the so-what (`takeaway_rail`).
+
+    `metrics` are pre-formatted STRINGS ("34.6", never 34.6): a float would need a `value_fmt`
+    parameter and re-open the format-dialect bug class. Keep them ≤11pt so a dozen per-cell numbers
+    stay chrome and do not drag the deck's body median into `SMALL TYPE`.
+    """
+    import os as _os
+    import statistics as _stats
+
+    acc = accent if accent is not None else MAGENTA
+    ic = ink if ink is not None else DEEP
+    mc = mute if mute is not None else MUTE
+    ms = float(label_size if metric_size is None else metric_size)
+    fnt = font or FONT
+
+    # ── validate EVERYTHING before drawing a single shape: a refusal must never leave a
+    #    half-drawn slide behind for the author to clean up.
+    if not isinstance(images, (list, tuple)) or not images or \
+            not all(isinstance(r, (list, tuple)) and r for r in images):
+        raise ValueError("image_grid(): images must be nested rows — images[row][col], e.g. "
+                         "[[a, b], [c, d]]. A flat list has no row structure to align.")
+    nr = len(images)
+    widths = {len(r) for r in images}
+    if len(widths) != 1:
+        raise ValueError("image_grid(): ragged rows (%s) — every row needs the same N cells; a "
+                         "ragged grid cannot align columns." % (sorted(widths),))
+    nc = len(images[0])
+    if not col_labels or len(col_labels) != nc or not all(str(c).strip() for c in col_labels):
+        raise ValueError("image_grid(): col_labels is required and must have %d non-blank entries "
+                         "— an unlabelled comparison grid says nothing about what is being "
+                         "compared." % nc)
+    if row_labels is not None and len(row_labels) != nr:
+        raise ValueError("image_grid(): row_labels must have %d entries, one per row, got %d."
+                         % (nr, len(row_labels)))
+    if metrics is not None and (len(metrics) != nr or any(len(m) != nc for m in metrics)):
+        raise ValueError("image_grid(): metrics must match images cell-for-cell (%dx%d), got %s."
+                         % (nr, nc, [len(m) for m in metrics]))
+    if nr * nc > max_cells:
+        raise ValueError("image_grid(): %dx%d = %d cells is a contact sheet, not a comparison "
+                         "(cap %d). Cut methods, or split across two slides."
+                         % (nr, nc, nr * nc, max_cells))
+    if ms > 11.0:
+        raise ValueError("image_grid(): metric_size %.1f exceeds 11pt, which puts %d per-cell "
+                         "numbers into the deck's BODY type tier and will drag the body median. "
+                         "Keep per-cell metrics as chrome (<=11pt)." % (ms, nr * nc))
+    flat = [p for row in images for p in row]
+    missing = [p for p in flat if not _os.path.isfile(str(p))]
+    if missing:
+        raise FileNotFoundError("image_grid(): %d image(s) do not exist, e.g. %r — nothing was "
+                                "drawn." % (len(missing), missing[0]))
+    _sw, _sh = _slide_size(slide)
+    floor_y = _sh - FOOTER_BAND - 0.15
+    if y + h > floor_y + 1e-6:
+        raise ValueError("image_grid(): the region bottom (%.2fin) enters the reserved footer band "
+                         "(content must stay above %.2fin). Derive the region from content_band()."
+                         % (y + h, floor_y))
+
+    # ── ONE aspect ratio for the grid: the median of the images' own.
+    from PIL import Image as _Im
+    ars = []
+    for p in flat:
+        with _Im.open(str(p)) as im:
+            iw, ih = im.size
+        ars.append(float(iw) / float(ih) if ih else 1.0)
+    ar = _stats.median(ars)
+    worst = max(range(len(ars)), key=lambda i: abs(ars[i] - ar))
+    if abs(ars[worst] - ar) / ar > ar_tol:
+        raise ValueError("image_grid(): %s has aspect ratio %.3f against the grid's %.3f (tol "
+                         "%.2f). Mixed aspect ratios cannot align rows AND columns — crop to a "
+                         "common FOV with scripts/crop_helper.py."
+                         % (_os.path.basename(str(flat[worst])), ars[worst], ar, ar_tol))
+
+    # ── reserve the label bands, all deterministic (no circularity with the cell size)
+    lh = label_size / 72.0 * _LINT_LINE_H
+    col_band = lh + 0.08
+    metric_band = (ms / 72.0 * _LINT_LINE_H + 0.05) if metrics is not None else 0.0
+    cap_band = (measure_text([(str(caption), False)], w, label_size) + 0.10) if caption else 0.0
+    row_gutter = 0.0
+    if row_labels is not None:
+        row_gutter = 1.40
+        for g in [round(0.50 + 0.05 * k, 2) for k in range(19)]:
+            if all(measure_lines([(str(l), False)], label_size, g - 0.10, fnt) <= 2
+                   for l in row_labels):
+                row_gutter = g
+                break
+
+    gw = w - row_gutter
+    gh = h - col_band - cap_band
+    if gap is None:
+        gap = max(0.05, min(0.18, 0.055 * (gw / float(nc))))
+    cw_a = (gw - (nc - 1) * gap) / float(nc)
+    ch_b = (gh - (nr - 1) * gap - nr * metric_band) / float(nr)
+    cw = min(cw_a, ch_b * ar)
+    ch = cw / ar
+    if min(cw, ch) < min_cell:
+        raise ValueError("image_grid(): a %dx%d grid in %.1fx%.1fin gives %.2fx%.2fin cells (floor "
+                         "%.2fin) — a thumbnail that small cannot show the artefact you are "
+                         "comparing. Drop a column, drop a row, or give the grid the full content "
+                         "band." % (nr, nc, w, h, cw, ch, min_cell))
+    if metrics is not None:
+        for r_i, row in enumerate(metrics):
+            for c_i, m in enumerate(row):
+                if measure_lines([(str(m), False)], ms, cw, fnt) > 1:
+                    raise ValueError("image_grid(): metric %r wraps at the %.2fin cell width — "
+                                     "shorten it ('34.6', not 'PSNR = 34.6 dB') and put the unit "
+                                     "in the column header." % (str(m), cw))
+
+    grid_w = nc * cw + (nc - 1) * gap
+    grid_h = nr * (ch + metric_band) + (nr - 1) * gap
+    ux = x + row_gutter + max(0.0, (gw - grid_w) / 2.0)
+    uy = y + col_band
+
+    # ── draw, then derive EVERY label from the rect the picture actually got
+    for r_i in range(nr):
+        cy = uy + r_i * (ch + metric_band + gap)
+        for c_i in range(nc):
+            cx = ux + c_i * (cw + gap)
+            hot = (c_i == highlight_col) or (r_i == highlight_row)
+            lbl = str(col_labels[c_i]) + (", " + str(row_labels[r_i]) if row_labels else "")
+            pic = picture(slide, str(images[r_i][c_i]), cx, cy, cw, ch, fit="contain",
+                          alt="%s: %s" % (alt or "comparison", lbl))
+            px = pic.left / 914400.0
+            py = pic.top / 914400.0
+            pw = pic.width / 914400.0
+            ph = pic.height / 914400.0
+            if hot:
+                box(slide, px - 0.035, py - 0.035, pw + 0.07, ph + 0.07,
+                    fill=None, line=acc, line_w=1.5)
+            if r_i == 0:
+                text(slide, px, y, pw, col_band,
+                     [[(str(col_labels[c_i]), label_size,
+                        acc if c_i == highlight_col else ic, True, False, fnt)]],
+                     align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.BOTTOM, space_after=0)
+            if c_i == 0 and row_labels is not None:
+                # anchored to the GRID (ux), not to the region's left edge. The grid is centred in
+                # what the gutter leaves, so anchoring to `x` strands the label a centring-offset
+                # away from the row it names — the exact floating-label defect this component
+                # exists to prevent, reintroduced by its own label placement. Caught by looking.
+                text(slide, ux - row_gutter, py + ph / 2.0 - lh, row_gutter - 0.10, 2 * lh,
+                     [[(str(row_labels[r_i]), label_size,
+                        acc if r_i == highlight_row else mc, False, False, fnt)]],
+                     align=PP_ALIGN.RIGHT, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
+            if metrics is not None:
+                text(slide, px, py + ph + 0.03, pw, metric_band,
+                     [[(str(metrics[r_i][c_i]), ms, acc if hot else mc, hot, False,
+                        numeral_run_face(str(metrics[r_i][c_i]), fnt, fallback=fnt))]],
+                     align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.TOP, space_after=0)
+    if caption:
+        text(slide, x, uy + grid_h + 0.10, w, cap_band,
+             [[(str(caption), label_size, mc, False, False, fnt)]], space_after=0)
+    return (ux, uy, grid_w, grid_h)
+
+
 def small_multiples(slide, x, y, w, h, panels, *, categories=None, cols=None, kind="line",
                     accent=None, highlight=None, gap=0.28, label_size=10.5, shared_scale=True,
                     font=None):

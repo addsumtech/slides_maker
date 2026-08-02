@@ -78,6 +78,8 @@ FORM_GUARANTEE = {
     "org_tree": "centroid parents and a horizontal bus; raises when it cannot fit legibly",
     "position_map": "labelled 2-D positions with anti-collision labels",
     "small_multiples": "every panel pinned to ONE shared value axis",
+    "image_grid": ("every label placed from the image's REAL rect, and ONE aspect ratio for the "
+                   "whole grid — so no cell is letterboxed or cropped"),
     "iso_bars": "a FAITHFUL 2.5D bar chart — height linear in the value, zero-based",
     "iso_stack": "an isometric layered stack with labels aligned to each slab",
     "iso_prism": "one extruded isometric block with fixed one-light-source face shading",

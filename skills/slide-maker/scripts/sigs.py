@@ -97,6 +97,13 @@ EXAMPLES = {
                 '            ("CEO", [("Eng", [("Web", [])]), ("Sales", [])]))',
     "position_map": 'dk.position_map(s, 0.8, 0.8, 8.4, 4.2,\n'
                     '                [("A", 1, 1), ("B", 9, 8), ("C", 5, 2)], highlight=1)',
+    "image_grid": 'dk.image_grid(s, *dk.content_band(s),\n'
+                  '              images=[["gt_c1.png", "zf_c1.png", "ours_c1.png"],\n'
+                  '                      ["gt_c2.png", "zf_c2.png", "ours_c2.png"]],\n'
+                  '              col_labels=["Reference", "Zero-filled", "Ours"],\n'
+                  '              row_labels=["Case 01", "Case 02"],\n'
+                  '              metrics=[["--", "26.1", "34.6"], ["--", "25.4", "33.9"]],\n'
+                  '              highlight_col=2, caption="PSNR (dB), 8x undersampled")',
     "small_multiples": 'dk.small_multiples(s, 0.6, 0.6, 8.8, 4.2,\n'
                        '                   [("A", [1, 2, 3]), ("B", [2, 2, 2]), ("C", [1, 5, 9])],\n'
                        '                   categories=["x", "y", "z"], highlight=2)',
