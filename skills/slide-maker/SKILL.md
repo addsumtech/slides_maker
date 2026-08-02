@@ -166,7 +166,8 @@ every **🔴 CHECKPOINT** is a hard stop.
 | **by taste / opt-in** | A judgment call (generated/sourced images, motion) — apply where it helps, justify where not; the image SOURCE is not a taste call once an image is planned (REFERENT RULE). Icons are NOT in this class: on category/entity-rich content they are a design must (self-verify (g) · PRE-FLIGHT 12(e)) |
 | **carve / exception** | A named case where a rule deliberately yields — follow the carve, don't over-apply it |
 
-> **Enforcement invariant (for anyone evolving this skill):** every 🔴 MUST must be *wired into a gate
+> **Enforcement invariant — binding on THIS run when you meet a rule, and on anyone evolving this
+> skill when they add one:** every 🔴 MUST must be *wired into a gate
 > artifact* — an interview question, a required plan field/column, a self-verify item, the PRE-FLIGHT
 > checklist (Step 4), a deterministic lint check, or a named critic-rubric item. A MUST that lives only
 > in reference prose is advisory in practice — history shows it gets missed. When adding a rule, name
@@ -1162,6 +1163,25 @@ column/bar `native_chart`, which hides n, the spread and the outliers; the fix i
 any claim is time-bound, and whether a font exists on the PRESENTER's machine are all facts absent
 from the file, and a check that fails on what it cannot know is one people learn to ignore. Exit 1 means not ready;
 `NOT CHECKED` + exit 2 means it could not run, which is never the same as clean.
+**It also emits four hard FAILs that are NOT numbered items** — each is a defect no geometry check
+can see, so when one fires, read it and fix the deck rather than routing around a check whose rule
+was never written down: **(i) mono overflow** — `code_block` sets `word_wrap=False`, so a too-long
+line does not wrap, it OVERFLOWS its panel, and a broken command line is not a cosmetic defect but a
+*wrong* command *(measured: a shipped deck's `npx skills add …` install line rendered as three lines
+and copied back as a repo path that 404s — the one line a persuaded reader must transcribe exactly
+was the broken one)*; a line within 15% of its box is reported as **tight**, not clean, because the
+default `MONO` is Consolas — absent from macOS and most Linux — and the substitute face is wider,
+which is how the historical failure fit with ~10% margin and broke anyway. **(ii) mono face not
+installed** — same cause, reported outright; fix it by setting a `MONO` that exists on the render
+box, not by shortening the line until it looks fine locally. **(iii) Latin→full-width adjacency** —
+a space appears BEFORE a full-width mark that follows a Latin run (`原生 PPTX 。`, `既搭 deck 、又给它
+打分`, `（第 3 、 5 步）`). The renderer's CJK/Latin auto-spacer inserts the gap and python-pptx has no
+switch for it, so the adjacency ITSELF is the defect: reword so a CJK glyph precedes the mark, or
+drop the mark *(shipped on 5 of 12 slides of a real deck and caught only by a human at 5× zoom)*.
+**(iv) non-positive text box** — `h = card_h - 1.42` with `card_h = 1.30` stores −0.12; the run
+overflows a box that has no inside and every geometry check stays green because there is nothing to
+overlap. `deckkit.text()` now raises at the call site, so a FAIL here means the box was built by
+other means. A box under half a line of its own type is ADVISORY, not a FAIL.
 **It deliberately does NOT decide 5, 6, 6b, 9, 11** — those are judgment (is the figure the real
 artifact, does the first look land on the hero, is the title the takeaway) and it prints them as
 still-yours rather than implying coverage. Item 12 keeps its own script. *(Why: eleven of the twelve

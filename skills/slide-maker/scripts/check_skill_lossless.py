@@ -191,15 +191,33 @@ def main() -> int:
         missing.append((n, raw.strip(), norm))
 
     if args.write_allow:
-        stub = {
-            "_comment": "Each entry waives one baseline line that no longer exists anywhere in the "
-                        "skill tree. Replace every REASON with why losing this line is safe. Editing "
-                        "the line's wording changes its hash and revokes the waiver.",
-            "waived": {line_key(nrm): f"REASON REQUIRED (baseline line {n}): {raw[:120]}"
-                       for n, raw, nrm in missing},
-        }
-        Path(args.write_allow).write_text(json.dumps(stub, indent=2, ensure_ascii=False), encoding="utf-8")
-        print(f"wrote {len(missing)} waiver stubs to {args.write_allow} — fill in every REASON")
+        # MERGE, never overwrite. The natural thing to type is --write-allow <the live allowlist>,
+        # and this used to build a fresh dict and write it: every hand-written REASON accumulated
+        # over the skill's history vanished, silently, exit 0. A tool whose whole job is proving
+        # content was not deleted must not be the thing that deletes it. Existing reasons win —
+        # a stub never overwrites a justification someone already wrote.
+        out_path = Path(args.write_allow)
+        existing = {}
+        comment = ("Each entry waives one baseline line that no longer exists anywhere in the "
+                   "skill tree. Replace every REASON with why losing this line is safe. Editing "
+                   "the line's wording changes its hash and revokes the waiver.")
+        if out_path.exists():
+            try:
+                prior = json.loads(out_path.read_text(encoding="utf-8"))
+                existing = dict(prior.get("waived") or {})
+                comment = prior.get("_comment") or comment
+            except Exception as e:
+                sys.exit(f"{out_path} exists but is not readable JSON ({e}) — "
+                         "refusing to overwrite it")
+        added = {line_key(nrm): f"REASON REQUIRED (baseline line {n}): {raw[:120]}"
+                 for n, raw, nrm in missing if line_key(nrm) not in existing}
+        merged = dict(existing)
+        merged.update(added)
+        out_path.write_text(
+            json.dumps({"_comment": comment, "waived": merged}, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8")
+        print(f"added {len(added)} waiver stub(s) to {out_path} "
+              f"({len(existing)} existing kept) — fill in every REASON")
         return 0
 
     pct = 100.0 * len(missing) / checked if checked else 0.0

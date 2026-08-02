@@ -1322,6 +1322,13 @@ def main(argv):
         while flag in argv or ("--mode=" + name) in argv:
             argv = [a for a in argv if a not in (flag, "--mode=" + name)]
             mode = name
+    # --static: accepted and intentionally inert. lint_deck.py takes it to silence NO BUILDS on a
+    # deck whose user opted OUT of appear-builds; this tool already lints with static_ok=True, so
+    # there is nothing for it to switch. It is consumed rather than rejected because callers pass
+    # it by symmetry with lint_deck.py (the test suite does, on every gate call) — and before the
+    # unknown-flag guard below existed it was silently absorbed as the OUTPUT DIRECTORY.
+    while "--static" in argv or "--mode=static" in argv:
+        argv = [a for a in argv if a not in ("--static", "--mode=static")]
     gate_only = False
     if "--gate-check" in argv:
         argv = [a for a in argv if a != "--gate-check"]
@@ -1342,6 +1349,26 @@ def main(argv):
     if only and fast:
         # Contradictory intents: --fast decides WHICH slides to render, --slides declares them.
         die("--slides and --fast both choose the slide set — pass one")
+    # Every flag this tool knows has been consumed by now, so anything still starting with `--`
+    # is one it does not take — and until this guard existed it was not an error. `argv[0]` is
+    # the deck and `argv[1]` is the output dir, so `render_deck.py deck.pptx --gate-check
+    # --briefing` resolved to out="--briefing" and ran the hand-off gate at the `presented`
+    # floor: a briefing deck (lint budget ~150 words) silently held to the ~40-word budget, with
+    # nothing printed either way. That is the same silent-fallthrough class the `delivery` key
+    # below already dies on ("a legibility floor silently not applied"); a mode flag typed at the
+    # CLI deserves the same treatment. NB `--briefing` is a real lint_deck.py mode that this tool
+    # genuinely does not implement — the message says so rather than pretending it is a typo.
+    _stray = [a for a in argv if a.startswith("--")]
+    if _stray:
+        _hint = ""
+        if any(a in ("--briefing", "--mode=briefing") for a in _stray):
+            _hint += ("\n  `--briefing` is a lint_deck.py mode; the hand-off gate has no briefing "
+                      "floor yet, so it would have run at `presented`. Lint the deck with "
+                      "`lint_deck.py <deck> --briefing` and record `delivery` in .deck-gates.json.")
+        die("unrecognised option(s): " + " ".join(_stray) + "\n  render_deck.py takes: --slides "
+            "N[,M] · --fast · --deliverables/--final · --gate-check · --selfread · --textheavy · "
+            "--surface (each mode also spelled --mode=NAME). The output dir is POSITIONAL: "
+            "render_deck.py <deck>.pptx [out_dir]." + _hint)
     if not argv:
         die("usage: python render_deck.py /path/to/deck.pptx [out_dir] "
             "[--fast | --slides N[,M]] [--deliverables] [--gate-check]")

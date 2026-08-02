@@ -85,6 +85,27 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   [containment excluded] · footer-zone intrusion · text-past-card · uneven rows) AND adds the
   render/parse-only faults (CJK kinsoku/widow · whole-page-image · orphan slides — plus missing EA font as the render-time BACKSTOP; `lint_layout` now catches it at build time as `CJK_NO_EA`);
   run after render, before critic; non-zero on findings. `smoke_deckkit.py` — regression guard for the helpers.
+- **Delivery-mode flags — the same word does NOT reach every tool.** SKILL.md names each flag at the
+  step that uses it; this is the complete map of which tool actually accepts which, because the
+  tools diverge and getting it wrong is quiet, not loud. Verified against the parsers, not the prose:
+  - `lint_deck.py` — `--selfread` · `--briefing` · `--textheavy` · `--surface` · `--static`
+    (each also spelled `--mode=NAME`), plus `--renders <dir>` · `--gates <.deck-gates.json>` ·
+    `--json <out>`. This is the only tool that implements **all five** modes.
+  - `render_deck.py` — `--slides N[,M]` · `--fast` · `--deliverables`/`--final` · `--gate-check` ·
+    `--selfread` · `--textheavy` · `--surface`. The output dir is **positional**, not `--outdir`
+    (`--headless`/`--convert-to`/`--outdir` in this file are the LibreOffice command line it emits,
+    not options it takes). 🔴 **It has no `briefing` floor** — `_KNOWN_DELIVERY` is
+    `presented|textheavy|selfread|surface` — so a briefing deck's hand-off gate runs at the
+    `presented` word budget unless `.deck-gates.json` records a `delivery` it recognises; passing
+    `--briefing` now exits with that explanation instead of silently absorbing it. `--static` is
+    accepted and deliberately **inert**: this tool already lints with `static_ok=True`, so NO BUILDS
+    cannot fire from it — it is consumed only so callers can pass it by symmetry with the lint.
+    Any flag this tool does not take used to resolve to the OUTPUT DIRECTORY and run the gate at the
+    `presented` floor in silence; it now exits with the accepted list.
+  - `preflight_check.py` — `--build <script>` · `--selfread` · `--static` only. No `--briefing`,
+    `--textheavy` or `--surface`.
+  - `validate_review.py` — `--record` (Step 5 writes the reviewed run to the record with it) ·
+    `--selftest` (the CI contract check).
 - `plan_wordcount.py` — advisory per-slide word-budget pass over the Content plan's table (the Step-1
   comprehension-gate check; write the table to a scratch path, never the deliverable folder).
   `validate_review.py` — stdlib schema validator for critic/arbiter JSON (`critic|arbiter <file|->`;
