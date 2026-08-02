@@ -20,6 +20,7 @@ CLI:  python component_audit.py <build_script.py> [<deck.pptx>] [--json]
 Exit: 0 = nothing to report · 2 = at least one cluster matches an unused component (advisory).
 """
 import argparse
+import ast
 import json
 import os
 import re
@@ -94,19 +95,52 @@ def _script_calls(path):
     A bare `\bdk\.` regex missed `from deckkit import scorecard` and any alias other than `dk`,
     so a deck that imported components directly had its OWN component output reported as a
     hand-roll — the tool punishing exactly the behaviour it exists to encourage.
+
+    The regex that replaced it stopped at the first `(`, so the PEP-8 PARENTHESIZED form —
+    `from deckkit import (a, b,\n                     c)`, which is what any import list longer
+    than a line becomes — contributed NOTHING. Measured on a real 14-slide build that calls
+    stat_row, step_list and unit_grid: reported as "calls 0 of the 23 form components", and its
+    own component output was then flagged as two hand-rolled clusters. Flattening the import (no
+    other change) turned the same deck into "3 of 23, cluster reporting suppressed" — so the one
+    gate PRE-FLIGHT 12 names was reporting the opposite of the truth, and reporting it in the
+    direction that makes a careful deck look careless.
+
+    Both misses are the same mistake made twice: a regex cannot see Python's grammar. So parse it.
+    The regex survives only as a fallback for a source that does not compile (a build script read
+    mid-edit), where it still sees the flat form.
     """
     src = open(path, encoding="utf-8", errors="ignore").read()
     names = set()
     aliases = {"dk", "deckkit"}
-    for m in re.finditer(r"^\s*import\s+deckkit\s+as\s+([A-Za-z_]\w*)", src, re.M):
-        aliases.add(m.group(1))
-    for m in re.finditer(r"^\s*from\s+deckkit\s+import\s+([^\n(]+)", src, re.M):
-        for part in m.group(1).split(","):
-            part = part.strip()
-            if not part or part == "*":
-                continue
-            names.add(part.split(" as ")[-1].strip())
-            names.add(part.split(" as ")[0].strip())
+    try:
+        tree = ast.parse(src)
+    except SyntaxError:
+        tree = None
+    if tree is not None:
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for a in node.names:
+                    if a.name == "deckkit" and a.asname:
+                        aliases.add(a.asname)
+            elif isinstance(node, ast.ImportFrom):
+                if (node.module or "").split(".")[-1] != "deckkit":
+                    continue
+                for a in node.names:
+                    if a.name == "*":
+                        continue
+                    names.add(a.name)
+                    if a.asname:
+                        names.add(a.asname)
+    else:
+        for m in re.finditer(r"^\s*import\s+deckkit\s+as\s+([A-Za-z_]\w*)", src, re.M):
+            aliases.add(m.group(1))
+        for m in re.finditer(r"^\s*from\s+deckkit\s+import\s+([^\n(]+)", src, re.M):
+            for part in m.group(1).split(","):
+                part = part.strip()
+                if not part or part == "*":
+                    continue
+                names.add(part.split(" as ")[-1].strip())
+                names.add(part.split(" as ")[0].strip())
     for a in aliases:
         names |= {m.group(1) for m in re.finditer(r"\b%s\.([a-z][a-z0-9_]*)\s*\(" % re.escape(a), src)}
     return names

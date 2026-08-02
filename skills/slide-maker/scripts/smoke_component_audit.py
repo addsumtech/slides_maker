@@ -73,6 +73,54 @@ def main():
                 "used_forms must list exactly the FORM components called, got %r" % (r["used_forms"],)
         ok("the usage ratio counts form components only", _usage_ratio_is_factual)
 
+        def _parenthesized_import_is_seen():
+            """PEP-8 wraps any import list longer than one line in parentheses, so this is the
+            NORMAL shape for a real build script. The regex this replaced stopped at the first
+            '(' and therefore read nothing from it. Measured on a real 14-slide deck calling
+            stat_row, step_list and unit_grid: reported as "0 of the 23 form components", and its
+            own component output then flagged as two hand-rolled clusters. Flattening the import,
+            with no other change, turned the same deck into 3-of-23 with clusters suppressed."""
+            def body(dk, sl):
+                dk.unit_grid(sl, 0.6, 1.0, 3.6, 1.8, 42, "things", filled=39)
+            sp, p = _deck(d, body, ["box"])
+            open(sp, "w", encoding="utf-8").write(
+                "from deckkit import (add_slide, box,\n"
+                "                     unit_grid, stat_row)\n"
+                "unit_grid(); stat_row()\n")
+            r = audit(sp, p)
+            assert set(r["used_forms"]) == {"unit_grid", "stat_row"}, \
+                "a parenthesized `from deckkit import (...)` must be read: got %r" % (r["used_forms"],)
+            assert not r["actionable"], \
+                "unit_grid's own cells were reported as a hand-roll: %r" % (r["actionable"][:1],)
+        ok("a parenthesized `from deckkit import (...)` is read", _parenthesized_import_is_seen)
+
+        def _flat_and_aliased_imports_still_read():
+            """The other side of the fixture: the two shapes that already worked must keep
+            working, so the AST rewrite cannot buy the parenthesized form by losing these."""
+            def body(dk, sl):
+                dk.box(sl, 1, 1, 2, 1, fill=dk.RGBColor(0, 0, 0))
+            sp, p = _deck(d, body, ["box"])
+            open(sp, "w", encoding="utf-8").write(
+                "import deckkit as kit\n"
+                "from deckkit import timeline as tl\n"
+                "kit.leaderboard(); tl()\n")
+            r = audit(sp, p)
+            assert {"leaderboard", "timeline"} <= set(r["used_forms"]), \
+                "an alias import or an `as` rename stopped being read: %r" % (r["used_forms"],)
+        ok("flat, aliased and `as`-renamed imports still read", _flat_and_aliased_imports_still_read)
+
+        def _unparseable_script_still_degrades_to_the_regex():
+            """A build script read mid-edit does not compile. It must fall back, not go blind."""
+            sp, p = _deck(d, lambda dk, sl: None, ["box"])
+            open(sp, "w", encoding="utf-8").write(
+                "from deckkit import timeline, scorecard\n"
+                "def broken(   :\n")
+            r = audit(sp, p)
+            assert {"timeline", "scorecard"} <= set(r["used_forms"]), \
+                "an unparseable script must fall back to the regex, got %r" % (r["used_forms"],)
+        ok("an unparseable build script falls back, never goes blind",
+           _unparseable_script_still_degrades_to_the_regex)
+
         def _never_raises_on_a_bad_deck():
             sp = os.path.join(d, "build_x.py"); open(sp, "w").write("dk.box(\n")
             r = audit(sp, os.path.join(d, "does-not-exist.pptx"))
