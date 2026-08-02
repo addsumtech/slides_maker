@@ -71,13 +71,15 @@ def find_transcript(explicit=None):
     if not os.path.isdir(root):
         return None
     cwd_slug = os.getcwd().replace("/", "-")
-    pools = [
-        glob.glob(os.path.join(root, cwd_slug, "*.jsonl")),
-        glob.glob(os.path.join(root, "*", "*.jsonl")),
-    ]
-    for pool in pools:
-        if pool:
-            return max(pool, key=os.path.getmtime)
+    pool = glob.glob(os.path.join(root, cwd_slug, "*.jsonl"))
+    if pool:
+        return max(pool, key=os.path.getmtime)
+    # No transcript for this directory. There USED to be a fallback here that took the newest
+    # transcript anywhere under ~/.claude/projects — and it silently measured somebody else's
+    # session. Observed: a delegated build ran this from the deck folder (which has no transcript
+    # of its own), got back a stranger's numbers, and reported them in its hand-off as its own,
+    # including "image reads 0" for a run that made 28. A confidently wrong number is worse than
+    # no number, and this script exists to argue precisely that. So: refuse, and say what to pass.
     return None
 
 
@@ -213,8 +215,14 @@ def main():
     path = find_transcript(args.transcript)
     if not path:
         sys.stderr.write(
-            "roundtrip_budget: no session transcript found. Pass --transcript <file.jsonl>.\n"
-            "This is a reporter, not a gate — a build is not wrong because this could not run.\n")
+            "roundtrip_budget: no transcript for this directory ({}).\n"
+            "  Pass --transcript <file.jsonl> explicitly. Look under ~/.claude/projects/ — a\n"
+            "  DELEGATED build's transcript is subagents/agent-<id>.jsonl under the parent\n"
+            "  session, not a file named after the deck folder.\n"
+            "  This deliberately does NOT guess: it used to fall back to the newest transcript\n"
+            "  anywhere on the machine, which reported a stranger's session as yours.\n"
+            "  Write `round-trips: not measured (no transcript for cwd)` rather than a guess.\n"
+            .format(os.getcwd()))
         return 2
     st = analyse(path)
     if st["roundtrips"] == 0:
