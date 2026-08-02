@@ -82,6 +82,14 @@ def find_transcript(explicit=None):
 
 
 def analyse(path):
+    # A MAIN session's transcript interleaves its own turns with its subagents', and only the
+    # coordinator's own round-trips are the thing being budgeted — so sidechain turns are excluded.
+    # But a SUBAGENT's transcript is entirely sidechain-flagged, and pointing this script at one is
+    # the normal way to measure a delegated build. Filtering there would report zero and read as
+    # "wrong transcript". So decide by what the file actually contains.
+    has_main_turns = any(
+        rec.get("type") == "assistant" and not rec.get("isSidechain")
+        for rec in _iter_records(path))
     roundtrips = 0
     tool_calls = 0
     assistant_turns = 0
@@ -92,7 +100,9 @@ def analyse(path):
     unbatched_bash = 0
     chained_bash = 0
     for rec in _iter_records(path):
-        if rec.get("type") != "assistant" or rec.get("isSidechain"):
+        if rec.get("type") != "assistant":
+            continue
+        if has_main_turns and rec.get("isSidechain"):
             continue
         assistant_turns += 1
         msg = rec.get("message") or {}
