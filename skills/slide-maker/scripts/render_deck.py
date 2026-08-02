@@ -163,6 +163,80 @@ def _report_form_reach(pptx_path):
           "answers it. Measured cost of skipping it once: a meter_bar rebuilt out of two boxes.")
 
 
+def _report_palette_drift(pptx_path, declared):
+    """Name the slides where deckkit's OWN default accents survived into a deck with its own palette.
+
+    WHY. `set_palette()` exists because a component's colour defaults BIND AT IMPORT — SKILL.md
+    says so ("a bare `deckkit.MAGENTA = ...` does NOT re-theme components whose signature default
+    binds at import"). The natural build script does not call it: it defines its palette as local
+    constants and passes them where the API takes a colour. Every component that takes one
+    IMPLICITLY then keeps deckkit blue or magenta.
+
+    Measured on a real 10-slide build whose declared palette was a single bound teal: `title_bar`
+    drew its accent rule in deckkit BLUE on all eight interior slides and `bottom_callout` set its
+    label in deckkit MAGENTA — two foreign hues on a deck whose entire argument was one colour
+    meaning one thing. Zero hard findings, zero warnings, every hand-off gate passed. The
+    semantic-colour contract is a required plan FIELD and nothing compared it to the pixels.
+
+    Deliberately narrow: it looks only for deckkit's own shipped constants, not for "any hue not in
+    the palette". A generic scan would flag every photo, chart theme and template colour; this one
+    answers a bounded question — did the LIBRARY's defaults leak past the deck's own choices? —
+    which is the failure that actually happens. Prints, never dies: a deck may legitimately keep
+    one deckkit hue if it declared it.
+    """
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import deckkit as dk
+        import lint_deck as _ld
+        from pptx import Presentation
+    except Exception:
+        return
+    want = set(re.findall(r"[0-9A-Fa-f]{6}", json.dumps(declared) if not isinstance(declared, str)
+                          else declared))
+    want = {w.upper() for w in want}
+    # deckkit's shipped accent constants — the ones a component reaches for when the caller passes
+    # nothing. Neutrals (DEEP/SLATE/MUTE/WHITE/TINT/LIGHT) are excluded on purpose: they are the
+    # library's ink and paper, and a deck that keeps them has not lost its identity.
+    lib = {}
+    for name in ("BLUE", "MAGENTA", "TEAL", "GOLD", "STEEL", "VIOLET", "GREEN"):
+        v = getattr(dk, name, None)
+        if v is not None:
+            lib[str(v).upper()] = name
+    leaked = {h: n for h, n in lib.items() if h not in want}
+    if not want or not leaked:
+        return
+    try:
+        prs = Presentation(pptx_path)
+        sw = prs.slide_width / 914400.0
+        sh = prs.slide_height / 914400.0
+    except Exception:
+        return
+    hits = {}
+    for i, slide in enumerate(prs.slides, 1):
+        try:
+            boxes = _ld._boxes(slide, sw, sh)
+        except Exception:
+            continue
+        for b in boxes:
+            for key in ("fill", "line", "ink"):
+                v = b.get(key)
+                h = str(v).upper() if v else ""
+                if len(h) == 6 and h in leaked:
+                    hits.setdefault(leaked[h], set()).add(i)
+    if not hits:
+        return
+    print("[gates] palette drift: deckkit's own default accent(s) survived into a deck that "
+          "declared its own palette —")
+    for name, pages in sorted(hits.items()):
+        print("        {} ({}) on slide(s) {}".format(
+            name, getattr(dk, name), ", ".join(str(p) for p in sorted(pages))))
+    print("        These are component defaults bound at IMPORT, not choices: title_bar's accent "
+          "rule, a callout's label, a marker. Call deckkit.set_palette(...) once after import so "
+          "the whole component set follows the deck, or pass the colour explicitly at each call.")
+    print("        (A hue you DID choose is not drift — declare it in the design plan's `palette` "
+          "field and this goes quiet.)")
+
+
 def _report_icon_waiver(pptx_path, fam):
     """Name the slides that contradict an `icon_family: none - <reason>` waiver.
 
@@ -871,6 +945,10 @@ def check_handoff_gates(pptx, mode="presented", gate_check=False):
         print("[gates] design plan: boldness={} · signature={} · carried_by={}".format(
             design["boldness"], str(design["signature_move"])[:48], cb))
         _report_carried_by(pptx, cb)
+        # the declared palette, re-tested against the BUILT file — same reason as the icon
+        # waiver above: a plan field written before any slide exists proves nothing about
+        # the slides.
+        _report_palette_drift(pptx, design.get("palette"))
         _report_icon_waiver(pptx, design.get("icon_family"))
         _report_form_reach(pptx)
     else:

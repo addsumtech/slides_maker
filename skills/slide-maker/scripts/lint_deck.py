@@ -1697,7 +1697,19 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False):
         ry = [r.get("title_rule_y") for i, r in enumerate(rows) if 0 < i < n - 1]
         present = [y for y in ry if y is not None]
         interior_n = n - 2
-        if interior_n > 0 and len(present) > 0.6 * interior_n and (max(present) - min(present)) <= 0.04:
+        # Cluster by SHARE around the median, not by (max - min) over every rule.
+        # Measured on a real 10-slide build: seven interior slides carried the identical
+        # title_bar rule at y=0.206 and ONE carried it at 0.261, because that slide's title was
+        # long enough to wrap and push the rule down. max-min was then 0.055 > 0.04 and the check
+        # went silent on a deck whose title chrome was visibly identical on every page — the exact
+        # template tell it exists to catch, defeated by one outlier. This is the same median-share
+        # test ENVELOPE MONOCULTURE already uses on content_bottom; the two now agree in method.
+        clustered = []
+        if present:
+            med_y = sorted(present)[len(present) // 2]
+            clustered = [y for y in present if abs(y - med_y) <= 0.02]
+        if interior_n > 0 and len(clustered) > 0.6 * interior_n:
+            present = clustered
             warns.append(f"TITLE-RULE MONOCULTURE: {len(present)} of {interior_n} content slides carry an "
                          f"identical thin rule under the title at the same height — a fixed title-chrome "
                          f"frame-line stamped deck-wide reads as a template. Rotate 2-3 title treatments "
