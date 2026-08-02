@@ -1743,6 +1743,18 @@ def main(argv):
                       " and ".join(_stale), "is" if len(_stale) == 1 else "are"), file=sys.stderr)
     print("next: python3 {} {} --renders {}  # render-time lint, then the actor-critic loop".format(
         os.path.join(os.path.dirname(os.path.abspath(__file__)), "lint_deck.py"), pptx, out))
+    # The render self-check is the single largest round-trip sink in the pipeline: one image Read
+    # per slide, one message each, every message re-sending the whole conversation. SKILL.md Step 5
+    # says to batch those reads, and a measured run showed the prose alone did not move it — the
+    # build chained its shell commands 98% of the time and still read every PNG in its own message.
+    # So the instruction is repeated HERE, in tool output the reader cannot skip, with the actual
+    # paths already assembled. Cheap to print, and it names the files so there is nothing to look up.
+    _pngs = sorted(f for f in os.listdir(out)
+                   if f.startswith("slide") and f.endswith(".png")) if os.path.isdir(out) else []
+    if len(_pngs) > 1:
+        print("      then read ALL {} slide PNGs in ONE message (one tool block per slide, same "
+              "message), and record a one-line verdict per slide:".format(len(_pngs)))
+        print("      " + "  ".join(os.path.join(out, f) for f in _pngs))
 
 
 def _viewer_html(title, slides):
