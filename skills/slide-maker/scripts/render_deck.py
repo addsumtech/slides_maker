@@ -824,8 +824,8 @@ def check_handoff_gates(pptx, mode="presented", gate_check=False):
     # with nothing showing it survived into the render. That asymmetry is the exact shape of a bug
     # this repo already fixed once: the critic waiver was schema-checked for Codex and a hand-typed
     # string everywhere else, and it carried a real deck through "all gates pass".
-    DESIGN_FIELDS = ("boldness", "signature_move", "carried_by", "form_ledger", "icon_family",
-                     "palette", "type_scale", "signature_proof")
+    DESIGN_FIELDS = ("concept", "boldness", "signature_move", "carried_by", "form_ledger",
+                     "icon_family", "palette", "type_scale", "signature_proof")
     # THE RESTRAINT CARVE — built on the escape the skill ALREADY documents, not a new one.
     # agents/slide-design.md: under a *conservative* dial (user-requested or purpose-defaulted for a
     # sober defense / regulatory / status deck) "the risk is OPTIONAL: take a modest, restrained
@@ -929,6 +929,39 @@ def check_handoff_gates(pptx, mode="presented", gate_check=False):
         # is fine — what it closes is the case that actually happens, the example copied verbatim
         # because it was the nearest words to hand. Judging whether a REAL move is bold stays the
         # critic's distinctiveness axis; this only refuses the three the skill already disowned.
+        # CONCEPT — what the deck's idea is a picture of, and the two pictures it beat.
+        # The pipeline diverged on STYLE (the direction gate: "the same four slide types … only the
+        # style differs") and on LAYOUT (form-selection's per-slide runner-up) and never on the
+        # IDEA. A motif does not fill that hole: it is chosen as an attribute of a preset picked
+        # first and capped at <=3 appearances, so a governing image is structurally forbidden from
+        # governing. The field is cheap by design — three sentences at plan time, no extra dispatch
+        # and no extra round trip — so the only thing worth checking is that three genuinely
+        # different pictures were considered, not one relabelled twice.
+        _con = design.get("concept")
+        if _con is not None and not design.get("waived"):
+            _rej = (_con.get("rejected") if isinstance(_con, dict) else None) or []
+            _win = str((_con.get("chosen") if isinstance(_con, dict) else _con) or "").strip()
+            if not isinstance(_con, dict) or not _win or len(_rej) < 2:
+                die('`design_plan.concept` must name the governing image AND the two it beat:\n'
+                    '    "concept": {"chosen": "<what this deck is a picture of>",\n'
+                    '                "rejected": [{"concept": "<the runner-up>", "why_lost": "<one clause>"},\n'
+                    '                             {"concept": "<the other>", "why_lost": "<one clause>"}]}\n'
+                    "  One picture with no alternatives is not a choice, it is the first thing that "
+                    "came to mind — which is the default this field exists to interrupt.")
+            _names = [_win.lower()] + [" ".join(str((r or {}).get("concept", "")).lower().split())
+                                       for r in _rej]
+            if len(set(n for n in _names if n)) < 3:
+                die("`design_plan.concept` lists the same picture more than once ({}). Three "
+                    "governing images for one argument, not one relabelled — a network, an "
+                    "organism and a pair of hands want different motifs, different colour logic "
+                    "and different covers, which is the whole reason to choose between them."
+                    .format(" · ".join(_names)))
+            for r in _rej:
+                if not str((r or {}).get("why_lost", "")).strip():
+                    die("`design_plan.concept.rejected` needs `why_lost` on each entry — a rejected "
+                        "concept with no reason is a decoration on the record, not a decision.")
+            print("[gates] concept: {} · beat {}".format(
+                _win[:60], " · ".join(str((r or {}).get("concept", "?"))[:28] for r in _rej)))
         _sm = " ".join(str(design["signature_move"]).lower().split())
         _CATALOGUE = ("a big number", "a nice gradient", "a full-bleed photo", "a full bleed photo")
         if any(_sm == c or _sm.rstrip(".") == c for c in _CATALOGUE):

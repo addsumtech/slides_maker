@@ -484,7 +484,18 @@ and getting the user's OK before the canvas is set up or anything is built. **Th
 runs on EVERY deck — it's how the art director designs, never opt-in per deck — and scales down
 gracefully to small decks (a 4-slide deck still earns one hero per slide, no card-grid reflex, semantic
 colour, and one memorable moment); only the deck-level numeric floors are size-gated (hard at ~8+ content
-slides, strong guidance at 6–7).** **Precondition — the design gate:** the plan is **not ready** unless it has a concrete **Design language** (a *named*
+slides, strong guidance at 6–7).** **Precondition — the design gate:** the plan is **not ready** unless it carries a **`concept:` line
+— what this deck's idea is a PICTURE of, plus the TWO pictures it beat and the clause that lost each**
+(*an intelligence network* · *a digital organism* · *a hand and a machine hand doing one job* — three
+governing images for the same approved argument, not three styles and not three layouts). This is the
+one divergence the pipeline never had: the direction gate diverges on STYLE (its own preview page says
+"the same four slide types … only the *style* differs") and form-selection diverges on LAYOUT per
+slide, and both hold the picture constant. The motif does not fill the hole — it is chosen as an
+attribute of a preset picked first and capped at ≤3 appearances, so a governing image is structurally
+forbidden from governing. It costs three sentences at plan time: no extra dispatch, no extra render,
+no extra round trip (`agents/slide-design.md` §0). One picture with no alternatives is not a choice,
+it is the first thing that came to mind — and the hand-off gate rejects two "alternatives" that are
+the winner in other words. It also has a concrete **Design language** (a *named*
 signature motif + a deliberately-chosen palette/type, not a defaulted light/minimal/blue), a one-line
 **taste-profile field** in that Design language section — `taste profile: <n dials applied / none on
 file> · freshness: varied <foundation> vs <last look-history line>`, or the alternate arm `look
@@ -562,7 +573,8 @@ deviation. This row makes that the default instead of a save.)*
 
 **The per-slide content-image opt-in is a CROSS-CUTTING choice available on EVERY deck** — independent of the template decision and separate from Q1's generate-a-template path; offer it whenever an image tool OR web search for sourced photos is available. **Read `references/asset-production.md` §Per-slide content-image opt-in before writing the opt-in list** — the three guardrails (content-related, never every slide, and the REFERENT RULE that decides generated vs real sourced imagery) and the per-row source-token grammar. Fold in the user's design edits, then set up the canvas (Step 3).
 
-> **🔴 CHECKPOINT — DESIGN:** show the Design language + Form ledger + the 3 design musts + the
+> **🔴 CHECKPOINT — DESIGN:** show the **`concept:` line (the governing image + the two it beat,
+> each with the clause that lost it)** + the Design language + Form ledger + the 3 design musts + the
 > **`boldness:` line + the `signature move:` line with its `carried_by:` clause** (the one scoped
 > aesthetic risk + where it lands + the bold reference it adapts + the 2–3 slides where the same idea
 > does STRUCTURAL work — so a wrong dial, a timid/too-wild move, or a risk that lives on exactly one

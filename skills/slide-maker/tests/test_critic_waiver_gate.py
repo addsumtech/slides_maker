@@ -25,6 +25,9 @@ GOOD_REASON = ("No subagent dispatch on this host, so the content and design len
                "run inline in the author's own context.")
 
 DESIGN_OK = {
+    "concept": {"chosen": "the deck is a picture of a signal being recovered from noise",
+                "rejected": [{"concept": "a clock running out", "why_lost": "makes time the subject, not fidelity"},
+                             {"concept": "a pair of hands", "why_lost": "no room for the data-consistency argument"}]},
     "boldness": "balanced+",
     "signature_move": "s" * 30,
     "carried_by": ["slide 3", "slide 4"],
@@ -517,6 +520,48 @@ def _fired(deck: Path):
     return tuple(stats.get("sameness_codes") or ()), int(stats.get("body_n") or 0)
 
 
+# ── CONCEPT: what the deck's idea is a PICTURE of, and the two pictures it beat ───────────────
+# The pipeline diverged on STYLE (the direction gate renders "the same four slide types … only the
+# style differs") and on LAYOUT (form-selection's per-slide runner-up) and never on the IDEA. Three
+# governing images for one argument is the missing divergence; one picture with no alternatives is
+# the first thing that came to mind, which is the default the field exists to interrupt.
+CONCEPT_CASES = [
+    ("a complete concept passes", DESIGN_OK["concept"], True, "concept:"),
+    ("a bare string is not a choice", "an intelligence network", False, "must name the governing image"),
+    ("one rejected alternative is not enough", {
+        "chosen": "a network", "rejected": [{"concept": "an organism", "why_lost": "too soft"}]},
+     False, "must name the governing image"),
+    ("the same picture relabelled is refused", {
+        "chosen": "an intelligence network",
+        "rejected": [{"concept": "An Intelligence Network", "why_lost": "x"},
+                     {"concept": "a network of intelligence", "why_lost": "y"}]},
+     False, "same picture more than once"),
+    ("a rejected concept with no reason is refused", {
+        "chosen": "a network", "rejected": [{"concept": "an organism", "why_lost": ""},
+                                            {"concept": "two hands", "why_lost": "z"}]},
+     False, "why_lost"),
+]
+
+
+def check_concept(deck_path: Path) -> tuple[int, int]:
+    ok = bad = 0
+    deck = deck_path
+    for name, con, should_pass, needle in CONCEPT_CASES:
+        g = {"critic": _record_review(deck, _review(list(range(1, 4)))),
+             "design_plan": dict(DESIGN_OK, concept=con), "provenance": PROV_OK}
+        code, out = run_gate(deck, g)
+        good = (code == 0) == should_pass and needle in out
+        if good:
+            ok += 1
+            print("  ok   concept: " + name)
+        else:
+            bad += 1
+            print("  FAIL concept: %s: exit=%d (wanted pass=%s), missing %r" %
+                  (name, code, should_pass, needle))
+            print("       " + out.strip().replace("\n", "\n       ")[:300])
+    return ok, bad
+
+
 def check_sameness(deck_path: Path) -> tuple[int, int]:
     td = deck_path.parent
     import lint_deck as ld
@@ -683,7 +728,7 @@ def main() -> int:
         passed += o
         failed += b
         for fn in (check_coverage, check_arbiter, check_signature, check_skip_env,
-                   check_sameness):
+                   check_concept, check_sameness):
             o, b = fn(deck)
             passed += o
             failed += b

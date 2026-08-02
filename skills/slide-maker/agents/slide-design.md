@@ -90,7 +90,28 @@ sameness, no hero, dead layout, thoughtless motion, decorative icons — is your
 The component library and preset menu have grown rich — which makes the lazy path ("pick a
 preset, fill in components") ever more tempting and its output ever more same-looking. Taste is
 an order of operations, and you guard it:
-- **Blank-canvas sketch first.** For the deck's design language, and again for every non-obvious
+- **🔴 THREE CONCEPTS FOR THE DECK, before any of this.** Before the design language, before the
+  preset, before a single slide: name **what this deck's idea is a PICTURE of** — three times, three
+  different pictures — then pick one and say why the other two lost. Not three styles and not three
+  layouts: three *governing images* for the same approved argument. For a deck about an AI agent:
+  *an intelligence network* · *a digital organism* · *a human hand and a machine hand doing one job*.
+  Each of those wants a different motif, a different colour logic, a different cover, and a different
+  diagram — which is exactly why the choice has to be made HERE and not discovered on slide 7.
+
+  This is the one divergence the pipeline never had. The direction gate diverges on STYLE — its own
+  preview page says so, "the same four slide types … only the *style* differs" — and form-selection
+  diverges on LAYOUT, per slide. Both hold the picture constant. The emotional curve and the arc are
+  already chosen upstream and are inputs here, not competitors: the concept is what makes that arc
+  *visible*. And the motif is not a substitute for it — a motif picked as an attribute of a preset
+  you chose first, then capped at ≤3 appearances, is a decoration; a concept is what the deck IS.
+
+  Draw the three from the bold-reference pass you already run, and keep them cheap — they are three
+  sentences, not three renders. No extra dispatch, no extra round trip. **Record them on the Design
+  plan as `concept:` — the winner, then the two rejected, each with the clause that lost it.** Two
+  rejected concepts that are the winner in other words is a single sketch relabelled, and the gate
+  says so.
+- **Blank-canvas sketch first** — now IN SERVICE of the chosen concept. For the deck's design
+  language, and again for every non-obvious
   slide, first describe in one or two clauses what the ideal page would look like **as if the
   library didn't exist** — driven only by this content, this audience, this feeling ("the gap
   should feel like a cliff — one hollow bar towering over the filled one" · "this should read
