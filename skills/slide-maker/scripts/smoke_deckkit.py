@@ -994,5 +994,61 @@ def _iso_components():
         pass
 ok("iso 2.5D suite (prism · faithful bars · aligned stack · guards)", _iso_components)
 
+def _structural_tokens():
+    """set_geometry is a NO-OP at its defaults and reaches every rounded component at radius=0.
+
+    The guarantee that matters is the first one: 55 components pass round=True through box(), so
+    if the default ever stopped being byte-identical, every deck ever built with this library
+    would restyle at once.
+    """
+    import zipfile, hashlib, tempfile
+
+    def digest():
+        prs = dk.blank_deck(); sl = dk.add_slide(prs)
+        dk.box(sl, 0.5, 0.5, 3, 1.5, fill="EEEEEE", round=True)
+        dk.chip(sl, 0.5, 2.4, 2.5, 0.9, "Chip", "sub", dk.BLUE)
+        dk.hrule(sl, 0.5, 4.6, 6)
+        f = tempfile.mktemp(suffix=".pptx"); prs.save(f)
+        with zipfile.ZipFile(f) as z:
+            return hashlib.sha256(b"".join(z.read(n) for n in sorted(z.namelist())
+                                           if n.startswith("ppt/slides/"))).hexdigest()
+
+    base = digest()
+    dk.set_geometry(radius=1.0, rule_w=1.0)
+    assert digest() == base, "set_geometry at its DEFAULTS must be byte-identical"
+    dk.set_geometry(radius=0, rule_w=3.0)
+    assert digest() != base, "radius=0 / rule_w=3 must actually change the deck"
+    dk.set_geometry(radius=1.0, rule_w=1.0)
+    assert digest() == base, "restoring the defaults must restore the rendering"
+
+    for bad in (-1, 5, "thick"):
+        try:
+            dk.set_geometry(radius=bad); assert False, "set_geometry must reject radius=%r" % (bad,)
+        except (ValueError, TypeError):
+            pass
+    try:
+        dk.set_geometry(rule_w=0); assert False, "rule_w=0 would delete every rule, not thin it"
+    except ValueError:
+        pass
+    dk.set_geometry(radius=1.0, rule_w=1.0)
+
+    # every preset must CARRY its structure, or the register is prose again
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import presets as _pr
+    for nm in _pr.names():
+        pp = _pr.preset(nm)
+        assert "radius" in pp and "rule_w" in pp, "preset %s carries no structural tokens" % nm
+        assert 0 <= pp["radius"] <= 4 and 0.2 <= pp["rule_w"] <= 6, "preset %s out of range" % nm
+    assert _pr.preset("brutalist")["radius"] == 0, "brutalist guard says NO rounded corners"
+    assert _pr.preset("ink_wash")["radius"] == 0, "east-asian register: no rounded SaaS cards"
+    assert _pr.preset("brutalist")["rule_w"] > _pr.preset("swiss")["rule_w"], \
+        "brutalist THICK rules must outweigh swiss hairlines"
+    _pr.apply("brutalist")
+    assert dk.RADIUS_SCALE == 0 and dk.RULE_W_SCALE == 3.0, "presets.apply must set geometry too"
+    dk.set_geometry(radius=1.0, rule_w=1.0)
+    dk.set_palette(accents=list(dk.ACCENTS))
+ok("structural tokens (set_geometry no-op at default · reaches box · presets carry them)",
+   _structural_tokens)
+
 print(f"\nsmoke_deckkit: {len(fails)} failure(s)" + ("" if not fails else " — " + "; ".join(n for n, _ in fails)))
 sys.exit(1 if fails else 0)

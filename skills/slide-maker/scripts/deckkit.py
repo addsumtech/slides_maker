@@ -340,6 +340,53 @@ EADISPLAY = None          # optional CJK DISPLAY/title font (e.g. "Hiragino Sans
 # defaults for you, so a single call re-themes the whole component set. See set_palette below.
 
 
+# ── STRUCTURAL tokens — the register's geometry, as opposed to its colour ─────────────────────
+# Every one is resolved at CALL time and defaults to a no-op, so a deck that never calls
+# set_geometry() renders byte-identically to before these existed.
+#
+# Why they are globals rather than per-call parameters: `presets.py`'s `surface` and `guard`
+# strings are already a fairly complete geometry spec — "NO rounded corners, NO soft shadows"
+# (brutalist), "hairline rules" (swiss/ink_wash/luxury), "THICK black rules/borders" (brutalist),
+# "line-work stays THIN" (blueprint) — and NONE of it was reachable through the component library.
+# A preset was 5 colours, 5 font names and 3 English sentences; the sentences were the part that
+# made a brutalist deck look brutalist, and they were the part nothing implemented. That is the
+# mechanism behind the house style: every register resolved to the same rounded card.
+RADIUS_SCALE = 1.0        # 0 = every corner square (brutalist · swiss · ink_wash · blueprint);
+                          # 1 = today; >1 = softer (memphis · midcentury "rounded organic shapes")
+RULE_W_SCALE = 1.0        # multiplies rule / divider / border weights. brutalist "THICK black
+                          # rules"; blueprint + swiss + editorial + luxury "hairline"
+
+
+def set_geometry(*, radius=None, rule_w=None):
+    """Set the deck's STRUCTURAL tokens once, after import and before building.
+
+    The twin of :func:`set_palette`, for the half of a register that is not colour. Call it with a
+    preset's own structural intent:
+
+        set_geometry(radius=0, rule_w=2.2)      # brutalist: hard edges, thick rules
+        set_geometry(radius=0, rule_w=0.6)      # swiss / ink_wash: hard edges, hairlines
+        set_geometry(radius=1.6)                # midcentury: rounded organic shapes
+
+    Deliberately NOT implemented the way set_palette is. set_palette rewrites frozen signature
+    defaults keyed on the identity of the old constant, which works for RGBColor objects and would
+    be catastrophic for floats and bools — `id(0.1)` and `id(True)` are shared across the whole
+    interpreter, so remapping by identity would rewrite unrelated parameters. These resolve at call
+    time instead, the pattern `columns()` already uses for GUTTER.
+    """
+    global RADIUS_SCALE, RULE_W_SCALE
+    if radius is not None:
+        if not (0 <= float(radius) <= 4):
+            raise ValueError("set_geometry(radius=%r): expected 0..4 (0 = square, 1 = default). "
+                             "It is a SCALE on each component's own radius, not an inch value."
+                             % (radius,))
+        RADIUS_SCALE = float(radius)
+    if rule_w is not None:
+        if not (0.2 <= float(rule_w) <= 6):
+            raise ValueError("set_geometry(rule_w=%r): expected 0.2..6 (1 = default). A weight of "
+                             "0 would delete every rule rather than thin it." % (rule_w,))
+        RULE_W_SCALE = float(rule_w)
+    return {"radius": RADIUS_SCALE, "rule_w": RULE_W_SCALE}
+
 def set_palette(*, deep=None, blue=None, teal=None, magenta=None, slate=None, mute=None,
                 mono=None, font=None, display=None, eadisplay=None, eafont=None, accents=None):
     """Re-theme the whole deck in ONE call, right after import and before building. Reassigns the
@@ -713,6 +760,16 @@ def box(slide, x, y, w, h, fill=None, line=None, line_w=1.0, round=False, corner
     (pos 0..1, colour, alpha 0..1); `grad_angle` sets linear direction (deg), `grad_radial=True`
     a centre-out radial. Powers glass/glow/scrim — usually via the `glass_card`/`glow`/
     `scrim_overlay` helpers rather than called directly."""
+    # RADIUS_SCALE, resolved at CALL time (the `columns()`/GUTTER pattern, not set_palette's
+    # id()-keyed default remap — that mechanism cannot carry floats, whose identity is shared).
+    # At 0 every rounded component squares off, which is the only way to reach three registers the
+    # library ships prose for and could not draw: brutalist "NO rounded corners", swiss "no rounded
+    # cards", east-asian "No rounded 'SaaS cards'". 55 components pass round=True through here, so
+    # this one line is the whole switch — before it, honouring those guards meant abandoning the
+    # component library and hand-rolling with box(), which is a plausible CAUSE of the measured
+    # 3-of-59 form-component usage rather than a coincidence with it.
+    if RADIUS_SCALE <= 0:
+        round, r, corners = False, None, "all"
     if not (round or r is not None or corners != "all"):
         t = MSO_SHAPE.RECTANGLE
     elif corners in ("top", "bottom"):
@@ -727,7 +784,7 @@ def box(slide, x, y, w, h, fill=None, line=None, line_w=1.0, round=False, corner
     else: s.line.color.rgb = _as_rgb(line); s.line.width = Pt(line_w)
     s.shadow.inherit = False
     if t != MSO_SHAPE.RECTANGLE:
-        adj = (r / min(w, h)) if r is not None else 0.08
+        adj = ((r / min(w, h)) if r is not None else 0.08) * RADIUS_SCALE
         adj = max(0.0, min(0.5, adj))
         try: s.adjustments[0] = adj
         except Exception: pass
@@ -3029,8 +3086,13 @@ def equation_png(latex_lines, out_path, color="FFFFFF", fontsize=28, dpi=300, ma
 
 
 def hrule(slide, x, y, w, color=MUTE, weight=0.012):
-    """A thin horizontal rule — for real table lines / separators."""
-    return box(slide, x, y, w, weight, fill=color)
+    """A thin horizontal rule — for real table lines / separators.
+
+    `weight` is scaled by ``RULE_W_SCALE`` (see :func:`set_geometry`), so one call switches a deck
+    between brutalist "THICK black rules" and swiss / ink-wash / editorial "hairline". At the
+    default 1.0 the rendered weight is unchanged.
+    """
+    return box(slide, x, y, w, weight * RULE_W_SCALE, fill=color)
 
 
 # ================================================================= native (editable) charts

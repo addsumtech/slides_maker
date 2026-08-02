@@ -11,7 +11,19 @@ helper. The craft rules in `design-principles.md` still govern; this is the cata
 - The component catalogue (reach for these, don't reinvent)
 - Reproduction notes
 
-## The style presets (one switch = palette + fonts + surface)
+## The style presets (one switch = palette + fonts + **structure** + surface)
+
+**Use `presets.apply(name)`, not `preset(name)`.** It sets the palette AND the structural tokens —
+`radius` (a scale on every component's corner radius; **0 = square**) and `rule_w` (a scale on rule
+and border weights) — which are what actually make a register look like itself. Until they existed a
+preset was 5 colours, 5 font names and 3 English sentences, and the sentences were the load-bearing
+part: `brutalist`'s "NO rounded corners, NO soft shadows", `swiss`'s "no rounded cards", ink-wash's
+"No rounded 'SaaS cards'", `blueprint`'s "line-work stays THIN". **None of it was reachable through
+the component library** — 55 components pass `round=True` into `box()` with no caller-side switch,
+so honouring a guard meant abandoning the components and hand-rolling with `box()`. That is a
+plausible cause of the measured "3 of 59 form components used", not a coincidence with it.
+`deckkit.set_geometry(radius=…, rule_w=…)` is the manual form; both are no-ops at their defaults, so
+nothing built before this restyles.
 | preset | register | signature moves |
 |---|---|---|
 | `swiss` | minimal / typographic | strict grid, one red, huge type-scale ratio, ghost numerals |

@@ -44,6 +44,7 @@ _KAITI = "Kaiti SC" if _sys.platform == "darwin" else "KaiTi"
 
 PRESETS = {
     "glassmorphism": {
+        "radius": 1.4, "rule_w": 1.0,   # structural tokens — see deckkit.set_geometry
         "mood": "premium dark UI / tech — depth, light, frosted glass",
         "bg": C("0A0E27"), "ink": C("F2F5FC"), "muted": C("AEB7CC"),
         "accents": [C("5B8DEF"), C("3DDDFC"), C("A26BFA"), C("FB7185"), C("4ADE80")],
@@ -58,6 +59,7 @@ PRESETS = {
         "when": "launches, product/tech talks, dashboards, design-forward decks. NEEDS a dark base.",
     },
     "swiss": {
+        "radius": 0.0, "rule_w": 0.6,   # structural tokens — see deckkit.set_geometry
         "mood": "International Typographic Style — grid, restraint, one red",
         "bg": C("FFFFFF"), "ink": C("111111"), "muted": C("777777"),
         "accents": [C("E2231A")], "font": "Arial", "display": "Arial", "mono": "Consolas",
@@ -71,6 +73,7 @@ PRESETS = {
         "when": "research, design, editorial, defense, any minimal/typographic register.",
     },
     "editorial_paper": {
+        "radius": 0.3, "rule_w": 0.6,   # structural tokens — see deckkit.set_geometry
         "mood": "luxury magazine — warm paper, serif, gold, big photography",
         "bg": C("FAF6EE"), "ink": C("1C1A17"), "muted": C("8A8275"),
         "accents": [C("B58A2E"), C("CBB46A")], "font": "Arial", "display": "Georgia", "mono": "Consolas",
@@ -86,6 +89,7 @@ PRESETS = {
         "when": "brand, portfolio, award, culture/lifestyle, showcase — tone over data density.",
     },
     "editorial_report": {
+        "radius": 0.4, "rule_w": 0.7,   # structural tokens — see deckkit.set_geometry
         "mood": "serious dark briefing — FT/Bloomberg gravitas, one-red discipline",
         "bg": C("0E0E12"), "ink": C("ECECEF"), "muted": C("8C8C97"),
         "accents": [C("E0392B"), C("D9A441")], "font": "Arial", "display": "Georgia", "mono": "Consolas",
@@ -101,6 +105,7 @@ PRESETS = {
         "when": "market/landscape reports, investor/strategy briefings, thought-leadership.",
     },
     "risograph": {
+        "radius": 0.4, "rule_w": 1.3,   # structural tokens — see deckkit.set_geometry
         "mood": "indie print zine — riso in 2 inks + the navy neutral, halftone, hard offset shadows",
         "bg": C("F3ECD9"), "ink": C("1B2A4A"), "muted": C("6B7280"),
         "accents": [C("FF4D8D"), C("F5B301"), C("1B2A4A")], "font": "Arial", "display": "Arial Black",
@@ -114,6 +119,7 @@ PRESETS = {
         "when": "culture, marketing, teaching, launch — audiences that reward personality.",
     },
     "memphis": {
+        "radius": 1.6, "rule_w": 1.2,   # structural tokens — see deckkit.set_geometry
         "mood": "80s-90s New Wave — bold, playful, chaotic-geometric",
         "bg": C("FCF2D8"), "ink": C("1A1A17"), "muted": C("9A9384"),
         "accents": [C("F76302"), C("0548C5"), C("E2342B"), C("1B7A3D"), C("F6BE1A")],
@@ -127,6 +133,7 @@ PRESETS = {
         "when": "events, festivals, launches, culture decks wanting energy.",
     },
     "brutalist": {
+        "radius": 0.0, "rule_w": 3.0,   # structural tokens — see deckkit.set_geometry
         "mood": "brutalist newspaper / annual report — heavy rules, raw type, ink-red-white",
         "bg": C("FFFFFF"), "ink": C("111111"), "muted": C("3A3A3A"),
         "accents": [C("C8102E")], "font": "Arial", "display": "Arial Black", "mono": "Consolas",
@@ -141,6 +148,7 @@ PRESETS = {
         "when": "annual report, manifesto, data-journalism with attitude, bold tech/culture decks.",
     },
     "blueprint": {
+        "radius": 0.0, "rule_w": 0.6,   # structural tokens — see deckkit.set_geometry
         "mood": "engineering / academic blueprint — schematic line-work on deep navy, one warm accent",
         "bg": C("0A1B38"), "ink": C("EAF2FF"), "muted": C("8FA6C4"),
         "accents": [C("46B4E8"), C("F1764E")], "font": "Arial", "display": "Arial", "mono": "Consolas",
@@ -156,6 +164,7 @@ PRESETS = {
         "when": "technical/method talks, architecture, agents/AI/engineering, paper-reading decks.",
     },
     "ink_wash": {
+        "radius": 0.0, "rule_w": 0.5,   # structural tokens — see deckkit.set_geometry
         "mood": "Chinese ink editorial (藏拙) — warm paper, ink black, one seal red, KaiTi serif",
         "bg": C("F5F1E8"), "ink": C("1A1A1A"), "muted": C("8B8680"),
         "accents": [C("A52A2A"), C("5C5852")], "font": "Hiragino Sans GB", "display": _KAITI, "mono": "Consolas",
@@ -171,6 +180,7 @@ PRESETS = {
         "when": "Chinese cultural / literary / brand / humanities decks; any 中文 editorial register.",
     },
     "eastern_traditional": {
+        "radius": 0.0, "rule_w": 0.7,   # structural tokens — see deckkit.set_geometry
         "mood": "Eastern traditional-colour narrative — warm paper, ochre-gold + sage, KaiTi",
         "bg": C("F7F2E8"), "ink": C("3A3530"), "muted": C("7A7068"),
         "accents": [C("C99E62"), C("6F8F75"), C("A52A2A")], "font": "Hiragino Sans GB", "display": _KAITI, "mono": "Consolas",
@@ -186,6 +196,7 @@ PRESETS = {
         "when": "traditional-culture, heritage, colour/material, plant-dye, museum/exhibition CN decks.",
     },
     "consulting": {
+        "radius": 0.8, "rule_w": 1.0,   # structural tokens — see deckkit.set_geometry
         "mood": "top-tier (MBB) strategy deck — white, action titles, navy insight banners, semantic 5-colour",
         "bg": C("FFFFFF"), "ink": C("1A2B45"), "muted": C("5A6B82"),
         "accents": [C("1A2B45"), C("1F8A70"), C("C9A227"), C("C0492E"), C("64748B")],
@@ -207,6 +218,7 @@ PRESETS = {
         "when": "strategy proposals, board/exec readouts, consulting, business cases.",
     },
     "dark_tech": {
+        "radius": 1.0, "rule_w": 1.0,   # structural tokens — see deckkit.set_geometry
         "mood": "calm near-black engineering — semantic accents on navy, white 'diagram islands', mono brand",
         "bg": C("0C1320"), "ink": C("E8EDF5"), "muted": C("8A96AC"),
         "accents": [C("4F9CF5"), C("33C2A6"), C("F2A33C"), C("E0556E"), C("A98BF0")],
@@ -224,6 +236,7 @@ PRESETS = {
         "when": "AI/ML, infra, agents, developer-tool, eng-blog and safety decks (dark, technical).",
     },
     "luxury_dark": {
+        "radius": 0.4, "rule_w": 0.6,   # structural tokens — see deckkit.set_geometry
         "mood": "dark luxury editorial — near-black, ONE metallic accent, photography supplies the colour",
         "bg": C("0A0A0A"), "ink": C("F5F0EB"), "muted": C("9E9690"),
         "accents": [C("C9A96E"), C("8B7355")], "font": "Arial", "display": "Georgia", "mono": "Consolas",
@@ -239,6 +252,7 @@ PRESETS = {
         "when": "fashion, luxury brand, premium product, gallery/awards — tone over data.",
     },
     "museum_memorial": {
+        "radius": 0.2, "rule_w": 0.6,   # structural tokens — see deckkit.set_geometry
         "mood": "midnight-navy memorial / exhibition — brass-gold accents, archival duotone, serif gravitas",
         "bg": C("0E1A2B"), "ink": C("ECE6D8"), "muted": C("8B93A3"),
         "accents": [C("C5A253"), C("6E8CA8")], "font": "Arial", "display": "Georgia", "mono": "Consolas",
@@ -254,6 +268,7 @@ PRESETS = {
         "when": "memorial, history/heritage, museum exhibition, biography, retrospective decks.",
     },
     "bauhaus": {
+        "radius": 0.0, "rule_w": 2.6,   # structural tokens — see deckkit.set_geometry
         "mood": "Bauhaus modernism — the primitive triad (circle/square/triangle) as the layout's "
                 "structural actors, primary red/yellow/blue on white, lowercase geometric sans.",
         "bg": [245, 243, 238], "ink": [26, 26, 26], "muted": [110, 108, 102],
@@ -271,6 +286,7 @@ PRESETS = {
         "when": "design, architecture, education, modernist brand, a bold geometric register.",
     },
     "midcentury": {
+        "radius": 1.8, "rule_w": 0.8,   # structural tokens — see deckkit.set_geometry
         "mood": "Mid-century modern — warm harvest palette + atomic/starburst/boomerang motifs, "
                 "1950s-60s optimism; geometric-humanist type.",
         "bg": [244, 237, 221], "ink": [42, 37, 30], "muted": [120, 108, 90],
@@ -289,6 +305,7 @@ PRESETS = {
         "when": "culture, retro brand, lifestyle, a warm optimistic register; anything Eames-era.",
     },
     "terminal": {
+        "radius": 0.0, "rule_w": 1.0,   # structural tokens — see deckkit.set_geometry
         "mood": "Terminal / monospace — phosphor-on-black CRT: fixed-width type throughout, a "
                 "command-line register for engineers.",
         "bg": [10, 15, 10], "ink": [200, 240, 200], "muted": [90, 130, 90],
@@ -306,6 +323,7 @@ PRESETS = {
         "when": "developer-tool, CLI/infra, hacker/CTF, an eng-blog or release-notes register.",
     },
     "synthwave": {
+        "radius": 0.6, "rule_w": 1.2,   # structural tokens — see deckkit.set_geometry
         "mood": "Synthwave / Outrun — retro-futurist neon: a receding perspective grid to a horizon, "
                 "sunset gradient, glow. Vivid and high-contrast.",
         "bg": [18, 12, 38], "ink": [240, 235, 255], "muted": [150, 130, 190],
@@ -325,6 +343,30 @@ PRESETS = {
         "when": "launch, gaming, music/culture, a bold retro-future register; audiences wanting energy.",
     },
 }
+
+
+def apply(name):
+    """Apply a preset's COLOUR and its STRUCTURE in one call, then return the preset dict.
+
+    Before the structural tokens existed a preset was 5 colours, 5 font names and 3 English
+    sentences — and the sentences ("NO rounded corners", "hairline rules", "THICK black
+    rules/borders") were the part that made a register look like itself, and the part nothing
+    implemented. Honouring them meant abandoning the component library and hand-rolling with
+    box(), because 55 components pass round=True with no caller-side switch. Now they are data:
+
+        import presets, deckkit as dk
+        p = presets.apply("brutalist")      # palette + fonts + hard edges + thick rules
+
+    Returns the preset so the caller can still read `surface` / `guard` / `image_prompt`, which
+    stay prose on purpose — they are art direction, not geometry.
+    """
+    import deckkit as dk
+    p = preset(name)
+    dk.set_palette(deep=p["ink"], slate=p["muted"], accents=list(p["accents"]),
+                   font=p["font"], display=p["display"], mono=p["mono"],
+                   eafont=p["ea"], eadisplay=p["ea_display"])
+    dk.set_geometry(radius=p["radius"], rule_w=p["rule_w"])
+    return p
 
 
 def preset(name):
