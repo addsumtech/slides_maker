@@ -9,7 +9,36 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+### Added
+- **slide-maker now tells you when it is out of date.** `scripts/check_version.py` runs once at
+  Step 0, prints ONE line if a newer version exists and nothing when current, and never pulls,
+  blocks, or fails — every error path (offline, 404, corrupt cache, missing marker) exits 0,
+  because a version notice that can break someone's deck is worse than no notice. Cached 24h, so
+  the cost is one network call a day and ~5ms otherwise; opt out with
+  `SLIDE_MAKER_NO_VERSION_CHECK=1`.
+  - The blocker this had to clear first: `npx skills add` copies only `skills/slide-maker/`, so
+    `plugin.json`, `marketplace.json` and `CHANGELOG.md` — every version marker the repo had —
+    stay behind in the root. A copied install had **nothing on disk** saying which version it
+    was, which made "tell the user an update exists" impossible for most users rather than
+    merely hard. **`skills/slide-maker/VERSION`** is that marker; it ships with the skill.
+  - Two install shapes, two questions: a git checkout gets `fetch` + `rev-list` and hears how
+    many commits it is behind; a copy gets one GET of the raw `VERSION` and a semver compare.
+  - **The CI version gate grew from two markers to four** (`scripts/check_versions.py`). This is
+    not tidiness. The notice is SILENT when current, so a stale `VERSION` would tell every copied
+    install it is up to date *forever*, with nothing anywhere reporting it — a failure that is
+    invisible by construction is exactly the class that needs a gate rather than a line in a
+    release checklist. **Bump `VERSION` with the other three or CI goes red.**
+- README: a **"Keeping it up to date"** section, because the notice shipped pointing at a command
+  the README had never explained. The npx and clone paths had no documented update route at all —
+  only the plugin path did.
+
 ### Changed
+- **README corrected on two claims that 74 commits had overtaken.** Click builds were described as
+  unconditional ("bullets are native PowerPoint click builds") when they are the user's opt-in
+  choice and a static deck is a correct outcome; and the four rendered style directions were
+  described as something you ask for ("Show me a few style directions first") when the direction
+  gate runs BY DEFAULT on the design-from-scratch branch and now guarantees a bespoke register
+  among the options — the README was underselling a shipped feature.
 - **The direction gate now requires at least one BESPOKE register**, invented for the topic
   rather than picked from the 18 presets. `directions_diversity.py` exits 2 when no candidate
   carries its own `cover_motif`/`ambient_motif` — the only machine-visible difference between a
