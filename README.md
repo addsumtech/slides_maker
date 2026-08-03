@@ -33,8 +33,6 @@ Most AI-PPT tools race to look pretty in seconds. slide-maker optimizes for the 
 
 Native-editable PPTX is now table stakes (several tools do it). What's rare is *editable **and** source-traced **and** critic-reviewed **and** bespoke* — together, in one file you own. Honest limits: no zero-setup cloud, no share links, no animated web backgrounds — it makes a **file**, run locally, that opens and edits cleanly in real PowerPoint/Keynote. See [what's different](#what-makes-slide-maker-different).
 
-Recent updates: it now also reads **Word, Excel, CSV, images, and video/audio** (extraction-first — it never guesses a number off pixels), and handles a whole **book or very-long PDF** by triaging chapters around your deck's purpose instead of skimming.
-
 <p align="center">
   <a href="https://slides.addsum.top/"><strong>Intro video</strong></a> ·
   <a href="#template-gallery"><strong>Templates</strong></a> ·
@@ -153,7 +151,7 @@ cp -r slides_maker-site/templates/decks/en/nvidia-overview ~/.claude/slide-templ
 cp -r slides_maker-site/templates/decks/en/nvidia-overview ~/.codex/slide-templates/nvidia-overview
 ```
 
-Use `en/` templates for English decks and `zh/` for Chinese ones. The layouts match; only the copy language differs.
+The layouts match; only the copy language differs.
 
 
 ---
@@ -183,10 +181,9 @@ slide-maker isn't one prompt doing everything. It's a set of **specialized agent
 
 The split is the point: a constructive planner proposes, independent judges dispose. That's why the deck you receive has already survived a review you never had to run.
 
-On top of that, it does four things most tools skip:
+On top of that, it does three things most tools skip:
 
 - **It reads before it draws.** A paper gets read end to end, a repo starts from its README, and when you have no material it researches the topic online first. Every number and figure is traced back to a source, and you confirm a structure draft before any slide is drawn. It will not paste the abstract onto slide one and call it a day.
-- **It gets reviewed before you see it.** After generation, every slide is rendered to an image and handed to the independent critic. Cramped layout, weak contrast, numbers that don't match the source: all get sent back for fixes. You receive the deck only after the critic signs off.
 - **More than text stays editable.** Data charts default to native PowerPoint charts you can double-click and re-number. Formulas are typeset as editable native math text by default, not screenshots (only 2-D layouts like fractions and matrices fall back to a rendered image). Paper figures are cropped from the PDF as-is, never redrawn.
 - **Script comes included; motion is yours to choose.** Presentation decks carry a full per-slide script in speaker notes, so you can walk on stage with it. Click builds — revealing a slide one beat at a time — are offered in the interview rather than assumed: say you want a plain click-through and the deck is static, which is the correct result and not a missing feature. When you do want them, it decides *where* they earn their place and stages those slides fully, instead of animating half a page.
 
@@ -200,8 +197,8 @@ To be plain about it: it does not promise a perfect deck in one shot. It promise
 
 ## How it works
 
-1. **It asks first.** Who is the audience, how long is the talk, live or self-read, what style. Short answers are enough. Say "you decide" if you are in a hurry — it then picks sensible answers itself and posts its picks before building, so a wrong guess costs you one glance, not a rebuild (only a missing topic or source still needs you). No material at all? Give it a topic and it will research online before anything else.
-2. **It reads (or researches) the material.** Papers, docs, repos — and now Word / Excel / CSV / images / video, plus whole books via purpose-driven triage — are read faithfully: figures cropped from the PDF, key numbers verified line by line, nothing without a source on a slide. With only a topic, it researches current information online first, then works from that.
+1. **It asks first.** Who is the audience, how long is the talk, live or self-read, what style. Short answers are enough. Say "you decide" if you are in a hurry — it then picks sensible answers itself and posts its picks before building, so a wrong guess costs you one glance, not a rebuild (only a missing topic or source still needs you).
+2. **It reads (or researches) the material.** Papers, docs, repos — plus Word / Excel / CSV / images / video / audio, and whole books via purpose-driven triage — are read faithfully, extraction-first (it never guesses a number off pixels): figures cropped from the PDF, key numbers verified line by line, nothing without a source on a slide. With only a topic, it researches current information online first, then works from that.
 3. **You approve the story, then the look — right in the chat.** The content-planner posts a compact per-slide table (what each slide says, which figure carries it, how the deck flows); once you confirm the story, the art director posts the design plan (look, palette, per-slide form, motion) the same way. Two quick confirmations at the two cheapest moments to change direction — no plan files to open.
 4. **It generates the PPTX.** Layout is guaranteed by code, with automatic layout checks both at build time and on the rendered output. Overflow, overlap, and font problems get caught there.
 5. **An independent critic reviews it.** Rendered slides go to the critic agent (with an arbiter cross-checking on high-stakes decks), judged against presentation standards. Fixes land, the deck is re-checked, and only then is it delivered to `~/Downloads/<deck-name>/`. The PDF and the browser preview are generated at hand-off rather than on every build (a deck still being edited makes them stale immediately) — and they are **gated on a record that the review actually ran**, because the model that skips a check is the same model that would write the note claiming it didn't.
@@ -327,8 +324,6 @@ It:   (after reading the paper) Here is the plan: 15 slides.
       becomes a native chart you can re-number...
       Confirm the direction and I will build.
 ```
-
-Two more things worth knowing:
 
 - **You pick the look before the deck is built — you don't have to ask.** When slide-maker is designing from scratch (you have no template of your own), it renders **four style directions** into one browser link and waits for you to choose. At least one of the four is a **register invented for your topic** rather than a stock preset, and a mechanical check rejects a set whose options are four coats of the same paint — so it is a real choice, not a formality.
 - Put your material in the current project, or give a full path in the request. **No material at all?** Give it a topic; it researches online first, then agrees on a structure with you.
