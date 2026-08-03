@@ -62,7 +62,27 @@ Read this before Step 2, then carry its evidence through the remaining steps.
    against the final PPTX and produce small PNG crops for review. This is intentionally not a generic
    box-overlap lint: it makes the few high-risk relationships explicit without penalising deliberate
    overlays or bespoke composition.
-6. **Review by lens, not by one permissive generalist.** At `standard` or `thorough`, dispatch the
+6. **Resolve the palette as a MATRIX before building, and run the mechanical pre-flight before the
+   first render.** Two checks that this adapter used to leave entirely to prose, both of which the
+   shared path has since mechanised:
+   - `python3 scripts/palette_audit.py` — computes every accent x ground pair at once and splits each
+     hue into a FILL-only and a TEXT-safe token. The two-token rule was always stated; it is still
+     easy to break, because the rule is per-PAIR and a build touches dozens. Record the resolved
+     split in the evidence record's design section. 🔴 **The Codex delivery gate does NOT check
+     contrast today** — `palette` and `contrast` appear nowhere in `codex_delivery_gate.py`, while
+     the shared `.deck-gates.json` requires a `palette` field precisely because one deck shipped four
+     separate contrast violations. Until the gate catches up, this step is the only thing standing
+     between a Codex deck and that failure, so do not skip it on the grounds that nothing enforces it.
+   - `python3 scripts/preflight_check.py <deck>.pptx --build build_<deck>.py` before the first
+     whole-deck render, with `--selfread` / `--static` to match the delivery mode. It decides the
+     mechanical half of PRE-FLIGHT — speaker-notes coverage, build timing, native charts, the as-of
+     date, leaked `<slot>` text, a literal stride constant in a placement loop, a bar of sample
+     means — plus four hard FAILs no geometry check can see: mono overflow, a mono face absent from
+     the render box, **Latin -> full-width adjacency** (`原生 PPTX 。`, a defect that shipped on 5 of
+     12 slides of a real deck and was caught only by a human at 5x zoom), and a non-positive text
+     box. Exit 1 means not ready; `NOT CHECKED` + exit 2 means it could not run, which is never the
+     same as clean. The five judgment items it prints as still-yours stay yours.
+7. **Review by lens, not by one permissive generalist.** At `standard` or `thorough`, dispatch the
    normal two focused critics separately: content/fidelity and design/layout/legibility. Each final
    review is a separate JSON file, has full-deck coverage, declares its lens, consents, and records the
    SHA-256 of the final PPTX it reviewed. The review must also record `reviewer: {origin, identity,
