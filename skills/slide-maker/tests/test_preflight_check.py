@@ -313,13 +313,33 @@ def _(td):
     return st == "NOT CHECKABLE" and st2 == "NOT CHECKABLE"
 
 
+def _installed_mono():
+    """A monospace face that actually exists on THIS machine, or None.
+
+    `check_mono_wrap` reports a missing mono face BEFORE it reports anything about wrapping, and
+    rightly so — a substituted face has different widths, so a panel checked in one face is not the
+    panel the reader sees. That ordering means a test hardcoding "Courier New" asserts nothing on a
+    Linux runner, where the face is absent and the check short-circuits into the missing-face FAIL.
+    That is exactly how these cases went red in CI while passing locally: macOS has Courier New,
+    the runner has DejaVu Sans Mono, and neither machine has both."""
+    sys.path.insert(0, str(SKILL / "scripts"))
+    from preflight_check import _face_installed
+    for name in ("Courier New", "Menlo", "Monaco", "Consolas", "DejaVu Sans Mono", "SF Mono"):
+        if _face_installed(name):
+            return name
+    return None
+
+
 # --- mono-wrap precision: the check FAILs a build, so a false FAIL teaches the builder to
 # --- route around the one defect it exists for (a shipped command that 404s).
 
 @case("mono wrap: a too-long line in a NON-wrapping panel still FAILs")
 def _(td):
     import deckkit as dk
-    dk.FONT, dk.MONO = "Helvetica", "Courier New"
+    mono = _installed_mono()
+    if mono is None:
+        return True          # no mono face anywhere: check_mono_wrap's missing-face arm owns this
+    dk.MONO = mono
     prs = dk.blank_deck(10, 5.625)
     s = dk.add_slide(prs)
     dk.code_block(s, 0.5, 1.0, 2.6, "npx skills add addsumtech/slides_maker")
@@ -332,12 +352,15 @@ def _(td):
 @case("mono wrap: mixed proportional+mono runs that FIT are not reported")
 def _(td):
     import deckkit as dk
-    dk.FONT, dk.MONO = "Helvetica", "Courier New"
+    mono = _installed_mono()
+    if mono is None:
+        return True          # no mono face anywhere: check_mono_wrap's missing-face arm owns this
+    dk.MONO = mono
     prs = dk.blank_deck(10, 5.625)
     s = dk.add_slide(prs)
     tb = dk.text(s, 0.5, 1.0, 6.0, 0.6,
-                 [[("Run this: ", 12, dk.DEEP, False, False, "Helvetica"),
-                   ("pip install x", 12, dk.DEEP, False, False, "Courier New")]])
+                 [[("Run this: ", 12, dk.DEEP, False, False, dk.FONT),
+                   ("pip install x", 12, dk.DEEP, False, False, mono)]])
     tb.text_frame.word_wrap = True
     f = td / "mono_mixed.pptx"
     prs.save(str(f))
@@ -348,12 +371,15 @@ def _(td):
 @case("mono wrap: an over-wide line in a WRAPPING box is advisory, not a silent-clip FAIL")
 def _(td):
     import deckkit as dk
-    dk.FONT, dk.MONO = "Helvetica", "Courier New"
+    mono = _installed_mono()
+    if mono is None:
+        return True          # no mono face anywhere: check_mono_wrap's missing-face arm owns this
+    dk.MONO = mono
     prs = dk.blank_deck(10, 5.625)
     s = dk.add_slide(prs)
     tb = dk.text(s, 0.5, 1.0, 1.6, 0.6,
                  [[("npx skills add addsumtech/slides_maker", 12, dk.DEEP,
-                    False, False, "Courier New")]])
+                    False, False, mono)]])
     tb.text_frame.word_wrap = True
     f = td / "mono_wraps.pptx"
     prs.save(str(f))
