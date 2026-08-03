@@ -68,11 +68,22 @@ def _run_div(dirs, d):
     return r.returncode, r.stdout + r.stderr
 
 
+def _flagged(dirs, d):
+    """DIVERGENCE only. The process exit code is shared with the bespoke gate, so asserting on
+    it here would make these tests fail for a reason they are not about."""
+    p = os.path.join(d, "dirs.json")
+    with open(p, "w", encoding="utf-8") as f:
+        json.dump(dirs, f)
+    r = subprocess.run([sys.executable, os.path.join(HERE, "directions_diversity.py"), p, "--json"],
+                       capture_output=True, text=True)
+    return json.loads(r.stdout)
+
+
 def main():
     with tempfile.TemporaryDirectory() as d:
         def _diverse_passes():
-            rc, out = _run_div(DIVERSE, d)
-            assert rc == 0, "a genuinely divergent set was flagged:\n" + out
+            j = _flagged(DIVERSE, d)
+            assert not j["flagged"], "a genuinely divergent set was flagged:\n" + json.dumps(j)[:400]
         ok("diversity: three divergent directions pass", _diverse_passes)
 
         def _collapsed_flagged():
@@ -84,10 +95,26 @@ def main():
         ok("diversity: two skins of one idea are flagged (and not auto-killed)", _collapsed_flagged)
 
         def _brand_lock_redirects():
-            rc, out = _run_div(BRAND_LOCKED, d)
-            assert rc == 0, ("a brand-locked pair that diverged on composition+type was flagged — "
-                             "constraint must RELOCATE variance, not forbid it:\n" + out)
+            j = _flagged(BRAND_LOCKED, d)
+            assert not j["flagged"], ("a brand-locked pair that diverged on composition+type was "
+                                      "flagged — constraint must RELOCATE variance, not forbid "
+                                      "it:\n" + json.dumps(j)[:400])
         ok("diversity: brand-locked accent passes when composition+type diverge", _brand_lock_redirects)
+
+        def _bespoke_required():
+            j = _flagged(DIVERSE, d)          # DIVERSE is preset-only by construction
+            assert j["no_bespoke"], "a preset-only set must fail the bespoke gate"
+            rc, out = _run_div(DIVERSE, d)
+            assert rc == 2, "a preset-only set must exit 2"
+            assert "NO BESPOKE DIRECTION" in out, "no actionable message: " + out
+            assert "ESCAPE" in out and "record why" in out, \
+                "the hard gate ships without its named escape — those get routed around"
+            withb = list(DIVERSE) + [{"name": "Invented", "cover_motif": "<div/>",
+                                      "ambient_motif": "<i/>"}]
+            j2 = _flagged(withb, d)
+            assert not j2["no_bespoke"] and j2["bespoke"] == ["Invented"], \
+                "one bespoke candidate must satisfy the gate: " + json.dumps(j2)[:300]
+        ok("directions: >=1 bespoke register is required, with a named escape", _bespoke_required)
 
         def _composition_reaches_html():
             sys.path.insert(0, HERE)

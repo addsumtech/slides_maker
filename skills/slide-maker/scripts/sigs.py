@@ -35,7 +35,7 @@ MODULES = ("deckkit", "designed_charts")
 # the API that no single signature line states, so they are printed with every lookup rather than
 # left in one helper's docstring where only that helper's reader would find them.
 CONTRACTS = """\
-CALL-SHAPE CONTRACTS (the five that have actually gone wrong):
+CALL-SHAPE CONTRACTS (the ones that have actually gone wrong):
   · a text RUN is (text, size, color, bold, italic[, font])  — font is the SIXTH item. Runs live in
     paragraphs: text(slide, x, y, w, h, [[run, run], [run]]) is TWO paragraphs.
   · MEASURING takes a DIFFERENT run shape than PLACING. measure_text(runs, w, size) wants a FLAT
@@ -62,6 +62,36 @@ CALL-SHAPE CONTRACTS (the five that have actually gone wrong):
     iso_bars and the designed_charts recipes format in PYTHON, so there it is a format STRING
     ('{:.0f}', '{:.0%}'). Crossing them is silent on the sankey/iso side: the literal text
     '0%' is printed onto every node. Excel dialect for native_*, Python dialect for everything else.
+  · ONE TYPE SIZE PER PARAGRAPH. lint_layout measures a paragraph's INK at its LARGEST run size, so
+    a 38pt number inline with 10.5pt CJK is scored as multi-line 38pt text and "collides" with
+    whatever sits below — while the frames themselves are provably fine. The fix is never a bigger
+    gap; it is two blocks:
+        y = place(x, y, [[("257万1,037", 38, …, FONT)]])          # the number
+        place(x, y + 0.08, [[("人 · 在日外国劳动者", 10.5, …, EAFONT)]])   # its unit, separately
+    Measured on one deck: 7 of the first 20 build-time criticals were this single mistake.
+  · A COMPONENT OWNS ITS AXIS — never hand-derive one to overlay on it. dot_strip / dumbbell_board /
+    timeline(spacing='value') reserve their own label gutter, so an axis_scale() you build from the
+    same (x, w) does NOT land where theirs did. Measured: a 1.00 parity line computed that way was
+    drawn to the RIGHT of the 1.18 dot — the chart contradicting its own numbers, and no lint can
+    see it. Either set the component's `lo` to the threshold so the axis origin IS the reference
+    (best — geometry becomes true by construction), or drop the overlay and say it in the caption.
+  · highlight= SELECTS A SERIES; emphasize= selects a BAR. On a SINGLE-series column/bar chart
+    highlight is a no-op that greys everything — which silently deletes a semantic-colour binding
+    the whole page rests on. One series → emphasize=<category index>.
+  · native_chart(kind="bar") plots the FIRST category at the BOTTOM. Feed the list ASCENDING for it
+    to read as a descending ranking top-to-bottom. A ranking rendered upside down still lints clean.
+  · source_note() anchors to the canvas floor and then LIFTS clear of whatever it finds — on a full
+    page that walks it up INTO the content (measured: landed at y=3.88 on a 5.6in canvas, straight
+    through a data row). On any dense page pass an explicit `y`, and reserve that strip when you
+    compute the page's content bottom. Call it LAST either way.
+  · A COLOUR TOKEN IS SCOPED TO ITS GROUND. A muted grey chosen for a light canvas measures ~3:1 on
+    the dark bookend; a text-safe accent for the light ground measures ~2.9:1 on it. Keep a token
+    per ground and resolve by ground (`mute_for(bg)`, `on(fill)`), never by name — the failure is
+    invisible in the build and legible only in the render.
+  · A HAND-MADE SHAPE KEEPS THE THEME SHADOW. add_shape() stamps <p:style> with the theme's soft
+    drop shadow; `shadow.inherit = False` writes an empty effectLst that PowerPoint honours and
+    LibreOffice IGNORES — so the render and the visual critic still see it. Pass every hand-made
+    shape through deckkit._flat().
 """
 
 

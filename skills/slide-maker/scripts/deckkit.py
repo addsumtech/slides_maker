@@ -6148,6 +6148,11 @@ def _natural_width_in(runs, size_pt, font):
         flat = "".join(t for t, _ in runs)
         return len(flat) * size_pt * 0.5 / 72.0
 
+# Run-scoped, id(shape)-keyed. Advisory TEXT ONLY — it never changes a verdict, so a stale
+# entry from a reused id can at worst print an unhelpful sentence, never mis-gate a deck.
+_MIXED_HINTS = {}
+
+
 def _ink_rect(sh, bb):
     """The rectangle the GLYPHS actually fill inside a text frame `sh` (bbox `bb`), accounting for
     measured wraps, the frame's inner margins, the vertical anchor and the paragraph alignment.
@@ -6166,23 +6171,41 @@ def _ink_rect(sh, bb):
     inner_w = max(0.1, bb[2]-ml-mr); inner_h = max(0.05, bb[3]-mt-mb)
     wrap = tf.word_wrap if tf.word_wrap is not None else True
     lines_total, ink_w, max_sz = 0, 0.0, 0.0
+    mixed_hint = None
     ink_h_acc = 0.0
     align = None; subbed = False
     for p in tf.paragraphs:
         runs, sz, fn = [], 0.0, None
+        per_run = []                                    # (text, bold, size, font) — see below
         for r in p.runs:
             t = r.text or ""
             if not t: continue
             runs.append((t, bool(r.font.bold)))
+            _rsz = None
             try:
-                if r.font.size is not None: sz = max(sz, r.font.size.pt)
+                if r.font.size is not None:
+                    _rsz = r.font.size.pt; sz = max(sz, _rsz)
             except Exception: pass
             if fn is None and r.font.name: fn = r.font.name
+            per_run.append((t, bool(r.font.bold), _rsz, r.font.name))
         if not runs: continue
         if align is None: align = p.alignment
         if sz <= 0: sz = 18.0
         max_sz = max(max_sz, sz)
         if _font_substituted(fn or FONT): subbed = True
+        # MIXED-SIZE DIAGNOSIS — measured, but deliberately NOT used to shrink the ink.
+        # Summing each run at its own size is the width the runs themselves occupy; it is NOT
+        # the width the renderer produces, because PowerPoint and LibreOffice both insert
+        # CJK/Latin boundary spacing that no width model here accounts for. Measured: a box
+        # sized to the exact per-run sum still wrapped, and a 11-boundary line still wrapped at
+        # +20%. So the conservative max-size model STAYS (over-counting lines, never under-),
+        # and the per-run sum is carried only to EXPLAIN a finding — see `mixed_hint` below.
+        nat_true = 0.0
+        for _t, _b, _rs, _rf in per_run:
+            nat_true += _natural_width_in([(_t, _b)], _rs if _rs else sz, _rf or fn)
+        _sizes = [s2 for (_t, _b, s2, _rf) in per_run if s2]
+        if len(set(_sizes)) > 1 and nat_true <= inner_w:
+            mixed_hint = (max(_sizes), min(_sizes), nat_true, inner_w)
         nat = _natural_width_in(runs, sz, fn)
         if wrap:
             nl = _measure_lines(runs, sz, inner_w, font=fn)
@@ -6219,6 +6242,8 @@ def _ink_rect(sh, bb):
     # measurement slack: when the text's font isn't installed (wrap count is ~1 line approximate),
     # never let a single fabricated line trip a CRITICAL — tolerate ~0.9 line-height on height checks
     slack = (0.9 * line_h) if subbed else 0.0
+    if mixed_hint:
+        _MIXED_HINTS[id(sh)] = mixed_hint
     return (ix, iy, ink_w, ink_h), (inner_w, inner_h), (max_sz, lines_total, wrap, slack)
 
 def _has_fill(sh):
@@ -6292,6 +6317,7 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
     measurement falls back to a wider face, near-threshold flags carry ~1 line of slack and a one-time
     note is printed — i.e. every CRITICAL it prints is real WHEN the deck's fonts are available, and
     conservative (may under-flag a 1-line overrun) when they're substituted."""
+    _MIXED_HINTS.clear()
     W, H = prs.slide_width/914400.0, prs.slide_height/914400.0
     findings = []; subbed_any = False
     for n, slide in enumerate(prs.slides, 1):
@@ -6636,8 +6662,19 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
                 if ov > overlap_tol and ov > 0.22*min(a[2]*a[3], b[2]*b[3]):
                     ta = _snip(text_inks[i][0].text_frame.text,18)
                     tb = _snip(text_inks[j][0].text_frame.text,18)
+                    _hint = ""
+                    for _t in (text_inks[i], text_inks[j]):
+                        _h = _MIXED_HINTS.get(id(_t[0]))
+                        if _h:
+                            _bg, _sm, _true, _inner = _h
+                            _hint = (f" — NOTE: one of these paragraphs mixes {_sm:g}pt with {_bg:g}pt. "
+                                     f"A paragraph's ink is measured at its LARGEST run size, so this "
+                                     f"scores as multi-line {_bg:g}pt text even though its runs sum to "
+                                     f"{_true:.2f}in in a {_inner:.2f}in box. Split it into separate "
+                                     f"blocks, ONE type size each — do not just add a gap.")
+                            break
                     findings.append((n, "CRITICAL", "TEXT_OVERLAP",
-                        f"text ink overlaps ({ov:.2f}in²): \"{ta}…\" ✕ \"{tb}…\""))
+                        f"text ink overlaps ({ov:.2f}in²): \"{ta}…\" ✕ \"{tb}…\"{_hint}"))
         # ---- FOOTER intrusion for CARDS (a filled panel reaching the actual footer row)
         if footer_top is not None:
             for sh, bb, st, ink, r in info:

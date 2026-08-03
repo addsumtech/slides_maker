@@ -837,6 +837,42 @@ def main():
             ok.append("narrow glyphs and spaces no longer invent a collision (0.26em real vs "
                       "0.52em assumed)")
 
+    # ---- a MIXED-SIZE paragraph that fits on one line must not invent an overlap -------------
+    # _ink_rect used to collapse every run to the paragraph's LARGEST size and measure the whole
+    # string at it, so "257万1,037" at 38pt followed by " 人 · 在日外国劳动者" at 10.5pt scored as
+    # ~3 lines of 38pt and "collided" with the block below. Measured on one real deck: 7 of the
+    # first 20 build-time criticals were this, every one of them a phantom.
+    _big, _small = "257万1,037", " 人 · 在日外国劳动者"
+    _true_w = (_L._text_w(_big, 38, _F, True) + _L._text_w(_small, 10.5, _F, False))
+    _box_w = _true_w + 0.45                        # comfortably fits at the RUNS' own sizes...
+    _flat_w = _L._text_w(_big + _small, 38, _F, True)
+    _prs = _dk.blank_deck(10, 5.625); _s = _dk.add_slide(_prs)
+    _dk.text(_s, 0.5, 1.0, _box_w, 0.62,
+             [[(_big, 38, _dk.DEEP, True, False, _F),
+               (_small, 10.5, _dk.SLATE, False, False, _F)]], space_after=0)
+    _dk.text(_s, 0.5, 1.72, _box_w, 0.9,
+             [[("The block that the phantom third line used to collide with.", 14,
+                _dk.SLATE, False, False, _F)]], space_after=0)
+    # Asserts against lint_layout (BUILD time). The gate must STILL FIRE — the conservative
+    # max-size model is deliberately kept, because a box sized to the exact per-run sum was
+    # measured wrapping in a real render (CJK/Latin boundary spacing no width model here knows
+    # about; an 11-boundary line still wrapped at +20% width). What must be present is the
+    # CAUSE: without it an author reads a spacing symptom and restructures correct content.
+    _findings = _dk.lint_layout(_prs, verbose=False) or []
+    _ov = [f for f in _findings if len(f) > 2 and f[2] == "TEXT_OVERLAP"]
+    if _flat_w <= _box_w:
+        bad.append("mixed-size fixture is inert: the flat model fits anyway "
+                   f"({_flat_w:.2f}in <= {_box_w:.2f}in), so it cannot exercise the diagnosis")
+    elif not _ov:
+        bad.append("the mixed-size TEXT_OVERLAP stopped firing — the conservative max-size model "
+                   "must stay; suppressing it was measured UNSAFE (exact-fit boxes still wrap)")
+    elif not any("ONE type size each" in str(f[3]) for f in _ov):
+        bad.append("mixed-size TEXT_OVERLAP fires but no longer NAMES the cause — an author "
+                   "reads it as a spacing problem and restructures text that was fine")
+    else:
+        ok.append("a mixed-size paragraph still trips TEXT_OVERLAP (conservative) AND the "
+                  "finding names the cause: split into one type size per block")
+
     for line in ok:
         print("  ok   " + line)
     for line in bad:

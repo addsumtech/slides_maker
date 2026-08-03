@@ -57,7 +57,10 @@ SECTIONS = [
                           "density · tone · language · template decision · review tier"),
     ("Mode", "standard, or a per-deck AUTO WAIVER (say which, and that checkpoints post as FYI)"),
     ("Search cap", "planned / spent, and 'do not search at all' when the deck is local-sourced"),
-    ("Source material", "what it is and where it lives, plus the condense/verbatim/hybrid answer"),
+    ("Source material", "what it is and where it lives, the condense/verbatim/hybrid answer, and "
+                        "the WEB-SUPPLEMENT answer: (a) source only / (b) named gaps only / "
+                        "(c) free within a cap — plus the gaps you named. On (a), a claim the "
+                        "source cannot settle stays flagged, never filled from memory"),
     ("Contract card", "assembled from the APPROVED plans — declarations only, never rationale. "
                       "Full required field list: references/critic-panel.md -> 'The CONTRACT CARD'"),
 ]
@@ -141,6 +144,22 @@ def _unfilled(path):
         body = re.sub(r"^\*\(.*?\)\*\s*$", "", body, flags=re.M)   # drop the hint line
         if not m or TODO in body or not body.strip():
             missing.append(name)
+            continue
+        # SUB-FIELD check. A section can be "filled" and still be missing the one answer a
+        # downstream agent needs — which is how a required field becomes decorative. Only the
+        # answers with a fixed, machine-checkable vocabulary are asserted here; prose is not.
+        if name == "Source material":
+            low = body.lower()
+            said_none = any(k in low for k in ("no source", "无用户素材", "无素材", "none provided",
+                                               "no material", "no user material"))
+            answered = any(k in low for k in ("source only", "仅用源", "named gaps", "点名的缺口",
+                                              "free within", "上限内自由", "web-supplement",
+                                              "web supplement", "不搜索", "do not search"))
+            if not (said_none or answered):
+                missing.append(name + " → the WEB-SUPPLEMENT answer (source only / named gaps only "
+                                      "/ free within a cap). Provided material is where the gap is "
+                                      "least visible: it is complete for its own purpose, not the "
+                                      "deck's. Name the gaps you can already see, or say none.")
     return missing
 
 

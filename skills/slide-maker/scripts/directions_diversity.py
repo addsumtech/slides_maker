@@ -114,10 +114,19 @@ def _pair(a, b):
             "a_comp": "/".join(a["comp"]), "b_comp": "/".join(b["comp"])}
 
 
+def _bespoke(d):
+    """A direction is BESPOKE when it carries its own motif HTML rather than borrowing a
+    preset's `dna`. That is the only machine-visible difference between "a register invented
+    for this content" and "a preset with the serial number filed off"."""
+    return bool(d.get("cover_motif") or d.get("ambient_motif"))
+
+
 def check(directions):
     feats = [_features(d) for d in directions]
     pairs = [_pair(x, y) for x, y in itertools.combinations(feats, 2)]
+    bespoke = [d.get("name", "?") for d in directions if _bespoke(d)]
     return {"pairs": pairs, "flagged": [p for p in pairs if p["too_similar"]],
+            "bespoke": bespoke, "no_bespoke": not bespoke,
             "modes": {f["name"]: f["mode"] for f in feats},
             "compositions": {f["name"]: "/".join(f["comp"]) for f in feats}}
 
@@ -138,7 +147,7 @@ def main():
         sys.exit(1)
     if a.as_json:
         print(json.dumps(r, indent=1))
-        sys.exit(2 if r["flagged"] else 0)
+        sys.exit(2 if (r["flagged"] or r["no_bespoke"]) else 0)
     for p in r["pairs"]:
         mark = "x TOO SIMILAR" if p["too_similar"] else "v"
         print("  {}  {} vs {}: palette {} · comp {} vs {} · matched: {}".format(
@@ -151,7 +160,23 @@ def main():
         print("            REDIVERGE them, or keep the pair and record the reason on the")
         print("            `direction gate:` line (e.g. 'brand-locked accent — divergence moved")
         print("            to composition + type'). Never ship an unexplained collapse.")
-    sys.exit(2 if r["flagged"] else 0)
+    if r["no_bespoke"]:
+        print("[bespoke]  x NO BESPOKE DIRECTION: every candidate is a preset (or a motif-less")
+        print("             colourway). At least ONE direction must be a register invented for")
+        print("             THIS topic — a dict carrying its own `cover_motif` + `ambient_motif`.")
+        print("             Derive it from what the content already IS (its objects, signage,")
+        print("             instruments, documents), not from a style vocabulary. Presets are the")
+        print("             floor you beat; three of them plus a colour scheme is the catalogue,")
+        print("             not a set of directions.")
+        print("             You must OFFER one, not make it win — the user may still pick a preset,")
+        print("             and that is a real choice made against a real alternative.")
+        print("             ESCAPE (same as the divergence check's): if you genuinely cannot invent")
+        print("             one, keep the set and record why on the `direction gate:` line. A brand")
+        print("             lock is rarely a real escape — motif, composition envelope and interior")
+        print("             register are yours even when palette and type are not.")
+    else:
+        print("[bespoke]  v bespoke direction(s): {}".format(", ".join(r["bespoke"])))
+    sys.exit(2 if (r["flagged"] or r["no_bespoke"]) else 0)
 
 
 if __name__ == "__main__":

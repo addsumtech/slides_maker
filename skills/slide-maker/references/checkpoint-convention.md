@@ -87,7 +87,7 @@ that no longer blocks is a gate that can quietly become self-attested — "picke
 coordinator can write without any user having chosen anything, whereas a quoted paste-back line is
 evidence a person acted. Under the AUTO WAIVER write `said: auto-pick (waiver)` — the waiver removes
 the stop, never the record.
-— **4 rendered directions (A–C = best-fit DNA presets, D = the colour-scheme option), E = describe-your-own**;
+— **4 rendered directions (A–C = >=1 bespoke register + best-fit DNA presets, D = the colour-scheme option), E = describe-your-own**;
 the mechanical-check verdict rides on the same line, so a collapsed set cannot be posted as a
 choice without the collapse being spoken — or the named carve (e.g. `carve: user said just-go` /
 `carve: Mode-A mimic`). Branch (d): `picked <X> of 3 (gallery: <path>)`, **or**, when Auto/你决定

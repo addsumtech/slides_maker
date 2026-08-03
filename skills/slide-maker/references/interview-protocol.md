@@ -74,7 +74,8 @@ batch: *a conference talk* → ask which venue, then research it; *a new templat
 hand over the file; *"design a clean one" (no template)* → run the **direction gate**
 (DEFAULT on this branch — see Q1's design-one branch for the named skip carves; a Q4 Mode-A
 mimic example decides the look and skips it) — show **4** rendered style directions to pick
-from before the full build (3 best-fit REAL-DNA presets + 1 pure colour-scheme direction —
+from before the full build (>=1 BESPOKE register invented for the topic + best-fit REAL-DNA
+presets + 1 pure colour-scheme direction —
 see Q1(c)); *"generate a template with an image tool"* → run the mini-interview + generation
 + feedback loop in `references/generated-template.md` (its style gate shows **3** best-fit
 image-backed styles), then **skip the direction gate** (the look is already decided).
@@ -146,7 +147,7 @@ four template choices:
        are REAL STYLES — a named preset OR a bespoke register with its own motif — never three shades
        of one palette.** ("Synthesised" is not the enemy; a *motif-less colourway* is. A bespoke
        register you invent for this content is a real style and a first-class peer of a preset — often
-       the more daring answer, see the launchpad note below.) Pick the **3 best-fit design languages** for
+       the more daring answer, see the launchpad note below.) Fill the preset slots with the **best-fit design languages** for
        THIS topic/audience — presets from the 18-preset library (read each preset's `when` field in
        `scripts/presets.py` / `references/design-gallery.md`; e.g. a technical talk → blueprint /
        dark_tech / swiss, a culture deck → memphis / risograph / editorial_paper, a Chinese-heritage
@@ -161,7 +162,8 @@ four template choices:
        (the ambient register signature; `_dna_ambient`), so the user sees a style that carries the
        whole deck.
        - 🔴 **On this no-image-tool branch, offer FOUR rendered directions, not three:** the 3
-         best-fit DNA presets (A/B/C) **plus a 4th "colour-scheme" direction (D)** — one tasteful
+         directions A/B/C — **at least one of them a BESPOKE register invented for this topic, the
+         rest best-fit DNA presets** — **plus a 4th "colour-scheme" direction (D)** — one tasteful
          palette+type combination for THIS topic with **no motif**, the classic clean look (this is
          itself a legitimate style; a user asked for it to stay on the menu). Build all four in one
          call: `preset_directions(["p1","p2","p3", {colour_token}])` — a **dict** is passed through
@@ -169,14 +171,40 @@ four template choices:
          The HTML labels A–D as the four options and **E — describe your own** as the fifth slot (the
          own-letter is dynamic, so no collision). *(With an image tool it's the OTHER branch — Q1(d)'s
          style gate — which stays at 3.)*
-       - **Presets are the FLOOR you beat, not the menu you satisfy — PREFER a bespoke register when
-         the content has one.** Any of A–C may be a **bespoke synthesised direction** (a dict in the
-         `preset_directions` list, carrying its OWN motif so it renders real DNA) — and when THIS
-         content has a distinctive visual world of its own, *prefer* inventing that register over a
-         merely-adequate preset. A bespoke register with a named motif + palette + type + its own guard
-         + item-(q) all-pages carry is as legitimate as any preset and usually the bolder pick. Weigh it
-         on every design-clean deck — it is a default consideration, not a fallback for "a topic no
-         preset fits". The library raises the floor; your job is still to beat it.
+       - 🔴 **AT LEAST ONE of the offered directions MUST be a bespoke register invented for THIS
+         topic — not a preset.** Presets are the FLOOR you beat, not the menu you satisfy. A bespoke
+         direction is a dict in the `preset_directions` list carrying its OWN `cover_motif` +
+         `ambient_motif`, so it renders real DNA rather than a motif-less colourway; with a named
+         motif + palette + type + its own guard + item-(q) all-pages carry it is a first-class peer
+         of any preset, and usually the bolder pick. Weigh it on every design-clean deck — it is a
+         requirement, not a fallback for "a topic no preset fits". The library raises the floor;
+         your job is still to beat it.
+         **Why this became a MUST rather than a preference:** the previous wording ("PREFER a bespoke
+         register when the content has one") is exactly the shape of rule this skill keeps proving
+         gets skipped — it is advisory, nothing reports its absence, and the cheapest path is always
+         three preset names. **Derive the bespoke register from what the content already IS**, not
+         from a style vocabulary: ask what world this material lives in (its objects, its signage,
+         its instruments, its documents) and build the motif out of that. Where the subject has a
+         real-world visual system of its own, borrowing THAT system is almost always stronger than
+         any preset — it makes the colour, the marker and the line carry meaning instead of taste.
+         *(Measured: on a deck about routes into a country's labour market, a bespoke transit-signage
+         register — line colour = visa route, numbered roundel = step, buffer stop = dead end — beat
+         all three best-fit presets, and then supplied the deck's signature move for free, because
+         the motif was load-bearing rather than decorative.)*
+       - 🔴 **The mechanical check enforces it:** `directions_diversity.py` fails a set in which no
+         direction carries `cover_motif`/`ambient_motif`. A set of three presets plus a colour scheme
+         is not a set of directions — it is the catalogue.
+         **The requirement is to OFFER one, never that it must win** — the user may well pick a
+         preset, and that is a real choice made against a real alternative rather than a default.
+         **Escape, same shape as the divergence check's:** if you genuinely cannot invent one, keep
+         the set and record why on the `direction gate:` line (e.g. `no bespoke — brand mandates
+         palette, type AND grid; variance had nowhere left to live`). A recorded reason is a decision
+         someone made; a silently preset-only set is the default this exists to interrupt. Note that
+         a brand lock is rarely a real escape: a motif, a composition envelope and an interior
+         register signature are all still yours even when the palette and type are not.
+       - **This gate also fires on the lighter case-(b) offer** (unsure-on-style / brand-defining,
+         2–3 directions) because it is the same machinery — which is the right default, since those
+         are exactly the decks where an invented register pays most.
        - 🔴 **DIVERGENCE IS A PAIRWISE RULE, NOT AN EXHORTATION: any two directions must differ on
          ≥2 of four axes — {palette mood · type attitude · density/scale · COMPOSITION ENVELOPE}.**
          "Distinct light/dark, warm/cool, serif/sans" describes *knobs*; a dark version and a light
@@ -192,9 +220,13 @@ four template choices:
        - 🔴 **Run the mechanical check before you post the link:**
          `python scripts/directions_diversity.py directions.json`. It scores four axes — **palette
          mood** (a light/dark flip counts as a palette divergence, so mode is folded in) · **type
-         pairing** · **density** · **composition** — and flags any pair matching on ≥3 of the 4. **Exit 2 is
-         not an auto-kill** — REDIVERGE the flagged pair, or keep it and record the reason on the
-         `direction gate:` line ("brand-locked accent — divergence moved to composition + type").
+         pairing** · **density** · **composition** — and flags any pair matching on ≥3 of the 4. It ALSO
+         fails a set with no bespoke direction (above). **Exit 2 is not an auto-kill, and it now
+         carries two distinct meanings — read the output, do not infer from the code**: a flagged
+         PAIR (rediverge it, or keep it and record the reason on the `direction gate:` line —
+         "brand-locked accent — divergence moved to composition + type") and/or NO BESPOKE
+         direction (invent one, or record why you could not). `--json` reports them separately as
+         `flagged` and `no_bespoke`.
          The check exists because the agent that writes the directions is the same agent that
          judges whether they differ; only an outside measurement catches several skins of one idea. **Hand the user the single `file://…
        directions.html` link** to open in a browser, review side-by-side, and pick from — no
@@ -407,6 +439,33 @@ four template choices:
    - *No* → **build the content yourself** from your knowledge, and **web-search to
      ground it** (correct facts, current numbers, credible framing) rather than
      inventing. Confirm the intended scope/outline with the user before building.
+   - 🔴 **When material IS provided, ASK whether to supplement it from the web — and bring your
+     own read of what is missing.** "They gave me a source" is not the same as "the deck has what
+     it needs", and a provided source is the case where the gap is *least* visible: the material
+     looks complete because it is complete *for its own purpose*, which is rarely the deck's
+     purpose. Make it one option-line in the same batch, **pre-filled with the specific gaps you
+     can already name from a first scan** — not a bare "want me to search?", which puts the
+     diagnosis on the user and reliably gets "no".
+     The recurring gap classes, in the order they actually bite:
+     - **Time-bound claims in the source have gone stale.** A paper's "state-of-the-art", an
+       adoption number, a "first/largest/latest" superlative, a price, a policy, a headcount.
+       Re-verifying a source claim is not inventing — it is fidelity to what is true *now*
+       (this is the same rule as SKILL.md's "re-verify the source's own falsifiable claims at
+       TODAY's date"; the interview is where the user gets to authorise the searches it costs).
+     - **The source ends where the deck's audience begins** — a method paper with no
+       related-work-since-publication, a repo with no writeup, an internal memo with no market
+       context, figures with no prose.
+     - **The venue / audience / competitor context is nowhere in the material**, because the
+       material was never written for that room.
+     - **One named asset the deck will need and the source does not carry** — an official logo,
+       a brand colour, a licensed photo, a spec number. These are few, they are cheap, and per
+       the SEARCH BUDGET rule they are exactly what starves if a research fan-out runs first.
+     Offer three answers, and record which one was chosen: **(a) source only — do not search**
+     (the right answer for a self-contained document, a fixed-scope internal deck, or anything
+     confidential); **(b) supplement the named gaps only** (default when you can name any);
+     **(c) supplement freely within a stated cap**. On (a), any claim the source leaves
+     unverifiable stays flagged in the ledger rather than quietly filled from memory — 🔴 a
+     source-only deck may not be grounded by recall.
 
 ## Step 0 — Q4 (style): density levels, mimic modes, and the direction-gate scope
 
@@ -449,7 +508,7 @@ four template choices:
    unsure; carry the choice into the plan (steps 1–2) and the build (step 4).
    - **Direction gate (when to show rendered options first).** Two cases call for it:
      (a) **"design a clean one" / no template** → it's the *recommended default* there —
-     offer **4** directions as described in Q1's design-one branch above (3 best-fit DNA presets +
+     offer **4** directions as described in Q1's design-one branch above (>=1 bespoke register + best-fit DNA presets +
      1 colour-scheme direction); (b) any other case where the user is **unsure on style** or it's a
      **brand-defining / high-stakes** deck → offer **2–3 directions** as a lighter opt-in. Either way it's the same machinery
      (collaborative mode Gate A, `references/collaborative-mode.md` + `scripts/archetypes_html.py`):

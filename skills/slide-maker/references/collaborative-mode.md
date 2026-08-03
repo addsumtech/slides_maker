@@ -37,7 +37,8 @@ direction*; the single real render confirms *fidelity*.
 > branch where the look is invented from nothing and the user has seen no options.
 1. From the interview (purpose/audience/style) offer **differentiated directions** — distinct design
    *languages* (a named preset **or** a bespoke register invented for THIS content), never three shades
-   of one idea. **Default: recommend the 3 best-fit REAL DESIGN LANGUAGES** for this topic — best-fit
+   of one idea. **Default: >=1 BESPOKE register invented for this topic, plus the best-fit REAL
+   DESIGN LANGUAGES** for it — best-fit
    presets from the 18-preset library (read each preset's `when` field in `scripts/presets.py`) **and/or
    a bespoke register you invent when the content has a look of its own** — built into direction tokens
    with **`archetypes_html.preset_directions([names])`** (a bespoke direction is a **dict** in that list,
@@ -72,7 +73,7 @@ direction*; the single real render confirms *fidelity*.
    the standard interface (see `references/examples/style_example.py`).
    - **How many — the count rule is set by whether an image tool is in play:**
      - *"design a clean one" / no image tool* (this gate's recommended-default home) → **4**
-       rendered directions: the **3 best-fit DNA presets** + **1 pure colour-scheme direction**
+       rendered directions: **>=1 bespoke register + best-fit DNA presets** + **1 pure colour-scheme direction**
        (a tasteful palette+type combo for the topic, NO motif — the classic clean look, itself a
        legitimate style the user asked to keep on the menu). Build all four in one call —
        `preset_directions(["p1","p2","p3", {colour_token}])`, where the 4th arg is a **dict**
@@ -104,8 +105,11 @@ direction*; the single real render confirms *fidelity*.
    direction's `style.py` later, so there's **one source of truth** and no HTML→pptx drift. Write the
    2–4 directions to a `directions.json` in a disposable `_directions/` subfolder of the deck folder.
 3. 🔴 **Check the divergence mechanically BEFORE building the link:**
-   `python scripts/directions_diversity.py directions.json`. Exit 2 means a pair matched on ≥3 of
-   the four axes — REDIVERGE it, or keep it and record the reason on the checkpoint's
+   `python scripts/directions_diversity.py directions.json`. Exit 2 means EITHER a pair matched on
+   ≥3 of the four axes, OR the set contains no bespoke direction (at least one candidate must be a
+   register invented for THIS topic, carrying its own `cover_motif`/`ambient_motif` — see
+   `references/interview-protocol.md` Q1(c)). Read the output; `--json` separates `flagged` from
+   `no_bespoke`. Either way: fix it, or keep it and record the reason on the checkpoint's
    `direction gate:` line. This is not distrust of the pick; it is that the agent writing the three
    directions and the agent judging their difference are the same mind, and that mind's failure
    mode is confident, well-argued sameness.

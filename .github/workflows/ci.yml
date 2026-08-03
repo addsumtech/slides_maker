@@ -78,6 +78,12 @@ jobs:
       - name: deckkit smoke (every public helper)
         run: python scripts/smoke_deckkit.py
 
+      # The direction gate's own smoke suite. It was not wired in, and a change to the gate's
+      # exit semantics broke two of its divergence assertions with nothing reporting it --
+      # exactly the silent class this repo keeps legislating against.
+      - name: Direction gate smoke (divergence + bespoke requirement)
+        run: python scripts/smoke_directions.py
+
       - name: Review-contract validator selftest
         run: python scripts/validate_review.py --selftest
 

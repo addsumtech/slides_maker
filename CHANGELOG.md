@@ -9,6 +9,38 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+### Changed
+- **The direction gate now requires at least one BESPOKE register**, invented for the topic
+  rather than picked from the 18 presets. `directions_diversity.py` exits 2 when no candidate
+  carries its own `cover_motif`/`ambient_motif` — the only machine-visible difference between a
+  register invented for this content and a preset with the serial number filed off. The
+  requirement is to *offer* one, not to make it win, and it ships with a named escape recorded on
+  the `direction gate:` line. Every passage stating the slot composition ("3 best-fit presets + 1
+  colour scheme") was reconciled; the Q1(d) image-tool style gate is a different gate and is
+  unchanged.
+- **When the user provides material, the interview now asks whether to supplement it from the
+  web**, pre-filled with the gaps you can already name. A provided source is where the gap is
+  least visible: it is complete for its own purpose, not the deck's. Three answers (source only /
+  named gaps only / free within a cap); a source-only deck may not be grounded from recall. The
+  answer is a checked sub-field of the dispatch brief, so it cannot go missing silently.
+- **`TEXT_OVERLAP` now names the mixed-size cause.** A paragraph's ink is measured at its largest
+  run size, so a 38pt number inline with 10.5pt CJK scores as multi-line 38pt text and collides
+  with whatever is below. The finding now says so and prescribes the fix (one type size per
+  block). The conservative measurement is deliberately KEPT: suppressing it was tried and measured
+  unsafe — a box sized to the exact per-run sum still wrapped in a real render, and an
+  11-boundary CJK/Latin line still wrapped at +20% width, because neither width model here
+  accounts for the renderer's boundary spacing.
+- `sigs.py` gains seven call-shape contracts observed failing on a real build: one type size per
+  paragraph · a component owns its axis (a hand-derived overlay put a parity line on the wrong
+  side of its own data) · `highlight` selects a series, `emphasize` selects a bar · bar charts
+  plot the first category at the bottom · `source_note` lifts into content on a full page ·
+  colour tokens are scoped to their ground · hand-made shapes keep the theme shadow.
+
+### Fixed
+- `scripts/smoke_directions.py` is now **in CI**. It was not wired in, and its divergence
+  assertions were coupled to a process exit code that a second gate redefined — they now assert
+  on the `flagged` field directly, and the bespoke gate is asserted on its own terms.
+
 ## [4.4.0] — 2026-08-03
 
 **Two behaviour changes to know about before upgrading.** (1) **Section fan-out now starts at ~9
