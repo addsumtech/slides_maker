@@ -9,6 +9,66 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+## [4.4.0] — 2026-08-03
+
+**Two behaviour changes to know about before upgrading.** (1) **Section fan-out now starts at ~9
+slides, not 15+.** A 9–14 slide deck that used to be written by one author is now authored by
+parallel section agents against a locked design plan and shared `style.py`. The old threshold was
+reasoned on TOKEN cost, where one author genuinely wins because nothing is duplicated; wall clock
+was never on the scale, and the build step measured 40–71% of all model-active minutes. Fanning out
+the BUILD deliberately does **not** escalate the REVIEW shape — the sectioned critic panel still
+belongs to a genuinely large deck (~15+), because coupling them would add critics to every
+mid-sized deck. (2) **`render_deck.py` now rejects an unrecognised flag** instead of resolving it to
+the output directory. `render_deck.py deck.pptx --gate-check --briefing` used to run the hand-off
+gate at the wrong legibility floor and print nothing either way.
+
+### Fixed — three measurements that could not see what they were measuring
+- **`deckkit.measure_text` gained `font=`.** It never passed a face to the metric, so it always
+  measured in the deck default: the same command string is 4.04in in Helvetica and 5.44in in
+  Courier New, so a monospace line came back **26% narrow** — enough to report a 9.2in line as
+  fitting an 8.25in box. Nothing downstream can catch that, because the box is then BUILT to the
+  wrong size and every later geometry check agrees with the box. `fit_text_size` had always taken
+  `font=`; the asymmetry was the bug.
+- **`lint_deck` had two definitions of "the title".** `_find_title` looks for ≥14.5pt in the top
+  28%; the deck-stats scan ran its own search over the top 20% with no size floor at all. A title
+  between the two bands was invisible to the stats scan, so the margin chrome above it won. That
+  fed the **title spine** — the titles-only test the coordinator and both critic lenses read as the
+  deck's argument — and one measured deck presented its argument as three pieces of chrome. It also
+  fed INVERTED TYPE HIERARCHY, which then advised that a correct 30pt title was too small.
+- **`lint_deck` measured text in a face it refused to look at.** It imported deckkit, then dropped
+  face and weight on the very line that reads `r.font`, after which every Latin character was
+  charged a flat 0.52 em. Measured on Helvetica Neue at 26pt: uppercase runs +33% over the estimate
+  and narrow glyphs/spaces −44%, so it both **missed real collisions and invented others**. The
+  invented ones are the expensive half — an author rewrote two correct titles to satisfy a wrong
+  measurement, which is rework the gate itself caused.
+- **`code_block` now says when a line will clip.** It sets `word_wrap=False` so indentation
+  survives, and its own comment nominated the docstring's "keep snippets short" as the enforcement.
+  A clip is invisible to every gate: the height model stays right and the shape stays on canvas
+  while the end of the line is simply not on the slide.
+- **`preflight_check`'s mono-wrap check stopped crying wolf.** It charged the whole paragraph the
+  monospace advance if any run was monospace (~20% over on a `label: <command>` line), and
+  announced "word_wrap is off, so they run off it silently" without looking at `word_wrap`.
+
+### Added — the cost of a build is now measurable, and the repetition is gone
+- **`scripts/roundtrip_budget.py`** measures a build from its session transcript: round-trips, the
+  batching ratio, median context re-sent, and whether the render self-check read the slide PNGs in
+  one message or one at a time. Step 6 fills the hand-off `cost:` line from it. It refuses to guess
+  when it cannot find the right transcript — it used to fall back to the newest one anywhere on the
+  machine, and reported a stranger's session as yours.
+- **`scripts/dispatch_brief.py`** writes the deck brief once and prints a pointer prompt for every
+  dispatch. Measured: nine dispatches cost 41,203 output tokens at ~4,600 each, almost all of it the
+  same interview answers, paths, cap and CONTRACT CARD retyped nine times; the generated prompt is
+  ~220 tokens. It also makes the contract card one artifact instead of nine reconstructions.
+- **`scripts/slide_index.py`** prints `slide N -> file:line function` plus each slide's plan row.
+  Section fan-out means the coordinator did not write the code, so a finding on slide 7 otherwise
+  begins by grepping modules it has never read.
+- **Icons render ~300× faster.** `rasterize()` had no output cache, and cairocffi cannot find a
+  Homebrew libcairo, so every icon fell through to headless Chrome: **5.05s → 0.021s cold, 0.003s
+  warm**, output equivalent. That also exposed a latent quality bug — only the Chrome backend
+  supersampled, so on any machine where cairosvg loaded, icons silently shipped at ⅓ resolution.
+- **Codex image concurrency scales with the machine** (`cores//3`, clamped 2–4) instead of a flat 2,
+  against work that spends its time waiting on a hosted model rather than on a local core.
+
 ## [4.3.0] — 2026-07-31
 
 **One behaviour change to know about before upgrading.** `render_deck.py --gate-check` /
