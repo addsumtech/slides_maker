@@ -887,6 +887,30 @@ def _skeleton(bx):
                      for s in bx if not s["bg"])
 
 
+def _envelope(bx, sh):
+    """The CHROME signature only — the title box and anything sharing its band.
+
+    `_skeleton` above says "chrome always matches — content must be what differs", and then counts
+    both together, so a deck can stamp a byte-identical header on every interior slide and still
+    score a high `distinct skeletons` because its bodies vary. Measured on a deck built exactly
+    that way: `0 layout finding(s) ✓ clean · distinct skeletons 14` with the same title box on
+    12 of 12 interior slides. That number is not merely silent about the fixed header — SKILL.md
+    tells the actor to paste the stats block into the critic's evidence packet, so it becomes
+    affirmative evidence AGAINST a reviewer who noticed. This separates the two so the packet
+    stops arguing with the truth.
+
+    🔴 Deliberately a STAT, not a check. There is no threshold and no warn code, because a
+    repeated header is normal and often correct: prototyped over ~40 decks, a 70% rule fired on
+    `tests/lint_fixture.py`'s PASS deck (80%) and on `references/examples/build_example_generic.py`
+    (100%) — the composition the skill itself teaches, since `title_bar()` and `footer()` have
+    fixed geometry by design. It was also evadable in the one direction the deck-stats layer
+    forbids: nudging the title 0.10in clears it and immediately trips REGISTRATION DRIFT. Two
+    gates pulling on one pixel in opposite directions is how a rule set makes decks worse."""
+    band = 0.28 * sh
+    return frozenset((s["st"], round(s["l"] * 2), round(s["t"] * 2), round(s["w"] * 2))
+                     for s in bx if not s["bg"] and s["t"] < band)
+
+
 def _size_clusters(bx, sh):
     """Distinct font sizes on the slide's CONTENT (footer chrome excluded), clustered within
     0.75pt so 10.3/10.5 counts once. The doc target: ≤3-4 sizes per slide, from the deck's
@@ -1130,6 +1154,7 @@ def _slide_stats(slide, bx, sw, sh):
         "build": has_timing,
         "trans": has_trans,
         "skel": _skeleton(bx),
+        "env": _envelope(bx, sh),
     }
 
 
@@ -1681,6 +1706,17 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False):
         if not any(len(rep & r["skel"]) / max(1, len(rep | r["skel"])) >= 0.75 for rep in skel_reps):
             skel_reps.append(r["skel"])
     n_skel = len(skel_reps)
+    # The CHROME half of the same question, counted separately — see `_envelope`. Exact-match
+    # rather than Jaccard: the point is to expose a header that is byte-identical, and a near-match
+    # test would blur precisely what is being reported. Interior slides only (a cover and a closer
+    # are meant to differ), and only when there are enough of them to mean anything.
+    _int = rows[1:-1] if len(rows) >= 4 else rows
+    n_env = len({r["env"] for r in _int}) if _int else 0
+    _modal = max((sum(1 for r in _int if r["env"] == e) for e in {r["env"] for r in _int}),
+                 default=0)
+    env_stat = ("" if not _int else
+                " · distinct envelopes {}/{} (modal {}%)".format(
+                    n_env, len(_int), round(100 * _modal / max(1, len(_int)))))
     spine = [(i + 1, r["title_txt"]) for i, r in enumerate(rows) if r.get("title_txt")]
     if len(spine) >= 3:
         print("     title spine (the consultants' titles-only test — read it as one argument):")
@@ -1688,7 +1724,7 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False):
             print(f"       {num:2d}. {t[:78]}")
     print(f"     fonts: body-median {body_med:.0f}pt · deck max {max((r['max_pt'] for r in rows), default=0):.0f}pt "
           f"· type drama {drama:.1f}× · size tokens in use {len(tokens)} (target 4-5 deck-wide) · "
-          f"distinct skeletons {n_skel} | "
+          f"distinct skeletons {n_skel}{env_stat} | "
           f"builds {builds}/{n} · transitions {transd}/{n} · avg occupancy {avg_ink*100:.0f}%")
     # ── cross-slide REGISTRATION: consecutive content slides whose title tops drift by a hair
     # (0.02-0.12in) read as a twitch when advancing — identical is right, a big move is deliberate,

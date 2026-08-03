@@ -99,8 +99,14 @@ Required table (one row per content slide):
 
 **The Density cell carries the §1.3 whitespace estimate** — write it as `light ~65%` / `medium ~55%` /
 `dense ~45% (split?)`, so the 50–70% target is *planned* per slide here rather than remembered
-mid-build (the render-time lint then measures the real ink coverage and warns `CROWDED` when the
-estimate was optimistic).
+mid-build. 🔴 **Nothing checks this number against the built deck, and this sentence used to claim
+otherwise** ("the render-time lint then measures the real ink coverage and warns `CROWDED` when the
+estimate was optimistic"). It does not: `CROWDED` is a fixed absolute ceiling (`ink_cov_nopic > 0.70`,
+0.80 on a briefing) and never reads the planned figure, so a slide planned at 35% ink that ships at
+60% is silent forever. The estimate also never reaches the file — the per-slide rhythm map stays in
+the checkpoint (`references/checkpoint-convention.md` forbids writing it into the deck folder), so
+no lint *can* read it today. A gate that is claimed and absent is worse than one that is simply
+missing: it stops anyone looking. **The Density cell is a planning aid you honour by hand.**
 
 **The SKELETON column is the page's bone structure — one level above the protagonist.** A deck can
 rotate protagonists (chart → diagram → number) and still feel templated because every page shares the

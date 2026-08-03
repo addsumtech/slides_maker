@@ -88,7 +88,15 @@ def record_gate(kind, obj, review_path, deck_dir):
             seen.append(rp)
         gates["critic"] = {
             "verdict": obj.get("verdict"),
-            "rounds": len(seen),
+            # REVIEWS, not rounds. This used to write `"rounds": len(seen)` over the review FILES
+            # it had seen, so the standard panel — 2 lenses x 2 rounds — recorded `rounds: 4`
+            # against a cap SKILL.md states as 2. Every consumer of that number (the hand-off note,
+            # the two prints in render_deck.py) then reported a deck as having run twice the rounds
+            # it ran. A round is a concept only the coordinator holds: one round is N lens reviews
+            # of the same build, and nothing in a review file says which round it belongs to. So
+            # this records what it can actually count, and leaves `rounds` to whoever knows it —
+            # preserved if already present, never invented here.
+            "reviews_seen": len(seen),
             "blockers": sev.count("blocker"),
             "majors": sev.count("major"),
             "source": rp,
@@ -96,6 +104,8 @@ def record_gate(kind, obj, review_path, deck_dir):
             "reviews": seen,
             "recorded_by": "validate_review.py",
         }
+        if prev.get("rounds") is not None:
+            gates["critic"]["rounds"] = prev["rounds"]
         if prev.get("corroborated_by"):
             gates["critic"]["corroborated_by"] = prev["corroborated_by"]
     else:  # arbiter — a Job-2 payload is the confirmation pass high-stakes consent needs

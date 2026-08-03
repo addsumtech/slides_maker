@@ -145,6 +145,36 @@ CASES = [
      {"critic": {"verdict": "consent", "rounds": 2}},
      True, "critic consented"),
 
+    # `cap-reached-majors-open`. Every other kind describes a loop that was SKIPPED, so a deck that
+    # RAN to its round cap with majors still open had no honest route: `user-waived` asserts "the
+    # user was asked and chose to ship over it", a claim about a conversation that did not happen.
+    # Measured on a real build, the builder's words were "the four options force either a lie or a
+    # red gate" — and it correctly left the gate red rather than invent one. This kind claims the
+    # work HAPPENED, so it owes the reader what the work ran into; both refusals below are the
+    # difference between a record and an excuse.
+    ("cap-reached-majors-open without the open list is refused",
+     {"critic": {"waived": "Two full rounds ran; three design majors remain open at the cap.",
+                 "waived_category": "cap-reached-majors-open"}},
+     False, '"open"'),
+
+    ("cap-reached-majors-open with an EMPTY open list is refused",
+     {"critic": {"waived": "Two full rounds ran; three design majors remain open at the cap.",
+                 "waived_category": "cap-reached-majors-open", "open": []}},
+     False, '"open"'),
+
+    ("cap-reached-majors-open without surfaced_to_user is refused",
+     {"critic": {"waived": "Two full rounds ran; three design majors remain open at the cap.",
+                 "waived_category": "cap-reached-majors-open",
+                 "open": ["envelope monoculture", "signature move reaches too few pages"]}},
+     False, "surfaced_to_user"),
+
+    ("a complete cap-reached record passes, still labelled NOT INDEPENDENT",
+     {"critic": {"waived": "Two full rounds ran; three design majors remain open at the cap.",
+                 "waived_category": "cap-reached-majors-open",
+                 "open": ["envelope monoculture", "signature move reaches too few pages"],
+                 "surfaced_to_user": True}},
+     True, "NOT INDEPENDENTLY REVIEWED"),
+
     # The two-token contrast rule was declared in a design plan and then broken four times on
     # the same deck, each in a pair nobody was computing contrast for. `palette` is a required
     # field so the split has to be resolved (palette_audit.py) rather than remembered.

@@ -251,7 +251,48 @@ def _report_icon_waiver(pptx_path, fam):
     category set. It over-counts (tables, timelines), which is why this prints slides and does not
     die — but naming '2, 6, 7' is much harder to wave past than a general nag.
     """
-    if not isinstance(fam, str) or not fam.strip().lower().startswith("none"):
+    if not isinstance(fam, str):
+        return
+    if not fam.strip().lower().startswith("none"):
+        # THE OTHER DIRECTION, and it is the one the incident actually took. This guard was
+        # installed because "a deck shipped with ZERO icons through every automated gate" — and it
+        # then checked only `icon_family: none` against a deck that HAS icons, i.e. a stale record
+        # in the harmless direction. A deck declaring `icon_family: lucide-outline, 24 icons` and
+        # shipping none passed silently: the guard installed for the incident could not fire on it.
+        #
+        # Counted by IMAGE IDENTITY, not by position+size. The geometry signature below is a chrome
+        # detector — it asks "does this rectangle recur?" — and a real icon SET is many different
+        # pictures at similar sizes, so counting distinct geometries miscounts it. Hashing the blob
+        # answers the question actually being asked: how many distinct small pictures are in here?
+        try:
+            from pptx import Presentation as _P1
+            import hashlib as _h1
+            _prs1 = _P1(str(pptx_path))
+            _blobs, _per = {}, {}
+            for _i1, _s1 in enumerate(_prs1.slides):
+                for _sh1 in _s1.shapes:
+                    try:
+                        if _sh1.width / 914400.0 >= 1.2 or _sh1.height / 914400.0 >= 1.2:
+                            continue
+                        # `.image` raises on any non-picture shape, which is the test — no
+                        # MSO_SHAPE_TYPE import needed, and nothing silently swallows a NameError.
+                        _k1 = _h1.sha256(_sh1.image.blob).hexdigest()[:16]
+                    except Exception:
+                        continue
+                    _blobs[_k1] = _blobs.get(_k1, 0) + 1
+                    _per.setdefault(_k1, set()).add(_i1)
+            _n_sl1 = len(_prs1.slides) or 1
+            # A logo is ONE picture stamped on most slides; an icon set is many pictures on a
+            # minority. Drop any blob appearing on more than half the deck.
+            _icons = {k: v for k, v in _blobs.items() if len(_per[k]) <= max(2, 0.5 * _n_sl1)}
+            if not _icons:
+                print("[gates] icon record: the plan declares `icon_family: {}` but the deck "
+                      "contains NO icon-sized picture that is not deck chrome. The record and the "
+                      "file disagree — either the icons were never built, or the field is stale. "
+                      "This is the direction the guard was written for: a deck once shipped with "
+                      "zero icons through every automated gate.".format(fam.strip()[:60]))
+        except Exception:
+            pass
         return
     # Caught on its first run: a rebuild ADDED icons and the plan record still said `none`, because
     # nothing ever compares the record to the file. Say so before looking for peer groups — a record
@@ -668,6 +709,16 @@ def check_handoff_gates(pptx, mode="presented", gate_check=False):
                 "the user was asked and chose to ship over it",
             "external-deck":
                 "a deck this skill did not author (redesign diagnosis / critique-only run)",
+            # The loop RAN and did not converge. Every kind above describes a loop that was
+            # SKIPPED, so a deck that reached its round cap with majors still open had no honest
+            # route: `user-waived` asserts "the user was asked and chose to ship over it", which is
+            # a claim about a conversation that did not happen. Measured on a real build — the
+            # builder's words were "the four options force either a lie or a red gate", and it
+            # correctly left the gate red rather than fabricate one. A record with no state for the
+            # commonest non-consent ending is a record that teaches people to lie to it.
+            "cap-reached-majors-open":
+                "the loop RAN to its round cap and majors remain open (needs `open` + "
+                "`surfaced_to_user`)",
         }
         reason = critic["waived"]
         kind = critic.get("waived_category")
@@ -680,6 +731,22 @@ def check_handoff_gates(pptx, mode="presented", gate_check=False):
                 "waiver is indistinguishable from never having run the loop. One of:\n"
                 + "\n".join("    {:28s} {}".format(k, v) for k, v in sorted(WAIVER_KINDS.items()))
                 + "\n\n  If none of these fit, the honest move is to run the critic.")
+        if kind == "cap-reached-majors-open":
+            # This kind asserts the OPPOSITE of the others — that the work happened — so it carries
+            # the evidence: which findings survived, and whether the user was actually told. Without
+            # `open` it degrades into "we tried", which is what every other waiver already says.
+            _open = critic.get("open")
+            if not isinstance(_open, list) or not _open or not all(
+                    isinstance(x, str) and x.strip() for x in _open):
+                die("`waived_category: cap-reached-majors-open` must list the surviving findings in "
+                    "`\"open\": [\"...\"]` — one short string each. This category claims the loop "
+                    "RAN, so the deck owes the reader what it ran INTO; an empty list is a consent "
+                    "verdict wearing a waiver's name.")
+            if not isinstance(critic.get("surfaced_to_user"), bool):
+                die("`waived_category: cap-reached-majors-open` must record "
+                    "`\"surfaced_to_user\": true|false` — whether these open majors were put in "
+                    "front of the user. Shipping over a known major is a decision; the record has "
+                    "to say whose it was.")
         if kind == "no-dispatch-on-host" and "inline_ran" not in critic:
             die("`waived_category: no-dispatch-on-host` must also record `\"inline_ran\": true|false` "
                 "— whether the content and design lenses were at least run inline. 'Ran inline in "
