@@ -9,6 +9,8 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+## [4.5.0] — 2026-08-04
+
 ### Added
 - **slide-maker now tells you when it is out of date.** `scripts/check_version.py` runs once at
   Step 0, prints ONE line if a newer version exists and nothing when current, and never pulls,
@@ -33,6 +35,17 @@ section is a distilled summary — the full notes live on the
   only the plugin path did.
 
 ### Changed
+- **The Codex adapter caught up with two gates that landed after it was written.**
+  `codex-runtime.md` was last touched 2026-07-28 and contained the string `PRE-FLIGHT` **zero
+  times** — while `SKILL.md` says "Codex only: after PRE-FLIGHT 12, follow
+  `references/codex-runtime.md`", handing Codex off to a document that did not cover the thing it
+  was handing off about. New runbook step 6 covers both mechanised checks the adapter had left to
+  prose: **`palette_audit.py`** (the two-token rule is per-PAIR and a build touches dozens; one
+  deck declared it in its design plan and then broke it four separate times) and
+  **`preflight_check.py`** (including the Latin→full-width adjacency FAIL, which shipped on 5 of
+  12 slides of a real deck and was caught only by a human at 5× zoom). The step states plainly
+  that `codex_delivery_gate.py` does **not** check contrast today — naming a gap is not closing
+  it, and pretending otherwise would be worse than the gap.
 - **README corrected on two claims that 74 commits had overtaken.** Click builds were described as
   unconditional ("bullets are native PowerPoint click builds") when they are the user's opt-in
   choice and a static deck is a correct outcome; and the four rendered style directions were
