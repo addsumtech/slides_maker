@@ -249,6 +249,14 @@ filled-field gate, or a deterministic check — that makes skipping them visible
 > directly; running the four-question interview there is noise. When in doubt ("improve my deck"
 > could be either), one clarifying line beats a wrong assumption.
 
+**Run `python3 scripts/check_version.py` once, alongside the first question.** It prints ONE line
+if a newer slide-maker exists and **nothing** if the install is current; relay that line to the user
+verbatim and carry on — it is a notice, never a gate, and it never updates anything. Cost is a
+single network call at most once per 24h (every other run reads a cache in ~5ms), and every failure
+path — offline, no marker, corrupt cache — exits silently, so it can never be the reason a deck
+did not get built. It lives here rather than in a reference because a check nobody triggers is a
+check that does not exist; users opt out with `SLIDE_MAKER_NO_VERSION_CHECK=1`.
+
 **Run this interview every time, from scratch — do not skip it because earlier
 conversation, a previous deck, or context "obviously" implies an answer.** A terse
 request like *"make slides for MICCAI"* specifies only one thing (the venue);

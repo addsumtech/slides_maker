@@ -59,10 +59,9 @@ jobs:
           python scripts/scan_secrets.py
           python scripts/scan_secrets.py --history
 
-      - name: Manifest versions match (plugin.json vs marketplace.json)
+      - name: Version markers match (plugin.json · marketplace.json · CHANGELOG · skills VERSION)
         working-directory: ${{ github.workspace }}
-        run: |
-          python -c "import json, sys; p = json.load(open('.claude-plugin/plugin.json'))['version']; m = json.load(open('.claude-plugin/marketplace.json'))['metadata']['version']; print(f'plugin.json version={p}  marketplace.json metadata.version={m}'); sys.exit(0 if p == m else f'VERSION MISMATCH: plugin.json version={p!r} != marketplace.json metadata.version={m!r} — bump both together')"
+        run: python scripts/check_versions.py
 
       - name: Install system deps (LibreOffice, rsvg, CJK fonts)
         run: |
