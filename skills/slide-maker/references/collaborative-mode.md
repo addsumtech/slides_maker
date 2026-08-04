@@ -186,9 +186,9 @@ carrying its source token per the REFERENT RULE, `references/image-generation.md
 **motif line** (device + meaning + how a stranger reads it), the **`boldness:` +
 `signature move:` lines with the `carried_by:` slides** (the declared risk and where it does
 structural work — the fields the critic's distinctiveness axis will later hold the deck to), the
-branch's **gate line** (`direction gate:` with its `diversity:` verdict / `style gate:`) and — on a
-single-entity deck — the
-**`logo plan:` line WITH its evidence token**; Gate C shows the same fields as SKILL.md's
+branch's **gate line** (`direction gate:` with its `diversity:` verdict / `style gate:`) and — on any deck
+that names a real entity, including a roster slide — the
+**`logo plan:` line WITH its evidence token** (plus a roster slide's **`entity marks:`** line); Gate C shows the same fields as SKILL.md's
 🔴 CHECKPOINT — DESIGN spec. Approve
 before building all slides — this catches form / layout / motion direction errors before the
 costly build. Confirm any scope shift here too ("9 slides in *Editorial* — proceed?").

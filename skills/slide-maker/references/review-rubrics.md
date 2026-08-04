@@ -296,9 +296,12 @@ Score each dimension; cite specific slides.
    tells, measured: a stated reading that DEFERS (*"they get it by slide 9"*) is not a reading — it
    concedes the device is opaque where it first appears; and a device sitting in a slot whose meaning
    is already spoken for (a thin rule low on the page = divider/footer, a side strip = sidebar, a
-   corner mark = chrome) reads as that slot, not as the intent, however the plan describes it; **logo missing or unevidenced on a single-entity deck** — the deck's subject is one
+   corner mark = chrome) reads as that slot, not as the intent, however the plan describes it; **logo missing or unevidenced on any deck that names a real entity** — the deck's subject is one
    company / product / brand / institution (stakeholder readout, pitch, org report) yet no official
-   logo appears on the cover and the plan's `logo plan:` line carries no evidence token
+   logo appears on the cover, **OR a slide whose FORM is a roster of named real entities carries a
+   generic placeholder glyph — a coloured square, a repeated stock icon — where each entity's mark
+   belongs, or declares an `entity marks:` count the render does not show**; and the plan's
+   `logo plan:` line carries no evidence token
    (`official asset — <source>` / `searched, none found → designed wordmark (flagged)` / `n/a — <reason>`) —
    the slide-design LOGO PRINCIPLE's situation table is the reference: name which row the deck
    matches and what the row's default demanded (a typeset wordmark with no recorded search is the

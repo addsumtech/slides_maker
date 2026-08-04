@@ -33,6 +33,7 @@ USAGE
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -79,8 +80,12 @@ def _semver(v: str) -> tuple[int, ...] | None:
 # ── cache ──────────────────────────────────────────────────────────────────────────────
 
 def cache_path() -> Path:
+    """One cache file PER INSTALL. A single shared file let a symlinked dev checkout and an
+    npx copy on the same machine answer for each other — and the wrong one is the dangerous
+    one, because the answer feeds a decision about overwriting files."""
     base = os.environ.get("XDG_CACHE_HOME") or (Path.home() / ".cache")
-    return Path(base) / "slide-maker" / "version-check.json"
+    key = hashlib.sha1(str(SKILL_ROOT).encode()).hexdigest()[:12]
+    return Path(base) / "slide-maker" / f"version-check-{key}.json"
 
 
 def read_cache() -> dict | None:
@@ -127,7 +132,10 @@ def git_shape() -> dict | None:
         return None
     remotes = _git("remote", "-v") or ""
     if "slides_maker" not in remotes:
-        return None          # someone else's repo happens to contain the skill — not ours to judge
+        # A real checkout whose remote is not ours — a fork, a vendored copy, someone's monorepo.
+        # Returning None used to fall through to copy_shape(), which would then tell a git
+        # working tree to run `npx skills add` and overwrite itself. Stay silent instead.
+        return {"shape": "foreign-git", "behind": 0, "dirty": None, "ahead": 0}
     branch = "origin/main"
     if _git("fetch", "origin", "main", "-q") is None:
         # offline, or no permission to fetch. Fall back to whatever ref we already have.
@@ -138,12 +146,17 @@ def git_shape() -> dict | None:
     porcelain = _git("status", "--porcelain") or ""
     dirty = len([l for l in porcelain.splitlines() if l.strip()])
     ahead = _git("rev-list", "--count", f"{branch}..HEAD")
+    # `repo` so the caller can print a real path instead of a literal `<repo>` nobody defines.
     return {"shape": "git", "behind": int(n), "dirty": dirty,
-            "ahead": int(ahead) if (ahead or "").isdigit() else 0}
+            "ahead": int(ahead) if (ahead or "").isdigit() else 0,
+            "repo": _git("rev-parse", "--show-toplevel")}
 
 
 def copy_shape(local: str | None) -> dict | None:
-    """An npx/copied install: compare the local VERSION against the one on GitHub."""
+    """An npx/copied install: compare the local VERSION against the one on GitHub.
+
+    A Claude Code PLUGIN install is also a copy on disk, but its update path is the plugin
+    system — telling it `npx skills add` would install a second, competing copy beside it."""
     try:
         req = urllib.request.Request(RAW_VERSION_URL,
                                      headers={"User-Agent": "slide-maker-version-check"})
@@ -158,7 +171,9 @@ def copy_shape(local: str | None) -> dict | None:
     # diff against, so whether the user edited it is genuinely unknowable here — and the update
     # prompt must say "I cannot tell" rather than "you have no local changes", which would be a
     # claim that quietly licenses overwriting someone's work.
-    return {"shape": "copy", "local": local, "remote": remote, "dirty": None,
+    shape = "plugin" if any("plugins" == part or "plugins" in part
+                            for part in SKILL_ROOT.parts[:-2]) else "copy"
+    return {"shape": shape, "local": local, "remote": remote, "dirty": None,
             "behind": 1 if (lv is None or lv < rv) else 0}
 
 
@@ -174,17 +189,23 @@ def local_work(res: dict) -> str:
     """
     d = res.get("dirty")
     if d is None:
-        return " · local edits: unknown (copied install has no baseline to diff against)"
+        kind = "plugin install" if res.get("shape") == "plugin" else "copied install"
+        return f" · local edits: unknown ({kind} has no baseline to diff against)"
+    ahead = res.get("ahead") or 0
     if d:
-        ahead = res.get("ahead") or 0
-        extra = f" + {ahead} unpushed commit{'s' if ahead != 1 else ''}" if ahead else ""
+        extra = f" and {ahead} unpushed commit{'s' if ahead != 1 else ''}" if ahead else ""
         return f" · 🔴 you have {d} uncommitted change{'s' if d != 1 else ''}{extra} here"
+    # An `ahead` count on a CLEAN tree still means a plain pull is not the whole story.
+    if ahead:
+        return f" · working tree clean, but {ahead} unpushed commit{'s' if ahead != 1 else ''}"
     return " · working tree clean"
 
 
 def notice(res: dict) -> str | None:
     if not res or not res.get("behind"):
         return None
+    if res.get("shape") == "foreign-git":
+        return None          # not our remote — we have no standing to tell it anything
     if res.get("shape") == "git":
         n = res["behind"]
         return (f"slide-maker is {n} commit{'s' if n != 1 else ''} behind "
@@ -207,12 +228,20 @@ def main() -> int:
         return 0
 
     local = local_version()
-    res = None if a.force else read_cache()
+    # 🔴 Only the REMOTE fact is cacheable. `dirty`/`ahead`/`behind` are local git reads that
+    # cost ~10ms and change whenever the user touches a file — caching them for 24h means the
+    # update prompt can be told "working tree clean" about a tree edited an hour ago, which is
+    # precisely the reading this feature exists to get right. Local state is recomputed every run.
+    res = git_shape()
     if res is None:
-        res = git_shape() or copy_shape(local)
-        if res is not None:
-            write_cache(res)
+        res = None if a.force else read_cache()
+        if res is None:
+            res = copy_shape(local)
+            if res is not None:
+                write_cache(res)
 
+    if res is None and a.json:
+        print(json.dumps({"shape": None, "local": local})); return 0
     if res is None:
         if a.verbose:
             print(f"version check: could not determine (installed: {local or 'unknown'}) — "

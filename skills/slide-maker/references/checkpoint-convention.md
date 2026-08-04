@@ -76,7 +76,10 @@ few proposed images, for approval — **each row carries its source token**: `ge
 where the reasons include **`third-party assessment`** — a deck ABOUT an entity but not FROM it,
 carrying what that entity would not publish about itself; that row is decided before the search and a
 found logo does not overturn it; a bare
-"wordmark" with no recorded search on a single-entity deck = incomplete, even as an auto-waiver FYI)
+"wordmark" with no recorded search on ANY deck that names a real entity = incomplete, even as an
+auto-waiver FYI) **+ on a roster slide, the `entity marks: <N of M sourced | none — reason>` line**
+(the deck's own mark and the eight institutions on one slide are two different answers, and one
+field cannot carry both)
 **+ one required GATE line naming the look-choice that was made — `direction gate:` on the
 design-clean branch (c), `style gate:` on the generated-template branch (d).** Branch (c):
 `picked A/B/C/D/E of 4 (html: <path>) · said: "<the user's verbatim paste-back line>" · diversity: <ok | flagged <pair> → rediverged | justified: <reason>>`

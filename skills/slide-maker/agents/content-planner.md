@@ -346,7 +346,7 @@ Use the web for **three jobs**, and run it whether or not you have a source:
     than") into an absolute ("writes don't"). A clause lifted from a longer sentence keeps its
     lowercase and a leading ellipsis (or bracketed capital); a paraphrase drops the quote marks and
     attributes as `after <who>`.
-- **(c) Find the single-entity's real brand assets (a research act, not a design one).** When the
+- **(c) Find the real brand assets (a research act, not a design one).** When the
   deck's subject **is one organisation / product / brand / institution** — a pitch, product intro,
   launch, company or stakeholder readout, an org's report, **and equally** a research talk naming a
   tool / framework / model, a teaching deck showing an app, or a status deck naming a vendor —
@@ -359,7 +359,12 @@ Use the web for **three jobs**, and run it whether or not you have a source:
   **designed wordmark** — a **NOTE for design, not a content blocker** (a missing logo never blocks
   the plan). This stays a **content/research act — you find the asset**; *whether and where* a mark
   is placed is the slide-design agent's call. (A **multi-organisation** deck — survey / landscape /
-  review — or a **neutral-academic** talk needs no such global mark; name entities inline.)
+  review — or a **neutral-academic** talk needs no such GLOBAL mark; name entities inline.
+  🔴 **But that exempts CHROME, not content:** when any slide's FORM is a roster of named real
+  entities — an alliance's members, an ecosystem map, a comparison whose rows are institutions —
+  search each one's mark and report `N of M sourced` with per-entity sources, because the
+  slide-design agent's `entity marks:` line is assembled from what you find. A roster shipped with
+  a coloured square per row is what this arm exists to prevent.)
 
 - **(d) Calibrate density against professional decks when unsure.** If you can't confidently say
   how much a page of THIS genre should carry (an investor update vs a lecture vs a conference talk

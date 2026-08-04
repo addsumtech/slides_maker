@@ -220,6 +220,7 @@ REQUIRED_CHECKPOINT_FIELDS = [
     ("signature move:", "the one scoped aesthetic risk"),
     ("carried_by", "the 2-3 slides where the signature idea does structural work"),
     ("logo plan:", "the logo evidence token"),
+    ("entity marks:", "the roster slide's per-mark sourcing count"),
     ("interior register:", "the quiet cue that carries the style onto interior pages "
                            "(self-verify (q) - PRE-FLIGHT 6b - the critic's register_interiors check)"),
     ("density:", "the two planned density numbers (self-verify (r); the hand-off gate compares to them)"),

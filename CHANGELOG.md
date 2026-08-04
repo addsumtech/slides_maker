@@ -12,6 +12,35 @@ section is a distilled summary — the full notes live on the
 ## [4.5.0] — 2026-08-04
 
 ### Added
+- **The logo rule generalised from "is this deck ABOUT one org" to "does this deck NAME real
+  entities".** A Codex-built deck on Australian higher education put all eight Go8 universities
+  around a hub on one slide, each behind an identical generic blue square. The LOGO PRINCIPLE was
+  not wrong — its multi-entity row already said a logo wall is right "when a slide's chosen form IS
+  an ecosystem map" — but the `logo plan:` line was required only on a single-entity deck, so on a
+  deck about a whole system the field was never written and nothing ever asked. A new **ROSTER row**
+  scores per SLIDE rather than per deck, roster slides carry
+  `entity marks: <N of M sourced | none — reason>`, and a generic placeholder glyph in a mark's slot
+  is named unacceptable: it is decoration impersonating information, and plain type beats a shape
+  that looks like it means something. Reconciled across all nine files that consume the field —
+  including `check_design_contracts.py`, which now gates `entity marks:` as a 10th checkpoint field,
+  and `review-rubrics.md`, whose finding definition previously made the defect unraiseable on any
+  multi-org deck.
+- **The version notice became a question.** yes / no / other, asked in a new `Step 0.0 — INITIALIZE`
+  before the capability ledger and before the four interview questions, so the deck is built by the
+  version the user chose rather than by whichever one happened to be installed. `other` is for a user
+  with local changes: the skill shows what is theirs and what is incoming and resolves nothing.
+
+### Fixed
+- **`check_version.py` cached `dirty` for 24 hours** — so "your working tree is clean" could be a
+  day-old reading, feeding the one decision that overwrites files. Only the remote fact is cached
+  now; local git state is re-read every run.
+- **One cache file served every install on the machine.** A symlinked dev checkout and an npx copy
+  answered for each other, and the wrong answer is the dangerous one. Keyed per install path.
+- **A Claude Code plugin install was classified `copy`** and told to run `npx skills add`, which
+  installs a second competing copy beside it. It now reports `shape: plugin`.
+- **A git checkout whose remote is not ours was classified `copy`** and told to overwrite itself.
+  It now returns `foreign-git` and stays silent — not our remote, no standing to advise.
+
 - **slide-maker now tells you when it is out of date.** `scripts/check_version.py` runs once at
   Step 0, prints ONE line if a newer version exists and nothing when current, and never pulls,
   blocks, or fails — every error path (offline, 404, corrupt cache, missing marker) exits 0,

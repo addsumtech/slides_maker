@@ -258,27 +258,45 @@ filled-field gate, or a deterministic check — that makes skipping them visible
 > directly; running the four-question interview there is noise. When in doubt ("improve my deck"
 > could be either), one clarifying line beats a wrong assumption.
 
-**Run `python3 scripts/check_version.py` once, alongside the first question.** It is silent when the
-install is current — then say nothing and go straight to the interview. Cost is one network call at
-most per 24h (~5ms from cache otherwise), and every failure path — offline, no marker, corrupt cache
-— exits silently, so it can never be the reason a deck did not get built. It lives in Step 0 rather
+### Step 0.0 — INITIALIZE: the version choice, before anything is asked
+
+🔴 **This runs FIRST on ANY invocation, build or not — before the capability ledger, before the
+four questions, before you read a single byte of their material.** (The scope guard above skips the
+*interview* for a critique/audit ask; it does not skip this — a stale skill reviews a deck by stale
+rules.) `python3 scripts/check_version.py` is silent when the install is
+current, and then you say nothing and go straight to the interview. Cost is one network call at most
+per 24h (~0.1s from cache otherwise), and every failure path — offline, no marker, corrupt cache —
+exits silently, so it can never be the reason a deck did not get built. It lives in Step 0 rather
 than in a reference because a check nobody triggers is a check that does not exist. Opt out with
 `SLIDE_MAKER_NO_VERSION_CHECK=1`.
 
 **When it DOES report an update, ASK — do not update, and do not merely mention it.** Run
-`check_version.py --json` and offer three options *before the four interview questions*, so the deck
-is built by the version the user chose:
+`check_version.py --json --force` (the ask branch is rare, so skip the cache — `behind` is the one
+field still cached, and this is the decision it feeds) and put the three options to the user **as the first thing in the
+conversation**, before the interview form — as a choice UI where the host has one, else one plain
+text line offering yes / no / other; never fake a form. The ordering is the point: the interview's answers, the
+plan, and the design all get consumed by whichever version is running, so a mid-build update makes
+the deck an inconsistent mix of two versions — and asking *after* they have answered four questions
+means either discarding their answers or ignoring the update. Ask once, at the top, then build.
+
+*(Per-deck AUTO WAIVER: do **not** stop. Default to **no — build on the installed version**, and say
+so in the first FYI. Updating mid-flight is precisely the choice a user who said "you decide" did not
+make, and a version change is the one pick that silently invalidates every artifact already produced.)*
 - **yes — update first.** Then run the command for their install shape: `git -C <repo> pull
-  --ff-only` (git checkout) or `npx skills add addsumtech/slides_maker` (copied install). 🔴 **Re-read
-  SKILL.md after a successful update** — the instructions already in context are the OLD ones, so a
-  mid-session update that is not re-read changes nothing except the version number.
+  --ff-only` (git checkout) or `npx skills add addsumtech/slides_maker` (copied install). 🔴 **Re-read SKILL.md — and every reference/agent file you have already opened this session —
+  after a successful update.** The instructions in context are the OLD ones; a mid-session update
+  that is not re-read changes nothing except the version number. Where the two disagree, the file
+  on disk wins.
 - **no — build on the installed version.** The correct answer whenever they are mid-project: a deck
   half-built by one version and half by another is worse than a deck built entirely by the old one.
 - **other — they have local changes.** Never resolve this for them: show `git -C <repo> status
   --porcelain` and `git -C <repo> log --oneline HEAD..origin/main`, i.e. *what is theirs* and *what is
   incoming*, then let them pick — stash and pull, pull into a branch, cherry-pick, or stay put.
   **Never `git checkout .`, never `--force`, never `--replace` over an install you did not verify is
-  clean.**
+  clean.** 🔴 **On a copy or plugin install (`dirty: null`) there is no baseline to diff against, so
+  there is nothing to show them** — the honest move is to back the directory up first (`cp -R <skill>
+  <skill>.bak`), then update, then let them compare. Never present "no local changes" as the finding
+  when the shape cannot know it.
 
 🔴 **`--json` reports `dirty` in three states and they are NOT interchangeable:** a number (a git
 checkout with that many uncommitted changes — a pull is not a safe default), `0` (clean — updating
@@ -1250,7 +1268,7 @@ font drama, build presence, layout sameness, CJK ea-font, contrast, footer, over
 those here; read its report instead).
 1. **Speaker notes**: presented deck (screen-shared = presented) → every slide's notes = the plan's **Spoken thread, verbatim**, via `dk.speaker_notes` (deviations — e.g. a split/merged slide — noted in one clause); self-read → prose is ON the slides instead.
 2. **Builds — opted-in? then FULLY staged**: builds appear only if the user opted in; every animated slide reveals ALL its content beats in order (nothing content-bearing pre-shown but the title/frame — no half-animated slide), starting from an empty content area (first beat included), with no spoiling summary/legend in the base.
-3. **Plan↔code correspondence**: (a) mechanical — diff the design plan's per-slide rows against the slide-function docstrings (icon family included; the classic inline-mode miss); (b) spot-check — each `build:` docstring has matching `Build.step` calls in its function body; (c) **cover carries its promises** — the built cover shows the self-verify-(l) device, the motif's label/legend where the plan said the STRANGER TEST is satisfied by labeling, and the `logo plan:` asset placed as planned (official file untouched; on a single-entity deck a cover with no logo and no recorded `n/a` reason is a ✗).
+3. **Plan↔code correspondence**: (a) mechanical — diff the design plan's per-slide rows against the slide-function docstrings (icon family included; the classic inline-mode miss); (b) spot-check — each `build:` docstring has matching `Build.step` calls in its function body; (c) **cover carries its promises** — the built cover shows the self-verify-(l) device, the motif's label/legend where the plan said the STRANGER TEST is satisfied by labeling, and the `logo plan:` asset placed as planned (official file untouched; on a single-entity deck a cover with no logo and no recorded `n/a` reason is a ✗; and a roster slide's declared `entity marks:` count is matched by that many REAL marks in the render — a generic glyph sitting in a mark's slot is a ✗, not a partial pass).
 4. **Charts native**: every chart is editable-native unless a matplotlib look was deliberately chosen; legends sit off the data. Same bar for math: every 1-D equation is `equation_native`; raster `equation_png` only for genuinely 2-D layout (fractions/matrices), named as such.
 5. **Evidence real**: every domain image/figure is the real computed/source artifact — no plausible stand-in; PDF crops checked on all four edges; every SOURCED photo comes from a sanctioned origin (Commons / Openverse / press kit / user file), its subject verified against caption/geotag/category, it is **watermark-free** (a watermark is an unlicensed-preview tell → reject the file; never crop/blur/inpaint the mark away), its license recorded (credit placed where required), it is **aesthetically vetted** (an ugly / under-construction / blurry / unrepresentative shot is rejected even when the subject is correct → re-source, or generate a declared-stylized illustration via the `searched, found but low-quality → generated, flagged illustrative` rung), and it is palette-treated so mixed sources read as one deck; no generated CONTENT image claims photographic reality for a real-and-specific subject (REFERENT RULE, `references/image-generation.md` — generated-template identity plates and declared stylized illustrations are exempt; a real subject with no findable photo uses a recorded `searched, none found → …` rung). **CLINICAL imagery carries one more check, before anything else:** no burned-in patient identifier (name, MRN/ID, accession, date of birth, study date, institution), read on all four edges and in any overlay/header strip rather than the middle — highest risk on a user-supplied scan or PACS screenshot, and a published figure is usually de-identified already but is still read. **If one is there, get a de-identified export — do NOT crop or blur it out and ship:** a crop can miss a second identifier in another corner and a blur is not a guarantee. Unlike every other item here this one is irreversible once the deck is sent. Any **text over a hero/photo/plate** is verified legible against the pixels — no image linework crosses the glyphs (a scrim only dims a bright line; cover it with a near-opaque panel), eyebrow/kicker included, with a clear title↔subtitle gap (render self-check "Text over an image").
 6. **Colour keyed**: the semantic-colour ledger's meanings are taught on-slide (key at first use) and no accent appears outside its bound meaning; chrome stays quiet — the **loud** signature motif ≤3 appearances (a *quiet register signature* — faint grid/scanline, corner numeral, edge rule, small seal — MAY repeat on every slide; that is SYSTEM, not stamping) — AND the chosen preset's `guard` constraints hold on every slide (quote the guard line in the tick).

@@ -601,8 +601,10 @@ fall and stage each built slide FULLY (think SMART, not by quota):
   the reference's grammar (incl. the `searched, none found → …` rungs); a bare filename is
   incomplete — same gate pattern as the logo token.
 - **LOGO PRINCIPLE (a real design principle — general, any domain; repeated user feedback, so it is
-  gated, not advisory).** Decide by SITUATION — every deck matches exactly one row, and the row's
-  default fires unless the user overrides it:
+  gated, not advisory).** Decide by SITUATION — every deck matches exactly one row for the DECK, and the row's default
+  fires unless the user overrides it. **The ROSTER row is scored per SLIDE, not per deck**, so it
+  co-exists with whichever deck-level row applies: a landscape survey can be `named inline as text`
+  overall and still owe real marks on the one slide whose form is a named set.
 
   | Situation | Logo default |
   |---|---|
@@ -623,13 +625,18 @@ fall and stage each built slide FULLY (think SMART, not by quota):
     wordmark-only logotype is a full pass. (3) **Not found →** design a wordmark (recipe:
     `references/image-generation.md`), flagged. (4) The DESIGN checkpoint's **`logo plan:` line MUST
     carry the evidence**: `official asset — <source>` · or `searched, none found → designed wordmark
-    (flagged)` · or `n/a — <multi-entity | template carries it | third-party assessment | user opted
-    out>`. **The third-party arm is decided BEFORE the search, not after it** — it is a question about
+    (flagged)` · or `n/a — <named inline as text | template carries it | third-party assessment |
+    user opted out>` — and a **ROSTER slide additionally carries `entity marks: <N of M sourced |
+    none — reason>`**, since one line cannot answer both "the deck's own mark" and "the eight
+    institutions on slide 5". `multi-entity` is no longer a value: it named the deck's SHAPE and
+    was read as a blanket exemption, which is exactly how a roster slide shipped eight identical
+    blue squares. The replacement names the DECISION — you looked, and chose type. **The third-party arm is decided BEFORE the search, not after it** — it is a question about
     who wrote the deck, so a found logo does not overturn it and "not found" is not its reason; say
     which finding makes the deck independent (a real one: a briefing carrying two open Class I recalls
     and a "first, but not alone" correction went to build in the subject's brand colours until this was
     caught by hand, and the row now exists so it is a default instead of a save). A bare "wordmark"
-    or "text only" **without a recorded search**, or an omitted line on a single-entity deck, is an
+    or "text only" **without a recorded search**, or an omitted line on ANY deck that names a real
+    entity — including a roster slide — is an
     INVALID plan — the checkpoint is incomplete (this exact miss shipped: a stakeholder deck went to
     build with a typeset wordmark and no search; the user had asked for the rule before).
   - **FIDELITY GUARD (critical):** a designed wordmark is a **clearly-labelled designer's stand-in**,
@@ -851,8 +858,10 @@ NOT a blanket per-slide quota):
   table AND carries its evidence token (`official asset — <source>` / `searched, none found →
   designed wordmark (flagged)` / `n/a — <reason>`, the reasons including **`third-party assessment`** —
   a deck ABOUT an entity but not FROM it, decided BEFORE the search, which a found logo does not
-  overturn). On a single-entity deck a bare "wordmark", "text only",
-  or missing line fails — the search was not run or not recorded.
+  overturn). On ANY deck that names a real entity — including a roster slide — a bare "wordmark",
+  "text only", or a missing line fails: the search was not run or not recorded. A **roster slide
+  additionally owes `entity marks: <N of M sourced | none — reason>`**, and a generic placeholder
+  glyph is not an acceptable value for it.
 - **(p) image rows carry source tokens on-contract — split by owner:** at YOUR (agent) time, every
   Image opt-in row declares its depicted-subject **referent class + INTENDED source class** from the
   REFERENT-RULE grammar (`references/image-generation.md` step 5) — no `generated` claiming
