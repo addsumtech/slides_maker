@@ -321,6 +321,7 @@ def main():
     ap.add_argument("script")
     ap.add_argument("pptx", nargs="?")
     ap.add_argument("--json", action="store_true", dest="as_json")
+    ap.add_argument("--out", help="write the JSON audit to this path (requires --json)")
     a = ap.parse_args()
     pptx = a.pptx
     if pptx is None:
@@ -329,8 +330,16 @@ def main():
         pptx = os.path.join(d, cand[0]) if len(cand) == 1 else None
     r = audit(a.script, pptx)
     if a.as_json:
-        print(json.dumps(r, indent=1))
+        payload = json.dumps(r, indent=1)
+        if a.out:
+            with open(a.out, "w", encoding="utf-8") as fh:
+                fh.write(payload + "\n")
+            print("[json] wrote {}".format(a.out))
+        else:
+            print(payload)
         sys.exit(1 if not r.get("inspected") else (2 if r["actionable"] else 0))
+    if a.out:
+        ap.error("--out requires --json")
     # NEVER report clean for a deck that was not opened: a wrong path, an unreadable file, or an
     # ambiguous directory used to print the success line and exit 0 — a green PRE-FLIGHT tick for
     # a check that did no work, which is the worst failure a checklist tool can have.

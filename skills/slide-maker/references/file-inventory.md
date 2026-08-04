@@ -51,7 +51,11 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
 - `codex_delivery_gate.py` — **Codex-only** post-lint evidence gate. It verifies a v2 evidence chain:
   final PPTX/build hashes, source and claim ledger, direction/signature artifacts, per-slide component
   and icon provenance, plus two schema-valid focused critic reviews. It does **not** alter Claude Code's
-  pipeline or `component_audit.py`'s advisory classification.
+  pipeline or `component_audit.py`'s advisory classification. With `--receipt`, it writes a
+  final-PPTX-bound PASS receipt only after the full gate succeeds.
+- `codex_handoff_guard.py` — **Codex-only** final hand-off check. It re-hashes the PPTX against the
+  PASS receipt from `codex_delivery_gate.py`; a missing, invalid, or stale receipt blocks a
+  Codex-verified file hand-off.
 - `codex_visual_contract.py` — **Codex-only** per-slide visual contract: local overlap and
   icon-semantic drift, checked against the evidence record. Paired with `codex_delivery_gate.py`;
   neither runs on the shared (Claude Code / Kimi) path.

@@ -154,6 +154,15 @@ otherwise compress them into one pass. **Do not run this adapter or reinterpret
 `component_audit.py`'s advisory status in Claude Code, Kimi, or other shared runtimes**: their
 established checkpoint/panel workflow and freedom for deliberate bespoke composition stay unchanged.
 
+**Codex PPTX routing — HARD RULE.** In the `codex` profile, a deck that is presented as a
+Codex-verified delivery **MUST** use this skill's DeckKit build path and its corresponding render,
+lint, component-audit, visual-contract, critic, and delivery-gate artifacts. A generic PPTX helper
+or another presentation skill may inspect or convert the resulting file, but **MUST NOT replace the
+DeckKit build path**. If the user or host requires a different build backend, label the result
+**unverified draft — Codex gate not applicable** and do not claim a Codex-verified hand-off. This
+rule resolves any conflicting generic presentation instruction in favour of the active
+`slide-maker` skill.
+
 ## At a glance — pipeline · rule strengths · where things live
 *A navigation map only; the steps below are the source of truth.*
 
@@ -1347,9 +1356,13 @@ replacement for looking (it can't judge crop, balance, legibility, or fidelity).
 
 **Codex only — close the execution loop before consent is treated as hand-off:** retain the final
 lint JSON and component-audit JSON, complete `.codex-deck-evidence.json`, then run
-`scripts/codex_delivery_gate.py` exactly as `references/codex-runtime.md` specifies. A clean hard-lint
-alone is not a pass: unresolved card dominance, type sprawl, CJK leading, or missing evidence stays
-blocked unless a precise, named waiver explains why this deck is the exception.
+`scripts/codex_delivery_gate.py` exactly as `references/codex-runtime.md` specifies, with a
+`.codex-delivery-receipt.json` output. Before sharing a file path, download link, file citation, or
+claim of completion, run `scripts/codex_handoff_guard.py` against that receipt and the final PPTX.
+**No matching `CODEX HANDOFF GUARD: PASS` means no delivery** — report progress or an
+**unverified draft** instead. A clean hard-lint alone is not a pass: unresolved card dominance, type
+sprawl, CJK leading, or missing evidence stays blocked unless a precise, named waiver explains why
+this deck is the exception.
 
 **🔴 When the gate says clean and the pixels say broken, the PIXELS win.** Paint order is the fault
 class that keeps proving this: a shape added after a text box is drawn ON TOP of it while every
@@ -1833,7 +1846,7 @@ the provenance pass's per-claim list. *(The one exception: `--record` writes a C
 real review, so it cannot produce the waiver shape above — a waiver is always hand-written, which is
 exactly why it must carry its category.)*
 
-**Before you write the hand-off note, read `references/handoff-checklist.md` — every deck.** It is the ONE authoritative list of what the note carries (minimal caveats + next steps, never a recap or self-praise) and of the conditional REQUIRED lines the owning rules point here for: `provenance:`, **`review:`** (the effort tier that ran + how it was reached) and **`cost:`** (subagents · tokens · wall-clock — a dial whose bill is never shown builds no intuition), click order, image licences, the GIF note, accepted advisories, `distinctiveness:`, the delegated-picks recap, the optional `ceiling` line, and the two taste-ecosystem offers — **including the save-this-look offer, which is skipped entirely under a per-deck auto directive: never an un-consented registry write.**
+**Before you write the hand-off note, read `references/handoff-checklist.md` — every deck.** It is the ONE authoritative list of what the note carries (minimal caveats + next steps, never a recap or self-praise) and of the conditional REQUIRED lines the owning rules point here for: `provenance:`, **`review:`** (the effort tier that ran + how it was reached) and **`cost:`** (subagents · tokens · wall-clock — a dial whose bill is never shown builds no intuition), click order, image licences, the GIF note, accepted advisories, `distinctiveness:`, the delegated-picks recap, the optional `ceiling` line, and the two taste-ecosystem offers — **including the save-this-look offer, which is skipped entirely under a per-deck auto directive: never an un-consented registry write.** For a Codex-verified PPTX, the hand-off note is forbidden until the final-file guard passes; an explicit **unverified draft** is the only disclosure alternative.
 
 **For a long deck (~15+ slides), show work at ~50%, not only at 100%.** When a build is large enough
 that a wrong direction is expensive to unwind, render the first few finished slides (cover + a couple

@@ -137,7 +137,12 @@ python3 scripts/codex_delivery_gate.py \
   --lint lint-final.json \
   --components components-final.json \
   --build-script build_<deck>.py \
-  --evidence .codex-deck-evidence.json
+  --evidence .codex-deck-evidence.json \
+  --receipt .codex-delivery-receipt.json
+
+python3 scripts/codex_handoff_guard.py \
+  --receipt .codex-delivery-receipt.json \
+  --deck <deck>.pptx
 ```
 
 The gate blocks a Codex hand-off on remaining hard lint, missing pixel checks, undersized body text,
@@ -150,5 +155,11 @@ valid only when it names the exact issue and a meaningful reason; it is a design
 or critic schema validity.
 The gate also re-runs `component_audit.py` against the recorded final PPTX and build script, so a stale
 or hand-authored component JSON cannot certify the deck.
+
+The receipt is written only after `CODEX DELIVERY GATE: PASS`; the final hand-off guard hashes the
+actual PPTX again. **Do not hand off a Codex-verified deck, expose its file link, or use an output
+citation unless `CODEX HANDOFF GUARD: PASS` is in the current run log.** If a different backend is
+required, disclose it as an **unverified draft — Codex gate not applicable**, rather than treating a
+clean render or generic PPTX inspection as equivalent proof.
 
 This command is **not** part of Claude Code's hand-off and must not be added to its default pipeline.

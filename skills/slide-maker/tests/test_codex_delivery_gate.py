@@ -10,6 +10,7 @@ import hashlib
 import importlib.util
 import json
 import struct
+import subprocess
 import sys
 import tempfile
 import zlib
@@ -321,6 +322,42 @@ def main() -> int:
         failures = []
         if errors:
             failures.append("valid evidence unexpectedly blocked:\n" + "\n".join(errors))
+
+        evidence_path = root / ".codex-deck-evidence.json"
+        lint_path = root / "lint-final.json"
+        components_path = root / "components-final.json"
+        receipt_path = root / ".codex-delivery-receipt.json"
+        write_json(evidence_path, evidence)
+        write_json(lint_path, lint)
+        write_json(components_path, components)
+        run = subprocess.run(
+            [
+                sys.executable, str(SCRIPTS / "codex_delivery_gate.py"),
+                "--lint", str(lint_path),
+                "--components", str(components_path),
+                "--build-script", str(build),
+                "--evidence", str(evidence_path),
+                "--receipt", str(receipt_path),
+            ],
+            text=True, capture_output=True,
+        )
+        if run.returncode or not receipt_path.exists():
+            failures.append("a valid gate run did not emit a PASS receipt:\n" + run.stdout + run.stderr)
+        deck_path = root / evidence["deck"]["pptx"]
+        guard = subprocess.run(
+            [sys.executable, str(SCRIPTS / "codex_handoff_guard.py"), "--receipt", str(receipt_path), "--deck", str(deck_path)],
+            text=True, capture_output=True,
+        )
+        if guard.returncode:
+            failures.append("a matching PASS receipt was rejected by the hand-off guard:\n" + guard.stdout + guard.stderr)
+        tampered = root / "tampered-deck.pptx"
+        tampered.write_bytes(deck_path.read_bytes() + b"tampered")
+        guard = subprocess.run(
+            [sys.executable, str(SCRIPTS / "codex_handoff_guard.py"), "--receipt", str(receipt_path), "--deck", str(tampered)],
+            text=True, capture_output=True,
+        )
+        if guard.returncode == 0:
+            failures.append("a receipt for a different PPTX passed the hand-off guard")
 
         evidence["runtime"] = "openai-gpt-bridged"
         errors = gate.evaluate(lint, components, build, evidence, root)
