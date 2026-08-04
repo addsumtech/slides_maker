@@ -258,13 +258,34 @@ filled-field gate, or a deterministic check — that makes skipping them visible
 > directly; running the four-question interview there is noise. When in doubt ("improve my deck"
 > could be either), one clarifying line beats a wrong assumption.
 
-**Run `python3 scripts/check_version.py` once, alongside the first question.** It prints ONE line
-if a newer slide-maker exists and **nothing** if the install is current; relay that line to the user
-verbatim and carry on — it is a notice, never a gate, and it never updates anything. Cost is a
-single network call at most once per 24h (every other run reads a cache in ~5ms), and every failure
-path — offline, no marker, corrupt cache — exits silently, so it can never be the reason a deck
-did not get built. It lives here rather than in a reference because a check nobody triggers is a
-check that does not exist; users opt out with `SLIDE_MAKER_NO_VERSION_CHECK=1`.
+**Run `python3 scripts/check_version.py` once, alongside the first question.** It is silent when the
+install is current — then say nothing and go straight to the interview. Cost is one network call at
+most per 24h (~5ms from cache otherwise), and every failure path — offline, no marker, corrupt cache
+— exits silently, so it can never be the reason a deck did not get built. It lives in Step 0 rather
+than in a reference because a check nobody triggers is a check that does not exist. Opt out with
+`SLIDE_MAKER_NO_VERSION_CHECK=1`.
+
+**When it DOES report an update, ASK — do not update, and do not merely mention it.** Run
+`check_version.py --json` and offer three options *before the four interview questions*, so the deck
+is built by the version the user chose:
+- **yes — update first.** Then run the command for their install shape: `git -C <repo> pull
+  --ff-only` (git checkout) or `npx skills add addsumtech/slides_maker` (copied install). 🔴 **Re-read
+  SKILL.md after a successful update** — the instructions already in context are the OLD ones, so a
+  mid-session update that is not re-read changes nothing except the version number.
+- **no — build on the installed version.** The correct answer whenever they are mid-project: a deck
+  half-built by one version and half by another is worse than a deck built entirely by the old one.
+- **other — they have local changes.** Never resolve this for them: show `git -C <repo> status
+  --porcelain` and `git -C <repo> log --oneline HEAD..origin/main`, i.e. *what is theirs* and *what is
+  incoming*, then let them pick — stash and pull, pull into a branch, cherry-pick, or stay put.
+  **Never `git checkout .`, never `--force`, never `--replace` over an install you did not verify is
+  clean.**
+
+🔴 **`--json` reports `dirty` in three states and they are NOT interchangeable:** a number (a git
+checkout with that many uncommitted changes — a pull is not a safe default), `0` (clean — updating
+costs them nothing), and `null` (a *copied* install, which has no baseline to diff against, so local
+edits are genuinely **unknowable**). Report `null` as unknown. Saying "you have no local changes"
+when you cannot know is the claim that licenses overwriting someone's work — and on the copy path,
+`npx skills add` overwrites the directory outright.
 
 **Run this interview every time, from scratch — do not skip it because earlier
 conversation, a previous deck, or context "obviously" implies an answer.** A terse
@@ -560,15 +581,26 @@ re-form-vs-taste-reason call), a **Form
 ledger** whose diversity gate passes (no one format-family on >~40–50% of content slides — the
 card-overuse guard), the addendum's **deck-level design gates** — a **rhythm map**, a **semantic-colour
 ledger**, a passing **block-dependency audit** (no >2 consecutive card slides), and the **minimum
-deck-level variation** (`references/design-intelligence-addendum.md`) — plus, for a **company / product /
-single-entity** deck (its subject IS one org / product / brand / institution, or a talk naming a
-tool/framework/model), a **logo plan WITH EVIDENCE** per the slide-design LOGO PRINCIPLE's situation
+deck-level variation** (`references/design-intelligence-addendum.md`) — plus, on **ANY deck that NAMES
+a real entity** (not only a single-entity one: a company / product / brand / institution / government
+body as the SUBJECT, a tool/framework/model named as content, **or a slide whose FORM is a roster of
+named real entities** — an ecosystem map, an alliance's member list, a comparison whose rows are
+institutions), a **logo plan WITH EVIDENCE** per the slide-design LOGO PRINCIPLE's situation
 table: the line must read `official asset — <source>`, `searched, none found → designed wordmark
-(flagged)`, or `n/a — <multi-entity | template carries it | user opted out | third-party assessment>`
+(flagged)`, or `n/a — <named inline as text | template carries it | user opted out | third-party assessment>`
+— and a **roster slide additionally carries `entity marks: <N of M sourced | none — reason>`**, because
+one line cannot say both "the deck's own mark" and "the eight institutions on slide 5". 🔴 **A generic
+placeholder glyph in a mark's slot — a coloured square, a repeated stock icon, a bullet dot dressed as a
+crest — is NOT an acceptable value for that field.** It is decoration impersonating information and it
+fails the 1-second decodability floor; plain type beats a shape that looks like it means something.
+*(Measured: a 12-page deck listed all eight Go8 universities around a hub — the exact ecosystem-map form
+the LOGO PRINCIPLE says earns a logo wall — and shipped eight identical blue squares. Nothing was wrong
+with the rule; the deck was multi-entity, so no `logo plan:` line was ever required, and a rule nobody is
+asked to evaluate is a rule that does not run.)*
 — **`third-party assessment` is a full member of this set, not a footnote**: it is decided BEFORE the
 search and overrides its result (the 🔴 row below), so a deck that qualifies for it must be able to
 name it here — a bare "wordmark"/
-"text only" with no recorded search, or a missing line on a single-entity deck, makes the plan
+"text only" with no recorded search, or a missing line on any deck that names a real entity (including a roster slide), makes the plan
 **incomplete** (send it back; self-verify (o) owns this) — and the **THREE
 DESIGN MUSTS** addressed (`slide-design.md`'s three design musts) —
 **(1) appear-builds — ONLY if the user opted in** (the interview's presented-deck choice): if IN, a
@@ -610,7 +642,7 @@ deviation. This row makes that the default instead of a save.)*
 > slide costs one glance to veto) + the
 > image opt-in list (each row with its `generated — <tool>` / `sourced — <origin> (<license>)` /
 > `provided — …` / `searched, none found → …` rung — full grammar: `references/image-generation.md`
-> step 5 — source token) + (for a company/product/single-entity deck) the **`logo plan:` line WITH its
+> step 5 — source token) + (on ANY deck naming a real entity — subject, named-as-content, or a ROSTER slide) the **`logo plan:` line WITH its
 > evidence token** (`official asset — <source>` / `searched, none found → designed wordmark (flagged)` /
 > `n/a — <reason, incl. third-party assessment>`) + the **motif line stating the device AND its meaning
 > + how it's made legible**

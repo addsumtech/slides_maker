@@ -117,7 +117,12 @@ def _git(*args: str) -> str | None:
 
 
 def git_shape() -> dict | None:
-    """A git checkout (including the symlink-into-a-repo install). Returns commits behind."""
+    """A git checkout (including the symlink-into-a-repo install).
+
+    Reports commits behind AND whether the working tree carries local work, because those are
+    two different situations for the user: "you are behind" invites a pull, while "you are
+    behind AND you have edited this" must never invite one silently. The second number is the
+    only fact the update prompt's third option can stand on."""
     if _git("rev-parse", "--git-dir") is None:
         return None
     remotes = _git("remote", "-v") or ""
@@ -130,7 +135,11 @@ def git_shape() -> dict | None:
     n = _git("rev-list", "--count", f"HEAD..{branch}")
     if n is None or not n.isdigit():
         return None
-    return {"shape": "git", "behind": int(n)}
+    porcelain = _git("status", "--porcelain") or ""
+    dirty = len([l for l in porcelain.splitlines() if l.strip()])
+    ahead = _git("rev-list", "--count", f"{branch}..HEAD")
+    return {"shape": "git", "behind": int(n), "dirty": dirty,
+            "ahead": int(ahead) if (ahead or "").isdigit() else 0}
 
 
 def copy_shape(local: str | None) -> dict | None:
@@ -145,11 +154,33 @@ def copy_shape(local: str | None) -> dict | None:
     lv, rv = _semver(local or ""), _semver(remote)
     if not rv:
         return None
-    return {"shape": "copy", "local": local, "remote": remote,
+    # `dirty: None` is deliberate and is NOT the same as 0. A copied install has no baseline to
+    # diff against, so whether the user edited it is genuinely unknowable here — and the update
+    # prompt must say "I cannot tell" rather than "you have no local changes", which would be a
+    # claim that quietly licenses overwriting someone's work.
+    return {"shape": "copy", "local": local, "remote": remote, "dirty": None,
             "behind": 1 if (lv is None or lv < rv) else 0}
 
 
 # ── report ─────────────────────────────────────────────────────────────────────────────
+
+def local_work(res: dict) -> str:
+    """The clause that decides whether an update is a one-liner or a conversation.
+
+    Three distinct states, and collapsing any two of them loses the thing that matters:
+      dirty > 0   the user has edited this checkout — a pull is NOT a safe default
+      dirty == 0  clean; updating costs them nothing
+      dirty None  a copied install; genuinely unknowable, and saying "clean" would be a lie
+    """
+    d = res.get("dirty")
+    if d is None:
+        return " · local edits: unknown (copied install has no baseline to diff against)"
+    if d:
+        ahead = res.get("ahead") or 0
+        extra = f" + {ahead} unpushed commit{'s' if ahead != 1 else ''}" if ahead else ""
+        return f" · 🔴 you have {d} uncommitted change{'s' if d != 1 else ''}{extra} here"
+    return " · working tree clean"
+
 
 def notice(res: dict) -> str | None:
     if not res or not res.get("behind"):
@@ -157,16 +188,17 @@ def notice(res: dict) -> str | None:
     if res.get("shape") == "git":
         n = res["behind"]
         return (f"slide-maker is {n} commit{'s' if n != 1 else ''} behind "
-                f"{REPO}@main — update: git -C <repo> pull --ff-only")
+                f"{REPO}@main{local_work(res)}")
     return (f"slide-maker {res.get('remote')} is available "
-            f"(installed: {res.get('local') or 'unknown'}) — "
-            f"update: npx skills add {REPO}")
+            f"(installed: {res.get('local') or 'unknown'}){local_work(res)}")
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Tell the user if a newer slide-maker exists.")
     ap.add_argument("--verbose", action="store_true", help="print the result even when current")
     ap.add_argument("--force", action="store_true", help="ignore the cache")
+    ap.add_argument("--json", action="store_true",
+                    help="emit the raw result so a caller can build the update prompt")
     a = ap.parse_args()
 
     if os.environ.get("SLIDE_MAKER_NO_VERSION_CHECK"):
@@ -187,6 +219,8 @@ def main() -> int:
                   "offline, or no VERSION marker")
         return 0
 
+    if a.json:
+        print(json.dumps(res)); return 0
     line = notice(res)
     if line:
         print(line)
