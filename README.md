@@ -280,8 +280,8 @@ This is the same skill, just managed by Claude Code's plugin system instead of c
 
 slide-maker checks before it asks you anything, and **stays completely silent when you are current**. When a newer version exists it does not update itself and does not just mention it — it asks, once, at the top:
 
-- **yes** — update first, then build on the new version.
-- **no** — build on what you have installed. The right answer mid-project: a deck half-built by one version and half by another is worse than one built entirely by the older.
+- **yes** — update to the latest version on GitHub first, then build the whole deck on that one.
+- **no** — don't update; build on the version you already have installed. The right answer mid-project: a deck half-built by one version and half by another is worse than one built entirely by the older.
 - **other** — you have local changes. It shows you what is yours and what is incoming, and resolves nothing on its own.
 
 The remote lookup is cached for 24 hours, but whether *you* have uncommitted work is re-read every time — a day-old "your tree is clean" is exactly the reading that gets someone's edits overwritten. Offline, it stays quiet rather than getting in the way.

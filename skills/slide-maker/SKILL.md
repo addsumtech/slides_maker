@@ -274,7 +274,11 @@ than in a reference because a check nobody triggers is a check that does not exi
 `check_version.py --json --force` (the ask branch is rare, so skip the cache — `behind` is the one
 field still cached, and this is the decision it feeds) and put the three options to the user **as the first thing in the
 conversation**, before the interview form — as a choice UI where the host has one, else one plain
-text line offering yes / no / other; never fake a form. The ordering is the point: the interview's answers, the
+text line offering yes / no / other; never fake a form. **Spell out what each answer DOES — never
+offer a bare yes / no / other.** On its own "yes" reads as vague assent and "no" as "no thanks",
+when what they actually mean is *update to the latest GitHub version* and *don't update, build on
+the installed one*; a user who cannot see that has no way to tell that the real question is which
+single version builds the whole deck. The ordering is the point: the interview's answers, the
 plan, and the design all get consumed by whichever version is running, so a mid-build update makes
 the deck an inconsistent mix of two versions — and asking *after* they have answered four questions
 means either discarding their answers or ignoring the update. Ask once, at the top, then build.
@@ -282,12 +286,12 @@ means either discarding their answers or ignoring the update. Ask once, at the t
 *(Per-deck AUTO WAIVER: do **not** stop. Default to **no — build on the installed version**, and say
 so in the first FYI. Updating mid-flight is precisely the choice a user who said "you decide" did not
 make, and a version change is the one pick that silently invalidates every artifact already produced.)*
-- **yes — update first.** Then run the command for their install shape: `git -C <repo> pull
+- **yes — update to the latest GitHub version first, then build the whole deck on it.** Then run the command for their install shape: `git -C <repo> pull
   --ff-only` (git checkout) or `npx skills add addsumtech/slides_maker` (copied install). 🔴 **Re-read SKILL.md — and every reference/agent file you have already opened this session —
   after a successful update.** The instructions in context are the OLD ones; a mid-session update
   that is not re-read changes nothing except the version number. Where the two disagree, the file
   on disk wins.
-- **no — build on the installed version.** The correct answer whenever they are mid-project: a deck
+- **no — don't update; build on the installed version.** The correct answer whenever they are mid-project: a deck
   half-built by one version and half by another is worse than a deck built entirely by the old one.
 - **other — they have local changes.** Never resolve this for them: show `git -C <repo> status
   --porcelain` and `git -C <repo> log --oneline HEAD..origin/main`, i.e. *what is theirs* and *what is
