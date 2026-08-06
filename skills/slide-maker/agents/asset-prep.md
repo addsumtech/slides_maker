@@ -31,6 +31,14 @@ exists — so its plate/figure/icons are the one set the build is actually WAITI
 then parallelize the rest freely. An asset queue that starves the proof is how the proof gets
 skipped "just this once".
 
+**Nothing is waiting on the REST of the queue, so do not act like it is.** The caller dispatches you
+the moment it has a deck folder and then goes on authoring the build script — generation (~30–90s a
+plate, waiting on a hosted model) is meant to run *underneath* that authoring, not in front of it.
+Two consequences for you: report the signature slide's assets as soon as they land rather than
+batching one report at the end, and never serialize independent jobs to keep the log tidy. The
+caller's build run is the barrier that catches anything still missing (`python-pptx` raises on an
+absent image), so a late asset is a loud failure, never a silent hole.
+
 ## Jobs (each one independent — parallelize freely)
 - **Crop figures** with `scripts/extract_pdf.py` (`figure`/`figures`/`page`+`crop_helper.py`) to the
   plan's spec → whole, un-clipped PNG.

@@ -195,6 +195,53 @@ def _str_list(obj, key, path, errors, required=True):
     return values
 
 
+# The nine per-purpose overlays in references/review-rubrics.md. A critic reads the universal
+# rubric in full plus EXACTLY ONE of these — the other eight describe decks it is not reviewing.
+RUBRIC_OVERLAYS = (
+    "progress / lab meeting",
+    "work status update",
+    "academic conference talk",
+    "academic job talk / faculty interview",
+    "company / stakeholder presentation",
+    "product description / pitch",
+    "thesis / committee defense",
+    "teaching / instructional",
+    "conference / research poster",
+)
+
+
+def _rubric_overlay(obj, errors):
+    """`rubric_overlay` — which per-purpose rubric section this review actually applied.
+
+    review-rubrics.md has told critics to read one overlay and skip the other eight for a while,
+    and nothing ever checked. That is the shape of instruction this skill's own enforcement
+    invariant ranks last: a rule that lives only in reference prose is advisory in practice. It
+    matters more than a token count, because a critic that read the WRONG overlay reviews a job
+    talk against the pitch bar and reports a clean verdict either way — the failure is silent in
+    exactly the place the panel exists to be loud.
+
+    So the review names its overlay and this validator checks it. `none — <reason>` stays legal:
+    a deck that matches none of the nine is real, and forcing a wrong pick would be worse than
+    the gap. What is NOT legal is silence, or a bare "none" with nothing after it.
+    """
+    val = _field(obj, "rubric_overlay", "str", "$", errors)
+    if not isinstance(val, str):
+        return
+    norm = val.strip().lower()
+    if norm in RUBRIC_OVERLAYS:
+        return
+    if norm.startswith("none"):
+        tail = norm[4:].lstrip(" -—:")
+        if len(tail) >= 8:
+            return
+        errors.append("$.rubric_overlay: 'none' needs a reason after it (e.g. "
+                      "'none — internal design-system deck, no purpose overlay fits'), got %r" % val)
+        return
+    errors.append("$.rubric_overlay: %r is not one of the nine per-purpose sections in "
+                  "references/review-rubrics.md (%s), nor 'none — <reason>'"
+                  % (val, ", ".join(RUBRIC_OVERLAYS)))
+
+
 # ---------------------------------------------------------------- critic ----
 
 def validate_critic(obj):
@@ -204,6 +251,7 @@ def validate_critic(obj):
         return ["$: critic output must be a JSON object, got %s" % type(obj).__name__]
 
     _field(obj, "purpose", "str", "$", errors)
+    _rubric_overlay(obj, errors)
 
     # coverage — the anti-skim gate
     cov = _field(obj, "coverage", "dict", "$", errors)
@@ -378,6 +426,7 @@ def _selftest():
     """Three inline fixtures: a valid critic, a broken critic, a valid+broken arbiter."""
     good_critic = {
         "purpose": "MICCAI oral, 10 min, broad audience",
+        "rubric_overlay": "academic conference talk",
         "coverage": {"slides_opened": [1, 2, 3], "passes": ["content lens (full deck)",
                                                             "design lens (full deck)"],
                      "stats_block_seen": True, "contract_card_seen": "none-declared"},
@@ -413,6 +462,20 @@ def _selftest():
                    "$.findings[0].severity", "$.findings[0].dimension",
                    "$.findings[0].why", "$.findings[0].fix"):
         assert any(needle in e for e in errs), "expected %r in %s" % (needle, errs)
+    assert any("$.rubric_overlay: missing" in e for e in errs), errs
+
+    # rubric_overlay — the scoping backstop. A review must name which of the nine per-purpose
+    # sections it applied; the whole point is that neither silence nor a made-up name passes.
+    assert any("not one of the nine" in e for e in
+               validate_critic(dict(good_critic, rubric_overlay="vibes"))), "bogus overlay passed"
+    assert validate_critic(dict(good_critic, rubric_overlay="Academic Conference Talk")) == [], \
+        "overlay match must be case-insensitive"
+    assert validate_critic(dict(good_critic,
+                                rubric_overlay="none — internal design-system deck")) == [], \
+        "'none — <reason>' is a legitimate answer"
+    assert any("needs a reason after it" in e for e in
+               validate_critic(dict(good_critic, rubric_overlay="none"))), "bare 'none' passed"
+
     # ("critical" fails the enum so no severity survives; the consent rule is
     #  exercised separately with a well-typed blocker)
     consent_blocker = dict(good_critic, verdict="consent")

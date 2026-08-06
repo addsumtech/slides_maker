@@ -707,6 +707,28 @@ don't silently dump into `/tmp`. You'll remind them to open it in step 6.
 > `./<deck-name>/` in the working directory. Never `/tmp`. State the chosen location in chat the
 > moment you decide it — auto mode is never invisible — and repeat it in the hand-off.)*
 
+> ### 🔴 The moment you have a folder, DISPATCH THE IMAGE MANIFEST — then keep working
+> Generated plates are the slowest thing in this pipeline (~30–90s each, and the scripts run them
+> concurrently). Authoring the build script is the longest thing YOU do. They are independent:
+> generation is waiting on a hosted model, authoring is you writing Python. **Run them at the same
+> time.** Put every approved plate — hero, dividers, interior, per-slide — into ONE manifest, start
+> it, and go straight on to the canvas and the build script without waiting. By the time you
+> *execute* the script the images are on disk, and you paid for them in wall clock you were
+> spending anyway.
+> - **The build RUN is the barrier, not your judgment** — `python-pptx` raises on a missing image
+>   file, so a script executed too early fails loudly and names the file. There is no version of
+>   this that quietly ships a deck with holes in it.
+> - **The one thing that genuinely blocks: the signature slide's assets.** Step 4 opens with the
+>   SIGNATURE PROOF, so `asset-prep` delivers that slide's plate/figure/icons first (its brief
+>   already says so). Everything else can land while you author.
+> - **Order the manifest to match:** signature slide first, then the rest.
+> - **Do not** dispatch before the Step-2 DESIGN checkpoint is approved — the prompts, placements
+>   and opt-ins are exactly what that checkpoint locks, and regenerating a rejected plate costs
+>   more than it saved.
+>
+> *(Serial by default was never a decision anyone made — the pipeline simply read top-to-bottom.
+> Measured cost of leaving it serial: the full generation batch, dead, before authoring starts.)*
+
 **Canvas format.** The default deck is 16:9 via `deckkit.blank_deck()` — untouched, and everything below assumes it. **If the interview confirmed any non-16:9 surface (4:3 venue · 小红书 3:4 · square 1:1 · story 9:16 · A4 print) — or the design plan carries a `format:` line that isn't `wide` — read `references/deck-setup.md` §Canvas format BEFORE creating the presentation object**; it carries the `scripts/formats.py` contract (`band` safe rect · `chrome` · `columns_ok` · `display_scale` · `lint_flags`) and the rule that the design plan records a `format:` line whenever it isn't `wide`.
 
 **Keep the per-deck build script (`build_<deck>.py`) in that same folder, beside the
@@ -1339,7 +1361,15 @@ First **render and look** (`bash scripts/render_deck.sh <deck.pptx>` → one PNG
 slide). python-pptx writes blind — overflow, low contrast, a callout on the footer,
 or a missing glyph only show up in the image. Fix mechanical issues and re-render.
 **Chain build → render → lint into ONE command** — `python3 build_<deck>.py && bash
-scripts/render_deck.sh <deck>.pptx && python3 scripts/lint_deck.py <deck>.pptx --renders render`.
+scripts/render_deck.sh <deck>.pptx --fast && python3 scripts/lint_deck.py <deck>.pptx --renders render`.
+🔴 **`--fast` belongs in the chain itself, not in your judgment.** It is safe on the FIRST render
+too: with no cache it prints `--fast fell back to a full render: no previous render cache` and does
+the full one — same for a changed slide count, a deck-global edit, hidden slides, or auto
+slide-number fields. So the flag costs nothing when it cannot help and saves a full render on every
+round when it can. It was previously advised one paragraph above this command and omitted FROM it,
+which is the same as not being there: the chain is what gets copied each round.
+(The one command that must NOT carry it is the hand-off render — `--deliverables` needs a whole-deck
+PDF and dies if you pass both.)
 They are a strict dependency chain, so they cannot run in parallel, but they also need no
 decision between them: running them as three messages buys nothing and pays the full
 conversation context three times instead of once. `&&` already stops the chain at the first

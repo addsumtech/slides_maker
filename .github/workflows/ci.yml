@@ -125,6 +125,19 @@ jobs:
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/reg.log || {
             echo "::error::regression suite exited 0 without running to completion"; exit 1; }
 
+      # The two render optimizations (chunked parallel rasterization, pooled LibreOffice
+      # profile) are only legitimate if they are INVISIBLE in the output. This renders the
+      # same deck down every path and compares sha256, and asserts the invariant the old
+      # throwaway profile existed for: concurrent renders must still all produce a PDF.
+      # Same skip-means-broken assertion as above — it renders for real, so a silent SKIPPED
+      # here means LibreOffice went missing, not that the contract holds.
+      - name: Render optimizations are byte-identical (parallel + profile pool)
+        run: |
+          set -o pipefail
+          python tests/test_render_parallel.py | tee /tmp/renderpar.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/renderpar.log || {
+            echo "::error::render-equivalence suite did not run to completion"; exit 1; }
+
       # The Codex delivery gate is the strictest thing in the skill -- it is what stops a Codex
       # run from calling a deck delivered without two schema-valid critic reviews. It shipped
       # with 437 lines of tests wired to nothing. Script-style on purpose (matching

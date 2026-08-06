@@ -136,7 +136,12 @@ something.
   **source-first**: the contract card's claim-ledger row is corroboration for a number, never a
   substitute for its source location.
 - The **rubric**: read `references/review-rubrics.md` (universal rubric + the overlay
-  for this purpose) and `references/design-principles.md`.
+  for this purpose) and `references/design-principles.md`. **Scope that file before you read it**
+  — its `## How much of this file to read` says the universal rubric in full plus **exactly one**
+  of the nine per-purpose overlays, and `## Finding-level cross-validation` only at tier
+  `thorough`. The other eight overlays describe decks you are not reviewing. You then declare the
+  one you used as `rubric_overlay` in your output, which `validate_review.py` checks against the
+  nine — so this is a contract you sign, not a suggestion you can skim past.
 - **Your assigned LENS** (when dispatched as a panel): **Content** (Lens A) or **Design** (Lens B) —
   apply only that lens's checks (§2) so you go deep instead of skimming all ~30; if no lens is named
   you are the sole critic — run **both** lenses as two passes. The three high-recurrence classes
@@ -936,6 +941,7 @@ line it audits).
 ```json
 {
   "purpose": "<echo the purpose you reviewed against>",
+  "rubric_overlay": "<which ONE per-purpose section of review-rubrics.md you applied, verbatim from its heading — progress / lab meeting · work status update · academic conference talk · academic job talk / faculty interview · company / stakeholder presentation · product description / pitch · thesis / committee defense · teaching / instructional · conference / research poster. If none of the nine fits this deck, 'none — <reason>'. validate_review.py rejects anything else, including a bare 'none': reviewing a job talk against the pitch bar produces a confident verdict that is measuring the wrong thing, and that error is invisible in the output>",
   "coverage": {
     "slides_opened": [1, 2, "...every slide number whose PNG you actually Read — a missing number means the review is INVALID, not that the slide was fine. SCOPE: every slide in your ASSIGNED scope — the whole deck for a sole/whole-deck critic; your section's page range for a per-section critic (echo the range you were given); the coordinator rejects gaps against the scope, not the whole deck"],
     "scope": "<OMIT on a whole-deck review. A per-section critic MUST set it to its assigned range, [first, last] — e.g. [4, 9]. This is not bookkeeping: render_deck.py --gate-check counts the deck's real slides and refuses a consent whose slides_opened does not reach them, so a section review that does not state its range is read as a whole-deck review full of holes and bounces>",

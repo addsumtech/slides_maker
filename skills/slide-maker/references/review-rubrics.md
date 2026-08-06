@@ -47,6 +47,13 @@ scoping this file saves ~4k per critic — small on its own, but a critic's stan
 load is ~62.6k tokens and every lens on every round pays it again. See
 `references/critic-panel.md` for the full cost breakdown and for what is NOT safe to cut.
 
+**This instruction now has a gate.** The review declares `rubric_overlay` — which one of the nine
+you applied — and `validate_review.py` rejects a review that omits it, invents a name, or says a
+bare `none` (`none — <reason>` is legitimate for a deck none of the nine fits). Until that field
+existed this section was pure prose, and the cost of ignoring it was never the tokens: a critic
+that reads the WRONG overlay reviews a job talk against the pitch bar and returns a confident
+verdict either way. Naming the overlay is what makes that mistake visible.
+
 ## Universal rubric
 > **Skim test (decide-goal decks):** before scoring dimensions, read ONLY the slide titles plus
 > slides 1–2, for ~90 seconds. Can you state the recommendation and the exact ask? If not, that

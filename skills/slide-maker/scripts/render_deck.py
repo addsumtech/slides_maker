@@ -532,28 +532,243 @@ def _subset_pptx(src, keep_idx, dest):
     return dest
 
 
+def _profile_pool_dir():
+    """Where the reusable LibreOffice profiles live. Same convention as the icon cache."""
+    env = os.environ.get("SLIDE_MAKER_CACHE")
+    if env:
+        return os.path.join(env, "lo-profiles")
+    if sys.platform == "win32":
+        base = os.environ.get("LOCALAPPDATA") or os.path.expanduser(r"~\AppData\Local")
+    elif sys.platform == "darwin":
+        base = os.path.expanduser("~/Library/Caches")
+    else:
+        base = os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
+    return os.path.join(base, "slide-maker", "lo-profiles")
+
+
+PROFILE_POOL_SLOTS = 8       # more concurrent renders than that, and the extras go throwaway
+
+
+class _Profile(object):
+    """A LibreOffice user profile to render with, plus how to let it go.
+
+    Building a user profile from scratch is most of what a headless `--convert-to` run spends
+    its time on: measured 3.71s per export with a fresh profile against 2.16s once the profile
+    already exists — ~42% of the export, on every render, spent recreating the same directory.
+
+    The old code paid that every time by design, and the design had two real reasons, both of
+    which this pool has to keep:
+
+      1. **Parallel renders must not fight.** The large-deck section fan-out renders several
+         decks at once, and two `soffice` processes pointed at ONE profile collide: measured,
+         one of the pair exits 1 having written no PDF at all.
+      2. **The user's own LibreOffice may be open.** A render must not touch the GUI's profile.
+
+    So this is a POOL, not a shared singleton: N private slots, each held under an exclusive
+    `flock` for the duration of one render. Concurrent renders land on different slots; a slot
+    is only ever used by one process at a time, which is exactly the invariant a throwaway
+    profile gave for free. Nothing here goes near LibreOffice's default profile.
+
+    When every slot is busy, or the platform has no `flock` (Windows), or anything at all goes
+    wrong, we hand back a throwaway profile — i.e. precisely the old behaviour. The pool is an
+    optimization; it is never the reason a deck fails to render.
+    """
+
+    def __init__(self, path, pooled, lock_fh=None):
+        self.path = path
+        self.pooled = pooled
+        self._lock_fh = lock_fh
+
+    def release(self, discard=False):
+        if not self.pooled:
+            shutil.rmtree(self.path, ignore_errors=True)
+            return
+        if discard:
+            # This slot was in hand for a render that failed. It may be the cause (a profile
+            # torn by a killed process, or one written by a different LibreOffice version), so
+            # do not leave it for the next run to trip over.
+            shutil.rmtree(self.path, ignore_errors=True)
+        if self._lock_fh is not None:
+            try:
+                import fcntl
+                fcntl.flock(self._lock_fh.fileno(), fcntl.LOCK_UN)
+            except Exception:
+                pass
+            try:
+                self._lock_fh.close()
+            except Exception:
+                pass
+
+
+def _acquire_profile():
+    """Take a pooled profile slot, or fall back to a throwaway one."""
+    if os.environ.get("SLIDE_MAKER_NO_PROFILE_POOL"):
+        return _Profile(tempfile.mkdtemp(prefix="lo_render_"), pooled=False)
+    try:
+        import fcntl                                    # POSIX only; Windows keeps the old path
+    except ImportError:
+        return _Profile(tempfile.mkdtemp(prefix="lo_render_"), pooled=False)
+    try:
+        root = _profile_pool_dir()
+        os.makedirs(root, exist_ok=True)
+        for i in range(PROFILE_POOL_SLOTS):
+            slot = os.path.join(root, "slot{:02d}".format(i))
+            os.makedirs(slot, exist_ok=True)
+            # The lock file lives BESIDE the slot, not inside it: `release(discard=True)` deletes
+            # the slot tree, and unlinking the file we hold the lock on would drop the lock.
+            fh = open(os.path.join(root, "slot{:02d}.lock".format(i)), "a+")
+            try:
+                fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except OSError:
+                fh.close()
+                continue                                # another render holds this slot
+            return _Profile(slot, pooled=True, lock_fh=fh)
+    except Exception:
+        pass
+    return _Profile(tempfile.mkdtemp(prefix="lo_render_"), pooled=False)
+
+
 def _render_pdf(soffice, src, outdir):
-    """pptx -> pdf via a throwaway LibreOffice profile, into an EMPTY private directory.
+    """pptx -> pdf via a private LibreOffice profile, into an EMPTY private directory.
 
     `outdir` must not already contain `<src-stem>.pdf`. Rendering into a directory that may hold a
     previous PDF is how a FAILED conversion gets read back as success: the caller checks only that
     the file exists, and a stale one satisfies that. Reproduced with real LibreOffice on a deck it
     refuses to convert — the run printed "rendered N slides" and exit 0 over untouched output.
     Returns (pdf_path, result, cmd); the caller must check `result.returncode`.
+
+    The profile comes from `_acquire_profile()` — a pooled, warm one when a slot is free, a
+    throwaway otherwise. On a non-zero exit with a POOLED profile we throw that slot away and
+    retry ONCE on a throwaway, so a poisoned slot degrades into the old behaviour instead of
+    into a failed render. A genuine bad deck fails both times and is reported as before.
     """
-    profile = tempfile.mkdtemp(prefix="lo_render_")
-    try:
-        cmd = [soffice, "-env:UserInstallation=" + Path(profile).as_uri(),
+    pdf = os.path.join(outdir, os.path.splitext(os.path.basename(src))[0] + ".pdf")
+
+    def _once(profile):
+        cmd = [soffice, "-env:UserInstallation=" + Path(profile.path).as_uri(),
                "--headless", "--convert-to", "pdf", "--outdir", outdir, src]
         try:
             result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                     text=True, timeout=300)
         except subprocess.TimeoutExpired:
+            profile.release(discard=True)
             die("LibreOffice render exceeded 300s and was killed — the .pptx may be malformed or "
                 "hostile (e.g. a decompression bomb). Nothing was produced from {}.".format(src))
+        return result, cmd
+
+    profile = _acquire_profile()
+    result, cmd = _once(profile)
+    if result.returncode != 0 and profile.pooled:
+        profile.release(discard=True)
+        print("note: render failed on a pooled LibreOffice profile — discarding it and retrying "
+              "with a fresh one", file=sys.stderr)
+        retry = _Profile(tempfile.mkdtemp(prefix="lo_render_"), pooled=False)
+        result, cmd = _once(retry)
+        retry.release()
+        return (pdf, result, cmd)
+    profile.release()
+    return (pdf, result, cmd)
+
+
+# --- parallel rasterization -------------------------------------------------------------
+# Rasterizing is the one render stage that is embarrassingly parallel: each page is an
+# independent draw into its own file. It is also, on an image-heavy deck, the stage that
+# actually costs something.
+#
+# Two things about the shape below are load-bearing, both measured rather than reasoned:
+#
+#  1. **Chunk contiguously; open the PDF ONCE per worker.** The obvious version — one task
+#     per page — was measured at 18.5s against 2.9s serial on a 16-page image deck: 6.5x
+#     SLOWER, because every task re-opens and re-parses the whole PDF. Chunked, the same
+#     deck rasterizes in 1.27s (4 workers).
+#  2. **Never let this fail a render.** It is an optimization on a step that already worked.
+#     Any failure — no process pool in a locked-down sandbox, a worker dying, pickling
+#     trouble — returns False and the caller runs the original serial loop. A deck that
+#     renders slower is a nuisance; a deck that does not render is a broken run.
+#
+# Verified byte-identical to the serial loop (sha256 over every PNG, text and image decks).
+# `SLIDE_MAKER_RENDER_WORKERS=1` forces the serial path.
+RASTER_MIN_PAGES = 8          # below this the pool costs more than the pages save
+RASTER_MAX_WORKERS = 4        # measured: 4 workers ~= 8 workers (1.27s vs 1.25s), half the RAM
+
+
+def _rasterize_chunk(args):
+    """Render a contiguous run of pages in one worker. Module-level so it is picklable.
+
+    `thumbs` maps a page index this chunk owns to a thumbnail name. The bookend thumbnails
+    are produced HERE, by the worker that already rasterized that page at 2x, and only after
+    the whole chunk is done — because a page's thumbnail is not independent of whether that
+    page was rendered at 2x first. Measured: `thumb_first` of an image-heavy deck hashes
+    differently when rendered from a fresh document than when rendered after the 2x pass
+    (both individually deterministic). MuPDF is scaling a cached decode in one case and
+    doing a scaled decode in the other. So the thumbnail follows its page into the worker,
+    which keeps the ordering — 2x pass, then thumbnails — byte-for-byte what it has always
+    been. Rendering them in the parent instead silently changes two PNGs the critic looks at.
+    """
+    pdf, idxs, out, thumbs = args
+    import fitz
+    doc = fitz.open(pdf)
+    try:
+        for i in idxs:
+            doc[i].get_pixmap(matrix=fitz.Matrix(2, 2)).save(
+                os.path.join(out, "slide{:02d}.png".format(i + 1)))
+        for i, name in sorted(thumbs.items()):
+            page = doc[i]
+            zoom = 240.0 / max(1.0, page.rect.width)
+            page.get_pixmap(matrix=fitz.Matrix(zoom, zoom)).save(
+                os.path.join(out, name + ".png"))
     finally:
-        shutil.rmtree(profile, ignore_errors=True)
-    return (os.path.join(outdir, os.path.splitext(os.path.basename(src))[0] + ".pdf"), result, cmd)
+        doc.close()
+    return len(idxs)
+
+
+def _raster_workers(n_pages):
+    """How many workers to rasterize `n_pages` with — 1 means 'use the serial loop'."""
+    env = os.environ.get("SLIDE_MAKER_RENDER_WORKERS")
+    if env:
+        try:
+            return max(1, min(int(env), n_pages))
+        except ValueError:
+            pass                                  # a typo'd override must not break the render
+    if n_pages < RASTER_MIN_PAGES:
+        return 1
+    try:
+        cores = os.cpu_count() or 1
+    except Exception:
+        cores = 1
+    return max(1, min(RASTER_MAX_WORKERS, cores - 1, n_pages))
+
+
+def _rasterize_parallel(pdf, n_pages, out):
+    """Try to rasterize all pages across worker processes. Returns True if it wrote them all.
+
+    Returns False (writing nothing, or leaving a partial set the serial loop then overwrites)
+    whenever the fast path is unavailable or fails, so the caller can fall back.
+    """
+    workers = _raster_workers(n_pages)
+    if workers < 2:
+        return False
+    per = -(-n_pages // workers)
+    parts = [list(range(k * per, min(n_pages, (k + 1) * per))) for k in range(workers)]
+    parts = [p for p in parts if p]
+    # Hand each bookend thumbnail to whichever chunk owns its page (see _rasterize_chunk).
+    want = {0: "thumb_first", n_pages - 1: "thumb_last"} if n_pages else {}
+    jobs = [(pdf, p, out, {i: nm for i, nm in want.items() if i in p}) for p in parts]
+    try:
+        from concurrent.futures import ProcessPoolExecutor
+        with ProcessPoolExecutor(max_workers=len(parts)) as ex:
+            done = list(ex.map(_rasterize_chunk, jobs))
+    except Exception as exc:
+        print("note: parallel rasterize unavailable ({}) — using the serial path".format(exc),
+              file=sys.stderr)
+        return False
+    if sum(done) != n_pages:
+        # A worker returned but wrote fewer pages than it was given. Do not trust a partial
+        # set: say so and let the serial loop rewrite every page.
+        print("note: parallel rasterize covered {}/{} pages — redoing serially".format(
+            sum(done), n_pages), file=sys.stderr)
+        return False
+    return True
 
 
 def _sha256(path):
@@ -1554,10 +1769,13 @@ def main(argv):
 
 
 
-    # Give this invocation its OWN LibreOffice profile: lets parallel renders (the
-    # large-deck section fan-out) run at once without fighting a shared profile lock,
-    # and lets the render work even while the user has the LibreOffice GUI open.
+    # Give this invocation a LibreOffice profile NO OTHER PROCESS IS USING: lets parallel
+    # renders (the large-deck section fan-out) run at once without fighting a shared profile
+    # lock, and lets the render work even while the user has the LibreOffice GUI open.
     # Without this, concurrent/coexisting soffice calls silently produce no PDF.
+    # `_acquire_profile()` keeps that invariant with an exclusively-flocked slot from a
+    # persistent pool (warm profile, ~1.5s cheaper per export) and falls back to the original
+    # throwaway `mkdtemp` whenever a slot is unavailable — see `_Profile` for the whole story.
     src_pptx, keep = pptx, None
     tmp_subset = tmp_dir = None
     if incremental:
@@ -1677,12 +1895,18 @@ def main(argv):
         n_pages = len(fps)
     else:
         pages = list(enumerate(doc, 1))
-        for i, page in pages:
-            page.get_pixmap(matrix=fitz.Matrix(2, 2)).save(
-                os.path.join(out, "slide{:02d}.png".format(i)))
+        # Fast path first; it returns False on a small deck or any trouble, and then both
+        # loops below run exactly as they always did. When it succeeds it has ALSO written
+        # the two bookend thumbnails, from the workers that own those pages — see
+        # _rasterize_chunk for why they cannot be re-rendered here instead.
+        drawn_in_parallel = _rasterize_parallel(pdf, doc.page_count, out)
+        if not drawn_in_parallel:
+            for i, page in pages:
+                page.get_pixmap(matrix=fitz.Matrix(2, 2)).save(
+                    os.path.join(out, "slide{:02d}.png".format(i)))
         # bookend thumbnails (~240px wide) for the critic's poster test — first + last slide small,
         # the scale at which a cover either survives or dies. Same PyMuPDF path, no new deps.
-        if pages:
+        if pages and not drawn_in_parallel:
             for name, (_, page) in (("thumb_first", pages[0]), ("thumb_last", pages[-1])):
                 zoom = 240.0 / max(1.0, page.rect.width)
                 page.get_pixmap(matrix=fitz.Matrix(zoom, zoom)).save(os.path.join(out, name + ".png"))

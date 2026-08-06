@@ -76,6 +76,9 @@ def critic(lens: str) -> dict:
         ]
     return {
         "purpose": "Validate a one-slide presentation fixture for the final delivery gate.",
+        # Which of review-rubrics.md's nine per-purpose overlays this review applied. Required
+        # since the scoping rule got a gate — see validate_review._rubric_overlay.
+        "rubric_overlay": "work status update",
         "reviewer": {
             "origin": "isolated",
             "identity": f"fixture-{lens}-reviewer",
