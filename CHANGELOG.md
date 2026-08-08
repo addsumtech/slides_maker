@@ -9,6 +9,91 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+## [4.6.0] — 2026-08-08
+
+Everything below was found by building one real 14-page deck end to end and looking at the
+pixels. Each item names what it measured, because the pattern that produced them is the point:
+every one of these had already passed the build-time lint AND the render-time lint.
+
+### Added
+- **The signature motif now has a machine-readable existence, so its two contracts are
+  checkable.** The skill has long asked for a named device with a stated meaning, a budget of ≤3
+  LOUD appearances, a quiet register signature that MAY repeat on every page, and a `carried_by`
+  clause. All of it was prose. Measured: a hand-rolled register signature offset each ring in x
+  but **not in y**, drew three *interlocking* circles — a Venn diagram — and reached twelve pages
+  before a human opened a PNG; a subtitle laid across the cover motif produced **zero** findings,
+  because `TEXT_OVERLAP` measures text against TEXT and a motif is geometry; and nothing could say
+  whether a deck's motif appeared 3 times or 11. **`deckkit.tag_motif(shape, loud=…)`** gives the
+  device an identity (in the shape name, the idiom this file already uses for watermarks and
+  declared overlaps), and **`register_mark(slide, kind, corner=…)`** draws the five common shapes
+  correct-by-construction — `arcs` (concentric rings sharing ONE centre, so that bug is
+  unrepresentable) · `rule` · `ticks` · `ordinal` · `grid`. Invention stays open: draw anything and
+  tag it. Two new warns follow and could not exist without the tag — **`TEXT_OVER_MOTIF`** (declare
+  a deliberate one with `overlap_intent`) and **`MOTIF_BUDGET`** (the quiet signature is excluded
+  by design). An untagged deck is never punished for not using the vocabulary.
+- **A run tuple's SEVENTH slot is the East-Asian face.** `text()` forwards it to `set_font(ea=)`;
+  omitting it keeps the old behaviour exactly, which matters more than the feature — every
+  component in the library builds 5- and 6-element tuples, and the suite asserts both shapes
+  unchanged.
+- **`ink_content`** — the occupancy union with hollow decoration removed — beside `ink_cov` rather
+  than replacing it, because the existing bands were calibrated against the old number.
+
+### Fixed
+- 🔴 **On a 中文 deck the declared display face reached ZERO glyphs, and the documented call shape
+  was the reason.** A run tuple carries one font slot, in position 6, and it writes `<a:latin>`;
+  CJK glyphs render from `<a:ea>`, which takes `EAFONT`. So `(title, 40, INK, True, False,
+  "Songti SC")` set the Latin face of a run whose Latin content is a stray acronym. This is the
+  dangerous shape — the rule was **wrong**, not missing: the author follows the documentation and
+  gets a silent no-op. Measured on a real build: 11 runs across 6 of 14 slides carried a face that
+  reached not one of the characters it was chosen for, for the whole build, and the deck looked
+  plausible only because `EADISPLAY` happened to hold the same face for the components that read
+  it. Decided by pixels rather than by reading XML — swapping `EAFONT` moved 25,570 px of a
+  rendered title while swapping the run tuple's font moved none of the CJK glyphs. Fixing the deck
+  changed **150,901 px** across those six renders. **`CJK_FACE_UNREACHED`** makes the mistake
+  audible.
+- **A drawn container counted as content, so a page carrying one word read as half full.**
+  Occupancy is a bounding-box union: one empty outlined rect with four characters inside measured
+  **49% ink** — "full" by every density check here, and therefore exempt from `UNDERFILLED` too.
+  **`HOLLOW FILL`** reports it, and its message is deliberately about the FORM, because every
+  other warning in the file points at geometry.
+- **Two faults a per-slide check structurally cannot see.** **`DUPLICATE_TEXT`** — the same string
+  rendered by two separate shapes on one slide; measured causes were an ORPHANED copy of an
+  earlier layout left by repeated patching (the tell: four consecutive coordinate edits appear to
+  do nothing, because two layouts are running at once), a component's auto-label printed beside a
+  hand-written one (one quantity, two roundings, on a deck whose whole proposition was
+  traceability), and a name repeated in both a list and the diagram beneath it. And
+  **`CHROME_SLOT_DRIFT`** — 11 source lines, 8 pinned to one slot and 3 placed wherever their
+  page's last block ended, one of them rendering `as of <date>` *inside* a diagram box. The fix
+  documented for the latter is never to nudge the strays: a slot each page applies by hand is not
+  a contract.
+- **Eight audit defects (D1–D8) closed, each wired to a gate.** The critic gate accepted
+  `plan_audit: {}` with `contract_card_seen: true` and no probes while `agents/critic.md` told the
+  critic that shape is rejected; a fifth waiver category existed in code and in no message, so two
+  paths steered a loop that RAN toward `user-waived`; `rounds` was documented as machine-counted
+  and is not; the redesign path was told the build-time geometry gate did not apply to it;
+  `--mode=static` was documented and silently swallowed; and five render benchmarks were stale by
+  ~4× with one inverted. Re-measured: a full 18-slide render is ~2.8 s, `--fast` on one changed
+  slide ~2.3 s, a no-op round 0.07 s, and `--slides N` ~2.9 s — **`--slides` is not a speed flag**;
+  a fixed ~2.5 s LibreOffice start dominates.
+- **`CJK_NO_EA` had an unreachable remedy** ("set `EAFONT`"), since the lint runs at the END of a
+  build and `EAFONT` is read only by `set_font()`. **`deckkit.retrofit_ea(prs, face)`** fixes the
+  deck in hand — reaching groups, table cells, fields and chart text the check itself cannot see —
+  and both the finding and the fix now resolve inheritance through the same `_inherited_ea`, so a
+  supplied CJK template's own face is neither falsely flagged nor silently overwritten.
+
+### Changed
+- **The LibreOffice worker pool is gated on page WEIGHT, not page count.** A pool saves decode
+  work, and decode cost tracks page weight: a text deck at 2.5–5.5 KB/page rasterises in 0.06 s
+  while an image deck at 84.5 KB/page takes 0.47 s. Gating on count alone sent every text deck
+  into the pool to save ~60 ms at a cost of ~70 ms in process starts — an optimization that ran
+  and made the render **slower** (+2.1% measured). Its equivalence suite needed the same
+  correction for a worse reason: with a text fixture its "parallel" render took the serial path
+  and every byte-identity assertion compared serial to serial.
+- **CI gains `workflow_dispatch:`.** A push that changed `ci.yml` produced no run at all, and with
+  only event triggers an absent run is indistinguishable from a passing one — the same silent
+  class these steps keep legislating against.
+
+
 ## [4.5.0] — 2026-08-04
 
 ### Added
