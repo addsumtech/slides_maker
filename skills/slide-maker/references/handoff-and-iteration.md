@@ -29,16 +29,24 @@ and both are avoidable:
   scope for the builder, high value for the presenter).
 
 ## Iterating fast after delivery
-Post-delivery tweaks are conversational — "make slide 7 a chart", "shrink that title" — and the cost
-of each round is almost entirely the render, not the build (python-pptx rebuilds an 18-slide deck in
-under 2s). So for every round after the first, re-render with **`--fast`**: it diffs a per-slide
+Post-delivery tweaks are conversational — "make slide 7 a chart", "shrink that title" — and each
+round costs a build plus a render, both a few seconds. So for every round after the first, re-render
+with **`--fast`**: it diffs a per-slide
 fingerprint against the previous run and re-renders only what changed, subsetting the pptx to those
-slides. An 18-slide deck goes from ~12s to ~4.7s for a one-slide edit, and a no-op round costs 0.07s.
+slides. Measured on an 18-slide deck: full ~2.8s → **~2.3s** for a one-slide edit, and a no-op round
+**0.07s**. Read those two savings differently. The no-op round is the enormous one (~40×) because it
+never starts LibreOffice at all. A one-slide round still starts it once, and that start is a fixed
+~2.5s floor that dwarfs the page work — so expect roughly a fifth off, not a multiple, and never
+skip a re-render on the theory that it is expensive.
 The PNGs it writes are byte-identical to a full render, so the lint and the critic are unaffected.
 `--fast` and `--deliverables` are mutually exclusive (a subset render has no whole-deck PDF): use
 `--fast` for the iteration rounds, then one plain `--deliverables` run for the hand-off.
 **`--slides N[,M]`** is the third member of the family: it renders exactly the pages you name, for
-when you already KNOW what changed (the Step-4 signature proof, or "re-render just page 7"). Same
+when you already KNOW what changed (the Step-4 signature proof, or "re-render just page 7"). 🔴 **It
+is not a speed flag** — measured on the same deck, one page costs ~2.9s against ~2.8s for all
+eighteen, because both pay the one fixed LibreOffice start. Reach for it when you want exactly those
+PNGs (a single page to post, a page whose neighbours you must not overwrite), never to save time.
+Same
 exclusivity as `--fast` — not with `--deliverables`, and not with `--fast` itself, which chooses the
 set for you. It deliberately writes NO cache: it rendered some pages, so recording fingerprints for
 all of them would let the next `--fast` call stale PNGs current. That means the run AFTER a

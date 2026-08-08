@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   pull_request:
+  # A push that changes THIS file did not produce a run — no queued job, no failed job, nothing to
+  # look at, and no way to ask for one. A workflow whose only triggers are events means an absent
+  # run is indistinguishable from a passing one, which is the same silent class the steps below
+  # keep legislating against. This makes "run it now" reachable from the Actions tab.
+  workflow_dispatch:
 
 jobs:
   smoke:
@@ -77,6 +82,20 @@ jobs:
       - name: deckkit smoke (every public helper)
         run: python scripts/smoke_deckkit.py
 
+      # `CJK_NO_EA` is a build BLOCKER whose remedy used to be unreachable at the moment it fired:
+      # it said "set EAFONT before building", but the lint runs at the END of the build, and the
+      # two paths where the fault actually lives -- an opened template's own text, a surgical
+      # fix-pass on a foreign deck -- never route through set_font(), the only reader of EAFONT.
+      # retrofit_ea() is the lever that is connected; this holds it to what the CRITICAL promises.
+      # Both directions: a retrofit that silently fixed nothing, or that overwrote a deliberate
+      # per-run face, would each be worse than the fault it clears.
+      - name: CJK EA retrofit (the CJK_NO_EA remedy actually works)
+        run: |
+          set -o pipefail
+          python tests/test_retrofit_ea.py | tee /tmp/retrofit_ea.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/retrofit_ea.log || {
+            echo "::error::retrofit_ea suite did not run to completion"; exit 1; }
+
       # The direction gate's own smoke suite. It was not wired in, and a change to the gate's
       # exit semantics broke two of its divergence assertions with nothing reporting it --
       # exactly the silent class this repo keeps legislating against.
@@ -85,6 +104,21 @@ jobs:
 
       - name: Review-contract validator selftest
         run: python scripts/validate_review.py --selftest
+
+      # `validate_review.py` is the ONLY gate on the critic -- the one judgement a deck cannot
+      # self-certify -- and its entire test suite was --selftest's three inline fixtures, whose
+      # canonical "good critic" set `plan_audit: null`. So the populated-audit path, where the
+      # contract card actually gets audited, was never exercised: a review with `plan_audit: {}`,
+      # `contract_card_seen: true` and no `probes` validated clean and consented, while
+      # agents/critic.md told the critic that exact shape is rejected. Both directions are asserted,
+      # because over-rejecting here stops a per-section critic or a direction preview from filing a
+      # legitimate review, and the first honest failure teaches everyone to bypass the gate.
+      - name: Review contract (plan_audit subfields, lens-scoped probes, both directions)
+        run: |
+          set -o pipefail
+          python tests/test_validate_review.py | tee /tmp/vreview.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/vreview.log || {
+            echo "::error::review-contract suite did not run to completion"; exit 1; }
 
       - name: Minimal build, lint, render
         run: |

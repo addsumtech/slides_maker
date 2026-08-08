@@ -75,10 +75,18 @@ with the user on it before spending effort. So:
 - **For a full re-author,** apply the normal build path (plan → deckkit → render → critic loop),
   but seed it with *their* real content and figures from the extraction — the point of a redesign
   is that the facts and figures are theirs; only the *presentation* changes.
-- **Which geometry net runs depends on the path.** A *re-author* has a deckkit build script, so end it
-  with the build-time `dk.lint_layout(prs)` gate (Step 4) before `prs.save()`. A *copy-in-place edit* has
-  no build script — there's nothing to call `lint_layout` from — so it relies on the **render-time**
-  `scripts/lint_deck.py` (Step 5) after rendering. Either way the deck reaches the critic geometry-clean.
+- **🔴 BOTH geometry nets run on BOTH paths — the path only changes what the gate is called FROM.**
+  A *re-author* ends its deckkit build script with `dk.lint_layout(prs, strict=True)` before
+  `prs.save()` (Step 4). A *copy-in-place edit* runs the same call from its consolidated fix-pass
+  script (protocol rule 1 below), which opens the original, mutates, and saves — for this gate that
+  script IS the build script. Then, on both paths, render → `scripts/lint_deck.py` (Step 5), which
+  catches what only pixels reveal. This bullet used to say a copy-in-place edit "has no build
+  script" and therefore relies on render-time lint alone; that reads as permission to drop a hard
+  gate, and it contradicts *Gate mapping* below, which says the build-time gate still runs in full.
+  It is the *Gate mapping* sentence that is right. (Rule 2 already has you linting the untouched
+  ORIGINAL to get the coordinates you target by — so keep that baseline report: it is what tells a
+  CRITICAL you introduced from one that was already theirs. A pre-existing CRITICAL is a diagnosis
+  finding to fix or surface, never a reason to pass `strict=False`.)
 - **Carry their numbers and emphasis faithfully.** A redesign that "improves" a slide into saying
   something the source doesn't is a fidelity failure (see the critic's fidelity check) — the most
   damaging thing you can do to someone's own deck.

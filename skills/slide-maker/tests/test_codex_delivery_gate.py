@@ -90,7 +90,32 @@ def critic(lens: str) -> dict:
             "stats_block_seen": True,
             "contract_card_seen": True,
         },
-        "plan_audit": {"lens_a": {"status": "pass"}, "lens_b": {"status": "pass"}},
+        # A real contract-card audit, not a placeholder. This used to read
+        # {"lens_a": {"status": "pass"}, "lens_b": {"status": "pass"}} — `status` is not a field
+        # in agents/critic.md's output block at all, and it validated clean because nothing
+        # checked the subfields. validate_review.py now requires the audit each declared lens
+        # owes, so the fixture has to be the shape a critic actually returns.
+        "plan_audit": {
+            "lens_a": {
+                "memory_sentence": "One fixture slide, one claim, bound to its evidence.",
+                "matches_deck_message": True,
+                "curve_visible": "single slide — no curve to pace",
+                "takeaway_titles": "title matches the takeaway table",
+                "motion_manifest": "kept",
+            },
+            "lens_b": {
+                "concept_landed": "carried: the evidence-binding idea is the slide's own geometry",
+                "skeleton_rhythm": "kept — single slide",
+                "signature_move": {"verdict": "landed", "why": "the binding is the visual",
+                                   "carried": [], "proof": "matches"},
+                "memorable_one_thing": "evidence travels with the deck",
+                "composition": {"cover_archetype": "kept", "home_skeleton_plurality": "kept"},
+                "register_interiors": "kept",
+                "money_slide": "landed on slide 1",
+                "semantic_colour": "ledger kept",
+                "type_tokens": "sizes drawn from the declared tokens",
+            },
+        },
         "probes": probes,
         "verdict": "consent",
         "summary": "The final fixture meets the named review lens.",

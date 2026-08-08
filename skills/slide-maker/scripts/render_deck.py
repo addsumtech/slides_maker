@@ -798,6 +798,53 @@ def _deck_slide_count(pptx):
             .format(pptx, exc))
 
 
+CRITIC_WAIVER_KINDS = {
+    "no-dispatch-on-host":
+        "the runtime cannot dispatch a subagent (record it in the capability ledger too)",
+    "already-reviewed-minor-edit":
+        "a 1-2 slide edit to a deck that already passed its loop",
+    "user-waived":
+        "the user was asked and chose to ship over it",
+    "external-deck":
+        "a deck this skill did not author (redesign diagnosis / critique-only run)",
+    # The loop RAN and did not converge. Every kind above describes a loop that was SKIPPED, so a
+    # deck that reached its round cap with majors still open had no honest route: `user-waived`
+    # asserts "the user was asked and chose to ship over it", which is a claim about a conversation
+    # that did not happen. Measured on a real build — the builder's words were "the four options
+    # force either a lie or a red gate", and it correctly left the gate red rather than fabricate
+    # one. A record with no state for the commonest non-consent ending is a record that teaches
+    # people to lie to it.
+    "cap-reached-majors-open":
+        "the loop RAN to its round cap and majors remain open (needs `open` + `surfaced_to_user`)",
+}
+# Every message that offers the categories renders them from this dict. They were hand-copied into
+# four places and the fifth kind reached none of them, so the file that ACCEPTED
+# `cap-reached-majors-open` also told every reader it did not exist — which is the same lie the
+# fifth kind was added to prevent.
+CRITIC_WAIVER_LIST = " | ".join(sorted(CRITIC_WAIVER_KINDS))
+
+
+def _critic_waiver_menu(indent="    "):
+    return "\n".join("{}{:28s} {}".format(indent, k, v)
+                     for k, v in sorted(CRITIC_WAIVER_KINDS.items()))
+
+
+def _critic_effort(critic):
+    """How much reviewing happened, said in the unit the record can actually back.
+
+    `rounds` is the only hand-typed field in the critic block — `validate_review.py --record`
+    preserves one but never derives it, because nothing inside a review file says which round it
+    belongs to. `reviews_seen` is the machine-counted one. These lines used to print
+    `rounds` with a bare `"?"` fallback, which reported "consented after ? round(s)" on every
+    tool-written record: the number the tool DOES know was sitting in the same dict, unread.
+    """
+    if isinstance(critic.get("rounds"), int):
+        return "{} round(s)".format(critic["rounds"])
+    if isinstance(critic.get("reviews_seen"), int):
+        return "{} review(s) [rounds not recorded]".format(critic["reviews_seen"])
+    return "an unrecorded number of rounds"
+
+
 def check_handoff_gates(pptx, mode="presented", gate_check=False):
     """Refuse --deliverables until the quality gates have actually run.
 
@@ -868,12 +915,13 @@ def check_handoff_gates(pptx, mode="presented", gate_check=False):
             "written by the same pass that would have skipped the refutation.)\n\n"
             "  A gate you deliberately skipped is waived in writing AND CLASSIFIED, not omitted:\n\n"
             '    {{"critic": {{"waived": "why this deck does not need a critic round",\n'
-            '                 "waived_category": "no-dispatch-on-host | already-reviewed-minor-edit'
-            ' | user-waived | external-deck",\n'
+            '                 "waived_category": "{}",\n'
             '                 "inline_ran": true}}}}\n\n'
-            "  (`inline_ran` is required only for `no-dispatch-on-host`.)\n\n"
+            "  (`inline_ran` is required only for `no-dispatch-on-host`; "
+            "`cap-reached-majors-open` — the loop RAN and did not converge — additionally needs\n"
+            "  `open` and `surfaced_to_user`.)\n\n"
             "  Renders without --deliverables are unaffected; iterate freely."
-            .format(path, os.path.dirname(path) or "."))
+            .format(path, os.path.dirname(path) or ".", CRITIC_WAIVER_LIST))
     # --- resolve the DELIVERY once, above every gate that keys off it -------------------------
     # Measured divergence: the type-scale floor read a `delivery` key out of this JSON while the
     # density gate three blocks below read the raw `mode` the CLI flags set. One run could
@@ -915,26 +963,7 @@ def check_handoff_gates(pptx, mode="presented", gate_check=False):
         # string. Measured: a hand-typed waiver carried a whole deck through `all hand-off gates
         # pass` without an independent critic ever seeing it. So: name the category, and say
         # whether the lenses ran at all.
-        WAIVER_KINDS = {
-            "no-dispatch-on-host":
-                "the runtime cannot dispatch a subagent (record it in the capability ledger too)",
-            "already-reviewed-minor-edit":
-                "a 1-2 slide edit to a deck that already passed its loop",
-            "user-waived":
-                "the user was asked and chose to ship over it",
-            "external-deck":
-                "a deck this skill did not author (redesign diagnosis / critique-only run)",
-            # The loop RAN and did not converge. Every kind above describes a loop that was
-            # SKIPPED, so a deck that reached its round cap with majors still open had no honest
-            # route: `user-waived` asserts "the user was asked and chose to ship over it", which is
-            # a claim about a conversation that did not happen. Measured on a real build — the
-            # builder's words were "the four options force either a lie or a red gate", and it
-            # correctly left the gate red rather than fabricate one. A record with no state for the
-            # commonest non-consent ending is a record that teaches people to lie to it.
-            "cap-reached-majors-open":
-                "the loop RAN to its round cap and majors remain open (needs `open` + "
-                "`surfaced_to_user`)",
-        }
+        WAIVER_KINDS = CRITIC_WAIVER_KINDS
         reason = critic["waived"]
         kind = critic.get("waived_category")
         if not isinstance(reason, str) or len(reason.strip()) < 24:
@@ -944,7 +973,7 @@ def check_handoff_gates(pptx, mode="presented", gate_check=False):
         if kind not in WAIVER_KINDS:
             die("`critic.waived_category` must name WHICH kind of skip this is — an unclassified "
                 "waiver is indistinguishable from never having run the loop. One of:\n"
-                + "\n".join("    {:28s} {}".format(k, v) for k, v in sorted(WAIVER_KINDS.items()))
+                + _critic_waiver_menu()
                 + "\n\n  If none of these fit, the honest move is to run the critic.")
         if kind == "cap-reached-majors-open":
             # This kind asserts the OPPOSITE of the others — that the work happened — so it carries
@@ -1036,16 +1065,16 @@ def check_handoff_gates(pptx, mode="presented", gate_check=False):
                     .format(src, _what,
                             ", ".join(str(m) for m in _missing[:12]),
                             " (+{} more)".format(len(_missing) - 12) if len(_missing) > 12 else ""))
-            print("[gates] critic consented after {} round(s) — verified against {} "
+            print("[gates] critic consented after {} — verified against {} "
                   "(opened {}/{} slides)".format(
-                      critic.get("rounds", "?"), os.path.basename(src),
+                      _critic_effort(critic), os.path.basename(src),
                       len(_opened & _expect), len(_expect)))
         else:
-            print("[gates] critic consented after {} round(s) — SELF-REPORTED (no review "
+            print("[gates] critic consented after {} — SELF-REPORTED (no review "
                   "artifact).\n"
                   "        The evidence-backed path is one flag on a step you already run:\n"
                   "          python3 scripts/validate_review.py critic <review.json> --record {}"
-                  .format(critic.get("rounds", "?"), os.path.dirname(path) or "."))
+                  .format(_critic_effort(critic), os.path.dirname(path) or "."))
         if critic.get("corroborated_by"):
             # An arbiter pass is only corroboration when it CORROBORATES. Read what it actually
             # said: a Job-2 payload reporting an unresolved finding, a dulled strength, or a
@@ -1066,21 +1095,33 @@ def check_handoff_gates(pptx, mode="presented", gate_check=False):
                 die("the arbiter pass recorded against this deck reports {} item(s) that are still "
                     "open, so it is not a corroboration:\n{}\n\n"
                     "  Fix them and re-run the round, or — if you are shipping over it — say so in "
-                    "writing where the user can see it:\n"
+                    "writing where the user can see it. The loop RAN here, so the honest category "
+                    "is the one that says so:\n"
                     '    {{"critic": {{"waived": "shipping over: <the open item and why>",\n'
-                    '                 "waived_category": "user-waived"}}}}'
+                    '                 "waived_category": "cap-reached-majors-open",\n'
+                    '                 "open": ["<each surviving finding>"],\n'
+                    '                 "surfaced_to_user": true|false}}}}\n\n'
+                    "  Use `user-waived` ONLY if you actually asked the user and they chose to "
+                    "ship — it is a claim about a conversation, and writing it for a conversation "
+                    "that did not happen is the failure this classification exists to catch."
                     .format(len(_open), "\n".join(_lines)))
             print("[gates] consent corroborated by {} arbiter pass(es), no open items".format(
                 len(critic["corroborated_by"])))
     elif critic.get("verdict") == "revise":
         die("the last critic review returned verdict=revise. Fix the blockers and re-run the "
-            "loop, or record a waiver with the reason you are shipping over it:\n"
+            "loop, or record a waiver with the reason you are shipping over it. The loop RAN "
+            "here, so the honest category is the one that says so:\n"
             '    {"critic": {"waived": "shipping over: <the surviving finding and why>",\n'
-            '                "waived_category": "user-waived"}}')
+            '                "waived_category": "cap-reached-majors-open",\n'
+            '                "open": ["<each surviving finding>"],\n'
+            '                "surfaced_to_user": true|false}}\n\n'
+            "  Use `user-waived` ONLY if you actually asked the user and they chose to ship — it "
+            "is a claim about a conversation, and writing it for a conversation that did not "
+            "happen is the failure this classification exists to catch.")
     else:
         die("{} has no usable `critic` record — needs {{\"verdict\": \"consent\"|\"revise\"}} or "
-            "{{\"waived\": \"<reason>\", \"waived_category\": \"<one of the four kinds>\"}}"
-            .format(path))
+            "{{\"waived\": \"<reason>\", \"waived_category\": \"<one of these>\"}}:\n{}"
+            .format(path, _critic_waiver_menu()))
 
     # The design plan is the art director's output (Step 2). Self-authoring one is indistinguishable
     # from dispatching for it — unless the record has to carry the fields the dispatch produces.

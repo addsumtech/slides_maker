@@ -26,7 +26,10 @@ they had been gated on the Codex path only — and the provenance pass's
 per-claim `claims` list, never a summary tally — or, for any gate deliberately skipped, a written
 `waived` reason — and for the CRITIC gate specifically, **plus its `waived_category`**
 (`no-dispatch-on-host` — which also requires `inline_ran: true|false` —
-`already-reviewed-minor-edit`, `user-waived`, `external-deck`); an unclassified CRITIC waiver is
+`already-reviewed-minor-edit`, `user-waived`, `external-deck`, and `cap-reached-majors-open` —
+which also requires a non-empty `open: [...]` plus `surfaced_to_user: true|false`, and is the one
+to use whenever the loop RAN and did not converge, since the other four all claim it was skipped);
+an unclassified CRITIC waiver is
 rejected, because it is indistinguishable from never having run the loop. The `design_plan`,
 `provenance` and `density` waivers take a written reason only. The
 `critic` block on the CONSENT path is written by `validate_review.py … --record <deck-dir>` from the

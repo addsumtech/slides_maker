@@ -58,6 +58,47 @@ deckkit.EAFONT = "Hiragino Sans GB"  # CJK glyphs (macOS render-loop-safe; or "M
 and numbers stay on `FONT`. Mixed "中文 + English 28%" text then looks intentional and
 travels correctly. (Without `EAFONT`, CJK falls back to an uncontrolled default.)
 
+🔴 **Setting `EAFONT` never fixes a deck already built** — `lint_layout` runs at the END of the
+build script, so by the time `CJK_NO_EA` tells you about it the runs exist. The remedy for the deck
+in hand is one line, just above the lint:
+
+```python
+deckkit.retrofit_ea(prs, "Hiragino Sans GB")   # or set EAFONT above and call retrofit_ea(prs)
+deckkit.lint_layout(prs, strict=True)
+prs.save(out)
+```
+
+**Pass the face unless `EAFONT` is already set** — with no face resolvable anywhere it raises
+rather than returning 0, because a silent no-op would clear the lint line without fixing a glyph.
+It returns the count of runs it stamped.
+
+**Two different causes, two different follow-ups.** If the runs came from deckkit helpers and you
+simply forgot `EAFONT`, setting it makes the next build clean. If they never went through
+`set_font()` at all — a **redesign / surgical fix-pass** on a deck this skill did not author, or raw
+`python-pptx` in the build script — `EAFONT` will not help next time either, because nothing on that
+path reads it; keep calling `retrofit_ea`. (`open_template()` is *not* a source: it drops every
+slide and python-pptx clones layout placeholders empty, so no template-owned run ever lands on a
+slide. What a template really contributes is layout chrome — below.)
+
+**What it reaches:** every CJK run under each slide, **including groups, table cells and
+date/footer `<a:fld>` fields**, plus each **chart's** `c:txPr/a:defRPr` — a chart's category and
+axis text lives in another part with no runs of its own. `CJK_NO_EA` can see none of those (it walks
+`slide.shapes` and tests `has_text_frame`, false for a group, a table and a graphic frame), so the
+fix is deliberately wider than the finding.
+
+🔴 **It never overwrites a face the run already resolves**, its own or one INHERITED from the
+paragraph's `defRPr` or the shape's `lstStyle` — which is where a supplied CJK template normally
+keeps it. That is why the two agree by construction: the CRITICAL asks the same inheritance
+question, so on a template deck neither the finding nor the fix touches 思源黑体 / 方正黑体 /
+whatever the template chose. An `EADISPLAY` cover stays too. (`<a:ea typeface=""/>` is *not* such a
+face — that is OOXML's way of writing "none", and it gets filled.)
+
+🔴 **Layouts and masters are the one real gap, and it is loud.** Both the finding and the fix stop
+at the slide, so a CJK shape sitting on a *layout* — which composites onto every slide that uses it
+— is invisible to `CJK_NO_EA`, to `lint_deck.py`, and to `retrofit_ea`'s default pass. So the
+default pass **counts them and says so**. When it does, re-run with `layouts=True` (it edits the
+template's own parts, which is why it is opt-in), or set the face in the template.
+
 **Translate the component CHROME too.** A few components ship English chrome words baked in;
 on a non-English deck, pass the translated label so no stray English leaks onto an otherwise
 Chinese slide: `eval_matrix(..., recommend_label="推荐方案", scale_label="评分")`,

@@ -873,6 +873,50 @@ def main():
         ok.append("a mixed-size paragraph still trips TEXT_OVERLAP (conservative) AND the "
                   "finding names the cause: split into one type size per block")
 
+    # ---- the CLI surface itself: a flag this tool documents must REACH the tool ----------
+    # `--mode=static` was documented in references/file-inventory.md, under a paragraph promising
+    # the map was "verified against the parsers, not the prose", and the parser read `--static`
+    # only. The `startswith("--")` filter then dropped the token into oblivion: no error, exit 0,
+    # and a NO BUILDS advisory raised against a user who had explicitly opted out of appear-builds
+    # — which review-rubrics.md makes a critic finding. Nothing anywhere asserted the two spellings
+    # agree, so the drift was invisible for as long as it existed. Both directions are checked: the
+    # unknown-flag guard must reject a typo AND must not reject anything the docs promise.
+    _flag_pptx, _flag_renders = tmp / "fx_pass.pptx", tmp / "fx_pass_render"
+
+    def _flag_run(*flags):
+        p = subprocess.run([sys.executable, str(SCRIPTS / "lint_deck.py"), str(_flag_pptx),
+                            "--renders", str(_flag_renders), *flags],
+                           capture_output=True, text=True)
+        return p.returncode, p.stdout + p.stderr
+
+    _out_bare = _flag_run()[1]
+    _out_short = _flag_run("--static")[1]
+    _out_long = _flag_run("--mode=static")[1]
+    if "NO BUILDS" not in _out_bare:
+        bad.append("the flag fixture no longer trips NO BUILDS unflagged, so this check is inert")
+    elif "NO BUILDS" in _out_short or "NO BUILDS" in _out_long:
+        bad.append("--static and --mode=static do not both silence NO BUILDS "
+                   f"(--static silenced: {'NO BUILDS' not in _out_short}, "
+                   f"--mode=static silenced: {'NO BUILDS' not in _out_long})")
+    else:
+        ok.append("--static and --mode=static are the SAME flag (both silence NO BUILDS)")
+
+    _rc_bogus, _out_bogus = _flag_run("--bogus")
+    if _rc_bogus != 2 or "unrecognised option" not in _out_bogus:
+        bad.append(f"an unknown flag is swallowed again (rc={_rc_bogus}) — the whole class of "
+                   "silently-dropped options is back")
+    else:
+        ok.append("an unknown flag exits 2 with a named list instead of being swallowed")
+
+    _rejected = [f for f in ("--selfread", "--briefing", "--surface", "--textheavy", "--static",
+                             "--mode=selfread", "--mode=briefing", "--mode=surface",
+                             "--mode=textheavy", "--mode=static", "--mode=presented")
+                 if "unrecognised option" in _flag_run(f)[1]]
+    if _rejected:
+        bad.append("the unknown-flag guard rejects DOCUMENTED flags: " + " ".join(_rejected))
+    else:
+        ok.append("every delivery-mode flag file-inventory.md documents still reaches the tool")
+
     for line in ok:
         print("  ok   " + line)
     for line in bad:

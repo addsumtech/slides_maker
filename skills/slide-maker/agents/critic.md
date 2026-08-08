@@ -984,10 +984,20 @@ must list every slide in the deck (the main loop rejects a review with gaps), `p
 two lens passes actually ran (and, on rounds 2+, that the re-pass was whole-deck fresh, not a
 fix-list check), `stats_block_seen: false` obliges the main loop to hand you the lint deck-stats
 block before the review counts, and `contract_card_seen: false` obliges it to re-dispatch with the
-card. **The `probes` and lens-owned `plan_audit` blocks are gated the same way:** on a full-deck
-review of a pipeline-built deck, the main loop rejects a review whose lens-required probe fields
-or plan_audit subfields are missing, exactly as it rejects `slides_opened` gaps (direction
-previews and external no-plan decks set `plan_audit: null` with the reason and skip `probes`).
+card. **The `probes` and lens-owned `plan_audit` blocks are gated the same way, and now really
+are:** `scripts/validate_review.py` rejects a review that omits the audit or the probe its own
+`coverage.passes` says it owes — the content lens owes `lens_a` + `probes.memory_sentence`, the
+design lens owes `lens_b` + `probes.per_slide`, a sole critic owes both — and rejects
+`contract_card_seen: true` sitting over an empty or null `plan_audit`, which is a review claiming
+it received the card while auditing none of it. Direction previews and external no-plan decks set
+`plan_audit: null` with the reason, declare the card `'none-declared'`, and skip `probes`. **A
+back-of-room / audience critic owes neither** — it judges the room, not the contract card, and the
+gate reads that off `passes` too; name the pass so it can (`"passes": ["back-of-room pass (full
+deck)"]`). A `passes` line naming no pass the gate recognises is read as a SOLE critic and held to
+both lenses, per the assigned-LENS rule above — an unparseable line is not an exemption.
+*(This sentence used to describe a rejection nothing implemented: the validator checked only that
+`plan_audit` was a dict, so `"plan_audit": {}` with no probes at all validated clean and
+consented — every contract the panel exists to test could be skipped in silence.)*
 
 Severity: **blocker** = undermines the purpose / a claim the audience can't verify or
 that is wrong → must fix. **major** = clearly hurts comprehension or impact. **minor**

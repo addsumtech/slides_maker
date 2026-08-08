@@ -242,7 +242,7 @@ filled-field gate, or a deterministic check — that makes skipping them visible
 | Step 1, before writing the comprehension brief | `references/content-plan-spec.md` | the comprehension gate rejects an unfilled brief |
 | End of Step 1 and Step 2, before posting either 🔴 checkpoint | `references/checkpoint-convention.md` | the checkpoint artifact is the thing it specifies |
 | Step 2, once the plan is approved and any asset is named | `references/asset-production.md` | PRE-FLIGHT 4 (charts) · 5 (evidence) · 12(e) (icons) |
-| Step 3, on a non-16:9 surface or a supplied template | `references/deck-setup.md` | `CJK_NO_EA` fails the build on a missing EA font |
+| Step 3, on a non-16:9 surface or a supplied template | `references/deck-setup.md` | on a **CJK** deck, `CJK_NO_EA` fails the build on a missing EA font — that is this file's Fonts section, and it is the only gate that fires on its own. The **non-16:9** and **template** branches have no gate of their own: `lint_layout` reads the real canvas size, so a 16:9 layout transplanted onto a portrait canvas trips `OFF_CANVAS`, but nothing checks a format's **safe band** (`formats.py band()`), its `lint_flags`, or the design plan's `format:` line. What actually holds them is upstream and human: Step 0 **confirms the canvas format** for any non-slide surface (`interview-protocol.md`), and the answer rides into the Step-0 picks FYI. Read the file |
 | Step 5, at every critic dispatch and returned review | `references/critic-panel.md` | `validate_review.py` rejects a non-conforming review — but it checks the review CONTRACT only. Panel size, lens assignment and the arbiter pass have **no** check; Step 5's dispatch names this file for them |
 | Step 6, before composing the hand-off — every deck | `references/handoff-checklist.md` | the hand-off note is itself the visible artifact |
 | A helper's exact call contract, before writing build code | `scripts/sigs.py <names…>` (one lookup, many helpers; `--example` for a runnable call) | **nothing** — `sigs.py` is a PULL tool with no gate. A skipped lookup surfaces as a wrong-parameter or wrong-shape call that raises at build time if you are lucky, and renders wrong if you are not |
@@ -757,8 +757,11 @@ than the current working directory, so `python /path/to/build_<deck>.py` works f
 > 1. Author the **signature slide first** (the one the `signature move:` line names) — plus its
 >    `carried_by:` partner if the idea's structural claim is only legible across the pair.
 > 2. Build, then render just that page:
->    `python3 scripts/render_deck.py <deck>.pptx <out> --slides N` (~5s vs ~12s full; the PNG is
->    byte-identical to the same page from a full render, so it is evidence, not an approximation).
+>    `python3 scripts/render_deck.py <deck>.pptx <out> --slides N`. The PNG is byte-identical to the
+>    same page from a full render, so it is evidence, not an approximation. 🔴 **`--slides` is not
+>    the saving here** — one page costs about what all eighteen cost (below), because the render is
+>    a fixed LibreOffice start. What this ritual saves is AUTHORING: you learn the move is wrong
+>    having built one slide instead of twenty.
 > 3. **Post the PNG** with one line: *"this is what `<signature move>` actually looks like."* A 🔴 stop
 >    in the default flow; under a per-deck AUTO WAIVER it downgrades to a posted FYI like every other
 >    approval stop — the waiver removes the wait, never the artifact.
@@ -774,7 +777,10 @@ than the current working directory, so `python /path/to/build_<deck>.py` works f
 > does NOT skip it — a borrowed look still has a signature slide, and that is exactly where a template
 > deck either becomes designed or stays a template.
 >
-> *(Measured: build ≈ 1.8s, `--slides` render ≈ 4.7s vs 12.3s full. The proof costs less than one
+> *(Measured on an 18-slide deck: a `--slides` render ≈ 2.9s and a FULL render ≈ 2.8s — the same,
+> because both pay one ~2.5s LibreOffice start and page count barely moves it. So the proof is cheap
+> in absolute terms (one build + one render, a few seconds), not because it renders fewer pages; the
+> saving that matters is the twenty slides you did not author yet. It costs less than one
 > critic round, and it is spent BEFORE the expensive authoring rather than after. This does not
 > contradict "build the whole deck in one script run" below: the proof runs the SAME build script
 > while it still contains only the signature slide — you extend one script, you never maintain two.
@@ -1109,7 +1115,11 @@ A few rules that matter (see `references/design-principles.md`):
   that the text above it later grew into; derive the rule from the block's measured end, never a guessed
   coordinate), and **CJK runs with no `<a:ea>` font** (`CJK_NO_EA` — set
   `deckkit.EAFONT` before building; catching it here saves the render round-trip lint_deck previously
-  needed); it **warns** on **display numerals in an old-style figure face** (`OLDSTYLE_FIGURES` — digits at mixed heights make a big number visibly bob; the figure components resolve a lining face themselves via `deckkit.numeral_run_face`, so this fires only on hand-set runs — a taste call, deliberately not a build blocker), on a label/figure **escaping its card**, a **single
+  needed. When it fires anyway, **`dk.retrofit_ea(prs, "<face>")` on the line above the lint** is
+  the fix for the deck in hand — setting `EAFONT` cannot be, since the runs already exist — and it
+  covers the groups, table cells, fields and chart text this check is blind to. Pass the face unless
+  `EAFONT` is set; it raises rather than fixing nothing. `EAFONT` afterwards keeps the NEXT build
+  clean, except on a redesign fix-pass, whose runs never reach `set_font()` at all); it **warns** on **display numerals in an old-style figure face** (`OLDSTYLE_FIGURES` — digits at mixed heights make a big number visibly bob; the figure components resolve a lining face themselves via `deckkit.numeral_run_face`, so this fires only on hand-set runs — a taste call, deliberately not a build blocker), on a label/figure **escaping its card**, a **single
   line left off-centre** in a card, content **reaching the footer**, and **two panels nearly
   touching** (`SLIVER_GAP` — a 0.005–0.10in seam between panels, or a panel and a picture: the
   hand-picked-pitch bug). (Each code's plain-language meaning + first fix:
@@ -1347,8 +1357,11 @@ contrast, balance, a tofu glyph, text on a busy image), which only the render sh
 every slide (its XML + rels + the bytes of the media it references, mixed with a deck-global digest
 covering the theme/master/layouts/canvas size) against the previous run, then re-renders **only the
 slides that changed** — it subsets the pptx to those slides, converts that, and overwrites just their
-PNGs. Measured on an 18-slide deck: a full render is ~12s, a one-slide change is **~4.7s**, and a run
-where nothing changed is **0.07s**. Output is byte-identical to a full render (verified), so the
+PNGs. Measured on an 18-slide deck: a full render is ~2.8s, a one-slide change **~2.3s**, and a run
+where nothing changed **0.07s**. 🔴 **The no-op round is the big win, not the one-slide round** — a
+no-op never starts LibreOffice, while any real render pays one ~2.5s start that dwarfs the page work,
+so a one-slide round saves about a fifth. Never skip a re-render on the belief that rendering is
+expensive; it is a couple of seconds. Output is byte-identical to a full render (verified), so the
 critic and the render-time lint see exactly what they would have seen anyway. It falls back to a full
 render — and says why — whenever the mapping could be wrong: slide count changed, every slide changed,
 no cache, or the deck contains **auto slide-number fields** or **hidden slides** (LibreOffice drops
@@ -1682,6 +1695,14 @@ Then run the **actor-critic loop** — this is the quality engine, and the criti
    sole critic, `stats_block_seen: true`, and `contract_card_seen` is not false when a card was
    sent. A review failing any of these is **rejected and re-dispatched once** with the gap named —
    never acted on.
+   **The contract-card audit is checked by the same command, not by your eye.** `validate_review.py`
+   requires the `plan_audit` block and the `probes` entry each lens in `passes` owes (content →
+   `lens_a` + `memory_sentence`; design → `lens_b` + `per_slide`), every named subfield inside them,
+   and refuses `contract_card_seen: true` over an empty or null `plan_audit`. That last rule is the
+   one worth knowing: a review can otherwise assert it received the card while auditing none of its
+   contracts, and `concept_landed`, `signature_move`, `register_interiors`, `takeaway_titles` and
+   the rest — the entire mechanism by which declared design intent is tested against pixels — go
+   unchecked with the deck still consenting.
    **The coverage half of that check is now MECHANICAL, at hand-off** — `render_deck.py
    --gate-check` re-opens the recorded review, counts the deck's real slides, and refuses a consent
    whose `slides_opened` does not reach them. So a **per-section critic MUST declare its range** or
@@ -1699,8 +1720,13 @@ Then run the **actor-critic loop** — this is the quality engine, and the criti
      ~/Downloads/<deck>/`. It writes the `critic` block of `.deck-gates.json` **from the validated
      review itself** (verdict · blocker/major counts · the review file's path + sha256), and the
      Step-6 gate then re-reads that artifact instead of trusting a summary — a moved, edited, or
-     revise-verdict review fails the hand-off. Run it on every round; `rounds` is the count of
-     distinct reviews recorded, so it cannot be inflated. On a high-stakes deck, `--record` on the
+     revise-verdict review fails the hand-off. Run it on **every review, not once per round** — the
+     field it writes is **`reviews_seen`**, the number of distinct review FILES it has been handed,
+     so a standard 2-lens × 2-round panel records `reviews_seen: 4`. 🔴 **`reviews_seen` is not
+     `rounds`** and the tool never derives one from the other: a round is N lens reviews of the same
+     build, and nothing inside a review file says which round it belongs to, so only you know that
+     number. `--record` preserves a `rounds` you wrote and invents none — which means `rounds` is
+     the one hand-typed field in this block, and it is on you to keep it honest. On a high-stakes deck, `--record` on the
      arbiter's Job-2 payload files the corroborating pass under `critic.corroborated_by`. **Why this
      is not ceremony:** a record you TYPE at hand-off is self-certification — the model that skipped
      the loop writes the same JSON as the model that ran it, so both produce identical prose and
@@ -1911,7 +1937,7 @@ the loop, so the gate rejects it (the `design_plan`, `provenance` and `density` 
 written reason only — the category is required for the critic alone):
 ```json
 {"critic": {"waived": "<a sentence someone can disagree with later — ≥24 chars>",
-            "waived_category": "no-dispatch-on-host | already-reviewed-minor-edit | user-waived | external-deck",
+            "waived_category": "already-reviewed-minor-edit | cap-reached-majors-open | external-deck | no-dispatch-on-host | user-waived",
             "inline_ran": true}}
 ```
 `no-dispatch-on-host` = the runtime cannot dispatch a subagent (and it **additionally requires
@@ -1919,7 +1945,13 @@ written reason only — the category is required for the critic alone):
 claims, and the hand-off note reads identically for both unless this file separates them) ·
 `already-reviewed-minor-edit` = a 1–2 slide edit to a deck that already passed its loop ·
 `user-waived` = the user was asked and chose to ship over it · `external-deck` = a deck this skill
-did not author (redesign diagnosis / critique-only run). **If none of the four fits, the honest move
+did not author (redesign diagnosis / critique-only run) · 🔴 **`cap-reached-majors-open` = the loop
+RAN to its round cap and majors are still open** — the other four all describe a loop that was
+SKIPPED, so this is the only honest label for the commonest non-consent ending, and it
+**additionally requires `open: ["<each surviving finding>"]` (non-empty) and `surfaced_to_user:
+true|false`**. Reach for it instead of `user-waived` whenever the loop ran: `user-waived` is a claim
+about a conversation, and writing it for a conversation that did not happen is exactly what
+classifying the waiver was meant to stop. **If none of the five fits, the honest move
 is to run the critic.**
 This file is the hand-off's evidence, not a formality: the model that
 skips a gate is the same model that would write the note claiming it ran, so both produce identical

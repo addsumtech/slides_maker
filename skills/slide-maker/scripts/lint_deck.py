@@ -80,6 +80,18 @@ try:                                                  # real glyph advances, sam
 except Exception:
     _dk_pil_font = None
     _dk_prec = 1.0
+# The CJK/EA pair, borrowed rather than re-implemented. This file is the RENDER-TIME BACKSTOP for
+# deckkit's build-time CJK_NO_EA, and it had its own answer to both halves of that question: a CJK
+# test of `ord(ch) > 0x2E80` (an open-ended superset that swallows emoji, PUA and math alphanumerics)
+# and an EA test that read the run's own slot only. Both diverged from the build gate the moment
+# that gate learned to resolve inheritance — so on a template deck whose face lives in a paragraph
+# `defRPr`, deckkit reported clean and this reported a fault that `retrofit_ea` deliberately will
+# not fix. A backstop whose findings the documented remedy cannot clear is a backstop nobody acts on.
+try:
+    from deckkit import _has_cjk as _dk_has_cjk, _inherited_ea as _dk_inherited_ea
+except Exception:                                     # deckkit unavailable → keep the old local test
+    _dk_has_cjk = None
+    _dk_inherited_ea = None
 
 def _no_real_alt(descr):
     # python-pptx auto-sets a picture's descr to its FILE NAME; treat that (or None) as no real
@@ -410,12 +422,25 @@ def _slide_provenance(slide):
 
 
 def _run_cjk_no_ea(run):
-    """True if the run has CJK glyphs but no <a:ea> font (→ no kinsoku + tofu/uncontrolled-font risk)."""
+    """True if the run has CJK glyphs but resolves no <a:ea> font (→ no kinsoku + tofu risk).
+
+    Asks deckkit the same two questions its build-time CJK_NO_EA asks — `_has_cjk` for what counts
+    as CJK, `_inherited_ea` for whether a face actually resolves (run → paragraph `defRPr` → the
+    shape's `lstStyle`). The fallbacks below run only when deckkit cannot be imported, and they are
+    the OLD tests: over-broad on both axes, which is the safe direction for a backstop that has lost
+    its reference implementation.
+    """
     try:
-        if not any(ord(ch) > 0x2E80 for ch in run.text):
+        if _dk_has_cjk is not None:
+            if not _dk_has_cjk(run.text):
+                return False
+        elif not any(ord(ch) > 0x2E80 for ch in run.text):
             return False
+        if _dk_inherited_ea is not None:
+            return not _dk_inherited_ea(run._r)
         rPr = run._r.find(qn("a:rPr"))
-        return rPr is None or rPr.find(qn("a:ea")) is None
+        return rPr is None or not (rPr.find(qn("a:ea")) is not None
+                                   and rPr.find(qn("a:ea")).get("typeface"))
     except Exception:
         return False
 
@@ -2418,14 +2443,22 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
         # 6c) CJK text with NO East-Asian font — the ROOT cause of orphaned punctuation (no <a:ea> →
         #     PowerPoint applies no kinsoku (避头尾), so a 。/，can start a line; also tofu/uncontrolled
         #     font). Checked across ANY text scenario — text boxes, TABLE cells, and grouped shapes —
-        #     not just top-level boxes. Reliable, render-independent. Fix: set deckkit.EAFONT (+ EADISPLAY).
+        #     not just top-level boxes. Reliable, render-independent.
+        #     The fix line used to say "set deckkit.EAFONT", and that is unreachable HERE in a way it
+        #     is not even at build time: this tool holds a PATH to a saved .pptx, not a live `prs`,
+        #     and the redesign / fix-pass path arrives with no build script at all. So it names the
+        #     move that works on a file — reopen, retrofit, save — and leaves EAFONT as the
+        #     next-build half, exactly as deckkit's CJK_NO_EA now does.
         prov.append((si + 1,) + _slide_provenance(slide))
         bad_ea = [r for r in _walk_runs(slide.shapes) if _run_cjk_no_ea(r)]
         if bad_ea:
             sample = next((r.text.strip() for r in bad_ea if r.text.strip()), "")[:18]
             finds.append(f"CJK TEXT without an EA font: {len(bad_ea)} run(s) (e.g. '{sample}', incl. any "
-                         f"table/grouped text) have CJK with no East-Asian font — set deckkit.EAFONT "
-                         f"(no kinsoku → orphaned punctuation; uncontrolled font → tofu)")
+                         f"table/grouped text) have CJK with no East-Asian font "
+                         f"(no kinsoku → orphaned punctuation; uncontrolled font → tofu). Fix the "
+                         f"FILE: import deckkit; p = Presentation(deck); "
+                         f"deckkit.retrofit_ea(p, 'Hiragino Sans GB'); p.save(deck) — then set "
+                         f"deckkit.EAFONT at the top of the build script so the next build is clean")
         # 6d) META-ANNOTATION LEAK — a run that describes how the slide was MADE (a placeholder tag,
         #     "(AI-generated)", "(editable native chart)", a bare 占位/draft, TODO/FIXME, lorem ipsum)
         #     rather than its content. These are authoring scaffolds that must be deleted before ship.
@@ -2632,7 +2665,14 @@ if __name__ == "__main__":
                                   # occupancy bars rather than removing them
     elif any(a in ("--mode=textheavy", "--textheavy") for a in argv):
         mode = "textheavy"        # user-chosen text-heavy presented deck: TEXT WALL waived only
-    static_ok = any(a == "--static" for a in argv)   # user opted OUT of appear-builds: silence NO BUILDS
+    # Both spellings, like every mode above it. This read `a == "--static"` alone, so
+    # `--mode=static` — a spelling references/file-inventory.md documents, under a paragraph
+    # promising it was "Verified against the parsers, not the prose" — fell through the
+    # `startswith("--")` filter on 2626 and vanished. Measured: no flag -> 1 NO BUILDS,
+    # `--static` -> 0, `--mode=static` -> 1 with no message and exit 0. That advisory is not
+    # cosmetic; review-rubrics.md makes an unaddressed NO BUILDS a critic finding, so a user who
+    # explicitly opted out of appear-builds got one anyway.
+    static_ok = any(a in ("--mode=static", "--static") for a in argv)
     json_out = None
     renders_dir = None
     gates_path = None          # defaults to .deck-gates.json beside the deck
@@ -2655,6 +2695,24 @@ if __name__ == "__main__":
                 args.remove(gates_path)
         elif a.startswith("--gates="):
             gates_path = a.split("=", 1)[1]
+    # Anything still starting with `--` that this tool does not take is an ERROR, not a shrug.
+    # Line 2626 drops every `--` token into oblivion, which is how `--mode=static` silently did
+    # nothing for as long as it was documented. render_deck.py grew the same guard after
+    # `--briefing` was absorbed as an output directory; a flag typed at the CLI deserves the same
+    # answer from both tools, especially these two, which callers hand the same word.
+    _known = {"--selfread", "--briefing", "--surface", "--textheavy", "--static", "--json",
+              "--renders", "--gates"}
+    _known |= {"--mode=" + m for m in ("selfread", "briefing", "surface", "textheavy", "static",
+                                       "presented")}
+    _stray = [a for a in argv
+              if a.startswith("--") and a.split("=", 1)[0] not in _known and a not in _known]
+    if _stray:
+        print("unrecognised option(s): " + " ".join(_stray) + "\n"
+              "  lint_deck.py takes: --selfread · --briefing · --surface · --textheavy · --static "
+              "(each also spelled --mode=NAME) · --renders <dir> · --gates <file> · --json <file>.\n"
+              "  NB the delivery-mode words are NOT identical across tools — render_deck.py has no "
+              "--briefing floor. See references/file-inventory.md.", file=sys.stderr)
+        sys.exit(2)
     if not args:
         print("usage: python lint_deck.py <deck.pptx> [--selfread] [--briefing] [--surface] [--textheavy] "
               "[--static] [--renders dir] [--gates .deck-gates.json] [--json out.json]"); sys.exit(2)

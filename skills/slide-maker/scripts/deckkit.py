@@ -437,17 +437,282 @@ def set_palette(*, deep=None, blue=None, teal=None, magenta=None, slate=None, mu
 
 
 # ====================================================================== text
+# CT_TextCharacterProperties orders its children, and <a:ea> sits after <a:latin> but BEFORE all of
+# these. Appending to the end is only safe when none of them is present — on a deck we built that is
+# always true, on a FOREIGN deck (an opened template, a redesign fix-pass) a hyperlinked run makes it
+# false, and PowerPoint rejects an out-of-order rPr rather than ignoring it. retrofit_ea() runs on
+# exactly those foreign decks, so the position is computed instead of assumed.
+_EA_FOLLOWERS = ('a:cs', 'a:sym', 'a:hlinkClick', 'a:hlinkMouseOver', 'a:rtl', 'a:extLst')
+
+
+def _ea_face(el):
+    ea = el.find(qn('a:ea')) if el is not None else None
+    return ea.get('typeface') if ea is not None else None
+
+
+def _inherited_ea(r_el):
+    """The East-Asian typeface this `<a:r>` will actually render with, or None.
+
+    OOXML resolves a run's EA face by inheritance, and CJK_NO_EA used to test only the first step
+    of that chain — `run.rPr/a:ea` — so a run that inherits a perfectly good face was reported as a
+    CRITICAL. Measured: on a deck whose paragraphs carry the face in `a:pPr/a:defRPr` and whose
+    shapes carry it in `a:lstStyle`, all such runs flagged, and `strict=True` would have refused to
+    save a deck that renders correctly. That is not a stylistic quibble on the template branch — a
+    supplied CJK template is exactly where the face lives one level up.
+
+    It also matters for retrofit_ea(): stamping the deck's own EAFONT onto a run that inherits the
+    TEMPLATE's CJK face would silently retypeset someone else's deck while clearing a lint line.
+    Both callers ask this one question, so the fix and the finding cannot disagree.
+
+    Deliberately LOCAL — run → paragraph `defRPr` → the shape's `lstStyle` for that paragraph's
+    level. It does NOT cross into the layout, master or theme, which live in other parts: a
+    theme-level `minorFont/ea` still reads as missing here. That is a known remaining
+    over-report, and the honest one to leave: resolving placeholder inheritance means walking the
+    layout/master chain per shape, and under-reporting a genuinely absent EA font costs a silently
+    wrong render, while over-reporting costs one `retrofit_ea(prs)` call.
+    """
+    face = _ea_face(r_el.find(qn('a:rPr')))
+    if face:
+        return face
+    para = r_el.getparent()                      # <a:p>
+    if para is None:
+        return None
+    pPr = para.find(qn('a:pPr'))
+    lvl = 0
+    if pPr is not None:
+        face = _ea_face(pPr.find(qn('a:defRPr')))
+        if face:
+            return face
+        try:
+            lvl = int(pPr.get('lvl') or 0)
+        except (TypeError, ValueError):
+            lvl = 0
+    body = para.getparent()                      # <p:txBody> / <a:txBody>
+    lst = body.find(qn('a:lstStyle')) if body is not None else None
+    if lst is not None:
+        lp = lst.find(qn('a:lvl%dpPr' % (lvl + 1)))
+        face = _ea_face(lp.find(qn('a:defRPr')) if lp is not None else None)
+        if face:
+            return face
+    return None
+
+
+def _stamp_ea(r_el, typeface):
+    """Give ONE `<a:r>` (or `<a:fld>`) a real `<a:ea typeface=…>`, in its schema position.
+
+    Returns True if it set a face, False if the run already carried a real one — a deliberate
+    per-run choice, a cover set in EADISPLAY, a quotation in a second family — which is never
+    overwritten.
+
+    🔴 The guard tests the resolved FACE, not the presence of the element, and that distinction is
+    load-bearing: `<a:ea typeface=""/>` is how OOXML spells "no East-Asian font" (it is literally
+    what the stock Office theme's fontScheme carries, and templates copy it down). A presence guard
+    made the two halves of this feature disagree — `_inherited_ea` correctly read the empty string
+    as NO face, so `CJK_NO_EA` fired and `retrofit_ea` decided the run needed fixing, then this
+    function returned False and stamped nothing. `lint_layout(strict=True)` then raised AFTER the
+    documented remedy had run, on the foreign deck the remedy exists for, with no second lever.
+
+    XML-level rather than python-pptx-level because retrofit_ea() has to reach runs inside groups
+    and table cells, where there is no `_Run` proxy to hand to the paragraph API.
+    """
+    rPr = r_el.find(qn('a:rPr'))
+    if rPr is None:
+        rPr = r_el.makeelement(qn('a:rPr'), {})
+        r_el.insert(0, rPr)                  # <a:r> is (rPr?, t) — rPr is always first
+    return _set_ea(rPr, typeface)
+
+
+def _set_ea(rPr, typeface):
+    """`_stamp_ea`'s body, on a CT_TextCharacterProperties directly.
+
+    Separate because a chart's font lives in `c:txPr/…/a:defRPr` — the same element type, reached
+    without any run — and one implementation of "where does <a:ea> go" is the whole point.
+    """
+    existing = rPr.find(qn('a:ea'))
+    if existing is not None:
+        if existing.get('typeface'):
+            return False
+        existing.set('typeface', typeface)   # an empty slot IS the fault; fill it in place
+        return True
+    ea = rPr.makeelement(qn('a:ea'), {'typeface': typeface})
+    latin = rPr.find(qn('a:latin'))
+    if latin is not None:
+        latin.addnext(ea)
+        return True
+    for tag in _EA_FOLLOWERS:
+        nxt = rPr.find(qn(tag))
+        if nxt is not None:
+            nxt.addprevious(ea)
+            return True
+    rPr.append(ea)
+    return True
+
+
 def _apply_ea(run, typeface):
     """Set the East-Asian (<a:ea>) typeface so PowerPoint/Keynote render CJK glyphs with
     the chosen font (Latin chars keep the <a:latin> font). python-pptx only writes
     <a:latin>, so we add <a:ea> directly, in the correct schema position (after latin)."""
     rPr = run._r.get_or_add_rPr()
     ea = rPr.find(qn('a:ea'))
-    if ea is None:
-        ea = rPr.makeelement(qn('a:ea'), {})
-        latin = rPr.find(qn('a:latin'))
-        (latin.addnext(ea) if latin is not None else rPr.append(ea))
-    ea.set('typeface', typeface)
+    if ea is not None:
+        ea.set('typeface', typeface)         # set_font is the AUTHOR speaking — it does overwrite
+    else:
+        _stamp_ea(run._r, typeface)
+
+
+def _cjk_runs_missing_ea(spTree):
+    """Every `<a:r>`/`<a:fld>` under a shape tree whose CJK text resolves no EA face.
+
+    `<a:fld>` is in because a field carries its own `rPr` and its own rendered text — a supplied
+    template's Chinese date or footer field is CJK the author never typed, and it renders in the
+    fallback like any other run. `_stamp_ea` works on it unchanged: its `rPr` is the same
+    CT_TextCharacterProperties and is equally the first child.
+    """
+    for el in spTree.iter(qn('a:r'), qn('a:fld')):
+        t = el.find(qn('a:t'))
+        if t is None or not _has_cjk(t.text or ''):
+            continue
+        if _inherited_ea(el):
+            continue                              # already renders with a controlled face
+        yield el
+
+
+def _chart_ea_parts(slide):
+    """The `c:txPr/a:defRPr` of every chart on a slide — where chart text gets its font.
+
+    A chart's categories and axis labels are `c:pt/c:v` strings in a SEPARATE part, with no runs of
+    their own; they inherit from the chart-space text properties. So `.iter('a:r')` over the slide
+    finds nothing and stamps nothing, and neither lint sees a graphicFrame's text either — a
+    foreign deck's 一月/二月/三月 axis would keep an uncontrolled EA font with every gate reporting
+    clean. deckkit's own `native_chart()` already stamps exactly this slot at build time; this is
+    the same fix on the path retrofit_ea exists for.
+    """
+    for sh in slide.shapes:
+        if not getattr(sh, "has_chart", False):
+            continue
+        try:
+            cs = sh.chart._chartSpace
+        except Exception:
+            continue
+        txPr = cs.find(qn('c:txPr'))
+        if txPr is None:
+            txPr = cs.makeelement(qn('c:txPr'), {})
+            body = txPr.makeelement(qn('a:bodyPr'), {})
+            lst = txPr.makeelement(qn('a:lstStyle'), {})
+            para = txPr.makeelement(qn('a:p'), {})
+            txPr.extend([body, lst, para])
+            cs.append(txPr)            # c:txPr is late in CT_ChartSpace; append is its position
+        para = txPr.find(qn('a:p'))
+        if para is None:
+            para = txPr.makeelement(qn('a:p'), {})
+            txPr.append(para)
+        pPr = para.find(qn('a:pPr'))
+        if pPr is None:
+            pPr = para.makeelement(qn('a:pPr'), {})
+            para.insert(0, pPr)
+        d = pPr.find(qn('a:defRPr'))
+        if d is None:
+            d = pPr.makeelement(qn('a:defRPr'), {})
+            pPr.append(d)
+        yield d
+
+
+def _layout_cjk_without_ea(prs):
+    """CJK runs sitting on LAYOUTS and MASTERS with no EA face — counted, never silently ignored.
+
+    A non-placeholder CJK shape on a layout is composited onto every slide that uses it, and it is
+    invisible to all three gates: `CJK_NO_EA` walks `slide.shapes`, lint_deck's render-time backstop
+    walks the same, and this function's default is not to touch other parts. Saying "layouts are
+    template chrome, leave them alone" made that sound harmless. It is not harmless — it is the one
+    case where a supplied template really does contribute its own CJK text — so the omission is
+    reported rather than assumed away, and `layouts=True` is the lever.
+    """
+    out = []
+    for master in prs.slide_masters:
+        for part in [master] + list(master.slide_layouts):
+            out.extend(_cjk_runs_missing_ea(part.shapes._spTree))
+    return out
+
+
+def retrofit_ea(prs, face=None, *, layouts=False, verbose=True):
+    """Give every CJK run in an ALREADY-BUILT deck the `<a:ea>` font slot it is missing.
+
+    This is the remedy for `lint_layout`'s `CJK_NO_EA` CRITICAL, and it exists because the advice
+    that CRITICAL used to give — "set deckkit.EAFONT before building" — is not something you can do
+    at the moment you read it. `lint_layout` runs at the END of a build script, so by then the runs
+    are already made. Two causes, and they want different follow-ups:
+
+      · the runs went through `set_font()` but `EAFONT` was never set. Setting it at the top of the
+        script makes the NEXT build clean; this call fixes the one in your hand.
+      · the runs never went through `set_font()` at all — a REDESIGN / surgical fix-pass editing a
+        deck this skill did not author, or raw `python-pptx` in the build script. `EAFONT` will not
+        help next time either, because nothing reads it on that path; keep calling this.
+
+    (`open_template()` is NOT a source: it drops every slide, and python-pptx clones layout
+    placeholders empty, so no template-owned run ever lands on a slide. What a template really
+    contributes is LAYOUT chrome — see `layouts=` below.)
+
+        dk.retrofit_ea(prs, "Hiragino Sans GB")   # or set dk.EAFONT first and pass nothing
+        dk.lint_layout(prs, strict=True)
+        prs.save(out)
+
+    `face` defaults to `EAFONT` (then `EADISPLAY`). If neither is set this RAISES rather than
+    quietly doing nothing — a silent no-op here would leave the deck broken while making the lint
+    line disappear, which is worse than the fault. `references/multilingual.md` has the per-OS
+    pairing table (macOS "Hiragino Sans GB" · Windows "Microsoft YaHei" · Linux "Noto Sans CJK SC").
+
+    Reaches every `<a:r>` and `<a:fld>` under each slide's shape tree — so GROUPS, TABLE CELLS and
+    date/footer FIELDS are covered, none of which `CJK_NO_EA` can see (it walks `slide.shapes` and
+    tests `has_text_frame`, and that is False for a group, a table and a graphic frame) — plus each
+    CHART's `c:txPr/a:defRPr`, which lives in another part entirely and is where a chart's category
+    and axis text gets its font. Fixing more than the gate reports is deliberate; those runs render
+    with an uncontrolled fallback just the same.
+
+    `layouts=True` extends the same pass to slide LAYOUTS and MASTERS. It is off by default because
+    rewriting a supplied template's masters is a bigger act than clearing a lint line — but the
+    default is LOUD, not silent: a deck with unfixed CJK on its layouts says so and names the count,
+    because that text composites onto every slide using the layout and no gate anywhere sees it.
+
+    Skips any run that already resolves an EA face — its own, or one inherited from the paragraph
+    or the shape's list style (`_inherited_ea`, the same question the CRITICAL asks). On a supplied
+    CJK template the face usually lives one level up, and overwriting it at run level would
+    retypeset someone else's deck as a side effect of clearing a lint line. An `<a:ea typeface=""/>`
+    is NOT such a face — that is OOXML's way of writing "none" — and is filled in.
+
+    Returns the number of runs stamped.
+    """
+    face = face or EAFONT or EADISPLAY
+    if not face:
+        raise ValueError(
+            "retrofit_ea() needs an East-Asian typeface and none is set. Pass one, or set "
+            "deckkit.EAFONT first — e.g. 'Hiragino Sans GB' (macOS), 'Microsoft YaHei' (Windows), "
+            "'Noto Sans CJK SC' (Linux); see references/multilingual.md. Defaulting to a face "
+            "here would pick one that may not exist on the presenting machine, and returning 0 "
+            "would silence CJK_NO_EA without fixing a single run.")
+    n = 0
+    for slide in prs.slides:
+        for el in _cjk_runs_missing_ea(slide.shapes._spTree):
+            if _stamp_ea(el, face):
+                n += 1
+        for defrpr in _chart_ea_parts(slide):
+            if _set_ea(defrpr, face):
+                n += 1
+    stranded = _layout_cjk_without_ea(prs)
+    if layouts:
+        for el in stranded:
+            if _stamp_ea(el, face):
+                n += 1
+        stranded = []
+    if verbose:
+        print("[deckkit] retrofit_ea: stamped <a:ea typeface='{}'> on {} run(s)".format(face, n))
+    if stranded:
+        print("[deckkit] retrofit_ea: {} CJK run(s) on LAYOUTS/MASTERS still have no EA font "
+              "(e.g. {!r}). That text composites onto every slide using the layout and NO gate "
+              "sees it — CJK_NO_EA and lint_deck both walk slide shapes only. Pass layouts=True "
+              "to fix them too, or set the face in the template."
+              .format(len(stranded),
+                      (stranded[0].find(qn('a:t')).text or '')[:12]))
+    return n
 
 def set_font(run, size, color, bold=False, italic=False, font=None, ea=None):
     run.font.name = font or FONT          # resolve FONT at call time so re-theming works
@@ -6334,6 +6599,11 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
         # BUILD time instead of after the expensive render round-trip (lint_deck re-checks as the
         # backstop): without the EA slot, PowerPoint/LibreOffice pick an uncontrolled fallback
         # font and kinsoku (避头尾) never engages.
+        # Asks _inherited_ea, not `rPr/a:ea` directly. This read the run's own slot only, so a run
+        # inheriting a face from its paragraph's defRPr or its shape's lstStyle — where a supplied
+        # CJK template normally puts it — was reported as a CRITICAL and strict=True refused to save
+        # a deck that renders correctly. retrofit_ea() asks the same question, so the finding and
+        # its fix cannot drift apart.
         bad_ea = []
         for sh in slide.shapes:
             if not getattr(sh, "has_text_frame", False):
@@ -6341,10 +6611,8 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
             for para in sh.text_frame.paragraphs:
                 for run in para.runs:
                     try:
-                        if _has_cjk(run.text):
-                            rPr = run._r.find(qn("a:rPr"))
-                            if rPr is None or rPr.find(qn("a:ea")) is None:
-                                bad_ea.append(run.text.strip()[:12])
+                        if _has_cjk(run.text) and not _inherited_ea(run._r):
+                            bad_ea.append(run.text.strip()[:12])
                     except Exception:
                         pass
         # OLDSTYLE_FIGURES — digits set in a face whose numerals are OLD-STYLE (text) figures:
@@ -6422,9 +6690,17 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
                              "(Helvetica Neue / Arial / Cambria); see references/font-guidance.md"))
         if bad_ea:
             findings.append((n, "CRITICAL", "CJK_NO_EA",
-                             f"{len(bad_ea)} CJK run(s) carry no <a:ea> font (e.g. '{bad_ea[0]}') — set "
-                             "deckkit.EAFONT (e.g. 'Hiragino Sans GB') before building so CJK renders "
-                             "with a controlled font and 避头尾 engages"))
+                             f"{len(bad_ea)} CJK run(s) carry no <a:ea> font (e.g. '{bad_ea[0]}') — the "
+                             "renderer picks an uncontrolled fallback and 避头尾 never engages. FIX "
+                             "THIS DECK, one line above this lint: "
+                             "deckkit.retrofit_ea(prs, 'Hiragino Sans GB')  (Microsoft YaHei on "
+                             "Windows, Noto Sans CJK SC on Linux — the face is REQUIRED unless "
+                             "EAFONT is already set, and it also reaches groups, table cells, "
+                             "fields and charts, which this check cannot see). THEN set "
+                             "deckkit.EAFONT at the top of the script: if these runs came from "
+                             "deckkit helpers that makes the NEXT build clean, and if they never "
+                             "went through set_font() — a fix-pass, or raw python-pptx — EAFONT "
+                             "will not help next time either, so keep calling retrofit_ea"))
         # candidate CARD/PANEL/CHIP containers a label should sit inside: filled, boxy auto-shapes —
         # wide AND tall enough to be a panel (so thin accent rails, icon tiles and badges are excluded),
         # and not a full-bleed background. Chip/node-sized boxes count, so their labels get escape-checked.

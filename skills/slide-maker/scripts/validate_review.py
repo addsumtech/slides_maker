@@ -242,6 +242,191 @@ def _rubric_overlay(obj, errors):
                   % (val, ", ".join(RUBRIC_OVERLAYS)))
 
 
+# The contract-card audit, by lens, exactly as agents/critic.md's output block declares it.
+# These are not bookkeeping: each one is a declared design or content contract judged from the
+# PIXELS. Omitting them is how a deck ships with its stated idea never checked against what got
+# built — and until this gate existed, omitting them was free.
+PLAN_AUDIT_FIELDS = {
+    "lens_b": ("concept_landed", "skeleton_rhythm", "signature_move", "memorable_one_thing",
+               "composition", "register_interiors", "money_slide", "semantic_colour",
+               "type_tokens"),
+    "lens_a": ("memory_sentence", "matches_deck_message", "curve_visible", "takeaway_titles",
+               "motion_manifest"),
+}
+SIGNATURE_MOVE_FIELDS = ("verdict", "why", "proof")
+COMPOSITION_FIELDS = ("cover_archetype", "home_skeleton_plurality")
+# Which probe each lens owes. Lens B runs the thumbnail pass, Lens A writes the memory sentence;
+# a sole critic owes both. Section critics fill per_slide for their range only, so presence is
+# what is checked here, never a count.
+PROBE_BY_LENS = {"lens_b": "per_slide", "lens_a": "memory_sentence"}
+
+
+# The pass kinds a panel actually dispatches, and the words each is written with. `audience` is
+# here because it is a REAL third critic, not a variant of the other two: review-rubrics.md gives it
+# its own turf at raise-count 1 ("the audience critic owns back-of-room readability/jargon"),
+# large-deck-orchestration.md dispatches it beside content and design, and critic-panel.md lists it
+# as the optional third panel member. It judges the room, not the contract card, so it owes no lens
+# audit — and a gate that demanded one would make the documented third critic unable to file, which
+# is how an honest reviewer learns to route around the gate.
+PASS_KINDS = (
+    # 中文/日本語 spellings are here because this skill builds decks in any language and dispatches
+    # the critic in the deck's language. A critic writing `passes: ["内容视角（全篇）", "设计视角（全
+    # 篇）"]` matched no English word, so a single-lens Chinese panel critic fell through to the
+    # sole-critic fallback and was asked for the OTHER lens's audit — a gate that only understands
+    # English is a gate that rejects honest reviews on exactly the decks this skill advertises.
+    ("lens_a", ("content", "lens a", "内容", "narrative", "fidelity", "叙事")),
+    ("lens_b", ("design", "lens b", "设计", "設計", "デザイン", "layout", "版式")),
+    ("audience", ("audience", "back-of-room", "back of room", "受众", "受眾", "观众")),
+    # The whole-deck coherence critic of a SECTIONED panel. It is not a lens — it reads the whole
+    # deck for arc and seams — and `agents/critic.md` assigns it `memory_sentence` and not
+    # `per_slide`. Its pass line names content and design (it looks at both), so without this it
+    # was read as a sole critic and rejected for the per-slide probe it is told not to fill.
+    ("coherence", ("coherence", "seams", "连贯", "貫")),
+)
+
+
+def _pass_kinds(obj):
+    """Which kinds of pass this review claims to have run, read off `coverage.passes`.
+
+    The passes list is already required and already the thing the coordinator reads, so the
+    audit requirement rides on the critic's own declaration rather than on a new field it
+    could forget.
+    """
+    cov = obj.get("coverage")
+    passes = cov.get("passes") if isinstance(cov, dict) else None
+    out = set()
+    for p in passes if isinstance(passes, list) else []:
+        if not isinstance(p, str):
+            continue
+        low = p.lower()
+        for kind, words in PASS_KINDS:
+            if any(w in low for w in words):
+                out.add(kind)
+    return out
+
+
+def _audit_owed(obj):
+    """The lens audits this review owes — the one decision both audit rules key off.
+
+    Three cases, and the third is the one worth stating. A review naming content and/or design
+    owes those lenses. A review naming ONLY a non-lens pass (the audience critic) owes none. A
+    review naming nothing legible is a SOLE critic and owes both — that is not a guess, it is
+    `agents/critic.md`'s own rule ("if no lens is named you are the sole critic — run both lenses
+    as two passes"), and reading it the other way would turn an unparseable `passes` line into a
+    free exemption from the whole audit.
+    """
+    kinds = _pass_kinds(obj)
+    if not kinds:
+        return sorted(PLAN_AUDIT_FIELDS)
+    return sorted(kinds & set(PLAN_AUDIT_FIELDS))
+
+
+def _probes_owed(obj, lenses):
+    """Which fresh-eyes probes this review owes — NOT simply one per lens.
+
+    `agents/critic.md` splits them by ROLE, and on a sectioned deck the role is not the lens:
+    "section critics fill per_slide for their slides and the whole-deck coherence critic fills
+    memory_sentence". Deriving the probe from the lens alone rejected both halves of that panel —
+    a per-section critic that ran both lenses over slides 4-9 was told it owed a whole-deck memory
+    sentence it is not in a position to write, and the coherence critic was told it owed a
+    per-slide probe it is told not to fill. `references/large-deck-orchestration.md` makes that
+    panel mandatory on every ~15+ slide deck, so the whole panel bounced, and the message even
+    said the probe was owed "on a full-deck review" to a review that had declared it was not one.
+    """
+    cov = obj.get("coverage")
+    if _is(cov, "dict"):
+        if cov.get("scope") is not None:
+            return {"per_slide"}                  # a declared range: it did not read the whole deck
+        if "coherence" in _pass_kinds(obj):
+            return {"memory_sentence"}            # the whole-deck arc/seams critic of a panel
+    return {PROBE_BY_LENS[lens] for lens in lenses}
+
+
+def _plan_audit_subfields(obj, errors):
+    """Require the audit subfields of every lens this review says it ran.
+
+    agents/critic.md:987 tells the critic "the main loop rejects a review whose lens-required
+    probe fields or plan_audit subfields are missing, exactly as it rejects `slides_opened`
+    gaps". That sentence was false: the validator checked only that plan_audit was a dict, so
+    `"plan_audit": {}` with `"contract_card_seen": true` and no probes at all validated clean
+    and consented. Every contract the panel exists to test — did the concept land, did the
+    signature move survive, does the register reach interior slides, does the remembered
+    sentence match the deck message — could be skipped with nothing reporting it.
+
+    Scoped by lens on purpose. A design-lens critic is not asked for `memory_sentence`, and a
+    per-section critic is not asked to cover slides outside its range; a gate that demanded
+    both from everyone would be waived on its first honest failure.
+    """
+    audit = obj["plan_audit"]
+    lenses = _audit_owed(obj)
+    if not lenses:
+        return          # an audience-only pass: it judges the room, not the contract card
+    for lens in lenses:
+        block = audit.get(lens)
+        if block is None:
+            errors.append("$.plan_audit.%s: missing — `coverage.passes` says this review ran the "
+                          "%s lens, so its contract-card audit is required (see agents/critic.md "
+                          "'Output'). Use `\"plan_audit\": null` only when no plans exist."
+                          % (lens, "content" if lens == "lens_a" else "design"))
+            continue
+        if not _is(block, "dict"):
+            continue                                   # already reported as a type error above
+        path = "$.plan_audit.%s" % lens
+        for key in PLAN_AUDIT_FIELDS[lens]:
+            if key not in block:
+                errors.append("%s.%s: missing (required — every declared contract is judged, or "
+                              "the audit is not one)" % (path, key))
+        # A scalar here is not a shorthand, it is a skipped judgement — and it is the natural way
+        # to degrade, because the SIBLING fields (`skeleton_rhythm`, `register_interiors`) really
+        # are plain `kept|broken|degraded` strings. Guarding the nested checks on `_is(…, "dict")`
+        # without an else meant `"signature_move": "landed"` passed the presence test and then
+        # bought a silent exemption from `proof` — the rendered evidence the whole audit exists for.
+        for key, fields in (("signature_move", SIGNATURE_MOVE_FIELDS),
+                            ("composition", COMPOSITION_FIELDS)):
+            if lens != "lens_b" or key not in block:
+                continue
+            val = block[key]
+            if _is(val, "dict"):
+                for sub in fields:
+                    _field(val, sub, "str", "%s.%s" % (path, key), errors)
+            else:
+                errors.append("%s.%s: wrong type %s (expected an object with %s — a bare string "
+                              "looks like the `kept|broken` fields beside it, but this one carries "
+                              "the evidence, and a scalar skips every part of it)"
+                              % (path, key, type(val).__name__, "/".join(fields)))
+    probes = obj.get("probes")
+    for probe_key in sorted(_probes_owed(obj, lenses)):
+        if not _is(probes, "dict") or probe_key not in probes:
+            errors.append("$.probes.%s: missing (required — this review's role owes it; a "
+                          "per-section critic owes only `per_slide`, a whole-deck coherence "
+                          "critic only `memory_sentence`, a lens critic the one its lens owns, a "
+                          "sole critic both. Direction previews and archetype samples set "
+                          "`plan_audit: null` and are exempt)" % probe_key)
+
+
+def _contract_card_consistency(obj, errors):
+    """`contract_card_seen: true` must be backed by an audit that used it.
+
+    This is the cross-field rule, and it is the one that closes the hole: without it a review
+    can assert it received the contract card while auditing none of its contracts. The claim
+    and the work it implies now travel together.
+    """
+    cov = obj.get("coverage")
+    if not _is(cov, "dict") or cov.get("contract_card_seen") is not True:
+        return
+    if "plan_audit" not in obj:
+        return          # already reported as a missing required field — one error, not two
+    if not _audit_owed(obj):
+        return          # audience-only pass: it may hold the card as context and audit none of it
+    audit = obj["plan_audit"]
+    if audit is None or (_is(audit, "dict") and not audit):
+        errors.append("$.plan_audit: `coverage.contract_card_seen` is true but the audit is "
+                      "%s — a review that received the contract card and audited none of it is "
+                      "the shape this gate exists to reject. Either audit the card, or say the "
+                      "card was absent (`false` / `'none-declared'`)."
+                      % ("null" if audit is None else "empty"))
+
+
 # ---------------------------------------------------------------- critic ----
 
 def validate_critic(obj):
@@ -286,6 +471,8 @@ def validate_critic(obj):
                 if lens in obj["plan_audit"] and not _is(obj["plan_audit"][lens], "dict"):
                     errors.append("$.plan_audit.%s: wrong type %s (expected dict)"
                                   % (lens, type(obj["plan_audit"][lens]).__name__))
+            _plan_audit_subfields(obj, errors)
+    _contract_card_consistency(obj, errors)
 
     # probes — optional (direction previews skip it); fields are lens-scoped so each
     # is optional, but a present field must be well-formed

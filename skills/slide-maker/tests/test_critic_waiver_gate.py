@@ -325,12 +325,19 @@ ICON_CASES = [
 # work — it just has to be DECLARED (`coverage.scope`) rather than inferred from a short list,
 # because "short list" and "skimmed" are the same bytes.
 def _record_review(deck: Path, review: dict, name: str = "review.json") -> dict:
-    """A critic block as `validate_review.py --record` writes it: path + sha256 + verdict."""
+    """A critic block as `validate_review.py --record` writes it: path + sha256 + verdict.
+
+    `reviews_seen`, not `rounds`: the recorder counts review FILES, and leaves `rounds` to the
+    coordinator who is the only one who knows it (it preserves a `rounds` already present and
+    invents none). This fixture used to write `rounds: 1`, i.e. it claimed to be a tool-written
+    record while carrying a field the tool does not write — so the shape these tests exercise was
+    not the shape the gate meets in the field.
+    """
     import hashlib
     rp = deck.parent / name
     rp.write_text(json.dumps(review))
     h = hashlib.sha256(rp.read_bytes()).hexdigest()
-    return {"verdict": "consent", "rounds": 1, "blockers": 0, "majors": 0,
+    return {"verdict": "consent", "reviews_seen": 1, "blockers": 0, "majors": 0,
             "source": str(rp), "sha256": h, "reviews": [str(rp)],
             "recorded_by": "validate_review.py"}
 

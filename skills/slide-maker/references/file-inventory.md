@@ -76,8 +76,10 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   and with `--deliverables` (which needs the whole deck). **`--fast` re-renders only the
   slides whose content changed since the last run** (per-slide fingerprint + deck-global digest,
   cached in `render/.render-cache.json`; subsets the pptx, output byte-identical to a full render,
-  auto-falls-back to full whenever the page mapping could be wrong) — ~12s → ~4.7s for a one-slide
-  edit, 0.07s when nothing changed. **`--deliverables` (alias
+  auto-falls-back to full whenever the page mapping could be wrong) — on an 18-slide deck, ~2.8s →
+  ~2.3s for a one-slide edit (both start LibreOffice once, and that ~2.5s start is the floor), and
+  0.07s when nothing changed, which is the real win because it starts LibreOffice not at all.
+  **`--deliverables` (alias
   `--final`) additionally parks the PDF beside the pptx and writes `viewer.html`, a zero-dependency
   flip-through preview** — off by default, so an in-progress deck never accumulates stale copies;
   run it at hand-off once the user confirms the deck is final (PNGs always stay in `render/`); finds LibreOffice cross-platform
@@ -87,7 +89,7 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
 - `lint_deck.py` — deterministic **render-time** layout lint and complement to deckkit's build-time
   `lint_layout`: re-checks geometry on the final file (off-slide overflow · block/image collision
   [containment excluded] · footer-zone intrusion · text-past-card · uneven rows) AND adds the
-  render/parse-only faults (CJK kinsoku/widow · whole-page-image · orphan slides — plus missing EA font as the render-time BACKSTOP; `lint_layout` now catches it at build time as `CJK_NO_EA`);
+  render/parse-only faults (CJK kinsoku/widow · whole-page-image · orphan slides — plus missing EA font as the render-time BACKSTOP; `lint_layout` now catches it at build time as `CJK_NO_EA`, whose fix is `deckkit.retrofit_ea(prs)` on the line above the lint — setting `EAFONT` fixes the next build, not this one);
   run after render, before critic; non-zero on findings. `smoke_deckkit.py` — regression guard for the helpers.
 - **Delivery-mode flags — the same word does NOT reach every tool.** SKILL.md names each flag at the
   step that uses it; this is the complete map of which tool actually accepts which, because the
