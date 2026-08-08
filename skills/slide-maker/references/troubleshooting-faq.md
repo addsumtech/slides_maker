@@ -300,8 +300,15 @@ deliberate choice, not a miss" — silence reads as "didn't notice".
 - **The build refuses to save (`strict` raise). Can I bypass it?** `lint_layout(prs, strict=False)`
   exists for debugging **only** — a deck with criticals is broken at presentation scale; fix the
   two-three findings instead, they're always cheap (§4).
-- **Rendering works but everything is slow.** First render of a session pays LibreOffice startup
-  (~5–10 s); subsequent converts are fast, and the fixed 2× rasterization keeps the loop snappy.
+- **Rendering works but everything is slow.** Measured on an 18-slide deck: the first render of a
+  session is ~4.3 s (it also creates the LibreOffice profile), and every render after it is a flat
+  **~2.9 s**. 🔴 **"Subsequent converts are fast" is not true and the belief is expensive** — there
+  is no warm LibreOffice; each render starts one, and that start is ~2.5 s of the total whatever the
+  deck contains. Page count barely moves it (a 1-slide deck renders in ~2.5 s, an 18-slide deck in
+  ~2.9 s), which is why `--slides N` is not a speed flag. The one genuinely fast case is `--fast`
+  with nothing changed — **0.07 s**, because it starts LibreOffice not at all. So: re-render freely,
+  it costs seconds; use `--fast` for every iteration round; and do not restructure a build to
+  "avoid renders", because rendering was never the expensive part of a build.
 - **Something not on this page?** Run `bash scripts/check_env.sh` first (rules out environment),
   then read the error's owner section above; if it's genuinely new, the error text + the slide
   number + the build-script line are the three facts that make it debuggable.

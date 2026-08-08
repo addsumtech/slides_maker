@@ -690,6 +690,20 @@ def _render_pdf(soffice, src, outdir):
 # `SLIDE_MAKER_RENDER_WORKERS=1` forces the serial path.
 RASTER_MIN_PAGES = 8          # below this the pool costs more than the pages save
 RASTER_MAX_WORKERS = 4        # measured: 4 workers ~= 8 workers (1.27s vs 1.25s), half the RAM
+# Page COUNT was the wrong gate on its own: what a worker pool saves is DECODE work, and a page's
+# decode cost is set by its weight, not by how many neighbours it has. Measured serial rasterize:
+#
+#     18-page text/CJK deck   2.5-5.5 KB/page,  0 images   0.05-0.08s   (2.9-4.7 ms/page)
+#     16-page image deck       84.5 KB/page,   16 images   0.47s        (29.3 ms/page)
+#
+# Fanning out costs ~70 ms in process starts and `import fitz` per worker, so on the text decks the
+# pool spent more than the whole job — measured +2.1% wall clock, i.e. the optimization ran and made
+# the render slower. On the image deck it is a clear -11.4%. PDF bytes-per-page separates the two by
+# ~15x, which is a wide enough margin that a threshold in the middle is not a tuned constant: below
+# it there is not enough decode work to pay a single process start, whatever the page count.
+# This changes only WHICH path runs; both are already asserted byte-identical by
+# tests/test_render_parallel.py, so a mis-set threshold costs milliseconds and never a wrong PNG.
+RASTER_MIN_BYTES_PER_PAGE = 20 * 1024
 
 
 def _rasterize_chunk(args):
@@ -722,8 +736,14 @@ def _rasterize_chunk(args):
     return len(idxs)
 
 
-def _raster_workers(n_pages):
-    """How many workers to rasterize `n_pages` with — 1 means 'use the serial loop'."""
+def _raster_workers(n_pages, pdf=None):
+    """How many workers to rasterize `n_pages` with — 1 means 'use the serial loop'.
+
+    `pdf` is optional so an explicit `SLIDE_MAKER_RENDER_WORKERS` and the page-count floor still
+    answer without it; when it is given, page WEIGHT gets the final say (see
+    RASTER_MIN_BYTES_PER_PAGE). An unreadable size is treated as heavy — the pool is the safe
+    guess there, since being wrong costs ~70 ms and the serial path is the fallback anyway.
+    """
     env = os.environ.get("SLIDE_MAKER_RENDER_WORKERS")
     if env:
         try:
@@ -732,6 +752,12 @@ def _raster_workers(n_pages):
             pass                                  # a typo'd override must not break the render
     if n_pages < RASTER_MIN_PAGES:
         return 1
+    if pdf is not None:
+        try:
+            if os.path.getsize(pdf) / float(n_pages) < RASTER_MIN_BYTES_PER_PAGE:
+                return 1                          # not enough decode work to pay a process start
+        except Exception:
+            pass
     try:
         cores = os.cpu_count() or 1
     except Exception:
@@ -745,7 +771,7 @@ def _rasterize_parallel(pdf, n_pages, out):
     Returns False (writing nothing, or leaving a partial set the serial loop then overwrites)
     whenever the fast path is unavailable or fails, so the caller can fall back.
     """
-    workers = _raster_workers(n_pages)
+    workers = _raster_workers(n_pages, pdf)
     if workers < 2:
         return False
     per = -(-n_pages // workers)

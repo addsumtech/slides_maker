@@ -52,17 +52,50 @@ def _require_deps():
         sys.exit(0)
 
 
-def build_deck(path, n):
+def _heavy_image(path, w=900, h=560):
+    """A deterministic photo-like image — noisy enough that it does NOT compress away.
+
+    The fixture needs weight, not prettiness: the worker pool is now gated on PDF bytes per page,
+    so a flat fill would keep the deck under the threshold and quietly send every "parallel" render
+    down the serial path — which is how a byte-identity suite passes while comparing serial to
+    serial. Deterministic so the deck (and therefore every hash below) is reproducible.
+    """
+    from PIL import Image
+    im = Image.new("RGB", (w, h))
+    px = im.load()
+    v = 12345
+    for y in range(h):
+        for x in range(w):
+            v = (1103515245 * v + 12345) & 0x7FFFFFFF        # LCG: same bytes on every machine
+            px[x, y] = (v >> 16 & 0xFF, (v >> 8 & 0xFF) ^ (x & 0xFF), (v & 0xFF) ^ (y & 0xFF))
+    im.save(path, "JPEG", quality=92)
+    return path
+
+
+def build_deck(path, n, heavy=False):
+    """`heavy=True` puts a full-bleed photo on every slide, which is what crosses the weight gate."""
     import deckkit as dk
     prs = dk.blank_deck()
+    img = _heavy_image(os.path.join(os.path.dirname(path), "probe.jpg")) if heavy else None
     for i in range(n):
         s = dk.add_slide(prs)
+        if heavy:
+            dk.picture(s, img, 0.0, 0.0, 10.0, 5.625, fit="cover")
         dk.title_bar(s, "Parallel render probe {}".format(i + 1), kicker="TEST")
         dk.bullet(s, 0.8, 1.6, 8.4, [("Alpha", "a line of supporting detail that wraps once"),
                                      ("Beta", "a second line of comparable length here")])
         dk.footer(s, tag="test", page=i + 1)
     prs.save(path)
     return path
+
+
+def to_pdf(pptx, outdir):
+    """Convert once, so the weight gate can be asked the same question the renderer asks it."""
+    import render_deck as _rd
+    os.makedirs(outdir, exist_ok=True)
+    subprocess.run([_rd.find_soffice(), "--headless", "--convert-to", "pdf",
+                    "--outdir", outdir, str(pptx)], capture_output=True, text=True)
+    return os.path.join(outdir, os.path.splitext(os.path.basename(str(pptx)))[0] + ".pdf")
 
 
 def render(pptx, out, env_extra=None):
@@ -86,7 +119,7 @@ def main():
     tmp = tempfile.mkdtemp(prefix="render_parallel_")
     print("Parallel-render equivalence")
 
-    from render_deck import _raster_workers, RASTER_MIN_PAGES
+    from render_deck import _raster_workers, RASTER_MIN_PAGES, RASTER_MIN_BYTES_PER_PAGE
 
     # --- the worker-count policy, without rendering anything -----------------------------
     check("sub-threshold deck renders serially",
@@ -98,8 +131,38 @@ def main():
     check("a garbage SLIDE_MAKER_RENDER_WORKERS does not raise",
           isinstance(_forced("banana"), int))
 
+    # --- the WEIGHT gate: page count alone was the wrong question ------------------------
+    # A worker pool saves decode work, and decode cost tracks page weight. On text decks the pool
+    # cost ~70ms in process starts to save ~60ms of rasterizing — measured +2.1% wall clock, an
+    # optimization that ran and made the render slower.
+    _light = os.path.join(tmp, "light.pdf")
+    with open(_light, "wb") as fh:
+        fh.write(b"x" * (RASTER_MIN_BYTES_PER_PAGE * 20 // 2))       # 10 KB/page over 20 pages
+    check("a LIGHT pdf renders serially however many pages it has",
+          _raster_workers(20, _light) == 1)
+    _heavy = os.path.join(tmp, "heavy.pdf")
+    with open(_heavy, "wb") as fh:
+        fh.write(b"x" * (RASTER_MIN_BYTES_PER_PAGE * 20 * 4))        # 80 KB/page
+    check("a HEAVY pdf still fans out", _raster_workers(20, _heavy) >= 2)
+    check("the weight gate never overrides an explicit worker count",
+          _forced(1, _heavy) == 1)
+    check("an unreadable pdf size does not raise and does not force serial",
+          _raster_workers(20, os.path.join(tmp, "does-not-exist.pdf")) >= 2)
+    check("omitting the pdf keeps the old page-count-only answer",
+          _raster_workers(20) >= 2)
+
     # --- the real thing: same deck, both paths -------------------------------------------
-    big = build_deck(os.path.join(tmp, "big.pptx"), max(12, RASTER_MIN_PAGES + 4))
+    # HEAVY on purpose. With a text fixture the weight gate sends the "parallel" run down the
+    # serial path and every hash below compares serial to serial — a suite that passes by
+    # measuring nothing. The assertion after the conversion is what keeps that honest.
+    big = build_deck(os.path.join(tmp, "big.pptx"), max(12, RASTER_MIN_PAGES + 4), heavy=True)
+    _big_pdf = to_pdf(big, os.path.join(tmp, "pdfdir"))
+    _pages = max(12, RASTER_MIN_PAGES + 4)
+    check("the equivalence fixture actually TAKES the parallel path",
+          os.path.isfile(_big_pdf) and _raster_workers(_pages, _big_pdf) >= 2,
+          "pdf={} bytes/page={}".format(
+              _big_pdf,
+              round(os.path.getsize(_big_pdf) / _pages) if os.path.isfile(_big_pdf) else "n/a"))
     par_dir, ser_dir = os.path.join(tmp, "par"), os.path.join(tmp, "ser")
     rp = render(big, par_dir)
     rs = render(big, ser_dir, {"SLIDE_MAKER_RENDER_WORKERS": "1"})
@@ -182,12 +245,12 @@ def _renders_with_pool_exhausted(pptx, out):
                 pass
 
 
-def _forced(val):
+def _forced(val, pdf=None):
     from render_deck import _raster_workers
     old = os.environ.get("SLIDE_MAKER_RENDER_WORKERS")
     os.environ["SLIDE_MAKER_RENDER_WORKERS"] = str(val)
     try:
-        return _raster_workers(32)
+        return _raster_workers(32, pdf)
     finally:
         if old is None:
             os.environ.pop("SLIDE_MAKER_RENDER_WORKERS", None)
