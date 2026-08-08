@@ -82,6 +82,19 @@ jobs:
       - name: deckkit smoke (every public helper)
         run: python scripts/smoke_deckkit.py
 
+      # Two defect classes a per-slide check structurally cannot see, both found by a human eye on
+      # a delivered deck AFTER both lints reported clean: the same string rendered twice on one
+      # page (an orphaned copy of an earlier layout; a component's own label beside a hand-written
+      # one), and a repeated chrome line that drifts off the slot the rest of the deck uses. Both
+      # directions are asserted, because a check that fires on a legitimate repeat is worse than
+      # no check — a deck may repeat 是/N/A and may re-anchor chrome on a divider.
+      - name: Deck-level faults (duplicate text · chrome slot drift)
+        run: |
+          set -o pipefail
+          python tests/test_deck_level_faults.py | tee /tmp/decklevel.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/decklevel.log || {
+            echo "::error::deck-level fault suite did not run to completion"; exit 1; }
+
       # `CJK_NO_EA` is a build BLOCKER whose remedy used to be unreachable at the moment it fired:
       # it said "set EAFONT before building", but the lint runs at the END of the build, and the
       # two paths where the fault actually lives -- an opened template's own text, a surgical

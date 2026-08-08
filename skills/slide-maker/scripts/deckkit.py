@@ -6557,6 +6557,72 @@ def _is_watermark(sh):
     except Exception:
         return False
 
+
+def _deck_level_faults(prs):
+    """Faults that are invisible one slide at a time — both measured on a real delivered deck.
+
+    `lint_layout`'s other checks all reason about ONE slide's geometry, and these two cannot be
+    seen that way: the first is about two shapes on a page saying the same thing, the second is
+    about a page disagreeing with the REST of the deck. Both are WARN rather than CRITICAL, which
+    is the honest severity for a new check — a legitimate repeat (a comparison whose labels rhyme,
+    a deliberately re-anchored chrome line on one divider) must never block a build.
+
+    DUPLICATE TEXT — the same non-trivial string rendered by two separate top-level shapes on one
+    slide. Measured causes, all real: a build script patched repeatedly left an ORPHANED copy of a
+    layout drawing over the new one, so the page ran two layouts at once and its coordinates never
+    moved however the source was edited; a component's own auto-label printed beside a hand-written
+    one, so a single quantity appeared twice at two different roundings; a programme named in a
+    list and then again as the hub of a diagram beneath it. None of these is visible in a
+    per-shape check, and every one of them shipped past a clean lint.
+
+    CHROME SLOT DRIFT — a repeated chrome line (the per-slide source note) that does not sit where
+    the rest of the deck puts it. Measured: 11 source lines, 8 pinned to one slot and 3 placed
+    wherever their page's last block happened to end — one of them rendering "as of <date>" inside
+    a diagram box. The rule "pin the chrome" was prose; prose held 8 times out of 11.
+    """
+    import statistics
+    out = []
+
+    def _cjk_n(t):
+        return sum(1 for c in t if "\u2e80" <= c <= "\u9fff")
+
+    for n, slide in enumerate(prs.slides, 1):
+        seen = {}
+        for sh in slide.shapes:
+            if not getattr(sh, "has_text_frame", False):
+                continue
+            t = " ".join((sh.text_frame.text or "").split())
+            # long enough to be content rather than a shared token ("是", "N/A", an axis tick)
+            if not t or (len(t) < 8 and _cjk_n(t) < 4):
+                continue
+            seen.setdefault(t, []).append(sh)
+        for t, shapes in seen.items():
+            if len(shapes) > 1:
+                out.append((n, "WARN", "DUPLICATE_TEXT",
+                            f"{len(shapes)} separate shapes render the same text {t[:34]!r} — "
+                            "usually an orphaned copy of an earlier layout, a component's own "
+                            "label printed beside a hand-written one, or a name repeated in both "
+                            "a list and a diagram. Delete one, or let the component own the label"))
+
+    rows = []
+    for n, slide in enumerate(prs.slides, 1):
+        for sh in slide.shapes:
+            if not getattr(sh, "has_text_frame", False):
+                continue
+            t = (sh.text_frame.text or "").strip()
+            if t.startswith(("来源", "Source", "Bron", "出典", "출처")):
+                rows.append((n, sh.top / 914400.0, t))
+    if len(rows) >= 3:                     # fewer than 3 does not establish a slot
+        med = statistics.median(r[1] for r in rows)
+        for n, y, t in rows:
+            if abs(y - med) > 0.15:
+                out.append((n, "WARN", "CHROME_SLOT_DRIFT",
+                            f"this slide's source line sits at {y:.2f}in while the deck's other "
+                            f"source lines sit at {med:.2f}in — pin it to one slot, or the reader "
+                            "reads it as content on the pages where it floats"))
+    return out
+
+
 def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol=0.07, edge_tol=0.03):
     """Build-time GEOMETRY self-check. Walk every shape on every slide — HOWEVER it was placed,
     manual coords or the grid/stack helpers — and report the high-signal faults that otherwise
@@ -6971,6 +7037,7 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
                     if bb[1]+bb[3] > footer_top+0.02 and bb[1] < footer_top+0.10:
                         findings.append((n, "WARN", "FOOTER",
                             f"a card/panel reaches the footer row (bottom {bb[1]+bb[3]:.2f}in vs footer at {footer_top:.2f}in)"))
+    findings.extend(_deck_level_faults(prs))
     if verbose:
         crit = sum(1 for f in findings if f[1] == "CRITICAL")
         warn = len(findings) - crit

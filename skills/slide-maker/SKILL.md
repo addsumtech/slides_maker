@@ -1122,8 +1122,19 @@ A few rules that matter (see `references/design-principles.md`):
   clean, except on a redesign fix-pass, whose runs never reach `set_font()` at all); it **warns** on **display numerals in an old-style figure face** (`OLDSTYLE_FIGURES` — digits at mixed heights make a big number visibly bob; the figure components resolve a lining face themselves via `deckkit.numeral_run_face`, so this fires only on hand-set runs — a taste call, deliberately not a build blocker), on a label/figure **escaping its card**, a **single
   line left off-centre** in a card, content **reaching the footer**, and **two panels nearly
   touching** (`SLIVER_GAP` — a 0.005–0.10in seam between panels, or a panel and a picture: the
-  hand-picked-pitch bug). (Each code's plain-language meaning + first fix:
-  `references/troubleshooting-faq.md` §4.) Every CRITICAL it prints is real *when the deck's fonts are
+  hand-picked-pitch bug). It also warns on the two faults a PER-SLIDE check structurally cannot
+  see, both measured on a delivered deck *after* both lints had reported clean: **`DUPLICATE_TEXT`**
+  — the same string rendered by two separate shapes on one slide, whose real causes are an
+  ORPHANED copy of an earlier layout left behind by repeated patching (the tell: your coordinate
+  edits appear to do nothing, because two layouts are running at once), a component's own
+  auto-label printed beside a hand-written one, or a name repeated in both a list and the diagram
+  under it — and **`CHROME_SLOT_DRIFT`** — a per-slide source line that does not sit where the rest
+  of the deck puts its own. 🔴 **The fix for slot drift is never to nudge the strays**: the slot was
+  a constant each page applied by hand, and a rule a page can decline to follow is not a contract.
+  Route every source line through ONE helper that ignores any x/y the caller passes. *(Measured:
+  11 source lines, 8 pinned and 3 placed wherever their page's last block ended — one rendering
+  `as of <date>` inside a diagram box. Prose held 8 times out of 11.)* (Each code's plain-language
+  meaning + first fix: `references/troubleshooting-faq.md` §4.) Every CRITICAL it prints is real *when the deck's fonts are
   installed* — when a font is substituted for measurement it says so and carries ~1 line of slack
   (conservative, may under-flag), so it never fabricates. It is a **net, not a substitute for
   looking** (it can't see contrast, z-order, a figure smothering text, or shapes inside groups — the
