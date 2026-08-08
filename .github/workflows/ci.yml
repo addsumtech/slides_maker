@@ -88,6 +88,20 @@ jobs:
       # one), and a repeated chrome line that drifts off the slot the rest of the deck uses. Both
       # directions are asserted, because a check that fires on a legitimate repeat is worse than
       # no check — a deck may repeat 是/N/A and may re-anchor chrome on a divider.
+      # A motif had no machine-readable existence, so its two stated contracts were unmeasurable:
+      # a hand-rolled register signature drew three INTERLOCKING circles (offset in x, not y) and
+      # shipped to 12 pages, and a subtitle laid straight across the cover motif produced zero
+      # findings because TEXT_OVERLAP measures text against TEXT and a motif is geometry. Tagging
+      # the device is what makes both countable. The silent cases are the load-bearing half: an
+      # untagged deck, a declared overlap, a full-bleed ground and the quiet register signature
+      # must every one of them stay quiet.
+      - name: Motif contract (register_mark · keep-out · loud budget)
+        run: |
+          set -o pipefail
+          python tests/test_motif_contract.py | tee /tmp/motif.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/motif.log || {
+            echo "::error::motif contract suite did not run to completion"; exit 1; }
+
       - name: Deck-level faults (duplicate text · chrome slot drift)
         run: |
           set -o pipefail

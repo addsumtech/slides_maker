@@ -876,6 +876,23 @@ The helper set, by job:
   hierarchy, or ONE hero chart, never every slide; text cannot be sheared onto a face, so labels sit
   beside the geometry. When the 2.5D wants to be a rich atmospheric *scene* (not data), that is the
   generated-image branch, not these.
+- **The register signature (`register_mark`) — build the quiet motif, don't re-derive it.** A
+  bespoke register is REQUIRED at the direction gate, and until this helper existed deckkit had no
+  primitive to draw one, so every deck hand-rolled its signature out of raw boxes. Measured: one
+  such helper offset each ring in x but **not in y** and therefore drew three *interlocking*
+  circles — a Venn diagram — in the corner of twelve pages, and nothing caught it because no gate
+  knows what a motif is supposed to look like. `register_mark(slide, kind, corner=…)` draws the
+  five common shapes correct-by-construction — **`arcs`** (concentric rings sharing ONE centre, so
+  that bug is unrepresentable) · **`rule`** (an inset edge rule) · **`ticks`** (an evenly-spaced
+  scale) · **`ordinal`** (a corner numeral) · **`grid`** (a small hairline field) — and TAGS what
+  it draws. Invention stays open: draw whatever you like and call **`deckkit.tag_motif(shape,
+  loud=…)`** on it. 🔴 **The tag is what gives the motif a machine-readable existence**, and two
+  contracts the skill has always stated become checkable only because of it: **`TEXT_OVER_MOTIF`**
+  (a title crossing the device — invisible to `TEXT_OVERLAP`, which measures text against TEXT
+  while a motif is geometry; declare a deliberate one with `overlap_intent`) and
+  **`MOTIF_BUDGET`** (the ≤3 LOUD appearances the design plan promises — pass `loud=True` for a
+  hero appearance; the quiet register signature is excluded by design, because it is *meant* to
+  repeat on every page). An untagged deck is never punished for not using this vocabulary.
 - **Composed overlap (`overlap_intent`)** — `lint_layout`'s `TEXT_OVERLAP` is a CRITICAL that refuses
   to save, and it is right to be: colliding text is the commonest way a build ships unreadable. But it
   also refused two moves that are ordinary editorial design — **a giant display word with a small line

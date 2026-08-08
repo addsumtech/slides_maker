@@ -2086,6 +2086,133 @@ def photo_card(slide, x, y, w, h, *, role="info", accent=MAGENTA, r=0.1, alpha=0
     return tc
 
 
+MOTIF_TAG = "deckkit-motif"
+# The deck's signature device, TAGGED so it has a machine-readable existence. Before this, a motif
+# lived only in prose: the design plan named one, gave it a meaning, budgeted it at <=3 loud
+# appearances and promised `carried_by` slides where it does structural work — and NOTHING could
+# tell whether a built deck's motif appeared 3 times, 11 times, or never. Measured on a real build:
+# the register signature was drawn by hand, drawn WRONG (offset in x but not y, so it rendered as
+# three interlocking circles rather than concentric rings), and shipped to 12 pages before a human
+# looked at a PNG. Two things follow from the tag and cannot be had without it:
+#   · the loud-motif budget becomes countable;
+#   · TEXT_OVER_MOTIF can ask "is this text crossing the deck's device?", which TEXT_OVERLAP
+#     structurally cannot — it measures text against TEXT, and a motif is geometry.
+# `LOUD` marks a hero appearance (the cover figure); `QUIET` marks the chrome-level register
+# signature that is MEANT to repeat on every page, so the budget must not count it.
+MOTIF_LOUD = MOTIF_TAG + "-loud"
+MOTIF_QUIET = MOTIF_TAG + "-quiet"
+
+
+def tag_motif(shape, loud=False):
+    """Mark a shape as part of the deck's signature device. Returns the shape.
+
+    Reach for this on any motif you draw by hand — `register_mark()` does it for you. An untagged
+    motif is invisible to the budget count and to TEXT_OVER_MOTIF, which is the state every deck
+    was in before the tag existed.
+    """
+    try:
+        shape.name = MOTIF_LOUD if loud else MOTIF_QUIET
+    except Exception:
+        pass
+    return shape
+
+
+def _is_motif(sh, loud=None):
+    n = getattr(sh, "name", "") or ""
+    if not n.startswith(MOTIF_TAG):
+        return False
+    if loud is None:
+        return True
+    return n.endswith("-loud") if loud else n.endswith("-quiet")
+
+
+def register_mark(slide, kind="arcs", *, corner="tr", color=None, size=1.55, weight=0.9,
+                  rings=3, count=5, text="", font=None, inset=0.30, loud=False):
+    """The QUIET register signature — the chrome-level cue that carries a deck's style onto every
+    ordinary interior page. Correct by construction, and TAGGED.
+
+    This exists because a bespoke register is mandatory at the direction gate while deckkit had no
+    primitive to draw one, so every deck hand-rolls its signature in raw boxes and lines. Measured
+    on a real build, that hand-rolled helper was eight lines long, offset each ring in x but not in
+    y, and therefore drew THREE INTERLOCKING CIRCLES — a Venn diagram — in the corner of twelve
+    pages. Nothing caught it: no lint knows what a motif is supposed to look like, and a human only
+    saw it because they opened a PNG. The failure was not carelessness; it was that "draw three
+    concentric arcs" is arithmetic nobody should be re-deriving per deck.
+
+    `kind`:
+      ``arcs``    concentric rings sharing ONE centre (`rings` of them). The centre is computed,
+                  never offset per ring — the bug above is unrepresentable here.
+      ``rule``    a thin edge rule inset from the page edge — the quietest possible signature.
+      ``ticks``   `count` evenly-spaced short ticks along the edge (a scale, a gallery, a ruler).
+      ``ordinal`` a small numeral/character set in the corner (a section index, a page cue).
+      ``grid``    a small square field of hairlines (graph/plate register).
+
+    `corner` is one of tl / tr / bl / br, or a literal (x, y) in inches for full control.
+    `loud=True` marks this a HERO appearance and puts it in the <=3 budget; the default is the
+    quiet register signature, which the motif budget deliberately does NOT count because the skill
+    permits it on every page.
+
+    Returns the list of shapes it drew, all tagged.
+    """
+    if kind not in ("arcs", "rule", "ticks", "ordinal", "grid"):
+        # Raise rather than fall back: a wrong name that silently draws something else is exactly
+        # how a deck ends up with a register nobody chose (see backdrop_motif's own note).
+        raise ValueError("register_mark(kind={!r}): unknown mark. One of: "
+                         "arcs · rule · ticks · ordinal · grid.".format(kind))
+    sw, sh_h = _slide_size(slide)
+    c = color if color is not None else RGBColor(0xD8, 0xD0, 0xBF)
+    out = []
+
+    if isinstance(corner, (tuple, list)):
+        ax, ay = float(corner[0]), float(corner[1])
+        right = ax > sw / 2.0
+        low = ay > sh_h / 2.0
+    else:
+        if corner not in ("tl", "tr", "bl", "br"):
+            raise ValueError("register_mark(corner={!r}): one of tl · tr · bl · br, or (x, y)."
+                             .format(corner))
+        right, low = corner[1] == "r", corner[0] == "b"
+        ax = (sw - inset - size) if right else inset
+        ay = (sh_h - inset - size) if low else inset
+
+    if kind == "arcs":
+        # ONE centre for every ring — that is the whole point of the helper.
+        cx, cy = ax + size / 2.0, ay + size / 2.0
+        for i in range(max(1, rings)):
+            r = (size / 2.0) * (1.0 - i * (0.30 if rings > 1 else 0.0))
+            out.append(box(slide, cx - r, cy - r, r * 2, r * 2, fill=None, line=c,
+                           line_w=weight, round=True, r=r))
+    elif kind == "rule":
+        y = ay if not low else ay + size
+        out.append(box(slide, inset, y, sw - 2 * inset, max(0.008, weight / 72.0), fill=c))
+    elif kind == "ticks":
+        span = sw - 2 * inset
+        for i in range(max(2, count)):
+            x = inset + span * (i / float(max(1, count - 1)))
+            out.append(box(slide, x, ay, max(0.008, weight / 72.0), size * 0.34, fill=c))
+    elif kind == "ordinal":
+        t = str(text or "")
+        if not t:
+            raise ValueError("register_mark(kind='ordinal') needs `text` — the numeral or "
+                             "character the corner carries.")
+        tb = slide.shapes.add_textbox(Inches(ax), Inches(ay), Inches(size), Inches(size * 0.5))
+        tb.text_frame.word_wrap = False
+        p0 = tb.text_frame.paragraphs[0]
+        r0 = p0.add_run(); r0.text = t
+        set_font(r0, 13, c, bold=True, font=font or FONT)
+        p0.alignment = PP_ALIGN.RIGHT if right else PP_ALIGN.LEFT
+        out.append(tb)
+    else:                                                   # grid
+        step = size / 4.0
+        for i in range(5):
+            out.append(box(slide, ax + i * step, ay, max(0.006, weight / 96.0), size, fill=c))
+            out.append(box(slide, ax, ay + i * step, size, max(0.006, weight / 96.0), fill=c))
+
+    for shp in out:
+        tag_motif(shp, loud=loud)
+    return out
+
+
 def backdrop_motif(slide, *, kind="grid", color=None, spacing=0.6, accent_disc=None,
                    disc_at=None, disc_r=0.7):
     """A FAINT full-bleed texture + optional accent disc, to bookend a deck on its cover and closer
@@ -6558,6 +6685,82 @@ def _is_watermark(sh):
         return False
 
 
+
+def _motif_faults(prs):
+    """What the deck's own signature device is doing — countable only because motifs are TAGGED.
+
+    Two things no other check can see, both measured on a real build:
+
+    TEXT_OVER_MOTIF — a title or caption crossing the motif. `TEXT_OVERLAP` measures text against
+    TEXT and a motif is geometry, so a subtitle laid straight across a decorative ring produced
+    ZERO findings at build time. The same defect was caught once by a human, written down as a
+    build rule, and then recurred on the very next page — which is the signature of a rule with no
+    gate. WARN, never CRITICAL: text ON a device is ordinary editorial design (a display word over
+    a rule, a caption riding a plate), so this reports a collision and lets the author declare it
+    rather than refusing to save.
+
+    MOTIF_BUDGET — the skill budgets the LOUD motif at <=3 appearances (a device stamped on every
+    page is the opposite failure to a device that never recurs) and nothing counted it. Only shapes
+    tagged `loud` count; the quiet register signature is MEANT to repeat on every page and is
+    deliberately excluded, which is why the tag carries the distinction rather than the counter
+    guessing from size.
+
+    Silent by construction on: a deck with no tagged motif (nothing is claimed, so nothing is
+    checked — the check cannot punish a deck for not using this vocabulary), a declared
+    `overlap_intent` (the author said the overlap is the composition), and a full-bleed motif,
+    which is a ground rather than an object and cannot be "crossed".
+    """
+    out = []
+    W, H = prs.slide_width / 914400.0, prs.slide_height / 914400.0
+    loud_pages = []
+    for n, slide in enumerate(prs.slides, 1):
+        motifs, texts = [], []
+        for sh in slide.shapes:
+            bb = _bbox_in(sh)
+            if bb is None:
+                continue
+            if _is_motif(sh):
+                full_bleed = bb[2] >= W * 0.92 and bb[3] >= H * 0.92
+                if _is_motif(sh, loud=True):
+                    loud_pages.append(n)
+                if not full_bleed:
+                    motifs.append((sh, bb))
+            elif _is_text(sh) and not _is_watermark(sh):
+                r = _ink_rect(sh, bb)
+                if r and r[0]:
+                    texts.append((sh, r[0]))
+        for tsh, tr in texts:
+            if _declared_overlap(tsh):
+                continue
+            for msh, mb in motifs:
+                ix = max(0.0, min(tr[0] + tr[2], mb[0] + mb[2]) - max(tr[0], mb[0]))
+                iy = max(0.0, min(tr[1] + tr[3], mb[1] + mb[3]) - max(tr[1], mb[1]))
+                if ix > 0.04 and iy > 0.04:
+                    txt = (tsh.text_frame.text or "").strip().replace("\n", " ")[:26]
+                    out.append((n, "WARN", "TEXT_OVER_MOTIF",
+                                f"text {txt!r} crosses the deck's signature motif "
+                                f"({ix * iy:.2f}in\u00b2) — a motif is geometry, so TEXT_OVERLAP "
+                                "cannot see this. Move the text out of the device's region, move "
+                                "the device, or declare it with deckkit.overlap_intent(shape, "
+                                "'<why the overlap IS the composition>')"))
+                    break
+    if len(set(loud_pages)) > 3:
+        pages = ", ".join(str(x) for x in sorted(set(loud_pages)))
+        out.append((sorted(set(loud_pages))[3], "WARN", "MOTIF_BUDGET",
+                    f"the LOUD motif appears on {len(set(loud_pages))} slides ({pages}) — the "
+                    "budget is <=3, because a device stamped on every page reads as a template "
+                    "tell rather than a signature. Demote the extras to the quiet register "
+                    "signature (register_mark(..., loud=False)), which may repeat on every page"))
+    return out
+
+
+def _declared_overlap(sh):
+    """overlap_intent() records the declaration in the shape NAME (the same idiom as the watermark
+    and motif tags), so read it there rather than from a side table keyed on object identity —
+    python-pptx yields fresh proxies per iteration, so an id()-keyed table would silently miss."""
+    return str(getattr(sh, "name", "") or "").startswith(OVERLAP_TAG)
+
+
 def _deck_level_faults(prs):
     """Faults that are invisible one slide at a time — both measured on a real delivered deck.
 
@@ -7038,6 +7241,7 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
                         findings.append((n, "WARN", "FOOTER",
                             f"a card/panel reaches the footer row (bottom {bb[1]+bb[3]:.2f}in vs footer at {footer_top:.2f}in)"))
     findings.extend(_deck_level_faults(prs))
+    findings.extend(_motif_faults(prs))
     if verbose:
         crit = sum(1 for f in findings if f[1] == "CRITICAL")
         warn = len(findings) - crit
