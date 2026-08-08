@@ -359,8 +359,14 @@ def _plan_audit_subfields(obj, errors):
     """
     audit = obj["plan_audit"]
     lenses = _audit_owed(obj)
-    if not lenses:
-        return          # an audience-only pass: it judges the room, not the contract card
+    # NOT `if not lenses: return`. That early return sat above the probe loop, so a pass line
+    # naming only a non-lens kind switched the ENTIRE gate off: `plan_audit: {}` +
+    # `contract_card_seen: true` + no probes at all validated clean and consented — the exact D1
+    # shape, reachable with the phrasing large-deck-orchestration.md itself prescribes ("one
+    # whole-deck critic whose only job is coherence, arc, and seams"). It also inverted the rule
+    # this file states one function up: an UNPARSEABLE passes line was held to both lenses while
+    # the word "coherence" bought a total exemption. A non-lens kind may narrow WHICH obligations
+    # apply; it must never remove all of them.
     for lens in lenses:
         block = audit.get(lens)
         if block is None:
@@ -416,8 +422,21 @@ def _contract_card_consistency(obj, errors):
         return
     if "plan_audit" not in obj:
         return          # already reported as a missing required field — one error, not two
-    if not _audit_owed(obj):
-        return          # audience-only pass: it may hold the card as context and audit none of it
+    lenses = _audit_owed(obj)
+    if not lenses:
+        # A pass that owes no LENS audit — the audience critic, the whole-deck coherence critic —
+        # has no lens-shaped block it could fill, so demanding one would be over-rejection. But
+        # `{}` is not how this schema says "nothing to audit"; `null` is, and it is the value a
+        # direction preview already uses. Requiring the declared value keeps the empty dict from
+        # reading as an audit that happened, without asking these critics for work that is not
+        # theirs. Owing NO probe either (the audience critic) means owing no evidence at all here.
+        if _probes_owed(obj, lenses) and _is(obj["plan_audit"], "dict") and not obj["plan_audit"]:
+            errors.append("$.plan_audit: `coverage.contract_card_seen` is true and the audit is an "
+                          "empty object. This review's passes name no content/design lens, so no "
+                          "lens audit is owed — but say that with `\"plan_audit\": null`, the "
+                          "value this schema uses for 'no plans to audit'. `{}` is "
+                          "indistinguishable from an audit that was started and abandoned.")
+        return
     audit = obj["plan_audit"]
     if audit is None or (_is(audit, "dict") and not audit):
         errors.append("$.plan_audit: `coverage.contract_card_seen` is true but the audit is "

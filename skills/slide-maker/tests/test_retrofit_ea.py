@@ -299,19 +299,63 @@ def main():
         check("the field's slot carries the face",
               _ea_attr(fld) == FACE, _ea_attr(fld))
 
-        p9 = dk.blank_deck()
-        s9 = dk.add_slide(p9)
         from pptx.chart.data import CategoryChartData
         from pptx.enum.chart import XL_CHART_TYPE
-        cd = CategoryChartData()
-        cd.categories = ["一月", "二月", "三月"]
-        cd.add_series("营收", (3, 5, 4))
-        s9.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED, Inches(0.5), Inches(0.5),
-                            Inches(6), Inches(3), cd)
-        check("a FOREIGN chart's CJK category text is stamped (another part, no runs of its own)",
+
+        def chart_deck(cats, drop_txpr, series="营收"):
+            """`drop_txpr` is the FOREIGN shape: a chart with no chartSpace-level <c:txPr>.
+
+            Every chart python-pptx or deckkit builds already carries one, so a suite that only
+            builds its own charts never reaches the branch that creates it — which is the branch
+            that was writing the element in the wrong place.
+            """
+            prs = dk.blank_deck()
+            s = dk.add_slide(prs)
+            cd = CategoryChartData()
+            cd.categories = cats
+            cd.add_series(series, (3, 5, 4))
+            gf = s.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED, Inches(0.5), Inches(0.5),
+                                    Inches(6), Inches(3), cd)
+            cs = gf.chart._chartSpace
+            if drop_txpr:
+                t = cs.find(qn("c:txPr"))
+                if t is not None:
+                    cs.remove(t)
+            return prs, cs
+
+        def tags(cs):
+            return [e.tag.split("}")[1] for e in cs]
+
+        p9, cs9 = chart_deck(["一月", "二月", "三月"], drop_txpr=False)
+        check("a chart's CJK category text is stamped (another part, no runs of its own)",
               dk.retrofit_ea(p9, FACE, verbose=False) == 1)
         check("the chart's defRPr carries the face",
               any(_ea_attr(d) == FACE for sl in p9.slides for d in dk._chart_ea_parts(sl)))
+
+        # CT_ChartSpace is a SEQUENCE and <c:txPr> is 10th of 14 — BEFORE <c:externalData>.
+        # Appending it put the element last and the chart part stopped validating: the same
+        # failure _EA_FOLLOWERS prevents for <a:rPr>, on the one code path that skipped the guard.
+        p10, cs10 = chart_deck(["一月", "二月", "三月"], drop_txpr=True)
+        check("the foreign shape really lacks c:txPr, so this exercises the create branch",
+              "txPr" not in tags(cs10), tags(cs10))
+        check("a foreign chart is stamped too", dk.retrofit_ea(p10, FACE, verbose=False) == 1)
+        _t = tags(cs10)
+        check("<c:txPr> is created BEFORE <c:externalData>, not appended after it",
+              "txPr" in _t and "externalData" in _t
+              and _t.index("txPr") < _t.index("externalData"), _t)
+
+        # ...and a Latin chart is not this function's business at all. Every other branch of the
+        # retrofit is guarded by _has_cjk; this one ran on any chart, so an all-Latin deck came
+        # back "stamped 1 run(s)" with its chart part rewritten for nothing.
+        # The SERIES NAME is a c:v cell too — the first draft of this fixture left it as 营收 and
+        # the "Latin" chart was not Latin, which the assertion caught.
+        p11, cs11 = chart_deck(["Jan", "Feb", "Mar"], drop_txpr=True, series="revenue")
+        check("a LATIN chart is left completely alone",
+              dk.retrofit_ea(p11, FACE, verbose=False) == 0 and "txPr" not in tags(cs11),
+              tags(cs11))
+        p12, cs12 = chart_deck(["Jan", "Feb", "Mar"], drop_txpr=True, series="营收")
+        check("a chart whose only CJK is its SERIES NAME is still stamped",
+              dk.retrofit_ea(p12, FACE, verbose=False) == 1)
 
         # --- layouts: the one real gap, and it must be LOUD ----------------------------------
         p10 = dk.blank_deck()

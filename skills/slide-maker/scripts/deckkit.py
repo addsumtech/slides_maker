@@ -586,6 +586,18 @@ def _chart_ea_parts(slide):
     foreign deck's 一月/二月/三月 axis would keep an uncontrolled EA font with every gate reporting
     clean. deckkit's own `native_chart()` already stamps exactly this slot at build time; this is
     the same fix on the path retrofit_ea exists for.
+
+    Two things this got wrong first time round, both on FOREIGN charts — the only ones it is for,
+    since a deckkit-built chart already carries a chartSpace `c:txPr`:
+
+    · The insert position. CT_ChartSpace is a SEQUENCE and `c:txPr` is 10th of 14, BEFORE
+      `c:externalData`; appending put it last and the chart part stopped validating. That is the
+      same failure `_EA_FOLLOWERS` exists to prevent for `a:rPr` one screen up — the guard was
+      written for runs and then not applied here. `get_or_add_txPr()` is used instead of hand-rolled
+      XML precisely so the successor list is python-pptx's and not mine.
+    · The CJK guard. Every other branch of the retrofit only touches runs whose text is CJK; this
+      one ran on any chart at all, so an all-Latin deck came back "stamped 1 run(s)" with its chart
+      part rewritten for nothing. A chart's text is in `c:v` cells, so that is where to look.
     """
     for sh in slide.shapes:
         if not getattr(sh, "has_chart", False):
@@ -594,14 +606,14 @@ def _chart_ea_parts(slide):
             cs = sh.chart._chartSpace
         except Exception:
             continue
+        if not any(_has_cjk(v.text or '') for v in cs.iter(qn('c:v'))):
+            continue                   # a Latin chart is not this function's business
         txPr = cs.find(qn('c:txPr'))
         if txPr is None:
-            txPr = cs.makeelement(qn('c:txPr'), {})
-            body = txPr.makeelement(qn('a:bodyPr'), {})
-            lst = txPr.makeelement(qn('a:lstStyle'), {})
-            para = txPr.makeelement(qn('a:p'), {})
-            txPr.extend([body, lst, para])
-            cs.append(txPr)            # c:txPr is late in CT_ChartSpace; append is its position
+            try:
+                txPr = cs.get_or_add_txPr()      # python-pptx owns the CT_ChartSpace child order
+            except Exception:
+                continue                          # cannot place it safely -> leave the part alone
         para = txPr.find(qn('a:p'))
         if para is None:
             para = txPr.makeelement(qn('a:p'), {})

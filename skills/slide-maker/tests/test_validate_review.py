@@ -215,6 +215,28 @@ def main():
     check("the whole-deck coherence critic owes memory_sentence and NOT per_slide",
           validate_critic(r) == [], str(validate_critic(r)))
 
+    # ...and recognising a NON-LENS pass must never switch the whole gate off. The first draft
+    # returned before the probe loop whenever no lens was owed, so `plan_audit: {}` +
+    # contract_card_seen:true + no probes validated clean under the exact phrasing
+    # large-deck-orchestration.md prescribes — the D1 shape, reachable by writing one word. It also
+    # inverted this file's own rule: an unparseable line was held to both lenses while "coherence"
+    # bought total exemption.
+    for passes in (["whole-deck coherence pass (arc + seams)"], ["seams and arc pass"],
+                   ["全篇连贯性审阅"]):
+        r = sole_critic()
+        r["coverage"]["passes"] = passes
+        r["plan_audit"] = {}
+        r.pop("probes", None)
+        errs = validate_critic(r)
+        check("a coherence-only pass does NOT switch the gate off (%s)" % str(passes)[:24],
+              has(errs, "$.probes.memory_sentence: missing") and has(errs, "$.plan_audit:"))
+    r = sole_critic()
+    r["coverage"]["passes"] = ["whole-deck coherence pass (arc + seams)"]
+    r["plan_audit"] = None
+    r["probes"] = {"memory_sentence": "one pass, no gating"}
+    check("...but the same critic filing honestly is clean",
+          validate_critic(r) == [], str(validate_critic(r)))
+
     # --- a scalar where the evidence goes is a skipped judgement, not a shorthand -------
     # The sibling fields ARE plain strings (`skeleton_rhythm`, `register_interiors`), so this is
     # how the block naturally degrades — and a `_is(…, "dict")` guard with no else let it buy a
