@@ -256,7 +256,16 @@ def _boxes(slide, sw, sh, slide_no=None):
                     "paras": paras, "solid": s.shape_type in SOLID, "align": align, "anchor": anchor,
                     "font": _face, "bold": _bold,
                     "text": bool(s.has_text_frame and txt), "descr": descr, "mathfont": mathfont,
-                    "title_ph": tph, "bg": (w * h) >= 0.95 * (sw * sh), "grp": grp})
+                    "title_ph": tph, "bg": (w * h) >= 0.95 * (sw * sh), "grp": grp,
+                    # HOLLOW: an outlined shape with no fill, no picture and no text of its own —
+                    # a frame, a ring, a rule box, a plate outline. Its bounding box is NOT ink a
+                    # reader receives, and counting it as such is why "this form spends 40% of the
+                    # page on one sentence" is invisible to every density check: measured, a single
+                    # empty outlined rect with four characters inside scored 49% ink coverage, i.e.
+                    # a page carrying one word read as half full. Classified here rather than in
+                    # the coverage function because every fact it needs was already gathered.
+                    "hollow": (not is_pic and fill_rgb is None and not fill_unk
+                               and not (s.has_text_frame and txt))})
     return out
 
 
@@ -1134,6 +1143,10 @@ def _slide_stats(slide, bx, sw, sh):
         "text_cov": _coverage([s for s in bx if s["text"] and not s["bg"]], sw, sh),
         "ink_cov": _coverage([s for s in bx if not s["bg"]], sw, sh),
         "ink_cov_nopic": _coverage([s for s in bx if not s["bg"] and not s["pic"]], sw, sh),
+        # The same union with hollow decoration removed — what a reader actually receives. Kept
+        # BESIDE the others rather than replacing them: the existing bands were calibrated against
+        # the old number, so moving them silently would re-tune every threshold in this file.
+        "ink_content": _coverage([s for s in bx if not s["bg"] and not s["hollow"]], sw, sh),
         "max_pt": max((pt for pt, _ in sizes), default=0.0),
         "sizes": sizes,
         "n_shapes": len([s for s in bx if not s["bg"]]),
@@ -1668,6 +1681,34 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False):
                          f"for a ~{r['load']}-word content slide — strengthen the hero, or declare the "
                          f"quiet register with design_intent(envelope=...) if the air is the point; "
                          f"only then consider enriching or merging with a thin neighbour")
+        # HOLLOW FILL: the page's ink is mostly a DRAWN CONTAINER rather than content. This is the
+        # one thing UNDERFILLED structurally cannot see: coverage is a bounding-box union, so an
+        # empty outlined frame counts its whole footprint, and a page carrying four characters
+        # inside one scored 49% — comfortably "full" by every density check in this file, and
+        # therefore exempt from UNDERFILLED too. Measured on a real build: a three-node diagram
+        # spent ~40% of a page to carry one sentence and every gate reported the page clean, so
+        # many rounds went into its SPACING before anyone asked whether the form was right.
+        #
+        # It fires only where all three hold, because any one alone is ordinary craft:
+        #   · the container is doing most of the work (a big gap between the two ink measures),
+        #   · what it contains is thin (a low word load), and
+        #   · the page is otherwise typographically flat — no hero. A hero + air is the oldest
+        #     move in editorial design and is exactly what `_composed_void` already protects.
+        # The advice is deliberately about the FORM, not the geometry: nudging this page's spacing
+        # is the wrong repair, and every other message in this file points at spacing.
+        if (mode != "surface" and 0 < i < last_body
+                and r["ink_cov"] >= 0.28
+                and r["ink_cov"] - r.get("ink_content", r["ink_cov"]) >= 0.20
+                and r["load"] < 25
+                and not r.get("big_pic_fg", r["n_pic"] > 0)
+                and not (r.get("intent") or {}).get("envelope")
+                and not _composed_void(r)):
+            warns.append(f"HOLLOW FILL: slide {i+1} reads as {r['ink_cov']*100:.0f}% full but only "
+                         f"{r['ink_content']*100:.0f}% is content — the rest is a drawn container "
+                         f"around ~{r['load']} words. Ask whether the FORM is right before touching "
+                         f"the spacing: a frame this large is usually a diagram or panel carrying "
+                         f"one sentence, and the cheap fix is to demote it (an annotation, a line "
+                         f"in the list it sits beside) rather than to re-space it")
         # DEAD BOTTOM: an interior content slide whose content stops well above the footer — the
         # lower third reads as an accidental void even when overall ink% passes (a wide-but-shallow
         # layout). Charts and big fg imagery earn their own whitespace; text/panel slides don't.

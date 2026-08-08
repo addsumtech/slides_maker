@@ -101,6 +101,18 @@ jobs:
       # build across 6 of 14 slides, silently, for the whole build. text() gained a seventh slot;
       # this suite holds both the new capability and the backward compatibility that makes it safe,
       # since every component in the library is built from 5- and 6-element tuples.
+      # Occupancy is a bounding-box union, so a drawn container counts as a full page: measured,
+      # one empty outlined rect with four characters inside scored 49% ink — "full" by every
+      # density check, and therefore exempt from UNDERFILLED too. The suite also pins the BOUNDARY:
+      # a white-filled node box is NOT hollow, because that is the ordinary card form and widening
+      # the rule would fire across a large class of legitimate decks.
+      - name: Hollow ink (a container is not content)
+        run: |
+          set -o pipefail
+          python tests/test_hollow_ink.py | tee /tmp/hollow.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/hollow.log || {
+            echo "::error::hollow-ink suite did not run to completion"; exit 1; }
+
       - name: CJK face routing (the 7th slot · unreached-face warn · back-compat)
         run: |
           set -o pipefail

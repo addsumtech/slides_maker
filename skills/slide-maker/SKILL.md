@@ -1460,7 +1460,7 @@ coverage** vs its role's OCCUPANCY band (cover/divider ~25–35 · exec/summary 
 **build** presence · **sim↑** (layout-skeleton similarity vs the previous slide); deck-wide it
 prints the **font histogram + type-drama ratio** and **builds/transitions n/N**. Its `[stats]`
 warnings name the rule they measure — **`TEXT WALL`** (word budget blown → cut copy to notes or
-split), **`CROWDED`** (occupancy past ~70% — role bands: cover 25–35 · exec 45–60 · technical 55–70 →
+split), **`HOLLOW FILL`** (the page reads as full but most of its ink is a drawn CONTAINER — occupancy is a bounding-box union, so an outlined frame counts its whole footprint and a page carrying four characters inside one measured 49%. 🔴 **Ask whether the FORM is right before touching the spacing**: every other warning here points at geometry, and the repair for this one is usually to demote the container, not to re-space it), **`CROWDED`** (occupancy past ~70% — role bands: cover 25–35 · exec 45–60 · technical 55–70 →
 subtract or split, don't shrink), **`LAYOUT SAMENESS`**
 (3 consecutive slides share one skeleton → the §1.2 skeleton-rotation rule failed), **`FLAT TYPE`**
 (no typographic hero → the type-scale drama rule failed), **`SMALL TYPE`** (body-median under the
