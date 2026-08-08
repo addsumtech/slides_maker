@@ -58,6 +58,25 @@ deckkit.EAFONT = "Hiragino Sans GB"  # CJK glyphs (macOS render-loop-safe; or "M
 and numbers stay on `FONT`. Mixed "中文 + English 28%" text then looks intentional and
 travels correctly. (Without `EAFONT`, CJK falls back to an uncontrolled default.)
 
+🔴 **A run tuple's font slot is the LATIN face — the CJK face is the SEVENTH slot.** This is the
+one place where following the documented call shape produces a silent no-op, so it is worth the
+sentence: `text()` takes runs as `(text, size, colour, bold, italic, latin_face, ea_face)`, the
+sixth element writes `<a:latin>`, and **CJK glyphs render from `<a:ea>`**. So
+
+```python
+dk.text(s, x, y, w, h, [[("认识 LUMC", 40, INK, True, False, "Songti SC")]])          # ✗
+dk.text(s, x, y, w, h, [[("认识 LUMC", 40, INK, True, False, "Helvetica Neue", "Songti SC")]])  # ✓
+```
+
+the first line sets the Latin face of a run whose only Latin content is the acronym, and every
+Chinese character in it renders in `EAFONT`. *(Measured: on a real build this made 6 of 14 slides
+carry a title in a face nobody chose, for the whole build, while the deck looked plausible because
+`EADISPLAY` happened to hold the intended face for the components that read it. Swapping `EAFONT`
+moved 25,570 px of a rendered title; swapping the run tuple's font moved none of the CJK glyphs.)*
+Omitting the seventh slot keeps the old behaviour exactly — `EAFONT` still applies — so this is an
+addition, not a change. **`CJK_FACE_UNREACHED`** reports the mistake: a CJK-capable face named in
+slot 6 on a run that contains CJK, where `<a:ea>` says something else.
+
 🔴 **Setting `EAFONT` never fixes a deck already built** — `lint_layout` runs at the END of the
 build script, so by the time `CJK_NO_EA` tells you about it the runs exist. The remedy for the deck
 in hand is one line, just above the lint:

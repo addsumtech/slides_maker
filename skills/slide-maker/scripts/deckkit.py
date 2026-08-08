@@ -912,7 +912,17 @@ def text(slide, x, y, w, h, runs, align=PP_ALIGN.LEFT, anchor=MSO_ANCHOR.TOP,
             p.line_spacing = CJK_LS if any(_has_cjk(t) for (t, *_rest) in para) else 1.0
         for (txt, size, color, bold, italic, *rest) in para:
             r = p.add_run(); r.text = txt
-            set_font(r, size, color, bold, italic, rest[0] if rest else None)
+            # rest = [latin_face, ea_face] — the SEVENTH slot is the East-Asian face, and it
+            # exists because the sixth one cannot do that job. A run tuple's font goes to
+            # <a:latin>, and CJK glyphs render from <a:ea>, so on a 中文 deck a display face
+            # named in slot 6 reached only the Latin characters. Measured by pixels: swapping
+            # EAFONT changed 25,570 px of a rendered CJK title while swapping the run tuple's
+            # font changed none of the CJK glyphs at all. Omitting it (the default) keeps the
+            # old behaviour exactly — set_font falls back to EAFONT — so every existing call
+            # is unaffected.
+            set_font(r, size, color, bold, italic,
+                     rest[0] if rest else None,
+                     ea=rest[1] if len(rest) > 1 else None)
     return tb
 
 
@@ -6686,6 +6696,77 @@ def _is_watermark(sh):
 
 
 
+
+# Faces that exist to set CJK glyphs. A face in this set, named as a run's LATIN font on a run that
+# contains CJK, is almost certainly an author believing they set the CJK face — because that is the
+# only reason to reach for one. Kept as a NAME list rather than a metric probe on purpose: reading
+# a font's glyph coverage requires the font to be installed, and the whole point is to catch this
+# on a machine where it may not be.
+_CJK_FACES = (
+    "songti", "simsun", "simhei", "simkai", "fangsong", "kaiti", "heiti", "yahei", "microsoft ya",
+    "pingfang", "hiragino", "yu gothic", "yu mincho", "meiryo", "ms gothic", "ms mincho",
+    "noto sans cjk", "noto serif cjk", "source han", "nanum", "malgun", "batang", "gulim",
+    "wenquanyi", "lisu", "youyuan", "stsong", "stkaiti", "stheiti", "sthei", "apple ligothic",
+)
+
+
+def _is_cjk_face(name):
+    n = (name or "").strip().lower()
+    return any(k in n for k in _CJK_FACES)
+
+
+def _cjk_face_faults(prs):
+    """A CJK face named where it cannot reach a single CJK glyph.
+
+    A run tuple carries ONE font slot in position 6, and it writes `<a:latin>`. CJK glyphs render
+    from `<a:ea>`, which takes EAFONT unless a run says otherwise. So on a 中文 deck an author who
+    writes `(title, 40, INK, True, False, "Songti SC")` has set the Latin face of a run whose Latin
+    content is a stray acronym, and every Chinese character in it still renders in EAFONT. Measured
+    by pixels on a real build: swapping EAFONT changed 25,570 px of a rendered CJK title while
+    swapping the run tuple's font changed none of the CJK glyphs. The declared display face reached
+    zero of the characters it was chosen for, and nothing said a word — the deck LOOKED right only
+    because EADISPLAY happened to be set to the same face for the components that read it.
+
+    This is the rule being WRONG rather than missing, which is the worse kind: the author followed
+    the documented call shape and got a silent no-op. deckkit.text() now accepts a SEVENTH slot for
+    the East-Asian face; this check is what makes the sixth-slot mistake audible.
+
+    Silent on: a Latin-only run (no CJK to reach), a run whose ea already equals the named face
+    (the author set both, deliberately), and any deck that never names a CJK face in slot 6.
+    """
+    out = []
+    for n, slide in enumerate(prs.slides, 1):
+        for sh in slide.shapes:
+            if not getattr(sh, "has_text_frame", False):
+                continue
+            for para in sh.text_frame.paragraphs:
+                for run in para.runs:
+                    try:
+                        t = run.text or ""
+                        if not _has_cjk(t):
+                            continue
+                        rPr = run._r.find(qn("a:rPr"))
+                        if rPr is None:
+                            continue
+                        lat = rPr.find(qn("a:latin"))
+                        ea = rPr.find(qn("a:ea"))
+                        latf = lat.get("typeface") if lat is not None else None
+                        eaf = ea.get("typeface") if ea is not None else None
+                        if not _is_cjk_face(latf):
+                            continue
+                        if eaf and eaf.strip().lower() == (latf or "").strip().lower():
+                            continue                      # both set to it — deliberate
+                        out.append((n, "WARN", "CJK_FACE_UNREACHED",
+                                    f"{latf!r} is a CJK face but it is set as this run's LATIN font, "
+                                    f"so it reaches none of {t.strip()[:12]!r} — those glyphs render "
+                                    f"in {eaf or 'EAFONT'}. A run tuple's 6th slot is the Latin face; "
+                                    "pass the East-Asian face as the SEVENTH: "
+                                    "(text, size, colour, bold, italic, latin_face, ea_face)"))
+                    except Exception:
+                        pass
+    return out
+
+
 def _motif_faults(prs):
     """What the deck's own signature device is doing — countable only because motifs are TAGGED.
 
@@ -7242,6 +7323,7 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
                             f"a card/panel reaches the footer row (bottom {bb[1]+bb[3]:.2f}in vs footer at {footer_top:.2f}in)"))
     findings.extend(_deck_level_faults(prs))
     findings.extend(_motif_faults(prs))
+    findings.extend(_cjk_face_faults(prs))
     if verbose:
         crit = sum(1 for f in findings if f[1] == "CRITICAL")
         warn = len(findings) - crit

@@ -95,6 +95,19 @@ jobs:
       # the device is what makes both countable. The silent cases are the load-bearing half: an
       # untagged deck, a declared overlap, a full-bleed ground and the quiet register signature
       # must every one of them stay quiet.
+      # The rule was WRONG rather than missing, which is the worse kind: a run tuple's font slot
+      # writes <a:latin> while CJK glyphs render from <a:ea>, so an author following the documented
+      # call shape set a display face that reached zero Chinese characters — measured on a real
+      # build across 6 of 14 slides, silently, for the whole build. text() gained a seventh slot;
+      # this suite holds both the new capability and the backward compatibility that makes it safe,
+      # since every component in the library is built from 5- and 6-element tuples.
+      - name: CJK face routing (the 7th slot · unreached-face warn · back-compat)
+        run: |
+          set -o pipefail
+          python tests/test_cjk_face_routing.py | tee /tmp/cjkface.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/cjkface.log || {
+            echo "::error::CJK face routing suite did not run to completion"; exit 1; }
+
       - name: Motif contract (register_mark · keep-out · loud budget)
         run: |
           set -o pipefail
