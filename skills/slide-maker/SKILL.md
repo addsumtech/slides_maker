@@ -286,8 +286,22 @@ means either discarding their answers or ignoring the update. Ask once, at the t
 *(Per-deck AUTO WAIVER: do **not** stop. Default to **no — build on the installed version**, and say
 so in the first FYI. Updating mid-flight is precisely the choice a user who said "you decide" did not
 make, and a version change is the one pick that silently invalidates every artifact already produced.)*
-- **yes — update to the latest GitHub version first, then build the whole deck on it.** Then run the command for their install shape: `git -C <repo> pull
-  --ff-only` (git checkout) or `npx skills add addsumtech/slides_maker` (copied install). 🔴 **Re-read SKILL.md — and every reference/agent file you have already opened this session —
+- **yes — update to the latest GitHub version first, then build the whole deck on it.** DO IT
+  YOURSELF — the user answered the question, not "give me instructions". `check_version.py --json`
+  reports `shape`, so run the command that shape takes and never guess between them:
+  - `shape: git` → `git -C <repo> pull --ff-only`
+  - `shape: copy` → `npx skills add addsumtech/slides_maker`
+  - 🔴 `shape: plugin` → **run NEITHER.** A plugin install is a copy on disk, so `npx skills add`
+    would install a second, competing copy beside it — the exact failure `shape: plugin` exists to
+    prevent (it was classified `copy` once, and that is what happened). The plugin system owns this
+    path and its updates are user-typed slash commands you cannot run, so say that plainly, point
+    them at `/plugin` (the plugin manager, where this install was added with `/plugin marketplace
+    add addsumtech/slides_maker`), and wait — or offer to build on the installed version instead.
+    Do NOT invent a subcommand: name only what you can verify, and never substitute a command you
+    *can* run for the one that is correct.
+  - `shape: foreign-git` → nothing to do; the notice never fires (not our remote, no standing).
+
+  🔴 **Re-read SKILL.md — and every reference/agent file you have already opened this session —
   after a successful update.** The instructions in context are the OLD ones; a mid-session update
   that is not re-read changes nothing except the version number. Where the two disagree, the file
   on disk wins.

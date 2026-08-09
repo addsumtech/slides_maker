@@ -280,20 +280,11 @@ This is the same skill, just managed by Claude Code's plugin system instead of c
 
 slide-maker checks before it asks you anything, and **stays completely silent when you are current**. When a newer version exists it does not update itself and does not just mention it — it asks, once, at the top:
 
-- **yes** — update to the latest version on GitHub first, then build the whole deck on that one.
-- **no** — don't update; build on the version you already have installed. The right answer mid-project: a deck half-built by one version and half by another is worse than one built entirely by the older.
+- **yes** — it updates for you, then builds the whole deck on the new version. You don't need to know how you installed it: it works that out and runs the right command itself. (One exception it will tell you about — a Claude Code plugin install updates through the plugin system, and those are slash commands only you can type, so it points you at `/plugin` instead of guessing at a command that would install a second copy beside the first.)
+- **no** — don't update; build on the version you already have installed.
 - **other** — you have local changes. It shows you what is yours and what is incoming, and resolves nothing on its own.
 
 The remote lookup is cached for 24 hours, but whether *you* have uncommitted work is re-read every time — a day-old "your tree is clean" is exactly the reading that gets someone's edits overwritten. Offline, it stays quiet rather than getting in the way.
-
-How you update depends on how you installed:
-
-```bash
-npx skills add addsumtech/slides_maker            # one-liner install: re-run the same command
-git -C /path/to/slides_maker pull --ff-only       # cloned repo
-```
-
-Installed as a Claude Code plugin? The plugin system handles updates for you — that is the main reason to prefer that path.
 
 Don't want to be told: `export SLIDE_MAKER_NO_VERSION_CHECK=1`.
 
