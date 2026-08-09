@@ -9,6 +9,100 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+## [4.7.0] — 2026-08-09
+
+Everything here was found the same way: by building a real 12-page Chinese deck end to end and
+looking at what no gate caught, then by reading what other slide skills do that this one does
+not. **Five of the seven fixes are for defects that passed every existing check** — which is the
+only kind worth shipping a release for.
+
+### The ruler was wrong on Chinese decks
+
+- **CJK widths were short by ~46%.** `_ink_rect` took a run's face from `run.font.name`, which
+  python-pptx reads out of `<a:latin>` — but a Chinese glyph renders from `<a:ea>`. So every
+  geometry check on a 中文 deck (`TEXT_OVERLAP`, `OFF_CANVAS`, `ESCAPES_CARD`, `vstack`'s block
+  heights) was scored in a Latin face: 27 full-width characters at 13pt measured **2.6181in
+  against a true 4.8750in**. Its signature in practice is the worst kind — a page collides after
+  a generous-looking margin was left, so the operator blames their own arithmetic. Resolved
+  through the `_inherited_ea` chain `retrofit_ea` already walks, so all three agree by
+  construction. A precision fix, not a loosened threshold: the delivered deck re-measures with no
+  new findings.
+
+### The rules the skill states are now followable
+
+- **`content_band()` was unsafe against the deck's own chrome.** It returned a constant 1.15in —
+  which is `title_bar()`'s bottom plus a gap, and only for a title with NO kicker. Add a kicker
+  and the first content block landed 0.09in *inside* the title rule. That was shipping in this
+  skill's own worked example, in the helper SKILL.md offers as the cure for hand-picked
+  coordinates. It now measures tagged chrome; the no-kicker case still returns exactly 1.15, so
+  decks that were correct are byte-identical.
+- **New `chrome_band()`** for chrome this library did not draw — a deck with its own `style.py`,
+  or `archetypes.py`, which builds direction-gate previews for style modules whose title geometry
+  is unknown *by construction*. It opened content at a hand-picked y=1.55 for every direction;
+  measured on a 34pt-title direction, chrome ends at 1.830, so the preview collided with its own
+  title **on the slide a user approves a whole deck from**.
+- **"Measure or anchor, never hand-pick a y" was unfollowable for every component that grows** —
+  173 public callables, 4 `measure_*` helpers. Added `measure_table` · `measure_timeline` ·
+  `measure_takeaway_rail` · `measure_chip` · `measure_modbox` · `measure_node`, and the last four
+  are **enforced by their own component** (`h = max(h, measure_…)`, as `callout` has always
+  enforced `measure_callout`), so one formula has two callers and cannot drift. Two live defects
+  fell out: `takeaway_rail` had no height parameter and no return value and reserved a fixed
+  2.0in, putting a long body's ink at y=5.45 — inside the footer band — with the lint clean; and
+  `node`, the builder every hand-made diagram uses, sits under the 0.5in² threshold at ordinary
+  flowchart sizes, so its label escaped by 0.55in above AND below with every gate green.
+
+### Four checks for defect classes nothing could see
+
+- **`OOXML_SHAPE`** (CRITICAL) — the slide part violates its own schema. **The only defect class
+  where the file does not open at all**, and every other check here is structurally blind to it:
+  they are geometric, pixel-based or semantic, and none asks whether the part is well-formed.
+  Measured: two `Build(s)` on one slide left TWO `<p:timing>` elements — `save()` silent,
+  LibreOffice happy, `lint_layout` clean, and `preflight_check.py` read the *duplicate* as **more**
+  compliant. `anim.apply()` now refuses a second call outright and inserts in schema order.
+  Deliberately not a full XSD validator: it asserts the cardinality and order of the elements this
+  toolkit writes by hand, which is where its own bugs land.
+- **`TEXT_GRAZES_SHAPE`** — a label's ink running into the bar/chip/node beside it. `TEXT_OVERLAP`
+  measures text against **text**, so this was invisible, exactly as a motif was before
+  `TEXT_OVER_MOTIF` — the difference being that nobody tags a bar. The discriminator is
+  *containment*, not overlap, so a value printed inside its own bar stays silent. The message names
+  the repair that actually works: move the label column's **edge**, derived from how far the mark
+  can reach — shortening the string only moves the collision.
+- **`WEIGHT MONOCULTURE`** `[stats]` — the deck puts its visual weight on the same side page after
+  page. Ported from a published per-slide "visual imbalance" metric as a **deck-level share**
+  instead, deliberately: an asymmetric page is what the taste protocol asks for, so a per-slide
+  tolerance would fire on every deliberate composition. Not added to `SAMENESS_CODES` — that
+  composite is calibrated, and a new code earns its place after being seen on real decks.
+- **`overlap_intent` now means the same thing at both gates.** It always worked at build time and
+  the render-time lint never read it, so a declared composition passed one gate and was refused by
+  the other — a declaration one tool honours and another ignores teaches authors that declaring is
+  pointless.
+
+### Something that says whether the SKILL got better
+
+- **`scripts/run_eval.py` + `evals/evals.json`.** All 20 suites asked whether the *code* works;
+  nothing asked whether 2109 lines of SKILL.md, 35 references and 5 agents make the *deck* better,
+  so every claim of improvement was an impression. `--score` reads an already-built deck and
+  decides in ~1s with no model and no network (CI-able); producing the deck is the other half and
+  is developer/nightly-only. Assertions are only what a program can be wrong about in one
+  direction — including `no_unsourced_numbers` (the fidelity floor, mechanised) and
+  `reference_reached`, which needs a transcript and is the only way to answer *was that reference
+  actually read*. 🔴 A **skipped** assertion is never a pass. No taste scoring: reference-similarity
+  rewards imitation and closed-form beauty composites fight this skill's own diversity gates, so
+  both were examined and rejected.
+
+### Also
+
+- **`declare_delivery(OUT, mode)`** records the delivery mode in `.deck-gates.json`, which both
+  `lint_deck.py` and `render_deck.py --gate-check` read. Measured on a delivered self-read deck:
+  20 `[stats]` lines with no flag, 10 with `--selfread` — the ten were the ~40-word *presented*
+  budget applied to a deck nobody speaks. A mode carried only in flags is a fact carried by memory.
+- **The worked example is checked like a contract.** Whatever `build_example_generic.py`
+  demonstrates is what gets written; it used `vstack` 0 times, `content_band` 0 times, `tag_motif`
+  0 times and hand-picked 6 coordinates. `tests/test_scaffold_teaches.py` now parses it.
+- `_chrome_bottom` reads the XML rather than building 11 shape proxies (886µs → 44µs).
+- Cost of everything above, measured with a noise floor: **+52ms on a build+lint cycle = 1.7% of a
+  build round** once the ~2.8s render is counted, and invisible against model round-trips.
+
 ## [4.6.0] — 2026-08-08
 
 Everything below was found by building one real 14-page deck end to end and looking at the
