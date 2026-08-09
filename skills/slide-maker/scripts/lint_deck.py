@@ -1124,6 +1124,21 @@ def _slide_stats(slide, bx, sw, sh):
             break
     # lopsided inputs: per-half occupancy of content ink (bg plate + footer chrome excluded)
     halves = _half_occ([s for s in bx if not s["bg"] and s["t"] < footer_y], sw, sh)
+    # Area-weighted horizontal centroid of the page's ink, as an offset from centre in -1..1.
+    # LOPSIDED (below) is a BINARY extreme — one half under 5% occupancy while the other clears
+    # 33% — so it only speaks when a half is essentially dead. This is the continuous quantity it
+    # cannot see: a page with ink in both halves whose WEIGHT still sits to one side. On its own
+    # that is composition, not a defect, which is why nothing per-slide is built on it; it feeds
+    # the deck-level WEIGHT MONOCULTURE share, where leaning the same way on every page is the
+    # template tell.
+    _lean_num = _lean_den = 0.0
+    for _s in bx:
+        if _s["bg"] or _s["t"] >= footer_y or _s["w"] <= 0 or _s["h"] <= 0:
+            continue
+        _a = _s["w"] * _s["h"]
+        _lean_num += _a * (_s["l"] + _s["w"] / 2.0)
+        _lean_den += _a
+    lean_x = ((_lean_num / _lean_den) - sw / 2.0) / (sw / 2.0) if _lean_den > 0 else 0.0
     # card-dominance input: how much of the canvas is covered by LARGE solid panels/cards (the
     # greedy first-draft default). Small diagram nodes (<1.5in²) and pictures don't count.
     boxy_area = sum(s["w"] * s["h"] for s in bx
@@ -1138,7 +1153,7 @@ def _slide_stats(slide, bx, sw, sh):
     return {
         "title_pt": title_pt, "title_txt": title_txt, "title_top": title_top,
         "body_tier": body_tier, "big_run_words": big_run_words, "intent": intent,
-        "halves": halves, "boxy": boxy,
+        "halves": halves, "boxy": boxy, "lean_x": lean_x,
         "notes": notes_text,
         "notes_words": _text_load(notes_text),
         "pingfang": pingfang,
@@ -1880,6 +1895,31 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False):
                          f"template even when forms vary. Let a statement slide stop high with real "
                          f"void, let a grounded slide ride the baseline (aim ~1/3 default / 1/3 upper "
                          f"/ 1/3 low; declare deliberate ones with deckkit.design_intent)")
+        # ── WEIGHT MONOCULTURE: the deck leans the same way on page after page.
+        # A single lopsided page is composition — the skill asks for it, and design_intent(weight=)
+        # is how an author declares one. What no check could see is the DECK doing it by habit: ink
+        # pushed left and the right held as air, over and over, until the reader is looking at one
+        # template with different content in it. LOPSIDED cannot reach this (it needs a half under
+        # 5% occupancy) and per-slide balance metrics must not (they would punish exactly the
+        # asymmetric editorial compositions this skill exists to produce, which is why the
+        # continuous quantity is only ever used HERE, as a share).
+        # Measured on a delivered 12-page deck: 6 of 10 content slides leaned left, ZERO leaned
+        # right. One of the six was declared; the other five were habit, and no gate said a word.
+        # Declared leans are excluded from both sides of the ratio — they were decided, not defaulted.
+        leaners = [r for r in interior
+                   if abs(r.get("lean_x", 0.0)) > 0.06 and not (r.get("intent") or {}).get("weight")]
+        if len(leaners) >= 4:
+            left = sum(1 for r in leaners if r["lean_x"] < 0)
+            one_way = max(left, len(leaners) - left)
+            if one_way / float(len(leaners)) >= 0.85 and len(leaners) / float(len(interior)) >= 0.5:
+                side = "LEFT" if left >= len(leaners) - left else "RIGHT"
+                warns.append(
+                    f"WEIGHT MONOCULTURE: {one_way} of {len(leaners)} leaning content slides put "
+                    f"their visual weight on the {side} (and {len(leaners)} of {len(interior)} lean "
+                    f"at all) — one lopsided page is composition, the same lean on page after page "
+                    f"is a template. Vary which side carries the weight, or declare the deliberate "
+                    f"ones with deckkit.design_intent(weight=…) so the choice is on the record")
+
         # SHALLOW BAND: the defect that fell exactly BETWEEN the two checks above. Measured on a real
         # 12-page build: five interior slides left 24–37% of the canvas empty below their content
         # (content_bottom 0.63–0.76). Too high for per-slide DEAD BOTTOM (fires under 0.45, tuned for

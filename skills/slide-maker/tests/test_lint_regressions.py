@@ -945,6 +945,38 @@ def main():
     (ok if not _crossing(True) else bad).append(
         "a DECLARED overlap is silent at render time too, as it already was at build time")
 
+    # ---- WEIGHT MONOCULTURE: the deck leans the same way page after page ------------------
+    # A single lopsided page is composition — the skill asks for it and design_intent(weight=) is
+    # how it is declared. LOPSIDED cannot see the deck-level habit (it needs a half under 5%
+    # occupancy), and a per-slide balance metric must NOT be built, because it would punish exactly
+    # the asymmetric editorial compositions this skill exists to produce. So the continuous
+    # quantity is used only as a deck-level share. Both directions asserted; the silent one is
+    # load-bearing.
+    import deckkit as _dk2
+
+    def _lean_deck(mode):
+        _dk2.FONT = "Helvetica Neue"
+        prs = _dk2.blank_deck()
+        for i in range(10):
+            sl = _dk2.add_slide(prs)
+            _dk2.box(sl, 0, 0, 10, 5.625, fill=_dk2.RGBColor(0xF5, 0xF1, 0xE6))
+            _dk2.title_bar(sl, "Page %d" % (i + 1), kicker="test")
+            _dk2.footer(sl, "t", page=i + 1)
+            x = 0.62 if (mode == "left" or i % 2 == 0) else 5.2
+            _dk2.text(sl, x, 1.6, 4.0, 2.2,
+                      [[("A block of body text that carries this page's point and gives the slide a "
+                         "real reading load so it counts as an interior content slide.",
+                         12.5, _dk2.DEEP, False, False, "Helvetica Neue")]], space_after=0)
+        d = tempfile.mkdtemp()
+        out = os.path.join(d, "t.pptx")
+        prs.save(out)
+        return [l for l in lint(out, d).splitlines() if "WEIGHT MONOCULTURE" in l]
+
+    (ok if _lean_deck("left") else bad).append(
+        "a deck that puts its weight on the same side page after page is reported")
+    (ok if not _lean_deck("mixed") else bad).append(
+        "a deck that alternates which side carries the weight is silent")
+
     for line in ok:
         print("  ok   " + line)
     for line in bad:

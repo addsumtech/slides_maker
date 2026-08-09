@@ -1516,7 +1516,15 @@ appear-builds → the motion manifest failed *unless the user opted out of build
 across an 8+-slide deck → the canvas architecture barely rotates), **`TIMID COVER`** (slide 1's
 largest run under 2× body → the cover lacks poster scale), **`FLAT RHYTHM`** (when render PNGs are
 present via `--renders`/`./render`: no light/dark or colour-temperature event across the deck → the
-rhythm map's Background-mode column is single-note), and on CJK decks **`CJK TIGHT LEADING`** (multi-line
+rhythm map's Background-mode column is single-note), **`WEIGHT MONOCULTURE`** (the deck puts its
+visual weight on the SAME side page after page — a share, never a per-slide verdict. One lopsided
+page is composition and this skill asks for it; `LOPSIDED` only speaks when a half is essentially
+dead (<5% occupancy), and a per-slide balance metric would punish exactly the asymmetric editorial
+compositions the taste protocol exists to produce, which is why the continuous quantity is used
+ONLY as a deck-level share. Slides carrying `design_intent(weight=…)` are excluded from both sides
+of the ratio — they were decided, not defaulted. Deliberately **not** in `SAMENESS_CODES` yet: that
+composite is calibrated against this skill's own registers, and a new signal earns its way in after
+it has been seen on real decks, not on the day it ships), and on CJK decks **`CJK TIGHT LEADING`** (multi-line
 CJK at ≤ single spacing → use the script-aware default) and **`CJK-LATIN SPACING`** (both 盘古之白
 conventions mixed → pick one deck-wide). Treat each `[stats]` warning as the NAMED design rule
 having failed measurably: fix it or write one clause of why this deck is the exception, and **paste
