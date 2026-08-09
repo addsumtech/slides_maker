@@ -7238,17 +7238,23 @@ def _graze_faults(prs):
     W, H = prs.slide_width / 914400.0, prs.slide_height / 914400.0
     CONTAINED, MIN_DIP = 0.80, 0.02
     for n, slide in enumerate(prs.slides, 1):
+        # TWO passes on purpose: marks first, and only measure text ink if any mark exists.
+        # `_ink_rect` is the expensive call in this file (it measures every run against real font
+        # metrics) and a page with no filled mark has nothing for a label to collide with.
+        #
+        # Measured honestly: on an ordinary deck this saves nothing, because `title_bar` draws an
+        # accent rule and that rule is a filled mark, so the early-out never fires. It pays only
+        # on pages built from type alone. The check costs ~53ms on a 14-page deck either way —
+        # about a fifth of lint_layout, and 1.7% of a build round once the ~2.8s render is counted,
+        # which is why the real saving (sharing ink rects with _motif_faults, which recomputes the
+        # same ones) has NOT been taken: it is a risky refactor of two working checks for 50ms
+        # nobody waits on.
         marks, texts = [], []
         for sh in slide.shapes:
+            if _is_text(sh):
+                continue
             bb = _bbox_in(sh)
             if bb is None or bb[2] <= 0 or bb[3] <= 0:
-                continue
-            if _is_text(sh):
-                if _is_watermark(sh) or _declared_overlap(sh):
-                    continue
-                r = _ink_rect(sh, bb)
-                if r and r[0]:
-                    texts.append((sh, r[0]))
                 continue
             # a filled, non-bleed mark: the class a label can collide with
             if _is_motif(sh):
@@ -7260,6 +7266,17 @@ def _graze_faults(prs):
             if bb[2] * bb[3] >= W * H * 0.5:
                 continue                      # a half-canvas panel is a ground, not a mark
             marks.append(bb)
+        if not marks:
+            continue                          # nothing to collide with — never measure the ink
+        for sh in slide.shapes:
+            if not _is_text(sh) or _is_watermark(sh) or _declared_overlap(sh):
+                continue
+            bb = _bbox_in(sh)
+            if bb is None or bb[2] <= 0 or bb[3] <= 0:
+                continue
+            r = _ink_rect(sh, bb)
+            if r and r[0]:
+                texts.append((sh, r[0]))
         for tsh, tr in texts:
             ink_a = tr[2] * tr[3]
             if ink_a <= 0:
