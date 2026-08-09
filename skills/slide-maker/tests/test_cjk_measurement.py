@@ -35,10 +35,20 @@ import deckkit as dk                                                  # noqa: E4
 from deckkit import Inches, Pt                                        # noqa: E402
 from pptx.oxml.ns import qn                                           # noqa: E402
 
-PASS, FAIL = [], []
+PASS, FAIL, SKIP = [], [], []
 CJK = "给准备申请的人——学位、博士、岗位，三扇门分别长什么样"   # 27 glyphs
 TRUE_W = 27 * 13 / 72.0                                              # full-width at 13pt
 LATIN = "A subtitle running straight across the page"
+EA, LAT = "Hiragino Sans GB", "Helvetica Neue"
+
+# 🔴 An absolute width is only meaningful where the face is actually INSTALLED. On a bare CI
+# runner none of these exist and every one of them substitutes to DejaVu Sans, which carries no
+# CJK glyphs — so 27 full-width characters measure 3.0697in there instead of 4.8750in no matter
+# which face name the code resolves. The first version of this suite asserted the macOS numbers
+# unconditionally and went red on GitHub while passing locally: it was testing the runner's font
+# directory, not the fix. What the fix actually does is resolve the FACE, so that is what is
+# asserted everywhere; the inch values are asserted only where they can be true.
+HAVE_CJK_FONT = not dk._font_substituted(EA)
 
 
 def check(name, cond, detail=""):
@@ -47,9 +57,26 @@ def check(name, cond, detail=""):
           + (("  — " + str(detail)) if detail and not cond else ""))
 
 
-def ink_w(text, latin="Helvetica Neue", ea=None, inherited=None, size=13):
-    """The ink width _ink_rect measures for one un-wrapped run."""
-    dk.FONT, dk.EAFONT = "Helvetica Neue", "Hiragino Sans GB"
+def check_metric(name, cond, detail=""):
+    """A check whose truth depends on a real CJK font being installed."""
+    if not HAVE_CJK_FONT:
+        SKIP.append(name)
+        print("  skip " + name + "  — %r is not installed here; width would be DejaVu's" % EA)
+        return
+    check(name, cond, detail)
+
+
+def face_of(text, latin="Helvetica Neue", ea=None, inherited=None, size=13):
+    """The face `_ink_rect` will MEASURE this run in — the fix, isolated from font metrics."""
+    sh = _shape(text, latin, ea, inherited, size)
+    r = sh.text_frame.paragraphs[0].runs[0]
+    return dk._measuring_face(r)
+
+
+def _shape(text, latin, ea, inherited, size):
+    """One un-wrapped run in a textbox, with the ea face supplied in whichever of the three
+    places a real deck puts it: the deck default, the run itself, or one level up."""
+    dk.FONT, dk.EAFONT = LAT, EA
     prs = dk.blank_deck()
     s = dk.add_slide(prs)
     if inherited:
@@ -64,12 +91,16 @@ def ink_w(text, latin="Helvetica Neue", ea=None, inherited=None, size=13):
         d = pPr.makeelement(qn("a:defRPr"), {})
         pPr.append(d)
         d.append(d.makeelement(qn("a:ea"), {"typeface": inherited}))
-        sh = tb
-    else:
-        run = (text, size, dk.DEEP, False, False, latin) if ea is None \
-            else (text, size, dk.DEEP, False, False, latin, ea)
-        dk.text(s, 0.62, 2.0, 8.76, 0.4, [[run]], space_after=0, wrap=False)
-        sh = list(s.shapes)[0]
+        return tb
+    run = (text, size, dk.DEEP, False, False, latin) if ea is None \
+        else (text, size, dk.DEEP, False, False, latin, ea)
+    dk.text(s, 0.62, 2.0, 8.76, 0.4, [[run]], space_after=0, wrap=False)
+    return list(s.shapes)[0]
+
+
+def ink_w(text, latin="Helvetica Neue", ea=None, inherited=None, size=13):
+    """The ink width _ink_rect measures for one un-wrapped run."""
+    sh = _shape(text, latin, ea, inherited, size)
     r = dk._ink_rect(sh, dk._bbox_in(sh))
     return r[0][2] if r and r[0] else 0.0
 
@@ -77,20 +108,37 @@ def ink_w(text, latin="Helvetica Neue", ea=None, inherited=None, size=13):
 def main():
     print("CJK measurement")
 
-    # ---- the fix -----------------------------------------------------------------------
+    # ---- the fix, stated as what it actually does: resolve the FACE ---------------------
+    # This half is pure string resolution and holds on any machine, with or without the fonts.
+    dk.FONT, dk.EAFONT = LAT, EA
+    for label, kw, want in (
+            ("the deck's EAFONT",              {},                      EA),
+            ("an explicit 7th-slot ea face",   {"ea": "Songti SC"},     "Songti SC"),
+            ("an INHERITED ea (para defRPr)",  {"inherited": "Songti SC"}, "Songti SC"),
+    ):
+        check("a CJK run is measured in %s, not <a:latin>" % label,
+              face_of(CJK, **kw) == want, face_of(CJK, **kw))
+    check("a LATIN run keeps <a:latin> (the untouched half)", face_of(LATIN) == LAT,
+          face_of(LATIN))
+
+    # ...and the width follows the face it resolved — the invariant that ties the two together,
+    # true whether the font is installed (4.8750in) or substituted (DejaVu's number).
     w = ink_w(CJK)
-    check("a CJK run measures at its REAL width, not the Latin face's",
-          abs(w - TRUE_W) < 0.02, "%.4f vs %.4f" % (w, TRUE_W))
-    check("...which is ~1.86x what the old ruler reported (2.6181in)", w > 4.0, "%.4f" % w)
+    expect = dk._natural_width_in([(CJK, False)], 13, EA)
+    check("the ink width IS the width of that face, not of the Latin one",
+          abs(w - expect) < 0.02, "%.4f vs %.4f" % (w, expect))
 
-    # the face may live one level up — a supplied template's usual shape
-    w = ink_w(CJK, inherited="Songti SC")
-    check("an INHERITED ea face (paragraph defRPr) is honoured too",
-          abs(w - TRUE_W) < 0.02, "%.4f" % w)
-
-    # an explicit 7th slot must win
-    w = ink_w(CJK, ea="Songti SC")
-    check("an explicit ea face in the run is honoured", abs(w - TRUE_W) < 0.02, "%.4f" % w)
+    # ---- the inch values, only where a face that covers CJK exists ----------------------
+    check_metric("a CJK run measures at its REAL width, not the Latin face's",
+                 abs(w - TRUE_W) < 0.02, "%.4f vs %.4f" % (w, TRUE_W))
+    check_metric("...which is ~1.86x what the old ruler reported (2.6181in)",
+                 w > 4.0, "%.4f" % w)
+    check_metric("an INHERITED ea face (paragraph defRPr) is honoured too",
+                 abs(ink_w(CJK, inherited="Songti SC") - TRUE_W) < 0.02,
+                 "%.4f" % ink_w(CJK, inherited="Songti SC"))
+    check_metric("an explicit ea face in the run is honoured",
+                 abs(ink_w(CJK, ea="Songti SC") - TRUE_W) < 0.02,
+                 "%.4f" % ink_w(CJK, ea="Songti SC"))
 
     # ---- and the half that must not move ------------------------------------------------
     lat = ink_w(LATIN)
@@ -116,8 +164,8 @@ def main():
     dk.text(s, 0.6, 2.0, 3.2, 0.42, [[(CJK, 13, dk.DEEP, False, False, "Helvetica Neue")]],
             space_after=0, wrap=True)
     found = dk.lint_layout(prs, verbose=False)
-    check("CJK text overflowing its box is now measurable at all",
-          ink_w(CJK) > 3.2, "ink %.2f vs box 3.20" % ink_w(CJK))
+    check_metric("CJK text overflowing its box is now measurable at all",
+                 ink_w(CJK) > 3.2, "ink %.2f vs box 3.20" % ink_w(CJK))
 
     # ---- a real CJK deck must not suddenly light up ------------------------------------
     # The fix improves PRECISION; it must not act as a loosened or tightened threshold. A deck
@@ -136,6 +184,9 @@ def main():
     crit = [f for f in dk.lint_layout(prs, verbose=False) if f[1] == "CRITICAL"]
     check("a well-built CJK deck stays clean under the true ruler", crit == [], crit)
 
+    if SKIP:
+        print("\n  ({} width check(s) skipped: no CJK-covering font on this machine — the face-"
+              "resolution checks above are the fix and they ran)".format(len(SKIP)))
     print("\n{} passed, {} failed".format(len(PASS), len(FAIL)))
     return 1 if FAIL else 0
 
