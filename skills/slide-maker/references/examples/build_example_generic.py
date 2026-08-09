@@ -11,6 +11,24 @@ docstrings) plus a spot-check that each `build:` docstring has matching Build.st
 in its function body — and the motion manifest the Step-5 critic reads IS these
 docstrings, not a comment block that drifts.
 
+🔴 TWO RULES THIS FILE DEMONSTRATES RATHER THAN STATES, because a scaffold teaches by example
+and this one used to teach the opposite of both:
+
+  1. NEVER hand-pick a y for a block that can grow. Measure it (`measure_bullets`/`measure_callout`
+     /`measure_text`) or anchor it (`vstack(..., bottom=)`, `content_band()`, `bottom_callout()`).
+     Measured on a real 14-page build: the author hand-computed nearly every y, spent many rounds
+     moving coordinates by 0.02in, and only reached for `vstack` after pages had already started
+     overlapping — at which point its first error, "blocks need 3.68in but the band is only
+     2.88in", was the single most useful sentence of the build. It says the page is OVER-FULL,
+     which no amount of nudging can fix. That error arriving on round one instead of round twelve
+     is the whole difference.
+
+  2. TAG the deck's signature device. `register_mark()` draws the common register shapes correct
+     by construction and tags them; anything you draw yourself gets `tag_motif(shape, loud=…)`.
+     Untagged, a motif is invisible to `TEXT_OVER_MOTIF` and to the <=3-loud-appearance budget —
+     measured on that same build, 383 shapes carried ZERO tags, so the check written for its own
+     cover defect reported nothing on it.
+
 If the user has a template, build on it instead (deckkit.open_template + the template's
 profile in the active template registry). This file is just a how-to for the kit.
 
@@ -25,7 +43,8 @@ from deckkit import (  # noqa: E402
     blank_deck, add_slide, title_bar, footer,
     box, text, bullet, callout, bottom_callout, arrow, chip, modbox, equation_native,
     equation_png,
-    columns, picture, lint_layout,
+    columns, rows, vstack, content_band, measure_bullets, measure_callout,
+    register_mark, tag_motif, picture, lint_layout, declare_delivery,
     set_font, Inches, PP_ALIGN, MSO_ANCHOR,
     DEEP, BLUE, TEAL, MAGENTA, SLATE, MUTE, TINT, LIGHT, WHITE,
     GOLD, STEEL, VIOLET, ACCENTS,
@@ -43,6 +62,9 @@ def slide_cover(prs):
     s = add_slide(prs)
     box(s, 0, 0, 10, 5.625, fill=DEEP)
     box(s, 0, 0, 0.18, 5.625, fill=MAGENTA)
+    # The register signature, drawn by the helper so it is correct AND tagged. `loud=True` marks a
+    # hero appearance (budgeted at <=3); interior pages use the same call without it.
+    register_mark(s, "arcs", corner="br", color=TEAL, size=2.2, loud=True)
     text(s, 0.7, 2.0, 8.6, 1.4, [[("Project Title", 40, WHITE, True, False)],
          [("a one-line subtitle", 20, TEAL, False, False)]], space_after=4, line_spacing=1.0)
     text(s, 0.7, 4.4, 8.6, 0.4, [[("Presenter · Affiliation", 13, WHITE, False, False)]], space_after=0)
@@ -54,12 +76,29 @@ def slide_one_idea(prs):
     s = add_slide(prs)
     title_bar(s, "One idea per slide", kicker="section")
     footer(s, TAG, page=2)
-    bullet(s, 0.6, 1.45, 5.5, [
-        ("Few words ", "per point"),
-        ("Diagrams ", "over text"),
-        ("Every figure ", "gets a takeaway"),
-    ], size=17, gap=0.3)
-    callout(s, 0.6, 4.3, 5.5, 0.6, "TAKEAWAY", "A slide is a visual aid, not a document.")
+    register_mark(s, "arcs", corner="tr", color=TINT, size=1.2)   # the quiet echo, every page
+    # 🔴 MEASURED, not hand-picked. `callout(s, 0.6, 4.3, ...)` is the bug this scaffold used to
+    # teach: the moment the bullets gain a line, that 4.3 is inside them. vstack takes each block's
+    # measured height, keeps the gaps equal by construction, and RAISES at build time if the two
+    # no longer fit the band — which is the message you want, because it means "this page is too
+    # full", not "move something 0.02in".
+    items = [("Few words ", "per point"),
+             ("Diagrams ", "over text"),
+             ("Every figure ", "gets a takeaway")]
+    band = content_band(s)                        # the safe rect: below the title, above the footer
+    h_bul = measure_bullets(items, 5.5, size=17, gap=0.3)
+    h_cal = measure_callout("TAKEAWAY", "A slide is a visual aid, not a document.", 5.5)
+    # anchor: "top" keeps the two blocks together as one unit under the title, which is right HERE
+    # because the page reserves its right column (w=5.5 of an 8.8in band) for a figure — the empty
+    # area is composed, not left over. "justify" spreads the slack as equal gaps, but with exactly
+    # TWO blocks that means maximum separation: the bullets pin to the title, the takeaway pins to
+    # the footer, and the slack collects as one hole in the MIDDLE of the page, which reads far
+    # worse than the same slack at the edge. Reach for "justify" at three or more blocks.
+    vstack(s, 0.6, band[1], 5.5,
+           [(h_bul, lambda x, y, w: bullet(s, x, y, w, items, size=17, gap=0.3)),
+            (h_cal, lambda x, y, w: callout(s, x, y, w, h_cal, "TAKEAWAY",
+                                            "A slide is a visual aid, not a document."))],
+           gap=0.35, bottom=band[1] + band[3])
 
 
 def slide_pipeline(prs):
@@ -83,23 +122,31 @@ def slide_equation(prs):
     s = add_slide(prs)
     title_bar(s, "Typeset math reads as formal", kicker="equations")
     footer(s, TAG, page=4)
-    # equation_native renders a LaTeX subset as real, click-EDITABLE text runs (italic
-    # variables, upright operators, true sub/superscripts) in a math font — the DEFAULT;
-    # reach for equation_png only for 2-D math (fractions/matrices), eq_par for one inline symbol.
-    equation_native(s, 0.8, 2.2, 8.4, 0.7,
-                    r"\hat{x} = \arg\min_x \|A x - y\|_2^2 + \lambda R(x)",
-                    size=20, align=PP_ALIGN.CENTER)
     # bottom_callout, NOT callout at a hand-picked y. `callout` auto-grows DOWN, so a long body
     # placed at an eyeballed y=4.3 grew straight into the footer band — this file shipped that way,
     # and it is the exact defect SKILL.md calls "the #1 recurring layout bug", demonstrated in the
     # example it tells you to copy. Measured on the built deck: FOOTER collision · FOOTER-ZONE
     # intrusion · TEXT PADDING past the card bottom, all three on this slide.
-    # bottom_callout anchors to the footer band and grows UP, so it cannot collide by construction,
-    # and it returns its own TOP y for sizing whatever sits above it.
-    bottom_callout(s, 0.6, 8.8, "WHY",
-                   "equation_native typesets real math as EDITABLE text runs (italic variables, true "
-                   "sub/superscripts) — click-editable and renders everywhere; reach for equation_png "
-                   "only for 2-D math (fractions/matrices), and eq_par for one inline symbol.")
+    # bottom_callout anchors to the footer band and grows UP, so it cannot collide by construction.
+    #
+    # 🔴 It is built FIRST because it RETURNS ITS OWN TOP y — that return value is what the block
+    # above is sized against. Building it last and discarding the return (which this file also used
+    # to do) leaves the equation at a hand-picked y=2.2 that knows nothing about how tall the
+    # callout grew: the two are independent guesses that happen to clear today and collide the
+    # first time the body text gains a line.
+    top = bottom_callout(s, 0.6, 8.8, "WHY",
+                         "equation_native typesets real math as EDITABLE text runs (italic variables, "
+                         "true sub/superscripts) — click-editable and renders everywhere; reach for "
+                         "equation_png only for 2-D math (fractions/matrices), eq_par for one inline "
+                         "symbol.")
+    # equation_native renders a LaTeX subset as real, click-EDITABLE text runs (italic
+    # variables, upright operators, true sub/superscripts) in a math font — the DEFAULT;
+    # reach for equation_png only for 2-D math (fractions/matrices), eq_par for one inline symbol.
+    band = content_band(s)                        # (x, y, w, h) — below the title, above the footer
+    eq_h, gap = 0.7, 0.30
+    equation_native(s, 0.8, band[1] + (top - gap - band[1] - eq_h) / 2.0, 8.4, eq_h,
+                    r"\hat{x} = \arg\min_x \|A x - y\|_2^2 + \lambda R(x)",
+                    size=20, align=PP_ALIGN.CENTER)
 
 
 def slide_split(prs):
@@ -144,6 +191,13 @@ def main():
     # a rare, deliberate off-canvas bleed). Then render + run the critic.
     lint_layout(prs, strict=True)
     prs.save(OUT)
+    # 🔴 Record WHAT KIND of deck this is, next to the save, while it is still known. Both
+    # `lint_deck.py` and `render_deck.py --gate-check` read this key, so the budgets they enforce
+    # stop depending on someone remembering `--selfread` on every run. Measured on a delivered
+    # self-read deck: 20 advisory lines with no flag, 10 with the right one — half the output was
+    # the presented budget applied to a deck nobody speaks, and noise is what teaches people to
+    # skim gates. One of: presented · textheavy · selfread · surface.
+    declare_delivery(OUT, "presented")
     print("saved ->", OUT, "| slides:", len(prs.slides._sldIdLst))
 
 

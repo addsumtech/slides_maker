@@ -2112,6 +2112,20 @@ MOTIF_TAG = "deckkit-motif"
 MOTIF_LOUD = MOTIF_TAG + "-loud"
 MOTIF_QUIET = MOTIF_TAG + "-quiet"
 
+CHROME_TITLE = "deckkit-chrome-title"
+# The title chrome, tagged for the same reason the motif is: so a measurement can ask "where does
+# the title actually END on THIS slide?" instead of assuming. `content_band()` is the caller — see
+# the note there for the 0.09in overlap this replaced.
+
+
+def _tag_chrome(shape):
+    """Mark a shape as title chrome so `content_band()` can measure where the title ends."""
+    try:
+        shape.name = CHROME_TITLE
+    except Exception:
+        pass
+    return shape
+
 
 def tag_motif(shape, loud=False):
     """Mark a shape as part of the deck's signature device. Returns the shape.
@@ -2955,7 +2969,24 @@ def rows(n=2, *, slide=None, w_in=None, h_in=None, x=None, y=None, w=None, top=1
     return out
 
 
-def content_band(slide, *, top=1.15, footer_gap=0.15):
+CHROME_GAP = 0.05      # breathing room between the title chrome and the first content block
+TITLE_BAND_DEFAULT = 1.15   # the fallback top when a slide carries no measurable title chrome
+
+
+def _chrome_bottom(slide):
+    """The bottom edge (inches) of this slide's TITLE chrome, or None if it has none.
+
+    Only shapes :func:`title_bar` tagged are measured. Measuring "whatever is near the top"
+    instead would be wrong on exactly the decks that matter: a `register_mark(corner="tr")` is
+    chrome-height geometry in the title zone but is NOT a title, and letting it set the band top
+    would push every page's content down by however large the register mark happens to be.
+    """
+    bots = [(sh.top + sh.height) / 914400.0
+            for sh in slide.shapes if getattr(sh, "name", "") == CHROME_TITLE]
+    return max(bots) if bots else None
+
+
+def content_band(slide, *, top=None, footer_gap=0.15):
     """The one authoritative SAFE content rect ``(x, y, w, h)`` — below the title bar and
     **above the footer band** — read from the deck's REAL size.
 
@@ -2963,8 +2994,22 @@ def content_band(slide, *, top=1.15, footer_gap=0.15):
     numbers like 4.3 / 5.05 that drift and let auto-growing blocks collide with the footer).
     The bottom edge is ``h_in - FOOTER_BAND - footer_gap``, so anything placed within the
     returned rect clears ``footer()``. Pair with :func:`vstack` / :func:`bottom_callout`.
+
+    The TOP edge is MEASURED from the slide's own title chrome. It used to be the constant
+    1.15, which is `title_bar()`'s bottom (1.100) plus a 0.05 gap — but only for a title with
+    NO kicker. Add a kicker and the same call returns 1.15 for chrome that ends at 1.240, so the
+    first block lands 0.09in INSIDE the title rule. That was shipping in this skill's own worked
+    example, in the helper SKILL.md offers as the cure for hand-picked y-coordinates: the safe
+    helper was unsafe against the deck's own default chrome. Measuring reproduces 1.15 exactly
+    in the case the constant was tuned for, and is correct in the case it was not.
+
+    Pass ``top=`` explicitly when the deck has its OWN title treatment (a custom `style.py`), or
+    to override; a slide with no tagged chrome yet falls back to ``TITLE_BAND_DEFAULT``.
     """
     w_in, h_in = _slide_size(slide)
+    if top is None:
+        cb = _chrome_bottom(slide)
+        top = TITLE_BAND_DEFAULT if cb is None else round(cb + CHROME_GAP, 4)
     y = top
     bottom_y = h_in - FOOTER_BAND - footer_gap
     return (GUTTER, y, w_in - 2 * GUTTER, bottom_y - y)
@@ -4417,7 +4462,9 @@ def title_bar(slide, title, kicker="", accent=BLUE, title_c=DEEP, w_in=None):
         w_in, _ = _slide_size(slide)
     tw = w_in - 1.1
     if kicker:
-        text(slide, 0.55, 0.30, tw, 0.3, [[(kicker.upper(), 11, accent, True, False)]], space_after=0)
+        kb = text(slide, 0.55, 0.30, tw, 0.3, [[(kicker.upper(), 11, accent, True, False)]],
+                  space_after=0)
+        _tag_chrome(kb)
         ty = 0.54
     else:
         ty = 0.40
@@ -4434,8 +4481,9 @@ def title_bar(slide, title, kicker="", accent=BLUE, title_c=DEEP, w_in=None):
         for p in tb.text_frame.paragraphs:
             for r in p.runs:
                 _apply_ea(r, EADISPLAY)
+    _tag_chrome(tb)
     rule_y = max(ty + 0.62, ty + nlines * lh + 0.06)   # floor keeps the one-line render byte-identical
-    box(slide, 0.57, rule_y, 1.1, 0.045, fill=accent)
+    _tag_chrome(box(slide, 0.57, rule_y, 1.1, 0.045, fill=accent))
     return rule_y + 0.20
 
 
@@ -5068,6 +5116,47 @@ def overlap_intent(shape, reason):
                          "collision and a declared composition must not read the same." % (reason,))
     shape.name = OVERLAP_TAG + " ".join(str(reason).strip().split())[:120]
     return shape
+
+DELIVERY_MODES = ("presented", "textheavy", "selfread", "surface")
+
+
+def declare_delivery(where, mode):
+    """Record HOW this deck will be consumed, in `<deck dir>/.deck-gates.json`, from the build
+    script — so the lint's budgets do not depend on an operator remembering a CLI flag.
+
+    `render_deck.py --gate-check` has always read this key; `lint_deck.py` reads it too now. What
+    the flag-only world cost, measured on a delivered 14-page self-read deck: 20 `[stats]` lines
+    with no flags, 10 with `--selfread`. The extra ten were the wrong budget applied to the wrong
+    deck — seven TEXT WALLs against the ~40-word *presented* budget instead of ~90, a SMALL TYPE
+    against the read-from-the-back floor, and "14 of 14 slides have empty speaker notes" on a deck
+    nobody speaks. Advisory noise is not harmless: it is what teaches people to skim the gates.
+
+    Call it beside the save, where the deck's identity is already known::
+
+        dk.declare_delivery(OUT, "selfread")     # OUT is the .pptx path, or its directory
+
+    `where` may be the .pptx path or the deck directory. Merges into any existing gates file —
+    the critic block `validate_review.py --record` writes is preserved. Returns the file path.
+    """
+    import json as _json
+    import os as _os                     # deckkit has no module-level `os` — see _ea_face et al.
+    if mode not in DELIVERY_MODES:
+        raise ValueError("delivery must be one of %s, got %r" % (", ".join(DELIVERY_MODES), mode))
+    d = where if _os.path.isdir(where) else _os.path.dirname(_os.path.abspath(where))
+    path = _os.path.join(d, ".deck-gates.json")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            gates = _json.load(fh)
+        if not isinstance(gates, dict):
+            gates = {}
+    except (OSError, ValueError):
+        gates = {}
+    gates["delivery"] = mode
+    with open(path, "w", encoding="utf-8") as fh:
+        _json.dump(gates, fh, ensure_ascii=False, indent=1)
+        fh.write("\n")
+    return path
+
 
 def design_intent(slide, *, envelope=None, rhyme=None, weight=None, role=None, reason=""):
     """Declare a slide's DELIBERATE design register so the render-time lint can tell intent
@@ -6567,6 +6656,41 @@ def _natural_width_in(runs, size_pt, font):
 _MIXED_HINTS = {}
 
 
+def _measuring_face(run):
+    """The face a run's glyphs will ACTUALLY be set in — which is not always `run.font.name`.
+
+    python-pptx's `font.name` reads `<a:latin>`. CJK glyphs render from `<a:ea>`, which is where
+    `_apply_ea`/`set_font` put the East-Asian face. So on a 中文 deck every geometry check measured
+    Chinese text with the deck's LATIN metrics, and Latin metrics are roughly half as wide as a
+    full-width glyph:
+
+        「给准备申请的人——学位、博士、岗位，三扇门分别长什么样」 at 13pt, true width 4.875in
+            Hiragino Sans GB  4.8750in   (exact)
+            Songti SC         4.8750in   (exact)
+            Helvetica Neue    2.6181in   (54% — what every check was using)
+
+    The width model was never wrong; the FACE handed to it was. That under-measurement is why a
+    CJK page can collide after a generous-looking margin was left, and why nudging coordinates
+    gives feedback that does not match intuition — the ruler is short, so the operator blames
+    their own arithmetic. It reaches `TEXT_OVERLAP`, `OFF_CANVAS`, `ESCAPES_CARD`, `FOOTER` and
+    every `measure_*` helper, i.e. essentially all of this file's geometry on a Chinese deck.
+
+    Resolved through `_inherited_ea` rather than `run.font.name`'s ea twin, because a supplied CJK
+    template normally sets the face one level up (paragraph `defRPr` / the shape's `lstStyle`) —
+    the same chain `retrofit_ea` and `CJK_NO_EA` already walk, so all three agree by construction.
+    A Latin run is unaffected: it returns `font.name` exactly as before.
+    """
+    try:
+        if not _has_cjk(run.text or ""):
+            return run.font.name
+        return _inherited_ea(run._r) or EAFONT or run.font.name
+    except Exception:
+        try:
+            return run.font.name
+        except Exception:
+            return None
+
+
 def _ink_rect(sh, bb):
     """The rectangle the GLYPHS actually fill inside a text frame `sh` (bbox `bb`), accounting for
     measured wraps, the frame's inner margins, the vertical anchor and the paragraph alignment.
@@ -6600,8 +6724,9 @@ def _ink_rect(sh, bb):
                 if r.font.size is not None:
                     _rsz = r.font.size.pt; sz = max(sz, _rsz)
             except Exception: pass
-            if fn is None and r.font.name: fn = r.font.name
-            per_run.append((t, bool(r.font.bold), _rsz, r.font.name))
+            _face = _measuring_face(r)      # <a:ea> for CJK — see _measuring_face
+            if fn is None and _face: fn = _face
+            per_run.append((t, bool(r.font.bold), _rsz, _face))
         if not runs: continue
         if align is None: align = p.alignment
         if sz <= 0: sz = 18.0

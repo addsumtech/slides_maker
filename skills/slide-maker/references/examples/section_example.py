@@ -27,32 +27,54 @@ try:
     import style
 except ModuleNotFoundError:
     import style_example as style
-from deckkit import add_slide, bullet, callout
+from deckkit import add_slide, bullet, bottom_callout, vstack, measure_bullets
 
 START_PAGE = 2   # orchestrator sets this so page numbers stay continuous
 
 def build_section(prs):
+    # 🔴 Every y below is MEASURED or ANCHORED, never hand-picked — and in a parallel-authored
+    # deck that rule is stricter than usual, because no single mind sees all the sections. A
+    # hand-picked 4.4 that clears the footer in THIS section, with THIS much text, silently stops
+    # clearing it in the next one; `style.band()` and `bottom_callout` cannot drift, and `vstack`
+    # RAISES at build time when the page is genuinely over-full instead of overlapping quietly.
+
     # slide 1 of this section
     s = add_slide(prs)
     style.title_bar(s, "What this section owns", kicker="section 1")
-    bullet(s, 0.6, 1.6, 8.7, [
+    style.register(s)                       # the shared, TAGGED signature — never hand-rolled here
+    items = [
         ("Shared style ", "— palette, font, chrome all come from style.py"),
         ("No drift ", "— every section looks like one deck"),
         ("Parallel-authored ", "— built by its own subagent, assembled in order"),
-    ], size=16, marker=style.ACCENT, lead_c=style.INK, body_c=style.GREY)
-    callout(s, 0.6, 4.4, 8.7, 0.6, "WHY", "Coherence is centralized; only the content fans out.",
-            label_c=style.WHITE, fill=style.ACCENT, body_c=style.WHITE)
+    ]
+    top = bottom_callout(s, 0.6, 8.7, "WHY",
+                         "Coherence is centralized; only the content fans out.",
+                         label_c=style.WHITE, fill=style.ACCENT, body_c=style.WHITE)
+    bx, by, _, _ = style.band(s)
+    vstack(s, bx, by, 8.7,
+           [(measure_bullets(items, 8.7, size=16),
+             lambda x, y, w: bullet(s, x, y, w, items, size=16, marker=style.ACCENT,
+                                    lead_c=style.INK, body_c=style.GREY))],
+           bottom=top - 0.3)
     style.footer(s, START_PAGE, tag="example deck")
 
     # slide 2 of this section — same helpers; the page number advances by one
     s = add_slide(prs)
     style.title_bar(s, "One idea per slide", kicker="section 1")
-    bullet(s, 0.6, 1.6, 8.7, [
+    style.register(s)
+    items = [
         ("Advance the page ", "— pass START_PAGE + 1 to the footer (+2 for the next, ...)"),
         ("Reuse the shared helpers ", "— add_slide / bullet / callout, all styled by style.py"),
-    ], size=16, marker=style.ACCENT, lead_c=style.INK, body_c=style.GREY)
-    callout(s, 0.6, 4.4, 8.7, 0.6, "NOTE", "Add as many slides as the section needs — keep one idea each.",
-            label_c=style.WHITE, fill=style.ACCENT, body_c=style.WHITE)
+    ]
+    top = bottom_callout(s, 0.6, 8.7, "NOTE",
+                         "Add as many slides as the section needs — keep one idea each.",
+                         label_c=style.WHITE, fill=style.ACCENT, body_c=style.WHITE)
+    bx, by, _, _ = style.band(s)
+    vstack(s, bx, by, 8.7,
+           [(measure_bullets(items, 8.7, size=16),
+             lambda x, y, w: bullet(s, x, y, w, items, size=16, marker=style.ACCENT,
+                                    lead_c=style.INK, body_c=style.GREY))],
+           bottom=top - 0.3)
     style.footer(s, START_PAGE + 1, tag="example deck")
 
     # ...add the section's further slides the same way (START_PAGE + 2, +3, ...)

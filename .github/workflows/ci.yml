@@ -120,6 +120,46 @@ jobs:
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/cjkface.log || {
             echo "::error::CJK face routing suite did not run to completion"; exit 1; }
 
+      # CJK width measurement read <a:latin>, which python-pptx exposes as run.font.name — but a
+      # Chinese glyph renders from <a:ea>. Every geometry check on a CJK deck was therefore scored
+      # in a Latin face and came out ~46% short.
+      - name: CJK measurement (the face a width is measured in)
+        run: |
+          set -o pipefail
+          python tests/test_cjk_measurement.py | tee /tmp/cjkmeas.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/cjkmeas.log || {
+            echo "::error::CJK measurement suite did not run to completion"; exit 1; }
+
+      # content_band() — the helper SKILL.md offers INSTEAD of hand-picked y-coordinates — returned
+      # a constant tuned for a title with no kicker, so with a kicker the first block landed 0.09in
+      # inside the title rule. It shipped in this skill's own worked example, unseen by every gate.
+      - name: Content band (the safe rect must clear the deck's own chrome)
+        run: |
+          set -o pipefail
+          python tests/test_content_band.py | tee /tmp/band.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/band.log || {
+            echo "::error::content-band suite did not run to completion"; exit 1; }
+
+      # The scaffold is the curriculum: whatever references/examples/build_example_generic.py
+      # demonstrates is what gets written, and whatever it omits effectively does not exist. It
+      # taught hand-picked y-coordinates and zero motif tags, and both showed up in a real build.
+      - name: Scaffold teaches (the example is checked like a contract)
+        run: |
+          set -o pipefail
+          python tests/test_scaffold_teaches.py | tee /tmp/scaffold.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/scaffold.log || {
+            echo "::error::scaffold suite did not run to completion"; exit 1; }
+
+      # Which deck this IS was a fact only the operator's memory carried: --gate-check read a
+      # recorded `delivery` key, lint_deck.py read only flags. Measured on a delivered self-read
+      # deck: 20 advisory lines with no flag, 10 with the right one.
+      - name: Delivery record (recorded mode beats a remembered flag)
+        run: |
+          set -o pipefail
+          python tests/test_delivery_record.py | tee /tmp/deliv.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/deliv.log || {
+            echo "::error::delivery-record suite did not run to completion"; exit 1; }
+
       - name: Motif contract (register_mark · keep-out · loud budget)
         run: |
           set -o pipefail

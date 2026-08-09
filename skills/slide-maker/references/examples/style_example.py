@@ -46,3 +46,33 @@ def footer(s, page, tag=""):
         text(s, 0.6, H - 0.4, 6.0, 0.3, [[(tag, 8.5, MUTE, False, False)]], space_after=0)
     text(s, W - 1.0, H - 0.4, 0.6, 0.3, [[(str(page), 9, MUTE, True, False)]],
          align=PP_ALIGN.RIGHT, space_after=0)
+
+
+# ─── the two things sections must NOT each decide for themselves ────────────────────────
+# Both live here for the same reason the palette does: sections are authored in PARALLEL by
+# separate agents, so anything a section computes locally drifts silently between sections.
+
+def band(s, kicker=True):
+    """The safe content rect (x, y, w, h) for THIS deck's chrome — below the title rule,
+    above the footer band.
+
+    `deckkit.content_band` defaults to `top=1.15`, which is deckkit's OWN title_bar. This deck
+    has its own title treatment, so the top edge is derived from it here, once: the rule sits at
+    ``ty + 0.66`` and is 0.045 tall, plus breathing room. A section that calls the bare
+    `content_band(s)` gets deckkit's number, not this deck's, and lands its first block ~0.4in
+    too high — the kind of drift that is invisible per-section and obvious once assembled.
+    """
+    return deckkit.content_band(s, top=(0.6 if kicker else 0.45) + 0.66 + 0.045 + 0.24)
+
+
+def register(s, loud=False):
+    """This deck's register signature — ONE tagged device, shared by every section.
+
+    Hand-rolling the mark per section is how a deck ends up with three slightly different
+    versions of its own signature, and — because a hand-rolled mark carries no tag — how
+    `TEXT_OVER_MOTIF` and the <=3-loud-appearance budget end up watching a deck they cannot see.
+    Measured on a real 14-page build: 383 shapes, ZERO motif tags. Pass ``loud=True`` only on a
+    hero page (cover / section opener).
+    """
+    return deckkit.register_mark(s, "arcs", corner="tr", color=ACCENT,
+                                 size=(2.0 if loud else 1.1), loud=loud)
