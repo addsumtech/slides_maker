@@ -917,6 +917,34 @@ def main():
     else:
         ok.append("every delivery-mode flag file-inventory.md documents still reaches the tool")
 
+    # ---- overlap_intent must mean the same thing at BOTH gates ---------------------------
+    # It always worked at build time and was never read here, so an author who declared a
+    # deliberate composition passed lint_layout and was still refused by lint_deck. Measured on a
+    # delivered deck: a bar crossing its reference line — the page's entire claim — was declared,
+    # cleared the build gate, and shipped an unresolvable OVERLAP. A declaration that one tool
+    # honours and another ignores teaches authors that declaring is pointless.
+    import deckkit as _dk
+    import tempfile as _tf
+
+    def _crossing(declare):
+        _dk.FONT = "Helvetica Neue"
+        prs = _dk.blank_deck()
+        sl = _dk.add_slide(prs)
+        _dk.box(sl, 0, 0, 10, 5.625, fill=_dk.RGBColor(0xF5, 0xF1, 0xE6))
+        _dk.box(sl, 0.6, 2.4, 8.8, 0.02, fill=_dk.RGBColor(0x8A, 0x83, 0x77))
+        bar = _dk.box(sl, 1.3, 1.9, 1.28, 1.6, fill=_dk.RGBColor(0xB4, 0x46, 0x2A))
+        if declare:
+            _dk.overlap_intent(bar, "the bar crossing its reference line IS this page's claim")
+        d = _tf.mkdtemp()
+        out = os.path.join(d, "t.pptx")
+        prs.save(out)
+        return [l for l in lint(out, d).splitlines() if "OVERLAP " in l and "[warn]" not in l]
+
+    (ok if _crossing(False) else bad).append(
+        "an UNdeclared solid-on-solid crossing still fires at render time")
+    (ok if not _crossing(True) else bad).append(
+        "a DECLARED overlap is silent at render time too, as it already was at build time")
+
     for line in ok:
         print("  ok   " + line)
     for line in bad:

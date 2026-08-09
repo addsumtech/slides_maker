@@ -257,6 +257,11 @@ def _boxes(slide, sw, sh, slide_no=None):
                     "font": _face, "bold": _bold,
                     "text": bool(s.has_text_frame and txt), "descr": descr, "mathfont": mathfont,
                     "title_ph": tph, "bg": (w * h) >= 0.95 * (sw * sh), "grp": grp,
+                    # `overlap_intent()` records the declaration in the shape NAME (the same idiom
+                    # as the motif and watermark tags), so it survives the save and can be read
+                    # here from the file — which is the only reason this gate can honour the same
+                    # declaration the build-time gate does.
+                    "declared": str(getattr(s, "name", "") or "").startswith("deckkit-overlap"),
                     # HOLLOW: an outlined shape with no fill, no picture and no text of its own —
                     # a frame, a ring, a rule box, a plate outline. Its bounding box is NOT ink a
                     # reader receives, and counting it as such is why "this form spends 40% of the
@@ -2421,6 +2426,17 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
                     # useless on exactly the decks worth linting. A child colliding with anything
                     # OUTSIDE its group is still caught, which is the collision that is not authored.
                     if a["grp"] is not None and a["grp"] == b["grp"]:
+                        continue
+                    # DECLARED composition. `overlap_intent()` is the skill's way of saying "this
+                    # overlap IS the design", and the BUILD-time gate has always honoured it —
+                    # but this one never read it, so the same declaration passed one gate and was
+                    # refused by the other. Measured on a delivered deck: a bar deliberately
+                    # crossing its reference line (the page's entire claim) was declared, cleared
+                    # `lint_layout`, and still shipped an unresolvable OVERLAP here. A declaration
+                    # a tool ignores teaches authors that declaring is pointless.
+                    # It waives the GEOMETRY only — exactly as at build time: contrast,
+                    # OCCLUSION and TEXT NOT VISIBLE are pixel checks and still apply.
+                    if a.get("declared") or b.get("declared"):
                         continue
                     finds.append(f"OVERLAP {round(ix,2)}x{round(iy,2)}in  {a['st']}'{a['txt']}' x {b['st']}'{b['txt']}'"
                                  f" — move/shrink one so they separate (≥0.12in gap) or nest one fully inside the other")
