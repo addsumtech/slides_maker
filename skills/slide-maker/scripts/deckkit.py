@@ -7167,6 +7167,55 @@ def _declared_overlap(sh):
     return str(getattr(sh, "name", "") or "").startswith(OVERLAP_TAG)
 
 
+def _ooxml_shape_faults(prs):
+    """OOXML_SHAPE — the produced XML violates the part's own schema.
+
+    Every other check in this file is geometric, pixel-based or semantic. NONE of them looks at
+    whether the part is well-formed against ECMA-376, and this library writes OOXML by hand in
+    ~11 places (`parse_xml`), plus `anim.py` composing `<p:timing>` as a string. That leaves one
+    failure mode no gate could see: **the file opens nowhere**.
+
+    Measured: two `Build(s)` on one slide each calling `apply()` produced
+    `['cSld', 'clrMapOvr', 'timing', 'timing']`. CT_Slide allows ONE `<p:timing>`. `prs.save()`
+    raised nothing, LibreOffice rendered it, `lint_layout` reported clean, and
+    `preflight_check.py` — which asks only whether the string `p:timing` occurs — read the
+    duplicate as *more* compliant. The first human signal would have been PowerPoint offering to
+    repair the file. `anim.apply()` now refuses outright; this check is the net under it, because
+    the next hand-written element will not have its own guard.
+
+    🔴 Deliberately NOT a schema validator. Shipping ECMA-376's XSD set means carrying the
+    schemas, filtering the noise a real template already contains, and maintaining an
+    auto-repair path — cost out of proportion to what it would catch here. This asserts only the
+    CARDINALITY AND ORDER of the elements this toolkit writes itself, which is exactly where its
+    own bugs land. When it starts missing things it does not model, that is the moment to
+    reconsider the full validator, not before.
+    """
+    out = []
+    # CT_Slide: cSld, clrMapOvr?, transition?, timing?, extLst?  (ECMA-376 §19.3.1.38)
+    ORDER = ["cSld", "clrMapOvr", "transition", "timing", "extLst"]
+    ONCE = {"cSld", "clrMapOvr", "transition", "timing", "extLst"}
+    for n, slide in enumerate(prs.slides, 1):
+        kids = [e.tag.split("}")[-1] for e in slide._element]
+        seen = {}
+        for k in kids:
+            seen[k] = seen.get(k, 0) + 1
+        for k, c in seen.items():
+            if k in ONCE and c > 1:
+                out.append((n, "CRITICAL", "OOXML_SHAPE",
+                            f"the slide part carries {c} <p:{k}> elements — the schema allows "
+                            f"one. PowerPoint refuses to open the file while python-pptx, "
+                            f"LibreOffice and every geometric check here stay silent, so this is "
+                            f"the one defect class that reaches the user as 'needs repair'. "
+                            f"Build ONE of it per slide."))
+        ranked = [ORDER.index(k) for k in kids if k in ORDER]
+        if ranked != sorted(ranked):
+            out.append((n, "CRITICAL", "OOXML_SHAPE",
+                        "the slide part's children are out of schema order (%s) — expected %s. "
+                        "Insert before the following element rather than appending, the way "
+                        "slide_transition() does." % (", ".join(kids), ", ".join(ORDER))))
+    return out
+
+
 def _graze_faults(prs):
     """TEXT_GRAZES_SHAPE — a label's ink running INTO a filled shape it is not inside.
 
@@ -7717,6 +7766,7 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
     findings.extend(_deck_level_faults(prs))
     findings.extend(_motif_faults(prs))
     findings.extend(_graze_faults(prs))
+    findings.extend(_ooxml_shape_faults(prs))
     findings.extend(_cjk_face_faults(prs))
     if verbose:
         crit = sum(1 for f in findings if f[1] == "CRITICAL")

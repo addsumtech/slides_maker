@@ -176,6 +176,17 @@ jobs:
       # to it — the same blindness TEXT_OVER_MOTIF was written for, except that one only sees
       # TAGGED shapes and nobody tags a bar. Measured on a delivered deck: a row label ran
       # 0.015in² into the negative bar beside it, both lints clean, found by eye — twice.
+      # The one defect class where the file does not open at all. Every other check here is
+      # geometric, pixel-based or semantic; none asks whether the part is well-formed against
+      # ECMA-376. Measured: two Build(s) on one slide left TWO <p:timing> elements — save() silent,
+      # LibreOffice happy, lint clean, and preflight read the duplicate as MORE compliant.
+      - name: OOXML shape (a file that opens nowhere passes every other gate)
+        run: |
+          set -o pipefail
+          python tests/test_ooxml_shape.py | tee /tmp/ooxml.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/ooxml.log || {
+            echo "::error::ooxml-shape suite did not run to completion"; exit 1; }
+
       - name: Graze contract (a label running into the bar beside it)
         run: |
           set -o pipefail

@@ -1148,12 +1148,21 @@ A few rules that matter (see `references/design-principles.md`):
   the mechanical layout faults: it runs in-process in milliseconds, *before* the slow render +
   visual-critic round, and walks **every** shape — however it was placed, the grid helpers or raw
   coordinates — reasoning about each label's **ink** rectangle (where the glyphs actually land), so it
-  stays quiet on the generously-sized frames real builds use. It **hard-fails (CRITICAL)** on six
+  stays quiet on the generously-sized frames real builds use. It **hard-fails (CRITICAL)** on seven
   things: content (text ink / a card / a non-bleed image) **off-canvas**, text **overflowing** a visible
   box, **text-on-text** overlap, a **connector routed through a block** (`CONNECTOR_IN_BOX`), a **decorative RULE
   drawn through a text block's ink** (`RULE_THROUGH_TEXT` — a divider/hairline placed at a hand-picked `y`
   that the text above it later grew into; derive the rule from the block's measured end, never a guessed
-  coordinate), and **CJK runs with no `<a:ea>` font** (`CJK_NO_EA` — set
+  coordinate), **a slide part that violates its own schema** (`OOXML_SHAPE` — the cardinality and order
+  of the elements this toolkit writes by hand. 🔴 This is the only defect class where the file **does not
+  open at all**, and it is the one every other check here is structurally blind to: they are geometric,
+  pixel-based or semantic, and none asks whether the part is well-formed. Measured: two `Build(s)` on one
+  slide left TWO `<p:timing>` elements — `save()` silent, LibreOffice happy, `lint_layout` clean, and
+  `preflight_check.py` read the *duplicate* as more compliant, so the deck got a tick for the thing that
+  broke it; the first human signal would have been PowerPoint offering to repair the file. `anim.apply()`
+  now refuses a second call outright — a second Build's steps were never in the first's sequence, so
+  keeping either tree ships a click order nobody wrote — and this code is the net under it, because the
+  next hand-written element will not carry its own guard), and **CJK runs with no `<a:ea>` font** (`CJK_NO_EA` — set
   `deckkit.EAFONT` before building; catching it here saves the render round-trip lint_deck previously
   needed. When it fires anyway, **`dk.retrofit_ea(prs, "<face>")` on the line above the lint** is
   the fix for the deck in hand — setting `EAFONT` cannot be, since the runs already exist — and it
