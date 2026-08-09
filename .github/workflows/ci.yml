@@ -180,6 +180,18 @@ jobs:
       # geometric, pixel-based or semantic; none asks whether the part is well-formed against
       # ECMA-376. Measured: two Build(s) on one slide left TWO <p:timing> elements — save() silent,
       # LibreOffice happy, lint clean, and preflight read the duplicate as MORE compliant.
+      # Every other suite asks whether the CODE works. This one guards the instrument that asks
+      # whether the SKILL works — run_eval.py scores a produced deck against machine-decidable
+      # assertions. Only the SCORER runs here (~1s, no model, no network); producing a deck is
+      # the other half and is developer/nightly-only. An eval harness that scores wrong is worse
+      # than none: it launders a bad build into a number.
+      - name: Eval harness (skip is not pass)
+        run: |
+          set -o pipefail
+          python tests/test_run_eval.py | tee /tmp/runeval.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/runeval.log || {
+            echo "::error::run_eval suite did not run to completion"; exit 1; }
+
       - name: OOXML shape (a file that opens nowhere passes every other gate)
         run: |
           set -o pipefail

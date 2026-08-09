@@ -2123,4 +2123,17 @@ A checkable red-flag list; if a draft does any of these, stop and fix it before 
 
 ## Files
 
+**Changing the SKILL itself? Score it, don't guess.** `scripts/run_eval.py --score <deck-dir>
+--eval <id>` checks a produced deck against `evals/evals.json` — machine-decidable assertions
+only (pptx exists · hard-lint clean · the `.deck-gates.json` blocks present · the user's numbers
+verbatim on a slide · **no figure the prompt never supplied** · notes coverage · and
+`reference_reached`, which needs `--transcript` and is the ONLY way to answer *was that reference
+actually read during the run*). Deliberately no taste scoring: reference-similarity rewards
+imitation and closed-form beauty composites fight this skill's own diversity gates, so both were
+examined and rejected. `--record` appends the result under the current `VERSION` so "this
+version is better" stops being an impression. 🔴 A **skipped** assertion is not a pass. This
+exists because the suites in `tests/` all ask whether the CODE works, and a lossless refactor can
+score 2298/2298 while the next live run reads 3 of 10 reference files and ships zero icons —
+which has happened, twice.
+
 Full inventory — every script and its flags, the agents, all reference files, the 18 `presets.py` design presets, and the template **Registry** paths — is in `references/file-inventory.md`. Read it whenever you need a capability the *Where things live* table above doesn't already route (an unfamiliar script's arguments, the preset list, which agent or reference owns a concern). Each script's own operating contract is also restated at the step that runs it, so this is a lookup, not a gate.

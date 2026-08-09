@@ -1,0 +1,66 @@
+{
+  "_comment": [
+    "Evals for the slide-maker SKILL — not for its scripts. The 20 test suites in tests/ all ask",
+    "'does this code work'. Nothing asked 'do these 2109 lines of SKILL.md, 35 references and 5",
+    "agents make the DECK better', so every claim that a change improved the skill has been an",
+    "impression. The repo's own CLAUDE.md says it outright: a lossless refactor can score",
+    "2298/2298 and still degrade the skill, because the regression is in WHEN content reaches",
+    "context, not whether it survives — and the only real test is running it end to end and",
+    "looking at what the output is missing.",
+    "",
+    "Two things this deliberately does NOT do. It does not score taste (no LLM judge, no",
+    "aesthetic composite — that path was examined and rejected: reference similarity rewards",
+    "imitation and closed-form beauty scores fight this skill's own diversity gates). And it does",
+    "not run in PR CI: a run builds a real deck, which is minutes and real tokens.",
+    "",
+    "`reference_reached` is the assertion this file exists for. It answers the one question that",
+    "has burned this repo twice — 'was that reference actually READ during the run' — and it can",
+    "only be answered from a transcript, never from the artifact."
+  ],
+  "evals": [
+    {
+      "id": "happy-source-provided",
+      "prompt": "我们有一篇做好的论文要在 ISMRM 上做约 10 分钟的口头报告，帮我做演讲幻灯片。论文要点：提出一种基于隐式神经表示（INR）的动态心脏 MRI 重建方法；在 8 倍加速下相比 L+S 基线，PSNR 提升约 2.1 dB、SSIM 达 0.94；消融实验显示时间正则项是关键。我有方法框架图和一张重建对比图可以用。",
+      "expected": "Interview first (confirm ISMRM track/format, then web-research the venue's rules/aspect/template + style); build a ~6-9 slide talk that reuses the user's two provided figures WHOLE and stays strictly faithful to the given numbers (2.1 dB / 0.94 / time-reg ablation, no invention); run the critic loop to consent.",
+      "assertions": [
+        {"kind": "pptx_exists"},
+        {"kind": "slides_between", "lo": 6, "hi": 12},
+        {"kind": "lint_hard_clean"},
+        {"kind": "gates_present", "keys": ["critic", "design_plan", "delivery"]},
+        {"kind": "text_contains", "values": ["2.1", "0.94"],
+         "why": "the two numbers the user supplied must survive onto the slides verbatim"},
+        {"kind": "no_unsourced_numbers", "allow": ["2.1", "0.94", "8"],
+         "why": "any other figure on a slide was invented — the fidelity floor, mechanised"},
+        {"kind": "notes_coverage", "min_share": 0.8,
+         "why": "a presented deck puts the sentences in the notes, not on the slide"},
+        {"kind": "reference_reached", "paths": ["references/design-principles.md"],
+         "why": "the craft reference the build is supposed to design against"}
+      ]
+    },
+    {
+      "id": "ambiguous-purpose",
+      "prompt": "make me some slides about our Q3 results for the leadership team",
+      "expected": "Identifies purpose = exec/stakeholder readout; interviews (template/source/style); leads with outcome+ask, crisp corporate design (design-by-purpose); critic loop.",
+      "assertions": [
+        {"kind": "pptx_exists"},
+        {"kind": "lint_hard_clean"},
+        {"kind": "gates_present", "keys": ["critic", "design_plan"]},
+        {"kind": "reference_reached", "paths": ["references/interview-protocol.md"],
+         "why": "an under-specified ask is exactly where the interview must not be skipped"}
+      ]
+    },
+    {
+      "id": "no-source",
+      "prompt": "make a teaching deck on diffusion models, no materials, in English",
+      "expected": "No-source branch: drafts outline, web-searches to fact-check incl. current-date grounding, confirms outline; teaching rubric (objectives→build→recap); minimal/diagram-heavy.",
+      "assertions": [
+        {"kind": "pptx_exists"},
+        {"kind": "lint_hard_clean"},
+        {"kind": "gates_present", "keys": ["critic", "design_plan", "provenance"],
+         "why": "a no-source deck is research-sourced, so the PRIMARY-SOURCE GATE owes a record"},
+        {"kind": "text_absent", "values": ["placeholder", "TODO", "AI-generated", "Lorem"],
+         "why": "build residue on a slide ships broken"}
+      ]
+    }
+  ]
+}
