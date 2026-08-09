@@ -1085,6 +1085,15 @@ A few rules that matter (see `references/design-principles.md`):
   get the safe region from **`content_band()`**, and pack content-height blocks with
   **`vstack(..., bottom=…)`** (equal gaps + no overlap by construction, errors at build time on
   overflow). Use `measure_callout/measure_bullets/measure_text` when you must position manually.
+  **A block that grows can be measured — every one of them, so this rule is followable rather than
+  aspirational:** `measure_table(rows)` · `measure_timeline(events, orientation=, polarity=)` ·
+  `measure_takeaway_rail(label, hero, body, w)` · `measure_chip(title, sub, w)` ·
+  `measure_modbox(role, fname, w)` · `measure_node(label, sub, w)`. The last four are *enforced by
+  their own component* (`h = max(h, measure_…)`, the way `callout` has always enforced
+  `measure_callout`), so a chip/modbox/node cannot be built too small for its own text — size a
+  row of chips with `ch = max(measure_chip(t, s, cw) for t, s in stages)` to keep it even.
+  `takeaway_rail` now MEASURES its body and returns its bottom y; it used to reserve a fixed 2.0in
+  and put a long body's ink at y=5.45, inside the footer band, with every gate reporting clean.
   Then run the Step-5 render self-check.
   - **Those measurements are CALIBRATED against the renderer in CI, and that is why you can lean
     on them.** Everything here trusts one number — how wide the renderer will set this string —

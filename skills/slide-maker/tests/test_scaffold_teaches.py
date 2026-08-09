@@ -99,6 +99,27 @@ def main():
         crit = [f for f in dk.lint_layout(prs, verbose=False) if f[1] == "CRITICAL"]
         check("the scaffold's own output passes the build-time gate", crit == [], crit)
 
+    # ---- the direction-gate previews are held to the same rule -------------------------
+    # archetypes.py is not a scaffold anyone copies, but it is the FIRST thing a user sees: the
+    # four preview slides they pick a whole deck's direction from. It opened content at y=1.55 for
+    # every direction, and a direction module's title geometry is unknown by construction — that
+    # is what a direction gate IS. Measured on a 34pt-title direction, chrome ends at 1.830, so
+    # the preview collided with its own title by 0.28in.
+    arch = (ROOT / "scripts" / "archetypes.py").read_text(encoding="utf-8")
+    atree = ast.parse(arch)
+    ahand = []
+    for node in ast.walk(atree):
+        if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Name):
+            continue
+        if node.func.id not in ("bullet", "callout", "equation_native", "equation_png"):
+            continue
+        a = node.args[1:3]
+        if len(a) == 2 and all(isinstance(x, ast.Constant) and isinstance(x.value, (int, float))
+                               for x in a):
+            ahand.append("%s at line %d" % (node.func.id, node.lineno))
+    check("the direction previews place nothing at a hand-picked y", not ahand, ahand)
+    check("...they measure the direction's own chrome instead", "chrome_band(" in arch)
+
     # ---- the docstring must say WHY, since rationale is what generalises --------------
     # the module docstring: from the OPENING triple-quote to the matching CLOSE. (Searching from
     # index 3 finds the opening quote, not the closing one, and yields an empty head that fails

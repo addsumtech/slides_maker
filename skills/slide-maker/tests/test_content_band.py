@@ -118,6 +118,46 @@ def main():
     bad = [f for f in dk.lint_layout(prs, verbose=False) if f[1] == "CRITICAL"]
     check("a bullet block at the band top passes the build-time gate", bad == [], bad)
 
+    # ---- chrome_band: the same problem, for chrome this library did NOT draw -----------
+    # `archetypes.py` builds the direction-gate previews for ARBITRARY style modules, so their
+    # title geometry is unknown by construction. It opened content at a hand-picked y=1.55 for
+    # every direction. Measured on a direction with a 34pt title and a larger kicker, chrome ends
+    # at 1.830 — so 1.55 lands 0.28in inside the title, on the very slide the user approves the
+    # whole deck from.
+    def big_title(s):                             # a direction with a taller title treatment
+        dk.text(s, 0.6, 0.34, 8.8, 0.42, [[("ARCHETYPE", 15, dk.BLUE, True, False)]],
+                space_after=0)
+        dk.text(s, 0.6, 0.86, 8.8, 0.95, [[("How content slides read", 34, dk.DEEP, True, False)]],
+                space_after=0)
+        dk.box(s, 0.62, 1.78, 1.4, 0.05, fill=dk.BLUE)
+
+    _, s = slide(title=False)
+    big_title(s)
+    top = dk.chrome_band(s)[1]
+    check("chrome_band clears a title treatment it has never seen",
+          top >= chrome_bottom(s) - 1e-9, (top, chrome_bottom(s)))
+    check("...which the old hand-picked 1.55 did not", chrome_bottom(s) > 1.55, chrome_bottom(s))
+
+    _, s = slide(kicker="section")                # deckkit's own chrome: the two must agree
+    check("chrome_band agrees with content_band on deckkit's own chrome",
+          abs(dk.chrome_band(s)[1] - dk.content_band(s)[1]) < 1e-9,
+          (dk.chrome_band(s)[1], dk.content_band(s)[1]))
+
+    # the exclusions, each of which would otherwise wreck the band
+    _, s = slide(title=False)
+    dk.box(s, 0, 0, 10, 5.625, fill=dk.DEEP)                      # a full-bleed ground
+    dk.title_bar(s, "A title", kicker="k")
+    dk.footer(s, "tag", page=2)                                   # bottom chrome
+    dk.register_mark(s, "arcs", corner="tr", size=2.0)            # a corner device
+    band = dk.chrome_band(s)
+    check("a full-bleed ground, a footer and a corner motif are all ignored",
+          abs(band[1] - dk.content_band(s)[1]) < 1e-9, (band[1], dk.content_band(s)[1]))
+    check("...so the band still has real height", band[3] > 3.0, band[3])
+
+    _, s = slide(title=False)
+    check("an empty slide falls back to the documented constant",
+          abs(dk.chrome_band(s)[1] - dk.TITLE_BAND_DEFAULT) < 1e-9, dk.chrome_band(s)[1])
+
     print("\n{} passed, {} failed".format(len(PASS), len(FAIL)))
     return 1 if FAIL else 0
 

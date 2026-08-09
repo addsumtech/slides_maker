@@ -143,6 +143,18 @@ jobs:
       # The scaffold is the curriculum: whatever references/examples/build_example_generic.py
       # demonstrates is what gets written, and whatever it omits effectively does not exist. It
       # taught hand-picked y-coordinates and zero motif tags, and both showed up in a real build.
+      # "Never hand-pick a y" was unfollowable for the components that grow: 173 public callables,
+      # 4 measure_* helpers. takeaway_rail reserved a fixed 2.0in and put a long body's ink inside
+      # the footer band with the lint clean; a node below 0.5in² is not a "card" to ESCAPES_CARD,
+      # so its label escaped by 0.55in top and bottom with every gate green. Each helper here is
+      # asserted against REAL rendered geometry, never against its own arithmetic.
+      - name: Measure contracts (a block whose height cannot be known cannot be packed)
+        run: |
+          set -o pipefail
+          python tests/test_measure_contracts.py | tee /tmp/measure.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/measure.log || {
+            echo "::error::measure-contract suite did not run to completion"; exit 1; }
+
       - name: Scaffold teaches (the example is checked like a contract)
         run: |
           set -o pipefail

@@ -35,6 +35,14 @@ TARGETS = ("deckkit.py", "anim.py", "designed_charts.py", "icons.py", "maps.py",
 # Parameters that are accepted and deliberately not read. Each needs a reason, so that an
 # intentional no-op is a decision somebody recorded rather than the bug this file exists to find.
 EXPECTED_UNREAD = {
+    "deckkit.py:measure_timeline:events":
+        "a timeline's HEIGHT is deliberately independent of how many events it carries — they are "
+        "spaced along a fixed-height axis, and running out of room raises inside `timeline` rather "
+        "than growing the band (its own docstring documents the polarity='alternate' escape). The "
+        "argument is kept so the call mirrors `timeline(s, x, y, w, events, ...)`: a caller who "
+        "has to drop it in one place and pass it in the other will eventually pass the wrong one. "
+        "Verified against the component in tests/test_measure_contracts.py for all three branches "
+        "(below 1.4 / alternate 2.7 / vertical h), which is what would catch this going stale.",
     "deckkit.py:vstack:slide":
         "every placing helper is fn(slide, x, y, ...); vstack only computes geometry and hands "
         "each block its own rect, so it never needs the slide. Dropping it would make one helper "

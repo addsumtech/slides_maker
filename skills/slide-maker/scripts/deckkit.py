@@ -1222,9 +1222,17 @@ def takeaway_rail(slide, x, y, w, label, hero, body, *, accent=MAGENTA, ink=DEEP
     """The narrative 'so-what' rail beside a chart (the ~35% right column): small caps accent
     label → one restated hero stat → a 2-3 line interpretation. Pair with a chart in the left
     ~65% (content_band). Every designed chart should carry one of these."""
-    text(slide, x, y, w, 0.3, [[(label.upper(), 11, accent, True, False)]], space_after=0)
-    text(slide, x, y + 0.34, w, 0.9, [[(hero, 34, ink, True, False)]], space_after=0)
-    text(slide, x, y + 1.3, w, 2.0, [[(body, 14, body_c, False, False)]], space_after=0, line_spacing=1.2)
+    # Every band is MEASURED — the label and hero can each wrap, and the body box was a fixed
+    # 2.0in. See measure_takeaway_rail for both defects. Returns the bottom y, so a caller can
+    # place under the rail or hand it to vstack.
+    lab_h = max(0.30, _measure_lines([(label.upper(), True)], 11, w) * 11 / 72.0 * _LINT_LINE_H)
+    hero_h = max(0.90, _measure_lines([(hero, True)], 34, w) * 34 / 72.0 * _LINT_LINE_H)
+    body_h = measure_text([(body, False)], w, 14, line_h_factor=_LINT_LINE_H * 1.2)
+    text(slide, x, y, w, lab_h, [[(label.upper(), 11, accent, True, False)]], space_after=0)
+    text(slide, x, y + lab_h + 0.04, w, hero_h, [[(hero, 34, ink, True, False)]], space_after=0)
+    text(slide, x, y + lab_h + 0.04 + hero_h + 0.06, w, body_h,
+         [[(body, 14, body_c, False, False)]], space_after=0, line_spacing=1.2)
+    return round(y + lab_h + 0.04 + hero_h + 0.06 + body_h + 0.03, 4)
 
 
 # ============================================ layout patterns (editorial / diagram / wayfinding)
@@ -3008,6 +3016,55 @@ def _chrome_bottom(slide):
     return best
 
 
+def chrome_band(slide, *, gap=CHROME_GAP, footer_gap=0.15):
+    """The safe content rect ``(x, y, w, h)`` below whatever chrome is ALREADY on this slide.
+
+    🔴 Call it immediately after drawing the chrome and before any content — at that moment
+    every shape on the slide IS chrome, which is what makes the measurement exact.
+
+    :func:`content_band` measures the chrome `title_bar` tagged, so it only knows deckkit's own
+    title. This one knows nothing and measures anyway, which is what a deck with its OWN title
+    treatment needs — a multi-section `style.py`, or `archetypes.py`, which builds preview slides
+    for direction modules whose title geometry is unknown by construction. Those had no honest
+    option but a hand-picked number: `archetypes.py` opened its content at y=1.55 for every
+    direction, and a direction with a taller title, a larger kicker or a two-line title collides
+    with it — on the preview slide the user approves the whole deck from.
+
+    What it deliberately ignores, because none of it constrains where content starts:
+      · anything with no explicit geometry (a placeholder inheriting from the layout);
+      · a full-bleed ground — a background box is not a ceiling to sit under;
+      · the deck's motif (`register_mark` / `tag_motif`) — a corner device is chrome-height
+        geometry that is emphatically NOT a title, and letting it set the top would push every
+        page's content down by however large the mark happens to be;
+      · anything starting in the lower half — the footer is chrome too, and measuring it would
+        collapse the band to nothing.
+    """
+    w_in, h_in = _slide_size(slide)
+    lower = h_in * 0.45
+    best = None
+    for sh in slide.shapes:
+        if _is_motif(sh):
+            continue
+        try:
+            t, hh = sh.top, sh.height
+            ww = sh.width
+        except Exception:
+            continue
+        if t is None or hh is None or ww is None:
+            continue
+        t, hh, ww = t / 914400.0, hh / 914400.0, ww / 914400.0
+        if t >= lower:                       # footer and other bottom chrome
+            continue
+        if hh >= h_in * 0.6 or (ww >= w_in * 0.98 and hh >= h_in * 0.35):
+            continue                         # a full-bleed ground, not a ceiling
+        b = t + hh
+        if best is None or b > best:
+            best = b
+    top = TITLE_BAND_DEFAULT if best is None else round(best + gap, 4)
+    bottom_y = h_in - FOOTER_BAND - footer_gap
+    return (GUTTER, top, w_in - 2 * GUTTER, bottom_y - top)
+
+
 def content_band(slide, *, top=None, footer_gap=0.15):
     """The one authoritative SAFE content rect ``(x, y, w, h)`` — below the title bar and
     **above the footer band** — read from the deck's REAL size.
@@ -3331,6 +3388,121 @@ def measure_callout(label, body, w):
     return 0.30 + 0.245 * nlines   # 0.30 = top+bottom padding: snug to the text but not cramped
 
 
+def _stacked_text_h(lines, w, *, pad=0.0, line_h_factor=1.12):
+    """Minimum inner height for a stack of ``(text, size_pt, bold, font)`` lines at width ``w``.
+
+    The shared arithmetic behind `measure_chip` / `measure_modbox` / `measure_node`, so the three
+    cannot drift apart or from the components that enforce them.
+    """
+    total = 0.0
+    for txt, size, bold, font in lines:
+        if not txt:
+            continue
+        n = max(1, _measure_lines([(txt, bool(bold))], size, w, font=font))
+        total += size / 72.0 * line_h_factor * n
+    return total + pad
+
+
+def measure_chip(title, sub="", w=1.9, *, title_size=14, sub_size=10.5):
+    """Minimum height (inches) a :func:`chip` needs for this text at width ``w``.
+
+    `chip` enforces it (``h = max(h, measure_chip(...))``), the same way `callout` enforces
+    `measure_callout` — so the formula lives in ONE place and a chip cannot be built too small
+    for its own label. Call it first when a row of chips must share one height:
+    ``ch = max(measure_chip(t, s, cw) for t, s in stages)``.
+    """
+    lines = [(title, title_size, True, None)]
+    lines += [(ln, sub_size, False, None) for ln in (sub.split("\n") if sub else [])]
+    return round(_stacked_text_h(lines, w - 0.26, pad=0.16, line_h_factor=0.98 * 1.12), 4)
+
+
+def measure_modbox(role, fname, w):
+    """Minimum height (inches) a :func:`modbox` needs: the role block (16pt, one line per ``\\n``)
+    plus the mono filename strip it pins to the bottom edge. Enforced by `modbox`.
+
+    ``fname`` is measured, not assumed to be one line: it is set in MONO, which is markedly wider
+    than the body face, so a long module path wraps in a narrow box and the strip needs the room.
+    """
+    role_h = _stacked_text_h([(ln, 16, True, None) for ln in role.split("\n")],
+                             w - 0.1, line_h_factor=0.92 * 1.12)
+    fname_h = max(0.30, _measure_lines([(fname, False)], 9.5, w - 0.1, font=MONO)
+                  * 9.5 / 72.0 * _LINT_LINE_H)
+    return round(0.12 + max(0.55, role_h) + fname_h + 0.04, 4)
+
+
+def measure_node(label, sub="", w=1.6, *, label_size=13, sub_size=9.5):
+    """Minimum height (inches) a :func:`node` needs for its label (+ optional mono ``sub``).
+
+    Enforced by `node`, which is why it matters more than it looks: a node smaller than 0.5 in²
+    is not treated as a card by the ESCAPES_CARD check (that threshold exists to exclude accent
+    rails, icon tiles and badges), so a label on a 1.2 x 0.35in node escaped its box by 0.55in
+    above AND below with every gate reporting clean. A component that knows its own text can
+    simply refuse to be too small, which beats detecting the mistake afterwards.
+    """
+    lines = [(label, label_size, True, None)]
+    if sub:
+        lines.append((sub, sub_size, False, MONO))
+    return round(_stacked_text_h(lines, w - 0.12, pad=0.10), 4)
+
+
+def measure_table(rows, *, row_h=0.34):
+    """Height (inches) :func:`table` will occupy for ``rows`` — the same ``row_h * nrow`` the
+    component uses, so a table can go into a `vstack` or be cleared by a block below.
+
+    There is deliberately no ``header`` argument, though `table` takes one: row 0 IS the header,
+    so it is already counted in ``rows`` and the flag cannot change the height. Accepting it for
+    call-site symmetry would be a parameter that silently does nothing, which is the trap
+    `check_param_reach.py` exists to catch.
+
+    A cell long enough to WRAP grows its row beyond ``row_h`` — python-pptx does that at render
+    time and it cannot be measured here, so keep cells terse and check the PNG (the same caveat
+    `table` documents).
+    """
+    return round(row_h * len(rows), 4)
+
+
+def measure_takeaway_rail(label, hero, body, w):
+    """Height (inches) a :func:`takeaway_rail` occupies: label + hero + the MEASURED body.
+
+    The rail had no ``h`` parameter and no return value, and reserved a hard-coded 2.0in for the
+    body. Measured: a 2.1in body overflowed that box by 0.10in, putting its ink at y=5.45 —
+    inside the footer band, which starts at 5.12 — while `lint_layout` reported clean. Nothing
+    downstream could even ask where the rail ended. `takeaway_rail` now sizes its body from this
+    and returns its bottom y.
+
+    🔴 The factor is ``_LINT_LINE_H * 1.2``, not ``1.2``. Those are two multipliers, not one: the
+    ink model uses ``_LINT_LINE_H`` (=1.2) as the base line height and the rail's `text()` call
+    multiplies it again by ``line_spacing=1.2``. Passing only the spacing under-measured the body
+    by exactly 1.20x — the first version of this helper returned 4.57in for a rail whose ink
+    really ended at 5.45in, i.e. it "fixed" the constant and kept the bug. Measured, per line at
+    14pt: spacing 1.0 -> 1.2000 x pt/72, 1.08 -> 1.2960, 1.2 -> 1.4400, 1.4 -> 1.6800.
+
+    The trailing 0.03 is the text frame's own top inset. Measured as a CONSTANT 0.028in across
+    2-, 4- and 8-line bodies, i.e. an offset and not a scaling error — carried so the returned
+    bottom is never under the real ink bottom, which is the whole contract.
+
+    🔴 `label` and `hero` are MEASURED, not assumed to be one line. An earlier version folded them
+    into a 1.30in constant, which `check_param_reach.py` caught as "accepted and never read" —
+    correctly, because it was a bug and not a no-op: a 34pt hero wrapping to 4 lines overflowed
+    its 0.9in box by 1.394in and its ink ran to y=4.03, straight through a body that starts at
+    y+1.30. For a one-line label and hero the arithmetic below is 0.30 + 0.04 + 0.90 + 0.06 =
+    1.30 exactly, so the common case is unchanged byte for byte.
+    """
+    lab_h = max(0.30, _measure_lines([(label.upper(), True)], 11, w) * 11 / 72.0 * _LINT_LINE_H)
+    hero_h = max(0.90, _measure_lines([(hero, True)], 34, w) * 34 / 72.0 * _LINT_LINE_H)
+    body_h = measure_text([(body, False)], w, 14, line_h_factor=_LINT_LINE_H * 1.2)
+    return round(lab_h + 0.04 + hero_h + 0.06 + body_h + 0.03, 4)
+
+
+def measure_timeline(events, *, orientation="h", h=1.4, polarity="below"):
+    """Height (inches) a :func:`timeline` occupies — mirrors the extent `timeline` returns, so a
+    caller can reserve the space BEFORE placing (which is what `vstack` needs) instead of only
+    learning it afterwards."""
+    if orientation == "v":
+        return round(float(h), 4)
+    return 2.7 if polarity == "alternate" else 1.4     # alternate is ay+1.35 either side of the axis
+
+
 def measure_bullets(items, w, size=17, gap=0.26):
     """Height (inches) :func:`bullet` will occupy for ``items`` at width ``w`` (no trailing
     gap), using the same per-item line measurement — so a build can place the next block
@@ -3438,6 +3610,7 @@ def chip(slide, x, y, w, h, title, sub, fill, tcolor=None):
     instead of unreadable white. Pass `tcolor` explicitly to override."""
     if tcolor is None:
         tcolor = _legible_ink(fill)
+    h = max(h, measure_chip(title, sub, w))     # never smaller than its own text — see measure_chip
     box(slide, x, y, w, h, fill=fill, round=True)
     runs = [[(title, 14, tcolor, True, False)]]
     if sub:
@@ -3512,6 +3685,7 @@ def modbox(slide, x, y, w, h, role, fname, fill, tcolor=None, check=False):
     `tcolor=None` auto-picks white/dark ink for contrast against `fill` (see chip)."""
     if tcolor is None:
         tcolor = _legible_ink(fill)
+    h = max(h, measure_modbox(role, fname, w))          # see measure_modbox
     box(slide, x, y, w, h, fill=fill, round=True)
     role_runs = [[(line, 16, tcolor, True, False)] for line in role.split("\n")]
     text(slide, x + 0.05, y + 0.12, w - 0.1, 0.55, role_runs, align=PP_ALIGN.CENTER,
@@ -5311,6 +5485,10 @@ def node(slide, x, y, w, h, label, *, shape="roundrect", fill=None, line=None, l
     lines (hub_spoke does this internally)."""
     acc = accent if accent is not None else BLUE
     ln = line if line is not None else acc
+    # A node is never smaller than its own label — see measure_node for the measured defect this
+    # closes. NB this is the RECTANGULAR floor; a circle/diamond has less usable interior than its
+    # bounding box, so those still want headroom beyond the minimum.
+    h = max(h, measure_node(label, sub, w))
     sh = {"pill": MSO_SHAPE.ROUNDED_RECTANGLE, "roundrect": MSO_SHAPE.ROUNDED_RECTANGLE,
           "rect": MSO_SHAPE.RECTANGLE, "circle": MSO_SHAPE.OVAL,
           "diamond": MSO_SHAPE.DIAMOND, "parallelogram": MSO_SHAPE.PARALLELOGRAM,

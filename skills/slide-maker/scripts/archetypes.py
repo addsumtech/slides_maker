@@ -45,7 +45,8 @@ def _load_style(path):
 
 def build_archetypes(prs, S, name=""):
     """Append the 4 standard preview slides, styled by direction module S."""
-    from deckkit import add_slide, box, text, bullet, callout, chip, arrow, WHITE as _W
+    from deckkit import (add_slide, box, text, bullet, callout, bottom_callout, chip, arrow,
+                         chrome_band, vstack, measure_bullets, WHITE as _W)
     accents = list(getattr(S, "ACCENTS", [S.ACCENT, getattr(S, "ACCENT2", S.ACCENT)]))
     W, H = S.W, S.H
 
@@ -61,21 +62,36 @@ def build_archetypes(prs, S, name=""):
     # 2 — bullets + callout (how text content reads)
     s = add_slide(prs)
     S.title_bar(s, "How content slides read", kicker="archetype")
-    bullet(s, 0.6, 1.55, W - 1.7, [
-        ("Terse points ", "a few words each"),
-        ("Emphasis ", "where it matters"),
-        ("Consistent ", "spacing and rhythm"),
-    ], size=16, marker=S.ACCENT, lead_c=S.INK, body_c=S.GREY)
-    callout(s, 0.6, H - 1.15, W - 1.2, 0.6, "TAKEAWAY",
-            "One idea per slide, carried by the layout.",
-            label_c=S.WHITE, fill=S.ACCENT, body_c=S.WHITE)
+    # 🔴 MEASURED, and here it is not a nicety. `S` is an ARBITRARY direction module: its title
+    # treatment is unknown by construction, which is the entire point of a direction gate. This
+    # opened at a hand-picked y=1.55 for every direction, so a direction with a taller title, a
+    # larger kicker, or a title that wraps collided with its own first bullet — on the preview
+    # slide the user approves the whole deck from. chrome_band() is called right after the chrome
+    # is drawn and before any content, when every shape on the slide IS chrome.
+    band = chrome_band(s)
+    items = [("Terse points ", "a few words each"),
+             ("Emphasis ", "where it matters"),
+             ("Consistent ", "spacing and rhythm")]
+    top = bottom_callout(s, 0.6, W - 1.2, "TAKEAWAY",
+                         "One idea per slide, carried by the layout.",
+                         label_c=S.WHITE, fill=S.ACCENT, body_c=S.WHITE)
+    vstack(s, 0.6, band[1], W - 1.7,
+           [(measure_bullets(items, W - 1.7, size=16),
+             lambda x, y, w: bullet(s, x, y, w, items, size=16, marker=S.ACCENT,
+                                    lead_c=S.INK, body_c=S.GREY))],
+           bottom=top - 0.3)
     S.footer(s, 2, tag="direction preview")
 
     # 3 — diagram (how a pipeline/structure reads)
     s = add_slide(prs)
     S.title_bar(s, "How a diagram reads", kicker="archetype")
     stages = ["Input", "Process", "Model", "Output"]
-    cw, g, x0, y0, ch = (W - 1.2 - 3 * 0.3) / 4, 0.3, 0.6, 2.2, 1.2
+    # y0 was 2.2 — a literal, so the AST scan that found the other three missed it, which is a
+    # fair warning about that scan: it catches `f(s, 0.6, 1.55, ...)` and not a constant bound to
+    # a name one line earlier. Same defect either way. Centre the row in the measured band.
+    band = chrome_band(s)
+    cw, g, x0, ch = (W - 1.2 - 3 * 0.3) / 4, 0.3, 0.6, 1.2
+    y0 = band[1] + (band[3] - ch) / 2.0
     for i, nm in enumerate(stages):
         x = x0 + i * (cw + g)
         chip(s, x, y0, cw, ch, nm, "one line", accents[i % len(accents)])
@@ -86,16 +102,23 @@ def build_archetypes(prs, S, name=""):
     # 4 — data / figure (how a results slide reads)
     s = add_slide(prs)
     S.title_bar(s, "How a results slide reads", kicker="archetype")
-    box(s, 0.6, 1.55, 5.4, 3.1, fill=getattr(S, "LIGHT", S.LINE), line=S.LINE, line_w=1.0)
-    text(s, 0.6, 2.9, 5.4, 0.4, [[("[ your figure / chart, shown whole ]", 12, S.MUTE, False, True)]], align=None, space_after=0)
-    text(s, 6.25, 1.7, W - 6.85, 0.3, [[("LEGEND", 11, S.ACCENT, True, False)]], space_after=0)
-    bullet(s, 6.3, 2.1, W - 6.9, [
-        ("Series A ", "baseline"),
-        ("Series B ", "proposed"),
-    ], size=13, gap=0.28, marker=S.ACCENT, lead_c=S.INK, body_c=S.GREY)
-    callout(s, 6.25, 3.7, W - 6.85, 0.85, "WHAT TO NOTICE",
-            "The one comparison the figure makes.",
-            label_c=S.WHITE, fill=S.ACCENT, body_c=S.WHITE)
+    band = chrome_band(s)                     # again: measured, for an unknown title treatment
+    fy, fh = band[1], band[3]
+    box(s, 0.6, fy, 5.4, fh, fill=getattr(S, "LIGHT", S.LINE), line=S.LINE, line_w=1.0)
+    text(s, 0.6, fy + fh / 2 - 0.2, 5.4, 0.4,
+         [[("[ your figure / chart, shown whole ]", 12, S.MUTE, False, True)]],
+         align=None, space_after=0)
+    legend = [("Series A ", "baseline"), ("Series B ", "proposed")]
+    note = bottom_callout(s, 6.25, W - 6.85, "WHAT TO NOTICE",
+                          "The one comparison the figure makes.",
+                          label_c=S.WHITE, fill=S.ACCENT, body_c=S.WHITE)
+    vstack(s, 6.25, fy, W - 6.85,
+           [(0.3, lambda x, y, w: text(s, x, y, w, 0.3,
+                                       [[("LEGEND", 11, S.ACCENT, True, False)]], space_after=0)),
+            (measure_bullets(legend, W - 6.9, size=13, gap=0.28),
+             lambda x, y, w: bullet(s, x + 0.05, y, w - 0.05, legend, size=13, gap=0.28,
+                                    marker=S.ACCENT, lead_c=S.INK, body_c=S.GREY))],
+           gap=0.12, bottom=note - 0.3)
     S.footer(s, 4, tag="direction preview")
 
 
