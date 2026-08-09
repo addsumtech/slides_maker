@@ -280,7 +280,7 @@ This is the same skill, just managed by Claude Code's plugin system instead of c
 
 slide-maker checks before it asks you anything, and **stays completely silent when you are current**. When a newer version exists it does not update itself and does not just mention it — it asks, once, at the top:
 
-- **yes** — it updates for you, then builds the whole deck on the new version. You don't need to know how you installed it: it works that out and runs the right command itself. (One exception it will tell you about — a Claude Code plugin install updates through the plugin system, and those are slash commands only you can type, so it points you at `/plugin` instead of guessing at a command that would install a second copy beside the first.)
+- **yes** — it updates for you, then builds the whole deck on the new version. You don't need to know how you installed it: it works that out and runs the right command itself.
 - **no** — don't update; build on the version you already have installed.
 - **other** — you have local changes. It shows you what is yours and what is incoming, and resolves nothing on its own.
 
