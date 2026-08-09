@@ -172,6 +172,17 @@ jobs:
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/deliv.log || {
             echo "::error::delivery-record suite did not run to completion"; exit 1; }
 
+      # TEXT_OVERLAP measures text against TEXT, so a label grazing a bar/chip/node is invisible
+      # to it — the same blindness TEXT_OVER_MOTIF was written for, except that one only sees
+      # TAGGED shapes and nobody tags a bar. Measured on a delivered deck: a row label ran
+      # 0.015in² into the negative bar beside it, both lints clean, found by eye — twice.
+      - name: Graze contract (a label running into the bar beside it)
+        run: |
+          set -o pipefail
+          python tests/test_graze_contract.py | tee /tmp/graze.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/graze.log || {
+            echo "::error::graze-contract suite did not run to completion"; exit 1; }
+
       - name: Motif contract (register_mark · keep-out · loud budget)
         run: |
           set -o pipefail

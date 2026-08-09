@@ -7167,6 +7167,74 @@ def _declared_overlap(sh):
     return str(getattr(sh, "name", "") or "").startswith(OVERLAP_TAG)
 
 
+def _graze_faults(prs):
+    """TEXT_GRAZES_SHAPE — a label's ink running INTO a filled shape it is not inside.
+
+    `TEXT_OVERLAP` measures text against TEXT, so a caption grazing a bar, a chip, a node or a
+    table swatch is invisible to it — the same structural blindness `TEXT_OVER_MOTIF` was written
+    for, except that one only sees shapes the author remembered to TAG. Measured on a delivered
+    12-page deck: a right-aligned row label ran 0.09in into the negative bar beside it, and BOTH
+    the build-time gate and the render-time lint reported clean. It was found by eye, twice —
+    the first repair shortened the text and the label still grazed, because the fix has to move
+    the COLUMN EDGE, not the string.
+
+    🔴 The whole difficulty is the ordinary case this must stay silent on: a value printed INSIDE
+    its own bar (`3.2%` on the interest column) is text over a filled shape too, and it is correct
+    design — this library's own components do it. So containment is the discriminator, not
+    overlap: ink mostly INSIDE the shape is a label ON it; ink mostly OUTSIDE with a corner
+    dipping in is a collision. `CONTAINED` is deliberately generous (0.80) because a centred
+    label can overhang a snug chip by a hair and still be the intended composition.
+    """
+    out = []
+    W, H = prs.slide_width / 914400.0, prs.slide_height / 914400.0
+    CONTAINED, MIN_DIP = 0.80, 0.02
+    for n, slide in enumerate(prs.slides, 1):
+        marks, texts = [], []
+        for sh in slide.shapes:
+            bb = _bbox_in(sh)
+            if bb is None or bb[2] <= 0 or bb[3] <= 0:
+                continue
+            if _is_text(sh):
+                if _is_watermark(sh) or _declared_overlap(sh):
+                    continue
+                r = _ink_rect(sh, bb)
+                if r and r[0]:
+                    texts.append((sh, r[0]))
+                continue
+            # a filled, non-bleed mark: the class a label can collide with
+            if _is_motif(sh):
+                continue                      # TEXT_OVER_MOTIF owns those, with its own message
+            if not _has_fill(sh):
+                continue
+            if bb[2] >= W * 0.92 and bb[3] >= H * 0.92:
+                continue                      # a full-bleed ground is not something to graze
+            if bb[2] * bb[3] >= W * H * 0.5:
+                continue                      # a half-canvas panel is a ground, not a mark
+            marks.append(bb)
+        for tsh, tr in texts:
+            ink_a = tr[2] * tr[3]
+            if ink_a <= 0:
+                continue
+            for mb in marks:
+                ix = max(0.0, min(tr[0] + tr[2], mb[0] + mb[2]) - max(tr[0], mb[0]))
+                iy = max(0.0, min(tr[1] + tr[3], mb[1] + mb[3]) - max(tr[1], mb[1]))
+                a = ix * iy
+                if a <= MIN_DIP * MIN_DIP:
+                    continue
+                if a / ink_a >= CONTAINED:
+                    continue                  # the label is ON the mark — ordinary, and correct
+                txt = (tsh.text_frame.text or "").strip().replace("\n", " ")[:26]
+                out.append((n, "WARN", "TEXT_GRAZES_SHAPE",
+                            f"text {txt!r} runs {a:.3f}in² into a filled shape it is not "
+                            "inside — TEXT_OVERLAP measures text against TEXT, so a label "
+                            "grazing a bar/chip/node is invisible to it. Derive the label "
+                            "column's edge from the DATA (the furthest the mark can reach), not "
+                            "from the axis; shortening the string only moves the collision. "
+                            "Deliberate? declare it with deckkit.overlap_intent(shape, '<why>')"))
+                break
+    return out
+
+
 def _deck_level_faults(prs):
     """Faults that are invisible one slide at a time — both measured on a real delivered deck.
 
@@ -7648,6 +7716,7 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
                             f"a card/panel reaches the footer row (bottom {bb[1]+bb[3]:.2f}in vs footer at {footer_top:.2f}in)"))
     findings.extend(_deck_level_faults(prs))
     findings.extend(_motif_faults(prs))
+    findings.extend(_graze_faults(prs))
     findings.extend(_cjk_face_faults(prs))
     if verbose:
         crit = sum(1 for f in findings if f[1] == "CRITICAL")
