@@ -13,7 +13,7 @@ falsely flagged for craft. The two directions matter equally and are asserted se
 
 Run:  python3 tests/test_lint_regressions.py
 """
-import os, pathlib, shutil, subprocess, sys, tempfile
+import json, os, pathlib, shutil, subprocess, sys, tempfile
 
 HERE = pathlib.Path(__file__).resolve().parent
 SCRIPTS = HERE.parent / "scripts"
@@ -976,6 +976,46 @@ def main():
         "a deck that puts its weight on the same side page after page is reported")
     (ok if not _lean_deck("mixed") else bad).append(
         "a deck that alternates which side carries the weight is silent")
+
+    # ---- the JSON must say which findings BLOCK, because a gate downstream asks -------------
+    # codex_delivery_gate.check_lint filters `finding.get("severity") == "error"`. That field did
+    # not exist, so the filter matched nothing and a deck with a genuine OVERFLOW produced ZERO
+    # gate errors — the gate's rule was right and the payload could not answer it. The hard/soft
+    # split was always real here (two separate lists); it just never reached the JSON.
+    import deckkit as _dk3
+    import tempfile as _tf3
+
+    def _sev(broken):
+        _dk3.FONT = "Helvetica Neue"
+        prs = _dk3.blank_deck()
+        sl = _dk3.add_slide(prs)
+        _dk3.box(sl, 0, 0, 10, 5.625, fill=_dk3.RGBColor(0xFF, 0xFF, 0xFF))
+        _dk3.text(sl, 0.6, 1.4, 8.8, 0.5,
+                  [[("An ordinary line of body text.", 14, _dk3.DEEP, False, False,
+                     "Helvetica Neue")]], space_after=0)
+        if broken:
+            _dk3.text(sl, 9.4, 1.0, 4.0, 0.4,
+                      [[("this runs off the right edge", 14, _dk3.DEEP, False, False,
+                         "Helvetica Neue")]], space_after=0, wrap=False)
+        d = _tf3.mkdtemp()
+        out = os.path.join(d, "t.pptx")
+        prs.save(out)
+        jf = os.path.join(d, "l.json")
+        subprocess.run([sys.executable, str(SCRIPTS / "lint_deck.py"), out,
+                        "--json", jf, "--static"], capture_output=True, text=True)
+        with open(jf, encoding="utf-8") as fh:
+            return json.load(fh)
+
+    _b, _c = _sev(True), _sev(False)
+    (ok if all(f.get("severity") == "error" for f in _b.get("findings") or [None])
+     else bad).append("every hard finding in the JSON is tagged severity=error")
+    (ok if all(w.get("severity") == "warning" for w in (_b.get("warnings") or []))
+     else bad).append("every advisory in the JSON is tagged severity=warning")
+    (ok if not (_c.get("findings") or []) else bad).append(
+        "a clean deck still emits no hard findings at all")
+    # the shape older consumers read must not have moved
+    (ok if all({"slide", "text"} <= set(f) for f in _b.get("findings") or [])
+     else bad).append("the pre-existing slide/text keys are untouched (severity is additive)")
 
     for line in ok:
         print("  ok   " + line)

@@ -2702,12 +2702,18 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
                 seen_pairs.add(("LINE", lc, back))
                 warns.append(f"NON-TEXT CONTRAST: line #{lc} on #{back} — {ratio:.2f}:1 "
                              f"(<3:1, WCAG 1.4.11); essential icons/lines need more contrast")
+        # `severity` is ADDITIVE — every existing consumer reads `slide`/`text` and is untouched.
+        # It exists because the hard/soft split has always been real here (two separate lists) and
+        # was the one thing the JSON never said, so a downstream gate could not act on it.
+        # Measured: codex_delivery_gate.check_lint filters `finding.get("severity") == "error"`,
+        # which matched NOTHING because the field did not exist — a deck with a genuine OVERFLOW
+        # produced zero gate errors. The gate's rule was right; the payload could not answer it.
         for m in finds:
             print(f"  slide {si+1}: {m}")
-            j_findings.append({"slide": si + 1, "text": m})
+            j_findings.append({"slide": si + 1, "text": m, "severity": "error"})
         for m in warns:
             print(f"  slide {si+1}: [warn] {m}")
-            j_warns.append({"slide": si + 1, "text": m})
+            j_warns.append({"slide": si + 1, "text": m, "severity": "warning"})
         total += len(finds)
         warn_total += len(warns)
     # duplicate slide titles (deck-level, advisory): screen-reader navigation needs UNIQUE titles
@@ -2720,7 +2726,7 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
             m = (f"DUPLICATE SLIDE TITLES: slides {', '.join(map(str, sns))} share the title "
                  f"'{disp}' — screen readers navigate by title; make each unique")
             print(f"  slide {sns[0]}: [warn] {m}")
-            j_warns.append({"slide": sns[0], "text": m})
+            j_warns.append({"slide": sns[0], "text": m, "severity": "warning"})
             warn_total += 1
     # UNSOURCED NUMBER (deck-level, advisory): a slide asserting a magnitude that appears NOWHERE
     # a source is stated. Deck-level on purpose — a recap or divider restating a figure that IS
@@ -2741,7 +2747,7 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
                  f"If the attribution is already in prose here, this is a false alarm; if you cannot "
                  f"name where the figure came from, that is the actual problem")
             print(f"  slide {sn}: [warn] {m}")
-            j_warns.append({"slide": sn, "text": m})
+            j_warns.append({"slide": sn, "text": m, "severity": "warning"})
             warn_total += 1
     # SCALE DRIFT (deck-level, advisory): the declared type_scale vs the type actually set. The
     # gate requires the field; until now nothing compared it to the artifact.
@@ -2750,7 +2756,7 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
         # slide 0 = DECK-level, deliberately: unlike DUPLICATE SLIDE TITLES this cannot be pinned to
         # one slide — the scale is a property of the whole deck, and naming an arbitrary slide would
         # send a reader to a page where nothing is wrong.
-        j_warns.append({"slide": 0, "text": m})
+        j_warns.append({"slide": 0, "text": m, "severity": "warning"})
         warn_total += 1
     lums = _load_render_lums(path, renders_dir, len(stats_rows), pngs=pngs)
     deck_stats = _print_stats(stats_rows, mode, sw, sh, lums=lums, static_ok=static_ok)
