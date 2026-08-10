@@ -717,6 +717,91 @@ def check_sameness(deck_path: Path) -> tuple[int, int]:
     return ok_n, bad_n
 
 
+
+def check_form_reach(deck: Path) -> tuple[int, int]:
+    """A report that never asks for an answer is a line people learn to scroll past.
+
+    `form reach` printed `1 of 23 named components; the rest is raw box/text` on a DELIVERED deck
+    and let it through — and three of that deck's review findings were defects the unused
+    components prevent by construction (a label grazing its bar, a value floating off a track's
+    centreline, a reference line drawn three different ways).
+
+    🔴 It must never block on the NUMBER. Bespoke composition is legitimate and is often the
+    signature move itself — a Mondrian page cannot come from a catalogue. It blocks on the absence
+    of a DECISION, which is the failure that actually happened: nobody looked. Both directions are
+    asserted, and the silent cases are the load-bearing half.
+    """
+    ok = bad = 0
+
+    def one(name, cond, detail=""):
+        nonlocal ok, bad
+        if cond:
+            ok += 1
+            print("  ok   form_reach: " + name)
+        else:
+            bad += 1
+            print("  FAIL form_reach: " + name + ("  — " + str(detail) if detail else ""))
+
+    base = {"critic": {"verdict": "consent", "rounds": 2}, "provenance": PROV_OK,
+            "density": {"waived": "a fixture deck is not a real density decision"}}
+
+    # the fixture deck has no build*.py beside it, so the reporter cannot even measure reach —
+    # it must stay silent rather than inventing a blocker for a deck it knows nothing about.
+    code, out = run_gate(deck, dict(base, design_plan=DESIGN_OK))
+    one("a deck with no build script is unaffected (nothing to measure)",
+        "form reach is" not in out, out[-140:])
+
+    # now give it a build script that is all raw box/text — the measured failure
+    script = deck.parent / "build_fixture.py"
+    script.write_text("import deckkit as dk\n"
+                      "def main(s):\n"
+                      "    dk.box(s, 0, 0, 1, 1)\n"
+                      "    dk.text(s, 0, 0, 1, 1, [[('x', 12, dk.DEEP, False, False)]])\n",
+                      encoding="utf-8")
+    try:
+        code, out = run_gate(deck, dict(base, design_plan=DESIGN_OK))
+        one("a raw box/text build with no recorded reason BLOCKS", code != 0, code)
+        one("...and the message names the one command that answers it",
+            "sigs.py --list" in out, out[-160:])
+        one("...and says it blocks on the decision, not the number",
+            "blocks on there being no decision" in out, out[-160:])
+
+        d = dict(DESIGN_OK)
+        d["form_reach"] = {"waived": "the deck's whole argument is one bespoke datum line"}
+        code, out = run_gate(deck, dict(base, design_plan=d))
+        one("a recorded reason passes", code == 0, out[-160:])
+        one("...and the waiver is printed, not swallowed", "form reach WAIVED" in out, out[-160:])
+
+        d["form_reach"] = {"waived": "bespoke"}
+        code, out = run_gate(deck, dict(base, design_plan=d))
+        one("a one-word reason is not a reason", code != 0, code)
+
+        d["form_reach"] = "bespoke composition throughout this deck"
+        code, out = run_gate(deck, dict(base, design_plan=d))
+        one("a bare string is not the recorded shape either", code != 0, code)
+    finally:
+        script.unlink(missing_ok=True)
+
+    # ---- plan files in the deliverable folder ------------------------------------------
+    # checkpoint-convention.md says the checkpoint artifact is pasted into the CONVERSATION and
+    # that content-plan.md / design-plan.md must not be written into the deck folder. That lived
+    # as one sentence inside a reference file — the position most likely to be skipped — and
+    # nothing anywhere reported one, so the user found the clutter instead of a gate.
+    # Advisory, not blocking: the same sentence carves out "unless the user asked for plan files".
+    code, out = run_gate(deck, dict(base, design_plan=DESIGN_OK))
+    one("a clean folder says nothing about plan files", "plan files in the deliverable" not in out)
+    plan = deck.parent / "design-plan.md"
+    plan.write_text("# design plan\n", encoding="utf-8")
+    try:
+        code, out = run_gate(deck, dict(base, design_plan=DESIGN_OK))
+        one("a stray design-plan.md is reported", "plan files in the deliverable" in out, out[-140:])
+        one("...and it is ADVISORY — the hand-off is not blocked over clutter", code == 0, code)
+        one("...and it names the file", "design-plan.md" in out)
+    finally:
+        plan.unlink(missing_ok=True)
+    return ok, bad
+
+
 def main() -> int:
     passed = failed = 0
     with tempfile.TemporaryDirectory() as td:
@@ -765,7 +850,7 @@ def main() -> int:
         passed += o
         failed += b
         for fn in (check_coverage, check_arbiter, check_signature, check_skip_env,
-                   check_concept, check_sameness):
+                   check_concept, check_sameness, check_form_reach):
             o, b = fn(deck)
             passed += o
             failed += b

@@ -155,12 +155,43 @@ def _report_form_reach(pptx_path):
     prims = sum(1 for n in ("box", "text") if n in called)
     if len(forms) >= 3 or not prims:
         print(f"[gates] form reach: {len(forms)} named component(s) — {', '.join(forms) or 'none'}")
-        return
+        return None
     print(f"[gates] form reach: {len(forms)} of {len(_ca.FORM_GUARANTEE)} named components "
           f"({', '.join(forms) or 'none'}); the rest of {cands[0].name} is raw box/text.")
     print("        Bespoke composition is legitimate and often right — but confirm it was CHOSEN, "
           "not defaulted to: `python3 scripts/sigs.py --list` (or --search <shape>) is one call and "
           "answers it. Measured cost of skipping it once: a meter_bar rebuilt out of two boxes.")
+    # Returning the count is what turns this from a line nobody reads into a question somebody
+    # answers. It still never blocks on the NUMBER — only on the absence of a decision. See the
+    # `form_reach` waiver in the gate below.
+    return {"forms": forms, "total": len(_ca.FORM_GUARANTEE), "script": cands[0].name}
+
+
+def _report_plan_files(pptx_path):
+    """Plan files left in the deliverable folder — the checkpoint that became a file.
+
+    `checkpoint-convention.md` says it plainly: the checkpoint artifact is a compact table PASTED
+    INTO THE CONVERSATION, and `content-plan.md` / `design-plan.md` must not be written into the
+    deliverable folder — the conversation is the record, and a folder the user opens should hold
+    the deck, not the working notes that produced it.
+
+    That rule lived only as one sentence inside a reference file, which is the position most
+    likely to be skipped: nothing anywhere reported a plan file, so writing one cost nothing and
+    the user found the clutter instead of a gate. Advisory rather than blocking — a user may have
+    ASKED for plan files, and that carve is in the same sentence — but it is now said out loud at
+    the moment the folder is handed over.
+    """
+    try:
+        d = Path(pptx_path).parent
+        stray = sorted(p.name for p in d.glob("*.md")
+                       if p.name.lower() in ("content-plan.md", "design-plan.md",
+                                             "content_plan.md", "design_plan.md"))
+    except Exception:
+        return
+    if stray:
+        print("[gates] plan files in the deliverable folder: %s — the checkpoint artifact belongs "
+              "in the conversation, not on disk (checkpoint-convention.md). Delete them unless the "
+              "user asked for plan files." % ", ".join(stray))
 
 
 def _report_palette_drift(pptx_path, declared):
@@ -1331,8 +1362,36 @@ def check_handoff_gates(pptx, mode="presented", gate_check=False):
         # waiver above: a plan field written before any slide exists proves nothing about
         # the slides.
         _report_palette_drift(pptx, design.get("palette"))
+        _report_plan_files(pptx)
         _report_icon_waiver(pptx, design.get("icon_family"))
-        _report_form_reach(pptx)
+        _low_reach = _report_form_reach(pptx)
+        # 🔴 A report that never asks for an answer is a line people learn to scroll past. This one
+        # printed `1 of 23 named components; the rest is raw box/text` on a delivered deck and let
+        # it through — and three of that deck's review findings were defects the unused components
+        # prevent by construction (a label grazing its bar, a value floating off a track's
+        # centreline, a reference line drawn three different ways).
+        #
+        # It still does NOT block on the number. Bespoke composition is legitimate and often the
+        # signature move itself; a Mondrian page cannot come from a catalogue. What it blocks on is
+        # the absence of a DECISION — the failure is never having looked, and `sigs.py --list` is
+        # one call. Same shape as the sameness waiver: a written reason, in the record.
+        if _low_reach is not None:
+            _fr = design.get("form_reach")
+            _why = str((_fr or {}).get("waived") or "").strip() if isinstance(_fr, dict) else ""
+            if len(_why) < 24:
+                die("form reach is {n} of {t} named components and the rest of {s} is raw "
+                    "box/text, with no recorded reason.\n"
+                    "  Look once — `python3 scripts/sigs.py --list` (or --search <shape>) — then "
+                    "either build the component, or record WHY the hand-rolled form is the right "
+                    "one for this deck:\n"
+                    '    {{"design_plan": {{..., "form_reach": {{"waived": "<why bespoke here — '
+                    'name the form and what a component would have cost it>"}}}}}}\n'
+                    "  This never blocks on the NUMBER; it blocks on there being no decision. "
+                    "Measured: a deck shipped at 1 of 23, and three of its review findings were "
+                    "defects the unused components prevent by construction."
+                    .format(n=len(_low_reach["forms"]), t=_low_reach["total"],
+                            s=_low_reach["script"]))
+            print("[gates] form reach WAIVED — %s" % _why[:150])
     else:
         die("no `design_plan` record. Step 2 dispatches agents/slide-design.md as the deck's art "
             "director; nothing else decides deck rhythm or the signature move.\n"
