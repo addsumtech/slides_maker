@@ -718,9 +718,116 @@ def _selftest():
 
 # ------------------------------------------------------------------- cli ----
 
+def _critic_schema():
+    """The critic contract as a JSON Schema a dispatcher can hand to a subagent verbatim.
+
+    🔴 Published by the SAME file that validates, and built from the same enum constants
+    (`CRITIC_VERDICTS` / `SEVERITIES` / `FIX_RISKS`), so the shape a critic is ASKED for and the
+    shape it is JUDGED by cannot drift apart. Transcribing it twice is how they drift.
+
+    This exists because the contract used to be readable only as validation code — a caller could
+    discover the required fields exactly one way: by failing. And the failure lands AFTER the
+    review has run, when the agent's tokens are already spent and the returned review cannot be
+    recorded at all. Measured on a real deck: both lenses ran, read all 12 slides and produced
+    real findings (1 blocker + 7 majors + 6 minors, and 3 + 4 + 4), and neither could be filed by
+    `--record` because the dispatch had hand-rolled `{slide, severity, what, fix}` instead of
+    `{id, slide, severity, dimension, issue, why, fix}`. The deck shipped with the critic block
+    written as a hand-classified waiver rather than recorded consent.
+
+    Deliberately NOT the whole validator: `plan_audit`'s per-lens obligations and the probes
+    block are conditional on which lens ran, and a flat schema cannot express "lens_b owes
+    signature_move.verdict". Those stay in agents/critic.md and are still enforced on the way
+    back in. What this guarantees is that the shape which used to be got wrong by everyone —
+    the finding rows and the coverage block — is now impossible to get wrong.
+    """
+    finding = {
+        "type": "object", "additionalProperties": False,
+        "required": ["id", "slide", "severity", "dimension", "issue", "why", "fix"],
+        "properties": {
+            "id": {"type": "string",
+                   "description": "stable handle, e.g. 's2-crop-1' — the arbiter cites it"},
+            "slide": {"description": "1-based slide number, or the string 'deck' for a "
+                                     "deck-level finding",
+                      "anyOf": [{"type": "integer"}, {"const": "deck"}]},
+            "severity": {"enum": list(SEVERITIES)},
+            "dimension": {"type": "string",
+                          "description": "which rubric axis this belongs to, e.g. figures / "
+                                         "typography / fidelity / distinctiveness"},
+            "issue": {"type": "string", "description": "what is wrong, in one line"},
+            "why": {"type": "string", "description": "why it matters to THIS audience — a "
+                                                     "finding with no consequence is a preference"},
+            "fix": {"type": "string", "description": "the concrete change to make"},
+            "fix_risk": {"enum": list(FIX_RISKS)},
+        },
+    }
+    return {
+        "type": "object", "additionalProperties": False,
+        "required": ["purpose", "rubric_overlay", "coverage", "verdict", "summary",
+                     "strengths", "findings"],
+        "properties": {
+            "purpose": {"type": "string", "description": "the deck's purpose as you were given it"},
+            "rubric_overlay": {
+                "type": "string",
+                "description": "which per-purpose overlay in references/review-rubrics.md you "
+                               "actually applied — one of the nine below VERBATIM, or "
+                               "'none — <reason>'. It is an enum, not free text: naming it is "
+                               "what makes 'I read the right rubric' checkable, and a near-miss "
+                               "like 'exec readout' is rejected on return. Nine: "
+                               + " / ".join(RUBRIC_OVERLAYS)},
+            "coverage": {
+                "type": "object", "additionalProperties": False,
+                "required": ["slides_opened", "passes", "stats_block_seen", "contract_card_seen"],
+                "properties": {
+                    "slides_opened": {
+                        "type": "array", "items": {"type": "integer"},
+                        "description": "every slide you actually opened — the anti-skim field; "
+                                       "the hand-off gate compares it to the deck's real count"},
+                    "scope": {"type": "array", "items": {"type": "integer"},
+                              "description": "[first, last] for a per-SECTION critic; omit when "
+                                             "reviewing the whole deck"},
+                    "passes": {"type": "array", "items": {"type": "string"},
+                               "description": "which lens passes you ran"},
+                    "stats_block_seen": {"type": "boolean"},
+                    "contract_card_seen": {
+                        "description": "true|false, or 'none-declared' when no card was sent",
+                        "anyOf": [{"type": "boolean"}, {"const": "none-declared"}]},
+                },
+            },
+            "verdict": {"enum": list(CRITIC_VERDICTS)},
+            "summary": {"type": "string"},
+            "strengths": {"type": "array", "items": {"type": "string"},
+                          "description": "a do-not-harm ledger for the author's next round"},
+            "findings": {"type": "array", "items": finding},
+            "ceiling": {"type": "string",
+                        "description": "on a full-deck consent: the one thing that would take "
+                                       "this deck from good to excellent"},
+            "plan_audit": {"description": "the contract-card audit. 🔴 COUPLED to "
+                                          "coverage.contract_card_seen: if that is true this MUST "
+                                          "be a real audit — a review that received the card and "
+                                          "audited none of it is exactly what the gate rejects. "
+                                          "null is legal only when the card was absent "
+                                          "(contract_card_seen false / 'none-declared'). A flat "
+                                          "schema cannot express that coupling, so it is stated "
+                                          "here and enforced on return; per-lens obligations are "
+                                          "in agents/critic.md."},
+            "probes": {"description": "the per-lens probe block agents/critic.md specifies"},
+        },
+    }
+
+
 def main(argv):
     if argv == ["--selftest"]:
         return _selftest()
+    if argv and argv[0] == "--schema":
+        kind = argv[1] if len(argv) > 1 else "critic"
+        if kind != "critic":
+            print("--schema currently publishes the CRITIC contract only; the arbiter's Job-1/"
+                  "Job-2 payloads are two different shapes and picking one silently would be "
+                  "worse than not offering it (see agents/arbiter.md)", file=sys.stderr)
+            return 2
+        json.dump(_critic_schema(), sys.stdout, ensure_ascii=False, indent=1)
+        sys.stdout.write("\n")
+        return 0
     record_dir = None
     if "--record" in argv:
         i = argv.index("--record")

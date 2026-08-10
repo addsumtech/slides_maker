@@ -1796,6 +1796,22 @@ Then run the **actor-critic loop** — this is the quality engine, and the criti
    arbiter's `escalated_unreviewed` entries are handed to the next round's fresh critic as
    candidate findings (or, at the round cap, surfaced to the user with the other open questions).
 
+   - 🔴 **ASK FOR THE REVIEW IN THE SHAPE THE VALIDATOR ACCEPTS — get it from the validator, never
+     hand-roll it:** `python3 scripts/validate_review.py --schema critic` prints the contract as a
+     JSON Schema you pass straight to the subagent as its structured-output schema. Same file
+     publishes and checks, built from the same enum constants, so the shape a critic is ASKED for
+     and the shape it is JUDGED by cannot drift. **Before this, the contract was readable exactly
+     one way — by failing — and the failure lands AFTER the review has run**, when the agent's
+     tokens are spent and the returned review cannot be filed at all. Measured on a real deck:
+     both lenses ran, read all 12 slides and produced genuine findings (1 blocker + 7 majors + 6
+     minors, and 3 + 4 + 4), and NEITHER could be recorded, because the dispatch had invented
+     `{slide, severity, what, fix}` instead of `{id, slide, severity, dimension, issue, why,
+     fix}`. That deck's `critic` block had to be hand-written as a classified waiver rather than
+     recorded consent — the loop ran and the evidence file could not say so. Two things the flat
+     schema deliberately does not carry, because they are conditional and it would lie about
+     them: `plan_audit`'s per-lens obligations, and the coupling that `contract_card_seen: true`
+     REQUIRES a real audit (both stated in the schema's own descriptions, both still enforced on
+     return).
    - 🔴 **LAND EVERY RETURNED REVIEW ON DISK THE MOMENT IT ARRIVES, before you read it or act on
      it:** `python3 scripts/fanout_record.py put <deck-dir> --round critic-r1 --member <lens>
      --file <review.json>`, and for a member that died,

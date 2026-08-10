@@ -31,9 +31,12 @@ HERE = pathlib.Path(__file__).resolve().parent
 SCRIPTS = HERE.parent / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
+import validate_review as vr                                          # noqa: E402
 from validate_review import (  # noqa: E402
     validate_critic, validate_arbiter, PLAN_AUDIT_FIELDS, RUBRIC_OVERLAYS,
 )
+
+VALIDATE = SCRIPTS / "validate_review.py"
 
 PASS, FAIL = [], []
 
@@ -349,6 +352,72 @@ def main():
     r = subprocess.run([sys.executable, str(SCRIPTS / "validate_review.py"), "critic", bad_path],
                        capture_output=True, text=True)
     check("CLI exits non-zero on an unaudited contract card", r.returncode != 0)
+
+    # ---- --schema: the contract must be ASKABLE, not only checkable ----------------------
+    # It used to be readable one way only — by failing — and the failure lands AFTER the review
+    # has run, when the tokens are spent and the returned review cannot be filed at all. Measured:
+    # both lenses of a real panel ran, read all 12 slides and produced real findings, and neither
+    # could be recorded because the dispatch had hand-rolled {slide, severity, what, fix}. That
+    # deck's critic block had to be written as a hand-classified waiver instead of consent.
+    r = subprocess.run([sys.executable, str(VALIDATE), "--schema", "critic"],
+                       capture_output=True, text=True)
+    check("--schema critic exits 0", r.returncode == 0, r.stderr[:80])
+    try:
+        schema = json.loads(r.stdout)
+    except ValueError as exc:
+        schema = None
+        check("--schema emits parseable JSON", False, str(exc)[:60])
+    if schema:
+        check("--schema emits parseable JSON", True)
+        fin = schema["properties"]["findings"]["items"]
+        check("the finding row publishes every field the validator requires",
+              set(fin["required"]) == {"id", "slide", "severity", "dimension", "issue", "why",
+                                       "fix"}, fin["required"])
+        check("the enums come from the validator's own constants, not a second transcription",
+              fin["properties"]["severity"]["enum"] == list(vr.SEVERITIES)
+              and schema["properties"]["verdict"]["enum"] == list(vr.CRITIC_VERDICTS))
+        check("rubric_overlay's nine legal values are spelled out, since it is an enum",
+              all(o in schema["properties"]["rubric_overlay"]["description"]
+                  for o in vr.RUBRIC_OVERLAYS))
+        check("the plan_audit/contract_card coupling a flat schema cannot express is STATED",
+              "contract_card_seen" in schema["properties"]["plan_audit"]["description"])
+
+        # 🔴 the round trip: a review built strictly from the published schema must VALIDATE.
+        # This is the whole guarantee — if it fails, the schema is lying about the contract.
+        built = {
+            "purpose": "a 12-page briefing",
+            "rubric_overlay": vr.RUBRIC_OVERLAYS[0],
+            "coverage": {"slides_opened": [1, 2, 3], "passes": ["design"],
+                         "stats_block_seen": True, "contract_card_seen": "none-declared"},
+            "verdict": "revise", "summary": "one line",
+            "strengths": ["something to preserve"],
+            "findings": [{"id": "s1-a", "slide": 1, "severity": "major", "dimension": "typography",
+                          "issue": "x", "why": "y", "fix": "z", "fix_risk": "low"}],
+            "plan_audit": None,
+        }
+        p = tempfile.mktemp(suffix=".json")
+        with open(p, "w", encoding="utf-8") as fh:
+            json.dump(built, fh, ensure_ascii=False)
+        r2 = subprocess.run([sys.executable, str(VALIDATE), "critic", p],
+                            capture_output=True, text=True)
+        check("a review built strictly from the published schema VALIDATES",
+              r2.returncode == 0, (r2.stdout + r2.stderr)[-160:])
+
+        # and the shape that actually got shipped once must still be refused
+        bad = dict(built)
+        bad["findings"] = [{"slide": 1, "severity": "major", "what": "x", "fix": "z"}]
+        p2 = tempfile.mktemp(suffix=".json")
+        with open(p2, "w", encoding="utf-8") as fh:
+            json.dump(bad, fh, ensure_ascii=False)
+        r3 = subprocess.run([sys.executable, str(VALIDATE), "critic", p2],
+                            capture_output=True, text=True)
+        check("the hand-rolled {slide,severity,what,fix} shape is still rejected",
+              r3.returncode != 0)
+
+    r = subprocess.run([sys.executable, str(VALIDATE), "--schema", "arbiter"],
+                       capture_output=True, text=True)
+    check("--schema arbiter refuses rather than publishing one of two payload shapes",
+          r.returncode == 2 and "two different shapes" in (r.stdout + r.stderr))
 
     print("\n{} passed, {} failed".format(len(PASS), len(FAIL)))
     return 1 if FAIL else 0

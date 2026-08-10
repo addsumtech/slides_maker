@@ -115,7 +115,13 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
 - `plan_wordcount.py` — advisory per-slide word-budget pass over the Content plan's table (the Step-1
   comprehension-gate check; write the table to a scratch path, never the deliverable folder).
   `validate_review.py` — stdlib schema validator for critic/arbiter JSON (`critic|arbiter <file|->`;
-  Step 5 runs it before acting on any review).
+  Step 5 runs it before acting on any review). **`--schema critic` PUBLISHES that contract as a
+  JSON Schema** to hand a subagent as its structured-output shape — same file publishes and
+  checks, from the same enum constants, so what a critic is asked for and judged by cannot drift.
+  Use it at every dispatch: the contract was previously discoverable only by failing, and the
+  failure arrives after the review has already run. (`--schema arbiter` deliberately refuses —
+  the Job-1 and Job-2 payloads are two shapes and silently picking one would be worse than not
+  offering it.)
 - `slide_index.py` — `slide N -> file:line function` + each slide's plan-row docstring, for one
   build script or a set of section modules. Run it at the top of the Step-5 fix loop on any
   fanned-out deck: section fan-out means the coordinator did NOT write the code, so a finding on
