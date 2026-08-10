@@ -1796,6 +1796,22 @@ Then run the **actor-critic loop** — this is the quality engine, and the criti
    arbiter's `escalated_unreviewed` entries are handed to the next round's fresh critic as
    candidate findings (or, at the round cap, surfaced to the user with the other open questions).
 
+   - 🔴 **LAND EVERY RETURNED REVIEW ON DISK THE MOMENT IT ARRIVES, before you read it or act on
+     it:** `python3 scripts/fanout_record.py put <deck-dir> --round critic-r1 --member <lens>
+     --file <review.json>`, and for a member that died,
+     `… miss <deck-dir> --round critic-r1 --member <lens> --why "<what happened>"`. Then
+     `… status <deck-dir> --round critic-r1 --expect content,design` — it **exits 1** and names
+     only the members to re-dispatch, so "the round is complete" is a check rather than something
+     you remember. **A fan-out is otherwise atomic in the worst way:** results come back into your
+     context, context is not a file, and one dead member costs the whole round. Measured on a real
+     build — the DESIGN lens died on a session limit while the CONTENT lens had already produced a
+     complete review (1 blocker, 7 majors, 6 minors) that was read out of the workflow result and
+     never written down, so `validate_review.py --record` had nothing to register and the deck
+     shipped with a `.deck-gates.json` holding only `delivery`. Recording the FAILURE matters as
+     much as recording the result: a 19-agent round once returned `surviving: 0`, which reads
+     exactly like "nothing was found" and was in fact "they all died". **This is persistence, not
+     a channel** — nothing moves sideways between agents, because a critic that knows the author's
+     intent stops being independent.
    - **Record the consent as EVIDENCE, not as a claim — add `--record <deck-dir>` to the validation
      you are already running:** `python3 scripts/validate_review.py critic <review.json> --record
      ~/Downloads/<deck>/`. It writes the `critic` block of `.deck-gates.json` **from the validated

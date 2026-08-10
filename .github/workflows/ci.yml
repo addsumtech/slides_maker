@@ -185,6 +185,17 @@ jobs:
       # assertions. Only the SCORER runs here (~1s, no model, no network); producing a deck is
       # the other half and is developer/nightly-only. An eval harness that scores wrong is worse
       # than none: it launders a bad build into a number.
+      # A fan-out used to be atomic in the worst way: results returned into the coordinator's
+      # memory, so one dead member cost the whole round. Measured — a critic panel lost its DESIGN
+      # lens to a session limit while the CONTENT lens had already produced a full review that was
+      # never written down, so validate_review --record had nothing to register.
+      - name: Fan-out record (one dead agent costs one agent)
+        run: |
+          set -o pipefail
+          python tests/test_fanout_record.py | tee /tmp/fanout.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/fanout.log || {
+            echo "::error::fanout-record suite did not run to completion"; exit 1; }
+
       - name: Eval harness (skip is not pass)
         run: |
           set -o pipefail
