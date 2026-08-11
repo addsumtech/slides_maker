@@ -189,6 +189,13 @@ every **🔴 CHECKPOINT** is a hard stop.
 > checklist (Step 4), a deterministic lint check, or a named critic-rubric item. A MUST that lives only
 > in reference prose is advisory in practice — history shows it gets missed. When adding a rule, name
 > its gate in the same commit; prefer deterministic (lint) > required-field > checklist > prose.
+>
+> **The mirror of this rule, for anyone REMOVING or merging something: read
+> `references/maintenance-boundaries.md` first.** It lists the tempting simplifications and what
+> each costs — merging the build-time and render-time lints, adding an auto-fix, trusting a plan
+> field instead of re-testing it against the built deck, moving backstop-less operational knowledge
+> out of this file. `check_skill_lossless.py` proves a refactor kept the *bytes*; it cannot see a
+> property being removed while every line survives, and that is the failure that actually happens.
 
 **Where things live** — the reference that *owns* each concern (read it when that concern is in play):
 
@@ -946,6 +953,17 @@ The helper set, by job:
   `wireframe_grid`+`spec_list`, `corner_frame`, `photo_card`, `backdrop_motif`,
   `repeat_row` (N identical-except-index units as representatives + `…` + `×N`, shared detail said
   once — never N duplicate blocks).
+- **Value→geometry mappers — pick by what the mark ENCODES, and never hand-roll the arithmetic:**
+  **`axis_scale(x, w, lo, hi)`** maps a value to a POSITION on a track (dot strips, dumbbells,
+  value-spaced timelines, `gantt`); any `lo` is legitimate there, because a dot at 47 between 40
+  and 50 reads correctly. **`bar_scale(span, values, group=)`** maps a value to a LENGTH, and takes
+  **no `lo` at all** — a bar's length is a proportion claim, so a non-zero baseline is not a scaling
+  choice but a false statement (1.5 and 2.1 drawn from 1.4 look like 1 : 7). Call `sc.bar(slide, x,
+  y, thickness, value, fill=…)` (`vertical=True` for columns): it draws zero-based, puts negatives
+  on the far side of the zero line — the `max(abs(v))` slip picks the largest POSITIVE value and
+  mis-places that line — and tags each bar so the build-time **`DATUM SCALE`** check can confirm the
+  geometry still matches the numbers. A bar you draw yourself is unchecked, not assumed correct;
+  `mark_datum(shape, value, group=)` opts it in.
 - **Surface (dark / glass / print):** `glass_card`/`glow`/`scrim_overlay` (gradient+alpha fill),
   `offset_shadow` (hard letterpress/riso shadow).
   **`slide_background(s, color)` paints a SOLID page backdrop — use it instead of

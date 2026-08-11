@@ -494,9 +494,22 @@ def _every_scaffold_runs():
     # that the tool is not to be trusted. Square, because image_grid locks one aspect ratio.
     try:
         from PIL import Image as _SmkIm
-        for _p in ("gt_c1.png", "zf_c1.png", "ours_c1.png",
-                   "gt_c2.png", "zf_c2.png", "ours_c2.png"):
-            _SmkIm.new("RGB", (256, 256), (28, 30, 36)).save(os.path.join(TMP, _p))
+        # …and they must carry actual IMAGE CONTENT, not one flat fill. `ASSET NOT USABLE` reads a
+        # single colour across a whole frame as a failed generation or an empty canvas, which is
+        # exactly right and exactly what a `new("RGB", …, (28,30,36))` placeholder is. It caught
+        # these the first time it ran, on a fixture written long before it existed. A blurred
+        # radial blob is also the more honest stand-in: the scaffold claims to show MRI slices,
+        # and no slice is one colour.
+        for _i, _p in enumerate(("gt_c1.png", "zf_c1.png", "ours_c1.png",
+                                 "gt_c2.png", "zf_c2.png", "ours_c2.png")):
+            _im = _SmkIm.new("RGB", (256, 256), (28, 30, 36))
+            _px = _im.load()
+            for _y in range(256):
+                for _x in range(256):
+                    _d = ((_x - 128) ** 2 + (_y - 128) ** 2) ** 0.5
+                    _v = max(0, int(210 - _d * (1.4 + 0.12 * _i)))
+                    _px[_x, _y] = (28 + _v, 30 + int(_v * 0.92), 36 + int(_v * 0.8))
+            _im.save(os.path.join(TMP, _p))
     except Exception:
         pass
     for name, code in sorted(_sigs.EXAMPLES.items()):
@@ -1065,8 +1078,17 @@ def _image_grid():
     d = tempfile.mkdtemp()
 
     def img(nm, w=256, h=256):
+        # Content, not a flat fill: `ASSET NOT USABLE` reads one colour across a whole frame as a
+        # failed generation, which is what a `new("RGB", …, (30,30,34))` stand-in is. It caught
+        # this fixture the first time it ran — on a test written long before the check existed.
         p = os.path.join(d, nm)
-        _Im.new("RGB", (w, h), (30, 30, 34)).save(p)
+        im = _Im.new("RGB", (w, h), (30, 30, 34))
+        px = im.load()
+        for y in range(h):
+            for x in range(w):
+                v = max(0, int(200 - (((x - w // 2) ** 2 + (y - h // 2) ** 2) ** 0.5) * 1.5))
+                px[x, y] = (30 + v, 30 + int(v * 0.9), 34 + int(v * 0.8))
+        im.save(p)
         return p
 
     rows = [[img("r%dc%d.png" % (r, c)) for c in range(3)] for r in range(2)]

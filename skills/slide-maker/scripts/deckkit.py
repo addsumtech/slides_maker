@@ -331,6 +331,10 @@ WATERMARK_TAG = "deckkit-watermark"
 # Prefix for a DELIBERATE overlap. The reason travels in the shape name, so the declaration is
 # evidence carried by the artifact rather than a claim in a plan file nobody re-reads.
 OVERLAP_TAG = "deckkit-overlap:"
+# Prefix for a LENGTH-ENCODED datum: `deckkit-datum:<group>:<value>`. Same idiom as the tags
+# above — the fact travels in the shape name, so it survives the save and a checker can read the
+# author's INTENT (the number) next to the geometry that claims to show it.
+DATUM_TAG = "deckkit-datum:"
                           # to FONT. Pairing roles (display / body / mono) beats one font for the
                           # whole deck — see references/font-guidance.md ("Type pairing").
 EADISPLAY = None          # optional CJK DISPLAY/title font (e.g. "Hiragino Sans GB" titles over a
@@ -1425,6 +1429,80 @@ def spaced_centers(x, w, n, *, label_w=2.0, total_w=10.0, margin=0.05):
     aw = w - 2 * pad
     step = aw / (n - 1)
     return ([x0 + i * step for i in range(n)], x0, aw)
+
+
+def mark_datum(shape, value, *, group="bars"):
+    """Record that this shape's LENGTH encodes `value`, so a checker can verify the claim.
+
+    Use it on a bar you drew yourself. `bar_scale()` below does it for you and is the better
+    route, because it also computes the geometry that this tag then re-checks.
+    """
+    shape.name = "%s%s:%s" % (DATUM_TAG, str(group).replace(":", "-")[:40], repr(float(value)))
+    return shape
+
+
+def bar_scale(span, values, *, group="bars"):
+    """The ONE value→LENGTH mapper for bars — zero-based by construction, sign-aware, and it
+    tags what it draws.
+
+    `axis_scale()` above is its sibling and answers a different question. That one maps a value to
+    a POSITION on a track (dot strips, dumbbells, value-spaced timelines), where any `lo` is
+    legitimate: a dot at 47 sits between 40 and 50 and reads correctly. This one maps a value to a
+    LENGTH, where a non-zero baseline is not a scaling choice but a false statement — two bars of
+    1.5 and 2.1 drawn from a baseline of 1.4 look like 1 : 7. There is no `lo` parameter here, and
+    that absence is the point.
+
+    Two things it removes from the caller, both of which have gone wrong in real builds:
+      · the hand-rolled `w = v * SCALE`, where SCALE is derived once and then quietly reused for a
+        second group of bars that is not on the same scale;
+      · the sign. `max(abs(v))` reads naturally and picks the largest POSITIVE value when the
+        negatives are smaller, which sizes the chart wrongly and puts the zero line in the wrong
+        place. Here the extent covers `[min(0, min(values)), max(0, max(values))]`, so zero is
+        always on the axis and negatives always draw on the far side of it.
+
+        sc = dk.bar_scale(4.0, [67.98, 17.61, 17.08, -2.68], group="gdp")
+        for i, v in enumerate(vals):
+            sc.bar(s, X0, y0 + i * 0.5, 0.32, v, fill=INK)      # x, y, thickness, value
+
+    `sc.zero` is the distance from the span's start to the zero line; `sc.length(v)` is the bare
+    magnitude in inches. `bar()` takes the span's START (not the zero line) as `x`/`y` and draws
+    horizontally by default, `vertical=True` for columns growing upward from the baseline.
+
+    Every bar it draws carries `DATUM_TAG`, so `lint_layout` can confirm that the drawn geometry
+    is still proportional to the numbers — which catches a truncated baseline, a second scale
+    leaking into one group, and a magnitude drawn where a signed value belongs. A bar you draw
+    without this helper is simply unchecked; tag it with `mark_datum()` to opt it in.
+    """
+    vals = [float(v) for v in values]
+    lo, hi = min(0.0, min(vals)) if vals else 0.0, max(0.0, max(vals)) if vals else 0.0
+    rng = (hi - lo) or 1.0
+    k = float(span) / rng
+
+    class _Scale(object):
+        __slots__ = ("k", "zero", "span", "group")
+
+        def __init__(self):
+            self.k, self.span, self.group = k, float(span), group
+            self.zero = (0.0 - lo) * k          # offset of the zero line inside the span
+
+        def length(self, v):
+            return abs(float(v)) * self.k
+
+        def bar(self, slide, x, y, thickness, value, *, vertical=False, **kw):
+            v = float(value)
+            ext = self.length(v)
+            if vertical:
+                # y is the span's BOTTOM edge; the axis runs upward, so zero sits `zero` above it
+                zy = y - self.zero
+                top = zy - ext if v >= 0 else zy
+                shp = box(slide, x, top, thickness, ext, **kw)
+            else:
+                zx = x + self.zero
+                left = zx if v >= 0 else zx - ext
+                shp = box(slide, left, y, ext, thickness, **kw)
+            return mark_datum(shp, v, group=self.group)
+
+    return _Scale()
 
 
 def axis_scale(x, w, lo, hi):
@@ -7202,6 +7280,181 @@ def _declared_overlap(sh):
     return str(getattr(sh, "name", "") or "").startswith(OVERLAP_TAG)
 
 
+def _datum_faults(prs):
+    """DATUM SCALE — a bar whose LENGTH no longer matches the number it claims to show.
+
+    Every other geometric check in this file asks whether the page is readable. This one asks
+    whether it is TRUE, which is a different question and the only one where a passing deck can
+    still mislead the room. Bar length is a proportion claim: if two bars sit in one group, the
+    reader reads their ratio, and a truncated baseline turns 1.5 vs 2.1 into 1 : 7 while every
+    legibility, overflow and contrast check stays green.
+
+    Nothing here needs judgment — `extent / |value|` is either constant across the group or it is
+    not. Measured on a delivered 12-page deck whose two hand-drawn charts were correct, the
+    constant held to 1.0003 and 1.0000, so the 2% tolerance below is not a tuned threshold with a
+    deck sitting near it; it is two orders of magnitude of headroom over the rounding a correct
+    build produces.
+
+    🔴 This is PREVENTIVE, and that is worth saying plainly: unlike the other checks added
+    recently, no instance of this defect has been found in this skill's own output. What is real
+    is the effort it displaces — the design critic hand-computed a bar ratio on a delivered deck
+    (`1.5 bar 198px / 2.1 bar 279px = 0.710 ≈ 1.5/2.1`), which is arithmetic paid for at model
+    prices, in a dispatch that might not do it next time.
+
+    It sees only what is TAGGED, via `bar_scale()` or `mark_datum()`. An untagged bar is
+    unchecked, not assumed correct — the check cannot recover a number the author never wrote
+    down, and guessing which printed number belongs to which rectangle produced garbage pairings
+    on 4 of 6 real chart pages when it was tried.
+    """
+    out = []
+    for n, slide in enumerate(prs.slides, 1):
+        groups = {}
+        for shp in slide.shapes:
+            name = str(getattr(shp, "name", "") or "")
+            if not name.startswith(DATUM_TAG):
+                continue
+            # 🔴 NOT wrapped in a bare `except: continue`. The first version was, and it swallowed
+            # a NameError (this module has no `EMU` constant) so the whole check silently did
+            # nothing while its tests looked like they passed — the exact "green because it
+            # stopped looking" failure this check exists to prevent, committed inside the check
+            # itself. A tag this module WROTE must parse; if it does not, that is a bug here.
+            body = name[len(DATUM_TAG):]
+            if ":" not in body:
+                continue                                 # foreign shape borrowing the prefix
+            g, raw = body.rsplit(":", 1)
+            try:
+                v = float(raw)
+            except ValueError:
+                continue
+            w, h = shp.width / 914400.0, shp.height / 914400.0
+            groups.setdefault(g, []).append((v, w, h, shp))
+        for g, rows in sorted(groups.items()):
+            live = [r for r in rows if abs(r[0]) > 1e-9]
+            if len(live) < 2:
+                continue
+            # Which dimension carries the value? The other one is the bar's THICKNESS and is
+            # constant across a group by construction, so the varying dimension is the encoding.
+            ws = [r[1] for r in live]
+            hs = [r[2] for r in live]
+            w_const = (max(ws) - min(ws)) <= 0.01
+            h_const = (max(hs) - min(hs)) <= 0.01
+            if w_const == h_const:                       # both or neither constant: cannot tell
+                out.append((n, "CRITICAL", "DATUM SCALE",
+                            f"datum group '{g}' has {len(live)} bars but no single dimension "
+                            f"varies with the value, so which one encodes it is unknowable. "
+                            f"Bars in one group must share a thickness and differ only along the "
+                            f"value axis — draw them through one bar_scale()."))
+                continue
+            # SIGN. A magnitude drawn where a signed value belongs is proportional and still
+            # wrong: -2.68 rendered as a bar growing the same way as +17.61 says the economy
+            # gained. Length alone cannot see it, so the direction is checked separately —
+            # positives and negatives in one group must sit on OPPOSITE sides of a shared zero.
+            pos = [r for r in live if r[0] > 0]
+            neg = [r for r in live if r[0] < 0]
+            if pos and neg:
+                if w_const:                              # vertical columns: zero is a y line
+                    base = min(r[3].top / 914400.0 + r[2] for r in pos)
+                    same = [r for r in neg
+                            if abs((r[3].top / 914400.0 + r[2]) - base) <= 0.02]
+                else:                                    # horizontal bars: zero is an x line
+                    base = min(r[3].left / 914400.0 for r in pos)
+                    same = [r for r in neg if abs(r[3].left / 914400.0 - base) <= 0.02]
+                if same:
+                    out.append((n, "CRITICAL", "DATUM SCALE",
+                                f"datum group '{g}': {len(same)} negative value(s) "
+                                f"({', '.join('%g' % r[0] for r in same[:3])}) start from the same "
+                                f"edge as the positive bars, so a decline is drawn as growth. A "
+                                f"signed group needs a zero line with the negatives on the far "
+                                f"side of it — bar_scale() places that line for you (this is the "
+                                f"`max(abs(v))` slip, which reads naturally and picks the largest "
+                                f"POSITIVE value whenever the negatives are smaller)."))
+            ks = [(r[0], (r[2] if w_const else r[1]) / abs(r[0])) for r in live]
+            kk = [k for _v, k in ks]
+            if min(kk) > 0 and max(kk) / min(kk) > 1.02:
+                worst = max(ks, key=lambda t: t[1])[0], min(ks, key=lambda t: t[1])[0]
+                out.append((n, "CRITICAL", "DATUM SCALE",
+                            f"datum group '{g}' is not proportional to its own numbers: "
+                            f"{max(kk) / min(kk):.2f}x spread between the inches-per-unit of "
+                            f"{worst[0]:g} and {worst[1]:g}. A bar's LENGTH is a proportion claim, "
+                            f"so a truncated baseline or a second scale leaking into the group "
+                            f"misstates the data while every other check stays green. Draw the "
+                            f"whole group through ONE bar_scale(), which is zero-based by "
+                            f"construction."))
+    return out
+
+
+def _asset_faults(prs):
+    """ASSET NOT USABLE — a picture that arrived but cannot carry anything.
+
+    Every asset gate in this skill so far asks whether a planned asset was USED (the icon waiver,
+    form reach, carried_by, palette drift). None asks whether the file that got used is any good,
+    and a file existing is not proof that acquiring it succeeded: a failed generation commonly
+    returns a truncated download or a flat placeholder plate, and a cropped export can come back
+    fully transparent. All three embed without complaint, render as a blank rectangle, and pass
+    every geometric, contrast and density check — the picture occupies its box, so nothing even
+    reads the page as underfilled.
+
+    Three states, each unusable for a different reason:
+      · the blob does not decode — PowerPoint shows a broken-image placeholder;
+      · every pixel is transparent — the shape is a hole in the layout with a caption under it;
+      · one colour covers effectively the whole frame — a generation placeholder or an empty
+        canvas. A genuinely flat image is not a picture anyone needs: `box()` draws that.
+
+    Sampled at 64x64 NEAREST, so a pure colour stays pure and a photograph cannot be flattened
+    into one by resampling. Icons are the case to NOT break: they are mostly transparent by
+    construction, so the transparency rule asks for FULL transparency, and the flat-colour rule
+    measures the opaque pixels only.
+    """
+    out = []
+    try:
+        from PIL import Image
+        import io as _io
+    except ImportError:
+        return out
+    for n, slide in enumerate(prs.slides, 1):
+        for shp in slide.shapes:
+            if not str(getattr(shp, "shape_type", "")).startswith("PICTURE"):
+                continue
+            try:
+                blob = shp.image.blob
+            except Exception:
+                continue                                 # linked/OLE picture: nothing to read
+            nm = str(getattr(shp, "name", "") or "")
+            try:
+                im = Image.open(_io.BytesIO(blob))
+                im.load()
+                im = im.convert("RGBA")
+                if max(im.size) > 64:
+                    im = im.resize((64, 64), Image.NEAREST)
+                px = list(im.getdata())
+            except Exception as exc:
+                out.append((n, "CRITICAL", "ASSET NOT USABLE",
+                            f"picture '{nm[:40] or '(unnamed)'}' does not decode ({type(exc).__name__})"
+                            f" — it will render as a broken-image placeholder. The file exists, so "
+                            f"every path that only checks existence passed it; re-acquire it."))
+                continue
+            op = [q for q in px if q[3] > 8]
+            if not op:
+                out.append((n, "CRITICAL", "ASSET NOT USABLE",
+                            f"picture '{nm[:40] or '(unnamed)'}' is fully transparent — the shape "
+                            f"is a hole in the layout. A crop or export that produced an empty "
+                            f"frame still writes a valid file."))
+                continue
+            counts = {}
+            top = 0
+            for r, g, b, _a in op:
+                k = (r // 8, g // 8, b // 8)
+                c = counts[k] = counts.get(k, 0) + 1
+                top = max(top, c)
+            if top >= 0.995 * len(px):                   # vs the FULL frame, so icons are safe
+                out.append((n, "CRITICAL", "ASSET NOT USABLE",
+                            f"picture '{nm[:40] or '(unnamed)'}' is one flat colour across the "
+                            f"whole frame — the shape of a failed generation or an empty canvas. "
+                            f"If a flat plate is what the page wants, draw it with box(); if an "
+                            f"image was meant to be here, the acquisition did not succeed."))
+    return out
+
+
 def _ooxml_shape_faults(prs):
     """OOXML_SHAPE — the produced XML violates the part's own schema.
 
@@ -7838,6 +8091,8 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
     findings.extend(_motif_faults(prs))
     findings.extend(_graze_faults(prs))
     findings.extend(_ooxml_shape_faults(prs))
+    findings.extend(_datum_faults(prs))
+    findings.extend(_asset_faults(prs))
     findings.extend(_cjk_face_faults(prs))
     if verbose:
         crit = sum(1 for f in findings if f[1] == "CRITICAL")

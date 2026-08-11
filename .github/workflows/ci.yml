@@ -250,6 +250,47 @@ jobs:
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/ragged.log || {
             echo "::error::ragged-edge suite did not run to completion"; exit 1; }
 
+      # Bar length is a proportion CLAIM. Every other geometric check asks whether a page is
+      # readable; this asks whether it is true, the only failure where a fully passing deck still
+      # misleads the room -- a truncated baseline turns 1.5 vs 2.1 into 1 : 7 while legibility,
+      # overflow and contrast stay green. Preventive rather than corrective: no instance was found
+      # in this skill's own output (two delivered hand-drawn charts held to 1.0003 and 1.0000, and
+      # both are live negative controls in the suite). What it displaces is real -- the design
+      # critic hand-computed a bar ratio on a delivered deck, arithmetic paid for at model prices.
+      # The first version wrapped its parser in a bare `except: continue` that swallowed a
+      # NameError, so the check silently did nothing while looking like it passed; the suite now
+      # asserts a known-bad deck still fires, so that cannot recur quietly.
+      - name: Datum scale (a bar that misstates its own number)
+        run: |
+          set -o pipefail
+          python tests/test_datum_scale.py | tee /tmp/datum.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/datum.log || {
+            echo "::error::datum-scale suite did not run to completion"; exit 1; }
+
+      # A file existing is not proof that acquiring it succeeded. A failed generation writes a
+      # truncated download or a flat placeholder plate; a bad crop writes a transparent frame. All
+      # three embed without complaint and pass every geometric and density check, because the
+      # picture does occupy its box. The load-bearing negatives are the icons: mostly transparent
+      # by construction, so a carelessly written emptiness rule fires on every one in the library.
+      - name: Asset usable (existence is not success)
+        run: |
+          set -o pipefail
+          python tests/test_asset_usable.py | tee /tmp/asset.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/asset.log || {
+            echo "::error::asset-usable suite did not run to completion"; exit 1; }
+
+      # check_skill_lossless.py proves a refactor kept the BYTES. It cannot see two gates merged
+      # into one, a warning promoted to an auto-fix, or a plan field trusted instead of re-tested
+      # -- each keeps every line of text and removes the property the text described, so the
+      # lossless check reports a perfect score while the skill gets worse. This asserts the
+      # negative contracts that a program can decide.
+      - name: Maintenance boundaries (the properties a lossless refactor can still delete)
+        run: |
+          set -o pipefail
+          python tests/test_maintenance_boundaries.py | tee /tmp/bounds.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/bounds.log || {
+            echo "::error::maintenance-boundaries suite did not run to completion"; exit 1; }
+
       - name: Graze contract (a label running into the bar beside it)
         run: |
           set -o pipefail
