@@ -193,6 +193,7 @@ def _slide_bg_box(slide, sw, sh):
         return None
     return {"l": 0.0, "t": 0.0, "w": sw, "h": sh, "r": sw, "b": sh, "zi": -1,
             "runs": [], "fill": fill, "unk": fill is None, "pic": False, "grad": False,
+            "icon": None,
             "st": "AUTO_SHAPE", "txt": "", "full": "", "size": 12.0,
             "paras": [], "solid": True, "align": None, "anchor": None,
             "font": None, "bold": False,
@@ -284,6 +285,12 @@ def _boxes(slide, sw, sh, slide_no=None):
         except Exception:
             is_grad = False
         is_pic = str(s.shape_type).startswith("PICTURE")
+        icon_ink = None                                  # (hex, purity, opaque_frac) for a
+        if is_pic:                                       #   recolored monochrome icon, else None
+            try:
+                icon_ink = _icon_ink(s.image.blob)
+            except Exception:
+                icon_ink = None
         tph = False                                      # a TITLE/CENTER_TITLE placeholder (a11y title)
         try:
             tph = bool(s.is_placeholder) and s.placeholder_format.type in (
@@ -292,6 +299,7 @@ def _boxes(slide, sw, sh, slide_no=None):
             tph = False
         out.append({"l": l, "t": t, "w": w, "h": h, "r": l + w, "b": t + h, "zi": zi,
                     "runs": run_colors, "fill": fill_rgb, "unk": fill_unk, "pic": is_pic, "grad": is_grad,
+                    "icon": icon_ink,
                     "st": str(s.shape_type).split()[0], "txt": txt, "full": full, "size": size or 12.0,
                     "paras": paras, "solid": s.shape_type in SOLID, "align": align, "anchor": anchor,
                     "font": _face, "bold": _bold,
@@ -838,6 +846,59 @@ def _region_bg_lum(im, s, sw, sh, ink_lum):
     return sum(band) / len(band)
 
 
+def _icon_ink(blob):
+    """The single ink colour of a RECOLORED MONOCHROME ICON, as (hex, purity, opaque_fraction),
+    or None if this image is not one.
+
+    The non-text contrast check below skips `s["pic"]`, and this skill's icons ARE pictures —
+    `icons.py` recolors an SVG and rasterises it to a transparent PNG. So icon contrast has never
+    been checked on any deck, while icons are default-on for category-rich content. Measured on a
+    real 12-page deck: a gold icon at 2.69:1 on the paper canvas passed every deterministic gate,
+    and was caught only by the DESIGN CRITIC. That is the reason to build this, not a reason not
+    to: the critic is a model that costs a dispatch and might not look next time, and this skill's
+    own rule is deterministic > required-field > checklist > prose. A question with one arithmetic
+    answer belongs in a check that fires every run, for free, before the critic is even called.
+
+    Why an icon can be told from a photo without guessing:
+      · an icon is a glyph on NOTHING, so it must carry transparency — `Image.open` reports the
+        mode from the header alone, so a JPEG/opaque-PNG photo costs ~0.03ms and no decode;
+      · a recolored icon is ONE colour — measured, the dominant colour is 99–100% of its opaque
+        pixels, against 0.0–0.1% for a photograph. There is no overlap to tune a threshold in.
+    A multicolour logo or an illustration therefore returns None rather than having one of its
+    colours named as "the" ink: naming a colour we cannot defend would be a confident wrong
+    finding, which is worse here than the miss.
+
+    Sampled at 96x96 with NEAREST — 9x cheaper than full size and no resampling blend, so a pure
+    colour stays pure (measured: purity 99.7% vs 98.9%, opaque fraction 0.2307 vs 0.2299).
+    """
+    try:
+        from PIL import Image
+        import io as _io
+        im = Image.open(_io.BytesIO(blob))
+        if not (im.mode in ("RGBA", "LA") or (im.mode == "P" and "transparency" in im.info)):
+            return None                                  # no alpha => not an icon; header only
+        im = im.convert("RGBA")
+        if max(im.size) > 96:
+            im = im.resize((96, 96), Image.NEAREST)
+        px = list(im.getdata())
+    except Exception:
+        return None
+    op = [q for q in px if q[3] > 200]
+    if len(op) < 30 or len(op) >= 0.95 * len(px):        # too little ink, or effectively opaque
+        return None
+    best, n = None, 0
+    counts = {}
+    for r, g, b, _a in op:
+        k = (r, g, b)
+        c = counts[k] = counts.get(k, 0) + 1
+        if c > n:
+            best, n = k, c
+    purity = n / len(op)
+    if purity < 0.80:                                    # multicolour art: no single defensible ink
+        return None
+    return "%02X%02X%02X" % best, purity, len(op) / len(px)
+
+
 def _backing_fill(bx, ti, own=True):
     """The topmost solid fill under text shape bx[ti]: the shape's OWN fill if solid, else the
     highest lower-z shape whose box covers the text (center inside + >=50% overlap). A picture,
@@ -1091,6 +1152,75 @@ def reading_load(slide, bx, sh):
     return load
 
 
+_EDGE_LO, _EDGE_HI = 0.04, 0.12                          # the reportable near-miss band, in inches
+_EDGE_VGAP = 0.35                                        # "stacked" = this close, vertically
+_EDGE_OVERLAP = 0.6                                      # …and overlapping this much horizontally
+
+
+def _edge_pairs(bx):
+    """Candidate LEFT-EDGE near-misses on one slide: [(key, a_txt, b_txt, delta), …].
+
+    A ragged left edge is one of the few defects a reader feels without being able to name, and
+    nothing here checked alignment at all. The difficulty is not finding differing edges — it is
+    that MOST differing edges are correct. Every guard below removed a class of false positive
+    that was measured on a real delivered deck, not imagined:
+
+      · **top-level only.** A label inside a card is indented on purpose. Comparing raw box
+        lefts flagged 10 of 12 slides — pure noise.
+      · **not data-placed.** A value label sits after ITS bar, so two labels on bars of different
+        length MUST have different lefts. `17.61%` and `17.08%` were flagged 4px apart; the bars
+        differ by 0.53 points and the labels follow them. "Fixing" that would break the chart.
+        A left edge within 0.18in of some solid shape's RIGHT edge is positioned by data.
+      · **genuinely stacked.** Without this, a slide title was compared against a chart
+        annotation 1.2in below and 8px over — two elements no reader ever compares. Requiring
+        vertical adjacency AND 60% horizontal overlap removed all three such false positives.
+      · **the band, not any difference.** Below 0.04in (~4px) the offset is invisible at
+        projection size; reporting it trains the reader to ignore the check. Above ~0.12in it
+        reads as a deliberate indent. Measured: the delivered deck's only survivors were two
+        2px slips — correctly silent now — while a synthetic 8px title/body slip is caught.
+
+    The deck-level recurrence exemption is applied by the CALLER, not here: an offset repeated
+    across slides is a design decision (this deck's 10pt kicker sits 8px inside its title on
+    every section page), and only the caller can see more than one slide. Same principle as
+    ONE-OFF CANVAS FLIP — recurring is a system, once is a slip.
+    """
+    def _contained(a):
+        for b in bx:
+            if b is a or b["bg"] or not (b["solid"] or b["pic"]):
+                continue
+            if b["w"] * b["h"] <= a["w"] * a["h"]:
+                continue
+            if (b["l"] - 0.02 <= a["l"] and b["r"] + 0.02 >= a["r"]
+                    and b["t"] - 0.02 <= a["t"] and b["b"] + 0.02 >= a["b"]):
+                return True
+        return False
+
+    def _data_placed(a):
+        for b in bx:
+            if b is a or b["bg"] or not b["solid"] or b["text"]:
+                continue
+            if (abs(a["l"] - b["r"]) <= 0.18
+                    and min(a["b"], b["b"]) - max(a["t"], b["t"]) > 0.3 * min(a["h"], b["h"])):
+                return True
+        return False
+
+    top = [b for b in bx if b["text"] and not b["bg"] and not _contained(b) and not _data_placed(b)]
+    out = []
+    for i, a in enumerate(top):
+        for b in top[i + 1:]:
+            d = abs(a["l"] - b["l"])
+            if not (_EDGE_LO < d < _EDGE_HI):
+                continue
+            hi, lo = (a, b) if a["t"] <= b["t"] else (b, a)
+            if not (-0.05 <= lo["t"] - hi["b"] <= _EDGE_VGAP):
+                continue
+            if min(a["r"], b["r"]) - max(a["l"], b["l"]) < _EDGE_OVERLAP * min(a["w"], b["w"]):
+                continue
+            out.append((tuple(sorted((round(a["l"], 2), round(b["l"], 2)))),
+                        hi["txt"][:24], lo["txt"][:24], d))
+    return out
+
+
 def _slide_stats(slide, bx, sw, sh):
     footer_y = sh - 0.6                                  # used by the half-occupancy checks below
     load = reading_load(slide, bx, sh)
@@ -1193,7 +1323,7 @@ def _slide_stats(slide, bx, sw, sh):
     return {
         "title_pt": title_pt, "title_txt": title_txt, "title_top": title_top,
         "body_tier": body_tier, "big_run_words": big_run_words, "intent": intent,
-        "halves": halves, "boxy": boxy, "lean_x": lean_x,
+        "halves": halves, "boxy": boxy, "lean_x": lean_x, "edge_pairs": _edge_pairs(bx),
         "notes": notes_text,
         "notes_words": _text_load(notes_text),
         "pingfang": pingfang,
@@ -1918,6 +2048,28 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False):
         warns.append(f"REGISTRATION DRIFT: consecutive slides' title tops drift by a hair "
                      f"(slides {pages}; 0.02-0.12in) — pin titles to ONE y across the deck; "
                      f"identical is calm, a deliberate jump is fine, a wobble is neither")
+
+    # ── RAGGED LEFT EDGE: REGISTRATION DRIFT's horizontal sibling. That one catches title tops
+    # wobbling BETWEEN slides; this catches two stacked blocks starting at almost-but-not-quite
+    # the same x WITHIN one. Same band (a hair, not a jump) and the same reasoning: identical is
+    # calm, a deliberate indent is fine, a wobble is neither.
+    # The deck-wide exemption is the whole reason this is decided here rather than per slide. On
+    # the deck that motivated it, the loudest signal was a 10pt kicker sitting 8px inside its
+    # title — on slides 3, 6 AND 9, identically. That is a design decision, and a check that
+    # reports a designed offset three times is a check the reader learns to skip. An offset that
+    # recurs is a system; one that happens once is a slip, and only the slip is reported.
+    _edge_slides = {}
+    for i, r in enumerate(rows):
+        for key, a_txt, b_txt, d in r.get("edge_pairs", []):
+            _edge_slides.setdefault(key, []).append((i + 1, a_txt, b_txt, d))
+    for key, hits in sorted(_edge_slides.items()):
+        if len(set(p for p, _, _, _ in hits)) >= 2:
+            continue                                     # recurs deck-wide => designed, not a slip
+        p, a_txt, b_txt, d = hits[0]
+        warns.append(f"RAGGED LEFT EDGE: slide {p} — '{a_txt}' starts at {key[0]:.2f}in and "
+                     f"'{b_txt}' directly below it at {key[1]:.2f}in, {d * 96:.0f}px apart. Too "
+                     f"small to read as an indent and too large to look aligned; snap them to one "
+                     f"x, or indent deliberately (>0.12in) so it reads as a decision")
 
     # ── deck-level envelope distribution (the slides-to-video import): the subtler monotony is
     # every interior slide ending its content on the SAME line. Monoculture, not any single page,
@@ -2722,6 +2874,25 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
                 seen_pairs.add((s["fill"], back))
                 warns.append(f"NON-TEXT CONTRAST: icon/chip #{s['fill']} on #{back} — {ratio:.2f}:1 "
                              f"(<3:1, WCAG 1.4.11); essential icons/lines need more contrast")
+        # ICON CONTRAST [warn]: the same WCAG 1.4.11 question for RECOLORED MONOCHROME ICONS,
+        # which the loop above cannot ask because it skips `pic` and icons are pictures here.
+        # An icon carrying meaning at 2.69:1 is exactly as unreadable as a chip at 2.69:1; the
+        # only reason it was never reported is that nothing looked. Photos and multicolour art
+        # return None from _icon_ink rather than being given an ink colour they don't have.
+        for i, s in enumerate(bx):
+            if not s.get("icon"):
+                continue
+            ink_hex, _pur, _frac = s["icon"]
+            back = _backing_fill(bx, i, own=False)
+            if not back or back == "UNKNOWN":
+                continue
+            ratio = _contrast(ink_hex, back)
+            if ratio < 3.0 and ("ICON", ink_hex, back) not in seen_pairs:
+                seen_pairs.add(("ICON", ink_hex, back))
+                warns.append(f"ICON CONTRAST: icon ink #{ink_hex} on #{back} — {ratio:.2f}:1 "
+                             f"(<3:1, WCAG 1.4.11). An icon that carries meaning needs the same "
+                             f"3:1 floor as any other non-text mark: recolor it (a darker tone of "
+                             f"the same hue keeps the palette), or put it on a plate that lifts it.")
         for zi, shp in enumerate(slide.shapes):          # connectors never enter bx (zero extent)
             try:
                 if shp.shape_type != MSO_SHAPE_TYPE.LINE:

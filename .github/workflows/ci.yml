@@ -223,6 +223,33 @@ jobs:
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/slidebg.log || {
             echo "::error::slide-background suite did not run to completion"; exit 1; }
 
+      # The non-text contrast check skips `pic`, and this skill's icons ARE pictures (recolored
+      # SVG -> transparent PNG), so icon contrast was never checked on any deck while icons are
+      # default-on for category-rich content. Measured: a gold icon at 2.69:1 passed every
+      # DETERMINISTIC gate; only the design critic caught it, and a model that costs a dispatch is
+      # the wrong home for arithmetic. Most of this suite is NEGATIVE -- photograph,
+      # two-colour art, opaque PNG, unresolvable backdrop must all be SILENT, because inventing
+      # an ink colour an image does not have is worse than the miss it replaces.
+      - name: Icon contrast (icons are pictures, so nothing was checking them)
+        run: |
+          set -o pipefail
+          python tests/test_icon_contrast.py | tee /tmp/iconc.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/iconc.log || {
+            echo "::error::icon-contrast suite did not run to completion"; exit 1; }
+
+      # Nearly not shipped. The first framing flagged 10 of 12 slides on a delivered deck and
+      # MISSED the ragged page a human had complained about; every guard exists because a class
+      # of false positive was measured and removed (nested labels, value labels trailing their
+      # bars, unrelated elements, sub-perceptual 2px slips, deck-wide designed indents). Hence a
+      # suite that is mostly NEGATIVE: a check that cries wolf on a correct deck is worse than no
+      # check, because it teaches the reader to skip the output the real findings live in.
+      - name: Ragged left edge (the guards matter more than the check)
+        run: |
+          set -o pipefail
+          python tests/test_ragged_edge.py | tee /tmp/ragged.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/ragged.log || {
+            echo "::error::ragged-edge suite did not run to completion"; exit 1; }
+
       - name: Graze contract (a label running into the bar beside it)
         run: |
           set -o pipefail

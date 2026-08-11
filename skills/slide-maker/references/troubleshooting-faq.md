@@ -150,8 +150,11 @@ Render-time **advisory `[warn]`s** (never fail the exit code): `LOW CONTRAST` / 
 **accessibility set**: `TEXT-ON-IMAGE CONTRAST` (the 1.5–3.0 band of the hard check above),
 `NO SLIDE TITLE` / `DUPLICATE SLIDE TITLES` (screen readers navigate by unique titles; an
 off-canvas-invisible title is the sanctioned trick for statement slides), `READING ORDER` (title
-should be first in z-order — add it first in the build code), and `NON-TEXT CONTRAST` (icons/lines
-< 3:1 vs backing, WCAG 1.4.11). Resolve or consciously accept per §7.
+should be first in z-order — add it first in the build code), `NON-TEXT CONTRAST` (solid marks/lines
+< 3:1 vs backing, WCAG 1.4.11), and `ICON CONTRAST` (the same floor for a recolored
+monochrome icon; it is reported separately because icons are pictures and the shape-based
+check skips them — the remedy is a darker tone of the same hue, or a plate under the icon).
+Resolve or consciously accept per §7.
 
 **Paint-order and deck-level codes `lint_deck.py` also prints, which this page used to omit.**
 SKILL.md routes ANY finding here and tells you to report it in this page's plain language, so a code
@@ -169,6 +172,8 @@ without it.
 | `ONE-OFF CANVAS FLIP` • | Exactly ONE interior slide's canvas value departs sharply from the rest — reads as a mistake rather than a rhythm event | Make the flip RECUR as a divider family or a bookend, or return that slide to the deck's canvas. On the generated-template branch the plate stays on every content page and rhythm comes from imagery strength instead |
 | `FLAT RHYTHM` • | With renders present: no light/dark or colour-temperature event anywhere across the deck — the rhythm map's Background-mode column is single-note | Give the deck at least one value event (a dark divider, a full-bleed hero, a warm-accent conflict page). Needs `./render` PNGs beside the deck or `--renders <dir>`; without them the check silently does not run |
 | `FLAT TYPE` • | No run anywhere reaches 2× the body size — the deck has no typographic hero | Let one thing win per slide (the squint test). This is the type-scale drama rule failing measurably, not a style opinion |
+| `REGISTRATION DRIFT` • | Consecutive slides' title tops differ by a hair (0.02–0.12in) on 2+ pages — the deck's masthead wobbles page to page | Pin titles to ONE y across the deck. Identical is calm and a deliberate jump is fine; a wobble is neither |
+| `RAGGED LEFT EDGE` • | The horizontal sibling of the above, WITHIN one slide: two vertically stacked blocks start 4–12px apart — too small to read as an indent, too large to look aligned | Snap them to one x, or indent deliberately (>0.12in) so it reads as a decision. Four things are exempt by design and will never be reported: a label nested inside a card (that indent is the card's padding), a value label trailing its own bar (bars of different length MUST give different lefts), two elements too far apart to be compared, and any offset that recurs on 2+ slides (a repeated offset is a design decision — same logic as `ONE-OFF CANVAS FLIP`) |
 
 **`UNSOURCED NUMBER` — how to read it.** It is *deck-level*: it fires only when a magnitude
 (`$400B`, `81%`, `+46pt`, `2.3x`, `95 亿`) appears on a slide with no source stated **and no source

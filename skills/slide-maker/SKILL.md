@@ -1490,8 +1490,9 @@ to clean before handing to the critic. It also prints soft **`[warn]`s** (adviso
 what the hard families can't fail on: **missing alt-text** on an informative image, a **math-font
 tofu** risk (an `equation_native` font not installed on the render host), **LOW/BODY CONTRAST**
 bands (1.8–4.5:1), **grouped-only content**, and the **accessibility set** — NO SLIDE TITLE /
-DUPLICATE SLIDE TITLES / READING ORDER (screen-reader navigation) and NON-TEXT CONTRAST (WCAG
-1.4.11 for icons/lines). Resolve them or consciously accept them (FAQ §7). The hard families also
+DUPLICATE SLIDE TITLES / READING ORDER (screen-reader navigation), NON-TEXT CONTRAST (WCAG
+1.4.11 for solid marks/lines) and **ICON CONTRAST** (the same 3:1 floor for a recolored
+monochrome icon vs its backing — icons are PICTURES, so the check above cannot see them). Resolve them or consciously accept them (FAQ §7). The hard families also
 include **TEXT ON IMAGE** — a render-pixel contrast estimate (<1.5:1) for text sitting on a
 photo/gradient with no opaque backing, exactly the class solid-fill contrast checks can't see;
 its 1.5–3.0 band is the TEXT-ON-IMAGE CONTRAST `[warn]`.
