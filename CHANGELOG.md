@@ -9,6 +9,19 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+### Added
+- **`slide_background(slide, color)` — the page backdrop as a real `<p:bg>`** instead of a
+  full-canvas rectangle, so the user cannot select, drag or delete it while editing the deck.
+  The linter synthesises the same background record from `<p:bg>`, which is the load-bearing
+  half: `_backing_fill`'s contract is "slide bg unknown → None" and every caller treats None as
+  *skip*, so a naive version would have switched off contrast checking on every deck rather
+  than reporting anything. Verified equivalent to the rect it replaces — build-time findings
+  identical, render-time lint output byte-identical, rendered pixels equal at every sampled
+  point (max channel delta 5/255, rasterizer dithering).
+- `OOXML_SHAPE` now models `<p:cSld>` (`bg?, spTree, …`) as well as `CT_Slide`, so a `<p:bg>`
+  appended after `<p:spTree>` or duplicated fails CRITICAL rather than reaching the user as
+  PowerPoint's "needs repair".
+
 ## [4.7.0] — 2026-08-09
 
 Everything here was found the same way: by building a real 12-page Chinese deck end to end and

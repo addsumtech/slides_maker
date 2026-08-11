@@ -4632,6 +4632,41 @@ def blank_deck(w_in=10.0, h_in=5.625):
     return prs
 
 
+def slide_background(slide, color):
+    """Paint the slide's REAL background (`<p:bg>`) instead of laying a full-canvas rectangle.
+
+    Every deck this skill builds opens its pages with `box(s, 0, 0, W, H, fill=…)`. That works,
+    and the lint has always excluded it from ink coverage (shapes covering ≥95% of the canvas are
+    tagged `bg`), so the density numbers were never wrong. What it costs is in the file the USER
+    edits: a full-canvas rectangle is a selectable object, so click-dragging anywhere on an empty
+    part of the slide grabs the backdrop and moves it, and Select-All picks it up with everything
+    else. `<p:bg>` is not in the shape tree at all — it cannot be selected, moved or deleted by
+    accident, which is what a background is supposed to be.
+
+    🔴 It is placed as the FIRST child of `<p:cSld>` because CT_CommonSlideData orders `bg?`
+    before `spTree` — appending would produce a schema-invalid part, the one defect class where
+    PowerPoint refuses to open the file (`OOXML_SHAPE` is the net under that).
+
+    🔴 And `lint_deck._backing_fill` was taught to read it in the same change. That resolver
+    looked for the topmost solid SHAPE under a run and documented "Slide bg unknown -> None", so
+    moving the backdrop out of the shape tree would have made the colour behind ordinary text
+    unknowable — silently switching off every contrast check on the deck (62 call sites resolve a
+    backing fill). A background that no longer participates in contrast checking is a worse deck
+    than a selectable rectangle.
+
+    Returns the slide, so it composes: `slide_background(add_slide(prs), PAPER)`.
+    """
+    from pptx.oxml.ns import nsdecls as _nsdecls
+    hexv = _hex(_as_rgb(color)).upper()           # RGBColor or 'RRGGBB'/'#RRGGBB', one convention
+    cSld = slide._element.find(qn("p:cSld"))
+    for old in cSld.findall(qn("p:bg")):          # idempotent: repaint rather than stack
+        cSld.remove(old)
+    cSld.insert(0, parse_xml(
+        '<p:bg %s><p:bgPr><a:solidFill><a:srgbClr val="%s"/></a:solidFill>'
+        '<a:effectLst/></p:bgPr></p:bg>' % (_nsdecls("p", "a"), hexv)))
+    return slide
+
+
 def add_slide(prs):
     """Add a truly blank slide (layout 6) to draw on from scratch."""
     return prs.slides.add_slide(prs.slide_layouts[6])
@@ -7213,6 +7248,25 @@ def _ooxml_shape_faults(prs):
                         "the slide part's children are out of schema order (%s) — expected %s. "
                         "Insert before the following element rather than appending, the way "
                         "slide_transition() does." % (", ".join(kids), ", ".join(ORDER))))
+        # CT_CommonSlideData: bg?, spTree, custDataLst?, controls?, extLst?  (§19.3.1.16).
+        # Modelled for the same reason as CT_Slide: slide_background() hand-writes <p:bg> into
+        # this element, and `bg` must precede `spTree` — appending it produces a file PowerPoint
+        # offers to repair while every check here stays green.
+        C_ORDER = ["bg", "spTree", "custDataLst", "controls", "extLst"]
+        cSld = slide._element.find(qn("p:cSld"))
+        if cSld is not None:
+            ckids = [e.tag.split("}")[-1] for e in cSld]
+            if ckids.count("bg") > 1:
+                out.append((n, "CRITICAL", "OOXML_SHAPE",
+                            "the slide carries %d <p:bg> elements — the schema allows one. "
+                            "slide_background() replaces rather than stacks; a hand-written one "
+                            "must too." % ckids.count("bg")))
+            cranked = [C_ORDER.index(k) for k in ckids if k in C_ORDER]
+            if cranked != sorted(cranked):
+                out.append((n, "CRITICAL", "OOXML_SHAPE",
+                            "<p:cSld>'s children are out of schema order (%s) — expected %s. "
+                            "<p:bg> goes FIRST, before <p:spTree>."
+                            % (", ".join(ckids), ", ".join(C_ORDER))))
     return out
 
 

@@ -164,8 +164,48 @@ def _flat_shapes(shapes, tf=(0.0, 0.0, 1.0, 1.0), depth=0, slide_no=None, grp=No
             yield s, tf, grp
 
 
+def _slide_bg_box(slide, sw, sh):
+    """A synthetic box record for a REAL `<p:bg>` background, or None if the slide has none.
+
+    `deckkit.slide_background()` paints the backdrop as `<p:bg>` rather than a full-canvas
+    rectangle, so it is no longer in the shape tree — and this walk only ever saw shapes.
+    Without this, every run sitting on the bare canvas would resolve its backing colour to
+    None ("slide bg unknown"), and `_backing_fill`'s contract tells its 62 callers to SKIP on
+    None: the deck's contrast checks would go quiet instead of going red. That is the exact
+    failure this linter exists to prevent — a gate that reports clean because it stopped
+    looking.
+
+    The record is deliberately IDENTICAL in shape to the full-canvas rect it replaces (solid,
+    canvas-sized, `bg=True`, lowest z) so every downstream check — backing fill, dark-plate
+    detection, canvas-flip, ink coverage exclusion, shape counts — behaves exactly as it does
+    on a rect-backed deck. A theme or gradient background stays UNKNOWN rather than guessing,
+    same as a picture behind text.
+    """
+    try:
+        cSld = slide._element.find(qn("p:cSld"))
+        bg = None if cSld is None else cSld.find(qn("p:bg"))
+        if bg is None:
+            return None
+        srgb = bg.findall(".//" + qn("a:srgbClr"))
+        solid = bg.findall(".//" + qn("a:solidFill"))
+        fill = srgb[0].get("val").upper() if (srgb and solid) else None
+    except Exception:
+        return None
+    return {"l": 0.0, "t": 0.0, "w": sw, "h": sh, "r": sw, "b": sh, "zi": -1,
+            "runs": [], "fill": fill, "unk": fill is None, "pic": False, "grad": False,
+            "st": "AUTO_SHAPE", "txt": "", "full": "", "size": 12.0,
+            "paras": [], "solid": True, "align": None, "anchor": None,
+            "font": None, "bold": False,
+            "text": False, "descr": None, "mathfont": None,
+            "title_ph": False, "bg": True, "grp": None,
+            "declared": False, "hollow": False}
+
+
 def _boxes(slide, sw, sh, slide_no=None):
     out = []
+    _bg = _slide_bg_box(slide, sw, sh)
+    if _bg is not None:
+        out.append(_bg)                                  # index 0 = below every real shape
     for zi, (s, tf, grp) in enumerate(_flat_shapes(slide.shapes, slide_no=slide_no)):
         try:
             dx, dy, sx, sy = tf

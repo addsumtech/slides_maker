@@ -948,6 +948,13 @@ The helper set, by job:
   once — never N duplicate blocks).
 - **Surface (dark / glass / print):** `glass_card`/`glow`/`scrim_overlay` (gradient+alpha fill),
   `offset_shadow` (hard letterpress/riso shadow).
+  **`slide_background(s, color)` paints a SOLID page backdrop — use it instead of
+  `box(s, 0, 0, W, H, fill=…)`.** It writes the real `<p:bg>`, so the backdrop is not a shape the
+  user can select, drag or delete while editing (a full-canvas rect is, and click-dragging any
+  empty part of the slide grabs it). Renders identically, lints identically — the linter
+  synthesises the same background record from `<p:bg>`, so contrast, dark-plate and density
+  checks are unchanged. **Non-solid backdrops keep the rect/`picture()`/`scrim_overlay` path**:
+  gradients, images and alpha have no `<p:bg>` route here.
 - **Publication & math:** `cover`/`colophon` (bookend the deck), `sources_page`, `specimen_card`;
   **`equation_native`** (EDITABLE LaTeX-subset math — real text runs, renders everywhere; the default) /
   `equation_png` (rasterised LaTeX, for 2-D math: fractions/matrices) / `eq_par` (inline runs).

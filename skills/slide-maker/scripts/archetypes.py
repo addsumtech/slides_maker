@@ -46,13 +46,13 @@ def _load_style(path):
 def build_archetypes(prs, S, name=""):
     """Append the 4 standard preview slides, styled by direction module S."""
     from deckkit import (add_slide, box, text, bullet, callout, bottom_callout, chip, arrow,
-                         chrome_band, vstack, measure_bullets, WHITE as _W)
+                         chrome_band, vstack, measure_bullets, slide_background, WHITE as _W)
     accents = list(getattr(S, "ACCENTS", [S.ACCENT, getattr(S, "ACCENT2", S.ACCENT)]))
     W, H = S.W, S.H
 
     # 1 — cover
     s = add_slide(prs)
-    box(s, 0, 0, W, H, fill=S.INK)
+    slide_background(s, S.INK)                   # the real <p:bg>, not a selectable full-canvas rect
     box(s, 0, 0, 0.16, H, fill=S.ACCENT)
     text(s, 0.7, H/2 - 0.7, W - 1.4, 1.0, [[("Deck Title", 38, S.WHITE, True, False)]], space_after=2)
     text(s, 0.72, H/2 + 0.05, W - 1.4, 0.5, [[("a one-line subtitle in this direction", 17, S.ACCENT, False, False)]], space_after=0)

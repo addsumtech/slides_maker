@@ -210,6 +210,19 @@ jobs:
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/ooxml.log || {
             echo "::error::ooxml-shape suite did not run to completion"; exit 1; }
 
+      # A real <p:bg> takes the backdrop OUT of the shape tree, and _backing_fill's contract is
+      # "slide bg unknown -> None" with every caller treating None as skip. So the failure mode
+      # of this feature is not a wrong colour, it is 62 contrast checks going quiet while the
+      # deck reports clean. The suite's load-bearing assertion is the equivalence property:
+      # a p:bg deck and the rect deck it replaces must produce the SAME findings, failures
+      # included -- plus a live negative control, so it cannot pass by two silences agreeing.
+      - name: Slide background (p:bg must not blind the contrast checks)
+        run: |
+          set -o pipefail
+          python tests/test_slide_background.py | tee /tmp/slidebg.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/slidebg.log || {
+            echo "::error::slide-background suite did not run to completion"; exit 1; }
+
       - name: Graze contract (a label running into the bar beside it)
         run: |
           set -o pipefail

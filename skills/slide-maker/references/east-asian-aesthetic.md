@@ -52,7 +52,7 @@ import deckkit as dk
 p = preset("ink_wash")
 dk.EAFONT = p["ea"]; dk.EADISPLAY = p["ea_display"]; dk.DISPLAY = p["display"]
 BG, INK, RED = p["bg"], p["ink"], p["accents"][0]
-dk.box(s, 0, 0, 10, 5.625, fill=BG)                       # warm paper
+dk.slide_background(s, BG)                                # warm paper, as the real <p:bg>
 dk.seal(s, 8.7, 0.45, 0.7, "藏拙", fill=RED)               # the one red seal
 dk.text(s, 0.7, 0.55, 7, 0.7, [[("木秀于林，风必摧之", 30, INK, True, False, dk.EADISPLAY)]])
 for i,(head,body) in enumerate(items):                    # 壹·贰·叁 markers
