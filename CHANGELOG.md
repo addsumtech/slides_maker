@@ -9,6 +9,8 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+## [4.7.1] — 2026-08-11
+
 ### Added
 - **`slide_background(slide, color)` — the page backdrop as a real `<p:bg>`** instead of a
   full-canvas rectangle, so the user cannot select, drag or delete it while editing the deck.
@@ -21,6 +23,39 @@ section is a distilled summary — the full notes live on the
 - `OOXML_SHAPE` now models `<p:cSld>` (`bg?, spTree, …`) as well as `CT_Slide`, so a `<p:bg>`
   appended after `<p:spTree>` or duplicated fails CRITICAL rather than reaching the user as
   PowerPoint's "needs repair".
+- **`ICON CONTRAST`** — WCAG 1.4.11's 3:1 floor for recolored monochrome icons. The existing
+  non-text check skips `pic`, and this skill's icons ARE pictures, so icon contrast had never
+  been checked on any deck built here while icons are default-on for category-rich content. An
+  icon is told from a photo without guessing: it must carry alpha (read from the header, so a
+  photo costs no decode), and a recolored icon is one colour — measured, the dominant colour is
+  99–100% of its opaque pixels against 0.0–0.1% for a photograph. Multicolour art is skipped
+  rather than assigned an ink it does not have. Watermarks and motifs are exempt by their tag.
+- **`RAGGED LEFT EDGE`** — two vertically stacked blocks starting 4–12px apart: too small to read
+  as an indent, too large to look aligned. `REGISTRATION DRIFT`'s horizontal sibling, and both are
+  now documented in the troubleshooting FAQ. Five guards keep it quiet on correct decks (nested
+  labels, value labels trailing their own bars, unrelated elements, sub-perceptual slips, and any
+  offset that recurs across slides — a repeated offset is a design decision).
+- Codex: **`STRICT_WARNINGS`**, a remediate-or-waive tier for accessibility floors on the
+  per-slide warning stream. The gate blocked on `error` findings and could waive `stats`
+  warnings with nothing in between, so an objective floor on a per-slide warning could not be
+  held to any bar. Waive with `{"kind": "a11y", "warning": "<CODE>", "reason": "…"}`.
+
+### Fixed
+- **Backgrounds resolve slide → layout → master**, the way OOXML does. Reading only the slide meant
+  a deck built on the user's TEMPLATE — which states its canvas once on the master, not per page —
+  resolved every run's backing colour to `None`, and `None` tells all 62 contrast callers to skip.
+  Contrast checking was silently off for the whole template branch. An *inherited* background that
+  cannot be resolved (python-pptx's default master carries a theme reference) deliberately stays
+  unknown rather than becoming an "unknowable plate" record on every deck.
+- `<p:bg>`'s colour is read from inside `<a:solidFill>`, not the first `<a:srgbClr>` anywhere under
+  it — a legal `<a:effectLst>` declared first made a wheat-white canvas resolve as `#FF0000`.
+- `RAGGED LEFT EDGE` no longer compares elements inside a group: a child's absolute x follows where
+  its group was dropped, so it is not a decision about that child (`OVERLAP` already reasons this
+  way).
+- Codex: two of the seven `STRICT_STATS` names (`cjk_risk`, `color_envelope`) matched no output the
+  linter can produce, so the gate believed it enforced them and could never fire. Corrected to
+  `cjk_tight_leading` / `envelope_monoculture`, and the suite now asserts every name against the
+  codes `lint_deck.py` really emits.
 
 ## [4.7.0] — 2026-08-09
 
