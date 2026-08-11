@@ -200,6 +200,44 @@ if n == 1:
 else:
     bad.append(f"colour-pair dedup failed: {n} warnings for one repeated pair")
 
+# ---------------------------------------------------------------- 2b. page devices are not icons
+# A watermark or backdrop motif is DELIBERATELY faint — that is the whole point — and by every
+# pixel test it IS a monochrome icon. Measured: a pale full-page motif PNG was reported for
+# failing a floor it was never meant to meet. Both helpers tag their shape, so the tag is read
+# rather than guessed; the area cap catches an untagged page device.
+def _faint_png(name, w_in, h_in, tag=None):
+    im = Image.new("RGBA", (400, 400), (0, 0, 0, 0))
+    px = im.load()
+    for y in range(0, 400, 3):
+        for x in range(400):
+            px[x, y] = (0xEA, 0xE4, 0xD6, 255)              # barely there on paper
+    p = TMP / f"{name}.png"
+    p.write_bytes(_blob(im))
+    prs = dk.blank_deck(W, H)
+    s = dk.add_slide(prs)
+    dk.slide_background(s, PAPER)
+    shp = dk.picture(s, str(p), 0.2, 0.2, w_in, h_in)
+    if tag:
+        try:
+            shp.name = tag
+        except Exception:
+            pass
+    dk.text(s, 1, 2, 6, 0.6, [[("body", 15, RGBColor.from_string("1F3B2F"), False, False)]])
+    out = TMP / f"{name}.pptx"
+    prs.save(str(out))
+    return out
+
+
+for nm, wi, hi, tag, want, why in (
+        ("wm_full", 9.6, 5.2, None, 0, "a page-scale faint image is a backdrop, not an icon"),
+        ("wm_tagged", 1.0, 1.0, "deckkit-watermark", 0, "a tagged watermark is exempt at any size"),
+        ("wm_motif", 1.0, 1.0, "deckkit-motif-quiet", 0, "a tagged motif is exempt at any size")):
+    hits = [l for l in _warns(_faint_png(nm, wi, hi, tag)).splitlines() if "ICON CONTRAST" in l]
+    if len(hits) == want:
+        ok.append(why)
+    else:
+        bad.append(f"{nm}: expected {want} finding(s), got {len(hits)}")
+
 # ---------------------------------------------------------------- 3. it is a WARN, not a blocker
 out = _warns(_deck(GOLD, name="sev.pptx"))
 if "[warn]" in out and "ICON CONTRAST" in out:

@@ -14,6 +14,15 @@ The adapter has two kinds of rules:
 
 - **Universal floors made explicit in Codex:** rendered proof, a readable type floor, pixel checks,
   and an independent content + design review record.
+- **Accessibility floors (`STRICT_WARNINGS`): remediate or waive, never ignore.** `ICON CONTRAST`
+  and `NON-TEXT CONTRAST` are WCAG 1.4.11's 3:1 floor for marks that carry meaning. They arrive as
+  per-slide *warnings*, a stream the gate previously had no strict path for at all — so a deck
+  could ship an icon at 2.69:1 and pass. To waive one, record
+  `{"kind": "a11y", "warning": "<CODE>", "reason": "<why this mark is decorative>"}`; a decorative
+  flourish whose meaning is carried by an adjacent label is a legitimate waiver, and a bare "ok"
+  is refused. Only floors with an arithmetic answer live here: a ratio either clears 3:1 or it
+  does not. Density, component reach and form variety stay judgment calls — forcing a judgment
+  through a waiver form turns it into a rubber stamp.
 - **Taste-sensitive calls that stay explainable:** components, icon dosage, and form variety. Do not
   turn these into quotas. When the normal component or icon choice is intentionally wrong for this
   deck, record a slide-specific waiver and explain why.

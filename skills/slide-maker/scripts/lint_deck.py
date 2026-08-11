@@ -181,14 +181,54 @@ def _slide_bg_box(slide, sw, sh):
     on a rect-backed deck. A theme or gradient background stays UNKNOWN rather than guessing,
     same as a picture behind text.
     """
+    def _bg_of(part):
+        try:
+            c = part._element.find(qn("p:cSld"))
+            return None if c is None else c.find(qn("p:bg"))
+        except Exception:
+            return None
+
     try:
-        cSld = slide._element.find(qn("p:cSld"))
-        bg = None if cSld is None else cSld.find(qn("p:bg"))
+        # slide -> layout -> master, which is how OOXML actually resolves a page's background.
+        # Reading only the slide was a hole with wide reach: a deck built on the USER'S TEMPLATE
+        # normally carries no per-slide <p:bg> at all — the template states it once on the master —
+        # so `_backing_fill` returned None for every run on the bare canvas and its 62 callers,
+        # told to skip on None, skipped. Contrast checking was silently off for the entire
+        # template branch of this skill, which is half of what it builds. Measured: dark text on
+        # a master-level dark canvas produced zero findings.
+        bg, inherited = _bg_of(slide), False
+        if bg is None:
+            inherited = True
+            try:
+                layout = slide.slide_layout
+                bg = _bg_of(layout)
+                if bg is None:
+                    bg = _bg_of(layout.slide_master)
+            except Exception:
+                bg = None
         if bg is None:
             return None
-        srgb = bg.findall(".//" + qn("a:srgbClr"))
-        solid = bg.findall(".//" + qn("a:solidFill"))
-        fill = srgb[0].get("val").upper() if (srgb and solid) else None
+        # The colour must come from INSIDE the <a:solidFill>, not from the first srgbClr anywhere
+        # under <p:bg>. A <p:bgPr> legally carries an <a:effectLst> too, and a glow or shadow
+        # colour declared before the fill would otherwise be read as the page colour — measured:
+        # a red glow made a wheat-white canvas resolve as #FF0000, which would then be handed to
+        # every contrast check on the slide as the backdrop. Wrong-and-confident, the one failure
+        # mode worse than the None this function is careful to return elsewhere.
+        solid = bg.find(".//" + qn("a:solidFill"))
+        srgb = None if solid is None else solid.find(qn("a:srgbClr"))
+        fill = srgb.get("val").upper() if srgb is not None else None
+        if inherited and fill is None:
+            # An INHERITED background we cannot resolve teaches nothing, and claiming one is not
+            # free. python-pptx's own default master carries `<p:bgRef idx="1001"><a:schemeClr/>`
+            # — a theme reference — so synthesising an `unk` record here would hand EVERY deck a
+            # background of unknowable colour: `unk_plate` (which asks "is there an unreadable
+            # plate on this slide?") would become true deck-wide and quietly change the one-off
+            # canvas-flip logic, on decks that had painted a perfectly explicit canvas.
+            # A background the SLIDE declares is different: it is a fact about that page even when
+            # its colour is a gradient, and it keeps its `unk` record. Theme-colour resolution
+            # (bgRef -> bgFillStyleLst -> clrMap -> clrScheme) is deliberately not attempted:
+            # several chained lookups to reach a value that only ever downgrades to "skip" anyway.
+            return None
     except Exception:
         return None
     return {"l": 0.0, "t": 0.0, "w": sw, "h": sh, "r": sw, "b": sh, "zi": -1,
@@ -285,9 +325,15 @@ def _boxes(slide, sw, sh, slide_no=None):
         except Exception:
             is_grad = False
         is_pic = str(s.shape_type).startswith("PICTURE")
+        _nm = str(getattr(s, "name", "") or "")
+        # A watermark or backdrop motif is DELIBERATELY faint — that is its whole job — and both
+        # are tagged by the helpers that draw them, so the tag is read rather than guessed at.
+        # Without this, a pale full-page motif PNG reads as a monochrome icon (it is one, by
+        # every pixel test) and gets reported for failing a floor it was never meant to meet.
+        _deco = _nm.startswith("deckkit-watermark") or _nm.startswith("deckkit-motif")
         icon_ink = None                                  # (hex, purity, opaque_frac) for a
-        if is_pic:                                       #   recolored monochrome icon, else None
-            try:
+        if is_pic and not _deco and w * h < 4.0:         #   recolored monochrome icon, else None
+            try:                                         # >=4 sq in is a page device, not an icon
                 icon_ink = _icon_ink(s.image.blob)
             except Exception:
                 icon_ink = None
@@ -1204,7 +1250,15 @@ def _edge_pairs(bx):
                 return True
         return False
 
-    top = [b for b in bx if b["text"] and not b["bg"] and not _contained(b) and not _data_placed(b)]
+    # GROUPED elements are excluded outright. Alignment is a statement about things placed
+    # INDEPENDENTLY: a child's absolute x is a consequence of where its group was dropped, not a
+    # decision anyone made about that child. `OVERLAP` already reasons this way ("a group is an
+    # AUTHORED unit … flagging those pairs would turn every designed deck into a wall of
+    # findings") and exempts same-group pairs; alignment needs the stronger form, because a
+    # grouped label is not comparable to a free one in either direction. Measured: two labels
+    # inside one composed diagram, 8px apart, were reported before this.
+    top = [b for b in bx if b["text"] and not b["bg"] and b.get("grp") is None
+           and not _contained(b) and not _data_placed(b)]
     out = []
     for i, a in enumerate(top):
         for b in top[i + 1:]:

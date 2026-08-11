@@ -149,6 +149,30 @@ if not _lint(prs, "sidebyside.pptx"):
 else:
     bad.append("side-by-side blocks were treated as stacked")
 
+# a GROUP is an authored unit: a child's absolute x follows where the group was dropped, so it
+# is not a decision about that child. OVERLAP already reasons this way and exempts same-group
+# pairs; alignment needs the stronger form. Measured: two labels inside one composed diagram,
+# 8px apart, were reported before this.
+prs = dk.blank_deck(W, H)
+s = _page(prs)
+_t(s, 0.80, 1.00, 3.0, 0.4, "label A inside a diagram")
+_t(s, 0.88, 1.45, 3.0, 0.4, "label B inside a diagram")
+s.shapes.add_group_shape([x for x in list(s.shapes)])
+if not _lint(prs, "grouped.pptx"):
+    ok.append("two labels inside one GROUP are exempt — a group is an authored unit")
+else:
+    bad.append("a composed diagram's internal labels were reported as ragged")
+
+prs = dk.blank_deck(W, H)                                   # …the identical pair, UNgrouped
+s = _page(prs)
+_t(s, 0.80, 1.00, 3.0, 0.4, "label A inside a diagram")
+_t(s, 0.88, 1.45, 3.0, 0.4, "label B inside a diagram")
+if len(_lint(prs, "ungrouped.pptx")) == 1:
+    ok.append("the SAME pair ungrouped is still reported (the exemption is about grouping, "
+              "not about the geometry)")
+else:
+    bad.append("the ungrouped control did not fire — the exemption is too wide")
+
 # ---------------------------------------------------------------- deck-wide recurrence exemption
 prs = dk.blank_deck(W, H)
 for i in range(3):                                          # the same offset on every page

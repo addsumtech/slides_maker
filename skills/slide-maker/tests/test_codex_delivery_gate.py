@@ -6,6 +6,8 @@ Run with: python3 tests/test_codex_delivery_gate.py
 
 from __future__ import annotations
 
+import pathlib
+
 import hashlib
 import importlib.util
 import json
@@ -479,10 +481,58 @@ def main() -> int:
         if not any("Quick Look thumbnail generation" in error for error in errors):
             failures.append("a Quick Look icon rasterization workaround passed the gate")
 
+        # Every STRICT_STATS name must be a code lint_deck.py can actually EMIT. The test above
+        # feeds the gate `["card_dominance"]` -- the gate's own expected shape -- so it proves the
+        # logic and nothing about the vocabulary. Measured before this check existed: `cjk_risk`
+        # and `color_envelope` matched no linter output at all, so two of the seven entries were
+        # a gate believing it enforced something it could never see. The real codes are
+        # `cjk_tight_leading` and `envelope_monoculture`. This is a cross-file agreement, which is
+        # decidable by a program and therefore should never again be left to someone remembering.
+        import re as _re
+
+        _src = (pathlib.Path(__file__).resolve().parent.parent
+                / "scripts" / "lint_deck.py").read_text(encoding="utf-8")
+        emitted = {"_".join(m.group(1).strip().lower().split())
+                   for m in _re.finditer(r"[\"\']([A-Z][A-Z0-9 \-/&]{2,40}):", _src)}
+        # the accessibility tier: an objective floor on the per-slide `warnings` stream, which
+        # previously had NO strict path at all (errors blocked, stats could be waived, per-slide
+        # warnings were unreachable from here). Both directions, plus the rubber-stamp guard.
+        _a11y = {"stats_warnings": [], "warnings": [
+            {"slide": 8, "text": "ICON CONTRAST: icon ink #C08A2E on #F5F1E6 — 2.69:1 "
+                                 "(<3:1, WCAG 1.4.11)."}]}
+
+        def _a11y_errs(ev):
+            errs: list[str] = []
+            gate.check_lint(_a11y, "presented", ev, errs)
+            return [e for e in errs if "1.4.11" in e]
+
+        if not _a11y_errs({}):
+            failures.append("an icon below the WCAG 1.4.11 3:1 floor passed the codex gate")
+        if _a11y_errs({"waivers": [{"kind": "a11y", "warning": "ICON CONTRAST",
+                                    "reason": "decorative flourish; meaning is carried by the "
+                                              "label beside it"}]}):
+            failures.append("a properly reasoned a11y waiver was still blocked")
+        if not _a11y_errs({"waivers": [{"kind": "a11y", "warning": "ICON CONTRAST",
+                                        "reason": "ok"}]}):
+            failures.append("a rubber-stamp waiver (<12 chars of reason) was accepted")
+        _unrelated = {"stats_warnings": [], "warnings": [
+            {"slide": 3, "text": "TEXT WALL: slide 3 carries a reading load of ~95 words"}]}
+        _e: list[str] = []
+        gate.check_lint(_unrelated, "presented", _e, [])
+        if [x for x in _e if "1.4.11" in x]:
+            failures.append("an unrelated per-slide warning was treated as an a11y floor")
+
+        unreachable = sorted(name for name in gate.STRICT_STATS if name not in emitted)
+        if unreachable:
+            failures.append(
+                "STRICT_STATS names that lint_deck.py never emits, so the gate can never fire "
+                "on them: " + ", ".join(unreachable))
+
         if failures:
             print("\n".join("FAIL: " + failure for failure in failures))
             return 1
-    print("ok - Codex delivery gate rejects icon-rasterization and historical bypasses")
+    print("ok - Codex delivery gate rejects icon-rasterization and historical bypasses, and "
+          "every STRICT_STATS name is a code the linter really emits")
     return 0
 
 

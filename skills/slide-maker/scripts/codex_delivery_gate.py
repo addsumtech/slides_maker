@@ -26,14 +26,34 @@ from typing import Any
 SCHEMA = "slide-maker-codex-evidence/v2"
 RECEIPT_SCHEMA = "slide-maker-codex-delivery-receipt/v1"
 BODY_FLOORS = {"presented": 13.5, "textheavy": 13.5, "selfread": 12.0}
+# Each entry must be a code `lint_deck.py` can actually emit, normalised the way check_lint
+# normalises one ("CJK TIGHT LEADING: slide 3 ..." -> "cjk_tight_leading"). Two of these were
+# invented names -- `cjk_risk` and `color_envelope` -- that no linter output could ever match, so
+# the gate believed it was enforcing them and could never fire. The suite now asserts every name
+# here against the codes lint_deck really produces, because the existing test fed the gate its own
+# expected shape (`lint["stats"]["warnings"] = ["card_dominance"]`) and so proved the logic while
+# proving nothing about the vocabulary.
 STRICT_STATS = {
     "card_dominance",
-    "cjk_risk",
-    "color_envelope",
+    "cjk_tight_leading",
+    "envelope_monoculture",
     "flat_type",
     "size_sprawl",
     "small_type",
     "timid_cover",
+}
+# The gate had a blocking path for `severity == "error"` findings and a remediate-or-waive path
+# for the `stats` stream, and NOTHING in between -- so a per-slide warning could not be held to
+# any bar at all, however objective. That gap is where the accessibility floors live: measured on
+# a delivered deck, an icon at 2.69:1 against its canvas (WCAG 1.4.11 asks 3:1) produced a warning
+# on the `warnings` stream and passed every gate here.
+#
+# Deliberately TINY, and only floors with an arithmetic answer. A ratio either clears 3:1 or it
+# does not; whether a component is over-used or a page is too dense is a judgment, and a judgment
+# forced through a waiver form becomes a rubber stamp. Nothing that needs an opinion belongs here.
+STRICT_WARNINGS = {
+    "ICON CONTRAST",                                # WCAG 1.4.11, recolored monochrome icons
+    "NON-TEXT CONTRAST",                            # WCAG 1.4.11, solid marks and connector lines
 }
 ICON_HELPERS = {"icon", "icon_card", "icon_tile", "icon_badge", "icon_ghost"}
 
@@ -434,6 +454,27 @@ def check_lint(lint: dict[str, Any], delivery: str, evidence: dict[str, Any], er
         ]
         if flagged:
             errors.append("stats warnings require remediation or an explicit waiver: " + ", ".join(flagged))
+
+    # the accessibility floors on the per-slide `warnings` stream (see STRICT_WARNINGS)
+    per_slide = lint.get("warnings", [])
+    if isinstance(per_slide, list):
+        hit: dict[str, set[int]] = {}
+        for row in per_slide:
+            text = row.get("text", "") if isinstance(row, dict) else str(row)
+            slide = row.get("slide") if isinstance(row, dict) else None
+            for code in STRICT_WARNINGS:
+                if text.startswith(code + ":") and not waived(evidence, "a11y", warning=code):
+                    hit.setdefault(code, set())
+                    if isinstance(slide, int):
+                        hit[code].add(slide)
+        for code in sorted(hit):
+            where = (" (slide%s %s)" % ("s" if len(hit[code]) > 1 else "",
+                                        ", ".join(str(n) for n in sorted(hit[code])))
+                     if hit[code] else "")
+            errors.append(
+                f"{code}{where} is below the WCAG 1.4.11 3:1 floor — remediate it, or record a "
+                f"waiver {{\"kind\": \"a11y\", \"warning\": \"{code}\", \"reason\": \"…\"}} saying "
+                f"why this mark is decorative")
 
 
 def check_content(

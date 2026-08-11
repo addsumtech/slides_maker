@@ -263,6 +263,94 @@ if g and g[0]["fill"] is None and g[0]["unk"]:
 else:
     bad.append(f"a gradient background was resolved to a definite colour: {g}")
 
+# ---------------------------------------------------------------- 9. inheritance + robustness
+# Backgrounds resolve slide -> layout -> master, the way OOXML does. Reading only the slide meant
+# a deck built on the USER'S TEMPLATE — which states its canvas once on the master, not per page —
+# resolved every run's backing to None, and None tells all 62 contrast callers to skip. Contrast
+# checking was silently off for the whole template branch.
+SOLID = ('<p:bg %s><p:bgPr><a:solidFill><a:srgbClr val="0E1B2A"/></a:solidFill>'
+         '<a:effectLst/></p:bgPr></p:bg>' % nsdecls("p", "a"))
+
+
+def _at(level, xml):
+    prs = dk.blank_deck(W, H)
+    s = dk.add_slide(prs)
+    part = {"slide": s, "layout": s.slide_layout, "master": prs.slide_masters[0]}[level]
+    part._element.find(qn("p:cSld")).insert(0, parse_xml(xml))
+    dk.text(s, 1, 2, 6, 0.6, [[("a line of text", 18, _c("14243A"), False, False)]])
+    out = _save(prs, "inh_%s.pptx" % level)
+    bxx = L._boxes(Presentation(str(out)).slides[0], W, H)
+    ti2 = next(i for i, b in enumerate(bxx) if b["text"])
+    return L._backing_fill(bxx, ti2), bxx
+
+
+for lvl in ("slide", "layout", "master"):
+    back, bxx = _at(lvl, SOLID)
+    dark = any(b["bg"] and b["fill"] and L._lum(b["fill"]) < 0.45 for b in bxx)
+    if back == "0E1B2A" and dark:
+        ok.append(f"a solid background declared on the {lvl} resolves, and reads as a dark plate")
+    else:
+        bad.append(f"{lvl}-level background did not resolve: backing={back!r} dark={dark}")
+
+# …but an INHERITED background we cannot resolve must NOT become a record. python-pptx's own
+# default master carries <p:bgRef idx="1001"><a:schemeClr/>; synthesising an `unk` record for it
+# would hand every deck an unknowable plate and flip `unk_plate` deck-wide.
+prs = dk.blank_deck(W, H)
+s = dk.add_slide(prs)
+dk.text(s, 1, 2, 6, 0.6, [[("x", 14, _c(INK), False, False)]])
+pth = _save(prs, "themeref.pptx")
+bx2 = L._boxes(Presentation(str(pth)).slides[0], W, H)
+if not any(b["bg"] for b in bx2):
+    ok.append("an inherited THEME-reference background stays unknown — no record invented, so "
+              "`unk_plate` does not become true on every deck ever built")
+else:
+    bad.append("a theme-reference master background was turned into a background record")
+
+# a gradient the SLIDE declares is still a record (a fact about that page), just unresolvable
+GRAD = ('<p:bg %s><p:bgPr><a:gradFill><a:gsLst><a:gs pos="0"><a:srgbClr val="112233"/></a:gs>'
+        '<a:gs pos="100000"><a:srgbClr val="AABBCC"/></a:gs></a:gsLst><a:lin ang="0"/>'
+        '</a:gradFill><a:effectLst/></p:bgPr></p:bg>') % nsdecls("p", "a")
+_b, bx3 = _at("slide", GRAD)
+if _b == "UNKNOWN" and any(x["bg"] for x in bx3):
+    ok.append("a gradient the SLIDE declares keeps its record and reports UNKNOWN")
+else:
+    bad.append(f"a slide-declared gradient lost its record: backing={_b!r}")
+
+_b, _ = _at("master", GRAD)
+if _b is None:
+    ok.append("an INHERITED gradient stays None — inheritance only ever adds resolved colour")
+else:
+    bad.append(f"an inherited gradient produced {_b!r} instead of staying unknown")
+
+# the colour must come from inside <a:solidFill>, not the first srgbClr anywhere under <p:bg>:
+# a legal <a:effectLst> declared first would otherwise be read as the page colour
+EFFECT_FIRST = ('<p:bg %s><p:bgPr>'
+                '<a:effectLst><a:glow><a:srgbClr val="FF0000"/></a:glow></a:effectLst>'
+                '<a:solidFill><a:srgbClr val="F5F1E6"/></a:solidFill></p:bgPr></p:bg>'
+                % nsdecls("p", "a"))
+_b, _ = _at("slide", EFFECT_FIRST)
+if _b == PAPER:
+    ok.append("a glow colour declared before the fill is not mistaken for the page colour")
+else:
+    bad.append(f"an effect colour was read as the background: {_b!r}")
+
+# every canvas format, not just 16:9
+for label, (cw, ch) in (("4:3", (10.0, 7.5)), ("story 9:16", (5.625, 10.0)),
+                        ("A4 portrait", (8.27, 11.69))):
+    prs = dk.blank_deck(cw, ch)
+    s = dk.add_slide(prs)
+    dk.slide_background(s, PAPER)
+    dk.text(s, 0.6, 0.5, cw - 1.2, 0.6, [[("a title", 22, _c(INK), True, False)]])
+    pth = _save(prs, "fmt_%s.pptx" % label.replace(":", "x").replace(" ", "_"))
+    bxf = L._boxes(Presentation(str(pth)).slides[0], cw, ch)
+    rec = [b for b in bxf if b["bg"]]
+    tif = next(i for i, b in enumerate(bxf) if b["text"])
+    if len(rec) == 1 and rec[0]["w"] * rec[0]["h"] >= 0.95 * cw * ch \
+            and L._backing_fill(bxf, tif) == PAPER:
+        ok.append(f"{label}: the background covers the canvas and resolves")
+    else:
+        bad.append(f"{label}: background record wrong on a non-16:9 canvas")
+
 # ---------------------------------------------------------------- report
 print("\n".join("  ok   " + x for x in ok))
 if bad:
