@@ -158,6 +158,57 @@ if len(_hits(prs)) == 2:
 else:
     bad.append(f"expected 2 findings on a mixed slide, got {len(_hits(prs))}")
 
+# ---------------------------------------------------------------- grouped + vector assets
+prs, s = _page()
+dk.picture(s, _save(Image.new("RGB", (200, 200), (140, 140, 140)), "gflat.png"), 1, 1, 2, 2)
+dk.box(s, 4, 1, 1, 1, fill="1F3B2F")
+s.shapes.add_group_shape([x for x in list(s.shapes)][-2:])
+if len(_hits(prs)) == 1:
+    ok.append("a flat placeholder INSIDE a group is still caught")
+else:
+    bad.append("grouping a bad picture hid it from the check")
+
+
+class _FakeImg(object):
+    def __init__(self, ext):
+        self.ext, self.blob = ext, b"not-decodable-by-pillow"
+
+
+class _FakePic(object):
+    shape_type = "PICTURE (13)"
+    name = "vector-logo"
+    rotation = 0.0
+
+    def __init__(self, ext):
+        self.image = _FakeImg(ext)
+
+
+class _FakeSlide(object):
+    def __init__(self, shapes):
+        self.shapes = shapes
+
+
+class _FakePrs(object):
+    def __init__(self, slides):
+        self.slides = slides
+
+
+for ext in ("emf", "wmf", "svg"):
+    f = dk._asset_faults(_FakePrs([_FakeSlide([_FakePic(ext)])]))
+    if not f:
+        ok.append(f".{ext} is skipped, not reported — Pillow cannot open a metafile, and saying "
+                  f"'does not decode' about one would be a confident wrong finding on somebody "
+                  f"else's template (the redesign route lints decks this skill did not build)")
+    else:
+        bad.append(f".{ext} was reported as undecodable: {f}")
+
+f = dk._asset_faults(_FakePrs([_FakeSlide([_FakePic("png")])]))
+if f and "does not decode" in f[0][3]:
+    ok.append("a .png that genuinely does not decode IS still reported (the extension carve is "
+              "narrow, not an escape hatch)")
+else:
+    bad.append("the vector carve swallowed a real undecodable bitmap")
+
 print("\n".join("  ok   " + x for x in ok))
 if bad:
     print("\n".join("  FAIL " + x for x in bad))

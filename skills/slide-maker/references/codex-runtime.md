@@ -14,6 +14,13 @@ The adapter has two kinds of rules:
 
 - **Universal floors made explicit in Codex:** rendered proof, a readable type floor, pixel checks,
   and an independent content + design review record.
+- **Truth floors reach this gate as blocking errors, not warnings.** `DATUM SCALE` (a bar whose
+  length no longer matches the number it claims) and `ASSET NOT USABLE` (a picture that decoded to
+  nothing, to one flat colour, or not at all) are computed by `deckkit` at BUILD time and replayed
+  by `lint_deck.py`, so they arrive in `lint.findings` with `severity: "error"` and `check_lint`
+  blocks on them like any other. There is no waiver: a chart that misstates its own data and a
+  frame with no image in it are not judgment calls. If a bar genuinely should not be measured,
+  do not tag it — an untagged bar is unchecked, which is an honest state, unlike a waived one.
 - **Accessibility floors (`STRICT_WARNINGS`): remediate or waive, never ignore.** `ICON CONTRAST`
   and `NON-TEXT CONTRAST` are WCAG 1.4.11's 3:1 floor for marks that carry meaning. They arrive as
   per-slide *warnings*, a stream the gate previously had no strict path for at all — so a deck

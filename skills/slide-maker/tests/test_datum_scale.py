@@ -183,6 +183,53 @@ if not _hits(prs):
 else:
     bad.append("a malformed datum name produced a finding")
 
+# ---------------------------------------------------------------- 3b. groups and rotation
+# `slide.shapes` stops at the group, and composing related marks into one is ordinary practice.
+# Measured: a mis-scaled bar pair went unreported the moment it was grouped.
+prs, s = _page()
+K = 1.932 / (2.1 - 1.4)
+for v in (1.5, 2.1):
+    dk.mark_datum(dk.box(s, 2.0 + (v > 1.6) * 1.6, 3.92 - (v - 1.4) * K, 1.2, (v - 1.4) * K,
+                         fill="8A8377"), v, group="prod")
+s.shapes.add_group_shape([x for x in list(s.shapes)][-2:])
+if len(_hits(prs)) == 1:
+    ok.append("a truncated baseline INSIDE a group is still caught (the walk descends)")
+else:
+    bad.append("grouping a mis-scaled bar pair hid it from the check")
+
+prs, s = _page()
+sc = dk.bar_scale(1.932, [1.5, 2.1], group="ok")
+for i, v in enumerate([1.5, 2.1]):
+    sc.bar(s, 2.0 + i * 1.6, 3.92, 1.2, v, vertical=True, fill="8A8377")
+s.shapes.add_group_shape([x for x in list(s.shapes)][-2:])
+if not _hits(prs):
+    ok.append("a CORRECT grouped pair stays silent — descending did not break the ratios")
+else:
+    bad.append("a correct pair inside a group was reported")
+
+prs, s = _page()                                            # a group's children live in the
+sc = dk.bar_scale(3.0, [1.0, 2.0], group="x")               # GROUP's coordinate space
+sc.bar(s, 2.0, 1.0, 0.3, 1.0, fill="1F3B2F")
+b2 = sc.bar(s, 2.0, 1.6, 0.3, 2.0, fill="1F3B2F")
+s.shapes.add_group_shape([b2])
+h = _hits(prs)
+if h and "spans a group boundary" in h[0][3]:
+    ok.append("a datum group split across a group boundary REFUSES to compare rather than "
+              "comparing lengths measured in different coordinate spaces")
+else:
+    bad.append(f"bars in different coordinate spaces were compared anyway: {h}")
+
+prs, s = _page()
+sc = dk.bar_scale(3.0, [1.0, 2.0], group="r")
+sc.bar(s, 2.0, 1.0, 0.3, 1.0, fill="1F3B2F")
+b = sc.bar(s, 2.0, 1.6, 0.3, 2.0, fill="1F3B2F")
+b.rotation = 90
+if not _hits(prs):
+    ok.append("a ROTATED bar is skipped — neither dimension is the length the reader sees, so "
+              "measuring it would compare the wrong one")
+else:
+    bad.append("a rotated bar was measured on its unrotated box")
+
 # ---------------------------------------------------------------- 4. survives the round trip
 prs, s = _page()
 K = 1.932 / (2.1 - 1.4)

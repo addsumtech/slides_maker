@@ -7280,6 +7280,28 @@ def _declared_overlap(sh):
     return str(getattr(sh, "name", "") or "").startswith(OVERLAP_TAG)
 
 
+def _deep_shapes(shapes, container=None):
+    """Every shape on a slide INCLUDING the ones inside groups, paired with its container id.
+
+    `slide.shapes` stops at the group: a bar or a picture composed into one is invisible to a
+    plain loop, and composing related marks into a group is ordinary practice, not an edge case.
+    Measured: a mis-scaled bar pair and a flat placeholder picture both went unreported the
+    moment they were grouped.
+
+    The container id travels with the shape because a group's children are measured in the
+    GROUP's coordinate space, not the slide's. Ratios inside one container stay valid under any
+    group scaling (every child scales the same way along a given axis), so the callers compare
+    within a container and refuse to compare across containers rather than comparing wrongly.
+    """
+    from pptx.enum.shapes import MSO_SHAPE_TYPE
+    for shp in shapes:
+        if getattr(shp, "shape_type", None) == MSO_SHAPE_TYPE.GROUP:
+            for pair in _deep_shapes(shp.shapes, container=id(shp)):
+                yield pair
+        else:
+            yield shp, container
+
+
 def _datum_faults(prs):
     """DATUM SCALE — a bar whose LENGTH no longer matches the number it claims to show.
 
@@ -7309,9 +7331,15 @@ def _datum_faults(prs):
     out = []
     for n, slide in enumerate(prs.slides, 1):
         groups = {}
-        for shp in slide.shapes:
+        for shp, _cont in _deep_shapes(slide.shapes):
             name = str(getattr(shp, "name", "") or "")
             if not name.startswith(DATUM_TAG):
+                continue
+            # A ROTATED bar's width and height are its unrotated box, so neither is the length the
+            # reader sees and the encoding axis cannot be inferred. Bars are essentially never
+            # rotated; measuring one anyway would compare the wrong dimension, which is worse than
+            # the silence, and the shape stays visible to every other check.
+            if abs(float(getattr(shp, "rotation", 0.0) or 0.0)) > 0.01:
                 continue
             # 🔴 NOT wrapped in a bare `except: continue`. The first version was, and it swallowed
             # a NameError (this module has no `EMU` constant) so the whole check silently did
@@ -7327,10 +7355,19 @@ def _datum_faults(prs):
             except ValueError:
                 continue
             w, h = shp.width / 914400.0, shp.height / 914400.0
-            groups.setdefault(g, []).append((v, w, h, shp))
+            groups.setdefault(g, []).append((v, w, h, shp, _cont))
         for g, rows in sorted(groups.items()):
             live = [r for r in rows if abs(r[0]) > 1e-9]
             if len(live) < 2:
+                continue
+            # A group's children are measured in the GROUP's coordinate space. Ratios inside one
+            # container stay valid under any group scaling; across containers they are not
+            # comparable, so say so rather than compare wrongly.
+            if len({r[4] for r in live}) > 1:
+                out.append((n, "CRITICAL", "DATUM SCALE",
+                            f"datum group '{g}' spans a group boundary, so its bars are measured "
+                            f"in different coordinate spaces and their lengths cannot be compared. "
+                            f"Keep one datum group inside one container."))
                 continue
             # Which dimension carries the value? The other one is the bar's THICKNESS and is
             # constant across a group by construction, so the varying dimension is the encoding.
@@ -7412,16 +7449,30 @@ def _asset_faults(prs):
     except ImportError:
         return out
     for n, slide in enumerate(prs.slides, 1):
-        for shp in slide.shapes:
+        for shp, _c in _deep_shapes(slide.shapes):
             if not str(getattr(shp, "shape_type", "")).startswith("PICTURE"):
                 continue
             try:
                 blob = shp.image.blob
+                ext = str(getattr(shp.image, "ext", "") or "").lower()
             except Exception:
                 continue                                 # linked/OLE picture: nothing to read
+            # A METAFILE or SVG is a legitimate asset that Pillow simply cannot open. Reporting
+            # "does not decode" on one would be a confident wrong finding on somebody's template,
+            # which is the failure mode this check is otherwise built to avoid — and this path DOES
+            # meet foreign decks, because the redesign route lints a file this skill did not build.
+            if ext in ("emf", "wmf", "svg", "eps", "pdf"):
+                continue
             nm = str(getattr(shp, "name", "") or "")
             try:
                 im = Image.open(_io.BytesIO(blob))
+                # A full-frame photo costs ~38ms to decode, and a photo-led deck has a dozen.
+                # draft() lets the JPEG decoder emit a reduced image directly instead of decoding
+                # 2400x1350 and throwing it away (measured 55ms -> 33ms); it is a no-op for PNG.
+                try:
+                    im.draft("RGB", (64, 64))
+                except Exception:
+                    pass
                 im.load()
                 im = im.convert("RGBA")
                 if max(im.size) > 64:

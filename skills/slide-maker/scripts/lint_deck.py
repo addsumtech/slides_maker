@@ -45,6 +45,7 @@ Checks (tuned for low false-positives):
   warns in the 1.5-3.0:1 band; only its hopeless <1.5:1 case (TEXT ON IMAGE) is a HARD finding.
 """
 import json
+import os
 import math
 import re
 import sys
@@ -2369,6 +2370,27 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
     # (per-slide, inside the loop) and the stats lum pass (after it)
     _SKIP.clear()          # one owner for the skip reason: cleared here, only ever set below
     pngs = _render_png_paths(path, renders_dir, len(prs.slides))
+    # DATUM SCALE and ASSET NOT USABLE live in deckkit because they must fire at BUILD time,
+    # before a render is paid for. But `lint_layout` only ever runs on a deck this skill is
+    # building, and two paths reach this file instead: the redesign route, which lints somebody
+    # else's deck, and the codex delivery gate, which reads THIS script's JSON and so could never
+    # see a build-time finding at all. Running them here as well costs one extra pass over the
+    # already-open Presentation and makes both checks reachable from every entry point. They are
+    # imported, not reimplemented — a second copy is how two gates start disagreeing.
+    _early = {}
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import deckkit as _dk_checks
+        for _sn, _sev, _code, _msg in (_dk_checks._datum_faults(prs)
+                                       + _dk_checks._asset_faults(prs)):
+            _early.setdefault(_sn, []).append(f"{_code}: {_msg}")
+    except Exception as _exc:
+        # NOT silent. A swallowed import here would delete two CRITICAL checks from every
+        # render-time run while the output still says "0 findings" — and this is the second time
+        # in one change that a bare `except: pass` hid exactly that (the first ate a NameError
+        # inside _datum_faults). If deckkit cannot be reached, the report has to say so.
+        print(f"  [skipped] build-time checks (DATUM SCALE · ASSET NOT USABLE) NOT re-run here: "
+              f"{type(_exc).__name__}: {_exc}")
     titles = []                                          # (slide#, normalized title, display snip)
     prov = []                                            # (slide#, claim numbers, sourced?)
     intent_map = {}                                      # si -> declared design intent (see design_intent)
@@ -2392,7 +2414,7 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
             # the first one lies. Same principle as _report_pixel_skip — "0 findings" and
             # "0 findings, and here is what did not run" are different sentences.
             _STATS_ERR.append((si + 1, "%s: %s" % (type(exc).__name__, exc)))
-        finds = []
+        finds = list(_early.get(si + 1, []))          # build-time checks, replayed here
         warns = []
         # 1) overflow
         for s in bx:
