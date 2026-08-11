@@ -9,7 +9,7 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
-## [4.7.1] — 2026-08-11
+## [4.8.0] — 2026-08-11
 
 ### Added
 - **`slide_background(slide, color)` — the page backdrop as a real `<p:bg>`** instead of a
