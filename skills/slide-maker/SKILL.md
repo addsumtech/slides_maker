@@ -107,6 +107,17 @@ Two time sinks compress well: ingesting material/assets, and the critic loop.
   - **Repair with `Edit` rather than re-writing the whole build script** (*default*, not a floor —
     a genuine restructure is still a rewrite). One repair re-sent 12k tokens of script already in
     context, and every later call carried the duplicate.
+  - **Iterate with `deck_cycle.py`, so one fix costs one round-trip.**
+    `python3 scripts/deck_cycle.py build_<deck>.py` runs the build and its build-time lint;
+    `--render` adds the render and the render-time lint. Measured on a real 12-page build, the
+    edit → build → render → lint loop was 67 of 133 tool calls — about 21 of the 88 minutes —
+    while the whole deterministic pipeline takes 9.1 seconds. The steps are not slow; asking for
+    them one at a time is. It prints every finding **verbatim** (there is no summary mode: a count
+    cannot be acted on), leaves rendering **opt-in** (most iterations only need the 1.8s geometry
+    pass, and forcing a 5.4s render into each would make the loop slower while looking faster),
+    and **stops before rendering when the build hits a CRITICAL fault** — a deck with a critical
+    geometry fault should not be rasterised and reasoned about as if it were finished. It replaces
+    nothing: `render_deck.py` and `lint_deck.py` behave exactly as before.
 - **Scale the critic to stakes** (step 5): two focused **lens** critics (content · design) even for a
   quick deck; the larger multi-critic + arbiter, multi-round panel for high-stakes. The loop is
   non-negotiable; its *weight* is what you tune.
@@ -1605,6 +1616,19 @@ findings` without it, and only one of them means what it looks like.
 invisible in the build code and only appear in the pixels; catching them yourself saves a
 critic round — full rationale in `references/design-principles.md`):
 
+> **Look at `render/contact.png` first — then read every slide anyway.** The render writes one
+> image of the whole deck beside the per-slide PNGs. It is the only view in which the DECK-level
+> questions are actually visible: the light/dark rhythm, whether the bookends bookend, form
+> variety, one chrome treatment stamped on every page, a canvas flip that lands on exactly one
+> slide — the things `ONE-OFF CANVAS FLIP` / `TITLE-RULE MONOCULTURE` / `FLAT RHYTHM` /
+> `BOTTOM-STRIP MONOCULTURE` measure and no single-slide read can see. 🔴 **It settles NO per-slide
+> question and never substitutes for the reads below.** Measured: a page there is 46 px/inch, so a
+> 23pt title is 15px and legible while **13.5pt body text is 8.6px and a 10pt source line 6.4px —
+> both unreadable.** Typography, contrast, a label grazing its bar, an overlap, whether a number is
+> right: none of that is decidable from the sheet. Use it to arrive at the per-slide read knowing
+> which pages deserve the most attention; treating it as the visual check IS the "passed because
+> nothing looked" failure this skill keeps finding elsewhere.
+>
 > 🔴 **Read the slide PNGs in ONE message — every slide, one tool block — then judge them one at a
 > time.** This is the preamble's `round-trips × context` rule at the place it binds hardest: reading
 > N slides in N messages re-sends the whole conversation N times, and by mid-build that context runs

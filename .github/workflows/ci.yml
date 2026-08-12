@@ -291,6 +291,21 @@ jobs:
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/bounds.log || {
             echo "::error::maintenance-boundaries suite did not run to completion"; exit 1; }
 
+      # A deck's wall clock is round-trips, not computation -- 9.1s of deterministic pipeline
+      # inside an 88-minute build. deck_cycle.py and the contact sheet both shorten that, and both
+      # are therefore shortcuts through a checking pipeline, which is how a pipeline stops
+      # checking. The guards ARE the feature, so they are what this suite asserts: findings
+      # verbatim (no --quiet exists), rendering opt-in, a CRITICAL build fault stopping before any
+      # pixels, the sheet written BESIDE every per-slide PNG with the hint still demanding all of
+      # them, and no gate anywhere reading the round-trip metric (a number whose cheapest
+      # improvement is looking at less must never become a target).
+      - name: Deck cycle + contact sheet (the guards are the feature)
+        run: |
+          set -o pipefail
+          python tests/test_deck_cycle.py | tee /tmp/cycle.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/cycle.log || {
+            echo "::error::deck-cycle suite did not run to completion"; exit 1; }
+
       - name: Graze contract (a label running into the bar beside it)
         run: |
           set -o pipefail

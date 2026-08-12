@@ -409,7 +409,7 @@ def _tail(text, limit=4000):
 
 # Exactly what a render writes: slide01.png … slideNN.png and the two bookend thumbnails. Used to
 # decide what may be deleted when the out dir is shared with the user's own files.
-_RENDER_PNG = re.compile(r"^(slide\d{2,}|thumb_first|thumb_last)\.png$")
+_RENDER_PNG = re.compile(r"^(slide\d{2,}|thumb_first|thumb_last|contact)\.png$")
 
 
 def _rels_targets(xml_bytes, base_dir):
@@ -1686,6 +1686,59 @@ def _density_stats(pptx, budget=70):
     return sum(1 for x in loads if x > budget), len(loads), loads[len(loads) // 2]
 
 
+
+def _contact_sheet(out, n_pages):
+    """One image of the WHOLE deck, written beside the per-slide PNGs as `contact.png`.
+
+    🔴 ADDITIVE, and the distinction is not a nicety. Measured on a real 12-page deck, a page in
+    this sheet is 460px wide — 46 px/inch against the render's 144. At that size a 23pt title is
+    15px and readable, and **13.5pt body text is 8.6px and a 10pt source line is 6.4px: neither
+    can be read at all**. So this image answers DECK-LEVEL questions only — the light/dark rhythm,
+    whether the bookends bookend, form variety, whether one chrome treatment is stamped on every
+    page, a canvas flip that lands on exactly one slide. It is the view the deck-level checks
+    (ONE-OFF CANVAS FLIP · TITLE-RULE MONOCULTURE · FLAT RHYTHM · BOTTOM-STRIP MONOCULTURE)
+    measure, finally visible to a reader.
+
+    It CANNOT answer a per-slide question — typography, contrast, a label grazing its bar, an
+    overlap, whether a number is right — and it must never be used as if it had. The render
+    self-check still reads slides page by page; this sheet is what you look at BEFORE that, to
+    know which pages deserve the attention. Substituting it for the per-slide read would be the
+    same failure this skill keeps finding elsewhere: passing a check by not looking.
+
+    Silent no-op without Pillow, and never fatal — a missing contact sheet must not fail a render.
+    """
+    try:
+        from PIL import Image, ImageDraw
+    except ImportError:
+        return None
+    import glob as _glob
+    pngs = sorted(_glob.glob(os.path.join(out, "slide*.png")),
+                  key=lambda p: int(re.sub(r"\D", "", os.path.basename(p)) or 0))
+    if len(pngs) < 2:
+        return None                                      # a 1-page deck has no deck-level shape
+    cols = 4 if len(pngs) > 6 else (3 if len(pngs) > 2 else 2)
+    rows = -(-len(pngs) // cols)
+    try:
+        w0, h0 = Image.open(pngs[0]).size
+        tw = 460
+        th = max(1, int(round(tw * h0 / float(w0))))
+        pad, lab = 10, 16
+        sheet = Image.new("RGB", (cols * tw + (cols + 1) * pad,
+                                  rows * (th + lab) + (rows + 1) * pad), (235, 235, 238))
+        d = ImageDraw.Draw(sheet)
+        for i, p in enumerate(pngs):
+            im = Image.open(p).convert("RGB").resize((tw, th), Image.LANCZOS)
+            x = pad + (i % cols) * (tw + pad)
+            y = pad + (i // cols) * (th + lab + pad)
+            sheet.paste(im, (x, y))
+            d.rectangle([x, y, x + tw, y + th], outline=(180, 180, 186))
+            d.text((x + 3, y + th + 2), "%02d" % (i + 1), fill=(60, 60, 66))
+        dest = os.path.join(out, "contact.png")
+        sheet.save(dest)
+        return dest
+    except Exception:
+        return None                                      # never fail a render over a preview
+
 def main(argv):
     # --deliverables (alias --final): ALSO park the PDF beside the .pptx and write viewer.html.
     # OFF by default: while a deck is still being iterated, those two are pure churn — they are
@@ -1986,7 +2039,8 @@ def main(argv):
                     # (slideNN.png / thumb_first|last.png) are ours. A user's slide_background.png
                     # or thumb_hero.png sitting beside the deck was being deleted silently.
                     continue
-                if (e.startswith(("slide", "thumb_")) and e.endswith(("png",))) or e == "viewer.html":
+                if ((e.startswith(("slide", "thumb_")) and e.endswith(("png",)))
+                        or e == "contact.png" or e == "viewer.html"):
                     try:
                         os.remove(os.path.join(out, e))
                     except OSError:
@@ -2140,6 +2194,11 @@ def main(argv):
         print("rendered {} slides -> {}".format(n_pages, out))
         if fast and skip_reason:
             print("(--fast fell back to a full render: {})".format(skip_reason))
+    _cs = _contact_sheet(out, n_pages)
+    if _cs:
+        print("contact sheet -> {}  (DECK-LEVEL view only: rhythm, bookends, form variety, "
+              "chrome repetition. Body text is ~8px here and unreadable — the per-slide visual "
+              "read is still required and this does not replace it.)".format(_cs))
     if not deliverables:
         print("pdf/viewer: not generated (deck still in progress) — at hand-off, once the user "
               "confirms the deck is final, re-run with --deliverables")
@@ -2169,6 +2228,15 @@ def main(argv):
     _pngs = sorted(f for f in os.listdir(out)
                    if f.startswith("slide") and f.endswith(".png")) if os.path.isdir(out) else []
     if len(_pngs) > 1:
+        _cs = os.path.join(out, "contact.png")
+        if os.path.exists(_cs):
+            # Deck-level FIRST, then every page. The order matters: the sheet tells you which
+            # pages deserve scrutiny, and it is worthless for judging any of them — body text is
+            # ~8px there. It is a way to arrive at the per-slide read informed, never a way to
+            # skip it, and the line below still asks for ALL of them.
+            print("      first read {}  — the whole deck at once: rhythm, bookends, form "
+                  "variety, chrome repetition. It CANNOT settle a per-slide question (body text "
+                  "is unreadable at that size), so it never replaces the reads below.".format(_cs))
         print("      then read ALL {} slide PNGs in ONE message (one tool block per slide, same "
               "message), and record a one-line verdict per slide:".format(len(_pngs)))
         print("      " + "  ".join(os.path.join(out, f) for f in _pngs))
