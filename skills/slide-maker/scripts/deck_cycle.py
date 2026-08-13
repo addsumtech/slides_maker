@@ -34,7 +34,8 @@ USAGE
     python3 scripts/deck_cycle.py build_<deck>.py --render --fast # …re-rendering changed pages only
     python3 scripts/deck_cycle.py build_<deck>.py --slides 3,7    # render only these pages
 
-Exit code is nonzero when any stage fails, so the loop can be scripted.
+Exit code uses lint_deck.py's vocabulary, so a caller can tell the two apart:
+    2 = a stage could not run   ·   1 = everything ran and the deck has findings   ·   0 = clean
 """
 from __future__ import annotations
 
@@ -48,17 +49,23 @@ HERE = Path(__file__).resolve().parent
 
 
 def _run(label, cmd, cwd=None):
-    """Run one stage; return (ok, seconds, combined output). Output is never trimmed."""
+    """Run one stage; return (rc, seconds, combined output, label). Output is never trimmed."""
     t0 = time.perf_counter()
     proc = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd)
-    dt = time.perf_counter() - t0
-    out = (proc.stdout or "") + (proc.stderr or "")
-    return proc.returncode == 0, dt, out, label
+    return proc.returncode, time.perf_counter() - t0, (proc.stdout or "") + (proc.stderr or ""), label
 
 
-def _emit(label, ok, dt, out):
-    mark = "ok  " if ok else "FAIL"
-    print(f"\n── {label}  [{mark}]  {dt:.2f}s " + "─" * max(0, 46 - len(label)))
+def _emit(label, rc, dt, out):
+    """A checker that RAN and found things is not a checker that broke.
+
+    Both used to print [FAIL]. That is worse than untidy: the render-time lint reports findings on
+    most real decks, so the common case trained the reader to read FAIL on that stage as noise —
+    and the next time the stage genuinely could not run, the label would have said the same thing.
+    `lint_deck.py` already separates them (1 = ran, found things · 2 = could not run), so this
+    reuses that vocabulary rather than inventing one.
+    """
+    mark = {0: "ok      ", 1: "findings", 2: "BROKEN  "}.get(rc, "BROKEN  ")
+    print(f"\n── {label}  [{mark}]  {dt:.2f}s " + "─" * max(0, 44 - len(label)))
     text = out.rstrip()
     if text:
         print(text)
@@ -103,17 +110,19 @@ def main(argv):
     deck_dir = script_path.parent
 
     stages = []
-    ok, dt, out, label = _run("build (+ build-time lint)", [sys.executable, str(script_path)],
+    rc, dt, out, label = _run("build (+ build-time lint)", [sys.executable, str(script_path)],
                               cwd=str(deck_dir))
-    _emit(label, ok, dt, out)
-    stages.append((label, ok, dt))
-    if not ok:
+    # A build either produced a deck or it did not; there is no "ran but found things" for it,
+    # so any nonzero is BROKEN.
+    _emit(label, 0 if rc == 0 else 2, dt, out)
+    stages.append((label, rc, dt))
+    if rc != 0:
         # Guard 3. The build script's own lint_layout(strict=True) raises on a CRITICAL geometry
         # fault. Rendering past that would produce pixels of a deck that is known to be broken and
         # invite reasoning about them as if they were finished.
         print("\ndeck_cycle: STOPPED before rendering — the build did not complete. A critical "
               "layout fault is a reason to fix the build, not to look at the render.")
-        return 1
+        return 2
 
     pptx = None
     for line in out.splitlines():
@@ -125,27 +134,36 @@ def main(argv):
         pptx = cands[0] if cands else None
     if pptx is None:
         print("\ndeck_cycle: the build succeeded but no .pptx was found beside the build script.")
-        return 1
+        return 2
 
     if render:
         rdir = deck_dir / "render"
-        ok_r, dt_r, out_r, lab_r = _run("render", [sys.executable, str(HERE / "render_deck.py"),
+        rc_r, dt_r, out_r, lab_r = _run("render", [sys.executable, str(HERE / "render_deck.py"),
                                                    str(pptx), str(rdir)] + passthru)
-        _emit(lab_r, ok_r, dt_r, out_r)
-        stages.append((lab_r, ok_r, dt_r))
-        ok_l, dt_l, out_l, lab_l = _run("render-time lint",
-                                        [sys.executable, str(HERE / "lint_deck.py"),
-                                         str(pptx), str(rdir)])
-        _emit(lab_l, ok_l, dt_l, out_l)
-        stages.append((lab_l, ok_l, dt_l))
+        _emit(lab_r, 0 if rc_r == 0 else 2, dt_r, out_r)
+        stages.append((lab_r, rc_r, dt_r))
+        if rc_r == 0:
+            rc_l, dt_l, out_l, lab_l = _run("render-time lint",
+                                            [sys.executable, str(HERE / "lint_deck.py"),
+                                             str(pptx), str(rdir)])
+            _emit(lab_l, rc_l, dt_l, out_l)
+            stages.append((lab_l, rc_l, dt_l))
+        else:
+            print("\ndeck_cycle: the render did not complete, so the render-time lint was not "
+                  "run — it reads the PNGs, and linting a stale or partial set reports the "
+                  "previous deck.")
 
-    total = sum(d for _l, _o, d in stages)
-    line = " · ".join(f"{l} {d:.1f}s" for l, _o, d in stages)
+    total = sum(d for _l, _r, d in stages)
+    line = " · ".join(f"{l} {d:.1f}s" for l, _r, d in stages)
     print(f"\n── cycle  {total:.1f}s  ({line})")
     if not render:
         print("   render not run (add --render). The build-time lint above is geometry only; "
               "pixel-level checks and the per-slide visual read still need a render.")
-    return 0 if all(o for _l, o, _d in stages) else 1
+    # Same vocabulary as lint_deck.py, so a caller can tell the two apart:
+    #   2 = a stage could not run   ·   1 = everything ran and the deck has findings   ·   0 = clean
+    if any(r >= 2 for _l, r, _d in stages):
+        return 2
+    return 1 if any(r for _l, r, _d in stages) else 0
 
 
 if __name__ == "__main__":

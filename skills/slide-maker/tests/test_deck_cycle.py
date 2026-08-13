@@ -192,6 +192,99 @@ for f in ("render_deck.py", "lint_deck.py", "codex_delivery_gate.py"):
 if not any("roundtrip" in b for b in bad):
     ok.append("no gate or pipeline script reads the round-trip metric")
 
+# ---------------------------------------------------------------- ran-with-findings != broken
+# The render-time lint reports findings on most real decks. Labelling that [FAIL] taught the
+# reader to treat FAIL on that stage as noise — and the next time the stage genuinely could not
+# run, the label would have said the same thing. lint_deck.py already separates 1 (ran, found
+# things) from 2 (could not run); the cycle reuses that vocabulary end to end.
+# TEXT PADDING: a render-time HARD finding that is deliberately not a build-time CRITICAL, so
+# the build passes and the lint stage is the one with something to say — the shape of the real
+# delivered deck, whose single hard finding was exactly this.
+FINDINGS = GOOD.replace(
+    '    dk.text(s, 0.6, 1.6, 8.0, 0.8, [[("a line of ordinary body copy", 14, C.from_string("1F3B2F"), False, False)]])',
+    '    dk.box(s, 0.6, 1.2, 4.0, 1.0, fill="FFFFFF")\n'
+    '    dk.text(s, 0.8, 1.88, 3.6, 0.28, [[("text cramped against the card bottom", 13, C.from_string("1F3B2F"), False, False)]])')
+assert FINDINGS != GOOD, "the findings fixture did not substitute"
+d5 = _write("findings", FINDINGS)
+rc, out = _cycle(d5, "--render")
+if "[findings]" in out and "[BROKEN" not in out:
+    ok.append("a lint that RAN and found things reads [findings], never [BROKEN]")
+else:
+    bad.append(f"a lint with findings was labelled as broken (or not at all):\n{out[-400:]}")
+if rc == 1:
+    ok.append("…and the cycle exits 1 for it — lint_deck's own 'ran, found things' code")
+else:
+    bad.append(f"a deck with findings exited {rc}, not 1")
+
+rc, out = _cycle(_write("broken", BAD), "--render")
+if rc == 2 and "[BROKEN" in out:
+    ok.append("a stage that could NOT run reads [BROKEN] and exits 2 — a caller can tell a "
+              "broken tool from a deck that needs work")
+else:
+    bad.append(f"a broken build did not report as broken: rc={rc}")
+
+rc, out = _cycle(d, "--slides")                              # --slides with no value
+if "render-time lint was not run" in out:
+    ok.append("when the render fails, the render-time lint is SKIPPED and says so — it reads the "
+              "PNGs, and linting a stale set reports the previous deck as if it were this one")
+else:
+    bad.append("a failed render was followed by a lint of whatever PNGs happened to be there")
+
+# ---------------------------------------------------------------- the sheet splits, not shrinks
+# One sheet of 40 pages is 1890x2860, and an image that tall is downscaled before anyone looks at
+# it — measured 0.55x, taking a 23pt title from 15px to 8px. It would still be produced and still
+# be called the deck-level view while showing nothing.
+BIG = GOOD.replace("for i in range(3):", "for i in range(26):").replace('"| slides:", 3',
+                                                                        '"| slides:", 26')
+d6 = _write("big", BIG)
+subprocess.run([sys.executable, str(SCRIPTS / "deck_cycle.py"), "build.py", "--render"],
+               capture_output=True, text=True, cwd=str(d6))
+sheets = sorted(p.name for p in (d6 / "render").glob("contact*.png"))
+if sheets == ["contact_01.png", "contact_02.png", "contact_03.png"]:
+    ok.append("a 26-page deck splits into 3 readable sheets instead of one unreadable one")
+else:
+    bad.append(f"large-deck contact sheets wrong: {sheets}")
+if sheets:
+    from PIL import Image as _I
+    hs = {_I.open(d6 / "render" / s).size[1] for s in sheets}
+    if max(hs) < 1000:
+        ok.append(f"every sheet stays short enough to survive downscaling (max {max(hs)}px tall)")
+    else:
+        bad.append(f"a sheet is {max(hs)}px tall — it will be shrunk past legibility")
+
+# ---------------------------------------------------------------- roundtrip fails loud
+_tx = TMP / "t.jsonl"
+_tx.write_text(
+    '{"timestamp":"2026-01-01T00:00:00Z","type":"user","message":{"content":"start here"}}\n'
+    '{"timestamp":"2026-01-01T00:10:00Z","type":"assistant","message":{"content":[{"type":"text","text":"x"}]}}\n'
+    '{"timestamp":"2026-01-01T00:20:00Z","type":"user","message":{"content":"stop here"}}\n',
+    encoding="utf-8")
+
+
+def _rt(*args):
+    q = subprocess.run([sys.executable, str(SCRIPTS / "roundtrip_report.py"), str(_tx)] + list(args),
+                       capture_output=True, text=True)
+    return q.returncode, (q.stdout or "") + (q.stderr or "")
+
+rc, out = _rt("--from", "no such marker")
+if rc == 2 and "matches no user message" in out:
+    ok.append("an unmatched --from FAILS rather than silently widening to the whole transcript "
+              "(measured: a typo reported a 9,492-minute 'build' in the shape of a real answer)")
+else:
+    bad.append(f"an unmatched marker fell back silently: rc={rc}")
+
+rc, out = _rt("--from", "stop here", "--to", "start here")
+if rc == 2:
+    ok.append("markers in the wrong order are refused, not reported as a negative window")
+else:
+    bad.append("a reversed window was accepted")
+
+rc, out = _rt("--from", "start here", "--to", "stop here")
+if rc == 0 and "20.0 min" in out:
+    ok.append("a valid window still reports normally")
+else:
+    bad.append(f"a valid window broke: rc={rc}\n{out[:300]}")
+
 print("\n".join("  ok   " + x for x in ok))
 if bad:
     print("\n".join("  FAIL " + x for x in bad))

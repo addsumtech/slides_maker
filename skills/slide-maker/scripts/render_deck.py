@@ -409,7 +409,7 @@ def _tail(text, limit=4000):
 
 # Exactly what a render writes: slide01.png … slideNN.png and the two bookend thumbnails. Used to
 # decide what may be deleted when the out dir is shared with the user's own files.
-_RENDER_PNG = re.compile(r"^(slide\d{2,}|thumb_first|thumb_last|contact)\.png$")
+_RENDER_PNG = re.compile(r"^(slide\d{2,}|thumb_first|thumb_last|contact(_\d{2})?)\.png$")
 
 
 def _rels_targets(xml_bytes, base_dir):
@@ -1716,26 +1716,39 @@ def _contact_sheet(out, n_pages):
                   key=lambda p: int(re.sub(r"\D", "", os.path.basename(p)) or 0))
     if len(pngs) < 2:
         return None                                      # a 1-page deck has no deck-level shape
-    cols = 4 if len(pngs) > 6 else (3 if len(pngs) > 2 else 2)
-    rows = -(-len(pngs) // cols)
+    # SPLIT rather than shrink past legibility. A single sheet of 40 pages measures 1890x2860, and
+    # an image that tall is downscaled to fit before anyone looks at it — measured, a 0.55 factor,
+    # which takes a tile from 460px to 252px and a 23pt title from 15px to 8px. The sheet would
+    # still be produced, still be called the deck-level view, and no longer show anything: a
+    # silent degradation, which is the failure mode this skill treats as worse than a loud one.
+    # 12 per sheet is the size that was verified readable on a real deck, so a long deck gets
+    # several readable sheets instead of one useless one.
+    PER = 12
+    chunks = [pngs[i:i + PER] for i in range(0, len(pngs), PER)]
+    made = []
     try:
         w0, h0 = Image.open(pngs[0]).size
         tw = 460
         th = max(1, int(round(tw * h0 / float(w0))))
         pad, lab = 10, 16
-        sheet = Image.new("RGB", (cols * tw + (cols + 1) * pad,
-                                  rows * (th + lab) + (rows + 1) * pad), (235, 235, 238))
-        d = ImageDraw.Draw(sheet)
-        for i, p in enumerate(pngs):
-            im = Image.open(p).convert("RGB").resize((tw, th), Image.LANCZOS)
-            x = pad + (i % cols) * (tw + pad)
-            y = pad + (i // cols) * (th + lab + pad)
-            sheet.paste(im, (x, y))
-            d.rectangle([x, y, x + tw, y + th], outline=(180, 180, 186))
-            d.text((x + 3, y + th + 2), "%02d" % (i + 1), fill=(60, 60, 66))
-        dest = os.path.join(out, "contact.png")
-        sheet.save(dest)
-        return dest
+        for ci, chunk in enumerate(chunks):
+            cols = 4 if len(chunk) > 6 else (3 if len(chunk) > 2 else 2)
+            rows = -(-len(chunk) // cols)
+            sheet = Image.new("RGB", (cols * tw + (cols + 1) * pad,
+                                      rows * (th + lab) + (rows + 1) * pad), (235, 235, 238))
+            d = ImageDraw.Draw(sheet)
+            for i, p in enumerate(chunk):
+                im = Image.open(p).convert("RGB").resize((tw, th), Image.LANCZOS)
+                x = pad + (i % cols) * (tw + pad)
+                y = pad + (i // cols) * (th + lab + pad)
+                sheet.paste(im, (x, y))
+                d.rectangle([x, y, x + tw, y + th], outline=(180, 180, 186))
+                d.text((x + 3, y + th + 2), "%02d" % (ci * PER + i + 1), fill=(60, 60, 66))
+            name = "contact.png" if len(chunks) == 1 else "contact_%02d.png" % (ci + 1)
+            dest = os.path.join(out, name)
+            sheet.save(dest)
+            made.append(dest)
+        return made
     except Exception:
         return None                                      # never fail a render over a preview
 
@@ -2040,7 +2053,8 @@ def main(argv):
                     # or thumb_hero.png sitting beside the deck was being deleted silently.
                     continue
                 if ((e.startswith(("slide", "thumb_")) and e.endswith(("png",)))
-                        or e == "contact.png" or e == "viewer.html"):
+                        or e == "contact.png" or e.startswith("contact_")
+                        or e == "viewer.html"):
                     try:
                         os.remove(os.path.join(out, e))
                     except OSError:
@@ -2198,7 +2212,7 @@ def main(argv):
     if _cs:
         print("contact sheet -> {}  (DECK-LEVEL view only: rhythm, bookends, form variety, "
               "chrome repetition. Body text is ~8px here and unreadable — the per-slide visual "
-              "read is still required and this does not replace it.)".format(_cs))
+              "read is still required and this does not replace it.)".format(", ".join(_cs)))
     if not deliverables:
         print("pdf/viewer: not generated (deck still in progress) — at hand-off, once the user "
               "confirms the deck is final, re-run with --deliverables")
@@ -2228,8 +2242,10 @@ def main(argv):
     _pngs = sorted(f for f in os.listdir(out)
                    if f.startswith("slide") and f.endswith(".png")) if os.path.isdir(out) else []
     if len(_pngs) > 1:
-        _cs = os.path.join(out, "contact.png")
-        if os.path.exists(_cs):
+        _sheets = sorted(f for f in os.listdir(out)
+                         if f == "contact.png" or f.startswith("contact_"))
+        _cs = ", ".join(os.path.join(out, f) for f in _sheets)
+        if _sheets:
             # Deck-level FIRST, then every page. The order matters: the sheet tells you which
             # pages deserve scrutiny, and it is worthless for judging any of them — body text is
             # ~8px there. It is a way to arrive at the per-slide read informed, never a way to

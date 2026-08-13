@@ -89,10 +89,23 @@ def main(argv):
     f_mark, t_mark = opt("--from"), opt("--to")
     start = rows[0][0]
     end = rows[-1][0]
+    # A marker that matches nothing must NOT silently widen the window to the whole transcript.
+    # Measured: a typo'd --from reported a 9,492-minute "build" with 1,836 minutes of assistant
+    # work, in the same layout as a real answer. A wrong number delivered confidently is worse
+    # than an error, and this tool exists to inform a judgement about where time goes.
+    for mark, name in ((f_mark, "--from"), (t_mark, "--to")):
+        if mark and not any(_real_user(k, x) and mark in x for _t, k, x, _tl in rows):
+            print(f"roundtrip_report: {name} {mark!r} matches no user message in that transcript. "
+                  f"Not falling back to the whole file — the window would be meaningless.")
+            return 2
     if f_mark:
-        start = next((t for t, k, x, _ in rows if _real_user(k, x) and f_mark in x), start)
+        start = next(t for t, k, x, _ in rows if _real_user(k, x) and f_mark in x)
     if t_mark:
-        end = next((t for t, k, x, _ in rows if _real_user(k, x) and t_mark in x), end)
+        end = next(t for t, k, x, _ in rows if _real_user(k, x) and t_mark in x)
+    if end < start:
+        print("roundtrip_report: --to occurs BEFORE --from in this transcript; the window would "
+              "be negative. Check the two markers.")
+        return 2
     win = [r for r in rows if start <= r[0] <= end]
 
     asst = [r for r in win if r[1] == "assistant"]
