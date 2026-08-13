@@ -306,6 +306,17 @@ jobs:
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/cycle.log || {
             echo "::error::deck-cycle suite did not run to completion"; exit 1; }
 
+      # Both checks here came out of VERIFYING a review's claims rather than trusting them: of six
+      # re-measured by hand, three were factually wrong, and two of those nearly became lint checks
+      # built to enforce a defect that did not exist. What survived verification ships; what did
+      # not is recorded as an absence in the suite's own docstring.
+      - name: Review grounding (split page · carried_by device consistency)
+        run: |
+          set -o pipefail
+          python tests/test_review_grounding.py | tee /tmp/ground.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/ground.log || {
+            echo "::error::review-grounding suite did not run to completion"; exit 1; }
+
       - name: Graze contract (a label running into the bar beside it)
         run: |
           set -o pipefail

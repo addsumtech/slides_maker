@@ -1441,6 +1441,58 @@ def _slide_stats(slide, bx, sw, sh):
     }
 
 
+def _render_void_band(im):
+    """Tallest fully-empty horizontal band inside the content region, in INCHES of canvas.
+
+    A page can pass every density check and still be split in half. Occupancy is a coverage
+    fraction, so ink at the top and ink at the bottom average out to a healthy number while the
+    reader sees two unrelated halves with a gap between them. This asks a different question: how
+    tall is the widest run of rows that carry nothing at all.
+
+    Measured on a delivered 12-page deck, this is the only number that separated its weakest page
+    from the rest — slide 6 held a 142px band (y=446-586) while every other slide's tallest was
+    <=82px. The independent design review reached the same page by the same route and quoted 141px,
+    which is the agreement worth having: a defect two methods find is a defect.
+
+    The band is measured against the page's OWN corner colour, so a dark page is judged on its own
+    ground rather than against white. The title strip and the footer are excluded — a deck is
+    supposed to have air there.
+    """
+    w, h = im.size
+    # The page's DOMINANT colour, not the pixel in one corner. A closing slide in a real deck
+    # carries an ochre spine down its left edge, so the corner sample returned the SPINE — every
+    # row would then read as "inked" and the measure would silently return zero on exactly the
+    # kind of page it is meant to look at.
+    _c = {}
+    for _y in range(0, h, max(1, h // 40)):
+        for _x in range(0, w, max(1, w // 40)):
+            _k = tuple(v // 6 for v in im.getpixel((_x, _y)))
+            _c[_k] = _c.get(_k, 0) + 1
+    bg = tuple(v * 6 + 3 for v in max(_c, key=_c.get))
+    y0, y1 = int(h * 0.135), int(h * 0.79)       # below the title band, above the footer rule
+    step = max(1, w // 240)
+    # Skip the outer 5% of the width. A spine, a rail or a full-height accent bar lives at the very
+    # edge and runs through every row, which would make every row read as "inked" and blind this
+    # measure entirely on any deck that uses one — while the split the reader sees is in the
+    # CONTENT column, which never starts at the bleed.
+    x_lo, x_hi = int(w * 0.05), int(w * 0.95)
+    best = cur = 0
+    for y in range(y0, y1, 2):
+        ink = 0
+        for x in range(x_lo, x_hi, step):
+            c = im.getpixel((x, y))
+            if abs(c[0] - bg[0]) + abs(c[1] - bg[1]) + abs(c[2] - bg[2]) > 28:
+                ink += 1
+                if ink > 1:
+                    break
+        if ink <= 1:
+            cur += 2
+            best = max(best, cur)
+        else:
+            cur = 0
+    return best / float(h) * 5.625               # rows -> inches of a 16:9 canvas height
+
+
 def _render_col_void(im):
     """Largest contiguous BLANK vertical channel in the slide's interior, as a fraction of width.
     'Blank' = pixels within noise distance of the canvas colour (median of the border pixels), so a
@@ -1797,6 +1849,7 @@ def _load_render_lums(path, renders_dir, n, pngs=...):
         try:
             im = Image.open(p).convert("RGB")
             void, flank = _render_col_void(im)
+            band = _render_void_band(im)
             w, h = im.size
             im = im.resize((64, max(1, int(64 * h / w))))
             px = list(im.getdata())
@@ -1806,7 +1859,7 @@ def _load_render_lums(path, renders_dir, n, pngs=...):
             for r, g, b in px:
                 mx = max(r, g, b)
                 sat += 0.0 if mx == 0 else (mx - min(r, g, b)) / mx
-            out.append((lum, sat / m, void, flank))
+            out.append((lum, sat / m, void, flank, band))
         except Exception:
             return None
     return out
@@ -2220,6 +2273,29 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False):
                      f"{body_med:.0f}pt ({rows[0]['max_pt']/body_med:.1f}×) — the cover is the deck's poster; "
                      f"give the title display scale (type contract: display ≥2.5× body), or write the "
                      f"one-clause register exception (ink_wash / museum_memorial)")
+    # SPLIT PAGE: one interior slide is cut in half by a band of nothing, far outside the band
+    # every other page runs. Deliberately DECK-RELATIVE: an airy deck is a legitimate register and
+    # an absolute threshold would punish it; what reads as a mistake is one page doing it alone.
+    # Measured on a delivered 12-page deck: slide 6 held a 0.99in (142px) empty band while every
+    # other page's tallest was <=0.57in — 1.7x the next worst. The independent design review found
+    # the same page by the same route and quoted 141px. `design_intent(envelope="upper")` declares
+    # a deliberate void and exempts the slide, the same carve the envelope checks already use.
+    if lums and n >= 6 and all(len(x) > 4 for x in lums):
+        bands = [(i, x[4]) for i, x in enumerate(lums)
+                 if 0 < i < n - 1                       # cover and closer are not content pages
+                 and not (rows[i].get("intent") or {}).get("envelope")]
+        if len(bands) >= 4:
+            bands.sort(key=lambda z: -z[1])
+            (wi, wb), (_ri, rb) = bands[0], bands[1]
+            if wb >= 0.85 and wb >= 1.5 * max(rb, 0.01):
+                warns.append(
+                    f"SPLIT PAGE: slide {wi + 1} carries a {wb:.2f}in band of nothing through its "
+                    f"interior — {wb / max(rb, 0.01):.1f}x the tallest on any other content slide "
+                    f"({rb:.2f}in). Occupancy cannot see this: ink above the gap and ink below it "
+                    f"average to a healthy number while the reader sees two unrelated halves. "
+                    f"Close it, move a block across it, or declare the void with "
+                    f"deckkit.design_intent(envelope='upper')")
+
     # FLAT RHYTHM: with renders available, the deck never changes canvas VALUE — no light/dark or
     # temperature event across 8+ slides. Uniformly-dark decks trip the same range test (correct — a
     # deliberately uniform series answers with the register exception).

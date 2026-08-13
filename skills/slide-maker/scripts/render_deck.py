@@ -118,6 +118,53 @@ def _report_carried_by(pptx_path, cb):
                 if isinstance(i, int) and 1 <= i <= len(skels) and not _same(skels[i - 1], modal)]
     print(f"[gates] carried_by structure: {len(distinct)}/{len(cb)} named slide(s) differ from the "
           f"deck's default skeleton (distinct: {distinct or 'none'})")
+
+    # …and whether the DEVICE is drawn the same way on each, which is what the declaration claims.
+    # The check above asks "is each named slide unlike the deck's default page" — three slides can
+    # each be unusual in three unrelated ways and pass it.
+    #
+    # Scoped deliberately to the accent RULE, because that is the case that occurred and the only
+    # one that is measurable without knowing what the move is. Measured on a delivered deck whose
+    # plan declared carried_by=[5,10,11] as "the same line grammar": #1F3B2F at 41% of the canvas
+    # and 3.2px · #8A8377 at 50% and 2.9px · #B4462A at 34%, 2.3px, and at a different y entirely.
+    # Three colours, three spans, three weights.
+    #
+    # A generic structural test was tried first and DROPPED: mean pairwise skeleton likeness among
+    # the named slides was 0.11 against a deck baseline of 0.12. That gap is noise, and reporting
+    # it as evidence would be the confident-wrong-number failure this file keeps fixing.
+    #
+    # NOT A FAILURE, same carve as above: a signature move may live on colour, type or concept. If
+    # the named slides do not all carry a rule, the device is not a rule and nothing is said.
+    idx = [i - 1 for i in cb if isinstance(i, int) and 1 <= i <= len(skels)]
+    if len(idx) >= 2:
+        try:
+            slides = list(prs.slides)
+            rules = []
+            for i in idx:
+                bx = _ld._boxes(slides[i], sw, sh)
+                cand = [b for b in bx if b["solid"] and not b["text"] and not b["bg"]
+                        and b["fill"] and b["w"] > 0.15 * sw and b["h"] < 0.02 * sh
+                        and b["t"] < 0.80 * sh]          # exclude the footer rule
+                rules.append(max(cand, key=lambda z: z["w"]) if cand else None)
+        except Exception:
+            rules = []
+        if rules and all(r is not None for r in rules):
+            cols = {r["fill"] for r in rules}
+            spans = [r["w"] / sw for r in rules]
+            thick = [r["h"] * 144 for r in rules]
+            span_off = (max(spans) - min(spans)) > 0.10
+            thick_off = (max(thick) / max(min(thick), 0.1)) > 1.25
+            if len(cols) > 1 or span_off or thick_off:
+                bits = []
+                for i, r in zip(idx, rules):
+                    bits.append(f"p{i + 1} #{r['fill']} {r['w'] / sw:.0%}w {r['h'] * 144:.1f}px")
+                print(f"        ⚠ the carried_by slides draw their rule THREE different ways: "
+                      + " · ".join(bits) + ". `carried_by` says they carry ONE move; a device "
+                      f"redrawn per page is not one move, it is three. Match the colour, the span "
+                      f"and the weight, or say in the hand-off what the shared move actually is.")
+            else:
+                print(f"        carried_by rule is consistent across the named slides "
+                      f"(#{list(cols)[0]}, {min(spans):.0%}-{max(spans):.0%} width)")
     if len(distinct) < 2:
         print("        ⚠ the signature move is doing structural work on fewer than 2 of the slides "
               "that claim it. If it lives on colour/type/concept instead, fine — say which in the "
