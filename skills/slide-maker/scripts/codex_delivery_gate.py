@@ -96,6 +96,19 @@ TEMPLATE = {
                 "verified": True,
             }
         ],
+        # THE ARC COMPETITION. This record bound the DESIGN competition (design.direction, with a
+        # hashed directions.html) and recorded nothing about the CONTENT one — backwards, by the
+        # skill's own reckoning: a wrong form costs one slide, a wrong arc costs the design plan and
+        # the build underneath it. `arc_divergence.py` scores 2-3 candidates over one ledger; what
+        # was missing was anywhere for its verdict to land on this path.
+        "arc": {
+            "chosen": "<the arc that won>",
+            "shape": "problem-turn-evidence",
+            "rejected": [
+                {"name": "<runner-up>", "why_lost": "<one clause>"},
+            ],
+            "divergence": "ok | flagged <pair> -> rediverged | justified: <reason>",
+        },
         "checkpoint": {"mode": "approved", "record": "<decision record>"},
     },
     "design": {
@@ -560,6 +573,31 @@ def check_content(
             evidence_rows = row.get("evidence")
             if not isinstance(evidence_rows, list) or not all(isinstance(item, str) and item.strip() for item in evidence_rows):
                 errors.append(f"content slide {number}.evidence must contain source references")
+
+    # Mirrors what this gate already demands of `design.direction`: a competition is only a
+    # competition if the losers are on the record. `picked contribution-first` alone is a sentence
+    # the coordinator can write without any alternative having existed — the same reason the
+    # content checkpoint's `arc gate:` line requires the losers and their clauses. Kept to ONE
+    # rejected arc minimum, because arc_divergence.py accepts 2 candidates as a valid set.
+    arc = content.get("arc")
+    if not isinstance(arc, dict):
+        errors.append("content.arc missing — the arc competition (agents/content-planner.md §3): "
+                      "the arc that won, the ones it beat, and the divergence verdict")
+    else:
+        require_string(arc.get("chosen"), "content.arc.chosen", errors, minimum=4)
+        require_string(arc.get("divergence"), "content.arc.divergence", errors, minimum=2)
+        rejected = arc.get("rejected")
+        if not isinstance(rejected, list) or not rejected:
+            errors.append("content.arc.rejected must name at least one arc the winner beat — "
+                          "a winner with no losers on the record is a derivation, not a choice")
+        else:
+            for index, row in enumerate(rejected):
+                label = f"content.arc.rejected[{index}]"
+                if not isinstance(row, dict):
+                    errors.append(f"{label} must be an object")
+                    continue
+                require_string(row.get("name"), f"{label}.name", errors, minimum=2)
+                require_string(row.get("why_lost"), f"{label}.why_lost", errors, minimum=8)
 
     ledger = content.get("claim_ledger")
     if not isinstance(ledger, list) or (source_mode != "none" and not ledger):

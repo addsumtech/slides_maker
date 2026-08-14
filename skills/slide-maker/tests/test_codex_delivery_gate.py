@@ -214,6 +214,15 @@ def fixture(root: Path) -> tuple[dict, dict, dict, Path]:
                     "verified": True,
                 }
             ],
+            "arc": {
+                "chosen": "evidence-first",
+                "shape": "evidence-build",
+                "rejected": [
+                    {"name": "recommendation-first",
+                     "why_lost": "there is no decision to lead with on a one-slide record"},
+                ],
+                "divergence": "ok",
+            },
             "checkpoint": {
                 "mode": "approved",
                 "record": "The one-slide narrative and claim were approved.",

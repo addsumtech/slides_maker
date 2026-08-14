@@ -135,9 +135,17 @@ python3 scripts/codex_delivery_gate.py --init .codex-deck-evidence.json
 ```
 
 Fill it from actual artifacts, not memory. The v2 record binds the final PPTX and build script to their
-SHA-256 hashes; stores the source/claim ledger, content and design checkpoint records, per-slide form
+SHA-256 hashes; stores the source/claim ledger, content and design checkpoint records, **both
+competitions — the CONTENT arc (`content.arc`: the arc that won, the ones it beat with the clause that
+lost each, and `arc_divergence.py`'s verdict) and the DESIGN direction** (`design.direction`), **the
+governing picture** (`design.concept`: chosen + the two it beat), per-slide form
 ledger, four clean-branch direction tokens and preview, final rendered signature proof, categorical
-icon assets, visual-contract manifest/result, and two separate critic JSON files. Every proof is
+icon assets, visual-contract manifest/result, and two separate critic JSON files.
+*(All three were missing. This record bound the design competition to a hashed `directions.html` while
+recording nothing about the arc — backwards by the skill's own reckoning, since a wrong form costs one
+slide and a wrong arc costs the design plan and the build under it. `design.concept` had simply never
+been added after `render_deck.py --gate-check` began requiring it, so a bridged run could satisfy this
+gate with a design nobody had chosen a concept for and then fail the shared one.)* Every proof is
 re-read and the critic/signature/visual-contract proofs must name the final deck hash. Keep the record
 with `.deck-gates.json`; it is a workflow artifact, not a user-facing deck document.
 
