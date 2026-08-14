@@ -2140,8 +2140,18 @@ out explicitly here so they can confirm it.
 
 **`--deliverables` refuses to run until `<deck-dir>/.deck-gates.json` records that the Step-2
 design plan, the Step-5 critic and the Step-6 provenance pass actually ran.** Write it when the
-critic loop converges — `{"critic": {"verdict": "consent", "rounds": N}}`, the design plan's
+critic loop converges — `{"critic": {"verdict": "consent", "rounds": N}}`, **the Step-1 arc
+competition** (`{"content": {"arc": {"chosen": …, "rejected": [{"name": …, "why_lost": …}],
+"divergence": …}}}` — the losers and their clauses ARE the artifact, since `picked
+contribution-first` on its own is a sentence anyone can write without a competition having
+happened; `{"content": {"waived": "<why this deck had one possible arc>"}}` if it genuinely did.
+This joined the file because the arc was the one Step-1/2 decision whose verdict reached only the
+*conversation* while every other one reached this record — and the Codex path had already been
+binding it), the design plan's
 `boldness` / `signature_move` / `carried_by` / `form_ledger` / `icon_family` / `palette` /
+**`motif_generates`** (background · markers · one page whose geometry IS the motif — a motif that
+only recurs is an ornament with a schedule; carved out, like `signature_proof`, under a
+`conservative` dial with a recorded `deliberately restrained:` move) /
 **`type_scale`** (the three tiers as numbers — SIZE SPRAWL tells authors to draw sizes "from the
 deck's declared type-scale tokens", and this is where they get declared) / **`signature_proof`**
 (the ANCHOR PROOF — a LIST `[{"role": "signature"|"complex"|"data", "slide": N, "png": "<rendered

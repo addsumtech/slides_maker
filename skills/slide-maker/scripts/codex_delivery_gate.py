@@ -155,6 +155,14 @@ TEMPLATE = {
         # one gate that could have caught that class on the Codex path could not see the palette
         # at all.
         "palette": "<FILL vs TEXT-safe split, per palette_audit.py>",
+        # A motif that only RECURS is an ornament with a schedule. Three things it makes besides
+        # itself; `page` takes `none - <reason>` because a deck with no page whose geometry the
+        # idea could own must not invent one to fill this field.
+        "motif_generates": {
+            "background": "<what the motif makes the canvas do | flat by register - reason>",
+            "markers": "<the numeral / icon / bullet system it implies>",
+            "page": "<the slide whose GEOMETRY is the motif | none - reason>",
+        },
         "signature_move": "<repeated, deliberate visual device>",
         "carried_by": [1, 5],
         # The ANCHOR PROOF — three rendered pages, three different failures. `signature` proves the
@@ -761,6 +769,22 @@ def check_design(
                                errors, minimum=8)
 
     require_string(design.get("palette"), "design.palette", errors, minimum=12)
+    # Same carve as signature_proof, and for the same reason: under a conservative dial with a
+    # recorded "deliberately restrained" move there is no loud motif to be productive, and
+    # demanding three products would push an author to invent a device so the field has an answer.
+    _restrained = (str(design.get("boldness", "")).strip().lower() in {"conservative",
+                                                                      "deliberately-restrained"}
+                   and str(design.get("signature_move", "")).strip().lower()
+                       .startswith("deliberately restrained"))
+    generates = design.get("motif_generates")
+    if not _restrained:
+        if not isinstance(generates, dict):
+            errors.append("design.motif_generates missing — name the three things the motif makes "
+                          "besides itself (background, markers, page); a motif that only recurs is "
+                          "an ornament with a schedule")
+        else:
+            for key in ("background", "markers", "page"):
+                require_string(generates.get(key), f"design.motif_generates.{key}", errors, minimum=4)
     require_string(design.get("signature_move"), "design.signature_move", errors, minimum=12)
     carried_by = design.get("carried_by")
     if not isinstance(carried_by, list) or len(set(carried_by) & expected_slides) < min(2, len(expected_slides)):

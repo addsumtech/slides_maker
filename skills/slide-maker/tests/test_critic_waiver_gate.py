@@ -32,9 +32,18 @@ DESIGN_OK = {
     "signature_move": "s" * 30,
     "carried_by": ["slide 3", "slide 4"],
     "form_ledger": "f" * 30,
-    "icon_family": "tabler",
+    # TRUTHFUL for this fixture: build_deck() makes three slides of one text box each and places
+    # no icons at all. This said "tabler" and passed, because the declared-but-absent direction
+    # only printed. It dies now, and the fixture is the first thing it caught.
+    "icon_family": "none — a three-slide text fixture, no categorical content to mark",
     "palette": "FILL E2543A / TEXT BD4630 on cream, A3341F on tint",
     "type_scale": {"display": 34, "title": 24, "body": 14},
+    # A motif that only RECURS is an ornament with a schedule; these are the three things it makes
+    # besides itself. Carved out under a conservative dial with a `deliberately restrained:` move,
+    # exactly as signature_proof is.
+    "motif_generates": {"background": "a scanline field the recovered signal rides",
+                        "markers": "sample-index numerals in the corner",
+                        "page": "slide 3 — the recovery plot IS the motif"},
     # THE ANCHOR PROOF — three rendered pages, three different failures (scripts/anchor_proof.py).
     # One page only ever proved the aesthetic risk; the design that looks right on it can still fail
     # to hold the deck's densest page, and the charts can still obey none of the palette/type
@@ -46,6 +55,12 @@ DESIGN_OK = {
     ],
 }
 PROV_OK = {"claims": [{"claim": "c", "verdict": "CONFIRMED", "url": "https://example.org"}]}
+# The arc competition (Step 1). Gated on the shared path since the same competition was already
+# bound on the Codex one — a wrong form costs one slide, a wrong arc costs the build under it.
+ARC_OK = {"arc": {"chosen": "problem-turn-evidence",
+                  "rejected": [{"name": "recommendation-first",
+                                "why_lost": "there is no decision to lead with here"}],
+                  "divergence": "ok"}}
 
 
 def build_deck(dest: Path) -> Path:
@@ -102,7 +117,7 @@ def check_delivery(deck: Path) -> tuple[int, int]:
     for name, recorded, flags, want_death in DELIVERY_CASES:
         g = {"critic": {"verdict": "consent", "rounds": 2},
              "design_plan": dict(DESIGN_OK, type_scale={"display": 34, "title": 24, "body": 12}),
-             "provenance": PROV_OK}
+             "provenance": PROV_OK, "content": ARC_OK}
         if recorded:
             g["delivery"] = recorded
         _, out = run_gate(deck, g, *flags)
@@ -433,7 +448,7 @@ def check_coverage(deck: Path) -> tuple[int, int]:
     ok = bad = 0
     for name, opened, scope, should_pass, needle in COVERAGE_CASES:
         g = {"critic": _record_review(deck, _review(opened, scope)),
-             "design_plan": DESIGN_OK, "provenance": PROV_OK}
+             "design_plan": DESIGN_OK, "provenance": PROV_OK, "content": ARC_OK}
         code, out = run_gate(deck, g)
         good = (code == 0) == should_pass and needle in out
         if good:
@@ -472,7 +487,7 @@ def check_arbiter(deck: Path) -> tuple[int, int]:
         critic["corroborated_by"] = [str(deck.parent / "a.json")]
         critic["dulled_reopened"] = len(open_items)
         critic["arbiter_open"] = open_items
-        g = {"critic": critic, "design_plan": DESIGN_OK, "provenance": PROV_OK}
+        g = {"critic": critic, "design_plan": DESIGN_OK, "provenance": PROV_OK, "content": ARC_OK}
         code, out = run_gate(deck, g)
         good = (code == 0) == should_pass and needle in out
         if good:
@@ -505,7 +520,7 @@ def check_signature(deck: Path) -> tuple[int, int]:
     ok = bad = 0
     for name, move, should_pass in SIGNATURE_CASES:
         g = {"critic": _record_review(deck, _review([1, 2, 3])),
-             "design_plan": dict(DESIGN_OK, signature_move=move), "provenance": PROV_OK}
+             "design_plan": dict(DESIGN_OK, signature_move=move), "provenance": PROV_OK, "content": ARC_OK}
         code, out = run_gate(deck, g)
         good = (code == 0) == should_pass and (should_pass or "SAFE CATALOGUE" in out)
         if good:
@@ -648,7 +663,7 @@ def check_concept(deck_path: Path) -> tuple[int, int]:
     deck = deck_path
     for name, con, should_pass, needle in CONCEPT_CASES:
         g = {"critic": _record_review(deck, _review(list(range(1, 4)))),
-             "design_plan": dict(DESIGN_OK, concept=con), "provenance": PROV_OK}
+             "design_plan": dict(DESIGN_OK, concept=con), "provenance": PROV_OK, "content": ARC_OK}
         code, out = run_gate(deck, g)
         good = (code == 0) == should_pass and needle in out
         if good:
@@ -678,7 +693,7 @@ def check_sameness(deck_path: Path) -> tuple[int, int]:
 
     base = {"critic": {"waived": "No subagent dispatch on this host; both lenses ran inline.",
                        "waived_category": "no-dispatch-on-host", "inline_ran": True},
-            "design_plan": DESIGN_OK, "provenance": PROV_OK}
+            "design_plan": DESIGN_OK, "provenance": PROV_OK, "content": ARC_OK}
 
     d = td / "sm"; d.mkdir()
     samey = build_samey(d, n=12)
@@ -805,7 +820,7 @@ def check_form_reach(deck: Path) -> tuple[int, int]:
             bad += 1
             print("  FAIL form_reach: " + name + ("  — " + str(detail) if detail else ""))
 
-    base = {"critic": {"verdict": "consent", "rounds": 2}, "provenance": PROV_OK,
+    base = {"critic": {"verdict": "consent", "rounds": 2}, "provenance": PROV_OK, "content": ARC_OK,
             "density": {"waived": "a fixture deck is not a real density decision"}}
 
     # the fixture deck has no build*.py beside it, so the reporter cannot even measure reach —
@@ -874,6 +889,7 @@ def main() -> int:
             gates = dict(critic_block)
             gates.setdefault("design_plan", DESIGN_OK)
             gates.setdefault("provenance", PROV_OK)
+            gates.setdefault("content", ARC_OK)
             code, out = run_gate(deck, gates)
             ok = (code == 0) == should_pass and needle in out
             if ok:
@@ -894,7 +910,7 @@ def main() -> int:
             build_icon_deck(d2, **{k: v for k, v in kw.items() if k != "tag"})
             g = {"critic": {"verdict": "consent", "rounds": 2},
                  "design_plan": dict(DESIGN_OK, icon_family=fam, carried_by=[2, 3]),
-                 "provenance": PROV_OK}
+                 "provenance": PROV_OK, "content": ARC_OK}
             code, out = run_gate(d2, g)
             if "hand-off gates pass" not in out and "icon waiver" not in out:
                 failed += 1

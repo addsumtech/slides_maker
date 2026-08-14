@@ -364,11 +364,30 @@ def _report_icon_waiver(pptx_path, fam):
             # minority. Drop any blob appearing on more than half the deck.
             _icons = {k: v for k, v in _blobs.items() if len(_per[k]) <= max(2, 0.5 * _n_sl1)}
             if not _icons:
-                print("[gates] icon record: the plan declares `icon_family: {}` but the deck "
-                      "contains NO icon-sized picture that is not deck chrome. The record and the "
-                      "file disagree — either the icons were never built, or the field is stale. "
-                      "This is the direction the guard was written for: a deck once shipped with "
-                      "zero icons through every automated gate.".format(fam.strip()[:60]))
+                # 🔴 die, not print. This guard was installed because "a deck shipped with ZERO
+                # icons through every automated gate" — and for its whole life it answered that
+                # incident with a printed line and exit 0, which is the same outcome the incident
+                # had. The Codex path already BLOCKS this exact case (`check_icons`: "categorical
+                # slide N needs rendered icon evidence or a documented waiver", plus a check that
+                # the slide's build function calls a deckkit icon helper), so the shared path was
+                # the weaker of the two on the one class of failure this field exists for.
+                #
+                # Only THIS direction is fatal. The `icon_family: none` arm below stays a print
+                # because its peer-group detector over-counts by design (tables, timelines) — its
+                # own docstring says so, and a detector that over-counts must not hold a deck.
+                die("`design_plan.icon_family` declares {!r} but the deck contains NO icon-sized "
+                    "picture that is not deck chrome.\n"
+                    "  The record and the file disagree: either the icons were never built, or the "
+                    "field is stale.\n\n"
+                    "  Build them (`scripts/icons.py <family>:<name> <out>.png`, placed with "
+                    "deckkit.icon / icon_tile),\n"
+                    "  or record the truth — `\"icon_family\": \"none — <why this deck carries no "
+                    "icons>\"` — which is a\n"
+                    "  legitimate choice on a figure-dominated or sober-register deck and is "
+                    "checked in the other direction.\n\n"
+                    "  (This is the direction the guard was written for. It printed and exited 0 "
+                    "until now, which is\n"
+                    "  exactly what happened the first time.)".format(fam.strip()[:60]))
         except Exception:
             pass
         return
@@ -1010,6 +1029,9 @@ def check_handoff_gates(pptx, mode="presented", gate_check=False):
             '     "design_plan": {{"boldness": "balanced+", "signature_move": "<the one risk>",\n'
             '                     "carried_by": [4, 6, 8], "form_ledger": "<family tally>",\n'
             '                     "icon_family": "<family | none - reason>",\n'
+            '                     "motif_generates": {{"background": "<what the motif makes the canvas do>",\n'
+            '                                        "markers": "<the numeral/icon system it implies>",\n'
+            '                                        "page": "<the slide whose GEOMETRY is the motif, or none - reason>"}},\n'
             '                     "palette": "<FILL vs TEXT-safe split, per palette_audit.py>",\n'
             '                     "type_scale": {{"display": 34, "title": 24, "body": 14}},\n'
             '                     "signature_proof": [{{"role": "signature", "slide": 6, "png": "render/slide06.png"}},\n'
@@ -1254,7 +1276,8 @@ def check_handoff_gates(pptx, mode="presented", gate_check=False):
     # this repo already fixed once: the critic waiver was schema-checked for Codex and a hand-typed
     # string everywhere else, and it carried a real deck through "all gates pass".
     DESIGN_FIELDS = ("concept", "boldness", "signature_move", "carried_by", "form_ledger",
-                     "icon_family", "palette", "type_scale", "signature_proof")
+                     "icon_family", "palette", "type_scale", "signature_proof",
+                     "motif_generates")
     # THE RESTRAINT CARVE — built on the escape the skill ALREADY documents, not a new one.
     # agents/slide-design.md: under a *conservative* dial (user-requested or purpose-defaulted for a
     # sober defense / regulatory / status deck) "the risk is OPTIONAL: take a modest, restrained
@@ -1288,7 +1311,14 @@ def check_handoff_gates(pptx, mode="presented", gate_check=False):
     if design.get("waived"):
         print("[gates] design plan WAIVED — {}".format(design["waived"]))
     elif design:
-        required = [f for f in DESIGN_FIELDS if not (_carved and f == "signature_proof")]
+        # `motif_generates` takes the SAME carve as `signature_proof`: under a conservative dial
+        # with a recorded "deliberately restrained" move there is no loud motif to be productive,
+        # and demanding three things it makes would push an author to invent a device so the field
+        # has an answer — the exact failure agents/slide-design.md names ("never invent an artifact
+        # so this field has an answer"). A tiny 1-2 slide ask carves out for the same reason the
+        # anchor proof does; that one is not detectable here, so it rides the design_plan waiver.
+        _skip = {"signature_proof", "motif_generates"} if _carved else set()
+        required = [f for f in DESIGN_FIELDS if f not in _skip]
         missing = [f for f in required if not design.get(f)]
         if missing:
             hint = ("\n    palette: the resolved FILL-only vs TEXT-safe split — run\n"
@@ -1465,6 +1495,52 @@ def check_handoff_gates(pptx, mode="presented", gate_check=False):
             '     "png": "render/slideNN.png"}, ...] — rendered evidence that the move survived, that\n'
             '     the design holds the densest page, and that the charts speak the same language)\n'
             '    or {"design_plan": {"waived": "<reason>"}}')
+
+    # THE ARC COMPETITION, ported from the Codex record so both paths hold the same bar. The design
+    # side has had a rendered competition for years (the direction gate) and the content side got
+    # one in 3e4eddb — but its verdict landed only on the content CHECKPOINT, which is prose in a
+    # conversation, while every other Step-1/2 decision reaches this file. That asymmetry put the
+    # cheaper decision under a gate and left the costlier one out: a wrong form costs one slide, a
+    # wrong arc costs the design plan and the build underneath it.
+    #
+    # Shape is IDENTICAL to codex_delivery_gate's `content.arc`, deliberately — the two gates have
+    # already drifted on a duplicated field twice (`path` vs `png`, the missing `conservative`
+    # dial), and a third spelling would be the same mistake with a new name.
+    content = gates.get("content") or {}
+    if content.get("waived"):
+        print("[gates] arc competition WAIVED — {}".format(content["waived"]))
+    else:
+        arc = content.get("arc")
+        if not isinstance(arc, dict):
+            die("`content.arc` is missing — the arc competition (Step 1, "
+                "agents/content-planner.md §3).\n"
+                "  2-3 candidate arcs over ONE ledger, scored by scripts/arc_divergence.py, and "
+                "the winner recorded WITH its losers:\n\n"
+                '    "content": {"arc": {"chosen": "<the arc that won>",\n'
+                '                        "rejected": [{"name": "<runner-up>", "why_lost": "<one clause>"}],\n'
+                '                        "divergence": "ok | flagged <pair> -> rediverged | justified: <reason>"}}\n\n'
+                "  `picked contribution-first` on its own is a sentence anyone can write without a "
+                "competition having happened —\n"
+                "  the losers and their clauses ARE the artifact. Or waive it: "
+                '{"content": {"waived": "<why this deck had one possible arc>"}}.')
+        else:
+            if not str(arc.get("chosen") or "").strip():
+                die("`content.arc.chosen` is empty — name the arc that won.")
+            rejected = arc.get("rejected")
+            if not isinstance(rejected, list) or not rejected:
+                die("`content.arc.rejected` must name at least one arc the winner beat, with the "
+                    "clause that lost it.\n"
+                    "  A winner with no losers on the record is a derivation wearing a "
+                    "competition's clothes.")
+            for i, row in enumerate(rejected):
+                if not isinstance(row, dict) or not str(row.get("name") or "").strip() \
+                        or len(str(row.get("why_lost") or "").strip()) < 8:
+                    die("`content.arc.rejected[{}]` needs a `name` and a `why_lost` clause — the "
+                        "reason is the whole point.".format(i))
+            if not str(arc.get("divergence") or "").strip():
+                die("`content.arc.divergence` is missing — paste what "
+                    "`scripts/arc_divergence.py` returned (`ok`, a flagged pair you rediverged, "
+                    "or a recorded justification).")
 
     # Provenance: a self-filled tally proves nothing — the refutation pass is what the gate is FOR.
     # Require per-claim verdicts, so "confirmed" means someone tried to break it and could not.

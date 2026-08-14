@@ -296,6 +296,11 @@ def fixture(root: Path) -> tuple[dict, dict, dict, Path]:
             "boldness": "balanced+",
             "palette": "ink #101820 on paper #F6F4EF (14.9:1); accent #1F5FA9 FILL-only, "
                        "text-safe variant #17457C (5.4:1) — per palette_audit.py",
+            "motif_generates": {
+                "background": "a faint rule field the evidence rail sits on",
+                "markers": "numbered evidence stamps, one per claim",
+                "page": "slide 1 — the rail IS the slide's geometry",
+            },
             "signature_move": "A visible evidence rail connects source, build, and review.",
             "carried_by": [1],
             "signature_proof": {
