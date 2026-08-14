@@ -1010,15 +1010,35 @@ def check_icons(
     # case this whole field exists for. Waivable per slide like the rest, because the detector
     # over-counts by construction (tables, timelines, stat rows) and an over-counting detector
     # must not hold a deck without an escape.
-    if design_rows and not any(d.get("categorical") for d in design_rows.values()):
-        if not waived(evidence, "icon", scope="deck-not-categorical"):
-            errors.append(
-                "no slide is marked `categorical`, so every icon check below was skipped — and the "
-                "deck carries no icon evidence. If that is true, record it: a waiver "
-                '{"kind": "icon", "scope": "deck-not-categorical", "reason": "<why this deck names '
-                'no tools/entities/roles/pillars>"}. If it is not true, mark the categorical slides '
-                "and build the family (scripts/icons.py). Self-declaring nothing categorical is how "
-                "a deck ships zero icons through a gate written to prevent exactly that.")
+    # Read the BUILT FILE, not the claim. `lint_deck.categorical_slides` is the shared definition
+    # the other gate path uses; importing it is what keeps the two from disagreeing again.
+    looks_categorical: list[int] = []
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import lint_deck as _ld
+        from pptx import Presentation as _P
+        deck_rel = (evidence.get("deck") or {}).get("pptx")
+        if deck_rel:
+            looks_categorical = _ld.categorical_slides(_P(str(root / deck_rel)))
+    except Exception:                                     # pragma: no cover - detector is advisory
+        looks_categorical = []
+
+    declared = {s for s, d in design_rows.items() if d.get("categorical")}
+    # The detector over-counts (tables, timelines, stat rows), so it never fails a deck by itself —
+    # it fails the CONTRADICTION: pages that read as category sets, declared as none, and no icon
+    # anywhere. Any one of those three being false leaves this silent.
+    missed = sorted(set(looks_categorical) - declared)
+    if missed and not icon_rows and not waived(evidence, "icon", scope="undeclared-categorical"):
+        errors.append(
+            "slides {} carry parallel label sets (3+ short peers sharing a baseline across half the "
+            "canvas — the shape of a category row) but are declared `categorical: false`, and the "
+            "deck records no icon assets at all. Every icon check below keys off that flag, so "
+            "declaring nothing categorical switched them all off — which is how a deck ships zero "
+            "icons through the gate written to prevent it. Mark them and build the family "
+            "(scripts/icons.py), or record why these specific slides read better without one: "
+            '{{"kind": "icon", "scope": "undeclared-categorical", "reason": "<why>"}}. The detector '
+            "over-counts on purpose (tables, timelines), so this is a re-decision, not a verdict."
+            .format(missed))
 
     for slide, design in design_rows.items():
         if not design.get("categorical"):

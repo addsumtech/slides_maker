@@ -429,35 +429,10 @@ def _report_icon_waiver(pptx_path, fam):
         sw, sh = prs.slide_width / 914400.0, prs.slide_height / 914400.0
     except Exception:
         return
-    hits = []
-    for i, s in enumerate(prs.slides, 1):
-        try:
-            bx = [b for b in _ld._boxes(s, sw, sh) if b.get("text") and not b.get("bg")]
-        except Exception:
-            continue
-        groups = {}
-        for b in bx:
-            if not (b.get("full") or "").strip() or len((b.get("full") or "").split()) > 8:
-                continue                        # a peer LABEL is short; a paragraph is not a peer
-            groups.setdefault(round(b.get("size", 0) or 0, 1), []).append(b)
-        for _sz, g in groups.items():
-            if len(g) < 3:
-                continue
-            # ROWS ONLY, and they must actually span the page. A vertical stack of short lines at one
-            # left edge is a bullet list, not a category set — counting columns made every deck with
-            # a 3-line body block "entity-rich" (measured: fired on all 8 slides of a fixture whose
-            # only pictures were one repeated logo). A category set reads ACROSS: 3+ peers sharing a
-            # baseline, spread over at least half the canvas.
-            for anchor in g:
-                row = [b for b in g if abs(b["t"] - anchor["t"]) < 0.15]
-                if len(row) < 3:
-                    continue
-                spread = max(b["l"] for b in row) - min(b["l"] for b in row)
-                if spread >= 0.45 * sw:
-                    hits.append(i)
-                    break
-            if hits and hits[-1] == i:
-                break
+    # The peer-group rule now lives in lint_deck.categorical_slides — ONE definition, imported by
+    # this path and by codex_delivery_gate. It was inline here and absent there, which is exactly
+    # how the two gates came to disagree about what "checked" means for icons.
+    hits = _ld.categorical_slides(prs, sw, sh)
     if len(hits) >= 2:
         print(f"[gates] icon waiver: `icon_family: none` but slides {hits} carry parallel label sets "
               f"(3+ peers in a row/column) — the entity-rich case SKILL.md calls a design must.")

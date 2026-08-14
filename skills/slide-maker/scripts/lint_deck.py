@@ -369,6 +369,54 @@ def _boxes(slide, sw, sh, slide_no=None):
     return out
 
 
+def categorical_slides(prs, sw=None, sh=None):
+    """Slide numbers whose CONTENT looks like a category set — the shape an icon family serves.
+
+    ONE definition, imported by both gate paths, never copied. `render_deck.py --gate-check` used
+    to hold this inline and `codex_delivery_gate.py` had no equivalent at all, which is how the two
+    disagreed about what "checked" means: the shared gate detects categorical content from the FILE,
+    while the Codex gate believed whatever `design.slides[].categorical` claimed. Marking nothing
+    categorical there satisfied every icon check it had. Measured on a delivered 12-slide Codex
+    deck: zero pictures in the file, and that gate had nothing to say.
+
+    A peer group = 3+ SHORT text boxes (<=8 words) at the same size, sharing a baseline, spread
+    across at least half the canvas. ROWS ONLY: a vertical stack of short lines at one left edge is
+    a bullet list, not a category set — counting columns made every deck with a 3-line body block
+    read as entity-rich (measured: it fired on all 8 slides of a fixture whose only pictures were
+    one repeated logo).
+
+    It OVER-COUNTS by construction — tables, timelines and stat rows share this shape — so every
+    caller must treat it as a prompt to re-decide, never as proof. Neither path may fail a deck on
+    this number alone without offering a written escape.
+    """
+    if sw is None or sh is None:
+        sw, sh = prs.slide_width / 914400.0, prs.slide_height / 914400.0
+    hits = []
+    for i, s in enumerate(prs.slides, 1):
+        try:
+            bx = [b for b in _boxes(s, sw, sh) if b.get("text") and not b.get("bg")]
+        except Exception:
+            continue
+        groups = {}
+        for b in bx:
+            if not (b.get("full") or "").strip() or len((b.get("full") or "").split()) > 8:
+                continue                        # a peer LABEL is short; a paragraph is not a peer
+            groups.setdefault(round(b.get("size", 0) or 0, 1), []).append(b)
+        done = False
+        for _sz, g in groups.items():
+            if len(g) < 3 or done:
+                continue
+            for anchor in g:
+                row = [b for b in g if abs(b["t"] - anchor["t"]) < 0.15]
+                if len(row) < 3:
+                    continue
+                if max(b["l"] for b in row) - min(b["l"] for b in row) >= 0.45 * sw:
+                    hits.append(i)
+                    done = True
+                    break
+    return hits
+
+
 def _text_w(text, size_pt, face=None, bold=False):
     """Width in INCHES of `text` at `size_pt` — real glyph advances when the face is known.
 
