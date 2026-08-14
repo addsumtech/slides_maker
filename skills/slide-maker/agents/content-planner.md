@@ -427,8 +427,26 @@ the **audience question** it answers, the **objection** it pre-empts, its **clos
 **evidence** (claim-ledger ids) it carries. Divergence has to move the CLAIM, not the wording —
 evidence before the claim instead of after it, a different ask, a different objection.
 
-🔴 **Check the set mechanically before choosing:**
-`python3 scripts/arc_divergence.py <arcs>.json` — it measures every pair on shape · opening order ·
+🔴 **Check the set mechanically before choosing.** Get the exact shape with
+`python3 scripts/arc_divergence.py --template` (it also prints both vocabularies) rather than
+guessing it — one object per candidate, all seven fields required:
+
+```json
+[{"name": "contribution", "shape": "contribution-first",
+  "roles": ["problem", "method", "evidence", "comparison", "conclusion"],
+  "audience_question": "is the INR formulation actually better than L+S",
+  "objection": "the gain comes from the regulariser, not the representation",
+  "closing_ask": "accept implicit neural representation as the recon backbone",
+  "evidence": ["c1", "c3", "c4"]}]
+```
+
+`shape` is a closed list (`--template` prints it; pick the nearest and put any nuance in the
+one-clause reason). `roles` is the §4 role vocabulary and is **open** — an unrecognised role is
+accepted, not refused, and only reported so a typo stays visible. `evidence` is claim-ledger ids:
+**which evidence an arc leaves on the floor is most of what distinguishes it**, so a candidate set
+where every list is empty is refused outright.
+
+Then run `python3 scripts/arc_divergence.py <arcs>.json` — it measures every pair on shape · opening order ·
 ask · stance and flags a pair matching on ≥3, and separately flags a candidate carrying under half
 the winner's evidence. That second check exists because arcs collapse differently from directions:
 directions become three colourways of one layout, arcs become **one real argument plus two foils** —

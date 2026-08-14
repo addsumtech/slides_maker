@@ -160,10 +160,23 @@ want(rc == 1 and "story-time" in out and "contribution-first" in out,
      "divergence credit for a shape that does not exist",
      "an invented shape was accepted (rc=%d):\n%s" % (rc, out[:300]))
 
-rc, out = _run([dict(HEALTHY[0], roles=["problem", "climax", "evidence"]), HEALTHY[1]])
-want(rc == 1 and "climax" in out,
-     "an unknown role is refused by name",
-     "an invented role was accepted (rc=%d):\n%s" % (rc, out[:300]))
+# THE ROLE VOCABULARY IS OPEN, and this pair of cases is why. content-planner.md §4 calls its role
+# list "a *vocabulary*, not a straitjacket: a lecture, a defense and a status deck use different
+# mixes" — so a hard refusal here would BLOCK a planner following its own instructions. The first
+# version of this file did exactly that.
+rc, out = _run([dict(HEALTHY[0], roles=["problem", "demo", "evidence"]), HEALTHY[1]])
+want(rc == 0 and "demo" in out,
+     "a role outside the documented list is ACCEPTED and merely reported — the skill's own text "
+     "calls that vocabulary open, and a gate that contradicts the agent brief it enforces is a "
+     "wall, not a check",
+     "an undocumented role was refused, contradicting content-planner.md (rc=%d):\n%s"
+     % (rc, out[:300]))
+
+rc, out = _run([dict(HEALTHY[0], roles=["problem", "case study", "framework/idea"]), HEALTHY[1]])
+want(rc == 0 and "[note]" not in out,
+     "`case study` and `framework/idea` — the exact spellings content-planner.md prints, with a "
+     "space and a slash — normalise onto the documented roles instead of reading as unknown",
+     "the documented spelling was not recognised (rc=%d):\n%s" % (rc, out[:300]))
 
 rc, out = _run([dict(HEALTHY[0], closing_ask=""), HEALTHY[1]])
 want(rc == 1 and "closing_ask" in out,
@@ -175,6 +188,39 @@ rc, out = _run([HEALTHY[0], dict(HEALTHY[1], name="contribution")])
 want(rc == 1 and "share a name" in out,
      "two candidates with one name are refused (the report keys on names)",
      "duplicate candidate names were accepted (rc=%d):\n%s" % (rc, out[:300]))
+
+# ----------------------------------------------------------------- the empty-ledger hole
+# The effort check compares each candidate against the LARGEST. When no candidate names any
+# evidence the largest is zero, every comparison is vacuously fine, and the check reported a clean
+# set — deciding nothing on the one input where nothing had been decided. Its own fault now.
+rc, out = _run([dict(HEALTHY[0], evidence=[]), dict(HEALTHY[1], evidence=[])])
+want(rc == 2 and "NO CANDIDATE NAMES ITS EVIDENCE" in out,
+     "a candidate set where NO arc names its evidence is refused — the effort check used to pass "
+     "it silently, because a relative comparison against zero is vacuously satisfied",
+     "an evidence-less candidate set passed (rc=%d):\n%s" % (rc, out[:300]))
+rc, out = _run([dict(HEALTHY[0], evidence=["c1", "c2"]), dict(HEALTHY[1], evidence=["c3", "c4"])])
+want(rc == 0,
+     "…and equally-developed candidates still pass, so the new fault is about the ledger being "
+     "absent, not about the counts differing",
+     "a healthy equal-evidence set was caught by the empty-ledger rule (rc=%d):\n%s"
+     % (rc, out[:300]))
+
+# ----------------------------------------------------------------- the skeleton is usable
+tmpl = subprocess.run([sys.executable, str(SCRIPTS / "arc_divergence.py"), "--template"],
+                      capture_output=True, text=True)
+want(tmpl.returncode == 0 and json.loads(tmpl.stdout),
+     "--template prints parseable JSON — a field list that lives only in a docstring is a field "
+     "list nobody reads, and this repo has already printed a raw format string onto a slide for "
+     "exactly that reason",
+     "--template did not print usable JSON: %r" % tmpl.stdout[:200])
+rc, out = _run(json.loads(tmpl.stdout))
+want(rc == 0,
+     "…and the skeleton PASSES its own checker: a template that models a strawman (or a collapse) "
+     "would teach one to every planner that fills it in",
+     "the printed skeleton fails the checker it is a skeleton for (rc=%d):\n%s" % (rc, out[:300]))
+want("shape" in tmpl.stderr and "roles" in tmpl.stderr,
+     "…and the vocabularies are printed beside it, so filling the skeleton needs no second lookup",
+     "--template does not print the vocabularies")
 
 # ----------------------------------------------------------------- measurement contracts
 want(A._overlap("", "anything at all") == 0.0,
@@ -189,6 +235,13 @@ want("order" in short["matched_axes"],
      "openings are compared over the SHORTER arc's length — a 2-beat and a 4-beat arc opening "
      "identically match on order rather than diverging because one is longer",
      "the order axis missed an identical opening of unequal lengths: %s" % short["matched_axes"])
+
+mixed = A._tokens("接受INR骨干")
+want("受骨" not in mixed and "接受" in mixed and "骨干" in mixed,
+     "bigrams stop at a Latin island — an earlier version filtered CJK out of the whole letter run "
+     "and welded 受 to 骨, inventing a token that appears nowhere in the text and inflating the "
+     "similarity of any two mixed-script strings that share a Latin term",
+     "phantom cross-island bigram present: %r" % sorted(t for t in mixed if len(t) == 2))
 
 nz = A._overlap("接受隐式神经表示作为重建骨干", "批准一个为期六个月的临床试点")
 want(nz < A.OVERLAP_T,

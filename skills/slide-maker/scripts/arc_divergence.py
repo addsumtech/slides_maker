@@ -47,7 +47,8 @@ The overlap threshold is a COARSE signal and is treated as one: the response to 
 kill, it is REDIVERGE-or-justify, and the justification is recorded on the `arc gate:` line of the
 content checkpoint. A false flag therefore costs one sentence; a missed collapse costs a rebuild.
 
-CLI:  python arc_divergence.py arcs.json [--json]
+CLI:  python arc_divergence.py --template          # a fillable skeleton + the vocabularies
+      python arc_divergence.py arcs.json [--json]
 Exit: 0 = candidates diverge and none is a sketch · 2 = flagged (printed) · 1 = unreadable input.
 """
 import argparse
@@ -76,11 +77,35 @@ _SHAPES = (
 
 # The role vocabulary of `agents/content-planner.md` §3, plus the structural rows that are excluded
 # from the order axis (a cover is not a beat in the argument).
-_ROLES = ("hook", "problem", "diagnosis", "framework", "idea", "method", "evidence",
-          "case-study", "comparison", "roadmap", "conclusion", "call-to-action")
+#
+# 🔴 THIS LIST IS OPEN, and that is not laziness — content-planner.md calls it "a *vocabulary*, not
+# a straitjacket: a lecture, a defense and a status deck use different mixes". An earlier version
+# RAISED on anything outside it, so a planner following its own instructions could be hard-blocked
+# for writing `demo` or `context`. Unrecognised roles are accepted as opaque tokens and compared by
+# equality like any other, so an open vocabulary costs exactly this: two different typos of one role
+# read as divergent rather than identical — a mild false-negative on ONE of four axes, against a
+# wall. They are printed in the report, so a typo is visible rather than silent.
+# `framework-idea` is the normalised form of content-planner.md's own "framework/idea", and it is
+# listed BESIDE the two halves rather than instead of them: a planner may write either the joint
+# role or one side of it, and neither spelling should read as undocumented.
+_ROLES = ("hook", "problem", "diagnosis", "framework", "idea", "framework-idea", "method",
+          "evidence", "case-study", "comparison", "roadmap", "conclusion", "call-to-action")
 _STRUCTURAL = ("cover", "agenda", "divider", "closing", "section", "thanks", "qa")
 
-_CJK = re.compile(r"[぀-ヿ㐀-䶿一-鿿豈-﫿가-힯]")
+_CJK_CLASS = "぀-ヿ㐀-䶿一-鿿豈-﫿가-힯"
+_CJK = re.compile("[" + _CJK_CLASS + "]")
+_CJK_RUN = re.compile("[" + _CJK_CLASS + "]+")
+
+
+def _norm_role(r):
+    """`case study` / `Case Study` / `framework/idea` all normalise to one token.
+
+    content-planner.md writes the vocabulary with SPACES and a SLASH ("case study",
+    "framework/idea"). Matching those literally against a hyphenated tuple rejected the exact
+    spelling the agent is told to use. Two files have to agree about a name; here is the cheap
+    place to make them agree.
+    """
+    return re.sub(r"[\s/_]+", "-", str(r or "").strip().lower())
 
 
 def _tokens(s):
@@ -89,19 +114,21 @@ def _tokens(s):
     A whitespace split on '让评审委员会接受这个方法' yields ONE token, so every pair of Chinese
     asks scores either 1.0 (identical string) or 0.0 (anything else) — an axis that is on paper
     and off in practice. Bigrams give the same graded signal Latin text gets.
+
+    Bigrams are taken PER CONTIGUOUS CJK RUN, never across a Latin island. An earlier version
+    collected the whole letter run '接受INR骨干' and filtered the CJK out of it, which welded 受 to
+    骨 and produced the bigram '受骨' — a token appearing nowhere in the text. Two mixed strings
+    sharing only a Latin term would then also share phantom bigrams and score more similar than
+    they are, on exactly the CJK path this function exists to get right.
     """
     s = (s or "").strip().lower()
     if not s:
         return set()
     out = set()
-    # Latin/numeric words, with CJK stripped out so a mixed string contributes both ways.
     for w in re.findall(r"[a-z0-9][a-z0-9\-']*", s):
         if len(w) > 1:
             out.add(w)
-    for run in re.findall(r"[^\W\d_]+", s, flags=re.UNICODE):
-        if not _CJK.search(run):
-            continue
-        cjk = "".join(ch for ch in run if _CJK.match(ch))
+    for cjk in _CJK_RUN.findall(s):
         if len(cjk) == 1:
             out.add(cjk)
         for i in range(len(cjk) - 1):
@@ -131,19 +158,18 @@ def _content_roles(d):
     if not isinstance(roles, list) or not roles:
         raise ValueError("arc {!r}: `roles` must be a non-empty list of beat roles".format(
             d.get("name", "?")))
-    out = []
+    out, unknown = [], []
     for r in roles:
-        r = str(r).strip().lower()
-        if r in _STRUCTURAL:
+        r = _norm_role(r)
+        if not r or r in _STRUCTURAL:
             continue
         if r not in _ROLES:
-            raise ValueError("arc {!r}: unknown role {!r}. Vocabulary: {}".format(
-                d.get("name", "?"), r, ", ".join(_ROLES + _STRUCTURAL)))
+            unknown.append(r)
         out.append(r)
     if not out:
         raise ValueError("arc {!r}: every role is structural — an arc needs beats".format(
             d.get("name", "?")))
-    return out
+    return out, unknown
 
 
 def _required_text(d, key):
@@ -156,7 +182,7 @@ def _required_text(d, key):
 
 
 def _features(d):
-    roles = _content_roles(d)
+    roles, unknown = _content_roles(d)
     ev = d.get("evidence") or []
     if not isinstance(ev, list):
         raise ValueError("arc {!r}: `evidence` must be a list of claim-ledger ids".format(
@@ -165,6 +191,7 @@ def _features(d):
         "name": str(d.get("name") or "?"),
         "shape": _checked(d, "shape", _SHAPES),
         "roles": roles,
+        "unknown_roles": unknown,
         "opening": tuple(roles[:3]),
         "ask": _required_text(d, "closing_ask"),
         "question": _required_text(d, "audience_question"),
@@ -207,17 +234,59 @@ def check(arcs):
     sketches = [{"name": f["name"], "evidence": len(f["evidence"]), "top": top}
                 for f in feats
                 if top and len(f["evidence"]) < EFFORT_T * top]
+    # `top == 0` means NOT ONE candidate named the evidence it carries. The comparison above is
+    # relative, so that case produced an empty `sketches` list and a clean exit — the effort check
+    # silently deciding nothing on the one input where nothing was decided. It is its own fault
+    # now: without ledger ids the whole competition is three assertions about the same unexamined
+    # material, which is the state this gate exists to end.
+    no_ledger = not top
     return {"pairs": pairs, "flagged": [p for p in pairs if p["too_similar"]],
-            "sketches": sketches, "count": len(feats),
+            "sketches": sketches, "count": len(feats), "no_ledger": no_ledger,
+            "unknown_roles": sorted({r for f in feats for r in f["unknown_roles"]}),
             "shapes": {f["name"]: f["shape"] for f in feats},
             "evidence": {f["name"]: len(f["evidence"]) for f in feats}}
 
 
+TEMPLATE = [
+    {"name": "<label-A>",
+     "shape": "contribution-first",
+     "roles": ["problem", "method", "evidence", "comparison", "conclusion"],
+     "audience_question": "<the question this room is actually asking>",
+     "objection": "<the objection this arc pre-empts>",
+     "closing_ask": "<what the room should do or believe>",
+     "evidence": ["<claim-ledger id>", "<claim-ledger id>"]},
+    {"name": "<label-B>",
+     "shape": "recommendation-first",
+     "roles": ["conclusion", "evidence", "roadmap", "call-to-action"],
+     "audience_question": "<a DIFFERENT question>",
+     "objection": "<a DIFFERENT objection>",
+     "closing_ask": "<a DIFFERENT ask>",
+     # Comparable depth on purpose: a candidate carrying under half the winner's evidence is
+     # reported as a strawman, and a skeleton that models a strawman teaches one.
+     "evidence": ["<claim-ledger id>", "<claim-ledger id>"]},
+]
+
+
 def main():
     ap = argparse.ArgumentParser(description="mechanical narrative-arc candidate divergence check")
-    ap.add_argument("arcs", help="JSON list of 2-3 candidate arc objects")
+    ap.add_argument("arcs", nargs="?", help="JSON list of 2-3 candidate arc objects")
     ap.add_argument("--json", action="store_true", dest="as_json")
+    # A fillable skeleton, because a field list that lives only in this file's docstring is a field
+    # list nobody reads: this repo has already printed a raw format string onto a slide because a
+    # parameter's dialect was documented in a docstring and nowhere the author was looking.
+    ap.add_argument("--template", action="store_true",
+                    help="print a fillable candidate-set skeleton and exit")
     a = ap.parse_args()
+    if a.template:
+        print(json.dumps(TEMPLATE, indent=2, ensure_ascii=False))
+        print("\n# shapes: " + " | ".join(_SHAPES), file=sys.stderr)
+        print("# roles:  " + " | ".join(_ROLES) + "   (open list — others are accepted)",
+              file=sys.stderr)
+        print("# structural roles are ignored by the order axis: " + " | ".join(_STRUCTURAL),
+              file=sys.stderr)
+        return 0
+    if not a.arcs:
+        ap.error("give a candidates JSON file, or --template to print a skeleton")
     try:
         with open(a.arcs, encoding="utf-8") as f:
             data = json.load(f)
@@ -228,9 +297,10 @@ def main():
     except Exception as e:                                        # noqa: BLE001
         print("[arcs] could not read candidates: {}".format(e))
         sys.exit(1)
+    bad = bool(r["flagged"] or r["sketches"] or r["no_ledger"])
     if a.as_json:
         print(json.dumps(r, indent=1, ensure_ascii=False))
-        sys.exit(2 if (r["flagged"] or r["sketches"]) else 0)
+        sys.exit(2 if bad else 0)
 
     for p in r["pairs"]:
         mark = "x TOO SIMILAR" if p["too_similar"] else "v"
@@ -259,10 +329,23 @@ def main():
         print("           ESCAPE: a decision arc legitimately carries less evidence than a")
         print("           contribution arc. If that is the case here, keep it and record the")
         print("           reason on the `arc gate:` line.")
-    if not r["flagged"] and not r["sketches"]:
+    if r["no_ledger"]:
+        print("[effort]   x NO CANDIDATE NAMES ITS EVIDENCE. Every `evidence` list is empty, so the")
+        print("           effort comparison has nothing to compare and the competition is three")
+        print("           assertions about material nobody linked to the claim ledger. Put the")
+        print("           ledger ids each arc actually carries on each candidate — which evidence")
+        print("           an arc leaves on the floor is most of what distinguishes it.")
+    if r["unknown_roles"]:
+        # Not a failure: content-planner.md calls the role list "a vocabulary, not a straitjacket".
+        # Printed so a TYPO is visible — an unrecognised role still compares by equality, so
+        # `problm` vs `problem` reads as divergent and quietly weakens the order axis.
+        print("[note]     roles outside the documented vocabulary: {}. Accepted (the list is open "
+              "by design) — check none of them is a typo of a documented role, which would read as "
+              "divergence.".format(", ".join(r["unknown_roles"])))
+    if not bad:
         print("[arcs]     v {} candidates, all developed, none a rewording of another.".format(
             r["count"]))
-    sys.exit(2 if (r["flagged"] or r["sketches"]) else 0)
+    sys.exit(2 if bad else 0)
 
 
 if __name__ == "__main__":

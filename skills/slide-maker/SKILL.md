@@ -2131,9 +2131,12 @@ critic loop converges — `{"critic": {"verdict": "consent", "rounds": N}}`, the
 `boldness` / `signature_move` / `carried_by` / `form_ledger` / `icon_family` / `palette` /
 **`type_scale`** (the three tiers as numbers — SIZE SPRAWL tells authors to draw sizes "from the
 deck's declared type-scale tokens", and this is where they get declared) / **`signature_proof`**
-(`{"slide": N, "png": "<rendered png>"}` — the rendered evidence that the signature move SURVIVED
-the build; a move that exists only as a sentence gets sanded back to the safe catalogue and nobody
-notices, because the plan still reads bravely), and the provenance pass's **per-claim
+(the ANCHOR PROOF — a LIST `[{"role": "signature"|"complex"|"data", "slide": N, "png": "<rendered
+png>"}, …]`, one entry per anchor: the rendered evidence that the signature move SURVIVED
+the build, that the design HOLDS the deck's densest page, and that the charts speak its visual
+language. A move that exists only as a sentence gets sanded back to the safe catalogue and nobody
+notices, because the plan still reads bravely — and a design proved on one spacious page tells you
+nothing about the other two failures), and the provenance pass's **per-claim
 `claims` list, never a summary tally** (a tally is written by the same pass that would have skipped
 the refutation). A gate you deliberately skipped is **waived in writing** — never omitted; the tool
 prints the reason, so a skip is visible instead of invisible. 🔴 **The CRITIC waiver must be

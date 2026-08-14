@@ -142,8 +142,15 @@ def faults(proof, *, n_slides, expected_slides=None, carved=False):
 
     slides = [a.get("slide") for a in anchors if isinstance(a.get("slide"), int)]
     if len(set(slides)) != len(slides):
-        out.append("two anchors point at the same slide (%s) — proving one page three times "
-                   "proves one page" % ", ".join(str(s) for s in slides))
+        # A real case this refuses: the signature move genuinely living ON the key data page. The
+        # answer is not to relax the rule — the ritual's whole value is seeing three DIFFERENT
+        # pages before authoring the rest — so the message names the resolution instead of only
+        # refusing. Anchoring `data` on the next most critical page still buys the thing the
+        # anchor was for; two labels on one render buys nothing.
+        out.append("two anchors point at the same slide (%s) — proving one page twice proves one "
+                   "page. If the signature move genuinely lives on your key data page, anchor "
+                   "`data` on the NEXT most critical one: the point is three different pages, not "
+                   "three labels." % ", ".join(str(s) for s in slides))
 
     if len(anchors) < need:
         out.append(
