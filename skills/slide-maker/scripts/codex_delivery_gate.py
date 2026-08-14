@@ -148,6 +148,13 @@ TEMPLATE = {
             ],
         },
         "boldness": "balanced+",
+        # The resolved FILL-only vs TEXT-safe split. `render_deck.py --gate-check` has required
+        # this since a deck shipped a chrome family at 2.4-3.3:1 — a hue that reads fine as a fill
+        # measures 2-4:1 as small text on the same tint — and it even ships the hint
+        # (`palette_audit.py --from-style <deck>/style.py`). This record never carried it, so the
+        # one gate that could have caught that class on the Codex path could not see the palette
+        # at all.
+        "palette": "<FILL vs TEXT-safe split, per palette_audit.py>",
         "signature_move": "<repeated, deliberate visual device>",
         "carried_by": [1, 5],
         # The ANCHOR PROOF — three rendered pages, three different failures. `signature` proves the
@@ -502,6 +509,38 @@ def check_lint(lint: dict[str, Any], delivery: str, evidence: dict[str, Any], er
         if flagged:
             errors.append("stats warnings require remediation or an explicit waiver: " + ", ".join(flagged))
 
+        # THE SAMENESS COMPOSITE, ported from the shared gate as a COMPOSITE — not as seven more
+        # STRICT_STATS rows. That distinction is the whole calibration: `lint_deck` counts DISTINCT
+        # monotony signals and blocks at >=4 with >=1 structural, precisely because any one of them
+        # is legitimate on its own (a 小红书 carousel and a short status update each trip three
+        # honestly). Adding them here per-warning would make this gate refuse decks the shared path
+        # correctly ships — stricter, but wrong, which is worse than drifted.
+        #
+        # Measured before this: STRICT_STATS covered 2 of the 7 (card_dominance,
+        # envelope_monoculture), so a Codex deck could fire LAYOUT SAMENESS + SKELETON VARIETY +
+        # BOTTOM-STRIP MONOCULTURE + TITLE-RULE MONOCULTURE — four signals, a hard block on the
+        # shared path — and hear nothing at all here.
+        #
+        # The code list is IMPORTED, never copied: this file already carries two comments about the
+        # two gates drifting on a duplicated constant (`path` vs `png`, and the missing
+        # `conservative` dial). One source, one rule.
+        try:
+            sys.path.insert(0, str(Path(__file__).resolve().parent))
+            import lint_deck as _ld
+            sameness_codes = {c.lower().replace(" ", "_").replace("-", "_")
+                              for c in _ld.SAMENESS_CODES}
+            structural = {"layout_sameness", "skeleton_variety", "card_dominance"}
+        except Exception:                                     # pragma: no cover - import guard
+            sameness_codes, structural = set(), set()
+        if sameness_codes:
+            fired = {w for w in warnings if w in sameness_codes}
+            if len(fired) >= 4 and (fired & structural) and not waived(evidence, "sameness"):
+                errors.append(
+                    "sameness: {} distinct deck-level monotony signals fired ({}) — the deck reads "
+                    "as one template even where its forms vary. Redesign the repetition, or record "
+                    '{{"kind": "sameness", "reason": "<why this deck repeats on purpose — name the '
+                    'register>"}} in waivers.'.format(len(fired), ", ".join(sorted(fired))))
+
     # the accessibility floors on the per-slide `warnings` stream (see STRICT_WARNINGS)
     per_slide = lint.get("warnings", [])
     if isinstance(per_slide, list):
@@ -721,6 +760,7 @@ def check_design(
                 require_string(row.get("why_lost"), f"design.concept.rejected[{index}].why_lost",
                                errors, minimum=8)
 
+    require_string(design.get("palette"), "design.palette", errors, minimum=12)
     require_string(design.get("signature_move"), "design.signature_move", errors, minimum=12)
     carried_by = design.get("carried_by")
     if not isinstance(carried_by, list) or len(set(carried_by) & expected_slides) < min(2, len(expected_slides)):

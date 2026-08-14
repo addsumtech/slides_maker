@@ -172,9 +172,15 @@ python3 scripts/codex_handoff_guard.py \
 ```
 
 The gate blocks a Codex hand-off on remaining hard lint, missing pixel checks, undersized body text,
-unresolved card/type/leading warnings, an untraced content plan, missing checkpoint evidence, a stale
+unresolved card/type/leading warnings, **four or more distinct deck-level monotony signals with at
+least one structural among them** (the same composite `lint_deck.SAMENESS_CODES` drives on the shared
+path — imported, never copied, and deliberately a COMPOSITE rather than seven more per-warning rows,
+because any single monotony signal is legitimate on its own and a per-warning bar would refuse decks
+the shared gate correctly ships), an untraced content plan, missing checkpoint evidence, a stale
 signature image, unexplained component clusters, missing required icons, a failed visual-contract zone,
-icon-semantic drift, absent design proof, or a focused critic record that fails the normal JSON schema,
+icon-semantic drift, absent design proof, **an unrecorded palette split** (`design.palette` — the
+resolved FILL-only vs TEXT-safe pair per `palette_audit.py`; a hue that reads fine as a fill can
+measure 2–4:1 as small text on the same tint), or a focused critic record that fails the normal JSON schema,
 skim checks, reviewer-provenance requirement, or visual-probe coverage. Fix the deck first. A waiver is
 valid only when it names the exact issue and a meaningful reason; it is a design decision, not a generic
 `accepted` flag. It cannot waive source traceability, final-render binding, visual-contract recomputation,
