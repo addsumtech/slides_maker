@@ -65,7 +65,26 @@ delegation uses most; the comprehension gate still forbids shipping any unverifi
 checkpoint = look/palette/type/motif in ~4 lines (the **motif line states device + meaning + how a
 stranger reads it AT FIRST APPEARANCE** — label/legend/figurative, the slide-design STRANGER TEST;
 a reading that defers to a later slide is a FAILED test written as a passing sentence, and the fix is
-a label at first use or removing the device, never a promise that it lands later) + the rhythm-map table +
+a label at first use or removing the device, never a promise that it lands later. 🔴 **It also states
+ONE MEANING PER REPEATED FORM, deck-wide** — a device meaning one thing on the cover and another
+inside passes every per-page check and still sends the reader asking, which is the test failing;
+list the repeated forms and the single thing each means)
+**+ the `motif generates:` line — three fields, because a motif that only recurs is an ornament with
+a schedule and a motif that GENERATES is what makes the deck look designed rather than decorated:**
+`background: <what the motif makes the canvas do | flat by register — reason>` ·
+`markers: <the numeral/icon/bullet system it implies>` ·
+`page: <the slide whose GEOMETRY is the motif — diagram, chart frame, rail, picture hang or type
+composition; `none — <reason>` when the content has no such page, NEVER an invented one>`.
+Two "nothing obvious" answers means the motif is a shape someone liked — that is a one-glance veto,
+which is the whole point of putting it here.
+🔴 **On branch (c) these are REQUIRED, not weighed** — with no generated plate the motif carries the
+entire visual load, so "considered and skipped" is unavailable. **Three carves, each stated in
+`agents/slide-design.md` §1:** `boldness: conservative` answers the whole triple with its one
+`deliberately restrained` clause; a **1–2 slide tiny ask** skips it; and on a **registered/provided
+template or Mode-A mimic** the template's device IS the motif — the ladder is NOT re-run on it (that
+would re-litigate an approved identity), while the STRANGER TEST, ONE-form-ONE-meaning, and the
+triple applied to what you ADD all still bind.
++ the rhythm-map table +
 the three design musts + a one-line Form-ledger/diversity verdict + the **`boldness:` + `signature
 move:` lines, the latter carrying its `carried_by:` clause** (the dial + the one scoped aesthetic risk
 + the bold reference it adapts + the 2–3 slides where the same idea does STRUCTURAL work — even as an

@@ -274,6 +274,16 @@ def fixture(root: Path) -> tuple[dict, dict, dict, Path]:
                 "record": "Direction A was selected after reviewing four distinct previews.",
             },
             "type_scale": {"display": 34, "title": 24, "body": 14},
+            "concept": {
+                "chosen": "a chain of custody — every claim carries its receipt",
+                "via": "provenance, verification -> a rail that threads every page",
+                "rejected": [
+                    {"concept": "a laboratory bench",
+                     "why_lost": "it pictures the work, not the guarantee the deck is selling"},
+                    {"concept": "a set of scales",
+                     "why_lost": "it implies a tradeoff, and nothing here is being traded off"},
+                ],
+            },
             "boldness": "balanced+",
             "signature_move": "A visible evidence rail connects source, build, and review.",
             "carried_by": [1],

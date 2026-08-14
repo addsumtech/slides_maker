@@ -107,9 +107,16 @@ an order of operations, and you guard it:
 
   Draw the three from the bold-reference pass you already run, and keep them cheap — they are three
   sentences, not three renders. No extra dispatch, no extra round trip. **Record them on the Design
-  plan as `concept:` — the winner, then the two rejected, each with the clause that lost it.** Two
-  rejected concepts that are the winner in other words is a single sketch relabelled, and the gate
-  says so.
+  plan as `concept:` — the winner WITH the two middle rungs that produced it, then the two rejected,
+  each with the clause that lost it:**
+
+      concept: <the governing picture> · via <core concepts> → <visual language>
+               beat: <rejected> — <why it lost> · <rejected> — <why it lost>
+
+  Two rejected concepts that are the winner in other words is a single sketch relabelled, and the
+  gate says so. **A winner with no middle rungs is the same failure one step earlier** — a picture
+  that arrived rather than one that was derived (the ladder, and why the middle rung is the one that
+  matters, is under §1 "DERIVE the motif down a LADDER").
 - **Blank-canvas sketch first** — now IN SERVICE of the chosen concept. For the deck's design
   language, and again for every non-obvious
   slide, first describe in one or two clauses what the ideal page would look like **as if the
@@ -244,6 +251,73 @@ feel art-directed rather than defaulted, and it's yours to set once and hold. Pi
   *across decks* is the same failure as one template *across slides*. (Skip this cross-deck variation
   when the look is LOCKED per §0 — a registered/provided template the user chose is *meant* to repeat
   across decks; vary only the unlocked foundations, e.g. signature device and per-deck motifs.)
+- **🔴 DERIVE the motif down a LADDER, never in one jump — and record the rungs.** "Content-born"
+  above is the *requirement*; this is the *method*, and without it the step quietly depends on a good
+  image happening to arrive. Four rungs, three sentences of work:
+
+      topic  →  core concepts  →  visual language  →  motif
+
+  **The middle rung is the one that gets skipped, and skipping it is what produces industry
+  stereotype.** Jump straight from *an MRI deck* to a picture and you get a scanner; go through
+  *frequency · sampling* and you get a k-space grid — same content, and a motif that can carry an
+  argument. Two worked rungs so the shape is unambiguous:
+
+  | topic | core concepts | visual language | motif |
+  |---|---|---|---|
+  | MRI reconstruction | frequency · sampling | grid · trajectory | the acquired-vs-skipped sampling row |
+  | the Dutch 17th century | double-entry · an account that cannot close | ruled columns · a struck rule | a ledger page whose balance rule breaks |
+
+  🔴 **The core-concepts rung is ABSTRACT and belongs to THIS deck — never to its industry.**
+  `AI → knowledge graph`, `medical → diagnostic grid`, `cloud → mesh` are lookups keyed by *field*,
+  and a lookup keyed by field is precisely the stereotype this section exists to prevent — it also
+  breaks rung 1, because a topic is not a concept. **Test: if your middle rung could have been
+  written before you read the material, you did not do it.** Resolve rung 3 through the addendum's
+  **§3 dictionary**, which is domain-neutral by construction and already maps concept → visual
+  language across ~35 concepts; §3's rows then give the per-slide FORM, while the motif is the
+  deck-level object that same language implies. One table, used at two altitudes.
+  *(Gate: the design plan's `concept:` line carries the middle two rungs — Design-language output
+  below. A `concept:` line with no rungs records a picture someone thought of, which is the exact
+  failure the three-candidate rule was already reaching for.)*
+- **🔴 A motif must GENERATE, not merely RECUR — name three things it makes besides itself.**
+  `carried_by` asks whether the idea does structural work on 2–3 slides; this asks the prior question,
+  whether the motif is *productive at all*. A motif that can only repeat is an ornament with a
+  schedule. A motif that generates hands the deck a coherent visual system — which is the difference
+  between a deck that looks designed and one that looks decorated, and it is the half of "make it
+  beautiful" that no amount of palette work supplies. Name all three in the plan:
+  - **background** — what the motif makes the canvas *do* (a ruled field, a faint scanline, an edge
+    register), or `flat by register — <reason>`;
+  - **markers** — the numeral / icon / bullet system it implies, so the small furniture belongs to the
+    same idea instead of being chosen separately from a library;
+  - **one page** — the slide whose GEOMETRY is the motif rather than a slide that carries it. 🔴 **Not
+    necessarily a diagram**: a chart's frame, a rail, a picture hang, a type composition all qualify.
+    **Never invent an artifact so this field has an answer** — a deck with no diagram in its content
+    does not acquire one to satisfy a motif, which would be the "inventing a stage so the tower gets
+    its fifth floor" failure named under the constructed-object rule. `none — <the deck has no page
+    whose geometry this idea could own>` is a legitimate answer and is worth more than a forced one.
+
+  Two "nothing obvious" answers means the motif is a shape you liked: re-sketch it, **or step down to
+  a quiet register signature and say so in one clause — a first-class answer, not a concession.** A
+  sober register (defense, regulatory, status readout) that carries only a quiet signature has
+  answered this correctly; **`boldness: conservative` satisfies the whole triple with that one
+  clause**, on the same logic that makes its signature move optional. And a **1–2 slide tiny ask
+  skips the triple** — the same carve the anchor proof takes, for the same reason. *(Gate: the
+  `motif generates:` line on the design checkpoint; self-verify (n).)*
+- **🔴 With NO generated imagery, the motif carries the WHOLE visual load — hold it to the full
+  contract.** On the generated-template branch a hero plate and its interior echoes do most of the
+  atmospheric work and the motif can afford to be quiet beside them. On **branch (c) "design a clean
+  one"** there is nothing else: the motif *is* the deck's visual design, and it is what every page
+  the reader meets is wearing. There the derivation ladder, the generativity triple and the STRANGER
+  TEST are **required rather than weighed** — a motif that is merely inoffensive leaves the deck
+  looking untouched, and the reader has no imagery to be impressed by instead.
+  🔴 **A LOCKED look is the exception, and the split is precise** (§0's LOCKED-look carve, which this
+  must not override): on a **registered or provided template**, or a Mode-A mimic, the template's own
+  device IS the motif and **you do not run the ladder on it** — deriving a replacement re-litigates
+  an identity the user already approved. What still binds there is everything about *use*: the
+  STRANGER TEST (a borrowed device can be just as opaque as an invented one), **ONE form ONE meaning**
+  (a template's rule means what the template means by it, and you may not quietly assign it a second
+  job), and the generativity triple applied to **what you ADD** — the markers and page geometry you
+  introduce must belong to the template's idea rather than to a library. Ladder for an invented look;
+  discipline for a borrowed one.
 - **A motif may be a CONSTRUCTED OBJECT, not only a shape (user feedback, 2026-08).** Every
   content-born example above — ring, taper, axis, lockup — is an abstract diagram shape, and a deck
   whose motif is an abstract shape tends to *repeat* it. The other class is an object made of this
@@ -289,8 +363,9 @@ feel art-directed rather than defaulted, and it's yours to set once and hold. Pi
   checkpoint's motif line must state the meaning in words ("twin rails = the two engines"), so the
   user can veto an opaque device before the build. Self-check: ask what a stranger would call the
   shape — "two ellipses" instead of "the two engines" = fail; label it.
-  **Three things this rule did NOT catch, measured on a real deck (user feedback, 2026-07-31 — a
-  low horizontal rule on nine pages that the user had to ask the meaning of):**
+  **FOUR things this rule did NOT catch, each measured on a real deck (the first three: user
+  feedback, 2026-07-31 — a low horizontal rule on nine pages that the user had to ask the meaning
+  of; the fourth: user feedback, 2026-08-14 — the same question asked again, of a different device):**
   - **A reading that DEFERS is not a reading.** The motif line said "it is the same line throughout;
     they understand it on slide 9" — meaning arriving eight pages after first appearance, which is
     the definition of failing at first appearance. If the stated reading contains *later / by page N /
@@ -307,6 +382,16 @@ feel art-directed rather than defaulted, and it's yours to set once and hold. Pi
     You cannot assign a new meaning to a position that is already spoken for — a horizon needs
     content ABOVE it and real sky, not a line under the body text. Ask what the SLOT says before
     asking what the shape says.
+  - **🔴 ONE form, ONE meaning — deck-wide.** A device that means one thing on the cover and a
+    different thing inside is two motifs wearing the same clothes, and nothing tells the reader the
+    meaning changed. This passes every other arm of the test: each reading is correct *on its own
+    page*, each is labelled or inferable, neither defers. Only the pair is wrong. **Measured: a pair
+    of vertical rules read as *the two sides of the account* on a cover and as *the amount column* on
+    every interior page — and the user asked what they meant, which is this test failing by
+    definition.** Before the build, list every REPEATED form (rules, bands, corner marks, columns)
+    and write the one thing each means. Two entries against one form is the finding: change one of
+    them, or make them different enough in weight, position or count that nobody reads them as the
+    same device. *(Self-verify (n) now reads this list, not just the motif line.)*
 - **Declare the TYPE SCALE as a contract — with real drama and a real floor.** Fix the deck's modular
   scale once, as named tokens the builder must use (e.g. on the default 10×5.625in canvas:
   `display 40 · title 22 · body 14 · caption 9.5`), instead of improvising sizes per slide (the
@@ -843,17 +928,32 @@ NOT a blanket per-slide quota):
   frame-fill rule; thin rows merged/enriched or their quiet register named in one clause), and no
   canvas value flip appears exactly once (any flip recurs as a divider family or bookend; on the
   generated-template branch, no canvas flip at all — imagery-strength beats only).
-- **(n) motif passes the STRANGER TEST** — the plan's motif line states the device AND its meaning in
-  words ("twin rails = the two engines"), and names HOW a first-time viewer learns it. **FOUR arms,
-  not three** (§1 STRANGER TEST): labeled at first appearance / figurative enough to read unaided /
-  on-canvas legend / **REMOVED — and removal is first-class, usually the better fix**. A motif
-  whose meaning appears only in the plan text fails. Two tells that a passing sentence is really a
-  failing one: **a reading that DEFERS is not a reading** ("it becomes clear on slide 7" is a failed
-  test written as a promise — label it at first use or take it out), and **position dictates reading,
-  and it outranks intent** (if where the device sits says something other than what you meant, the
-  viewer reads the position). *(This item lists three arms in earlier drafts; the fourth is the one
-  the shipped failure needed, and `references/checkpoint-convention.md` already spells it out — the
-  tick you write here must match the checkpoint spec you post.)*
+- **(n) motif is DERIVED, GENERATES, and passes the STRANGER TEST** — three things, because a motif
+  can be legible and still be an ornament, and it can be beautiful and still be undeducible:
+  - **derived** — the `concept:` line carries its middle rungs (`via <core concepts> → <visual
+    language>`, §1's ladder). A concept with no rungs is a picture that occurred to someone; the
+    middle rung is also the only thing standing between this deck and an industry stereotype.
+  - **generates** — the `motif generates:` line names all three (background · markers · one PAGE whose
+    geometry IS the motif — not necessarily a diagram, and `none — <reason>` beats an invented one),
+    or steps down to a quiet register with a stated reason. Two "nothing obvious" answers means
+    re-sketch. *Carves: `conservative` answers the triple with its `deliberately restrained` clause; a
+    1–2 slide tiny ask skips it; a locked template applies it to what you ADD, not to its own device.*
+  - **reads** — the motif line states the device AND its meaning in words ("twin rails = the two
+    engines") and names HOW a first-time viewer learns it. **FOUR arms** (§1 STRANGER TEST): labeled
+    at first appearance / figurative enough to read unaided / on-canvas legend / **REMOVED — and
+    removal is first-class, usually the better fix**. A motif whose meaning appears only in the plan
+    text fails. **FOUR tells** that a passing sentence is really a failing one: a reading that
+    **DEFERS** is not a reading ("it becomes clear on slide 7" is a failure written as a promise);
+    **position dictates reading and outranks intent** (if the slot says something other than what you
+    meant, the viewer reads the slot); a stranger who can only name the **shape** ("two ellipses")
+    rather than the meaning; and **ONE form, ONE meaning deck-wide** — check the repeated-forms list,
+    because two meanings on one device passes every per-page check and still sends the user asking.
+  🔴 **On branch (c) all three are REQUIRED, not weighed** (§1): there the motif is the entire visual
+  design, so "considered and skipped" is not an available answer. On a **locked look** the ladder is
+  not re-run — the template's device is the motif — while "reads" and the ADDED half of "generates"
+  still bind.
+  *(`references/checkpoint-convention.md` spells out the checkpoint fields — the tick you write here
+  must match the checkpoint you post.)*
 - **(o) logo plan carries evidence** — the `logo plan:` line matches the LOGO PRINCIPLE's situation
   table AND carries its evidence token (`official asset — <source>` / `searched, none found →
   designed wordmark (flagged)` / `n/a — <reason>`, the reasons including **`third-party assessment`** —

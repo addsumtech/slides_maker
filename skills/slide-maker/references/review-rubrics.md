@@ -299,11 +299,30 @@ Score each dimension; cite specific slides.
    and no on-canvas legend (`agents/slide-design.md` §1 STRANGER TEST) — describe what a stranger
    would call the shape vs what the plan says it means, and require a label/legend at the cover
    appearance **or its REMOVAL, which is the better call whenever the only way to keep the device is
-   to caption it** (a motif needing a sentence to earn its place has answered the question). Two
-   tells, measured: a stated reading that DEFERS (*"they get it by slide 9"*) is not a reading — it
+   to caption it** (a motif needing a sentence to earn its place has answered the question). FOUR
+   tells, each measured on a shipped deck: a stated reading that DEFERS (*"they get it by slide 9"*) is not a reading — it
    concedes the device is opaque where it first appears; and a device sitting in a slot whose meaning
    is already spoken for (a thin rule low on the page = divider/footer, a side strip = sidebar, a
-   corner mark = chrome) reads as that slot, not as the intent, however the plan describes it; **logo missing or unevidenced on any deck that names a real entity** — the deck's subject is one
+   corner mark = chrome) reads as that slot, not as the intent, however the plan describes it.
+   🔴 **A THIRD tell, and it is the one that survives every per-page check: ONE FORM carrying TWO
+   MEANINGS deck-wide.** Walk the repeated forms (rules, bands, columns, corner marks) and write the
+   single thing each means; two entries against one form is the finding, because each reading is
+   correct on its own page and only the pair is wrong — measured twice, on two decks, both times
+   surfacing as the user asking what the device meant. **A FOURTH: a motif that only RECURS.** The
+   plan's `motif generates:` line names three things the motif produces besides itself (background ·
+   markers · one PAGE whose geometry IS the motif — not necessarily a diagram, and a recorded
+   `none — <reason>` beats an invented artifact); two "nothing obvious" answers means the deck is
+   wearing an ornament on a schedule, and **on branch (c) — where the motif IS the visual design —
+   that is a major, not a minor.** Do NOT raise it on a deck carrying its carve: `boldness:
+   conservative` answers the triple with its `deliberately restrained` clause, a 1–2 slide tiny ask
+   skips it, and on a registered/provided template the device is the TEMPLATE's — judge only what the
+   deck ADDED, never the borrowed identity (`agents/slide-design.md` §1; raising a finding against a
+   look the user already approved is the reviewer re-litigating an approved decision).
+   **Weigh this axis in that order:
+   does it MEAN something · does it run the whole deck · does it generate · does it read unaided ·
+   is it fresh.** Novelty is last on purpose: a beautiful device nobody can decode is the failure
+   this section exists to catch, and clarity is a floor here rather than a dimension to trade against
+   the others; **logo missing or unevidenced on any deck that names a real entity** — the deck's subject is one
    company / product / brand / institution (stakeholder readout, pitch, org report) yet no official
    logo appears on the cover, **OR a slide whose FORM is a roster of named real entities carries a
    generic placeholder glyph — a coloured square, a repeated stock icon — where each entity's mark

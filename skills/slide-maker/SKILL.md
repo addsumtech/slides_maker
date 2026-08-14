@@ -598,7 +598,13 @@ runs on EVERY deck — it's how the art director designs, never opt-in per deck 
 gracefully to small decks (a 4-slide deck still earns one hero per slide, no card-grid reflex, semantic
 colour, and one memorable moment); only the deck-level numeric floors are size-gated (hard at ~8+ content
 slides, strong guidance at 6–7).** **Precondition — the design gate:** the plan is **not ready** unless it carries a **`concept:` line
-— what this deck's idea is a PICTURE of, plus the TWO pictures it beat and the clause that lost each**
+— what this deck's idea is a PICTURE of, **the two middle rungs that produced it** (`via <core
+concepts> → <visual language>`), plus the TWO pictures it beat and the clause that lost each**
+*(the ladder is `topic → core concepts → visual language → motif`; the MIDDLE rung is the one that
+gets skipped, and skipping it is what produces industry stereotype — an MRI deck jumped straight to a
+picture gives you a scanner, routed through `frequency · sampling` it gives you a k-space grid. A
+winner with no rungs is a picture that arrived, not one that was derived. Full ladder + the
+domain-neutral §3 dictionary it resolves through: `agents/slide-design.md` §1)*
 (*an intelligence network* · *a digital organism* · *a hand and a machine hand doing one job* — three
 governing images for the same approved argument, not three styles and not three layouts). This is the
 one divergence the pipeline never had: the direction gate diverges on STYLE (its own preview page says
@@ -697,8 +703,9 @@ deviation. This row makes that the default instead of a save.)*
 
 **The per-slide content-image opt-in is a CROSS-CUTTING choice available on EVERY deck** — independent of the template decision and separate from Q1's generate-a-template path; offer it whenever an image tool OR web search for sourced photos is available. **Read `references/asset-production.md` §Per-slide content-image opt-in before writing the opt-in list** — the three guardrails (content-related, never every slide, and the REFERENT RULE that decides generated vs real sourced imagery) and the per-row source-token grammar. Fold in the user's design edits, then set up the canvas (Step 3).
 
-> **🔴 CHECKPOINT — DESIGN:** show the **`concept:` line (the governing image + the two it beat,
-> each with the clause that lost it)** + the Design language + Form ledger + the 3 design musts + the
+> **🔴 CHECKPOINT — DESIGN:** show the **`concept:` line (the governing image + the two middle rungs
+> that produced it — `via <core concepts> → <visual language>` — + the two it beat, each with the
+> clause that lost it)** + the Design language + Form ledger + the 3 design musts + the
 > **`boldness:` line + the `signature move:` line with its `carried_by:` clause** (the one scoped
 > aesthetic risk + where it lands + the bold reference it adapts + the 2–3 slides where the same idea
 > does STRUCTURAL work — so a wrong dial, a timid/too-wild move, or a risk that lives on exactly one
@@ -708,7 +715,13 @@ deviation. This row makes that the default instead of a save.)*
 > step 5 — source token) + (on ANY deck naming a real entity — subject, named-as-content, or a ROSTER slide) the **`logo plan:` line WITH its
 > evidence token** (`official asset — <source>` / `searched, none found → designed wordmark (flagged)` /
 > `n/a — <reason, incl. third-party assessment>`) + the **motif line stating the device AND its meaning
-> + how it's made legible**
+> + how it's made legible + `motif generates:` (background · markers · one PAGE whose geometry IS the
+> motif — `none — <reason>` beats an invented artifact) + ONE MEANING PER REPEATED FORM deck-wide** —
+> the last two are gates, not garnish: a motif that only recurs is an ornament with a schedule, and a
+> device meaning one thing on the cover and another inside passes every per-page check while still
+> sending the reader asking what it means (measured twice, on two different decks). On branch (c) both
+> are REQUIRED rather than weighed, because there the motif IS the deck's visual design; `conservative`
+> and a 1–2 slide tiny ask carve out, and on a locked template the ladder is not re-run on its device
 > (label / legend / figurative / **removed** — the STRANGER TEST; **a motif may be a CONSTRUCTED
 > OBJECT rather than a shape** — something this deck's own material would BUILD, gaining a part per
 > beat instead of appearing again per beat, which is what makes `carried_by` structural rather than

@@ -120,6 +120,20 @@ TEMPLATE = {
             "record": "<selection or auto-carve record>",
         },
         "type_scale": {"display": 34, "title": 24, "body": 14},
+        # The governing picture, and the two it beat. `render_deck.py --gate-check` has required
+        # this for a while and THIS record never picked it up — a bridged run could therefore
+        # satisfy the Codex gate with a design nobody had chosen a concept for, and fail the shared
+        # one. Same drift the anchor-proof and boldness comments below already record, caught a
+        # third time. `via` carries the derivation rungs (topic -> core concepts -> visual language
+        # -> motif); the MIDDLE rung is what separates a derived motif from an industry stereotype.
+        "concept": {
+            "chosen": "<what this deck's idea is a PICTURE of>",
+            "via": "<core concepts> -> <visual language>",
+            "rejected": [
+                {"concept": "<runner-up>", "why_lost": "<one clause>"},
+                {"concept": "<the other>", "why_lost": "<one clause>"},
+            ],
+        },
         "boldness": "balanced+",
         "signature_move": "<repeated, deliberate visual device>",
         "carried_by": [1, 5],
@@ -646,6 +660,29 @@ def check_design(
                                       "deliberately-restrained"}:
         errors.append("design.boldness must declare a supported direction "
                       "(conservative | balanced+ | bold | experimental)")
+    # Mirrors render_deck.py --gate-check's `concept` contract EXACTLY — one picture with no
+    # alternatives is not a choice, it is the first thing that came to mind. Kept deliberately at
+    # the shared path's strictness (chosen + two rejected, each with the clause that lost it): the
+    # `via` rungs are checked here only when present, because making them blocking on ONE path is
+    # how the two gates drift, and this file already carries two comments about that costing the
+    # repo. If the rungs become blocking, both paths change in the same commit.
+    concept = design.get("concept")
+    if not isinstance(concept, dict):
+        errors.append("design.concept missing — name the governing picture and the two it beat")
+    else:
+        require_string(concept.get("chosen"), "design.concept.chosen", errors, minimum=8)
+        rejected = concept.get("rejected")
+        if not isinstance(rejected, list) or len(rejected) < 2:
+            errors.append("design.concept.rejected must name TWO pictures the winner beat")
+        else:
+            for index, row in enumerate(rejected[:2]):
+                if not isinstance(row, dict):
+                    errors.append(f"design.concept.rejected[{index}] must be an object")
+                    continue
+                require_string(row.get("concept"), f"design.concept.rejected[{index}].concept", errors)
+                require_string(row.get("why_lost"), f"design.concept.rejected[{index}].why_lost",
+                               errors, minimum=8)
+
     require_string(design.get("signature_move"), "design.signature_move", errors, minimum=12)
     carried_by = design.get("carried_by")
     if not isinstance(carried_by, list) or len(set(carried_by) & expected_slides) < min(2, len(expected_slides)):
