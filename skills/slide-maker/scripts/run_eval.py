@@ -90,6 +90,87 @@ def slide_texts(pptx):
     return out
 
 
+_C_NS = "{http://schemas.openxmlformats.org/drawingml/2006/chart}"
+_A_NS = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
+_CJK_RE = re.compile("[぀-ヿ㐀-䶿一-鿿豈-﫿가-힯]")
+
+
+def _parts(pptx, prefix):
+    """Yield (name, parsed XML) for package parts under `prefix`. Unparseable parts are skipped —
+    this is an eval, and a corrupt part is a different failure that other checks already own."""
+    import xml.etree.ElementTree as ET
+    import zipfile
+    with zipfile.ZipFile(pptx) as z:
+        for name in z.namelist():
+            if not (name.startswith(prefix) and name.endswith(".xml")):
+                continue
+            try:
+                yield name, ET.fromstring(z.read(name))
+            except ET.ParseError:
+                continue
+
+
+def signed_native_bars(pptx):
+    """Native BAR/COLUMN charts carrying a NEGATIVE value — a rendering bug no gate here can see.
+
+    Measured: LibreOffice draws a negative column/bar at its ABSOLUTE height, so a -12% bar comes
+    out of the rasteriser looking identical to +12%. The .pptx itself is correct, so every check
+    that reads the deck passes, and every check that reads the PNG is looking at a plausible chart
+    pointing the wrong way. Nothing in this repo catches it — not lint_deck, not the visual
+    contract, not a critic reading a render. The only reliable fix is to not use a native chart
+    for signed data (draw it with shapes, or raster it), which makes this decidable from the
+    artifact: a native bar chart with a negative cached value is the defect.
+
+    Scoped to `c:barChart` on purpose: line and scatter render signed data correctly, and flagging
+    them would train authors to route working charts through the workaround.
+    """
+    hits = []
+    for name, root in _parts(pptx, "ppt/charts/"):
+        for bar in root.iter(_C_NS + "barChart"):
+            for val in bar.iter(_C_NS + "val"):
+                for v in val.iter(_C_NS + "v"):
+                    try:
+                        if float((v.text or "").strip()) < 0:
+                            hits.append(name)
+                            break
+                    except ValueError:
+                        continue
+                if hits and hits[-1] == name:
+                    break
+            if hits and hits[-1] == name:
+                break
+    return sorted(set(hits))
+
+
+def cjk_runs_missing_ea(pptx):
+    """Runs containing CJK text whose `a:rPr` declares no `<a:ea>` East-Asian typeface.
+
+    PowerPoint picks the face for CJK glyphs from `<a:ea>`, not `<a:latin>`. A run that sets only
+    `<a:latin>` renders its Chinese through whatever the host substitutes — a different face, a
+    different width, and on a machine without the fallback, tofu. This repo has already shipped a
+    geometry bug from the same asymmetry (every width measurement read `<a:latin>` while the glyphs
+    came from `<a:ea>`, under-reporting Chinese runs by ~46%), which is exactly why a CJK deck
+    needs an assertion that reads the file rather than a reviewer who reads the render on the one
+    machine that happens to have the font.
+    """
+    bad = []
+    for name, root in _parts(pptx, "ppt/slides/slide"):
+        for run in root.iter(_A_NS + "r"):
+            t = run.find(_A_NS + "t")
+            if t is None or not _CJK_RE.search(t.text or ""):
+                continue
+            rpr = run.find(_A_NS + "rPr")
+            if rpr is None or rpr.find(_A_NS + "ea") is None:
+                bad.append("%s: %s" % (name.rsplit("/", 1)[-1], (t.text or "")[:18]))
+    return bad
+
+
+def canvas_inches(pptx):
+    from pptx import Presentation
+    prs = Presentation(pptx)
+    return (prs.slide_width / 914400.0, prs.slide_height / 914400.0)
+
+
 def notes_texts(pptx):
     from pptx import Presentation
     out = []
@@ -155,6 +236,22 @@ def check(a, ctx):
         share = have / float(len(notes))
         return share >= a.get("min_share", 0.8), "%d of %d slides carry real notes (%.0f%%)" % (
             have, len(notes), share * 100)
+    if kind == "canvas_is":
+        w, h = canvas_inches(ctx["pptx"])
+        tol = a.get("tol", 0.05)
+        good = abs(w - a["w_in"]) <= tol and abs(h - a["h_in"]) <= tol
+        return good, "canvas is %.2f x %.2f in, wanted %.2f x %.2f" % (w, h, a["w_in"], a["h_in"])
+    if kind == "no_signed_native_bars":
+        hits = signed_native_bars(ctx["pptx"])
+        return not hits, ("native bar/column chart(s) carrying negative values: %s — LibreOffice "
+                          "renders these at absolute height, so the PNG shows the bar pointing the "
+                          "wrong way while the .pptx is correct. Draw signed data with shapes or "
+                          "raster it." % ", ".join(hits))
+    if kind == "cjk_runs_have_ea_face":
+        bad = cjk_runs_missing_ea(ctx["pptx"])
+        return not bad, ("%d CJK run(s) declare no <a:ea> typeface (e.g. %s) — PowerPoint takes the "
+                         "East-Asian face from <a:ea>, so these render through a host substitution"
+                         % (len(bad), "; ".join(bad[:4])))
     if kind == "reference_reached":
         tr = ctx["transcript"]
         if tr is None:

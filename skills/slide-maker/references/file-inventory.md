@@ -60,6 +60,8 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   icon-semantic drift, checked against the evidence record. Paired with `codex_delivery_gate.py`;
   neither runs on the shared (Claude Code / Kimi) path.
 - `directions_diversity.py` — mechanical divergence check for direction-gate candidates
+- `arc_divergence.py` — its content-side twin: mechanical divergence + strawman check for the
+  2–3 narrative-arc candidates (Step 1), CJK-aware
   (mode · palette distance · type pairing · composition), flagging any pair that matches on ≥3 of 4
   axes. Exit 0 all diverge / 2 flagged / 1 unreadable. Never auto-kills: a flag means REDIVERGE **or**
   record a named justification on the `direction gate:` line. Run it before posting the preview link.

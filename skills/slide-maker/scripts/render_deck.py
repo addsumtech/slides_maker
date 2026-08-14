@@ -1012,7 +1012,9 @@ def check_handoff_gates(pptx, mode="presented", gate_check=False):
             '                     "icon_family": "<family | none - reason>",\n'
             '                     "palette": "<FILL vs TEXT-safe split, per palette_audit.py>",\n'
             '                     "type_scale": {{"display": 34, "title": 24, "body": 14}},\n'
-            '                     "signature_proof": {{"slide": 6, "png": "render/slide06.png"}}}},\n'
+            '                     "signature_proof": [{{"role": "signature", "slide": 6, "png": "render/slide06.png"}},\n'
+            '                                         {{"role": "complex", "slide": 9, "png": "render/slide09.png"}},\n'
+            '                                         {{"role": "data", "slide": 11, "png": "render/slide11.png"}}]}},\n'
             '     "provenance": {{"claims": [{{"claim": "<the claim>", "verdict": "CONFIRMED",\n'
             '                                "url": "https://<primary source>"}}]}}}}\n\n'
             "  (A summary tally like {{\"checked\": 87}} is REJECTED on purpose — a tally is "
@@ -1325,26 +1327,38 @@ def check_handoff_gates(pptx, mode="presented", gate_check=False):
                   "signature_proof not required (there is no risk to prove); every other field is")
         proof = None if _carved else design["signature_proof"]
         if proof is not None:
+            # THE CONTRACT LIVES IN scripts/anchor_proof.py, imported by BOTH gate paths.
             # `png` or `path`: the Codex delivery gate spells this key `path` in its own evidence file,
             # and a Codex run keeps BOTH records (references/codex-runtime.md). Demanding one spelling
             # here would reject the field an OpenAI-bridged run naturally writes — the same evidence,
-            # rejected for its key name.
-            # isinstance FIRST: this guard used to run one line after the .get() it protects, so the
-            # natural shorthand `"signature_proof": "sig.png"` raised AttributeError and printed a
-            # traceback instead of the message below, which says exactly what to write.
-            proof_file = proof.get("png") or proof.get("path") if isinstance(proof, dict) else None
-            if not isinstance(proof, dict) or not proof_file or not proof.get("slide"):
-                die('`signature_proof` must be {"slide": <n>, "png": "<rendered png>"} (the key may also '
-                    'be spelled "path", as the Codex delivery gate does) — the rendered evidence that '
-                    'the signature move actually SURVIVED into the deck. A move that exists only as a '
-                    'sentence in the plan is the documented failure: it gets sanded back to the safe '
-                    'catalogue during the build and nobody notices, because the plan still reads bravely.')
-            png = Path(proof_file)
-            if not png.is_absolute():
-                png = Path(pptx).parent / png
-            if not png.exists() or png.stat().st_size < 512:
-                die(f'`signature_proof` file ({proof_file}) does not exist or is empty — render '
-                    f'the slide first (render_deck.py <deck> <dir>) and point at the real PNG.')
+            # rejected for its key name. That divergence is exactly why the rule is no longer written
+            # out twice: this file and codex_delivery_gate.py import the same module, so they cannot
+            # drift apart again. Only the FILE checking differs by design (Codex binds a SHA-256 to
+            # the final PPTX; here it is existence plus a size floor), and flattening the two would
+            # weaken the stricter one.
+            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+            import anchor_proof as _ap
+            _n = _deck_slide_count(pptx)
+            _bad = _ap.faults(proof, n_slides=_n,
+                              expected_slides=set(range(1, _n + 1)) if _n else None)
+            if _bad:
+                die("`signature_proof` (the ANCHOR PROOF, Step 4):\n    - "
+                    + "\n    - ".join(_bad)
+                    + "\n  A move that exists only as a sentence in the plan is the documented "
+                      "failure: it gets sanded back to the safe catalogue during the build and "
+                      "nobody notices, because the plan still reads bravely. The two anchors "
+                      "beside it catch the other two: a design approved on a spacious page that "
+                      "cannot hold the deck's densest one, and charts that obey none of the "
+                      "palette/type decisions made against text.")
+            for _a in _ap.normalise(proof):
+                proof_file = _ap.anchor_file(_a)
+                png = Path(proof_file)
+                if not png.is_absolute():
+                    png = Path(pptx).parent / png
+                if not png.exists() or png.stat().st_size < 512:
+                    die('`signature_proof` {} anchor ({}) does not exist or is empty — render '
+                        'the slide first (render_deck.py <deck> <dir>) and point at the real PNG.'
+                        .format(_a.get("role"), proof_file))
         cb = design["carried_by"]
         if not isinstance(cb, list) or len(cb) < 2:
             die("`carried_by` must name at least 2 slides where the signature move does structural "
@@ -1446,8 +1460,10 @@ def check_handoff_gates(pptx, mode="presented", gate_check=False):
             # listed SIX of the eight for a while, so copying it verbatim produced a record that
             # died on "missing type_scale, signature_proof".
             + "    {\"design_plan\": {" + ", ".join('"%s": ...' % f for f in DESIGN_FIELDS) + "}}\n"
-            '    (type_scale is {"display": 34, "title": 24, "body": 14}; signature_proof is\n'
-            '     {"slide": N, "png": "render/slideNN.png"} — the rendered evidence the move survived)\n'
+            '    (type_scale is {"display": 34, "title": 24, "body": 14}; signature_proof is the\n'
+            '     THREE-anchor list [{"role": "signature"|"complex"|"data", "slide": N,\n'
+            '     "png": "render/slideNN.png"}, ...] — rendered evidence that the move survived, that\n'
+            '     the design holds the densest page, and that the charts speak the same language)\n'
             '    or {"design_plan": {"waived": "<reason>"}}')
 
     # Provenance: a self-filled tally proves nothing — the refutation pass is what the gate is FOR.

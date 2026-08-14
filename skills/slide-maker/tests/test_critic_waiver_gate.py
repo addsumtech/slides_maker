@@ -35,7 +35,15 @@ DESIGN_OK = {
     "icon_family": "tabler",
     "palette": "FILL E2543A / TEXT BD4630 on cream, A3341F on tint",
     "type_scale": {"display": 34, "title": 24, "body": 14},
-    "signature_proof": {"slide": 3, "png": "proof.png"},
+    # THE ANCHOR PROOF — three rendered pages, three different failures (scripts/anchor_proof.py).
+    # One page only ever proved the aesthetic risk; the design that looks right on it can still fail
+    # to hold the deck's densest page, and the charts can still obey none of the palette/type
+    # decisions that were made against text.
+    "signature_proof": [
+        {"role": "signature", "slide": 3, "png": "proof.png"},
+        {"role": "complex", "slide": 2, "png": "proof_complex.png"},
+        {"role": "data", "slide": 1, "png": "proof_data.png"},
+    ],
 }
 PROV_OK = {"claims": [{"claim": "c", "verdict": "CONFIRMED", "url": "https://example.org"}]}
 
@@ -53,10 +61,11 @@ def build_deck(dest: Path) -> Path:
 
 
 def write_proof(dest: Path) -> None:
-    """A real PNG next to the deck — signature_proof points at rendered evidence, not a promise."""
+    """Real PNGs next to the deck — the anchors point at rendered evidence, not a promise."""
     sys.path.insert(0, str(SKILL / "scripts"))
     from PIL import Image
-    Image.new("RGB", (960, 540), (240, 240, 245)).save(dest / "proof.png")
+    for name in ("proof.png", "proof_complex.png", "proof_data.png"):
+        Image.new("RGB", (960, 540), (240, 240, 245)).save(dest / name)
 
 
 def run_gate(deck: Path, gates: dict, *flags: str) -> tuple[int, str]:
@@ -214,10 +223,60 @@ CASES = [
     # An OpenAI/Codex-bridged run keeps both .codex-deck-evidence.json and .deck-gates.json, and its
     # own gate spells this key "path". Rejecting that spelling here would fail the same evidence for
     # its key name alone.
-    ("the Codex spelling signature_proof.path is accepted",
+    ("the Codex spelling signature_proof[].path is accepted",
      {"critic": {"verdict": "consent", "rounds": 2},
-      "design_plan": dict(DESIGN_OK, signature_proof={"slide": 3, "path": "proof.png"})},
+      "design_plan": dict(DESIGN_OK, signature_proof=[
+          {"role": "signature", "slide": 3, "path": "proof.png"},
+          {"role": "complex", "slide": 2, "path": "proof_complex.png"},
+          {"role": "data", "slide": 1, "path": "proof_data.png"}])},
      True, "design plan: boldness"),
+
+    # ---- the ANCHOR PROOF rules. Every one of these passed as recently as the single-anchor
+    # shape, which is the point: a deck could prove its bravest page and ship a design that had
+    # never been seen holding real content or a real chart.
+    ("the LEGACY single-anchor dict is refused, and told what to add",
+     {"critic": {"verdict": "consent", "rounds": 2},
+      "design_plan": dict(DESIGN_OK, signature_proof={"slide": 3, "png": "proof.png"})},
+     False, "only 1 anchor"),
+
+    ("...and the refusal names the two anchors that are missing, not just a count",
+     {"critic": {"verdict": "consent", "rounds": 2},
+      "design_plan": dict(DESIGN_OK, signature_proof={"slide": 3, "png": "proof.png"})},
+     False, '"complex"'),
+
+    ("two anchors claiming the same ROLE are refused",
+     {"critic": {"verdict": "consent", "rounds": 2},
+      "design_plan": dict(DESIGN_OK, signature_proof=[
+          {"role": "signature", "slide": 3, "png": "proof.png"},
+          {"role": "complex", "slide": 2, "png": "proof_complex.png"},
+          {"role": "complex", "slide": 1, "png": "proof_data.png"}])},
+     False, "same role"),
+
+    ("two anchors pointing at the same SLIDE are refused — proving one page three times "
+     "proves one page",
+     {"critic": {"verdict": "consent", "rounds": 2},
+      "design_plan": dict(DESIGN_OK, signature_proof=[
+          {"role": "signature", "slide": 3, "png": "proof.png"},
+          {"role": "complex", "slide": 3, "png": "proof_complex.png"},
+          {"role": "data", "slide": 3, "png": "proof_data.png"}])},
+     False, "same slide"),
+
+    ("an anchor set with no `signature` role is refused — the risk is the anchor most likely to "
+     "have been sanded away",
+     {"critic": {"verdict": "consent", "rounds": 2},
+      "design_plan": dict(DESIGN_OK, signature_proof=[
+          {"role": "data", "slide": 3, "png": "proof.png"},
+          {"role": "complex", "slide": 2, "png": "proof_complex.png"},
+          {"role": "data", "slide": 1, "png": "proof_data.png"}])},
+     False, "no `signature` anchor"),
+
+    ("an anchor pointing at a slide the deck does not have is refused",
+     {"critic": {"verdict": "consent", "rounds": 2},
+      "design_plan": dict(DESIGN_OK, signature_proof=[
+          {"role": "signature", "slide": 3, "png": "proof.png"},
+          {"role": "complex", "slide": 2, "png": "proof_complex.png"},
+          {"role": "data", "slide": 99, "png": "proof_data.png"}])},
+     False, "not a final slide"),
 
     # THE RESTRAINT CARVE, on the escape agents/slide-design.md already documents: under a
     # *conservative* dial the risk is OPTIONAL — take a modest move, or write the one-clause
@@ -262,9 +321,13 @@ CASES = [
          "signature_move": "deliberately restrained: sober status readout"}},
      False, "type_scale"),
 
-    ("a signature_proof pointing at a MISSING png is refused",
+    ("an anchor pointing at a MISSING png is refused — including when it is not the first one, "
+     "so the loop cannot stop at the signature anchor and call the set proven",
      {"critic": {"verdict": "consent", "rounds": 2},
-      "design_plan": dict(DESIGN_OK, signature_proof={"slide": 3, "png": "nope.png"})},
+      "design_plan": dict(DESIGN_OK, signature_proof=[
+          {"role": "signature", "slide": 3, "png": "proof.png"},
+          {"role": "complex", "slide": 2, "png": "proof_complex.png"},
+          {"role": "data", "slide": 1, "png": "nope.png"}])},
      False, "does not exist"),
 ]
 

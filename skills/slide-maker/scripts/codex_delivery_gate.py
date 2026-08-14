@@ -123,12 +123,32 @@ TEMPLATE = {
         "boldness": "balanced+",
         "signature_move": "<repeated, deliberate visual device>",
         "carried_by": [1, 5],
-        "signature_proof": {
-            "slide": 1,
-            "path": "render/slide-1.png",
-            "sha256": "<sha256>",
-            "pptx_sha256": "<must equal deck.sha256>",
-        },
+        # The ANCHOR PROOF — three rendered pages, three different failures. `signature` proves the
+        # aesthetic risk survived the build; `complex` proves the design holds the deck's densest
+        # page; `data` proves the charts speak the same visual language the type did.
+        "signature_proof": [
+            {
+                "role": "signature",
+                "slide": 1,
+                "path": "render/slide-1.png",
+                "sha256": "<sha256>",
+                "pptx_sha256": "<must equal deck.sha256>",
+            },
+            {
+                "role": "complex",
+                "slide": 5,
+                "path": "render/slide-5.png",
+                "sha256": "<sha256>",
+                "pptx_sha256": "<must equal deck.sha256>",
+            },
+            {
+                "role": "data",
+                "slide": 8,
+                "path": "render/slide-8.png",
+                "sha256": "<sha256>",
+                "pptx_sha256": "<must equal deck.sha256>",
+            },
+        ],
         "slides": [
             {
                 "slide": 1,
@@ -638,29 +658,41 @@ def check_design(
     carved = (str(design.get("boldness", "")).strip().lower() == "conservative"
               and str(design.get("signature_move", "")).strip().lower()
                   .startswith("deliberately restrained"))
+    # THE ANCHOR-PROOF CONTRACT LIVES IN scripts/anchor_proof.py, imported by BOTH gate paths.
+    # This gate and render_deck.py --gate-check have already diverged once on this exact field (the
+    # file key was spelled `path` here and `png` there, so a bridged run wrote what its own gate
+    # demanded and the other rejected it). Shared module, one rule, no drift. What stays local is
+    # the strictness: the Codex path binds every anchor PNG to a SHA-256 AND to the final PPTX
+    # hash, which the shared path does not, and folding that into the shared module would have to
+    # weaken it to the weaker of the two.
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import anchor_proof as _ap
+
     proof = design.get("signature_proof")
     if carved and proof is None:
         pass                          # a conservative deck that declared it took no risk
-    elif not isinstance(proof, dict):
+    elif proof is None:
         errors.append("design.signature_proof missing")
     else:
-        proof_slide = proof.get("slide")
-        if proof_slide not in expected_slides:
-            errors.append("design.signature_proof.slide is not a final slide")
-        proof_path = check_hashed_file(
-            root,
-            proof.get("path"),
-            proof.get("sha256"),
-            "design.signature_proof",
-            errors,
-            minimum_bytes=512,
-        )
-        if proof_path is not None:
-            dimensions = png_dimensions(proof_path)
-            if dimensions is None or dimensions[0] < 640 or dimensions[1] < 360:
-                errors.append("design.signature_proof must be a rendered PNG of at least 640x360")
-        if proof.get("pptx_sha256") != deck_hash:
-            errors.append("signature proof is not bound to the final PPTX SHA-256")
+        for line in _ap.faults(proof, n_slides=len(expected_slides),
+                               expected_slides=expected_slides, carved=carved):
+            errors.append("design.signature_proof: " + line)
+        for index, anchor in enumerate(_ap.normalise(proof) or []):
+            label = "design.signature_proof[%d] (%s)" % (index, anchor.get("role"))
+            proof_path = check_hashed_file(
+                root,
+                _ap.anchor_file(anchor),
+                anchor.get("sha256"),
+                label,
+                errors,
+                minimum_bytes=512,
+            )
+            if proof_path is not None:
+                dimensions = png_dimensions(proof_path)
+                if dimensions is None or dimensions[0] < 640 or dimensions[1] < 360:
+                    errors.append(label + " must be a rendered PNG of at least 640x360")
+            if anchor.get("pptx_sha256") != deck_hash:
+                errors.append(label + " is not bound to the final PPTX SHA-256")
 
     rows = design.get("slides")
     if not isinstance(rows, list):

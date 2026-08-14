@@ -513,6 +513,33 @@ jobs:
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/boundary.log || {
             echo "::error::boundary I/O suite did not run to completion"; exit 1; }
 
+      # The design side has measured direction-candidate divergence for a while; the content side
+      # derived its arc from the primary goal and recorded "which arc I chose and why" -- a reason
+      # written after the fact, against no alternative. The arc is the only decision whose error
+      # invalidates everything downstream, so it now runs a competition, and this measures whether
+      # the candidates are genuinely different (and whether the losers were ever developed).
+      # The CJK cases are load-bearing: a whitespace tokeniser scores every pair of Chinese asks at
+      # 0.0 and switches two of the four axes off on every Chinese deck, silently and forever.
+      - name: Narrative-arc candidate divergence
+        run: |
+          set -o pipefail
+          python tests/test_arc_divergence.py | tee /tmp/arcdiv.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/arcdiv.log || {
+            echo "::error::arc divergence suite did not run to completion"; exit 1; }
+
+      # Step 4's proof was ONE rendered page. It proved the aesthetic risk and nothing else, so a
+      # design approved on the deck's most spacious page could still fail to hold its densest one,
+      # and a palette chosen entirely against text could meet its first native chart at Step 5 --
+      # where the fix is a rebuild. Three anchors now. The second half of this suite is the reason
+      # it exists: both gate paths must IMPORT the shared contract rather than restate it, because
+      # they have already diverged once on this exact field.
+      - name: Anchor proof (three-page contract, and the two gates that must not diverge)
+        run: |
+          set -o pipefail
+          python tests/test_anchor_proof.py | tee /tmp/anchor.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/anchor.log || {
+            echo "::error::anchor proof suite did not run to completion"; exit 1; }
+
       # A parameter accepted and never read is the quietest defect this library can ship: the caller
       # writes the call the docs describe, nothing raises, no lint fires, and the setting is simply
       # discarded. Three were found by hand, in three different files, over three separate audits --

@@ -448,6 +448,15 @@ planner is *one mind* — it may fan out *reading* across multiple documents, bu
 understanding, arc, and per-slide message itself; never split one paper across blind agents. For a
 quick, low-stakes deck you may do this pass inline yourself rather than dispatching — but
 the deep-understanding and planning standard below is the same either way.
+**🔴 The arc is COMPETED, not derived — 2–3 candidates over one ledger.** The planner returns 2–3
+candidate arcs (each naming its audience question, the objection it pre-empts, its closing ask and
+the ledger ids it carries), you run `python3 scripts/arc_divergence.py <arcs>.json`, and **YOU pick**
+— it is not a new user stop. The competition reaches the user as the content checkpoint's required
+**`arc gate:`** line (picked + the losers + one clause each + the divergence verdict); a content
+checkpoint without it is not ready. Rationale, both collapse modes, and the escape hatch:
+`agents/content-planner.md` §3. This exists because the arc is the only decision whose error
+invalidates everything downstream — a wrong form costs one slide, a wrong arc costs the design plan
+and the build under it — and it was the one decision with no alternative on the record.
 **🔴 Hand the planner a `search cap:` too — and do the SMALL, NAMED lookups BEFORE dispatching it.**
 Web search is capped per SESSION, shared with every subagent, and it does not reset between decks in
 one conversation. Measured: one research fan-out — 12 agents plus 7 verifiers, none of them told a
@@ -781,28 +790,46 @@ than the current working directory, so `python /path/to/build_<deck>.py` works f
 
 ## Step 4 — Build with deckkit
 
-> ### 🔴 Step 4 opens with the SIGNATURE PROOF — one slide, rendered, BEFORE the other slides exist
+> ### 🔴 Step 4 opens with the ANCHOR PROOF — THREE slides, rendered, BEFORE the other slides exist
 > The `boldness:` / `signature move:` contract is approved as **prose**. The pixels that either honour
 > it or sand it back to safe do not appear until Step 5, after the whole deck is built — at which point
 > the critic's "the signature move got sanded" finding costs a rebuild, and that cost is exactly why it
-> gets accepted instead of fixed. **Put the evidence where the decision is:**
-> 1. Author the **signature slide first** (the one the `signature move:` line names) — plus its
->    `carried_by:` partner if the idea's structural claim is only legible across the pair.
-> 2. Build, then render just that page:
->    `python3 scripts/render_deck.py <deck>.pptx <out> --slides N`. The PNG is byte-identical to the
->    same page from a full render, so it is evidence, not an approximation. 🔴 **`--slides` is not
->    the saving here** — one page costs about what all eighteen cost (below), because the render is
->    a fixed LibreOffice start. What this ritual saves is AUTHORING: you learn the move is wrong
->    having built one slide instead of twenty.
-> 3. **Post the PNG** with one line: *"this is what `<signature move>` actually looks like."* A 🔴 stop
->    in the default flow; under a per-deck AUTO WAIVER it downgrades to a posted FYI like every other
->    approval stop — the waiver removes the wait, never the artifact.
-> 4. Then author the rest. If the proof is wrong you have re-authored ONE slide, not twenty.
+> gets accepted instead of fixed. **Put the evidence where the decision is** — and prove the three
+> things that each cost a rebuild when they surface at Step 5, not just the one:
+>
+> | anchor | the page | what it proves | the failure it catches |
+> |---|---|---|---|
+> | **`signature`** | the slide `signature move:` names | the aesthetic risk survived the build | the move got sanded back to the safe catalogue |
+> | **`complex`** | the densest page in the content plan | the design HOLDS the content | 好看但装不下内容 — a look approved on a spacious page |
+> | **`data`** | the most critical data/conclusion page | the charts speak the same visual language | palette + type were chosen against text, and the first native chart obeys none of them |
+>
+> *(Why not the cover, the obvious third? It already has two gates — branch (c) renders four full
+> directions at the direction gate, branch (d) posts a rendered hero at its own 🔴 checkpoint. Making
+> it an anchor would re-prove the one page nothing was missing on, and leave these two unproven.)*
+>
+> 1. Author the **three anchor slides first** — the signature slide plus its `carried_by:` partner if
+>    the idea's structural claim is only legible across the pair, the densest planned page, and the
+>    key data/conclusion page. On a deck with fewer than three slides the count drops to the deck size
+>    (a 1–2 slide tiny-ask skips the ritual entirely, below).
+> 2. Build, then render just those pages:
+>    `python3 scripts/render_deck.py <deck>.pptx <out> --slides N,M,K`. The PNGs are byte-identical to
+>    the same pages from a full render, so they are evidence, not an approximation. 🔴 **`--slides` is
+>    not the saving here** — three pages cost about what all eighteen cost (below), because the render
+>    is a fixed LibreOffice start. What this ritual saves is AUTHORING: you learn the design is wrong
+>    having built three slides instead of twenty.
+> 3. **Post the three PNGs** with one line each: *"this is what `<signature move>` actually looks
+>    like"* · *"this is the design carrying the heaviest page"* · *"this is a real chart in this
+>    language."* A 🔴 stop in the default flow; under a per-deck AUTO WAIVER it downgrades to a posted
+>    FYI like every other approval stop — the waiver removes the wait, never the artifact.
+> 4. Then author the rest. If the proof is wrong you have re-authored THREE slides, not twenty.
 > 5. **Record it** — the run carries a `signature proof:` token to Step 5 on the critic contract
->    card: `signature proof: slide N → <png path>` or `skipped: <the named carve>`. Without it the
+>    card, one entry per anchor: `signature proof: signature slide N → <png> · complex slide M → <png>
+>    · data slide K → <png>` or `skipped: <the named carve>`. Without it the
 >    step is advisory by construction, which is the failure mode this whole batch exists to fix:
->    the critic can then check the SHIPPED signature slide against the frame that was approved, and
->    a silent skip is visible instead of invisible.
+>    the critic can then check each SHIPPED anchor against the frame that was approved, and
+>    a silent skip is visible instead of invisible. The delivery gates enforce the same three
+>    (`design_plan.signature_proof` is now a LIST of `{role, slide, png}` — one contract in
+>    `scripts/anchor_proof.py`, imported by both gate paths so they cannot drift apart).
 >
 > **Skip only when:** `boldness: conservative` with its "deliberately restrained" clause recorded (no
 > risk was taken, so there is nothing to prove), or a 1–2 slide tiny-ask. A registered/provided template
@@ -812,10 +839,15 @@ than the current working directory, so `python /path/to/build_<deck>.py` works f
 > *(Measured on an 18-slide deck: a `--slides` render ≈ 2.9s and a FULL render ≈ 2.8s — the same,
 > because both pay one ~2.5s LibreOffice start and page count barely moves it. So the proof is cheap
 > in absolute terms (one build + one render, a few seconds), not because it renders fewer pages; the
-> saving that matters is the twenty slides you did not author yet. It costs less than one
+> saving that matters is the twenty slides you did not author yet. **Going from one anchor to three
+> is therefore close to free on both axes that cost anything:** the render is one fixed start either
+> way (~0s more machine time), and all three pages go in the SAME build script and the SAME render
+> call, so the ROUND-TRIP count — the thing a deck's wall clock is actually made of — does not move.
+> What you spend is authoring two more slides; what you buy is discovering that the design cannot
+> hold your densest page while three slides exist instead of twelve. It costs less than one
 > critic round, and it is spent BEFORE the expensive authoring rather than after. This does not
 > contradict "build the whole deck in one script run" below: the proof runs the SAME build script
-> while it still contains only the signature slide — you extend one script, you never maintain two.
+> while it still contains only the three anchors — you extend one script, you never maintain two.
 > Asset note: the signature slide's assets are the first thing asset-prep delivers, per its brief.
 > One render can serve several rituals: when Gate A's one-real-slide fidelity confirm has not yet
 > run, use the signature slide AS that confirm slide; on a large deck the proof doubles as the

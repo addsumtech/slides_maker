@@ -46,7 +46,18 @@ distribution pass's output): a `1` on a standalone content slide or a `6+` on a 
 visible at a glance, so an about-to-be-empty or about-to-be-dense page gets caught at the
 checkpoint, not at the render. The table's takeaway column, read top to bottom, IS the Takeaway spine: append only
 the plan's one-line spine verdict, never the spine paragraph (new plan fields like the money
-slide / Spoken thread live in the FULL plan; at most a one-line marker appears here). **The 承载证据
+slide / Spoken thread live in the FULL plan; at most a one-line marker appears here).
+**+ one required GATE line naming the arc-choice that was made — `arc gate:`.** Shape:
+`arc gate: picked <name> (<shape>) of N · lost: <name> — <one clause> · <name> — <one clause> · divergence: <ok | flagged <pair> → rediverged | justified: <reason>>`.
+**A content checkpoint with no `arc gate:` line is NOT READY**, exactly as a branch-(c)/(d) design
+checkpoint with no `direction gate:` line is not ready — and for the identical reason, which the
+design side learned the expensive way: a choose-from-alternatives step with no line to record it
+silently becomes a derivation, and an Auto pick leaves NO trace that alternatives ever existed.
+The losers and their reasons are the whole artifact; `picked contribution-first` on its own is a
+claim the coordinator can write without any competition having happened. Under the AUTO WAIVER the
+line still appears — the waiver removes the stop, never the record — and the coordinator picks,
+so this is an FYI in every mode rather than a new user stop (`agents/content-planner.md` §3).
+**The 承载证据
 column carries a concrete SOURCE TRACE, not a vague label** — a locator ("Fig 3 / p.4 ¶2", a table
 cell, a short verbatim span) — so a watching auto-mode user can catch a per-slide grounding mismatch
 even though the checkpoint is an FYI, not a stop (this is the cheapest fidelity catch on the path

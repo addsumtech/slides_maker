@@ -15,7 +15,20 @@
     "",
     "`reference_reached` is the assertion this file exists for. It answers the one question that",
     "has burned this repo twice — 'was that reference actually READ during the run' — and it can",
-    "only be answered from a transcript, never from the artifact."
+    "only be answered from a transcript, never from the artifact.",
+    "",
+    "SCENARIO SELECTION. The later scenarios are chosen by BLIND SPOT, not to reach a count. Each",
+    "sits on a defect class this repo has actually shipped and that every existing gate passed",
+    "clean — CJK faces, signed native charts, non-16:9 canvases — and each carries an assertion",
+    "that did not exist before it. That is the test of whether a scenario earns its place: one",
+    "that only re-runs the assertions the earlier scenarios already run measures nothing new, and",
+    "twenty of those are not broader coverage, they are a longer bill.",
+    "",
+    "TWO MORE ARE WANTED AND ARE DELIBERATELY ABSENT: template replication and old-deck",
+    "restructuring. Both need an INPUT artifact (a .pptx to mimic or to rebuild), and this file has",
+    "no mechanism to ship or locate one. An eval whose input does not exist is not reproducible,",
+    "and writing it down anyway would inflate the count while measuring nothing. Building that",
+    "mechanism is the next piece of work — not a line in this file."
   ],
   "evals": [
     {
@@ -60,6 +73,60 @@
          "why": "a no-source deck is research-sourced, so the PRIMARY-SOURCE GATE owes a record"},
         {"kind": "text_absent", "values": ["placeholder", "TODO", "AI-generated", "Lorem"],
          "why": "build residue on a slide ships broken"}
+      ]
+    },
+
+    {
+      "id": "cjk-thesis-defense",
+      "prompt": "我下周要做硕士论文答辩，20 分钟，评审是三位磁共振方向的老师。论文做的是心脏 4D flow MRI 的加速重建：提出一个时空联合的低秩加正则方法，在 12 倍加速下相比 compressed sensing 基线，流速峰值误差从 8.4% 降到 3.1%，重建时间从 6 分钟降到 52 秒。有方法框架图和一张流场对比图。请做答辩幻灯片，中文。",
+      "expected": "Chinese-language defense deck: interview first, defense rubric (contribution → method → validation → limitations → Q&A backup), the user's two figures reused whole, strictly the given numbers. Every CJK run must declare an East-Asian face.",
+      "assertions": [
+        {"kind": "pptx_exists"},
+        {"kind": "lint_hard_clean"},
+        {"kind": "cjk_runs_have_ea_face",
+         "why": "PowerPoint picks the CJK face from <a:ea>, not <a:latin>. A run that sets only the Latin face renders Chinese through a host substitution — a different face, a different width, and tofu on a machine without the fallback. This repo already shipped a geometry bug from the same asymmetry (every width measured against <a:latin> while the glyphs came from <a:ea>, under-reporting Chinese by ~46%), and no lint here reads the file for it."},
+        {"kind": "text_contains", "values": ["8.4", "3.1", "52"],
+         "why": "the three numbers the user supplied must survive onto the slides verbatim"},
+        {"kind": "no_unsourced_numbers", "allow": ["8.4", "3.1", "52", "12", "6", "20", "4"],
+         "why": "any other figure on a slide was invented — the fidelity floor, mechanised"},
+        {"kind": "gates_present", "keys": ["critic", "design_plan"]},
+        {"kind": "reference_reached", "paths": ["references/multilingual.md"],
+         "why": "the CJK type rules live there, and a Chinese deck built without opening them is the run this scenario exists to catch"}
+      ]
+    },
+
+    {
+      "id": "signed-financial-data",
+      "prompt": "Make a 6-slide deck for our board on FY25 segment performance. Revenue by segment vs last year: Cloud +18.2%, Services +4.6%, Hardware -11.9%, Licensing -3.4%. Group operating margin went from 12.1% to 9.7%. Free cash flow was -$42M in H1 and +$61M in H2. The ask is approval to shift 15 headcount from Hardware to Cloud.",
+      "expected": "Exec readout: leads with the outcome and the ask, then justifies. The signed series (two negative growth rates, a negative H1 cash flow) must NOT be drawn as a native bar/column chart.",
+      "assertions": [
+        {"kind": "pptx_exists"},
+        {"kind": "slides_between", "lo": 5, "hi": 8},
+        {"kind": "lint_hard_clean"},
+        {"kind": "no_signed_native_bars",
+         "why": "LibreOffice renders a negative column at its ABSOLUTE height, so a -11.9% bar comes out looking exactly like +11.9%. The .pptx is correct, so every check that reads the deck passes; the render is a plausible chart pointing the wrong way, so every check that reads the PNG passes too. This is the one defect class in this repo with no gate at all, and a board deck reading a decline as growth is the worst case it has."},
+        {"kind": "text_contains", "values": ["18.2", "11.9", "9.7"],
+         "why": "the supplied figures, including the negative ones, must reach the slides"},
+        {"kind": "gates_present", "keys": ["critic", "design_plan"]},
+        {"kind": "reference_reached", "paths": ["references/data-viz.md"],
+         "why": "which chart type, and native-vs-raster, is decided there — and native-vs-raster is exactly what this scenario turns on"}
+      ]
+    },
+
+    {
+      "id": "non-16-9-portrait",
+      "prompt": "帮我做一组小红书图文，讲「为什么心脏 MRI 要做加速采集」，5 张卡片，面向没有医学背景的读者。",
+      "expected": "Portrait 3:4 social cards on the `red` format (7.5 x 10 in), not a 16:9 deck exported sideways: one idea per card, big type, self-read density, the format's safe_top/safe_bottom respected.",
+      "assertions": [
+        {"kind": "pptx_exists"},
+        {"kind": "canvas_is", "w_in": 7.5, "h_in": 10.0,
+         "why": "the whole scenario. Every other canvas assertion in this file is implicitly 16:9, so a pipeline that silently builds 10x5.625 and calls it a 小红书 note passes every existing eval — the format registry exists and nothing tested that it is ever reached."},
+        {"kind": "slides_between", "lo": 4, "hi": 7},
+        {"kind": "lint_hard_clean"},
+        {"kind": "cjk_runs_have_ea_face",
+         "why": "same East-Asian face rule; this one also checks it survives the non-default canvas path"},
+        {"kind": "reference_reached", "paths": ["references/canvas-formats.md"],
+         "why": "the per-surface layout DNA — a portrait card is not a wide slide with a different aspect, and this is where that is written"}
       ]
     }
   ]

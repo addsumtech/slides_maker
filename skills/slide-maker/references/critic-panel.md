@@ -42,9 +42,13 @@ verdict: a composed line is not wrong, it is simply unquoted, so nothing but a r
      repeats on interior slides, or `none (flat by register — <reason>)` — the critic's
      `register_interiors` check reads it), the motion manifest, the **chosen preset name + its `guard` string
      verbatim** (or `custom look — no preset guards`) (on the generated-template branch, plus the four identity-propagation contract lines — palette · type register · component geometry · surface), the **`signature proof:` token**
-     (`slide N → <png>` or `skipped: <carve>` — so the critic compares the SHIPPED signature slide
+     (one entry per ANCHOR — `signature slide N → <png> · complex slide M → <png> · data slide K →
+     <png>`, or `skipped: <carve>` — so the critic compares each SHIPPED anchor
      against the frame that was approved before the rest of the deck existed, and a silent skip is
-     visible), the **`logo plan:` line with its evidence
+     visible. Three anchors rather than one because the signature page only ever proved the
+     aesthetic risk: whether the design HOLDS the deck's densest page and whether the charts speak
+     its visual language are separate questions, and both used to reach the critic for the first
+     time at full deck size, where the fix is a rebuild), the **`logo plan:` line with its evidence
      token**, the **checkpoint motif line** (device + meaning + legibility mode), the **approved
      image opt-in rows with their per-row source tokens** (+ license/credit notes and any declared
      stylized deviation), and — **when a Q4 style example is in play** —

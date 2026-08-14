@@ -47,7 +47,9 @@ Read this before Step 2, then carry its evidence through the remaining steps.
    rendered archetype slides; do not replace the preview with a prose palette description. Keep the
    exact direction tokens and run the normal diversity check, rather than claiming four colorways are
    four directions. If a user says to decide, record the auto carve and the rejected alternatives.
-   Build and render the signature slide before the rest, as the normal signature-proof rule requires.
+   Build and render the THREE anchor slides before the rest, as the normal anchor-proof rule requires
+   (signature · the densest planned page · the key data/conclusion page — SKILL.md Step 4). One build
+   script, one render call; `design_plan.signature_proof` is the role-bearing list both gates check.
 2. **Write a focused build contract.** Declare type tokens before coding. On a 10in-wide 16:9 canvas,
    target body text at least 13.5pt for presented/text-heavy delivery and 12pt for self-read; a larger
    display token (normally at least 32pt) must create a real focal point. Reduce copy or split slides

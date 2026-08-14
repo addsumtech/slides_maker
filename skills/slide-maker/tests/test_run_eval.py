@@ -52,6 +52,28 @@ def check(name, cond, detail=""):
           + (("  — " + str(detail)) if detail and not cond else ""))
 
 
+def known_kinds():
+    """Every assertion kind `run_eval.check()` actually implements, read out of its source.
+
+    Collects the string on the right of every `kind == "..."` test inside check(). Deriving it
+    means a kind can never be "known" to this suite without a branch existing that decides it.
+    """
+    import ast
+    tree = ast.parse((SCRIPTS / "run_eval.py").read_text(encoding="utf-8"))
+    fn = next(n for n in ast.walk(tree)
+              if isinstance(n, ast.FunctionDef) and n.name == "check")
+    out = set()
+    for node in ast.walk(fn):
+        if not isinstance(node, ast.Compare) or not isinstance(node.left, ast.Name):
+            continue
+        if node.left.id != "kind" or not isinstance(node.ops[0], ast.Eq):
+            continue
+        rhs = node.comparators[0]
+        if isinstance(rhs, ast.Constant) and isinstance(rhs.value, str):
+            out.add(rhs.value)
+    return out
+
+
 def make_deck(d, *, slides=3, numbers=("2.1", "0.94"), notes=True, gates=None,
               residue=None, broken=False):
     """A minimal but REAL deck: built by deckkit, saved, scoreable like any other."""
@@ -96,9 +118,16 @@ def main():
         check("every eval has a unique id", len(ids) == len(set(ids)), ids)
         check("every eval carries at least one assertion",
               all(e.get("assertions") for e in evals))
-        known = {"pptx_exists", "slides_between", "lint_hard_clean", "gates_present",
-                 "text_contains", "text_absent", "no_unsourced_numbers", "notes_coverage",
-                 "reference_reached"}
+        # DERIVED from run_eval.check() by AST, not retyped here. It was a hand-kept literal set,
+        # which is the same drift this repo has already paid for elsewhere (a gate's own printed
+        # template listed six of the eight fields it enforced). A hand-kept mirror of a function's
+        # branches fails in the direction that hurts: a NEW assertion kind reads as "the scorer
+        # cannot decide this" and the obvious fix is to append a string to the list — at which
+        # point the check is asserting that a name appears in two places, not that the scorer
+        # implements it.
+        known = known_kinds()
+        check("the decidable-kind set is derived from check(), not a hand-kept list",
+              len(known) >= 9, sorted(known))
         unknown = sorted({a["kind"] for e in evals for a in e["assertions"]} - known)
         check("no eval names an assertion the scorer cannot decide", not unknown, unknown)
 
@@ -198,6 +227,86 @@ def main():
         r = rows_of(str(good), [{"kind": "slides_between"}])          # missing lo/hi
         check("a malformed assertion FAILS rather than passing quietly",
               r["slides_between"]["ok"] is False, r["slides_between"]["detail"])
+
+        # ---- the three BLIND-SPOT assertions ------------------------------------------------
+        # Each was added with a scenario that targets a defect class this repo has shipped and
+        # every existing gate passed clean. An assertion with no test of its own is the exact
+        # trap that has already bitten twice here: the check runs, decides nothing, and the suite
+        # stays green. Both directions are pinned for all three.
+
+        # canvas_is — nothing before this ever read the slide size, so a pipeline that silently
+        # builds 16:9 and calls it a portrait card passed every eval in the file.
+        port = tmp / "portrait"
+        port.mkdir()
+        dk.FONT, dk.EAFONT = "Helvetica Neue", "Hiragino Sans GB"
+        prs = dk.blank_deck(7.5, 10.0)
+        s = dk.add_slide(prs)
+        dk.text(s, 0.5, 1.0, 6.5, 0.6,
+                [[("为什么要加速采集", 24, dk.DEEP, True, False, "Hiragino Sans GB")]],
+                space_after=0)
+        prs.save(str(port / "deck.pptx"))
+        r = rows_of(str(port), [{"kind": "canvas_is", "w_in": 7.5, "h_in": 10.0}])
+        check("canvas_is passes on the portrait canvas it names",
+              r["canvas_is"]["ok"] is True, r["canvas_is"]["detail"])
+        r = rows_of(str(port), [{"kind": "canvas_is", "w_in": 10.0, "h_in": 5.625}])
+        check("canvas_is FAILS when the deck is not the canvas the scenario asked for",
+              r["canvas_is"]["ok"] is False, r["canvas_is"]["detail"])
+
+        # cjk_runs_have_ea_face — the deck above set EAFONT, so it is the passing case.
+        r = rows_of(str(port), [{"kind": "cjk_runs_have_ea_face"}])
+        check("cjk_runs_have_ea_face passes when CJK runs declare an <a:ea> face",
+              r["cjk_runs_have_ea_face"]["ok"] is True, r["cjk_runs_have_ea_face"]["detail"])
+
+        noea = tmp / "noea"
+        noea.mkdir()
+        dk.EAFONT = None                      # the real failure: only <a:latin> reaches the run
+        prs = dk.blank_deck()
+        s = dk.add_slide(prs)
+        dk.text(s, 0.6, 1.0, 8.8, 0.6,
+                [[("心脏磁共振加速采集", 24, dk.DEEP, True, False, "Helvetica Neue")]],
+                space_after=0)
+        prs.save(str(noea / "deck.pptx"))
+        dk.EAFONT = "Hiragino Sans GB"
+        r = rows_of(str(noea), [{"kind": "cjk_runs_have_ea_face"}])
+        check("cjk_runs_have_ea_face FAILS when Chinese text carries only a Latin face — the "
+              "asymmetry that already cost this repo a 46%-wrong width measurement",
+              r["cjk_runs_have_ea_face"]["ok"] is False, r["cjk_runs_have_ea_face"]["detail"])
+        r = rows_of(str(good), [{"kind": "cjk_runs_have_ea_face"}])
+        check("…and a deck with no CJK at all passes rather than being punished for it",
+              r["cjk_runs_have_ea_face"]["ok"] is True, r["cjk_runs_have_ea_face"]["detail"])
+
+        # no_signed_native_bars — the defect class with no gate anywhere in this repo.
+        def chart_deck(dest, values, kind="column"):
+            dest.mkdir()
+            prs = dk.blank_deck()
+            s = dk.add_slide(prs)
+            dk.native_chart(s, 0.8, 1.0, 8.0, 3.6, ["Cloud", "Services", "Hardware"],
+                            [("YoY %", values)], kind=kind)
+            prs.save(str(dest / "deck.pptx"))
+            return dest
+
+        neg = chart_deck(tmp / "negbar", [18.2, 4.6, -11.9])
+        r = rows_of(str(neg), [{"kind": "no_signed_native_bars"}])
+        check("no_signed_native_bars FAILS on a native column chart carrying a negative value — "
+              "LibreOffice draws it at absolute height, so the .pptx is right and the render "
+              "silently points the wrong way",
+              r["no_signed_native_bars"]["ok"] is False, r["no_signed_native_bars"]["detail"])
+
+        pos = chart_deck(tmp / "posbar", [18.2, 4.6, 11.9])
+        r = rows_of(str(pos), [{"kind": "no_signed_native_bars"}])
+        check("…and passes on the same chart with no negative value",
+              r["no_signed_native_bars"]["ok"] is True, r["no_signed_native_bars"]["detail"])
+
+        line = chart_deck(tmp / "negline", [18.2, 4.6, -11.9], kind="line")
+        r = rows_of(str(line), [{"kind": "no_signed_native_bars"}])
+        check("…and a LINE chart with the same negative value passes — line and scatter render "
+              "signed data correctly, and flagging them would route working charts through a "
+              "workaround they do not need",
+              r["no_signed_native_bars"]["ok"] is True, r["no_signed_native_bars"]["detail"])
+
+        r = rows_of(str(good), [{"kind": "no_signed_native_bars"}])
+        check("…and a deck with no native chart at all passes",
+              r["no_signed_native_bars"]["ok"] is True, r["no_signed_native_bars"]["detail"])
 
         # ---- exit codes: the only thing CI reads -------------------------------------------
         def run(deck, ev_id):
