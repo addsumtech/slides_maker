@@ -998,6 +998,28 @@ def check_icons(
     if len(families) > 1:
         errors.append("all icon evidence must use one coherent icon family")
 
+    # 🔴 THE OPT-IN HOLE. Everything below is keyed on a slide having been MARKED `categorical`,
+    # which the run writes about itself. Mark nothing, and a deck with zero icons satisfies every
+    # line of this function — measured on a real 12-slide Codex deck: 0 pictures in the file, and
+    # this gate had nothing to say. A gate that only fires when the author opts in is not a
+    # detector, and the shared path's equivalent is one (it hashes the icon-sized pictures in the
+    # built file and compares them against the declared family).
+    #
+    # So: if NOTHING is categorical, that claim is itself checked against the deck. A deck with
+    # repeated same-size label sets — the shape of a category row — and no icons anywhere is the
+    # case this whole field exists for. Waivable per slide like the rest, because the detector
+    # over-counts by construction (tables, timelines, stat rows) and an over-counting detector
+    # must not hold a deck without an escape.
+    if design_rows and not any(d.get("categorical") for d in design_rows.values()):
+        if not waived(evidence, "icon", scope="deck-not-categorical"):
+            errors.append(
+                "no slide is marked `categorical`, so every icon check below was skipped — and the "
+                "deck carries no icon evidence. If that is true, record it: a waiver "
+                '{"kind": "icon", "scope": "deck-not-categorical", "reason": "<why this deck names '
+                'no tools/entities/roles/pillars>"}. If it is not true, mark the categorical slides '
+                "and build the family (scripts/icons.py). Self-declaring nothing categorical is how "
+                "a deck ships zero icons through a gate written to prevent exactly that.")
+
     for slide, design in design_rows.items():
         if not design.get("categorical"):
             continue

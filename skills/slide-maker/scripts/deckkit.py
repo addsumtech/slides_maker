@@ -7648,12 +7648,28 @@ def _graze_faults(prs):
                 if a / ink_a >= CONTAINED:
                     continue                  # the label is ON the mark — ordinary, and correct
                 txt = (tsh.text_frame.text or "").strip().replace("\n", " ")[:26]
+                # TWO different faults share this signature, and the message used to name only
+                # the first — which sent an author looking along the wrong axis. Measured on a
+                # delivered deck: this fired on exactly the three pages whose real defect was
+                # VERTICAL (a two-line title growing down onto an accent rule), and its advice
+                # was about label column edges, so the diagnosis pointed sideways.
+                # `tr` is the text's INK rect, `mb` the mark's box. Vertical when the overlap is
+                # taller-than-wide relative to how the two sit: the text is entering the mark from
+                # above or below rather than from the side.
+                _vert = iy < ix
+                _fix = ("Vertical here — the text sits above or below the shape's middle, so this "
+                        "is a block that GREW into a mark placed at a fixed y (a title wrapping to "
+                        "a second line is the usual cause). Derive the y from the block's MEASURED "
+                        "end, not a coordinate; see HEADLINE_CROWDED, which measures that gap "
+                        "directly."
+                        if _vert else
+                        "Horizontal here — derive the label column's edge from the DATA (the "
+                        "furthest the mark can reach), not from the axis; shortening the string "
+                        "only moves the collision.")
                 out.append((n, "WARN", "TEXT_GRAZES_SHAPE",
                             f"text {txt!r} runs {a:.3f}in² into a filled shape it is not "
                             "inside — TEXT_OVERLAP measures text against TEXT, so a label "
-                            "grazing a bar/chip/node is invisible to it. Derive the label "
-                            "column's edge from the DATA (the furthest the mark can reach), not "
-                            "from the axis; shortening the string only moves the collision. "
+                            f"grazing a bar/chip/node is invisible to it. {_fix} "
                             "Deliberate? declare it with deckkit.overlap_intent(shape, '<why>')"))
                 break
     return out
@@ -8130,6 +8146,58 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
                             break
                     findings.append((n, "CRITICAL", "TEXT_OVERLAP",
                         f"text ink overlaps ({ov:.2f}in²): \"{ta}…\" ✕ \"{tb}…\"{_hint}"))
+        # ---- HEADLINE_CROWDED: the deck's biggest text and the first block under it, nearly or
+        #      actually touching. THE MEASURED GAP, and why this is a distinct check:
+        #
+        #      A title box is sized for ONE line and the content below it is placed at a picked y.
+        #      The moment the title wraps to TWO, its ink grows down into a block that never moved.
+        #      Nothing here saw that. `TEXT_OVERLAP` needs the inks to actually cross and these
+        #      merely graze; `RULE_THROUGH_TEXT` needs a rule to be crossed, not approached; and
+        #      `SLIVER_GAP` measures panel against panel, never text against text. Measured on a
+        #      delivered 12-slide deck: three pages with title-to-body gaps of 0.01in, 0.05in and
+        #      -0.12in (overlapping) reported ZERO criticals, and the author found all three by eye.
+        #
+        #      Scoped to the HEADLINE only — the largest text starting in the top third — because a
+        #      general "two text blocks are close" rule would fire on every list, caption pair and
+        #      stat block in every deck, which is how a check gets ignored. The headline is where
+        #      the growth actually happens, since it is the one block whose length nobody controls.
+        _head = None
+        for t in text_inks:
+            _sh, _ink, _sz = t[0], t[1], t[2] if len(t) > 2 else 0
+            if _ink[1] > H*0.34:                      # not a headline if it starts mid-page
+                continue
+            _fs = _max_font_pt(_sh) if "_max_font_pt" in dir() else None
+            _key = _fs if _fs else _ink[3]            # font size when known, else ink height
+            if _head is None or _key > _head[0]:
+                _head = (_key, t)
+        if _head is not None:
+            _ht = _deflate(_head[1])
+            _hbot = _ht[1] + _ht[3]
+            _below = None
+            for t in text_inks:
+                if t[0] is _head[1][0]:
+                    continue
+                d = _deflate(t)
+                # must start below the headline's ink AND share horizontal extent with it,
+                # so a side rail parallel to the title is not read as "the block underneath"
+                if d[1] >= _ht[1] and not (d[0] > _ht[0]+_ht[2] or d[0]+d[2] < _ht[0]):
+                    if _below is None or d[1] < _below[1]:
+                        _below = d
+            if _below is not None:
+                _gap = _below[1] - _hbot
+                _txt = _snip(_head[1][0].text_frame.text, 22)
+                if _gap < 0.06:
+                    findings.append((n, "CRITICAL", "HEADLINE_CROWDED",
+                        f"only {_gap:.2f}in between the headline \"{_txt}…\" and the block under it"
+                        f" — derive that block's y from the headline's MEASURED end "
+                        f"(dk.measure_text(...) + a gap token), never a fixed coordinate. A title "
+                        f"sized for one line grows into whatever sits below it the moment it wraps "
+                        f"to two."))
+                elif _gap < 0.18:
+                    findings.append((n, "WARN", "HEADLINE_CROWDED",
+                        f"{_gap:.2f}in between the headline \"{_txt}…\" and the block under it reads "
+                        f"as cramped (aim >= ~0.18in, the spacing scale's group gap) — derive it "
+                        f"from the headline's measured end rather than a picked y"))
         # ---- FOOTER intrusion for CARDS (a filled panel reaching the actual footer row)
         if footer_top is not None:
             for sh, bb, st, ink, r in info:
