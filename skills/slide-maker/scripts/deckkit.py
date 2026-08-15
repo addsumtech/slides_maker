@@ -8161,10 +8161,18 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
         #      general "two text blocks are close" rule would fire on every list, caption pair and
         #      stat block in every deck, which is how a check gets ignored. The headline is where
         #      the growth actually happens, since it is the one block whose length nobody controls.
+        #      🔴 A DECLARED overlap is exempt, on the same terms as TEXT_OVERLAP. `overlap_intent`
+        #      exists for exactly the composition this would otherwise refuse — a giant display word
+        #      with a small line riding it, where a near-zero gap IS the design. The first cut of
+        #      this check omitted that and broke smoke_deckkit's "a DECLARED composed overlap must
+        #      build" assertion, which exists to catch a new rule making a documented escape
+        #      unreachable. Both sides skip a declared shape: the headline, and the block under it.
         _head = None
         for t in text_inks:
             _sh, _ink, _sz = t[0], t[1], t[2] if len(t) > 2 else 0
             if _ink[1] > H*0.34:                      # not a headline if it starts mid-page
+                continue
+            if _declared(t):                          # deliberately composed — not a collision
                 continue
             _fs = _max_font_pt(_sh) if "_max_font_pt" in dir() else None
             _key = _fs if _fs else _ink[3]            # font size when known, else ink height
@@ -8175,7 +8183,7 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
             _hbot = _ht[1] + _ht[3]
             _below = None
             for t in text_inks:
-                if t[0] is _head[1][0]:
+                if t[0] is _head[1][0] or _declared(t):
                     continue
                 d = _deflate(t)
                 # must start below the headline's ink AND share horizontal extent with it,
