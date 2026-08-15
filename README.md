@@ -206,11 +206,11 @@ It does not promise a perfect deck in one shot. It removes the expensive part �
 
 | `review:` | what runs | measured |
 | --- | --- | --- |
-| `fast` | 1 generalist critic, 1 round, top-5 claims fact-checked — ask for it by name | ~6 subagents · ~250k tokens |
-| `standard` | 2 focused critics (content + design), 2 rounds, top-10 claims — default for a lab meeting or status update | ~12 · ~600k |
-| `thorough` | multi-critic panel + arbiter cross-check, 3 rounds, every claim — default for a defense or pitch | ~32 · ~2M |
+| `fast` | 1 generalist critic, 1 round, top-5 claims fact-checked | ~6 subagents · ~250k tokens |
+| `standard` | 2 focused critics (content + design), 2 rounds, top-10 claims | ~12 · ~600k |
+| `thorough` | multi-critic panel + arbiter cross-check, 3 rounds, every claim | ~32 · ~2M |
 
-<sub>Measured on one 12-page research-sourced deck, July 2026 — orders of magnitude, not guarantees. Say nothing and your purpose picks the tier.</sub>
+<sub>Say nothing and your purpose picks the tier; `fast` is the one you have to ask for. Figures measured on one 12-page research-sourced deck, July 2026 — orders of magnitude, not guarantees.</sub>
 
 ---
 
