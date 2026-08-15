@@ -315,6 +315,37 @@ def _report_palette_drift(pptx_path, declared):
           "field and this goes quiet.)")
 
 
+def _report_file_observations(pptx_path):
+    """What the DECK shows, for the case where there is no record to read.
+
+    Every hand-off gate keys off `.deck-gates.json`, so a deck with no record gets one message
+    about the record and nothing about itself — which teaches that the failure is paperwork. The
+    deck that motivated this had five slides of category content and zero icons; the record being
+    absent is why nothing said so, but writing the record would not have fixed it either.
+
+    File-derived only, no declaration involved, and it never decides anything: it prints and
+    returns, and the caller still dies on the missing record.
+    """
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import lint_deck as _ld
+        from pptx import Presentation as _P
+        prs = _P(str(pptx_path))
+        ev = _ld.icon_evidence(prs)
+    except Exception:
+        return
+    if ev["icons"] == 0 and len(ev["categorical"]) >= 2:
+        print("[gates] the deck itself, before the record: slides {} read as category sets and it "
+              "carries NO icon at all.".format(", ".join(map(str, ev["categorical"]))))
+        print("        On category-rich content an icon family is a design must "
+              "(slide-design self-verify (g)) — this is a real miss, not a bookkeeping one, and "
+              "it survives writing the record.")
+        # FLUSH. `die()` writes to stderr unbuffered while this is stdout, block-buffered when
+        # piped — so without the flush the one line about the actual deck lands BELOW forty lines
+        # of JSON-shape instructions, which is where a reader has already stopped.
+        sys.stdout.flush()
+
+
 def _report_icon_waiver(pptx_path, fam):
     """Name the slides that contradict an `icon_family: none - <reason>` waiver.
 
@@ -990,6 +1021,13 @@ def check_handoff_gates(pptx, mode="presented", gate_check=False):
         return
     path = os.path.join(os.path.dirname(os.path.abspath(pptx)) or ".", GATES_FILE)
     if not os.path.isfile(path):
+        # SAY WHAT THE FILE ITSELF SHOWS, before saying a word about missing paperwork. Every gate
+        # below reads `.deck-gates.json`, so with no record they all report the same thing — write
+        # the record — and a reader learns the problem is bookkeeping. It is not. Measured on a
+        # delivered 13-slide deck that had no record at all: the FILE showed five slides of
+        # category content and zero icons, a real design miss that no amount of paperwork fixes,
+        # and every gate stayed silent about it because the gates read the record, not the deck.
+        _report_file_observations(pptx)
         die("--deliverables is the hand-off run, and this deck has no record that its quality "
             "gates ran.\n"
             "  Missing: {}\n\n"

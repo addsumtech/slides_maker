@@ -243,12 +243,13 @@ def _slide_bg_box(slide, sw, sh):
             "declared": False, "hollow": False}
 
 
-def _boxes(slide, sw, sh, slide_no=None):
+def _boxes(slide, sw, sh, slide_no=None, record=True):
     out = []
     _bg = _slide_bg_box(slide, sw, sh)
     if _bg is not None:
         out.append(_bg)                                  # index 0 = below every real shape
-    for zi, (s, tf, grp) in enumerate(_flat_shapes(slide.shapes, slide_no=slide_no)):
+    for zi, (s, tf, grp) in enumerate(_flat_shapes(slide.shapes, slide_no=slide_no,
+                                                  record=record)):
         try:
             dx, dy, sx, sy = tf
             l = (s.left * sx + dx) / EMU
@@ -394,7 +395,12 @@ def categorical_slides(prs, sw=None, sh=None):
     hits = []
     for i, s in enumerate(prs.slides, 1):
         try:
-            bx = [b for b in _boxes(s, sw, sh) if b.get("text") and not b.get("bg")]
+            # record=False: this is a read-only answer walk, not the main pass. The group-skip
+            # notes are recorded ONCE by the walk that carries slide_no, and a second recording
+            # walk re-reports every rotated group as "slide ?" — the exact regression
+            # tests/test_lint_regressions.py guards.
+            bx = [b for b in _boxes(s, sw, sh, record=False)
+                  if b.get("text") and not b.get("bg")]
         except Exception:
             continue
         groups = {}
@@ -415,6 +421,42 @@ def categorical_slides(prs, sw=None, sh=None):
                     done = True
                     break
     return hits
+
+
+def icon_evidence(prs, sw=None, sh=None):
+    """What the BUILT FILE says about icons: which slides read as category sets, and how many
+    icon-sized content pictures are actually in the deck.
+
+    Read from the pptx, never from a declaration. Every icon rule in this skill used to terminate
+    in something the model writes about its own output — `design_plan.icon_family` in
+    `.deck-gates.json`, the `categorical` flag in the Codex record, a PRE-FLIGHT tick. All three
+    are self-certifying, so a run that skips them produces a deck with zero icons and nothing
+    anywhere notices. Measured on a delivered 13-slide deck: 0 pictures, 5 slides reading as
+    category sets, and no gate had anything to say — because the file the gates read was never
+    written.
+
+    Icon COUNT drops chrome the same way `render_deck` has: a repeated logo is icon-sized, and a
+    deck stamping one 0.6in mark on 8 slides is not a deck with 8 icons. Chrome repeats at the same
+    geometry on most slides; a content icon set appears on a minority of them.
+
+    Returns {"categorical": [slide numbers], "icons": int}. Both callers treat `categorical` as a
+    prompt to re-decide rather than proof — the detector over-counts by construction (tables,
+    timelines, stat rows share the shape of a category row).
+    """
+    if sw is None or sh is None:
+        sw, sh = prs.slide_width / 914400.0, prs.slide_height / 914400.0
+    sig, n_sl = {}, len(prs.slides) or 1
+    for s in prs.slides:
+        try:
+            boxes = _boxes(s, sw, sh, record=False)      # read-only walk; see categorical_slides
+        except Exception:
+            continue
+        for b in boxes:
+            if b.get("pic") and not b.get("bg") and b["w"] < 1.2 and b["h"] < 1.2:
+                k = (round(b["l"], 1), round(b["t"], 1), round(b["w"], 1), round(b["h"], 1))
+                sig[k] = sig.get(k, 0) + 1
+    icons = sum(c for c in sig.values() if c <= max(2, 0.5 * n_sl))
+    return {"categorical": categorical_slides(prs, sw, sh), "icons": icons}
 
 
 def _text_w(text, size_pt, face=None, bold=False):
@@ -1945,7 +1987,7 @@ def _composed_void(r):
     return bool(dominant and sparse)
 
 
-def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False):
+def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False, icon_ev=None):
     if not rows:
         return {}
     n = len(rows)
@@ -2313,6 +2355,26 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False):
                          f"solid panels/cards — the greedy default form; re-form the ones whose idea "
                          f"has a shape (ratio → proportional bar · flip → diagram · division → split · "
                          f"process → roadmap), don't just restyle the boxes")
+    # NO ICONS ON CATEGORY CONTENT: the deck names categories and carries no icon at all. Derived
+    # from the FILE — no plan, no declaration, no flag the run writes about itself. Every other
+    # icon rule in this skill terminates in something self-certified, so a run that skips the
+    # design plan and the hand-off record ships zero icons and nothing anywhere speaks. Measured on
+    # a delivered 13-slide deck: 0 pictures, 5 slides reading as category sets, silence everywhere.
+    #
+    # Needs BOTH halves to fire, and the second is the load-bearing one: a deck with SOME icons has
+    # made the decision, whatever the count. This only speaks when the answer is zero.
+    if mode != "surface" and icon_ev:
+        _ie = icon_ev
+        if _ie["icons"] == 0 and len(_ie["categorical"]) >= 2:
+            warns.append(
+                f"NO ICONS ON CATEGORY CONTENT: slides {', '.join(map(str, _ie['categorical']))} "
+                f"carry parallel label sets (3+ short peers on one baseline across half the canvas "
+                f"— the shape of a category row) and the deck contains no icon-sized picture at "
+                f"all. On category-rich content an icon family is a design must, not a taste call "
+                f"(slide-design self-verify (g)). Build one (scripts/icons.py, one family, "
+                f"recolored to the palette), or record `icon_family: \"none — <why THESE slides "
+                f"read better without one>\"` in .deck-gates.json — the detector over-counts on "
+                f"tables and timelines, so this is a re-decision, not a verdict")
     # TIMID COVER: the cover is the deck's poster — its largest run should reach display scale
     # (≥2.5× body; warn below 2×). max_pt>0 guards template-inherited sizes (only explicit-size runs
     # count); a deliberately quiet register answers with the one-clause exception.
@@ -3170,7 +3232,14 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
         j_warns.append({"slide": 0, "text": m, "severity": "warning"})
         warn_total += 1
     lums = _load_render_lums(path, renders_dir, len(stats_rows), pngs=pngs)
-    deck_stats = _print_stats(stats_rows, mode, sw, sh, lums=lums, static_ok=static_ok)
+    # icon evidence is read from the FILE here, where `prs` is already open, and handed down —
+    # `_print_stats` must not re-open the deck just to answer one question.
+    try:
+        _icon_ev = icon_evidence(prs, sw, sh)
+    except Exception:
+        _icon_ev = None
+    deck_stats = _print_stats(stats_rows, mode, sw, sh, lums=lums, static_ok=static_ok,
+                              icon_ev=_icon_ev)
     if stats_out is not None:
         stats_out.update(deck_stats)
         # Whether the render-backed members of SAMENESS_CODES could run at all. A gate that cannot
