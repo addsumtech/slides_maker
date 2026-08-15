@@ -9,6 +9,91 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+## [4.9.0] — 2026-08-15
+
+### Added
+- **The arc COMPETITION** — `scripts/arc_divergence.py`. The design side has rendered alternatives
+  for years (the direction gate) while content DERIVED its arc from the primary goal and then
+  recorded "which arc I chose and why": a reason written after the fact, against no alternative.
+  The planner now returns 2–3 candidate arcs over one ledger and the script scores them on four
+  axes, with an EFFORT check beside the divergence one — arcs collapse into one real candidate and
+  two sketches, which a divergence check alone scores as a healthy set. The content checkpoint
+  carries a required `arc gate:` line.
+- **`HEADLINE_CROWDED`** (CRITICAL <0.06in / WARN <0.18in) — the gap between a slide's headline and
+  the block under it. A title box sized for ONE line, with content placed below at a picked `y`,
+  collides the moment the title wraps to TWO. Three existing checks each miss it for a specific
+  reason: `TEXT_OVERLAP` needs the inks to CROSS and these graze, `RULE_THROUGH_TEXT` needs a rule
+  to be crossed rather than approached, and `SLIVER_GAP` measures panel against panel. Measured on
+  a delivered 12-slide deck: gaps of 0.01in, 0.05in and −0.12in, and `lint_layout` reported zero
+  criticals. Scoped to the headline, and it honours `overlap_intent` — a declared composed overlap
+  is a composition, not a collision.
+- **`lint_deck.categorical_slides()`** — the peer-group detector (3+ short peers sharing a baseline
+  across half the canvas: the shape of a category row) extracted from `render_deck` and now imported
+  by both gate paths. One definition, copied by neither.
+- **`DATUM SCALE` and `ASSET NOT USABLE` see inside groups**, via `_deep_shapes()` carrying a
+  container id — a mis-scaled bar pair and a flat placeholder picture each became invisible the
+  moment they were grouped, and composing related marks into one group is ordinary practice.
+- **Chart geometry as a correctness requirement** (from an analysis of `hugohe3/ppt-master`): bar
+  heights and sweep angles are neither structural nor caught by any validity rule.
+- **The ANCHOR PROOF is three pages, not one** — `signature` · `complex` (the densest planned page)
+  · `data` (the key data/conclusion page). One page only ever proved the aesthetic risk survived;
+  the design that looks right on it can still fail to hold the deck's densest page, and the charts
+  can still obey none of the palette and type decisions that were made against text.
+- **The motif contract**: a derivation LADDER (`topic → core concepts → visual language → motif`,
+  where skipping the middle rung is what produces industry stereotype), a GENERATIVITY triple
+  (`motif generates:` — background · markers · one page whose geometry IS the motif), and a fourth
+  STRANGER TEST tell — **one form, one meaning, deck-wide**. That last one is the failure a user hit
+  twice: a device meaning one thing on the cover and another inside passes every per-page check and
+  still leaves the reader asking what it means.
+- **Speed tools that cut round-trips without cutting what a build looks at**: `deck_cycle.py`
+  (build → lint, `--render` for the full loop), `dispatch_brief.py` (write the brief once, generate
+  each dispatch), `slide_index.py` (slide → file:line on a fanned-out deck) and
+  `roundtrip_budget.py` (measure a run's cost from the transcript rather than recalling it).
+  Measured motivation: on one 12-page deck the deterministic pipeline is 9.1s and the session was
+  88 minutes — computation was 0.2% of the cost.
+- Three evals for blind spots the suite could not see, and `run_eval`'s `reference_reached`
+  assertion, which is the only way to answer *was that reference actually read during the run*.
+
+### Changed
+- **Both gate paths now require the same evidence.** A field-by-field diff (rather than another
+  read-through) found the Codex record missing `concept`, `palette` and any record of the CONTENT
+  competition, while it bound the DESIGN one to a hashed `directions.html` — strict about the
+  cheaper decision, silent about the costlier one. `content.arc`, `design.concept`,
+  `design.palette`, `design.motif_generates` and `interview.length` are required on both.
+  Four differences were NOT drift and are documented as deliberate: `form_ledger` and `icon_family`
+  are covered by richer per-slide structures on the Codex side, its component-cluster check is the
+  `form_reach` equivalent, and it has no critic-skip waiver at all.
+- **The sameness composite reaches the Codex gate** — imported from `lint_deck.SAMENESS_CODES`, and
+  ported as a COMPOSITE (≥4 distinct signals, ≥1 structural) rather than as more per-warning rows.
+  Per-warning entries would have refused decks the shared path correctly ships.
+- **The icon guard blocks instead of printing.** It exists because a deck once shipped with zero
+  icons through every automated gate, and it answered that incident with a printed line and exit 0
+  — the same outcome the incident had. Declared-but-absent is now fatal; the `icon_family: none`
+  arm stays a print, because its detector over-counts by design.
+- **The Codex icon check reads the FILE, not the run's own claim.** It keyed on
+  `design.slides[].categorical`, so marking nothing categorical switched every icon check off.
+  Measured on a delivered 12-slide Codex deck: 0 pictures, gate silent.
+- **The interview asks the same questions without a choice UI.** The direct-question fallback had
+  five numbered lines and none was deck LENGTH, while `interview-protocol.md` had carried "deck
+  length is ALWAYS the user's choice" the whole time — a layer-2 rule with no layer-1 trigger fires
+  only on the hosts that were already going to follow it. A choice UI carries the axes for you;
+  plain text carries nothing, so the axes with no downstream artifact are the ones that vanish.
+  `codex-runtime.md` gained a step 0 (it began at step 2, implying the interview is the compressible
+  part), and `interview.length` is now a required field.
+- The Codex evidence template shows **several slide rows** in `content.slides` and `design.slides`.
+  `slide_count: 10` sat above a list containing exactly ONE row, and a template's example teaches
+  louder than its numbers — observed result: decks arriving at one page when no length was given.
+- `TEXT_GRAZES_SHAPE` names the AXIS. It fired on exactly the three bad slides of a delivered deck
+  and then gave horizontal advice for a vertical fault, which is worse than silence.
+
+### Fixed
+- `arc_divergence` raised on any beat role outside a closed 12-entry list, while the file the
+  planner reads while writing those roles calls that list "a vocabulary, not a straitjacket" — a
+  planner following its own instructions could be hard-blocked.
+- Five further defects from a self-audit of the same commit, and three silent degradations in the
+  speed tools where each kept working and stopped being right — most notably a stage that RAN and
+  found things being labelled identically to one that BROKE.
+
 ## [4.8.0] — 2026-08-11
 
 ### Added
