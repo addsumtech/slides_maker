@@ -352,9 +352,18 @@ style, its template) — every deck starts fresh with these questions.
 Collect all four answers in **one cheap interview turn**. Match the host UI:
 - **If the runtime provides a structured choice UI** (for example Claude Code's
   `AskUserQuestion`), ask the four questions in one batched call with concise options.
-- **If the runtime does not provide that UI** (for example plain Codex chat), ask one
-  compact direct question and let the user answer in free text. Do not fabricate a fake
-  multiple-choice form; give short examples only where they reduce ambiguity.
+- **If the runtime does not provide that UI** — plain Codex chat, a GPT/Gemini/Kimi chat surface,
+  an API caller, a CLI with no widgets: **the norm, not the exception** — ask one compact direct
+  question and let the user answer in free text. Do not fabricate a fake multiple-choice form;
+  give short examples only where they reduce ambiguity.
+  🔴 **Fewer WIDGETS, never fewer QUESTIONS.** A choice UI carries the axes for you — every option
+  the host renders is one you cannot forget to ask. In plain text nothing carries them, so the
+  axes that vanish are exactly the ones with no downstream artifact demanding them: **deck length**
+  first (measured: decks arriving at ONE page), then delivery mode, then the review tier. Ask all
+  six numbered lines below; a host without widgets is not a host with a shorter interview.
+  🔴 **Ask in the USER's language.** The fallback block is written in English because this file is;
+  a user writing 中文 gets the same six questions in 中文. Translating the questions is not
+  personalisation, it is the baseline — and it costs one pass over a block you are already typing.
 
 Direct-question fallback:
 ```text
@@ -362,11 +371,24 @@ Before I build, please give me:
 1. Template/brand: existing template, new template, design a clean one, or generate one with an image tool?
 2. Purpose/audience/time: who is this for, how long — and is it presented live, screen-shared, sent to self-read, or presented live THEN sent around (hybrid: presented density on-slide, self-sufficient speaker notes)? Main goal: inform, support a decision, or inspire action? — If decide/inspire, one cheap follow-up: what exactly is the ASK, who says yes, and what's the biggest objection you expect? (Duarte's briefing trio; it sharpens the money slide and the close.)
 3. Source material: paper, deck, doc, figures, repo, or none? — When material IS provided, one follow-up: condense freely, preserve key phrasing verbatim, or hybrid (verbatim for claims/numbers, condense elsewhere)? Record the answer; it governs every rewrite downstream.
-4. Style/language: density (≈a phrase / one sentence / 2–3 sentences per point?), tone (minimal/corporate/academic/playful), and language (中文/English/etc.)?
-5. Review effort: `standard` (what your purpose derives) or `thorough`? Say `fast` if you want it
+4. HOW MANY SLIDES: a spoken deck takes it from the time budget (~1 slide/minute); a self-read one
+   needs it said — short ~5-8, medium ~9-15, long 16+. Never assume, and never take silence as ONE.
+5. Style/language: density (≈a phrase / one sentence / 2–3 sentences per point?), tone (minimal/corporate/academic/playful), and language (中文/English/etc.)?
+6. Review effort: `standard` (what your purpose derives) or `thorough`? Say `fast` if you want it
    cheap and accept one generalist critic and a single round — this is the deck's cost dial, and
    `fast` is the only tier you have to ask for.
 ```
+
+🔴 **The length question is on this list because it was MISSING from it**, while
+`references/interview-protocol.md` had carried "deck length is ALWAYS the user's choice — surface
+it, never silently derive it" the whole time. A runtime with a choice UI reads that file and asks;
+a plain-chat runtime copies THIS block, and this block never mentioned length. That is the
+layering failure this skill keeps re-learning: a rule in layer 2 with no trigger in layer 1 is a
+rule that only fires on the hosts that were already going to follow it.
+🔴 **A missing answer is a QUESTION, never a default — and least of all a one-slide default.** If
+the user names no length and no time budget, ask; if they decline to answer, derive it from the
+CONTENT (how many takeaways the material actually supports) and say the number in the plan before
+building. A deck silently built at one page is not a small deck, it is an unasked question.
 
 This batching is deliberate: the interview is non-negotiable, so it has to be *cheap*.
 Only drop a question if the user already answered *that* one in their current request — or the

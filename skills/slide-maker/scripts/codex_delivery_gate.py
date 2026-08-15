@@ -71,6 +71,12 @@ TEMPLATE = {
     "interview": {
         "mode": "answered",
         "record": "<user answers or auto-carved rationale>",
+        # The one interview axis with a field of its own, because it is the one that goes missing
+        # on a runtime with no choice UI and nothing downstream complains. A range, a time budget,
+        # or a recorded derivation are all valid: "medium, 9-15" / "20 min, so ~18" / "user
+        # declined — derived 11 from the ledger". What is NOT valid is silence, whose observed
+        # result is a one-slide deck.
+        "length": "<what the user said, or how the count was derived when they did not>",
     },
     "content": {
         "source_mode": "provided",
@@ -81,13 +87,32 @@ TEMPLATE = {
                 "sha256": "<sha256>",
             }
         ],
+        # ONE ROW PER SLIDE — this list must cover every slide in the deck, and the gate
+        # enforces that against deck.slide_count. Shown with three rows rather than one for a
+        # blunt reason: a single-row example IS a one-slide deck, and a runtime filling this
+        # template in copies its SHAPE. Measured: decks arriving at one page when the user named
+        # no length. `slide_count: 10` above and a one-row list below contradicted each other,
+        # and the example won, because an example is concrete and a number is not.
         "slides": [
             {
                 "slide": 1,
                 "role": "cover",
                 "takeaway": "<one audience takeaway>",
                 "evidence": ["README.md:1-10"],
-            }
+            },
+            {
+                "slide": 2,
+                "role": "problem",
+                "takeaway": "<what the room is wrong about, or does not yet see>",
+                "evidence": ["README.md:11-24"],
+            },
+            {
+                "slide": 3,
+                "role": "evidence",
+                "takeaway": "<the claim this page makes, not its topic>",
+                "evidence": ["README.md:25-40"],
+            },
+            # ... one row per remaining slide, through the closing page
         ],
         "claim_ledger": [
             {
@@ -191,6 +216,8 @@ TEMPLATE = {
                 "pptx_sha256": "<must equal deck.sha256>",
             },
         ],
+        # ONE ROW PER SLIDE, as in content.slides above, and for the same reason: a one-row
+        # example teaches a one-slide deck.
         "slides": [
             {
                 "slide": 1,
@@ -200,7 +227,17 @@ TEMPLATE = {
                 "reason": "<why this form serves the takeaway>",
                 "categorical": False,
                 "components": [],
-            }
+            },
+            {
+                "slide": 2,
+                "function": "slide_02",
+                "form": "<the form this content's SHAPE wants>",
+                "runner_up": "<a form from a DIFFERENT family that it beat>",
+                "reason": "<why this form serves the takeaway>",
+                "categorical": False,
+                "components": [],
+            },
+            # ... one row per remaining slide
         ],
         "checkpoint": {"mode": "approved", "record": "<decision record>"},
     },
@@ -581,6 +618,16 @@ def check_content(
         if interview.get("mode") not in {"answered", "auto"}:
             errors.append("interview.mode must be answered or auto")
         require_string(interview.get("record"), "interview.record", errors, minimum=12)
+        # WHERE THE LENGTH ANSWER LANDS. `interview.record` is free text with a 12-char floor, so
+        # it cannot tell an answered interview from a stub, and deck length is the axis that
+        # actually goes missing on a runtime with no choice UI — nothing downstream demands it, so
+        # nothing notices. Measured: decks arriving at ONE page when the user named no length.
+        #
+        # Deliberately not a number to validate against slide_count: the honest answers include a
+        # range ("medium, 9-15"), a time budget ("20 min, so ~18"), and "user declined — derived 11
+        # from the ledger's takeaway count". What is being checked is that the question was PUT and
+        # its answer recorded, not that a particular integer was hit.
+        require_string(interview.get("length"), "interview.length", errors, minimum=4)
 
     content = evidence.get("content")
     if not isinstance(content, dict):

@@ -42,6 +42,24 @@ geometry guarantees.
 
 Read this before Step 2, then carry its evidence through the remaining steps.
 
+0. **Ask the whole interview, in plain text, before anything else.** This runbook used to begin at
+   Step 2, which left the impression that the interview is the part a bridged runtime can compress.
+   It is the opposite: with no choice UI there is no menu doing the remembering for you, so the
+   questions have to be *typed*, and the ones that get dropped are the ones no artifact later
+   demands. Ask SKILL.md's direct-question fallback in full — template · purpose/audience/delivery ·
+   source material · **HOW MANY SLIDES** · style/language · review effort — as ONE compact message
+   in the user's own language, then record the answers in `interview.record`.
+   - 🔴 **Never fabricate a fake multiple-choice form**, and never present a menu the user cannot
+     click. Numbered lines answered in free text are the correct shape here.
+   - 🔴 **A missing answer is a QUESTION, not a default — and a deck is never silently ONE slide.**
+     If no length and no time budget were given, ask. If the user declines, derive the count from
+     what the CONTENT supports and state that number before building. (Measured: decks arriving at
+     one page. The evidence template compounded it — `slide_count: 10` sat above a `slides` list
+     showing exactly ONE row, and a template's example teaches louder than its numbers, so both
+     lists now show several.)
+   - **Offer the same escape the choice-UI hosts offer**: "decide everything yourself" is a real
+     answer, and it triggers the per-deck AUTO WAIVER — every checkpoint still gets POSTED as an
+     FYI, the stops are what disappear. Silence is not that answer; only saying so is.
 1. **Make design visible before building.** On the `design a clean one` branch, create the normal
    direction preview and wait for the user's pick. In plain Codex chat, use the HTML preview or
    rendered archetype slides; do not replace the preview with a prose palette description. Keep the

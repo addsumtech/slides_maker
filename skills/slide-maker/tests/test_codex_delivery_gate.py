@@ -195,6 +195,9 @@ def fixture(root: Path) -> tuple[dict, dict, dict, Path]:
         "interview": {
             "mode": "answered",
             "record": "The user requested a concise evidence-focused deck.",
+            # The length axis, recorded. It is the question that disappears on a runtime with no
+            # choice UI, and a deck silently built at one page is its symptom.
+            "length": "user asked for a single-slide record fixture",
         },
         "content": {
             "source_mode": "provided",
@@ -434,6 +437,19 @@ def main() -> int:
             failures.append("a documented, deliberate statistics waiver was blocked:\n" + "\n".join(errors))
         lint["stats"]["warnings"] = []
         evidence["waivers"] = []
+
+        # THE LENGTH AXIS. It is the interview question that disappears on a runtime with no
+        # choice UI — nothing downstream demands it, so nothing notices — and the observed symptom
+        # is a deck silently built at ONE page. `interview.record` cannot stand in for it: a
+        # 12-char free-text floor passes a stub.
+        _len = evidence["interview"].pop("length")
+        errors = gate.evaluate(lint, components, build, evidence, root)
+        if not any("interview.length" in error for error in errors):
+            failures.append("an interview with no recorded deck length passed the gate")
+        evidence["interview"]["length"] = _len
+        errors = gate.evaluate(lint, components, build, evidence, root)
+        if errors:
+            failures.append("restoring interview.length did not clear the gate:\n" + "\n".join(errors))
 
         evidence["critics"][0]["pptx_sha256"] = "0" * 64
         errors = gate.evaluate(lint, components, build, evidence, root)
