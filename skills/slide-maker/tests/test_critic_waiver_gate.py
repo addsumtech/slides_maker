@@ -37,6 +37,8 @@ DESIGN_OK = {
     # only printed. It dies now, and the fixture is the first thing it caught.
     "icon_family": "none — a three-slide text fixture, no categorical content to mark",
     "palette": "FILL E2543A / TEXT BD4630 on cream, A3341F on tint",
+    # Required from ~6 content slides up; always allowed. A truthful reason for every fixture here.
+    "build_shape": "solo — CI fixture, no subagent dispatch",
     "type_scale": {"display": 34, "title": 24, "body": 14},
     # A motif that only RECURS is an ornament with a schedule; these are the three things it makes
     # besides itself. Carved out under a conservative dial with a `deliberately restrained:` move,
@@ -63,11 +65,11 @@ ARC_OK = {"arc": {"chosen": "problem-turn-evidence",
                   "divergence": "ok"}}
 
 
-def build_deck(dest: Path) -> Path:
+def build_deck(dest: Path, n_slides: int = 3) -> Path:
     sys.path.insert(0, str(SKILL / "scripts"))
     import deckkit as dk
     prs = dk.blank_deck(10, 5.625)
-    for i in range(3):
+    for i in range(n_slides):
         s = prs.slides.add_slide(prs.slide_layouts[6])
         dk.text(s, 1, 1, 8, 1, [[(f"Slide {i+1}", 28, dk.DEEP, True, False)]])
     out = dest / "t.pptx"
@@ -900,6 +902,42 @@ def main() -> int:
                 print(f"  FAIL {name}: exit={code} (wanted pass={should_pass}), "
                       f"missing {needle!r}")
                 print("       " + out.strip().replace("\n", "\n       ")[:400])
+        # ── the `build_shape` gate. The build step is 40-71% of a session's model-active minutes
+        # and the fan-out rule that addresses it lived only in prose: a 13-slide deck was built
+        # solo at 241 round-trips against a ~125 budget, and nothing anywhere asked why. From ~6
+        # content slides the DECISION is recorded — fanout, or solo with a reason. Never blocks
+        # the choice (solo is mandatory on hosts without dispatch), only the absence of one.
+        # The 3-slide deck above is under the threshold, which is itself asserted: a tiny deck
+        # must never be asked this question.
+        big_dir = Path(td) / "big"
+        big_dir.mkdir()
+        big = build_deck(big_dir, 8)
+        write_proof(big_dir)
+        base_big = {"critic": {"waived": GOOD_REASON, "waived_category": "no-dispatch-on-host",
+                               "inline_ran": True},
+                    "design_plan": {k: v for k, v in DESIGN_OK.items() if k != "build_shape"},
+                    "provenance": PROV_OK, "content": ARC_OK}
+        code, out = run_gate(big, base_big)
+        if code != 0 and "build_shape" in out:
+            passed += 1; print("  ok   an 8-slide deck with no build_shape is refused")
+        else:
+            failed += 1; print(f"  FAIL an 8-slide deck with no build_shape passed (exit={code})")
+        base_big["design_plan"] = dict(DESIGN_OK, build_shape="solo — host has no subagent dispatch")
+        code, out = run_gate(big, base_big)
+        if code == 0 and "build shape: solo" in out:
+            passed += 1; print("  ok   solo with a reason passes, and is echoed")
+        else:
+            failed += 1; print(f"  FAIL solo-with-reason was refused (exit={code})\n       " + out.strip()[-300:])
+        code, out = run_gate(deck, {"critic": {"waived": GOOD_REASON,
+                                               "waived_category": "no-dispatch-on-host",
+                                               "inline_ran": True},
+                                    "design_plan": dict(DESIGN_OK), "provenance": PROV_OK,
+                                    "content": ARC_OK})
+        if code == 0:
+            passed += 1; print("  ok   a 3-slide deck is never asked for build_shape")
+        else:
+            failed += 1; print(f"  FAIL the under-threshold deck was asked for build_shape (exit={code})")
+
         # ── the `icon waiver` gate. `icon_family: "none - <reason>"` is free text written at PLAN
         # time, before any slide exists, and nothing revisited it: one real build shipped ZERO icons
         # past every gate on a deck of category slides. It must stay satisfiable for a genuinely

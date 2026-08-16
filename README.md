@@ -206,9 +206,9 @@ It does not promise a perfect deck in one shot. It removes the expensive part �
 
 | `review:` | what runs | measured |
 | --- | --- | --- |
-| `fast` | 1 generalist critic, 1 round, top-5 claims fact-checked | ~6 subagents · ~250k tokens |
-| `standard` | 2 focused critics (content + design), 2 rounds, top-10 claims | ~12 · ~600k |
-| `thorough` | multi-critic panel + arbiter cross-check, 3 rounds, every claim | ~32 · ~2M |
+| `fast` | 1 generalist critic, 1 round, top-5 claims fact-checked | ~6 subagents · ~250k tokens · ~10–20 min |
+| `standard` | 2 focused critics (content + design), 2 rounds, top-10 claims | ~12 · ~600k · ~30–60 min |
+| `thorough` | multi-critic panel + arbiter cross-check, 3 rounds, every claim | ~32 · ~2M · ~1–2 h |
 
 <sub>The tier is chosen by purpose. Figures from one 12-page deck, July 2026 — orders of magnitude.</sub>
 

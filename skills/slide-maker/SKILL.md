@@ -374,9 +374,10 @@ Before I build, please give me:
 4. HOW MANY SLIDES: a spoken deck takes it from the time budget (~1 slide/minute); a self-read one
    needs it said — short ~5-8, medium ~9-15, long 16+. Never assume, and never take silence as ONE.
 5. Style/language: density (≈a phrase / one sentence / 2–3 sentences per point?), tone (minimal/corporate/academic/playful), and language (中文/English/etc.)?
-6. Review effort: `standard` (what your purpose derives) or `thorough`? Say `fast` if you want it
-   cheap and accept one generalist critic and a single round — this is the deck's cost dial, and
-   `fast` is the only tier you have to ask for.
+6. Review effort: `standard` (what your purpose derives, ~30-60 min of review) or `thorough`
+   (~1-2 h)? Say `fast` (~10-20 min) if you want it cheap and accept one generalist critic and a
+   single round — this is the deck's cost dial, and `fast` is the only tier you have to ask for.
+   (Rough times, review loop only; the build itself is the session's biggest slice.)
 ```
 
 🔴 **The length question is on this list because it was MISSING from it**, while
@@ -1347,17 +1348,28 @@ docstring `role=… | form=… | build:…/static:… | takeaway='…'` → an o
 `main()`): the docstrings make plan↔code correspondence greppable instead of remembered, and it
 does not change "build the whole deck in one script run" — `main()` always builds every slide.
 
-**Scaling up — section fan-out.** For a **short deck (~≤8 slides)** one author writing one build
-script is both cheaper and more coherent — **that's the default there**. From **~9 slides up**,
-fan out; also fan out at any size for **independently-sourced sections** (different
-papers/datasets/areas). *(This threshold used to be 15+. It moved because the old rule was
-weighed on TOKEN cost, where one author is genuinely cheaper — no context is duplicated — and
-wall clock was never on the scale. Measured across five real build sessions, the build step is
-40–71% of all model-active minutes, and it is one agent generating serially into a context that
-runs ~500k by mid-build. Fan-out does not make the deck cost fewer tokens; it makes the tokens
-happen at the same time, and it gives each author a fresh ~60k context instead of the
-coordinator's saturated one — which also buys better rule-following, since a 500k context is
-where instructions start getting missed.)* The
+**Scaling up — section fan-out.** For a **tiny deck (~≤5 slides)** one author writing one build
+script is both cheaper and more coherent — **that's the default there**. From **~6 slides up,
+fan out** (when the host can dispatch subagents); also fan out at any size for
+**independently-sourced sections** (different papers/datasets/areas). *(This threshold has moved
+twice, 15+ → 9 → 6, both times on the same evidence. The old rule was weighed on TOKEN cost,
+where one author is genuinely cheaper — no context is duplicated — and wall clock was never on
+the scale. Measured across five real build sessions, the build step is 40–71% of all
+model-active minutes, and it is one agent generating serially into a context that runs ~500k by
+mid-build. Fan-out does not make the deck cost fewer tokens; it makes the tokens happen at the
+same time, and it gives each author a fresh ~60k context instead of the coordinator's saturated
+one — which also buys better rule-following, since a 500k context is where instructions start
+getting missed. The 9→6 move added a second measurement: a 13-slide deck built solo ran 241
+round-trips against a ~125 budget with a 1.00 batching ratio and 37 slide images read one
+message at a time — the batching rules were IN context the whole time and stopped being
+followed, which is precisely the failure a fresh 60k context prevents.)*
+🔴 **The decision is RECORDED, not assumed: `design_plan.build_shape` in `.deck-gates.json`** —
+`"fanout — <n> sections"` or `"solo — <reason>"` (e.g. `solo — host has no subagent dispatch`,
+`solo — 6 slides but one tightly-coupled argument`). The hand-off gate requires it on any deck
+of ~6+ content slides and never blocks on the CHOICE — solo is legitimate on every host and
+mandatory on hosts without dispatch — only on the absence of a decision, exactly the
+`form_reach` pattern. It exists because this rule was prose: the 241-round-trip deck above was
+13 slides, well past the threshold, and nothing anywhere asked why it was built solo. The
 rule that keeps quality high: **centralize coherence, parallelize only the independent
 work.** The coordinator (you) keeps the comprehension brief, the arc, and a single
 shared `style.py` (palette/font/chrome — copy `references/examples/style_example.py`);

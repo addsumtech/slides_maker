@@ -1308,6 +1308,29 @@ def check_handoff_gates(pptx, mode="presented", gate_check=False):
     # `palette`, `type_scale`, `icon_family` or `form_ledger`. And it cannot be claimed above the
     # conservative dial: at balanced+ and above a real signature move is required, not optional.
     design = gates.get("design_plan") or {}
+
+    # BUILD SHAPE — was the build fanned out, and if not, why not. The build step is 40-71% of all
+    # model-active minutes (SKILL.md, five measured sessions), and the fan-out rule that addresses
+    # it lived only in prose: a 13-slide deck was built solo at 241 round-trips against a ~125
+    # budget, with the batching rules in context and unfollowed, and nothing anywhere asked why.
+    # Same pattern as form_reach: the gate never blocks the CHOICE — solo is legitimate everywhere
+    # and mandatory on hosts without subagent dispatch — only the absence of a decision.
+    if design and not design.get("waived"):
+        _n_slides = _deck_slide_count(pptx)
+        _shape = str(design.get("build_shape", "")).strip()
+        if _n_slides >= 7 and not _shape:
+            die("`design_plan.build_shape` is missing on a {}-slide deck. From ~6 content slides "
+                "up the build FANS OUT (one author per section, fresh context each — SKILL.md "
+                "'Scaling up'), because the build step is 40-71% of a session's model-active "
+                "minutes and a saturated context is where the batching rules stop being followed.\n"
+                '    "build_shape": "fanout — <n> sections"\n'
+                '    "build_shape": "solo — <reason>"  (e.g. "solo — host has no subagent '
+                'dispatch", "solo — one tightly-coupled argument")\n'
+                "  Solo is a legitimate answer on every host; what is not legitimate is nobody "
+                "having decided.".format(_n_slides))
+        elif _shape:
+            print("[gates] build shape: {}".format(_shape[:100]))
+
     _dial = str(design.get("boldness", "")).strip().lower()
     _move = str(design.get("signature_move", "")).strip().lower()
     # Validate the enum. Every dial-keyed branch in this file and in codex_delivery_gate.py is an

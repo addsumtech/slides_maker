@@ -369,6 +369,13 @@ four template choices:
        to ONE generalist critic carrying both lenses, and a single agent wading all ~30 checks is
        the exact failure mode the two-lens split was built to fix. Choosing it is accepting a known
        recall drop, which is a legitimate trade — but only if it was stated.
+       **Say the rough WALL-CLOCK in every tier's option too** — `fast` ≈ 10–20 min of review ·
+       `standard` ≈ 30–60 min · `thorough` ≈ 1–2 h (review loop only; the whole session runs
+       longer, and the build — not the review — is its biggest slice at 40–71% of model-active
+       minutes). Estimates, not promises: they move with the model and the deck, and saying so in
+       the option costs six words. This line exists because a user asked why a deck took three
+       hours and reached for the review dial — the one lever whose label carried no time at all.
+       A cost dial with no clock on it teaches people to blame whichever knob they can see.
        🔴 **Choosing a tier BELOW the derived default is allowed and must be VISIBLE:** say in one
        line what is being given up, and record it on the hand-off's `review:` line as
        `fast (derived default was thorough — user chose)`. A downgrade nobody can see afterwards is

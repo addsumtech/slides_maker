@@ -173,6 +173,12 @@ TEMPLATE = {
             ],
         },
         "boldness": "balanced+",
+        # Was the build fanned out (one author per section, fresh context each), and if not, why
+        # not. Required from ~6 content slides up; "solo — <reason>" is always a legitimate
+        # answer ("solo — this runtime has no subagent dispatch" is the normal one on Codex).
+        # Mirrors render_deck.py --gate-check exactly — the two gates have drifted on duplicated
+        # fields twice before.
+        "build_shape": "fanout — <n> sections | solo — <reason>",
         # The resolved FILL-only vs TEXT-safe split. `render_deck.py --gate-check` has required
         # this since a deck shipped a chrome family at 2.4-3.3:1 — a hue that reads fine as a fill
         # measures 2-4:1 as small text on the same tint — and it even ships the hint
@@ -816,6 +822,14 @@ def check_design(
                                errors, minimum=8)
 
     require_string(design.get("palette"), "design.palette", errors, minimum=12)
+    # Same threshold and same rule as render_deck.py --gate-check: from ~6 content slides the
+    # build-shape decision must be recorded. Never blocks the CHOICE — solo is mandatory on a
+    # runtime with no subagent dispatch — only the absence of a decision.
+    if len(expected_slides) >= 7 and not str(design.get("build_shape", "")).strip():
+        errors.append('design.build_shape missing on a {}-slide deck — "fanout — <n> sections" or '
+                      '"solo — <reason>" ("solo — no subagent dispatch on this runtime" is the '
+                      'normal Codex answer); the build step is 40-71% of a session, so the '
+                      'decision is recorded, not assumed'.format(len(expected_slides)))
     # Same carve as signature_proof, and for the same reason: under a conservative dial with a
     # recorded "deliberately restrained" move there is no loud motif to be productive, and
     # demanding three products would push an author to invent a device so the field has an answer.
