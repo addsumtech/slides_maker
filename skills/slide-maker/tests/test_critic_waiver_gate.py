@@ -704,9 +704,15 @@ def check_sameness(deck_path: Path) -> tuple[int, int]:
             bad_n += 1
             print("  FAIL " + name + (("\n       " + str(detail)[:400]) if detail else ""))
 
+    # These sameness fixtures ARE repeated label rows with no pictures, so the icon gate fires on
+    # them correctly — they simply predate it. Record the re-decision the gate asks for rather than
+    # weakening it; this suite is about the SAMENESS composite and must not be the place an icon
+    # rule gets quietly relaxed.
+    _dp = dict(DESIGN_OK)
+    _dp["icon_none_checked"] = ["slide 2", "slide 3", "slide 4"]
     base = {"critic": {"waived": "No subagent dispatch on this host; both lenses ran inline.",
                        "waived_category": "no-dispatch-on-host", "inline_ran": True},
-            "design_plan": DESIGN_OK, "provenance": PROV_OK, "content": ARC_OK}
+            "design_plan": _dp, "provenance": PROV_OK, "content": ARC_OK}
 
     d = td / "sm"; d.mkdir()
     samey = build_samey(d, n=12)

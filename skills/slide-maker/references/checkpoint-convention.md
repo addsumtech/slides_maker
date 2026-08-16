@@ -11,7 +11,14 @@ the stated purpose; **appear-builds → derived from delivery** (presented → b
 recommended default; self-read → static); language → the user's own), and post the picks as the FIRST FYI — one
 compact block, one line per question — before any planning, so a wrong pick costs one glance to
 veto, not a build. The FLOOR: delegation covers *preferences*, never *information only the user
-has* — a missing TOPIC or unlocatable source material is still asked (that one question, not the
+has*, and never **which deck this is**. 🔴 A common genre carries a DEFAULT the request already
+implies — 「介绍巴黎的 PPT」 means the city introduction people actually give: places, districts,
+food, what to see. Take that reading unless the user signalled otherwise. Measured: a run read
+「你自行决定」 as licence to pick the ANGLE too, and delivered a thesis about 19th-century building
+regulation — every gate passed, and it answered a question nobody asked. Deciding the angle is
+not a preference pick; it is deciding what the deck IS, which is the one thing the ask already
+did. An unusual angle is a proposal: name it in one line in the first FYI so it costs one glance
+to veto — a missing TOPIC or unlocatable source material is still asked (that one question, not the
 form), same class as the save-location stop. Preference questions the request already answers
 are simply recorded, not re-picked.
 **Delegated picks are DERIVED, not defaulted — the waiver removes the asking, never the

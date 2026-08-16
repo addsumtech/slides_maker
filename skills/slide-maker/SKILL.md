@@ -673,7 +673,16 @@ concepts> → <visual language>`), plus the TWO pictures it beat and the clause 
 gets skipped, and skipping it is what produces industry stereotype — an MRI deck jumped straight to a
 picture gives you a scanner, routed through `frequency · sampling` it gives you a k-space grid. A
 winner with no rungs is a picture that arrived, not one that was derived. Full ladder + the
-domain-neutral §3 dictionary it resolves through: `agents/slide-design.md` §1)*
+domain-neutral §3 dictionary it resolves through: `agents/slide-design.md` §1.
+🔴 **This rule governs the MOTIF, never the CONTENT.** Rejecting the obvious PICTURE is the job;
+dropping the obvious SUBJECT is a different act and it is almost always wrong. Measured: asked for
+「介绍巴黎的 PPT」, a run correctly refused the Eiffel-tower silhouette as a governing image — and
+then also deleted the landmarks, the neighbourhoods and the food from the CONTENT, delivering an
+argument about 19th-century building regulation to an audience that came for a city introduction.
+A deck may carry Notre-Dame, the Louvre and Montmartre while its visual language owes nothing to a
+postcard. **Give the audience what they came for, in a form no template would have found** — that
+is the whole sentence, and taking only its second half produces a deck that is distinctive and
+useless.)*
 (*an intelligence network* · *a digital organism* · *a hand and a machine hand doing one job* — three
 governing images for the same approved argument, not three styles and not three layouts). This is the
 one divergence the pipeline never had: the direction gate diverges on STYLE (its own preview page says

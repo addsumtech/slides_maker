@@ -411,7 +411,18 @@ def _report_file_observations(pptx_path):
         sys.stdout.flush()
 
 
-def _report_icon_waiver(pptx_path, fam):
+def _icon_none_waived(gates):
+    """True when the `none` decision was re-made against the BUILT slides, not just planned.
+
+    The escape has to name the slides, because the failure being caught is a sentence written at
+    plan time and never re-tested against pixels. Naming them is what proves someone looked.
+    """
+    d = (gates or {}).get("design_plan") or {}
+    named = d.get("icon_none_checked")
+    return isinstance(named, list) and len(named) >= 1
+
+
+def _report_icon_waiver(pptx_path, fam, gates=None, delivery=None):
     """Name the slides that contradict an `icon_family: none - <reason>` waiver.
 
     WHY. The waiver is meant to stay satisfiable — a deliberately icon-free deck is a real choice.
@@ -535,6 +546,48 @@ def _report_icon_waiver(pptx_path, fam):
         print("        ⚠ Re-decide NOW against the built slides, not against the plan sentence: either "
               "give these a family, or restate in the hand-off why THESE specific slides are better "
               "without one. A plan-time waiver that was never re-tested is how a deck ships zero icons.")
+        # 🔴 And at deck scale it stops being a prompt. The detector OVER-COUNTS by construction
+        # (tables, timelines, stat rows share the peer shape), so one or two slides can never hold a
+        # deck — that caveat is what keeps it honest. But a deck with ZERO icon-sized pictures
+        # anywhere AND three or more pages of parallel label sets is not an over-count; it is the
+        # shape of a plan sentence that was written once and never re-tested. Measured twice in one
+        # session: a Kimi-built deck and a deck built here, both with `icon_family: none - <reason>`,
+        # both shipping zero icons past every gate. Same composite shape as sameness/timidity —
+        # several weak signals before a hold, and a written escape that must name the SLIDES.
+        try:
+            _tot = sum(c for c in _sig.values() if c <= max(2, 0.5 * _n_sl))
+        except Exception:
+            _tot = 0
+        # The SAME floors sameness and timidity carry, for the same reason: a 小红书 carousel, a
+        # poster, or a five-slide ask is not a deck that owes an icon family. Without these the
+        # block fired on a 3-slide portrait fixture — caught by the suite, which is what it is for.
+        try:
+            _asp = float(prs.slide_width) / float(prs.slide_height)
+        except Exception:
+            _asp = 1.78
+        _cheap = (len(hits) >= 3 and _tot == 0 and _asp >= 1.2
+                  and delivery != "surface" and not _icon_none_waived(gates))
+        # Only NOW pay for the real content-slide count — the same `body_n` sameness uses, which
+        # excludes the cover, the closer and any declared appendix run. Raw slide count is the
+        # wrong number: a 12-slide deck whose slides 5+ are declared reference material has three
+        # content pages, and holding it for lacking an icon family is nonsense. Measured by the
+        # suite on exactly that fixture.
+        _body = 99
+        if _cheap:
+            try:
+                _st, _ = _sameness_stats(str(pptx_path), delivery or "presented")
+                _body = int(_st.get("body_n") or 0)
+            except Exception:
+                _body = 99
+        if _cheap and _body >= 8:
+            die("`icon_family: none` on a deck with ZERO icon-sized pictures and {} pages of "
+                "parallel label sets ({}) — SKILL.md calls an icon family a design MUST on exactly "
+                "this content, and the plan sentence is the only thing saying otherwise.\n"
+                "    Build the family (scripts/icons.py <lib>:<name> <out>.png, placed with "
+                "deckkit.icon / icon_tile), or record the re-decision AGAINST THE BUILT SLIDES:\n"
+                '    {{"design_plan": {{"icon_family": "none — <why THESE slides read better bare>", '
+                '"icon_none_checked": ["slide {}", "..."]}}}}'.format(
+                    len(hits), hits, hits[0]))
 
 
 def _tail(text, limit=4000):
@@ -1639,7 +1692,7 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
             # the slides.
             _report_palette_drift(pptx, design.get("palette"))
             _report_plan_files(pptx)
-            _report_icon_waiver(pptx, design.get("icon_family"))
+            _report_icon_waiver(pptx, design.get("icon_family"), gates, delivery)
             _low_reach = _report_form_reach(pptx)
             # 🔴 A report that never asks for an answer is a line people learn to scroll past. This one
             # printed `1 of 23 named components; the rest is raw box/text` on a delivered deck and let
