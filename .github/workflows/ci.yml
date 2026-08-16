@@ -306,6 +306,19 @@ jobs:
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/cycle.log || {
             echo "::error::deck-cycle suite did not run to completion"; exit 1; }
 
+      # Guard 4, separately: the loop breaker keys faults by (stage, slide, code) so a nudge that
+      # only changes the numbers in the message still counts as the SAME fault, and the third
+      # consecutive failure escalates to "re-derive by measurement" instead of another nudge.
+      # Measured origin: 10+ nudge iterations on one slide; the computed-fit rewrite landed first
+      # try. Both directions are asserted — it fires at 3, and it stays silent on a cleared fault,
+      # below the limit, and across a build-only run that never judged the render-stage keys.
+      - name: Deck cycle loop breaker (the third attempt is never another nudge)
+        run: |
+          set -o pipefail
+          python tests/test_deck_cycle_loop_breaker.py | tee /tmp/cycle_breaker.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/cycle_breaker.log || {
+            echo "::error::loop-breaker suite did not run to completion"; exit 1; }
+
       # Both checks here came out of VERIFYING a review's claims rather than trusting them: of six
       # re-measured by hand, three were factually wrong, and two of those nearly became lint checks
       # built to enforce a defect that did not exist. What survived verification ships; what did

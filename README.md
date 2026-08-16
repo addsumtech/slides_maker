@@ -22,13 +22,13 @@
 
 > **The slide-maker that reads your actual work, never invents a number, ships fully-editable native PowerPoint, and won't hand it over until an independent critic signs off.**
 
-Chat with it in Codex or Claude Code — or, with **zero install, in ChatGPT** via the [slide-maker (addsum studio)](https://chatgpt.com/g/g-6a5b41f0a33881918be69e8b10f8b4ff-slide-maker-gpt). It isn't one prompt guessing at slides: a small team of specialized agents reads your paper / repo / doc (or researches the topic when you have none), plans the story, designs each slide around it, builds a real `.pptx`, and puts it through an independent review before you ever see it.
+Chat with it in Codex or Claude Code — or, with **zero install, in ChatGPT** via the [slide-maker (addsum studio)](https://chatgpt.com/g/g-6a5b41f0a33881918be69e8b10f8b4ff-slide-maker-gpt). It isn't one prompt guessing at slides: a small team of specialized agents reads your paper / repo / doc (or researches the topic when you have none), plans the story, designs each slide around it, builds a real `.pptx`, and puts it through an independent review you size after seeing the first render.
 
 Most AI-PPT tools race to look pretty in seconds. slide-maker optimizes for the four things that actually matter when the deck is *yours to defend*:
 
 - 🔍 **Reads your source — doesn't invent it.** Every number and figure traces back to your material; it won't make up a statistic to fill a slide. (The failure mode of every "expand a topic" tool — one popular assistant printed *43% growth* where the real figure was *12%*.)
 - ✏️ **A real PowerPoint, not a screenshot.** Every text box, shape, native chart and equation is a click-to-edit object — *nothing* flattened to an image. (Many "export to PPTX" tools quietly turn a third of your slides into uneditable pictures.)
-- 🧑‍⚖️ **Reviewed before you see it.** A non-negotiable actor–critic loop: a *separate* critic tries to break the deck — cramped layout, weak contrast, a number that doesn't match the source — and sends fixes back. Not the author model grading its own homework.
+- 🧑‍⚖️ **Independently reviewed — you size it, deck in hand.** A *separate* critic tries to break the deck — cramped layout, weak contrast, a number that doesn't match the source — and sends fixes back. Not the author model grading its own homework. You pick how hard (or skip it) after seeing the first render.
 - 🎨 **Designed around your content, in any language — on any canvas.** Composed slide by slide — matching your template or designing a clean one — for a research talk, a thesis defense, or a product pitch. Not your text poured into a stock layout. And not only 16:9: the same skill recomposes to 4:3, square 1:1, rednote (小红书) 3:4 cards, 9:16 story covers, and A4 print one-pagers, each with its own safe zones and layout logic.
 
 Native-editable PPTX is now table stakes; several tools do it. Rarer is a deck that is editable, source-traced, critic-reviewed and composed for your content at the same time. Honest limits: no zero-setup cloud, no share links, no animated web backgrounds — it makes a **file**, run locally, that opens and edits cleanly in real PowerPoint/Keynote. See [what's different](#what-makes-slide-maker-different).
@@ -167,7 +167,7 @@ AI presentation tools roughly fall into four categories. slide-maker only does t
 | HTML presentation | Slides in a browser | Not a PPTX |
 | **Native editable (slide-maker)** | **Real text boxes, shapes, native charts** | **Yes, click anything and edit** |
 
-That table is about the *format*. A handful of newer tools now also emit native-editable PPTX, so "editable" alone no longer sets anything apart. What does: it reads your real material and refuses to invent, it puts the deck through an independent review before you see it, and it composes each slide to your content instead of pouring text into a template.
+That table is about the *format*. A handful of newer tools now also emit native-editable PPTX, so "editable" alone no longer sets anything apart. What does: it reads your real material and refuses to invent, it puts the deck through an independent review, and it composes each slide to your content instead of pouring text into a template.
 
 ### A small team of agents: separate jobs, separate incentives
 
@@ -199,18 +199,19 @@ It does not promise a perfect deck in one shot. It removes the expensive part �
 2. **It reads (or researches) the material.** Papers, docs, repos — plus Word / Excel / CSV / images / video / audio, and whole books via purpose-driven triage — are read faithfully, extraction-first (it never guesses a number off pixels): figures cropped from the PDF, key numbers verified line by line, nothing without a source on a slide. With only a topic, it researches current information online first, then works from that.
 3. **You approve the story, then the look — right in the chat.** The content-planner posts a compact per-slide table (what each slide says, which figure carries it, how the deck flows), plus the narrative arc it picked and the two it rejected with the reason each lost — so you can overrule the structure, not just the wording. Once you confirm the story, the art director posts the design plan (look, palette, per-slide form, motion) the same way. Two quick confirmations at the two cheapest moments to change direction — no plan files to open.
 4. **It generates the PPTX.** Layout is guaranteed by code, with automatic layout checks both at build time and on the rendered output. Overflow, overlap, and font problems get caught there — and so is the rarer failure nobody thinks to check for: **a file PowerPoint refuses to open.** The checks that read geometry and pixels are structurally blind to a malformed part, so the file itself is validated too. Measured on a real build: a duplicated animation element left a deck that saved without error, rendered fine, and passed every layout check — the first sign would have been PowerPoint offering to "repair" it, in front of the user.
-5. **An independent critic reviews it.** Rendered slides go to the critic agent (with an arbiter cross-checking on high-stakes decks), judged against presentation standards. Fixes land, the deck is re-checked, and only then is it delivered to `~/Downloads/<deck-name>/`. The PDF and the browser preview are generated at hand-off rather than on every build (a deck still being edited makes them stale immediately) — and they are **gated on a record that the review actually ran**, because the model that skips a check is the same model that would write the note claiming it didn't.
+5. **You see the render, then an independent critic reviews it.** The rendered deck is posted first, and you pick the review effort with it in front of you — `fast` (the default) up to `thorough`, or `none` if it's already what you wanted. The critic agent (with an arbiter cross-checking on high-stakes decks) judges the slides against presentation standards; fixes land, the deck is re-checked, and only then is it delivered to `~/Downloads/<deck-name>/`. The PDF and the browser preview are generated at hand-off rather than on every build (a deck still being edited makes them stale immediately) — and they are **gated on a record that the review actually ran**, because the model that skips a check is the same model that would write the note claiming it didn't.
 6. **You tune it in plain language.** Not perfect? Just say so in the chat ("turn slide 7 into a chart," "cut the intro," "warmer palette," "make it 10 slides," "shorten the notes") and it rebuilds cleanly from the same script. No dragging boxes by hand; keep refining until it's right.
 
-**What it costs:** the tool is free; you pay only your AI usage. Reading, planning and building is the cheap part — **the independent review loop is where the tokens go**, so it is a dial you set with one word in the interview:
+**What it costs:** the tool is free; you pay only your AI usage. Reading, planning and building is the cheap part — **the independent review loop is where the tokens go**, so it's asked as one question after the first render, with the deck in front of you:
 
 | `review:` | what runs | measured |
 | --- | --- | --- |
-| `fast` | 1 generalist critic, 1 round, top-5 claims fact-checked | ~6 subagents · ~250k tokens · ~10–20 min |
+| `fast` (default) | 1 generalist critic, 1 round, top-5 claims fact-checked | ~6 subagents · ~250k tokens · ~10–20 min |
 | `standard` | 2 focused critics (content + design), 2 rounds, top-10 claims | ~12 · ~600k · ~30–60 min |
 | `thorough` | multi-critic panel + arbiter cross-check, 3 rounds, every claim | ~32 · ~2M · ~1–2 h |
+| `none` | no review — happy with what you see, take it as-is | 0 |
 
-<sub>The tier is chosen by purpose. Figures from one 12-page deck, July 2026 — orders of magnitude.</sub>
+<sub>Figures from one 12-page deck, July 2026 — orders of magnitude.</sub>
 
 ---
 
@@ -292,7 +293,7 @@ The best, most reliable result comes from **invoking the skill and answering its
 /slide-maker
 ```
 
-The interview opens as a clickable, tabbed form (Topic · Template · Purpose & Audience · Style & Language): arrow keys to move, Enter to pick, and every question ships with ready-made options. Review effort rides along with Purpose & Audience, since your purpose is what sets its default. It recognizes returning users, too: saved templates and past topics show up as one "use one of my previous ones" choice beside the general options, expanding only if you pick it. **Answering each question is what makes the deck yours instead of generic**: audience, length, live-vs-self-read, density, language, look, and how hard you want it reviewed all steer the plan. Short answers are fine, and **"you decide" is always a valid answer**.
+The interview opens as a clickable, tabbed form (Topic · Template · Purpose & Audience · Style & Language): arrow keys to move, Enter to pick, and every question ships with ready-made options. It recognizes returning users, too: saved templates and past topics show up as one "use one of my previous ones" choice beside the general options, expanding only if you pick it. **Answering each question is what makes the deck yours instead of generic**: audience, length, live-vs-self-read, density, language, and look all steer the plan. Short answers are fine, and **"you decide" is always a valid answer**. (Review effort isn't asked here — you choose it after the first render, deck in hand.)
 
 **In a hurry? A one-liner works too, but treat it as a shortcut, not the best path:**
 

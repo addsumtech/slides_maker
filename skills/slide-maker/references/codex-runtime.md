@@ -47,8 +47,10 @@ Read this before Step 2, then carry its evidence through the remaining steps.
    It is the opposite: with no choice UI there is no menu doing the remembering for you, so the
    questions have to be *typed*, and the ones that get dropped are the ones no artifact later
    demands. Ask SKILL.md's direct-question fallback in full — template · purpose/audience/delivery ·
-   source material · **HOW MANY SLIDES** · style/language · review effort — as ONE compact message
-   in the user's own language, then record the answers in `interview.record`.
+   source material · **HOW MANY SLIDES** · style/language — as ONE compact message
+   in the user's own language, then record the answers in `interview.record`. *(Review effort is
+   NOT an interview axis: it is asked at the post-build review question, after the first clean
+   render, with the rendered deck posted — see step 7.)*
    - 🔴 **Never fabricate a fake multiple-choice form**, and never present a menu the user cannot
      click. Numbered lines answered in free text are the correct shape here.
    - 🔴 **A missing answer is a QUESTION, not a default — and a deck is never silently ONE slide.**
@@ -118,7 +120,12 @@ Read this before Step 2, then carry its evidence through the remaining steps.
      12 slides of a real deck and was caught only by a human at 5x zoom), and a non-positive text
      box. Exit 1 means not ready; `NOT CHECKED` + exit 2 means it could not run, which is never the
      same as clean. The five judgment items it prints as still-yours stay yours.
-7. **Review by lens, not by one permissive generalist.** At `standard` or `thorough`, dispatch the
+7. **Ask the post-build review question first, then review by lens.** Once the render self-check
+   is clean, post the rendered deck (contact sheet + slide PNG paths) and ask the ONE post-build
+   question — `fast` (pre-selected default, ~10–20 min) · `standard` (~30–60 min) · `thorough`
+   (~1–2 h) · `none` — with cost and what-is-skipped stated in the option text, exactly as
+   SKILL.md's post-build review question specifies. In plain Codex chat this is a typed question,
+   not a fake form. `none` is only ever the user's own typed answer. Then, at `standard` or `thorough`, dispatch the
    normal two focused critics separately: content/fidelity and design/layout/legibility. Each final
    review is a separate JSON file, has full-deck coverage, declares its lens, consents, and records the
    SHA-256 of the final PPTX it reviewed. The review must also record `reviewer: {origin, identity,
@@ -132,12 +139,21 @@ Read this before Step 2, then carry its evidence through the remaining steps.
 
    🔴 **Write the effort tier into the evidence record, and its tier-specific companion field —
    the gate reads them and no other file names them.** `review_effort` must be `fast` |
-   `standard` | `thorough`; it defaults to `standard` when absent, so a standard run needs
-   nothing extra. The other two tiers each require one more key:
-   - `fast` → **`fast_opt_in`**: a >=12-character record of the user asking for it. 🔴 `fast` is
-     opt-in only and never derived, so the gate refuses the tier without this. **This field is
-     not in the `--init` skeleton** — it is the one gate requirement that is otherwise
-     discoverable only by reading `codex_delivery_gate.py`, which is why it is named here.
+   `standard` | `thorough` | `none`; `standard` needs nothing extra. The other tiers each
+   require one more key, and the gate rejects a companion still holding its `<placeholder>`:
+   - `fast` → **`fast_basis`**: a >=12-character record of HOW the tier was reached — the user's
+     post-build answer, or `post-build default — auto/not asked` on a non-interactive run.
+     `fast` is the post-build DEFAULT, so the basis is not an opt-in proof but an honesty
+     record: chosen-with-the-deck-visible and defaulted-because-nobody-was-there are different
+     facts and the hand-off `review:` line must tell them apart. At `fast` the single
+     `general`-lens review carries BOTH lenses' probe rows — including the visual-contract
+     `hotspot_checks`/`icon_checks` the gate cross-examines.
+   - `none` → **`none_opt_in`**: a >=12-character record quoting the user declining review AT the
+     post-build question, with the rendered deck visible. 🔴 `none` is never a default, never
+     derived, never an auto pick — the gate refuses the tier without the quoted decline, and
+     refuses it again if any critic review is attached (record the tier that actually ran). The
+     deterministic visual-contract recompute still runs at `none`; only the critic attestation
+     is waived with the loop.
    - `thorough` → **`thorough_panel`**: `{scope: "light"|"full", record: "<>=12 chars>"}`.
      `scope: "full"` additionally requires the **`arbiters`** entries the gate cross-checks.
 

@@ -176,17 +176,18 @@ evidence, and letting the rest go on purpose.** Work in this order:
    understanding, the arc, and every verified claim are re-derived by ONE mind from the real pages**
    (step 5). Fan out the reading; never fan out the synthesis.
 
-   **How WIDE you fan out is the deck's `review:` effort tier, collected at Step 0** — the same
-   one word that sizes the critic panel also sizes this sweep, because research and review are
-   comparable cost centres (measured on one deck: ~1.02M tokens of research against ~0.95M of
-   review), and a user asking for speed means the pipeline, not half of it. `fast` = one reader
-   per load-bearing source cluster and no more; `standard` = a reader per cluster plus a second
-   pass on whatever the first left as a gap; `thorough` = the full multi-modal sweep. What the
-   tier narrows is BREADTH — how many angles you search from. It never narrows the FLOOR: every
-   claim that reaches a slide is still traced to a primary source at every tier, and the
-   PRIMARY-SOURCE GATE still runs. A thinner sweep means you find fewer facts, never that you
-   verify them less. **If no tier was handed to you, work at `standard`** and say so in the plan —
-   an unstated tier must never become whatever this run happened to feel like.
+   **How WIDE you fan out is the RESEARCH BREADTH the coordinator hands you — derived from the
+   deck's purpose at Step 0** (`standard` for a lab meeting / status update / teaching deck,
+   `thorough` for a defense / conference talk / exec readout / pitch — see
+   `references/interview-protocol.md`). It is NOT the review tier: that is chosen later, at Step 5,
+   with the rendered deck visible, and you neither know nor need it. `standard` = a reader per
+   load-bearing source cluster plus a second pass on whatever the first left as a gap;
+   `thorough` = the full multi-modal sweep. What the breadth narrows is BREADTH — how many angles
+   you search from. It never narrows the FLOOR: every claim that reaches a slide is still traced
+   to a primary source at every breadth, and the PRIMARY-SOURCE GATE still runs. A thinner sweep
+   means you find fewer facts, never that you verify them less. **If no breadth was handed to
+   you, work at `standard`** and say so in the plan — an unstated breadth must never become
+   whatever this run happened to feel like.
 
    **A `search cap:` sizes the sweep just as hard as the tier does, and for a blunter reason: web
    search is capped per SESSION and shared with every subagent you dispatch, so the budget you spend

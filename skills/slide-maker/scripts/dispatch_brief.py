@@ -54,7 +54,8 @@ TODO = "<<FILL>>"
 SECTIONS = [
     ("Deck", "absolute path of the deck dir + the .pptx filename"),
     ("Interview answers", "purpose · audience · time · delivery context · primary goal · "
-                          "density · tone · language · template decision · review tier"),
+                          "density · tone · language · template decision · review tier (chosen "
+                          "at the POST-BUILD question, not the interview — 'pending' before it)"),
     ("Mode", "standard, or a per-deck AUTO WAIVER (say which, and that checkpoints post as FYI)"),
     ("Search cap", "planned / spent, and 'do not search at all' when the deck is local-sourced"),
     ("Source material", "what it is and where it lives, the condense/verbatim/hybrid answer, and "

@@ -23,7 +23,9 @@ and why before touching a slide, make each slide earn its place, and **think
 carefully at each step** rather than rushing to output. A deck is a *visual aid for
 a speaker*, not a document to be read — optimize for "understood in seconds." Read
 `references/design-principles.md` for the craft, and treat the actor-critic loop
-(step 5) as non-negotiable: you are not the final judge of your own work.
+(step 5) as the default you never skip on your own authority: you are not the final
+judge of your own work — only the USER may decline the review, at the post-build
+question, with the rendered deck in front of them, and that decline is recorded.
 
 **THE TASTE PROTOCOL — rules are the floor, judgment is the ceiling.** This skill carries many
 rules, gates, components, and presets. They exist to prevent known failures — they are NOT the
@@ -116,11 +118,17 @@ Two time sinks compress well: ingesting material/assets, and the critic loop.
     cannot be acted on), leaves rendering **opt-in** (most iterations only need the 1.8s geometry
     pass, and forcing a 5.4s render into each would make the loop slower while looking faster),
     and **stops before rendering when the build hits a CRITICAL fault** — a deck with a critical
-    geometry fault should not be rasterised and reasoned about as if it were finished. It replaces
-    nothing: `render_deck.py` and `lint_deck.py` behave exactly as before.
-- **Scale the critic to stakes** (step 5): two focused **lens** critics (content · design) even for a
-  quick deck; the larger multi-critic + arbiter, multi-round panel for high-stakes. The loop is
-  non-negotiable; its *weight* is what you tune.
+    geometry fault should not be rasterised and reasoned about as if it were finished. It also
+    carries the **LOOP BREAKER**: the same fault (same slide + same lint code) surviving 3
+    consecutive runs prints an escalation, and 🔴 **when it fires, obey it — the third attempt is
+    never another nudge.** Stop adjusting constants by eye and re-derive that slide's layout by
+    MEASUREMENT (fit_text / measured ink heights / a form helper that owns the geometry).
+    Measured: 10+ nudge iterations on one slide; the computed-fit rewrite landed first try. It
+    replaces nothing: `render_deck.py` and `lint_deck.py` behave exactly as before.
+- **Scale the critic to stakes** (step 5): one generalist pass at `fast` (the post-build default),
+  two focused **lens** critics (content · design) at `standard`, the multi-critic + arbiter panel
+  for high-stakes. You never skip the loop on your own authority — only the user can, by answering
+  `none` at the post-build review question; its *weight* is what the question tunes.
 
 **Two modes.** *Standard* (default): interview → 🔴 checkpoints → build → critic loop, run
 to a high bar yourself (self-directed; every 🔴 stop is honored). *Collaborative* (opt-in — when the user wants to see options or approve as
@@ -349,9 +357,9 @@ the content, source material, style, and template are all still unknown and must
 assumptions from a prior deck in the same session (its topic, its content, its
 style, its template) — every deck starts fresh with these questions.
 
-Collect all four answers in **one cheap interview turn**. Match the host UI:
+Collect all the answers in **one cheap interview turn**. Match the host UI:
 - **If the runtime provides a structured choice UI** (for example Claude Code's
-  `AskUserQuestion`), ask the four questions in one batched call with concise options.
+  `AskUserQuestion`), ask the questions in one batched call with concise options.
 - **If the runtime does not provide that UI** — plain Codex chat, a GPT/Gemini/Kimi chat surface,
   an API caller, a CLI with no widgets: **the norm, not the exception** — ask one compact direct
   question and let the user answer in free text. Do not fabricate a fake multiple-choice form;
@@ -359,10 +367,10 @@ Collect all four answers in **one cheap interview turn**. Match the host UI:
   🔴 **Fewer WIDGETS, never fewer QUESTIONS.** A choice UI carries the axes for you — every option
   the host renders is one you cannot forget to ask. In plain text nothing carries them, so the
   axes that vanish are exactly the ones with no downstream artifact demanding them: **deck length**
-  first (measured: decks arriving at ONE page), then delivery mode, then the review tier. Ask all
-  six numbered lines below; a host without widgets is not a host with a shorter interview.
+  first (measured: decks arriving at ONE page), then delivery mode. Ask all
+  five numbered lines below; a host without widgets is not a host with a shorter interview.
   🔴 **Ask in the USER's language.** The fallback block is written in English because this file is;
-  a user writing 中文 gets the same six questions in 中文. Translating the questions is not
+  a user writing 中文 gets the same five questions in 中文. Translating the questions is not
   personalisation, it is the baseline — and it costs one pass over a block you are already typing.
 
 Direct-question fallback:
@@ -374,11 +382,10 @@ Before I build, please give me:
 4. HOW MANY SLIDES: a spoken deck takes it from the time budget (~1 slide/minute); a self-read one
    needs it said — short ~5-8, medium ~9-15, long 16+. Never assume, and never take silence as ONE.
 5. Style/language: density (≈a phrase / one sentence / 2–3 sentences per point?), tone (minimal/corporate/academic/playful), and language (中文/English/etc.)?
-6. Review effort: `standard` (what your purpose derives, ~30-60 min of review) or `thorough`
-   (~1-2 h)? Say `fast` (~10-20 min) if you want it cheap and accept one generalist critic and a
-   single round — this is the deck's cost dial, and `fast` is the only tier you have to ask for.
-   (Rough times, review loop only; the build itself is the session's biggest slice.)
 ```
+
+*(No review question here — it is asked at Step 5, AFTER the first clean render, with the deck in
+front of the user. Asking it blind at Step 0 forced a cost decision about a deck nobody had seen.)*
 
 🔴 **The length question is on this list because it was MISSING from it**, while
 `references/interview-protocol.md` had carried "deck length is ALWAYS the user's choice — surface
@@ -399,20 +406,17 @@ source-material floor still gets asked);
 when in doubt, keep it. Never assume the **topic/content**, the **style**, or **which
 template** — confirm each.
 
-**Ask the `review:` effort tier in the same batch — it is a first-class interview axis, not a
-footnote.** One word (`fast` | `standard` | `thorough`) scales BOTH cost centres, the research
-fan-out and the review panel, and its default is DERIVED from the purpose the same question
-already collects. 🔴 **`fast` is opt-in only and never derived**, so the derivation has just two
-rows — `standard` and `thorough` — and they are pure ALIASES for the low-stakes and high-stakes
-behaviour the skill already had. The full table (which purpose maps where, and the rule that
-purpose decides while SIZE never lowers a tier) is in `references/interview-protocol.md`; it and
-this sentence must agree — change one, change both. Aliasing rather than redefining is what makes
-the dial safe: **a user who says nothing gets the behaviour that predates it.** This
-axis exists because the scaling rule was always in the rubric and never on the menu — a single
-low-stakes deck measured ~32 subagents and ~2M tokens at full weight, and the user had no way to
-say "less". Options, the derivation table and the 🔴 rule that a downgrade must be stated and
-recorded: `references/interview-protocol.md`; what each tier dispatches:
-`references/critic-panel.md` → "Review effort tiers".
+**The `review:` question is NOT asked here — it moved to Step 5, after the first clean render.**
+It used to be a Step-0 axis, which forced the user to size a review of a deck nobody had seen;
+with the rendered deck in front of them the same choice is informed instead of blind, and that is
+what makes the cheaper default safe (Step 5 owns the question, its four options and the recording
+rules). What Step 0 STILL decides is the **research breadth**, because research happens before
+anything renders and cannot wait for the post-build question: derive it from the purpose —
+`standard` for a lab meeting / status update / teaching deck, `thorough` for a defense /
+conference talk / exec readout / pitch (the same two stakes classes the skill has always had;
+purpose decides, deck SIZE never lowers it) — state the derived value in the Step-0 picks/plan,
+and hand it to the planner at Step 1. Research narrows BREADTH only, never the fidelity floor:
+every claim that reaches a slide is traced to a primary source at every breadth.
 
 **🔴 Read `references/interview-protocol.md` before you ask anything on a build ask** — it owns the rest of Step 0: two-stage personalization from THIS user's footprint + `taste.md` precedence (🔴 MUST: current request > this interview's answers > `taste.md`), scaling the interview to the ask, Q1's four template choices (a)–(d) — all four MUST be offered, never a hardcoded institution — with each branch, Q2's delivery · deck-length · appear-builds · primary-goal axes + per-purpose cases + venue research, and Q3's source-material routing per input format.
 > **One 🔴 CHECKPOINT lives in that file:** the Q1(d) generated-template **hero checkpoint** (show the hero + a sample content slide, iterate until the user confirms). The Q1(c) **direction gate** (4 rendered directions) RUNS BY DEFAULT on the design-a-clean-one branch — skippable only via its named carves, and recorded on the design checkpoint's `direction gate:` line.
@@ -493,12 +497,12 @@ parallel — keeping the whole round under about half of what REMAINS, not half 
 (3) carry `searches: planned N / spent N` to the hand-off `cost:` line. If the budget does run out,
 say so on the deck's limitations page and in the hand-off: **"could not verify" must never be allowed
 to look like "does not exist"** (full rationale at Step 5's SEARCH BUDGET block).
-**Hand the planner the `review:` effort tier too** — the same one word collected at Step 0 sizes
-this research sweep and the Step-5 panel, because the two measured comparable on a real deck
-(~1.02M tokens of research against ~0.95M of review) and a user asking for speed means the
-pipeline, not half of it. What the tier narrows is BREADTH, never the fidelity floor: every claim
-that reaches a slide is still traced to a primary source at every tier. If no tier was collected,
-the planner works at `standard` and says so.
+**Hand the planner the RESEARCH breadth too** — the purpose-derived value from Step 0 (`standard`
+for the low-stakes class, `thorough` for defense / conference / exec / pitch). It sizes only the
+research sweep; the REVIEW tier is chosen later, at Step 5, with the rendered deck visible, and
+the planner neither knows nor needs it. What breadth narrows is BREADTH, never the fidelity
+floor: every claim that reaches a slide is still traced to a primary source at every breadth. If
+no derivation was recorded, the planner works at `standard` and says so.
 
 The rest of this step is the **specification the planner works to** (and what
 you check its plan against). The bar — understand it deeply, don't skim:
@@ -1886,8 +1890,40 @@ So verify the fully-built PNG reads correctly on its own (run the loop as normal
 in step 6 **describe the click order** to the user. Builds are a layer on a correct
 static slide, never a fix for a cluttered one.
 
-Then run the **actor-critic loop** — this is the quality engine, and the critic is a
-*demanding* judge (see `agents/critic.md`), not a rubber stamp:
+### 🔴 THE POST-BUILD REVIEW QUESTION — ask it HERE, with the deck in front of the user
+
+The render is clean, both lints are clean, the self-check verdict lines are written. **Now — not
+at Step 0 — post the rendered deck (contact sheet + the slide PNG paths) and ask ONE question:**
+
+| option | what runs | rough cost |
+|---|---|---|
+| **`fast` (default)** | 1 generalist critic, 1 round, top-5 claims re-checked | ~10–20 min · ~250k tok |
+| `standard` | 2 lens critics (content · design), 2 rounds, top-10 claims — worth it for a defense / pitch / exec readout | ~30–60 min · ~600k |
+| `thorough` | multi-critic panel + arbiter, 3 rounds, every claim | ~1–2 h · ~2M |
+| `none` | no review — deliver as-is | 0 |
+
+Why the question lives here and not in the interview: at Step 0 it was a **blind** cost decision
+about a deck nobody had seen, and blind is why `fast` could never be the default (a silent recall
+drop the user never chose). With the deck visible the same choice is **informed** — the user has
+already judged the thing itself, so the cheap tier is a proportionate default and declining
+entirely is a legitimate answer, not a loophole. Three rules keep it honest:
+- **The option texts carry the cost and what is skipped, every time** (the table above). On a
+  RESEARCH-SOURCED deck, `none`'s option text must additionally say it skips the adversarial
+  primary-source re-check — the one defect class the user's own eyes cannot catch — and the
+  hand-off's `provenance:` line then reads `skipped — user declined post-build review`, never a
+  tally that implies it ran.
+- **`none` is recorded, not silent**: the standard `user-waived` critic waiver in
+  `.deck-gates.json`, quoting the decline — the machinery that always existed for exactly this.
+  A surviving `fast` blocker still goes back to the user by name (the cap rule below), so the
+  default tier never silently ships a known-broken deck.
+- **Under a per-deck AUTO WAIVER, run `fast` — never `none`.** "You decide" delegates effort
+  sizing, not the decision to skip review entirely; the FYI records `review: fast (post-build
+  default — auto)` and the user escalates at hand-off if they want more. Auto MAY escalate above
+  `fast` for a high-stakes purpose (defense / exec readout / pitch) with the reason recorded —
+  `review: standard (escalated — defense deck, auto)` — it may only never decline.
+
+Then run the **actor-critic loop** at the chosen tier — this is the quality engine, and the
+critic is a *demanding* judge (see `agents/critic.md`), not a rubber stamp:
 > 🔴 **Do not retype the dispatch below.** `python3 scripts/dispatch_brief.py prompt --brief <path>
 > --role critic --lens A|B --round N --deck <dir>` prints it — ~220 tokens against the ~4,600 a
 > hand-written one measured, and the CONTRACT CARD then comes from the one file every critic reads
@@ -2007,14 +2043,15 @@ Then run the **actor-critic loop** — this is the quality engine, and the criti
    low-stakes analogue of high-stakes' "fail loudly at the cap" below. Cap the rounds by
    stakes so the loop converges fast: **low-stakes ≈ up to 2 rounds, high-stakes up
    to 3.**
-   **The user's `review:` tier (Step 0) is the same rule with a handle on it:** `fast` = 1 round,
-   `standard` = 2, `thorough` = 3. `standard` and `thorough` are pure ALIASES for the two stakes
-   classes above — same panel, same arbitration, same fresh whole-deck re-review on every round —
-   so a deck whose user says nothing behaves exactly as it did before the dial existed. `fast` is
-   the one genuinely new band and is 🔴 **opt-in only, never derived**. At `fast` there is no
-   second round to absorb a surviving blocker/major, so it goes back to the USER named, and the
-   run does not end until they answer: either they authorise one extra round (a recorded exception
-   to the cap) or the ship is recorded as *their* waiver, never the model's. Tier table:
+   **The user's `review:` tier (the POST-BUILD question above) is the same rule with a handle on
+   it:** `fast` = 1 round, `standard` = 2, `thorough` = 3, `none` = 0 (recorded as `user-waived`,
+   never run). `standard` and `thorough` are pure ALIASES for the two stakes classes above — same
+   panel, same arbitration, same fresh whole-deck re-review on every round. `fast` is the DEFAULT
+   because the choice is made with the rendered deck visible — an informed cheap tier, not a
+   silent one. At `fast` there is no second round to absorb a surviving blocker/major, so it goes
+   back to the USER named, and the run does not end until they answer: either they authorise one
+   extra round (a recorded exception to the cap) or the ship is recorded as *their* waiver, never
+   the model's — this rule is what makes the cheap default safe. Tier table:
    `references/critic-panel.md` → "Review effort tiers".
    *(The cap numbers live in TWO places on purpose — here, because a cap is coordinator-enforced and
    nothing lints it, so layer 1 must carry it; and in `critic-panel.md`, which owns the rest. They
@@ -2101,9 +2138,14 @@ abuse — `agents/content-planner.md` §2, rubric item 10). Scale it to stakes l
 (a quick deck: one verifier over the top ~10 claims; high-stakes: a fan-out over all of them) —
 **and the user's `review:` tier is the handle on that same scale** — `fast` = the top ~5 load-bearing
 claims, `standard` = the top ~10, `thorough` = all of them. The tier narrows the SAMPLE and never the
-gate; on a research-sourced deck the gate itself runs at every tier —
-but never skip it entirely on a research-sourced deck: this is the gate between "the slides match
-the ledger" and "the ledger matches reality." **Ordering:** run the
+gate; on a research-sourced deck the gate runs at every tier that RUNS —
+this is the gate between "the slides match the ledger" and "the ledger matches reality."
+**The one exception is `none` at the post-build question:** the user declined the whole review
+loop with the deck visible, and this gate rides on it. That is the single most consequential thing
+`none` gives up — a wrong number is the one defect the user's own eyes cannot catch — which is why
+`none`'s option text on a research-sourced deck must SAY it skips this, and the hand-off's
+`provenance:` line must read `skipped — user declined post-build review` rather than a tally.
+**Ordering:** run the
 verifier pass in parallel with (or immediately before) the FINAL critic round; any WRONG /
 PARTLY-WRONG fix re-enters the normal rebuild → re-render → re-lint path, and a fix landing after
 critic consent gets a cheap confirmation look (the touched slides, not a fresh full round) — gate

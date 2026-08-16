@@ -61,8 +61,12 @@ TEMPLATE = {
     "schema": SCHEMA,
     "runtime": "codex",
     "delivery": "presented",
-    "review_effort": "standard",
-    "fast_opt_in": "<only when review_effort is fast: >=12 chars recording the user asking for it>",
+    # The tier is collected at the POST-BUILD review question (SKILL.md Step 5), with the rendered
+    # deck visible — never at the interview. "fast" is the pre-selected default there.
+    "review_effort": "fast",
+    "fast_basis": "<only when review_effort is fast: >=12 chars — how fast was reached: the user's post-build choice, or 'post-build default — auto/not asked'>",
+    # "none" (user declined review at the post-build question) additionally requires "none_opt_in":
+    # >=12 chars quoting the user's decline, given AFTER they saw the rendered deck. Never a default.
     "deck": {
         "pptx": "deck.pptx",
         "sha256": "<sha256 of final deck.pptx>",
@@ -1154,13 +1158,28 @@ def check_critics(
         errors.append("critics must be a list")
         return reviewed
     effort = evidence.get("review_effort", "standard")
-    if effort not in {"fast", "standard", "thorough"}:
-        errors.append("review_effort must be fast, standard, or thorough")
+    if effort not in {"fast", "standard", "thorough", "none"}:
+        errors.append("review_effort must be fast, standard, thorough, or none")
+        return reviewed
+    if effort == "none":
+        # The user declined review at the POST-BUILD question, with the rendered deck visible.
+        # Never a default, never derived: the gate wants the decline itself on record.
+        basis = evidence.get("none_opt_in")
+        if not require_string(basis, "none_opt_in", errors, minimum=12):
+            return reviewed
+        if isinstance(basis, str) and basis.lstrip().startswith("<"):
+            errors.append("none_opt_in still contains the template placeholder — quote the user's post-build decline")
+        if critics:
+            errors.append("review_effort none must not carry critic reviews — record the tier that actually ran")
         return reviewed
     lenses = [row.get("lens") for row in critics if isinstance(row, dict)]
     thorough_scope = None
     if effort == "fast":
-        if not require_string(evidence.get("fast_opt_in"), "fast_opt_in", errors, minimum=12):
+        basis = evidence.get("fast_basis")
+        if not require_string(basis, "fast_basis", errors, minimum=12):
+            return reviewed
+        if isinstance(basis, str) and basis.lstrip().startswith("<"):
+            errors.append("fast_basis still contains the template placeholder — record how fast was reached")
             return reviewed
         required_lenses = {"general"}
     else:
@@ -1333,7 +1352,13 @@ def check_visual_contract(
     }
     if result_zones != declared_zones or result_icons != declared_icons:
         errors.append("visual_contract result does not account for every declared zone and icon")
-    design_review = reviews.get("design")
+    if evidence.get("review_effort", "standard") == "none":
+        # The user waived the review loop at the post-build question; the critic-attestation rows
+        # are review artifacts and go with it. The deterministic recompute above still ran — the
+        # visual-contract FLOOR holds at every tier, only the human-eye attestation is waived.
+        return
+    # At `fast` the single generalist carries both lenses, so its review holds the probe rows.
+    design_review = reviews.get("design") or reviews.get("general")
     probes = design_review.get("probes", {}) if isinstance(design_review, dict) else {}
     hotspot_checks = probes.get("hotspot_checks", []) if isinstance(probes, dict) else []
     icon_checks = probes.get("icon_checks", []) if isinstance(probes, dict) else []

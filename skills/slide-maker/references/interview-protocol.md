@@ -339,50 +339,25 @@ four template choices:
        This sets the **rhetorical arc**: *inform* builds to the evidence; *decide* leads with the
        recommendation and the ask; *inspire* opens on stakes and closes on a call to action. Purpose
        hints at it but doesn't fix it (a conference talk can inform *or* persuade) — so confirm it.
-     - **Review effort — `fast` · `standard` · `thorough`. ASK IT, on the same line as purpose.**
-       This is the deck's COST DIAL, and it is the one axis the user previously had no handle on:
-       a single low-stakes deck run at full weight measured **~32 subagents and ~2M tokens across
-       research + build + two review rounds**. The rule that scales the loop already existed
-       ("scale the critic to stakes"), but it was inferred, never offered — so nobody knew they
-       could turn it down.
-       **The default is DERIVED, not fixed** — offer the derived value as the pre-selected option
-       so the common case is one click:
-       | purpose | derived default |
+     - **Review effort — NOT asked here.** The `fast` · `standard` · `thorough` · `none` question
+       is asked at **Step 5, after the first clean render, with the deck in front of the user**
+       (SKILL.md → the post-build review question). At Step 0 it was a blind cost decision about a
+       deck nobody had seen — which is why the cheap tier could never safely be the default. Do
+       not add it back to the interview, and do not derive a review tier from the purpose.
+     - **Research breadth — DERIVED from purpose, never asked.** Research runs before the deck
+       exists, so it cannot wait for the post-build question; derive its breadth from the purpose
+       and say the derived word in the plan:
+       | purpose | derived research breadth |
        |---|---|
        | research/lab meeting · work status update · teaching · webinar / online presentation · **any tiny ask (1–2 slides, an internal note)** | `standard` |
        | academic conference talk · academic job talk / faculty interview · thesis defense · company/stakeholder readout · product description / pitch (customer, investor or internal) | `thorough` |
-       🔴 **`fast` is never derived — it is reachable only by the user asking for it.** The table has
-       two rows for a reason: those are the two classes the skill already had, so a derived tier can
-       only ever reproduce today's behaviour. A small ask does NOT lower the tier; **purpose decides,
-       size never does.** A one-slide exec readout derives `thorough`, and choosing `fast` there is a
-       recorded downgrade — which is exactly the case that most needs recording.
-       Deriving rather than defaulting to a constant is what makes this safe to add: **a user who
-       says nothing gets exactly the behaviour they got before this dial existed** (today's
-       low-stakes ≡ `standard`, today's high-stakes ≡ `thorough`), because those two tiers are pure
-       ALIASES rather than new behaviours. `fast` is the ONE genuinely new band, and it is opt-in
-       only — so the guarantee holds without an exception. The word exists so ONE word can move it.
-       **One word governs BOTH cost centres** — the research fan-out and the review panel. They are
-       comparable in size (measured on one deck: research ~1.02M tokens vs review ~0.95M), and a
-       user who asks for speed means the whole pipeline, not half of it. What `fast` narrows on the
-       research side is the **sample**, never the gate: the PRIMARY-SOURCE GATE still runs.
-       **Say the cost of `fast` in the option itself, never in a footnote:** it collapses the panel
-       to ONE generalist critic carrying both lenses, and a single agent wading all ~30 checks is
-       the exact failure mode the two-lens split was built to fix. Choosing it is accepting a known
-       recall drop, which is a legitimate trade — but only if it was stated.
-       **Say the rough WALL-CLOCK in every tier's option too** — `fast` ≈ 10–20 min of review ·
-       `standard` ≈ 30–60 min · `thorough` ≈ 1–2 h (review loop only; the whole session runs
-       longer, and the build — not the review — is its biggest slice at 40–71% of model-active
-       minutes). Estimates, not promises: they move with the model and the deck, and saying so in
-       the option costs six words. This line exists because a user asked why a deck took three
-       hours and reached for the review dial — the one lever whose label carried no time at all.
-       A cost dial with no clock on it teaches people to blame whichever knob they can see.
-       🔴 **Choosing a tier BELOW the derived default is allowed and must be VISIBLE:** say in one
-       line what is being given up, and record it on the hand-off's `review:` line as
-       `fast (derived default was thorough — user chose)`. A downgrade nobody can see afterwards is
-       indistinguishable from a downgrade that was never offered.
-       *(What each tier actually dispatches — panel size, arbitration trigger, round cap and round-2
-       scope — is owned by `references/critic-panel.md` → "Review effort tiers". Do not restate the
-       mechanics here; this question only collects the word.)*
+       A small ask does NOT lower the breadth; **purpose decides, size never does.** Breadth
+       narrows the **sample** (how many sources, how deep the sweep), never the gate: the
+       PRIMARY-SOURCE GATE and the fidelity floor hold at every breadth. Cost context, for when
+       the user asks: a single low-stakes deck at full weight measured **~32 subagents and ~2M
+       tokens across research + build + two review rounds**, research and review comparable in
+       size (~1.02M vs ~0.95M tokens on one measured deck) — and the build, not the review, is
+       the biggest wall-clock slice at 40–71% of model-active minutes.
    - *(Structure emphasis — data/trends vs narrative-insights vs sector/section breakdown — and the
      fine-grained slide count are best steered at the **Step-1 content checkpoint**, where the user
      approves the arc, rather than front-loaded here — keep this interview cheap.)*

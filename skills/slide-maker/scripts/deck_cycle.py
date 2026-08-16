@@ -24,6 +24,19 @@ is exactly how a pipeline stops checking:
      deck with a critical geometry fault should not be rasterised, looked at, or reasoned about
      as if it were finished. This tool propagates the stop; it never renders past one.
 
+  4. **The LOOP BREAKER: the third consecutive failure of the same fault is never answered with
+     another nudge.** The one genuinely uncapped loop in the pipeline is edit → build → lint on
+     a single stubborn slide: measured on a real deck, 10+ iterations of adjusting a constant by
+     a few points each time — and the fix that finally landed (computing the layout from the
+     measured content) landed on its FIRST try. So this tool keeps a per-fault streak across
+     consecutive runs in `.deck-cycle-state.json` beside the build script (same slide + same lint
+     code = same fault; the message's numbers may change, the key does not). When a fault
+     survives 3 consecutive runs it prints an escalation: stop nudging, RE-DERIVE that slide's
+     layout by measurement — `fit_text`/ink measurement, or a form helper that owns the geometry
+     (`sigs.py --example <form>`). A fault that clears resets its streak; a fresh build script
+     resets them all. The breaker never changes an exit code and never suppresses a finding — it
+     only names the moment where the strategy, not the constant, is what has to change.
+
 It is an ALTERNATIVE entry point, not a replacement. `render_deck.py` and `lint_deck.py` keep
 their own behaviour and every existing invocation still works — nothing in the pipeline is routed
 through here, and a step this skips is a step you can still run yourself.
@@ -39,13 +52,81 @@ Exit code uses lint_deck.py's vocabulary, so a caller can tell the two apart:
 """
 from __future__ import annotations
 
+import json
 import os
+import re
 import subprocess
 import sys
 import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+
+# Guard 4 — the loop breaker. A fault is keyed by (stage, slide, lint code), never by the message:
+# the whole failure mode is that each nudge changes the NUMBERS in the message while the fault
+# stays the same fault.
+STREAK_LIMIT = 3
+STATE_NAME = ".deck-cycle-state.json"
+
+
+def _fault_keys(build_out: str, lint_out: str | None) -> set[str]:
+    """Extract stable per-slide fault keys from one cycle's verbatim outputs.
+
+    build-time criticals: `[lint] ✗ slide  4 OVERFLOW      msg`  → `build:slide 4:OVERFLOW`
+    render-time blockers: `  slide 4: TEXT NOT VISIBLE: msg`     → `deck:slide 4:TEXT NOT VISIBLE`
+    ([warn] lines are advisory and never tracked — the loop this breaks is the fix-the-blocker loop).
+    """
+    keys: set[str] = set()
+    for m in re.finditer(r"\[lint\] ✗ slide\s+(\d+)\s+(\S+)", build_out):
+        keys.add(f"build:slide {int(m.group(1))}:{m.group(2)}")
+    if lint_out is not None:
+        for m in re.finditer(r"^  slide (\d+): (?!\[warn\])([^\n]+)", lint_out, re.M):
+            msg = m.group(2)
+            code = msg.split(":", 1)[0] if ":" in msg[:48] else " ".join(msg.split()[:4])
+            keys.add(f"deck:slide {int(m.group(1))}:{code.strip()}")
+    return keys
+
+
+def _loop_breaker(deck_dir: Path, script_name: str, build_out: str,
+                  lint_out: str | None, lint_ran: bool) -> None:
+    """Track fault streaks across CONSECUTIVE runs of the same build script; escalate at 3.
+
+    Render-stage keys are carried (not reset) by a build-only run: a run that never rendered has
+    not judged them either way. Never changes exit codes, never suppresses a finding.
+    """
+    state_path = deck_dir / STATE_NAME
+    try:
+        state = json.loads(state_path.read_text(encoding="utf-8")) if state_path.exists() else {}
+    except (OSError, ValueError):
+        state = {}
+    if state.get("script") != script_name:
+        state = {"script": script_name, "streaks": {}}
+    old = state.get("streaks", {}) if isinstance(state.get("streaks"), dict) else {}
+    current = _fault_keys(build_out, lint_out if lint_ran else None)
+    streaks = {key: int(old.get(key, 0)) + 1 for key in current}
+    if not lint_ran:
+        for key, cnt in old.items():
+            if key.startswith("deck:") and key not in streaks:
+                streaks[key] = int(cnt)
+    state["streaks"] = streaks
+    try:
+        state_path.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
+    except OSError:
+        pass
+    stuck = sorted(k for k in current if streaks[k] >= STREAK_LIMIT)
+    if stuck:
+        print("\n── deck_cycle: LOOP BREAKER " + "─" * 36)
+        for key in stuck:
+            print(f"   {key.split(':', 1)[1]} — failing for {streaks[key]} consecutive runs")
+        print(
+            "   The third attempt is never another nudge. Adjusting a constant by a few points and\n"
+            "   re-running is the strategy that has now failed three times on the same fault — stop\n"
+            "   nudging and RE-DERIVE that slide's layout by MEASUREMENT: compute positions from the\n"
+            "   real content (fit_text, measured ink heights, a stack pitch computed from the block\n"
+            "   height), or rebuild the slide on a form helper that owns the geometry\n"
+            "   (python3 scripts/sigs.py --example <form>). Measured precedent: 10+ nudge iterations\n"
+            "   on one slide; the computed-fit rewrite landed on its first try."
+        )
 
 
 def _run(label, cmd, cwd=None):
@@ -122,6 +203,8 @@ def main(argv):
         # invite reasoning about them as if they were finished.
         print("\ndeck_cycle: STOPPED before rendering — the build did not complete. A critical "
               "layout fault is a reason to fix the build, not to look at the render.")
+        # Guard 4. This is the path the nudge loop lives on — count the streak before returning.
+        _loop_breaker(deck_dir, script_path.name, out, None, False)
         return 2
 
     pptx = None
@@ -136,6 +219,7 @@ def main(argv):
         print("\ndeck_cycle: the build succeeded but no .pptx was found beside the build script.")
         return 2
 
+    lint_out, lint_ran = None, False
     if render:
         rdir = deck_dir / "render"
         rc_r, dt_r, out_r, lab_r = _run("render", [sys.executable, str(HERE / "render_deck.py"),
@@ -148,10 +232,16 @@ def main(argv):
                                              str(pptx), str(rdir)])
             _emit(lab_l, rc_l, dt_l, out_l)
             stages.append((lab_l, rc_l, dt_l))
+            if rc_l != 2:
+                lint_out, lint_ran = out_l, True
         else:
             print("\ndeck_cycle: the render did not complete, so the render-time lint was not "
                   "run — it reads the PNGs, and linting a stale or partial set reports the "
                   "previous deck.")
+
+    # Guard 4. The build succeeded (its ✗ lines cleared), so only render-time blockers can extend
+    # a streak here — and only when the lint actually ran and judged them.
+    _loop_breaker(deck_dir, script_path.name, out, lint_out, lint_ran)
 
     total = sum(d for _l, _r, d in stages)
     line = " · ".join(f"{l} {d:.1f}s" for l, _r, d in stages)

@@ -156,12 +156,14 @@ hand-off when more than a third of slides are over, unless `.deck-gates.json` ca
 **Slides are a visual aid for a speaker; the sentences belong in the speaker notes, which a
 pipeline-built deck already has.**
 
-**The delegated picks MUST include the `review:` effort tier**, written as the word plus its
-derivation — `review: standard (derived from purpose)` — and, when the pick sits BELOW the
-derived default, the reason. 🔴 **Under the auto waiver the coordinator records the DERIVED tier and
-runs it — it may never auto-pick BELOW it.** Delegation covers preferences the user would have
-expressed; it does not cover spending less care than the purpose calls for on a deck they never
-saw. `fast` is opt-in only, so in auto mode it is simply unreachable:
-`review: thorough (derived from purpose — auto)`. It is the deck's cost dial, so an auto run that never surfaces it spends the
-user's budget without ever showing them the lever; and a downgrade recorded nowhere is
-indistinguishable from a downgrade never made.
+**The `review:` tier is NOT a delegated Step-0 pick** — it is asked at Step 5, after the first
+clean render, with the deck visible (SKILL.md → the post-build review question). What the auto
+waiver changes: the post-build question is not posted as a stop; the coordinator runs the
+**default, `fast`**, and records it in the FYI and hand-off as
+`review: fast (post-build default — auto)`. 🔴 **Auto may never pick `none`.** Delegation covers
+preferences the user would have expressed; it does not cover declining review of a deck they never
+saw — skipping the loop entirely is a decision only the user can make, with the deck in front of
+them. An auto run that wants MORE than `fast` (a defense, an exec readout) may escalate and must
+record the reason: `review: standard (escalated — defense deck, auto)`. Either way the tier and
+its derivation appear in the hand-off `review:` line; a tier recorded nowhere is
+indistinguishable from a review never run.

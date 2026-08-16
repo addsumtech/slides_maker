@@ -44,12 +44,15 @@ their artifacts, the critic panel still reviews. What changes:
 
 ## Quality enforcement in auto mode
 
-### Review tier floor (already enforced)
+### Review tier in auto mode
 
-🔴 **The derived review tier is the floor.** From `checkpoint-convention.md`:
-- Conference talk / thesis / stakeholder readout → `thorough`
-- Work status / team meeting → `standard`  
-- `fast` is opt-in only, unreachable in auto mode
+🔴 **Auto runs the post-build default, `fast` — and may never pick `none`.** The review question
+is asked at Step 5 with the deck visible; under auto it is posted as an FYI, not a stop
+(`review: fast (post-build default — auto)`). Declining review entirely is a decision only the
+user can make, with the deck in front of them. Auto may ESCALATE above `fast` for a high-stakes
+purpose (defense / exec readout / pitch) and must record the reason:
+`review: standard (escalated — defense deck, auto)`. The surviving-blocker rule still applies at
+`fast`: a blocker the single round cannot absorb goes back to the USER named, never shipped.
 
 ### Design targets (must meet)
 
