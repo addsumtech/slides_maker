@@ -318,6 +318,19 @@ jobs:
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/reason.log || {
             echo "::error::written-reason suite did not run to completion"; exit 1; }
 
+      # The design step gated a motif's CONCEPT thoroughly and its MATERIAL not at all. Measured:
+      # a deck whose concept was genuinely right — a config row derived from the product's own
+      # cordis.yml, correctly rejecting the plug-socket stereotype — shipped as six grey
+      # rectangles, passed every concept gate, and the repair changed only the material. Step 2
+      # now opens by MAKING one real slide. The second half closes the hole that made the old
+      # evidence mechanism hollow: a 960x540 rectangle of one grey satisfied the ANCHOR PROOF.
+      - name: Material probe (make it before you declare it; a blank PNG is not evidence)
+        run: |
+          set -o pipefail
+          python tests/test_material_probe.py | tee /tmp/probe.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/probe.log || {
+            echo "::error::material-probe suite did not run to completion"; exit 1; }
+
       # THE COUNTERWEIGHT. Every other blocking signal punishes a deck for being too much or too
       # same; nothing could hold one for being too SAFE, and a real 12-page build proved the cost —
       # ten advisory-driven iterations, each one flatter than the last, and no gate said a word.

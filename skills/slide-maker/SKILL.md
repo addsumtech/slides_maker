@@ -588,6 +588,45 @@ user's edits to the story, then move to design (Step 2).
 
 ## Step 2 — Design the deck (use the slide-design agent)
 
+> ### 🔴 STEP 2 OPENS WITH A MATERIAL PROBE — one REAL slide, built and looked at, BEFORE the plan is written
+> **Author the signature page in the invented register with real deckkit, render it, and LOOK at it —
+> then write the design plan's declarations to describe what you made.** Not after. The plan is a
+> description of an artifact that exists, never a promise about one that does not.
+>
+> **WHY, measured on a delivered deck in this repo's own history.** The pipeline gates a motif's
+> CONCEPT thoroughly — a derivation ladder with two middle rungs, two rejected pictures with the
+> clause that lost each, the STRANGER TEST, ONE-form-ONE-meaning, the generativity triple — and its
+> MATERIAL not at all. On that deck the concept was genuinely right (a config row, derived from the
+> product's own `cordis.yml`, correctly rejecting the plug-socket stereotype every plugin deck
+> reaches for) and it passed every one of those checks. **What shipped was six grey rectangles.**
+> The user's verdict was 设计能力变弱了. The repair changed only the material — the same rows became
+> a real config with keys, values and a `-`/`+` diff — and nothing about the concept moved. **No step
+> between "concept approved" and "deck delivered" had asked what the device is MADE of.**
+>
+> The cause is an order-of-work failure, not a missing rule: the design turn had ~20 required
+> declarations and zero required artifacts, so the effort went into sentences that pass instead of
+> a thing that works. `signature move: 封面自己演示论点` is a good sentence and it was true of
+> nothing on the page. **Pixels cannot be faked this way** — a grey-bars register renders as grey
+> bars — which is the whole reason this probe comes first.
+>
+> 1. Build ONE slide: the page the signature move lands on, in the register you just invented,
+>    using the same `build_<deck>.py` the deck will use. Render it (`render_deck.py … --slides 1`).
+> 2. **Look at it, and answer one question in one line: what would the SAFE version of this page
+>    have been?** If the honest answer is "about the same thing", the register is a look, not a
+>    move — go back and invent, before twenty declarations are written on top of it.
+> 3. Then write the design plan. The checkpoint carries a **`material probe:`** line — the rendered
+>    PNG plus that one-sentence comparison.
+>
+> **Cost is one build + one render (seconds), and the page is not a throwaway** — it becomes the
+> deck's signature slide and serves as the Step-4 anchor proof's `signature` anchor, so the ritual
+> is paid once. **It is a different question from the anchor proof**, which asks whether the move
+> SURVIVED the build; this asks whether the register was worth building at all.
+>
+> **Skip only when the look is not yours to invent:** a registered/provided template or a Mode-A
+> mimic (the material is the template's), or a 1–2 slide tiny ask. `boldness: conservative` does
+> NOT skip it — restraint is a material decision too, and a page is exactly where you see whether
+> it reads as deliberate or as nothing.
+
 With the **Content plan approved**, first build the **Evidence manifest** — one READ-ONLY probe line per asset the approved plan names, so the art director plans geometry with its eyes open (a no-asset deck skips it entirely). **Read `references/asset-production.md` §Evidence manifest before dispatching slide-design** for the line format, the probing tools, and the rule that probing NEVER materializes crops/equations/plates (asset-prep still runs only after the design plan is approved). That file is the asset lifecycle end-to-end — probe → image opt-in → crops → charts → logo/icons → equations.
 
 **The per-asset SPEC asset-prep consumes has a named producer:** the Design plan's per-slide rows

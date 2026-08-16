@@ -50,6 +50,10 @@ DESIGN_OK = {
     # One page only ever proved the aesthetic risk; the design that looks right on it can still fail
     # to hold the deck's densest page, and the charts can still obey none of the palette/type
     # decisions that were made against text.
+    # Step 2 opens by MAKING one real slide and looking at it; this is the one field on the plan
+    # that cannot be written without an artifact.
+    "material_probe": {"png": "probe.png",
+                       "safe_version": "安全版本会是同一句话配一张通用图表——那不是同一类东西"},
     "signature_proof": [
         {"role": "signature", "slide": 3, "png": "proof.png"},
         {"role": "complex", "slide": 2, "png": "proof_complex.png"},
@@ -81,8 +85,15 @@ def write_proof(dest: Path) -> None:
     """Real PNGs next to the deck — the anchors point at rendered evidence, not a promise."""
     sys.path.insert(0, str(SKILL / "scripts"))
     from PIL import Image
-    for name in ("proof.png", "proof_complex.png", "proof_data.png"):
-        Image.new("RGB", (960, 540), (240, 240, 245)).save(dest / name)
+    # NOT a flat rectangle: the gate now refuses a single-colour PNG as an anchor, because a
+    # 960x540 field of one grey used to satisfy the ANCHOR PROOF — evidence that proves nothing.
+    for k, name in enumerate(("proof.png", "proof_complex.png", "proof_data.png",
+                              "probe.png")):
+        im = Image.new("RGB", (960, 540), (240, 240, 245))
+        for x in range(80, 880):
+            for y in range(120 + k * 20, 300 + k * 20):
+                im.putpixel((x, y), (16 + k * 20, 110, 99))
+        im.save(dest / name)
 
 
 def run_gate(deck: Path, gates: dict, *flags: str) -> tuple[int, str]:

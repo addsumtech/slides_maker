@@ -124,6 +124,23 @@ def die(msg, code=1):
     sys.exit(code)
 
 
+def _png_is_flat(path):
+    """True when the image is a single flat colour — i.e. not a render of anything.
+
+    Measured: `signature_proof` required its PNGs to exist and be non-empty, and a 960x540
+    rectangle of one grey satisfied the ANCHOR PROOF — the mechanism whose entire purpose is to
+    put rendered evidence where a design decision is made. A proof that a blank file can satisfy
+    proves nothing. Costs one PIL open; on any failure it returns False (unreadable is not a lie).
+    """
+    try:
+        from PIL import Image
+        with Image.open(path) as im:
+            cols = im.convert("RGB").getcolors(maxcolors=64)
+        return cols is not None and len(cols) <= 1
+    except Exception:
+        return False
+
+
 def _report_carried_by(pptx_path, cb):
     """Say, as a number, how many `carried_by` slides are structurally distinct from the deck.
 
@@ -1520,6 +1537,43 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
                         die('`signature_proof` {} anchor ({}) does not exist or is empty — render '
                             'the slide first (render_deck.py <deck> <dir>) and point at the real PNG.'
                             .format(_a.get("role"), proof_file))
+                    if _png_is_flat(png):
+                        die('`signature_proof` {} anchor ({}) is a single flat colour — that is not '
+                            'a render of a slide. Measured: a 960x540 rectangle of one grey used to '
+                            'satisfy the ANCHOR PROOF, the mechanism whose whole purpose is to put '
+                            'rendered evidence where the design decision is made.'
+                            .format(_a.get("role"), proof_file))
+            # ── THE MATERIAL PROBE (Step 2's opening block) ──────────────────────────────────
+            # The one required declaration on the design plan that cannot be written without
+            # having MADE something. Every other field is a sentence, and a deck shipped six grey
+            # rectangles under the sentence `signature move: 封面自己演示论点` — true of nothing on
+            # the page. The concept gates all passed; no step ever asked what the device is made of.
+            probe = design.get("material_probe")
+            if not isinstance(probe, dict):
+                die('`design_plan.material_probe` is missing. Step 2 opens by BUILDING one real '
+                    'slide — the signature page in the register you invented — rendering it, and '
+                    'looking at it, before any of this plan is written.\n'
+                    '    {"material_probe": {"png": "render/slideNN.png",\n'
+                    '                        "safe_version": "<what the DEFAULT version of this '
+                    'page would have been — if it is about the same thing, the register is a look, '
+                    'not a move>"}}')
+            ppng = Path(str(probe.get("png") or ""))
+            if not ppng.is_absolute():
+                ppng = Path(pptx).parent / ppng
+            if not str(probe.get("png") or "") or not ppng.exists() or ppng.stat().st_size < 512:
+                die('`design_plan.material_probe.png` must point at a REAL rendered slide '
+                    '({!r} is missing or empty). The probe is the artifact; a plan describing it '
+                    'is not.'.format(str(probe.get("png") or "")))
+            if _png_is_flat(ppng):
+                die('`design_plan.material_probe.png` is a single flat colour — not a render.')
+            if reason_width(probe.get("safe_version")) < 20:
+                die('`design_plan.material_probe.safe_version` must say in one line what the SAFE '
+                    'version of that page would have been. It is the whole test: if the honest '
+                    'answer is "about the same thing", the register is a look rather than a move, '
+                    'and that is worth discovering before twenty declarations are written on it.')
+            print("[gates] material probe: {} · safe version would have been: {}".format(
+                probe.get("png"), str(probe.get("safe_version"))[:90]))
+
             cb = design["carried_by"]
             if not isinstance(cb, list) or len(cb) < 2:
                 die("`carried_by` must name at least 2 slides where the signature move does structural "
