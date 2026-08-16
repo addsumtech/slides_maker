@@ -1720,7 +1720,16 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
         # skill deliberately caps as non-blocking), whether it is REPETITIVE is a share of slides
         # agreeing with each other, which is a defect with a concrete fix. `agents/critic.md` states
         # that exact test, and it is why this can hold a deck while the distinctiveness axis cannot.
+        #
+        # 🔴 THAT PARAGRAPH USED TO END HERE, and the asymmetry it describes was the bug: "whether a
+        # deck is TIMID stays the critic's taste call" left the safe side of the scale with no
+        # deterministic voice at all. Some of timidity IS measurable — whether any page has a
+        # protagonist that is not a sentence, whether the palette does any work — and that half now
+        # has a gate of its own, below.
         _check_sameness(pptx, delivery, gates)
+
+    with _gate_section('timidity'):
+        _check_timidity(pptx, delivery, gates)
 
     with _gate_section('density'):
         # ── DENSITY: a slide is a visual aid, not a document ────────────────────────
@@ -1930,6 +1939,111 @@ def _LD_SAMENESS_STRUCTURAL():
 def _LD_SAMENESS_RENDER_DEPENDENT():
     import lint_deck as _ld
     return _ld.SAMENESS_RENDER_DEPENDENT
+
+
+def _LD_TIMIDITY_CODES():
+    import lint_deck as _ld
+    return _ld.TIMIDITY_CODES
+
+
+def _LD_TIMIDITY_STRUCTURAL():
+    import lint_deck as _ld
+    return _ld.TIMIDITY_STRUCTURAL
+
+
+TIMIDITY_WAIVER_KINDS = {
+    "register-restrained":
+        "a deliberately quiet register (ink-wash, mono spec sheet, memorial) where restraint IS the design",
+    "text-is-the-artifact":
+        "the words themselves are the deliverable (a quote deck, a legal/《条款》 read-through)",
+    "template-locked":
+        "a registered or provided template this deck may not push past",
+    "user-waived":
+        "the user was shown the finding and chose to ship over it",
+}
+
+
+def _check_timidity(pptx, delivery, gates):
+    """🔴 THE COUNTERWEIGHT. Hold a deck that is measurably SAFE, the way sameness holds one that
+    is measurably repetitive.
+
+    Every other blocking signal in this pipeline punishes excess. Measured on a real 12-page build:
+    ten iterations, each one driven by an advisory, each one making the deck flatter — the dark
+    pivot page deleted for ONE-OFF CANVAS FLIP, content cut for TEXT WALL, the type scale collapsed
+    for SIZE SPRAWL. Every one of those advisories names the ambitious repair FIRST ("enrich with a
+    second column of substance", "repeat the treatment as a divider family"); subtraction is simply
+    the cheaper way to make the number go away, and with feedback on one side only, the cheap way
+    always wins. The user's verdict on that deck was "设计能力变弱了" — and NOTHING in the pipeline
+    had said so, because the one force that could (the critic's distinctiveness axis) is
+    non-blocking at the default dial and lives inside a review that can be declined.
+
+    Shaped exactly like the sameness gate, for the same reason: several weak signals, a structural
+    requirement, a size floor, and a waiver that must NAME the register. It blocks at >= 2 codes
+    with >= 1 structural — TIMID COVER and FLAT TYPE are one fact counted twice, so type drama
+    alone can never hold a deck.
+
+    It stands down entirely under `boldness: conservative` with a recorded `deliberately
+    restrained:` move, because that is the dial saying "restraint is the position" — the same carve
+    signature_proof already honours.
+    """
+    if not isinstance(gates, dict):
+        gates = {}
+    stats, aspect = _sameness_stats(pptx, delivery)
+    fired = tuple(stats.get("timidity_codes") or ())
+    body_n = int(stats.get("body_n") or 0)
+
+    design = gates.get("design_plan") or {}
+    dial = str(design.get("boldness", "")).strip().lower()
+    move = str(design.get("signature_move", "")).strip().lower()
+    if dial == "conservative" and move.startswith("deliberately restrained"):
+        print("[gates] timidity: not applied — boldness=conservative with a recorded "
+              "`deliberately restrained` move; restraint IS the position here")
+        return
+    if delivery == "surface" or aspect < 1.2 or body_n < 8:
+        why = ("a single-canvas surface" if delivery == "surface"
+               else "a portrait/square canvas" if aspect < 1.2
+               else "%d content slide(s), under the 8 this is calibrated for" % body_n)
+        print("[gates] timidity: not applied — {} (the per-signal [stats] warnings still print)"
+              .format(why))
+        return
+
+    structural = [c for c in fired if c in _LD_TIMIDITY_STRUCTURAL()]
+    blocks = len(fired) >= 2 and bool(structural)
+    listed = " · ".join(fired) if fired else "none"
+    waiver = gates.get("timidity") or {}
+
+    if waiver:
+        reason = waiver.get("waived")
+        kind = waiver.get("waived_category")
+        if not isinstance(reason, str) or reason_width(reason) < 40:
+            die("`timidity.waived` must NAME the register that makes this restraint deliberate — "
+                "a sentence someone can disagree with later (>=40 wide).")
+        if kind not in TIMIDITY_WAIVER_KINDS:
+            die("`timidity.waived_category` must say WHICH kind of deliberate restraint this is. "
+                "One of:\n" + "\n".join("    {:22s} {}".format(k, v)
+                                          for k, v in sorted(TIMIDITY_WAIVER_KINDS.items())))
+        recorded = waiver.get("codes")
+        if not isinstance(recorded, list) or set(recorded) != set(fired):
+            die("`timidity.codes` records {} but this deck now fires {}. A waiver written for a "
+                "different state of the deck does not certify this one.".format(
+                    sorted(recorded or []), sorted(fired)))
+        print("[gates] timidity: {} of {} signal(s) fired ({}) — WAIVED [{}]: {}".format(
+            len(fired), len(_LD_TIMIDITY_CODES()), listed, kind, str(reason)[:110]))
+        return
+
+    if blocks:
+        die("this deck measures SAFE on {} of {} signals ({}) — and unlike every other gate here, "
+            "that is a finding about ambition rather than about error.\n"
+            "    Nothing is broken; the deck simply takes no position a template would not have "
+            "taken. The repairs the advisories name FIRST are the ones that fix this — enrich a "
+            "page with a real protagonist (a figure, a chart, a form whose geometry IS the "
+            "argument), give the deck a rhythm event, let the palette mean something.\n"
+            "    If the restraint is the design, say which register:\n"
+            '    "timidity": {{"waived": "<the register, named>", "waived_category": "<{}>", '
+            '"codes": {}}}'.format(len(fired), len(_LD_TIMIDITY_CODES()), listed,
+                                   " | ".join(sorted(TIMIDITY_WAIVER_KINDS)), sorted(fired)))
+    print("[gates] timidity: {} of {} signal(s) fired ({})".format(
+        len(fired), len(_LD_TIMIDITY_CODES()), listed))
 
 
 def _density_stats(pptx, budget=70):

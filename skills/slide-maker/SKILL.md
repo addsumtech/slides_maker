@@ -2240,6 +2240,33 @@ out explicitly here so they can confirm it.
 > every deck where the user said "no PDF, thanks", the strongest gate in the skill never ran — and
 > nobody could see that it hadn't. A gate whose execution depends on an unrelated user preference is
 > not a gate.
+>
+> **🔴 The other one is TIMIDITY — the counterweight, and the newer half of the same idea.** Every
+> blocking signal above punishes a deck for being too MUCH or too SAME. Nothing could hold one for
+> being too SAFE: `TIMID COVER` / `FLAT TYPE` are excluded from the sameness composite, and the one
+> force that can call a deck forgettable — the critic's distinctiveness axis — is non-blocking at
+> the default dial and lives inside a review the user may decline. **Measured, on a real build: a
+> 12-page deck was iterated ten times, every pass driven by an advisory, and every pass made it
+> flatter** — the dark pivot page deleted for `ONE-OFF CANVAS FLIP`, content cut for `TEXT WALL`,
+> the type scale collapsed for `SIZE SPRAWL`. Each of those advisories names the ambitious repair
+> FIRST ("enrich with a second column of substance", "repeat the treatment as a divider family");
+> subtraction is merely the cheaper way to make the number disappear, and **with feedback on one
+> side only, the cheap way always wins.** The user's verdict was *设计能力变弱了* and nothing in the
+> pipeline had said so. So: `TIMID COVER` · `FLAT TYPE` · **`TEXT-ONLY DECK`** (most content slides
+> carry no chart, no figure, no drawn form — every page's protagonist is a sentence) ·
+> **`MONOTONE INK`** (the rendered pages are effectively greyscale), blocking at **≥2 with ≥1
+> structural** (the two type signals are one fact twice, so drama alone can never hold a deck).
+> It stands down under `boldness: conservative` with a recorded `deliberately restrained:` move —
+> there restraint IS the position — and under the same size/aspect floors as sameness. Where the
+> quiet is the design, name the register:
+> ```json
+> "timidity": {"waived": "<the register, named>",
+>              "waived_category": "register-restrained | text-is-the-artifact | template-locked | user-waived",
+>              "codes": ["<exactly the codes the gate reported>"]}
+> ```
+> 🔴 **When it fires, take the repair the advisories name first, not the one that deletes.** The
+> measurable half of timidity is now gated; the unmeasurable half is still the critic's, and this
+> is the moment to notice you have been optimising a warning count instead of designing.
 
 **`--deliverables` refuses to run until `<deck-dir>/.deck-gates.json` records that the Step-2
 design plan, the Step-5 critic and the Step-6 provenance pass actually ran.** Write it when the

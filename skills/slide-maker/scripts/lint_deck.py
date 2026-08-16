@@ -1689,6 +1689,31 @@ SAMENESS_CODES = ("LAYOUT SAMENESS", "SKELETON VARIETY", "CARD DOMINANCE",
 SAMENESS_STRUCTURAL = ("LAYOUT SAMENESS", "SKELETON VARIETY", "CARD DOMINANCE")
 SAMENESS_RENDER_DEPENDENT = ("FLAT RHYTHM",)
 
+# ── THE MISSING COUNTERWEIGHT ────────────────────────────────────────────────────────────────
+# Every blocking signal in this file punishes a deck for being TOO MUCH or TOO SAME. Nothing
+# could hold a deck for being too SAFE: `TIMID COVER` and `FLAT TYPE` are deliberately excluded
+# from SAMENESS_CODES, and the only force that can call a deck forgettable — the critic's
+# distinctiveness axis — is non-blocking at the default `balanced+` dial AND lives inside a review
+# the user may decline. Measured, on a real run: a 12-page deck was iterated TEN times, every pass
+# driven by an advisory, and each pass made it flatter — the dark pivot page was deleted to satisfy
+# ONE-OFF CANVAS FLIP, content was cut to satisfy TEXT WALL, the type scale collapsed to satisfy
+# SIZE SPRAWL. Every one of those advisories names the ambitious way out FIRST ("enrich with a
+# second column of substance", "repeat the treatment as a divider family"); the cheap way out is
+# subtraction, and with feedback on one side only, subtraction always wins. So this composite is
+# the other side, deliberately shaped like SAMENESS_CODES: several weak signals, a structural
+# requirement, a floor on deck size, and a written waiver that names the register.
+TIMIDITY_CODES = ("TIMID COVER", "FLAT TYPE", "TEXT-ONLY DECK", "MONOTONE INK")
+# At least one of these must fire before the gate blocks. TIMID COVER + FLAT TYPE are one fact
+# counted twice (see the note above them), so a deck may not be held on type drama alone.
+TIMIDITY_STRUCTURAL = ("TEXT-ONLY DECK", "MONOTONE INK")
+TIMIDITY_RENDER_DEPENDENT = ("MONOTONE INK",)
+
+
+def timidity_codes(warns):
+    """The DISTINCT timidity codes present in `warns`, in a stable order."""
+    seen = {str(w).split(":", 1)[0].strip() for w in warns}
+    return tuple(c for c in TIMIDITY_CODES if c in seen)
+
 
 def sameness_codes(warns):
     """The DISTINCT sameness codes present in `warns`, in a stable order.
@@ -2519,6 +2544,45 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False, icon_ev=None):
     if drama and drama < 2.0 and n > 3:
         warns.append(f"FLAT TYPE: no run anywhere reaches 2× the body size ({drama:.1f}×) — the deck has "
                      f"no typographic hero; give at least the key number/statement real scale")
+    # ── TEXT-ONLY DECK ───────────────────────────────────────────────────────────────────────
+    # Per slide, `ink_cov - text_cov` is the share of the page carried by something that is NOT
+    # words: a figure, a chart, a diagram, a plate, a filled form. When that gap is a couple of
+    # points on most pages, every page's protagonist is a paragraph — which is the measurable
+    # shape of "this deck is a document someone set in a slide frame". Deliberately NOT a
+    # per-slide warning: one text page is fine and often right; a DECK of them is the finding.
+    # WHY it is not simply `ink_cov - text_cov`: ink coverage is a UNION, so a filled plate with
+    # text on it contributes its area once and the text ink cancels most of it out. Measured on a
+    # real deck, the page whose whole geometry WAS a stack of filled rows scored 2.9pp — the same
+    # as a page of bare paragraphs. That metric would have fired on every card-based deck ever
+    # built, which is a false-positive machine, not a gate. So ask what the page actually CONTAINS:
+    # a chart, a foreground picture (a figure, a photo, an icon set), or enough non-text ink to be
+    # a drawn form. A page with none of those three is words in a frame.
+    body_rows = [r for k, r in enumerate(rows) if 0 < k < last_body]
+    if len(body_rows) >= 6:
+        wordy = [r for r in body_rows
+                 if not (r.get("n_chart") or r.get("n_pic_fg")
+                         or (r.get("ink_cov", 0) - r.get("text_cov", 0)) >= 0.08)]
+        share = len(wordy) / len(body_rows)
+        if share >= 0.65:
+            warns.append(
+                f"TEXT-ONLY DECK: {len(wordy)} of {len(body_rows)} content slides carry almost "
+                f"nothing but words ({share*100:.0f}%: no chart, no figure, no drawn form) — the "
+                f"deck has no visual argument, only set paragraphs. Give the load-bearing pages a "
+                f"protagonist that is not a sentence (a figure, a real chart, a diagram whose "
+                f"geometry IS the point), or record the register exception")
+    # ── MONOTONE INK ─────────────────────────────────────────────────────────────────────────
+    # Needs renders. A deck whose pages are all near-greyscale is not necessarily wrong — an
+    # ink-wash or a mono spec sheet is a register — but it is one of the ways a deck reads safe,
+    # and it is only ever counted as ONE weak signal inside the composite.
+    if lums:
+        sats = [r.get("sat") for r in rows if isinstance(r.get("sat"), (int, float))]
+        if sats:
+            med_sat = sorted(sats)[len(sats) // 2]
+            if med_sat < 0.06:
+                warns.append(
+                    f"MONOTONE INK: the deck's median colour saturation is {med_sat:.2f} — the "
+                    f"pages are effectively greyscale. If that is the register (ink-wash, mono "
+                    f"spec sheet), say so; otherwise the semantic palette is not doing any work")
     for w in warns:
         print(f"  [stats] {w}")
     return {"warns": warns, "body_median_pt": body_med, "type_drama": round(drama, 2),
@@ -2528,7 +2592,8 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False, icon_ev=None):
             # closer excluded, and any design_intent(role="appendix") run excluded via last_body —
             # so the gate and the [stats] block cannot disagree about how big the deck is.
             "body_n": max(0, last_body - 1),
-            "sameness_codes": list(sameness_codes(warns))}
+            "sameness_codes": list(sameness_codes(warns)),
+            "timidity_codes": list(timidity_codes(warns))}
 
 
 def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=False,

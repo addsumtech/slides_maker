@@ -318,6 +318,20 @@ jobs:
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/reason.log || {
             echo "::error::written-reason suite did not run to completion"; exit 1; }
 
+      # THE COUNTERWEIGHT. Every other blocking signal punishes a deck for being too much or too
+      # same; nothing could hold one for being too SAFE, and a real 12-page build proved the cost —
+      # ten advisory-driven iterations, each one flatter than the last, and no gate said a word.
+      # Both directions matter more here than anywhere: a miscalibrated gate on THIS side would
+      # punish exactly the restrained registers the skill protects, so the suite asserts it blocks
+      # a text-only greyscale deck AND stands down on declared restraint, real protagonists, and
+      # small decks.
+      - name: Timidity gate (a deck can be held for being safe)
+        run: |
+          set -o pipefail
+          python tests/test_timidity_gate.py | tee /tmp/timid.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/timid.log || {
+            echo "::error::timidity suite did not run to completion"; exit 1; }
+
       # The hand-off gate reports every failure in one run instead of stopping at the first — the
       # same ping-pong `codex_delivery_gate.py` already avoided and `validate_review.py` names by
       # name. Batching is only safe if it did not weaken anything, so the suite asserts both
