@@ -50,6 +50,43 @@ def _require_deps():
         sys.exit(0)
 
 
+def _categorical_shapes():
+    """The icon guard is only as good as what it calls a category set.
+
+    ROWS ONLY was right about bullet lists and wrong about the vertical DEFINITION list — a page of
+    four rules, each a short label with a parallel gloss beside it. That shape is a category set by
+    any reading, it is one of the commonest ways to lay one out, and it was invisible: measured
+    twice on real decks, whose plans then recorded `icon_family: none — <reason>` with nothing in
+    the file able to contradict them. Both directions are pinned here, because widening this once
+    before made every deck with a 3-line body block read as entity-rich.
+    """
+    import sys, tempfile, pathlib as _pl
+    sys.path.insert(0, str(SCRIPTS))
+    import deckkit as dk, lint_deck as L
+    from pptx import Presentation
+    from pptx.dml.color import RGBColor
+    C = RGBColor.from_string
+    prs = dk.blank_deck(13.333, 7.5)
+    s1 = prs.slides.add_slide(prs.slide_layouts[6])          # 1: bullet list — must NOT count
+    for k in range(4):
+        dk.text(s1, 0.9, 2.4 + k * 0.7, 6.0, 0.5,
+                [[(f"point number {k+1}", 19, C("333333"), False, False)]])
+    s2 = prs.slides.add_slide(prs.slide_layouts[6])          # 2: definition list — MUST count
+    for k, (a, b) in enumerate([("roof", "45 deg zinc"), ("height", "aligned"),
+                                ("stone", "limestone"), ("balcony", "floors 2 and 5")]):
+        dk.text(s2, 0.9, 2.4 + k * 0.7, 1.4, 0.5, [[(a, 19, C("A8422C"), True, False)]])
+        dk.text(s2, 2.6, 2.4 + k * 0.7, 5.0, 0.5, [[(b, 19, C("333333"), False, False)]])
+    s3 = prs.slides.add_slide(prs.slide_layouts[6])          # 3: a row of peers — always counted
+    for k, n in enumerate(["alpha", "beta", "gamma"]):
+        dk.text(s3, 0.9 + k * 4.0, 3.0, 3.4, 0.6, [[(n, 19, C("333333"), False, False)]])
+    with tempfile.TemporaryDirectory() as td:
+        f = _pl.Path(td) / "cat.pptx"
+        prs.save(str(f))
+        got = L.categorical_slides(Presentation(str(f)))
+    return (got == [2, 3],
+            "categorical: a definition list counts, a bullet list does not (got %s)" % got)
+
+
 def main():
     _require_deps()
     tmp = pathlib.Path(tempfile.mkdtemp(prefix="lintfx-"))
@@ -61,6 +98,8 @@ def main():
                        cwd=tmp, capture_output=True)
 
     ok, bad = [], []
+    _pass, _msg = _categorical_shapes()
+    (ok if _pass else bad).append(_msg)
 
     def ran(out, label):
         """A token's ABSENCE only means 'suppressed' if the lint actually ran. Without this the

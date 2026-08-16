@@ -420,6 +420,37 @@ def categorical_slides(prs, sw=None, sh=None):
                     hits.append(i)
                     done = True
                     break
+        # ── THE VERTICAL DEFINITION LIST ────────────────────────────────────────────────────
+        # "ROWS ONLY" above is right about bullet lists and wrong about this shape, and the gap
+        # cost a real deck its icons twice. A page of four rules — 屋顶 / 高度 / 材料 / 阳台, each a
+        # short label with a parallel gloss beside it — is a category set by any reading, and it is
+        # invisible to the row test because its peers stack DOWNWARD. The docstring even records the
+        # earlier incident ("the plan said 'none — 概念性内容,图标会变装饰'"): the guard installed for
+        # that incident could not fire on the layout that produced it.
+        #
+        # What separates it from the bullet list the row-only rule was protecting: TWO aligned
+        # columns. A definition list has a short label at one shared x AND a second text at another
+        # shared x on the same baseline, 3+ times over. A bullet list has one column and is still
+        # not counted. Same over-counting caveat as above — this names slides, it never fails a deck.
+        if not done:
+            for _sz, g in groups.items():
+                labels = {}
+                for b in g:
+                    labels.setdefault(round(b["l"], 1), []).append(b)
+                for lx, col in labels.items():
+                    if len(col) < 3:
+                        continue
+                    paired = 0
+                    for b in col:
+                        if any(abs(o["t"] - b["t"]) < 0.20 and o["l"] > b["l"] + 0.25
+                               for o in bx if o is not b):
+                            paired += 1
+                    if paired >= 3:                      # 3+ 行「短标签 + 平行说明」
+                        hits.append(i)
+                        done = True
+                        break
+                if done:
+                    break
     return hits
 
 
