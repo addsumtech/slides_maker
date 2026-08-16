@@ -210,7 +210,7 @@ It does not promise a perfect deck in one shot. It removes the expensive part �
 | `standard` | 2 focused critics (content + design), 2 rounds, top-10 claims | ~12 · ~600k |
 | `thorough` | multi-critic panel + arbiter cross-check, 3 rounds, every claim | ~32 · ~2M |
 
-<sub>Say nothing and your purpose picks the tier. Figures from one 12-page deck, July 2026 — orders of magnitude.</sub>
+<sub>The tier is chosen by purpose. Figures from one 12-page deck, July 2026 — orders of magnitude.</sub>
 
 ---
 
