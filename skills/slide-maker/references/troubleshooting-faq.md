@@ -33,7 +33,14 @@ Three error surfaces, three prefixes:
 | `slide N: FINDING message` + `N layout finding(s)` | render-time (`lint_deck.py` on the PNGs) | **hard finding — must reach 0** |
 | `slide N: [warn] MESSAGE` | render-time | advisory (alt-text, math-font tofu risk, low/body contrast…) — does not fail the exit code |
 | `[stats] FAMILY: …` | render-time | advisory — never fails the exit code (see §7) |
+| `render_deck: N hand-off gate(s) failed` + `[i/N] <section>` | hand-off (`render_deck.py --gate-check`) | **all N must be fixed — the run reports every one** |
 | a Python traceback | your build script crashed | fix the code line it names (§3) |
+
+🔴 **The hand-off gate lists EVERY failure in one run — fix them ALL before re-running.** It used
+to stop at the first, so a thin `.deck-gates.json` cost one fail → fix → re-run cycle per field, at
+the point in the session where a round-trip is most expensive. Only a structural stop still comes
+alone (no `.deck-gates.json`, unreadable JSON, an unknown recorded `delivery`), because every later
+gate reads what it could not produce. Within one section the first stop wins for the same reason.
 
 `slide N` is 1-based and matches the rendered `slideNN.png` (e.g. `slide07.png`). When a message
 names a shape it quotes the first words of its text — search your build script for those words to

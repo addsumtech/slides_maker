@@ -2184,6 +2184,12 @@ out explicitly here so they can confirm it.
 > the budget that mode is actually held to — or, better, record it once with
 > `dk.declare_delivery(OUT, "<mode>")` in the build script and neither tool needs the flag again.
 >
+> 🔴 **It reports EVERY failure at once — `[1/N] <section>`, so FIX THEM ALL, then re-run.** Fixing
+> the first one and re-running is the habit this batching exists to kill: the gate used to stop at
+> the first problem, which cost one round-trip per field at the most expensive point of the run.
+> The only stops that still come alone are structural (no `.deck-gates.json`, unreadable JSON, an
+> unknown recorded delivery) — every later gate reads what those could not produce.
+>
 > **One of those gates is SAMENESS, and it is the one that can send you back to the build.** The
 > deck-level monotony signals (`LAYOUT SAMENESS` · `SKELETON VARIETY` · `CARD DOMINANCE` ·
 > `BOTTOM-STRIP MONOCULTURE` · `TITLE-RULE MONOCULTURE` · `ENVELOPE MONOCULTURE` · `FLAT RHYTHM`)

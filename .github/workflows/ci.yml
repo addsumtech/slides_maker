@@ -306,6 +306,18 @@ jobs:
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/cycle.log || {
             echo "::error::deck-cycle suite did not run to completion"; exit 1; }
 
+      # The hand-off gate reports every failure in one run instead of stopping at the first — the
+      # same ping-pong `codex_delivery_gate.py` already avoided and `validate_review.py` names by
+      # name. Batching is only safe if it did not weaken anything, so the suite asserts both
+      # directions: all N problems named in ONE run, and every failure still fatal, unmasked, with
+      # a clean record still passing silently.
+      - name: Hand-off gate batching (one run, every failure)
+        run: |
+          set -o pipefail
+          python tests/test_gate_batching.py | tee /tmp/gatebatch.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/gatebatch.log || {
+            echo "::error::gate-batching suite did not run to completion"; exit 1; }
+
       # Guard 4, separately: the loop breaker keys faults by (stage, slide, code) so a nudge that
       # only changes the numbers in the message still counts as the SAME fault, and the third
       # consecutive failure escalates to "re-derive by measurement" instead of another nudge.

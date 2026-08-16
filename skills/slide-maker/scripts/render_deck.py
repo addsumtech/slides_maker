@@ -13,6 +13,7 @@ Output: <out_dir>/slide01.png, slide02.png, ...   (default out_dir: ./render)
 Requires: LibreOffice + pymupdf (python -m pip install pymupdf). One-time installs.
 Override LibreOffice discovery with the SOFFICE env var (full path to the binary).
 """
+import contextlib
 import json
 import os
 import re
@@ -71,7 +72,51 @@ def find_soffice():
     return None
 
 
+# ── BATCHED GATE REPORTING ────────────────────────────────────────────────────────────────────
+# `die()` used to be what it looks like: print one message, exit. On the hand-off gate that made
+# every run report exactly ONE problem, and a thin `.deck-gates.json` then costs one fail → fix →
+# re-run round-trip PER FIELD — measured shape: ~15 sequential stop classes (critic → build_shape
+# → boldness → design_plan fields → type_scale → signature_proof → carried_by → concept →
+# signature_move → form reach → arc → provenance → sameness → density), each round-trip re-sending
+# the whole conversation at hand-off-time context, which is the most expensive point of the run.
+# The repo already knew this: `codex_delivery_gate.py` accumulates an `errors` list and prints all
+# of it, and `validate_review.py`'s docstring names "the ping-pong of one-error-at-a-time retries"
+# as the anti-pattern it was built to avoid. This path was the only holdout.
+#
+# So in batching mode `die()` records the failure and raises `_GateStop`, which ends the CURRENT
+# gate section (its remaining checks genuinely depend on what just failed) and lets every OTHER
+# section still run. `check_handoff_gates` prints the whole list at the end. Nothing about the
+# messages, the thresholds or the exit code changes — only how many runs it takes to see them.
+#
+# `_GateStop` derives from BaseException, like SystemExit and for the same reason: several gates
+# call `die()` inside a `try/except Exception`, and an ordinary exception would be swallowed there
+# — turning a hard gate into a silent pass. That is the one way this change could have made the
+# file WORSE than the behaviour it replaces.
+_COLLECTED = None       # list of (section, msg, code) while a batching run is in flight
+_SECTION = None         # the gate section currently executing, for labelling
+
+
+class _GateStop(BaseException):
+    """One gate section failed; its remaining checks depend on what just failed."""
+
+
+@contextlib.contextmanager
+def _gate_section(label):
+    """Run one INDEPENDENT gate section: a failure inside it never suppresses the others."""
+    global _SECTION
+    prev, _SECTION = _SECTION, label
+    try:
+        yield
+    except _GateStop:
+        pass
+    finally:
+        _SECTION = prev
+
+
 def die(msg, code=1):
+    if _COLLECTED is not None:
+        _COLLECTED.append((_SECTION, msg, code))
+        raise _GateStop
     print(msg, file=sys.stderr)
     sys.exit(code)
 
@@ -975,6 +1020,51 @@ def _critic_effort(critic):
 
 
 def check_handoff_gates(pptx, mode="presented", gate_check=False):
+    """Run EVERY hand-off gate, then report EVERY failure — one run, one fix pass.
+
+    This is the batching wrapper described at `die()`. It exists because the gate used to stop at
+    the first problem, so a thin record cost one round-trip per field at the most expensive moment
+    of the run. Now each independent section reports for itself and this prints the whole list.
+
+    What it deliberately does NOT change: the checks, their thresholds, their messages, or the
+    exit code. A batched report is a cheaper way to see the same refusals — never a softer one.
+    Two properties keep that true, and both are asserted by `tests/test_gate_batching.py`:
+
+      * a section that fails still fails — the exit code is the max of the collected codes, and a
+        deck with any problem never prints a pass line;
+      * failures do not MASK each other, in either direction. Within one section the first stop
+        still wins (its later checks read values the failed one was supposed to establish, so
+        continuing would report invented follow-on faults), and across sections nothing is
+        suppressed.
+
+    A structural failure — no `.deck-gates.json`, unreadable JSON, an unknown recorded delivery —
+    is still terminal: it is collected and reported alone, because every later gate reads what it
+    could not produce. That case never had a ping-pong problem, since it is one message either way.
+    """
+    global _COLLECTED
+    outer, _COLLECTED = _COLLECTED, []
+    try:
+        try:
+            _handoff_gate_checks(pptx, mode, gate_check)
+        except _GateStop:
+            pass                    # structural stop: report what we have, which is that one
+        problems = _COLLECTED
+    finally:
+        _COLLECTED = outer
+    if not problems:
+        return
+    n = len(problems)
+    head = ("render_deck: {} hand-off gate(s) failed. ALL of them are listed below — fix them in "
+            "ONE pass, then re-run.".format(n) if n > 1 else
+            "render_deck: 1 hand-off gate failed.")
+    print(head, file=sys.stderr)
+    for i, (section, msg, _code) in enumerate(problems, start=1):
+        label = " {}".format(section) if section else ""
+        print("\n[{}/{}]{}\n{}".format(i, n, label, msg), file=sys.stderr)
+    sys.exit(max(code for _s, _m, code in problems))
+
+
+def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
     """Refuse --deliverables until the quality gates have actually run.
 
     The gates that guard a deck's quality — the design plan, the independent critic, the
@@ -1095,574 +1185,580 @@ def check_handoff_gates(pptx, mode="presented", gate_check=False):
               "disagree about which deck this is.".format(path, _recorded, mode))
     delivery = _recorded or mode          # one of _KNOWN_DELIVERY, un-aliased
 
-    critic = gates.get("critic") or {}
-    if critic.get("waived"):
-        # A waiver is legitimate — quick decks and hosts without subagent dispatch are real —
-        # but an UNCLASSIFIED one is just a sentence, and the model that skipped the loop writes
-        # the same sentence as the model that ran it. The Codex delivery gate has required a
-        # distinct schema-valid review artifact per lens for a while; this path accepted any
-        # string. Measured: a hand-typed waiver carried a whole deck through `all hand-off gates
-        # pass` without an independent critic ever seeing it. So: name the category, and say
-        # whether the lenses ran at all.
-        WAIVER_KINDS = CRITIC_WAIVER_KINDS
-        reason = critic["waived"]
-        kind = critic.get("waived_category")
-        if not isinstance(reason, str) or len(reason.strip()) < 24:
-            die("`critic.waived` must be a written reason that travels with the deck, not a "
-                "placeholder. Say what was skipped and why, in a sentence someone can disagree "
-                "with later.")
-        if kind not in WAIVER_KINDS:
-            die("`critic.waived_category` must name WHICH kind of skip this is — an unclassified "
-                "waiver is indistinguishable from never having run the loop. One of:\n"
-                + _critic_waiver_menu()
-                + "\n\n  If none of these fit, the honest move is to run the critic.")
-        if kind == "cap-reached-majors-open":
-            # This kind asserts the OPPOSITE of the others — that the work happened — so it carries
-            # the evidence: which findings survived, and whether the user was actually told. Without
-            # `open` it degrades into "we tried", which is what every other waiver already says.
-            _open = critic.get("open")
-            if not isinstance(_open, list) or not _open or not all(
-                    isinstance(x, str) and x.strip() for x in _open):
-                die("`waived_category: cap-reached-majors-open` must list the surviving findings in "
-                    "`\"open\": [\"...\"]` — one short string each. This category claims the loop "
-                    "RAN, so the deck owes the reader what it ran INTO; an empty list is a consent "
-                    "verdict wearing a waiver's name.")
-            if not isinstance(critic.get("surfaced_to_user"), bool):
-                die("`waived_category: cap-reached-majors-open` must record "
-                    "`\"surfaced_to_user\": true|false` — whether these open majors were put in "
-                    "front of the user. Shipping over a known major is a decision; the record has "
-                    "to say whose it was.")
-        if kind == "no-dispatch-on-host" and "inline_ran" not in critic:
-            die("`waived_category: no-dispatch-on-host` must also record `\"inline_ran\": true|false` "
-                "— whether the content and design lenses were at least run inline. 'Ran inline in "
-                "the author's own context' and 'was never reviewed' are different claims, and the "
-                "hand-off note reads identically for both unless this file separates them.")
-        print("[gates] critic WAIVED [{}] — NOT INDEPENDENTLY REVIEWED".format(kind))
-        print("        {}".format(reason))
-        if kind == "no-dispatch-on-host":
-            print("        lenses run inline: {} — inline review is the author grading "
-                  "themselves.".format("yes" if critic.get("inline_ran") else "NO"))
-        print("        Say this in the hand-off note too; a waiver the user never sees is a "
-              "silence.")
-    elif critic.get("verdict") == "consent":
-        # A record the model TYPED at hand-off is self-certification: the model that skipped the
-        # loop writes the same JSON as the model that ran it. So when the record points at the
-        # review artifact (validate_review.py --record puts it there), re-read that artifact and
-        # verify it still says what the record claims. A hand-written record still passes — but it
-        # is LABELLED self-reported, so the two are distinguishable instead of identical.
-        src = critic.get("source")
-        if src:
-            if not os.path.isfile(src):
-                die("`critic.source` points at {} — which does not exist. The gate re-reads the "
-                    "review artifact rather than trusting the summary; restore the file, re-run "
-                    "`validate_review.py critic <review.json> --record <deck-dir>`, or waive in "
-                    "writing.".format(src))
-            digest = critic.get("sha256")
-            if digest and _sha256(src) != digest:
-                die("`critic.source` ({}) has changed since it was recorded — the sha256 no longer "
-                    "matches. Re-validate it with `validate_review.py critic <review.json> "
-                    "--record <deck-dir>` so the record and the evidence agree.".format(src))
-            try:
-                review = json.load(open(src, encoding="utf-8"))
-            except Exception as exc:
-                die("`critic.source` ({}) is not readable JSON: {}".format(src, exc))
-            if review.get("verdict") != "consent":
-                die("the recorded verdict says consent, but the review at {} says {!r}. The "
-                    "artifact wins.".format(src, review.get("verdict")))
-            hard = [f for f in (review.get("findings") or [])
-                    if isinstance(f, dict) and f.get("severity") in ("blocker", "major")]
-            if hard:
-                die("the review at {} consents while still carrying {} blocker/major finding(s) — "
-                    "that is a contract violation (agents/critic.md: any blocker/major -> revise). "
-                    "Fix them and re-review, or waive in writing.".format(src, len(hard)))
-            # --- bind the coverage claim to the DECK, not just to the file --------------------
-            # Until this ran, "verified" meant only "the artifact exists and still hashes to what
-            # was recorded". Measured: a schema-valid review of a 15-slide deck declaring
-            # slides_opened=[1] was accepted, recorded with a sha256, and printed as verified, and
-            # every hand-off gate passed. `slides_opened` is the anti-skim field; nothing compared
-            # it to the deck it claims to have read. SKILL.md Step 5 already tells the coordinator
-            # to make this comparison by hand ("lists every slide in the critic's ASSIGNED scope —
-            # whole deck for a sole critic; its section's range for a per-section critic"); the
-            # Codex delivery gate already mechanises it. This is the shared path catching up.
-            _cov = review.get("coverage") or {}
-            _opened = {v for v in (_cov.get("slides_opened") or []) if isinstance(v, int)}
-            _scope = _cov.get("scope")
-            if isinstance(_scope, (list, tuple)) and len(_scope) == 2 \
-                    and all(isinstance(v, int) for v in _scope):
-                _expect = set(range(_scope[0], _scope[1] + 1))
-                _what = "its declared scope (slides {}-{})".format(*_scope)
+    with _gate_section('critic'):
+        critic = gates.get("critic") or {}
+        if critic.get("waived"):
+            # A waiver is legitimate — quick decks and hosts without subagent dispatch are real —
+            # but an UNCLASSIFIED one is just a sentence, and the model that skipped the loop writes
+            # the same sentence as the model that ran it. The Codex delivery gate has required a
+            # distinct schema-valid review artifact per lens for a while; this path accepted any
+            # string. Measured: a hand-typed waiver carried a whole deck through `all hand-off gates
+            # pass` without an independent critic ever seeing it. So: name the category, and say
+            # whether the lenses ran at all.
+            WAIVER_KINDS = CRITIC_WAIVER_KINDS
+            reason = critic["waived"]
+            kind = critic.get("waived_category")
+            if not isinstance(reason, str) or len(reason.strip()) < 24:
+                die("`critic.waived` must be a written reason that travels with the deck, not a "
+                    "placeholder. Say what was skipped and why, in a sentence someone can disagree "
+                    "with later.")
+            if kind not in WAIVER_KINDS:
+                die("`critic.waived_category` must name WHICH kind of skip this is — an unclassified "
+                    "waiver is indistinguishable from never having run the loop. One of:\n"
+                    + _critic_waiver_menu()
+                    + "\n\n  If none of these fit, the honest move is to run the critic.")
+            if kind == "cap-reached-majors-open":
+                # This kind asserts the OPPOSITE of the others — that the work happened — so it carries
+                # the evidence: which findings survived, and whether the user was actually told. Without
+                # `open` it degrades into "we tried", which is what every other waiver already says.
+                _open = critic.get("open")
+                if not isinstance(_open, list) or not _open or not all(
+                        isinstance(x, str) and x.strip() for x in _open):
+                    die("`waived_category: cap-reached-majors-open` must list the surviving findings in "
+                        "`\"open\": [\"...\"]` — one short string each. This category claims the loop "
+                        "RAN, so the deck owes the reader what it ran INTO; an empty list is a consent "
+                        "verdict wearing a waiver's name.")
+                if not isinstance(critic.get("surfaced_to_user"), bool):
+                    die("`waived_category: cap-reached-majors-open` must record "
+                        "`\"surfaced_to_user\": true|false` — whether these open majors were put in "
+                        "front of the user. Shipping over a known major is a decision; the record has "
+                        "to say whose it was.")
+            if kind == "no-dispatch-on-host" and "inline_ran" not in critic:
+                die("`waived_category: no-dispatch-on-host` must also record `\"inline_ran\": true|false` "
+                    "— whether the content and design lenses were at least run inline. 'Ran inline in "
+                    "the author's own context' and 'was never reviewed' are different claims, and the "
+                    "hand-off note reads identically for both unless this file separates them.")
+            print("[gates] critic WAIVED [{}] — NOT INDEPENDENTLY REVIEWED".format(kind))
+            print("        {}".format(reason))
+            if kind == "no-dispatch-on-host":
+                print("        lenses run inline: {} — inline review is the author grading "
+                      "themselves.".format("yes" if critic.get("inline_ran") else "NO"))
+            print("        Say this in the hand-off note too; a waiver the user never sees is a "
+                  "silence.")
+        elif critic.get("verdict") == "consent":
+            # A record the model TYPED at hand-off is self-certification: the model that skipped the
+            # loop writes the same JSON as the model that ran it. So when the record points at the
+            # review artifact (validate_review.py --record puts it there), re-read that artifact and
+            # verify it still says what the record claims. A hand-written record still passes — but it
+            # is LABELLED self-reported, so the two are distinguishable instead of identical.
+            src = critic.get("source")
+            if src:
+                if not os.path.isfile(src):
+                    die("`critic.source` points at {} — which does not exist. The gate re-reads the "
+                        "review artifact rather than trusting the summary; restore the file, re-run "
+                        "`validate_review.py critic <review.json> --record <deck-dir>`, or waive in "
+                        "writing.".format(src))
+                digest = critic.get("sha256")
+                if digest and _sha256(src) != digest:
+                    die("`critic.source` ({}) has changed since it was recorded — the sha256 no longer "
+                        "matches. Re-validate it with `validate_review.py critic <review.json> "
+                        "--record <deck-dir>` so the record and the evidence agree.".format(src))
+                try:
+                    review = json.load(open(src, encoding="utf-8"))
+                except Exception as exc:
+                    die("`critic.source` ({}) is not readable JSON: {}".format(src, exc))
+                if review.get("verdict") != "consent":
+                    die("the recorded verdict says consent, but the review at {} says {!r}. The "
+                        "artifact wins.".format(src, review.get("verdict")))
+                hard = [f for f in (review.get("findings") or [])
+                        if isinstance(f, dict) and f.get("severity") in ("blocker", "major")]
+                if hard:
+                    die("the review at {} consents while still carrying {} blocker/major finding(s) — "
+                        "that is a contract violation (agents/critic.md: any blocker/major -> revise). "
+                        "Fix them and re-review, or waive in writing.".format(src, len(hard)))
+                # --- bind the coverage claim to the DECK, not just to the file --------------------
+                # Until this ran, "verified" meant only "the artifact exists and still hashes to what
+                # was recorded". Measured: a schema-valid review of a 15-slide deck declaring
+                # slides_opened=[1] was accepted, recorded with a sha256, and printed as verified, and
+                # every hand-off gate passed. `slides_opened` is the anti-skim field; nothing compared
+                # it to the deck it claims to have read. SKILL.md Step 5 already tells the coordinator
+                # to make this comparison by hand ("lists every slide in the critic's ASSIGNED scope —
+                # whole deck for a sole critic; its section's range for a per-section critic"); the
+                # Codex delivery gate already mechanises it. This is the shared path catching up.
+                _cov = review.get("coverage") or {}
+                _opened = {v for v in (_cov.get("slides_opened") or []) if isinstance(v, int)}
+                _scope = _cov.get("scope")
+                if isinstance(_scope, (list, tuple)) and len(_scope) == 2 \
+                        and all(isinstance(v, int) for v in _scope):
+                    _expect = set(range(_scope[0], _scope[1] + 1))
+                    _what = "its declared scope (slides {}-{})".format(*_scope)
+                else:
+                    _expect = set(range(1, _deck_slide_count(pptx) + 1))
+                    _what = "the whole deck ({} slides)".format(len(_expect))
+                _missing = sorted(_expect - _opened)
+                if _missing:
+                    die("the review at {} consents for {}, but `coverage.slides_opened` never lists "
+                        "slide(s) {}{}.\n"
+                        "  A critic can only judge what it opened, and consent on an unopened slide is "
+                        "not a verdict — it is a gap the record renders as a pass.\n"
+                        "  Re-dispatch the critic over the missing slides, or — for a per-section "
+                        "critic — declare the range it was assigned:\n"
+                        '      "coverage": {{"scope": [4, 9], "slides_opened": [4,5,6,7,8,9], ...}}'
+                        .format(src, _what,
+                                ", ".join(str(m) for m in _missing[:12]),
+                                " (+{} more)".format(len(_missing) - 12) if len(_missing) > 12 else ""))
+                print("[gates] critic consented after {} — verified against {} "
+                      "(opened {}/{} slides)".format(
+                          _critic_effort(critic), os.path.basename(src),
+                          len(_opened & _expect), len(_expect)))
             else:
-                _expect = set(range(1, _deck_slide_count(pptx) + 1))
-                _what = "the whole deck ({} slides)".format(len(_expect))
-            _missing = sorted(_expect - _opened)
-            if _missing:
-                die("the review at {} consents for {}, but `coverage.slides_opened` never lists "
-                    "slide(s) {}{}.\n"
-                    "  A critic can only judge what it opened, and consent on an unopened slide is "
-                    "not a verdict — it is a gap the record renders as a pass.\n"
-                    "  Re-dispatch the critic over the missing slides, or — for a per-section "
-                    "critic — declare the range it was assigned:\n"
-                    '      "coverage": {{"scope": [4, 9], "slides_opened": [4,5,6,7,8,9], ...}}'
-                    .format(src, _what,
-                            ", ".join(str(m) for m in _missing[:12]),
-                            " (+{} more)".format(len(_missing) - 12) if len(_missing) > 12 else ""))
-            print("[gates] critic consented after {} — verified against {} "
-                  "(opened {}/{} slides)".format(
-                      _critic_effort(critic), os.path.basename(src),
-                      len(_opened & _expect), len(_expect)))
+                print("[gates] critic consented after {} — SELF-REPORTED (no review "
+                      "artifact).\n"
+                      "        The evidence-backed path is one flag on a step you already run:\n"
+                      "          python3 scripts/validate_review.py critic <review.json> --record {}"
+                      .format(_critic_effort(critic), os.path.dirname(path) or "."))
+            if critic.get("corroborated_by"):
+                # An arbiter pass is only corroboration when it CORROBORATES. Read what it actually
+                # said: a Job-2 payload reporting an unresolved finding, a dulled strength, or a
+                # regressed neighbour is the opposite of a confirmation, and printing it as one is how
+                # a failed verification round became a hand-off credential.
+                _open = critic.get("arbiter_open") or []
+                if _open:
+                    _lines = []
+                    for c in _open[:6]:
+                        bits = []
+                        if not c.get("resolved"):
+                            bits.append("NOT resolved" + (": " + c["still_wrong"] if c.get("still_wrong") else ""))
+                        if c.get("dulled"):
+                            bits.append("dulled a named strength")
+                        if c.get("regressions"):
+                            bits.append("regressed " + "; ".join(map(str, c["regressions"])))
+                        _lines.append("    - {}: {}".format(c.get("finding_ref") or "?", " · ".join(bits)))
+                    die("the arbiter pass recorded against this deck reports {} item(s) that are still "
+                        "open, so it is not a corroboration:\n{}\n\n"
+                        "  Fix them and re-run the round, or — if you are shipping over it — say so in "
+                        "writing where the user can see it. The loop RAN here, so the honest category "
+                        "is the one that says so:\n"
+                        '    {{"critic": {{"waived": "shipping over: <the open item and why>",\n'
+                        '                 "waived_category": "cap-reached-majors-open",\n'
+                        '                 "open": ["<each surviving finding>"],\n'
+                        '                 "surfaced_to_user": true|false}}}}\n\n'
+                        "  Use `user-waived` ONLY if you actually asked the user and they chose to "
+                        "ship — it is a claim about a conversation, and writing it for a conversation "
+                        "that did not happen is the failure this classification exists to catch."
+                        .format(len(_open), "\n".join(_lines)))
+                print("[gates] consent corroborated by {} arbiter pass(es), no open items".format(
+                    len(critic["corroborated_by"])))
+        elif critic.get("verdict") == "revise":
+            die("the last critic review returned verdict=revise. Fix the blockers and re-run the "
+                "loop, or record a waiver with the reason you are shipping over it. The loop RAN "
+                "here, so the honest category is the one that says so:\n"
+                '    {"critic": {"waived": "shipping over: <the surviving finding and why>",\n'
+                '                "waived_category": "cap-reached-majors-open",\n'
+                '                "open": ["<each surviving finding>"],\n'
+                '                "surfaced_to_user": true|false}}\n\n'
+                "  Use `user-waived` ONLY if you actually asked the user and they chose to ship — it "
+                "is a claim about a conversation, and writing it for a conversation that did not "
+                "happen is the failure this classification exists to catch.")
         else:
-            print("[gates] critic consented after {} — SELF-REPORTED (no review "
-                  "artifact).\n"
-                  "        The evidence-backed path is one flag on a step you already run:\n"
-                  "          python3 scripts/validate_review.py critic <review.json> --record {}"
-                  .format(_critic_effort(critic), os.path.dirname(path) or "."))
-        if critic.get("corroborated_by"):
-            # An arbiter pass is only corroboration when it CORROBORATES. Read what it actually
-            # said: a Job-2 payload reporting an unresolved finding, a dulled strength, or a
-            # regressed neighbour is the opposite of a confirmation, and printing it as one is how
-            # a failed verification round became a hand-off credential.
-            _open = critic.get("arbiter_open") or []
-            if _open:
-                _lines = []
-                for c in _open[:6]:
-                    bits = []
-                    if not c.get("resolved"):
-                        bits.append("NOT resolved" + (": " + c["still_wrong"] if c.get("still_wrong") else ""))
-                    if c.get("dulled"):
-                        bits.append("dulled a named strength")
-                    if c.get("regressions"):
-                        bits.append("regressed " + "; ".join(map(str, c["regressions"])))
-                    _lines.append("    - {}: {}".format(c.get("finding_ref") or "?", " · ".join(bits)))
-                die("the arbiter pass recorded against this deck reports {} item(s) that are still "
-                    "open, so it is not a corroboration:\n{}\n\n"
-                    "  Fix them and re-run the round, or — if you are shipping over it — say so in "
-                    "writing where the user can see it. The loop RAN here, so the honest category "
-                    "is the one that says so:\n"
-                    '    {{"critic": {{"waived": "shipping over: <the open item and why>",\n'
-                    '                 "waived_category": "cap-reached-majors-open",\n'
-                    '                 "open": ["<each surviving finding>"],\n'
-                    '                 "surfaced_to_user": true|false}}}}\n\n'
-                    "  Use `user-waived` ONLY if you actually asked the user and they chose to "
-                    "ship — it is a claim about a conversation, and writing it for a conversation "
-                    "that did not happen is the failure this classification exists to catch."
-                    .format(len(_open), "\n".join(_lines)))
-            print("[gates] consent corroborated by {} arbiter pass(es), no open items".format(
-                len(critic["corroborated_by"])))
-    elif critic.get("verdict") == "revise":
-        die("the last critic review returned verdict=revise. Fix the blockers and re-run the "
-            "loop, or record a waiver with the reason you are shipping over it. The loop RAN "
-            "here, so the honest category is the one that says so:\n"
-            '    {"critic": {"waived": "shipping over: <the surviving finding and why>",\n'
-            '                "waived_category": "cap-reached-majors-open",\n'
-            '                "open": ["<each surviving finding>"],\n'
-            '                "surfaced_to_user": true|false}}\n\n'
-            "  Use `user-waived` ONLY if you actually asked the user and they chose to ship — it "
-            "is a claim about a conversation, and writing it for a conversation that did not "
-            "happen is the failure this classification exists to catch.")
-    else:
-        die("{} has no usable `critic` record — needs {{\"verdict\": \"consent\"|\"revise\"}} or "
-            "{{\"waived\": \"<reason>\", \"waived_category\": \"<one of these>\"}}:\n{}"
-            .format(path, _critic_waiver_menu()))
+            die("{} has no usable `critic` record — needs {{\"verdict\": \"consent\"|\"revise\"}} or "
+                "{{\"waived\": \"<reason>\", \"waived_category\": \"<one of these>\"}}:\n{}"
+                .format(path, _critic_waiver_menu()))
 
-    # The design plan is the art director's output (Step 2). Self-authoring one is indistinguishable
-    # from dispatching for it — unless the record has to carry the fields the dispatch produces.
-    # `icon_family` joins the four originals for one measured reason: a deck shipped with ZERO
-    # icons through every automated gate, while a missing LOGO was caught by a required
-    # checkpoint token. Icons are called a design must on every branch and had no field, no
-    # column and no check anywhere. The token grammar mirrors `logo plan:` — a family name or
-    # an explicit `none — <reason>` — so a deliberately icon-free deck is always satisfiable.
-    # `palette` joins them for the same measured reason as `icon_family`. SKILL.md already
-    # states the two-token rule -- a hue used as TEXT must itself clear 4.5:1, so keep a bright
-    # FILL token and a darker TEXT twin. The rule is correct and still easy to break, because
-    # the check is per-PAIR and a build touches dozens of them. Measured on one deck: the author
-    # declared the rule in the design plan and then broke it FOUR times -- a vivid ochre set as a
-    # label on its own pale slab (2.34:1), coral emphasis text on a coral tint (4.19:1), a table
-    # highlight (4.19:1), a muted grey carrying real content on cream (4.26:1). None were
-    # reckless; each was a pair nobody was thinking about while computing contrast for a
-    # different pair, and each surfaced at render time or in review, a round later.
-    # `scripts/palette_audit.py` resolves the whole matrix in one call, so the field is cheap to
-    # fill honestly and cannot be filled at all without having run something.
-    # type_scale and signature_proof were gated on the CODEX delivery path only, so on the shared
-    # path typography was the one pillar of the visual language nobody had to resolve (palette,
-    # icons and forms all had required fields), and the signature move was accepted as a SENTENCE
-    # with nothing showing it survived into the render. That asymmetry is the exact shape of a bug
-    # this repo already fixed once: the critic waiver was schema-checked for Codex and a hand-typed
-    # string everywhere else, and it carried a real deck through "all gates pass".
-    DESIGN_FIELDS = ("concept", "boldness", "signature_move", "carried_by", "form_ledger",
-                     "icon_family", "palette", "type_scale", "signature_proof",
-                     "motif_generates")
-    # THE RESTRAINT CARVE — built on the escape the skill ALREADY documents, not a new one.
-    # agents/slide-design.md: under a *conservative* dial (user-requested or purpose-defaulted for a
-    # sober defense / regulatory / status deck) "the risk is OPTIONAL: take a modest, restrained
-    # signature move if one fits, OR — if none does — fill the field with the one-clause
-    # `deliberately restrained: <why>` so the field is never blank either way."
-    #
-    # That escape existed in prose and nowhere in the gate, so an honest 5-minute lab-meeting plan
-    # was rejected for lacking a rendered `signature_proof` — a PNG proving an aesthetic risk
-    # survived the build, for a deck that deliberately took none. The only way out was
-    # {"waived": …}, which also switches off palette, type_scale and icon_family: the real choice
-    # was "invent a risk" or "abandon all design gating", and both corrupt the record.
-    #
-    # What it deliberately does NOT do: it does not relax `signature_move` (the field is still never
-    # blank — you must WRITE why restraint is the position) and it does not relax `carried_by`,
-    # `palette`, `type_scale`, `icon_family` or `form_ledger`. And it cannot be claimed above the
-    # conservative dial: at balanced+ and above a real signature move is required, not optional.
-    design = gates.get("design_plan") or {}
-
-    # BUILD SHAPE — was the build fanned out, and if not, why not. The build step is 40-71% of all
-    # model-active minutes (SKILL.md, five measured sessions), and the fan-out rule that addresses
-    # it lived only in prose: a 13-slide deck was built solo at 241 round-trips against a ~125
-    # budget, with the batching rules in context and unfollowed, and nothing anywhere asked why.
-    # Same pattern as form_reach: the gate never blocks the CHOICE — solo is legitimate everywhere
-    # and mandatory on hosts without subagent dispatch — only the absence of a decision.
-    if design and not design.get("waived"):
-        _n_slides = _deck_slide_count(pptx)
-        _shape = str(design.get("build_shape", "")).strip()
-        if _n_slides >= 7 and not _shape:
-            die("`design_plan.build_shape` is missing on a {}-slide deck. From ~6 content slides "
-                "up the build FANS OUT (one author per section, fresh context each — SKILL.md "
-                "'Scaling up'), because the build step is 40-71% of a session's model-active "
-                "minutes and a saturated context is where the batching rules stop being followed.\n"
-                '    "build_shape": "fanout — <n> sections"\n'
-                '    "build_shape": "solo — <reason>"  (e.g. "solo — host has no subagent '
-                'dispatch", "solo — one tightly-coupled argument")\n'
-                "  Solo is a legitimate answer on every host; what is not legitimate is nobody "
-                "having decided.".format(_n_slides))
-        elif _shape:
-            print("[gates] build shape: {}".format(_shape[:100]))
-
-    _dial = str(design.get("boldness", "")).strip().lower()
-    _move = str(design.get("signature_move", "")).strip().lower()
-    # Validate the enum. Every dial-keyed branch in this file and in codex_delivery_gate.py is an
-    # equality test against "conservative", so an unrecognised value is not a loud error — it is a
-    # SILENT demotion to "not carved, not conservative". Verified: `"boldness": "BANANA"` printed
-    # "all hand-off gates pass". A typo must not be a way out of a dial-keyed rule.
-    _DIALS = ("conservative", "balanced+", "bold", "experimental")
-    if design and not design.get("waived") and _dial and _dial not in _DIALS:
-        die("`design_plan.boldness` is {!r}, which is not a dial. One of: {}.\n"
-            "  (Every dial-keyed rule tests for `conservative`, so an unrecognised value silently "
-            "reads as 'not conservative' rather than failing — which makes a typo an escape.)"
-            .format(design.get("boldness"), " | ".join(_DIALS)))
-    _carved = _dial == "conservative" and _move.startswith("deliberately restrained")
-    if design.get("waived"):
-        print("[gates] design plan WAIVED — {}".format(design["waived"]))
-    elif design:
-        # `motif_generates` takes the SAME carve as `signature_proof`: under a conservative dial
-        # with a recorded "deliberately restrained" move there is no loud motif to be productive,
-        # and demanding three things it makes would push an author to invent a device so the field
-        # has an answer — the exact failure agents/slide-design.md names ("never invent an artifact
-        # so this field has an answer"). A tiny 1-2 slide ask carves out for the same reason the
-        # anchor proof does; that one is not detectable here, so it rides the design_plan waiver.
-        _skip = {"signature_proof", "motif_generates"} if _carved else set()
-        required = [f for f in DESIGN_FIELDS if f not in _skip]
-        missing = [f for f in required if not design.get(f)]
-        if missing:
-            hint = ("\n    palette: the resolved FILL-only vs TEXT-safe split — run\n"
-                    "      python3 scripts/palette_audit.py --from-style <deck>/style.py\n"
-                    "    and paste what it hands back. A hue that works as a fill can read at\n"
-                    "    2-4:1 as text on the same tint; the matrix is what stops that being\n"
-                    "    found a render later." if "palette" in missing else "")
-            die("`design_plan` is missing {}. These are the art director's outputs "
-                "(agents/slide-design.md, Step 2) — a plan without them was not designed, it was "
-                "defaulted. Fill them, or waive with a reason.{}".format(", ".join(missing), hint))
-        scale = design["type_scale"]
-        if not isinstance(scale, dict) or not all(
-                isinstance(scale.get(k), (int, float)) for k in ("display", "title", "body")):
-            die('`type_scale` must resolve the three tiers as numbers, e.g. '
-                '{"display": 34, "title": 24, "body": 14}. SIZE SPRAWL tells authors to draw sizes '
-                '"from the deck\'s declared type-scale tokens" — this is where they get declared. '
-                'A deck with no scale does not have restrained typography, it has whatever each '
-                'slide happened to pick.')
-        # same floors the Codex delivery gate uses, so the two paths cannot disagree about what
-        # counts as legible body type
-        BODY_FLOORS = {"presented": 13.5, "textheavy": 13.5, "selfread": 12.0}
-        # `delivery` is resolved ONCE at the top of this function (recorded key > CLI mode, with
-        # surface aliased to selfread) and is the same value the density gate uses. Hardcoding
-        # "presented" here made --selfread INERT for this floor: a self-read deck with body 12pt
-        # died citing the *presented* floor while the same flag correctly drove density.
-        floor = BODY_FLOORS[_DELIVERY_ALIAS.get(delivery, delivery)]
-        if scale["body"] < floor:
-            die(f'`type_scale.body` is {scale["body"]}pt, under the {floor}pt floor for a '
-                f'{delivery} deck — that is a legibility floor, not a style choice.')
-        if not (scale["display"] > scale["title"] > scale["body"]):
-            die(f'`type_scale` is not a scale: display {scale["display"]} > title {scale["title"]} '
-                f'> body {scale["body"]} must hold, or the tiers do not rank and the hierarchy is '
-                f'decorative rather than structural.')
-        if _carved:
-            print("[gates] boldness=conservative with a 'deliberately restrained:' signature move — "
-                  "signature_proof not required (there is no risk to prove); every other field is")
-        proof = None if _carved else design["signature_proof"]
-        if proof is not None:
-            # THE CONTRACT LIVES IN scripts/anchor_proof.py, imported by BOTH gate paths.
-            # `png` or `path`: the Codex delivery gate spells this key `path` in its own evidence file,
-            # and a Codex run keeps BOTH records (references/codex-runtime.md). Demanding one spelling
-            # here would reject the field an OpenAI-bridged run naturally writes — the same evidence,
-            # rejected for its key name. That divergence is exactly why the rule is no longer written
-            # out twice: this file and codex_delivery_gate.py import the same module, so they cannot
-            # drift apart again. Only the FILE checking differs by design (Codex binds a SHA-256 to
-            # the final PPTX; here it is existence plus a size floor), and flattening the two would
-            # weaken the stricter one.
-            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-            import anchor_proof as _ap
-            _n = _deck_slide_count(pptx)
-            _bad = _ap.faults(proof, n_slides=_n,
-                              expected_slides=set(range(1, _n + 1)) if _n else None)
-            if _bad:
-                die("`signature_proof` (the ANCHOR PROOF, Step 4):\n    - "
-                    + "\n    - ".join(_bad)
-                    + "\n  A move that exists only as a sentence in the plan is the documented "
-                      "failure: it gets sanded back to the safe catalogue during the build and "
-                      "nobody notices, because the plan still reads bravely. The two anchors "
-                      "beside it catch the other two: a design approved on a spacious page that "
-                      "cannot hold the deck's densest one, and charts that obey none of the "
-                      "palette/type decisions made against text.")
-            for _a in _ap.normalise(proof):
-                proof_file = _ap.anchor_file(_a)
-                png = Path(proof_file)
-                if not png.is_absolute():
-                    png = Path(pptx).parent / png
-                if not png.exists() or png.stat().st_size < 512:
-                    die('`signature_proof` {} anchor ({}) does not exist or is empty — render '
-                        'the slide first (render_deck.py <deck> <dir>) and point at the real PNG.'
-                        .format(_a.get("role"), proof_file))
-        cb = design["carried_by"]
-        if not isinstance(cb, list) or len(cb) < 2:
-            die("`carried_by` must name at least 2 slides where the signature move does structural "
-                "work. One brave slide among eleven safe ones is a tonal break, not a position.")
-        # SKILL.md, slide-design.md and review-rubrics.md all name the same three answers as the
-        # SAFE CATALOGUE rather than a signature move. Nothing checked, so the literal example
-        # passed: a plan whose signature_move was the string "a big number" was accepted and
-        # printed approvingly by this gate. A denylist is trivially evaded by paraphrase and that
-        # is fine — what it closes is the case that actually happens, the example copied verbatim
-        # because it was the nearest words to hand. Judging whether a REAL move is bold stays the
-        # critic's distinctiveness axis; this only refuses the three the skill already disowned.
-        # CONCEPT — what the deck's idea is a picture of, and the two pictures it beat.
-        # The pipeline diverged on STYLE (the direction gate: "the same four slide types … only the
-        # style differs") and on LAYOUT (form-selection's per-slide runner-up) and never on the
-        # IDEA. A motif does not fill that hole: it is chosen as an attribute of a preset picked
-        # first and capped at <=3 appearances, so a governing image is structurally forbidden from
-        # governing. The field is cheap by design — three sentences at plan time, no extra dispatch
-        # and no extra round trip — so the only thing worth checking is that three genuinely
-        # different pictures were considered, not one relabelled twice.
-        _con = design.get("concept")
-        if _con is not None and not design.get("waived"):
-            _rej = (_con.get("rejected") if isinstance(_con, dict) else None) or []
-            _win = str((_con.get("chosen") if isinstance(_con, dict) else _con) or "").strip()
-            if not isinstance(_con, dict) or not _win or len(_rej) < 2:
-                die('`design_plan.concept` must name the governing image AND the two it beat:\n'
-                    '    "concept": {"chosen": "<what this deck is a picture of>",\n'
-                    '                "rejected": [{"concept": "<the runner-up>", "why_lost": "<one clause>"},\n'
-                    '                             {"concept": "<the other>", "why_lost": "<one clause>"}]}\n'
-                    "  One picture with no alternatives is not a choice, it is the first thing that "
-                    "came to mind — which is the default this field exists to interrupt.")
-            _names = [_win.lower()] + [" ".join(str((r or {}).get("concept", "")).lower().split())
-                                       for r in _rej]
-            if len(set(n for n in _names if n)) < 3:
-                die("`design_plan.concept` lists the same picture more than once ({}). Three "
-                    "governing images for one argument, not one relabelled — a network, an "
-                    "organism and a pair of hands want different motifs, different colour logic "
-                    "and different covers, which is the whole reason to choose between them."
-                    .format(" · ".join(_names)))
-            for r in _rej:
-                if not str((r or {}).get("why_lost", "")).strip():
-                    die("`design_plan.concept.rejected` needs `why_lost` on each entry — a rejected "
-                        "concept with no reason is a decoration on the record, not a decision.")
-            print("[gates] concept: {} · beat {}".format(
-                _win[:60], " · ".join(str((r or {}).get("concept", "?"))[:28] for r in _rej)))
-        _sm = " ".join(str(design["signature_move"]).lower().split())
-        _CATALOGUE = ("a big number", "a nice gradient", "a full-bleed photo", "a full bleed photo")
-        if any(_sm == c or _sm.rstrip(".") == c for c in _CATALOGUE):
-            die('`signature_move` is {!r} — the skill names that (with "a nice gradient" and "a '
-                'full-bleed photo") as the SAFE CATALOGUE, explicitly NOT a signature move '
-                '(SKILL.md Step 2 · agents/slide-design.md self-verify (h) · '
-                'references/review-rubrics.md distinctiveness).\n'
-                "  The field wants the ONE aesthetic RISK a template would not take, scoped to "
-                "where it lands, and doing structural work on the carried_by slides — the motif "
-                "becoming the shape of the content, not a decoration repeated.\n"
-                "  If this deck genuinely takes no risk, that is a legitimate answer with its own "
-                'arm: set `boldness: conservative` and write `signature_move: "deliberately '
-                'restrained: <why>"`.'.format(design["signature_move"]))
-        print("[gates] design plan: boldness={} · signature={} · carried_by={}".format(
-            design["boldness"], str(design["signature_move"])[:48], cb))
-        _report_carried_by(pptx, cb)
-        # the declared palette, re-tested against the BUILT file — same reason as the icon
-        # waiver above: a plan field written before any slide exists proves nothing about
-        # the slides.
-        _report_palette_drift(pptx, design.get("palette"))
-        _report_plan_files(pptx)
-        _report_icon_waiver(pptx, design.get("icon_family"))
-        _low_reach = _report_form_reach(pptx)
-        # 🔴 A report that never asks for an answer is a line people learn to scroll past. This one
-        # printed `1 of 23 named components; the rest is raw box/text` on a delivered deck and let
-        # it through — and three of that deck's review findings were defects the unused components
-        # prevent by construction (a label grazing its bar, a value floating off a track's
-        # centreline, a reference line drawn three different ways).
+    with _gate_section('design_plan'):
+        # The design plan is the art director's output (Step 2). Self-authoring one is indistinguishable
+        # from dispatching for it — unless the record has to carry the fields the dispatch produces.
+        # `icon_family` joins the four originals for one measured reason: a deck shipped with ZERO
+        # icons through every automated gate, while a missing LOGO was caught by a required
+        # checkpoint token. Icons are called a design must on every branch and had no field, no
+        # column and no check anywhere. The token grammar mirrors `logo plan:` — a family name or
+        # an explicit `none — <reason>` — so a deliberately icon-free deck is always satisfiable.
+        # `palette` joins them for the same measured reason as `icon_family`. SKILL.md already
+        # states the two-token rule -- a hue used as TEXT must itself clear 4.5:1, so keep a bright
+        # FILL token and a darker TEXT twin. The rule is correct and still easy to break, because
+        # the check is per-PAIR and a build touches dozens of them. Measured on one deck: the author
+        # declared the rule in the design plan and then broke it FOUR times -- a vivid ochre set as a
+        # label on its own pale slab (2.34:1), coral emphasis text on a coral tint (4.19:1), a table
+        # highlight (4.19:1), a muted grey carrying real content on cream (4.26:1). None were
+        # reckless; each was a pair nobody was thinking about while computing contrast for a
+        # different pair, and each surfaced at render time or in review, a round later.
+        # `scripts/palette_audit.py` resolves the whole matrix in one call, so the field is cheap to
+        # fill honestly and cannot be filled at all without having run something.
+        # type_scale and signature_proof were gated on the CODEX delivery path only, so on the shared
+        # path typography was the one pillar of the visual language nobody had to resolve (palette,
+        # icons and forms all had required fields), and the signature move was accepted as a SENTENCE
+        # with nothing showing it survived into the render. That asymmetry is the exact shape of a bug
+        # this repo already fixed once: the critic waiver was schema-checked for Codex and a hand-typed
+        # string everywhere else, and it carried a real deck through "all gates pass".
+        DESIGN_FIELDS = ("concept", "boldness", "signature_move", "carried_by", "form_ledger",
+                         "icon_family", "palette", "type_scale", "signature_proof",
+                         "motif_generates")
+        # THE RESTRAINT CARVE — built on the escape the skill ALREADY documents, not a new one.
+        # agents/slide-design.md: under a *conservative* dial (user-requested or purpose-defaulted for a
+        # sober defense / regulatory / status deck) "the risk is OPTIONAL: take a modest, restrained
+        # signature move if one fits, OR — if none does — fill the field with the one-clause
+        # `deliberately restrained: <why>` so the field is never blank either way."
         #
-        # It still does NOT block on the number. Bespoke composition is legitimate and often the
-        # signature move itself; a Mondrian page cannot come from a catalogue. What it blocks on is
-        # the absence of a DECISION — the failure is never having looked, and `sigs.py --list` is
-        # one call. Same shape as the sameness waiver: a written reason, in the record.
-        if _low_reach is not None:
-            _fr = design.get("form_reach")
-            _why = str((_fr or {}).get("waived") or "").strip() if isinstance(_fr, dict) else ""
-            if len(_why) < 24:
-                die("form reach is {n} of {t} named components and the rest of {s} is raw "
-                    "box/text, with no recorded reason.\n"
-                    "  Look once — `python3 scripts/sigs.py --list` (or --search <shape>) — then "
-                    "either build the component, or record WHY the hand-rolled form is the right "
-                    "one for this deck:\n"
-                    '    {{"design_plan": {{..., "form_reach": {{"waived": "<why bespoke here — '
-                    'name the form and what a component would have cost it>"}}}}}}\n'
-                    "  This never blocks on the NUMBER; it blocks on there being no decision. "
-                    "Measured: a deck shipped at 1 of 23, and three of its review findings were "
-                    "defects the unused components prevent by construction."
-                    .format(n=len(_low_reach["forms"]), t=_low_reach["total"],
-                            s=_low_reach["script"]))
-            print("[gates] form reach WAIVED — %s" % _why[:150])
-    else:
-        die("no `design_plan` record. Step 2 dispatches agents/slide-design.md as the deck's art "
-            "director; nothing else decides deck rhythm or the signature move.\n"
-            # Built from DESIGN_FIELDS so this template cannot drift behind the gate again — it
-            # listed SIX of the eight for a while, so copying it verbatim produced a record that
-            # died on "missing type_scale, signature_proof".
-            + "    {\"design_plan\": {" + ", ".join('"%s": ...' % f for f in DESIGN_FIELDS) + "}}\n"
-            '    (type_scale is {"display": 34, "title": 24, "body": 14}; signature_proof is the\n'
-            '     THREE-anchor list [{"role": "signature"|"complex"|"data", "slide": N,\n'
-            '     "png": "render/slideNN.png"}, ...] — rendered evidence that the move survived, that\n'
-            '     the design holds the densest page, and that the charts speak the same language)\n'
-            '    or {"design_plan": {"waived": "<reason>"}}')
+        # That escape existed in prose and nowhere in the gate, so an honest 5-minute lab-meeting plan
+        # was rejected for lacking a rendered `signature_proof` — a PNG proving an aesthetic risk
+        # survived the build, for a deck that deliberately took none. The only way out was
+        # {"waived": …}, which also switches off palette, type_scale and icon_family: the real choice
+        # was "invent a risk" or "abandon all design gating", and both corrupt the record.
+        #
+        # What it deliberately does NOT do: it does not relax `signature_move` (the field is still never
+        # blank — you must WRITE why restraint is the position) and it does not relax `carried_by`,
+        # `palette`, `type_scale`, `icon_family` or `form_ledger`. And it cannot be claimed above the
+        # conservative dial: at balanced+ and above a real signature move is required, not optional.
+        design = gates.get("design_plan") or {}
 
-    # THE ARC COMPETITION, ported from the Codex record so both paths hold the same bar. The design
-    # side has had a rendered competition for years (the direction gate) and the content side got
-    # one in 3e4eddb — but its verdict landed only on the content CHECKPOINT, which is prose in a
-    # conversation, while every other Step-1/2 decision reaches this file. That asymmetry put the
-    # cheaper decision under a gate and left the costlier one out: a wrong form costs one slide, a
-    # wrong arc costs the design plan and the build underneath it.
-    #
-    # Shape is IDENTICAL to codex_delivery_gate's `content.arc`, deliberately — the two gates have
-    # already drifted on a duplicated field twice (`path` vs `png`, the missing `conservative`
-    # dial), and a third spelling would be the same mistake with a new name.
-    content = gates.get("content") or {}
-    if content.get("waived"):
-        print("[gates] arc competition WAIVED — {}".format(content["waived"]))
-    else:
-        arc = content.get("arc")
-        if not isinstance(arc, dict):
-            die("`content.arc` is missing — the arc competition (Step 1, "
-                "agents/content-planner.md §3).\n"
-                "  2-3 candidate arcs over ONE ledger, scored by scripts/arc_divergence.py, and "
-                "the winner recorded WITH its losers:\n\n"
-                '    "content": {"arc": {"chosen": "<the arc that won>",\n'
-                '                        "rejected": [{"name": "<runner-up>", "why_lost": "<one clause>"}],\n'
-                '                        "divergence": "ok | flagged <pair> -> rediverged | justified: <reason>"}}\n\n'
-                "  `picked contribution-first` on its own is a sentence anyone can write without a "
-                "competition having happened —\n"
-                "  the losers and their clauses ARE the artifact. Or waive it: "
-                '{"content": {"waived": "<why this deck had one possible arc>"}}.')
+        # BUILD SHAPE — was the build fanned out, and if not, why not. The build step is 40-71% of all
+        # model-active minutes (SKILL.md, five measured sessions), and the fan-out rule that addresses
+        # it lived only in prose: a 13-slide deck was built solo at 241 round-trips against a ~125
+        # budget, with the batching rules in context and unfollowed, and nothing anywhere asked why.
+        # Same pattern as form_reach: the gate never blocks the CHOICE — solo is legitimate everywhere
+        # and mandatory on hosts without subagent dispatch — only the absence of a decision.
+        if design and not design.get("waived"):
+            _n_slides = _deck_slide_count(pptx)
+            _shape = str(design.get("build_shape", "")).strip()
+            if _n_slides >= 7 and not _shape:
+                die("`design_plan.build_shape` is missing on a {}-slide deck. From ~6 content slides "
+                    "up the build FANS OUT (one author per section, fresh context each — SKILL.md "
+                    "'Scaling up'), because the build step is 40-71% of a session's model-active "
+                    "minutes and a saturated context is where the batching rules stop being followed.\n"
+                    '    "build_shape": "fanout — <n> sections"\n'
+                    '    "build_shape": "solo — <reason>"  (e.g. "solo — host has no subagent '
+                    'dispatch", "solo — one tightly-coupled argument")\n'
+                    "  Solo is a legitimate answer on every host; what is not legitimate is nobody "
+                    "having decided.".format(_n_slides))
+            elif _shape:
+                print("[gates] build shape: {}".format(_shape[:100]))
+
+        _dial = str(design.get("boldness", "")).strip().lower()
+        _move = str(design.get("signature_move", "")).strip().lower()
+        # Validate the enum. Every dial-keyed branch in this file and in codex_delivery_gate.py is an
+        # equality test against "conservative", so an unrecognised value is not a loud error — it is a
+        # SILENT demotion to "not carved, not conservative". Verified: `"boldness": "BANANA"` printed
+        # "all hand-off gates pass". A typo must not be a way out of a dial-keyed rule.
+        _DIALS = ("conservative", "balanced+", "bold", "experimental")
+        if design and not design.get("waived") and _dial and _dial not in _DIALS:
+            die("`design_plan.boldness` is {!r}, which is not a dial. One of: {}.\n"
+                "  (Every dial-keyed rule tests for `conservative`, so an unrecognised value silently "
+                "reads as 'not conservative' rather than failing — which makes a typo an escape.)"
+                .format(design.get("boldness"), " | ".join(_DIALS)))
+        _carved = _dial == "conservative" and _move.startswith("deliberately restrained")
+        if design.get("waived"):
+            print("[gates] design plan WAIVED — {}".format(design["waived"]))
+        elif design:
+            # `motif_generates` takes the SAME carve as `signature_proof`: under a conservative dial
+            # with a recorded "deliberately restrained" move there is no loud motif to be productive,
+            # and demanding three things it makes would push an author to invent a device so the field
+            # has an answer — the exact failure agents/slide-design.md names ("never invent an artifact
+            # so this field has an answer"). A tiny 1-2 slide ask carves out for the same reason the
+            # anchor proof does; that one is not detectable here, so it rides the design_plan waiver.
+            _skip = {"signature_proof", "motif_generates"} if _carved else set()
+            required = [f for f in DESIGN_FIELDS if f not in _skip]
+            missing = [f for f in required if not design.get(f)]
+            if missing:
+                hint = ("\n    palette: the resolved FILL-only vs TEXT-safe split — run\n"
+                        "      python3 scripts/palette_audit.py --from-style <deck>/style.py\n"
+                        "    and paste what it hands back. A hue that works as a fill can read at\n"
+                        "    2-4:1 as text on the same tint; the matrix is what stops that being\n"
+                        "    found a render later." if "palette" in missing else "")
+                die("`design_plan` is missing {}. These are the art director's outputs "
+                    "(agents/slide-design.md, Step 2) — a plan without them was not designed, it was "
+                    "defaulted. Fill them, or waive with a reason.{}".format(", ".join(missing), hint))
+            scale = design["type_scale"]
+            if not isinstance(scale, dict) or not all(
+                    isinstance(scale.get(k), (int, float)) for k in ("display", "title", "body")):
+                die('`type_scale` must resolve the three tiers as numbers, e.g. '
+                    '{"display": 34, "title": 24, "body": 14}. SIZE SPRAWL tells authors to draw sizes '
+                    '"from the deck\'s declared type-scale tokens" — this is where they get declared. '
+                    'A deck with no scale does not have restrained typography, it has whatever each '
+                    'slide happened to pick.')
+            # same floors the Codex delivery gate uses, so the two paths cannot disagree about what
+            # counts as legible body type
+            BODY_FLOORS = {"presented": 13.5, "textheavy": 13.5, "selfread": 12.0}
+            # `delivery` is resolved ONCE at the top of this function (recorded key > CLI mode, with
+            # surface aliased to selfread) and is the same value the density gate uses. Hardcoding
+            # "presented" here made --selfread INERT for this floor: a self-read deck with body 12pt
+            # died citing the *presented* floor while the same flag correctly drove density.
+            floor = BODY_FLOORS[_DELIVERY_ALIAS.get(delivery, delivery)]
+            if scale["body"] < floor:
+                die(f'`type_scale.body` is {scale["body"]}pt, under the {floor}pt floor for a '
+                    f'{delivery} deck — that is a legibility floor, not a style choice.')
+            if not (scale["display"] > scale["title"] > scale["body"]):
+                die(f'`type_scale` is not a scale: display {scale["display"]} > title {scale["title"]} '
+                    f'> body {scale["body"]} must hold, or the tiers do not rank and the hierarchy is '
+                    f'decorative rather than structural.')
+            if _carved:
+                print("[gates] boldness=conservative with a 'deliberately restrained:' signature move — "
+                      "signature_proof not required (there is no risk to prove); every other field is")
+            proof = None if _carved else design["signature_proof"]
+            if proof is not None:
+                # THE CONTRACT LIVES IN scripts/anchor_proof.py, imported by BOTH gate paths.
+                # `png` or `path`: the Codex delivery gate spells this key `path` in its own evidence file,
+                # and a Codex run keeps BOTH records (references/codex-runtime.md). Demanding one spelling
+                # here would reject the field an OpenAI-bridged run naturally writes — the same evidence,
+                # rejected for its key name. That divergence is exactly why the rule is no longer written
+                # out twice: this file and codex_delivery_gate.py import the same module, so they cannot
+                # drift apart again. Only the FILE checking differs by design (Codex binds a SHA-256 to
+                # the final PPTX; here it is existence plus a size floor), and flattening the two would
+                # weaken the stricter one.
+                sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+                import anchor_proof as _ap
+                _n = _deck_slide_count(pptx)
+                _bad = _ap.faults(proof, n_slides=_n,
+                                  expected_slides=set(range(1, _n + 1)) if _n else None)
+                if _bad:
+                    die("`signature_proof` (the ANCHOR PROOF, Step 4):\n    - "
+                        + "\n    - ".join(_bad)
+                        + "\n  A move that exists only as a sentence in the plan is the documented "
+                          "failure: it gets sanded back to the safe catalogue during the build and "
+                          "nobody notices, because the plan still reads bravely. The two anchors "
+                          "beside it catch the other two: a design approved on a spacious page that "
+                          "cannot hold the deck's densest one, and charts that obey none of the "
+                          "palette/type decisions made against text.")
+                for _a in _ap.normalise(proof):
+                    proof_file = _ap.anchor_file(_a)
+                    png = Path(proof_file)
+                    if not png.is_absolute():
+                        png = Path(pptx).parent / png
+                    if not png.exists() or png.stat().st_size < 512:
+                        die('`signature_proof` {} anchor ({}) does not exist or is empty — render '
+                            'the slide first (render_deck.py <deck> <dir>) and point at the real PNG.'
+                            .format(_a.get("role"), proof_file))
+            cb = design["carried_by"]
+            if not isinstance(cb, list) or len(cb) < 2:
+                die("`carried_by` must name at least 2 slides where the signature move does structural "
+                    "work. One brave slide among eleven safe ones is a tonal break, not a position.")
+            # SKILL.md, slide-design.md and review-rubrics.md all name the same three answers as the
+            # SAFE CATALOGUE rather than a signature move. Nothing checked, so the literal example
+            # passed: a plan whose signature_move was the string "a big number" was accepted and
+            # printed approvingly by this gate. A denylist is trivially evaded by paraphrase and that
+            # is fine — what it closes is the case that actually happens, the example copied verbatim
+            # because it was the nearest words to hand. Judging whether a REAL move is bold stays the
+            # critic's distinctiveness axis; this only refuses the three the skill already disowned.
+            # CONCEPT — what the deck's idea is a picture of, and the two pictures it beat.
+            # The pipeline diverged on STYLE (the direction gate: "the same four slide types … only the
+            # style differs") and on LAYOUT (form-selection's per-slide runner-up) and never on the
+            # IDEA. A motif does not fill that hole: it is chosen as an attribute of a preset picked
+            # first and capped at <=3 appearances, so a governing image is structurally forbidden from
+            # governing. The field is cheap by design — three sentences at plan time, no extra dispatch
+            # and no extra round trip — so the only thing worth checking is that three genuinely
+            # different pictures were considered, not one relabelled twice.
+            _con = design.get("concept")
+            if _con is not None and not design.get("waived"):
+                _rej = (_con.get("rejected") if isinstance(_con, dict) else None) or []
+                _win = str((_con.get("chosen") if isinstance(_con, dict) else _con) or "").strip()
+                if not isinstance(_con, dict) or not _win or len(_rej) < 2:
+                    die('`design_plan.concept` must name the governing image AND the two it beat:\n'
+                        '    "concept": {"chosen": "<what this deck is a picture of>",\n'
+                        '                "rejected": [{"concept": "<the runner-up>", "why_lost": "<one clause>"},\n'
+                        '                             {"concept": "<the other>", "why_lost": "<one clause>"}]}\n'
+                        "  One picture with no alternatives is not a choice, it is the first thing that "
+                        "came to mind — which is the default this field exists to interrupt.")
+                _names = [_win.lower()] + [" ".join(str((r or {}).get("concept", "")).lower().split())
+                                           for r in _rej]
+                if len(set(n for n in _names if n)) < 3:
+                    die("`design_plan.concept` lists the same picture more than once ({}). Three "
+                        "governing images for one argument, not one relabelled — a network, an "
+                        "organism and a pair of hands want different motifs, different colour logic "
+                        "and different covers, which is the whole reason to choose between them."
+                        .format(" · ".join(_names)))
+                for r in _rej:
+                    if not str((r or {}).get("why_lost", "")).strip():
+                        die("`design_plan.concept.rejected` needs `why_lost` on each entry — a rejected "
+                            "concept with no reason is a decoration on the record, not a decision.")
+                print("[gates] concept: {} · beat {}".format(
+                    _win[:60], " · ".join(str((r or {}).get("concept", "?"))[:28] for r in _rej)))
+            _sm = " ".join(str(design["signature_move"]).lower().split())
+            _CATALOGUE = ("a big number", "a nice gradient", "a full-bleed photo", "a full bleed photo")
+            if any(_sm == c or _sm.rstrip(".") == c for c in _CATALOGUE):
+                die('`signature_move` is {!r} — the skill names that (with "a nice gradient" and "a '
+                    'full-bleed photo") as the SAFE CATALOGUE, explicitly NOT a signature move '
+                    '(SKILL.md Step 2 · agents/slide-design.md self-verify (h) · '
+                    'references/review-rubrics.md distinctiveness).\n'
+                    "  The field wants the ONE aesthetic RISK a template would not take, scoped to "
+                    "where it lands, and doing structural work on the carried_by slides — the motif "
+                    "becoming the shape of the content, not a decoration repeated.\n"
+                    "  If this deck genuinely takes no risk, that is a legitimate answer with its own "
+                    'arm: set `boldness: conservative` and write `signature_move: "deliberately '
+                    'restrained: <why>"`.'.format(design["signature_move"]))
+            print("[gates] design plan: boldness={} · signature={} · carried_by={}".format(
+                design["boldness"], str(design["signature_move"])[:48], cb))
+            _report_carried_by(pptx, cb)
+            # the declared palette, re-tested against the BUILT file — same reason as the icon
+            # waiver above: a plan field written before any slide exists proves nothing about
+            # the slides.
+            _report_palette_drift(pptx, design.get("palette"))
+            _report_plan_files(pptx)
+            _report_icon_waiver(pptx, design.get("icon_family"))
+            _low_reach = _report_form_reach(pptx)
+            # 🔴 A report that never asks for an answer is a line people learn to scroll past. This one
+            # printed `1 of 23 named components; the rest is raw box/text` on a delivered deck and let
+            # it through — and three of that deck's review findings were defects the unused components
+            # prevent by construction (a label grazing its bar, a value floating off a track's
+            # centreline, a reference line drawn three different ways).
+            #
+            # It still does NOT block on the number. Bespoke composition is legitimate and often the
+            # signature move itself; a Mondrian page cannot come from a catalogue. What it blocks on is
+            # the absence of a DECISION — the failure is never having looked, and `sigs.py --list` is
+            # one call. Same shape as the sameness waiver: a written reason, in the record.
+            if _low_reach is not None:
+                _fr = design.get("form_reach")
+                _why = str((_fr or {}).get("waived") or "").strip() if isinstance(_fr, dict) else ""
+                if len(_why) < 24:
+                    die("form reach is {n} of {t} named components and the rest of {s} is raw "
+                        "box/text, with no recorded reason.\n"
+                        "  Look once — `python3 scripts/sigs.py --list` (or --search <shape>) — then "
+                        "either build the component, or record WHY the hand-rolled form is the right "
+                        "one for this deck:\n"
+                        '    {{"design_plan": {{..., "form_reach": {{"waived": "<why bespoke here — '
+                        'name the form and what a component would have cost it>"}}}}}}\n'
+                        "  This never blocks on the NUMBER; it blocks on there being no decision. "
+                        "Measured: a deck shipped at 1 of 23, and three of its review findings were "
+                        "defects the unused components prevent by construction."
+                        .format(n=len(_low_reach["forms"]), t=_low_reach["total"],
+                                s=_low_reach["script"]))
+                print("[gates] form reach WAIVED — %s" % _why[:150])
         else:
-            if not str(arc.get("chosen") or "").strip():
-                die("`content.arc.chosen` is empty — name the arc that won.")
-            rejected = arc.get("rejected")
-            if not isinstance(rejected, list) or not rejected:
-                die("`content.arc.rejected` must name at least one arc the winner beat, with the "
-                    "clause that lost it.\n"
-                    "  A winner with no losers on the record is a derivation wearing a "
-                    "competition's clothes.")
-            for i, row in enumerate(rejected):
-                if not isinstance(row, dict) or not str(row.get("name") or "").strip() \
-                        or len(str(row.get("why_lost") or "").strip()) < 8:
-                    die("`content.arc.rejected[{}]` needs a `name` and a `why_lost` clause — the "
-                        "reason is the whole point.".format(i))
-            if not str(arc.get("divergence") or "").strip():
-                die("`content.arc.divergence` is missing — paste what "
-                    "`scripts/arc_divergence.py` returned (`ok`, a flagged pair you rediverged, "
-                    "or a recorded justification).")
+            die("no `design_plan` record. Step 2 dispatches agents/slide-design.md as the deck's art "
+                "director; nothing else decides deck rhythm or the signature move.\n"
+                # Built from DESIGN_FIELDS so this template cannot drift behind the gate again — it
+                # listed SIX of the eight for a while, so copying it verbatim produced a record that
+                # died on "missing type_scale, signature_proof".
+                + "    {\"design_plan\": {" + ", ".join('"%s": ...' % f for f in DESIGN_FIELDS) + "}}\n"
+                '    (type_scale is {"display": 34, "title": 24, "body": 14}; signature_proof is the\n'
+                '     THREE-anchor list [{"role": "signature"|"complex"|"data", "slide": N,\n'
+                '     "png": "render/slideNN.png"}, ...] — rendered evidence that the move survived, that\n'
+                '     the design holds the densest page, and that the charts speak the same language)\n'
+                '    or {"design_plan": {"waived": "<reason>"}}')
 
-    # Provenance: a self-filled tally proves nothing — the refutation pass is what the gate is FOR.
-    # Require per-claim verdicts, so "confirmed" means someone tried to break it and could not.
-    prov = gates.get("provenance") or {}
-    if prov.get("waived"):
-        print("[gates] provenance WAIVED — {}".format(prov["waived"]))
-    elif prov:
-        claims = prov.get("claims")
-        if not isinstance(claims, list) or not claims:
-            die("`provenance` needs a per-claim `claims` list, not a summary tally. A tally is "
-                "written by the same pass that would have skipped the check.\n"
-                '    "claims": [{"claim": "...", "verdict": "CONFIRMED|WRONG|PARTLY-WRONG|'
-                'UNVERIFIABLE", "url": "https://..."}]')
-        ALLOWED = {"CONFIRMED", "WRONG", "PARTLY-WRONG", "UNVERIFIABLE"}
-        bad = [c for c in claims if c.get("verdict") not in ALLOWED]
-        if bad:
-            die("{} claim row(s) carry no valid verdict (one of {}).".format(
-                len(bad), " / ".join(sorted(ALLOWED))))
-        nourl = [c for c in claims if c.get("verdict") == "CONFIRMED" and not c.get("url")]
-        if nourl:
-            die("{} claim(s) are CONFIRMED with no primary-source URL. Confirmed-without-a-source "
-                "is the exact failure this gate exists to catch.".format(len(nourl)))
-        unresolved = [c for c in claims if c["verdict"] in ("WRONG", "PARTLY-WRONG")]
-        if unresolved:
-            die("{} claim(s) still verdict WRONG / PARTLY-WRONG. Fix or cut them before hand-off:\n"
-                "  - {}".format(len(unresolved),
-                                "\n  - ".join(str(c.get("claim"))[:90] for c in unresolved[:5])))
-        tally = {}
-        for c in claims:
-            tally[c["verdict"]] = tally.get(c["verdict"], 0) + 1
-        print("[gates] provenance: {} claim(s) adversarially checked — {}".format(
-            len(claims), " · ".join("{} {}".format(v, k) for k, v in sorted(tally.items()))))
-    else:
-        print("[gates] no provenance record — fine for a deck built from the user's own material; "
-              "a research-sourced deck should carry one.")
-
-    # ── SAMENESS: the deck-level monotony the [stats] block measured and nobody read ──────────
-    # Every deck-level "this deck is one page repeated" signal the linter computes is a
-    # `warns.append` printed under a line that says the stats are advisory; `lint()` returns only
-    # the hard-finding count, and nothing on this path ever read the warns. So blandness was
-    # DETECTED deterministically and blocked nothing. This turns the measurement into a gate —
-    # and only the measurement: whether a deck is TIMID stays the critic's taste call (which the
-    # skill deliberately caps as non-blocking), whether it is REPETITIVE is a share of slides
-    # agreeing with each other, which is a defect with a concrete fix. `agents/critic.md` states
-    # that exact test, and it is why this can hold a deck while the distinctiveness axis cannot.
-    _check_sameness(pptx, delivery, gates)
-
-    # ── DENSITY: a slide is a visual aid, not a document ────────────────────────
-    # This one is a gate rather than a warning because the warning already existed and was
-    # already ignored — twice, by the same author, on two consecutive decks. Measured: one
-    # deck shipped with 8 of 12 slides over the presented text budget, the next with 12 of 12
-    # (loads of 81-144 words against a budget of ~40), and both times the per-slide TEXT WALL
-    # line was read and dismissed as advisory. The skill's OWN reference deck — the file it
-    # tells every builder to copy — runs at a median of 27 words a slide, so the budget is not
-    # unrealistic; what failed was that nothing made ignoring it cost anything.
-    # A deck may legitimately be denser (a self-read leave-behind, a spec sheet). That is what
-    # the waiver is for: not a rule against text, a rule against text arriving by default.
-    #
-    # DELIVERY MODE. The budget here is lint_deck's budget, taken from lint_deck: 70 words for a
-    # presented deck, 120 for a self-read one, and no budget at all on a poster (`surface`) or a
-    # deck whose density the user CHOSE at Q4 (`textheavy`). A gate that fires on a mode the
-    # interview offers, the rubric protects and the lint deliberately passes does not enforce
-    # anything for long — it teaches the author to paste a waiver, and after that it is decoration.
-    txt = gates.get("density")
-    # the SAME resolved delivery the type floor used — reading raw `mode` here is how one run
-    # enforced two different deliveries
-    if delivery in ("surface", "textheavy"):
-        print("[gates] density: not applied — %s deck (the user chose this density, or the "
-              "surface has no per-slide budget)" % delivery)
-        return
-    over, total, median = _density_stats(pptx, budget=70 if delivery == "presented" else 120)
-    if total:
-        if isinstance(txt, dict) and txt.get("waived"):
-            print("[gates] density: {}/{} slide(s) over the presented text budget, median {} "
-                  "words — WAIVED: {}".format(over, total, median, str(txt["waived"])[:110]))
-        elif over * 3 > total:
-            die("{} of {} slides are over the {} text budget (median {} words a slide; "
-                "aim ~40, warn >{}). The skill's own reference deck runs at 27.\n"
-                "    A slide is a visual aid for a speaker — the sentences belong in the speaker "
-                "notes, which this deck already has.\n"
-                "    Cut the on-slide prose, or record the deliberate choice:\n"
-                '    "density": {{"waived": "why this deck is meant to be read, not presented"}}'
-                .format(over, total, delivery, median, 70 if delivery == "presented" else 120))
+    with _gate_section('content.arc'):
+        # THE ARC COMPETITION, ported from the Codex record so both paths hold the same bar. The design
+        # side has had a rendered competition for years (the direction gate) and the content side got
+        # one in 3e4eddb — but its verdict landed only on the content CHECKPOINT, which is prose in a
+        # conversation, while every other Step-1/2 decision reaches this file. That asymmetry put the
+        # cheaper decision under a gate and left the costlier one out: a wrong form costs one slide, a
+        # wrong arc costs the design plan and the build underneath it.
+        #
+        # Shape is IDENTICAL to codex_delivery_gate's `content.arc`, deliberately — the two gates have
+        # already drifted on a duplicated field twice (`path` vs `png`, the missing `conservative`
+        # dial), and a third spelling would be the same mistake with a new name.
+        content = gates.get("content") or {}
+        if content.get("waived"):
+            print("[gates] arc competition WAIVED — {}".format(content["waived"]))
         else:
-            print("[gates] density: {}/{} slide(s) over the text budget, median {} words a slide"
-                  .format(over, total, median))
+            arc = content.get("arc")
+            if not isinstance(arc, dict):
+                die("`content.arc` is missing — the arc competition (Step 1, "
+                    "agents/content-planner.md §3).\n"
+                    "  2-3 candidate arcs over ONE ledger, scored by scripts/arc_divergence.py, and "
+                    "the winner recorded WITH its losers:\n\n"
+                    '    "content": {"arc": {"chosen": "<the arc that won>",\n'
+                    '                        "rejected": [{"name": "<runner-up>", "why_lost": "<one clause>"}],\n'
+                    '                        "divergence": "ok | flagged <pair> -> rediverged | justified: <reason>"}}\n\n'
+                    "  `picked contribution-first` on its own is a sentence anyone can write without a "
+                    "competition having happened —\n"
+                    "  the losers and their clauses ARE the artifact. Or waive it: "
+                    '{"content": {"waived": "<why this deck had one possible arc>"}}.')
+            else:
+                if not str(arc.get("chosen") or "").strip():
+                    die("`content.arc.chosen` is empty — name the arc that won.")
+                rejected = arc.get("rejected")
+                if not isinstance(rejected, list) or not rejected:
+                    die("`content.arc.rejected` must name at least one arc the winner beat, with the "
+                        "clause that lost it.\n"
+                        "  A winner with no losers on the record is a derivation wearing a "
+                        "competition's clothes.")
+                for i, row in enumerate(rejected):
+                    if not isinstance(row, dict) or not str(row.get("name") or "").strip() \
+                            or len(str(row.get("why_lost") or "").strip()) < 8:
+                        die("`content.arc.rejected[{}]` needs a `name` and a `why_lost` clause — the "
+                            "reason is the whole point.".format(i))
+                if not str(arc.get("divergence") or "").strip():
+                    die("`content.arc.divergence` is missing — paste what "
+                        "`scripts/arc_divergence.py` returned (`ok`, a flagged pair you rediverged, "
+                        "or a recorded justification).")
+
+    with _gate_section('provenance'):
+        # Provenance: a self-filled tally proves nothing — the refutation pass is what the gate is FOR.
+        # Require per-claim verdicts, so "confirmed" means someone tried to break it and could not.
+        prov = gates.get("provenance") or {}
+        if prov.get("waived"):
+            print("[gates] provenance WAIVED — {}".format(prov["waived"]))
+        elif prov:
+            claims = prov.get("claims")
+            if not isinstance(claims, list) or not claims:
+                die("`provenance` needs a per-claim `claims` list, not a summary tally. A tally is "
+                    "written by the same pass that would have skipped the check.\n"
+                    '    "claims": [{"claim": "...", "verdict": "CONFIRMED|WRONG|PARTLY-WRONG|'
+                    'UNVERIFIABLE", "url": "https://..."}]')
+            ALLOWED = {"CONFIRMED", "WRONG", "PARTLY-WRONG", "UNVERIFIABLE"}
+            bad = [c for c in claims if c.get("verdict") not in ALLOWED]
+            if bad:
+                die("{} claim row(s) carry no valid verdict (one of {}).".format(
+                    len(bad), " / ".join(sorted(ALLOWED))))
+            nourl = [c for c in claims if c.get("verdict") == "CONFIRMED" and not c.get("url")]
+            if nourl:
+                die("{} claim(s) are CONFIRMED with no primary-source URL. Confirmed-without-a-source "
+                    "is the exact failure this gate exists to catch.".format(len(nourl)))
+            unresolved = [c for c in claims if c["verdict"] in ("WRONG", "PARTLY-WRONG")]
+            if unresolved:
+                die("{} claim(s) still verdict WRONG / PARTLY-WRONG. Fix or cut them before hand-off:\n"
+                    "  - {}".format(len(unresolved),
+                                    "\n  - ".join(str(c.get("claim"))[:90] for c in unresolved[:5])))
+            tally = {}
+            for c in claims:
+                tally[c["verdict"]] = tally.get(c["verdict"], 0) + 1
+            print("[gates] provenance: {} claim(s) adversarially checked — {}".format(
+                len(claims), " · ".join("{} {}".format(v, k) for k, v in sorted(tally.items()))))
+        else:
+            print("[gates] no provenance record — fine for a deck built from the user's own material; "
+                  "a research-sourced deck should carry one.")
+
+    with _gate_section('sameness'):
+        # ── SAMENESS: the deck-level monotony the [stats] block measured and nobody read ──────────
+        # Every deck-level "this deck is one page repeated" signal the linter computes is a
+        # `warns.append` printed under a line that says the stats are advisory; `lint()` returns only
+        # the hard-finding count, and nothing on this path ever read the warns. So blandness was
+        # DETECTED deterministically and blocked nothing. This turns the measurement into a gate —
+        # and only the measurement: whether a deck is TIMID stays the critic's taste call (which the
+        # skill deliberately caps as non-blocking), whether it is REPETITIVE is a share of slides
+        # agreeing with each other, which is a defect with a concrete fix. `agents/critic.md` states
+        # that exact test, and it is why this can hold a deck while the distinctiveness axis cannot.
+        _check_sameness(pptx, delivery, gates)
+
+    with _gate_section('density'):
+        # ── DENSITY: a slide is a visual aid, not a document ────────────────────────
+        # This one is a gate rather than a warning because the warning already existed and was
+        # already ignored — twice, by the same author, on two consecutive decks. Measured: one
+        # deck shipped with 8 of 12 slides over the presented text budget, the next with 12 of 12
+        # (loads of 81-144 words against a budget of ~40), and both times the per-slide TEXT WALL
+        # line was read and dismissed as advisory. The skill's OWN reference deck — the file it
+        # tells every builder to copy — runs at a median of 27 words a slide, so the budget is not
+        # unrealistic; what failed was that nothing made ignoring it cost anything.
+        # A deck may legitimately be denser (a self-read leave-behind, a spec sheet). That is what
+        # the waiver is for: not a rule against text, a rule against text arriving by default.
+        #
+        # DELIVERY MODE. The budget here is lint_deck's budget, taken from lint_deck: 70 words for a
+        # presented deck, 120 for a self-read one, and no budget at all on a poster (`surface`) or a
+        # deck whose density the user CHOSE at Q4 (`textheavy`). A gate that fires on a mode the
+        # interview offers, the rubric protects and the lint deliberately passes does not enforce
+        # anything for long — it teaches the author to paste a waiver, and after that it is decoration.
+        txt = gates.get("density")
+        # the SAME resolved delivery the type floor used — reading raw `mode` here is how one run
+        # enforced two different deliveries
+        if delivery in ("surface", "textheavy"):
+            print("[gates] density: not applied — %s deck (the user chose this density, or the "
+                  "surface has no per-slide budget)" % delivery)
+            return
+        over, total, median = _density_stats(pptx, budget=70 if delivery == "presented" else 120)
+        if total:
+            if isinstance(txt, dict) and txt.get("waived"):
+                print("[gates] density: {}/{} slide(s) over the presented text budget, median {} "
+                      "words — WAIVED: {}".format(over, total, median, str(txt["waived"])[:110]))
+            elif over * 3 > total:
+                die("{} of {} slides are over the {} text budget (median {} words a slide; "
+                    "aim ~40, warn >{}). The skill's own reference deck runs at 27.\n"
+                    "    A slide is a visual aid for a speaker — the sentences belong in the speaker "
+                    "notes, which this deck already has.\n"
+                    "    Cut the on-slide prose, or record the deliberate choice:\n"
+                    '    "density": {{"waived": "why this deck is meant to be read, not presented"}}'
+                    .format(over, total, delivery, median, 70 if delivery == "presented" else 120))
+            else:
+                print("[gates] density: {}/{} slide(s) over the text budget, median {} words a slide"
+                      .format(over, total, median))
 
 
 SAMENESS_WAIVER_KINDS = {
