@@ -120,11 +120,14 @@ Two time sinks compress well: ingesting material/assets, and the critic loop.
     and **stops before rendering when the build hits a CRITICAL fault** — a deck with a critical
     geometry fault should not be rasterised and reasoned about as if it were finished. It also
     carries the **LOOP BREAKER**: the same fault (same slide + same lint code) surviving 3
-    consecutive runs prints an escalation, and 🔴 **when it fires, obey it — the third attempt is
-    never another nudge.** Stop adjusting constants by eye and re-derive that slide's layout by
-    MEASUREMENT (fit_text / measured ink heights / a form helper that owns the geometry).
-    Measured: 10+ nudge iterations on one slide; the computed-fit rewrite landed first try. It
-    replaces nothing: `render_deck.py` and `lint_deck.py` behave exactly as before.
+    consecutive runs escalates, and 🔴 **the escalation BINDS — the next run is REFUSED if your
+    edit only moved numbers.** "Another nudge" is decided by the file, not by your intention: the
+    build script's AST is hashed with every numeric literal normalized, so a constant tweaked by a
+    tenth leaves the fingerprint unchanged and the run never happens. Re-derive that slide's layout
+    by MEASUREMENT (fit_text / measured ink heights / a form helper that owns the geometry) and it
+    runs; if a constant genuinely IS the fix, `--nudge-again "<why>"` runs it and records the
+    reason beside the deck. Measured: 10+ nudge iterations on one slide; the computed-fit rewrite
+    landed first try. It replaces nothing: `render_deck.py` and `lint_deck.py` behave as before.
 - **Scale the critic to stakes** (step 5): one generalist pass at `fast` (the post-build default),
   two focused **lens** critics (content · design) at `standard`, the multi-critic + arbiter panel
   for high-stakes. You never skip the loop on your own authority — only the user can, by answering

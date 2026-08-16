@@ -31,11 +31,21 @@ is exactly how a pipeline stops checking:
      measured content) landed on its FIRST try. So this tool keeps a per-fault streak across
      consecutive runs in `.deck-cycle-state.json` beside the build script (same slide + same lint
      code = same fault; the message's numbers may change, the key does not). When a fault
-     survives 3 consecutive runs it prints an escalation: stop nudging, RE-DERIVE that slide's
-     layout by measurement — `fit_text`/ink measurement, or a form helper that owns the geometry
+     survives 3 consecutive runs it escalates: stop nudging, RE-DERIVE that slide's layout by
+     measurement — `fit_text`/ink measurement, or a form helper that owns the geometry
      (`sigs.py --example <form>`). A fault that clears resets its streak; a fresh build script
-     resets them all. The breaker never changes an exit code and never suppresses a finding — it
-     only names the moment where the strategy, not the constant, is what has to change.
+     resets them all.
+
+     🔴 **And the escalation BINDS: the next run is refused if the edit was another nudge.** A
+     rule whose only enforcement is the author choosing to obey it fails silently, and a silent
+     failure here means the loop carries on exactly as before. So "another nudge" is defined by
+     the FILE, not by intent: `_nudge_fingerprint` hashes the build script's AST with every
+     numeric literal normalized to 0, so an edit that moved only numbers leaves the fingerprint
+     UNCHANGED — and an unchanged fingerprint after an escalation is refused before the build is
+     even spent. Restructure (a helper call, computed geometry, fewer words) and it runs. If a
+     constant really is the fix, `--nudge-again "<why>"` runs it and records the reason beside the
+     deck; a gate with no way through stops being a gate and becomes something to work around.
+     It never changes THIS run's exit code and never suppresses a finding — it changes the next.
 
 It is an ALTERNATIVE entry point, not a replacement. `render_deck.py` and `lint_deck.py` keep
 their own behaviour and every existing invocation still works — nothing in the pipeline is routed
@@ -46,12 +56,15 @@ USAGE
     python3 scripts/deck_cycle.py build_<deck>.py --render        # …+ render + render-time lint
     python3 scripts/deck_cycle.py build_<deck>.py --render --fast # …re-rendering changed pages only
     python3 scripts/deck_cycle.py build_<deck>.py --slides 3,7    # render only these pages
+    python3 scripts/deck_cycle.py build_<deck>.py --nudge-again "<why>"   # after an escalation
 
 Exit code uses lint_deck.py's vocabulary, so a caller can tell the two apart:
     2 = a stage could not run   ·   1 = everything ran and the deck has findings   ·   0 = clean
 """
 from __future__ import annotations
 
+import ast
+import hashlib
 import json
 import os
 import re
@@ -67,6 +80,37 @@ HERE = Path(__file__).resolve().parent
 # stays the same fault.
 STREAK_LIMIT = 3
 STATE_NAME = ".deck-cycle-state.json"
+# An override has to be a sentence someone can disagree with later, like every other waiver in this
+# skill — long enough that typing it is a decision rather than a reflex.
+OVERRIDE_MIN = 20
+
+
+def _nudge_fingerprint(script_path: Path) -> str | None:
+    """Fingerprint a build script's STRUCTURE, blind to every numeric literal.
+
+    This is what makes the escalation enforceable instead of advisory. "Stop nudging" cannot be
+    checked by asking the author whether they nudged; it CAN be checked by asking the file. A
+    nudge — 1.02 → 0.98, 14 → 13, a y offset moved by a tenth — leaves the AST identical once
+    numbers are normalized, so an unchanged fingerprint IS the definition of another nudge.
+
+    Deliberately NOT normalized: strings and everything else. Shortening the words on a slide is a
+    real fix for OVERFLOW, restructuring is a real fix for anything, and both change the shape.
+    Booleans are left alone too (`True`/`False` are decisions, not magnitudes) — Python spells them
+    as constants that would otherwise fold into the same bucket as 0 and 1.
+
+    Returns None when the file cannot be parsed (mid-edit, or not Python). An unreadable file is
+    not evidence of a nudge, so the enforcement fails OPEN — a checker that cannot see must not
+    block; the build is about to fail with its own SyntaxError anyway, which is the better message.
+    """
+    try:
+        tree = ast.parse(script_path.read_text(encoding="utf-8"))
+    except (OSError, SyntaxError, ValueError, UnicodeDecodeError):
+        return None
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Constant) and isinstance(node.value, (int, float, complex)) \
+                and not isinstance(node.value, bool):
+            node.value = 0
+    return hashlib.sha256(ast.dump(tree).encode("utf-8")).hexdigest()
 
 
 def _fault_keys(build_out: str, lint_out: str | None) -> set[str]:
@@ -87,46 +131,115 @@ def _fault_keys(build_out: str, lint_out: str | None) -> set[str]:
     return keys
 
 
-def _loop_breaker(deck_dir: Path, script_name: str, build_out: str,
+def _read_state(deck_dir: Path, script_name: str) -> dict:
+    """Load the streak state, resetting it whenever it belongs to a different build script."""
+    try:
+        path = deck_dir / STATE_NAME
+        state = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    except (OSError, ValueError):
+        state = {}
+    if not isinstance(state, dict) or state.get("script") != script_name:
+        state = {"script": script_name, "streaks": {}}
+    if not isinstance(state.get("streaks"), dict):
+        state["streaks"] = {}
+    return state
+
+
+def _write_state(deck_dir: Path, state: dict) -> None:
+    try:
+        (deck_dir / STATE_NAME).write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
+    except OSError:
+        pass                            # a loop aid must never be the reason a build cannot run
+
+
+ESCALATION_ADVICE = (
+    "   The third attempt is never another nudge. Adjusting a constant by a few points and\n"
+    "   re-running is the strategy that has now failed three times on the same fault — stop\n"
+    "   nudging and RE-DERIVE that slide's layout by MEASUREMENT: compute positions from the\n"
+    "   real content (fit_text, measured ink heights, a stack pitch computed from the block\n"
+    "   height), or rebuild the slide on a form helper that owns the geometry\n"
+    "   (python3 scripts/sigs.py --example <form>). Measured precedent: 10+ nudge iterations\n"
+    "   on one slide; the computed-fit rewrite landed on its first try."
+)
+
+
+def _enforce_escalation(deck_dir: Path, script_path: Path, override: str | None) -> tuple[bool, str]:
+    """🔴 THE HARD CONSTRAINT. After an escalation, REFUSE a build whose script is another nudge.
+
+    The escalation used to be a printed paragraph, which put it in the class of rule this repo
+    keeps re-learning the cost of: a rule whose only enforcement is the model choosing to obey it
+    fails silently, and a silent failure here means the loop it was written to break just carries
+    on. So it is now a refusal, and the thing it refuses is defined by the FILE rather than by
+    intent — `_nudge_fingerprint` is blind to numeric literals, so "the script changed only in its
+    numbers" is exactly "unchanged fingerprint".
+
+    Returns (allowed, message). It blocks only when ALL of these hold, which is why it costs
+    nothing on a healthy loop:
+      * a fault already escalated (>= STREAK_LIMIT consecutive failures), and
+      * the build script is structurally identical to the run that escalated, and
+      * no `--nudge-again "<reason>"` override was given.
+
+    The override exists because a constant genuinely is the fix sometimes, and a gate with no way
+    through stops being a gate and becomes something to work around. It is the same shape as every
+    other waiver here: a written reason, recorded in the state file, never a bare flag. It does NOT
+    reset the streak — one more nudge is a decision, not a fresh start.
+    """
+    state = _read_state(deck_dir, script_path.name)
+    stuck = sorted(state.get("escalated") or ())
+    if not stuck:
+        return True, ""
+    fp = _nudge_fingerprint(script_path)
+    if fp is None or fp != state.get("fingerprint"):
+        return True, ""                 # unparseable (fail open) or genuinely restructured
+    if override:
+        state.setdefault("overrides", []).append({"faults": stuck, "reason": override})
+        _write_state(deck_dir, state)
+        return True, ("\n── deck_cycle: nudging again ON THE RECORD " + "─" * 21 + "\n"
+                      "   {}\n   (still failing: {})".format(override, " · ".join(stuck)))
+    return False, (
+        "\n── deck_cycle: REFUSED — this edit is another nudge " + "─" * 12 + "\n"
+        "   Still open after {} consecutive runs: {}\n"
+        "   The build script's structure is UNCHANGED since that run — only numbers moved, which\n"
+        "   is the strategy that has already failed. So this run is refused before spending it.\n\n"
+        "{}\n\n"
+        "   If a constant really is the fix here, say why and it runs:\n"
+        "     python3 scripts/deck_cycle.py {} --nudge-again \"<why this constant is the fix>\"\n"
+        "   State: {}".format(
+            STREAK_LIMIT, " · ".join(stuck), ESCALATION_ADVICE, script_path.name,
+            deck_dir / STATE_NAME))
+
+
+def _loop_breaker(deck_dir: Path, script_path: Path, build_out: str,
                   lint_out: str | None, lint_ran: bool) -> None:
     """Track fault streaks across CONSECUTIVE runs of the same build script; escalate at 3.
 
     Render-stage keys are carried (not reset) by a build-only run: a run that never rendered has
-    not judged them either way. Never changes exit codes, never suppresses a finding.
+    not judged them either way. Never changes THIS run's exit code and never suppresses a finding —
+    what it changes is the NEXT run, via `_enforce_escalation`.
     """
-    state_path = deck_dir / STATE_NAME
-    try:
-        state = json.loads(state_path.read_text(encoding="utf-8")) if state_path.exists() else {}
-    except (OSError, ValueError):
-        state = {}
-    if state.get("script") != script_name:
-        state = {"script": script_name, "streaks": {}}
-    old = state.get("streaks", {}) if isinstance(state.get("streaks"), dict) else {}
+    script_name = script_path.name
+    state = _read_state(deck_dir, script_name)
+    old = state["streaks"]
     current = _fault_keys(build_out, lint_out if lint_ran else None)
     streaks = {key: int(old.get(key, 0)) + 1 for key in current}
     if not lint_ran:
         for key, cnt in old.items():
             if key.startswith("deck:") and key not in streaks:
                 streaks[key] = int(cnt)
-    state["streaks"] = streaks
-    try:
-        state_path.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
-    except OSError:
-        pass
     stuck = sorted(k for k in current if streaks[k] >= STREAK_LIMIT)
+    state["streaks"] = streaks
+    state["escalated"] = stuck
+    # The fingerprint of the script AS IT JUST RAN — the baseline the next run is compared against.
+    state["fingerprint"] = _nudge_fingerprint(script_path) if stuck else None
+    _write_state(deck_dir, state)
     if stuck:
         print("\n── deck_cycle: LOOP BREAKER " + "─" * 36)
         for key in stuck:
             print(f"   {key.split(':', 1)[1]} — failing for {streaks[key]} consecutive runs")
-        print(
-            "   The third attempt is never another nudge. Adjusting a constant by a few points and\n"
-            "   re-running is the strategy that has now failed three times on the same fault — stop\n"
-            "   nudging and RE-DERIVE that slide's layout by MEASUREMENT: compute positions from the\n"
-            "   real content (fit_text, measured ink heights, a stack pitch computed from the block\n"
-            "   height), or rebuild the slide on a form helper that owns the geometry\n"
-            "   (python3 scripts/sigs.py --example <form>). Measured precedent: 10+ nudge iterations\n"
-            "   on one slide; the computed-fit rewrite landed on its first try."
-        )
+        print(ESCALATION_ADVICE)
+        print("   🔴 The next run is REFUSED unless the script changes structurally — a numbers-only\n"
+              "      edit is what this just measured. To nudge anyway, say why:\n"
+              "      --nudge-again \"<why this constant is the fix>\"")
 
 
 def _run(label, cmd, cwd=None):
@@ -160,6 +273,28 @@ def main(argv):
         while flag in argv:
             argv.remove(flag)
             render = True
+    # --nudge-again "<reason>": the recorded way through an escalation (guard 4). Parsed here
+    # rather than forwarded — it is this tool's own decision, and render_deck knows nothing of it.
+    override = None
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--nudge-again" or a.startswith("--nudge-again="):
+            if "=" in a:
+                override = a.split("=", 1)[1]
+                argv.pop(i)
+            else:
+                override = argv[i + 1] if i + 1 < len(argv) else ""
+                del argv[i:i + 2]
+            continue
+        i += 1
+    if override is not None and len(override.strip()) < OVERRIDE_MIN:
+        print("deck_cycle: --nudge-again needs a REASON of at least {} characters — a sentence "
+              "someone can disagree with later, not a flag.\n"
+              "  It is recorded in {} beside the deck, like every other waiver in this skill."
+              .format(OVERRIDE_MIN, STATE_NAME))
+        return 2
+
     # flags that belong to render_deck.py, forwarded verbatim rather than re-implemented
     i = 0
     while i < len(argv):
@@ -190,6 +325,14 @@ def main(argv):
         return 2
     deck_dir = script_path.parent
 
+    # Guard 4, the hard half: refuse BEFORE spending the build when the previous run escalated and
+    # this edit is another nudge. Refusing after would still cost the cycle it exists to save.
+    allowed, note = _enforce_escalation(deck_dir, script_path, override)
+    if note:
+        print(note)
+    if not allowed:
+        return 2
+
     stages = []
     rc, dt, out, label = _run("build (+ build-time lint)", [sys.executable, str(script_path)],
                               cwd=str(deck_dir))
@@ -204,7 +347,7 @@ def main(argv):
         print("\ndeck_cycle: STOPPED before rendering — the build did not complete. A critical "
               "layout fault is a reason to fix the build, not to look at the render.")
         # Guard 4. This is the path the nudge loop lives on — count the streak before returning.
-        _loop_breaker(deck_dir, script_path.name, out, None, False)
+        _loop_breaker(deck_dir, script_path, out, None, False)
         return 2
 
     pptx = None
@@ -241,7 +384,7 @@ def main(argv):
 
     # Guard 4. The build succeeded (its ✗ lines cleared), so only render-time blockers can extend
     # a streak here — and only when the lint actually ran and judged them.
-    _loop_breaker(deck_dir, script_path.name, out, lint_out, lint_ran)
+    _loop_breaker(deck_dir, script_path, out, lint_out, lint_ran)
 
     total = sum(d for _l, _r, d in stages)
     line = " · ".join(f"{l} {d:.1f}s" for l, _r, d in stages)

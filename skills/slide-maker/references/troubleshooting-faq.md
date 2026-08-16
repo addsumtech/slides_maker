@@ -36,6 +36,16 @@ Three error surfaces, three prefixes:
 | `render_deck: N hand-off gate(s) failed` + `[i/N] <section>` | hand-off (`render_deck.py --gate-check`) | **all N must be fixed — the run reports every one** |
 | a Python traceback | your build script crashed | fix the code line it names (§3) |
 
+**`deck_cycle: REFUSED — this edit is another nudge`.** Not a bug: the same fault failed 3
+consecutive runs and your last edit changed only NUMBERS (the build script's AST is identical once
+numeric literals are normalized, which is what "another nudge" means as a file property). Fix it
+the way that works — compute the geometry from the real content (`fit_text`, measured ink heights,
+a stack pitch derived from the block height) or rebuild the slide on a form helper
+(`sigs.py --example <form>`); shortening the text counts too. Measured precedent: 10+ nudge
+iterations on one slide, then the computed-fit rewrite landed first try. If a constant really is
+the fix (a fixed template slot, say), `--nudge-again "<why>"` runs it and records the reason in
+`.deck-cycle-state.json`. A fault that clears, or a different build script, resets everything.
+
 🔴 **The hand-off gate lists EVERY failure in one run — fix them ALL before re-running.** It used
 to stop at the first, so a thin `.deck-gates.json` cost one fail → fix → re-run cycle per field, at
 the point in the session where a round-trip is most expensive. Only a structural stop still comes
