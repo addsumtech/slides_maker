@@ -1905,6 +1905,20 @@ at Step 0 — post the rendered deck (contact sheet + the slide PNG paths) and a
 | `thorough` | multi-critic panel + arbiter, 3 rounds, every claim | ~1–2 h · ~2M |
 | `none` | no review — deliver as-is | 0 |
 
+🔴 **On a runtime with NO choice UI — plain Codex chat, Kimi, a GPT surface, an API caller: the
+norm, not the exception — ask it as ONE typed question and never fake a form.** Say it in the
+USER's language. This is the same rule Step 0 carries, and it is repeated here because this
+question has no interview block to inherit it from — and an unaskable question does not become a
+default quietly, it becomes a default *silently*:
+> The deck is rendered — slides are at `<path>/render/slideNN.png` (contact sheet:
+> `<path>/render/contact.png`). Have a look, then tell me how hard to review it:
+> **fast** (default — 1 critic, 1 round, ~10–20 min) · **standard** (2 lens critics, 2 rounds,
+> ~30–60 min) · **thorough** (panel + arbiter, 3 rounds, ~1–2 h) · **none** (ship it as-is).
+
+**A host that cannot DISPLAY images still asks it** — the paths are the deck: the user opens them.
+What a no-image host may not do is answer the question on the user's behalf; that is the one
+substitution this question exists to prevent.
+
 Why the question lives here and not in the interview: at Step 0 it was a **blind** cost decision
 about a deck nobody had seen, and blind is why `fast` could never be the default (a silent recall
 drop the user never chose). With the deck visible the same choice is **informed** — the user has
@@ -1916,7 +1930,11 @@ entirely is a legitimate answer, not a loophole. Three rules keep it honest:
   hand-off's `provenance:` line then reads `skipped — user declined post-build review`, never a
   tally that implies it ran.
 - **`none` is recorded, not silent**: the standard `user-waived` critic waiver in
-  `.deck-gates.json`, quoting the decline — the machinery that always existed for exactly this.
+  `.deck-gates.json`, quoting the decline — `{"critic": {"waived": "<the user's words>",
+  "waived_category": "user-waived"}}`, plus `{"provenance": {"waived": "skipped — user declined
+  the post-build review"}}` on a research-sourced deck, so the record and the hand-off line say
+  the same thing. (Codex path: `review_effort: "none"` + `none_opt_in`.) This is the machinery
+  that always existed for exactly this.
   A surviving `fast` blocker still goes back to the user by name (the cap rule below), so the
   default tier never silently ships a known-broken deck.
 - **Under a per-deck AUTO WAIVER, run `fast` — never `none`.** "You decide" delegates effort

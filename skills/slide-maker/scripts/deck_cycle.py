@@ -74,6 +74,8 @@ import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+from written_reason import reason_width  # noqa: E402  (one shared definition, never a copy)
 
 # Guard 4 — the loop breaker. A fault is keyed by (stage, slide, lint code), never by the message:
 # the whole failure mode is that each nudge changes the NUMBERS in the message while the fault
@@ -81,7 +83,9 @@ HERE = Path(__file__).resolve().parent
 STREAK_LIMIT = 3
 STATE_NAME = ".deck-cycle-state.json"
 # An override has to be a sentence someone can disagree with later, like every other waiver in this
-# skill — long enough that typing it is a decision rather than a reflex.
+# skill — long enough that typing it is a decision rather than a reflex. Measured in
+# `written_reason.reason_width`, so a Chinese reason is not refused for saying more in fewer
+# characters (a 17-character Chinese sentence used to miss a 20-codepoint floor).
 OVERRIDE_MIN = 20
 
 
@@ -288,7 +292,7 @@ def main(argv):
                 del argv[i:i + 2]
             continue
         i += 1
-    if override is not None and len(override.strip()) < OVERRIDE_MIN:
+    if override is not None and reason_width(override) < OVERRIDE_MIN:
         print("deck_cycle: --nudge-again needs a REASON of at least {} characters — a sentence "
               "someone can disagree with later, not a flag.\n"
               "  It is recorded in {} beside the deck, like every other waiver in this skill."

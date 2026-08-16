@@ -57,6 +57,9 @@ STRICT_WARNINGS = {
 }
 ICON_HELPERS = {"icon", "icon_card", "icon_tile", "icon_badge", "icon_ghost"}
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from written_reason import reason_width  # noqa: E402  (one shared definition, never a copy)
+
 TEMPLATE = {
     "schema": SCHEMA,
     "runtime": "codex",
@@ -337,7 +340,11 @@ def is_sha256(value: Any) -> bool:
 
 
 def require_string(value: Any, label: str, errors: list[str], minimum: int = 1) -> str | None:
-    if not isinstance(value, str) or len(value.strip()) < minimum:
+    # Width, not codepoints — `written_reason.reason_width` counts an East-Asian wide character
+    # as 2, so these floors mean "roughly this much information" rather than "roughly this much
+    # Latin". Exactly a no-op for ASCII; the only records whose behaviour changes are CJK ones,
+    # which were being refused for saying MORE in fewer characters.
+    if not isinstance(value, str) or reason_width(value) < minimum:
         errors.append(f"{label} must be a non-empty string")
         return None
     return value.strip()

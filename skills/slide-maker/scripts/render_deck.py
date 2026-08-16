@@ -23,6 +23,9 @@ import tempfile
 import subprocess
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from written_reason import reason_width  # noqa: E402  (one shared definition, never a copy)
+
 
 def find_soffice():
     """Locate the LibreOffice binary across macOS / Linux / WSL / native Windows.
@@ -1198,7 +1201,7 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
             WAIVER_KINDS = CRITIC_WAIVER_KINDS
             reason = critic["waived"]
             kind = critic.get("waived_category")
-            if not isinstance(reason, str) or len(reason.strip()) < 24:
+            if not isinstance(reason, str) or reason_width(reason) < 24:
                 die("`critic.waived` must be a written reason that travels with the deck, not a "
                     "placeholder. Say what was skipped and why, in a sentence someone can disagree "
                     "with later.")
@@ -1597,7 +1600,7 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
             if _low_reach is not None:
                 _fr = design.get("form_reach")
                 _why = str((_fr or {}).get("waived") or "").strip() if isinstance(_fr, dict) else ""
-                if len(_why) < 24:
+                if reason_width(_why) < 24:
                     die("form reach is {n} of {t} named components and the rest of {s} is raw "
                         "box/text, with no recorded reason.\n"
                         "  Look once — `python3 scripts/sigs.py --list` (or --search <shape>) — then "
@@ -1663,7 +1666,7 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
                         "competition's clothes.")
                 for i, row in enumerate(rejected):
                     if not isinstance(row, dict) or not str(row.get("name") or "").strip() \
-                            or len(str(row.get("why_lost") or "").strip()) < 8:
+                            or reason_width(row.get("why_lost")) < 8:
                         die("`content.arc.rejected[{}]` needs a `name` and a `why_lost` clause — the "
                             "reason is the whole point.".format(i))
                 if not str(arc.get("divergence") or "").strip():
@@ -1857,7 +1860,7 @@ def _check_sameness(pptx, delivery, gates):
     if waiver:
         reason = waiver.get("waived")
         kind = waiver.get("waived_category")
-        if not isinstance(reason, str) or len(reason.strip()) < 40:
+        if not isinstance(reason, str) or reason_width(reason) < 40:
             die("`sameness.waived` must be a written reason that names the REGISTER this deck is "
                 "in, not a circumstance — a sentence someone can disagree with later (>=40 chars).")
         if kind not in SAMENESS_WAIVER_KINDS:

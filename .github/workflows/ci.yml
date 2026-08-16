@@ -306,6 +306,18 @@ jobs:
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/cycle.log || {
             echo "::error::deck-cycle suite did not run to completion"; exit 1; }
 
+      # Every "record a written reason" floor in this skill was a codepoint count, which made the
+      # bar depend on the writing system: a Chinese sentence saying MORE was refused for using
+      # fewer characters, on the decks this skill most often builds. One shared measure now counts
+      # East-Asian wide characters as 2. Both directions are asserted — substantive CJK reasons
+      # pass, short ones in any language still do not, and every ASCII floor is unchanged.
+      - name: Written reasons are language-fair (CJK floors)
+        run: |
+          set -o pipefail
+          python tests/test_written_reason.py | tee /tmp/reason.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/reason.log || {
+            echo "::error::written-reason suite did not run to completion"; exit 1; }
+
       # The hand-off gate reports every failure in one run instead of stopping at the first — the
       # same ping-pong `codex_delivery_gate.py` already avoided and `validate_review.py` names by
       # name. Batching is only safe if it did not weaken anything, so the suite asserts both

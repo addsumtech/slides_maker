@@ -85,6 +85,18 @@ Read this before Step 2, then carry its evidence through the remaining steps.
    source SVG, preserving transparent alpha; Codex evidence records the rasterizer and the gate rejects
    a recorded icon whose shortest edge is below 256px or whose PNG has no alpha channel. This is a
    Codex-only execution rule: it prevents thumbnail blur without changing the shared icon workflow.
+3b. **Iterate through `deck_cycle.py`, not through hand-run steps — this is where the adapter's
+   own worst time sink lives.** `python3 scripts/deck_cycle.py build_<deck>.py [--render]` runs
+   build + lint (+ render + render-lint) in ONE call, which matters more on a bridged runtime than
+   anywhere else: every step asked for separately is a full round-trip. 🔴 **It also carries the
+   LOOP BREAKER, and the breaker is why this step is not optional here.** When the same fault
+   (same slide, same lint code) survives 3 consecutive runs it escalates, and the next run is
+   REFUSED if the build script changed only in its NUMBERS — an AST fingerprint blind to numeric
+   literals decides that, not your intention. Re-derive the slide's layout by measurement
+   (`fit_text`, measured ink, a form helper) and it runs; if a constant genuinely is the fix,
+   `--nudge-again "<why>"` runs it and records the reason. A runtime that hand-runs
+   `python build.py` then `lint_deck.py` gets neither the round-trip saving nor the guard, and the
+   uncapped nudge loop is the one loop in this pipeline with no other ceiling.
 4. **Make component decisions auditable.** Run `component_audit.py --json` after the build. For every
    detected cluster, use one of the audit's suggested components in the mapped slide builder or record
    a waiver with the exact slide, pattern, and bespoke reason. A real component emitter is accepted when
