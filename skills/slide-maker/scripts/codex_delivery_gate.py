@@ -589,11 +589,18 @@ def check_lint(lint: dict[str, Any], delivery: str, evidence: dict[str, Any], er
         try:
             sys.path.insert(0, str(Path(__file__).resolve().parent))
             import lint_deck as _ld
-            sameness_codes = {c.lower().replace(" ", "_").replace("-", "_")
-                              for c in _ld.SAMENESS_CODES}
-            structural = {"layout_sameness", "skeleton_variety", "card_dominance"}
+            def _slug(codes):
+                return {c.lower().replace(" ", "_").replace("-", "_") for c in codes}
+            sameness_codes = _slug(_ld.SAMENESS_CODES)
+            # IMPORTED, not retyped. This set used to be a hand-written literal sitting directly
+            # under the comment above warning that copied constants drift — and it would have
+            # silently disagreed the moment SAMENESS_STRUCTURAL changed.
+            structural = _slug(_ld.SAMENESS_STRUCTURAL)
+            timid_codes = _slug(_ld.TIMIDITY_CODES)
+            timid_structural = _slug(_ld.TIMIDITY_STRUCTURAL)
         except Exception:                                     # pragma: no cover - import guard
             sameness_codes, structural = set(), set()
+            timid_codes, timid_structural = set(), set()
         if sameness_codes:
             fired = {w for w in warnings if w in sameness_codes}
             if len(fired) >= 4 and (fired & structural) and not waived(evidence, "sameness"):
@@ -602,6 +609,18 @@ def check_lint(lint: dict[str, Any], delivery: str, evidence: dict[str, Any], er
                     "as one template even where its forms vary. Redesign the repetition, or record "
                     '{{"kind": "sameness", "reason": "<why this deck repeats on purpose — name the '
                     'register>"}} in waivers.'.format(len(fired), ", ".join(sorted(fired))))
+        # THE COUNTERWEIGHT, ported symmetrically. Without it the Codex profile would keep only the
+        # half of the scale that punishes excess — the exact asymmetry that let a shared-path deck
+        # be iterated flatter ten times with every gate reporting clean.
+        if timid_codes:
+            fired_t = {w for w in warnings if w in timid_codes}
+            if len(fired_t) >= 2 and (fired_t & timid_structural) and not waived(evidence, "timidity"):
+                errors.append(
+                    "timidity: {} signals say this deck is measurably SAFE ({}) — no page carries a "
+                    "protagonist that is not a sentence. Give the load-bearing pages a real one (a "
+                    "figure, a chart, a form whose geometry IS the argument), or record "
+                    '{{"kind": "timidity", "reason": "<the register that makes this restraint '
+                    'deliberate>"}} in waivers.'.format(len(fired_t), ", ".join(sorted(fired_t))))
 
     # the accessibility floors on the per-slide `warnings` stream (see STRICT_WARNINGS)
     per_slide = lint.get("warnings", [])

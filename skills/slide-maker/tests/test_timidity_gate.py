@@ -55,7 +55,7 @@ def check(name, cond, detail=""):
         print(f"  FAIL {name}\n       {str(detail)[:400]}")
 
 
-def build(dest, *, visual=False, timid_cover=True, n=12):
+def build(dest, *, visual=False, timid_cover=True, n=12, pics=False):
     """A 12-slide deck. `visual=True` gives half the pages a real non-text protagonist."""
     import deckkit as dk
     prs = dk.blank_deck(13.333, 7.5)
@@ -70,6 +70,11 @@ def build(dest, *, visual=False, timid_cover=True, n=12):
         # asserting the wrong thing. Timidity is about what a page CONTAINS, not how wordy it is.
         dk.text(s, 0.8, 2.2, 11.5, 3.2,
                 [[("One short line of body copy.", 18, grey, False, False)]])
+        if pics and 0 < i < n - 1:
+            from PIL import Image
+            f = dest / f"p{i}.png"
+            Image.new("RGB", (400, 300), (120, 140, 160)).save(f)
+            dk.picture(s, str(f), 7.6, 2.2, 4.4, 3.0, fit="contain")
         if visual and 0 < i < n - 1 and i % 2:
             dk.native_chart(s, 1.0, 3.2, 6.0, 3.0, ["a", "b", "c"],
                             [("s", [3, 5, 4])], kind="bar")
@@ -97,13 +102,44 @@ def record(**design):
 
 def main():
     print("== the composite's shape mirrors sameness ==")
-    check("4 codes, 2 of them structural",
-          len(LD.TIMIDITY_CODES) == 4 and len(LD.TIMIDITY_STRUCTURAL) == 2)
+    check("4 codes, exactly ONE of them structural",
+          len(LD.TIMIDITY_CODES) == 4 and LD.TIMIDITY_STRUCTURAL == ("TEXT-ONLY DECK",))
     check("type drama alone cannot hold a deck (TIMID COVER/FLAT TYPE are not structural)",
           not ({"TIMID COVER", "FLAT TYPE"} & set(LD.TIMIDITY_STRUCTURAL)))
+    check("a deliberately monochrome register cannot be held on quietness alone "
+          "(MONOTONE INK is not structural — ink-wash / 留白 / mono spec sheets are protected)",
+          "MONOTONE INK" not in LD.TIMIDITY_STRUCTURAL)
     check("timidity_codes() reads warn lines like sameness_codes()",
           LD.timidity_codes(["TEXT-ONLY DECK: 9 of 10 …", "CROWDED: slide 2 …"])
           == ("TEXT-ONLY DECK",))
+
+    print("== the measure is DRAWN AREA, not the ink/text difference ==")
+    with tempfile.TemporaryDirectory() as td2:
+        import deckkit as dk
+        d2 = pathlib.Path(td2)
+        prs = dk.blank_deck(13.333, 7.5)
+        sl = prs.slides.add_slide(prs.slide_layouts[6])
+        # A labelled filled form: exactly the shape that broke the first attempt, because the
+        # label sits ON the plate and ink coverage is a union, so `ink_cov - text_cov` collapsed
+        # a page whose whole geometry was drawn into the same score as bare paragraphs.
+        dk.box(sl, 1.0, 2.0, 11.0, 2.4, fill=dk.RGBColor.from_string("0F6E63"))
+        dk.text(sl, 1.4, 2.0, 10.2, 2.4,
+                [[("a name written on the form it belongs to", 20,
+                   dk.RGBColor.from_string("FFFFFF"), True, False)]])
+        out2 = d2 / "form.pptx"
+        prs.save(str(out2))
+        import lint_deck as _L
+        from pptx import Presentation
+        pr = Presentation(str(out2))
+        sw, sh = pr.slide_width / 914400, pr.slide_height / 914400
+        bx = _L._boxes(pr.slides[0], sw, sh, record=False)
+        drawn = _L._coverage([b for b in bx if not b.get("bg") and not b.get("text")], sw, sh)
+        inkgap = (_L._coverage([b for b in bx if not b.get("bg")], sw, sh)
+                  - _L._coverage([b for b in bx if b.get("text") and not b.get("bg")], sw, sh))
+        check("a labelled filled form reads as DRAWN (>=8% of the page)", drawn >= 0.08,
+              f"drawn={drawn:.3f}")
+        check("...while the ink/text difference would have called it text-only",
+              inkgap < 0.08, f"ink-text={inkgap:.3f}")
 
     with tempfile.TemporaryDirectory() as td:
         d = pathlib.Path(td)
@@ -160,6 +196,23 @@ def main():
         rc, out = gate(deck, record())
         check("charts + a display cover → passes", rc == 0, out)
         check("...and TEXT-ONLY DECK does not fire", "TEXT-ONLY DECK" not in out, out)
+
+    print("== a photo/figure deck (pictures, no charts) is NOT held ==")
+    with tempfile.TemporaryDirectory() as td:
+        d = pathlib.Path(td)
+        deck = build(d, visual=False, timid_cover=True, pics=True)
+        write_proof(d)
+        rc, out = gate(deck, record())
+        check("foreground pictures count as a protagonist", rc == 0 and "TEXT-ONLY DECK" not in out, out)
+
+    print("== a signal that could not run says so, rather than passing quietly ==")
+    with tempfile.TemporaryDirectory() as td:
+        d = pathlib.Path(td)
+        deck = build(d, visual=True, timid_cover=False)
+        write_proof(d)
+        rc, out = gate(deck, record())
+        check("render-dependent code reported as NOT CHECKED without renders",
+              "NOT CHECKED" in out and "MONOTONE INK" in out, out)
 
     print("== the size floor mirrors sameness (calibrated for 8+ content slides) ==")
     with tempfile.TemporaryDirectory() as td:

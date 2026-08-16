@@ -2010,6 +2010,12 @@ def _check_timidity(pptx, delivery, gates):
     structural = [c for c in fired if c in _LD_TIMIDITY_STRUCTURAL()]
     blocks = len(fired) >= 2 and bool(structural)
     listed = " · ".join(fired) if fired else "none"
+    # A signal that could not run is not a signal that passed — say which, exactly as sameness does.
+    ran = bool(stats.get("render_signals_ran"))
+    import lint_deck as _ld
+    tail = "" if ran else "  · NOT CHECKED: {} ({})".format(
+        " · ".join(_ld.TIMIDITY_RENDER_DEPENDENT),
+        stats.get("render_skip_reason") or "no renders beside the deck")
     waiver = gates.get("timidity") or {}
 
     if waiver:
@@ -2027,8 +2033,8 @@ def _check_timidity(pptx, delivery, gates):
             die("`timidity.codes` records {} but this deck now fires {}. A waiver written for a "
                 "different state of the deck does not certify this one.".format(
                     sorted(recorded or []), sorted(fired)))
-        print("[gates] timidity: {} of {} signal(s) fired ({}) — WAIVED [{}]: {}".format(
-            len(fired), len(_LD_TIMIDITY_CODES()), listed, kind, str(reason)[:110]))
+        print("[gates] timidity: {} of {} signal(s) fired ({}) — WAIVED [{}]: {}{}".format(
+            len(fired), len(_LD_TIMIDITY_CODES()), listed, kind, str(reason)[:110], tail))
         return
 
     if blocks:
@@ -2042,8 +2048,8 @@ def _check_timidity(pptx, delivery, gates):
             '    "timidity": {{"waived": "<the register, named>", "waived_category": "<{}>", '
             '"codes": {}}}'.format(len(fired), len(_LD_TIMIDITY_CODES()), listed,
                                    " | ".join(sorted(TIMIDITY_WAIVER_KINDS)), sorted(fired)))
-    print("[gates] timidity: {} of {} signal(s) fired ({})".format(
-        len(fired), len(_LD_TIMIDITY_CODES()), listed))
+    print("[gates] timidity: {} of {} signal(s) fired ({}){}".format(
+        len(fired), len(_LD_TIMIDITY_CODES()), listed, tail))
 
 
 def _density_stats(pptx, budget=70):

@@ -1478,6 +1478,17 @@ def _slide_stats(slide, bx, sw, sh):
         "text_cov": _coverage([s for s in bx if s["text"] and not s["bg"]], sw, sh),
         "ink_cov": _coverage([s for s in bx if not s["bg"]], sw, sh),
         "ink_cov_nopic": _coverage([s for s in bx if not s["bg"] and not s["pic"]], sw, sh),
+        # DRAWN AREA — the union of everything on the page that is NOT a text box and NOT the
+        # canvas: filled forms, bars, plates, panels, rules, connectors, pictures.
+        #
+        # It exists because `ink_cov - text_cov` cannot answer "does this page have a drawn
+        # argument". Ink coverage is a UNION, so a label sitting ON a filled segment makes the
+        # segment's own area vanish from the difference: measured on a real deck, a page built from
+        # three large filled seam-segments with their names on them scored 3.3pp — the same as a
+        # page of bare paragraphs. Every design language that writes ON its forms (config rows,
+        # labelled diagrams, chips, banded charts) would have been mislabelled "only sentences",
+        # which is a false-positive class big enough to make the signal worse than nothing.
+        "form_cov": _coverage([s for s in bx if not s["bg"] and not s["text"]], sw, sh),
         # The same union with hollow decoration removed — what a reader actually receives. Kept
         # BESIDE the others rather than replacing them: the existing bands were calibrated against
         # the old number, so moving them silently would re-tune every threshold in this file.
@@ -1703,9 +1714,14 @@ SAMENESS_RENDER_DEPENDENT = ("FLAT RHYTHM",)
 # the other side, deliberately shaped like SAMENESS_CODES: several weak signals, a structural
 # requirement, a floor on deck size, and a written waiver that names the register.
 TIMIDITY_CODES = ("TIMID COVER", "FLAT TYPE", "TEXT-ONLY DECK", "MONOTONE INK")
-# At least one of these must fire before the gate blocks. TIMID COVER + FLAT TYPE are one fact
-# counted twice (see the note above them), so a deck may not be held on type drama alone.
-TIMIDITY_STRUCTURAL = ("TEXT-ONLY DECK", "MONOTONE INK")
+# At least one of these must fire before the gate blocks — and only ONE code qualifies, on purpose.
+# TIMID COVER + FLAT TYPE are one fact counted twice, so type drama alone may never hold a deck.
+# MONOTONE INK is deliberately NOT structural either: a deliberately monochrome register (ink-wash,
+# 留白, a mono spec sheet, a memorial) is exactly the restraint this skill protects, and pairing it
+# with any type signal would block that deck on two facts that are both just "it is quiet". So a
+# hold always rests on the one claim that is hard to argue with — that no page in the deck has a
+# protagonist which is not a sentence — plus any second signal.
+TIMIDITY_STRUCTURAL = ("TEXT-ONLY DECK",)
 TIMIDITY_RENDER_DEPENDENT = ("MONOTONE INK",)
 
 
@@ -2561,12 +2577,13 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False, icon_ev=None):
     if len(body_rows) >= 6:
         wordy = [r for r in body_rows
                  if not (r.get("n_chart") or r.get("n_pic_fg")
-                         or (r.get("ink_cov", 0) - r.get("text_cov", 0)) >= 0.08)]
+                         or r.get("form_cov", 0) >= 0.08)]
         share = len(wordy) / len(body_rows)
         if share >= 0.65:
             warns.append(
                 f"TEXT-ONLY DECK: {len(wordy)} of {len(body_rows)} content slides carry almost "
-                f"nothing but words ({share*100:.0f}%: no chart, no figure, no drawn form) — the "
+                f"nothing but words ({share*100:.0f}%: no chart, no figure, and drawn forms under "
+                f"8% of the page) — the "
                 f"deck has no visual argument, only set paragraphs. Give the load-bearing pages a "
                 f"protagonist that is not a sentence (a figure, a real chart, a diagram whose "
                 f"geometry IS the point), or record the register exception")
