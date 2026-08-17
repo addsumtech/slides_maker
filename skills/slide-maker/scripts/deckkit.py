@@ -21,6 +21,60 @@ Equations: NEVER rely on Unicode modifier-letter super/subscripts (ᴴ ᵀ ᵣ) 
 display fonts lack those glyphs and render tofu/overlap. Use eq_par(), which draws
 real baseline-shifted ASCII in a full-coverage font, so it is crisp anywhere.
 """
+# ── runtime-dependency backstop ────────────────────────────────────────────────────────────────
+# Ensure the REQUIRED pip deps the moment deckkit is imported — the universal chokepoint EVERY deck
+# build passes through, by ANY code agent, on any host. Step 0's `check_env.py --ensure` is a PROSE
+# instruction an agent can skip; when it is skipped a missing dep otherwise surfaces here as a bare
+# `ModuleNotFoundError` with no pointer to the fix. This makes the auto-install agent-independent.
+# It fires ONLY when a dep is actually missing (`find_spec` is a cheap LOCATE, never a slow import),
+# so it costs nothing on a warm machine; it installs into THIS interpreter with a `--user` fallback
+# for externally-managed (PEP 668) envs, and never `--break-system-packages` (the user's call). Opt
+# out with SLIDE_MAKER_NO_ENV_CHECK=1. Keep the list in lockstep with check_env.REQUIRED_PIP.
+# (import-name, pip-name) — kept in lockstep with check_env.REQUIRED_PIP; test_env_bootstrap.py
+# asserts the two are identical so they can never drift.
+_RUNTIME_DEPS = [("pptx", "python-pptx"), ("fitz", "pymupdf"), ("PIL", "Pillow"),
+                 ("matplotlib", "matplotlib"), ("numpy", "numpy")]
+
+
+def _ensure_runtime_deps():
+    import importlib, importlib.util, os, subprocess, sys
+    if os.environ.get("SLIDE_MAKER_NO_ENV_CHECK"):
+        return
+
+    def _missing():
+        out = []
+        for mod, pkg in _RUNTIME_DEPS:
+            try:
+                if importlib.util.find_spec(mod) is None:
+                    out.append(pkg)
+            except Exception:
+                pass                 # a probe error is not evidence of absence — never install on it
+        return out
+
+    need = _missing()
+    if not need:
+        return
+    sys.stderr.write("[deckkit] required deps missing (%s) — installing into %s …\n"
+                     % (", ".join(need), sys.executable))
+    for extra in ([], ["--user"]):
+        try:
+            if subprocess.run([sys.executable, "-m", "pip", "install", *extra, *need],
+                              timeout=900).returncode == 0:
+                break
+        except Exception:
+            pass
+    importlib.invalidate_caches()
+    still = _missing()
+    if still:
+        raise ModuleNotFoundError(
+            "deckkit needs %s and could not auto-install them. Run:  python3 %s/check_env.py "
+            "--ensure   (or install by hand: %s -m pip install %s)"
+            % (", ".join(still), os.path.dirname(os.path.abspath(__file__)),
+               sys.executable, " ".join(still)))
+
+
+_ensure_runtime_deps()
+
 from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor

@@ -58,6 +58,30 @@ def _missing_required():
     return miss
 
 
+def _find_rasterizer():
+    """The SVG rasterizer icons.py will actually use: 'cairosvg' | 'rsvg-convert' |
+    'headless Chrome/Edge' | None. Resolved the way icons.py resolves it (a check that answers
+    differently from the code under test is worse than no check). Shared by main() and ensure()
+    so the human report and the Step-0 preflight never disagree about whether icons can render."""
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    try:
+        from icons import _cairosvg
+        if _cairosvg() is not None:
+            return "cairosvg"
+    except Exception:
+        pass
+    import shutil as _sh
+    if _sh.which("rsvg-convert"):
+        return "rsvg-convert"
+    try:
+        from icons import _find_chrome
+        if _find_chrome():
+            return "headless Chrome/Edge"
+    except Exception:
+        pass
+    return None
+
+
 def ensure():
     """Step-0 preflight: auto-install missing REQUIRED pip deps, report system deps that cannot be.
 
@@ -104,6 +128,15 @@ def ensure():
     if installed:
         print("[env] installed missing python deps: {} (into {})".format(
             ", ".join(installed), sys.executable))
+    if not _find_rasterizer():
+        # icons are a DEFAULT on categorical decks, but the rasterizer is a system-lib dep
+        # (cairosvg installs cleanly yet dies without libcairo — a blind pip is a false 'fixed'),
+        # so it is REPORTED here like LibreOffice, not auto-installed. Surfacing it at Step 0 stops
+        # a fresh machine from passing --ensure and then failing at the first icon.
+        print("[env] no SVG rasterizer — deckkit ICONS (a default on categorical decks) will fail. "
+              "Install one once:  macOS: brew install librsvg · Ubuntu: sudo apt install "
+              "librsvg2-bin · any OS: pip install cairosvg (needs a working libcairo) · or a "
+              "headless Chrome/Edge.")
     if not find_soffice():
         print("[env] LibreOffice not found — the PNG render loop (Step 5, before the critic) needs "
               "it. Ask the user to install it once:\n"
@@ -192,28 +225,10 @@ def main():
     # SVG rasterizer — icons.py needs ONE of: cairosvg (working libcairo), rsvg-convert, or a
     # Chromium-family browser. cairosvg importing cleanly is NOT enough: it dies at call time
     # when libcairo is missing, so probe the native lib too.
-    rasterizer = None
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    try:
-        # Resolve it the way icons.py does, not with a bare import: icons._cairosvg() also
-        # teaches cairocffi where a Homebrew/MacPorts libcairo lives, and a check that answers
-        # differently from the code under test is worse than no check.
-        from icons import _cairosvg
-        if _cairosvg() is not None:
-            rasterizer = "cairosvg"
-    except Exception:
-        pass
-    if not rasterizer:
-        import shutil as _sh
-        if _sh.which("rsvg-convert"):
-            rasterizer = "rsvg-convert"
-    if not rasterizer:
-        try:
-            from icons import _find_chrome
-            if _find_chrome():
-                rasterizer = "headless Chrome/Edge"
-        except Exception:
-            pass
+    # Resolve it the way icons.py does (via the shared _find_rasterizer), not a bare import:
+    # icons._cairosvg() also teaches cairocffi where a Homebrew/MacPorts libcairo lives, and a
+    # check that answers differently from the code under test is worse than no check.
+    rasterizer = _find_rasterizer()
     if rasterizer == "headless Chrome/Edge":
         # Green, but it is the SLOWEST backend by two orders of magnitude — measured on a real
         # 5-icon run: 5.05s per icon through Chrome vs 0.016s through cairosvg, identical output
