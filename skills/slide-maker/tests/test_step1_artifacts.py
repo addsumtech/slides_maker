@@ -47,7 +47,8 @@ sys.path.insert(0, str(HERE))
 import arc_divergence  # noqa: E402
 import render_deck as RD  # noqa: E402
 from test_critic_waiver_gate import (  # noqa: E402
-    ARC_CANDIDATES, DESIGN_OK, GOOD_REASON, PROV_OK, build_deck, content_ok, write_proof,
+    ARC_CANDIDATES, DESIGN_OK, GOOD_REASON, PROV_OK, build_deck, content_ok, selfcheck_ok,
+    write_proof,
 )
 
 PASS = FAIL = 0
@@ -77,6 +78,7 @@ def record(n=3, **content):
     return {"critic": {"waived": GOOD_REASON, "waived_category": "no-dispatch-on-host",
                        "inline_ran": True},
             "design_plan": copy.deepcopy(DESIGN_OK), "content": c,
+            "render_selfcheck": selfcheck_ok(n),
             "provenance": copy.deepcopy(PROV_OK)}
 
 

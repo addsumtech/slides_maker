@@ -1471,11 +1471,35 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
                           _critic_effort(critic), os.path.basename(src),
                           len(_opened & _expect), len(_expect)))
             else:
-                print("[gates] critic consented after {} — SELF-REPORTED (no review "
-                      "artifact).\n"
-                      "        The evidence-backed path is one flag on a step you already run:\n"
-                      "          python3 scripts/validate_review.py critic <review.json> --record {}"
-                      .format(_critic_effort(critic), os.path.dirname(path) or "."))
+                # 🔴 A consent with NO review artifact is REFUSED, not labelled. It used to print
+                # "SELF-REPORTED" and pass — the last self-certification hole in the gate set: the
+                # model that skipped the loop writes the same `{"verdict":"consent","rounds":N}` as
+                # the model that ran it, and a label the two share is not a distinction. Every other
+                # Step-1/2 verdict became a re-readable artifact this way (arc recomputed, slides
+                # table, provenance per-claim); the critic is the last one, and it is the costliest
+                # to fake because a real review must OPEN every slide (the coverage bind above).
+                #
+                # The escape is not a weaker consent — it is the honest WAIVER path above
+                # (`waived` + `waived_category`), which prints NOT INDEPENDENTLY REVIEWED. A host
+                # that genuinely cannot dispatch a subagent records `no-dispatch-on-host` +
+                # `inline_ran`; a host that CAN dispatch has no reason to self-report, because
+                # producing the artifact is `validate_review.py --record` on a review it already
+                # ran. So a consent MUST carry `source`; there is no legitimate source-less consent.
+                die("critic records `verdict: consent` but no `source` — the review artifact the "
+                    "gate re-reads.\n"
+                    "  A typed consent is self-certification: a skipped loop writes the identical "
+                    "JSON to a real one, so consent now REQUIRES the recorded review (path + "
+                    "sha256), not a summary.\n"
+                    "  Ran the critic? Dispatch it against the schema and record it — the shape it "
+                    "is judged by IS the shape you ask for:\n"
+                    "      python3 scripts/validate_review.py --schema critic   # -> subagent "
+                    "structured-output schema\n"
+                    "      python3 scripts/validate_review.py critic <review.json> --record {dir}\n"
+                    "  Could NOT run an independent critic (no subagent dispatch, or a 1-2 slide "
+                    "edit)? That is the WAIVER, and it is honest about not being independent:\n"
+                    '      {{"critic": {{"waived": "<why, >=24 chars>", "waived_category": '
+                    '"no-dispatch-on-host", "inline_ran": true}}}}'
+                    .format(dir=os.path.dirname(path) or "."))
             if critic.get("corroborated_by"):
                 # An arbiter pass is only corroboration when it CORROBORATES. Read what it actually
                 # said: a Job-2 payload reporting an unresolved finding, a dulled strength, or a
@@ -2165,6 +2189,68 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
             print("[gates]   note: {} says `approved` over a WAIVED artifact — legitimate if the "
                   "user approved the rest of that checkpoint, worth a second look if not"
                   .format(", ".join(sorted(_odd))))
+
+    with _gate_section('render_selfcheck'):
+        # THE ACTOR'S OWN LOOK, TURNED FROM PROSE INTO A TRACE. Step 5 tells the coordinator to read
+        # every slide PNG and "record a one-line verdict for EVERY slide — a slide with no line was
+        # not checked." That was prose with no backstop, so the cheap actor-side look (the one that
+        # catches an overflow, a cropped subject, a wrong number BEFORE a critic round is spent) was
+        # the easiest step to skip silently — the "passed because nothing looked" failure this skill
+        # keeps re-finding.
+        #
+        # This makes the look leave a mark: one verdict per slide, covering every slide, no
+        # placeholders. Same SHAPE and same honest LIMIT as content.slides — it proves the trace
+        # exists, not that the eye judged well (a lazy "ok" on a bad slide still passes). The strong
+        # guarantee that every slide was JUDGED is the independent critic's coverage bind above; this
+        # is the cheaper pre-filter in front of it, and its value is that a MISSING slide is now
+        # visible instead of silent. Genuinely no render to look at (a --static/no-render edge, or a
+        # deck this gate should not touch)? Waive it in writing.
+        _rs = gates.get("render_selfcheck") or {}
+        _rw = _rs.get("waived")
+        if _rw:
+            if reason_width(_rw) < 16 or _has_placeholder(_rw):
+                die("`render_selfcheck.waived` needs a real reason (>=16 wide), not a token/"
+                    "placeholder — say why there is no rendered deck to look at.")
+            print("[gates] render self-check WAIVED — {}".format(_rw))
+        else:
+            _sl = _rs.get("slides")
+            _n = _deck_slide_count(pptx)
+            if not isinstance(_sl, list) or not _sl:
+                die("`render_selfcheck.slides` is missing — Step 5's per-slide verdict, one line per "
+                    "slide (a slide with no line was not looked at):\n\n"
+                    '    "render_selfcheck": {"slides": [\n'
+                    '        {"n": 1, "verdict": "ok — signature move lands, 4.9% buried below the '
+                    'line"},\n'
+                    '        {"n": 2, "verdict": "teal glyph on aqua tile <3:1 — recoloured"},\n'
+                    '        ...]}\n\n'
+                    "  Read render/contact.png, then EVERY slide PNG in one message, and write the "
+                    "verdict as you go.\n"
+                    '  No rendered deck to look at? Waive it: {"render_selfcheck": {"waived": '
+                    '"<why>"}}.')
+            if _n and len(_sl) != _n:
+                die("`render_selfcheck.slides` has {} verdict(s) for a {}-slide deck — one per "
+                    "slide, covering every slide. A slide with no verdict is a slide nobody looked "
+                    "at.".format(len(_sl), _n))
+            _seen_rs = {}
+            _limit_rs = _n or len(_sl)
+            for _i, _row in enumerate(_sl):
+                if not isinstance(_row, dict):
+                    die("`render_selfcheck.slides[{}]` must be an object with n / verdict."
+                        .format(_i))
+                _rn = _row.get("n")
+                if not isinstance(_rn, int) or isinstance(_rn, bool) or not 1 <= _rn <= _limit_rs:
+                    die("`render_selfcheck.slides[{}].n` must be a slide number in 1..{}, got {!r}."
+                        .format(_i, _limit_rs, _row.get("n")))
+                if _rn in _seen_rs:
+                    die("`render_selfcheck.slides`: two verdicts both claim slide {} — one per "
+                        "slide.".format(_rn))
+                _seen_rs[_rn] = _i
+                if reason_width(_row.get("verdict")) < 4 or _is_stub(_row.get("verdict")):
+                    die("`render_selfcheck.slides[{}]` (slide {}) has no real verdict. It is the "
+                        "one line you write having LOOKED at the slide — `ok` is fine on a clean "
+                        "page, but an empty/placeholder line is a slide that was not read."
+                        .format(_i, _rn))
+            print("[gates] render self-check: {} verdict(s), one per slide".format(len(_sl)))
 
     with _gate_section('provenance'):
         # Provenance: a self-filled tally proves nothing — the refutation pass is what the gate is FOR.

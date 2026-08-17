@@ -329,6 +329,14 @@ TEMPLATE = {
     ],
     "thorough_panel": None,
     "arbiters": [],
+    # THE ACTOR'S RENDER LOOK — one verdict per slide, covering every slide (Step 5). `ok` is a
+    # valid verdict on a clean page; an empty/placeholder line is a slide nobody read.
+    "render_selfcheck": {
+        "slides": [
+            {"n": 1, "verdict": "<what you saw on slide 1 — 'ok' or the defect + fix>"},
+            # ... one verdict per remaining slide
+        ],
+    },
     "waivers": [],
 }
 
@@ -706,6 +714,49 @@ def check_lint(lint: dict[str, Any], delivery: str, evidence: dict[str, Any], er
                 f"{code}{where} is below the WCAG 1.4.11 3:1 floor — remediate it, or record a "
                 f"waiver {{\"kind\": \"a11y\", \"warning\": \"{code}\", \"reason\": \"…\"}} saying "
                 f"why this mark is decorative")
+
+
+def check_render_selfcheck(
+    evidence: dict[str, Any], expected_slides: set[int], errors: list[str]
+) -> None:
+    """The actor's own render look, turned from prose into a trace — mirror of render_deck's gate.
+
+    Step 5 asks the coordinator to read every slide PNG and record a one-line verdict per slide; that
+    was prose with no backstop, so the cheap actor-side look (catching an overflow / cropped subject
+    / wrong number BEFORE a critic round is spent) was the easiest step to skip silently. This makes
+    it leave a mark: one non-placeholder verdict per slide, covering every slide. Same shape and
+    honest limit as content.slides — it proves the trace exists, not that the eye judged well; the
+    strong per-slide guarantee is the independent critic's coverage bind (check_critics).
+    """
+    rs = evidence.get("render_selfcheck")
+    if isinstance(rs, dict) and require_string(rs.get("waived"), "render_selfcheck.waived",
+                                               [], minimum=16):
+        if has_placeholder(rs.get("waived")):
+            errors.append("render_selfcheck.waived is still a <placeholder>")
+        return
+    slides = (rs or {}).get("slides") if isinstance(rs, dict) else None
+    if not isinstance(slides, list) or not slides:
+        errors.append("render_selfcheck.slides missing — Step 5's per-slide verdict, one line per "
+                      "slide (a slide with no line was not looked at); or waive it in writing")
+        return
+    seen: dict[int, int] = {}
+    for index, row in enumerate(slides):
+        if not isinstance(row, dict):
+            errors.append(f"render_selfcheck.slides[{index}] must be an object with n / verdict")
+            continue
+        n = row.get("n")
+        if not isinstance(n, int) or isinstance(n, bool):
+            errors.append(f"render_selfcheck.slides[{index}].n must be the slide number")
+            continue
+        if n in seen:
+            errors.append(f"render_selfcheck.slides: two verdicts both claim slide {n}")
+        seen[n] = index
+        require_string(row.get("verdict"), f"render_selfcheck slide {n}.verdict", errors, minimum=4)
+        if has_placeholder(row.get("verdict")):
+            errors.append(f"render_selfcheck slide {n}.verdict is still a <placeholder>")
+    if expected_slides and set(seen) != expected_slides:
+        errors.append("render_selfcheck.slides must carry one verdict for every slide "
+                      "(a slide with no verdict is a slide nobody looked at)")
 
 
 def check_content(
@@ -1611,6 +1662,7 @@ def evaluate(
     check_lint(lint, delivery, evidence, errors)
     if expected_slides:
         check_content(evidence, root, expected_slides, errors)
+        check_render_selfcheck(evidence, expected_slides, errors)
         design_rows = check_design(evidence, root, expected_slides, deck_hash, errors)
         build_script, calls = check_build(evidence, root, supplied_script, errors)
         audited_components = components

@@ -1839,6 +1839,16 @@ critic round — full rationale in `references/design-principles.md`):
 > not the same act as fourteen scans, and the zoom-level checks this list demands (each icon tile at
 > ~3:1 on its own ground; all four edges of every PDF crop) still need their own look. The verdict
 > lines are the artifact that shows the scan happened; a slide with no line was not checked.
+> 🔴 **This look is now a GATE ARTIFACT, not prose — record it in `.deck-gates.json` as
+> `render_selfcheck.slides`, one verdict per slide, covering every slide** (`{"n": 7, "verdict":
+> "ok — signature lands"}` / `{"n": 7, "verdict": "teal glyph <3:1 — recoloured"}`; Codex:
+> `render_selfcheck` in the evidence file). The hand-off gate refuses a deck missing it or short a
+> slide, so the cheap actor-side look — the one that catches an overflow / cropped subject / wrong
+> number BEFORE a critic round is spent — leaves a trace instead of being the easiest step to skip.
+> Its honest limit is the same as `content.slides`: it proves the trace exists, not that the eye
+> judged well (`ok` on a bad page still passes) — the strong per-slide guarantee is the independent
+> critic's coverage bind. Genuinely no render to look at (a rare `--static` edge)? Waive it in
+> writing (`render_selfcheck.waived`).
 - **Overflow / contrast / footer / glyphs** — no clipped or spilling text, ≥4.5:1 contrast,
   nothing jammed on the footer, no tofu/missing glyphs, and **no orphaned punctuation** (a lone 。/，
   or single glyph stranded on its own row — set `deckkit.EAFONT` so PowerPoint's kinsoku keeps it
@@ -2152,8 +2162,16 @@ critic is a *demanding* judge (see `agents/critic.md`), not a rubber stamp:
      arbiter's Job-2 payload files the corroborating pass under `critic.corroborated_by`. **Why this
      is not ceremony:** a record you TYPE at hand-off is self-certification — the model that skipped
      the loop writes the same JSON as the model that ran it, so both produce identical prose and
-     only an artifact tells them apart. A hand-written record still passes, and is labelled
-     `SELF-REPORTED` when it does.
+     only an artifact tells them apart. 🔴 **A source-less `consent` is now REFUSED, not merely
+     labelled** — a `consent` verdict MUST carry the recorded review (`source` + `sha256`, coverage
+     bound to the deck), because a bare `{"verdict": "consent", "rounds": N}` is exactly the
+     identical-JSON case above. This is the last self-cert hole closed, matching what the Codex
+     path always required. The ONLY way to consent without the artifact is not a weaker consent —
+     it is the honest **waiver** below (`waived_category: no-dispatch-on-host` + `inline_ran`),
+     which prints NOT INDEPENDENTLY REVIEWED. A host that CAN dispatch a subagent has no source-less
+     case: producing the artifact is `--record` on the review it already ran. Ask for the review in
+     the shape `validate_review.py --schema critic` prints, so the review you get is one `--record`
+     away from the artifact the gate demands.
 
    - **Hand the critic the approved claim ledger WHOLE — never a summary you retyped for the
      dispatch.** A critic can only check a slide against what it was handed, so every verified

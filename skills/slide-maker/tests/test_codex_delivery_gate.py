@@ -377,6 +377,8 @@ def fixture(root: Path) -> tuple[dict, dict, dict, Path]:
                 "pptx_sha256": sha256(deck),
             },
         ],
+        # The actor's render look — one verdict per slide (this fixture deck is a single page).
+        "render_selfcheck": {"slides": [{"n": 1, "verdict": "ok — cover reads clean"}]},
         "waivers": [],
     }
     lint = {

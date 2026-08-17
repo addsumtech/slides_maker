@@ -122,26 +122,55 @@ def content_ok(n_slides: int = 3) -> dict:
 ARC_OK = content_ok(3)
 
 
-def fit_content(gates: dict, pptx) -> dict:
-    """Resize a fixture's `content.slides` to the deck actually under test.
+def selfcheck_ok(n_slides: int = 3) -> dict:
+    """A clean `render_selfcheck` artifact: one non-placeholder verdict per slide."""
+    return {"slides": [{"n": i, "verdict": "ok — reads clean" if i != 1 else "ok — cover"}
+                       for i in range(1, n_slides + 1)]}
 
-    The per-slide plan must cover every slide exactly once — that IS the gate — so a fixture with
-    three hardcoded rows cannot be shared by tests that build 3-, 8- and 16-slide decks. This
-    regenerates only the rows, only when they do not already match, and touches no other field, so
-    a test that deliberately corrupts `content` still sees its own corruption rather than this.
+
+def fit_content(gates: dict, pptx) -> dict:
+    """Resize a fixture's `content.slides` AND `render_selfcheck.slides` to the deck under test.
+
+    Both per-slide artifacts must cover every slide exactly once — that IS the gate — so a fixture
+    hardcoded at three rows cannot be shared by tests that build 3-, 8- and 16-slide decks. This
+    regenerates only the rows, only when they do not already match, and touches no other field, so a
+    test that deliberately corrupts one still sees its own corruption rather than this. It also
+    INJECTS a clean render_selfcheck when the gates dict carries none (most fixtures predate that
+    gate) — but never overwrites one a test set on purpose.
     """
-    c = gates.get("content")
-    if not isinstance(c, dict) or "slides" not in c:
-        return gates
     try:
         from pptx import Presentation
         n = len(Presentation(str(pptx)).slides)
     except Exception:                                              # noqa: BLE001
         return gates
-    if not n or len(c.get("slides") or []) == n:
+    if not n:
         return gates
     out = dict(gates)
-    out["content"] = dict(c, slides=content_ok(n)["slides"])
+    c = out.get("content")
+    if isinstance(c, dict) and "slides" in c and len(c.get("slides") or []) != n:
+        out["content"] = dict(c, slides=content_ok(n)["slides"])
+    rs = out.get("render_selfcheck")
+    if rs is None:
+        out["render_selfcheck"] = selfcheck_ok(n)
+    elif isinstance(rs, dict) and "slides" in rs and not rs.get("waived") \
+            and len(rs.get("slides") or []) != n:
+        out["render_selfcheck"] = selfcheck_ok(n)
+    # A bare `{"verdict": "consent"}` fixture no longer clears the gate on its own — a consent now
+    # REQUIRES the recorded review artifact (path + sha256), the last self-cert hole closed. Most
+    # fixtures use a bare consent only as a stand-in for "the critic was clean" while they test some
+    # OTHER gate; upgrade it to a real recorded review here (verdict + empty findings + full
+    # coverage), the same single-point move fit_content already makes for the per-slide artifacts. A
+    # test that sets `critic.source`/`waived` on purpose, or a non-consent verdict, is left alone.
+    cr = out.get("critic")
+    if isinstance(cr, dict) and cr.get("verdict") == "consent" \
+            and not cr.get("source") and not cr.get("waived"):
+        import hashlib
+        review = {"verdict": "consent", "findings": [],
+                  "coverage": {"slides_opened": list(range(1, n + 1))}}
+        rp = Path(pptx).parent / "_fixture_review.json"
+        rp.write_text(json.dumps(review), encoding="utf-8")
+        out["critic"] = dict(cr, source=str(rp),
+                             sha256=hashlib.sha256(rp.read_bytes()).hexdigest())
     return out
 
 
