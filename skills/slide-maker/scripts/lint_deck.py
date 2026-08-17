@@ -2066,19 +2066,26 @@ def _composed_void(r):
 
 
 def _declared_boldness(deck_path, gates_path=None):
-    """The deck's declared `design_plan.boldness` (lowercased) from .deck-gates.json, or None.
-    Used ONLY to scope the TEMPLATE-BOUND advisory to decks that CLAIMED to be daring — a
-    conservative or undeclared deck is legitimately quiet and must never be nudged for it."""
+    """The deck's declared boldness (lowercased), or None — RUNTIME-AGNOSTIC. lint_deck is the one
+    lint every runtime uses, so TEMPLATE-BOUND must find the boldness whichever agent built the deck:
+    the shared record `.deck-gates.json` (`design_plan.boldness`, Claude Code / Kimi / any shared
+    path) AND the Codex adapter's `.codex-deck-evidence.json` (`design.boldness`). Used ONLY to keep
+    the advisory off decks that never claimed to be daring — conservative or undeclared restraint is
+    legitimate and must never be nudged."""
     import json, os
-    cand = gates_path or os.path.join(
-        os.path.dirname(os.path.abspath(deck_path)), ".deck-gates.json")
-    try:
-        with open(cand, encoding="utf-8") as fh:
-            plan = (json.load(fh).get("design_plan") or {})
-    except (OSError, ValueError):
-        return None
-    b = plan.get("boldness")
-    return str(b).strip().lower() if b else None
+    d = os.path.dirname(os.path.abspath(deck_path))
+    sources = ((gates_path or os.path.join(d, ".deck-gates.json"), "design_plan"),
+               (os.path.join(d, ".codex-deck-evidence.json"), "design"))
+    for path, key in sources:
+        try:
+            with open(path, encoding="utf-8") as fh:
+                section = json.load(fh).get(key)
+        except (OSError, ValueError):
+            continue
+        b = section.get("boldness") if isinstance(section, dict) else None
+        if b:
+            return str(b).strip().lower()
+    return None
 
 
 def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False, icon_ev=None, boldness=None):

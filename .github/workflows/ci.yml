@@ -479,6 +479,20 @@ jobs:
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/reg.log || {
             echo "::error::regression suite exited 0 without running to completion"; exit 1; }
 
+      # Connector edge-docking (CONNECTOR_IN_BOX now sees axis-aligned + elbow connectors, and
+      # loop_between docks by construction), the import-time dependency backstop (deckkit self-heals
+      # its required pip deps for ANY agent), and TEMPLATE-BOUND — the composition-boldness signal,
+      # RUNTIME-AGNOSTIC by reading boldness from BOTH .deck-gates.json (shared) and
+      # .codex-deck-evidence.json (Codex). Script-style like the rest; same skip-means-broken guard.
+      - name: Connectors, dependency backstop, composition boldness
+        run: |
+          set -o pipefail
+          for t in test_connector_in_box test_env_bootstrap test_composition_boldness; do
+            python tests/$t.py | tee /tmp/$t.log
+            grep -qE "^[0-9]+ passed, 0 failed" /tmp/$t.log || {
+              echo "::error::$t did not run to completion"; exit 1; }
+          done
+
       # The two render optimizations (chunked parallel rasterization, pooled LibreOffice
       # profile) are only legitimate if they are INVISIBLE in the output. This renders the
       # same deck down every path and compares sha256, and asserts the invariant the old

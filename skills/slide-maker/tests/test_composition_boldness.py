@@ -49,7 +49,7 @@ def lint(pptx):
     return r.stdout + r.stderr
 
 
-def build(dirpath, boldness, *, breakout=False, n=11):
+def build(dirpath, boldness, *, breakout=False, n=11, record="gates"):
     """A deck of `n` slides: a cover, n-2 interior pages, a closer. Every interior is a plain
     title + bullets in the safe rectangle (no breakout) UNLESS `breakout` — then slide 3 is a
     dominant typographic hero (a committed, distinctive composition)."""
@@ -74,11 +74,17 @@ def build(dirpath, boldness, *, breakout=False, n=11):
     dk.text(s, 0.7, 2.2, 8.6, 1.0, [[("Thanks", 40, dk.WHITE, True, False)]])
     out = os.path.join(dirpath, "deck.pptx")
     prs.save(out)
-    dk.declare_delivery(out, "presented")            # writes .deck-gates.json in dirpath
-    gp = os.path.join(dirpath, ".deck-gates.json")
-    blob = json.load(open(gp)) if os.path.exists(gp) else {}
-    blob.setdefault("design_plan", {})["boldness"] = boldness
-    json.dump(blob, open(gp, "w"))
+    dk.declare_delivery(out, "presented")            # writes .deck-gates.json (delivery) in dirpath
+    if record == "codex":
+        # the Codex adapter records boldness in a SEPARATE evidence file, under `design.boldness`,
+        # and may leave .deck-gates.json without design_plan — TEMPLATE-BOUND must still see it.
+        json.dump({"design": {"boldness": boldness}},
+                  open(os.path.join(dirpath, ".codex-deck-evidence.json"), "w"))
+    else:
+        gp = os.path.join(dirpath, ".deck-gates.json")
+        blob = json.load(open(gp)) if os.path.exists(gp) else {}
+        blob.setdefault("design_plan", {})["boldness"] = boldness
+        json.dump(blob, open(gp, "w"))
     return out
 
 
@@ -113,6 +119,13 @@ def main():
         d = os.path.join(td, "s"); os.makedirs(d)
         check("a short bold deck (<8 interior pages) is not nudged",
               not fires(d, boldness="bold", n=7))
+
+        # RUNTIME ALIGNMENT: a Codex-built deck records boldness in .codex-deck-evidence.json, not
+        # .deck-gates.json — the shared lint_deck must still find it, or the signal silently dies on
+        # every Codex deck.
+        d = os.path.join(td, "x"); os.makedirs(d)
+        check("a Codex-built deck (boldness in .codex-deck-evidence.json) is also caught",
+              fires(d, boldness="bold", record="codex"))
 
     print("\n{} passed, {} failed".format(len(PASS), len(FAIL)))
     return 1 if FAIL else 0
