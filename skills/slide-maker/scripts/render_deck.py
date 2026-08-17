@@ -1030,6 +1030,71 @@ def _sha256(path):
 GATES_FILE = ".deck-gates.json"
 
 
+# Structural rows are excluded from the per-slide takeaway uniqueness check: a cover and a closing
+# legitimately restate the deck's one sentence, and blocking that would push authors to invent a
+# second sentence for a page whose whole job is to repeat the first. Same vocabulary
+# `arc_divergence.py` excludes from its `order` axis, for the same reason.
+_STRUCTURAL_ROLES = frozenset((
+    "cover", "agenda", "divider", "closing", "section", "thanks", "qa",
+    "封面", "目录", "分隔", "收尾", "结尾", "致谢", "问答"))
+
+# Values that look filled and say nothing. Kept SHORT on purpose: a long blocklist starts rejecting
+# honest short answers, and the width floor beside it already catches most emptiness. These are the
+# strings a run reaches for when it is filling a field rather than answering it.
+_STUBS = frozenset((
+    "n/a", "na", "none", "tbd", "todo", "-", "--", "—", "...", "…", "?", "x",
+    "source", "sources", "see source", "see sources", "same", "ditto",
+    "无", "暂无", "待定", "见来源", "同上", "略", "无来源", "见上"))
+
+
+# The angle-bracket TEMPLATE placeholder. `python3 scripts/arc_divergence.py --template` and this
+# gate's own die() messages print fillable skeletons whose fields read `<label-A>`,
+# `<the question this room is actually asking>`, `<the one sentence this slide leaves behind>`.
+# Measured: the raw skeleton, pasted with ZERO edits, passed the arc / slides / checkpoint gates —
+# every text floor here checks WIDTH, and a placeholder is wide. The template is SUPPOSED to pass
+# its own divergence checker (test_arc_divergence pins that — a skeleton that modelled a strawman
+# would teach one), so the guard lives in the GATE, not in arc_divergence's rules: the skeleton may
+# pass as a template, it may not pass as a delivered deck. Same predicate codex_delivery_gate
+# already applies to `fast_basis`/`none_opt_in` (startswith "<"), tightened to REQUIRE a closing `>`
+# so a real "<50%" or "reduced latency <10ms" survives while "<the ask>" does not.
+_PLACEHOLDER = re.compile(r"<[^<>]{2,}>")
+
+
+def _has_placeholder(v):
+    """True when a string still carries an angle-bracket template placeholder (`<...>`)."""
+    return bool(_PLACEHOLDER.search(str(v or "")))
+
+
+def _is_stub(v):
+    """True when a field is filled with a token that answers nothing — or a raw template placeholder."""
+    t = re.sub(r"[\s。．.、,，;；:：]+$", "", str(v or "").strip().lower())
+    return (not t) or t in _STUBS or _has_placeholder(v)
+
+
+def _norm_takeaway(v):
+    """Normalise a memory sentence for equality: whitespace and terminal punctuation only.
+
+    Deliberately NOT fuzzy. A near-duplicate pair is a judgement call the author may have made on
+    purpose; an exact duplicate is a plan that was written once and pasted down the column, and
+    that is the only case worth failing a build over.
+    """
+    t = str(v or "").strip().lower()
+    t = re.sub(r"\s+", "", t)
+    return re.sub(r"[。．.!！?？,，、;；]+$", "", t)
+
+
+def _arc_verdict(candidates):
+    """Score the candidate arcs with `arc_divergence.check` AT GATE TIME.
+
+    Imported lazily and by name so this file states the dependency where it is used: the gate's
+    verdict has to come from the same code the CLI runs, or the two drift and the gate starts
+    certifying a rule the script no longer applies. Any exception propagates to the caller, which
+    reports it with the CLI command that reproduces it.
+    """
+    import arc_divergence                                          # noqa: PLC0415
+    return arc_divergence.check(candidates)
+
+
 def _deck_slide_count(pptx):
     """How many slides the deck ACTUALLY has — the number a coverage claim is checked against.
 
@@ -1745,6 +1810,25 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
         # Shape is IDENTICAL to codex_delivery_gate's `content.arc`, deliberately — the two gates have
         # already drifted on a duplicated field twice (`path` vs `png`, the missing `conservative`
         # dial), and a third spelling would be the same mistake with a new name.
+        #
+        # 🔴 THE VERDICT IS RECOMPUTED HERE, NOT READ. The first version required `chosen` + one
+        # `rejected` with a clause + a `divergence` string, and its own comment said the quiet part:
+        # "`picked contribution-first` on its own is a sentence anyone can write without a competition
+        # having happened". The fix it chose — demand the losers and their clauses — raised the price
+        # of fabricating the record without making it impossible, because every one of those fields is
+        # still prose the run authors about itself.
+        #
+        # Measured on a delivered deck: `content.arc.divergence` was the two-character string "ok",
+        # `chosen`/`rejected` were filled in plausibly at build time, the gate passed, and
+        # `arc_divergence.py` had never been invoked for that deck. The session transcript shows three
+        # invocations on the one deck that had a real interview and zero on the two that were
+        # delegated. A gate that reads a verdict is a gate the run can dictate to.
+        #
+        # So the gate takes the CANDIDATES and runs `arc_divergence.check()` itself. Faking it now
+        # requires authoring 2-3 arcs that mechanically diverge on four axes and each carry comparable
+        # ledger evidence — which is not a cheaper way to pass, it is the work. Same move `e7336e6`
+        # made for icons ("ask the FILE, so the check survives a run that writes no record"), applied
+        # to the costliest Step-1 decision in the pipeline.
         content = gates.get("content") or {}
         if content.get("waived"):
             print("[gates] arc competition WAIVED — {}".format(content["waived"]))
@@ -1753,33 +1837,303 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
             if not isinstance(arc, dict):
                 die("`content.arc` is missing — the arc competition (Step 1, "
                     "agents/content-planner.md §3).\n"
-                    "  2-3 candidate arcs over ONE ledger, scored by scripts/arc_divergence.py, and "
-                    "the winner recorded WITH its losers:\n\n"
-                    '    "content": {"arc": {"chosen": "<the arc that won>",\n'
-                    '                        "rejected": [{"name": "<runner-up>", "why_lost": "<one clause>"}],\n'
-                    '                        "divergence": "ok | flagged <pair> -> rediverged | justified: <reason>"}}\n\n'
-                    "  `picked contribution-first` on its own is a sentence anyone can write without a "
-                    "competition having happened —\n"
-                    "  the losers and their clauses ARE the artifact. Or waive it: "
-                    '{"content": {"waived": "<why this deck had one possible arc>"}}.')
+                    "  2-3 candidate arcs over ONE ledger. Put the CANDIDATES here; this gate scores "
+                    "them itself:\n\n"
+                    '    "content": {"arc": {"chosen": "<the name of the arc that won>",\n'
+                    '                        "candidates": [<2-3 arc objects — '
+                    'python3 scripts/arc_divergence.py --template>],\n'
+                    '                        "rejected": [{"name": "<runner-up>", '
+                    '"why_lost": "<one clause>"}]}}\n\n'
+                    '  Or waive it: {"content": {"waived": "<why this deck had one possible arc>"}}.')
+            cands = arc.get("candidates")
+            if not isinstance(cands, list) or len(cands) < 2:
+                die("`content.arc.candidates` must carry the 2-3 candidate arcs THEMSELVES, not a "
+                    "report about them.\n"
+                    "  This gate runs scripts/arc_divergence.py over them right here, so a pasted "
+                    "verdict is no longer evidence:\n"
+                    "  a delivered deck passed with `\"divergence\": \"ok\"` while the script had "
+                    "never run for it.\n"
+                    "  `python3 scripts/arc_divergence.py --template` prints the fillable shape "
+                    "(name · shape · roles ·\n"
+                    "  audience_question · objection · closing_ask · evidence[ledger ids]).")
+            # The raw `--template` skeleton passed this gate: its fields are angle-bracket
+            # placeholders, and every check below measured WIDTH, which a placeholder has. Refuse a
+            # candidate set that still carries them BEFORE scoring — arc_divergence's own template is
+            # supposed to pass its divergence checker, so the skeleton is caught here, at delivery,
+            # not in the divergence axes. `<label-A>` for a `chosen` was literally what shipped.
+            _ph = []
+            for _ci, _c in enumerate(cands):
+                if not isinstance(_c, dict):
+                    _ph.append("candidates[{}] is {} not an arc object".format(
+                        _ci, type(_c).__name__))
+                    continue
+                for _f in ("name", "audience_question", "objection", "closing_ask"):
+                    if _has_placeholder(_c.get(_f)):
+                        _ph.append("candidates[{}].{}".format(_ci, _f))
+            if _has_placeholder(arc.get("chosen")):
+                _ph.append("chosen")
+            for _ri, _r in enumerate(arc.get("rejected") or []):
+                if isinstance(_r, dict):
+                    for _f in ("name", "why_lost"):
+                        if _has_placeholder(_r.get(_f)):
+                            _ph.append("rejected[{}].{}".format(_ri, _f))
+            if _ph:
+                die("`content.arc` still carries the raw `--template` placeholder(s): {}.\n"
+                    "  The unedited skeleton passes every width floor — `<label-A>` is wide — so it "
+                    "would ship an arc\n"
+                    "  competition that never happened. Fill the fields, or waive the arc with a real "
+                    "reason.".format(", ".join(_ph[:8]) + (" …" if len(_ph) > 8 else "")))
+            try:
+                _verdict = _arc_verdict(cands)
+            except Exception as exc:                              # noqa: BLE001
+                die("`content.arc.candidates` is not a readable candidate set: {}\n"
+                    "  Same reader as the CLI, so `python3 scripts/arc_divergence.py <arcs>.json` "
+                    "reproduces this exactly.".format(exc))
+            _names = [str(c.get("name") or "?") for c in cands if isinstance(c, dict)]
+            _chosen = str(arc.get("chosen") or "").strip()
+            if not _chosen:
+                die("`content.arc.chosen` is empty — name the arc that won.")
+            if _chosen not in _names:
+                die("`content.arc.chosen` is {!r}, which is not one of the candidates ({}).\n"
+                    "  A winner from outside the field means the competition scored a set the deck "
+                    "was not built from.".format(_chosen, ", ".join(_names)))
+            _rejected = arc.get("rejected")
+            if not isinstance(_rejected, list) or not _rejected:
+                die("`content.arc.rejected` must name every arc the winner beat, with the clause "
+                    "that lost it.\n"
+                    "  A winner with no losers on the record is a derivation wearing a "
+                    "competition's clothes.")
+            _named = {}
+            for _i, _row in enumerate(_rejected):
+                if not isinstance(_row, dict) or not str(_row.get("name") or "").strip() \
+                        or reason_width(_row.get("why_lost")) < 8:
+                    die("`content.arc.rejected[{}]` needs a `name` and a `why_lost` clause — the "
+                        "reason is the whole point.".format(_i))
+                _named[str(_row["name"]).strip()] = _row["why_lost"]
+            _missing = [n for n in _names if n != _chosen and n not in _named]
+            if _missing:
+                die("`content.arc.rejected` skips {}, which competed and lost.\n"
+                    "  Every candidate that is not the winner needs its losing clause; recording "
+                    "only the flattering half of\n"
+                    "  the field is how a competition quietly becomes a derivation again."
+                    .format(", ".join(repr(m) for m in _missing)))
+            _stray = [n for n in _named if n not in _names]
+            if _stray:
+                die("`content.arc.rejected` names {}, which never competed — it is not in "
+                    "`candidates`.".format(", ".join(repr(m) for m in _stray)))
+            _flagged = _verdict.get("flagged") or []
+            _sketch = _verdict.get("sketches") or []
+            _noledger = bool(_verdict.get("no_ledger"))
+            if _flagged or _sketch or _noledger:
+                _finding = "; ".join(filter(None, [
+                    "{} pair(s) tell the same story: {}".format(
+                        len(_flagged), ", ".join("{}~{}".format(p["a"], p["b"]) for p in _flagged))
+                    if _flagged else "",
+                    "strawman candidate(s): {}".format(", ".join(
+                        "{} carries {}/{} evidence units".format(x["name"], x["evidence"], x["top"])
+                        for x in _sketch)) if _sketch else "",
+                    "no candidate names its ledger evidence" if _noledger else ""]))
+                if reason_width(arc.get("divergence_justified")) < 16 \
+                        or _has_placeholder(arc.get("divergence_justified")):
+                    die("the arc competition, RECOMPUTED here, does not hold: {}.\n"
+                        "  Rediverge the candidates — move the CLAIM, not the wording: put the "
+                        "evidence before the claim instead\n"
+                        "  of after it, argue to a different ask, pre-empt a different objection. "
+                        "Or keep the set and record why in\n"
+                        "  `content.arc.divergence_justified`. This is the REDIVERGE-or-justify "
+                        "rule the script prints; it is\n"
+                        "  never an auto-kill.".format(_finding))
+                print("[gates] arc competition: {} candidates scored HERE — flagged ({}) · "
+                      "justified: {}".format(len(cands), _finding, arc["divergence_justified"]))
             else:
-                if not str(arc.get("chosen") or "").strip():
-                    die("`content.arc.chosen` is empty — name the arc that won.")
-                rejected = arc.get("rejected")
-                if not isinstance(rejected, list) or not rejected:
-                    die("`content.arc.rejected` must name at least one arc the winner beat, with the "
-                        "clause that lost it.\n"
-                        "  A winner with no losers on the record is a derivation wearing a "
-                        "competition's clothes.")
-                for i, row in enumerate(rejected):
-                    if not isinstance(row, dict) or not str(row.get("name") or "").strip() \
-                            or reason_width(row.get("why_lost")) < 8:
-                        die("`content.arc.rejected[{}]` needs a `name` and a `why_lost` clause — the "
-                            "reason is the whole point.".format(i))
-                if not str(arc.get("divergence") or "").strip():
-                    die("`content.arc.divergence` is missing — paste what "
-                        "`scripts/arc_divergence.py` returned (`ok`, a flagged pair you rediverged, "
-                        "or a recorded justification).")
+                print("[gates] arc competition: {} candidates scored HERE — none is a rewording of "
+                      "another, none is a sketch; won: {}".format(len(cands), _chosen))
+
+    with _gate_section('content.slides'):
+        # THE CONTENT CHECKPOINT BECOMES AN ARTIFACT ON THIS PATH TOO. Step 1 ends in a table —
+        # `# | 角色 | 记忆句 | 承载证据 | units` (references/checkpoint-convention.md) — and on the
+        # shared path that table lived ONLY as prose in the conversation. Under the per-deck AUTO
+        # WAIVER it is posted as an FYI rather than a stop, so nothing waits for it and nothing
+        # reports its absence.
+        #
+        # Measured across one session: the table was posted for the ONE deck that had a real
+        # interview and for NEITHER of the two that opened with "you decide the rest" — and those two
+        # are the decks whose design was judged flat and whose direction was judged wrong. A
+        # per-slide takeaway table is exactly the artifact that catches a wrong direction before a
+        # single slide is built: the reader sees twelve memory sentences and none is about the thing
+        # they asked for.
+        #
+        # 🔴 THE FIELD NAME IS `content.slides`, NOT A NEW ONE, because codex_delivery_gate has
+        # required this exact record all along ("content.slides must cover every final slide exactly
+        # once", with role/takeaway/evidence per row). The asymmetry was never that the artifact had
+        # not been invented — it was that the CODEX path demanded it and the shared path did not, so
+        # a Claude Code or Kimi run could deliver with no per-slide plan at all. A third spelling
+        # would have been the drift those two gates have already suffered twice.
+        #
+        # This gate cannot check that a table was pasted into a chat, and does not pretend to. It
+        # checks that the per-slide plan EXISTS, covers every slide exactly once, and that no two
+        # content slides carry the same memory sentence — the cheap mechanical signature of a plan
+        # written for the deck rather than per slide.
+        _content = gates.get("content") or {}
+        _sw = _content.get("slides_waived")
+        if _sw:
+            if reason_width(_sw) < 16 or _has_placeholder(_sw):
+                die("`content.slides_waived` needs a real reason (>=16 wide), not a token or a "
+                    "`<placeholder>` — say what this deck is that a per-slide plan does not apply to.")
+            print("[gates] content checkpoint rows WAIVED — {}".format(_sw))
+        else:
+            _rows = _content.get("slides")
+            _n_slides = _deck_slide_count(pptx)
+            if not isinstance(_rows, list) or not _rows:
+                die("`content.slides` is missing — the content checkpoint's table "
+                    "(references/checkpoint-convention.md),\n"
+                    "  one row per slide. Same shape codex_delivery_gate has always required:\n\n"
+                    '    "content": {"slides": [\n'
+                    '        {"slide": 1, "role": "cover",\n'
+                    '         "takeaway": "<the one sentence this slide leaves behind>",\n'
+                    '         "evidence": ["<SOURCE TRACE — a locator, not a label>"],\n'
+                    '         "units": 1},\n'
+                    '        ...]}\n\n'
+                    "  Read top to bottom, the `takeaway` column IS the takeaway spine. Under the "
+                    "auto waiver the table is still\n"
+                    "  posted in chat as an FYI — the waiver removes the stop, never the record; "
+                    "this field IS that record.\n"
+                    '  Or waive it: {"content": {"slides_waived": "<why this deck has no per-slide '
+                    'plan>"}}.')
+            _seen, _takeaways = {}, {}
+            for _i, _row in enumerate(_rows):
+                if not isinstance(_row, dict):
+                    die("`content.slides[{}]` must be an object with slide / role / takeaway / "
+                        "evidence.".format(_i))
+                _n = _row.get("slide")
+                if not isinstance(_n, int) or isinstance(_n, bool):
+                    die("`content.slides[{}].slide` must be the slide NUMBER, got {!r}."
+                        .format(_i, _row.get("slide")))
+                if _n in _seen:
+                    die("`content.slides`: rows {} and {} both claim slide {} — one slide, one row."
+                        .format(_seen[_n], _i, _n))
+                _seen[_n] = _i
+                if not str(_row.get("role") or "").strip():
+                    die("`content.slides[{}].role` is empty — name the beat this slide plays "
+                        "(cover / problem / evidence / conclusion …).".format(_i))
+                if reason_width(_row.get("takeaway")) < 8 or _is_stub(_row.get("takeaway")):
+                    die("`content.slides[{}]` (slide {}) has no real 记忆句 / takeaway.\n"
+                        "  It is the sentence the room keeps after the slide is gone. A label like "
+                        "{!r} is a topic, and a topic\n"
+                        "  is what a slide is ABOUT, not what it SAYS."
+                        .format(_i, _n, _row.get("takeaway")))
+                _ev = _row.get("evidence")
+                if not isinstance(_ev, list) or not _ev or \
+                        any(not isinstance(x, str) or _is_stub(x) for x in _ev) or \
+                        reason_width(" ".join(str(x) for x in _ev)) < 4:
+                    die("`content.slides[{}]` (slide {}) has no 承载证据.\n"
+                        "  A LIST of SOURCE TRACEs — a locator (\"Fig 3 / p.4 ¶2\", a table cell, a "
+                        "short verbatim span), or an\n"
+                        "  honest statement of what kind of claim it is. It is the cheapest "
+                        "per-slide grounding catch on the\n"
+                        "  path delegation uses most.".format(_i, _n))
+                _u = _row.get("units")
+                if _u is not None and (not isinstance(_u, int) or isinstance(_u, bool) or _u < 0):
+                    die("`content.slides[{}].units` must be a non-negative count, got {!r}."
+                        .format(_i, _u))
+                if str(_row.get("role")).strip().lower() not in _STRUCTURAL_ROLES:
+                    _key = _norm_takeaway(_row.get("takeaway"))
+                    if _key in _takeaways:
+                        die("`content.slides`: slides {} and {} carry the SAME takeaway.\n"
+                            "  Two content slides with one memory sentence is the mechanical "
+                            "signature of a plan written for the\n"
+                            "  DECK rather than per slide — and one of the two pages has no reason "
+                            "to exist. Give each its own\n"
+                            "  sentence, or merge them.".format(_takeaways[_key], _n))
+                    _takeaways[_key] = _n
+            if _n_slides and set(_seen) != set(range(1, _n_slides + 1)):
+                _miss = sorted(set(range(1, _n_slides + 1)) - set(_seen))
+                _extra = sorted(set(_seen) - set(range(1, _n_slides + 1)))
+                die("`content.slides` must cover every final slide exactly once — {}{}\n"
+                    "  Every slide is a beat someone chose; a plan that stops short of the deck is "
+                    "the half that got built\n"
+                    "  without one.".format(
+                        "no row for slide(s) {}. ".format(_miss) if _miss else "",
+                        "row(s) for slide(s) {} that the deck does not have. ".format(_extra)
+                        if _extra else ""))
+            print("[gates] content plan: {} row(s), one per slide, {} distinct takeaway(s)"
+                  .format(len(_rows), len(_takeaways)))
+            # The units column exists to make an about-to-be-empty or about-to-be-dense page visible
+            # AT THE CHECKPOINT rather than at the render. Printed, never fatal: a 0 on a pure-image
+            # beat and a 6 on a spoken one are both legitimate, and only the author knows which.
+            _thin = sorted(r["slide"] for r in _rows if isinstance(r.get("units"), int)
+                           and not isinstance(r.get("units"), bool) and r["units"] == 0
+                           and str(r.get("role", "")).strip().lower() not in _STRUCTURAL_ROLES)
+            _dense = sorted(r["slide"] for r in _rows if isinstance(r.get("units"), int)
+                            and not isinstance(r.get("units"), bool) and r["units"] >= 6)
+            if _thin:
+                print("[gates]   units=0 on content slide(s) {} — an empty beat, or a count nobody "
+                      "filled".format(_thin))
+            if _dense:
+                print("[gates]   units>=6 on slide(s) {} — check these against the density dial "
+                      "before the build".format(_dense))
+
+    with _gate_section('checkpoints'):
+        # DELEGATION MUST BE VISIBLE AT DELIVERY. The per-deck auto waiver turns the two 🔴 stops into
+        # FYIs, and SKILL.md is explicit that it "removes the stop, never the record". But a run that
+        # posted both FYIs and a run that posted neither hand over identical decks, so the user finds
+        # out which one they got by reading the slides.
+        #
+        # Field names and the mode vocabulary are codex_delivery_gate's, unchanged
+        # (`content.checkpoint` / `design.checkpoint`, mode `approved` | `auto`, plus a `record`):
+        # that gate has required both since it was written, and this is the second artifact the
+        # shared path was missing rather than a new idea.
+        #
+        # This section does not — cannot — verify that text appeared in a conversation. Its teeth are
+        # the sections above it: `content.slides` and `design_plan` ARE the checkpoints' artifacts,
+        # and this ledger prints each checkpoint's mode next to whether its artifact exists. An
+        # `approved` claimed over a waived artifact is then a contradiction on a single line.
+        _cn = gates.get("content") or {}
+        _MODES = ("approved", "auto")
+        _have = {
+            "content": ("slides x{}".format(len(_cn.get("slides") or []))
+                        if isinstance(_cn.get("slides"), list) and _cn.get("slides")
+                        else ("WAIVED" if _cn.get("slides_waived") else "NO ARTIFACT")),
+            "design": ("design_plan"
+                       if isinstance(gates.get("design_plan"), dict)
+                       and not (gates.get("design_plan") or {}).get("waived") else "WAIVED")}
+        _ck = {"content": (gates.get("content") or {}).get("checkpoint"),
+               "design": (gates.get("design") or {}).get("checkpoint")
+               or (gates.get("design_plan") or {}).get("checkpoint")}
+        _bad = [k for k, v in _ck.items()
+                if not isinstance(v, dict) or v.get("mode") not in _MODES
+                or reason_width(v.get("record")) < 12 or _has_placeholder(v.get("record"))]
+        if _bad:
+            die("the 🔴 checkpoint record is missing or malformed for: {}.\n\n"
+                '    "content": {{"checkpoint": {{"mode": "approved", "record": "<what was shown '
+                'and what came back>"}}}},\n'
+                '    "design":  {{"checkpoint": {{"mode": "auto", "record": "<what was shown and '
+                'what came back>"}}}}\n\n'
+                "  `approved` = presented, and the user approved before the build continued.\n"
+                "  `auto`     = presented under the per-deck AUTO WAIVER, and the build continued "
+                "(the waiver removes\n"
+                "               the stop, never the record).\n"
+                "  Same two values codex_delivery_gate has always accepted. There is no third one: a "
+                "run that SKIPPED the\n"
+                "  checkpoint has nothing true to write here, and that is the point — delegation "
+                "changes WHO approves,\n"
+                "  not WHETHER the step happened.".format(", ".join(sorted(_bad))))
+        print("[gates] checkpoint ledger — content: {} ({}) · design: {} ({})".format(
+            _ck["content"]["mode"], _have["content"],
+            _ck["design"]["mode"], _have["design"]))
+        # NOTED, not fatal, and the distinction is the lesson this whole file is about. `approved`
+        # over a waived artifact LOOKS like a contradiction and is not one: a content checkpoint
+        # carries a deck memory sentence, a ledger digest and an emotional-curve line besides the
+        # per-slide table, so a user can genuinely approve one whose table was waived for a written
+        # reason. A rule that blocks a legitimate state is worse than no rule — it teaches authors
+        # to write whichever value gets them through. The ledger line above is the deliverable; this
+        # is the sentence under it.
+        _odd = [k for k in ("content", "design")
+                if _ck[k]["mode"] == "approved" and "WAIVED" in _have[k]]
+        if _odd:
+            print("[gates]   note: {} says `approved` over a WAIVED artifact — legitimate if the "
+                  "user approved the rest of that checkpoint, worth a second look if not"
+                  .format(", ".join(sorted(_odd))))
 
     with _gate_section('provenance'):
         # Provenance: a self-filled tally proves nothing — the refutation pass is what the gate is FOR.

@@ -149,7 +149,19 @@ invisible).** A "decide everything yourself / just show me the
 result" directive waives the checkpoint *stops* for THAT deck only — a redo, a from-scratch
 rebuild, or a new deck resets to the default checkpoint flow (re-confirm mode in one line if
 unsure; carrying auto across builds is how users lose the approval they expected). And even
-under the auto waiver the checkpoints stay **visible — presented directly in chat, not as files**: the
+under the auto waiver the checkpoints stay **visible — presented directly in chat, not as files**, and
+🔴 **both still land in `.deck-gates.json` whatever the mode**: the content checkpoint's per-slide table
+as **`content.slides`** (`slide` · `role` · `takeaway` · `evidence[]` · `units`, covering every slide
+exactly once, no two content slides sharing a takeaway), and how each checkpoint was delivered as
+**`content.checkpoint`** / **`design_plan.checkpoint`** (`{"mode": "approved"|"auto", "record": …}`).
+Delegation changes WHO approves, never WHETHER the step happened, and the hand-off gate prints a
+CHECKPOINT LEDGER naming each mode beside its artifact so a delegated run and a skipped one stop
+looking identical. Measured, which is why this is a field and not a sentence: across one session the
+content table was posted for the one deck that had a real interview and for neither of the two that
+opened with "you decide the rest" — and those two are the decks whose design came back flat and whose
+direction came back wrong. `content.slides` is not a new field either: `codex_delivery_gate.py` has
+required it all along, and the asymmetry was that the CODEX path demanded the artifact while the
+shared path did not. Under a genuine exception, waive it in writing (`content.slides_waived`). Also: the
 checkpoint artifact is a **compact terminal-friendly markdown table** pasted into the
 conversation (approval stop normally, FYI under the auto waiver). The waiver covers the
 preference/approval 🔴 stops — the content and design checkpoints, the Q1=d hero checkpoint,
@@ -487,6 +499,15 @@ checkpoint without it is not ready. Rationale, both collapse modes, and the esca
 `agents/content-planner.md` §3. This exists because the arc is the only decision whose error
 invalidates everything downstream — a wrong form costs one slide, a wrong arc costs the design plan
 and the build under it — and it was the one decision with no alternative on the record.
+🔴 **Its GATE is `content.arc.candidates` in `.deck-gates.json` — the candidate arcs THEMSELVES, not a
+verdict about them.** The hand-off gate runs `arc_divergence.check()` over them at delivery, so the
+line you paste is no longer the evidence: it re-scores the set. Losers go in `content.arc.rejected`
+(every one of them, with its clause) and a flagged-but-kept set needs
+`content.arc.divergence_justified`. This changed because a delivered deck passed with
+`"divergence": "ok"` — two characters — while the script had never been run for it; the previous
+gate demanded the losers and their clauses, which raised the price of writing the record without
+making it impossible. Both `render_deck.py --gate-check` and `codex_delivery_gate.py` recompute; a
+run that skipped the competition now has nothing true to write, which is the point.
 **🔴 Hand the planner a `search cap:` too — and do the SMALL, NAMED lookups BEFORE dispatching it.**
 Web search is capped per SESSION, shared with every subagent, and it does not reset between decks in
 one conversation. Measured: one research fan-out — 12 agents plus 7 verifiers, none of them told a

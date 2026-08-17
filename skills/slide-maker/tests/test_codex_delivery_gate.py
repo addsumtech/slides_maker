@@ -217,14 +217,32 @@ def fixture(root: Path) -> tuple[dict, dict, dict, Path]:
                     "verified": True,
                 }
             ],
+            # The CANDIDATES, not a verdict about them: this gate now runs
+            # arc_divergence.check() over them, because `"divergence": "ok"` is a string the run
+            # writes about itself and a delivered deck passed that way with the script never run.
             "arc": {
                 "chosen": "evidence-first",
                 "shape": "evidence-build",
+                "candidates": [
+                    {"name": "evidence-first",
+                     "shape": "evidence-build",
+                     "roles": ["problem", "evidence", "conclusion"],
+                     "audience_question": "does the measurement actually hold up",
+                     "objection": "one record is not a result",
+                     "closing_ask": "accept the single-record fixture as evidence",
+                     "evidence": ["c1", "c2"]},
+                    {"name": "recommendation-first",
+                     "shape": "recommendation-first",
+                     "roles": ["conclusion", "evidence", "roadmap"],
+                     "audience_question": "should the fixture ship as the CI default",
+                     "objection": "nobody has run it on the other host",
+                     "closing_ask": "make it the default gate fixture",
+                     "evidence": ["c1", "c3"]},
+                ],
                 "rejected": [
                     {"name": "recommendation-first",
                      "why_lost": "there is no decision to lead with on a one-slide record"},
                 ],
-                "divergence": "ok",
             },
             "checkpoint": {
                 "mode": "approved",
@@ -569,6 +587,44 @@ def main() -> int:
             failures.append(
                 "STRICT_STATS names that lint_deck.py never emits, so the gate can never fire "
                 "on them: " + ", ".join(unreachable))
+
+        # ADVERSARY-FOUND, two ways the arc/slides/checkpoint changes broke on their own skeleton:
+        #
+        # (1) `--init` wrote `"candidates": ["<one descriptive string>"]` and check_content then did
+        #     `str(c.get("name") …)` over it — an uncaught AttributeError on the exact evidence file
+        #     the gate itself emits. A gate that crashes on `--init` output cannot be run at all.
+        # (2) The unedited skeleton, with its `<placeholder>` fields, cleared every width floor and
+        #     PASSED — the same blindness the shared gate had.
+        init_path = root / "init-evidence.json"
+        init_run = subprocess.run(
+            [sys.executable, str(SCRIPTS / "codex_delivery_gate.py"), "--init", str(init_path)],
+            text=True, capture_output=True)
+        if init_run.returncode or not init_path.exists():
+            failures.append("codex_delivery_gate.py --init did not write a skeleton:\n"
+                            + init_run.stdout + init_run.stderr)
+        else:
+            skeleton = json.loads(init_path.read_text(encoding="utf-8"))
+            crash = subprocess.run(
+                [sys.executable, str(SCRIPTS / "codex_delivery_gate.py"),
+                 "--lint", str(lint_path), "--components", str(components_path),
+                 "--build-script", str(build), "--evidence", str(init_path)],
+                text=True, capture_output=True)
+            if "Traceback" in crash.stderr or "AttributeError" in (crash.stdout + crash.stderr):
+                failures.append("the gate CRASHES on its own --init skeleton:\n" + crash.stderr)
+            # The skeleton is placeholder-filled, so it must be BLOCKED (cleanly), never accepted.
+            init_errors = gate.evaluate(lint, components, build, skeleton, root)
+            if not init_errors:
+                failures.append("the unedited --init skeleton PASSED the gate — placeholders are "
+                                "clearing the width floors")
+
+        # And on the real fixture: swap a filled candidate field for a raw `--template` placeholder
+        # and confirm it is refused, so the guard is doing work rather than being always-on.
+        placeholder_ev = json.loads(json.dumps(evidence))
+        placeholder_ev["content"]["arc"]["candidates"][0]["audience_question"] = \
+            "<the question this room is actually asking>"
+        errs = gate.evaluate(lint, components, build, placeholder_ev, root)
+        if not any("placeholder" in e for e in errs):
+            failures.append("a raw --template placeholder in a candidate field passed the codex gate")
 
         if failures:
             print("\n".join("FAIL: " + failure for failure in failures))

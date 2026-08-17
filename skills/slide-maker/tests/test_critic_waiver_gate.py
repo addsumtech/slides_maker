@@ -40,6 +40,10 @@ DESIGN_OK = {
     # Required from ~6 content slides up; always allowed. A truthful reason for every fixture here.
     "build_shape": "solo — CI fixture, no subagent dispatch",
     "type_scale": {"display": 34, "title": 24, "body": 14},
+    # The 🔴 design checkpoint's mode + record. Same two values codex_delivery_gate accepts
+    # (`approved` | `auto`); on the shared path there is no top-level `design` section, so it
+    # rides beside the plan it belongs to.
+    "checkpoint": {"mode": "approved", "record": "CI fixture — design plan presented and approved"},
     # A motif that only RECURS is an ornament with a schedule; these are the three things it makes
     # besides itself. Carved out under a conservative dial with a `deliberately restrained:` move,
     # exactly as signature_proof is.
@@ -63,10 +67,82 @@ DESIGN_OK = {
 PROV_OK = {"claims": [{"claim": "c", "verdict": "CONFIRMED", "url": "https://example.org"}]}
 # The arc competition (Step 1). Gated on the shared path since the same competition was already
 # bound on the Codex one — a wrong form costs one slide, a wrong arc costs the build under it.
-ARC_OK = {"arc": {"chosen": "problem-turn-evidence",
-                  "rejected": [{"name": "recommendation-first",
-                                "why_lost": "there is no decision to lead with here"}],
-                  "divergence": "ok"}}
+# 🔴 This fixture USED to be the exact shape the gate now refuses:
+#     {"chosen": ..., "rejected": [...], "divergence": "ok"}
+# — every field authored by the run, and `"ok"` standing in for a competition that never happened.
+# A delivered deck passed that way while arc_divergence.py had never been invoked for it. The gate
+# now runs `arc_divergence.check()` over `candidates` itself, so the fixture has to carry two arcs
+# that actually diverge: different shape, different opening role, different ask, different stance,
+# and comparable ledger evidence (a candidate under half the winner's evidence is a strawman).
+ARC_CANDIDATES = [
+    {"name": "problem-turn-evidence",
+     "shape": "problem-turn-evidence",
+     "roles": ["problem", "diagnosis", "evidence", "conclusion"],
+     "audience_question": "why did the recovery fall over on this cohort",
+     "objection": "the model is overfit to the training scanner",
+     "closing_ask": "fund a second acquisition round on the other scanner",
+     "evidence": ["c1", "c2"]},
+    {"name": "recommendation-first",
+     "shape": "recommendation-first",
+     "roles": ["conclusion", "evidence", "roadmap"],
+     "audience_question": "should the pipeline ship this quarter or next",
+     "objection": "nobody has measured the latency budget end to end",
+     "closing_ask": "approve the December ship date",
+     "evidence": ["c1", "c3"]},
+]
+
+
+def content_ok(n_slides: int = 3) -> dict:
+    """A complete `content` record for an n-slide fixture deck.
+
+    Three artifacts, not one: the arc COMPETITION (scored here by the gate), the per-slide plan
+    (`content.slides` — the content checkpoint's own table, the field codex_delivery_gate has
+    always required and the shared path did not), and the checkpoint MODE. Sized to the deck
+    because `content.slides` must cover every slide exactly once.
+    """
+    rows = []
+    for i in range(1, n_slides + 1):
+        if i == 1:
+            role, take = "cover", "this deck is about recovering a signal from noise"
+        elif i == n_slides:
+            role, take = "conclusion", "the recovery holds on the held-out scanner too"
+        else:
+            role, take = "evidence", f"measurement {i} is what rules out the overfit explanation"
+        rows.append({"slide": i, "role": role, "takeaway": take,
+                     "evidence": [f"fixture ledger c{i}"], "units": 1})
+    return {"arc": {"chosen": "problem-turn-evidence",
+                    "candidates": [dict(c) for c in ARC_CANDIDATES],
+                    "rejected": [{"name": "recommendation-first",
+                                  "why_lost": "there is no decision to lead with here"}]},
+            "slides": rows,
+            "checkpoint": {"mode": "approved",
+                           "record": "CI fixture — table presented, approved as-is"}}
+
+
+ARC_OK = content_ok(3)
+
+
+def fit_content(gates: dict, pptx) -> dict:
+    """Resize a fixture's `content.slides` to the deck actually under test.
+
+    The per-slide plan must cover every slide exactly once — that IS the gate — so a fixture with
+    three hardcoded rows cannot be shared by tests that build 3-, 8- and 16-slide decks. This
+    regenerates only the rows, only when they do not already match, and touches no other field, so
+    a test that deliberately corrupts `content` still sees its own corruption rather than this.
+    """
+    c = gates.get("content")
+    if not isinstance(c, dict) or "slides" not in c:
+        return gates
+    try:
+        from pptx import Presentation
+        n = len(Presentation(str(pptx)).slides)
+    except Exception:                                              # noqa: BLE001
+        return gates
+    if not n or len(c.get("slides") or []) == n:
+        return gates
+    out = dict(gates)
+    out["content"] = dict(c, slides=content_ok(n)["slides"])
+    return out
 
 
 def build_deck(dest: Path, n_slides: int = 3) -> Path:
@@ -97,6 +173,7 @@ def write_proof(dest: Path) -> None:
 
 
 def run_gate(deck: Path, gates: dict, *flags: str) -> tuple[int, str]:
+    gates = fit_content(gates, deck)
     (deck.parent / ".deck-gates.json").write_text(json.dumps(gates))
     p = subprocess.run(
         [sys.executable, str(RENDER), str(deck), "--gate-check", "--static", *flags],
@@ -933,7 +1010,7 @@ def main() -> int:
         base_big = {"critic": {"waived": GOOD_REASON, "waived_category": "no-dispatch-on-host",
                                "inline_ran": True},
                     "design_plan": {k: v for k, v in DESIGN_OK.items() if k != "build_shape"},
-                    "provenance": PROV_OK, "content": ARC_OK}
+                    "provenance": PROV_OK, "content": content_ok(8)}
         code, out = run_gate(big, base_big)
         if code != 0 and "build_shape" in out:
             passed += 1; print("  ok   an 8-slide deck with no build_shape is refused")

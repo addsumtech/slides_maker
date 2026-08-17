@@ -59,6 +59,25 @@ ICON_HELPERS = {"icon", "icon_card", "icon_tile", "icon_badge", "icon_ghost"}
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from written_reason import reason_width  # noqa: E402  (one shared definition, never a copy)
+import re as _re  # noqa: E402
+
+# The angle-bracket TEMPLATE placeholder — `<label-A>`, `<the question this room is asking>`. The
+# raw `arc_divergence.py --template` / gate-skeleton output, pasted unedited, cleared every width
+# floor because a placeholder is wide. This file already ran `startswith("<")` on fast_basis /
+# none_opt_in for the same reason; this is that predicate, needing a closing `>` so a real "<50%"
+# survives, shared across the arc / slides / checkpoint records.
+_PLACEHOLDER = _re.compile(r"<[^<>]{2,}>")
+
+
+def has_placeholder(value: Any) -> bool:
+    """True when a string still carries an angle-bracket template placeholder (`<...>`)."""
+    return bool(_PLACEHOLDER.search(str(value or "")))
+
+# Kept in lockstep with render_deck._STRUCTURAL_ROLES and arc_divergence._STRUCTURAL: a cover is
+# not a beat in the argument, and it is not a duplicate takeaway either.
+STRUCTURAL_ROLES = frozenset((
+    "cover", "agenda", "divider", "closing", "section", "thanks", "qa",
+    "封面", "目录", "分隔", "收尾", "结尾", "致谢", "问答"))
 
 TEMPLATE = {
     "schema": SCHEMA,
@@ -134,12 +153,31 @@ TEMPLATE = {
         # the build underneath it. `arc_divergence.py` scores 2-3 candidates over one ledger; what
         # was missing was anywhere for its verdict to land on this path.
         "arc": {
-            "chosen": "<the arc that won>",
+            "chosen": "<the arc that won — must be one of candidates[].name>",
             "shape": "problem-turn-evidence",
-            "rejected": [
-                {"name": "<runner-up>", "why_lost": "<one clause>"},
+            # The CANDIDATES themselves, as ARC OBJECTS — this gate runs arc_divergence.check() over
+            # them. Shown as two dict skeletons (never a bare string: `--init` used to emit one
+            # descriptive string and the gate then AttributeError'd on str.get). The `<…>` fields
+            # are placeholders and the gate REFUSES them until filled — a filled competition is the
+            # work, not a formality. `python3 scripts/arc_divergence.py --template` prints the shape.
+            "candidates": [
+                {"name": "<label-A>", "shape": "problem-turn-evidence",
+                 "roles": ["problem", "evidence", "conclusion"],
+                 "audience_question": "<the question this room is actually asking>",
+                 "objection": "<the objection this arc pre-empts>",
+                 "closing_ask": "<what the room should do or believe>",
+                 "evidence": ["<claim-ledger id>", "<claim-ledger id>"]},
+                {"name": "<label-B>", "shape": "recommendation-first",
+                 "roles": ["conclusion", "evidence", "roadmap"],
+                 "audience_question": "<a DIFFERENT question>",
+                 "objection": "<a DIFFERENT objection>",
+                 "closing_ask": "<a DIFFERENT ask>",
+                 "evidence": ["<claim-ledger id>", "<claim-ledger id>"]},
             ],
-            "divergence": "ok | flagged <pair> -> rediverged | justified: <reason>",
+            "rejected": [
+                {"name": "<label-B>", "why_lost": "<one clause>"},
+            ],
+            "divergence_justified": "<only when the recomputed check flags: why this set is right anyway>",
         },
         "checkpoint": {"mode": "approved", "record": "<decision record>"},
     },
@@ -697,12 +735,33 @@ def check_content(
         rows = {row.get("slide"): row for row in slides if isinstance(row, dict) and isinstance(row.get("slide"), int)}
         if set(rows) != expected_slides:
             errors.append("content.slides must cover every final slide exactly once")
+        # Two content slides carrying ONE memory sentence is the mechanical signature of a plan
+        # written for the DECK and pasted down the column — and one of the two pages then has no
+        # reason to exist. Structural rows are exempt: a cover and a closing legitimately restate
+        # the deck's one sentence, and forbidding that would make authors invent a second.
+        seen_takeaways: dict[str, int] = {}
         for number, row in rows.items():
             require_string(row.get("role"), f"content slide {number}.role", errors)
             require_string(row.get("takeaway"), f"content slide {number}.takeaway", errors, minimum=8)
+            if has_placeholder(row.get("takeaway")):
+                errors.append(f"content slide {number}.takeaway is still the `<placeholder>` from "
+                              "the skeleton — the memory sentence has not been written")
             evidence_rows = row.get("evidence")
             if not isinstance(evidence_rows, list) or not all(isinstance(item, str) and item.strip() for item in evidence_rows):
                 errors.append(f"content slide {number}.evidence must contain source references")
+            elif any(has_placeholder(item) for item in evidence_rows):
+                errors.append(f"content slide {number}.evidence is still a `<placeholder>` source trace")
+            units = row.get("units")
+            if units is not None and (not isinstance(units, int) or isinstance(units, bool) or units < 0):
+                errors.append(f"content slide {number}.units must be a non-negative count")
+            if str(row.get("role") or "").strip().lower() not in STRUCTURAL_ROLES:
+                key = "".join(str(row.get("takeaway") or "").strip().lower().split())
+                key = key.rstrip("。．.!！?？,，、;；")
+                if key and key in seen_takeaways:
+                    errors.append(f"content slides {seen_takeaways[key]} and {number} carry the "
+                                  "SAME takeaway — give each its own memory sentence, or merge them")
+                elif key:
+                    seen_takeaways[key] = number
 
     # Mirrors what this gate already demands of `design.direction`: a competition is only a
     # competition if the losers are on the record. `picked contribution-first` alone is a sentence
@@ -714,11 +773,54 @@ def check_content(
         errors.append("content.arc missing — the arc competition (agents/content-planner.md §3): "
                       "the arc that won, the ones it beat, and the divergence verdict")
     else:
-        require_string(arc.get("chosen"), "content.arc.chosen", errors, minimum=4)
-        require_string(arc.get("divergence"), "content.arc.divergence", errors, minimum=2)
+        chosen = require_string(arc.get("chosen"), "content.arc.chosen", errors, minimum=4)
+        candidates = arc.get("candidates")
+        verdict = None
+        if not isinstance(candidates, list) or len(candidates) < 2:
+            errors.append("content.arc.candidates must carry the 2-3 candidate arcs THEMSELVES — "
+                          "this gate scores them with arc_divergence.check(), so a pasted "
+                          "`divergence` verdict is not evidence (a delivered deck passed with "
+                          '"ok" while the script had never run for it). '
+                          "`python3 scripts/arc_divergence.py --template` prints the shape")
+        else:
+            # Refuse the raw `--template` skeleton BEFORE scoring: its fields are angle-bracket
+            # placeholders, which are wide enough to clear every width floor, so the unedited
+            # skeleton passed the shared gate. `has_placeholder` is the same predicate this file
+            # already applies to fast_basis/none_opt_in, tightened to need a closing `>`.
+            ph = []
+            for ci, cand in enumerate(candidates):
+                if not isinstance(cand, dict):
+                    ph.append(f"candidates[{ci}] is {type(cand).__name__}, not an arc object")
+                    continue
+                for field in ("name", "audience_question", "objection", "closing_ask"):
+                    if has_placeholder(cand.get(field)):
+                        ph.append(f"candidates[{ci}].{field}")
+            if has_placeholder(arc.get("chosen")):
+                ph.append("chosen")
+            if ph:
+                errors.append("content.arc still carries the raw --template placeholder(s): "
+                              + ", ".join(ph[:8]) + " — the unedited skeleton clears every width "
+                              "floor, so it would ship an arc competition that never happened")
+            elif all(isinstance(c, dict) for c in candidates):
+                try:
+                    verdict = load_arc_checker().check(candidates)
+                except Exception as exc:  # noqa: BLE001
+                    errors.append(f"content.arc.candidates is not a readable candidate set: {exc} "
+                                  "(same reader as the CLI, so arc_divergence.py <arcs>.json "
+                                  "reproduces it)")
+        # `if isinstance(c, dict)` — a candidate list of raw strings (the malformed skeleton) must
+        # report a clean error, never crash on `str.get`. This line ran unconditionally before and
+        # AttributeError'd on the exact file `--init` writes.
+        names = [str(c.get("name") or "?") for c in candidates
+                 if isinstance(c, dict)] if isinstance(candidates, list) else []
+        if chosen and names and chosen not in names:
+            errors.append(f"content.arc.chosen {chosen!r} is not one of the candidates "
+                          f"({', '.join(names)}) — a winner from outside the field means the "
+                          "competition scored a set the deck was not built from")
         rejected = arc.get("rejected")
+        named: dict[str, Any] = {}
         if not isinstance(rejected, list) or not rejected:
-            errors.append("content.arc.rejected must name at least one arc the winner beat — "
+            errors.append("content.arc.rejected must name every arc the winner beat — "
                           "a winner with no losers on the record is a derivation, not a choice")
         else:
             for index, row in enumerate(rejected):
@@ -726,8 +828,35 @@ def check_content(
                 if not isinstance(row, dict):
                     errors.append(f"{label} must be an object")
                     continue
-                require_string(row.get("name"), f"{label}.name", errors, minimum=2)
+                nm = require_string(row.get("name"), f"{label}.name", errors, minimum=2)
                 require_string(row.get("why_lost"), f"{label}.why_lost", errors, minimum=8)
+                if nm:
+                    named[nm] = row.get("why_lost")
+        if names and chosen:
+            missing = [x for x in names if x != chosen and x not in named]
+            stray = [x for x in named if x not in names]
+            if missing:
+                errors.append("content.arc.rejected skips " + ", ".join(repr(m) for m in missing)
+                              + " — every candidate that is not the winner needs its losing "
+                                "clause; recording only the flattering half of the field is how a "
+                                "competition quietly becomes a derivation again")
+            if stray:
+                errors.append("content.arc.rejected names " + ", ".join(repr(m) for m in stray)
+                              + " — never in `candidates`, so it never competed")
+        if verdict is not None:
+            flagged = verdict.get("flagged") or []
+            sketches = verdict.get("sketches") or []
+            if flagged or sketches or verdict.get("no_ledger"):
+                finding = "; ".join(filter(None, [
+                    "{} pair(s) tell the same story".format(len(flagged)) if flagged else "",
+                    "strawman candidate(s): " + ", ".join(x["name"] for x in sketches)
+                    if sketches else "",
+                    "no candidate names its ledger evidence" if verdict.get("no_ledger") else ""]))
+                if reason_width(arc.get("divergence_justified")) < 16:
+                    errors.append(f"the arc competition, recomputed here, does not hold: {finding}. "
+                                  "Rediverge the candidates (move the CLAIM, not the wording) or "
+                                  "record why the set is right anyway in "
+                                  "content.arc.divergence_justified")
 
     ledger = content.get("claim_ledger")
     if not isinstance(ledger, list) or (source_mode != "none" and not ledger):
@@ -750,6 +879,8 @@ def check_content(
         if checkpoint.get("mode") not in {"approved", "auto"}:
             errors.append("content.checkpoint.mode must be approved or auto")
         require_string(checkpoint.get("record"), "content.checkpoint.record", errors, minimum=12)
+        if has_placeholder(checkpoint.get("record")):
+            errors.append("content.checkpoint.record is still the `<placeholder>` from the skeleton")
 
 
 def check_design(
@@ -952,6 +1083,8 @@ def check_design(
         if checkpoint.get("mode") not in {"approved", "auto"}:
             errors.append("design.checkpoint.mode must be approved or auto")
         require_string(checkpoint.get("record"), "design.checkpoint.record", errors, minimum=12)
+        if has_placeholder(checkpoint.get("record")):
+            errors.append("design.checkpoint.record is still the `<placeholder>` from the skeleton")
     return row_map
 
 
@@ -1160,6 +1293,20 @@ def load_direction_validator() -> Any:
     spec = importlib.util.spec_from_file_location("slide_maker_directions_diversity", validator_path)
     if spec is None or spec.loader is None:
         raise RuntimeError("could not load directions_diversity.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_arc_checker() -> Any:
+    # Same shape as the three loaders above, and for the same reason: the gate's verdict must come
+    # from the code the CLI runs. `content.arc.divergence` used to be a STRING this record wrote
+    # about itself, and a delivered deck passed with the two characters "ok" while the script had
+    # never been invoked for it. A gate that reads a verdict is a gate the run can dictate to.
+    validator_path = Path(__file__).with_name("arc_divergence.py")
+    spec = importlib.util.spec_from_file_location("slide_maker_arc_divergence", validator_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("could not load arc_divergence.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module

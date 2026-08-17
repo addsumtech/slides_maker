@@ -40,7 +40,7 @@ sys.path.insert(0, str(SKILL / "scripts"))
 sys.path.insert(0, str(HERE))
 
 import lint_deck as LD  # noqa: E402
-from test_critic_waiver_gate import ARC_OK, DESIGN_OK, GOOD_REASON, PROV_OK, write_proof  # noqa: E402
+from test_critic_waiver_gate import fit_content, ARC_OK, DESIGN_OK, GOOD_REASON, PROV_OK, write_proof  # noqa: E402
 
 PASS = FAIL = 0
 
@@ -85,6 +85,7 @@ def build(dest, *, visual=False, timid_cover=True, n=12, pics=False):
 
 
 def gate(deck, gates, *flags):
+    gates = fit_content(gates, deck)
     (deck.parent / ".deck-gates.json").write_text(json.dumps(gates, ensure_ascii=False),
                                                   encoding="utf-8")
     p = subprocess.run([sys.executable, str(RENDER), str(deck), "--gate-check", "--static", *flags],

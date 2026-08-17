@@ -33,7 +33,8 @@ SKILL = HERE.parent
 RENDER = SKILL / "scripts" / "render_deck.py"
 
 sys.path.insert(0, str(HERE))
-from test_critic_waiver_gate import (  # noqa: E402  (the fixtures are deliberately shared)
+from test_critic_waiver_gate import (  # noqa: E402
+    fit_content,  # noqa: E402  (the fixtures are deliberately shared)
     ARC_OK, DESIGN_OK, GOOD_REASON, PROV_OK, build_deck, write_proof,
 )
 
@@ -51,6 +52,7 @@ def check(name, cond, detail=""):
 
 
 def gate(deck, gates, *flags):
+    gates = fit_content(gates, deck)
     (deck.parent / ".deck-gates.json").write_text(json.dumps(gates), encoding="utf-8")
     p = subprocess.run([sys.executable, str(RENDER), str(deck), "--gate-check", "--static", *flags],
                        capture_output=True, text=True)
@@ -81,7 +83,9 @@ def main():
         rec = full_record()
         rec["critic"] = {"waived": GOOD_REASON}                    # a real reason, no category
         rec["design_plan"].pop("carried_by")                       # a required design field
-        rec["content"] = {"arc": {"chosen": ""}}                   # empty winner
+        # IN PLACE: `content` now carries three independent artifacts (arc · slides · checkpoint)
+        # and replacing the whole dict would break three sections, not the one this case is about.
+        rec["content"]["arc"]["chosen"] = ""                       # empty winner
         rec["provenance"] = {"claims": {"not": "a list"}}          # tally-shaped, not per-claim
         rc, out = gate(deck, rec)
         check("still blocks", rc != 0, out)
@@ -98,7 +102,16 @@ def main():
         for label, mutate, needle in (
             ("critic", lambda r: r.update(critic={"waived": GOOD_REASON}), "waived_category"),
             ("design_plan", lambda r: r["design_plan"].pop("carried_by"), "carried_by"),
-            ("content.arc", lambda r: r.update(content={"arc": {"chosen": ""}}), "name the arc"),
+            ("content.arc", lambda r: r["content"]["arc"].update(chosen=""), "name the arc"),
+            # The arc verdict is RECOMPUTED at the gate, so removing the candidates removes the
+            # only evidence the competition happened — a pasted verdict no longer stands in.
+            ("content.arc", lambda r: r["content"]["arc"].pop("candidates"),
+             "must carry the 2-3 candidate arcs"),
+            # The content checkpoint's own table, and the record of how each checkpoint was
+            # delivered: the two artifacts codex_delivery_gate always required and this path did not.
+            ("content.slides", lambda r: r["content"].pop("slides"), "one row per slide"),
+            ("checkpoints", lambda r: r["content"].pop("checkpoint"),
+             "delegation changes WHO approves"),
             ("provenance", lambda r: r.update(provenance={"claims": {}}), "per-claim"),
         ):
             rec = full_record()

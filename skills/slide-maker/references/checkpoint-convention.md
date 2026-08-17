@@ -56,7 +56,12 @@ the plan's one-line spine verdict, never the spine paragraph (new plan fields li
 slide / Spoken thread live in the FULL plan; at most a one-line marker appears here).
 **+ one required GATE line naming the arc-choice that was made — `arc gate:`.** Shape:
 `arc gate: picked <name> (<shape>) of N · lost: <name> — <one clause> · <name> — <one clause> · divergence: <ok | flagged <pair> → rediverged | justified: <reason>>`.
-**A content checkpoint with no `arc gate:` line is NOT READY**, exactly as a branch-(c)/(d) design
+🔴 **The table and this line also LAND IN `.deck-gates.json`** — the table as `content.slides`
+(`slide` · `role` · `takeaway` · `evidence[]` · `units`), the competition as
+`content.arc.candidates` + `chosen` + `rejected`. The hand-off gate re-scores the candidates with
+`arc_divergence.check()` and checks the table covers every slide exactly once with no two content
+slides sharing a takeaway. Posting the table in chat is still required and is still not checkable;
+this is the half that is. **A content checkpoint with no `arc gate:` line is NOT READY**, exactly as a branch-(c)/(d) design
 checkpoint with no `direction gate:` line is not ready — and for the identical reason, which the
 design side learned the expensive way: a choose-from-alternatives step with no line to record it
 silently becomes a derivation, and an Auto pick leaves NO trace that alternatives ever existed.

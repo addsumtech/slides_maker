@@ -37,7 +37,7 @@ sys.path.insert(0, str(HERE))
 import codex_delivery_gate as cg  # noqa: E402
 import deck_cycle  # noqa: E402
 from written_reason import reason_width  # noqa: E402
-from test_critic_waiver_gate import ARC_OK, DESIGN_OK, build_deck, write_proof  # noqa: E402
+from test_critic_waiver_gate import fit_content, ARC_OK, DESIGN_OK, build_deck, write_proof  # noqa: E402
 
 PASS = FAIL = 0
 
@@ -59,6 +59,7 @@ EN_SHORT = "skipped it"
 
 
 def gate(deck, gates):
+    gates = fit_content(gates, deck)
     (deck.parent / ".deck-gates.json").write_text(json.dumps(gates, ensure_ascii=False),
                                                   encoding="utf-8")
     p = subprocess.run([sys.executable, str(RENDER), str(deck), "--gate-check", "--static"],

@@ -44,6 +44,7 @@ sys.path.insert(0, str(HERE))
 
 import render_deck as RD  # noqa: E402
 from test_critic_waiver_gate import (  # noqa: E402
+    fit_content,  # noqa: E402
     ARC_OK, DESIGN_OK, GOOD_REASON, PROV_OK, build_deck, write_proof,
 )
 
@@ -61,6 +62,7 @@ def check(name, cond, detail=""):
 
 
 def gate(deck, gates):
+    gates = fit_content(gates, deck)
     (deck.parent / ".deck-gates.json").write_text(json.dumps(gates, ensure_ascii=False),
                                                   encoding="utf-8")
     p = subprocess.run([sys.executable, str(RENDER), str(deck), "--gate-check", "--static"],
