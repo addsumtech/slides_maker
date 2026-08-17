@@ -7784,10 +7784,21 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
         info = []   # (sh, bb, st, ink_or_None, r_full_or_None)  — watermark numerals carry ink=None (decorative)
         zof = {}    # id(sh)->z-order; keyed on the SAME sh objects held alive in `info` (python-pptx
                     # yields fresh proxies per iteration, so a separate comprehension's id()s wouldn't match)
+        conns = []  # (z, [(bx,by),(ex,ey)]) for EVERY connector segment — captured here, NOT from `info`,
+                    # because a VERTICAL or HORIZONTAL connector has zero width/height and `_bbox_in`
+                    # returns None for it, so it never reached `info` and CONNECTOR_IN_BOX was blind to
+                    # the commonest case: a flow / feedback-loop connector (incl. every elbow_connector
+                    # segment) docked on a box CENTRE. The check needs the ENDPOINTS, never a bbox.
         for zi, sh in enumerate(slide.shapes):
             bb = _bbox_in(sh)
-            if bb is None: continue
             st = str(getattr(sh, "shape_type", ""))
+            if "CONNECTOR" in st or "LINE" in st:
+                try:
+                    conns.append((zi, [(sh.begin_x/914400.0, sh.begin_y/914400.0),
+                                       (sh.end_x/914400.0, sh.end_y/914400.0)]))
+                except Exception:
+                    pass
+            if bb is None: continue
             r = _ink_rect(sh, bb) if (_is_text(sh) and not _is_watermark(sh)) else None
             info.append((sh, bb, st, (r[0] if r else None), r)); zof[id(sh)] = zi
         # CJK runs with no <a:ea> font — fully detectable from the in-memory pptx, so fail at
@@ -7907,20 +7918,15 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
                 containers.append(bb); containers_z.append((bb, zof.get(id(sh), 0)))
         # ---- CONNECTOR_IN_BOX: an arrow/line endpoint that lands in a block's CENTRAL zone AND is
         #      drawn ABOVE that block (so the stroke shows crossing the interior, across its own
-        #      label) — the "spokes emanate from the hub's centre" defect. Endpoints docked on an
-        #      edge (connect_boxes/edge_point/hub_spokes) sit near the boundary → never flagged; a
+        #      label) — the "spokes emanate from the hub's centre" defect. Runs over `conns` (EVERY
+        #      connector segment, incl. the axis-aligned + elbow ones `_bbox_in` drops), so a vertical
+        #      feedback loop docked on a box centre is caught, not just a diagonal one. Endpoints docked
+        #      on an edge (connect_boxes/edge_point/hub_spokes) sit near the boundary → never flagged; a
         #      connector drawn BELOW the block (the node paints over it) → never flagged; chart grid/
         #      axis lines end near a border, not centre → never flagged. The central-zone + z-order
         #      pair keeps this false-positive-free.
-        for sh, bb, st, ink, r in info:
-            if not ("CONNECTOR" in st or "LINE" in st):
-                continue
-            try:
-                ends = [(sh.begin_x/914400.0, sh.begin_y/914400.0),
-                        (sh.end_x/914400.0, sh.end_y/914400.0)]
-            except Exception:
-                continue
-            czi = zof.get(id(sh), 0); hit = False
+        for czi, ends in conns:
+            hit = False
             for (ex, ey) in ends:
                 for (cb, pzi) in containers_z:
                     if czi <= pzi:                          # behind the block → block covers it → ok
