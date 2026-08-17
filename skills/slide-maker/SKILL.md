@@ -1770,7 +1770,15 @@ compositions the taste protocol exists to produce, which is why the continuous q
 ONLY as a deck-level share. Slides carrying `design_intent(weight=…)` are excluded from both sides
 of the ratio — they were decided, not defaulted. Deliberately **not** in `SAMENESS_CODES` yet: that
 composite is calibrated against this skill's own registers, and a new signal earns its way in after
-it has been seen on real decks, not on the day it ships), and on CJK decks **`CJK TIGHT LEADING`** (multi-line
+it has been seen on real decks, not on the day it ships), **`TEMPLATE-BOUND`** (the composition-boldness
+counterweight — fires ONLY when the deck's own `design_plan.boldness` is `bold`/`experimental` yet NOT
+ONE interior page breaks its default frame: no full-bleed, no statement-with-void, no dominant hero,
+every content page a variation of the same safe rectangle. It measures the *floor* of compositional
+timidity — a deck can score 11 distinct skeletons and still park all its daring in the concept + chrome,
+never in where the ink sits; whether a breakout is genuinely *innovative* stays the critic's
+distinctiveness call. Advisory, and — like `WEIGHT MONOCULTURE` — deliberately kept OUT of the blocking
+timidity composite until seen on real decks; sound restraint is never nudged (`boldness: conservative`
+silences it)), and on CJK decks **`CJK TIGHT LEADING`** (multi-line
 CJK at ≤ single spacing → use the script-aware default) and **`CJK-LATIN SPACING`** (both 盘古之白
 conventions mixed → pick one deck-wide). Treat each `[stats]` warning as the NAMED design rule
 having failed measurably: fix it or write one clause of why this deck is the exception, and **paste

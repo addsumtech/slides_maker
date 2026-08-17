@@ -1754,6 +1754,12 @@ TIMIDITY_CODES = ("TIMID COVER", "FLAT TYPE", "TEXT-ONLY DECK", "MONOTONE INK")
 # protagonist which is not a sentence — plus any second signal.
 TIMIDITY_STRUCTURAL = ("TEXT-ONLY DECK",)
 TIMIDITY_RENDER_DEPENDENT = ("MONOTONE INK",)
+# TEMPLATE-BOUND — the COMPOSITION dimension of the same "too safe" counterweight (see _print_stats:
+# a bold-declared deck whose every interior page sits in one safe rectangle) — is deliberately NOT
+# in this composite. It is advisory-only, scoped to a bold/experimental declaration, and stays out
+# of the blocking gate until it has been seen on real decks — exactly how WEIGHT_MONOCULTURE earned
+# its way in. Promoting it early would block precisely the decks trying hardest to be daring, and
+# "is this breakout genuinely innovative" is the critic's distinctiveness call, not a measurable one.
 
 
 def timidity_codes(warns):
@@ -2059,7 +2065,23 @@ def _composed_void(r):
     return bool(dominant and sparse)
 
 
-def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False, icon_ev=None):
+def _declared_boldness(deck_path, gates_path=None):
+    """The deck's declared `design_plan.boldness` (lowercased) from .deck-gates.json, or None.
+    Used ONLY to scope the TEMPLATE-BOUND advisory to decks that CLAIMED to be daring — a
+    conservative or undeclared deck is legitimately quiet and must never be nudged for it."""
+    import json, os
+    cand = gates_path or os.path.join(
+        os.path.dirname(os.path.abspath(deck_path)), ".deck-gates.json")
+    try:
+        with open(cand, encoding="utf-8") as fh:
+            plan = (json.load(fh).get("design_plan") or {})
+    except (OSError, ValueError):
+        return None
+    b = plan.get("boldness")
+    return str(b).strip().lower() if b else None
+
+
+def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False, icon_ev=None, boldness=None):
     if not rows:
         return {}
     n = len(rows)
@@ -2427,6 +2449,44 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False, icon_ev=None):
                          f"solid panels/cards — the greedy default form; re-form the ones whose idea "
                          f"has a shape (ratio → proportional bar · flip → diagram · division → split · "
                          f"process → roadmap), don't just restyle the boxes")
+
+    # ── TEMPLATE-BOUND: the composition-boldness counterweight (advisory; scoped to decks that
+    # DECLARED daring). SKELETON VARIETY counts a slide's skeleton as "different" when its BODIES
+    # differ, so a deck can score 11 distinct skeletons and still park every content page in the
+    # same safe rectangle — title top-left, blocks in the band, a rule at the foot. The measurable
+    # floor of compositional timidity is: NOT ONE interior page departs that frame with a committed
+    # move — a full-bleed hero, a statement carried by real void, or a dominant typographic hero.
+    # This is a NECESSARY condition for timid composition, not a sufficient one: whether a breakout
+    # is genuinely INNOVATIVE is the critic's distinctiveness call, so it stays advisory and out of
+    # the blocking composites. It fires ONLY when the deck's own design_plan.boldness is bold /
+    # experimental — a conservative or undeclared register is sound restraint and is never nudged,
+    # and the legibility/fidelity floors are untouched either way. Measured on this skill's own
+    # build-record deck: boldness=bold, 11 distinct skeletons, zero interior breakouts — the daring
+    # was all in the concept and the chrome, none of it in where the ink actually sits.
+    if mode != "surface" and (boldness or "") in ("bold", "experimental"):
+        content = rows[1:last_body]                    # interior content: no cover, closer or appendix
+
+        def _breakout(r):
+            mp = r.get("max_pt", 0.0) or 0.0
+            occ = r.get("ink_cov_nopic", 1.0)
+            if r.get("big_pic_fg"):                                   # a full-bleed / dominant image
+                return True
+            if body_med and mp >= 3.0 * body_med:                    # a dominant typographic hero
+                return True
+            if body_med and mp >= 2.0 * body_med and occ < 0.32:     # a statement carried by real void
+                return True
+            return False
+
+        if len(content) >= 8 and not any(_breakout(r) for r in content):
+            warns.append(
+                f"TEMPLATE-BOUND: boldness={boldness}, yet not one of the {len(content)} interior "
+                f"pages breaks the deck's default frame — no full-bleed, no statement-with-void, no "
+                f"dominant hero; every content page is a variation of the same safe rectangle. The "
+                f"daring is in the concept and the chrome, not the composition. Commit ONE page to a "
+                f"decisively distinctive composition (a full-bleed hero · a big-void statement · a "
+                f"broken-grid page) — sound restraint is fine, but then set boldness: conservative. "
+                f"(Advisory, scoped to a bold-declared deck; whether a breakout is genuinely "
+                f"innovative is the critic's distinctiveness call.)")
     # NO ICONS ON CATEGORY CONTENT: the deck names categories and carries no icon at all. Derived
     # from the FILE — no plan, no declaration, no flag the run writes about itself. Every other
     # icon rule in this skill terminates in something self-certified, so a run that skips the
@@ -3352,7 +3412,7 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
     except Exception:
         _icon_ev = None
     deck_stats = _print_stats(stats_rows, mode, sw, sh, lums=lums, static_ok=static_ok,
-                              icon_ev=_icon_ev)
+                              icon_ev=_icon_ev, boldness=_declared_boldness(path, gates_path))
     if stats_out is not None:
         stats_out.update(deck_stats)
         # Whether the render-backed members of SAMENESS_CODES could run at all. A gate that cannot
