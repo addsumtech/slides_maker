@@ -113,6 +113,15 @@ TEMPLATE = {
                 "sha256": "<sha256>",
             }
         ],
+        # WEB-RESEARCHED decks (source_mode == "web") MUST also fill these three — the floors from
+        # content-planner.md §2(e), mirrored in the shared content checkpoint. Omit for a 'provided'
+        # or 'none' deck.
+        #   "coverage":  "<domain areas enumerated · covered · consciously cut (why)>",   # 全面
+        #   "lifecycle": "<every featured product/version/entity confirmed live as of today · "
+        #                "anything found discontinued/renamed + how the deck handles it>",  # (proactive)
+        #   "provenance": {"summary": "checked N · confirmed N · fixed N · cut N",           # 准确
+        #                  "method": "corroborated >=2 independent credible sources; MED labelled 'per public reporting'"},
+        # and every claim_ledger row carries a "confidence": "HIGH"|"MED"|"LOW".
         # ONE ROW PER SLIDE — this list must cover every slide in the deck, and the gate
         # enforces that against deck.slide_count. Shown with three rows rather than one for a
         # blunt reason: a single-row example IS a one-slide deck, and a runtime filling this
@@ -948,6 +957,33 @@ def check_content(
             require_string(claim.get("source"), f"{label}.source", errors, minimum=3)
             if claim.get("verified") is not True:
                 errors.append(f"{label}.verified must be true")
+
+    # A WEB-RESEARCHED deck ships on three floors (content-planner.md §2(e), mirrored in the shared
+    # content checkpoint's coverage:/lifecycle:/provenance: lines): 全面 COMPREHENSIVE (a coverage map
+    # + a proactive LIFECYCLE sweep so a discontinued/renamed product is never headlined), 充实
+    # SUBSTANTIAL (concrete specifics), 准确 ACCURATE (each fact confidence-tagged + corroborated).
+    # The Codex evidence carries them as structured fields so this gate checks what the shared
+    # checkpoint states. Scoped to source_mode == "web": a 'provided' deck traces to its material and
+    # 'none' is a stub. This closes the same gap the shared path had — a no-source deck that shipped
+    # thin and headlined two discontinued products because none of the three was recorded anywhere.
+    if source_mode == "web":
+        require_string(content.get("coverage"),
+                       "content.coverage — the domain areas enumerated · covered · cut (§2e 全面)",
+                       errors, minimum=12)
+        require_string(content.get("lifecycle"),
+                       "content.lifecycle — every featured product/version/entity checked "
+                       "live-vs-discontinued as of today (§2e; a headlined dead/renamed thing is a defect)",
+                       errors, minimum=12)
+        provenance = content.get("provenance")
+        if not isinstance(provenance, dict):
+            errors.append("content.provenance missing — the checked/confirmed/fixed/cut digest (§2e 准确)")
+        else:
+            require_string(provenance.get("summary"), "content.provenance.summary", errors, minimum=8)
+        if isinstance(ledger, list):
+            for index, claim in enumerate(ledger, start=1):
+                if isinstance(claim, dict) and claim.get("confidence") not in {"HIGH", "MED", "LOW"}:
+                    errors.append(f"content.claim_ledger[{index}].confidence must be HIGH, MED, or "
+                                  "LOW so LOW/UNVERIFIED facts are visibly cut (§2e 准确)")
 
     checkpoint = content.get("checkpoint")
     if not isinstance(checkpoint, dict):

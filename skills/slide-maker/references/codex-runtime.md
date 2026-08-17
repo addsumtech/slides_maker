@@ -40,7 +40,13 @@ geometry guarantees.
 
 ## Codex runbook
 
-Read this before Step 2, then carry its evidence through the remaining steps.
+Read this before Step 2, then carry its evidence through the remaining steps. **Step 2 is
+BRANCH-INVARIANT on the Codex path too** (SKILL.md Step 2): the design plan + design checkpoint run on
+every Q1 choice, including a generated visual identity — a hero / style gate confirms the LOOK, it is
+NOT the design checkpoint. Record the checkpoint as `design.checkpoint` in `.codex-deck-evidence.json`
+(the shared path uses `design_plan.checkpoint` in `.deck-gates.json`); `render_deck.py` reads BOTH and
+REFUSES a full render until one of them carries a recorded design plan + checkpoint, so the plan cannot
+be reconstructed post-hoc at the delivery gate.
 
 0. **Ask the whole interview, in plain text, before anything else.** This runbook used to begin at
    Step 2, which left the impression that the interview is the part a bridged runtime can compress.
@@ -187,6 +193,14 @@ lost each, and `arc_divergence.py`'s verdict) and the DESIGN direction** (`desig
 governing picture** (`design.concept`: chosen + the two it beat), per-slide form
 ledger, four clean-branch direction tokens and preview, final rendered signature proof, categorical
 icon assets, visual-contract manifest/result, and two separate critic JSON files.
+🔴 **A WEB-RESEARCHED deck (`source_mode: "web"`) additionally carries the three research floors from
+`content-planner.md` §2(e):** `content.coverage` (全面, the domain enumerated + swept), `content.lifecycle`
+(准确/全面, every featured product/version/entity checked live-vs-discontinued as of today — a headlined
+dead/renamed thing is a defect, not a warning), a `content.provenance` digest (`checked/confirmed/fixed/cut`,
+each fact corroborated ≥2 *independent* credible sources; MED facts labelled "per public reporting"), and a
+`confidence` tier on every `claim_ledger` row. `codex_delivery_gate.py` now requires all four for a web deck,
+so the Codex path and the shared content checkpoint enforce the same floors — closing the gap where a
+no-source deck shipped thin and headlined two discontinued products.
 *(All three were missing. This record bound the design competition to a hashed `directions.html` while
 recording nothing about the arc — backwards by the skill's own reckoning, since a wrong form costs one
 slide and a wrong arc costs the design plan and the build under it. `design.concept` had simply never

@@ -148,6 +148,22 @@ terminal and answers in one click. Do **NOT** write `content-plan.md` / `design-
 into the deliverable folder (they clutter it; the conversation is the record) — unless the user
 explicitly asks for plan files.
 
+**(web-researched / no-source decks) the content checkpoint carries THREE more required lines — the
+research floors from `content-planner.md` §2(e).** `coverage:` (全面 — the domain areas enumerated ·
+covered · consciously cut), `lifecycle:` (every featured product/version/entity confirmed live as of
+today · anything found discontinued/renamed + how the deck handles it — a proactive status sweep, not
+the reactive recency check), and a `provenance:` digest (准确 — `checked N · confirmed N · fixed N ·
+cut N`, each load-bearing fact corroborated across ≥2 *independent* credible sources; content-farm /
+AI-spun blogs corroborate nothing; MED facts ship only when labelled "per public reporting, as of
+&lt;month year&gt;"). 充实 rides on the per-slide `承载证据` column — a load-bearing row whose evidence
+is all adjectives and no concrete specific (number / date / price / named result) is not ready. 🔴 **A
+web-researched content checkpoint missing any of the three is NOT READY** — the same rule, and for the
+same reason, as a branch-(c)/(d) design checkpoint with no gate line: a floor with no line to record it
+silently becomes a floor nobody stood on. Measured: a no-source deck shipped thin and headlined two
+discontinued products because the sweep, the status check, and the depth were never recorded. The
+Codex path carries the identical floors as `content.coverage` / `content.lifecycle` /
+`content.provenance` + a per-`claim_ledger` `confidence` tier, enforced by `codex_delivery_gate.py`.
+
 **The design checkpoint carries a `density:` line, and it is a NUMBER, not an adjective.**
 Write it in the SAME two quantities the gate measures, so plan and gate can be compared at all:
 the planned **median** load, and how many slides you expect to be **over 70** — plus the count of

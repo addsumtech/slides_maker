@@ -99,6 +99,13 @@ hedged, or unsupported by a quotable span, you have NOT understood it — re-rea
 open question; **an incomplete or untraced brief blocks the pipeline** (do not proceed to the
 arc/plan). **Coverage gate:** run the diff described in "The editor's stance" — every brief-listed key point
 mapped to a slide or consciously cut in Open questions; a silent omission blocks the plan.
+**Web-research gate (hard — for any web-researched or no-source deck, §2(e)):** the plan is NOT
+ready without (1) a **`coverage:`** map (the domain enumerated, each area researched or consciously
+cut), (2) a **`lifecycle:`** line (every featured product/version/entity checked live-vs-discontinued
+as of today — a headlined dead/renamed thing is a blocking defect, not a warning), and (3) every
+load-bearing slide carrying a **concrete specific** (number/date/price/named result), not adjectives
+alone, with each such claim's ledger row tagged **confidence** and any LOW/UNVERIFIED row cut. A
+web-researched brief missing any of the three is incomplete, exactly like an untraced field.
 **Long-source gate (hard):** a file-sourced brief with **no `source size:` field at all** is not
 ready — the bounded-vs-long classification never happened (the field is required for every
 file-based source, precisely so this gate can't be bypassed by never measuring). If the field marks
@@ -374,6 +381,45 @@ Use the web for **three jobs**, and run it whether or not you have a source:
   not listicle advice. You're calibrating two numbers you'll use in step 3's distribution pass: the
   typical units-per-page and how much supporting detail sits on the slide vs in the narration. Keep
   it light; this is a taste calibration, not a literature review.
+
+- **(e) 🔴 A web pass ships on THREE floors — COMPREHENSIVE · SUBSTANTIAL · ACCURATE — and a thin
+  pass fails all three silently.** *(Measured: a no-source OpenAI products deck came back all
+  product-names-and-taglines and headlined two products — Sora, Agent Builder — that were already
+  discontinued, because the pass never enumerated the domain, never checked each thing's status, and
+  never went past the surface. Every gate downstream passed; only the user caught it.)* The
+  reactive claim-ledger of (b) verifies the claims you DECIDE to make; these three floors decide
+  whether you found the right, deep, live facts to make claims ABOUT.
+  - **全面 / COVERAGE — map the domain, then sweep it breadth-first.** Before searching, enumerate
+    the sub-areas / product lines / entities / angles a COMPLETE treatment needs — not only the ones
+    your first framing thought of — and research each. One search around the obvious angle is how
+    whole branches go missing. When the host has subagents, parallelize: one researcher per area,
+    each returning a structured, sourced fact list, then synthesize. Record the map as the content
+    checkpoint's **`coverage:`** line (areas covered · areas consciously cut, with why).
+  - **🔴 LIFECYCLE SWEEP — for EVERY named product/version/feature/entity you feature, verify its
+    CURRENT STATUS as of today: live · superseded · renamed · deprecated · discontinued.** This is
+    PROACTIVE and distinct from (b)'s recency check: (b) re-verifies a claim you already chose to
+    make; this asks whether the thing itself still exists *before* you feature it. Headlining a dead
+    or renamed product is the exact failure this prevents. Record it as the checkpoint's
+    **`lifecycle:`** line (named things confirmed current · anything found discontinued/renamed, and
+    how the deck handles it — dropped, or shown with an honest "being retired" note).
+  - **充实 / SUBSTANCE — every load-bearing point carries a concrete SPECIFIC, not an adjective.**
+    Research to the depth where a claim is a real number / date / price / named benchmark / named
+    mechanism — never "state-of-the-art" or "powerful" standing alone. The test: *hide the subject's
+    name — does the slide still say something a competitor's slide couldn't?* If a load-bearing slide's
+    facts are all qualitative, the research isn't finished — go deeper; the web usually HAS the number.
+    When a specific genuinely does not exist, say so plainly (and never inflate it into false
+    precision — the no-invention rule outranks this floor).
+  - **准确 / CORROBORATION & SOURCE QUALITY — extends the PROVENANCE CONTRACT above.** Corroborate
+    each load-bearing fact across **≥2 INDEPENDENT credible sources** — independent meaning *not* two
+    reprints of one wire story and *not* two SEO / AI-content-farm blogs (unknown `*-blog` / listicle
+    / AI-spun domains corroborate nothing; a fact appearing ONLY there is LOW confidence and does not
+    ship as established). Tag each ledger row's **confidence: HIGH** (primary, or 2+ independent
+    credible) · **MED** (credible but not primary — e.g. the official site was unreachable) ·
+    **LOW/UNVERIFIED** (single- or blog-only). A MED fact MAY ship only if the deck LABELS its
+    footing honestly ("per public reporting, as of &lt;month year&gt;"); a LOW/UNVERIFIED fact is cut
+    or moved to Open questions. Record the tally as the checkpoint's provenance digest
+    (`checked N · confirmed N · fixed N · cut N`) — the same artifact the Step-5 PRIMARY-SOURCE GATE
+    re-scores, now produced at research time, not reconstructed at hand-off.
 
 For a **conference talk**, research the named venue (talk length, audience composition, what a
 strong talk there argues and covers) — start from the Step-0 venue findings if provided (build

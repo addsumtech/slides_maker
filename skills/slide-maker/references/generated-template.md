@@ -17,7 +17,7 @@ and Q4's density + tone, which the visual identity does not decide) still runs n
   - 2 — Generate the template image(s)
   - 3 — Derive a matching `style.py` (treat the image as a style example)
   - 4 — Render a sample and get feedback (hard gate)
-  - 5 — Continue the interview, then build to the template
+  - 5 — Continue the interview, run Step 2 (design plan + 🔴 design checkpoint), then build
 - Legibility & fidelity guardrails (busy styles fight text)
 - Checklist
 - Style library — well-known starting styles (seed, then tailor)
@@ -322,11 +322,30 @@ them, and show both. The content slide is essential: it proves the blocks actual
   original mood baked into the picture, and the hero then fights the feeling the user asked for. If it's
   unclear whether they mean a tweak or a new atmosphere, ask in one line before spending a generation.
 
-### 5 — Continue the interview, then build to the template
+### 5 — Continue the interview, run Step 2 (design plan + 🔴 design checkpoint), then build
 - The look is decided → **skip the direction gate** and any LOOK question; the rest of the
   normal interview still runs — purpose & audience & time, source material, language, AND Q4's
   density (text-per-point) and tone: those are content/register choices a generated visual
   identity does not decide (density stays an ALWAYS-surfaced choice per SKILL.md Q4).
+- **Then run SKILL.md Step 2 IN FULL — the design plan + 🔴 DESIGN CHECKPOINT. The hero checkpoint
+  (§4 above) is NOT the design checkpoint: it confirmed the LOOK (the four-line identity contract),
+  not the per-slide DESIGN.** SKILL.md treats the two as *distinct* stops — the per-deck auto-waiver
+  names "the design checkpoint" AND "the Q1=d hero checkpoint" separately — so skipping Step 2 here
+  ships a deck whose layout, rhythm, and forms were never planned or reviewed (only the imagery was).
+  The generated identity **FEEDS** the plan — palette / motif / surface / type are its *inputs*,
+  recorded as the four-line IDENTITY-PROPAGATION CONTRACT (§3) — it does **not** replace it. Produce
+  the full design plan (per-slide **form ledger** + **deck rhythm** map + **signature move** under a
+  `boldness` dial + the **3 design musts** builds/icons/formats + **semantic colour** + **density** +
+  **logo / motif** line) and post the compact 🔴 DESIGN CHECKPOINT artifact
+  (`references/checkpoint-convention.md` spec) **with its required `style gate:` line** — a branch-(d)
+  design checkpoint with no gate line is NOT READY. Record it in `.deck-gates.json` as `design_plan` +
+  `design_plan.checkpoint` (`{"mode": "approved"|"auto", "record": …}`). **Only after it — approval,
+  or its FYI under a per-deck auto directive — do you build.** This is enforced, not just asked:
+  `render_deck.py` REFUSES a full render until the design plan + checkpoint are recorded (a `--slides`
+  probe stays exempt), so the plan cannot be reconstructed post-hoc at hand-off. On this branch the
+  plan's protagonists still sit on the one frosted/plate system (the form-family diversity gate and
+  architecture-rotation rule apply fully — don't let every slide become one panel), and Step 2's
+  material probe is satisfied by §4's already-rendered sample content slide.
 - **Build (step 4 of SKILL.md):**
   - **Cover, section dividers, and the closing / ending page** → the generated image full-bleed (`picture(..., fit="cover")`),
     with the **title and badges native on top**, placed in the image's calm zone (add a soft
@@ -424,6 +443,11 @@ them, and show both. The content slide is essential: it proves the blocks actual
       **`brand(slide)`** logo helper if the deck is about a company/institution/product.
 - [ ] Sample **cover + content slide** rendered and **confirmed by the user** (🔴 checkpoint).
 - [ ] Direction gate **skipped**; rest of the interview (incl. density/tone) completed.
+- [ ] **SKILL.md Step 2 run IN FULL** — the design plan (form ledger · rhythm · signature move ·
+      3 musts · semantic colour · density · logo/motif) posted as the 🔴 DESIGN CHECKPOINT **with its
+      `style gate:` line**, and approved (or FYI'd under an auto directive) **before building**. The
+      hero checkpoint (§4) is the LOOK gate, NOT this. (`render_deck.py` refuses the full render until
+      `design_plan` + `design_plan.checkpoint` are recorded.)
 - [ ] Built: dividers use the image; content is native and **on-system** with the **GENERATED shallow-
       background plate on every interior page** (🔴 MUST — no flat single-colour or merely-gradient
       interior, except a deliberately minimal/flat style) + frosted blocks; the **real logo present and

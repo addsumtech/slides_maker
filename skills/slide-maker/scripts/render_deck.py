@@ -2724,6 +2724,66 @@ def _contact_sheet(out, n_pages):
     except Exception:
         return None                                      # never fail a render over a preview
 
+def _read_json(path):
+    """Read a JSON file, returning {} on any error (missing / unreadable / malformed) — the
+    design-checkpoint gate treats an unreadable evidence file as 'nothing recorded', never a crash."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            d = json.load(f)
+        return d if isinstance(d, dict) else {}
+    except Exception:
+        return {}
+
+
+def _pptx_slide_count(pptx):
+    """Count slides in a .pptx by its package parts — cheap, and it runs BEFORE LibreOffice is
+    located, so the design-checkpoint gate can fail early without a rasterizer present."""
+    try:
+        import re
+        import zipfile
+        with zipfile.ZipFile(pptx) as z:
+            return sum(1 for n in z.namelist() if re.match(r"ppt/slides/slide\d+\.xml$", n))
+    except Exception:
+        return 0
+
+
+def _content_plan_slide_count(deck_dir):
+    """How many slides the APPROVED CONTENT PLAN (Step 1) names — read from either evidence file
+    (the shared `.deck-gates.json` → `content.slides`, or the Codex `.codex-deck-evidence.json`).
+    0 means no content plan is recorded yet (a test fixture or an ad-hoc render), so the Step-2
+    design gate does not apply."""
+    for fn in (GATES_FILE, ".codex-deck-evidence.json"):
+        d = _read_json(os.path.join(deck_dir, fn))
+        content = d.get("content")
+        sl = content.get("slides") if isinstance(content, dict) else None
+        if isinstance(sl, list) and sl:
+            return len(sl)
+    return 0
+
+
+def _design_plan_and_checkpoint_present(deck_dir):
+    """True iff a Step-2 design plan AND its design checkpoint are recorded — in the shared
+    `.deck-gates.json` (`design_plan` + `design_plan.checkpoint`, or a top-level `design.checkpoint`)
+    OR the Codex `.codex-deck-evidence.json` (`design` + `design.checkpoint`). This is the PRESENCE
+    gate that forces Step 2 to have HAPPENED before the first full render; the DEPTH of the plan is
+    validated separately by the hand-off gate (`--gate-check`) and `codex_delivery_gate.py`. Kept
+    lenient on purpose — its job is to stop a design plan being reconstructed post-hoc at hand-off,
+    not to re-judge the plan the deeper gates already own."""
+    def _ck(obj):
+        return isinstance(obj, dict) and obj.get("mode") in ("approved", "auto")
+    g = _read_json(os.path.join(deck_dir, GATES_FILE))
+    dp = g.get("design_plan")
+    if isinstance(dp, dict) and dp:
+        design = g.get("design")
+        if _ck(dp.get("checkpoint")) or (isinstance(design, dict) and _ck(design.get("checkpoint"))):
+            return True
+    c = _read_json(os.path.join(deck_dir, ".codex-deck-evidence.json"))
+    de = c.get("design")
+    if isinstance(de, dict) and de and _ck(de.get("checkpoint")):
+        return True
+    return False
+
+
 def main(argv):
     # --deliverables (alias --final): ALSO park the PDF beside the .pptx and write viewer.html.
     # OFF by default: while a deck is still being iterated, those two are pure churn — they are
@@ -2833,6 +2893,35 @@ def main(argv):
     # failing after a successful render wastes the render and reads as a late surprise.
     if deliverables:
         check_handoff_gates(pptx, mode)
+
+    # ── Step-2 DESIGN CHECKPOINT — a BRANCH-INVARIANT pre-build gate, enforced before the first
+    # FULL render (and before LibreOffice is even located: an unplanned deck should not render, with
+    # or without a rasterizer). A recorded content plan (Step 1) with NO design plan + design
+    # checkpoint (Step 2) means the deck is about to be rendered/reviewed on a design that was never
+    # planned or approved — the exact failure where `design_plan` gets reconstructed post-hoc to pass
+    # the hand-off gate. It runs on EVERY Q1 branch: a generated hero / style gate confirms the LOOK,
+    # it is NOT the design checkpoint. Reads BOTH evidence files (shared + Codex). EXEMPT: a `--slides`
+    # probe (the Step-2 material probe / hero-checkpoint sample / signature proof all run this way,
+    # before the plan is final); a deck with fewer slides than the plan (a probe/sample build); a deck
+    # with no content plan or a 1–3 slide tiny ask (`_cp >= 4`). --gate-check / --deliverables already
+    # run the deeper hand-off design_plan gate, so they are past this by construction.
+    if only is None and not gate_only and not deliverables:
+        _dd = os.path.dirname(os.path.abspath(pptx)) or "."
+        _cp = _content_plan_slide_count(_dd)
+        if _cp >= 4 and _pptx_slide_count(pptx) >= _cp and not _design_plan_and_checkpoint_present(_dd):
+            die("STEP 2 NOT DONE — this deck has an approved content plan ({0} slides) but no design "
+                "plan + design checkpoint recorded, and it is about to be FULL-rendered.\n"
+                "  Step 2 (design plan + \U0001f534 design checkpoint) is BRANCH-INVARIANT — it runs on "
+                "every Q1 choice: design-a-clean-one, a provided template, AND a generated visual "
+                "identity. A generated hero / style gate confirms the LOOK; it is NOT the design "
+                "checkpoint.\n"
+                "  Produce the design plan — per-slide form ledger · deck rhythm · signature "
+                "move under a boldness dial · the 3 design musts (builds/icons/formats) · "
+                "semantic colour · density · logo/motif — post the \U0001f534 DESIGN "
+                "CHECKPOINT, and record it: in `.deck-gates.json` as `design_plan` + "
+                "`design_plan.checkpoint` ({{\"mode\": \"approved\"|\"auto\", \"record\": \"…\"}}), "
+                "or on the Codex path in `.codex-deck-evidence.json` as `design` + `design.checkpoint`.\n"
+                "  Rendering ONE probe slide first is expected and exempt — use `--slides N`.".format(_cp))
 
     soffice = find_soffice()
     if not soffice:

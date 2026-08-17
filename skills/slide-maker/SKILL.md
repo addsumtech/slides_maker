@@ -591,7 +591,7 @@ at *today's* date**: a paper's "state-of-the-art", an adoption number, a "first/
 latest" superlative may be stale by presentation day. Re-verifying a source claim is not
 inventing — it's fidelity to what's *true now*.
 
-- **No content — and any web fact-check on any deck:** draft the outline from your own expertise, then ground *and verify* every falsifiable claim against a **primary** source, and ground the deck to *today*. **Read `references/content-plan-spec.md` §Web verification & no-source decks before running any search or putting a falsifiable/time-bound claim on a slide** — it owns the PROVENANCE CONTRACT, the re-verify-on-every-build list, the dated-event tense rule, and the no-web-tool fallback.
+- **No content — and any web fact-check on any deck:** draft the outline from your own expertise, then ground *and verify* every falsifiable claim against a **primary** source, and ground the deck to *today*. **Read `references/content-plan-spec.md` §Web verification & no-source decks before running any search or putting a falsifiable/time-bound claim on a slide** — it owns the PROVENANCE CONTRACT, the re-verify-on-every-build list, the dated-event tense rule, and the no-web-tool fallback. 🔴 **A web pass ships on three floors (`content-planner.md` §2(e)): 全面 COMPREHENSIVE** (map the domain, sweep breadth-first, + a proactive **LIFECYCLE sweep** — every featured product/version/entity checked live-vs-discontinued as of today, so a dead/renamed thing is never headlined), **充实 SUBSTANTIAL** (every load-bearing slide carries a concrete number/date/price/named result, not adjectives), **准确 ACCURATE** (each fact corroborated ≥2 *independent* credible sources — content-farm blogs corroborate nothing; confidence-tagged; MED facts ship only when labelled "per public reporting"). The content checkpoint MUST then carry the `coverage:` · `lifecycle:` · `provenance:` lines, or it is NOT READY (the content-planner §1 web-research gate + `checkpoint-convention.md`). Measured: a no-source deck shipped thin and headlined two discontinued products because none of this was enforced.
 
 - **A long source (a book / very long PDF / large corpus / multi-volume set)** is NOT read front-to-back — a faked linear read either overflows or, worse, *fits* and goes shallow. **The moment a source might exceed ~40–50 pp or not fit one pass, read `references/content-plan-spec.md` §Long-source mode** — deterministic size classification (`extract_pdf.py map`, CJK counting, multi-file sum), structure map, triage, the verbatim ~20% deep-read with page-traced claims, **page-scoped figure locators (never whole-document `autofig`)**, the Source-coverage map, the TWO-PHASE dispatch that posts the selection FYI *before* the deep-read, and the scanned/DRM no-text case.
 
@@ -637,6 +637,23 @@ user's edits to the story, then move to design (Step 2).
 > the coverage gate at book scale (also surfaced earlier as a cheap FYI, before the verbatim deep-read).
 
 ## Step 2 — Design the deck (use the slide-design agent)
+
+> ### 🔴 STEP 2 IS BRANCH-INVARIANT — it runs IN FULL on EVERY Q1 template choice
+> The Q1 choice — (a) design-a-clean-one, (b) a provided template, (c) the direction gate, (d) a
+> generated visual identity — decides only the **LOOK SOURCE**. It NEVER removes the design plan or
+> its 🔴 design checkpoint. **A branch's look-gate confirms the LOOK, not the per-slide DESIGN:** the
+> branch-(c) direction gate and the branch-(d) **hero checkpoint are NOT the design checkpoint** (the
+> per-deck auto-waiver lists them as separate stops for this reason). After either, you STILL produce
+> the design plan (form ledger · rhythm · signature move under a boldness dial · the 3 design musts ·
+> semantic colour · density · logo/motif) and post the design checkpoint — with its `direction gate:`
+> (c) / `style gate:` (d) line — **before building**. A generated identity *feeds* the plan (palette /
+> motif / surface / type are inputs, recorded as the four-line contract); it does not replace it.
+> **Enforced deterministically:** `render_deck.py` REFUSES a full render when a content plan is
+> recorded but no design plan + design checkpoint is (a `--slides` probe render is exempt, and it
+> reads both the shared `.deck-gates.json` and the Codex `.codex-deck-evidence.json`) — so the plan
+> can never be reconstructed post-hoc to pass the hand-off gate. This closes a measured regression:
+> the generated (d) branch's workflow once routed interview → build and let its hero checkpoint stand
+> in for Step 2, shipping a deck whose layout, rhythm, and forms were never planned or reviewed.
 
 > ### 🔴 STEP 2 OPENS WITH A MATERIAL PROBE — one REAL slide, built and looked at, BEFORE the plan is written
 > **Author the signature page in the invented register with real deckkit, render it, and LOOK at it —

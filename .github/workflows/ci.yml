@@ -484,10 +484,19 @@ jobs:
       # its required pip deps for ANY agent), and TEMPLATE-BOUND — the composition-boldness signal,
       # RUNTIME-AGNOSTIC by reading boldness from BOTH .deck-gates.json (shared) and
       # .codex-deck-evidence.json (Codex). Script-style like the rest; same skip-means-broken guard.
-      - name: Connectors, dependency backstop, composition boldness
+      # test_design_checkpoint_gate — Step 2 (design plan + design checkpoint) is BRANCH-INVARIANT and
+      # ENFORCED: render_deck.py refuses a full render when a content plan is recorded but no design
+      # plan + checkpoint is (reading both .deck-gates.json and .codex-deck-evidence.json); a --slides
+      # probe / no-content-plan / tiny-ask deck stays exempt. Closes the generated-branch regression
+      # where the hero checkpoint stood in for Step 2 and the plan was reconstructed post-hoc.
+      # test_web_research_floors — a WEB-RESEARCHED deck (source_mode: web) must carry the three
+      # research floors (content-planner §2e): coverage (全面) + lifecycle sweep (proactive
+      # live-vs-discontinued) + provenance digest & per-claim confidence (准确). codex_delivery_gate
+      # requires them; provided/none decks are exempt. Closes the thin+outdated no-source failure.
+      - name: Connectors, dependency backstop, composition boldness, design-checkpoint gate, web-research floors
         run: |
           set -o pipefail
-          for t in test_connector_in_box test_env_bootstrap test_composition_boldness; do
+          for t in test_connector_in_box test_env_bootstrap test_composition_boldness test_design_checkpoint_gate test_web_research_floors; do
             python tests/$t.py | tee /tmp/$t.log
             grep -qE "^[0-9]+ passed, 0 failed" /tmp/$t.log || {
               echo "::error::$t did not run to completion"; exit 1; }
