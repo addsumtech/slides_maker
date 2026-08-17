@@ -34,6 +34,85 @@ def ensure_mpl_config_dir():
     os.environ["MPLCONFIGDIR"] = path
 
 
+# The pip deps the build path IMPORTS — every script fails without these. Kept as (import-name,
+# pip-name) because the two differ (fitz→pymupdf, PIL→Pillow). This is the manifest `--ensure`
+# installs; the optional/system deps below it reports but never auto-installs.
+REQUIRED_PIP = [
+    ("pptx", "python-pptx"),
+    ("fitz", "pymupdf"),
+    ("PIL", "Pillow"),
+    ("matplotlib", "matplotlib"),
+    ("numpy", "numpy"),
+]
+
+
+def _missing_required():
+    miss = []
+    for mod, pkg in REQUIRED_PIP:
+        try:
+            if mod == "matplotlib":
+                ensure_mpl_config_dir()
+            __import__(mod)
+        except ImportError:
+            miss.append(pkg)
+    return miss
+
+
+def ensure():
+    """Step-0 preflight: auto-install missing REQUIRED pip deps, report system deps that cannot be.
+
+    WHY it runs at Step 0, right after the version check. On a fresh machine a missing library does
+    not surface until the step that imports it — and the most expensive one is the RENDER (Step 5),
+    the gate the critic loop waits on: a missing LibreOffice or PyMuPDF there costs a diagnosis
+    round-trip and a re-run, exactly when tokens are most expensive. Detecting it BEFORE the
+    interview turns a mid-critic failure into one fast install up front. Silent-and-instant when the
+    toolchain is warm (the common case), so it never taxes a repeat run. Opt out with
+    SLIDE_MAKER_NO_ENV_CHECK=1.
+
+    It auto-installs ONLY the pip deps, and ONLY into THIS interpreter (sys.executable). System
+    installs — LibreOffice, an SVG rasterizer — are heavier, need sudo / a package manager / a GUI
+    download, and are the user's call: it prints the one command and returns a distinct code.
+
+    Exit contract for the caller (SKILL.md Step 0.0):
+      0  everything required present (or just installed) AND LibreOffice found — proceed silently
+      3  pip deps ok, LibreOffice MISSING — render will fail; surface the one install command
+      1  a required pip dep could not be installed — surface the manual command
+    """
+    import subprocess
+    if os.environ.get("SLIDE_MAKER_NO_ENV_CHECK"):
+        return 0
+    miss = _missing_required()
+    installed = []
+    if miss:
+        # `pip install`, then `--user` on an externally-managed env (PEP 668). Never add
+        # --break-system-packages automatically — overriding the OS package manager is the user's
+        # decision, so on a hard block we fall through to printing the manual command.
+        for extra in ([], ["--user"]):
+            try:
+                r = subprocess.run([sys.executable, "-m", "pip", "install", *extra, *miss],
+                                   capture_output=True, text=True, timeout=600)
+            except Exception:                                    # noqa: BLE001
+                continue
+            if r.returncode == 0:
+                installed = list(miss)
+                break
+        still = _missing_required()
+        if still:
+            print("[env] could not auto-install {}. Install by hand, then re-run:\n"
+                  "        {} {}".format(", ".join(still), PIP, " ".join(still)))
+            return 1
+    if installed:
+        print("[env] installed missing python deps: {} (into {})".format(
+            ", ".join(installed), sys.executable))
+    if not find_soffice():
+        print("[env] LibreOffice not found — the PNG render loop (Step 5, before the critic) needs "
+              "it. Ask the user to install it once:\n"
+              "        macOS: brew install --cask libreoffice · Ubuntu: sudo apt install "
+              "libreoffice · Windows: winget install TheDocumentFoundation.LibreOffice")
+        return 3
+    return 0
+
+
 def check_module(mod, label, fix_pkg, optional=False, note=""):
     try:
         if mod == "matplotlib":
@@ -174,4 +253,9 @@ def main():
 
 
 if __name__ == "__main__":
+    # `--ensure` is the Step-0 auto-fix path (install missing pip deps, report system deps + exit
+    # code); no flag is the full human-readable report. Kept as one script so the check and the
+    # ensure never drift about what "required" means.
+    if "--ensure" in sys.argv[1:]:
+        raise SystemExit(ensure())
     main()

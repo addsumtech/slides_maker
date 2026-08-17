@@ -364,6 +364,35 @@ edits are genuinely **unknowable**). Report `null` as unknown. Saying "you have 
 when you cannot know is the claim that licenses overwriting someone's work — and on the copy path,
 `npx skills add` overwrites the directory outright.
 
+### Step 0.0b — ENSURE THE TOOLCHAIN, right after the version is settled (build asks only)
+
+🔴 **The moment the version is settled and BEFORE the interview, run
+`python3 scripts/check_env.py --ensure` on a deck-BUILD ask.** It is the same silent-when-warm shape
+as the version check: it imports the required pip deps (`python-pptx`, `pymupdf`, `Pillow`,
+`matplotlib`, `numpy`), and if any are missing it **installs them into this interpreter** (pip, then
+`--user` on an externally-managed env) — one fast install now instead of an `ImportError` at the step
+that needs them. **Why here and not "when a render errors":** on a fresh machine the missing library
+does not surface until the step that imports it, and the most expensive one is the **RENDER (Step 5),
+the gate the critic loop waits on** — a missing LibreOffice or PyMuPDF there costs a diagnosis
+round-trip and a re-run at the priciest moment in the pipeline. Catching it at Step 0 turns that into
+one up-front install, which is the whole point (less wall-clock, fewer tokens). Cost on a warm machine
+is ~0.1s and it prints nothing; opt out with `SLIDE_MAKER_NO_ENV_CHECK=1`.
+
+**Act on the exit code — it distinguishes what you CAN auto-fix from what you cannot:**
+- **`0`** — everything required is present (or was just installed) and LibreOffice is found. If it
+  installed something it says so in one line; otherwise say nothing and go to the interview.
+- **`3`** — pip deps are ready but **LibreOffice is MISSING**. It cannot be pip-installed (a system
+  app needing a package manager / GUI download), so the script prints the one install command per OS
+  and does not run it. **Surface that command to the user now** — LibreOffice is what Step 5's render
+  needs, so a deck built without noticing will die at the render, after all the authoring is spent.
+- **`1`** — a required pip dep could not be installed (a hard externally-managed block). The script
+  prints the manual command; surface it, and do not add `--break-system-packages` on the user's behalf
+  — overriding the OS package manager is their call.
+
+This is a BUILD-ask step: a pure critique/audit/question run does not need the render toolchain, so
+skip it there (the version check still runs — it is not gated on build). One shared `check_env.py`
+owns both the `--ensure` auto-fix and the human-readable report, so "what is required" never drifts.
+
 **Run this interview every time, from scratch — do not skip it because earlier
 conversation, a previous deck, or context "obviously" implies an answer.** A terse
 request like *"make slides for MICCAI"* specifies only one thing (the venue);
