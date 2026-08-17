@@ -1180,7 +1180,10 @@ The helper set, by job:
   `cjk_numeral` (壹·贰·叁 section markers vs Latin "01"). See `references/east-asian-aesthetic.md`.
 - **Diagram kit (general flowcharts):** `node` + `connector` / `flow_chain` (straight links between adjacent nodes) + `elbow_connector` /
   `loop_path` (elbow / U-shaped paths for a feedback/repeat loop, a return, or a link between NON-adjacent
-  nodes) — any architecture from rounded-rect/pill/circle nodes (+ diamond/parallelogram/cylinder when
+  nodes) — any architecture from rounded-rect/pill/circle nodes.
+  🔴 **When you link two BLOCKS, dock on their EDGES — reach for the edge-docked family, never hand a
+  block's CENTRE to `connector`/`loop_path` (the #1 connector defect, `CONNECTOR_IN_BOX`): **`connect_boxes(a_rect, b_rect)`** for a straight arrow · **`hub_spokes(hub, spokes)`** for one hub to many · **`loop_between(a_rect, b_rect)`** for a feedback/return U-loop (its rect-aware sibling `loop_path` takes raw coords and invites a centre). Pass the same `(x,y,w,h)` you gave `box`/`node` and both ends land on a boundary by construction.**
+  (+ diamond/parallelogram/cylinder when
   formal flowchart notation applies — see the Standard-notation crib in `design-gallery.md`) with
   **stroke semantics** (solid=required
   · dashed=optional · dotted=feedback) and **shape semantics** (straight=adjacent flow · elbow/U=loop /

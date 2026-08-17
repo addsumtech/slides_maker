@@ -125,6 +125,33 @@ def main():
     dk.flow_chain(s, 0.7, 2.5, 8.5, 1.0, ["In", "Mid", "Out"])
     check("flow_chain (edge-docked internally) is silent", cib(prs) == [])
 
+    # loop_between: the rect-aware, edge-docked-by-construction loop — the ergonomic fix that makes
+    # the SAFE feedback-loop the easy one (vs. loop_path + a raw box centre).
+    prs, s = deck()
+    box_node(s, A)
+    box_node(s, B)
+    segs = dk.loop_between(s, A, B, side="bottom", label="revise", color=RED)
+    check("loop_between (edge-docked U loop) is silent", cib(prs) == [])
+    dock_y = segs[0].begin_y / 914400.0
+    check("loop_between docks on the box EDGE, not its centre",
+          abs(dock_y - (A[1] + A[3])) < 0.01, (dock_y, A[1] + A[3]))
+
+    prs, s = deck()
+    box_node(s, A)
+    box_node(s, B)
+    dk.loop_between(s, A, B, side="top", color=RED)
+    check("loop_between side='top' is silent", cib(prs) == [])
+
+    prs, s = deck()
+    box_node(s, A)
+    box_node(s, B)
+    raised = False
+    try:
+        dk.loop_between(s, A, B, side="sideways")
+    except ValueError:
+        raised = True
+    check("loop_between rejects an unknown side", raised)
+
     print("\n{} passed, {} failed".format(len(PASS), len(FAIL)))
     return 1 if FAIL else 0
 

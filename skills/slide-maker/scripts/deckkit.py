@@ -5811,8 +5811,53 @@ def elbow_connector(slide, pts, *, style="solid", color=None, width=1.5, arrow=T
 
 def loop_path(x_from, x_to, y_row, y_drop):
     """Waypoints for a U-shaped feedback/repeat loop: from (x_from, y_row) DOWN to y_drop, across to
-    x_to, and UP to (x_to, y_row). Feed to `elbow_connector`. y_drop should clear the row's content."""
+    x_to, and UP to (x_to, y_row). Feed to `elbow_connector`. y_drop should clear the row's content.
+
+    Low-level. Prefer `loop_between(a_rect, b_rect)` for a loop between two BLOCKS — it derives the
+    docks from the rects so both ends land on an EDGE, whereas passing a block's CENTRE as `y_row`
+    here draws the loop out of the block's middle (the defect CONNECTOR_IN_BOX catches)."""
     return [(x_from, y_row), (x_from, y_drop), (x_to, y_drop), (x_to, y_row)]
+
+
+def loop_between(slide, a, b, *, side="bottom", drop=None, clearance=0.5, style="dotted",
+                 color=None, width=1.5, label="", label_c=None, head="triangle"):
+    """A U-shaped FEEDBACK / return loop between two block RECTS, EDGE-DOCKED by construction — the
+    rect-aware sibling of `loop_path`, and the loop counterpart to `connect_boxes`/`hub_spokes`.
+
+    It leaves block `a`'s edge (bottom-centre by default), drops to a clear channel, runs across, and
+    the arrowhead lands on block `b`'s edge — so NEITHER end can sit in a block's interior. This is
+    the safe-by-construction path for the commonest feedback-loop mistake: `loop_path(x, x, y_row,
+    …)` with a node CENTRE as `y_row`, which starts the loop inside the box and shows it crossing the
+    interior. `CONNECTOR_IN_BOX` now flags that, but the ergonomic fix is to make the safe way the
+    easy way — hand `loop_between` the same `(x, y, w, h)` rects you gave `box`/`node` and the docks
+    are computed for you.
+
+    `a`, `b` = (x, y, w, h) rects. `side`='bottom' (loop drops BELOW both blocks and returns — the
+    usual feedback loop) | 'top' (rises above — a return path over a row). `drop` = the channel's
+    absolute y in inches; defaults to `clearance` past the lower (or, for side='top', upper) of the
+    two blocks so it always clears their content. `label` sits in the OPEN middle of the U, never on
+    the line. Stroke semantics + arrowhead match `elbow_connector` (dotted=feedback is the default
+    here). Returns the segment list."""
+    ax, ay, aw, ah = a
+    bx, by, bw, bh = b
+    acx, bcx = ax + aw / 2.0, bx + bw / 2.0
+    if side == "top":
+        a_edge, b_edge = ay, by
+        chan = drop if drop is not None else min(ay, by) - clearance
+    elif side == "bottom":
+        a_edge, b_edge = ay + ah, by + bh
+        chan = drop if drop is not None else max(ay + ah, by + bh) + clearance
+    else:
+        raise ValueError("loop_between(): side must be 'bottom' or 'top', got %r" % (side,))
+    pts = [(acx, a_edge), (acx, chan), (bcx, chan), (bcx, b_edge)]
+    segs = elbow_connector(slide, pts, style=style, color=color, width=width, arrow=True, head=head)
+    if label:
+        col = color if color is not None else MUTE
+        midx = (acx + bcx) / 2.0
+        ly = chan - 0.28 if side == "bottom" else chan + 0.06   # inside the open U, off the line
+        text(slide, midx - 1.1, ly, 2.2, 0.26, [[(label, 9, label_c or col, False, False, MONO)]],
+             align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
+    return segs
 
 
 _ALGO_KW = {"input", "output", "require", "ensure", "initialize", "for", "while", "repeat",
