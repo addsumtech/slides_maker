@@ -787,6 +787,11 @@ def check_sameness(deck_path: Path) -> tuple[int, int]:
     # rule gets quietly relaxed.
     _dp = dict(DESIGN_OK)
     _dp["icon_none_checked"] = ["slide 2", "slide 3", "slide 4"]
+    # The icon `none` waiver now needs a CLASSIFIED high-bar reason too (not just named slides) —
+    # naming the class is what a casual "not category-rich" cannot do. This synthetic sameness deck
+    # is a repeated-label fixture, so any valid category clears it for the purpose of THIS suite
+    # (which tests the sameness composite, not the icon rule).
+    _dp["icon_none_category"] = "editorial-register"
     base = {"critic": {"waived": "No subagent dispatch on this host; both lenses ran inline.",
                        "waived_category": "no-dispatch-on-host", "inline_ran": True},
             "design_plan": _dp, "provenance": PROV_OK, "content": ARC_OK}

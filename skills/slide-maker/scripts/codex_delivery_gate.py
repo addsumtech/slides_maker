@@ -442,6 +442,32 @@ def slide_count_from_pptx(path: Path) -> int | None:
         return None
 
 
+# Mirror of render_deck._ICON_NONE_CATEGORIES — the four high-bar reasons a categorical deck may
+# carry no icon family, kept identical across the two gate paths so Codex and the shared path hold
+# the same bar (they have drifted on icons before — this is why `categorical_slides` is one shared
+# definition). Icons are the default on categorical content; skipping them names one of these.
+ICON_NONE_CATEGORIES = ("motif-dominant", "editorial-register", "tiny-deck", "template-locked")
+
+
+def _icon_waiver_ok(evidence: dict[str, Any]) -> bool:
+    """True when the undeclared-categorical icon waiver carries a CLASSIFIED high-bar category.
+
+    Symmetric with render_deck._icon_none_waived: naming a reason is no longer enough — the reason
+    must classify from ICON_NONE_CATEGORIES, so a casual 'not category-rich' cannot clear a deck
+    that reads as categorical and shipped zero icons.
+    """
+    for entry in evidence.get("waivers", []) or []:
+        if not isinstance(entry, dict) or entry.get("kind") != "icon":
+            continue
+        if entry.get("scope") != "undeclared-categorical":
+            continue
+        if not require_string(entry.get("reason"), "waiver.reason", [], minimum=12):
+            continue
+        if str(entry.get("category") or "").strip().lower() in ICON_NONE_CATEGORIES:
+            return True
+    return False
+
+
 def waived(evidence: dict[str, Any], kind: str, **matches: Any) -> bool:
     waivers = evidence.get("waivers", [])
     if not isinstance(waivers, list):
@@ -1252,17 +1278,18 @@ def check_icons(
     # it fails the CONTRADICTION: pages that read as category sets, declared as none, and no icon
     # anywhere. Any one of those three being false leaves this silent.
     missed = sorted(set(looks_categorical) - declared)
-    if missed and not icon_rows and not waived(evidence, "icon", scope="undeclared-categorical"):
+    if missed and not icon_rows and not _icon_waiver_ok(evidence):
         errors.append(
             "slides {} carry parallel label sets (3+ short peers sharing a baseline across half the "
             "canvas — the shape of a category row) but are declared `categorical: false`, and the "
-            "deck records no icon assets at all. Every icon check below keys off that flag, so "
-            "declaring nothing categorical switched them all off — which is how a deck ships zero "
-            "icons through the gate written to prevent it. Mark them and build the family "
-            "(scripts/icons.py), or record why these specific slides read better without one: "
-            '{{"kind": "icon", "scope": "undeclared-categorical", "reason": "<why>"}}. The detector '
-            "over-counts on purpose (tables, timelines), so this is a re-decision, not a verdict."
-            .format(missed))
+            "deck records no icon assets at all. Icons are the DEFAULT on categorical content — they "
+            "aid the 1-second read and reinforce the system — so shipping zero here is a HIGH-bar "
+            "choice. Mark them and build the family (scripts/icons.py), or record why an icon family "
+            "would HURT, with a CLASSIFIED reason (one of: {}): "
+            '{{"kind": "icon", "scope": "undeclared-categorical", "category": "motif-dominant", '
+            '"reason": "<why an icon family would hurt here>"}}. A bare reason no longer clears it — '
+            "name the class, the way the critic waiver names its own.".format(
+                missed, " | ".join(ICON_NONE_CATEGORIES)))
 
     for slide, design in design_rows.items():
         if not design.get("categorical"):

@@ -411,15 +411,34 @@ def _report_file_observations(pptx_path):
         sys.stdout.flush()
 
 
-def _icon_none_waived(gates):
-    """True when the `none` decision was re-made against the BUILT slides, not just planned.
+# The FOUR high-bar reasons a deck may carry no icon family. Icons are the DEFAULT on any deck with
+# categorical / multi-item / conceptual content — they aid the 1-second read and reinforce the
+# system, and skipping them is a real but HIGH-bar choice (user directive, 2026-08). A bare
+# "not category-rich" no longer clears it — that was the casual skip this set closes. Each names a
+# case where an icon family would genuinely HURT, not just be optional:
+#   motif-dominant     a strong constructed motif icons would dilute (the ≤3-loud motif budget)
+#   editorial-register a data / editorial register (FT/Economist) icons would cheapen into corporate
+#   tiny-deck          a 1-2 slide ask
+#   template-locked    a registered/provided template that carries its own marks or forbids them
+# 🔴 They are NOT a licence to drop icons from the CATEGORICAL slides that do have them — a deck may
+# be motif-dominant AND still put icons on its one roster page. The category explains the REST.
+_ICON_NONE_CATEGORIES = ("motif-dominant", "editorial-register", "tiny-deck", "template-locked")
 
-    The escape has to name the slides, because the failure being caught is a sentence written at
-    plan time and never re-tested against pixels. Naming them is what proves someone looked.
+
+def _icon_none_waived(gates):
+    """True when `icon_family: none` was re-decided against the BUILT slides AND classifies WHY.
+
+    Two things, not one. (1) It must name the slides it was re-decided against — proof someone
+    looked at pixels, not a plan sentence written before any slide existed. (2) It must classify the
+    reason from `_ICON_NONE_CATEGORIES` — because icons are now the default on categorical content,
+    so the bar for skipping is a genuinely strong reason (a motif they'd dilute, a register they'd
+    cheapen), not 'the content isn't category-rich'. Symmetric with the critic waiver's
+    `waived_category`: a waiver that cannot name its own class is the casual skip in disguise.
     """
     d = (gates or {}).get("design_plan") or {}
     named = d.get("icon_none_checked")
-    return isinstance(named, list) and len(named) >= 1
+    cat = str(d.get("icon_none_category") or "").strip().lower()
+    return (isinstance(named, list) and len(named) >= 1) and cat in _ICON_NONE_CATEGORIES
 
 
 def _report_icon_waiver(pptx_path, fam, gates=None, delivery=None):
@@ -565,7 +584,14 @@ def _report_icon_waiver(pptx_path, fam, gates=None, delivery=None):
             _asp = float(prs.slide_width) / float(prs.slide_height)
         except Exception:
             _asp = 1.78
-        _cheap = (len(hits) >= 3 and _tot == 0 and _asp >= 1.2
+        # Threshold lowered 3 → 2 (user directive: icons are a near-universal must). The detector
+        # over-counts (tables/timelines/stat-rows share the peer shape), so 2 will sometimes fire on
+        # a deck that legitimately wants none — but the cost of a false fire is now ONE line
+        # (classify the reason), while the cost of a false PASS is a categorical deck that shipped
+        # zero icons. Asymmetric, so the threshold sits on the side that asks the question. The
+        # floors (aspect, non-surface, >=8 body slides below) still exclude carousels/posters/tiny
+        # asks, and the waiver stays satisfiable for the real motif-dominant / editorial cases.
+        _cheap = (len(hits) >= 2 and _tot == 0 and _asp >= 1.2
                   and delivery != "surface" and not _icon_none_waived(gates))
         # Only NOW pay for the real content-slide count — the same `body_n` sameness uses, which
         # excludes the cover, the closer and any declared appendix run. Raw slide count is the
@@ -581,13 +607,18 @@ def _report_icon_waiver(pptx_path, fam, gates=None, delivery=None):
                 _body = 99
         if _cheap and _body >= 8:
             die("`icon_family: none` on a deck with ZERO icon-sized pictures and {} pages of "
-                "parallel label sets ({}) — SKILL.md calls an icon family a design MUST on exactly "
-                "this content, and the plan sentence is the only thing saying otherwise.\n"
+                "parallel label sets ({}) — icons are the DEFAULT on categorical content: they aid "
+                "the 1-second read and reinforce the system, so skipping them is a HIGH-bar choice, "
+                "not a plan sentence.\n"
                 "    Build the family (scripts/icons.py <lib>:<name> <out>.png, placed with "
-                "deckkit.icon / icon_tile), or record the re-decision AGAINST THE BUILT SLIDES:\n"
-                '    {{"design_plan": {{"icon_family": "none — <why THESE slides read better bare>", '
-                '"icon_none_checked": ["slide {}", "..."]}}}}'.format(
-                    len(hits), hits, hits[0]))
+                "deckkit.icon / icon_tile) — this is almost always the right move —\n"
+                "    or record the re-decision AGAINST THE BUILT SLIDES with a CLASSIFIED reason "
+                "(one of: {}):\n"
+                '    {{"design_plan": {{"icon_family": "none — <why an icon family would HURT here>", '
+                '"icon_none_checked": ["slide {}", "..."], "icon_none_category": "motif-dominant"}}}}\n'
+                "    A bare 'not category-rich' no longer clears it; name the class of reason, the "
+                "way the critic waiver names its own.".format(
+                    len(hits), hits, " | ".join(_ICON_NONE_CATEGORIES), hits[0]))
 
 
 def _tail(text, limit=4000):
