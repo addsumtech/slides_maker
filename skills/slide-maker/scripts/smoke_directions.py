@@ -33,13 +33,15 @@ def ok(label, fn):
 
 
 DIVERSE = [
-    {"name": "Editorial", "bg": "#FCFAF5", "ink": "#1A1A1A", "accent": "#B0451F",
+    # preset-driven directions carry a `dna` marker (as preset_directions() stamps), so they are
+    # REAL STYLES, not motif-less colourways — the accurate representation of a preset slot.
+    {"name": "Editorial", "bg": "#FCFAF5", "ink": "#1A1A1A", "accent": "#B0451F", "dna": "editorial_paper",
      "font_display": "Georgia, serif", "font_body": "'Helvetica Neue', Arial, sans-serif",
      "cover": "low-left", "skeleton": "rail"},
-    {"name": "Swiss", "bg": "#FFFFFF", "ink": "#111111", "accent": "#D6002A",
+    {"name": "Swiss", "bg": "#FFFFFF", "ink": "#111111", "accent": "#D6002A", "dna": "swiss",
      "font_display": "'Helvetica Neue', sans-serif", "font_body": "'Helvetica Neue', sans-serif",
      "cover": "full-bleed-type", "skeleton": "split"},
-    {"name": "Night", "bg": "#0E1420", "ink": "#EAEEF5", "accent": "#4FD1C5",
+    {"name": "Night", "bg": "#0E1420", "ink": "#EAEEF5", "accent": "#4FD1C5", "dna": "dark_tech",
      "font_display": "'Trebuchet MS', sans-serif", "font_body": "'Helvetica Neue', sans-serif",
      "cover": "split-vertical", "skeleton": "band"},
 ]
@@ -50,10 +52,10 @@ COLLAPSED = [
      "font_display": "'Times New Roman', serif", "font_body": "Arial, sans-serif"},
 ]
 BRAND_LOCKED = [
-    {"name": "Brand Light", "bg": "#FFFFFF", "ink": "#111111", "accent": "#0057B8",
+    {"name": "Brand Light", "bg": "#FFFFFF", "ink": "#111111", "accent": "#0057B8", "dna": "consulting",
      "font_display": "Georgia, serif", "font_body": "Arial, sans-serif",
      "cover": "low-left", "skeleton": "rail"},
-    {"name": "Brand Dark", "bg": "#0B1020", "ink": "#F0F3F8", "accent": "#0057B8",
+    {"name": "Brand Dark", "bg": "#0B1020", "ink": "#F0F3F8", "accent": "#0057B8", "dna": "blueprint",
      "font_display": "'Helvetica Neue', sans-serif", "font_body": "'Helvetica Neue', sans-serif",
      "cover": "full-bleed-type", "skeleton": "island"},
 ]
@@ -289,6 +291,48 @@ def main():
             ah.build_directions_html(ah.preset_directions([bespoke, "swiss"]), out, "T")
             assert "Sonar" in open(out, encoding="utf-8").read()
         ok("bespoke register is first-class in the gate (renders its own DNA)", _bespoke_register_is_first_class)
+
+        def _colourway_excess_flagged():
+            """The STRUCTURE gate: at most ONE motif-less colourway (the branch-(c) colour-scheme
+            option). Several bare colourways pass every PAIRWISE divergence test yet are exactly the
+            'the options were just different colours' failure — so a set of 3 plain colourways + 1
+            bespoke (the real regression that shipped) must flag, and a proper 3-styled + 1-colour-
+            scheme set must clear."""
+            sys.path.insert(0, HERE)
+            import importlib, directions_diversity as dd
+            importlib.reload(dd)
+            # 3 motif-less colourways (no dna, no motif) + 1 bespoke — the mediocre set that shipped
+            under = [
+                {"name": "Signal", "bg": "#0E1116", "accent": "#E82127", "cover": "centred", "skeleton": "island"},
+                {"name": "Ledger", "bg": "#FBF9F4", "accent": "#C4271D", "font_display": "Georgia, serif",
+                 "cover": "low-left", "skeleton": "rail"},
+                {"name": "Steel", "bg": "#EEF1F4", "accent": "#E4231F", "font_display": "'Arial Black', sans-serif",
+                 "cover": "full-bleed-type", "skeleton": "band"},
+                {"name": "Bespoke", "bg": "#101018", "accent": "#31D0E6", "cover": "split-vertical",
+                 "skeleton": "split", "cover_motif": "<div/>", "ambient_motif": "<i/>"},
+            ]
+            r = dd.check(under)
+            assert r["colourway_excess"] == ["Ledger", "Steel"], \
+                "the two colourways beyond the allowed one must be named: " + str(r["colourway_excess"])
+            rc, out = _run_div(under, d)
+            assert rc == 2, "an under-designed set (3 colourways) must exit 2:\n" + out
+            assert "UNDER-DESIGNED SET" in out and "preset_directions" in out, "no actionable message: " + out
+            assert "record why" in out, "the named-justification escape is missing"
+            # a PROPER set: 3 styled (preset dna and/or bespoke) + exactly 1 colour-scheme option
+            proper = [
+                {"name": "Blueprint", "bg": "#0A1B38", "accent": "#46C9E0", "dna": "blueprint",
+                 "cover": "split-vertical", "skeleton": "band"},
+                {"name": "Report", "bg": "#0E0E12", "accent": "#E8434A", "dna": "editorial_report",
+                 "font_display": "Georgia, serif", "cover": "low-left", "skeleton": "rail"},
+                {"name": "Current", "bg": "#101018", "accent": "#31D0E6", "cover": "centred",
+                 "skeleton": "island", "cover_motif": "<div/>", "ambient_motif": "<i/>"},
+                {"name": "Signal — palette", "bg": "#FFFFFF", "accent": "#D6002A",
+                 "cover": "full-bleed-type", "skeleton": "statement"},   # the ONE allowed colourway
+            ]
+            rp = dd.check(proper)
+            assert rp["colourway_excess"] == [], \
+                "a 3-styled + 1-colourway set must NOT flag: " + str(rp["colourway_excess"])
+        ok("structure gate: >1 motif-less colourway flags, 3-styled+1-colour passes", _colourway_excess_flagged)
 
     print("smoke_directions: {} failure(s)".format(len(FAILS)))
     return 1 if FAILS else 0

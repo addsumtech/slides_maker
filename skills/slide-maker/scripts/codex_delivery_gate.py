@@ -1037,10 +1037,30 @@ def check_design(
                 try:
                     validator = load_direction_validator()
                     result = validator.check(choices)
+                    # The shared directions_diversity.py exits 2 on THREE failures; align the Codex
+                    # gate to the same set so a clean-branch record cannot pass here while the human
+                    # CLI would reject it. Each has the same named-waiver escape.
                     if result.get("flagged") and not require_string(
                         direction.get("diversity_waiver"), "design.direction.diversity_waiver", errors, minimum=12
                     ):
                         errors.append("direction preview has too-similar candidates without a named diversity waiver")
+                    # STRUCTURE: >1 motif-less colourway = the 'just different colours' set. The
+                    # branch is 3 real styles (preset DNA and/or bespoke) + 1 colour scheme.
+                    if result.get("colourway_excess") and not require_string(
+                        direction.get("colourway_waiver"), "design.direction.colourway_waiver", errors, minimum=12
+                    ):
+                        errors.append(
+                            "clean design direction has >1 motif-less colourway ("
+                            + ", ".join(result["colourway_excess"])
+                            + ") — build styled slots with preset_directions([...]) or a bespoke "
+                            "register (topic-adapted), or record a named colourway_waiver")
+                    # A bespoke register invented for the topic is required (presets are the floor).
+                    if result.get("no_bespoke") and not require_string(
+                        direction.get("bespoke_waiver"), "design.direction.bespoke_waiver", errors, minimum=12
+                    ):
+                        errors.append(
+                            "clean design direction offers no bespoke register — invent one from the "
+                            "topic (a dict with cover_motif + ambient_motif), or record a named bespoke_waiver")
                 except Exception as exc:
                     errors.append(f"design.direction candidates cannot pass the diversity check: {exc}")
             if artifact_path is not None and artifact_path.suffix.lower() in {".html", ".htm"}:

@@ -19,8 +19,19 @@ REDIVERGE the pair, or keep it WITH A NAMED JUSTIFICATION recorded on the `direc
 (a brand-locked accent is a legitimate reason for a palette match — the shared hue is a mandate,
 and divergence then has to move onto the other three axes).
 
+It ALSO enforces the SET's STRUCTURE, not just its pairs. The branch-(c) gate is "3 real styles
+(best-fit DNA presets and/or a bespoke register) + 1 colour-scheme option" — so at most ONE
+direction may be a *motif-less colourway* (no preset `dna`, no bespoke motif). A set of several bare
+colourways passes every PAIRWISE test — each pair can differ on palette/type — while being exactly
+the "the options were just different colours" failure the whole preset-driven gate exists to end.
+The divergence axes measure whether directions differ FROM EACH OTHER; this measures whether they
+carry real style DNA AT ALL. Same escape as the others: keep it and record why on the
+`direction gate:` line.
+
 CLI:  python directions_diversity.py directions.json [--json]
-Exit: 0 = every pair diverges · 2 = >=1 too-similar pair (printed) · 1 = unreadable input.
+Exit: 0 = diverse, has a bespoke, and >=3 slots carry real style DNA
+      2 = >=1 too-similar pair, OR no bespoke, OR >1 motif-less colourway (all printed)
+      1 = unreadable input.
 """
 import argparse
 import itertools
@@ -121,12 +132,25 @@ def _bespoke(d):
     return bool(d.get("cover_motif") or d.get("ambient_motif"))
 
 
+def _styled(d):
+    """A direction carries REAL STYLE DNA when it is a preset (`dna`, stamped by
+    `archetypes_html.preset_directions`) OR a bespoke register (its own motif). Everything else is a
+    motif-less colourway — legitimate ONCE (the branch-(c) colour-scheme option D), a tell of an
+    under-designed set beyond that."""
+    return bool(d.get("dna") or _bespoke(d))
+
+
 def check(directions):
     feats = [_features(d) for d in directions]
     pairs = [_pair(x, y) for x, y in itertools.combinations(feats, 2)]
     bespoke = [d.get("name", "?") for d in directions if _bespoke(d)]
+    # STRUCTURE gate: at most one motif-less colourway (the colour-scheme option). The first plain
+    # direction is the allowed one; any beyond it are the excess this flags.
+    plain = [d.get("name", "?") for d in directions if not _styled(d)]
+    colourway_excess = plain[1:]
     return {"pairs": pairs, "flagged": [p for p in pairs if p["too_similar"]],
             "bespoke": bespoke, "no_bespoke": not bespoke,
+            "plain": plain, "colourway_excess": colourway_excess,
             "modes": {f["name"]: f["mode"] for f in feats},
             "compositions": {f["name"]: "/".join(f["comp"]) for f in feats}}
 
@@ -147,7 +171,7 @@ def main():
         sys.exit(1)
     if a.as_json:
         print(json.dumps(r, indent=1))
-        sys.exit(2 if (r["flagged"] or r["no_bespoke"]) else 0)
+        sys.exit(2 if (r["flagged"] or r["no_bespoke"] or r["colourway_excess"]) else 0)
     for p in r["pairs"]:
         mark = "x TOO SIMILAR" if p["too_similar"] else "v"
         print("  {}  {} vs {}: palette {} · comp {} vs {} · matched: {}".format(
@@ -176,7 +200,24 @@ def main():
         print("             register are yours even when palette and type are not.")
     else:
         print("[bespoke]  v bespoke direction(s): {}".format(", ".join(r["bespoke"])))
-    sys.exit(2 if (r["flagged"] or r["no_bespoke"]) else 0)
+    if r["colourway_excess"]:
+        print("[styles]   x UNDER-DESIGNED SET: {} motif-less colourway(s) ({}) beyond the one".format(
+            len(r["colourway_excess"]), ", ".join(r["colourway_excess"])))
+        print("             allowed colour-scheme option. The branch-(c) gate is 3 REAL STYLES")
+        print("             (best-fit DNA presets and/or a bespoke register) + 1 colour scheme —")
+        print("             so at most ONE direction may be a bare palette+type with no motif.")
+        print("             FIX: build the styled slots with `archetypes_html.preset_directions([")
+        print("             names])` (each preset carries its real DNA) or invent a bespoke register")
+        print("             (a dict with `cover_motif` + `ambient_motif`), TOPIC-ADAPTED — read each")
+        print("             preset's `when` field in scripts/presets.py for the best fit. Presets")
+        print("             are the floor you beat, not four colourways with the serial number filed off.")
+        print("             ESCAPE (same as the others): keep the set and record why on the")
+        print("             `direction gate:` line (e.g. 'brand mandates a single palette+type; the")
+        print("             other three slots carry motif/composition variance').")
+    else:
+        print("[styles]   v {} styled direction(s) (preset DNA or bespoke), <=1 colour scheme".format(
+            sum(1 for d in data if _styled(d))))
+    sys.exit(2 if (r["flagged"] or r["no_bespoke"] or r["colourway_excess"]) else 0)
 
 
 if __name__ == "__main__":

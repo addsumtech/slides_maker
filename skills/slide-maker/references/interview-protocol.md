@@ -191,9 +191,18 @@ four template choices:
          register — line colour = visa route, numbered roundel = step, buffer stop = dead end — beat
          all three best-fit presets, and then supplied the deck's signature move for free, because
          the motif was load-bearing rather than decorative.)*
-       - 🔴 **The mechanical check enforces it:** `directions_diversity.py` fails a set in which no
-         direction carries `cover_motif`/`ambient_motif`. A set of three presets plus a colour scheme
-         is not a set of directions — it is the catalogue.
+       - 🔴 **The mechanical check enforces it — on BOTH failure directions:** `directions_diversity.py`
+         fails a set in which **no** direction carries `cover_motif`/`ambient_motif` (no bespoke), AND
+         a set carrying **more than one motif-less colourway** (`colourway_excess` — the "just different
+         colours" set). The branch is **3 real styles (best-fit DNA presets and/or a bespoke register,
+         TOPIC-ADAPTED) + 1 colour-scheme option**, so a preset-only set is the catalogue *and* a set of
+         bare colourways is under-designed — both exit 2, both with the same named-`direction gate:`
+         escape. Build the styled slots with `preset_directions([names])` (each stamps a real `dna`) or a
+         bespoke dict; a hand-written colour dict with neither `dna` nor a motif counts as a plain
+         colourway, and only ONE is allowed. *(This closed a measured hole: a `3 plain colourways + 1
+         bespoke` set passed every pairwise divergence test and the bespoke gate, yet was exactly the
+         mediocre "the options were just different colours" set the whole preset-driven gate exists to
+         prevent. The Codex delivery gate loads the SAME checker, so both paths reject it identically.)*
          **The requirement is to OFFER one, never that it must win** — the user may well pick a
          preset, and that is a real choice made against a real alternative rather than a default.
          **Escape, same shape as the divergence check's:** if you genuinely cannot invent one, keep
@@ -259,7 +268,13 @@ four template choices:
      `references/generated-template.md`**: a mini-interview *now* (scenario/topic first — brand colours
      fold into tailoring; **pick the 3 best-fit, deliberately DIVERSE styles for the TOPIC + CONTENT
      from its Style library** (different visual languages — e.g. Swiss vs Manga vs Glassmorphism — never
-     colour-variations of one look), **GENERATE 1 real template image per candidate style (2 for the
+     colour-variations of one look). 🔴 **Each candidate is a whole STYLE, not a swapped picture: a
+     distinct visual language WITH its own matched chrome (the `style.py` you derive per pick — palette,
+     type, motif, component geometry), TOPIC-ADAPTED and novel — the same anti-mediocrity bar the
+     "design a clean one" branch enforces mechanically (`directions_diversity.py`). Three generated
+     images of the same subject in one look, or three that share a chrome, are the 生图 analogue of the
+     "just different colours" failure — reject them.** **GENERATE 1 real template image per candidate
+     style (2 for the
      front-runner) on this topic, and show them in ONE HTML gallery — the "style gate"** (one `file://`
      link; the winner's image is reused as the deck's hero, so the cost is ~3–4 images; native
      `archetypes_html.py` mockups are only the no-image-tool fallback), then the user picks. **Offer

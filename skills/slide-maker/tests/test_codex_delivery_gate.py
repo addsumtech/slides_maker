@@ -256,6 +256,7 @@ def fixture(root: Path) -> tuple[dict, dict, dict, Path]:
                 "sha256": sha256(direction),
                 "directions": [
                     {
+                        # A — the selected BESPOKE register (carries its own motif → real DNA)
                         "id": "A",
                         "name": "A",
                         "bg": "#071820",
@@ -265,8 +266,11 @@ def fixture(root: Path) -> tuple[dict, dict, dict, Path]:
                         "density": "minimal",
                         "cover": "low-left",
                         "skeleton": "rail",
+                        "cover_motif": "<div class='sonar'/>",
+                        "ambient_motif": "<i class='sonar-echo'/>",
                     },
                     {
+                        # B — a best-fit DNA preset
                         "id": "B",
                         "name": "B",
                         "bg": "#FFFFFF",
@@ -276,8 +280,10 @@ def fixture(root: Path) -> tuple[dict, dict, dict, Path]:
                         "density": "normal",
                         "cover": "centred",
                         "skeleton": "split",
+                        "dna": "editorial_paper",
                     },
                     {
+                        # C — a best-fit DNA preset
                         "id": "C",
                         "name": "C",
                         "bg": "#182033",
@@ -287,8 +293,10 @@ def fixture(root: Path) -> tuple[dict, dict, dict, Path]:
                         "density": "dense",
                         "cover": "full-bleed-type",
                         "skeleton": "dashboard",
+                        "dna": "terminal",
                     },
                     {
+                        # D — the ONE allowed motif-less colour-scheme option
                         "id": "D",
                         "name": "D",
                         "bg": "#F4E9D8",
