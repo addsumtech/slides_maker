@@ -37,6 +37,10 @@ DESIGN_OK = {
     # only printed. It dies now, and the fixture is the first thing it caught.
     "icon_family": "none — a three-slide text fixture, no categorical content to mark",
     "palette": "FILL E2543A / TEXT BD4630 on cream, A3341F on tint",
+    # The TOPIC-adapted look choice (references/design-by-topic.md): preset/bespoke for the subject's
+    # domain, the rival it beat, and the domain cliché avoided.
+    "style_pick": "bespoke signal-recovery register for imaging/signal · beat blueprint because the "
+                  "recovery IS the argument, not a schematic · anti-pick avoided: dark_tech neon",
     # Required from ~6 content slides up; always allowed. A truthful reason for every fixture here.
     "build_shape": "solo — CI fixture, no subagent dispatch",
     "type_scale": {"display": 34, "title": 24, "body": 14},

@@ -97,7 +97,11 @@ template or Mode-A mimic** the template's device IS the motif — the ladder is 
 would re-litigate an approved identity), while the STRANGER TEST, ONE-form-ONE-meaning, and the
 triple applied to what you ADD all still bind.
 + the rhythm-map table +
-the three design musts + a one-line Form-ledger/diversity verdict + the **`boldness:` + `signature
+the three design musts + a one-line Form-ledger/diversity verdict + the **`style pick:` line** (the
+TOPIC-adapted look choice, `references/design-by-topic.md`: `<preset|bespoke> for <domain> · beat
+<nearest rival> because <clause> · anti-pick avoided: <the domain cliché>`, or `n/a — <locked
+template | mimic | provided>` on a locked look — so a domain-reflex look, e.g. `dark_tech` for an
+"AI/tech" subject, costs one glance to veto) + the **`boldness:` + `signature
 move:` lines, the latter carrying its `carried_by:` clause** (the dial + the one scoped aesthetic risk
 + the bold reference it adapts + the 2–3 slides where the same idea does STRUCTURAL work — even as an
 auto-waiver FYI, a timid "big number" signature move, a wrong dial, or a risk that lands on exactly

@@ -73,6 +73,15 @@ be reconstructed post-hoc at the delivery gate.
    rendered archetype slides; do not replace the preview with a prose palette description. Keep the
    exact direction tokens and run the normal diversity check, rather than claiming four colorways are
    four directions. If a user says to decide, record the auto carve and the rejected alternatives.
+   **Pick the look for the SUBJECT, not the reflex — run the topic contest in
+   `references/design-by-topic.md` FIRST** (domain → apt presets → ANTI-PICK, the guardrail vetoes,
+   the CLICHÉ GUARD: no reflex `dark_tech`/`synthwave` for "AI/tech", `terminal` for every dev deck),
+   and record `design.style_pick` (`<preset|bespoke> for <domain> · beat <rival> · anti-pick avoided:
+   <cliché>`, or `n/a — <locked look>`) — the evidence scaffold carries it, and both
+   `codex_delivery_gate.py` and `render_deck.py --gate-check` require it, so produce it from the
+   contest up front rather than by failing the gate. A bespoke register from
+   `references/bespoke-registers.md` (adapt, never transplant) beats every preset when the subject
+   has a visual world of its own.
    Build and render the THREE anchor slides before the rest, as the normal anchor-proof rule requires
    (signature · the densest planned page · the key data/conclusion page — SKILL.md Step 4). One build
    script, one render call; `design_plan.signature_proof` is the role-bearing list both gates check.

@@ -240,6 +240,14 @@ TEMPLATE = {
         # one gate that could have caught that class on the Codex path could not see the palette
         # at all.
         "palette": "<FILL vs TEXT-safe split, per palette_audit.py>",
+        # The TOPIC-adapted look choice (references/design-by-topic.md): the preset or bespoke
+        # register chosen for the SUBJECT's DOMAIN, the nearest rival it beat + the one clause, and
+        # the domain cliché it avoided (the CLICHÉ GUARD — no reflex dark_tech/synthwave for
+        # "AI/tech"). On a locked look write "n/a - <template | mimic | provided>". This scaffold
+        # carries it so a Codex agent produces it from the domain contest UP FRONT, not by failing
+        # the gate.
+        "style_pick": "<preset|bespoke> for <domain> - beat <nearest rival> because <clause> - "
+                      "anti-pick avoided: <the domain cliché>",
         # A motif that only RECURS is an ornament with a schedule. Three things it makes besides
         # itself; `page` takes `none - <reason>` because a deck with no page whose geometry the
         # idea could own must not invent one to fill this field.
@@ -1116,6 +1124,11 @@ def check_design(
                                errors, minimum=8)
 
     require_string(design.get("palette"), "design.palette", errors, minimum=12)
+    # style_pick — the TOPIC-adapted look choice (references/design-by-topic.md): preset/bespoke for
+    # the SUBJECT's domain, the rival it beat + one clause, and the domain cliché avoided. Mirrors
+    # render_deck.py --gate-check's DESIGN_FIELDS. On a locked look write "n/a — <template|mimic|
+    # provided>" (a non-empty string clears the min, exactly like a `logo plan: n/a` line).
+    require_string(design.get("style_pick"), "design.style_pick", errors, minimum=12)
     # Same threshold and same rule as render_deck.py --gate-check: from ~6 content slides the
     # build-shape decision must be recorded. Never blocks the CHOICE — solo is mandatory on a
     # runtime with no subagent dispatch — only the absence of a decision.

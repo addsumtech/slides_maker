@@ -51,6 +51,8 @@ sameness, no hero, dead layout, thoughtless motion, decorative icons — is your
   `references/form-selection.md` (content-shape → candidate forms + tie-breaker),
   `references/design-gallery.md` (presets + component catalogue), `scripts/presets.py` (the preset menu),
   `references/design-by-purpose.md` (name-the-bias look per purpose),
+  `references/design-by-topic.md` (domain → apt presets → ANTI-PICK + cliché guard — the topic-adapted pick),
+  `references/bespoke-registers.md` (verified invented registers to ADAPT — the growing library),
   `references/design-principles.md` (full C.R.A.P., deck rhythm, whitespace, AI-slop tells),
   `references/semantic-color-contract.md`, `references/data-viz.md`, `references/schematic-diagrams.md`,
   `references/icons.md`, `references/animation.md`, `references/image-generation.md`,
@@ -162,7 +164,7 @@ an order of operations, and you guard it:
   exactly where the art director earns the fee.
 
 **This design intelligence is HOW you design — it runs on EVERY deck / each case, never opt-in per
-deck.** The design self-verify (a–r, incl. h2) and the `references/design-intelligence-addendum.md` gates
+deck.** The design self-verify (a–s, incl. h2) and the `references/design-intelligence-addendum.md` gates
 (concept→viz reasoning, block audit, evenness / one-hero-per-slide, semantic colour where colour is
 used, rhythm, WOW) apply to every deck and **scale down gracefully** — a 4-slide deck still gets one
 hero per slide, no card-grid reflex, semantic colour, and one memorable moment; you just do less of it,
@@ -181,9 +183,15 @@ feel art-directed rather than defaulted, and it's yours to set once and hold. Pi
 > `eastern_traditional` · dark fashion/luxury → `luxury_dark` · memorial/exhibition → `museum_memorial` ·
 > modernist geometric → `bauhaus` · warm retro (Eames-era) → `midcentury` · CLI/phosphor CRT →
 > `terminal` · retro-future neon → `synthwave` (**18 total** — full menu in `design-gallery.md`).
-- **Name the bias and beat it** (`design-by-purpose.md`): don't reflex to the safe light/minimal/blue
-  default. Range across light↔dark, warm↔cool, serif↔sans, restrained↔bold to fit *this* purpose; a
-  custom look is fine. Record the **palette · type pairing · surface · ONE signature motif · the
+- **Name the bias and beat it — on BOTH axes, purpose AND topic.** `design-by-purpose.md` keys the
+  look on *what kind of talk* it is; **`design-by-topic.md` keys it on *what the subject IS*** (its
+  DOMAIN → apt presets → ANTI-PICK), and the topic axis is what makes the look *fit the subject* rather
+  than default. Run its ranked contest (shortlist by domain → drop veto-trippers → score four axes →
+  crown one, name the rejected rival) and record the **`style pick:` line** (Design-language output
+  below; self-verify (s)). Don't reflex to the safe light/minimal/blue default — **and don't reflex the
+  domain cliché either** (`dark_tech`/`synthwave` for "AI/tech", `terminal` for every dev deck): the
+  CLICHÉ GUARD is a hard veto. Range across light↔dark, warm↔cool, serif↔sans, restrained↔bold to fit
+  *this* purpose AND subject; a custom look is fine. Record the **palette · type pairing · surface · ONE signature motif · the
   preset's guard line** (honored literally; guards survive the vary-it rule) — the
   *system* (palette, type, spacing, chrome geometry) repeats on every slide (CRAP Repetition); the
   **motif itself is DOSED, not stamped** (chrome budget, next bullet).
@@ -761,6 +769,19 @@ freshness: varied <foundation> vs <last look-history line>`, or the alternate ar
 (registered/provided template) — carve applies` — the line that makes the freshness rule checkable
 (self-verify (j) reads it; the Step-2 design gate requires it; `references/user-taste.md`).
 
+It also carries the **`style pick:` line — the TOPIC-adapted look choice** (this is what makes the
+look fit the SUBJECT, not a reflex): `style pick: <preset|bespoke> for <domain> · beat <nearest rival>
+because <one clause> · anti-pick avoided: <the cliché the domain tempts>`, derived by the ranked
+contest in **`references/design-by-topic.md`** (domain → apt presets → ANTI-PICK, the guardrail vetoes,
+the CLICHÉ GUARD, and the per-preset beats-its-rival). On a LOCKED look (registered/provided template
+or a Mode-A mimic) the look is not domain-picked — write `style pick: n/a — <locked: template | mimic
+| provided>`. When the subject has a visual world of its own, a bespoke register from
+`references/bespoke-registers.md` (adapt, never transplant) beats every preset here — name it as the
+pick. **This line is a gate** (self-verify (s); the Step-2 design gate + `render_deck.py --gate-check`'s
+`design_plan.style_pick` require it) — it exists because the look was keyed on PURPOSE only, and a tech
+deck defaulted to the `dark_tech`/`synthwave` cliché the domain map warns against (measured on this
+skill's own Tesla deck: the user overrode the reflex to `editorial_report`, this table's #1 for AI/ML).
+
 It also carries the **BOLDNESS + SIGNATURE MOVE contract — two required lines** (this is the balance
 mechanism: stable floors, one protected act of daring):
 - **`boldness: <conservative | balanced+ | bold | experimental>`** — the deck's aesthetic-risk budget.
@@ -846,7 +867,7 @@ Then run the **Block Dependency Audit** (the parallel/unordered/equal-weight/ind
 passes · the non-block alternative considered · keep-or-redesign*. This qualitative gate catches the
 visual sameness the family count misses, so it and the diversity gate both must pass.
 
-### Design self-verify (a–r, plus h2 — NINETEEN checks)
+### Design self-verify (a–s, plus h2 — TWENTY checks)
 State the plan is **not ready** unless these DISTINCT checks pass — each weighed with judgment
 (considered + applied where it helps, one-clause-justified where a slide legitimately doesn't need it,
 NOT a blanket per-slide quota):
@@ -995,10 +1016,18 @@ NOT a blanket per-slide quota):
   was correct both times and dismissed both times, so density is now hard-gated at hand-off
   (`render_deck.py --gate-check`). This item is where the number gets DECIDED rather than discovered:
   a design plan that never states its density has already chosen text by default.
-Fix any failing check before the DESIGN checkpoint. **Nineteen checks — (a)…(r) plus (h2). If your
-sweep stopped at (q), you skipped (r), the density line, which is the one item here with a hard
-deterministic backstop (`render_deck.py --gate-check` dies at hand-off when the plan carries no
-`type_scale`, and on density when too many slides run over budget).**
+- **(s) the look is TOPIC-ADAPTED, via a ranked contest** — the Design language carries the
+  `style pick:` line (`references/design-by-topic.md`): the preset or bespoke register chosen for the
+  SUBJECT's DOMAIN (not the reflex), the nearest rival it beat + the one separating clause, and the
+  domain cliché it avoided (the CLICHÉ GUARD — no reflex `dark_tech`/`synthwave` for "AI/tech",
+  `terminal` for every dev deck, `glassmorphism` for every SaaS). On a locked look
+  (registered/provided template or Mode-A mimic) write `style pick: n/a — <reason>`. A plan that
+  picked a look by purpose or habit without checking domain fit is not ready. This is the item that
+  makes the look fit the SUBJECT; it is hard-gated (`render_deck.py --gate-check` /
+  `codex_delivery_gate.py` require `design_plan.style_pick`).
+Fix any failing check before the DESIGN checkpoint. **Twenty checks — (a)…(s) plus (h2). If your
+sweep stopped at (r), you skipped (s), the topic-adapted `style pick:` line — the item that keeps the
+look from being a domain reflex, hard-gated alongside (r) at hand-off.**
 
 ### Design-critic checklist
 Confirm the deck answers the 10 checks the critic's design lens will apply (design bible):

@@ -323,6 +323,8 @@ def fixture(root: Path) -> tuple[dict, dict, dict, Path]:
                 ],
             },
             "boldness": "balanced+",
+            "style_pick": "editorial_report for AI/ML research · beat blueprint because the deck is a "
+                          "data readout, not a schematic · anti-pick avoided: dark_tech neon cliché",
             "palette": "ink #101820 on paper #F6F4EF (14.9:1); accent #1F5FA9 FILL-only, "
                        "text-safe variant #17457C (5.4:1) — per palette_audit.py",
             "motif_generates": {

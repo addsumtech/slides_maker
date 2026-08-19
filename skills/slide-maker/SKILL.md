@@ -237,6 +237,8 @@ every **🔴 CHECKPOINT** is a hard stop.
 |---|---|
 | The craft / the "why" (contrast · hierarchy · C.R.A.P. · layout safety) | `references/design-principles.md` |
 | Per-purpose look (defense vs exec vs lecture …) | `references/design-by-purpose.md` |
+| Per-TOPIC look (domain → apt presets → ANTI-PICK + cliché guard — the topic-adapted pick) | `references/design-by-topic.md` |
+| Bespoke registers invented from a subject's world (verified library to ADAPT + grow) | `references/bespoke-registers.md` |
 | Content — deep read + per-slide message (Step 1) | `agents/content-planner.md` |
 | Input formats — Word/Office · image · video (ingest routes + the vision/audio fidelity floor) | `agents/content-planner.md` §1 (Input formats) · `scripts/ingest.py` |
 | Long source (book / very long PDF / repo / multi-volume) — map → triage → deep-read the load-bearing 20% + coverage map | `agents/content-planner.md` §1 (long-source mode) · `scripts/extract_pdf.py map`/`text`/`headings` |
@@ -717,7 +719,7 @@ interview answers that steer register
 (purpose/audience/time, delivery mode, style, template/brand decision, venue — plus, when the user
 gave a Q4 style example, the **written style brief + chosen mimic mode**), and the craft
 references it designs against (`form-selection.md`, `design-gallery.md`, `scripts/presets.py`,
-`design-by-purpose.md`, `design-principles.md`, `design-intelligence-addendum.md`, `semantic-color-contract.md`, `data-viz.md`,
+`design-by-purpose.md`, `design-by-topic.md`, `bespoke-registers.md`, `design-principles.md`, `design-intelligence-addendum.md`, `semantic-color-contract.md`, `data-viz.md`,
 `schematic-diagrams.md`, `icons.md`, `animation.md`, `image-generation.md`,
 `east-asian-aesthetic.md` — and, for a mimic deck, `style-analysis.md`). It consumes the approved content — it does **not** reopen it — and
 returns a **Design plan**: the deck's **Design language** (a *named* signature motif + a

@@ -1575,7 +1575,14 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
         # string everywhere else, and it carried a real deck through "all gates pass".
         DESIGN_FIELDS = ("concept", "boldness", "signature_move", "carried_by", "form_ledger",
                          "icon_family", "palette", "type_scale", "signature_proof",
-                         "motif_generates")
+                         "motif_generates", "style_pick")
+        # `style_pick` — the TOPIC-adapted look choice (references/design-by-topic.md): the preset or
+        # bespoke register chosen for the SUBJECT's domain, the nearest rival it beat + the one clause,
+        # and the domain cliché it avoided. It exists because the look was keyed on PURPOSE only and a
+        # tech deck defaulted to the dark_tech/synthwave cliché the domain map warns against. On a
+        # LOCKED look (provided/registered template or a Mode-A mimic) the look is not domain-picked —
+        # write `"style_pick": "n/a — <locked: template | mimic | provided>"` (a non-empty string
+        # passes, exactly like a `logo plan: n/a — …` line).
         # THE RESTRAINT CARVE — built on the escape the skill ALREADY documents, not a new one.
         # agents/slide-design.md: under a *conservative* dial (user-requested or purpose-defaulted for a
         # sober defense / regulatory / status deck) "the risk is OPTIONAL: take a modest, restrained

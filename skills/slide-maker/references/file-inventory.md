@@ -39,7 +39,7 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   once in the shared references and nothing reported any of them — the build crashes at the
   reader's desk, not in CI. Exit 0 clean / 1 findings / 2 could not run. Runs in CI.
 - `check_design_contracts.py` — the DESIGN stack's index guard: every self-verify cross-reference in
-  the tree resolves to a real item, the `### Design self-verify (a–r)` header covers every item the
+  the tree resolves to a real item, the `### Design self-verify (a–s)` header covers every item the
   list actually defines (and its spelled-out count matches), the shared design thresholds agree
   across every file that states them (the ~40–50% form-family band, the two-consecutive-card rule),
   `references/checkpoint-convention.md` carries every line SKILL.md says it OWNS, and every

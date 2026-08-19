@@ -20,8 +20,10 @@ intuition, so the next deck's choice is as blind as the last one's. Report both 
 tier was derived rather than chosen. Then, as before: **`render_deck.py <deck>.pptx --gate-check` run and reported** (every hand-off gate, no render, under a second — run it whether or not the user wants the PDF, because the gates used to ride on `--deliverables` and that is a decline-able offer), the
 **`.deck-gates.json` written at the deck root** (the record `--deliverables` checks: critic verdict,
 the design plan's **boldness · signature_move · carried_by · form_ledger · icon_family · palette ·
-type_scale · signature_proof** — all eight (on `boldness: conservative` with a recorded
-`deliberately restrained:` move, `signature_proof` drops and the other seven still bind);
+type_scale · signature_proof · style_pick** — all nine (on `boldness: conservative` with a recorded
+`deliberately restrained:` move, `signature_proof` drops and the other eight still bind; `style_pick`
+is the TOPIC-adapted look choice — `<preset|bespoke> for <domain> · beat <rival> · anti-pick avoided:
+<cliché>`, or `n/a — <locked look>`, `references/design-by-topic.md`);
 `icon_family` was added because a deck shipped with ZERO icons through every automated gate,
 `palette` after contrast failures inside one deck, and `type_scale`/`signature_proof` because
 they had been gated on the Codex path only — and the provenance pass's
