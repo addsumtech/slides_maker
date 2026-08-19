@@ -81,7 +81,10 @@ be reconstructed post-hoc at the delivery gate.
    `codex_delivery_gate.py` and `render_deck.py --gate-check` require it, so produce it from the
    contest up front rather than by failing the gate. A bespoke register from
    `references/bespoke-registers.md` (adapt, never transplant) beats every preset when the subject
-   has a visual world of its own.
+   has a visual world of its own. **On the GENERATE-A-TEMPLATE (image-tool) branch the SAME contest
+   runs** — it shortlists the 3 generated styles and its ANTI-PICK/CLICHÉ GUARD governs the generated
+   HERO's art-direction (no reflex neon/HUD sci-fi hero for "AI/tech", no green-globe for climate;
+   `references/image-generation.md` CLICHÉ GUARD). `style_pick` is required on that branch too.
    Build and render the THREE anchor slides before the rest, as the normal anchor-proof rule requires
    (signature · the densest planned page · the key data/conclusion page — SKILL.md Step 4). One build
    script, one render call; `design_plan.signature_proof` is the role-bearing list both gates check.

@@ -245,9 +245,12 @@ TEMPLATE = {
         # the domain cliché it avoided (the CLICHÉ GUARD — no reflex dark_tech/synthwave for
         # "AI/tech"). On a locked look write "n/a - <template | mimic | provided>". This scaffold
         # carries it so a Codex agent produces it from the domain contest UP FRONT, not by failing
-        # the gate.
-        "style_pick": "<preset|bespoke> for <domain> - beat <nearest rival> because <clause> - "
-                      "anti-pick avoided: <the domain cliché>",
+        # the gate. On the GENERATE-A-TEMPLATE (image-tool) branch the SAME contest runs and the
+        # anti-pick is the IMAGE HERO cliché — no reflex neon/HUD sci-fi hero for "AI/tech", no
+        # green-globe for climate (references/image-generation.md + generated-template.md CLICHÉ GUARD);
+        # write e.g. "<generated register> for <domain> - anti-pick avoided: neon-sci-fi hero".
+        "style_pick": "<preset|bespoke|generated register> for <domain> - beat <nearest rival> because "
+                      "<clause> - anti-pick avoided: <the domain cliché / image hero cliché>",
         # A motif that only RECURS is an ornament with a schedule. Three things it makes besides
         # itself; `page` takes `none - <reason>` because a deck with no page whose geometry the
         # idea could own must not invent one to fill this field.

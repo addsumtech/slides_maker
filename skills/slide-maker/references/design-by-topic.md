@@ -10,6 +10,17 @@ generated identity); it is the thing that makes a template **topic-adapted** rat
 slide-maker's 18 presets — `scripts/presets.py`. On the design-a-clean-one branch it feeds the direction
 gate's preset slots; on a generated-template branch it feeds the style shortlist.)*
 
+🔴 **This file governs the IMAGE-GEN branch too, not only presets.** When Q1 = "generate a template with
+an image tool", run this same contest to shortlist the 3 generated styles (`generated-template.md`), and
+— just as important — **the ANTI-PICK and the CLICHÉ GUARD apply to the generated HERO's art-direction**:
+a domain map row's anti-pick names the *image cliché* to avoid (AI/ML → anti `synthwave`/`dark_tech`
+**= no neon/HUD sci-fi hero**; climate → anti `terminal`/`dark_tech` **= no cold green-globe render**;
+Chinese-culture → **not ink-wash-by-reflex on every topic**). The domain is chosen once; whether it is
+realised as a preset, a bespoke register, or a generated plate, the register family and its anti-pick
+are the same, and the pick is recorded as `design_plan.style_pick` on every branch. The image cliché is
+owned in full by `references/image-generation.md` (CLICHÉ GUARD); this file supplies the per-domain
+anti-pick it reasons from.
+
 ## How to use it — a ranked contest, not a lookup
 
 1. **Read the subject's DOMAIN** off the approved content (its thesis, its objects, its audience) — not

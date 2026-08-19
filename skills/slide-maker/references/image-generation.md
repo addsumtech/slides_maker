@@ -65,6 +65,23 @@ could sit on *any* slide) is decoration that *makes no sense* against the conten
 name, in one phrase, what the image shows about THIS slide's point.** If you can't — or if the same
 image could drop onto an unrelated slide without anyone noticing — it's not topical; use a real asset,
 a native diagram/chart, or plain whitespace instead. Put the slide's actual subject into the prompt.
+
+🔴 **CLICHÉ GUARD — topical is necessary but NOT sufficient: also avoid the DOMAIN STEREOTYPE.** The
+test above catches *generic filler* (an image that could sit on **any** slide). A **cliché** is the
+opposite trap and fails just as hard: an image that IS on-topic but is the reflex, stereotyped picture
+of the domain. The canonical one is **electric-blue neon / glowing HUD / circuit-board for anything
+"AI / tech"** — the exact glossy-sci-fi slop this skill bans (it is *topical* to "AI", which is why the
+generic-filler test waves it through); others are a full-screen gradient-orb mesh for every SaaS
+launch, a lightbulb for "ideas", a handshake for "partnership", gears for "engineering", a glowing
+brain for "intelligence". This applies to the generated **art-direction** exactly as it applies to a
+preset: **`references/design-by-topic.md` names the ANTI-PICK per domain, and the CLICHÉ GUARD there
+governs the generated hero too** — reason from the SPECIFIC subject, not the umbrella domain (an
+AI-method deck's hero is *the method made visible*, not a neon cityscape; a climate deck's is the real
+landscape, not a green globe). Test: *would this hero fit ANY deck in the same domain?* If yes, it is
+the cliché — re-art-direct from what makes THIS subject specific, and record the pick as
+`design_plan.style_pick` (`… · anti-pick avoided: <the image cliché>`, the same field the preset
+branch fills).
+
 And when the slide's title or source language is **figurative** (a metaphor, an idiom, a rhetorical
 image), the default is to **resolve it to the UNDERLYING concept first** — this resolution happens
 BEFORE the referent classification below, and the resolved concept gets a *native* visualization of

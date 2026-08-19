@@ -113,7 +113,17 @@ later in the normal interview):
   This gate is about **STYLE, chosen for the TOPIC + CONTENT**: pick the **3 best-fit named styles for
   what this deck is actually about** from the **Style library** at the end of this file, and make them
   **deliberately DIVERSE** — three different visual *languages* (e.g. Swiss vs Manga vs Glassmorphism;
-  Ink-wash vs Blueprint vs Claymorphism), never three moods of one language. For each candidate,
+  Ink-wash vs Blueprint vs Claymorphism), never three moods of one language.
+  🔴 **Shortlist by the TOPIC-DOMAIN contest, not by reflex — `references/design-by-topic.md` governs
+  the generated branch too** (its parenthetical says so): read the domain → apt styles → **ANTI-PICK**,
+  apply the guardrail vetoes and the **CLICHÉ GUARD** (never reflex a neon/HUD sci-fi hero for "AI/tech",
+  a gradient-orb mesh for every SaaS, ink-wash for every "Chinese" topic), then let the 3 candidates be
+  the apt registers — at least one may be a **bespoke register invented for the subject**
+  (`references/bespoke-registers.md`), the image analogue of the clean branch's bespoke direction. And
+  the anti-pick applies to the generated **hero art-direction** itself (`image-generation.md` CLICHÉ
+  GUARD), not just the style name. **Record the pick as `design_plan.style_pick`** — `<the generated
+  register> for <domain> · beat <nearest rival> · anti-pick avoided: <the image cliché>` — the same
+  required field every other branch fills (the hand-off gate checks it here too). For each candidate,
   **GENERATE 1 real template image (2 for the front-runner) in that style, on this topic** — a
   text-free hero/cover-grade plate with a calm title zone, exactly what the winner's cover will be —
   then compose **ONE self-contained HTML gallery** (the images beside the file, one `<img>` card per

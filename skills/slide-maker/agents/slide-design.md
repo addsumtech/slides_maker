@@ -670,7 +670,10 @@ fall and stage each built slide FULLY (think SMART, not by quota):
 - **A content plate only where it helps the audience UNDERSTAND or feel the content** — a concept clearer
   *shown than told*, the real thing they should picture, or section atmosphere. Name in one phrase **what
   it DEPICTS about that slide's point** — it must be **highly topical**, not a generic gradient/orb that
-  could sit on any slide. **Propose, don't assume it ships.** A content plate is NOT a header (that's
+  could sit on any slide. 🔴 **And topical is not enough — dodge the DOMAIN CLICHÉ too** (`image-generation.md`
+  CLICHÉ GUARD + `design-by-topic.md`'s per-domain anti-pick): a neon/HUD sci-fi hero for "AI/tech", a
+  green globe for climate, ink-wash-by-reflex for a Chinese topic are *on-topic yet stereotyped* — the
+  generated art-direction obeys the same anti-pick as a preset, and the choice is recorded in `style pick:`. **Propose, don't assume it ships.** A content plate is NOT a header (that's
   `title_bar`/`editorial_header`'s job); never where evidence belongs (figures/charts/screenshots/logos
   stay real). Plan `fit` (usually `contain`) so the subject stays whole; for real subjects, note the
   facts the generator gets wrong (scale/count/colour/arrangement) so the prompt states them and the
