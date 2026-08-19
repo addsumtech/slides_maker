@@ -9,6 +9,53 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+## [5.0.0] — 2026-08-19
+
+A design-intelligence milestone: the look is now chosen for the SUBJECT, the design plan is
+built from rendered evidence rather than prose, and a deck can be held for being measurably
+*safe*, not only measurably *same*. Several checkpoints and floors that were advisory prose
+became gate artifacts, and every new contract is mirrored on the Codex delivery path.
+
+### Added
+- **Topic-adapted look selection.** `references/design-by-topic.md` — a topic-DOMAIN → apt-preset →
+  **ANTI-PICK** map (adapted from `slides-to-video`'s style contest to the 18 presets), the guardrail
+  vetoes, and a **CLICHÉ GUARD** (never reflex `dark_tech`/`synthwave` for "AI/tech", `terminal` for
+  every dev deck). A required **`design_plan.style_pick`** field records the pick + the rival it beat +
+  the domain cliché avoided, enforced on BOTH gate paths (`render_deck.py --gate-check` and
+  `codex_delivery_gate.py`). `references/bespoke-registers.md` — a growing, open-ended library of
+  verified invented registers to ADAPT, with a hand-off write-back. The whole contest — anti-pick,
+  cliché guard, `style_pick` — extends to the **generate-a-template (image) branch** and governs the
+  generated HERO's art-direction (no neon/HUD-for-AI hero), so preset, bespoke, and generated plates
+  obey one topic-domain choice.
+- **Direction-gate STRUCTURE gate** (`directions_diversity.py`): at most ONE motif-less colourway —
+  the branch is 3 real styles (preset DNA and/or a bespoke register) + 1 colour-scheme option, closing
+  the "the options were just different colours" set that passed every pairwise divergence test.
+- **The Step-2 MATERIAL PROBE.** Step 2 opens by BUILDING one real signature slide in the invented
+  register, rendering it, and looking — before any of the design plan is written; recorded as
+  `design_plan.material_probe`.
+- **Timidity counterweight.** A `TEMPLATE-BOUND` lint and a hand-off TIMIDITY gate — a deck can now be
+  held for being measurably SAFE at a `bold`/`experimental` dial (the mirror of the sameness gates),
+  measured on DRAWN AREA, with the same counterweight on the Codex path.
+- **Icons are the DEFAULT on categorical content** — a HIGH-bar, classified waiver to skip, wired into
+  the design gate and the Codex evidence record.
+- `deckkit.loop_between` — an edge-docked U-loop between two blocks.
+
+### Changed
+- **The post-build REVIEW question moved to AFTER the first clean render** — an informed cost decision
+  with the deck visible, not a blind one at Step 0; the actor-critic loop gained a LOOP BREAKER that
+  binds (a numbers-only re-edit of a stuck slide is refused, not scolded).
+- **Checkpoints and floors became gate ARTIFACTS, not prose.** Step 1's content checkpoint + arc
+  competition, the **Step-2 design checkpoint on EVERY branch**, and the no-source web-research floors
+  (`coverage:` / `lifecycle:` / `provenance:`) now land in `.deck-gates.json` / the Codex evidence file
+  and are re-scored at hand-off; the render self-check and a tamper-proof critic record are artifacts too.
+- **Step 0.0b ensures the toolchain up front** so a missing dependency surfaces before the build, not
+  mid-critic; the hand-off gate reports every failure in one run; the fan-out (build-shape) decision is
+  recorded.
+
+### Fixed
+- `CONNECTOR_IN_BOX` now catches centre-docked axis-aligned & elbow connectors.
+- Portability pass so the release's contracts hold on Codex / Kimi / any host.
+
 ## [4.9.0] — 2026-08-15
 
 ### Added
