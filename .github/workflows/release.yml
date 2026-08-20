@@ -1,0 +1,54 @@
+name: release
+
+# Create a GitHub Release when a version tag is pushed. A pushed tag is NOT a Release
+# on its own (the Releases page only lists Release objects), so before this workflow every
+# release had to be made by hand with `gh release create` — and a tag pushed without it
+# looked like "the release is missing / delayed". This closes that gap: push `vX.Y.Z` and
+# the Release is created from that version's CHANGELOG section.
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write   # needed to create the Release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create the Release from the tag's CHANGELOG section
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          VER="${TAG#v}"
+
+          # Idempotent: if the Release already exists (e.g. it was created by hand), do nothing.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists — nothing to do."
+            exit 0
+          fi
+
+          # Pull this version's section out of CHANGELOG.md (between "## [X.Y.Z]" and the next "## [").
+          NOTES="$(awk -v ver="$VER" '
+            $0 ~ "^## \\[" ver "\\]" {f=1; next}
+            f && /^## \[/ {exit}
+            f {print}
+          ' CHANGELOG.md)"
+
+          if [ -n "${NOTES//[[:space:]]/}" ]; then
+            { printf '%s\n' "$NOTES"
+              printf '\n**Full changelog:** https://github.com/%s/blob/main/CHANGELOG.md\n' "$GITHUB_REPOSITORY"
+            } > /tmp/notes.md
+            gh release create "$TAG" --title "$TAG" --notes-file /tmp/notes.md --verify-tag
+          else
+            # No CHANGELOG section for this version — fall back to GitHub's auto-generated notes
+            # rather than shipping an empty release.
+            echo "No CHANGELOG section for $VER; using auto-generated notes."
+            gh release create "$TAG" --title "$TAG" --generate-notes --verify-tag
+          fi
