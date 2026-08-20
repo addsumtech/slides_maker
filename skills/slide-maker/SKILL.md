@@ -2441,6 +2441,11 @@ This joined the file because the arc was the one Step-1/2 decision whose verdict
 *conversation* while every other one reached this record — and the Codex path had already been
 binding it), the design plan's
 `boldness` / `signature_move` / `carried_by` / `form_ledger` / `icon_family` / `palette` /
+**`style_pick`** (the TOPIC-adapted look choice — `<preset|bespoke|generated register> for <domain> ·
+beat <nearest rival> because <clause> · anti-pick avoided: <the domain / image cliché>`, or `n/a —
+<locked template | mimic | provided>`; run the ranked contest in `references/design-by-topic.md`
+(domain → apt presets → ANTI-PICK + CLICHÉ GUARD) so the look fits the SUBJECT, not a reflex — it
+governs the design-a-clean, bespoke, AND generate-a-template branches alike) /
 **`motif_generates`** (background · markers · one page whose geometry IS the motif — a motif that
 only recurs is an ornament with a schedule; carved out, like `signature_proof`, under a
 `conservative` dial with a recorded `deliberately restrained:` move) /
