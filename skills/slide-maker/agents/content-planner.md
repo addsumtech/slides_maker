@@ -489,7 +489,25 @@ guessing it — one object per candidate, all seven fields required:
 
 `shape` is a closed list (`--template` prints it; pick the nearest and put any nuance in the
 one-clause reason). `roles` is the §4 role vocabulary and is **open** — an unrecognised role is
-accepted, not refused, and only reported so a typo stays visible. `evidence` is claim-ledger ids:
+accepted, not refused, and only reported so a typo stays visible.
+
+🔴 **A TEACHING deck picks from the instructional shapes, not from the argument ones.**
+`--template` prints them in two groups. The argue/report group (`evidence-build`,
+`contribution-first`, `recommendation-first`, …) was for a long time the *whole* list, so a lecture
+had to relabel itself `evidence-build` or `chronological` to pass the gate at all — and the
+checkpoint's `arc gate:` line then recorded a shape the deck was not. The instructional group is
+`concept-example-check` · `misconception-first` · `worked-example` · `prerequisite-chain` ·
+`spiral`, with roles to match (`objective`, `prerequisite`, `concept`, `worked-example`,
+`misconception`, `counterexample`, `practice`, `check`, `recap`). This is what
+`references/design-by-purpose.md` → *Teaching / lecture* already asks for in the design half — an
+objectives slide, a **concept → example → check** rhythm, a recap — and the content vocabulary now
+names the same beats.
+**On an instructional shape, two required fields read differently**, and the field NAMES do not
+change (renaming them per shape would fork the record): `objection` is the learner's
+**misconception** ("students think undersampling always loses information"), and `closing_ask` is
+the **capability** they leave with ("you can predict when aliasing appears"), never a decision the
+room makes. Divergence for a lecture is real divergence — concept-first vs misconception-first
+teach the same material in genuinely different orders and leave different evidence on the floor. `evidence` is claim-ledger ids:
 **which evidence an arc leaves on the floor is most of what distinguishes it**, so a candidate set
 where every list is empty is refused outright.
 

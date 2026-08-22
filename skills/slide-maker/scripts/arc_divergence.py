@@ -73,7 +73,29 @@ _SHAPES = (
     "contribution-first",    # the research claim up front, the work as its support
     "chronological",         # the story in the order it happened
     "survey",                # a landscape with no single climax
+    # --- INSTRUCTIONAL shapes ---------------------------------------------------------------
+    # The nine above are all shapes of an ARGUMENT or a REPORT, and the closed list therefore
+    # refused a lecture outright: `concept-example-check` and `misconception-first` were rejected
+    # at read time, so a teaching deck had to relabel itself `evidence-build` or `chronological`
+    # to get through the gate — and the `arc gate:` line then recorded a shape the deck was not.
+    # That is not a niche: `design-by-purpose.md` prescribes a "concept -> example -> check"
+    # rhythm for Teaching/lecture by name, and the skill's own description lists teaching as a
+    # first-class purpose. The design side named a structure the content vocabulary could not.
+    "concept-example-check",  # teach — state the idea, work an example, check understanding
+    "misconception-first",    # teach — open on what the room already believes wrongly, break it
+    "worked-example",         # teach — one problem solved end-to-end, the theory falls out of it
+    "prerequisite-chain",     # teach — build strictly on what was established one beat earlier
+    "spiral",                 # teach — the same idea three times at increasing depth
 )
+
+# Shapes whose "objection" is a learner's MISCONCEPTION and whose "closing_ask" is a capability
+# ("you can now predict when aliasing appears"), not a decision. The fields keep their names —
+# renaming them per shape would fork the record format — but the report says which reading applies,
+# so a planner filling them for a lecture is not being asked to invent a boardroom objection.
+_TEACHING_SHAPES = frozenset((
+    "concept-example-check", "misconception-first", "worked-example",
+    "prerequisite-chain", "spiral",
+))
 
 # The role vocabulary of `agents/content-planner.md` §3, plus the structural rows that are excluded
 # from the order axis (a cover is not a beat in the argument).
@@ -89,7 +111,14 @@ _SHAPES = (
 # listed BESIDE the two halves rather than instead of them: a planner may write either the joint
 # role or one side of it, and neither spelling should read as undocumented.
 _ROLES = ("hook", "problem", "diagnosis", "framework", "idea", "framework-idea", "method",
-          "evidence", "case-study", "comparison", "roadmap", "conclusion", "call-to-action")
+          "evidence", "case-study", "comparison", "roadmap", "conclusion", "call-to-action",
+          # Instructional roles. The list is open, so these were always *accepted* — but an
+          # undocumented role is one nobody reaches for, and a lecture's beats were nowhere in
+          # the vocabulary a planner reads. `design-by-purpose.md` already asks Teaching decks
+          # for an objectives slide, a concept -> example -> check rhythm and a recap; these are
+          # the names for those beats.
+          "objective", "prerequisite", "concept", "worked-example", "misconception",
+          "counterexample", "practice", "check", "recap")
 _STRUCTURAL = ("cover", "agenda", "divider", "closing", "section", "thanks", "qa")
 
 _CJK_CLASS = "぀-ヿ㐀-䶿一-鿿豈-﫿가-힯"
@@ -279,7 +308,14 @@ def main():
     a = ap.parse_args()
     if a.template:
         print(json.dumps(TEMPLATE, indent=2, ensure_ascii=False))
-        print("\n# shapes: " + " | ".join(_SHAPES), file=sys.stderr)
+        arg = [s for s in _SHAPES if s not in _TEACHING_SHAPES]
+        print("\n# shapes (argue/report): " + " | ".join(arg), file=sys.stderr)
+        print("# shapes (teach):        " + " | ".join(sorted(_TEACHING_SHAPES)), file=sys.stderr)
+        print("#   on a TEACH shape, read two fields differently: `objection` is the learner's "
+              "MISCONCEPTION,\n#   and `closing_ask` is the CAPABILITY they leave with "
+              "(\"you can predict when aliasing appears\"),\n#   not a decision the room makes. "
+              "The field names stay the same so the record format does not fork.",
+              file=sys.stderr)
         print("# roles:  " + " | ".join(_ROLES) + "   (open list — others are accepted)",
               file=sys.stderr)
         print("# structural roles are ignored by the order axis: " + " | ".join(_STRUCTURAL),
