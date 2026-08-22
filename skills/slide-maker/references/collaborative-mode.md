@@ -105,7 +105,7 @@ direction*; the single real render confirms *fidelity*.
    direction's `style.py` later, so there's **one source of truth** and no HTML→pptx drift. Write the
    2–4 directions to a `directions.json` in a disposable `_directions/` subfolder of the deck folder.
 3. 🔴 **Check the divergence mechanically BEFORE building the link:**
-   `python scripts/directions_diversity.py directions.json`. Exit 2 means EITHER a pair matched on
+   `python3 scripts/directions_diversity.py directions.json`. Exit 2 means EITHER a pair matched on
    ≥3 of the four axes, OR the set contains no bespoke direction (at least one candidate must be a
    register invented for THIS topic, carrying its own `cover_motif`/`ambient_motif` — see
    `references/interview-protocol.md` Q1(c)). Read the output; `--json` separates `flagged` from
@@ -113,7 +113,7 @@ direction*; the single real render confirms *fidelity*.
    `direction gate:` line. This is not distrust of the pick; it is that the agent writing the three
    directions and the agent judging their difference are the same mind, and that mind's failure
    mode is confident, well-argued sameness.
-4. Build the **one comparison link** with `python scripts/archetypes_html.py
+4. Build the **one comparison link** with `python3 scripts/archetypes_html.py
    directions.json _directions/directions.html "Deck Title"`. It renders the **same four
    archetype slides per direction** — cover, bullets+callout, diagram pipeline, data/figure
    — into a single self-contained HTML page: same content, only the style differs, so the

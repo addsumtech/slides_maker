@@ -4732,8 +4732,9 @@ def content_slide(prs, layout_idx, title_txt, size=23, footer="", date="",
 
     NOTE: layout_idx and placeholder types are template-specific — confirm them by
     inspecting the template once (inspect_template.py) and save them to the template's
-    profile.md in the active template registry, e.g. ~/.codex/slide-templates/<name>/
-    for Codex or ~/.claude/slide-templates/<name>/ for Claude Code."""
+    profile.md in the active template registry — resolve its root with scripts/registry.py
+    (~/.claude/ or ~/.codex/slide-templates/<name>/, else host-neutral
+    ~/.slide-maker/slide-templates/<name>/); do not hardcode a two-host list here."""
     s = prs.slides.add_slide(prs.slide_layouts[layout_idx])
     tf = s.shapes.title.text_frame; tf.text = title_txt
     for r in tf.paragraphs[0].runs:
@@ -9201,7 +9202,7 @@ def device_frame(slide, path, x, y, w, h, *, chrome="browser", url=None, accent=
     return (ix, iy, iw, ih)
 
 
-if __name__ == "__main__":          # `python deckkit.py deck.pptx` → lint a finished file
+if __name__ == "__main__":          # `python3 deckkit.py deck.pptx` → lint a finished file
     import sys
     if len(sys.argv) > 1:
         lint_layout(Presentation(sys.argv[1]))

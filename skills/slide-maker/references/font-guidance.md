@@ -73,6 +73,10 @@ unless the brand font is essential.
 1. The glyph is missing in the (substituted) font — for CJK, set `EAFONT`; for special
    symbols, prefer `equation_png` or a Unicode-complete font (Arial).
 2. The font name isn't installed on the render machine — `bash scripts/check_env.sh`
+   <!-- python3-sweep-exempt: native Windows ships the `python` launcher and frequently has no
+        `python3` at all, so this is the one place in the skill where bare `python` is correct.
+        Everywhere else it is a bug — /usr/bin/python does not exist on macOS, so an agent
+        copying a documented `python scripts/…` line verbatim gets "command not found". -->
    (or `python scripts/check_env.py` on native Windows) lists what's available; switch
    `FONT`/`MONO`/`EQFONT` to a present font and rebuild.
 3. Re-render and confirm. At hand-off, tell the user which fonts the deck depends on.

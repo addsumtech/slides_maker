@@ -134,7 +134,7 @@ def preview_direction(style_path, out_path, name=""):
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print("usage: python archetypes.py STYLE.py OUT.pptx [name]")
+        print("usage: python3 archetypes.py STYLE.py OUT.pptx [name]")
         raise SystemExit(2)
     style_path, out = sys.argv[1], sys.argv[2]
     nm = sys.argv[3] if len(sys.argv) > 3 else ""

@@ -6,7 +6,7 @@ Cross-platform: works on macOS, Linux, WSL, and NATIVE Windows (PowerShell / cmd
 no shell required. The .sh wrapper just delegates here.
 
 Usage:
-    python render_deck.py /path/to/deck.pptx [out_dir]
+    python3 render_deck.py /path/to/deck.pptx [out_dir]
     # Windows:  python scripts\\render_deck.py C:\\path\\deck.pptx
 Output: <out_dir>/slide01.png, slide02.png, ...   (default out_dir: ./render)
 
@@ -2883,7 +2883,7 @@ def main(argv):
             "--surface (each mode also spelled --mode=NAME). The output dir is POSITIONAL: "
             "render_deck.py <deck>.pptx [out_dir]." + _hint)
     if not argv:
-        die("usage: python render_deck.py /path/to/deck.pptx [out_dir] "
+        die("usage: python3 render_deck.py /path/to/deck.pptx [out_dir] "
             "[--fast | --slides N[,M]] [--deliverables] [--gate-check]")
     pptx = argv[0]
     out = argv[1] if len(argv) > 1 else "./render"

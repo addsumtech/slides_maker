@@ -86,7 +86,18 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   flip-through preview** — off by default, so an in-progress deck never accumulates stale copies;
   run it at hand-off once the user confirms the deck is final (PNGs always stay in `render/`); finds LibreOffice cross-platform
   or set `SOFFICE` (`.sh` is a shim). `check_env.py` — preflight if a render fails. `inspect_template.py`
-  — a template's layouts/placeholders/logos. `requirements.txt` / `install_skill.py` — deps / installer.
+  — a template's layouts/placeholders/logos. `requirements.txt` — deps.
+  `install_skill.py` — the installer: `--target all` (default) writes into EVERY runtime skill
+  root that exists (`~/.codex/skills/` · `~/.claude/skills/` · the host-neutral
+  `~/.agents/skills/` that `npx skills add` uses). It covered only the first two once, and the
+  third silently sat a whole major version behind while `check_version.py` correctly announced
+  the newer release nobody could apply to it.
+  `registry.py` — resolves the user's template + `taste.md` **Registry** root on ANY runtime
+  (Claude/Codex roots keep priority, host-neutral `~/.slide-maker/slide-templates/` otherwise,
+  `$SLIDE_MAKER_REGISTRY` overrides). 🔴 Run it instead of naming a root from memory — a
+  hardcoded two-host list left every other runtime with no registry at all, so Q1(a) lost the
+  saved-templates option and `taste.md` was never read or written, silently. `check_env.py`
+  prints the resolved root on every preflight.
 - **`sigs.py`** — one lookup, many helpers: exact signature + docstring head for every named deckkit/designed_charts helper, plus the run-tuple and RGBColor call-shape contracts. `--search TERM` to find one, `--list` for all, `--full` for whole docstrings. Use it BEFORE writing a build script; reading deckkit.py one function at a time costs a round-trip per question.
 - `lint_deck.py` — deterministic **render-time** layout lint and complement to deckkit's build-time
   `lint_layout`: re-checks geometry on the final file (off-slide overflow · block/image collision
@@ -201,5 +212,5 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
 
 `codex-runtime.md` is the **Codex-only** execution adapter: visible design proof, typography/icon/component evidence, and a focused critic-pair gate. It never changes Claude Code's workflow.
 
-**Registry** (NOT part of the skill): `~/.codex/slide-templates/` (Codex) · `~/.claude/slide-templates/` (Claude Code) — the user's saved templates, **plus `taste.md` at the root** (the portable taste profile — schema + read/write protocol in `references/user-taste.md`); read for choices, write new `profile.md`s to the active host — a freshly-designed look saved at hand-off carries the vetted critic `strengths` distilled into its profile's Notes. Empty for a new user (no templates, no `taste.md` — silently skipped; no write until the first durable signal).
+**Registry** (NOT part of the skill): resolved by `scripts/registry.py` — `~/.claude/slide-templates/` (Claude Code) · `~/.codex/slide-templates/` (Codex) · `~/.slide-maker/slide-templates/` (host-neutral: every other runtime, and the fallback that guarantees a write target exists) · `$SLIDE_MAKER_REGISTRY` overrides all three — the user's saved templates, **plus `taste.md` at the root** (the portable taste profile — schema + read/write protocol in `references/user-taste.md`); read for choices, write new `profile.md`s to the active host — a freshly-designed look saved at hand-off carries the vetted critic `strengths` distilled into its profile's Notes. Empty for a new user (no templates, no `taste.md` — silently skipped; no write until the first durable signal).
 | `scripts/contact_sheet.py` | Montage every `slideNN.png` onto ONE image so a critic can survey a whole deck in a single look, then open individual slides at full size only where needed. Narrows the COST of a review round, never its scope. |

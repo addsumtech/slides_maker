@@ -145,6 +145,64 @@ def main():
         check("...and is labelled as the override, not as a host",
               registry.root_for_write()[0] == "env")
 
+    print("\n== degrades LOUDLY, never fatally, on a root it cannot read ==")
+    # macOS TCC revokes access to home subdirectories mid-session (it does this to ~/Downloads
+    # and ~/Desktop routinely). A PermissionError escaping the Step-0 interview would kill a
+    # whole build over a directory the deck does not need — but reporting "no templates" for
+    # a permission wall would be the silent lie this resolver exists to end.
+    with fake_home(CLAUDE, templates=[(CLAUDE, "walled")]) as home:
+        (home / CLAUDE).chmod(0o000)
+        try:
+            import io
+            import contextlib
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err):
+                tpls = registry.list_templates()
+                taste = registry.taste_file()
+            check("an unreadable root does not crash list_templates", tpls == [], tpls)
+            check("...nor taste_file", taste is None)
+            check("...and it SAYS so on stderr, distinguishing absent from empty",
+                  "cannot read" in err.getvalue() and "NOT the same as empty" in err.getvalue(),
+                  err.getvalue()[:120])
+        finally:
+            (home / CLAUDE).chmod(0o755)
+
+    print("\n== a root that exists but is a FILE is not a root ==")
+    with fake_home() as home:
+        (home / ".claude").mkdir(parents=True)
+        (home / CLAUDE).write_text("not a directory", encoding="utf-8")
+        check("a file where the root should be falls through to the neutral root",
+              registry.root_for_write()[0] == registry.NEUTRAL, registry.root_for_write())
+
+    print("\n== the override is anchored, not cwd-relative ==")
+    # This skill changes directory constantly (build here, render there, lint elsewhere). A
+    # relative override would make taste.md follow the cwd and scatter partial copies of the
+    # user's profile across every deck folder they ever built in, each looking complete.
+    with fake_home(CLAUDE) as home:
+        (home / "rel").mkdir()
+        os.environ[registry.ENV_OVERRIDE] = "rel"
+        cwd = os.getcwd()
+        try:
+            os.chdir(home)
+            root = registry.root_for_write()[1]
+            check("a relative $SLIDE_MAKER_REGISTRY becomes an ABSOLUTE path",
+                  root.is_absolute(), root)
+            check("...anchored to HOME, the same anchor as every sibling root",
+                  root == home / "rel", root)
+            os.chdir(cwd)
+            check("...and does not move when the working directory does",
+                  registry.root_for_write()[1] == root, registry.root_for_write()[1])
+        finally:
+            os.chdir(cwd)
+            os.environ.pop(registry.ENV_OVERRIDE, None)
+    # An ABSOLUTE override must be passed through untouched — no symlink rewriting. macOS
+    # resolves /var to /private/var, which would make this root print and compare differently
+    # from the three that sit under HOME.
+    with fake_home(CLAUDE, env="myreg") as home:
+        got = registry.root_for_write()[1]
+        check("an absolute override is used verbatim, not symlink-resolved",
+              got == home / "myreg", got)
+
     print("\n== the docs point at the resolver, not at a hardcoded pair ==")
     # The prose is what an agent actually follows; a resolver nobody is told to run is the
     # same silent gap in a new place.

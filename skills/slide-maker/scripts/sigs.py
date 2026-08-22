@@ -321,6 +321,16 @@ def main(argv=None):
                 print(f"sigs: no helper named {n!r}"
                       + (f" — did you mean {', '.join(near)}?" if near else
                          " — check `--list` before you build it yourself"), file=sys.stderr)
+        # 🔴 The contracts print on the --example path TOO. They used to not, and that made
+        # --example a STRICTLY WORSE lookup than the plain one it was meant to shortcut:
+        # `sigs.py text` printed 68 lines including "RGBColor vs hex"; `sigs.py --example text`
+        # printed 9 and dropped every contract. Measured: a build script written from --example
+        # output died on `ValueError: assigned value must be type RGBColor` — one of the three
+        # contracts this block exists to state, withheld by the flag whose whole purpose is
+        # saving the round-trip that error then costs. A scaffold shows the SHAPE of one call;
+        # the contracts are what stop the call being wrong in a way no lint can see.
+        print("\n" + "─" * 78)
+        print(CONTRACTS)
         return 1 if miss else 0
 
     missing = []

@@ -5,7 +5,7 @@ slide's ON-SLIDE reading load (takeaway + content units) straight from the Conte
 "Per-slide content" markdown table, BEFORE the user approves it — so a blown word budget is a
 two-cell text edit at Step 1, not a slide split after design/build/render.
 
-    python scripts/plan_wordcount.py <content-plan.md> [--presented|--selfread|--textheavy|--surface]
+    python3 scripts/plan_wordcount.py <content-plan.md> [--presented|--selfread|--textheavy|--surface]
 
 Thresholds sit BELOW the render lint's warn lines, because plan words are a SUBSET of rendered
 words (design adds captions/labels): --presented warns > ~50 plan-words (nominal budget ~40;
@@ -31,7 +31,7 @@ def main(argv):
             mode = m
             break
     if not args:
-        print("usage: python plan_wordcount.py <content-plan.md> "
+        print("usage: python3 plan_wordcount.py <content-plan.md> "
               "[--presented|--selfread|--textheavy|--surface]")
         return 0
     try:

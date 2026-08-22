@@ -14,9 +14,9 @@ not PDF-specific. For a figure still inside a PDF, run extract_pdf.py first to g
 then crop here.
 
 THE LOOP (do this, don't skip the verify):
-  1. python crop_helper.py grid figure.png _grid.png          # ruler overlay
+  1. python3 crop_helper.py grid figure.png _grid.png          # ruler overlay
   2. Read _grid.png — read the crop box off the labelled lines (fractions or pixels).
-  3. python crop_helper.py crop figure.png out.png 0.05 0.1 0.62 0.95 --frac
+  3. python3 crop_helper.py crop figure.png out.png 0.05 0.1 0.62 0.95 --frac
   4. Read out.png — does it contain exactly the region you wanted, nothing clipped? If
      not, adjust the box and redo step 3. One or two iterations beats one blind guess.
 
@@ -26,9 +26,9 @@ slide. Don't crop one ragged rectangle — keep only the columns/rows that make 
 and reassemble them into a compact figure, preserving the header row and the row-label
 column. `panel` does this on a *regularly* spaced grid:
   # First overlay the cell indices and CHECK the lines land on real cell boundaries:
-  python crop_helper.py panel fig.png _idx.png --grid 5x10 --xpad 0.06 --ypad 0.05
+  python3 crop_helper.py panel fig.png _idx.png --grid 5x10 --xpad 0.06 --ypad 0.05
   # Then reassemble keeping the label col + header row + chosen content cols/rows:
-  python crop_helper.py panel fig.png out.png --grid 5x10 --xpad 0.06 --ypad 0.05 \
+  python3 crop_helper.py panel fig.png out.png --grid 5x10 --xpad 0.06 --ypad 0.05 \
          --keep-cols 0,1,3,9 --keep-rows 0,2,3
   --grid RxC      content area is R rows x C columns of equal cells (excl. the margins below)
   --xpad f        width fraction of the left ROW-LABEL margin (0 if none); always kept

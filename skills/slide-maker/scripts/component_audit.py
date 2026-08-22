@@ -16,7 +16,7 @@ that blocked on "you hand-rolled a bar row" would delete the best page of the de
 it. So this tool reports and directs attention; it never vetoes. What it CAN state as fact is the
 usage ratio and the specific component whose geometry the cluster matches.
 
-CLI:  python component_audit.py <build_script.py> [<deck.pptx>] [--json]
+CLI:  python3 component_audit.py <build_script.py> [<deck.pptx>] [--json]
 Exit: 0 = nothing to report · 2 = at least one cluster matches an unused component (advisory).
 """
 import argparse

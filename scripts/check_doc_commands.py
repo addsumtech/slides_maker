@@ -36,7 +36,8 @@ one-line lookback would silently fail to see its own carve. An unmarked exceptio
 carve is a decision someone wrote down rather than a pattern that silently re-accumulates.
 
 USAGE
-    python3 scripts/check_doc_commands.py          # exit 1 on any finding
+    python3 scripts/check_doc_commands.py             # exit 1 on any finding
+    python3 scripts/check_doc_commands.py --selftest  # prove the pattern still works, both ways
 """
 from __future__ import annotations
 
@@ -70,7 +71,52 @@ def scan(path: Path) -> list[tuple[int, str]]:
     return out
 
 
+# (text, should_match, why). Both directions, because a pattern that stops catching the real
+# thing fails silently — the repo would just go green forever — and one that fires on
+# `python-pptx` or a ```python fence teaches everyone to ignore the output, which is worse than
+# having no check at all.
+SELFTEST = [
+    ("python foo.py", True, "the bug itself"),
+    ("python3 foo.py", False, "already correct"),
+    ("python3.11 foo.py", False, "a versioned interpreter"),
+    ("python-pptx is a dependency", False, "the package name, not an invocation"),
+    ("```python", False, "a markdown code fence"),
+    ("run the python script", False, "prose"),
+    ("python  scripts/a.py", True, "two spaces still invokes"),
+    ("python ~/x/foo.py", True, "tilde path"),
+    ("python ./foo.py", True, "dot-slash path"),
+    ("python $DIR/foo.py", True, "env var inside the path"),
+    ("/usr/bin/python foo.py", True, "an absolute interpreter that does not exist on macOS"),
+    ("python -m pytest", False, "no .py to invoke"),
+    ("mypython foo.py", False, "python as the suffix of another word"),
+    ("python_helper.py", False, "an underscore name, not an invocation"),
+    ('"python foo.py"', True, "inside quotes"),
+    ("python .pyc", False, "not a .py"),
+    ("CPython foo.py", False, "a different word entirely"),
+]
+
+
+def selftest() -> int:
+    bad = 0
+    for text, want, why in SELFTEST:
+        got = bool(BARE_PYTHON.search(text))
+        if got != want:
+            bad += 1
+            print(f"  FAIL {text!r}  want={want} got={got}  ({why})")
+    caught = sum(1 for _, w, _ in SELFTEST if w)
+    if bad:
+        print(f"\ncheck_doc_commands selftest: {bad} disagreement(s) — the pattern no longer "
+              f"means what this file says it means. Fix it before trusting a clean run.")
+        return 1
+    print(f"selftest ok — {caught} real invocation shape(s) caught, "
+          f"{len(SELFTEST) - caught} lookalike(s) ignored")
+    return 0
+
+
 def main() -> int:
+    if "--selftest" in sys.argv[1:]:
+        return selftest()
+
     targets: list[Path] = []
     for pat in ("SKILL.md", "references/**/*.md", "agents/*.md", "scripts/*.py", "scripts/*.sh"):
         targets.extend(sorted(SKILL.glob(pat)))

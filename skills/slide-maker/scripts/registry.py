@@ -67,17 +67,58 @@ def all_roots() -> list[tuple[str, Path]]:
     """Every candidate root, in priority order — existing or not."""
     out: list[tuple[str, Path]] = []
     override = os.environ.get(ENV_OVERRIDE, "").strip()
-    if override:
-        out.append(("env", Path(override).expanduser()))
     home = Path.home()
+    if override:
+        # A relative override must be anchored, because this skill changes directory constantly
+        # — it builds in a deck folder, renders in another, lints from a third. Left relative,
+        # `taste.md` would follow the cwd and the user's profile would fan out into every deck
+        # directory they ever built in, each copy looking like a complete registry.
+        #
+        # Anchor to HOME, NOT via .resolve(): resolve() is still cwd-relative for a relative
+        # input (it only makes it absolute *now*), and on macOS it also rewrites /var -> /private/var
+        # by following symlinks, so this root would print and compare differently from every
+        # sibling root. HOME is where the other three live, so the anchor is consistent rather
+        # than invented — and it is said out loud, because a config silently reinterpreted is
+        # exactly the class of quiet wrongness this resolver replaced.
+        env_path = Path(override).expanduser()
+        if not env_path.is_absolute():
+            env_path = home / env_path
+            print(f"registry: ${ENV_OVERRIDE}={override!r} is a relative path, which cannot mean "
+                  f"one fixed place in a tool that changes directory — anchoring it to your home "
+                  f"as {env_path}. Set an absolute path to choose somewhere else.",
+                  file=sys.stderr)
+        out.append(("env", env_path))
     out.extend((name, home / rel) for name, rel in _ROOTS)
     return out
+
+
+def _unreadable(path: Path, what: str, exc: OSError) -> None:
+    """Say it out loud, on stderr, and carry on.
+
+    An unreadable registry must not abort a build. macOS TCC can revoke access to a home
+    subdirectory mid-session (it does this to ~/Downloads and ~/Desktop routinely), and a
+    PermissionError raised out of the Step-0 interview would kill a deck over a directory the
+    deck does not need. But it must not be SILENT either: "no templates registered" and
+    "your templates are behind a permission wall" are different facts, and only one of them
+    means the user genuinely has no footprint.
+    """
+    print(f"registry: cannot read {what} at {path} ({exc.__class__.__name__}) — "
+          f"treating it as ABSENT for this run, which is NOT the same as empty. "
+          f"Fix the permissions if you expected saved templates or a taste profile here.",
+          file=sys.stderr)
 
 
 def roots_for_read() -> list[tuple[str, Path]]:
     """Roots that actually exist, priority order. May be empty — a brand-new user has none,
     and that is a legitimate state: never manufacture a profile for someone with no footprint."""
-    return [(n, p) for n, p in all_roots() if p.is_dir()]
+    out = []
+    for n, p in all_roots():
+        try:
+            if p.is_dir():
+                out.append((n, p))
+        except OSError as exc:                       # unreadable parent, dead symlink, long path
+            _unreadable(p, "registry root", exc)
+    return out
 
 
 def root_for_write() -> tuple[str, Path]:
@@ -102,8 +143,11 @@ def taste_file() -> Path | None:
     """The `taste.md` to READ, or None when the user has no footprint yet."""
     for _, root in roots_for_read():
         f = root / "taste.md"
-        if f.is_file() and f.read_text(encoding="utf-8", errors="ignore").strip():
-            return f
+        try:
+            if f.is_file() and f.read_text(encoding="utf-8", errors="ignore").strip():
+                return f
+        except OSError as exc:
+            _unreadable(f, "taste.md", exc)
     return None
 
 
@@ -112,8 +156,18 @@ def list_templates() -> list[tuple[str, Path]]:
     higher-priority root winning — so Q1(a) can state a real N on any runtime."""
     seen: dict[str, Path] = {}
     for _, root in roots_for_read():
-        for sub in sorted(p for p in root.iterdir() if p.is_dir()):
-            if (sub / "profile.md").is_file() and sub.name not in seen:
+        try:
+            subs = sorted(p for p in root.iterdir() if p.is_dir())
+        except OSError as exc:
+            _unreadable(root, "registry root", exc)
+            continue
+        for sub in subs:
+            try:
+                registered = (sub / "profile.md").is_file()
+            except OSError as exc:
+                _unreadable(sub, "template folder", exc)
+                continue
+            if registered and sub.name not in seen:
                 seen[sub.name] = sub
     return list(seen.items())
 

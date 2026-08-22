@@ -619,7 +619,7 @@ agent decides form, layout, icons, and motion downstream. For each slide record:
     just body) — and rewrite anything that reads machine-translated or press-release-generic. A
     deck whose text smells AI-generated (esp. 中文 translationese) is **not ready**; this pass is
     the actor-side guarantee the critic's Voice check then independently confirms.
-  - **Deterministic budget check — run `python scripts/plan_wordcount.py <plan.md> --<mode>` after
+  - **Deterministic budget check — run `python3 scripts/plan_wordcount.py <plan.md> --<mode>` after
     the VOICE PASS, before emitting the plan** (write the per-slide table to a **temp/scratch
     file** for the pass — never into the deliverable folder, where plan files are forbidden)
     (advisory; it counts takeaway + content units per

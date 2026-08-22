@@ -6,7 +6,7 @@ public helpers (~68 of 138 — the positional/tuple colour contracts and geometr
 actually broken), so a passing run is a regression guard, not proof every helper works. Run after
 editing deckkit/designed_charts:
 
-    python scripts/smoke_deckkit.py     # exits non-zero on any failure
+    python3 scripts/smoke_deckkit.py     # exits non-zero on any failure
 """
 import os
 import sys

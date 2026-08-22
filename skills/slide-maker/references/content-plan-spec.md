@@ -53,7 +53,7 @@
   faithfully in a single pass — is NOT read front-to-back: a faked linear read either overflows or,
   worse, *fits* and goes shallow, then invents plausible-but-absent points. Run the planner's
   **Long-source mode** (`agents/content-planner.md` §1): (1) **classify size deterministically** —
-  PDF/EPUB → `python scripts/extract_pdf.py map <src>` (CJK-correct load + token estimate); `.docx`/
+  PDF/EPUB → `python3 scripts/extract_pdf.py map <src>` (CJK-correct load + token estimate); `.docx`/
   `.md`/Google-Doc/web → convert to PDF first or use a `wc`-style count (**never raw `wc -w` on CJK
   text — it undercounts ~6–30×; count CJK chars ÷ 2 + Latin words, or convert to PDF and let `map`
   do it**); a code repo → size the file

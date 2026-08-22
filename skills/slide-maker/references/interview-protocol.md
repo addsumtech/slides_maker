@@ -7,8 +7,13 @@ domain — and roll past work up into ONE option, drilling in only on pick (Q1's
 pattern), so personalization never crowds out the general choices.** Any *suggestions* you pre-fill into a question — candidate topics, example
 subjects, registered templates — must come from what this user has actually given you:
 materials they provided (now or in a past session) or their saved registry / profile /
-memory. In Codex, prefer the registry root `~/.codex/slide-templates/`; in Claude Code,
-prefer `~/.claude/slide-templates/`. If only one exists, use it. **Read `taste.md` at that
+memory. 🔴 **Resolve the registry root by RUNNING `python3 scripts/registry.py`, not from
+memory** — one call prints every existing root, the templates registered across them, and the
+write target. `~/.claude/slide-templates/` and `~/.codex/slide-templates/` keep priority;
+anything else (Kimi · Gemini · Cursor · Coze · an API caller) falls back to the host-neutral
+`~/.slide-maker/slide-templates/`, which exists because a hardcoded two-host list left every
+other runtime with no root at all — and therefore, silently, with no saved templates to offer
+at Q1(a) and no taste profile. **Read `taste.md` at that
 same registry root in the same pass** — the user's portable taste profile (schema +
 read/write protocol: `references/user-taste.md`): its DIALS/NO-GOs seed *delegated* picks
 under an auto directive, and its LOOK HISTORY supplies the substance of the two-stage
@@ -82,10 +87,12 @@ image-backed styles), then **skip the direction gate** (the look is already deci
 **The count rule, by branch: no image tool → 4 offered; with image tool → 3 offered.** The
 four template choices:
 
-1. **Template / brand.** First **check this user's registered templates** — the
-   host-appropriate registry (`~/.codex/slide-templates/` in Codex, `~/.claude/slide-templates/`
-   in Claude Code; if only one exists, use it). Each subfolder is one template they've used before,
-   with a `profile.md`.
+1. **Template / brand.** First **check this user's registered templates** — run
+   `python3 scripts/registry.py`, which prints the count and the names across every root that
+   exists on THIS runtime (Claude/Codex roots first, host-neutral `~/.slide-maker/slide-templates/`
+   otherwise). Each subfolder is one template they've used before, with a `profile.md`. Reading
+   the number off the tool rather than guessing it is what makes option (a)'s "N registered"
+   true on a runtime this file never enumerated.
    **⚠️ WHENEVER the template question is asked, it MUST present ALL FOUR standard choices — do not
    silently drop one (especially the image-tool option, which is easy to forget). The question itself
    may be skipped only per the named carves: the current request already answers Q1, or the tiny-ask
@@ -227,7 +234,7 @@ four template choices:
          corporate look", a Q4 mimic), that axis LEAVES the divergence set and the ≥2 rule re-applies
          to the ones that remain. A constraint relocates variance; it never licenses convergence.
        - 🔴 **Run the mechanical check before you post the link:**
-         `python scripts/directions_diversity.py directions.json`. It scores four axes — **palette
+         `python3 scripts/directions_diversity.py directions.json`. It scores four axes — **palette
          mood** (a light/dark flip counts as a palette divergence, so mode is folded in) · **type
          pairing** · **density** · **composition** — and flags any pair matching on ≥3 of the 4. It ALSO
          fails a set with no bespoke direction (above). **Exit 2 is not an auto-kill, and it now

@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Preflight: verify the slide-maker toolchain. Run once on a new machine:
 
-    python check_env.py            # Windows / anywhere
+    python3 check_env.py           # mac / Linux / WSL — and anywhere with a python3 on PATH
+    # python3-sweep-exempt: native Windows ships the `python` launcher and often no `python3`.
+    python check_env.py            # native Windows (PowerShell / cmd) ONLY
     bash scripts/check_env.sh      # mac / Linux (delegates here)
 
 Reports what's installed and the exact command to fix anything missing.
@@ -213,6 +215,27 @@ def check_save_locations():
               "write, before building".format(", ".join(l for l, _ in cands)))
 
 
+def check_registry():
+    """Report the resolved template/taste registry root.
+
+    Never a failure — an empty registry is the correct state for a new user, and inventing one
+    would break `user-taste.md`'s empty-file rule. It is here to be SEEN: the root used to be
+    prose naming two hosts, so on any third runtime it resolved to nothing and Q1(a) silently
+    lost the saved-templates option with no gate anywhere reporting it. One printed line at
+    Step 0 is the cheapest place for that to stop being invisible.
+    """
+    try:
+        import registry  # same directory as this script
+    except Exception as exc:                                    # never fail the env check on it
+        print(f"  [--]  template registry: unresolved ({exc.__class__.__name__})")
+        return
+    name, root = registry.root_for_write()
+    n = len(registry.list_templates())
+    taste = "taste.md" if registry.taste_file() else "no taste.md yet"
+    state = "ok" if root.is_dir() else "--"
+    print(f"  [{state}]  template registry ({name}): {root} — {n} template(s), {taste}")
+
+
 def main():
     print("slide-maker environment check:")
     print("  install python deps: {}".format(PIP_REQ))
@@ -265,6 +288,7 @@ def main():
               "else https://www.libreoffice.org/download")
 
     check_save_locations()
+    check_registry()
 
 
 if __name__ == "__main__":

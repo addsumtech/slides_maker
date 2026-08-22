@@ -28,7 +28,7 @@ The 4 archetype slides per direction mirror archetypes.py exactly — cover, bul
 diagram pipeline, data/figure — so the HTML comparison is apples-to-apples with what ships.
 
 USAGE
-  python archetypes_html.py directions.json out.html ["Deck Title"]
+  python3 archetypes_html.py directions.json out.html ["Deck Title"]
 
 `directions.json` is a list of 2–4 direction objects. Each object (only `name` required;
 sensible defaults fill the rest):
@@ -846,7 +846,7 @@ def build_directions_html(directions, out_path, deck_title="Your Deck"):
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print("usage: python archetypes_html.py directions.json out.html [\"Deck Title\"]")
+        print("usage: python3 archetypes_html.py directions.json out.html [\"Deck Title\"]")
         raise SystemExit(2)
     with open(sys.argv[1], encoding="utf-8") as f:
         dirs = json.load(f)

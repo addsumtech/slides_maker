@@ -281,7 +281,7 @@ atmosphere beats that deserve them.
    plate (or reuse just those headings), then run:
 
    ```bash
-   python scripts/image_prompts.py image-slides.md ~/Downloads/<deck>/assets/generated \
+   python3 scripts/image_prompts.py image-slides.md ~/Downloads/<deck>/assets/generated \
      --deck-size 16:9 \
      --style "<deck art direction>" \
      --calm-zone "left third / right third / top band / none"
@@ -468,7 +468,7 @@ references it.
 CLI is installed and logged in (check `which codex`; `codex login` once), shell out to it — it calls
 Codex's hosted `image_generation` tool on the user's subscription. **No key.** Just proceed.
 ```bash
-python scripts/generate_images_codex.py \
+python3 scripts/generate_images_codex.py \
   ~/Downloads/<deck>/assets/generated/image_prompt_manifest.json \
   --orientation landscape        # hint 16:9 for hero/divider plates
 ```
@@ -504,7 +504,7 @@ request a key when native imagegen or `codex` is present.
 # never paste a literal after the `=` (that shape is what secret scanners flag, and a scanner
 # cannot tell your placeholder from a real credential).
 export OPENAI_API_KEY="$(cat ~/.openai_key)"
-python scripts/generate_images_openai.py \
+python3 scripts/generate_images_openai.py \
   ~/Downloads/<deck>/assets/generated/image_prompt_manifest.json \
   --model gpt-image-2 --size 2048x1152 --quality medium
 ```

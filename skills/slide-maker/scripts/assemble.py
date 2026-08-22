@@ -131,7 +131,7 @@ def preview_section(section_path, out_path, *, template=None,
 if __name__ == "__main__":
     # tiny CLI: assemble.py OUT.pptx section_a.py section_b.py ...
     if len(sys.argv) < 3:
-        print("usage: python assemble.py OUT.pptx section_1.py [section_2.py ...]")
+        print("usage: python3 assemble.py OUT.pptx section_1.py [section_2.py ...]")
         raise SystemExit(2)
     out, sections = sys.argv[1], sys.argv[2:]
     n = build_deck(out, sections)

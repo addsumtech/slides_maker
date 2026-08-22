@@ -5,7 +5,7 @@ A presenter often rehearses from the notes alone, away from the slides. This rea
 slide's notes (deckkit.speaker_notes writes them) and emits a clean, numbered text file.
 
 Usage:
-    python export_notes.py deck.pptx [notes.txt]
+    python3 export_notes.py deck.pptx [notes.txt]
     # default out: <deck>.notes.txt  beside the deck
 """
 import sys
@@ -70,7 +70,7 @@ def export_notes(pptx_path, out_path=None):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("usage: python export_notes.py deck.pptx [notes.txt]")
+        print("usage: python3 export_notes.py deck.pptx [notes.txt]")
         raise SystemExit(2)
     out, n = export_notes(sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else None)
     print(f"exported notes for {n} slides -> {out}")

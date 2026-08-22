@@ -160,7 +160,8 @@ cite it as the check's evidence — the user's own words fix which dial moved an
 
 ## The taste write-back (step 6 close) — durable dials only
 The `user-dials:` ledger above is the per-deck observation stream; **`taste.md` at the
-registry root** (`~/.claude/slide-templates/` · `~/.codex/slide-templates/`) is the durable
+registry root** (resolve it with `python3 scripts/registry.py` — `~/.claude/slide-templates/` ·
+`~/.codex/slide-templates/` · host-neutral `~/.slide-maker/slide-templates/`) is the durable
 store; the **Step-6 close is the only bridge** — full schema + protocol in
 `references/user-taste.md`. Three named actions (the Step-6 close checklist in SKILL.md is
 the gate — a write not on it didn't happen):

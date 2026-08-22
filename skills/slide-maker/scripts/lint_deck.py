@@ -4,7 +4,7 @@
 critic can miss (a callout tucked a few px under a panel/image, a block hanging off the slide,
 content colliding with the footer).
 
-    python scripts/lint_deck.py deck.pptx
+    python3 scripts/lint_deck.py deck.pptx
 
 Run it right after building, BEFORE/with the critic loop — it's a cheap, deterministic safety net
 for the "no block/text/image overlap" rule, not a replacement for the visual critic (which judges
@@ -3549,7 +3549,7 @@ if __name__ == "__main__":
               "--briefing floor. See references/file-inventory.md.", file=sys.stderr)
         sys.exit(2)
     if not args:
-        print("usage: python lint_deck.py <deck.pptx> [--selfread] [--briefing] [--surface] [--textheavy] "
+        print("usage: python3 lint_deck.py <deck.pptx> [--selfread] [--briefing] [--surface] [--textheavy] "
               "[--static] [--renders dir] [--gates .deck-gates.json] [--json out.json]"); sys.exit(2)
     # A RECORDED delivery wins over the CLI, exactly as in render_deck.py --gate-check: it travels
     # with the deck, so it cannot be forgotten between one invocation and the next. The precedence

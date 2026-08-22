@@ -113,7 +113,7 @@ be reconstructed post-hoc at the delivery gate.
    literals decides that, not your intention. Re-derive the slide's layout by measurement
    (`fit_text`, measured ink, a form helper) and it runs; if a constant genuinely is the fix,
    `--nudge-again "<why>"` runs it and records the reason. A runtime that hand-runs
-   `python build.py` then `lint_deck.py` gets neither the round-trip saving nor the guard, and the
+   `python3 build.py` then `lint_deck.py` gets neither the round-trip saving nor the guard, and the
    uncapped nudge loop is the one loop in this pipeline with no other ceiling.
 4. **Make component decisions auditable.** Run `component_audit.py --json` after the build. For every
    detected cluster, use one of the audit's suggested components in the mapped slide builder or record

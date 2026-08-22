@@ -23,25 +23,25 @@ PREFERRED — auto-detect & crop figures straight from the paper (no manual coor
 no asking the user for originals). It anchors on captions ("Figure N" / "Fig. N" / "Table N"),
 grows into the adjacent graphics bounded by body text + neighbouring captions, then snaps to
 content. This is the *primary* path; the manual page/crop commands below are the fallback.
-    python extract_pdf.py figures paper.pdf            # list every detected figure + checks
-    python extract_pdf.py figures paper.pdf 4          # just page 4
-    python extract_pdf.py figure  paper.pdf 2 fig.png  # render detected figure #2 (auto-trimmed)
-    python extract_pdf.py autofig paper.pdf figs/      # render ALL detected figures to figs/
+    python3 extract_pdf.py figures paper.pdf            # list every detected figure + checks
+    python3 extract_pdf.py figures paper.pdf 4          # just page 4
+    python3 extract_pdf.py figure  paper.pdf 2 fig.png  # render detected figure #2 (auto-trimmed)
+    python3 extract_pdf.py autofig paper.pdf figs/      # render ALL detected figures to figs/
 `figures` prints each box with cov= (graphics coverage), bodyov= (body-text overlap) and a
 "⚠ CHECK" flag when a crop looks suspect (low coverage, body/foreign-caption bleed) — ALWAYS
 view a rendered crop before using it, and for a flagged one fall back to the manual loop.
 
 Quick start (manual fallback):
-    python extract_pdf.py info paper.pdf                      # page count + sizes
-    python extract_pdf.py page paper.pdf 4 fig.png --dpi 300  # page 4 (1-based) -> PNG
-    python extract_pdf.py crop paper.pdf 4 fig.png 60 90 540 360
-    python extract_pdf.py crop paper.pdf 4 fig.png 0.1 0.12 0.95 0.55 --frac
-    python extract_pdf.py images paper.pdf 4 figdir/          # embedded images -> figdir/
+    python3 extract_pdf.py info paper.pdf                      # page count + sizes
+    python3 extract_pdf.py page paper.pdf 4 fig.png --dpi 300  # page 4 (1-based) -> PNG
+    python3 extract_pdf.py crop paper.pdf 4 fig.png 60 90 540 360
+    python3 extract_pdf.py crop paper.pdf 4 fig.png 0.1 0.12 0.95 0.55 --frac
+    python3 extract_pdf.py images paper.pdf 4 figdir/          # embedded images -> figdir/
 
 LONG-SOURCE MODE (a book / very long PDF — map before you read, then read the parts that matter):
-    python extract_pdf.py map      book.pdf                   # structural skeleton: TOC + word-density
-    python extract_pdf.py headings book.pdf 1 400            # reconstruct a skeleton for a NO-TOC book
-    python extract_pdf.py text     book.pdf 40 72 ch3.txt    # dump pages 40-72 for a chunked read
+    python3 extract_pdf.py map      book.pdf                   # structural skeleton: TOC + word-density
+    python3 extract_pdf.py headings book.pdf 1 400            # reconstruct a skeleton for a NO-TOC book
+    python3 extract_pdf.py text     book.pdf 40 72 ch3.txt    # dump pages 40-72 for a chunked read
 `map` dumps NO body text (triage only: page + CJK-aware load/token estimate + the author's own
 TOC/bookmarks + a binned density strip, and a ⚠ if the doc is scanned/non-PDF); `headings` emits
 candidate heading lines by font-size outlier when there's no embedded TOC; `text` dumps a 1-indexed

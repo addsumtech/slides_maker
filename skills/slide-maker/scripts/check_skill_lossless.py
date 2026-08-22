@@ -13,13 +13,13 @@ paragraph is fine. Changing what it says is not — that shows up here as a miss
 has to be justified in the allowlist rather than slipping through.
 
     # against the merge base, in CI
-    python scripts/check_skill_lossless.py --baseline main:skills/slide-maker/SKILL.md
+    python3 scripts/check_skill_lossless.py --baseline main:skills/slide-maker/SKILL.md
 
     # against a file on disk
-    python scripts/check_skill_lossless.py --baseline /tmp/SKILL.md.orig
+    python3 scripts/check_skill_lossless.py --baseline /tmp/SKILL.md.orig
 
     # show every line that went missing, not just the first 40
-    python scripts/check_skill_lossless.py --baseline main:... --report missing.md
+    python3 scripts/check_skill_lossless.py --baseline main:... --report missing.md
 
 Exit 0 = every baseline line accounted for. Exit 1 = content was lost; the report names it.
 
@@ -32,7 +32,7 @@ lose a word.
 Deliberate deletions are legitimate (a genuinely redundant sentence, a rule superseded by a lint
 check). Record them in the allowlist with a reason and they stop failing the build:
 
-    python scripts/check_skill_lossless.py --baseline main:... --write-allow allow.json
+    python3 scripts/check_skill_lossless.py --baseline main:... --write-allow allow.json
 
 Allowlist entries key on a hash of the normalized line, so editing the line invalidates its
 waiver and it comes back for review. That is the point: a waiver covers one specific sentence

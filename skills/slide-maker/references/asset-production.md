@@ -82,7 +82,7 @@ generated or sourced. Fold in the user's design edits, then set up the canvas (S
     for an original** (you may *offer* to use one if they have it, but you can get a clean,
     precise crop yourself). The primary tool is `scripts/extract_pdf.py`'s auto-detection,
     which anchors on captions and snaps to the figure's real extent:
-    `python extract_pdf.py figures paper.pdf` lists every detected figure (with `cov=`/`bodyov=`
+    `python3 extract_pdf.py figures paper.pdf` lists every detected figure (with `cov=`/`bodyov=`
     checks, a `fit=<mag>x→<pt>` legibility number, and a `⚠ CHECK` flag on suspect ones); `extract_pdf.py figure paper.pdf <idx> out.png`
     renders one (auto-trimmed); `autofig paper.pdf figs/` dumps them all. **Always view a
     rendered crop before using it**, and for a `⚠`-flagged one (dense multi-figure pages can

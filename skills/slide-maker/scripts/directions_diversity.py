@@ -28,7 +28,7 @@ The divergence axes measure whether directions differ FROM EACH OTHER; this meas
 carry real style DNA AT ALL. Same escape as the others: keep it and record why on the
 `direction gate:` line.
 
-CLI:  python directions_diversity.py directions.json [--json]
+CLI:  python3 directions_diversity.py directions.json [--json]
 Exit: 0 = diverse, has a bespoke, and >=3 slots carry real style DNA
       2 = >=1 too-similar pair, OR no bespoke, OR >1 motif-less colourway (all printed)
       1 = unreadable input.

@@ -1633,7 +1633,7 @@ those here; read its report instead).
 10. **Hand-off ready**: font/portability deps + per-slide click order noted for the hand-off; open questions carried, not dropped; output dir resolved + announced (`~/Downloads/<deck>/` or the user's stated choice); image licenses/credits noted (sourced photos).
 11. **Titles bound to takeaways**: every content slide's title IS the plan's takeaway or a compression keeping its subject + verb + claim; **list the slide numbers** of compressions and of noted exceptions (bare topic labels are fine on cover/divider/agenda/closing; a named exception covers: Mode A "match its title treatment", a registered user template with a fixed title register, or a slide whose planned takeaway demonstrably lands as its named hero / `insight_banner` / `takeaway_rail` — note which element carries it). Emitting the slide numbers, not just a ✓, is what forces the per-slide comparison.
 12. **Form diversity & frame fill — EMIT THE TALLY**: **first run
-    `python scripts/component_audit.py build_<deck>.py <deck>.pptx` and paste its two summary lines
+    `python3 scripts/component_audit.py build_<deck>.py <deck>.pptx` and paste its two summary lines
     into the tick** (it takes ~50ms and reads the finished file, so it costs nothing and cannot be
     guessed). It states one fact — how many of the form components it can name a guarantee for this
     deck actually called (deckkit's wider form catalogue is ~59) — and points at clusters whose
@@ -1728,7 +1728,7 @@ sandbox even though `check_env.py` passes; in that case rerun only the render co
 unsandboxed execution, then continue the normal render -> lint -> critic loop. This is an environment
 permission issue, not evidence that the deck is malformed.
 
-**Then run the layout lint** — `python scripts/lint_deck.py <deck.pptx>` (add `--json out.json` for a structured copy of findings + the stats block — hand THAT to dispatched critics instead of re-parsing console text; the lint auto-reads the `./render` PNGs beside the deck to add the colour/value-pacing row + the `FLAT RHYTHM` warn, or pass `--renders <dir>` — silently skipped when no renders exist, so it never changes a render-less run). `render_deck.sh` also emits `render/thumb_first.png` + `thumb_last.png` (~240px) for the critic's poster test. The build-time
+**Then run the layout lint** — `python3 scripts/lint_deck.py <deck.pptx>` (add `--json out.json` for a structured copy of findings + the stats block — hand THAT to dispatched critics instead of re-parsing console text; the lint auto-reads the `./render` PNGs beside the deck to add the colour/value-pacing row + the `FLAT RHYTHM` warn, or pass `--renders <dir>` — silently skipped when no renders exist, so it never changes a render-less run). `render_deck.sh` also emits `render/thumb_first.png` + `thumb_last.png` (~240px) for the critic's poster test. The build-time
 `dk.lint_layout` (Step 4) already cleared the pure-geometry faults *before* this render; **lint_deck.py
 is its render-time complement** — it re-checks geometry on the FINAL file and adds the faults that only
 the rendered/parsed deck reveals (which `lint_layout` deliberately leaves to it). A cheap, deterministic
@@ -2355,7 +2355,7 @@ self-contained: it references the `render/` PNGs by relative path, so move the t
 during the build, because a deck still being edited makes them stale immediately. Ask in one line
 ("want a PDF and a browser preview?"); on a yes — or once the user confirms this is the final
 version — run `bash scripts/render_deck.sh <deck.pptx> --deliverables` (or
-`python scripts/render_deck.py … --deliverables`), which parks both at the deck root beside the
+`python3 scripts/render_deck.py … --deliverables`), which parks both at the deck root beside the
 `.pptx`, and surface the two `file://` links then. **Re-run it after any later change** so the pair
 never lags the deck. If you added any forward-looking content (per the fidelity rule), call that
 out explicitly here so they can confirm it.

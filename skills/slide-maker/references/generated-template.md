@@ -373,8 +373,9 @@ them, and show both. The content slide is essential: it proves the blocks actual
     genuinely fits the template (palette, motifs, components consistent), whether **every interior
     page carries the shallow background** (none left flat), whether the **logo is present and
     consistently placed** where the deck calls for one, and that everything stays legible.
-- **Save the confirmed template to the registry** (`~/.codex/slide-templates/<name>/` in
-  Codex, or `~/.claude/slide-templates/<name>/` in Claude Code): the `style.py`, the
+- **Save the confirmed template to the registry** (`<root>/<name>/`, where `<root>` is what
+  `python3 scripts/registry.py` reports as the write target — Claude/Codex root if one exists,
+  host-neutral `~/.slide-maker/slide-templates/` on every other runtime): the `style.py`, the
   generated `assets/`, and a `profile.md` — so it's a reusable choice next time (it shows up
   under Q1's registered templates). **Under a per-deck auto directive the hero checkpoint was an
   FYI, not a confirmation — defer the save to Step 6's save-this-look offer (explicit yes

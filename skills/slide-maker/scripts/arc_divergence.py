@@ -47,8 +47,8 @@ The overlap threshold is a COARSE signal and is treated as one: the response to 
 kill, it is REDIVERGE-or-justify, and the justification is recorded on the `arc gate:` line of the
 content checkpoint. A false flag therefore costs one sentence; a missed collapse costs a rebuild.
 
-CLI:  python arc_divergence.py --template          # a fillable skeleton + the vocabularies
-      python arc_divergence.py arcs.json [--json]
+CLI:  python3 arc_divergence.py --template          # a fillable skeleton + the vocabularies
+      python3 arc_divergence.py arcs.json [--json]
 Exit: 0 = candidates diverge and none is a sketch · 2 = flagged (printed) · 1 = unreadable input.
 """
 import argparse

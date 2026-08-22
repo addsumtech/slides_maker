@@ -22,7 +22,7 @@ LICENSES (all permissive — no attribution required, but keep this note):
 check that icon's license and attribute when required.)
 
 USAGE
-  python icons.py tabler:rocket out.png --color "#1F5FA8" --px 160
+  python3 icons.py tabler:rocket out.png --color "#1F5FA8" --px 160
   # in a build script:
   from icons import icon_png
   p = icon_png("tabler:chart-bar", "assets/icons/chart.png", color="#1F5FA8", px=160)

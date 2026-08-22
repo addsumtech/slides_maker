@@ -68,6 +68,18 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: python scripts/check_versions.py
 
+      # A documented command must be runnable AS WRITTEN, and CI is the one place that could
+      # never notice this one: `actions/setup-python` puts a `python` on PATH, so 35 bare
+      # `python <script>.py` lines across SKILL.md, its references and the scripts' own printed
+      # usage strings all "worked" here — while /usr/bin/python does not exist on macOS at all.
+      # The reader that breaks on it is an agent copying the line verbatim, which is exactly the
+      # cross-runtime story this skill sells. Runs before the heavy jobs; needs nothing but git.
+      - name: Documented commands are runnable as written (python3, not python)
+        working-directory: ${{ github.workspace }}
+        run: |
+          python3 scripts/check_doc_commands.py --selftest
+          python3 scripts/check_doc_commands.py
+
       - name: Install system deps (LibreOffice, rsvg, CJK fonts)
         run: |
           sudo apt-get update -q
@@ -189,6 +201,20 @@ jobs:
       # memory, so one dead member cost the whole round. Measured — a critic panel lost its DESIGN
       # lens to a session limit while the CONTENT lens had already produced a full review that was
       # never written down, so validate_review --record had nothing to register.
+      # The template/taste registry root was prose naming exactly two hosts, repeated in six
+      # files and one docstring. On any third runtime (Kimi, Gemini, Cursor, Coze, an API
+      # caller) NEITHER root exists, so Q1(a) silently lost the saved-templates option and
+      # taste.md was never read or written -- with no lint, no gate and no message anywhere.
+      # The suite is mostly about the two silent halves: an unknown runtime must still get a
+      # write target, and an existing Claude/Codex install must NOT move (quietly relocating a
+      # user's saved templates would be a worse bug than the one being fixed).
+      - name: Registry roots (a runtime nobody enumerated still has a registry)
+        run: |
+          set -o pipefail
+          python tests/test_registry_roots.py | tee /tmp/registry.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/registry.log || {
+            echo "::error::registry-roots suite did not run to completion"; exit 1; }
+
       - name: Fan-out record (one dead agent costs one agent)
         run: |
           set -o pipefail
