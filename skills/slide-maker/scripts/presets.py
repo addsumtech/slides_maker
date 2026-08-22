@@ -359,6 +359,13 @@ def apply(name):
 
     Returns the preset so the caller can still read `surface` / `guard` / `image_prompt`, which
     stay prose on purpose — they are art direction, not geometry.
+
+    It also sets the GROUND. It did not, and that was the third half-application in a row: the
+    preset carried `bg`, `apply()` returned it, and NOTHING painted it. 8 of the 18 registers are
+    dark, so a caller doing exactly what this docstring said got the register's light ink on a
+    white canvas — measured on `dark_tech`, body text at 1.18:1, surfaced only by the render lint,
+    one build->render->diagnose round trip after the fact was already known. `set_ground` exists
+    because `apply()` runs before any slide does, so it cannot call `slide_background()` itself.
     """
     import deckkit as dk
     p = preset(name)
@@ -366,17 +373,52 @@ def apply(name):
                    font=p["font"], display=p["display"], mono=p["mono"],
                    eafont=p["ea"], eadisplay=p["ea_display"])
     dk.set_geometry(radius=p["radius"], rule_w=p["rule_w"])
+    dk.set_ground(ground(name))
     return p
+
+
+def ground(name):
+    """A preset's background as an RGBColor — the colour `apply()` hands to `deckkit.set_ground`."""
+    return preset(name)["bg"]
+
+
+_COLOUR_KEYS = ("bg", "ink", "muted")
+
+
+def _rgb(v):
+    """One colour, however the table wrote it -> RGBColor."""
+    if isinstance(v, RGBColor):
+        return v
+    if isinstance(v, (list, tuple)):
+        return RGBColor(*(int(c) for c in v))
+    h = str(v).lstrip("#")
+    return RGBColor(*(int(h[i:i + 2], 16) for i in (0, 2, 4)))
 
 
 def preset(name):
     """Return a COPY of the named preset dict (palette as RGBColor, fonts, surface + image-prompt
-    guidance). Raises KeyError on an unknown name — see names()."""
+    guidance). Raises KeyError on an unknown name — see names().
+
+    NORMALISES every colour, because the docstring's "palette as RGBColor" was not true. The table
+    is hand-written and the four registers added last — `bauhaus`, `midcentury`, `terminal`,
+    `synthwave` — wrote every colour as a plain `[r, g, b]` list while the first fourteen wrote
+    RGBColor. Nothing coerced them, so the documented usage
+
+        p = presets.apply("bauhaus"); dk.text(s, ..., [[(t, 13, p["accents"][0], True, False)]])
+
+    raised `ValueError: assigned value must be type RGBColor` on 4 of 18 registers and worked on
+    the other 14 — the worst shape for a bug, since it looks like the caller's mistake. `bg` had
+    the same split. Normalising HERE means the table stays writable in whichever notation suits
+    an entry and every consumer gets one type.
+    """
     if name not in PRESETS:
         raise KeyError(f"unknown preset '{name}'; choose from {list(PRESETS)}")
     p = PRESETS[name]
     out = dict(p)
-    out["accents"] = list(p["accents"])
+    out["accents"] = [_rgb(a) for a in p["accents"]]
+    for k in _COLOUR_KEYS:
+        if k in out:
+            out[k] = _rgb(out[k])
     return out
 
 

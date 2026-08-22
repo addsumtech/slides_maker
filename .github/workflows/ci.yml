@@ -208,6 +208,23 @@ jobs:
       # The suite is mostly about the two silent halves: an unknown runtime must still get a
       # write target, and an existing Claude/Codex install must NOT move (quietly relocating a
       # user's saved templates would be a worse bug than the one being fixed).
+      # A register has to reach the PIXELS, not just the palette. Measured before this suite:
+      # RULE_W_SCALE was read by hrule() and nothing else (1 of 181 public functions), node()
+      # read RADIUS_SCALE not at all, presets.apply() returned a `bg` it applied nowhere (8 of 18
+      # registers are dark), node()'s own two defaults contradicted each other on every dark
+      # register (paints WHITE, labels in DEEP = that register's LIGHT ink -> 1.09:1 with NO
+      # caller override), and the four registers added last stored colours as lists so the
+      # documented p["accents"][0] raised ValueError on 4 of 18. Nothing reported any of it: the
+      # sameness lint measures monotony WITHIN a deck, never fidelity to the register it chose,
+      # so a brutalist deck rendered with glassmorphism's geometry passed every gate. Asserted
+      # against the built PPTX, which is the level the defect lived at.
+      - name: Register expression (a preset must reach the pixels, not just the palette)
+        run: |
+          set -o pipefail
+          python tests/test_register_expression.py | tee /tmp/register.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/register.log || {
+            echo "::error::register-expression suite did not run to completion"; exit 1; }
+
       - name: Registry roots (a runtime nobody enumerated still has a registry)
         run: |
           set -o pipefail

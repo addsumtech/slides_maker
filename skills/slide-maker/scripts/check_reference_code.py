@@ -18,6 +18,7 @@ Exit 0 clean · 1 findings · 2 could not run (never silently "clean").
 from __future__ import annotations
 
 import argparse
+import builtins
 import ast
 import inspect
 import re
@@ -43,6 +44,48 @@ def md_files() -> list[Path]:
     out += sorted((SKILL / "references").glob("*.md"))
     out += sorted((SKILL / "agents").glob("*.md"))
     return [p for p in out if p.is_file()]
+
+
+# Helper names named in prose: `mute_for(bg)` or `dk.picture(...)`.
+PROSE_CALL = re.compile(r"`([a-z_][a-z0-9_]*)\(")
+DOTTED_CALL = re.compile(r"\b(?:dk|deckkit)\.([a-z_][a-z0-9_]*)\(")
+
+
+def check_contract_card(dk, findings: list[str], stats: dict) -> None:
+    """The CALL-SHAPE CONTRACTS block in `scripts/sigs.py` must name helpers that EXIST.
+
+    This checker's scope was SKILL.md + references/*.md + agents/*.md — every prose file except
+    the one whose entire job is stating correct call shapes. The contract card is a Python string
+    inside a script, so it fell outside, and it told authors for a long time to
+
+        "keep a token per ground and resolve by ground (`mute_for(bg)`, `on(fill)`)"
+
+    while NEITHER function existed in deckkit. Following the contract card verbatim raised
+    AttributeError. That is the same defect class this file was written for — a documented deckkit
+    call that does not resolve — reached through a file extension nobody thought to include.
+    """
+    try:
+        sys.path.insert(0, str(HERE))
+        import sigs
+    except Exception as exc:                       # never fail the whole run on an import
+        findings.append(f"scripts/sigs.py: NOT CHECKED -> {exc.__class__.__name__}: {exc}")
+        return
+    card = getattr(sigs, "CONTRACTS", "")
+    if not card:
+        findings.append("scripts/sigs.py: CONTRACTS is empty or renamed — the contract card is "
+                        "the highest-traffic call-shape documentation in the skill and it is now "
+                        "unchecked")
+        return
+    names = set(PROSE_CALL.findall(card)) | set(DOTTED_CALL.findall(card))
+    stats["contract_names"] = len(names)
+    for n in sorted(names):
+        if n.startswith("_") or hasattr(dk, n) or hasattr(builtins, n):
+            continue
+        findings.append(
+            f"scripts/sigs.py (CONTRACTS): UNRESOLVED HELPER -> `{n}()` is taught by the "
+            f"call-shape contract card but does not exist in deckkit. An author following the "
+            f"card verbatim gets AttributeError."
+        )
 
 
 def fence_spans(text: str):
@@ -155,11 +198,13 @@ def main() -> int:
     files = md_files()
     for p in files:
         check_file(p, dk, findings, stats)
+    check_contract_card(dk, findings, stats)
 
     if not args.quiet:
         print(
-            f"checked {len(files)} markdown file(s) · {stats['fences']} python fence(s) · "
-            f"{stats['calls']} deckkit call(s)"
+            f"checked {len(files)} markdown file(s) + the sigs.py contract card "
+            f"({stats.get('contract_names', 0)} helper name(s)) · {stats['fences']} python "
+            f"fence(s) · {stats['calls']} deckkit call(s)"
             + (f" · {stats['unparseable']} fence(s) unparseable (skipped)"
                if stats["unparseable"] else "")
         )

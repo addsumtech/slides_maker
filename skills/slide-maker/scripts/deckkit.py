@@ -155,6 +155,46 @@ def _legible_ink(bg, light=None, dark=None):
     return best
 
 
+def on(fill):
+    """The label ink that stays legible ON ``fill`` — the public name for ``_legible_ink``.
+
+    `sigs.py`'s CALL-SHAPE CONTRACTS has told authors for a long time to "keep a token per ground
+    and resolve by ground (`mute_for(bg)`, `on(fill)`), never by name" — and NEITHER function
+    existed. Following the contract card verbatim raised AttributeError. `check_reference_code.py`
+    resolves every deckkit call taught in the skill's prose against the real module, but its scope
+    is SKILL.md + references/*.md + agents/*.md, so the one file whose entire job is stating
+    correct call shapes was the one file outside the checker.
+
+        text(s, x, y, w, h, [[(label, 13, dk.on(card_fill), True, False)]])
+    """
+    return _legible_ink(_as_rgb(fill))
+
+
+def mute_for(bg, target=3.0):
+    """The muted/secondary ink for ``bg`` — the ground-resolved counterpart of ``MUTE``.
+
+    ``MUTE`` is a single token tuned for a light canvas; on a dark register the same grey measures
+    ~2-3:1 and the caption it was meant for goes quiet. This resolves a secondary ink from the
+    ground instead: it starts from the legible ink for ``bg`` and blends it back toward the ground
+    just far enough to read as secondary while still clearing ``target``.
+
+    ``target`` is 3.0 (the non-text / large-text floor) by default. Pass **4.5 for body-size
+    text** — a 9-10pt caption is body size, and a helper that guarantees only 3:1 for it just
+    moves the failure from "unreadable" to "warned about".
+
+        dk.text(s, x, y, w, h, [[(caption, 10, dk.mute_for(deck_bg, 4.5), False, False)]])
+    """
+    g = _as_rgb(bg)
+    ink = _legible_ink(g)
+    best = ink
+    for t in (0.25, 0.32, 0.4, 0.48):
+        cand = _blend(_as_rgbc(ink), _as_rgbc(g), t)
+        if contrast_ratio(cand, g) < target:
+            break
+        best = cand
+    return best
+
+
 def _darken_to(color, bg, target=4.5):
     """Darken ``color`` toward near-black — KEEPING its hue — until it clears ``target`` contrast on
     ``bg``. For a same-hue label on a light tint of its own accent (a swimlane header, a tinted chip)
@@ -416,6 +456,8 @@ RADIUS_SCALE = 1.0        # 0 = every corner square (brutalist · swiss · ink_w
                           # 1 = today; >1 = softer (memphis · midcentury "rounded organic shapes")
 RULE_W_SCALE = 1.0        # multiplies rule / divider / border weights. brutalist "THICK black
                           # rules"; blueprint + swiss + editorial + luxury "hairline"
+GROUND = None             # the deck's background colour; add_slide() paints it. None = paint
+                          # nothing (unchanged behaviour). Set via set_ground()/presets.apply().
 
 
 def set_geometry(*, radius=None, rule_w=None):
@@ -1129,7 +1171,14 @@ def box(slide, x, y, w, h, fill=None, line=None, line_w=1.0, round=False, corner
     elif fill is None: s.fill.background()
     else: s.fill.solid(); s.fill.fore_color.rgb = _as_rgb(fill)
     if line is None: s.line.fill.background()
-    else: s.line.color.rgb = _as_rgb(line); s.line.width = Pt(line_w)
+    # RULE_W_SCALE, resolved at CALL time like RADIUS_SCALE below. It used to be read by `hrule`
+    # and NOTHING else — 1 of 181 public functions — so a register's border weight reached its
+    # horizontal dividers and no card, node, tile or table rule anywhere. Measured: the same
+    # content in brutalist (rule_w 3.0), bauhaus (2.6) and swiss (0.6) produced byte-identical
+    # 1.4pt outlines. "THICK black rules/borders" is half of what makes brutalist look brutalist,
+    # and it was the half the library could not draw. No-op at the 1.0 default, so a deck that
+    # never calls set_geometry is unchanged.
+    else: s.line.color.rgb = _as_rgb(line); s.line.width = Pt(line_w * RULE_W_SCALE)
     s.shadow.inherit = False
     if t != MSO_SHAPE.RECTANGLE:
         adj = ((r / min(w, h)) if r is not None else 0.08) * RADIUS_SCALE
@@ -4800,9 +4849,36 @@ def slide_background(slide, color):
     return slide
 
 
+def set_ground(color):
+    """Set the deck's GROUND — the colour every later ``add_slide()`` paints itself.
+
+    The third structural token, beside ``set_palette`` (colour) and ``set_geometry`` (form).
+    ``presets.apply()`` could not carry a register's background because it runs ONCE, before any
+    slide exists, and ``slide_background()`` needs a slide. So every preset returned a ``bg`` that
+    nothing applied: 8 of the 18 registers are dark, and a caller who did exactly what
+    ``apply()``'s docstring said got the register's LIGHT ink on a white canvas. Measured on
+    ``dark_tech``: #E8EDF5 body text at 1.18:1, caught only by the render-time lint — one
+    build -> render -> diagnose round trip for a fact known before the first slide was added.
+
+    ``None`` (the default) paints nothing, so a deck that never calls this is unchanged, and a
+    deck that wants a per-slide ground still calls ``slide_background()`` directly — this only
+    supplies the default.
+    """
+    global GROUND
+    GROUND = None if color is None else _as_rgb(color)
+    return GROUND
+
+
 def add_slide(prs):
-    """Add a truly blank slide (layout 6) to draw on from scratch."""
-    return prs.slides.add_slide(prs.slide_layouts[6])
+    """Add a truly blank slide (layout 6) to draw on from scratch.
+
+    Paints the deck's ``GROUND`` (see ``set_ground`` / ``presets.apply``) when one is set, so a
+    dark register is dark from the first slide rather than from wherever the author remembered.
+    """
+    s = prs.slides.add_slide(prs.slide_layouts[6])
+    if GROUND is not None:
+        slide_background(s, GROUND)
+    return s
 
 
 def _slide_size(slide):
@@ -5638,7 +5714,7 @@ def highlight(s, size, base_c, accent_c, *, key_bold=True, font=None):
 
 
 def node(slide, x, y, w, h, label, *, shape="roundrect", fill=None, line=None, line_w=1.4,
-         tcolor=None, sub="", dashed=False, hub=False, accent=None):
+         tcolor=None, sub="", dashed=False, hub=False, accent=None, sub_font=None):
     """One diagram NODE (box/connector kit — the general architecture/flowchart builder).
     `shape`='roundrect'|'rect'|'pill'|'circle'|'diamond'|'parallelogram'|'cylinder' — the last
     three carry standard flowchart notation (diamond=decision, parallelogram=input/output,
@@ -5650,7 +5726,13 @@ def node(slide, x, y, w, h, label, *, shape="roundrect", fill=None, line=None, l
     connector() + the stroke-semantics convention (solid=required · dashed=optional ·
     dotted=feedback). Z-ORDER: assemble freeform diagrams in fixed order — region/group boundaries
     first, then ALL connectors, then nodes, then any floating labels — so shapes always sit above
-    lines (hub_spoke does this internally)."""
+    lines (hub_spoke does this internally).
+
+    REGISTER-AWARE: a roundrect node takes the deck's ``RADIUS_SCALE`` (``set_geometry(radius=0)``
+    squares it, for brutalist/swiss/ink_wash/blueprint) and its outline takes ``RULE_W_SCALE``.
+    ``sub`` is set in the deck's BODY face (``FONT``/``EAFONT``), so a caption reads in the
+    register's own typography and mixed CJK+Latin stays on one type system; pass
+    ``sub_font=MONO`` when the caption genuinely is code, a path or an id."""
     acc = accent if accent is not None else BLUE
     ln = line if line is not None else acc
     # A node is never smaller than its own label — see measure_node for the measured defect this
@@ -5672,17 +5754,51 @@ def node(slide, x, y, w, h, label, *, shape="roundrect", fill=None, line=None, l
         o.fill.solid(); o.fill.fore_color.rgb = _as_rgb(ground); o.line.fill.background()
         tc = tcolor if tcolor is not None else _legible_ink(_as_rgb(ground))
     else:
-        o.fill.solid(); o.fill.fore_color.rgb = _as_rgb(fill) if fill is not None else WHITE
-        o.line.color.rgb = ln; o.line.width = Pt(line_w)
-        tc = tcolor if tcolor is not None else (_legible_ink(_as_rgb(fill)) if fill is not None else DEEP)
+        ground = _as_rgb(fill) if fill is not None else WHITE
+        o.fill.solid(); o.fill.fore_color.rgb = ground
+        o.line.color.rgb = ln; o.line.width = Pt(line_w * RULE_W_SCALE)
+        # Resolve the ink from the ground ACTUALLY PAINTED, in both branches. The fill=None branch
+        # used to take DEEP, and the node's own two defaults then contradicted each other on every
+        # dark register: the node is painted WHITE while set_palette has rebound DEEP to that
+        # register's LIGHT ink. Measured with no caller override at all — glassmorphism 1.09:1,
+        # synthwave 1.16:1, i.e. an invisible label from the component's own defaults.
+        tc = tcolor if tcolor is not None else _legible_ink(ground)
     if dashed and not hub:
         el = o.line._get_or_add_ln(); el.append(parse_xml(f'<a:prstDash {nsdecls("a")} val="dash"/>'))
     if shape == "pill":
         try: o.adjustments[0] = 0.5
         except Exception: pass
+    elif sh == MSO_SHAPE.ROUNDED_RECTANGLE:
+        # RADIUS_SCALE, the same call-time resolution box() uses. node() is the general
+        # architecture/flowchart builder and it did not read the token at all: measured, the same
+        # diagram in brutalist, swiss, bauhaus and ink_wash (every one of them radius=0, and three
+        # of the four named in SKILL.md as the registers this feature exists to unlock) came out
+        # roundRect adj=0.1667 — python-pptx's untouched default. A register whose own guard
+        # forbids rounded cards was drawing rounded nodes, and no gate could see it.
+        # `pill` is exempt above: its 0.5 adjustment IS the shape, not a corner style.
+        adj = max(0.0, min(0.5, 0.08 * RADIUS_SCALE))
+        try: o.adjustments[0] = adj
+        except Exception: pass
     runs = [[(label, 13, tc, True, False)]]
     if sub:
-        runs.append([(sub, 9.5, _blend(tc, WHITE, 0.25) if hub else MUTE, False, False, MONO)])
+        # The sub-label follows the DECK's body face, not MONO. It was hardcoded to MONO in all 18
+        # registers: on ink_wash / editorial_paper / eastern_traditional — registers whose whole
+        # identity is calligraphic or serif warmth — every diagram caption came out in Menlo. It is
+        # worse in CJK, where MONO carries no Chinese glyphs at all, so the Latin ran monospaced
+        # while the Chinese fell back to another face and the mixed line rendered visibly ragged.
+        # Pass `sub_font=MONO` to get the old behaviour where a caption really is code/an id.
+        # The sub ink is resolved against the ground the node ACTUALLY paints, and is only allowed
+        # to be secondary while it still clears the 3:1 floor. The old rule was blind to the fill:
+        # `_blend(tc, WHITE, 0.25)` on a hub, `MUTE` otherwise. A hub is a SOLID ACCENT — measured,
+        # that blend landed #4C4C4C on #5B8DEF (2.66:1) and on #FF2D95 (2.48:1) — and `MUTE` is one
+        # token tuned for a light canvas. `MUTE` is kept wherever it already passes, so a deck that
+        # was fine stays pixel-identical; only the cases that were failing move.
+        # 4.5, not 3.0: the sub sets at 9.5pt, which IS body size, so the 3:1 non-text floor would
+        # only downgrade an unreadable caption to a warned-about one.
+        sub_ground = (fill if fill is not None else acc) if hub else (fill if fill is not None else WHITE)
+        sub_c = MUTE if contrast_ratio(MUTE, _as_rgb(sub_ground)) >= 4.5 else mute_for(sub_ground, 4.5)
+        runs.append([(sub, 9.5, sub_c, False, False,
+                      sub_font if sub_font is not None else FONT)])
     text(slide, x + 0.06, y, w - 0.12, h, runs, align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE,
          space_after=1, line_spacing=0.96)
     return (x + w / 2, y + h / 2)

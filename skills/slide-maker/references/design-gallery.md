@@ -24,6 +24,19 @@ so honouring a guard meant abandoning the components and hand-rolling with `box(
 plausible cause of the measured "3 of 59 form components used", not a coincidence with it.
 `deckkit.set_geometry(radius=…, rule_w=…)` is the manual form; both are no-ops at their defaults, so
 nothing built before this restyles.
+
+**Reach, measured — because the first version of this paragraph over-claimed it.** `radius` is read
+by `box()`, so every box-based component inherits it, plus `node()` (the flowchart/architecture
+builder), which reads it directly; the forms with no rounded geometry of their own — `venn`,
+`pyramid`, `funnel`, `concentric_rings` and the like — are unaffected by definition. `rule_w` is
+read by `box()`, `hrule()` and `node()`, i.e. every card border, divider and node outline. It used
+to be read by `hrule()` **alone**: measured, the same diagram in `brutalist` (rule_w 3.0),
+`bauhaus` (2.6) and `swiss` (0.6) produced byte-identical 1.4pt outlines and identical
+`roundRect adj=0.1667` corners, on three of the four registers this feature exists to unlock.
+The third token is the GROUND: `presets.apply()` calls `deckkit.set_ground(<preset bg>)` and
+`add_slide()` paints it, so the 8 dark registers are dark from slide one. Nothing checks that a
+built deck *expresses* its register — the sameness lint measures monotony WITHIN a deck, not
+fidelity to the chosen one — so read a render before believing a register landed.
 | preset | register | signature moves |
 |---|---|---|
 | `swiss` | minimal / typographic | strict grid, one red, huge type-scale ratio, ghost numerals |
