@@ -1028,11 +1028,15 @@ def check_style_applied(evidence: dict[str, Any], build_script: Path,
                       f"{exc.__class__.__name__}: {exc} (not the same as clean)")
         return
     code, msg = checker.evaluate(design.get("style_pick"), src, names,
-                                 design.get(checker.WAIVER_KEY))
+                                 design.get(checker.WAIVER_KEY),
+                                 design.get(checker.LOOK_SOURCE_KEY))
     if code == 1:
         errors.append("design.style_pick " + msg.split("—", 1)[-1].strip().replace("\n", " "))
     elif code == 2:
-        errors.append(f"design.style_pick NOT CHECKED — {msg}")
+        # NOT an error. A look this checker cannot classify (a generated/bespoke identity whose
+        # pick names the preset that art-directed it) is an UNVERIFIED field, not a defect, and
+        # blocking it would teach people to waive the gate that guards the real case.
+        print("  [--] design.style_pick NOT CHECKED — " + msg.replace("\n", " "))
 
 
 def check_design(

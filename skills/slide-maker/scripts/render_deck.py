@@ -1278,7 +1278,8 @@ def _style_applied_gate(design, pptx):
               "the one it APPLIES.")
         return
     code, msg = csa.evaluate(design.get("style_pick"), script.read_text(encoding="utf-8"),
-                             names, design.get(csa.WAIVER_KEY))
+                             names, design.get(csa.WAIVER_KEY),
+                             design.get(csa.LOOK_SOURCE_KEY))
     if code == 1:
         die("`design_plan.style_pick` " + msg.split("—", 1)[-1].strip()
             + f"\n    (build script: {script})")

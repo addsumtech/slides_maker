@@ -234,6 +234,31 @@ def main():
                      and n.func.id == fname for n in _ast.walk(tree))
         check(f"{gate} actually CALLS {fname}() (a gate nobody runs is prose)", called)
 
+    print("\n== the GENERATED-TEMPLATE branch (Q1d) is aligned, not left behind ==")
+    # This branch declares a four-line IDENTITY-PROPAGATION CONTRACT (palette/type/geometry/
+    # surface) and had a carrier for only the first two: generated-template.md mentioned
+    # set_geometry / set_ground / presets.apply ZERO times and the scaffold it says to copy
+    # exposed colours and fonts only. A contract with no carrier is the preset defect one branch
+    # over - and the scaffold is the curriculum, so whatever it omits does not get written.
+    scaffold = (SKILL / "references/examples/style_example.py").read_text(encoding="utf-8")
+    check("style_example.py teaches set_geometry (the `geometry:` contract line)",
+          "set_geometry" in scaffold)
+    check("style_example.py teaches set_ground (the derived ground)", "set_ground" in scaffold)
+    gt = (SKILL / "references/generated-template.md").read_text(encoding="utf-8")
+    for token in ("set_geometry", "set_ground", "look_source"):
+        check(f"generated-template.md names {token}", token in gt)
+    # And the gate must not FALSE-POSITIVE this branch: the topic contest runs here too, so a
+    # generated pick legitimately leads with the preset that art-directed the hero.
+    gen = "editorial_paper for a poetry course \u00b7 beat ink_wash \u2014 generated hero art-directed by it"
+    code, _ = csa.evaluate(gen, "dk.set_palette(deep=X)", names, None)
+    check("a generated-branch pick naming a preset is NOT blocked (exit 2 = NOT CHECKED)",
+          code == 2, code)
+    code, _ = csa.evaluate(gen, "dk.set_palette(deep=X)", names, None, "generated")
+    check("...and look_source='generated' skips it outright", code == 0, code)
+    code, _ = csa.evaluate("swiss for a status update \u00b7 beat consulting",
+                           "dk.set_palette(deep=X)", names, None)
+    check("...while a qualifier-free preset pick still HARD blocks", code == 1, code)
+
     print(f"\n{PASS} passed, {FAIL} failed")
     return 1 if FAIL else 0
 

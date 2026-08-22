@@ -303,7 +303,20 @@ Study the generated image the way you'd study a provided style example
   Set `deckkit.FONT`/`EAFONT` from the chosen pair; define `title_bar`/`footer` to the template's
   chrome in the same register.
 - Put all of this in the deck's `style.py` (copy `references/examples/style_example.py` as the
-  starting shape) — **and record the four-line IDENTITY-PROPAGATION CONTRACT in the Design plan**:
+  starting shape). 🔴 **The `geometry:` and `surface:` lines below are CARRIED BY CODE, not by
+  intention** — `deckkit.set_geometry(radius=…, rule_w=…)` and `deckkit.set_ground(<bg>)`, both
+  in the scaffold. `radius=0` squares every box-based component and `node()`, which is the only
+  way a hard-edged generated identity reaches the library; `rule_w` scales card borders,
+  dividers and node outlines; `set_ground` makes `add_slide()` paint the derived ground, so a
+  dark identity is dark from slide one rather than from wherever a rectangle got drawn. This
+  branch used to name `geometry:` in a contract and have no mechanism behind it: the scaffold
+  carried colour and type only, so a generated identity propagated two of its four lines and
+  every card, node and outline in the deck kept the library's stock shape. A contract with no
+  carrier is the same defect the preset path had, one branch over.
+  **Record `look_source: "generated"` in the Design plan too** — `check_style_applied.py` uses it
+  to tell this branch apart from the preset path, since the topic contest runs here as well and
+  a generated pick legitimately names the preset that art-directed the hero.
+  **And record the four-line IDENTITY-PROPAGATION CONTRACT in the Design plan**:
   `palette: extracted from hero` · `type: <register — faces + CJK pair>` · `geometry:
   <outline/corner/shadow/fill read off the image>` · `surface: <frosted / tint / outlined>`. These
   four lines accompany the hero + sample-content renders at the 🔴 hero checkpoint (or its

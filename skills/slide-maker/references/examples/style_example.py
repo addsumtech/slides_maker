@@ -23,6 +23,25 @@ WHITE  = RGBColor(0xFF, 0xFF, 0xFF)
 FONT = "Calibri"          # set once for the whole deck
 deckkit.FONT = FONT        # deckkit resolves FONT at call time, so every section inherits
 
+# ---- the other two thirds of a visual identity: GEOMETRY and GROUND ----
+# Colour and type were the only tokens this scaffold carried, so a deck-owned identity — the
+# Q1(d) generated template above all — could declare its four-line IDENTITY-PROPAGATION CONTRACT
+# (`palette:` · `type:` · `geometry:` · `surface:`, references/generated-template.md §3) and then
+# have no way to carry the last two into the components. The `geometry:` line is read off the
+# hero image ("outline/corner/shadow/fill"); THIS is where it lands.
+#
+#   radius: a SCALE on every box-based component's corner (and node()). 0 = square — the only
+#           way a hard-edged identity reaches the library. 1 = today. >1 = softer.
+#   rule_w: a SCALE on card borders, dividers and node outlines. A heavy-ruled poster identity
+#           is ~2.5-3; a hairline editorial one ~0.5-0.7.
+# Both are no-ops at 1.0, so leaving them alone changes nothing.
+deckkit.set_geometry(radius=1.0, rule_w=1.0)
+
+# The deck's GROUND — add_slide() paints it, so a dark identity is dark from slide one instead of
+# from wherever the author remembered to draw a rectangle. None = paint nothing.
+GROUND = None              # e.g. RGBColor(0x0C, 0x13, 0x20) for a dark identity
+deckkit.set_ground(GROUND)
+
 W, H = 10.0, 5.625         # 16:9
 
 def base_deck():
