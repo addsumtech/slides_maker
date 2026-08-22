@@ -1007,6 +1007,34 @@ def check_content(
             errors.append("content.checkpoint.record is still the `<placeholder>` from the skeleton")
 
 
+def check_style_applied(evidence: dict[str, Any], build_script: Path,
+                        errors: list[str]) -> None:
+    """The register the evidence DECLARES must be the one the build APPLIES.
+
+    Delegates to `scripts/check_style_applied.py` rather than restating the rule, for the reason
+    this file already gives about `lint_deck.SAMENESS_CODES`: a composite imported, never copied.
+    A `bespoke` / `generated` / `n/a — <locked look>` pick is not preset-based and is skipped by
+    definition; a deliberate departure from a named preset is `design.style_pick_waived`.
+    """
+    design = evidence.get("design")
+    if not isinstance(design, dict):
+        return
+    try:
+        checker = load_style_checker()
+        names = checker.preset_names()
+        src = build_script.read_text(encoding="utf-8")
+    except Exception as exc:                       # never fail the gate on the checker itself
+        errors.append(f"design.style_pick NOT CHECKED against the build — "
+                      f"{exc.__class__.__name__}: {exc} (not the same as clean)")
+        return
+    code, msg = checker.evaluate(design.get("style_pick"), src, names,
+                                 design.get(checker.WAIVER_KEY))
+    if code == 1:
+        errors.append("design.style_pick " + msg.split("—", 1)[-1].strip().replace("\n", " "))
+    elif code == 2:
+        errors.append(f"design.style_pick NOT CHECKED — {msg}")
+
+
 def check_design(
     evidence: dict[str, Any],
     root: Path,
@@ -1462,6 +1490,20 @@ def load_arc_checker() -> Any:
     return module
 
 
+def load_style_checker() -> Any:
+    # Same shape as the loaders around it, and for the same reason: this gate and
+    # `render_deck.py --gate-check` must ask ONE question of ONE piece of code. `style_pick` is
+    # the field both already required and neither verified; growing two answers to "was the
+    # declared register applied" is how the two paths drift into disagreeing about a deck.
+    path = Path(__file__).with_name("check_style_applied.py")
+    spec = importlib.util.spec_from_file_location("slide_maker_check_style_applied", path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("could not load check_style_applied.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def load_visual_contract() -> Any:
     script_path = Path(__file__).with_name("codex_visual_contract.py")
     spec = importlib.util.spec_from_file_location("slide_maker_codex_visual_contract", script_path)
@@ -1737,6 +1779,15 @@ def evaluate(
         check_render_selfcheck(evidence, expected_slides, errors)
         design_rows = check_design(evidence, root, expected_slides, deck_hash, errors)
         build_script, calls = check_build(evidence, root, supplied_script, errors)
+        # DECLARED -> APPLIED. `design.style_pick` is required above as a STRING and was never
+        # verified: measured by grep, `presets.apply` / `set_geometry` / `set_ground` appeared in
+        # no gate script at all, on either path. A deck recording "brutalist for engineering -
+        # beat blueprint" and built with deckkit's stock defaults cleared this gate and the shared
+        # one alike — the competition ran, the winner was written down, and nothing carried it
+        # into the build. Same checker as render_deck.py --gate-check, so both paths ask one
+        # question of one piece of code rather than growing two answers.
+        if build_script is not None:
+            check_style_applied(evidence, build_script, errors)
         audited_components = components
         if build_script is not None and deck_path is not None:
             recomputed = recompute_component_audit(build_script, deck_path, errors)

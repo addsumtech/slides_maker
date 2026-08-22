@@ -1233,6 +1233,59 @@ def check_handoff_gates(pptx, mode="presented", gate_check=False):
     sys.exit(max(code for _s, _m, code in problems))
 
 
+def _find_build_script(pptx, design):
+    """The build script for this deck: recorded, else the `build_<stem>.py` convention beside it.
+
+    Discovery can legitimately fail — a build script is not a deliverable and the plan files are
+    deliberately never written into the deck folder — so a miss is reported LOUDLY and does not
+    block. Only a resolved script that contradicts the record does.
+    """
+    rec = design.get("build_script")
+    if rec:
+        p = Path(rec).expanduser()
+        return p if p.is_file() else None
+    deck = Path(pptx)
+    for cand in (deck.parent / f"build_{deck.stem}.py",
+                 Path.cwd() / f"build_{deck.stem}.py",
+                 deck.parent / "build.py"):
+        if cand.is_file():
+            return cand
+    return None
+
+
+def _style_applied_gate(design, pptx):
+    """`design_plan.style_pick` names a register; the build must actually apply it.
+
+    Both delivery gates required this field as a STRING and neither verified it — measured by
+    grep, `presets.apply` / `set_geometry` / `set_ground` appeared in no gate script at all. So a
+    deck recording `style_pick: "brutalist for engineering - beat blueprint"` and built with
+    deckkit's stock defaults passed here and on the Codex path alike: the competition ran, the
+    winner was written down, and nothing carried it into the build. `check_style_applied.py` owns
+    the logic so both paths ask the same question of the same code.
+    """
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    try:
+        import check_style_applied as csa
+        names = csa.preset_names()
+    except Exception as exc:                       # never fail a render on the checker itself
+        print(f"  [--] STYLE APPLIED: NOT CHECKED — {exc.__class__.__name__}: {exc}")
+        return
+    script = _find_build_script(pptx, design)
+    if script is None:
+        print("  [--] STYLE APPLIED: NOT CHECKED — no build script found beside the deck "
+              "(looked for build_<stem>.py). NOT the same as clean: record it as "
+              "`design_plan.build_script` and the register a deck DECLARES gets verified against "
+              "the one it APPLIES.")
+        return
+    code, msg = csa.evaluate(design.get("style_pick"), script.read_text(encoding="utf-8"),
+                             names, design.get(csa.WAIVER_KEY))
+    if code == 1:
+        die("`design_plan.style_pick` " + msg.split("—", 1)[-1].strip()
+            + f"\n    (build script: {script})")
+    if code == 2:
+        print(f"  [--] STYLE APPLIED: NOT CHECKED — {msg}")
+
+
 def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
     """Refuse --deliverables until the quality gates have actually run.
 
@@ -1657,6 +1710,12 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
                 die("`design_plan` is missing {}. These are the art director's outputs "
                     "(agents/slide-design.md, Step 2) — a plan without them was not designed, it was "
                     "defaulted. Fill them, or waive with a reason.{}".format(", ".join(missing), hint))
+            # DECLARED -> APPLIED. `style_pick` was required as a STRING and never verified: measured
+            # by grep, `presets.apply` / `set_geometry` / `set_ground` appear in no gate script at
+            # all, so a deck recording "brutalist for engineering - beat blueprint" and built with
+            # deckkit's stock defaults passed here and on the Codex path alike. The competition ran,
+            # the winner was written down, and nothing carried it into the build.
+            _style_applied_gate(design, pptx)
             scale = design["type_scale"]
             if not isinstance(scale, dict) or not all(
                     isinstance(scale.get(k), (int, float)) for k in ("display", "title", "body")):

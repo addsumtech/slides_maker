@@ -221,6 +221,7 @@ jobs:
       - name: Register expression (a preset must reach the pixels, not just the palette)
         run: |
           set -o pipefail
+          python scripts/check_style_applied.py --selftest
           python tests/test_register_expression.py | tee /tmp/register.log
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/register.log || {
             echo "::error::register-expression suite did not run to completion"; exit 1; }

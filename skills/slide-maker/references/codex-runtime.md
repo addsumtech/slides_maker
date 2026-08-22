@@ -93,6 +93,23 @@ be reconstructed post-hoc at the delivery gate.
    display token (normally at least 32pt) must create a real focal point. Reduce copy or split slides
    before reducing the body token. For CJK paragraphs leave deckkit line spacing unset unless the plan
    names a different, tested value.
+   🔴 **A type contract is HALF a build contract — APPLY the register, do not just name it.** This
+   step listed type tokens and nothing else, so a run following this runbook picked a preset in
+   step 1, wrote its name into `design.style_pick`, and then hand-set colours: the register's
+   *structural* half was never set at all. One call carries all three tokens —
+   `p = presets.apply("<the style_pick preset>")` sets the palette, the geometry
+   (`radius` — `0` squares every box-based component and `node()`, which is how `brutalist` /
+   `swiss` / `ink_wash` / `blueprint` reach their own "no rounded cards" guard — and `rule_w`,
+   which scales every card border, divider and node outline), and the **ground**
+   (`set_ground`, painted by `add_slide()`; 8 of the 18 registers are dark, and before this
+   existed a `dark_tech` deck shipped its light ink on a white canvas at 1.18:1). Read the
+   returned dict for `surface` / `guard` / `image_prompt`.
+   🔴 `scripts/check_style_applied.py` **is a hard gate on this path and on the shared one**:
+   `design.style_pick` naming a preset while the build script never calls
+   `presets.apply("<that name>")` is a BLOCK, because both gates already demanded the
+   declaration and nothing verified it. A deliberate departure is a named waiver
+   (`design.style_pick_waived`), not silence. A `bespoke` / `generated` / `n/a — <locked look>`
+   pick is skipped by definition — those are not preset-based.
 3. **Treat categories as a visual-system decision.** In the per-slide design ledger, mark every slide
    as categorical or not. If the deck names roles, input types, product pillars, tools, or stages,
    choose one icon family and use it where it clarifies those categories. For each categorical slide,

@@ -192,6 +192,48 @@ def main():
     check("...and sub_font=MONO still gets MONO, for a caption that IS code", dk.MONO in faces,
           sorted(faces))
 
+    print("\n== DECLARED -> APPLIED: both gates verify the register they demand ==")
+    # `style_pick` was required as a string by codex_delivery_gate.py AND
+    # render_deck.py --gate-check, and verified by NEITHER: measured by grep, presets.apply /
+    # set_geometry / set_ground appeared in no gate script at all. A deck recording
+    # "brutalist for engineering - beat blueprint" and built with deckkit's stock defaults
+    # passed both. One checker, imported by both gates, so they cannot grow two answers.
+    sys.path.insert(0, str(SKILL / "scripts"))
+    import check_style_applied as csa
+    names = csa.preset_names()
+    cases = [
+        ("brutalist for engineering \u00b7 beat blueprint", 'presets.apply("brutalist")', None, 0,
+         "declared and applied"),
+        ("brutalist for engineering \u00b7 beat blueprint", 'dk.set_palette(deep=X)', None, 1,
+         "declared, hand-built - the measured failure"),
+        ("brutalist for engineering \u00b7 beat swiss", 'presets.apply("swiss")', None, 1,
+         "applied the REJECTED rival, not the pick"),
+        ("bespoke seismograph register \u00b7 beat swiss", '', None, 0,
+         "bespoke is not preset-based"),
+        ("n/a \u2014 locked: the user's template", '', None, 0, "locked look"),
+        ("brutalist for engineering", 'dk.set_palette(deep=X)',
+         "the client brand book fixes border weight at 1pt, which brutalist would triple", 0,
+         "a real named waiver clears it"),
+        ("brutalist for engineering", 'dk.set_palette(deep=X)', "ok", 1,
+         "a bare 'ok' is not a waiver"),
+    ]
+    for pick, src, waiver, want, why in cases:
+        got, _ = csa.evaluate(pick, src, names, waiver)
+        check(f"style_pick: {why}", got == want, f"want={want} got={got}")
+    check("its own selftest still agrees with this file",
+          csa.selftest(names) == 0)
+    # AST, not a substring: `"_style_applied_gate" in body` is satisfied by the function's own
+    # DEFINITION, so deleting the call left it green. A check that cannot go red measures nothing,
+    # which is the whole defect class this suite exists for - caught here by running the negative
+    # control rather than trusting the assertion.
+    import ast as _ast
+    for gate, fname in (("scripts/render_deck.py", "_style_applied_gate"),
+                        ("scripts/codex_delivery_gate.py", "check_style_applied")):
+        tree = _ast.parse((SKILL / gate).read_text(encoding="utf-8"))
+        called = any(isinstance(n, _ast.Call) and isinstance(n.func, _ast.Name)
+                     and n.func.id == fname for n in _ast.walk(tree))
+        check(f"{gate} actually CALLS {fname}() (a gate nobody runs is prose)", called)
+
     print(f"\n{PASS} passed, {FAIL} failed")
     return 1 if FAIL else 0
 

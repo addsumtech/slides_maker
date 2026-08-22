@@ -153,8 +153,14 @@ def fixture(root: Path) -> tuple[dict, dict, dict, Path]:
     write_png(proof)
     write_png(icon, 512, 512, alpha=True)
     build = root / "build_deck.py"
+    # APPLIES the register the evidence declares (`design.style_pick` = editorial_report). The
+    # fixture used to declare a register and hand-build without it — which is exactly the defect
+    # check_style_applied.py was written for, and the scaffolding teaching the defect is how it
+    # spreads: whatever the example demonstrates is what gets written.
     build.write_text(
-        "import deckkit as dk\n\n"
+        "import deckkit as dk\n"
+        "import presets\n\n"
+        "p = presets.apply('editorial_report')\n\n"
         "def slide_01(slide):\n"
         "    dk.icon_card(slide, 0, 0, 1, 1, 'Feature')\n\n"
         "dk.lint_layout(prs, strict=True)\n",

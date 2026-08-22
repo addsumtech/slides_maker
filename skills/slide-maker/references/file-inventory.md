@@ -38,6 +38,16 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   raises nothing and renders a 100% OPAQUE shape). Exists because four wrong API facts shipped at
   once in the shared references and nothing reported any of them — the build crashes at the
   reader's desk, not in CI. Exit 0 clean / 1 findings / 2 could not run. Runs in CI.
+- `check_style_applied.py` — the register a deck DECLARES must be the one it APPLIES. Both
+  delivery gates required `style_pick` as a string and verified it in neither: measured by
+  grep, `presets.apply` / `set_geometry` / `set_ground` appeared in no gate script at all, so a
+  deck recording `"brutalist for engineering - beat blueprint"` and built with deckkit's stock
+  defaults passed on BOTH runtimes. AST-checks the build script for `presets.apply("<the
+  declared preset>")`; `bespoke` / `generated` / `n/a — <locked look>` are skipped by
+  definition, a deliberate departure is `style_pick_waived` (>=24 chars). Imported by
+  `render_deck.py --gate-check` and `codex_delivery_gate.py` — never copied, so the two paths
+  cannot grow two answers. `--selftest` proves it both ways. It checks the CALL, not the
+  pixels; `tests/test_register_expression.py` covers the other half.
 - `check_design_contracts.py` — the DESIGN stack's index guard: every self-verify cross-reference in
   the tree resolves to a real item, the `### Design self-verify (a–s)` header covers every item the
   list actually defines (and its spelled-out count matches), the shared design thresholds agree
