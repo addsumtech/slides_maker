@@ -23,6 +23,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 SESSIONS = Path.home() / ".codex" / "sessions"
@@ -61,12 +62,58 @@ def _have_codex():
     return shutil.which("codex") is not None
 
 
-def _newest_rollout():
+# How stale a rollout may be and still plausibly be THIS run's. A generation that just happened is
+# seconds old; anything older is a different session's transcript and reading it is not this
+# script's business.
+_ROLLOUT_MAX_AGE_S = 30 * 60
+_SESSION_ENV = ("CODEX_SESSION_ID", "CODEX_ROLLOUT_PATH", "CODEX_THREAD_ID")
+
+
+def _newest_rollout(*, quiet=False):
+    """The rollout holding THIS run's image, scoped as tightly as the host lets us.
+
+    A Codex session rollout is a full transcript — prompts, tool output, file paths. This script
+    needs exactly one thing out of it: the base64 in an `image_generation_call`. It used to take
+    the newest `rollout-*.jsonl` under ~/.codex/sessions with no scoping at all, so on a machine
+    with several sessions it could open an UNRELATED session's transcript. Three limits now:
+
+      1. an explicit session pointer from the environment wins, when the host provides one;
+      2. otherwise the newest file must be recent enough to plausibly be this run's;
+      3. whichever file is used is NAMED on stderr, so reading a transcript is never silent.
+
+    `_extract_from_rollout` still only ever pulls the image payload — no other field is read out,
+    and nothing from the file is echoed.
+    """
+    for var in _SESSION_ENV:
+        hint = os.environ.get(var, "").strip()
+        if not hint:
+            continue
+        p = Path(hint).expanduser()
+        if p.is_file():
+            return p
+        for cand in SESSIONS.rglob(f"rollout-*{hint}*.jsonl"):
+            return cand
     try:
         files = sorted(SESSIONS.rglob("rollout-*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True)
     except OSError:
         return None
-    return files[0] if files else None
+    if not files:
+        return None
+    newest = files[0]
+    try:
+        age = time.time() - newest.stat().st_mtime
+    except OSError:
+        return None
+    if age > _ROLLOUT_MAX_AGE_S:
+        if not quiet:
+            print(f"generate_images_codex: newest rollout is {int(age // 60)} min old — too stale "
+                  f"to be this run's, not reading it. Pass the image path directly, or set "
+                  f"{_SESSION_ENV[0]}.", file=sys.stderr)
+        return None
+    if not quiet:
+        print(f"generate_images_codex: reading the image payload from {newest} "
+              f"(image_generation_call only; no other field is read).", file=sys.stderr)
+    return newest
 
 
 def _extract_from_rollout(rollout, out_path):
@@ -119,7 +166,7 @@ def _generate_one(prompt, out_path, *, orientation, timeout):
     instr = INSTR.format(prompt=prompt, fname=out_path.name, orient=_orient_clause(orientation))
     cmd = ["codex", "exec", "--skip-git-repo-check", "--sandbox", "workspace-write",
            "-c", 'approval_policy="never"', instr]
-    before = _newest_rollout()
+    before = _newest_rollout(quiet=True)   # baseline marker only; the real read announces itself
     try:
         subprocess.run(cmd, cwd=str(out_path.parent), stdin=subprocess.DEVNULL,
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=timeout)

@@ -119,6 +119,24 @@ def copy_skill(src, dest, *, dry_run=False, replace=False):
     # the source out from under us.
     files = list(iter_files(src))
     if replace and dest.exists():
+        # `--replace` deletes a directory tree in the user's HOME, so it verifies WHAT it is about
+        # to delete rather than trusting that `dest` was computed correctly. Three refusals:
+        # a symlink (rmtree would follow it out of the skills root and delete the target — this
+        # machine really does symlink ~/.codex/skills/slide-maker at a git checkout, so an
+        # unguarded --replace there would have deleted the REPO); anything not named for this
+        # skill; and anything that does not look like an install of it. The source listing above
+        # already runs before any delete; this guards the destination.
+        real = dest if not dest.is_symlink() else None
+        if real is None:
+            raise SystemExit(
+                f"refusing --replace on {dest}: it is a SYMLINK, and removing it would follow the "
+                f"link and delete what it points at. Remove the link yourself if that is intended.")
+        if dest.name != SKILL_NAME:
+            raise SystemExit(f"refusing --replace on {dest}: not named {SKILL_NAME!r}")
+        if not (dest / "SKILL.md").is_file():
+            raise SystemExit(
+                f"refusing --replace on {dest}: no SKILL.md there, so this is not an install of "
+                f"{SKILL_NAME} and deleting it would destroy something else.")
         if dry_run:
             print(f"would remove existing {dest}")
         else:

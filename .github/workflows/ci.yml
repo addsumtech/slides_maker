@@ -218,6 +218,21 @@ jobs:
       # sameness lint measures monotony WITHIN a deck, never fidelity to the register it chose,
       # so a brutalist deck rendered with glassmorphism's geometry passed every gate. Asserted
       # against the built PPTX, which is the level the defect lived at.
+      # The direction-gate preview is an HTML file the USER opens in their browser, built from a
+      # directions.json the agent wrote while reading the user's SOURCE MATERIAL — untrusted input
+      # to a language model. Text was escaped; colours were not, and they land in style="..."
+      # attributes in ~86 places, so a crafted accent closed the attribute and attached an event
+      # handler. Most of this suite is the BOUNDARY: cover_motif/ambient_motif stay raw HTML on
+      # purpose (a bespoke register draws its own signature and the structure gate requires it),
+      # so the sanitiser has to remove behaviour while keeping shape — one that eats the <svg> is
+      # one nobody keeps.
+      - name: Preview injection (untrusted source material must not reach a live page)
+        run: |
+          set -o pipefail
+          python tests/test_preview_injection.py | tee /tmp/inject.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/inject.log || {
+            echo "::error::preview-injection suite did not run to completion"; exit 1; }
+
       - name: Register expression (a preset must reach the pixels, not just the palette)
         run: |
           set -o pipefail

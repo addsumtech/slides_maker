@@ -2,9 +2,17 @@
 """check_version — tell the user a newer slide-maker exists. Never do anything else.
 
 Prints ONE line when the installed skill is behind, and NOTHING when it is current.
-It never pulls, never writes into the skill, and never fails a build: every error path
-exits 0 silently, because a version notice that can break someone's deck is worse than
-no version notice at all.
+It never pulls, never checks out, never writes into the skill, and never fails a build: every
+error path exits 0 silently, because a version notice that can break someone's deck is worse
+than no version notice at all.
+
+WHAT IT *DOES* TOUCH — stated because "never writes" was too broad and a security review read
+it as "no side effects at all". On a git checkout it runs `git fetch origin main -q`, which
+makes a NETWORK request and updates remote-tracking refs inside `.git` (never the working tree,
+never a branch you are on). On a copy install it makes ONE HTTPS request to GitHub for the
+VERSION file. Both are rate-limited to once per CACHE_HOURS and both are disabled by
+`SLIDE_MAKER_NO_VERSION_CHECK=1`. The git subcommands used are exactly: fetch, remote, rev-list,
+rev-parse, status — no pull, merge, checkout, reset or clean anywhere in this file.
 
 TWO INSTALL SHAPES, and they need different questions asked
 -----------------------------------------------------------

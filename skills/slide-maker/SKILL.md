@@ -264,6 +264,7 @@ every **🔴 CHECKPOINT** is a hard stop.
 | The build helpers (source of truth) | `scripts/deckkit.py` (docstrings) |
 | Geometry lint — build-time · render-time | `deckkit.lint_layout(prs, strict=True)` (Step 4, pre-render) · `scripts/lint_deck.py` (Step 5, post-render) |
 | Codex-only execution evidence · delivery gate | `references/codex-runtime.md` · `scripts/codex_delivery_gate.py` |
+| What this skill does to the machine — installs, subprocesses, network, session data, file deletion, and every opt-out | `references/security-and-capabilities.md` (read it if a user asks what the skill touches, if a scanner flags it, or before running it on material you do not trust) |
 | ANY error / lint finding / env failure — symptom → cause → fix, plain language | `references/troubleshooting-faq.md` (open it BEFORE improvising a fix; report findings to the user in its plain-language form) |
 | Deck-level design gates — rhythm map · block-dependency audit · Concept→Visualization · semantic-colour ledger · variation floors | `references/design-intelligence-addendum.md` (Step 2's measured design targets) |
 
