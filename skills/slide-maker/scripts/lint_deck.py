@@ -240,7 +240,7 @@ def _slide_bg_box(slide, sw, sh):
             "font": None, "bold": False,
             "text": False, "descr": None, "mathfont": None,
             "title_ph": False, "bg": True, "grp": None,
-            "declared": False, "hollow": False}
+            "declared": False, "hollow": False, "motif": False}
 
 
 def _boxes(slide, sw, sh, slide_no=None, record=True):
@@ -358,6 +358,11 @@ def _boxes(slide, sw, sh, slide_no=None, record=True):
                     # here from the file — which is the only reason this gate can honour the same
                     # declaration the build-time gate does.
                     "declared": str(getattr(s, "name", "") or "").startswith("deckkit-overlap"),
+                    # The motif tag, read from the NAME for the same reason `declared` is: it
+                    # survives the save, so this file-level gate can reason about the deck's
+                    # signature device exactly as the build-time one does.
+                    "motif": (str(getattr(s, "name", "") or "").startswith("deckkit-motif")
+                              and not str(getattr(s, "name", "") or "").endswith("-legend")),
                     # HOLLOW: an outlined shape with no fill, no picture and no text of its own —
                     # a frame, a ring, a rule box, a plate outline. Its bounding box is NOT ink a
                     # reader receives, and counting it as such is why "this form spends 40% of the
@@ -1508,7 +1513,15 @@ def _slide_stats(slide, bx, sw, sh):
         "load": load,
         "text_cov": _coverage([s for s in bx if s["text"] and not s["bg"]], sw, sh),
         "ink_cov": _coverage([s for s in bx if not s["bg"]], sw, sh),
-        "ink_cov_nopic": _coverage([s for s in bx if not s["bg"] and not s["pic"]], sw, sh),
+        # A motif GROUND is canvas, not content — the same carve `bg` already gets. Measured on the
+        # scaffold's own `seam` page: two half-page colour fields (neither one full-bleed, so
+        # neither one `bg`) scored the page at 99% occupancy and drew CROWDED on a composition that
+        # holds two headlines and a key. Occupancy is meant to say "this page is FULL of things to
+        # read"; a painted ground is what the things are read ON.
+        "ink_cov_nopic": _coverage([s for s in bx if not s["bg"] and not s["pic"]
+                                    and not (s.get("motif") and not s["text"]
+                                             and (s["w"] >= sw * 0.92 or s["h"] >= sh * 0.92))],
+                                   sw, sh),
         # DRAWN AREA — the union of everything on the page that is NOT a text box and NOT the
         # canvas: filled forms, bars, plates, panels, rules, connectors, pictures.
         #
@@ -3112,6 +3125,16 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
                     # OCCLUSION and TEXT NOT VISIBLE are pixel checks and still apply.
                     if a.get("declared") or b.get("declared"):
                         continue
+                    # BOTH TAGGED MOTIF = one composed device. A signature motif is layered BY
+                    # CONSTRUCTION — a seam rule sits on the two colour fields it divides, a hinge
+                    # sits on the seam, taps sit on their spine — so pairwise separation is not a
+                    # thing that can be asked of it. Measured the moment `motif_page` was put in
+                    # the scaffold: four unresolvable OVERLAPs on a page whose composition was
+                    # exactly right. Same reasoning as the same-group escape above; a motif shape
+                    # colliding with ordinary CONTENT is still caught (and TEXT_OVER_MOTIF owns
+                    # the text half of it).
+                    if a.get("motif") and b.get("motif"):
+                        continue
                     finds.append(f"OVERLAP {round(ix,2)}x{round(iy,2)}in  {a['st']}'{a['txt']}' x {b['st']}'{b['txt']}'"
                                  f" — move/shrink one so they separate (≥0.12in gap) or nest one fully inside the other")
         # 3) footer-zone reservation: the bottom footer band is deck chrome — NO content block (solid
@@ -3131,6 +3154,12 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
                     continue          # the build DECLARED a baseline/bleed register for this slide
                 if not s["text"] and s["w"] <= 0.6 and s["h"] <= 0.35:
                     continue          # a small textless mark (page ring, tick) is footer chrome
+                if s.get("motif") and not s["text"] and (s["w"] >= sw * 0.92 or s["h"] >= sh * 0.92):
+                    # A motif GROUND that runs edge to edge is a canvas the footer is drawn ON,
+                    # not a content block dipping into the footer's band — the same carve `bg`
+                    # already gets for a full-bleed plate, extended to the half-page colour fields
+                    # a signature device paints (a `seam` is two of them, neither one full-bleed).
+                    continue
                 # For PURE TEXT, judge the rendered ink bottom (alignment/anchor-aware), not the
                 # declared frame: one 20pt line top-anchored in a generous 1.9in box had its ink
                 # ~1.5in clear of the footer and still hard-failed on the frame's bottom edge.

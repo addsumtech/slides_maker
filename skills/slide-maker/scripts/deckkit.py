@@ -80,6 +80,7 @@ from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 from pptx.enum.shapes import MSO_SHAPE, MSO_CONNECTOR
+from pptx.enum.dml import MSO_FILL
 from pptx.oxml.ns import qn, nsdecls
 from pptx.oxml import parse_xml
 import math
@@ -2337,9 +2338,24 @@ def _is_motif(sh, loud=None):
     n = getattr(sh, "name", "") or ""
     if not n.startswith(MOTIF_TAG):
         return False
+    if n.endswith("-legend"):
+        # The KEY that explains the device is not the device. Caught by its own test: the legend
+        # tag starts with MOTIF_TAG, so it counted as motif GEOMETRY — which would have let a
+        # legend trip TEXT_OVER_MOTIF against the caption beside it, and would have made the thing
+        # that satisfies the stranger test look like another appearance of the motif.
+        return False
     if loud is None:
         return True
     return n.endswith("-loud") if loud else n.endswith("-quiet")
+
+
+# The quiet register vocabulary. The first five are GRAPHIC-NEUTRAL (rules, ticks, grids) and every
+# deck that reached for them produced the same corner — which is the sameness the direction gate
+# exists to prevent. The six after them are drawn from SUBJECT WORLDS instead: a stamp, a stitched
+# seam, a signal trace, contour lines, a scale bar, hand hatching. A register borrowed from the
+# subject's own objects carries meaning before it carries taste (bespoke-registers.md).
+_REGISTER_KINDS = ("arcs", "rule", "ticks", "ordinal", "grid",
+                   "seal", "stitch", "trace", "contour", "caliper", "hatch")
 
 
 def register_mark(slide, kind="arcs", *, corner="tr", color=None, size=1.55, weight=0.9,
@@ -2370,11 +2386,11 @@ def register_mark(slide, kind="arcs", *, corner="tr", color=None, size=1.55, wei
 
     Returns the list of shapes it drew, all tagged.
     """
-    if kind not in ("arcs", "rule", "ticks", "ordinal", "grid"):
+    if kind not in _REGISTER_KINDS:
         # Raise rather than fall back: a wrong name that silently draws something else is exactly
         # how a deck ends up with a register nobody chose (see backdrop_motif's own note).
-        raise ValueError("register_mark(kind={!r}): unknown mark. One of: "
-                         "arcs · rule · ticks · ordinal · grid.".format(kind))
+        raise ValueError("register_mark(kind={!r}): unknown mark. One of: {}."
+                         .format(kind, " · ".join(_REGISTER_KINDS)))
     sw, sh_h = _slide_size(slide)
     c = color if color is not None else RGBColor(0xD8, 0xD0, 0xBF)
     out = []
@@ -2418,14 +2434,313 @@ def register_mark(slide, kind="arcs", *, corner="tr", color=None, size=1.55, wei
         set_font(r0, 13, c, bold=True, font=font or FONT)
         p0.alignment = PP_ALIGN.RIGHT if right else PP_ALIGN.LEFT
         out.append(tb)
-    else:                                                   # grid
+    elif kind == "grid":
         step = size / 4.0
         for i in range(5):
             out.append(box(slide, ax + i * step, ay, max(0.006, weight / 96.0), size, fill=c))
             out.append(box(slide, ax, ay + i * step, size, max(0.006, weight / 96.0), fill=c))
+    elif kind == "seal":
+        # A stamp: the mark a document, a permit, a certificate carries. Reads as authority.
+        out.append(box(slide, ax, ay, size * 0.72, size * 0.72, fill=None, line=c,
+                       line_w=weight, round=True, r=size * 0.10))
+        inner = size * 0.26
+        out.append(box(slide, ax + (size * 0.72 - inner) / 2, ay + (size * 0.72 - inner) / 2,
+                       inner, inner, fill=c))
+    elif kind == "stitch":
+        # Perforation / seam-stitch along the edge — a made object's join, not a screen grid.
+        span, pitch = sw - 2 * inset, 0.19
+        k = int(span / pitch)
+        for i in range(k):
+            out.append(box(slide, inset + i * pitch, ay, pitch * 0.42,
+                           max(0.008, weight / 96.0), fill=c))
+    elif kind == "trace":
+        # A signal trace: bars of alternating height along a baseline. For anything MEASURED —
+        # instruments, monitoring, telemetry, sound.
+        wsteps = (0.30, 0.72, 0.18, 0.95, 0.42, 0.62, 0.24)
+        bw = size / float(len(wsteps) * 1.6)
+        for i, hfrac in enumerate(wsteps):
+            bh = size * 0.52 * hfrac
+            out.append(box(slide, ax + i * bw * 1.6, ay + size * 0.52 - bh,
+                           max(0.01, bw * 0.9), bh, fill=c))
+    elif kind == "contour":
+        # Isolines: nested rounded rects. Terrain, gradients, fields, anything with level sets.
+        for i in range(max(2, min(rings + 1, 5))):
+            f = i / float(max(2, min(rings + 1, 5)))
+            iw, ih = size * (0.34 + 0.62 * f), size * (0.22 + 0.5 * f)
+            out.append(box(slide, ax + (size - iw) / 2, ay + (size * 0.72 - ih) / 2, iw, ih,
+                           fill=None, line=c, line_w=weight * 0.8, round=True, r=min(iw, ih) / 2))
+    elif kind == "caliper":
+        # A scale bar with end serifs — the mark of anything MEASURED to size: maps, microscopy,
+        # engineering drawings, product dimensions.
+        t = max(0.008, weight / 96.0)
+        out.append(box(slide, ax, ay + size * 0.34, size * 0.86, t, fill=c))
+        for dx in (0.0, size * 0.86 - t):
+            out.append(box(slide, ax + dx, ay + size * 0.34 - size * 0.12, t, size * 0.24, fill=c))
+        out.append(box(slide, ax + size * 0.43, ay + size * 0.34 - size * 0.07, t, size * 0.14,
+                       fill=c))
+    else:                                                   # hatch
+        # Woven / drawn shading — a hand register, the counterpart to `grid`'s machine one.
+        t = max(0.006, weight / 96.0)
+        for i in range(6):
+            hb = box(slide, ax + i * (size / 5.5), ay, t, size * 0.8, fill=c)
+            try:
+                hb.rotation = 24.0
+            except Exception:
+                pass
+            out.append(hb)
 
     for shp in out:
         tag_motif(shp, loud=loud)
+    return out
+
+
+MOTIF_LEGEND = MOTIF_TAG + "-legend"
+
+
+def motif_legend(slide, label, *, x=None, y=None, w=4.4, color=None, ink=None, size=9.5,
+                 font=None, glyph="rule", glyph_c=None):
+    """The STRANGER TEST, drawn — a small key that says what the device MEANS, at first appearance.
+
+    The skill requires a motif to be legible to someone who has never seen the deck: label it, key
+    it, or make it figurative. That requirement lived entirely in prose, so it was satisfiable by
+    intending to satisfy it. A legend is a shape; a shape can be counted. `_motif_faults` reports
+    MOTIF_UNEXPLAINED when a deck carries a LOUD motif and no legend anywhere, and the tag on this
+    text is how it knows one exists.
+
+    `glyph` draws a tiny sample of the device beside the words (`rule` · `dot` · `arc` · `none`),
+    because "CROSSING = the bet" next to nothing is a caption, while the same words next to a
+    2-pixel sample of the actual mark is a key.
+
+    Deliberately NOT tagged as the motif itself: a legend must not spend the <=3 loud budget, and
+    it must not trip TEXT_OVER_MOTIF against the device it is explaining."""
+    if glyph not in ("rule", "dot", "arc", "none"):
+        raise ValueError("motif_legend(glyph={!r}): one of rule · dot · arc · none.".format(glyph))
+    sw, sh_h = _slide_size(slide)
+    x = 0.7 if x is None else x
+    c = ink if ink is not None else MUTE
+    g = glyph_c if glyph_c is not None else (color if color is not None else MAGENTA)
+    gw = {"rule": 0.46, "dot": 0.26, "arc": 0.32, "none": 0.0}[glyph]
+    # MEASURE, then place, then draw — in that order. Sized to the TEXT, not to a guess: the first
+    # render of this helper clipped every legend at two lines ("…narrowing to an opening — focus,
+    # filt"), which is the one failure a key cannot survive, because a truncated explanation still
+    # looks explained.
+    body = max(0.8, w - gw)
+    h = max(0.3, measure_text([(str(label), False)], body, size))
+    if y is None:
+        # Against the deck's OWN safe band, never a hand-picked coordinate — the rule the rest of
+        # the kit follows, and one this helper broke twice: a fixed y put a two-line key inside the
+        # reserved footer band, and a fixed MARGIN only moved the same guess.
+        try:
+            _bx, _by, _bw, _bh = content_band(slide)
+            y = (_by + _bh) - h
+        except Exception:
+            y = sh_h - 0.62 - h
+    if glyph == "rule":
+        box(slide, x, y + 0.085, 0.34, 0.022, fill=g)
+    elif glyph == "dot":
+        box(slide, x, y + 0.03, 0.14, 0.14, fill=g, round=True, r=0.07)
+    elif glyph == "arc":
+        box(slide, x, y - 0.01, 0.2, 0.2, fill=None, line=g, line_w=1.4, round=True, r=0.1)
+    tb = text(slide, x + gw, y - 0.02, body, h,
+              [[(str(label), size, c, False, False, font or FONT)]], space_after=0)
+    try:
+        tb.name = MOTIF_LEGEND
+    except Exception:
+        pass
+    return tb
+
+
+# The LOUD tier. `register_mark` fixed the QUIET signature — the chrome cue that carries a style
+# onto ordinary pages — and the loud half was left hand-rolled: `motif_generates.page` asks every
+# deck for "the slide whose GEOMETRY is the motif", and every deck built that geometry from raw
+# boxes, which is the exact situation that produced a Venn diagram where three concentric arcs were
+# meant (see register_mark). These are the generative geometries that recur across subjects; the
+# MATERIAL is yours to swap (bespoke-registers.md: keep the method, swap the material).
+_MOTIF_PAGE_KINDS = {
+    "seam":     "two registers meeting at a hinge — a crossing from one state to another",
+    "conduit":  "a spine crossing the page with tap-offs — accumulation along a line",
+    "strata":   "stacked layers of unequal weight — depth, hierarchy, sedimented history",
+    "radial":   "rays from one origin — dispersion, reach, broadcast, divergence",
+    "lattice":  "interwoven members — coupling, network, mutual dependence",
+    "orbit":    "concentric paths with a rider — cycles, iteration, return",
+    "aperture": "frames narrowing to an opening — focus, filtering, a funnel",
+    "terrace":  "ascending steps — progression, escalation, staged advance",
+}
+
+
+def motif_page(slide, kind, *, color=None, second=None, accent=None, faint=False, weight=2.4,
+               at=0.5, orient="v", count=5, legend=None, legend_at=None, full_bleed=True,
+               inset=0.0):
+    """Build the ONE page whose geometry IS the deck's motif. Correct by construction, and TAGGED.
+
+    Every shape it draws is tagged LOUD, so the page spends exactly one of the <=3 budgeted loud
+    appearances and `MOTIF_BUDGET` can see it. Pass `legend="<what the device MEANS>"` on the
+    device's FIRST appearance and the key is drawn with it — the STRANGER TEST satisfied where the
+    device is, not in a note nobody reads.
+
+    kinds (each is a GENERATIVE relation, not an ornament — pick the one whose relation is your
+    content's relation, then swap the material):
+      ``aperture``  frames narrowing to an opening — focus, filtering, a funnel
+      ``conduit``   a spine crossing the page with tap-offs — accumulation along a line
+      ``lattice``   interwoven members — coupling, network, mutual dependence
+      ``orbit``     concentric paths with a rider — cycles, iteration, return
+      ``radial``    rays from one origin — dispersion, reach, broadcast, divergence
+      ``seam``      two registers meeting at a hinge — a crossing from one state to another
+      ``strata``    stacked layers of unequal weight — depth, hierarchy, sedimented history
+      ``terrace``   ascending steps — progression, escalation, staged advance
+
+    `faint=True` drops the device to a ground the page's own content can sit on; the default is a
+    hero strength, because this page is the one where the idea is allowed to be the subject.
+    `at` positions the seam/spine (0-1 of the canvas), `orient` is 'v' or 'h' where that means
+    something, `count` is how many members (taps, rays, layers, steps).
+
+    Returns the list of shapes drawn (the legend, when asked for, is NOT in it — a key is not part
+    of the device's budget)."""
+    if kind not in _MOTIF_PAGE_KINDS:
+        # Raise rather than fall back to a default: a wrong name that silently draws a different
+        # device is how a deck ends up with a signature nobody chose.
+        raise ValueError("motif_page(kind={!r}): unknown device. One of: {}."
+                         .format(kind, " · ".join(sorted(_MOTIF_PAGE_KINDS))))
+    if orient not in ("v", "h"):
+        raise ValueError("motif_page(orient={!r}): 'v' or 'h'.".format(orient))
+    sw, sh_h = _slide_size(slide)
+    x0, y0 = (0.0, 0.0) if full_bleed else (inset, inset)
+    W, H = (sw, sh_h) if full_bleed else (sw - 2 * inset, sh_h - 2 * inset)
+    base = color if color is not None else DEEP
+    two = second if second is not None else BLUE
+    acc = accent if accent is not None else MAGENTA
+    if faint:
+        base, two, acc = (_blend(base, WHITE, 0.86), _blend(two, WHITE, 0.86),
+                          _blend(acc, WHITE, 0.72))
+    lw = max(0.012, weight / 72.0)
+    n = max(2, int(count))
+    out = []
+    # Paint order, recorded: (rect, fill) for every SOLID shape drawn. A legend laid on a device
+    # that painted its own ground has to take its ink from what is under it — the first render put
+    # a navy key on the navy half of a `seam` and it was effectively invisible. Last painted wins,
+    # exactly as the renderer resolves it.
+    grounds = []
+
+    def _solid(x, y, w_, h_, fill, **kw):
+        shp = box(slide, x, y, w_, h_, fill=fill, **kw)
+        grounds.append(((x, y, w_, h_), fill))
+        return shp
+
+    if kind == "seam":
+        if orient == "v":
+            cut = x0 + W * at
+            out.append(_solid(x0, y0, cut - x0, H, base))
+            out.append(_solid(cut, y0, x0 + W - cut, H, two))
+            out.append(box(slide, cut - lw / 2, y0, lw, H, fill=acc))
+            out.append(box(slide, cut - 0.13, y0 + H / 2 - 0.13, 0.26, 0.26, fill=acc,
+                           round=True, r=0.13))
+        else:
+            cut = y0 + H * at
+            out.append(_solid(x0, y0, W, cut - y0, base))
+            out.append(_solid(x0, cut, W, y0 + H - cut, two))
+            out.append(box(slide, x0, cut - lw / 2, W, lw, fill=acc))
+            out.append(box(slide, x0 + W / 2 - 0.13, cut - 0.13, 0.26, 0.26, fill=acc,
+                           round=True, r=0.13))
+    elif kind == "conduit":
+        spine = y0 + H * at
+        out.append(box(slide, x0, spine - lw / 2, W, lw, fill=base))
+        span = W * 0.82
+        for i in range(n):
+            cx = x0 + W * 0.09 + span * (i / float(n - 1))
+            up = i % 2 == 0
+            drop = H * (0.20 + 0.06 * (i % 3))
+            ty = spine - drop if up else spine
+            out.append(box(slide, cx - lw / 3, ty, max(0.008, lw * 0.66), drop, fill=two))
+            ny = (ty - 0.11) if up else (ty + drop - 0.11)
+            out.append(box(slide, cx - 0.11, ny, 0.22, 0.22,
+                           fill=acc if i == n // 2 else two, round=True, r=0.11))
+    elif kind == "strata":
+        # Unequal weights, so the stack reads as sediment rather than a chart's gridlines.
+        weights = [0.32, 0.18, 0.24, 0.11, 0.15, 0.09, 0.13, 0.07]
+        ws = weights[:n]
+        ws = [w / sum(ws) for w in ws]
+        y = y0
+        hot = max(range(n), key=lambda i: ws[i]) if n > 1 else 0
+        for i, w in enumerate(ws):
+            h = H * w
+            out.append(_solid(x0, y, W, h,
+                              acc if i == hot else _blend(base, WHITE, 0.10 + 0.11 * i)))
+            y += h
+    elif kind == "radial":
+        # An origin OFF the canvas: rays that all meet inside it read as a starburst clip-art.
+        ox, oy = x0 - W * 0.12, y0 + H * 1.06
+        reach = (W + H) * 0.9
+        for i in range(n + 2):
+            ang = -68.0 + (72.0 * (i / float(n + 1)))
+            sh_r = box(slide, ox, oy - lw / 2, reach, lw,
+                       fill=acc if i == (n + 2) // 2 else base)
+            try:
+                sh_r.rotation = ang
+            except Exception:
+                pass
+            out.append(sh_r)
+    elif kind == "lattice":
+        step = max(0.55, W / float(n * 2))
+        k = int((W + H) / step) + 2
+        for i in range(k):
+            for ang in (45.0, -45.0):
+                m = box(slide, x0 - H + i * step, y0 + H / 2 - lw / 2, H * 1.5, lw * 0.8,
+                        fill=_blend(base, WHITE, 0.35))
+                try:
+                    m.rotation = ang
+                except Exception:
+                    pass
+                out.append(m)
+        for i in range(n):
+            cx = x0 + W * (0.12 + 0.76 * (i / float(max(1, n - 1))))
+            out.append(box(slide, cx - 0.09, y0 + H * 0.5 - 0.09, 0.18, 0.18,
+                           fill=acc if i == n // 2 else base, round=True, r=0.09))
+    elif kind == "orbit":
+        cx, cy = x0 + W * 1.02, y0 + H * 0.5
+        for i in range(max(2, min(n, 5))):
+            r = (W * 0.34) * (1.0 + 0.42 * i)
+            out.append(box(slide, cx - r, cy - r, r * 2, r * 2, fill=None,
+                           line=base if i else acc, line_w=weight * (1.4 if i == 0 else 0.8),
+                           round=True, r=r))
+        rr = (W * 0.34) * 1.42
+        out.append(box(slide, cx - rr - 0.13, cy - H * 0.30, 0.26, 0.26, fill=acc,
+                       round=True, r=0.13))
+    elif kind == "aperture":
+        for i in range(n):
+            f = i / float(n)
+            iw, ih = W * (1.0 - 0.62 * f), H * (1.0 - 0.62 * f)
+            out.append(box(slide, x0 + (W - iw) / 2, y0 + (H - ih) / 2, iw, ih, fill=None,
+                           line=acc if i == n - 1 else _blend(base, WHITE, 0.25 + 0.12 * i),
+                           line_w=weight * (1.0 + 0.5 * f)))
+    else:                                                       # terrace
+        step_w = W / float(n)
+        for i in range(n):
+            h = H * (0.22 + 0.72 * ((i + 1) / float(n)))
+            out.append(_solid(x0 + i * step_w, y0 + H - h, step_w, h,
+                              acc if i == n - 1 else _blend(base, WHITE, 0.55 - 0.07 * i)))
+
+    for shp in out:
+        tag_motif(shp, loud=True)
+    if legend:
+        # `ly=None` on purpose: motif_legend measures the key and places it against the deck's own
+        # safe band. Passing a coordinate here is what kept the two-line key inside the reserved
+        # footer band even after motif_legend learned to place itself — the caller's guess simply
+        # overrode the measurement.
+        lx, ly = legend_at if legend_at else (0.7, None)
+        probe_y = ly if ly is not None else sh_h - 0.55
+        ink, lw_avail = None, sw - lx - 0.6
+        for (rx, ry, rw, rh), fill in reversed(grounds):
+            if rx - 0.01 <= lx <= rx + rw + 0.01 and ry - 0.01 <= probe_y <= ry + rh + 0.01:
+                ink = _legible_ink(fill)
+                # A key that runs off its own colour field reads as two half-legends and trips
+                # ESCAPES_CARD — measured on the scaffold's `seam`, where the default 4.4in width
+                # crossed the seam into the other register. Fit it to the field it sits on.
+                lw_avail = min(lw_avail, (rx + rw) - lx - 0.25)
+                break
+        if lw_avail < 2.2:
+            lw_avail = sw - lx - 0.6                  # too narrow to be a key: let it span instead
+        motif_legend(slide, legend, x=lx, y=ly, w=max(2.2, min(4.4, lw_avail)), color=acc, ink=ink,
+                     glyph="rule")
     return out
 
 
@@ -7448,17 +7763,19 @@ def _motif_faults(prs):
     out = []
     W, H = prs.slide_width / 914400.0, prs.slide_height / 914400.0
     loud_pages = []
+    legend_pages = []
     for n, slide in enumerate(prs.slides, 1):
         motifs, texts = [], []
         for sh in slide.shapes:
+            if str(getattr(sh, "name", "") or "") == MOTIF_LEGEND:
+                legend_pages.append(n)
             bb = _bbox_in(sh)
             if bb is None:
                 continue
             if _is_motif(sh):
-                full_bleed = bb[2] >= W * 0.92 and bb[3] >= H * 0.92
                 if _is_motif(sh, loud=True):
                     loud_pages.append(n)
-                if not full_bleed:
+                if not _is_motif_ground(sh, bb, W, H):
                     motifs.append((sh, bb))
             elif _is_text(sh) and not _is_watermark(sh):
                 r = _ink_rect(sh, bb)
@@ -7479,6 +7796,22 @@ def _motif_faults(prs):
                                 "the device, or declare it with deckkit.overlap_intent(shape, "
                                 "'<why the overlap IS the composition>')"))
                     break
+    # MOTIF_UNEXPLAINED — the STRANGER TEST, made countable. The skill requires a motif to be
+    # readable by someone who has never seen the deck: LABEL it, KEY it, or make it FIGURATIVE.
+    # Two of those three are shapes and were still unmeasurable, so the requirement was satisfiable
+    # by intending to satisfy it — and an unexplained constructed device is the failure mode the
+    # test is named for: the author knows what the three arcs mean and nobody else can.
+    # WARN, like its two siblings: the figurative answer is legitimate and leaves no legend behind,
+    # so this reports the absence and lets the author own it rather than refusing to save.
+    if loud_pages and not legend_pages:
+        first = sorted(set(loud_pages))[0]
+        out.append((first, "WARN", "MOTIF_UNEXPLAINED",
+                    "the deck carries a LOUD motif (first on slide {}) and no legend anywhere — a "
+                    "stranger has no way to read what the device MEANS. Three sanctioned answers: "
+                    "LABEL it, KEY it (deckkit.motif_legend(slide, '<what it means>') at its first "
+                    "appearance, or motif_page(..., legend='…') which draws one with the device), "
+                    "or make it FIGURATIVE — if the shape reads on its own, this warning is the "
+                    "expected one and the plan's motif line says so.".format(first)))
     if len(set(loud_pages)) > 3:
         pages = ", ".join(str(x) for x in sorted(set(loud_pages)))
         out.append((sorted(set(loud_pages))[3], "WARN", "MOTIF_BUDGET",
@@ -7487,6 +7820,31 @@ def _motif_faults(prs):
                     "tell rather than a signature. Demote the extras to the quiet register "
                     "signature (register_mark(..., loud=False)), which may repeat on every page"))
     return out
+
+
+def _is_motif_ground(sh, bb, W, H):
+    """Is this motif shape a GROUND (text is meant to sit on it) or a DEVICE (text crossing it is
+    the defect)? Full-bleed was the original carve; a solid FIELD is the same thing at smaller
+    scale, and leaving it out made the loud tier unusable — measured the moment `motif_page` went
+    into the scaffold: a `seam` paints two half-page colour fields, neither of them full-bleed, so
+    every word on the page (both headlines, the footer, the page number, and the motif's OWN
+    legend) was reported as crossing the motif. Six findings on a page whose composition was
+    exactly right.
+
+    The distinction that holds: a shape that PAINTS AN AREA is a canvas — text on a colour field
+    is ordinary design, the same as text on a card. A shape that draws a LINE or a RING is a
+    device, and a subtitle laid across it is the defect this check was written for (a hand-rolled
+    register drew three interlocking circles and a subtitle ran straight through them). Area, not
+    fill colour, is what separates them: the conduit's spine and the seam's hinge are filled too,
+    and both are well under the floor."""
+    if bb[2] >= W * 0.92 and bb[3] >= H * 0.92:
+        return True
+    if (bb[2] * bb[3]) < (W * H) * 0.03:
+        return False                                  # rules, rings, nodes: devices, whatever fill
+    try:
+        return sh.fill.type == MSO_FILL.SOLID
+    except Exception:
+        return False
 
 
 def _declared_overlap(sh):
@@ -8283,7 +8641,12 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
                 child, kind = ink, "text"
             elif is_pic:
                 child, kind = bb, "figure"
-            elif _has_fill(sh) and "AUTO_SHAPE" in st and _rectish(sh):
+            elif _has_fill(sh) and "AUTO_SHAPE" in st and _rectish(sh) and not _is_motif(sh):
+                # A TAGGED motif element is a device the author placed in the composition, not a
+                # labelled box that belongs inside a band — a `seam`'s hinge STRADDLES the join by
+                # construction, which is the whole point of it, and ESCAPES_CARD read that as the
+                # node escaping the colour field beside it. The motif has its own checks
+                # (TEXT_OVER_MOTIF · MOTIF_BUDGET · MOTIF_UNEXPLAINED); this is not one of them.
                 child, kind = bb, "node"          # a labelled box that should sit inside a band
             else:
                 continue

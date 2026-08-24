@@ -24,7 +24,11 @@ and this one used to teach the opposite of both:
      is the whole difference.
 
   2. TAG the deck's signature device. `register_mark()` draws the common register shapes correct
-     by construction and tags them; anything you draw yourself gets `tag_motif(shape, loud=…)`.
+     by construction and tags them (reach past `arcs`/`rule`/`grid` for one of the subject-world
+     kinds — `seal`, `stitch`, `trace`, `contour`, `caliper`, `hatch` — or the deck's corner will
+     look like every other deck's); `motif_page()` builds the LOUD page whose geometry IS the
+     device, with `legend=` drawing the key that satisfies the stranger test; anything you draw
+     yourself gets `tag_motif(shape, loud=…)`.
      Untagged, a motif is invisible to `TEXT_OVER_MOTIF` and to the <=3-loud-appearance budget —
      measured on that same build, 383 shapes carried ZERO tags, so the check written for its own
      cover defect reported nothing on it.
@@ -44,7 +48,8 @@ from deckkit import (  # noqa: E402
     box, text, bullet, callout, bottom_callout, arrow, chip, modbox, equation_native,
     equation_png,
     columns, rows, vstack, content_band, measure_bullets, measure_callout,
-    register_mark, tag_motif, picture, lint_layout, declare_delivery,
+    register_mark, motif_page, motif_legend, tag_motif, page_marker, picture, lint_layout,
+    declare_delivery, RGBColor,
     set_font, Inches, PP_ALIGN, MSO_ANCHOR,
     DEEP, BLUE, TEAL, MAGENTA, SLATE, MUTE, TINT, LIGHT, WHITE,
     GOLD, STEEL, VIOLET, ACCENTS,
@@ -178,7 +183,46 @@ def slide_split(prs):
 # render-failure isolation workflow or a mid-round self-check render into render_check/ (never
 # render/) — the fence: every critic round reviews a full fresh render, and the deliverable is
 # always this full, zero-arg default build.
-SLIDES = [slide_cover, slide_one_idea, slide_pipeline, slide_equation, slide_split]
+def slide_motif_page(prs):
+    """role=turn | form=the page whose GEOMETRY is the motif | static: one idea, held |
+    takeaway='Before and after are two registers, and the hinge is the argument'"""
+    s = add_slide(prs)
+    # THE LOUD TIER. `motif_generates.page` asks every deck for the one page whose geometry IS the
+    # device; this is that page, built by the helper so it is correct AND tagged loud (one of the
+    # <=3 budgeted appearances). Pick the KIND by the relation your content has — `seam` is a
+    # crossing from one state to another — then swap the material for your subject's own.
+    #
+    # 🔴 BOTH REGISTERS TAKE THE SAME ACCENT, so both have to clear it. A seam between a DARK and a
+    # LIGHT ground has no such accent — measured with contrast_ratio: magenta reads 2.38:1 on the
+    # navy and 4.27:1 on the tint, amber 6.24:1 on navy and 1.63:1 on tint. Two registers of
+    # similar VALUE (navy + deep teal here) let one accent serve the seam on both sides, and let
+    # one text colour serve both halves.
+    SECOND, AMBER = RGBColor(0x00, 0x56, 0x6B), RGBColor(0xFF, 0xB0, 0x00)   # 8.3:1 · 6.2/4.5:1
+    motif_page(s, "seam", color=DEEP, second=SECOND, accent=AMBER, at=0.46,
+               legend="THE SEAM — where the old register hands over to the new")
+    # ^ legend= draws the key with the device, which is how the STRANGER TEST is satisfied where a
+    #   reader actually is. Without a key anywhere, `MOTIF_UNEXPLAINED` says so at lint time.
+    text(s, 0.7, 2.0, 3.4, 1.3, [[("Before", 30, WHITE, True, False)],
+         [("the way it was", 14, TINT, False, False)]], space_after=4, line_spacing=1.0)
+    text(s, 5.3, 2.0, 4.0, 1.3, [[("After", 30, WHITE, True, False)],
+         [("the way it works now", 14, TINT, False, False)]], space_after=4, line_spacing=1.0)
+    # A statement page still needs a TITLE — screen readers navigate by them, and `NO SLIDE TITLE`
+    # reports a page without one. On a blank_deck slide there is no title PLACEHOLDER to hide
+    # off-canvas, so the title here is a real one, small and in the register's own ink: any text
+    # >=14.5pt in the top ~28% of the canvas is what the check looks for.
+    text(s, 0.7, 0.55, 6.0, 0.4, [[("THE TURN", 15, AMBER, True, False)]], space_after=0)
+    # NOT `footer()` here: this page paints its own dark ground, and the footer's MUTE ink reads
+    # 1.9:1 on navy — the deck-level gate calls that LOW CONTRAST and TEXT NOT VISIBLE, and it is
+    # right. A dark register keeps the chrome, in an ink that survives it.
+    page_marker(s, 6, color=WHITE)
+    # One advisory stands on this page and is worth understanding rather than silencing: READING
+    # ORDER wants the title added FIRST (screen readers follow z-order), while a painted ground has
+    # to be added first or it covers the words. On a full-bleed design page that is a real
+    # trade-off, not an oversight — the deck's own notes/export carry the title for assistive tech.
+
+
+SLIDES = [slide_cover, slide_one_idea, slide_pipeline, slide_equation, slide_split,
+          slide_motif_page]
 
 
 def main():

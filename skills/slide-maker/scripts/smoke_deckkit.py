@@ -110,6 +110,13 @@ def _wordmark():
     dk.logo(S(), p, h=0.4)                       # placed afterward, exactly like a real logo
 ok("wordmark (typographic logo stand-in)", _wordmark)
 ok("backdrop_motif", lambda: dk.backdrop_motif(S(), accent_disc=C("C0362C")))
+# The LOUD tier and the quiet register vocabulary — every kind, because a kind that only exists in
+# the signature is the defect `register_mark`'s own docstring was written about.
+for _k in dk._MOTIF_PAGE_KINDS:
+    ok("motif_page:" + _k, (lambda k: lambda: dk.motif_page(S(), k, legend=k + " — means x"))(_k))
+for _k in dk._REGISTER_KINDS:
+    ok("register_mark:" + _k, (lambda k: lambda: dk.register_mark(S(), k, text="7"))(_k))
+ok("motif_legend", lambda: dk.motif_legend(S(), "CROSSING — today to the bet"))
 ok("native_chart (editable)", lambda: dk.native_chart(S(), 0.6, 1, 6, 3.2, ["Q1", "Q2", "Q3"],
    [("新客", [10, 18, 26]), ("老客", [30, 33, 36])], kind="column", dark=True, highlight=0))
 ok("native_dual_axis (editable)", lambda: dk.native_dual_axis(S(), 0.6, 1, 7, 3.2, ["m1", "m2", "m3"],

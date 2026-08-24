@@ -99,6 +99,19 @@ def _laplacian_var(a):
     return float(np.var(lap))
 
 
+def _saturation(im, side=128):
+    """Mean chroma, 0-1. Cheap, and enough to tell a monochrome photo from a colour one."""
+    np = _need("numpy")
+    rgb = im.convert("RGB")
+    w, h = rgb.size
+    if max(w, h) > side:
+        sc = side / float(max(w, h))
+        rgb = rgb.resize((max(1, int(w * sc)), max(1, int(h * sc))))
+    a = np.asarray(rgb, dtype="float32") / 255.0
+    mx, mn = a.max(axis=2), a.min(axis=2)
+    return float(np.mean(np.where(mx > 1e-6, (mx - mn) / np.maximum(mx, 1e-6), 0.0)))
+
+
 def _dhash(im, size=8):
     """Perceptual hash. Returns (bits, has_structure).
 
@@ -283,7 +296,12 @@ def inspect(path, *, box=None, dpi_floor=MIN_DPI, soft_var=SOFT_VAR):
 def inspect_dir(target, *, box=None, dpi_floor=MIN_DPI, soft_var=SOFT_VAR):
     p = Path(target)
     files = ([p] if p.is_file() else
-             sorted(f for f in p.iterdir() if f.suffix.lower() in EXTS)) if p.exists() else []
+             sorted(f for f in p.iterdir()
+                    if f.suffix.lower() in EXTS and not f.name.startswith("_"))) if p.exists() else []
+    # Leading underscore = this pipeline's OWN output, not a candidate: the contact sheet, and the
+    # `_ref-` files generate_images_codex stages. Caught on the first real run, where the sheet
+    # QC'd itself and reported LETTERBOX on its own margins — and worse, would have counted itself
+    # in the set-level MIXED TREATMENT and near-duplicate passes.
     if not files:
         print("nothing to check at {} (looked for {})".format(target, ", ".join(EXTS)),
               file=sys.stderr)
@@ -301,6 +319,31 @@ def inspect_dir(target, *, box=None, dpi_floor=MIN_DPI, soft_var=SOFT_VAR):
                 r["notes"]["dup_check"] = "skipped — too little structure to compare"
         except Exception:
             continue
+    # MIXED TREATMENT — a set-level fault no per-file check can see. `image-generation.md` step 4
+    # asks that mixed sources be treated to ONE register so the deck reads as one thing; a
+    # monochrome Commons photo sitting between two colour ones is the commonest way that breaks,
+    # and it is obvious the moment you see the contact sheet and invisible before then.
+    sats = {}
+    for r in recs:
+        if any(f[0] == "UNREADABLE" for f in r["flags"]):
+            continue
+        try:
+            im, _ = _load(r["path"])
+            sats[r["file"]] = _saturation(im)
+            r["notes"]["saturation"] = round(sats[r["file"]], 3)
+        except Exception:
+            continue
+    mono = [f for f, v in sats.items() if v < 0.06]
+    colour = [f for f, v in sats.items() if v > 0.18]
+    if mono and colour:
+        for r in recs:
+            if r["file"] in mono:
+                r["flags"].append((
+                    "MIXED TREATMENT",
+                    "monochrome, in a set that also holds {} colour photo(s) — mixed sources have "
+                    "to read as ONE deck. Treat them all to the palette (image_fx.py duotone/gray), "
+                    "or drop the odd one out.".format(len(colour))))
+
     names = list(hashes)
     for i, n1 in enumerate(names):
         for n2 in names[i + 1:]:

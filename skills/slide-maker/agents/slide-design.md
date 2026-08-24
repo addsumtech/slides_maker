@@ -965,14 +965,23 @@ NOT a blanket per-slide quota):
     language>`, §1's ladder). A concept with no rungs is a picture that occurred to someone; the
     middle rung is also the only thing standing between this deck and an industry stereotype.
   - **generates** — the `motif generates:` line names all three (background · markers · one PAGE whose
-    geometry IS the motif — not necessarily a diagram, and `none — <reason>` beats an invented one),
+    geometry IS the motif — not necessarily a diagram, and `none — <reason>` beats an invented one;
+    the BUILD of that page is `deckkit.motif_page(slide, kind, legend=…)`, whose kinds are named
+    after RELATIONS — `seam` a crossing · `conduit` accumulation along a line · `strata` depth ·
+    `radial` dispersion · `lattice` coupling · `orbit` a cycle · `aperture` focus · `terrace` a
+    staged advance — so name the page by the relation your CONTENT has and let the build swap in
+    your subject's own material),
     or steps down to a quiet register with a stated reason. Two "nothing obvious" answers means
     re-sketch. *Carves: `conservative` answers the triple with its `deliberately restrained` clause; a
     1–2 slide tiny ask skips it; a locked template applies it to what you ADD, not to its own device.*
   - **reads** — the motif line states the device AND its meaning in words ("twin rails = the two
     engines") and names HOW a first-time viewer learns it. **FOUR arms** (§1 STRANGER TEST): labeled
     at first appearance / figurative enough to read unaided / on-canvas legend / **REMOVED — and
-    removal is first-class, usually the better fix**. A motif whose meaning appears only in the plan
+    removal is first-class, usually the better fix**. Two of those four arms are now SHAPES:
+    `deckkit.motif_legend(slide, "<what it means>")` draws the on-canvas key (and `motif_page(...,
+    legend=…)` draws it with the device), and `MOTIF_UNEXPLAINED` reports a deck that carries a
+    loud motif with no key anywhere — on the FIGURATIVE arm that advisory is the expected one, and
+    this line is where you say so. A motif whose meaning appears only in the plan
     text fails. **FOUR tells** that a passing sentence is really a failing one: a reading that
     **DEFERS** is not a reading ("it becomes clear on slide 7" is a failure written as a promise);
     **position dictates reading and outranks intent** (if the slot says something other than what you

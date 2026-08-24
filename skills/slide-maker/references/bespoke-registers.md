@@ -22,6 +22,24 @@ keep the *method* (what made it legible + generative), swap the *material* for y
 STRANGER TEST, ONE-form-ONE-meaning, and the generativity triple (slide-design §1) all still bind on what
 you produce.
 
+## Building one — the primitives, and which tier they serve
+
+- The **quiet** signature (the chrome cue on every ordinary page) is `deckkit.register_mark(slide,
+  kind, corner=…)`. Reach past the graphic-neutral kinds (`arcs` · `rule` · `ticks` · `ordinal` ·
+  `grid`) for one drawn from the subject's own world — `seal` · `stitch` · `trace` · `contour` ·
+  `caliper` · `hatch` — or hand-roll anything and `deckkit.tag_motif(shape, loud=False)` it.
+- The **loud** tier — the ONE page whose geometry IS the motif, which `motif_generates.page` asks
+  every deck for — is `deckkit.motif_page(slide, kind, legend=…)`, and its kinds are named after
+  RELATIONS, not looks: `seam` (a crossing) · `conduit` (accumulation along a line) · `strata`
+  (depth/hierarchy) · `radial` (dispersion) · `lattice` (coupling) · `orbit` (cycles) · `aperture`
+  (focus) · `terrace` (staged advance). Pick the relation your CONTENT has, then swap the material
+  for your subject's own conduit/layer/seam — the `current` entry below is exactly a `conduit`
+  whose material is an electric bus, and reading it as "use the conduit kind" instead of "use a bus"
+  is what adapting means here.
+- The **key** that satisfies the STRANGER TEST is `deckkit.motif_legend(slide, "<the meaning>")`,
+  drawn at the device's first appearance (`motif_page(..., legend=…)` does it for you). It is not
+  tagged as the motif: a key must not spend the ≤3 loud budget, and `MOTIF_UNEXPLAINED` looks for it.
+
 ## Verified registers
 
 ### `current` — a live electric BUS (from: EV / energy / autonomy)

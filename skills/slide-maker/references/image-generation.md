@@ -240,7 +240,10 @@ CONTACTED the script exits 2 and records `unreachable`, and the gate refuses to 
    flat/placeholder plates, letterbox bars, near-duplicates, a possible-watermark heuristic, and
    **EXIF rotation** — a flag this skill's own render loop ignores (measured), so a Commons photo
    carrying it lands sideways in a box sized for the wrong aspect with every other gate green;
-   `--fix` bakes it in. Everything after that is EYES, and the script says so: the
+   `--fix` bakes it in. It also checks the SET, not just each file: **MIXED TREATMENT** reports a
+   monochrome photo sitting among colour ones, which is the commonest way step 4's "mixed sources
+   must read as ONE deck" breaks and is invisible to any per-file check. Everything after that is
+   EYES, and the script says so: the
    file's caption / description / geotag / Commons category must confirm it shows the *claimed*
    subject — a mislabeled photo is the photographic version of an invented number, and the critic's
    fidelity lens checks it. View the downloaded file for watermarks, stock-preview overlays,

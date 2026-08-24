@@ -236,6 +236,35 @@ check(_probe.returncode != 0 and "--ref-intent" in (_probe.stderr or ""),
       "--ref-dir without --ref-intent is a HARD STOP, not a default — the permissive reading of "
       "this flag produces a convincing fake photograph of a real building (measured)")
 
+
+# ── 7. set-level checks: coherence, and not QC-ing our own outputs ─────────────────────────────
+import image_qc as iq                                                       # noqa: E402
+from PIL import Image                                                       # noqa: E402
+
+setdir = pathlib.Path(tempfile.mkdtemp(prefix="qcset-"))
+import random as _rnd                                                       # noqa: E402
+_r = _rnd.Random(3)
+colour = Image.new("RGB", (1600, 1000))
+colour.putdata([(_r.randrange(120, 256), _r.randrange(0, 90), _r.randrange(0, 90))
+                for _ in range(1600 * 1000)])
+colour.save(setdir / "a-colour.png")
+colour.convert("L").convert("RGB").save(setdir / "b-mono.png")
+colour.rotate(180).save(setdir / "c-colour.png")
+(setdir / "_contact_sheet.png").write_bytes((setdir / "a-colour.png").read_bytes())
+
+recs = iq.inspect_dir(setdir)
+flags = {r["file"]: {f[0] for f in r["flags"]} for r in recs}
+check("MIXED TREATMENT" in flags.get("b-mono.png", set()),
+      "MIXED TREATMENT catches the monochrome photo in a colour set — a set-level fault no "
+      "per-file check can see, and the one a human spots the instant they open the contact sheet",
+      str(flags))
+check(not any("MIXED TREATMENT" in flags.get(f, set()) for f in ("a-colour.png", "c-colour.png")),
+      "...and does not accuse the colour photos of it")
+check("_contact_sheet.png" not in flags,
+      "the pipeline's OWN outputs (leading underscore: the contact sheet, staged _ref- files) are "
+      "not QC'd as candidates — the sheet used to report LETTERBOX on its own margins and to count "
+      "itself in the set-level passes", str(sorted(flags)))
+
 print("\n".join("  ok   " + x for x in ok))
 if bad:
     print("\n".join("  FAIL " + x for x in bad))

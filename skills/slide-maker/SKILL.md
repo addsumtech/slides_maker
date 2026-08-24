@@ -1122,11 +1122,17 @@ The helper set, by job:
   primitive to draw one, so every deck hand-rolled its signature out of raw boxes. Measured: one
   such helper offset each ring in x but **not in y** and therefore drew three *interlocking*
   circles — a Venn diagram — in the corner of twelve pages, and nothing caught it because no gate
-  knows what a motif is supposed to look like. `register_mark(slide, kind, corner=…)` draws the
-  five common shapes correct-by-construction — **`arcs`** (concentric rings sharing ONE centre, so
-  that bug is unrepresentable) · **`rule`** (an inset edge rule) · **`ticks`** (an evenly-spaced
-  scale) · **`ordinal`** (a corner numeral) · **`grid`** (a small hairline field) — and TAGS what
-  it draws. Invention stays open: draw whatever you like and call **`deckkit.tag_motif(shape,
+  knows what a motif is supposed to look like. `register_mark(slide, kind, corner=…)` draws
+  eleven marks correct-by-construction — the graphic-neutral five, **`arcs`** (concentric rings
+  sharing ONE centre, so that bug is unrepresentable) · **`rule`** (an inset edge rule) ·
+  **`ticks`** (an evenly-spaced scale) · **`ordinal`** (a corner numeral) · **`grid`** (a small
+  hairline field), and six drawn from SUBJECT WORLDS, because a deck reaching for the neutral five
+  produces the same corner as every other deck and that sameness is what the direction gate exists
+  to prevent: **`seal`** (a stamp — authority, permits, certificates) · **`stitch`** (a
+  perforated seam — a made object's join) · **`trace`** (a signal waveform — anything measured,
+  monitored, heard) · **`contour`** (isolines — terrain, fields, level sets) · **`caliper`** (a
+  scale bar — anything measured to size) · **`hatch`** (drawn shading — the hand counterpart to
+  `grid`'s machine one) — and TAGS what it draws. Invention stays open: draw whatever you like and call **`deckkit.tag_motif(shape,
   loud=…)`** on it. 🔴 **The tag is what gives the motif a machine-readable existence**, and two
   contracts the skill has always stated become checkable only because of it: **`TEXT_OVER_MOTIF`**
   (a title crossing the device — invisible to `TEXT_OVERLAP`, which measures text against TEXT
@@ -1134,6 +1140,25 @@ The helper set, by job:
   **`MOTIF_BUDGET`** (the ≤3 LOUD appearances the design plan promises — pass `loud=True` for a
   hero appearance; the quiet register signature is excluded by design, because it is *meant* to
   repeat on every page). An untagged deck is never punished for not using this vocabulary.
+- **The LOUD tier (`motif_page`) — the page whose GEOMETRY is the motif, and the key that explains
+  it.** `motif_generates.page` asks every deck for that page and, until this helper, every deck
+  built it out of raw boxes — the same situation that produced the Venn diagram above, one tier up
+  and with the deck's hero page riding on it. `motif_page(slide, kind, legend=…)` builds it from
+  the generative relations that recur across subjects, tags every shape LOUD (so the page spends
+  exactly one budgeted appearance and `MOTIF_BUDGET` can see it), and draws the key with the
+  device: **`seam`** (two registers meeting at a hinge — a crossing from one state to another) ·
+  **`conduit`** (a spine with tap-offs — accumulation along a line) · **`strata`** (layers of
+  unequal weight — depth, hierarchy, sediment) · **`radial`** (rays from one origin — dispersion,
+  reach) · **`lattice`** (interwoven members — coupling, network) · **`orbit`** (concentric paths
+  with a rider — cycles, return) · **`aperture`** (frames narrowing to an opening — focus, a
+  funnel) · **`terrace`** (ascending steps — staged advance). 🔴 **Pick the kind whose RELATION is
+  your content's relation, then swap the MATERIAL for your subject** (`references/bespoke-registers.md`
+  — keep the method, swap the material); a kind chosen for how it looks is an ornament with a
+  schedule. `faint=True` drops it to a ground content can sit on. **The STRANGER TEST is now
+  countable:** `motif_legend(slide, "<what the device MEANS>")` draws a small key (a sample of the
+  mark + the words) and `MOTIF_UNEXPLAINED` reports a deck that carries a loud motif with no key
+  anywhere — the three sanctioned answers are still LABEL it, KEY it, or make it FIGURATIVE, and
+  the third one leaves this advisory standing on purpose.
 - **Composed overlap (`overlap_intent`)** — `lint_layout`'s `TEXT_OVERLAP` is a CRITICAL that refuses
   to save, and it is right to be: colliding text is the commonest way a build ships unreadable. But it
   also refused two moves that are ordinary editorial design — **a giant display word with a small line
