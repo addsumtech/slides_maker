@@ -1159,6 +1159,14 @@ The helper set, by job:
   mark + the words) and `MOTIF_UNEXPLAINED` reports a deck that carries a loud motif with no key
   anywhere — the three sanctioned answers are still LABEL it, KEY it, or make it FIGURATIVE, and
   the third one leaves this advisory standing on purpose.
+- **A strike-through is a rule crossing its own text, and may now SAY so.** `RULE_THROUGH_TEXT` is
+  a CRITICAL written for the hand-picked-`y` divider that a growing paragraph later swallowed — and
+  it had no declaration, while both its siblings do (`TEXT_OVERLAP` → `overlap_intent`,
+  `OFF_CANVAS` → `bleed_intent`). Measured: a deck that wanted three struck-out items had to
+  abandon the mark. `deckkit.overlap_intent(rule, "<why this crossing IS the mark>")` now waives
+  it — the GEOMETRY only: `TEXT NOT VISIBLE`, contrast and the occlusion checks still run, so a
+  rule that actually erases its text is still caught, and an UNdeclared one still fails exactly as
+  before.
 - **Deliberate bleed (`bleed_intent`)** — `OFF_CANVAS` is a CRITICAL that refuses to save, and it
   is right to be: a card or a headline off the page is the commonest way a build ships something
   unreadable. But a signature device that runs off the edge is ordinary design — a ray fan whose
@@ -1788,7 +1796,11 @@ its 1.5–3.0 band is the TEXT-ON-IMAGE CONTRAST `[warn]`.
 
 **🔴 RECORD the delivery mode once, in the build script, instead of retyping a flag:**
 `dk.declare_delivery(OUT, "selfread")` beside `prs.save(OUT)` — one of `presented` · `textheavy` ·
-`selfread` · `surface`. It writes `delivery` into `<deck dir>/.deck-gates.json`, which **both**
+`selfread` · `surface`. **Pass `builds="static"` on a presented deck whose user opted OUT of
+appear-builds** (`dk.declare_delivery(OUT, "presented", builds="static")`): the builds choice is a
+user decision exactly like the mode, and it was the one still carried by memory — without it
+`--static` has to be retyped on every lint run or `NO BUILDS` fires on a deck that is static
+*because they chose that*. It writes `delivery` into `<deck dir>/.deck-gates.json`, which **both**
 `lint_deck.py` and `render_deck.py --gate-check` read, and a recorded value beats a conflicting
 flag in both (they say so and name the file). Why it is a 🔴 and not a convenience: a mode that
 lives only in flags is a fact carried by memory, and it gets dropped. Measured on a delivered
@@ -2404,6 +2416,18 @@ out explicitly here so they can confirm it.
 > deck's delivery mode, exactly as you would for `lint_deck.py`, so the text budget it enforces is
 > the budget that mode is actually held to — or, better, record it once with
 > `dk.declare_delivery(OUT, "<mode>")` in the build script and neither tool needs the flag again.
+>
+> 🔴 **Write the record with `deck_gates.py`, not by hand — `python3 scripts/deck_gates.py init
+> <deck-dir> --slides N`, fill it, `… check <deck-dir>`.** The gate stops at the first problem in a
+> SECTION on purpose (its later checks read what the earlier one validated), and `design_plan` is
+> the section with a dozen required fields — so a hand-typed record pays one round-trip per wrong
+> SHAPE. Measured on a real build: **six consecutive `--gate-check` runs**, one field each —
+> `boldness` written as `bold — because …` (the gate tests that field for equality, so the reason
+> belongs in `boldness_derivation`), then `signature_proof`, `material_probe`, `concept` as a
+> string instead of `{chosen, rejected[]}`, and `type_scale.body` under the legibility floor.
+> `deck_gates.py check` reports all of those in ONE pass because it only reads the JSON. It is a
+> SHAPE pre-flight and never the gate: it cannot know whether the anchors render, whether the
+> register reached the pixels, or whether the credits landed on a slide — run `--gate-check` after it.
 >
 > 🔴 **It reports EVERY failure at once — `[1/N] <section>`, so FIX THEM ALL, then re-run.** Fixing
 > the first one and re-running is the habit this batching exists to kill: the gate used to stop at

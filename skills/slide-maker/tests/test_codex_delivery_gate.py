@@ -341,6 +341,9 @@ def fixture(root: Path) -> tuple[dict, dict, dict, Path]:
             # The image evidence tokens. A text-only fixture still has to SAY so — the field is
             # required on both runtimes, and "no images" is a decision like any other.
             "image_sources": "n/a - text-only evidence deck, no content images",
+            # The look was not competed on a CI fixture — the named carve, same shape as a locked
+            # template or a tiny ask.
+            "direction_gate": "n/a - CI fixture, no direction gate was run",
             "signature_move": "A visible evidence rail connects source, build, and review.",
             "carried_by": [1],
             "signature_proof": {

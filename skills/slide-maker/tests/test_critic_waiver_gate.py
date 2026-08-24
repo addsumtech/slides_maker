@@ -47,6 +47,9 @@ DESIGN_OK = {
     # build_deck() places no pictures at all, so the honest row is the n/a escape, not an invented
     # sourced token.
     "image_sources": "n/a — three-slide text fixture, no content images",
+    # The look was not chosen from rendered alternatives on a CI fixture — the named carve, the
+    # same shape a locked template or a 1-2 slide tiny ask records.
+    "direction_gate": "n/a — CI fixture, no direction gate was run",
     "type_scale": {"display": 34, "title": 24, "body": 14},
     # The 🔴 design checkpoint's mode + record. Same two values codex_delivery_gate accepts
     # (`approved` | `auto`); on the shared path there is no top-level `design` section, so it

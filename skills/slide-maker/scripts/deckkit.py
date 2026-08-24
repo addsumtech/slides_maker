@@ -6007,7 +6007,7 @@ def overlap_intent(shape, reason):
 DELIVERY_MODES = ("presented", "textheavy", "selfread", "surface")
 
 
-def declare_delivery(where, mode):
+def declare_delivery(where, mode, builds=None):
     """Record HOW this deck will be consumed, in `<deck dir>/.deck-gates.json`, from the build
     script — so the lint's budgets do not depend on an operator remembering a CLI flag.
 
@@ -6039,6 +6039,15 @@ def declare_delivery(where, mode):
     except (OSError, ValueError):
         gates = {}
     gates["delivery"] = mode
+    if builds is not None:
+        # The BUILDS choice is a user decision exactly like the mode, and it was the one still
+        # carried by memory: with the user opted OUT of appear-builds, `--static` had to be typed
+        # on every lint run or NO BUILDS fired on a deck that is static BY THEIR CHOICE. Same
+        # argument that produced this function; the flag was simply never given a home.
+        if builds not in ("static", "builds"):
+            raise ValueError("builds must be 'static' (the user opted out) or 'builds' (opted "
+                             "in), got %r" % (builds,))
+        gates["builds"] = builds
     with open(path, "w", encoding="utf-8") as fh:
         _json.dump(gates, fh, ensure_ascii=False, indent=1)
         fh.write("\n")
@@ -8657,6 +8666,15 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
         for sh_r, bb_r, st_r, ink_r, _r in info:
             if ink_r is not None or "PICTURE" in st_r:
                 continue                                   # text and pictures are other checks
+            if _declared_overlap(sh_r):
+                # DECLARED. Its two siblings already honour this — TEXT_OVERLAP since it was
+                # written, OFF_CANVAS via bleed_intent — and this one refused a composition with
+                # no way to say "on purpose": a STRIKE-THROUGH is a rule crossing its own text,
+                # which is what the mark MEANS, and a deck that wanted one had to abandon it.
+                # Measured on a real build. The declaration waives the GEOMETRY only; the pixel
+                # checks (TEXT NOT VISIBLE, contrast, occlusion) still run, so a rule that
+                # actually erases its text is still caught.
+                continue
             rw, rh = bb_r[2], bb_r[3]
             thin, long_ = min(rw, rh), max(rw, rh)
             if thin > RULE_MAX_THICK or long_ < RULE_MIN_LEN:

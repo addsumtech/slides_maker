@@ -198,6 +198,16 @@ four template choices:
          register — line colour = visa route, numbered roundel = step, buffer stop = dead end — beat
          all three best-fit presets, and then supplied the deck's signature move for free, because
          the motif was load-bearing rather than decorative.)*
+       - 🔴 **The verdict now LANDS IN `.deck-gates.json` and is RE-SCORED at hand-off**, the way
+         the arc competition is: record `design_plan.direction_gate = {"candidates": "directions.json",
+         "picked": "<the chosen one>"}`, or the named carve `"n/a — <locked template | mimic |
+         user supplied the look | tiny ask>"`. `render_deck.py --gate-check` runs
+         `directions_diversity.check()` over the candidates itself. Measured on a real build: the
+         script reports `TOO SIMILAR Brutalist vs Swiss (palette 37.9)` — which the author caught
+         by eye — AND `NO BESPOKE DIRECTION`, which the author did NOT catch: the "bespoke"
+         candidate carried colours, a cover and a skeleton but no `cover_motif`, so the user chose
+         from three presets and a colourway. Neither finding reached the design checkpoint, because
+         nothing required the script to be run.
        - 🔴 **The mechanical check enforces it — on BOTH failure directions:** `directions_diversity.py`
          fails a set in which **no** direction carries `cover_motif`/`ambient_motif` (no bespoke), AND
          a set carrying **more than one motif-less colourway** (`colourway_excess` — the "just different

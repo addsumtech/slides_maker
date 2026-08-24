@@ -264,6 +264,8 @@ TEMPLATE = {
         # render_deck.py runs on the Claude path. Carried in the scaffold because a capability that
         # is not in the example scaffold is a capability that does not get produced.
         # A deck with no content images writes the string "n/a - <why>".
+        # The direction competition: the candidates themselves, re-scored at delivery.
+        "direction_gate": {"candidates": "directions.json", "picked": "<the chosen direction>"},
         "image_sources": [
             "slide <n> | <subject> | sourced - <origin> (<licence>) | <file>",
             "slide <n> | <subject> | generated - <tool>",
@@ -1207,6 +1209,51 @@ def check_design(
     # when a plan says nothing and no photo was sourced — that silence is right for a library
     # function and wrong for a gate, and render_deck.py requires the field via DESIGN_FIELDS. A
     # deck with no content images writes "n/a - <why>".
+    # DIRECTION COMPETITION — same field, same shape, same re-scoring as render_deck.py. The two
+    # gate paths drifting on a duplicated field has cost this repo twice already.
+    _dg = design.get("direction_gate")
+    if isinstance(_dg, str) and _dg.strip().lower().replace("—", "-").startswith("n/a") \
+            and len(_dg.strip()) > 6:
+        pass                                       # a recorded carve: locked / mimic / tiny ask
+    elif not isinstance(_dg, dict):
+        errors.append('design.direction_gate missing — the look was either CHOSEN from rendered '
+                      'alternatives or it was not, and both are recordable: {"candidates": '
+                      '"directions.json" | [...], "picked": "<the one>"}, or "n/a - <locked '
+                      'template | mimic | user supplied the look | tiny ask>". It is re-scored '
+                      'with scripts/directions_diversity.py, the way the arc competition is.')
+    else:
+        _c = _dg.get("candidates")
+        if isinstance(_c, str):
+            _cp = Path(root) / _c
+            try:
+                _c = json.loads(_cp.read_text(encoding="utf-8"))
+            except Exception as _exc:
+                errors.append("design.direction_gate.candidates ({}) could not be read: {}"
+                              .format(_c, _exc))
+                _c = None
+        if isinstance(_c, list) and len(_c) >= 2:
+            try:
+                sys.path.insert(0, str(Path(__file__).resolve().parent))
+                import directions_diversity as _dd
+                _r = _dd.check(_c)
+                _f = []
+                if _r["flagged"]:
+                    _f.append("{} pair(s) read as skins of one idea".format(len(_r["flagged"])))
+                if _r["no_bespoke"]:
+                    _f.append("no bespoke direction — every candidate is a preset or a "
+                              "motif-less colourway")
+                if _r["colourway_excess"]:
+                    _f.append("more than one motif-less colourway")
+                if _f and not str(_dg.get("waived", "")).strip():
+                    errors.append("design.direction_gate does not hold up when re-scored: "
+                                  + "; ".join(_f) + " — rediverge, or record `waived`")
+            except ImportError:
+                errors.append("design.direction_gate NOT re-scored — directions_diversity.py "
+                              "is missing")
+        elif _c is not None:
+            errors.append("design.direction_gate.candidates needs the LIST of directions shown "
+                          "(2-4). One direction is not a competition.")
+
     _img = design.get("image_sources")
     if not _img or (isinstance(_img, str) and len(_img.strip()) < 4):
         errors.append('design.image_sources missing — one row per content image with its evidence '
@@ -1882,6 +1929,13 @@ def main() -> int:
             return 2
         print(f"CODEX DELIVERY RECEIPT: {args.receipt}")
     return 0
+
+
+try:                                            # console safety: a legacy code page must
+    from _console import safe_stdio             # degrade a tick, never kill the report
+    safe_stdio()
+except Exception:
+    pass
 
 
 if __name__ == "__main__":

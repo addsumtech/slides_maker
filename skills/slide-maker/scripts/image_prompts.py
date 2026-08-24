@@ -182,5 +182,12 @@ def main():
     print(f"wrote {len(manifest)} prompts to {out_dir}")
 
 
+try:                                            # console safety: a legacy code page must
+    from _console import safe_stdio             # degrade a tick, never kill the report
+    safe_stdio()
+except Exception:
+    pass
+
+
 if __name__ == "__main__":
     main()

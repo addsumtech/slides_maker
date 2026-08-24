@@ -34,6 +34,7 @@ critic treats a recorded guard deviation like the stylized-illustration deviatio
 not a register break.
 """
 import sys as _sys
+import warnings
 from pptx.dml.color import RGBColor
 def C(h): return RGBColor.from_string(h)
 
@@ -368,6 +369,29 @@ def apply(name):
     because `apply()` runs before any slide does, so it cannot call `slide_background()` itself.
     """
     import deckkit as dk
+
+    # 🔴 A preset's FACE is a name, and a name that is not installed is measured in a substitute —
+    # which is worst precisely where the register is typographic. Measured: `terminal` declares
+    # Consolas, absent from macOS, so every fixed-width measurement in a mono register would have
+    # been computed in a proportional fallback. deckkit already knows how to ask; apply() did not.
+    _pre = PRESETS.get(name) or {}
+    _seen = set()
+    for _slot in ("font", "display", "mono"):
+        _face = _pre.get(_slot)
+        if not _face or _face in _seen:
+            continue                              # one warning per FACE, not per slot
+        _seen.add(_face)
+        try:
+            if dk._font_substituted(_face):
+                warnings.warn(
+                    "presets.apply({!r}): the preset's {} face {!r} is NOT installed on this "
+                    "machine, so every measurement in it falls back to a metric-incompatible "
+                    "substitute. Set an installed face after apply() — dk.FONT = dk.MONO = "
+                    "'<installed>' — or run deckkit.use_platform_fonts().".format(
+                        name, _slot, _face),
+                    stacklevel=2)
+        except Exception:
+            pass                                  # a font probe must never break a build
     p = preset(name)
     dk.set_palette(deep=p["ink"], slate=p["muted"], accents=list(p["accents"]),
                    font=p["font"], display=p["display"], mono=p["mono"],

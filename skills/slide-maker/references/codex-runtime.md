@@ -135,6 +135,23 @@ be reconstructed post-hoc at the delivery gate.
    source SVG, preserving transparent alpha; Codex evidence records the rasterizer and the gate rejects
    a recorded icon whose shortest edge is below 256px or whose PNG has no alpha channel. This is a
    Codex-only execution rule: it prevents thumbnail blur without changing the shared icon workflow.
+3b2. **The DIRECTION competition is re-scored at delivery — `design.direction_gate` BLOCKS
+   without it.** Same shape and same reason as the arc competition: the look was either chosen
+   from rendered alternatives or it was not, and both are recordable.
+
+   ```json
+   "direction_gate": {"candidates": "directions.json", "picked": "<the one chosen>"}
+   "direction_gate": "n/a - <locked template | mimic | user supplied the look | tiny ask>"
+   ```
+
+   `codex_delivery_gate.py` runs `scripts/directions_diversity.py` over the candidates ITSELF, so
+   a verdict you type is not evidence the check ran. It scores two things a preset list quietly
+   fails: a PAIR that is one idea in two colourways, and a set with no invented register at all.
+   Measured on a real build — the author caught the first by eye and never noticed the second: the
+   "bespoke" candidate carried a palette, a cover and a skeleton but no `cover_motif`, so the user
+   chose from three presets and a colourway. If the set genuinely stands, record
+   `"waived": "<why>"` beside it.
+
 3c. **Every CONTENT IMAGE is sourced by the REFERENT RULE, and the plan says so in
    `design.image_sources` — the delivery gate BLOCKS without it.** This step exists because the
    gate got the requirement before this runbook did: `codex_delivery_gate.py` refuses a plan whose
@@ -173,6 +190,19 @@ be reconstructed post-hoc at the delivery gate.
    the generation and REQUIRES `--ref-intent` (`generic-concrete` · `stylized-illustration` ·
    `fallback-rung`): a reference makes a fake ACCURATE, and a real subject that has a usable photo
    is not on that list — place the photo.
+
+3a. **Write the shared record with `scripts/deck_gates.py`, not by hand.** The Codex path keeps
+   its own `.codex-deck-evidence.json`, and the two files are different schemas — but a Codex run
+   that also produces `.deck-gates.json` (any build script calling `deckkit.declare_delivery`
+   does) gets the same benefit: `deck_gates.py init <deck-dir> --slides N` writes a fully SHAPED
+   skeleton, and `deck_gates.py check <deck-dir>` reports EVERY shape problem at once. The
+   delivery gates deliberately stop at the first problem in a section (their later checks read
+   what the earlier one validated), so on a hand-typed record that costs one round-trip per wrong
+   SHAPE — measured at six on one real build. 🔴 It is a shape pre-flight and never the gate: it
+   never opens the .pptx.
+   **Record the BUILDS choice while you are there** — `deckkit.declare_delivery(OUT, "presented",
+   builds="static")` when the user opted out of appear-builds, so `NO BUILDS` stops firing on a
+   deck that is static because they chose that, without `--static` being retyped every run.
 
 3b. **Iterate through `deck_cycle.py`, not through hand-run steps — this is where the adapter's
    own worst time sink lives.** `python3 scripts/deck_cycle.py build_<deck>.py [--render]` runs

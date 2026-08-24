@@ -203,6 +203,11 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   (`icon_png(spec, out, color=…, gradient=(c0,c1), px)`); pair with the deckkit container helpers
   `icon` / `icon_tile` (solid/gradient/glass tile) / `icon_badge` (ring) / `icon_ghost` (watermark) /
   `icon_card`. See `references/icons.md` ("Treatments").
+- `deck_gates.py` — write and shape-check `.deck-gates.json`, the record every hand-off gate
+  reads: `init <deck-dir> [--slides N]` (a fully-SHAPED skeleton whose every value is a placeholder
+  the checker rejects) · `set <deck-dir> <dotted.path> <value>` · `check <deck-dir>` (EVERY shape
+  problem at once — the half `--gate-check` deliberately cannot batch). A shape pre-flight, never
+  the gate: it never opens the .pptx.
 - `fetch_images.py` — the SOURCED-photo pipeline: `search` (look, download nothing) · `fetch`
   (download candidates + write the `sources.json` provenance ledger) · `adopt` (mark the one you
   chose, after LOOKING) · `ledger --tokens|--credits` (the plan's evidence rows, and the credit

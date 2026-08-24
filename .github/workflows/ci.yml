@@ -454,6 +454,27 @@ jobs:
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/motif.log || {
             echo "::error::motif contract suite did not run to completion"; exit 1; }
 
+      # Every image row's evidence token held against the ledger and the built deck, plus the
+      # non-Latin paths that were quietly ASCII-only (a CJK subject collapsed to the bare filename
+      # fallback; a two-character Chinese author could not satisfy a len>=4 credit check).
+      - name: Image sourcing (provenance tokens · QC · the non-Latin paths)
+        run: |
+          set -o pipefail
+          python tests/test_image_sourcing.py | tee /tmp/imgsrc.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/imgsrc.log || {
+            echo "::error::image-sourcing suite did not run to completion"; exit 1; }
+
+      # Six defects found by RUNNING the skill end to end, not by reading it — the six-round-trip
+      # gate sequence, the direction competition nothing required anyone to score, a preset setting
+      # an uninstalled face, a strike-through that could not be built, a builds choice carried by
+      # memory. Each one is a measurement from one real build.
+      - name: Gate ergonomics (deck_gates shapes · direction re-scoring · the three declarations)
+        run: |
+          set -o pipefail
+          python tests/test_gate_ergonomics.py | tee /tmp/gateerg.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/gateerg.log || {
+            echo "::error::gate-ergonomics suite did not run to completion"; exit 1; }
+
       - name: Deck-level faults (duplicate text · chrome slot drift)
         run: |
           set -o pipefail

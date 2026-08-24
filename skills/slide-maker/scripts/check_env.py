@@ -291,6 +291,13 @@ def main():
     check_registry()
 
 
+try:                                            # console safety: a legacy code page must
+    from _console import safe_stdio             # degrade a tick, never kill the report
+    safe_stdio()
+except Exception:
+    pass
+
+
 if __name__ == "__main__":
     # `--ensure` is the Step-0 auto-fix path (install missing pip deps, report system deps + exit
     # code); no flag is the full human-readable report. Kept as one script so the check and the

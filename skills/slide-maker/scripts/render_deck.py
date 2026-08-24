@@ -1188,6 +1188,88 @@ def _critic_effort(critic):
     return "an unrecorded number of rounds"
 
 
+def _direction_gate(design, deck_dir):
+    """The direction competition, RE-SCORED here — the design side's twin of the arc gate.
+
+    `directions_diversity.py` is a real detector: given the four directions of a real build it
+    reported `TOO SIMILAR Brutalist vs Swiss (palette 37.9, matched palette+type+density)` and
+    `NO BESPOKE DIRECTION: every candidate is a preset (or a motif-less colourway)`. Both were
+    true. NEITHER reached the design checkpoint, because nothing in the flow required the script
+    to be run — the author caught the first by eye and never noticed the second.
+
+    That is the same asymmetry the arc gate was written to close: the CONTENT competition is
+    re-scored from its candidates at hand-off, while the DESIGN competition's verdict was a
+    sentence somebody typed. So this reads the candidates and scores them here. A deck whose look
+    was not chosen from alternatives records the named carve instead — the `logo plan: n/a — …`
+    shape — because "no competition ran" and "a competition ran and I did not write it down" must
+    not look identical."""
+    dg = design.get("direction_gate")
+    if isinstance(dg, str) and _norm_na(dg):
+        return                                        # a recorded carve: locked / mimic / tiny ask
+    if not isinstance(dg, dict):
+        die('`design_plan.direction_gate` is missing. The look was either CHOSEN from rendered\n'
+            '    alternatives (branch c) or it was not, and both are recordable:\n'
+            '      "direction_gate": {"candidates": "directions.json" | [ {...}, ... ],\n'
+            '                         "picked": "<the direction the user chose>"}\n'
+            '      "direction_gate": "n/a - <locked template | mimic | user supplied the look | '
+            'tiny ask>"\n'
+            '    It is re-scored here with scripts/directions_diversity.py, the way the arc\n'
+            '    competition is re-scored with arc_divergence — a verdict somebody typed is not\n'
+            '    evidence that the check ran.')
+    cands = dg.get("candidates")
+    if isinstance(cands, str):
+        cp = os.path.join(deck_dir, cands)
+        if not os.path.exists(cp):
+            die("`design_plan.direction_gate.candidates` points at {!r}, which does not exist "
+                "beside the deck.".format(cands))
+        try:
+            with open(cp, encoding="utf-8") as fh:
+                cands = json.load(fh)
+        except ValueError as exc:
+            die("`design_plan.direction_gate.candidates` ({}) is not valid JSON: {}"
+                .format(cands, exc))
+    if not isinstance(cands, list) or len(cands) < 2:
+        die("`design_plan.direction_gate.candidates` needs the LIST of directions that were "
+            "shown (2-4 of them). One direction is not a competition.")
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import directions_diversity                                  # noqa: PLC0415
+        r = directions_diversity.check(cands)
+    except Exception as exc:                                          # never silently
+        print("  [--] DIRECTION GATE: NOT RE-SCORED — {}: {}".format(type(exc).__name__, exc))
+        return
+    faults = []
+    if r["flagged"]:
+        faults.append("{} pair(s) read as skins of one idea: {}".format(
+            len(r["flagged"]),
+            "; ".join("{} vs {} (palette {}, matched {})".format(
+                p["a"], p["b"], p["palette_distance"], ", ".join(p["matched_axes"]) or "none")
+                for p in r["flagged"])))
+    if r["no_bespoke"]:
+        faults.append("NO BESPOKE DIRECTION — every candidate is a preset or a motif-less "
+                      "colourway; at least one must be a register invented for THIS topic "
+                      "(a dict carrying its own `cover_motif` + `ambient_motif`)")
+    if r["colourway_excess"]:
+        faults.append("more than one motif-less colourway: {}".format(
+            ", ".join(r["colourway_excess"])))
+    if faults and not str(dg.get("waived", "")).strip():
+        die("the direction competition does not hold up when re-scored:\n    - "
+            + "\n    - ".join(faults)
+            + "\n    REDIVERGE them, or record why the set stands: "
+              '"direction_gate": {..., "waived": "<the reason>"}.')
+    if faults:
+        print("  [gates] direction gate: {} finding(s) WAIVED — {}".format(
+            len(faults), str(dg["waived"])[:90]))
+    else:
+        print("  [gates] direction gate: {} direction(s) re-scored — none is a skin of another, "
+              "{} bespoke".format(len(cands), len(r["bespoke"])))
+
+
+def _norm_na(v):
+    t = str(v or "").strip().lower().replace("—", "-").replace("–", "-")
+    return t.startswith("n/a") and len(t) > 6
+
+
 def _image_provenance_gate(design, pptx):
     """Evidence tokens vs the provenance ledger vs the deck's own text.
 
@@ -1749,6 +1831,7 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
             # search, and a CC BY photo with no credit on any slide, are both invisible to a
             # field-presence check and both were shipping.
             _image_provenance_gate(design, pptx)
+            _direction_gate(design, os.path.dirname(os.path.abspath(pptx)) or ".")
             scale = design["type_scale"]
             if not isinstance(scale, dict) or not all(
                     isinstance(scale.get(k), (int, float)) for k in ("display", "title", "body")):
@@ -3465,6 +3548,13 @@ addEventListener('keydown', e => {{
 go(0);
 </script></body></html>
 """.format(title=title.replace("&", "&amp;").replace("<", "&lt;"), slides=json.dumps(slides))
+
+
+try:                                            # console safety: a legacy code page must
+    from _console import safe_stdio             # degrade a tick, never kill the report
+    safe_stdio()
+except Exception:
+    pass
 
 
 if __name__ == "__main__":

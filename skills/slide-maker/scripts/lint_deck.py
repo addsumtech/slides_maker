@@ -3526,6 +3526,13 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
     return total
 
 
+try:                                            # console safety: a legacy code page must
+    from _console import safe_stdio             # degrade a tick, never kill the report
+    safe_stdio()
+except Exception:
+    pass
+
+
 if __name__ == "__main__":
     argv = sys.argv[1:]
     args = [a for a in argv if not a.startswith("--")]
@@ -3605,4 +3612,17 @@ if __name__ == "__main__":
             print("[gates] delivery={!r}, read from {} — budgets and floors follow the RECORDED "
                   "mode, not the default.".format(_rec, _gp))
         mode = _rec
+    if not static_ok:
+        # A RECORDED choice beats a remembered flag — the same argument that made `delivery`
+        # recordable. The user opting OUT of appear-builds is a decision the build script knows
+        # (`dk.declare_delivery(OUT, mode, builds="static")`); before this it had to be retyped as
+        # `--static` on every lint run, and NO BUILDS fired on decks that are static by choice.
+        try:
+            _blob, _ = _gates_blob(args[0], gates_path)
+            if str(_blob.get("builds") or "").strip() == "static":
+                static_ok = True
+                print("[lint] builds: RECORDED as static in .deck-gates.json — NO BUILDS stands "
+                      "down (the user opted out; this is not a missing motion manifest)")
+        except Exception:
+            pass
     sys.exit(1 if lint(args[0], mode, json_out, renders_dir, static_ok, gates_path) > 0 else 0)

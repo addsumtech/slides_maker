@@ -403,5 +403,12 @@ def main(argv):
     return 1 if any(r for _l, r, _d in stages) else 0
 
 
+try:                                            # console safety: a legacy code page must
+    from _console import safe_stdio             # degrade a tick, never kill the report
+    safe_stdio()
+except Exception:
+    pass
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv[1:]))

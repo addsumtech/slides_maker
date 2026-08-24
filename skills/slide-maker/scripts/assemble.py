@@ -128,6 +128,13 @@ def preview_section(section_path, out_path, *, template=None,
     return out_path
 
 
+try:                                            # console safety: a legacy code page must
+    from _console import safe_stdio             # degrade a tick, never kill the report
+    safe_stdio()
+except Exception:
+    pass
+
+
 if __name__ == "__main__":
     # tiny CLI: assemble.py OUT.pptx section_a.py section_b.py ...
     if len(sys.argv) < 3:

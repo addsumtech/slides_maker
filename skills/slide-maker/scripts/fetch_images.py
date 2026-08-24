@@ -859,6 +859,13 @@ def main(argv=None):
     return a.fn(a)
 
 
+try:                                            # console safety: a legacy code page must
+    from _console import safe_stdio             # degrade a tick, never kill the report
+    safe_stdio()
+except Exception:
+    pass
+
+
 if __name__ == "__main__":
     try:
         sys.exit(main())
