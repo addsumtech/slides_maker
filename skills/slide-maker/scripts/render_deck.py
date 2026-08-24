@@ -1188,6 +1188,26 @@ def _critic_effort(critic):
     return "an unrecorded number of rounds"
 
 
+def _image_provenance_gate(design, pptx):
+    """Evidence tokens vs the provenance ledger vs the deck's own text.
+
+    Kept thin on purpose: the rules live in scripts/check_image_provenance.py so that the Codex
+    delivery gate can call the SAME code. Two gate paths re-implementing one contract is how this
+    repo previously ended up with a key spelled `path` on one side and `png` on the other."""
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import check_image_provenance as cip
+    except Exception as exc:                       # never silently: a missing checker is a finding
+        print("  [gates] image provenance NOT checked — {}: {}".format(type(exc).__name__, exc))
+        return
+    deck_dir = os.path.dirname(os.path.abspath(pptx)) or "."
+    gates = {"design_plan": design}
+    probs = cip.check(deck_dir, pptx=pptx, gates=gates)
+    if probs:
+        die("image provenance:\n\n" + "\n\n".join(
+            "  {}: {}".format(c, m) for c, m in probs))
+
+
 def check_handoff_gates(pptx, mode="presented", gate_check=False):
     """Run EVERY hand-off gate, then report EVERY failure — one run, one fix pass.
 
@@ -1629,7 +1649,14 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
         # string everywhere else, and it carried a real deck through "all gates pass".
         DESIGN_FIELDS = ("concept", "boldness", "signature_move", "carried_by", "form_ledger",
                          "icon_family", "palette", "type_scale", "signature_proof",
-                         "motif_generates", "style_pick")
+                         "motif_generates", "style_pick", "image_sources")
+        # `image_sources` — the per-image EVIDENCE TOKENS (references/image-generation.md owns the
+        # grammar). It joins the required set for the reason `logo plan:` did: the decision that
+        # matters is not "which photo" but "where did it come from, and what licence rides with
+        # it", and a field nobody is required to fill is a decision nobody is required to make.
+        # A deck with no content images writes `"image_sources": "n/a — <why>"`, exactly like a
+        # `logo plan: n/a — …` line. The token grammar and the ledger cross-check live in
+        # scripts/check_image_provenance.py, which runs right after this block.
         # `style_pick` — the TOPIC-adapted look choice (references/design-by-topic.md): the preset or
         # bespoke register chosen for the SUBJECT's domain, the nearest rival it beat + the one clause,
         # and the domain cliché it avoided. It exists because the look was keyed on PURPOSE only and a
@@ -1717,6 +1744,11 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
             # deckkit's stock defaults passed here and on the Codex path alike. The competition ran,
             # the winner was written down, and nothing carried it into the build.
             _style_applied_gate(design, pptx)
+            # The tokens are checked against the RECORD (assets/sources.json) and against the built
+            # deck, not merely against the grammar: a `searched, none found` rung with no recorded
+            # search, and a CC BY photo with no credit on any slide, are both invisible to a
+            # field-presence check and both were shipping.
+            _image_provenance_gate(design, pptx)
             scale = design["type_scale"]
             if not isinstance(scale, dict) or not all(
                     isinstance(scale.get(k), (int, float)) for k in ("display", "title", "body")):

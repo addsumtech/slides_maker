@@ -338,6 +338,9 @@ def fixture(root: Path) -> tuple[dict, dict, dict, Path]:
                 "markers": "numbered evidence stamps, one per claim",
                 "page": "slide 1 — the rail IS the slide's geometry",
             },
+            # The image evidence tokens. A text-only fixture still has to SAY so — the field is
+            # required on both runtimes, and "no images" is a decision like any other.
+            "image_sources": "n/a - text-only evidence deck, no content images",
             "signature_move": "A visible evidence rail connects source, build, and review.",
             "carried_by": [1],
             "signature_proof": {

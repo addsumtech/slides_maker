@@ -152,6 +152,100 @@ def _valid_image(path):
         return True  # Pillow absent → trust the size check
 
 
+def refs_for(item, ref_dir):
+    """Reference photographs for THIS item, matched by the `slide-NN` stem.
+
+    Matching is deliberately strict: an unmatched item gets NO reference rather than the whole
+    folder. A shared pool would steer a robot-arm plate with a campus photo — a reference that is
+    not of the subject is worse than none, because it looks like grounding.
+
+    Verified with codex-cli 0.147.0: `codex exec` can open local image files and describe them
+    (probed on a real photo — it read the tower's colour and storey count), which is what makes
+    staging a reference beside the generation worth anything."""
+    if not ref_dir:
+        return []
+    stem = re.match(r"(slide-\d+)", Path(item.get("filename", "")).stem or "")
+    if not stem:
+        return []
+    d = Path(ref_dir)
+    if not d.is_dir():
+        return []
+    return sorted(f for f in d.iterdir()
+                  if f.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp")
+                  and f.name.startswith(stem.group(1))
+                  and not f.name.startswith("_"))
+
+
+# What a reference is being used FOR. Required with --ref-dir, and it changes the instruction,
+# because the capability is genuinely double-edged. MEASURED on the first real run of this flag: a
+# staged photo of the TU Delft EWI tower produced a plate that reads as a PHOTOGRAPH of that exact
+# building — grey slab, red stripe, the right birches, the right brick path, plus a garbled
+# invented wordmark on the facade. That is the REFERENT RULE's fidelity bug delivered faster and
+# more convincingly than before: for a real-and-specific subject with a usable photo, the answer
+# was never a better fake — it is the photo you already downloaded.
+#
+# So the reference path is legitimate in exactly three situations, and the caller has to say which.
+REF_INTENTS = {
+    "generic-concrete":
+        # "a robot arm", "an MRI scanner", "a warehouse" — a CLASS, not an entity. Photoreal is
+        # fine here; the reference is what stops a sci-fi donut standing in for a real bore.
+        "The subject is GENERIC-CONCRETE (a class of thing, not one identifiable entity). Use the "
+        "references for how this class of object actually looks, and do not depict any specific, "
+        "identifiable real place, building, person or product.",
+    "stylized-illustration":
+        # A real subject rendered in the deck's DECLARED stylized register — legitimate when the
+        # deck's one recorded art-direction line says so.
+        "The subject is real and specific, and this deck's DECLARED art direction is a stylized "
+        "illustration register. Use the references only for correct FORM and proportion, and render "
+        "the result so that it plainly reads as an ILLUSTRATION — it must never be mistaken for a "
+        "photograph of the real subject.",
+    "fallback-rung":
+        # `searched, none found` / `found but low-quality` — no usable photo exists.
+        "No usable licence-clear photograph of this real subject exists (a recorded `searched … → "
+        "generated, flagged illustrative` rung). Use the references for structural accuracy, and "
+        "render the result as a PLAINLY ILLUSTRATIVE image — visibly drawn, never photographic — "
+        "because it will be presented as an illustration, not as evidence.",
+}
+
+
+def _ref_clause(refs, intent):
+    """Instruction text for staged references. NOT part of the verbatim <IMAGE_PROMPT> block: it
+    tells the agent what to LOOK at before prompting, and it carries the fidelity rule with it."""
+    if not refs:
+        return ""
+    names = ", ".join("./" + r.name for r in refs)
+    return (
+        "\n\nBEFORE generating, OPEN and look at these reference photographs in the current "
+        "directory: {}. They show the REAL subject. Use them for the subject's actual form, "
+        "materials, proportions, colour and setting, and fold those observed attributes into the "
+        "image prompt you pass to the tool. Do NOT copy their composition or framing, do NOT "
+        "reproduce them, and do NOT carry over any watermark, photographer's mark, signage, "
+        "wordmark or lettering visible in them — reproduce the FORM, never the marks. {}"
+    ).format(names, REF_INTENTS[intent])
+
+
+# MEASURED, twice, on real generations. Putting "render it as an illustration, not a photograph"
+# in the WRAPPER instruction does nothing: the wrapper steers the agent, and the hosted image tool
+# only ever sees the verbatim <IMAGE_PROMPT> block. A reference-conditioned plate of the TU Delft
+# EWI tower came back fully photoreal under --ref-intent stylized-illustration, complete with an
+# invented wordmark on the facade — a convincing fake photograph of a real building, which is the
+# exact fidelity bug the REFERENT RULE forbids. The render mode therefore goes INSIDE the prompt,
+# where the tool can read it.
+_RENDER_MODE = (
+    " RENDER MODE — this must NOT look photographic: draw it as a visibly hand-made illustration "
+    "(flat planes, drawn linework or painted texture, simplified detail, no photographic depth of "
+    "field, no lens flare, no photo grain, no HDR realism). A viewer must be able to tell at a "
+    "glance that this is an illustration and not a photograph. Depict no signage, lettering, "
+    "wordmarks or logos anywhere in the image."
+)
+
+
+def _render_clause(intent):
+    """Non-photographic render mode, for the intents whose whole point is not being mistaken for a
+    photograph. `generic-concrete` is exempt: a class of object has no real referent to fake."""
+    return _RENDER_MODE if intent in ("stylized-illustration", "fallback-rung") else ""
+
+
 def _orient_clause(orientation):
     # appended INSIDE the verbatim <IMAGE_PROMPT> block, so it steers the generation (not plumbing)
     if orientation == "landscape":
@@ -161,9 +255,23 @@ def _orient_clause(orientation):
     return ""
 
 
-def _generate_one(prompt, out_path, *, orientation, timeout):
+def _generate_one(prompt, out_path, *, orientation, timeout, refs=(), ref_intent=None):
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    instr = INSTR.format(prompt=prompt, fname=out_path.name, orient=_orient_clause(orientation))
+    staged = []
+    for r in refs:
+        # codex runs with cwd=out_path.parent under a workspace-write sandbox, so a reference has
+        # to BE there. Copied under a `_ref-` prefix so it is obvious which files are inputs, and
+        # so refs_for() (which ignores leading underscores) cannot pick them up as candidates.
+        dst = out_path.parent / ("_ref-" + r.name)
+        try:
+            if not dst.exists() or dst.stat().st_mtime < r.stat().st_mtime:
+                shutil.copyfile(r, dst)
+            staged.append(dst)
+        except OSError as exc:
+            print("  [warn] could not stage reference {}: {}".format(r.name, exc), file=sys.stderr)
+    instr = INSTR.format(prompt=prompt, fname=out_path.name,
+                         orient=_orient_clause(orientation) + _render_clause(ref_intent)
+                         ) + _ref_clause(staged, ref_intent)
     cmd = ["codex", "exec", "--skip-git-repo-check", "--sandbox", "workspace-write",
            "-c", 'approval_policy="never"', instr]
     before = _newest_rollout(quiet=True)   # baseline marker only; the real read announces itself
@@ -263,6 +371,15 @@ def main():
     ap.add_argument("--limit", type=int, help="Only the first N entries.")
     ap.add_argument("--overwrite", action="store_true", help="Regenerate existing files (default: skip).")
     ap.add_argument("--timeout", type=int, default=360, help="Per-image timeout (seconds).")
+    ap.add_argument("--ref-dir", help="Folder of REAL reference photographs (fetch_images.py fetch "
+                    "--out <dir> --slide N names them slide-NN-*). Each manifest item is matched by "
+                    "its `slide-NN` stem and the matching files are staged beside the generation "
+                    "for codex to LOOK at before prompting; an unmatched item gets none.")
+    ap.add_argument("--ref-intent", choices=sorted(REF_INTENTS),
+                    help="REQUIRED with --ref-dir: what the reference is for. generic-concrete (a "
+                         "class of object) · stylized-illustration (a real subject in a declared "
+                         "stylized register) · fallback-rung (no usable photo exists). A real, "
+                         "specific subject WITH a usable photo is not on this list: use the photo.")
     ap.add_argument("--dry-run", action="store_true", help="Print planned outputs without calling codex.")
     ap.add_argument("--allow-generic", action="store_true",
                     help="generate anyway when a prompt looks generic")
@@ -271,6 +388,15 @@ def main():
                          "scales with the machine (cores//3, clamped to 2-4); set 1 to serialize if "
                          "you hit rate limits. Speeds a multi-image deck.")
     args = ap.parse_args()
+    if args.ref_dir and not args.ref_intent:
+        # A hard stop, not a default. Defaulting would pick the permissive reading of a
+        # double-edged capability on the user's behalf — and the permissive reading is the one that
+        # produces a convincing fake photograph of a real building.
+        ap.error("--ref-dir requires --ref-intent {}. Staging a real photograph beside a generation "
+                 "makes the output MORE convincing, which is a problem as well as a feature: for a "
+                 "real, specific subject that has a usable licence-clear photo, place THE PHOTO "
+                 "(references/image-generation.md, the REFERENT RULE)."
+                 .format("|".join(sorted(REF_INTENTS))))
 
     if not args.dry_run and not _have_codex():
         print("error: the `codex` CLI is not installed / on PATH. Install it and run `codex login` "
@@ -328,7 +454,10 @@ def main():
         worklist.append((item, out_path))
 
     def _work(item, out_path):                              # independent per item (own file, own subprocess)
-        return _generate_one(item["prompt"], out_path, orientation=args.orientation, timeout=args.timeout)
+        return _generate_one(item["prompt"], out_path, orientation=args.orientation,
+                             timeout=args.timeout,
+                             refs=item.get("_refs") or refs_for(item, args.ref_dir),
+                             ref_intent=args.ref_intent)
 
     conc = max(1, min(args.concurrency, len(worklist)))
     if conc <= 1 or len(worklist) <= 1:

@@ -202,11 +202,45 @@ deck presents it as THAT entity's actual premises. **Real living people:** a CC 
 copyright, not personality/publicity rights — for a commercial deck prefer official press/headshot
 assets or user-supplied photos.
 
-**The sourced-photo pipeline (real-referent subjects):**
+**The sourced-photo pipeline (real-referent subjects) — `scripts/fetch_images.py` runs steps 1-3:**
+
+```bash
+python3 scripts/fetch_images.py search "Delft University of Technology campus"      # look first
+python3 scripts/fetch_images.py fetch  "Delft University of Technology campus" \
+    --out ~/Downloads/<deck>/assets/sourced --subject "TU Delft campus" --slide 4 --limit 3
+python3 scripts/image_qc.py ~/Downloads/<deck>/assets/sourced --at 6.2x4.0 --contact-sheet
+#   ^ OPEN the sheet — then adopt the one you chose:
+python3 scripts/fetch_images.py adopt ~/Downloads/<deck>/assets/sourced <file>
+python3 scripts/fetch_images.py ledger ~/Downloads/<deck>/assets/sourced --tokens   # plan rows
+python3 scripts/fetch_images.py ledger ~/Downloads/<deck>/assets/sourced --credits  # slide credits
+```
+
+Everything it does lands in `<assets>/sources.json` — every query with its outcome, every file with
+its licence, author, attribution string and sha256. That ledger is what `check_image_provenance.py`
+(run by both gate paths) holds the plan's evidence tokens against, so the rungs below stop being
+self-reported. **A failed search is not the same as an empty one:** when no source can be
+CONTACTED the script exits 2 and records `unreachable`, and the gate refuses to spend that as a
+`none found` rung — a blocked network is not evidence that no photo of a place exists.
+
 1. **Search license-clear sources only**: Wikimedia Commons and Openverse (both keyless APIs,
    CC-licensed, captioned), official press kits / brand pages, or the user's own material. Never
-   grab from arbitrary image-search results — provenance and license unknown.
-2. **Verify the subject, that the file is WATERMARK-FREE, and that it is AESTHETICALLY USABLE**: the
+   grab from arbitrary image-search results — provenance and license unknown. `fetch_images.py`
+   excludes NC/ND licences by default (a work deck is commercial use, and treating a photo to the
+   palette is a derivative) and REJECTS an unrecognised licence string rather than assuming it is
+   free. It also walks a **query-relaxation ladder** — the exact subject phrase first, then
+   stop-words dropped, then the most distinctive terms — because Commons search is AND-strict and
+   a natural six-word subject phrase returns ZERO where "Delft University" returns plenty
+   (measured); every rung it issued is recorded, so a `none found` rung says what was actually
+   asked.
+2. **Verify the subject, that the file is WATERMARK-FREE, and that it is AESTHETICALLY USABLE.**
+   `scripts/image_qc.py` measures the measurable half and prints ONE labelled contact sheet of
+   every candidate with its licence and flags — because "look at each file" is a step that gets
+   skipped and "open this one image" is not. It reports resolution against the box you actually
+   planned (a 1200px photo is 90dpi at full-bleed), crop loss against that box's aspect, softness,
+   flat/placeholder plates, letterbox bars, near-duplicates, a possible-watermark heuristic, and
+   **EXIF rotation** — a flag this skill's own render loop ignores (measured), so a Commons photo
+   carrying it lands sideways in a box sized for the wrong aspect with every other gate green;
+   `--fix` bakes it in. Everything after that is EYES, and the script says so: the
    file's caption / description / geotag / Commons category must confirm it shows the *claimed*
    subject — a mislabeled photo is the photographic version of an invented number, and the critic's
    fidelity lens checks it. View the downloaded file for watermarks, stock-preview overlays,
@@ -237,14 +271,14 @@ assets or user-supplied photos.
    - `provided — user (own material)` — the user's own file (no license interrogation);
    - `generated — <tool>` — a generated plate (generic-concrete subject, or declared stylized
      illustration of a real one — say which);
-   - `searched, none found → generated, flagged illustrative` — the not-found rung: no license-clear
+   - `searched (Commons, Openverse), none found → generated, flagged illustrative` — the not-found rung: no license-clear
      photo exists (obscure place, private premises, pre-photography history, unreachable sources) →
      generate, clearly framed as illustration, never as photographic evidence;
-   - `searched, found but low-quality → generated, flagged illustrative` — the quality rung: a
+   - `searched (Commons, Openverse), found but low-quality → generated, flagged illustrative` — the quality rung: a
      license-clear photo exists but every candidate is unrepresentative/ugly (construction, poor shot,
      wrong preparation) → generate a declared-stylized illustration in the deck's art-direction
      instead (the aesthetic gate in step 2);
-   - `searched, none found → native form` — the other sanctioned exit: drop the photo, let a map /
+   - `searched (Commons, Openverse), none found → native form` — the other sanctioned exit: drop the photo, let a map /
      diagram / native form carry the slide.
    A `searched, none found` rung must NAME the origins tried — write it
    `searched (Commons, Openverse[, press kit]), none found → …`; a bare rung with no named origins
@@ -258,14 +292,71 @@ not fetch; the **main loop** runs the Commons/Openverse/press-kit search and fil
 (<license>)` into the checkpoint artifact before presenting it (exactly how the logo evidence line
 is assembled) — and records each found photo's **direct file URL** into the asset spec handed to
 asset-prep (or keeps it for itself on small inline decks where no asset-prep runs); the
-**asset-prep executor** downloads, subject-checks, and palette-treats after
-design approval.
+**asset-prep executor** downloads (`fetch_images.py fetch`), subject-checks against the contact
+sheet (`image_qc.py --contact-sheet`), adopts the chosen file (`fetch_images.py adopt` — the state
+that records that somebody LOOKED), and palette-treats after design approval. The credits line the
+licence obliges comes from `fetch_images.py ledger --credits`; put it on the image
+(`deckkit.source_note`) or on `deckkit.sources_page`, because the gate checks the DECK's text, not
+the plan's.
 
 **The dose rule is unchanged — only the PRESSURE inverts on photo-friendly topics:** on a travel /
 city / place-anchored deck the temptation flips from too-few earned images to wall-to-wall photos;
 the opt-in discipline (only the slides that genuinely earn one) and balanced fullness still rule,
 with native maps, routes, and cost tables doing the informational work while photos carry the few
 atmosphere beats that deserve them.
+
+## Visual research — a generated plate is grounded in what the thing ACTUALLY looks like
+
+A prompt can only carry the subject's NAME, and a name is exactly what a generator will illustrate
+wrongly: `generate_images_codex.py`'s topicality gate counts subject nouns, and no word count can
+know that a 7T magnet has a bore and a cryostat, or that this campus tower is grey with a red
+stripe. The skill already invites the USER to drop in reference material; it never went LOOKING
+itself. It should — the same license-clear search that serves sourced photos serves research.
+
+**The loop (any deck with generated plates whose subject exists in the world):**
+
+```bash
+# 1. get real references of the subject in front of your eyes
+python3 scripts/fetch_images.py fetch "<subject>" --out <deck>/assets/reference --slide 4 --limit 4
+python3 scripts/image_qc.py <deck>/assets/reference --contact-sheet     # 2. OPEN IT and look
+# 3. write down what you SAW, per slide, in visual-facts.md:
+#      ## <slide heading>
+#      - a single slab-like high-rise, ~20 storeys, grey concrete with red accent panels
+#      - flat parkland in front: mown grass, young birches, straight red-brick paths
+# 4. the facts become BINDING attributes in the prompt
+python3 scripts/image_prompts.py image-slides.md <deck>/assets/generated \
+    --style "<deck art direction>" --calm-zone "left third" --facts visual-facts.md
+```
+
+**Write only what you actually saw.** These lines enter the prompt as attributes that BIND, so a
+remembered detail is an invented one — the picture equivalent of a guessed number.
+
+**Reference-conditioned generation (`--ref-dir`) — governed, because it cuts both ways.**
+`generate_images_codex.py --ref-dir <dir> --ref-intent <intent>` stages the matching `slide-NN-*`
+reference files beside the generation and tells the agent to LOOK at them first (verified: codex
+opens local images and reads them accurately). It makes a generated illustration structurally
+right — and it makes a FAKE structurally right too. Measured on the first real run: a staged photo
+of a real university tower produced a plate that reads as a PHOTOGRAPH of that exact building,
+down to the red stripe and the brick paths, plus a garbled invented wordmark on the facade. That
+is the REFERENT RULE's fidelity bug, delivered faster and more convincingly than before.
+
+So `--ref-intent` is REQUIRED with `--ref-dir` and has exactly three legitimate values —
+`generic-concrete` (a CLASS of object: photoreal is fine, there is no entity to fake),
+`stylized-illustration` (a real subject in the deck's DECLARED stylized register), and
+`fallback-rung` (a recorded `searched … → generated, flagged illustrative`). **A real, specific
+subject with a usable licence-clear photo is not on that list: place the photo you already
+downloaded.** For the two illustration intents the tool also injects a RENDER MODE clause *inside*
+the image prompt — visibly drawn, no lens blur, no photo grain, no signage — because a
+"make it look illustrated" instruction in the wrapper reaches the agent and never reaches the
+image tool: measured, the wrapper-only version came back fully photoreal twice, and the same
+prompt with the clause inside came back as a plain watercolour rendering that still had the
+building's real form.
+
+**Design references (a look, not a subject) follow `bespoke-registers.md`'s rule unchanged:** keep
+the METHOD, swap the MATERIAL. Search them to see how a register was made legible and generative,
+never to transplant one — and never prompt "in the style of <living artist>" or reproduce a
+copyrighted layout. A reference informs how you build the deck's own register; it is not a thing
+to copy.
 
 ## Planning workflow
 

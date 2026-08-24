@@ -259,6 +259,17 @@ TEMPLATE = {
             "markers": "<the numeral / icon / bullet system it implies>",
             "page": "<the slide whose GEOMETRY is the motif | none - reason>",
         },
+        # One row per CONTENT IMAGE, each carrying its evidence token — the grammar lives in
+        # references/image-generation.md and is checked by scripts/check_image_provenance.py, which
+        # render_deck.py runs on the Claude path. Carried in the scaffold because a capability that
+        # is not in the example scaffold is a capability that does not get produced.
+        # A deck with no content images writes the string "n/a - <why>".
+        "image_sources": [
+            "slide <n> | <subject> | sourced - <origin> (<licence>) | <file>",
+            "slide <n> | <subject> | generated - <tool>",
+            "slide <n> | <subject> | searched (Commons, Openverse), none found -> generated, "
+            "flagged illustrative",
+        ],
         "signature_move": "<repeated, deliberate visual device>",
         "carried_by": [1, 5],
         # The ANCHOR PROOF — three rendered pages, three different failures. `signature` proves the
@@ -1189,6 +1200,27 @@ def check_design(
             for key in ("background", "markers", "page"):
                 require_string(generates.get(key), f"design.motif_generates.{key}", errors, minimum=4)
     require_string(design.get("signature_move"), "design.signature_move", errors, minimum=12)
+
+    # IMAGE PROVENANCE — the same contract render_deck.py enforces, run through the same module so
+    # the two runtimes cannot drift apart on what an honest image row looks like.
+    # PRESENCE is required here as well, because check_image_provenance() deliberately stays quiet
+    # when a plan says nothing and no photo was sourced — that silence is right for a library
+    # function and wrong for a gate, and render_deck.py requires the field via DESIGN_FIELDS. A
+    # deck with no content images writes "n/a - <why>".
+    _img = design.get("image_sources")
+    if not _img or (isinstance(_img, str) and len(_img.strip()) < 4):
+        errors.append('design.image_sources missing — one row per content image with its evidence '
+                      'token (sourced / provided / generated / searched-rung), or the string '
+                      '"n/a - <why>" when the deck carries no content images. Same shape as the '
+                      'logo evidence token: the sourcing decision is recorded, never assumed.')
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import check_image_provenance as _cip
+        for _code, _msg in _cip.check(root, gates={"design_plan": design}):
+            errors.append("image provenance [{}] {}".format(_code, _msg))
+    except ImportError:
+        errors.append("image provenance NOT checked — scripts/check_image_provenance.py is missing")
+
     carried_by = design.get("carried_by")
     if not isinstance(carried_by, list) or len(set(carried_by) & expected_slides) < min(2, len(expected_slides)):
         errors.append("design.carried_by must show the signature move on at least two slides")

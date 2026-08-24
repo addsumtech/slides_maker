@@ -43,6 +43,10 @@ DESIGN_OK = {
                   "recovery IS the argument, not a schematic · anti-pick avoided: dark_tech neon",
     # Required from ~6 content slides up; always allowed. A truthful reason for every fixture here.
     "build_shape": "solo — CI fixture, no subagent dispatch",
+    # The image evidence tokens (references/image-generation.md). TRUTHFUL for this fixture:
+    # build_deck() places no pictures at all, so the honest row is the n/a escape, not an invented
+    # sourced token.
+    "image_sources": "n/a — three-slide text fixture, no content images",
     "type_scale": {"display": 34, "title": 24, "body": 14},
     # The 🔴 design checkpoint's mode + record. Same two values codex_delivery_gate accepts
     # (`approved` | `auto`); on the shared path there is no top-level `design` section, so it

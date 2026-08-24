@@ -55,16 +55,64 @@ def parse_outline(text):
     return [{"title": f"Slide {i + 1}", "notes": _clean(c)} for i, c in enumerate(chunks)]
 
 
-def build_prompt(slide, idx, *, deck_size, style, calm_zone):
+def parse_facts(text):
+    """Parse a VISUAL FACTS file: `## <slide heading>` followed by `- <observed attribute>` lines.
+
+    This is the written output of the research step (references/image-generation.md, "Visual
+    research"): the model FETCHES real reference photos of the subject, LOOKS at them, and writes
+    down what the thing actually looks like. Without it a prompt can only carry the subject's NAME,
+    and a name is exactly what a generator will happily illustrate wrongly — the topicality gate in
+    generate_images_codex.py counts subject nouns and cannot know that a 7T scanner has a bore and
+    a cryostat, or that this campus tower is grey with red panels.
+
+    Keys are matched case-insensitively, and by substring in either direction, so `## EWI tower`
+    matches the slide `The EWI tower at night` without anyone maintaining exact strings."""
+    facts, key = {}, None
+    for raw in (text or "").splitlines():
+        m = HEADING_RE.match(raw)
+        if m:
+            key = _clean(m.group(1))
+            facts.setdefault(key, [])
+            continue
+        line = raw.strip()
+        if key and line.startswith(("-", "*", "•")):
+            v = _clean(line[1:])
+            if v:
+                facts[key].append(v)
+    return {k: v for k, v in facts.items() if v}
+
+
+def facts_for(slide, idx, facts):
+    """Facts for this slide: by heading (either direction), else by 1-based index."""
+    if not facts:
+        return []
+    title = (slide.get("title") or "").strip().lower()
+    for k, v in facts.items():
+        kl = k.strip().lower()
+        if kl and (kl in title or title in kl):
+            return v
+    for k, v in facts.items():
+        if k.strip().lower() in (str(idx), "slide %d" % idx):
+            return v
+    return []
+
+
+def build_prompt(slide, idx, *, deck_size, style, calm_zone, facts=()):
     title = slide["title"]
     notes = slide.get("notes", "")
     calm = f" Leave a broad low-detail calm region for editable slide text: {calm_zone}." if calm_zone else ""
     style_line = f"Visual style: {style}." if style else "Visual style: polished presentation-grade editorial visual, cohesive and modern."
+    # OBSERVED, not remembered. These lines were written by a model that looked at license-clear
+    # reference photographs of the real subject — so they go in as binding attributes, ahead of the
+    # style line, and they are the difference between "a robot arm" and THIS machine.
+    fact_lines = ([f"Observed subject facts (from reference photographs — these BIND, honour every "
+                   f"one): {'; '.join(facts)}."] if facts else [])
     return "\n".join([
         "Use case: productivity-visual",
         f"Asset type: text-free visual plate for a {deck_size} presentation slide",
         f"Primary request: create a visual that supports slide {idx}: {title}.",
         f"Slide context: {_sentence(notes or title)}",
+        *fact_lines,
         style_line,
         f"Composition/framing: wide slide composition, designed to be cropped with fit='cover' or placed as a side panel.{calm}",
         "Content rules: no readable words, letters, numbers, formulas, UI labels, chart labels, logos, watermarks, or citations.",
@@ -84,10 +132,15 @@ def main():
     ap.add_argument("--style", default="", help="Shared art direction to carry across the plated slides.")
     ap.add_argument("--calm-zone", default="", help="Where generated plates should leave quiet space, e.g. left third.")
     ap.add_argument("--prefix", default="slide", help="Output filename prefix.")
+    ap.add_argument("--facts", help="A VISUAL FACTS markdown file (`## <slide heading>` + `- <observed "
+                    "attribute>` bullets), written after LOOKING at real reference photos of the "
+                    "subject — see references/image-generation.md 'Visual research'. Without it a "
+                    "prompt carries the subject's name and nothing about its actual appearance.")
     args = ap.parse_args()
 
     text = Path(args.outline).read_text(encoding="utf-8")
     slides = parse_outline(text)
+    facts_map = parse_facts(Path(args.facts).read_text(encoding="utf-8")) if args.facts else {}
     # Cap the number of plates if asked, but never PAD: padding to a deck-length count would
     # invent a context-free plate per slide — the one-image-per-slide habit we want to avoid.
     # Feed an outline of only the plate-worthy slides instead.
@@ -99,7 +152,9 @@ def main():
     manifest = []
     for i, slide in enumerate(slides, start=1):
         filename = f"{args.prefix}-{i:02d}.png"
-        prompt = build_prompt(slide, i, deck_size=args.deck_size, style=args.style, calm_zone=args.calm_zone)
+        _f = facts_for(slide, i, facts_map)
+        prompt = build_prompt(slide, i, deck_size=args.deck_size, style=args.style,
+                              calm_zone=args.calm_zone, facts=_f)
         manifest.append({
             "slide": i,
             "title": slide["title"],

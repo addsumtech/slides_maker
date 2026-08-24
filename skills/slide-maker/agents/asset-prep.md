@@ -54,9 +54,18 @@ absent image), so a late asset is a loud failure, never a silent hole.
   in ONE manifest and run the script ONCE — it generates them **concurrently** (`--concurrency`), so the
   batch lands in ~one image's time, not N×. (Don't launch a separate process per image.)
 - **Icons** via `scripts/icons.py` `icon_png` (fetch → recolor → rasterize), one coherent family.
-- **Sourced photos**: download from the spec's URL (curl), then apply the spec's palette treatment
-  (`scripts/image_fx.py` duotone/tint + crop to the planned ratio); keep the license + credit note
-  next to the file (a one-line `credits.txt` in the folder) so the build can place the credit.
+- **Sourced photos**: `scripts/fetch_images.py fetch "<subject>" --out <deck>/assets/sourced
+  --subject "<as planned>" --slide N` (Commons + Openverse, licence-filtered, and it writes the
+  `sources.json` provenance ledger the hand-off gate reads). If the spec already names a file URL,
+  fetch that subject anyway so the ledger carries the licence — a photo with no ledger row fails
+  `check_image_provenance.py` at hand-off, whatever the plan says.
+  Then `scripts/image_qc.py <dir> --at <planned WxH inches> --contact-sheet`, **OPEN the sheet**,
+  and `fetch_images.py adopt <dir> <chosen file>` — `adopt` is what records that somebody LOOKED.
+  Apply the spec's palette treatment (`scripts/image_fx.py` duotone/tint + crop to the planned
+  ratio) and hand the build its credit lines from `fetch_images.py ledger <dir> --credits`; the
+  licence obligation is discharged by a line ON A SLIDE, and that is what the gate checks.
+  🔴 `image_qc.py --fix` any **EXIF ROTATION** finding before treatment: the render loop ignores the
+  flag (measured), so the photo would land sideways in a box sized for the wrong aspect.
 Keep everything in `~/Downloads/<deck>/assets/` (`figures/`, `icons/`, `generated/`, `sourced/`).
 
 ## View-check every output (this is your real value)

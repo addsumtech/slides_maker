@@ -694,8 +694,15 @@ fall and stage each built slide FULLY (think SMART, not by quota):
   imagery are exempt (generated-template.md governs those). YOU only PLAN each row (subject +
   intended source class) — the main loop runs the search and fills origin+license into the
   checkpoint; asset-prep downloads and palette-treats. Every image row carries its source token per
-  the reference's grammar (incl. the `searched, none found → …` rungs); a bare filename is
-  incomplete — same gate pattern as the logo token.
+  the reference's grammar (incl. the `searched (Commons, Openverse), none found → …` rungs); a bare
+  filename is incomplete — same gate pattern as the logo token.
+  **Emit those rows as `design_plan.image_sources`** (a list of `slide <n> | <subject> | <token>`
+  strings, or the string `n/a — <why>` on a deck with no content images). Both gate paths require
+  the field, and `scripts/check_image_provenance.py` holds every row against the sourcing ledger
+  and the built deck — so a `searched, none found` rung you write here has to be one the main loop
+  actually ran (`scripts/fetch_images.py` records it), and a CC BY row obliges a credit ON A SLIDE.
+  Plan the credit's home while you are planning the image: a `source_note` at the plate, or one
+  line on the sources page.
 - **LOGO PRINCIPLE (a real design principle — general, any domain; repeated user feedback, so it is
   gated, not advisory).** Decide by SITUATION — every deck matches exactly one row for the DECK, and the row's default
   fires unless the user overrides it. **The ROSTER row is scored per SLIDE, not per deck**, so it

@@ -182,7 +182,12 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   **bauhaus** · **midcentury** · **terminal** · **synthwave** — **18 total**; ink_wash/
   eastern_traditional → `references/east-asian-aesthetic.md`; the full style+component catalogue →
   `references/design-gallery.md`).
-- `image_prompts.py` (build the prompt manifest) → `generate_images_codex.py` (no-key, Codex CLI) /
+- `image_prompts.py` (build the prompt manifest; `--facts <visual-facts.md>` folds OBSERVED subject
+  attributes — written after looking at real reference photos — into each prompt as binding
+  attributes) → `generate_images_codex.py` (no-key, Codex CLI; `--ref-dir` stages matching
+  `slide-NN-*` reference photos beside the generation and REQUIRES `--ref-intent`
+  generic-concrete | stylized-illustration | fallback-rung, which also injects the
+  non-photographic render mode for the two illustration intents) /
   `generate_images_openai.py` (**metered** API path — gated, see the BILLING GATE). `archetypes_html.py` (direction-gate previews as
   **one HTML link** — `preset_directions([names])` turns best-fit preset names into direction tokens
   carrying each preset's real DNA, so the options are STYLES not colour schemes (accepts a **dict** in
@@ -196,6 +201,20 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   (`icon_png(spec, out, color=…, gradient=(c0,c1), px)`); pair with the deckkit container helpers
   `icon` / `icon_tile` (solid/gradient/glass tile) / `icon_badge` (ring) / `icon_ghost` (watermark) /
   `icon_card`. See `references/icons.md` ("Treatments").
+- `fetch_images.py` — the SOURCED-photo pipeline: `search` (look, download nothing) · `fetch`
+  (download candidates + write the `sources.json` provenance ledger) · `adopt` (mark the one you
+  chose, after LOOKING) · `ledger --tokens|--credits` (the plan's evidence rows, and the credit
+  lines the licence obliges). Keyless: Wikimedia Commons + Openverse. `--selftest` runs offline.
+- `image_qc.py` — what a program CAN measure about a candidate photo before it is placed:
+  resolution/DPI at the PLANNED box, crop loss, softness, flat plates, letterbox bars,
+  near-duplicates, a possible-watermark heuristic, and EXIF rotation (`--fix` bakes it in). Its
+  `--contact-sheet` is ONE labelled PNG of every candidate plus a sha256 — the artifact that makes
+  looking cheap, and that a critic's consent can name.
+- `check_image_provenance.py` — holds each `image_sources` evidence token against the ledger and
+  against the BUILT deck: a `searched, none found` rung must be backed by a recorded search (an
+  `unreachable` network is refused as one), and an attribution-required photo must be credited on
+  a slide. Called by `render_deck.py --gate-check` AND `codex_delivery_gate.py`, so both runtimes
+  enforce one contract.
 - `image_fx.py` — `duotone(img, ink_a, ink_b)` / `grayscale(img)` — preprocess a colour photo to the
   deck's ink so it doesn't fight the accent (riso/brutalist/ink/luxury/museum). See `design-gallery.md`.
 - `palette_audit.py` — resolve a palette into FILL-only vs TEXT-safe tokens ONCE, before the build,

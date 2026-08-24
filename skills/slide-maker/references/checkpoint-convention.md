@@ -114,10 +114,14 @@ three — 的风格要走所有页. Do not confuse it with the loud signature mo
 still binds; this one is the chrome-quiet echo that MAY repeat on every page. + the **`density:`
 line as two numbers** (planned median words/slide, planned count over 70, and how many content slides
 have a non-text protagonist — self-verify (r); the hand-off density gate is compared against these) +
-the image opt-in list (the
+the **`image sources:`** opt-in list (the
 few proposed images, for approval — **each row carries its source token**: `generated — <tool>` /
-`sourced — <origin> (<license>)` / `provided — …` / a `searched, none found → …` rung (full grammar:
-`references/image-generation.md` step 5), per the REFERENT RULE in `image-generation.md`) + the **`logo plan:` line with its evidence token**
+`sourced — <origin> (<license>)` / `provided — …` / a `searched (Commons, Openverse), none found → …`
+rung (full grammar: `references/image-generation.md` step 5), per the REFERENT RULE in
+`image-generation.md`. The same rows become `design_plan.image_sources`, which BOTH gate paths
+require and `scripts/check_image_provenance.py` holds against the `sources.json` ledger and the
+built deck — so what the user approves here is the same record the gate reads later. A deck with no
+content images writes `image sources: n/a — <why>`) + the **`logo plan:` line with its evidence token**
 (`official asset — <source>` / `searched, none found → designed wordmark (flagged)` / `n/a — <reason>`,
 where the reasons include **`third-party assessment`** — a deck ABOUT an entity but not FROM it,
 carrying what that entity would not publish about itself; that row is decided before the search and a

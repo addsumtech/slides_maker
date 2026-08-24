@@ -2450,6 +2450,17 @@ governs the design-a-clean, bespoke, AND generate-a-template branches alike) /
 **`motif_generates`** (background · markers · one page whose geometry IS the motif — a motif that
 only recurs is an ornament with a schedule; carved out, like `signature_proof`, under a
 `conservative` dial with a recorded `deliberately restrained:` move) /
+**`image_sources`** (one row per CONTENT IMAGE carrying its EVIDENCE TOKEN — `slide <n> | <subject>
+| sourced — <origin> (<licence>)` · `provided — user (own material)` · `generated — <tool>` ·
+`searched (Commons, Openverse), none found → generated, flagged illustrative` · `… → native form`;
+the grammar and the REFERENT RULE that picks between them live in `references/image-generation.md`,
+and a deck with no content images writes the string `n/a — <why>`, exactly like a `logo plan: n/a —
+…` line. The tokens are not taken on trust: `scripts/check_image_provenance.py` — run by BOTH gate
+paths — holds each one against `assets/**/sources.json`, the ledger `scripts/fetch_images.py`
+writes, and against the built deck's own text. Two claims it makes checkable for the first time:
+a `searched, none found` rung must be backed by a RECORDED search (and an `unreachable` network is
+refused as one — a blocked host is not evidence that no photo of Amsterdam exists), and an
+attribution-required photo must be CREDITED ON A SLIDE, not merely licensed in the plan) /
 **`type_scale`** (the three tiers as numbers — SIZE SPRAWL tells authors to draw sizes "from the
 deck's declared type-scale tokens", and this is where they get declared) / **`signature_proof`**
 (the ANCHOR PROOF — a LIST `[{"role": "signature"|"complex"|"data", "slide": N, "png": "<rendered
