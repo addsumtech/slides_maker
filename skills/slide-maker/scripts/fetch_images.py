@@ -464,7 +464,14 @@ def _download(url, dest, *, timeout=60):
 
 
 def _safe_name(s, fallback="photo"):
-    s = re.sub(r"[^A-Za-z0-9._-]+", "-", (s or "").strip()).strip("-.")
+    """Filesystem-safe, and NOT Latin-only.
+
+    The first version stripped everything outside `[A-Za-z0-9._-]`, so every Chinese or Japanese
+    subject collapsed to the bare fallback: 北京大学校园 and 東京タワー both became `photo`, and a
+    deck's asset folder lost the one thing that makes a filename useful. ``\\w`` with the unicode flag
+    keeps letters in any script and still drops the separators and shell-hostile punctuation that
+    actually matter. Every modern filesystem this skill runs on stores those names fine."""
+    s = re.sub(r"[^\w.-]+", "-", (s or "").strip(), flags=re.UNICODE).strip("-.")
     return (s or fallback)[:60]
 
 

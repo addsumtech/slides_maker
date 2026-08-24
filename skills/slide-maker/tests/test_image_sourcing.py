@@ -265,6 +265,43 @@ check("_contact_sheet.png" not in flags,
       "not QC'd as candidates — the sheet used to report LETTERBOX on its own margins and to count "
       "itself in the set-level passes", str(sorted(flags)))
 
+
+# ── 8. non-Latin subjects: the paths that were quietly Latin-only ──────────────────────────────
+check(fi._safe_name("北京大学校园") == "北京大学校园"
+      and fi._safe_name("東京タワー") == "東京タワー",
+      "a CJK subject keeps its name in the filename — the ASCII-only sanitiser collapsed every "
+      "Chinese and Japanese subject to the bare fallback, so an asset folder lost the one thing "
+      "a filename is for", fi._safe_name("北京大学校园"))
+check(fi._safe_name("Delft University of Technology.jpg").endswith(".jpg")
+      and " " not in fi._safe_name("a b c"),
+      "...while separators and shell-hostile punctuation are still replaced")
+check(fi._safe_name("///") == "photo", "an all-punctuation title still falls back")
+
+check(cip._weight("张伟") == 4 and cip._weight("John") == 4 and cip._weight("ab") == 2,
+      "credit matching weighs CJK glyphs double — a two-character Chinese personal name carries "
+      "as much signal as a four-letter Latin one, and a plain len() gate reported MISSING CREDIT "
+      "on a correctly credited Chinese deck (measured)")
+
+_cjk_led = {"entries": [{"file": "a.jpg", "license": "CC BY 4.0", "author": "张伟", "title": "校园",
+                         "attribution_required": True, "status": "placed"}],
+            "searches": [{"outcome": "found"}]}
+_g = {"design_plan": {"image_sources": ["slide 1 | sourced — Wikimedia Commons (CC BY 4.0)"]}}
+_real_dt = cip._deck_text
+cip._deck_text = lambda pth: ("来源：校园照片 由 张伟 提供（cc by 4.0）" if pth == "CJK_OK"
+                              else "完全无关的内容")
+try:
+    check(not [c for c, _ in cip.check(".", gates=_g, ledger=_cjk_led, pptx="CJK_OK")],
+          "a Chinese credit line ON THE SLIDE clears the attribution check")
+    check("MISSING CREDIT" in {c for c, _ in cip.check(".", gates=_g, ledger=_cjk_led, pptx="CJK_NO")},
+          "...and its absence still fails — the fix widened the alphabet, it did not soften the rule")
+finally:
+    cip._deck_text = _real_dt
+
+check(fi._query_ladder("北京大学 campus photo of the main gate")[0]
+      == "北京大学 campus photo of the main gate"
+      and len(fi._query_ladder("北京大学 campus photo of the main gate")) >= 3,
+      "a MIXED CJK/Latin subject still widens through the ladder")
+
 print("\n".join("  ok   " + x for x in ok))
 if bad:
     print("\n".join("  FAIL " + x for x in bad))

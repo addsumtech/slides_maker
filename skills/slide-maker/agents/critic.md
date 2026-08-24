@@ -231,7 +231,12 @@ Do not just skim for the first few obvious issues. Run these passes:
        wrong number); real brand/product-asset credibility; build/meta-annotation leaks; formula
        transcription/derivation fidelity; claim currency (as-of date); kicker-echoes-title;
        language consistency; text-density vs delivery mode; **sourced-photo subject verification**
-       (the photo matches its claimed subject per origin caption/geotag/category) + license/credit
+       (the photo matches its claimed subject per origin caption/geotag/category — and this is now
+       CHECKABLE rather than eyeballed: `python3 scripts/fetch_images.py ledger <assets> --tokens`
+       prints what was claimed, `--credits` prints the lines the licence obliges, and
+       `python3 scripts/check_image_provenance.py <deck-dir> --pptx <deck>` holds both against the
+       ledger and the built deck; a `searched, none found` rung with no recorded search behind it
+       is a finding, and so is a network failure spent as one) + license/credit
        presence + **watermark-free** (a visible watermark/stock-preview overlay is a finding — and
        so are crop/blur/inpaint traces where one was hidden); **REFERENT-RULE off-contract** — a generated image claiming photographic reality of a
        real-and-specific subject (named place / real product / real person) is a fidelity finding; a

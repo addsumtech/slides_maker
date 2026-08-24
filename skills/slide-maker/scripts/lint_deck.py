@@ -240,7 +240,7 @@ def _slide_bg_box(slide, sw, sh):
             "font": None, "bold": False,
             "text": False, "descr": None, "mathfont": None,
             "title_ph": False, "bg": True, "grp": None,
-            "declared": False, "hollow": False, "motif": False}
+            "declared": False, "hollow": False, "motif": False, "bled": False}
 
 
 def _boxes(slide, sw, sh, slide_no=None, record=True):
@@ -361,8 +361,14 @@ def _boxes(slide, sw, sh, slide_no=None, record=True):
                     # The motif tag, read from the NAME for the same reason `declared` is: it
                     # survives the save, so this file-level gate can reason about the deck's
                     # signature device exactly as the build-time one does.
-                    "motif": (str(getattr(s, "name", "") or "").startswith("deckkit-motif")
-                              and not str(getattr(s, "name", "") or "").endswith("-legend")),
+                    "motif": (str(getattr(s, "name", "") or "").split(":", 1)[0]
+                              .startswith("deckkit-motif")
+                              and "-legend" not in str(getattr(s, "name", "") or "")),
+                    # `bleed_intent()` — this shape leaves the canvas ON PURPOSE, with a written
+                    # reason. Read here for the same reason `declared` is: a declaration one gate
+                    # honours and the other ignores teaches authors that declaring is pointless.
+                    "bled": (str(getattr(s, "name", "") or "").startswith("deckkit-bleed")
+                             or "+bleed" in str(getattr(s, "name", "") or "").split(":", 1)[0]),
                     # HOLLOW: an outlined shape with no fill, no picture and no text of its own —
                     # a frame, a ring, a rule box, a plate outline. Its bounding box is NOT ink a
                     # reader receives, and counting it as such is why "this form spends 40% of the
@@ -2804,6 +2810,8 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
             if s["t"] < -TOL: ov.append("top")
             if s["r"] > sw + TOL: ov.append(f"right+{round(s['r']-sw,2)}")
             if s["b"] > sh + TOL: ov.append(f"bottom+{round(s['b']-sh,2)}")
+            if ov and s.get("bled"):
+                continue                     # declared: deckkit.bleed_intent(shape, "<why>")
             if ov:
                 finds.append(f"OVERFLOW [{','.join(ov)}] {s['st']} '{s['txt']}' — move/shrink it back "
                              f"inside the canvas (or shorten the text if a font swap re-wrapped it)")

@@ -158,6 +158,14 @@ def _shapes(pptx_path):
                 w, h = Emu(sh.width).inches, Emu(sh.height).inches
             except Exception:
                 continue
+            # A TAGGED MOTIF is the deck's signature DEVICE, not a hand-rolled form to refactor
+            # into a component. Measured on `motif_page("lattice")`: its five marker dots read as
+            # "a tile row on an even pitch — use scorecard()", which on the Codex path costs a
+            # waiver with a written reason for geometry that is the design. The motif has its own
+            # checks (MOTIF_BUDGET · TEXT_OVER_MOTIF · MOTIF_UNEXPLAINED); this is not one of them.
+            _nm = str(getattr(sh, "name", "") or "").split(":", 1)[0]
+            if _nm.startswith("deckkit-motif") and "-legend" not in _nm:
+                continue
             txt = ""
             try:
                 if sh.has_text_frame:

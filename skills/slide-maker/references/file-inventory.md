@@ -12,6 +12,8 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
 
 **Scripts** (`scripts/`):
 - `deckkit.py` — the build helpers (template & blank decks), **incl. the editable native charts**
+  (motif: `register_mark` 11 quiet kinds · `motif_page` 8 loud relations · `motif_legend` the key ·
+  `tag_motif` / `bleed_intent` the two declarations)
   (`native_chart`/`native_dual_axis`/`native_donut`/`native_pareto`/`native_bubble` — click-to-edit,
   any-language-safe) **and the build-time geometry gate** (`lint_layout(prs, strict=True)` — run before `prs.save()`;
   the in-process pre-render net for overflow/off-canvas/text-overlap/card-escape/footer/off-centre — plus

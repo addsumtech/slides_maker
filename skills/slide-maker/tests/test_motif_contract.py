@@ -46,6 +46,14 @@ def check(name, cond, detail=""):
           + (("  — " + str(detail)) if detail and not cond else ""))
 
 
+def _inside(sh, W, H):
+    try:
+        l, t = sh.left / 914400.0, sh.top / 914400.0
+        return -0.05 <= l <= W and -0.05 <= t <= H
+    except Exception:
+        return False
+
+
 def codes(prs, code):
     return [f for f in dk.lint_layout(prs, verbose=False) if f[2] == code]
 
@@ -282,6 +290,97 @@ def main():
     ink8 = leg8.text_frame.paragraphs[0].runs[0].font.color.rgb
     check("a legend on a DARK register takes a light ink — it reads its ground, it does not "
           "assume one", str(ink8) == str(dk.WHITE), str(ink8))
+
+    # ── every kind, on every canvas this skill ships ──────────────────────────────────────────
+    print("\ncanvas generality")
+    import math
+
+    def _segments(slide):
+        """Rotated members as real SEGMENTS: a shape rotates about its own CENTRE, so the drawn
+        line runs centre ± (len/2)(cosθ, sinθ). Reconstructed here because the frame alone cannot
+        tell you where a rotated ray actually is — which is exactly how a device that pivoted
+        around its own midpoint instead of its origin passed every check while rendering off-page."""
+        out = []
+        for sh in slide.shapes:
+            rot = float(getattr(sh, "rotation", 0.0) or 0.0)
+            if abs(rot) < 0.01:
+                continue
+            L = sh.width / 914400.0
+            cx = sh.left / 914400.0 + L / 2.0
+            cy = sh.top / 914400.0 + (sh.height / 914400.0) / 2.0
+            r = math.radians(rot)
+            dx, dy = (L / 2.0) * math.cos(r), (L / 2.0) * math.sin(r)
+            out.append(((cx - dx, cy - dy), (cx + dx, cy + dy)))
+        return out
+
+    def _crosses(seg, W, H, steps=64):
+        (x0, y0), (x1, y1) = seg
+        for i in range(steps + 1):
+            t = i / float(steps)
+            x, y = x0 + (x1 - x0) * t, y0 + (y1 - y0) * t
+            if 0.0 <= x <= W and 0.0 <= y <= H:
+                return True
+        return False
+
+    CANVASES = ((10.0, 5.625, "16:9"), (10.0, 7.5, "4:3"), (7.5, 7.5, "1:1"), (5.625, 10.0, "9:16"))
+    for W, H, label in CANVASES:
+        for kind in sorted(dk._MOTIF_PAGE_KINDS):
+            pk = dk.blank_deck(W, H)
+            sk = dk.add_slide(pk)
+            shapes = dk.motif_page(sk, kind, legend="{} — meaning".format(kind))
+            crit = [f for f in dk.lint_layout(pk, verbose=False) if f[1] == "CRITICAL"]
+            check("{} on {} saves clean".format(kind, label), not crit,
+                  sorted({f[2] for f in crit}))
+            check("{} on {} draws INSIDE the frame".format(kind, label),
+                  any(_inside(sh, W, H) for sh in shapes) if not _segments(sk)
+                  else sum(1 for g in _segments(sk) if _crosses(g, W, H)) >= 2,
+                  "nothing the viewer can see — a rotated device can pivot itself off the page and "
+                  "still leave every lint clean (measured: `radial` rendered an EMPTY 9:16 page)")
+
+    # ── bleeding off the canvas is DECLARED, per shape, not switched off deck-wide ─────────────
+    print("\ndeclared bleed")
+    pb = dk.blank_deck(10.0, 5.625)
+    sb2 = dk.add_slide(pb)
+    stray = dk.box(sb2, -2.4, 1.0, 3.0, 1.0, fill=dk.DEEP)
+    dk.tag_motif(stray, loud=True)
+    check("an UNdeclared motif off the canvas is still CRITICAL — the check keeps catching the "
+          "accident", any(f[2] == "OFF_CANVAS" for f in dk.lint_layout(pb, verbose=False)))
+    dk.bleed_intent(stray, "the rule runs off the trim by design")
+    check("...and a declared one is silent — a per-shape escape with a written reason, instead of "
+          "lint_layout(strict=False) switching the check off for the whole deck",
+          not any(f[2] == "OFF_CANVAS" for f in dk.lint_layout(pb, verbose=False)))
+    check("...while the declaration COMPOSES with the motif tag rather than replacing it (a motif "
+          "that bleeds must stay countable in the <=3 budget)",
+          dk._is_motif(stray, loud=True) and dk._declared_bleed(stray), stray.name)
+
+    # ── the codex path's component audit must not ask a motif to become a component ───────────
+    print("\ncross-runtime")
+    import subprocess
+    import tempfile
+    tmpd = pathlib.Path(tempfile.mkdtemp(prefix="motif-audit-"))
+    pm = dk.blank_deck(10.0, 5.625)
+    sm = dk.add_slide(pm)
+    dk.motif_page(sm, "lattice", legend="LATTICE — coupling")
+    pm.save(str(tmpd / "motif.pptx"))
+    (tmpd / "build_motif.py").write_text("# stand-in\n", encoding="utf-8")
+    ph = dk.blank_deck(10.0, 5.625)
+    shh = dk.add_slide(ph)
+    for i in range(5):
+        dk.box(shh, 0.6 + i * 1.8, 2.6, 1.5, 1.0, fill=dk.BLUE)      # untagged: a real hand-roll
+    ph.save(str(tmpd / "tiles.pptx"))
+    (tmpd / "build_tiles.py").write_text("# stand-in\n", encoding="utf-8")
+
+    def _audit(stem):
+        r = subprocess.run([sys.executable, str(SCRIPTS / "component_audit.py"),
+                            str(tmpd / ("build_%s.py" % stem)), str(tmpd / ("%s.pptx" % stem))],
+                           capture_output=True, text=True)
+        return r.stdout
+
+    check("a motif page is not reported as a hand-rolled cluster — its markers ARE the device, and "
+          "on the Codex path that advisory costs a written waiver for geometry that is the design",
+          "no hand-rolled cluster" in _audit("motif"), _audit("motif")[-200:])
+    check("...while a genuinely hand-rolled tile row is still caught (the carve is narrow, not an "
+          "escape hatch)", "tile row" in _audit("tiles"), _audit("tiles")[-200:])
 
     print("\n{} passed, {} failed".format(len(PASS), len(FAIL)))
     return 1 if FAIL else 0

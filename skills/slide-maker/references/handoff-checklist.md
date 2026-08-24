@@ -39,7 +39,9 @@ rejected, because it is indistinguishable from never having run the loop. The `d
 `critic` block on the CONSENT path is written by `validate_review.py … --record <deck-dir>` from the
 review itself, never typed here; a waiver is always hand-written, which is why it must be
 classified), the
-per-slide **click order** (appear-builds opted in), **image licenses/credits** (sourced photos), the
+per-slide **click order** (appear-builds opted in), **image licenses/credits** (sourced photos —
+`fetch_images.py ledger <assets> --credits` prints them, and `check_image_provenance.py` fails the
+hand-off if an attribution-required photo is credited nowhere on the slides), the
 **GIF plays-in-slideshow** note (embedded GIFs), **accepted advisories** one plain-language line
 each, the **`distinctiveness:` line whenever Step 5's bold/experimental escalation fired**
 (`user waived (bold)` or `resolved in round N` — without it, "they accepted it" and "I never asked"

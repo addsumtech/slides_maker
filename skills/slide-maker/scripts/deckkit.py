@@ -2336,9 +2336,10 @@ def tag_motif(shape, loud=False):
 
 def _is_motif(sh, loud=None):
     n = getattr(sh, "name", "") or ""
+    n = n.split(":", 1)[0]                       # drop a declaration's reason ("…+bleed:<why>")
     if not n.startswith(MOTIF_TAG):
         return False
-    if n.endswith("-legend"):
+    if n.startswith(MOTIF_LEGEND):
         # The KEY that explains the device is not the device. Caught by its own test: the legend
         # tag starts with MOTIF_TAG, so it counted as motif GEOMETRY — which would have let a
         # legend trip TEXT_OVER_MOTIF against the caption beside it, and would have made the thing
@@ -2346,7 +2347,10 @@ def _is_motif(sh, loud=None):
         return False
     if loud is None:
         return True
-    return n.endswith("-loud") if loud else n.endswith("-quiet")
+    # `in`, not `endswith`: a motif that also declares a deliberate bleed carries "+bleed" after
+    # its tier, and a tier test that could not see past that would drop the shape out of the <=3
+    # budget — which is the count the whole tagging scheme exists to make possible.
+    return ("-loud" in n) if loud else ("-quiet" in n)
 
 
 # The quiet register vocabulary. The first five are GRAPHIC-NEUTRAL (rules, ticks, grids) and every
@@ -2495,6 +2499,44 @@ def register_mark(slide, kind="arcs", *, corner="tr", color=None, size=1.55, wei
 
 
 MOTIF_LEGEND = MOTIF_TAG + "-legend"
+BLEED_TAG = "deckkit-bleed"
+
+
+def bleed_intent(shape, reason):
+    """Declare that this shape LEAVES THE CANVAS on purpose. Returns the shape.
+
+    `OFF_CANVAS` is a CRITICAL that refuses to save, and it is right to be: a card or a headline
+    off the page is the commonest way a build ships something nobody can read. But a signature
+    device that runs off the edge is ordinary design — a ray fan from an origin outside the frame,
+    a weave that continues past the trim, an orbit whose centre is off-page — and the ONLY way to
+    ship one was `lint_layout(strict=False)`, which switches the check off for the whole deck.
+    That is the same "invent a risk or abandon all gating" trap the design gate's restraint carve
+    was written to remove: measured here, three of `motif_page`'s eight kinds could not be saved by
+    the standard build path at all.
+
+    So this is the narrow, recorded escape — per shape, with a reason, readable from the saved file
+    by both linters. An UNdeclared shape off the canvas still fails, which is the whole point: the
+    check keeps catching the accident and stops refusing the composition.
+
+    The declaration rides in the shape NAME (the idiom `overlap_intent`, the motif tags and the
+    watermark tag all use, because a name survives the save), and it COMPOSES with a motif tag
+    rather than overwriting it — a motif that bleeds must stay countable as a motif."""
+    try:
+        cur = str(getattr(shape, "name", "") or "")
+        if cur.startswith("deckkit-"):
+            head = cur.split(":", 1)[0]
+            if "+bleed" not in head:
+                shape.name = head + "+bleed:" + str(reason)
+        else:
+            shape.name = BLEED_TAG + ":" + str(reason)
+    except Exception:
+        pass
+    return shape
+
+
+def _declared_bleed(sh):
+    n = str(getattr(sh, "name", "") or "")
+    return n.startswith(BLEED_TAG) or "+bleed" in n.split(":", 1)[0]
 
 
 def motif_legend(slide, label, *, x=None, y=None, w=4.4, color=None, ink=None, size=9.5,
@@ -2568,6 +2610,61 @@ _MOTIF_PAGE_KINDS = {
 }
 
 
+def _device_segments(shapes):
+    """Rotated members as SEGMENTS (centre ± half-length along the rotation), plus thin unrotated
+    bars as their own rect. Grounds are excluded: text on a painted colour field is fine."""
+    segs, rects = [], []
+    for sh in shapes:
+        try:
+            l, t = sh.left / 914400.0, sh.top / 914400.0
+            w, h = sh.width / 914400.0, sh.height / 914400.0
+            rot = float(getattr(sh, "rotation", 0.0) or 0.0)
+        except Exception:
+            continue
+        if abs(rot) > 0.01:
+            cx, cy = l + w / 2.0, t + h / 2.0
+            rad = math.radians(rot)
+            dx, dy = (w / 2.0) * math.cos(rad), (w / 2.0) * math.sin(rad)
+            segs.append(((cx - dx, cy - dy), (cx + dx, cy + dy)))
+        elif min(w, h) < 0.5:                       # a rule / bar: a device, not a field
+            rects.append((l, t, w, h))
+    return segs, rects
+
+
+def _legend_anchor(slide, shapes, sw, sh_h, *, box_w=4.4, box_h=0.5):
+    """The quietest corner of the safe band for a key, MEASURED against the device."""
+    segs, rects = _device_segments(shapes)
+    try:
+        bx, by, bw, bh = content_band(slide)
+    except Exception:
+        bx, by, bw, bh = 0.5, 1.0, sw - 1.0, sh_h - 1.6
+    cands = [bx + 0.2, max(bx + 0.2, bx + bw - box_w - 0.2)]
+    # Bottom row first (y=None lets motif_legend measure its own height against the safe band);
+    # the top row is the escape when the device owns the bottom of the page.
+    ys = [(by + bh - box_h, None), (by + 0.1, by + 0.1)]
+    best, best_score = (cands[0], None), None
+    for y, y_out in ys:
+        for x in cands:
+            r = (x, y, box_w, box_h)
+            score = 0
+            for a, b in segs:
+                for i in range(33):                 # sample the segment across the candidate rect
+                    t = i / 32.0
+                    px_, py_ = a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t
+                    if r[0] <= px_ <= r[0] + r[2] and r[1] <= py_ <= r[1] + r[3]:
+                        score += 1
+                        break
+            for q in rects:
+                if not (q[0] > r[0] + r[2] or q[0] + q[2] < r[0]
+                        or q[1] > r[1] + r[3] or q[1] + q[3] < r[1]):
+                    score += 1
+            if best_score is None or score < best_score:
+                best, best_score = (x, y_out), score
+            if best_score == 0 and (y, x) == (ys[0][0], cands[0]):
+                return best                          # bottom-left keeps the tie-break
+    return best
+
+
 def motif_page(slide, kind, *, color=None, second=None, accent=None, faint=False, weight=2.4,
                at=0.5, orient="v", count=5, legend=None, legend_at=None, full_bleed=True,
                inset=0.0):
@@ -2615,6 +2712,10 @@ def motif_page(slide, kind, *, color=None, second=None, accent=None, faint=False
     lw = max(0.012, weight / 72.0)
     n = max(2, int(count))
     out = []
+    # Shapes this device runs OFF the page on purpose (radial's origin, lattice's weave, orbit's
+    # off-canvas centre). Declared per shape with a reason so OFF_CANVAS keeps catching the
+    # accidental case — see bleed_intent().
+    bleeders = []
     # Paint order, recorded: (rect, fill) for every SOLID shape drawn. A legend laid on a device
     # that painted its own ground has to take its ink from what is under it — the first render put
     # a navy key on the navy half of a `seam` and it was effectively invisible. Last painted wins,
@@ -2667,18 +2768,29 @@ def motif_page(slide, kind, *, color=None, second=None, accent=None, faint=False
                               acc if i == hot else _blend(base, WHITE, 0.10 + 0.11 * i)))
             y += h
     elif kind == "radial":
-        # An origin OFF the canvas: rays that all meet inside it read as a starburst clip-art.
-        ox, oy = x0 - W * 0.12, y0 + H * 1.06
-        reach = (W + H) * 0.9
+        # An origin OFF the canvas: rays that all meet inside it read as starburst clip-art.
+        #
+        # 🔴 A shape ROTATES ABOUT ITS OWN CENTRE, not about the point you place its left edge on.
+        # The first version put the frame's left edge at the origin and rotated — so every ray
+        # pivoted around its own midpoint and swung AWAY from the origin. On 16:9 that still looked
+        # like a fan and hid the error; on a 9:16 story canvas the whole device swung off the page
+        # and the slide rendered EMPTY, with every lint clean. So the frame is positioned from the
+        # ray's MIDPOINT, which is the only placement that makes `rotation` mean what it looks like.
+        ox, oy = x0 - W * 0.05, y0 + H * 1.02
+        reach = math.hypot(W, H) * 1.3
         for i in range(n + 2):
-            ang = -68.0 + (72.0 * (i / float(n + 1)))
-            sh_r = box(slide, ox, oy - lw / 2, reach, lw,
+            ang = -78.0 + (70.0 * (i / float(n + 1)))
+            rad = math.radians(ang)
+            mx = ox + (reach / 2.0) * math.cos(rad)
+            my = oy + (reach / 2.0) * math.sin(rad)
+            sh_r = box(slide, mx - reach / 2.0, my - lw / 2, reach, lw,
                        fill=acc if i == (n + 2) // 2 else base)
             try:
                 sh_r.rotation = ang
             except Exception:
                 pass
             out.append(sh_r)
+            bleeders.append(sh_r)
     elif kind == "lattice":
         step = max(0.55, W / float(n * 2))
         k = int((W + H) / step) + 2
@@ -2691,6 +2803,7 @@ def motif_page(slide, kind, *, color=None, second=None, accent=None, faint=False
                 except Exception:
                     pass
                 out.append(m)
+                bleeders.append(m)
         for i in range(n):
             cx = x0 + W * (0.12 + 0.76 * (i / float(max(1, n - 1))))
             out.append(box(slide, cx - 0.09, y0 + H * 0.5 - 0.09, 0.18, 0.18,
@@ -2699,9 +2812,11 @@ def motif_page(slide, kind, *, color=None, second=None, accent=None, faint=False
         cx, cy = x0 + W * 1.02, y0 + H * 0.5
         for i in range(max(2, min(n, 5))):
             r = (W * 0.34) * (1.0 + 0.42 * i)
-            out.append(box(slide, cx - r, cy - r, r * 2, r * 2, fill=None,
-                           line=base if i else acc, line_w=weight * (1.4 if i == 0 else 0.8),
-                           round=True, r=r))
+            ring = box(slide, cx - r, cy - r, r * 2, r * 2, fill=None,
+                       line=base if i else acc, line_w=weight * (1.4 if i == 0 else 0.8),
+                       round=True, r=r)
+            out.append(ring)
+            bleeders.append(ring)
         rr = (W * 0.34) * 1.42
         out.append(box(slide, cx - rr - 0.13, cy - H * 0.30, 0.26, 0.26, fill=acc,
                        round=True, r=0.13))
@@ -2721,12 +2836,29 @@ def motif_page(slide, kind, *, color=None, second=None, accent=None, faint=False
 
     for shp in out:
         tag_motif(shp, loud=True)
+    # After tagging, so the declaration COMPOSES with the motif tag instead of replacing it.
+    _why = {"radial": "the ray fan's origin sits outside the frame — rays that all meet inside it "
+                      "read as starburst clip-art",
+            "lattice": "the weave continues past the trim; members that stop at the edge read as a "
+                       "drawn box, not a fabric",
+            "orbit": "the orbital centre is off-page — that is what makes these read as arcs of a "
+                     "much larger circle rather than as rings"}.get(kind, "")
+    for shp in bleeders:
+        bleed_intent(shp, _why or "this device is drawn to run off the canvas")
     if legend:
         # `ly=None` on purpose: motif_legend measures the key and places it against the deck's own
         # safe band. Passing a coordinate here is what kept the two-line key inside the reserved
         # footer band even after motif_legend learned to place itself — the caller's guess simply
         # overrode the measurement.
-        lx, ly = legend_at if legend_at else (0.7, None)
+        #
+        # WHERE it goes is measured too, against the device's own ink. Bottom-left was a guess that
+        # happened to work on 16:9 and failed the moment the canvas changed shape: on a 9:16 story
+        # page a `radial` ray runs straight through the key (RULE_THROUGH_TEXT, correctly). So the
+        # four corners of the safe band are scored against the DEVICE geometry — rotated members
+        # reconstructed as real segments, since a shape rotates about its own centre and its frame
+        # says nothing about where the drawn line is — and the quietest corner wins, with
+        # bottom-left keeping its tie-break.
+        lx, ly = legend_at if legend_at else _legend_anchor(slide, out, sw, sh_h)
         probe_y = ly if ly is not None else sh_h - 0.55
         ink, lw_avail = None, sw - lx - 0.6
         for (rx, ry, rw, rh), fill in reversed(grounds):
@@ -8603,6 +8735,8 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
                 off = [s for s, c in (("left", ext[0] < -budget), ("top", ext[1] < -budget),
                                       ("right", ext[0]+ext[2] > W+budget+slack),
                                       ("bottom", ext[1]+ext[3] > H+budget+slack)) if c]
+                if off and _declared_bleed(sh):
+                    off = []                     # declared, per shape, with a written reason
                 if off and not ((is_pic or is_wm) and full_bleed):
                     findings.append((n, "CRITICAL", "OFF_CANVAS",
                         f"{'text' if ink is not None else ('image' if is_pic else 'shape')} extends past the "

@@ -127,6 +127,17 @@ def _deck_text(pptx_path):
     return _norm(" ".join(out)).lower()
 
 
+def _weight(s):
+    """How much a string can DISCRIMINATE, script-aware. A CJK glyph is a whole word's worth of
+    signal, so counting characters is a Latin-centric measure: 张伟 is a full personal name at two
+    characters and would fail a `len >= 4` gate that "John" passes, which is how an attribution
+    check ends up reporting MISSING CREDIT on a correctly credited Chinese deck (measured). CJK,
+    kana and Hangul count double, everything else once — the same reasoning deckkit's own width
+    measurement uses."""
+    return sum(2 if ("\u2e80" <= c <= "\u9fff" or "\u3040" <= c <= "\u30ff"
+                     or "\uac00" <= c <= "\ud7af") else 1 for c in s or "")
+
+
 def _credit_present(entry, deck_text):
     """A credit is present when the AUTHOR (or, failing that, the title) appears in the deck.
 
@@ -135,7 +146,7 @@ def _credit_present(entry, deck_text):
     if deck_text is None:
         return None                                   # unknown: no pptx / no python-pptx
     author = _norm(entry.get("author", "")).lower()
-    if len(author) >= 4:
+    if _weight(author) >= 4:
         # When there IS an author, the author is the credit. Falling back to the title here was a
         # real hole, caught by the self-test: a file titled "Campus" scored as credited because the
         # deck happens to contain the word "campus" in a heading. A credit that a body word can
@@ -144,7 +155,7 @@ def _credit_present(entry, deck_text):
     title = re.sub(r"\.(jpe?g|png|webp|tiff?)$", "", _norm(entry.get("title", "")).lower()).strip()
     # No author (some CC0 uploads) — the title stands in, but only when it is distinctive enough
     # that a stray heading cannot satisfy it.
-    return bool(len(title) >= 12 and title in deck_text)
+    return bool(_weight(title) >= 12 and title in deck_text)
 
 
 def check(deck_dir, *, pptx=None, gates=None, ledger=None, strict_credits=True):

@@ -1159,6 +1159,18 @@ The helper set, by job:
   mark + the words) and `MOTIF_UNEXPLAINED` reports a deck that carries a loud motif with no key
   anywhere — the three sanctioned answers are still LABEL it, KEY it, or make it FIGURATIVE, and
   the third one leaves this advisory standing on purpose.
+- **Deliberate bleed (`bleed_intent`)** — `OFF_CANVAS` is a CRITICAL that refuses to save, and it
+  is right to be: a card or a headline off the page is the commonest way a build ships something
+  unreadable. But a signature device that runs off the edge is ordinary design — a ray fan whose
+  origin sits outside the frame, a weave that continues past the trim, an orbit drawn as arcs of a
+  much larger circle — and the only way to ship one was `lint_layout(strict=False)`, which switches
+  the check off for the WHOLE deck. Measured: three of `motif_page`'s eight kinds could not be
+  saved by the standard build path at all. `deckkit.bleed_intent(shape, "<why this leaves the
+  canvas>")` is the narrow, recorded escape — **per shape, with a reason, honoured by both linters**
+  (`OFF_CANVAS` at build time and `OVERFLOW` at file level), and it COMPOSES with a motif tag so a
+  bleeding device stays countable in the ≤3 budget. An UNdeclared shape off the canvas still fails,
+  which is the point: the check keeps catching the accident and stops refusing the composition.
+  `motif_page` declares its own bleeders for you.
 - **Composed overlap (`overlap_intent`)** — `lint_layout`'s `TEXT_OVERLAP` is a CRITICAL that refuses
   to save, and it is right to be: colliding text is the commonest way a build ships unreadable. But it
   also refused two moves that are ordinary editorial design — **a giant display word with a small line

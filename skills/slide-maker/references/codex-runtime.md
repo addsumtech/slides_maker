@@ -110,6 +110,21 @@ be reconstructed post-hoc at the delivery gate.
    declaration and nothing verified it. A deliberate departure is a named waiver
    (`design.style_pick_waived`), not silence. A `bespoke` / `generated` / `n/a — <locked look>`
    pick is skipped by definition — those are not preset-based.
+2b. **The motif is a BUILT thing, not a described one — and both tiers have primitives.** The
+   delivery gate requires `design.motif_generates` (background · markers · the one PAGE whose
+   GEOMETRY is the motif), and a runbook that stops at "describe it" is how that page gets
+   hand-rolled out of raw boxes — the failure `register_mark` was written for, one tier up.
+   The QUIET signature is `deckkit.register_mark(slide, kind, corner=…)`; reach past the
+   graphic-neutral `arcs`/`rule`/`ticks`/`ordinal`/`grid` for a subject-world kind — `seal` ·
+   `stitch` · `trace` · `contour` · `caliper` · `hatch` — or the corner looks like every other
+   deck's. The LOUD page is `deckkit.motif_page(slide, kind, legend="<what it MEANS>")`, whose
+   kinds name RELATIONS, not looks: `seam` (a crossing) · `conduit` (accumulation along a line) ·
+   `strata` (depth) · `radial` (dispersion) · `lattice` (coupling) · `orbit` (a cycle) ·
+   `aperture` (focus) · `terrace` (staged advance) — pick the relation your CONTENT has, then swap
+   in your subject's own material. `legend=` draws the key that satisfies the STRANGER TEST;
+   without one anywhere the lint reports `MOTIF_UNEXPLAINED`, and on a deliberately FIGURATIVE
+   device that advisory is the expected result — say so in the plan rather than adding a key you
+   do not want.
 3. **Treat categories as a visual-system decision.** In the per-slide design ledger, mark every slide
    as categorical or not. If the deck names roles, input types, product pillars, tools, or stages,
    choose one icon family and use it where it clarifies those categories. For each categorical slide,
@@ -120,6 +135,45 @@ be reconstructed post-hoc at the delivery gate.
    source SVG, preserving transparent alpha; Codex evidence records the rasterizer and the gate rejects
    a recorded icon whose shortest edge is below 256px or whose PNG has no alpha channel. This is a
    Codex-only execution rule: it prevents thumbnail blur without changing the shared icon workflow.
+3c. **Every CONTENT IMAGE is sourced by the REFERENT RULE, and the plan says so in
+   `design.image_sources` — the delivery gate BLOCKS without it.** This step exists because the
+   gate got the requirement before this runbook did: `codex_delivery_gate.py` refuses a plan whose
+   `design.image_sources` is missing, and an adapter that never mentions the field turns a design
+   contract into a mystery failure at hand-off. One row per content image, each carrying its
+   evidence token (grammar + the REFERENT RULE: `references/image-generation.md`), or the single
+   string `"n/a - <why>"` on a deck with no content images.
+
+   Classify the image's DEPICTED SUBJECT, not the slide topic: **real & specific** (a named place,
+   a real product, a real person) → a REAL licence-clear photo; **generic-concrete** ("a warehouse")
+   → generation is fine; **abstract** → native forms, no photo. A generated image CLAIMING
+   photographic reality of a real thing is a fidelity bug, not a style choice.
+
+   ```bash
+   python3 scripts/fetch_images.py fetch "<subject>" --out <deck>/assets/sourced --slide N --limit 3
+   python3 scripts/image_qc.py <deck>/assets/sourced --at <planned WxH inches> --contact-sheet
+   #   ^ OPEN the sheet — reject watermarks, scaffolding, ugly or wrong-subject shots; --fix any
+   #     EXIF ROTATION finding (this render loop ignores the flag, measured, so the photo would
+   #     land sideways in a box sized for the wrong aspect with every gate green)
+   python3 scripts/fetch_images.py adopt <deck>/assets/sourced <chosen file>
+   python3 scripts/fetch_images.py ledger <deck>/assets/sourced --tokens    # the plan rows
+   python3 scripts/fetch_images.py ledger <deck>/assets/sourced --credits   # the lines to RENDER
+   ```
+
+   `fetch_images.py` writes `sources.json`, and `check_image_provenance.py` (which the delivery
+   gate calls) holds the plan against it. Two rows that fail there and nowhere else: a
+   `searched (Commons, Openverse), none found → generated, flagged illustrative` rung with no
+   RECORDED search behind it — and a search recorded as `unreachable`, which is a connectivity
+   failure and never evidence that no photo exists — and an attribution-required photo whose credit
+   never reaches a SLIDE (`deckkit.source_note` at the plate, or one line on
+   `deckkit.sources_page`). The ledger's `--credits` output is that text.
+
+   On the generate-a-template / plated branch, ground the prompt in what the subject actually looks
+   like — `image_prompts.py --facts <visual-facts.md>` carries attributes you wrote after LOOKING
+   at real reference photos. `generate_images_codex.py --ref-dir` stages those references beside
+   the generation and REQUIRES `--ref-intent` (`generic-concrete` · `stylized-illustration` ·
+   `fallback-rung`): a reference makes a fake ACCURATE, and a real subject that has a usable photo
+   is not on that list — place the photo.
+
 3b. **Iterate through `deck_cycle.py`, not through hand-run steps — this is where the adapter's
    own worst time sink lives.** `python3 scripts/deck_cycle.py build_<deck>.py [--render]` runs
    build + lint (+ render + render-lint) in ONE call, which matters more on a bridged runtime than

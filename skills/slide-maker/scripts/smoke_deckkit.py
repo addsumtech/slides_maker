@@ -117,6 +117,8 @@ for _k in dk._MOTIF_PAGE_KINDS:
 for _k in dk._REGISTER_KINDS:
     ok("register_mark:" + _k, (lambda k: lambda: dk.register_mark(S(), k, text="7"))(_k))
 ok("motif_legend", lambda: dk.motif_legend(S(), "CROSSING — today to the bet"))
+ok("bleed_intent", lambda: dk.bleed_intent(dk.box(S(), -1.0, 1.0, 2.0, 1.0, fill=C("C0362C")),
+                                           "runs off the trim by design"))
 ok("native_chart (editable)", lambda: dk.native_chart(S(), 0.6, 1, 6, 3.2, ["Q1", "Q2", "Q3"],
    [("新客", [10, 18, 26]), ("老客", [30, 33, 36])], kind="column", dark=True, highlight=0))
 ok("native_dual_axis (editable)", lambda: dk.native_dual_axis(S(), 0.6, 1, 7, 3.2, ["m1", "m2", "m3"],
