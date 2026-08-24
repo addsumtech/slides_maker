@@ -9,7 +9,28 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+## [5.1.0] — 2026-08-24
+
+Everything in this release was found by RUNNING the skill, not by reading it: a full build —
+15 slides, a direction gate, an invented register, sourced and generated imagery — produced the
+image-provenance work, the loud motif tier, and then, on its own author, most of the fixes below.
+
+> ### 🔴 ACTION REQUIRED — two gate fields became MANDATORY
+> A deck whose `.deck-gates.json` predates this release will FAIL `render_deck.py --gate-check`
+> (and `codex_delivery_gate.py`) until it records two new `design_plan` fields. Both take a named
+> escape, so the fix is one line each:
+>
+> ```json
+> "image_sources": ["slide <n> | <subject> | sourced — <origin> (<licence>)"]   or "n/a — <why>"
+> "direction_gate": {"candidates": "directions.json", "picked": "<the one>"}    or "n/a — <carve>"
+> ```
+>
+> They are required rather than optional for the reason this repo keeps re-learning: an optional
+> field is not a detector. `scripts/deck_gates.py check <deck-dir>` reports both — and every other
+> shape problem — in one pass, without opening the .pptx.
+
 ### Added
+
 - **The sourced-photo pipeline became tools with a record.** `scripts/fetch_images.py`
   (Wikimedia Commons + Openverse, keyless, licence-filtered — `search` · `fetch` · `adopt` ·
   `ledger --tokens|--credits`) writes an `assets/**/sources.json` provenance ledger holding every
@@ -41,6 +62,27 @@ section is a distilled summary — the full notes live on the
   with no key anywhere — the STRANGER TEST, countable at last. `register_mark` gains six
   subject-world kinds (`seal` · `stitch` · `trace` · `contour` · `caliper` · `hatch`) beside the
   graphic-neutral five.
+- **`scripts/deck_gates.py` — an emitter for the record every gate reads.** `init` writes a fully
+  SHAPED skeleton, `set` edits one field by dotted path, `check` reports EVERY shape problem at
+  once. The delivery gate deliberately stops at the first problem in a section (its later checks
+  read what the earlier one validated), so a hand-typed record cost one round-trip per wrong
+  SHAPE — measured at six on one real build (`boldness` written as `bold — because …`, then
+  `signature_proof`, `material_probe`, `concept` as a string instead of `{chosen, rejected[]}`,
+  `type_scale.body` under the legibility floor). Five of those six now collapse into one pass. It
+  is a shape pre-flight and never the gate: it never opens the .pptx.
+- **The DIRECTION competition is re-scored at hand-off**, the way the arc competition already was.
+  `design_plan.direction_gate` carries the candidates and both gate paths run
+  `directions_diversity.check()` over them. `directions_diversity.py` was a real detector nothing
+  required anyone to run: on one build's first direction set it reports `TOO SIMILAR Brutalist vs
+  Swiss (palette 37.9)` — caught by eye — and `NO BESPOKE DIRECTION`, which was not caught at all,
+  because the "bespoke" candidate carried a palette, a cover and a skeleton but no `cover_motif`.
+- **`deckkit.bleed_intent(shape, reason)`** — the per-shape, written-reason escape for a device
+  that leaves the canvas ON PURPOSE. Three of `motif_page`'s eight kinds could not be saved by the
+  standard build path at all, and the only previous escape was `lint_layout(strict=False)`, which
+  switches `OFF_CANVAS` off for the whole deck. Undeclared still fails.
+- **`deckkit.declare_delivery(..., builds="static")`** records the builds choice beside the
+  delivery mode, so `NO BUILDS` stops firing on a deck that is static because the user chose that.
+- **`scripts/_console.py`** — output that survives a console which cannot encode it.
 
 ### Fixed
 - **A motif GROUND is no longer read as an object.** A painted colour field (a `motif_page`'s
@@ -51,6 +93,34 @@ section is a distilled summary — the full notes live on the
 - `motif_legend` measures its text, places itself against `content_band`, fits the field it sits
   on, and takes its ink from the ground under it; `_is_motif` no longer counts the legend as
   another appearance of the device.
+
+- **The whole toolchain died mid-report on a legacy code page** — the cmd/PowerShell default on the
+  Python versions this repo pins, on a platform SKILL.md explicitly tells people to use. Measured
+  with `PYTHONIOENCODING=cp1252`: `lint_deck.py` and `render_deck.py --gate-check` both exit 1 with
+  a `UnicodeEncodeError` after printing part of their output, and `deck_gates.py check` dies on a
+  🔴 *after* printing `shape clean`. A partial report plus a traceback reads as a broken deck when
+  the deck was fine and the console could not print a tick. 30 CLI entry points now degrade an
+  unencodable glyph to `?` and finish; a UTF-8 console is untouched.
+- **Two paths were quietly Latin-only.** `fetch_images._safe_name` stripped everything outside
+  `[A-Za-z0-9._-]`, so 北京大学校园 and 東京タワー both became the bare fallback; and the credit
+  check gated on `len(author) >= 4`, so 张伟 — a complete personal name — could not satisfy it and
+  a correctly credited Chinese deck reported MISSING CREDIT. Weighting is now script-aware.
+- **`motif_page` rendered an EMPTY page on a 9:16 canvas.** A shape rotates about its own CENTRE,
+  not the point you place its left edge on, so every `radial` ray pivoted around its own midpoint
+  and swung off the page — on 16:9 it still looked like a fan, which hid it. Rays are placed from
+  their midpoint now, and every kind is tested on 16:9 · 4:3 · 1:1 · 9:16.
+- **`presets.apply()` set a face it never checked exists** — `terminal` declares Consolas, absent
+  on macOS, so every measurement in a FIXED-WIDTH register would have been taken in a proportional
+  substitute. It warns now, once per face.
+- **`RULE_THROUGH_TEXT` had no declaration** while both its siblings do, so a STRIKE-THROUGH — a
+  rule crossing its own text, which is what the mark means — could not be built. `overlap_intent`
+  waives the geometry there; the pixel checks still run and an undeclared crossing still fails.
+- **The motif legend** measures its text, places itself against `content_band`, fits the field it
+  sits on, and takes its ink from the ground under it.
+- **`references/codex-runtime.md` documents the fields its own gate blocks on** — the image
+  evidence tokens (step 3c), the direction competition (3b2) and the shape emitter (3a). Twice in
+  this release a gate was taught to refuse something the Codex runbook never mentioned, which
+  gives a non-Claude run a hard failure with no instruction anywhere.
 
 ## [5.0.0] — 2026-08-19
 
