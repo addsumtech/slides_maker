@@ -9,6 +9,49 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+### Added
+- **The sourced-photo pipeline became tools with a record.** `scripts/fetch_images.py`
+  (Wikimedia Commons + Openverse, keyless, licence-filtered — `search` · `fetch` · `adopt` ·
+  `ledger --tokens|--credits`) writes an `assets/**/sources.json` provenance ledger holding every
+  QUERY and its outcome alongside every file's licence, author, attribution string and sha256.
+  `scripts/image_qc.py` measures what a program can measure before a photo is placed — DPI at the
+  PLANNED box, crop loss, softness, flat plates, letterbox bars, near-duplicates, a
+  possible-watermark heuristic, set-level `MIXED TREATMENT`, and **EXIF rotation**, which this
+  skill's own render loop ignores (measured) so a Commons photo lands sideways in a box sized for
+  the wrong aspect with every gate green; `--contact-sheet` writes ONE labelled PNG + sha256 so
+  looking costs a single Read. `scripts/check_image_provenance.py` holds each evidence token
+  against that ledger and against the BUILT deck, and runs on BOTH gate paths.
+- **`design_plan.image_sources`** — the per-image evidence tokens are now a required field on both
+  runtimes, with the `n/a — <why>` escape the logo token already had. Two claims become checkable
+  for the first time: a `searched, none found` rung must be backed by a RECORDED search (an
+  `unreachable` network is refused as one — a blocked host is not evidence that no photo exists),
+  and an attribution-required photo must be CREDITED ON A SLIDE.
+- **Visual research for generated plates.** `image_prompts.py --facts` folds observed subject
+  attributes — written after LOOKING at real reference photos — into each prompt as binding
+  attributes. `generate_images_codex.py --ref-dir` stages matching references beside the
+  generation and REQUIRES `--ref-intent` (`generic-concrete` · `stylized-illustration` ·
+  `fallback-rung`), because a reference makes a fake accurate: measured, a staged photo of a real
+  building produced a convincing fake photograph of it. For the two illustration intents a
+  non-photographic RENDER MODE is injected INSIDE the verbatim image prompt, where the image tool
+  can actually read it.
+- **The LOUD motif tier.** `deckkit.motif_page(slide, kind, legend=…)` builds the page whose
+  GEOMETRY is the motif from eight generative relations (`seam` · `conduit` · `strata` · `radial`
+  · `lattice` · `orbit` · `aperture` · `terrace`), tagged loud so it spends exactly one budgeted
+  appearance. `deckkit.motif_legend()` draws the key, and `MOTIF_UNEXPLAINED` reports a loud motif
+  with no key anywhere — the STRANGER TEST, countable at last. `register_mark` gains six
+  subject-world kinds (`seal` · `stitch` · `trace` · `contour` · `caliper` · `hatch`) beside the
+  graphic-neutral five.
+
+### Fixed
+- **A motif GROUND is no longer read as an object.** A painted colour field (a `motif_page`'s
+  half-page register) is a canvas text is MEANT to sit on; only line-and-ring DEVICES can be
+  crossed. Without the carve, `TEXT_OVER_MOTIF`, `OVERLAP`, `ESCAPES_CARD`, `FOOTER-ZONE` and
+  `CROWDED` all fired on a correctly-composed loud motif page — six to eleven findings on a page
+  holding two headlines and a key.
+- `motif_legend` measures its text, places itself against `content_band`, fits the field it sits
+  on, and takes its ink from the ground under it; `_is_motif` no longer counts the legend as
+  another appearance of the device.
+
 ## [5.0.0] — 2026-08-19
 
 A design-intelligence milestone: the look is now chosen for the SUBJECT, the design plan is
