@@ -1,4 +1,4 @@
-# Canvas formats — one deck skill, many surfaces (16:9 · 4:3 · 1:1 · 3:4 · 9:16 · A4)
+# Canvas formats — one deck skill, many surfaces (16:9 · 4:3 · 1:1 · 3:4 · 9:16 · A4 · A0/A1 poster)
 
 `scripts/formats.py` is the registry (dimensions · safe zones · chrome policy · density ·
 lint flags); this file is the **design intelligence per surface**. The rule that governs
@@ -27,7 +27,14 @@ layout per surface; keep the *identity* (palette, type pairing, motif, semantic 
 - **Inch-normalization:** every format's canvas inches are chosen so the SAME pt tokens land
   right per surface (14pt body ≈ 1.9% of a 10in-wide talk slide, ≈ 3.5% of a 5.625in story —
   automatically phone-legible). So build scripts keep ONE type scale across formats; do NOT
-  multiply body/label sizes per format. Only display/cover type takes the format's
+  multiply body/label sizes per format. 🔴 **The exception is a surface PRINTED AT ACTUAL SIZE.**
+  Inch-normalization works because a projected canvas is scaled to fill whatever screen it meets,
+  so only *relative* size matters. A poster is not scaled: it is printed at 33in and read at a
+  fixed distance, where the printed point size is the whole story. Those formats therefore declare
+  ABSOLUTE floors in `type_floors`, and `check_surface.py` enforces them — applying the relative
+  rule instead would demand a ~45pt body on A0 (absurd) while letting a 46pt title ship on a board
+  nobody can read across a hall. Both errors, in opposite directions, from one missing distinction.
+  Only display/cover type takes the format's
   `display_scale` multiplier.
 - **Safe zones are load-bearing, not padding:** `formats.band(FMT)` returns the content rect
   after margins + platform-UI zones. On `story`, ~1.3in top (profile/camera chrome) and
@@ -70,6 +77,7 @@ an explicit width, derive it from the band (`bw`), never a 16:9-remembered numbe
 | `square` 1:1 | IG/FB feed post | **centered, poster-like**: one hook line + one visual + 3–5 scannable points, vertically stacked; generous margins | ONE idea per card; display ×1.15 | 2-col splits (cramped at 7.5in); deck chrome; body prose |
 | `red` 3:4 | 小红书 image note | **vertical flow**: bold hook top (≈upper third) → content middle → payoff/handle bottom; list-cards may carry 4–6 short rows; card 1 of a carousel = pure hook cover | ONE idea per card; display ×1.25; 封面 hook ≥ ~10% of canvas height | side-by-side columns; small dense text (rednote is browsed at phone size); ignoring top/bottom safe zones |
 | `story` 9:16 | story/Reels/Shorts/抖音 cover | **one message, huge type**: hero visual + a 1–2 line statement; content lives in the middle ~65% (the band); stack everything | ONE message; display ×1.35; nothing that needs study | ANY text in the top 1.3in / bottom 1.8in (platform UI covers it); multi-point layouts; footers |
+| `poster_a0` / `poster_a1` | conference poster, printed | **three reading distances at once**: one headline claim across the top, 4–6 sections in 2 columns beneath it, every body block short enough to read standing. The board is composed ONCE — plan the whole surface, not a sequence | **ABSOLUTE pt, not canvas-relative**: A0 display ≥90 · section ≥36 · body ≥24 (A1: 72/32/20). Fill 55–90% of the board. **Methods + limitations are required content** | typesetting it like a slide (deckkit's cover caps titles at 46pt — unreadable at 5m on a 33in board); leaving half the board empty because "whitespace is rhythm" (it is, across a *sequence*; here it is the only space the work gets); the billboard trap — a huge result with no method and no limitation, the two things a passer-by cannot reconstruct |
 | `a4` print portrait | handout, one-pager | **document logic**: 2-col text+figure splits fine; sections flow down the page; margins 0.75in | self-read prose is the deliverable (density is correct, not a flaw) | presented-style sparse slides (wastes the page); social-style display type |
 
 ## Repurposing one deck across formats (the batch pattern)
@@ -106,6 +114,18 @@ type by `FMT.display_scale`.
   ask the question when "conference talk" already answers it.
 - The **design plan** records a `format:` line whenever it's not `wide` (with the safe-zone +
   chrome consequences named); the checkpoint shows it.
+- 🔴 **The registry is CHECKED, not merely offered.** It used to be producer-only — measured by
+  grep, `import formats` appeared in `formats.py` and `extract_pdf.py` and nowhere else, so a
+  build opted in voluntarily and nothing afterwards could tell whether it had. Every rule on this
+  page was advisory by construction. `scripts/check_surface.py` now recovers the format from the
+  BUILT canvas size and enforces the contract, wired into `render_deck.py --gate-check` (section
+  `surface`) and `codex_delivery_gate.py`:
+  `SAFE ZONE` (text inside a platform-UI zone) · `COLUMNS` (a side-by-side split where
+  `columns_ok=False`) · `DECK CHROME` (a footer strip on a social surface) · `TYPE FLOOR` and
+  `FILL` (printed boards only) · `MISSING SECTION` (content a surface is not finished without).
+  Run it alone with `python3 scripts/check_surface.py <deck.pptx>`; `--selftest` proves it on
+  purpose-built fixtures. A canvas matching no registered format reports NOT CHECKED, never clean.
+  Waive required sections in writing via `design_plan.surface_sections_waived`.
 - **Verification is per-surface:** the render self-check + critic judge the deck AT its real
   aspect — a portrait card montaged next to 16:9 renders is easy to misjudge, so view it at
   its own proportions, and check the story/red safe zones explicitly (nothing text-bearing

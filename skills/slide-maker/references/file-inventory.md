@@ -50,6 +50,31 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   `render_deck.py --gate-check` and `codex_delivery_gate.py` — never copied, so the two paths
   cannot grow two answers. `--selftest` proves it both ways. It checks the CALL, not the
   pixels; `tests/test_register_expression.py` covers the other half.
+- `check_register_pixels.py` — the register a deck DECLARES must reach its RENDERED PIXELS, and
+  must not be a previous deck's. The half `check_style_applied.py` structurally cannot reach: a
+  BESPOKE register has no `presets.apply()` call to find, and a build that calls it and then
+  hand-sets the tokens back passes there too. Reads the deck's own PNGs and reports
+  `STOCK REGISTER SHIPPED` (deckkit's chromatic identity is what actually shipped while the
+  declared hues are absent — SKILL.md's "never ship the default blue"),
+  `DECLARED PALETTE ABSENT`, and `GROUND REPEAT` / `LAST DECK'S SCHEME` against `taste.md`'s LOOK
+  HISTORY ("never reuse the last deck's scheme"). Presence is measured per-colour and NOT by area:
+  measured on a real 15-page deck the signature accent covered 0.65% of its best page, so an
+  area ranking called the deck's own palette absent; colours genuinely absent measured 0.0000%
+  and an antialiased blend 0.093%, which is where the threshold sits. Waive with
+  `design_plan.register_pixels_waived`. Imported by `render_deck.py --gate-check` (section
+  `register_pixels`) and `codex_delivery_gate.py`. `--selftest` proves it both ways. It judges
+  COLOUR only — composition is the sameness gate's and the critic's.
+- `check_surface.py` — the canvas format's contract, checked against the BUILT deck. `formats.py`
+  was producer-only: measured by grep, `import formats` appeared in two files and both write
+  formats, so every per-surface rule in `references/canvas-formats.md` was advisory by
+  construction. Recovers the format from the canvas SIZE (a built PPTX carries nothing else) and
+  reports `SAFE ZONE` · `COLUMNS` · `DECK CHROME` · `TYPE FLOOR` · `FILL` · `MISSING SECTION`.
+  The printed-board checks (`TYPE FLOOR`, `FILL`) apply only to formats declaring `type_floors` /
+  `fill_range` — A0/A1 posters, which are read at a fixed distance and so need ABSOLUTE point
+  floors rather than lint's canvas-relative one. An unregistered canvas reports NOT CHECKED, never
+  clean. Waive required sections with `design_plan.surface_sections_waived`. Imported by
+  `render_deck.py --gate-check` (section `surface`) and `codex_delivery_gate.py`; `--selftest`
+  proves it on built fixtures.
 - `check_design_contracts.py` — the DESIGN stack's index guard: every self-verify cross-reference in
   the tree resolves to a real item, the `### Design self-verify (a–s)` header covers every item the
   list actually defines (and its spelled-out count matches), the shared design thresholds agree

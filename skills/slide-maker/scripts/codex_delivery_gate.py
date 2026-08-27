@@ -1052,6 +1052,83 @@ def check_style_applied(evidence: dict[str, Any], build_script: Path,
         print("  [--] design.style_pick NOT CHECKED — " + msg.replace("\n", " "))
 
 
+def check_surface_contract(evidence: dict[str, Any], deck_path: Path | None,
+                          errors: list[str]) -> None:
+    """The canvas format's contract, checked against the built deck.
+
+    `formats.py` registers each design surface and, measured by grep, nothing downstream consumed
+    it — so the safe zones, the columns rule, the chrome policy and (for a printed board) the
+    absolute type floors were advisory by construction on both runtimes alike.
+    """
+    if deck_path is None:
+        return
+    design = evidence.get("design") if isinstance(evidence.get("design"), dict) else {}
+    try:
+        checker = load_surface_checker()
+        probs, facts = checker.check(deck_path, design.get("format"),
+                                     design.get("surface_sections_waived"),
+                                     design.get("surface_section_terms"))
+    except Exception as exc:                       # never fail the gate on the checker itself
+        print(f"  [--] surface contract NOT CHECKED — {exc.__class__.__name__}: {exc} "
+              f"(not the same as clean)")
+        return
+    if facts.get("note"):
+        print("  [--] surface contract: " + facts["note"])
+        return
+    line = "  surface: {}".format(facts.get("format"))
+    for extra in ("floors", "fill"):
+        if facts.get(extra):
+            line += " · " + facts[extra]
+    print(line)
+    for code, msg in probs:
+        errors.append("{}: {}".format(code, msg.replace("\n", " ")))
+
+
+def check_register_pixels(evidence: dict[str, Any], deck_path: Path | None,
+                         errors: list[str]) -> None:
+    """The register the evidence DECLARES must reach the deck's RENDERED PIXELS.
+
+    `check_style_applied` above verifies the CALL in the build script; it is skipped by definition
+    for the `bespoke` / `generated` picks this skill actively encourages, and a build that calls
+    `presets.apply()` and then hand-sets the tokens back passes it. This asks the render instead,
+    which is the only artifact that can answer whether the look ARRIVED. Same module as
+    `render_deck.py --gate-check`.
+    """
+    design = evidence.get("design")
+    if not isinstance(design, dict) or deck_path is None:
+        return
+    try:
+        checker = load_register_pixels_checker()
+    except Exception as exc:                       # never fail the gate on the checker itself
+        print(f"  [--] design.palette NOT CHECKED against the pixels — "
+              f"{exc.__class__.__name__}: {exc} (not the same as clean)")
+        return
+    taste = None
+    try:
+        import registry                            # noqa: PLC0415 - optional, host-dependent
+        t = registry.taste_file()
+        taste = str(t) if t else None
+    except Exception:
+        pass
+    try:
+        probs, facts = checker.check(deck_path.parent, taste=taste, design=design)
+    except Exception as exc:
+        print(f"  [--] design.palette NOT CHECKED against the pixels — "
+              f"{exc.__class__.__name__}: {exc} (not the same as clean)")
+        return
+    if facts.get("waived"):
+        print("  [--] design.palette vs pixels waived in writing (design.register_pixels_waived)")
+        return
+    codes = [c for c, _ in probs]
+    if "NO RENDERS" in codes:
+        print("  [--] design.palette NOT CHECKED against the pixels — no renders beside the deck")
+        return
+    if facts.get("band"):
+        print("  look history: " + facts["band"])
+    for code, msg in probs:
+        errors.append("{}: {}".format(code, msg.replace("\n", " ")))
+
+
 def check_design(
     evidence: dict[str, Any],
     root: Path,
@@ -1573,6 +1650,28 @@ def load_arc_checker() -> Any:
     return module
 
 
+def load_surface_checker() -> Any:
+    # Same one-question-one-implementation rule as the loaders around it.
+    path = Path(__file__).with_name("check_surface.py")
+    spec = importlib.util.spec_from_file_location("slide_maker_check_surface", path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("could not load check_surface.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_register_pixels_checker() -> Any:
+    # Same one-question-one-implementation rule as load_style_checker() above.
+    path = Path(__file__).with_name("check_register_pixels.py")
+    spec = importlib.util.spec_from_file_location("slide_maker_check_register_pixels", path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("could not load check_register_pixels.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def load_style_checker() -> Any:
     # Same shape as the loaders around it, and for the same reason: this gate and
     # `render_deck.py --gate-check` must ask ONE question of ONE piece of code. `style_pick` is
@@ -1871,6 +1970,11 @@ def evaluate(
         # question of one piece of code rather than growing two answers.
         if build_script is not None:
             check_style_applied(evidence, build_script, errors)
+        # DECLARED -> RENDERED. The line above reads the SOURCE; this reads the PIXELS, which is
+        # the only place a bespoke register (no preset call to grep for) can be verified at all.
+        check_register_pixels(evidence, deck_path, errors)
+        # DECLARED SURFACE -> BUILT CANVAS. The registry was producer-only until now.
+        check_surface_contract(evidence, deck_path, errors)
         audited_components = components
         if build_script is not None and deck_path is not None:
             recomputed = recompute_component_audit(build_script, deck_path, errors)

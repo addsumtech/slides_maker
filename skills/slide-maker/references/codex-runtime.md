@@ -93,6 +93,15 @@ be reconstructed post-hoc at the delivery gate.
    display token (normally at least 32pt) must create a real focal point. Reduce copy or split slides
    before reducing the body token. For CJK paragraphs leave deckkit line spacing unset unless the plan
    names a different, tested value.
+   🔴 **The type floors above are for a PROJECTED canvas.** A surface printed at actual size — an
+   A0/A1 conference poster — is read at a fixed distance, so its point sizes are absolute and these
+   numbers do not apply: A0 wants display ≥90pt · section ≥36pt · body ≥24pt, 55–90% of the board
+   covered, and methods + limitations as required content. `scripts/check_surface.py` enforces that
+   contract on both paths, recovering the format from the built canvas size, and also enforces the
+   safe-zone / `columns_ok` / social-chrome rules for every other non-16:9 surface — rules that were
+   in `references/canvas-formats.md` and consumed by nothing. Record the surface as
+   `design.format` when it is not `wide`; waive required sections with
+   `design.surface_sections_waived`.
    🔴 **A type contract is HALF a build contract — APPLY the register, do not just name it.** This
    step listed type tokens and nothing else, so a run following this runbook picked a preset in
    step 1, wrote its name into `design.style_pick`, and then hand-set colours: the register's
@@ -110,6 +119,15 @@ be reconstructed post-hoc at the delivery gate.
    declaration and nothing verified it. A deliberate departure is a named waiver
    (`design.style_pick_waived`), not silence. A `bespoke` / `generated` / `n/a — <locked look>`
    pick is skipped by definition — those are not preset-based.
+   🔴 And it checks the CALL, which is the weaker half. `scripts/check_register_pixels.py` is the
+   other hard gate on both paths: it reads the deck's RENDERED PNGs and blocks when deckkit's own
+   chromatic identity is what shipped while the declared hues are absent, when a declared colour
+   reached no pixel at all, or when the canvas repeats a recent deck's from `taste.md`'s LOOK
+   HISTORY. **This is the only check that can see a bespoke or generated register**, because those
+   have no `presets.apply()` call for the source-level gate to find — so the pick this runbook most
+   encourages was, until it existed, the pick nothing verified. Waive in writing with
+   `design.register_pixels_waived`; render before the gate runs, since a pixel check with no pixels
+   reports NOT CHECKED rather than clean.
 2b. **The motif is a BUILT thing, not a described one — and both tiers have primitives.** The
    delivery gate requires `design.motif_generates` (background · markers · the one PAGE whose
    GEOMETRY is the motif), and a runbook that stops at "describe it" is how that page gets

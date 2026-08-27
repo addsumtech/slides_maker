@@ -346,11 +346,20 @@ four template choices:
        **Canvas format rides on this answer:** an ordinary talk/meeting/self-read deck is 16:9 —
        never ask a format question there (16:9 is the unchanged default and every rule assumes it).
        But when the deliverable is a **non-slide surface** — a rednote/小红书 image note, an Instagram
-       square post, a Story/Reels/Shorts vertical, an A4 print one-pager, or a venue demanding 4:3 —
+       square post, a Story/Reels/Shorts vertical, an A4 print one-pager, an **A0/A1 conference
+       poster**, or a venue demanding 4:3 —
        **confirm the canvas format** (one option-line, or fold into this question) and build on the
        matching `scripts/formats.py` preset: per-format safe zones, chrome policy, density, and
        layout DNA live in `references/canvas-formats.md`. Same identity + components, recomposed —
        never a 16:9 layout transplanted onto a portrait canvas.
+       🔴 **A poster ask needs TWO answers, not one.** "Make me a poster for the conference" leaves
+       the board size open (A0 and A1 are both standard, and the venue usually specifies), and it
+       leaves the reading register open. Ask the size, and ask whether it is a **billboard** poster
+       (one result, big, read in seconds) or a **traditional** one (the full argument, read
+       standing) — they produce different section counts and different amounts of text at the same
+       type floors, which do NOT move either way. Whichever they choose, methods and limitations
+       are required content: they are what a passer-by cannot reconstruct and cannot fairly judge
+       the claim without, and `scripts/check_surface.py` blocks a board that has neither.
      - **Deck length is ALWAYS the user's choice — surface it, never silently derive it.** Make it an
        explicit interview option: a **self-read** deck → ask **short ~5–8 / medium ~9–15 / long 16+**; a
        **spoken** deck → the **time budget** sets the working count (~1 slide/min), but still **confirm the

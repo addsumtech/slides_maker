@@ -241,6 +241,22 @@ jobs:
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/register.log || {
             echo "::error::register-expression suite did not run to completion"; exit 1; }
 
+      - name: Register pixels (the look must arrive, and must not be the last deck's)
+        run: |
+          set -o pipefail
+          python scripts/check_register_pixels.py --selftest
+          python tests/test_register_pixels.py | tee /tmp/regpix.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/regpix.log || {
+            echo "::error::register-pixels suite did not run to completion"; exit 1; }
+
+      - name: Surface contract (a canvas format the registry describes and nothing enforced)
+        run: |
+          set -o pipefail
+          python scripts/check_surface.py --selftest
+          python tests/test_surface_contract.py | tee /tmp/surface.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/surface.log || {
+            echo "::error::surface-contract suite did not run to completion"; exit 1; }
+
       - name: Registry roots (a runtime nobody enumerated still has a registry)
         run: |
           set -o pipefail

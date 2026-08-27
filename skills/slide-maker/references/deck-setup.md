@@ -1,10 +1,11 @@
 # Deck setup
 
-## Canvas format — non-default surfaces (4:3 · 小红书 3:4 · 1:1 · story 9:16 · A4)
+## Canvas format — non-default surfaces (4:3 · 小红书 3:4 · 1:1 · story 9:16 · A4 · A0/A1 poster)
 
 **Canvas format (only when the interview picked a non-default surface).** The default deck is
 16:9 via `deckkit.blank_deck()` — untouched, and everything below assumes it. When the interview
-confirmed a different surface (4:3 venue, 小红书 3:4, square 1:1, story 9:16, A4 print), start from
+confirmed a different surface (4:3 venue, 小红书 3:4, square 1:1, story 9:16, A4 print, A0/A1
+conference poster), start from
 `scripts/formats.py` instead: `FMT = formats.get("<name>")` → `prs = formats.blank_deck(FMT)`,
 take the safe content rect from `formats.band(FMT)` (it encodes the platform-UI safe zones — on
 story/rednote, text outside it is covered by the platform), honor `FMT.chrome` (social surfaces get NO
@@ -14,6 +15,20 @@ SAME pt tokens for body/label type (canvas inches are chosen per format so relat
 right — the inch-normalization principle) and the same components/identity throughout; per-surface
 layout DNA + the repurpose/batch pattern live in `references/canvas-formats.md`. The design plan
 records a `format:` line whenever it's not `wide`.
+
+🔴 **Two things change on a surface PRINTED AT ACTUAL SIZE — an A0/A1 poster.** (1) The
+inch-normalization rule above does NOT apply: a printed board is not scaled to a screen, it is read
+at ~5m / ~2m / ~1m, so keep the *format's* absolute floors (`formats.floors(FMT)` → A0: display ≥90pt
+· section ≥36pt · body ≥24pt; A1: 72/36-ish/20) rather than the deck's usual pt tokens. deckkit's
+`cover()` caps titles at 46pt, which is right on a 10in slide and unreadable across a hall on a 33in
+board, so set the poster title size explicitly. (2) The board is composed ONCE and the whole of it is
+the deliverable, so `FMT.fill_range` (55–90%) applies where a deck's whitespace-as-rhythm does not,
+and **methods + limitations are required content** — `FMT.required_sections`. All of it is enforced
+by `scripts/check_surface.py` at hand-off, which also enforces the safe-zone / `columns_ok` /
+social-chrome rules on every other non-16:9 surface; run it yourself with
+`python3 scripts/check_surface.py <deck.pptx>` while iterating. A poster written in a language whose
+section headings the checker does not know extends it with `design_plan.surface_section_terms`
+(e.g. `{"limitations": ["beperkingen"]}`) rather than waiving the check off.
 
 ## Template branch — build on the user's (or the conference's) .pptx
 

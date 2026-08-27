@@ -1389,6 +1389,99 @@ def _style_applied_gate(design, pptx):
         print(f"  [--] STYLE APPLIED: NOT CHECKED — {msg}")
 
 
+def _register_pixels_gate(pptx):
+    """The declared register must reach the RENDERED PIXELS — and must not be the last deck's.
+
+    SKILL.md names two rules that "survive no matter what": never ship deckkit's default blue, and
+    never reuse the last deck's scheme. Both were prose, and the nearest gate checked something
+    weaker: `_style_applied_gate` verifies the CALL — that `presets.apply("brutalist")` appears in
+    the build script. A deck that calls it and then sets the tokens back by hand passes, and a
+    BESPOKE register (the case this skill actively encourages, with no preset call to find) is
+    skipped by definition. Measured on the deck built in this repo's own session: its whole
+    terminal register was set by hand, and nothing verified any of it landed.
+
+    So this asks the render. `check_register_pixels.py` owns the measurement; both delivery paths
+    call the same code so they cannot drift.
+    """
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    try:
+        import check_register_pixels as crp
+    except Exception as exc:                       # never fail a render on the checker itself
+        print(f"  [--] REGISTER PIXELS: NOT CHECKED — {exc.__class__.__name__}: {exc}")
+        return
+    deck_dir = Path(pptx).resolve().parent
+    taste = None
+    try:
+        import registry
+        t = registry.taste_file()
+        taste = str(t) if t else None
+    except Exception:
+        pass                                       # no registry footprint: the freshness half sits out
+    try:
+        probs, facts = crp.check(deck_dir, taste=taste)
+    except Exception as exc:
+        print(f"  [--] REGISTER PIXELS: NOT CHECKED — {exc.__class__.__name__}: {exc}")
+        return
+    if facts.get("waived"):
+        print("[gates] register pixels: waived in writing (design_plan.register_pixels_waived).")
+        return
+    codes = [c for c, _ in probs]
+    if "NO RENDERS" in codes:
+        print("  [--] REGISTER PIXELS: NOT CHECKED — no renders beside the deck. NOT the same as "
+              "clean: render first, and the register a deck DECLARES gets checked against the one "
+              "it SHOWS.")
+        return
+    if facts.get("band"):
+        print("[gates] look history: {}".format(facts["band"]))
+    if not probs:
+        print("[gates] register pixels: {} of {} declared colour(s) reached the pages{}".format(
+            len(facts.get("present") or []), len(facts.get("declared") or []),
+            "" if not facts.get("note") else " — " + facts["note"]))
+        return
+    die("the register this deck DECLARES did not reach its PIXELS:\n    - "
+        + "\n    - ".join("{}: {}".format(c, m) for c, m in probs)
+        + "\n    Re-run alone: python3 scripts/check_register_pixels.py {}".format(deck_dir))
+
+
+def _surface_gate(pptx, gates):
+    """A canvas format's contract, checked against the built deck instead of trusted.
+
+    `formats.py` registers each design surface — margins, platform-UI safe zones, whether columns
+    work, whether the surface carries chrome, and now the ABSOLUTE type floors and fill range a
+    PRINTED board needs. Measured by grep, nothing downstream ever consumed it: `import formats`
+    appeared in two files, both producers. So every per-surface rule in `references/canvas-formats.md`
+    was advisory by construction, on exactly the surfaces where the mistake is least recoverable —
+    a story caption under the swipe bar is invisible to whoever built it on a desktop, and a poster
+    is wrong only once it has been printed a metre wide.
+    """
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    try:
+        import check_surface as cs
+    except Exception as exc:                       # never fail a render on the checker itself
+        print(f"  [--] SURFACE: NOT CHECKED — {exc.__class__.__name__}: {exc}")
+        return
+    design = (gates or {}).get("design_plan") or {} if isinstance(gates, dict) else {}
+    waive = design.get("surface_sections_waived")
+    try:
+        probs, facts = cs.check(pptx, design.get("format"), waive,
+                                design.get("surface_section_terms"))
+    except Exception as exc:
+        print(f"  [--] SURFACE: NOT CHECKED — {exc.__class__.__name__}: {exc}")
+        return
+    if facts.get("note"):
+        print("  [--] SURFACE: " + facts["note"])
+        return
+    head = "[gates] surface: {}".format(facts.get("format"))
+    for extra in ("floors", "fill"):
+        if facts.get(extra):
+            head += " · " + facts[extra]
+    print(head)
+    if probs:
+        die("this deck breaks the contract of the canvas it is built on:\n    - "
+            + "\n    - ".join("{}: {}".format(c, m) for c, m in probs)
+            + "\n    Re-run alone: python3 scripts/check_surface.py {}".format(pptx))
+
+
 def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
     """Refuse --deliverables until the quality gates have actually run.
 
@@ -2487,6 +2580,12 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
         # protagonist that is not a sentence, whether the palette does any work — and that half now
         # has a gate of its own, below.
         _check_sameness(pptx, delivery, gates)
+
+    with _gate_section('surface'):
+        _surface_gate(pptx, gates)
+
+    with _gate_section('register_pixels'):
+        _register_pixels_gate(pptx)
 
     with _gate_section('timidity'):
         _check_timidity(pptx, delivery, gates)

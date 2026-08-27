@@ -9,6 +9,53 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+### Added
+
+- **`scripts/check_register_pixels.py` — the register a deck declares must reach its RENDERED
+  PIXELS, and must not be a previous deck's.** SKILL.md named two rules that "survive no matter
+  what" — never ship deckkit's default blue, never reuse the last deck's scheme — and scored
+  neither. The nearest gate, `check_style_applied.py`, reads the build SCRIPT for a
+  `presets.apply()` call, so it is skipped by definition on the **bespoke** registers this skill
+  actively encourages, and a build that calls it and then hand-sets the tokens back passes there
+  too. Measured on the deck this repo built in its own session: its entire terminal register was
+  set by hand and nothing verified any of it landed. The new checker reads the deck's own PNGs and
+  reports `STOCK REGISTER SHIPPED` · `DECLARED PALETTE ABSENT` · `GROUND REPEAT` ·
+  `LAST DECK'S SCHEME`, wired into `render_deck.py --gate-check` (section `register_pixels`) and
+  `codex_delivery_gate.py` through one shared module. Waive with
+  `design_plan.register_pixels_waived`.
+  Presence is measured per colour, deliberately NOT by area: on that same 15-page deck the
+  signature accent covered 0.65% of its best page, so an area ranking called the deck's own
+  palette absent. Colours genuinely absent measured 0.0000% and an antialiased blend 0.093%,
+  which is where the threshold sits. The freshness half reads what `taste.md` actually records —
+  8 of 10 look-history rows carry one hex, the canvas — because a check demanding two matching
+  hexes could never fire on real data, and a gate that reports "fresh" forever is worse than none.
+- **A0/A1 poster canvas, and `scripts/check_surface.py` to enforce every format's contract.**
+  `formats.py` was producer-only: measured by grep, `import formats` appeared in two files and
+  both write formats, so the safe zones, the `columns_ok` rule, the chrome policy and the density
+  budget in `references/canvas-formats.md` were advisory by construction — on exactly the surfaces
+  where the mistake is least recoverable. The new checker recovers the format from the BUILT canvas
+  size and reports `SAFE ZONE` · `COLUMNS` · `DECK CHROME` · `TYPE FLOOR` · `FILL` ·
+  `MISSING SECTION`, wired into both delivery paths (section `surface`).
+  A conference poster is not a big slide: it is printed at actual size and read at ~5m / ~2m / ~1m,
+  so `poster_a0` / `poster_a1` declare **absolute** point floors (A0: display ≥90 · section ≥36 ·
+  body ≥24) rather than the canvas-relative rule, which on a 33in board would demand a ~45pt body
+  while letting deckkit's 46pt cover cap ship a title nobody can read across a hall. They also
+  declare a 55–90% fill range — a real A0 render covered 43% of its board, visibly half empty, and
+  passed every gate that existed because lint's surface mode switches the density budgets off —
+  and require **methods + limitations** as content: the billboard style that draws people in is
+  the style that drops the two things a passer-by cannot reconstruct. Waive with
+  `design_plan.surface_sections_waived`.
+
+### Fixed
+
+- The new surface gate caught the repo's own portrait test fixture: `build_samey(portrait=True)` in
+  `tests/test_critic_waiver_gate.py` laid a 3-up card grid on the 7.5×10 canvas that `formats.py`
+  registers `columns_ok=False`. It now stacks — equally samey, and no longer a fixture that breaks
+  a real rule and so trips whichever gate is added next, hiding the case it was written for.
+- `references/user-taste.md` now requires the LOOK HISTORY row to carry the canvas **and accent
+  hexes**, not prose. `check_register_pixels.py` can only score what the row records, and the real
+  registry had 8 of 10 rows carrying a single hex.
+
 ## [5.1.0] — 2026-08-24
 
 Everything in this release was found by RUNNING the skill, not by reading it: a full build —

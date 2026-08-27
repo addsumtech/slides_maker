@@ -714,7 +714,17 @@ def build_samey(dest: Path, n=12, portrait=False, appendix_at=None) -> Path:
             dk.design_intent(s, role="appendix", reason="backup slides")
         dk.text(s, 0.5, 0.35, W - 1, 0.5, [[_R("Section %d" % (i + 1), 20)]])
         dk.hrule(s, 0.5, 0.95, W - 1)
-        for (cx, cy, cw, _h) in dk.columns(3, slide=s, top=1.2, bottom=1.1):
+        # The portrait fixture STACKS. `formats.py` registers the 7.5x10 canvas as
+        # columns_ok=False and `check_surface.py` now enforces it, so a 3-up card grid here is a
+        # deck the skill would refuse — and a fixture that breaks a real rule keeps tripping
+        # whichever gate is added next, hiding the case it was written for. Stacked cards are
+        # every bit as samey, which is all this fixture needs to be.
+        if portrait:
+            cells = [(0.5, 1.2 + i * 2.5, W - 1.0) for i in range(3)]
+        else:
+            cells = [(cx, cy, cw) for (cx, cy, cw, _h) in
+                     dk.columns(3, slide=s, top=1.2, bottom=1.1)]
+        for (cx, cy, cw) in cells:
             dk.box(s, cx, cy, cw, 2.2, fill="F2F4F7", round=True)
             dk.text(s, cx + 0.15, cy + 0.2, cw - 0.3, 1.6, [[_R("card body text", 12, dk.SLATE, False)]])
         dk.bottom_callout(s, 0.5, W - 1, "TAKEAWAY", "the same strip on every page")

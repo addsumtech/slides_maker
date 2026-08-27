@@ -64,7 +64,7 @@ evidence, like any other dial.)*
 ## LOOK HISTORY  (most recent 10 lines only — prune the oldest at append)
 | date | deck | preset/look | canvas value | signature motif |
 |---|---|---|---|---|
-| 2026-06-14 | cine-mri | dark_tech | dark navy | k-space spiral |
+| 2026-06-14 | cine-mri | dark_tech | dark navy #101A24 · accents #E3004F #4CC9F0 | k-space spiral |
 ```
 
 - **DIALS (≤10 rows)** — durable design preferences, one row per dimension, each carrying its
@@ -75,6 +75,13 @@ evidence, like any other dial.)*
 - **NO-GOs (≤5 lines)** — hard user vetoes, evidenced the same way.
 - **LOOK HISTORY (10 lines)** — one line per delivered deck; the freshness input
   (`agents/slide-design.md` §1 varies at least one foundation against the LAST line).
+  🔴 **Write the canvas value AND the accents as HEX**, as the example row does. This is not
+  decoration: `scripts/check_register_pixels.py` scores the new deck's rendered pixels against
+  these rows, and it can only see what the row records. Measured on this repo's own registry
+  before the rule existed, 8 of 10 rows carried exactly one hex — the canvas — with the accents
+  written as prose ("teal=you, amber=leverage"), so the accent half of *never reuse the last
+  deck's scheme* had nothing to compare against. A prose description of a colour is unreadable to
+  every check downstream; keep the prose, add the hex.
 - 🔴 **MUST — SCOPE EXCLUSION: design dials, NO-GOs, and look history ONLY; never
   workflow/mode directives** (the per-deck auto waiver, checkpoint skips) — SKILL.md settles
   those per-deck, and recording one here would silently carry an approval waiver across decks.

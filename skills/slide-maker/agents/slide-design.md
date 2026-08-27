@@ -778,6 +778,12 @@ This section always carries ONE required line — `taste profile: <n dials appli
 freshness: varied <foundation> vs <last look-history line>`, or the alternate arm `look LOCKED
 (registered/provided template) — carve applies` — the line that makes the freshness rule checkable
 (self-verify (j) reads it; the Step-2 design gate requires it; `references/user-taste.md`).
+🔴 That line is a CLAIM about the deck you are about to build; `scripts/check_register_pixels.py`
+tests it against the deck you actually built, comparing the rendered pixels to the look history's
+recorded hexes. "Varied the ground" written here and a near-identical canvas shipped is a
+`GROUND REPEAT` at hand-off — so vary a foundation that a viewer can SEE, and record the new
+deck's canvas and accent hexes in `taste.md` at close-out so the next deck can be measured
+against this one.
 
 It also carries the **`style pick:` line — the TOPIC-adapted look choice** (this is what makes the
 look fit the SUBJECT, not a reflex): `style pick: <preset|bespoke> for <domain> · beat <nearest rival>
