@@ -5,7 +5,7 @@
 **Canvas format (only when the interview picked a non-default surface).** The default deck is
 16:9 via `deckkit.blank_deck()` — untouched, and everything below assumes it. When the interview
 confirmed a different surface (4:3 venue, 小红书 3:4, square 1:1, story 9:16, A4 print, A0/A1
-conference poster), start from
+conference poster in either orientation — `a0` · `a1` · `a0-landscape` · `a1-landscape`), start from
 `scripts/formats.py` instead: `FMT = formats.get("<name>")` → `prs = formats.blank_deck(FMT)`,
 take the safe content rect from `formats.band(FMT)` (it encodes the platform-UI safe zones — on
 story/rednote, text outside it is covered by the platform), honor `FMT.chrome` (social surfaces get NO

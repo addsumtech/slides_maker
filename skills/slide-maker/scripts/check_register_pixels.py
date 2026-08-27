@@ -121,6 +121,24 @@ def page_field(png):
     return sorted(((rgb, c / float(total)) for rgb, c in counts.items()), key=lambda t: -t[1])
 
 
+def readable(pngs):
+    """(good, bad) — a render this cannot open is REPORTED, never allowed to abort the check.
+
+    Both callers of this module wrap it in try/except so a broken checker can never fail a render.
+    That protection turns any raised exception into "NOT CHECKED" for the WHOLE deck, so a single
+    truncated PNG among fifteen good ones would silently switch the colour gate off. Degrade
+    loudly: check what can be read, and name what cannot.
+    """
+    good, bad = [], []
+    for png in pngs:
+        try:
+            _load(png, 32).convert("RGB")
+            good.append(png)
+        except Exception as exc:
+            bad.append((png, "{}: {}".format(exc.__class__.__name__, exc)))
+    return good, bad
+
+
 def presence(pngs, colours):
     """{colour: largest share of any ONE page within NEAR of it}.
 
@@ -231,7 +249,16 @@ def check(deck_dir, renders=None, taste=None, recent=3, design=None):
     declared = _hexes(design.get("palette")) + [c for c in _hexes(design.get("style_pick"))
                                                 if c not in _hexes(design.get("palette"))]
     pngs = sorted(glob.glob(os.path.join(renders, "slide*.png")))
+    pngs, unreadable = readable(pngs)
     facts["pages"] = len(pngs)
+    if unreadable:
+        problems.append(("UNREADABLE RENDER",
+                         "{} render(s) could not be opened and were left out of the measurement: "
+                         "{}. Re-render before trusting the rest of this report — a colour check "
+                         "over a partial deck is a partial answer, not a clean one."
+                         .format(len(unreadable),
+                                 "; ".join("{} ({})".format(os.path.basename(f), e)
+                                           for f, e in unreadable[:3]))))
     if not pngs:
         return [("NO RENDERS", "no slide*.png under {} — this check reads PIXELS, and there are "
                                "none to read. Render first (`scripts/render_deck.sh <deck>`)."
@@ -273,6 +300,22 @@ def check(deck_dir, renders=None, taste=None, recent=3, design=None):
                          .format(", ".join(sorted(stock_hits)),
                                  ", ".join(_hx(c) for c in want_hue) or "none",
                                  len(got_hue), len(want_hue))))
+
+    # A ground and an ink are shared by half the world's decks; the HUES are what make a register
+    # that register. If the plan declares hues and not one of them reached a pixel, the colour
+    # identity did not arrive — regardless of how the count-based rule below happens to land. The
+    # count rule cannot see this on its own: a two-colour plan whose ground still matches scores
+    # 1 of 2 and clears "fewer than half", which is how a deck rendered entirely in GREYSCALE
+    # passed an earlier version of this check.
+    if want_hue and not got_hue and not stock_shipped:
+        problems.append(("DECLARED HUES ABSENT",
+                         "not one of the declared hues ({}) reached a pixel. A ground and an ink "
+                         "are shared by half the world's decks — the hue is the register. Either it "
+                         "was never applied, or it is used so sparingly (a hairline, one small mark) "
+                         "that it does not read as this deck's colour. If the restraint is "
+                         "deliberate, record it in the palette line or set "
+                         "design_plan.register_pixels_waived."
+                         .format(", ".join(_hx(c) for c in want_hue))))
 
     # ── 2. the declared palette must actually be on the pages ────────────────────────────────
     if declared and not stock_shipped and len(hit) < max(1, (len(declared) + 1) // 2):
@@ -430,6 +473,31 @@ def _selftest():
         "({}) so a drift toward one house ground is visible before it becomes a rule"
         .format(facts.get("band")) if "GROUND REPEAT" not in got and facts.get("band")
         else "ground freshness misjudged: {} {}".format(got, facts.get("band")))
+
+    # A deck rendered in GREYSCALE while its plan declares a hue. The count rule cannot see this:
+    # a two-colour plan whose near-black ground still matches scores 1 of 2 and clears "fewer than
+    # half", which is how an earlier version passed exactly this deck.
+    from PIL import Image as _Im
+    d, _ = deck("greyscale", (0x0A, 0x0F, 0x0A), [(0x33, 0xFF, 0x66)],
+                [(0x0A, 0x0F, 0x0A), (0x33, 0xFF, 0x66)])
+    for f in (d / "render").glob("*.png"):
+        _Im.open(f).convert("L").save(f)
+    got = {c for c, _ in check(d)[0]}
+    (ok if "DECLARED HUES ABSENT" in got else bad).append(
+        "a deck rendered in greyscale under a plan declaring a hue is caught — the hue IS the "
+        "register; a ground and an ink are shared by half the world's decks"
+        if "DECLARED HUES ABSENT" in got else "greyscale not caught: {}".format(got))
+
+    # One unreadable PNG must be REPORTED, not allowed to abort the run: both callers wrap this
+    # module in try/except, so anything raised becomes "NOT CHECKED" for the whole deck.
+    d, _ = deck("corrupt", (0x0A, 0x0F, 0x0A), [(0x33, 0xFF, 0x66)],
+                [(0x0A, 0x0F, 0x0A), (0x33, 0xFF, 0x66)])
+    (d / "render" / "slide02.png").write_bytes(b"not a png")
+    probs, facts = check(d)
+    hit = "UNREADABLE RENDER" in {c for c, _ in probs} and facts.get("pages") == 2
+    (ok if hit else bad).append(
+        "a corrupt render is reported and the readable pages are still measured" if hit
+        else "corrupt render mishandled: {} pages={}".format(probs, facts.get("pages")))
 
     d, _ = deck("norender", (0, 0, 0), [], [(1, 1, 1)])
     for f in (d / "render").glob("*.png"):

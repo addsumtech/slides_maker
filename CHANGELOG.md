@@ -48,6 +48,34 @@ section is a distilled summary — the full notes live on the
 
 ### Fixed
 
+- **Audit of the two gates above, against inputs they were not built on.** Six real defects, all
+  found by attacking them rather than by re-reading them:
+  - `DECK CHROME` was measuring GEOMETRY — a wide strip low on the card — and got both directions
+    wrong: it fired on the `payoff/handle bottom` line `canvas-formats.md` PRESCRIBES for a rednote
+    card, and it MISSED a real `deckkit.footer()`, whose tag and page number are two narrow shapes
+    at opposite ends. Furniture is now identified by what it says (a page marker, slide count or
+    date).
+  - `COLUMNS` fired on a two-up stat pair. The documented pitfall is running copy split too narrow
+    to read, so both blocks must now be tall and wide enough to BE columns.
+  - **Landscape A0/A1 were unregistered**, and an unregistered canvas reports NOT CHECKED — which
+    would have switched the whole contract off for half the posters printed. `poster_a0_land` /
+    `poster_a1_land` carry the same floors, fill range and required sections.
+  - A deck rendered in **greyscale** under a plan declaring a hue passed: with two declared colours
+    and the near-black ground still matching, it scored 1 of 2 and cleared "fewer than half".
+    `DECLARED HUES ABSENT` is now a separate rule — a ground and an ink are shared by half the
+    world's decks, so the hues are the register.
+  - **One unreadable PNG aborted the whole colour check.** Both callers wrap the module in
+    try/except, so anything raised became "NOT CHECKED" for every page. It is now reported as
+    `UNREADABLE RENDER` and the readable pages are still measured.
+  - `FILL` claimed more than it measured. It counts the area COMMITTED to content blocks, which is
+    all a PPTX can answer — measured on a real A0 board, 82% committed and **17% inked**. The
+    wording is corrected, and where renders exist the inked share is now REPORTED beside it (with a
+    wide gap named), deliberately without a threshold: two poster renders is not a calibration set,
+    and `lint_deck.py`'s calibrated HOLLOW FILL is switched off in `--surface` mode, so on a board
+    nobody was reporting either number.
+  Also verified: the numpy-free fallback reaches the same verdict as the numpy path; L/P/RGBA
+  renders all read correctly; a deck with no slides reports NOT CHECKED; and the codex-path
+  functions were exercised on real decks rather than only wired.
 - The new surface gate caught the repo's own portrait test fixture: `build_samey(portrait=True)` in
   `tests/test_critic_waiver_gate.py` laid a 3-up card grid on the 7.5×10 canvas that `formats.py`
   registers `columns_ok=False`. It now stacks — equally samey, and no longer a fixture that breaks

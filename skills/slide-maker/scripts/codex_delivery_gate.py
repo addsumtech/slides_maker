@@ -1076,7 +1076,7 @@ def check_surface_contract(evidence: dict[str, Any], deck_path: Path | None,
         print("  [--] surface contract: " + facts["note"])
         return
     line = "  surface: {}".format(facts.get("format"))
-    for extra in ("floors", "fill"):
+    for extra in ("floors", "fill", "ink"):
         if facts.get(extra):
             line += " · " + facts[extra]
     print(line)

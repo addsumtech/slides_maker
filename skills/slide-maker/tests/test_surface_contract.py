@@ -160,6 +160,113 @@ got = codes(story)
 check("SAFE ZONE" in got, "text inside a 9:16 platform-UI zone is caught", str(got))
 check("COLUMNS" in got, "a side-by-side split on a columns_ok=False surface is caught", str(got))
 
+# REGRESSION: the rednote layout DNA `references/canvas-formats.md` PRESCRIBES — "payoff/handle
+# bottom" — must not read as deck chrome, and a real `deckkit.footer()` / `page_marker()` must.
+# The first version tested GEOMETRY (a wide strip low on the card) and got both backwards: it fired
+# on the prescribed payoff line and missed a real footer, whose tag and page number are two NARROW
+# shapes at opposite ends.
+fr = formats.get("red")
+BX, BY, BW, _BH = formats.band(fr)
+payoff = build("red", [("A hook that fits the card", 30, BX, BY, BW, 1.4),
+                       ("One idea, stacked.", 18, BX, BY + 2.0, BW, 2.0),
+                       ("@handle · 收藏起来", 14, BX, 8.6, BW, 0.4)])
+check("DECK CHROME" not in codes(payoff),
+      "the prescribed rednote payoff/handle line is NOT read as deck chrome",
+      "got {} — the skill's own layout DNA must pass its own gate".format(codes(payoff)))
+
+
+def _with(fn):
+    f = formats.get("red")
+    prs = dk.blank_deck(f.w_in, f.h_in)
+    sl = dk.add_slide(prs)
+    dk.text(sl, BX, BY, BW, 1.4, [[("A hook", 30, dk.DEEP, False, False)]])
+    fn(sl)
+    _n[0] += 1
+    path = TMP / ("red-chrome-%d.pptx" % _n[0])
+    prs.save(str(path))
+    return path
+
+
+check("DECK CHROME" in codes(_with(lambda sl: dk.footer(sl, tag="deck name", page=3))),
+      "a real deckkit.footer() on a social surface IS caught")
+check("DECK CHROME" in codes(_with(lambda sl: dk.page_marker(sl, 3, 14))),
+      "so is a page marker — furniture is identified by what it says, not where it sits")
+
+# REGRESSION: COLUMNS must mean a split of running COPY. A stat pair, a chip row and two icon
+# captions all sit side by side on a portrait card and none of them halves anyone's measure.
+stats = build("red", [("Two numbers", 30, BX, BY, BW, 1.2),
+                      ("62%", 26, BX, BY + 1.6, 2.8, 0.5),
+                      ("3.1x", 26, BX + 3.4, BY + 1.6, 2.8, 0.5)])
+check("COLUMNS" not in codes(stats), "a two-up stat pair is a legitimate portrait form",
+      "got {}".format(codes(stats)))
+split = build("red", [("Two columns of copy", 30, BX, BY, BW, 1.2),
+                      ("Left column of running body copy that halves the measure.",
+                       16, BX, BY + 1.6, 3.0, 2.4),
+                      ("Right column of running body copy beside it.",
+                       16, BX + 3.3, BY + 1.6, 3.0, 2.4)])
+check("COLUMNS" in codes(split), "...and a real two-column body split still is",
+      "got {}".format(codes(split)))
+
+# Landscape boards are as standard as portrait ones. An unregistered canvas reports NOT CHECKED,
+# so omitting them would have switched the whole contract off for half the posters printed.
+for name, w, h in (("a0-landscape", 46.81, 33.11), ("a1-landscape", 33.11, 23.39)):
+    f = formats.get(name)
+    check(abs(f.w_in - w) < 0.02 and abs(f.h_in - h) < 0.02 and f.kind == "landscape"
+          and formats.floors(f) == formats.floors(formats.get(name.split("-")[0]))
+          and f.required_sections and f.fill_range,
+          "{} is registered, landscape, and carries the same printed contract".format(name),
+          "{}x{} {} {}".format(f.w_in, f.h_in, f.kind, formats.floors(f)))
+land = build("poster_a0_land",
+             [("A claim across the hall", 110, 1.6, 1.6, 43.0, 4.4),
+              ("Methods", 42, 1.6, 7.5, 20.0, 1.4),
+              ("Measured on every built deck.", 26, 1.6, 9.2, 20.0, 10.0),
+              ("Results", 42, 24.0, 7.5, 20.0, 1.4),
+              ("Two rules now fail loudly.", 26, 24.0, 9.2, 20.0, 10.0),
+              ("Limitations", 42, 1.6, 20.5, 20.0, 1.4),
+              ("One site, one operator.", 26, 1.6, 22.2, 20.0, 9.0),
+              ("Next", 42, 24.0, 20.5, 20.0, 1.4),
+              ("Record accent hexes.", 26, 24.0, 22.2, 20.0, 9.0)])
+probs, facts = cs.check(land)
+check(not probs and facts.get("format", "").startswith("poster_a0_land"),
+      "a well-set LANDSCAPE A0 board resolves and passes", "{} {}".format(probs, facts))
+bad_land = build("poster_a0_land", [("Slide-sized title", 46, 2.0, 2.0, 42.0, 3.0),
+                                    ("Methods and limitations, at 14pt.", 14, 2.0, 8.0, 42.0, 20.0)])
+check("TYPE FLOOR" in codes(bad_land), "...and a landscape board typeset like a slide is caught",
+      "got {}".format(codes(bad_land)))
+
+# FILL measures the area COMMITTED to content blocks, which is all a PPTX can answer — it cannot
+# tell a full panel from an empty one. Measured on a real A0 board: 82% committed, 17% inked. The
+# gap is REPORTED rather than thresholded, because two poster renders is not a calibration set,
+# and lint_deck's calibrated HOLLOW FILL is switched off in --surface mode so nobody was reporting
+# either number on a board.
+import tempfile as _tf                                                    # noqa: E402
+from PIL import Image as _Im                                              # noqa: E402
+_rd = pathlib.Path(_tf.mkdtemp()) / "render"
+_rd.mkdir(parents=True)
+_im = _Im.new("RGB", (400, 560), (0x18, 0x1E, 0x26))
+for _y in range(20, 60):                       # a thin band of ink on a big ground
+    for _x in range(20, 300):
+        _im.putpixel((_x, _y), (0xE2, 0x5A, 0x33))
+_im.save(_rd / "slide01.png")
+_probs, _facts = cs.check(build("poster_a0", FULL), renders=str(_rd))
+check("committed" in (_facts.get("fill") or "") and _facts.get("ink"),
+      "FILL says COMMITTED, and the render's real ink share is reported beside it",
+      "{} / {}".format(_facts.get("fill"), _facts.get("ink")))
+check("large gap" in (_facts.get("ink") or ""),
+      "...and a wide gap between the two is named, so 82%% committed is never read as 82%% full",
+      str(_facts.get("ink")))
+_probs, _facts = cs.check(build("poster_a0", FULL))
+check(_facts.get("fill") and not _facts.get("ink"),
+      "with no renders the check still runs and simply says nothing about ink",
+      "{} / {}".format(_facts.get("fill"), _facts.get("ink")))
+
+# A deck with no slides must be NOT CHECKED, never a pile of findings about content it cannot have.
+prs = dk.blank_deck(formats.get("a0").w_in, formats.get("a0").h_in)
+blank = TMP / "blank-a0.pptx"
+prs.save(str(blank))
+probs, facts = cs.check(blank)
+check(not probs and facts.get("note"), "a deck with no slides is reported, not judged", str(facts))
+
 wide = build("wide", [("A normal projected slide", 24, 0.6, 0.6, 8.8, 1.0),
                       ("Body copy at a normal projected size.", 14, 0.6, 2.0, 4.0, 1.0),
                       ("A second column, which 16:9 allows.", 14, 5.2, 2.0, 4.0, 1.0)])

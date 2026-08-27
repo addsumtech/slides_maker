@@ -77,7 +77,7 @@ an explicit width, derive it from the band (`bw`), never a 16:9-remembered numbe
 | `square` 1:1 | IG/FB feed post | **centered, poster-like**: one hook line + one visual + 3–5 scannable points, vertically stacked; generous margins | ONE idea per card; display ×1.15 | 2-col splits (cramped at 7.5in); deck chrome; body prose |
 | `red` 3:4 | 小红书 image note | **vertical flow**: bold hook top (≈upper third) → content middle → payoff/handle bottom; list-cards may carry 4–6 short rows; card 1 of a carousel = pure hook cover | ONE idea per card; display ×1.25; 封面 hook ≥ ~10% of canvas height | side-by-side columns; small dense text (rednote is browsed at phone size); ignoring top/bottom safe zones |
 | `story` 9:16 | story/Reels/Shorts/抖音 cover | **one message, huge type**: hero visual + a 1–2 line statement; content lives in the middle ~65% (the band); stack everything | ONE message; display ×1.35; nothing that needs study | ANY text in the top 1.3in / bottom 1.8in (platform UI covers it); multi-point layouts; footers |
-| `poster_a0` / `poster_a1` | conference poster, printed | **three reading distances at once**: one headline claim across the top, 4–6 sections in 2 columns beneath it, every body block short enough to read standing. The board is composed ONCE — plan the whole surface, not a sequence | **ABSOLUTE pt, not canvas-relative**: A0 display ≥90 · section ≥36 · body ≥24 (A1: 72/32/20). Fill 55–90% of the board. **Methods + limitations are required content** | typesetting it like a slide (deckkit's cover caps titles at 46pt — unreadable at 5m on a 33in board); leaving half the board empty because "whitespace is rhythm" (it is, across a *sequence*; here it is the only space the work gets); the billboard trap — a huge result with no method and no limitation, the two things a passer-by cannot reconstruct |
+| `poster_a0` / `poster_a1` (+ `_land`) | conference poster, printed — **portrait AND landscape are both registered**; the venue usually specifies, so ask | **three reading distances at once**: one headline claim across the top, 4–6 sections in 2 columns beneath it, every body block short enough to read standing. The board is composed ONCE — plan the whole surface, not a sequence | **ABSOLUTE pt, not canvas-relative**: A0 display ≥90 · section ≥36 · body ≥24 (A1: 72/32/20). Fill 55–90% of the board. **Methods + limitations are required content** | typesetting it like a slide (deckkit's cover caps titles at 46pt — unreadable at 5m on a 33in board); leaving half the board empty because "whitespace is rhythm" (it is, across a *sequence*; here it is the only space the work gets); the billboard trap — a huge result with no method and no limitation, the two things a passer-by cannot reconstruct |
 | `a4` print portrait | handout, one-pager | **document logic**: 2-col text+figure splits fine; sections flow down the page; margins 0.75in | self-read prose is the deliverable (density is correct, not a flaw) | presented-style sparse slides (wastes the page); social-style display type |
 
 ## Repurposing one deck across formats (the batch pattern)
@@ -120,9 +120,15 @@ type by `FMT.display_scale`.
   page was advisory by construction. `scripts/check_surface.py` now recovers the format from the
   BUILT canvas size and enforces the contract, wired into `render_deck.py --gate-check` (section
   `surface`) and `codex_delivery_gate.py`:
-  `SAFE ZONE` (text inside a platform-UI zone) · `COLUMNS` (a side-by-side split where
-  `columns_ok=False`) · `DECK CHROME` (a footer strip on a social surface) · `TYPE FLOOR` and
-  `FILL` (printed boards only) · `MISSING SECTION` (content a surface is not finished without).
+  `SAFE ZONE` (text inside a platform-UI zone) · `COLUMNS` (a side-by-side split of running COPY
+  where `columns_ok=False` — a stat pair or a chip row is a legitimate portrait form and is not
+  flagged) · `DECK CHROME` (a page marker, slide count or date on a social surface — identified by
+  what it SAYS, so the `payoff/handle bottom` line this page prescribes passes and a real
+  `deckkit.footer()` does not) · `TYPE FLOOR` and `FILL` (printed boards only) ·
+  `MISSING SECTION` (content a surface is not finished without). `FILL` measures the board area
+  COMMITTED to content blocks; where renders exist the check also REPORTS how much of it is
+  actually inked, because a poster can be 82% committed and 17% inked — panels drawn and left
+  mostly empty. That gap is reported, not thresholded.
   Run it alone with `python3 scripts/check_surface.py <deck.pptx>`; `--selftest` proves it on
   purpose-built fixtures. A canvas matching no registered format reports NOT CHECKED, never clean.
   Waive required sections in writing via `design_plan.surface_sections_waived`.

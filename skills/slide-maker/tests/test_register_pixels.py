@@ -162,6 +162,62 @@ check(not probs and facts.get("waived"),
       "a written waiver stands the check down and SAYS it stood down",
       "{} {}".format(probs, facts))
 
+# REGRESSION: a deck rendered in GREYSCALE while the plan declares a hue. The count-based rule
+# cannot see this on its own — a two-colour plan whose near-black ground still matches scores
+# 1 of 2 and clears "fewer than half" — so the hue rule is separate on purpose.
+from PIL import Image                                                        # noqa: E402
+d, _ = _deck(tmp, "greyscale", (0x0A, 0x0F, 0x0A), [((0x33, 0xFF, 0x66), 12)],
+             [(0x0A, 0x0F, 0x0A), (0x33, 0xFF, 0x66)])
+for f in (d / "render").glob("*.png"):
+    Image.open(f).convert("L").save(f)
+check("DECLARED HUES ABSENT" in codes(d),
+      "a deck rendered in greyscale under a plan declaring a hue is caught",
+      "got {}".format(codes(d)))
+
+# REGRESSION: one unreadable PNG must not switch the check off for the whole deck. Both callers
+# wrap this module in try/except, so anything it RAISES becomes "NOT CHECKED" for every page.
+d, _ = _deck(tmp, "corrupt", (0x0A, 0x0F, 0x0A), [((0x33, 0xFF, 0x66), 12)],
+             [(0x0A, 0x0F, 0x0A), (0x33, 0xFF, 0x66)])
+(d / "render" / "slide02.png").write_bytes(b"not a png")
+probs, facts = crp.check(d)
+check("UNREADABLE RENDER" in {c for c, _ in probs} and facts.get("pages") == 2,
+      "a corrupt render is REPORTED and the readable pages are still measured",
+      "{} / pages={}".format({c for c, _ in probs}, facts.get("pages")))
+
+# Renders arrive in whatever mode the rasteriser produced; none of them may crash or mislead.
+for mode in ("L", "P", "RGBA"):
+    d, _ = _deck(tmp, "mode" + mode, (0x0A, 0x0F, 0x0A), [((0x33, 0xFF, 0x66), 12)],
+                 [(0x0A, 0x0F, 0x0A), (0x33, 0xFF, 0x66)])
+    for f in (d / "render").glob("*.png"):
+        Image.open(f).convert(mode).save(f)
+    got = codes(d)
+    want = "DECLARED HUES ABSENT" in got if mode == "L" else not got
+    check(want, "a {} -mode render is read correctly".format(mode), "got {}".format(got))
+
+# The numpy-free fallback must give the SAME verdict — a minimal runtime is not a wrong runtime.
+import builtins                                                              # noqa: E402
+d, _ = _deck(tmp, "nonumpy", (0x0A, 0x0F, 0x0A),
+             [((0x33, 0xFF, 0x66), 12), ((0xFF, 0x5A, 0x5A), 12)],
+             [(0x0A, 0x0F, 0x0A), (0x33, 0xFF, 0x66), (0xFF, 0x5A, 0x5A)])
+with_np = crp.check(d)[1]
+_real_import = builtins.__import__
+
+
+def _no_numpy(name, *a, **k):
+    if name == "numpy" or name.startswith("numpy."):
+        raise ImportError("numpy unavailable")
+    return _real_import(name, *a, **k)
+
+
+builtins.__import__ = _no_numpy
+try:
+    without_np = crp.check(d)[1]
+finally:
+    builtins.__import__ = _real_import
+check(with_np["present"] == without_np["present"] and with_np["field"] == without_np["field"],
+      "the numpy-free path reaches the same verdict as the numpy path",
+      "{} vs {}".format(with_np["present"], without_np["present"]))
+
 # ── 2. the wiring: both delivery paths must ask the SAME code ────────────────────────────────
 render = (SCRIPTS / "render_deck.py").read_text(encoding="utf-8")
 codex = (SCRIPTS / "codex_delivery_gate.py").read_text(encoding="utf-8")

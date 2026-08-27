@@ -39,6 +39,7 @@ and the critic. Exit 0 clean · 1 findings · 2 could not run.
 from __future__ import annotations
 
 import argparse
+import glob
 import os
 import re
 import sys
@@ -65,7 +66,7 @@ def _is_ground(sh, W, H):
 
 
 def _runs(shape):
-    """[(text, pt, top_in, height_in)] for one shape's paragraphs, sizes resolved where set."""
+    """[(text, pt)] per non-empty paragraph — pt is None where no explicit size is set."""
     out = []
     if not getattr(shape, "has_text_frame", False):
         return out
@@ -78,6 +79,19 @@ def _runs(shape):
             sizes = [para.font.size.pt]
         out.append((txt.strip(), max(sizes) if sizes else None))
     return out
+
+
+# What a deck footer says, and a payoff line does not: a page marker, a slide count, a date.
+# `deckkit.page_marker` emits "03 / 14"; `deckkit.footer(page=n)` a bare number at the right edge.
+_FURNITURE = (re.compile(r"^\s*\d{1,3}\s*[/／]\s*\d{1,3}\s*$"),
+              re.compile(r"\bp(?:age|g)?\.?\s*\d{1,3}\b", re.I),
+              re.compile(r"^\s*\d{1,3}\s*$"),
+              re.compile(r"\b(?:19|20)\d{2}[-/.]\d{1,2}(?:[-/.]\d{1,2})?\b"),
+              re.compile(r"第\s*\d{1,3}\s*[页頁]"))
+
+
+def _is_furniture(txt):
+    return any(rx.search(txt) for rx in _FURNITURE)
 
 
 def _shapes(slide):
@@ -97,7 +111,40 @@ def _shapes(slide):
 # a middle tier existing at all — which needs no classification.
 
 
-def check(pptx, format_name=None, waive_sections=None, extra_terms=None):
+def ink_coverage(renders):
+    """Share of a rendered page that is NOT the ground colour, averaged — or None.
+
+    Reported, never thresholded. `FILL` below measures the area COMMITTED to content blocks, which
+    is what a PPTX can answer; it cannot tell a full panel from an empty one, and measured on a
+    real A0 board the two numbers were 82% committed and 17% inked. A gap that wide is the thing
+    worth seeing, and it is legible without a cut-off — which matters, because this skill has two
+    poster renders to its name and a threshold set from two samples is a threshold tuned to them.
+    `lint_deck.py`'s HOLLOW FILL owns the calibrated version of this judgement for slides and is
+    switched off in `--surface` mode, so on a board nobody was reporting either number.
+    """
+    pngs = sorted(glob.glob(os.path.join(renders or "", "slide*.png")))
+    if not pngs:
+        return None
+    try:
+        from PIL import Image
+        import numpy as np
+    except ImportError:
+        return None
+    vals = []
+    for png in pngs:
+        try:
+            im = Image.open(png).convert("RGB")
+            im.thumbnail((700, 700))
+            flat = np.asarray(im, dtype=np.int16).reshape(-1, 3)
+            cols, counts = np.unique(flat // 8, axis=0, return_counts=True)
+            ground = cols[counts.argmax()] * 8
+            vals.append(float((np.abs(flat - ground).sum(1) > 40).sum()) / len(flat))
+        except Exception:
+            continue                       # one unreadable render is not a reason to say nothing
+    return sum(vals) / len(vals) if vals else None
+
+
+def check(pptx, format_name=None, waive_sections=None, extra_terms=None, renders=None):
     """Return (problems, facts).
 
     `extra_terms` — {section_label: [word, …]} — extends the keyword list a required section is
@@ -119,6 +166,10 @@ def check(pptx, format_name=None, waive_sections=None, extra_terms=None):
                          .format(facts["canvas"]))
         return [], facts
     facts["format"] = "{} ({})".format(fmt.name, fmt.label)
+    if not len(prs.slides._sldIdLst):
+        facts["note"] = ("this deck has no slides, so its surface contract could not be checked. "
+                         "NOT the same as clean.")
+        return [], facts
     problems = []
 
     import formats
@@ -155,27 +206,40 @@ def check(pptx, format_name=None, waive_sections=None, extra_terms=None):
                                      "{!r}".format(idx, H - (top + hei), fmt.safe_bottom,
                                                    fmt.name, txt[:50])))
             # ── DECK CHROME on a social surface ────────────────────────────────────────────
+            # Identified by what it SAYS, not by where it sits. The first version flagged any
+            # full-width strip in the bottom band, which got both halves wrong: it fired on the
+            # `payoff/handle bottom` line that `canvas-formats.md` PRESCRIBES for a rednote card,
+            # and it missed a real `deckkit.footer()`, whose tag and page number are two NARROW
+            # shapes at opposite ends rather than one wide strip. Page markers and dates are what
+            # make furniture furniture; a handle and a call to action are content.
             if (fmt.chrome == "social" and getattr(sh, "has_text_frame", False)
-                    and hei and hei <= 0.5 and wid >= W * 0.55 and top >= H * 0.82
-                    and (sh.text_frame.text or "").strip()):
+                    and top >= H * 0.80 and (sh.text_frame.text or "").strip()
+                    and _is_furniture((sh.text_frame.text or "").strip())):
                 problems.append(("DECK CHROME",
-                                 "slide {}: a full-width strip of text sits in the bottom band of a "
-                                 "SOCIAL surface ({!r}). Feed formats carry no deck footer — the "
-                                 "platform's own UI lives there, and a footer reads as a stray "
-                                 "caption.".format(idx, (sh.text_frame.text or "").strip()[:40])))
+                                 "slide {}: deck furniture sits in the bottom band of a SOCIAL "
+                                 "surface ({!r}). Feed formats carry no footer, page number or "
+                                 "date — the platform's own UI lives there, and a page marker on a "
+                                 "card that will be seen alone reads as a stray artefact."
+                                 .format(idx, (sh.text_frame.text or "").strip()[:40])))
 
         # ── COLUMNS on a canvas the registry says cannot take them ─────────────────────────
         if not fmt.columns_ok:
+            # A COLUMN is a block of running copy, not any two things that happen to be beside
+            # each other. A stat pair, a chip row, two icon captions — all legitimate forms on a
+            # portrait card, all side by side, none of them halving the measure of anything. The
+            # documented pitfall is body copy split into columns too narrow to read, so both
+            # blocks must be tall enough to BE body copy and wide enough to be a column.
             texts = [sh for sh in _shapes(slide)
                      if getattr(sh, "has_text_frame", False)
                      and (sh.text_frame.text or "").strip()
-                     and (sh.width or 0) / EMU < W * 0.46]
+                     and W * 0.18 <= (sh.width or 0) / EMU < W * 0.46
+                     and (sh.height or 0) / EMU >= 0.8]
             for i, a in enumerate(texts):
                 for b in texts[i + 1:]:
                     at, ah = (a.top or 0) / EMU, (a.height or 0) / EMU
                     bt, bh = (b.top or 0) / EMU, (b.height or 0) / EMU
                     overlap = min(at + ah, bt + bh) - max(at, bt)
-                    if overlap > 0.45 * min(ah, bh) and min(ah, bh) > 0.2:
+                    if overlap > 0.45 * min(ah, bh):
                         problems.append(("COLUMNS",
                                          "slide {}: two text blocks share a horizontal band, each "
                                          "under half the canvas width. `{}` is registered "
@@ -248,10 +312,18 @@ def check(pptx, format_name=None, waive_sections=None, extra_terms=None):
                 for cx in range(cx0, cx1):
                     grid[base + cx] = 1
         cover = sum(grid) / float(NX * NY)
-        facts["fill"] = "{:.0%} of the board covered (target {:.0%}-{:.0%})".format(cover, lo, hi)
+        facts["fill"] = ("{:.0%} of the board committed to content blocks (target {:.0%}-{:.0%})"
+                         .format(cover, lo, hi))
+        ink = ink_coverage(renders or str(Path(pptx).resolve().parent / "render"))
+        if ink is not None:
+            facts["ink"] = "{:.0%} of it actually inked".format(ink)
+            if cover >= lo and ink < cover * 0.35:
+                facts["ink"] += (" — a large gap: the blocks are committed but mostly empty, so "
+                                 "read the render before trusting the number above")
         if cover < lo:
             problems.append(("FILL",
-                             "content covers {:.0%} of the board, under the {:.0%} floor for a {}. "
+                             "content blocks cover {:.0%} of the board, under the {:.0%} floor for "
+                             "a {}. "
                              "A poster is composed ONCE and read standing: unlike a deck, where "
                              "whitespace across a sequence is rhythm, empty board here is the only "
                              "space this work gets and it is being given away. Either the content "
@@ -259,7 +331,8 @@ def check(pptx, format_name=None, waive_sections=None, extra_terms=None):
                              .format(cover, lo, fmt.label)))
         elif cover > hi:
             problems.append(("FILL",
-                             "content covers {:.0%} of the board, over the {:.0%} ceiling for a {}. "
+                             "content blocks cover {:.0%} of the board, over the {:.0%} ceiling for "
+                             "a {}. "
                              "This is the wall people walk past. Cut, do not shrink — the type "
                              "floors above are absolute, so density has to come out of the words."
                              .format(cover, hi, fmt.label)))
@@ -380,6 +453,36 @@ def _selftest():
         "rules were prose in canvas-formats.md and nothing downstream read the registry"
         if "SAFE ZONE" in got and "COLUMNS" in got else "story faults missed: {}".format(got))
 
+    # Landscape boards are as standard as portrait ones; an unregistered canvas reports NOT
+    # CHECKED, so leaving them out would switch the contract off for half the posters printed.
+    landscape = build("poster_a0_land",
+                      [("A claim across the hall", 110, 1.6, 1.6, 43.0, 4.4),
+                       ("Methods", 42, 1.6, 7.5, 20.0, 1.4),
+                       ("Measured on every built deck.", 26, 1.6, 9.2, 20.0, 10.0),
+                       ("Results", 42, 24.0, 7.5, 20.0, 1.4),
+                       ("Two rules now fail loudly.", 26, 24.0, 9.2, 20.0, 10.0),
+                       ("Limitations", 42, 1.6, 20.5, 20.0, 1.4),
+                       ("One site, one operator.", 26, 1.6, 22.2, 20.0, 9.0),
+                       ("Next", 42, 24.0, 20.5, 20.0, 1.4),
+                       ("Record accent hexes.", 26, 24.0, 22.2, 20.0, 9.0)])
+    got = codes(landscape)
+    (ok if not got else bad).append(
+        "a LANDSCAPE A0 board resolves to its own format and passes" if not got
+        else "landscape board flagged: {}".format(got))
+
+    # The prescribed rednote payoff line vs real deck furniture — the discrimination the first
+    # version got backwards in both directions.
+    payoff = build("red", [("A hook that fits the card", 30, 0.5, 1.4, 6.5, 1.4),
+                           ("One idea, stacked.", 18, 0.5, 3.4, 6.5, 2.0),
+                           ("@handle - save this", 14, 0.5, 8.6, 6.5, 0.4)])
+    furniture = build("red", [("A hook that fits the card", 30, 0.5, 1.4, 6.5, 1.4),
+                              ("03 / 14", 9, 6.2, 8.7, 0.8, 0.25)])
+    a, b = "DECK CHROME" in codes(payoff), "DECK CHROME" in codes(furniture)
+    (ok if (not a and b) else bad).append(
+        "the rednote payoff line passes while a page marker is caught — furniture is what it "
+        "SAYS, not where it sits" if (not a and b)
+        else "chrome discrimination wrong: payoff={} furniture={}".format(a, b))
+
     # A normal 16:9 deck must not be judged against printed floors or social rules.
     slide = build("wide", [("A normal projected slide", 24, 0.6, 0.6, 8.8, 1.0),
                            ("Body copy at a normal projected size.", 14, 0.6, 2.0, 4.0, 1.0),
@@ -418,6 +521,8 @@ def main(argv=None):
                     help='extra words a required section is recognised by, e.g. '
                          '\'{"methods": ["methode", "手法"]}\' — for a poster not written in '
                          'English or Chinese')
+    ap.add_argument("--renders", help="render directory (default <deck-dir>/render) — used only to "
+                                      "REPORT how much of a printed board is actually inked")
     ap.add_argument("--selftest", action="store_true")
     a = ap.parse_args(argv)
     if a.selftest:
@@ -436,12 +541,12 @@ def main(argv=None):
         except ValueError as exc:
             print("--section-terms is not valid JSON: {}".format(exc), file=sys.stderr)
             return 2
-    probs, facts = check(a.pptx, a.format, a.waive_sections, extra)
+    probs, facts = check(a.pptx, a.format, a.waive_sections, extra, a.renders)
     print("canvas {} -> {}".format(facts.get("canvas"), facts.get("format", "unregistered")))
     if facts.get("floors"):
         print("  printed type floors: " + facts["floors"])
     if facts.get("fill"):
-        print("  " + facts["fill"])
+        print("  " + facts["fill"] + ("; " + facts["ink"] if facts.get("ink") else ""))
     if facts.get("sections_waived"):
         print("  required sections waived: " + facts["sections_waived"])
     if facts.get("note"):

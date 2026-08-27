@@ -1472,7 +1472,7 @@ def _surface_gate(pptx, gates):
         print("  [--] SURFACE: " + facts["note"])
         return
     head = "[gates] surface: {}".format(facts.get("format"))
-    for extra in ("floors", "fill"):
+    for extra in ("floors", "fill", "ink"):
         if facts.get(extra):
             head += " · " + facts[extra]
     print(head)

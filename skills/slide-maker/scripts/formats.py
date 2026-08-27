@@ -157,6 +157,39 @@ FORMATS = {f.name: f for f in [
                               ("limitations", ("limitation", "limitations", "caveat", "caveats",
                                                "threats to validity", "weakness", "局限",
                                                "不足")))),
+    # Landscape boards are as standard as portrait ones — many venues specify them, and a wide
+    # board is a genuinely different composition (columns run ACROSS, the title band is shallower).
+    # Registering them explicitly rather than transposing a portrait entry keeps `kind`,
+    # `columns_ok` and `title_band` honest; a canvas with no entry reports NOT CHECKED, so the
+    # omission would have silently switched the whole contract off for half the posters printed.
+    Format("poster_a0_land", "Poster A0 (landscape)", 46.81, 33.11, "landscape",
+           "conference poster · printed A0 landscape · read at 5m / 2m / 1m",
+           margin=1.6, safe_top=0.0, safe_bottom=0.0, chrome="print",
+           title_band=4.4, display_scale=2.2,
+           density_units="as A0 portrait; the width takes MORE columns, never smaller type",
+           columns_ok=True, lint_flags=("--surface",),
+           aliases=("a0-landscape", "a0l", "poster-a0-landscape", "横版海报"),
+           type_floors=(("display", 90), ("section", 36), ("body", 24)),
+           fill_range=(0.55, 0.90),
+           required_sections=(("methods", ("method", "methods", "approach", "materials",
+                                           "procedure", "protocol", "pipeline", "方法")),
+                              ("limitations", ("limitation", "limitations", "caveat", "caveats",
+                                               "threats to validity", "weakness", "局限",
+                                               "不足")))),
+    Format("poster_a1_land", "Poster A1 (landscape)", 33.11, 23.39, "landscape",
+           "conference poster · printed A1 landscape",
+           margin=1.2, safe_top=0.0, safe_bottom=0.0, chrome="print",
+           title_band=3.2, display_scale=1.65,
+           density_units="as A1 portrait; the width takes MORE columns, never smaller type",
+           columns_ok=True, lint_flags=("--surface",),
+           aliases=("a1-landscape", "a1l", "poster-a1-landscape"),
+           type_floors=(("display", 72), ("section", 32), ("body", 20)),
+           fill_range=(0.55, 0.90),
+           required_sections=(("methods", ("method", "methods", "approach", "materials",
+                                           "procedure", "protocol", "pipeline", "方法")),
+                              ("limitations", ("limitation", "limitations", "caveat", "caveats",
+                                               "threats to validity", "weakness", "局限",
+                                               "不足")))),
 ]}
 
 _ALIAS = {}
@@ -228,11 +261,11 @@ def band(fmt, *, title=True):
 
 
 if __name__ == "__main__":
-    print(f"{'name':10s} {'label':20s} {'W×H (in)':14s} {'kind':10s} {'safe T/B':10s} "
+    print(f"{'name':15s} {'label':20s} {'W×H (in)':14s} {'kind':10s} {'safe T/B':10s} "
           f"{'chrome':7s} {'cols':5s} {'type floors (pt)':22s} lint")
     for f in FORMATS.values():
         fl = " ".join(f"{r} {pt}" for r, pt in f.type_floors) or "canvas-relative"
-        print(f"{f.name:10s} {f.label:20s} {f.w_in:.2f}×{f.h_in:<7.2f} {f.kind:10s} "
+        print(f"{f.name:15s} {f.label:20s} {f.w_in:.2f}×{f.h_in:<7.2f} {f.kind:10s} "
               f"{f.safe_top:.2f}/{f.safe_bottom:<5.2f} {f.chrome:7s} "
               f"{'yes' if f.columns_ok else 'no':5s} {fl:22s} {' '.join(f.lint_flags) or '—'}")
-        print(f"{'':10s} ↳ {f.use}")
+        print(f"{'':15s} ↳ {f.use}")

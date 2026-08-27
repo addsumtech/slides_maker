@@ -60,8 +60,12 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   HISTORY ("never reuse the last deck's scheme"). Presence is measured per-colour and NOT by area:
   measured on a real 15-page deck the signature accent covered 0.65% of its best page, so an
   area ranking called the deck's own palette absent; colours genuinely absent measured 0.0000%
-  and an antialiased blend 0.093%, which is where the threshold sits. Waive with
-  `design_plan.register_pixels_waived`. Imported by `render_deck.py --gate-check` (section
+  and an antialiased blend 0.093%, which is where the threshold sits. `DECLARED HUES ABSENT` is a
+  separate rule from the count: a ground and an ink are shared by half the world's decks, so the
+  HUES are the register — a deck rendered in greyscale scores 1 of 2 on the count and clears it.
+  An unreadable PNG is reported as `UNREADABLE RENDER` and the remaining pages are still measured,
+  because both callers wrap this module in try/except and anything RAISED would silently become
+  "NOT CHECKED" for the whole deck. Waive with `design_plan.register_pixels_waived`. Imported by `render_deck.py --gate-check` (section
   `register_pixels`) and `codex_delivery_gate.py`. `--selftest` proves it both ways. It judges
   COLOUR only — composition is the sameness gate's and the critic's.
 - `check_surface.py` — the canvas format's contract, checked against the BUILT deck. `formats.py`
@@ -70,9 +74,18 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   construction. Recovers the format from the canvas SIZE (a built PPTX carries nothing else) and
   reports `SAFE ZONE` · `COLUMNS` · `DECK CHROME` · `TYPE FLOOR` · `FILL` · `MISSING SECTION`.
   The printed-board checks (`TYPE FLOOR`, `FILL`) apply only to formats declaring `type_floors` /
-  `fill_range` — A0/A1 posters, which are read at a fixed distance and so need ABSOLUTE point
-  floors rather than lint's canvas-relative one. An unregistered canvas reports NOT CHECKED, never
-  clean. Waive required sections with `design_plan.surface_sections_waived`. Imported by
+  `fill_range` — A0/A1 posters **in both orientations**, which are read at a fixed distance and so
+  need ABSOLUTE point floors rather than lint's canvas-relative one. `COLUMNS` means a split of
+  running COPY (both blocks ≥0.8in tall and ≥18% of the canvas wide), so a stat pair or chip row on
+  a portrait card passes; `DECK CHROME` identifies furniture by what it SAYS — a page marker, slide
+  count or date — so the `payoff/handle bottom` line `canvas-formats.md` prescribes passes while a
+  real `deckkit.footer()`, whose tag and page number are two narrow shapes, is caught. `FILL`
+  measures the area COMMITTED to content blocks — all a PPTX can answer, and it cannot tell a full
+  panel from an empty one: measured on a real A0 board, 82% committed and 17% inked. When renders
+  exist the inked share is REPORTED beside it (and a wide gap named), deliberately without a
+  threshold — two poster renders is not a calibration set, and `lint_deck.py`'s calibrated
+  HOLLOW FILL is switched off in `--surface` mode, so on a board nobody was reporting either
+  number. A deck with no slides, and an unregistered canvas, report NOT CHECKED, never clean. Waive required sections with `design_plan.surface_sections_waived`. Imported by
   `render_deck.py --gate-check` (section `surface`) and `codex_delivery_gate.py`; `--selftest`
   proves it on built fixtures.
 - `check_design_contracts.py` — the DESIGN stack's index guard: every self-verify cross-reference in
