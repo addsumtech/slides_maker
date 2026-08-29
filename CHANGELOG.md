@@ -86,6 +86,10 @@ section is a distilled summary — the full notes live on the
 
 ### Fixed
 
+- **`bento()` accepted `slide` and never read it** — caught by CI's `check_param_reach.py` after a
+  green local run, because I had run the test suite without the rest of the CI steps. The parameter
+  now does real work: it validates the grid rect against the canvas, so a grid placed past the edge
+  is named once instead of surfacing as N off-canvas tiles the caller has already filled.
 - **Audit of this batch — seven more, found by attacking it rather than re-reading it.**
   - **A mis-shaped `.deck-gates.json` crashed the whole gate run with a traceback.** Every gate
     read its record as `gates.get("x") or {}` and then called `.get()`, so `"a11y": "we don't need

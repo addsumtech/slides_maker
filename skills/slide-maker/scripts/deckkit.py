@@ -6145,6 +6145,22 @@ def bento(slide, x, y, w, h, tiles, *, gap=0.18, cols=4, rows=None):
     """
     if not tiles:
         return []
+    # `slide` is read: the grid is validated against the CANVAS it will be drawn on. Without this
+    # the parameter was accepted and discarded — CI's `check_param_reach.py` caught exactly that —
+    # and a grid placed past the edge produced tiles the caller then filled, off-canvas, for lint
+    # to report one shape at a time instead of naming the rect that was wrong.
+    try:
+        sw, sh = _slide_size(slide)
+        if x < -0.01 or y < -0.01 or x + w > sw + 0.01 or y + h > sh + 0.01:
+            raise ValueError(
+                "bento: the grid rect ({:.2f}, {:.2f}, {:.2f}x{:.2f}) falls outside the "
+                "{:.2f}x{:.2f}in canvas. Take it from the content band — "
+                "`dk.content_band(slide)` or `formats.band(FMT)` — rather than from remembered "
+                "16:9 numbers.".format(x, y, w, h, sw, sh))
+    except ValueError:
+        raise
+    except Exception:
+        pass                                       # no real slide (a geometry-only call)
     spans = [(int(t[0]), int(t[1])) for t in tiles]
     if any(c < 1 or r < 1 for c, r in spans):
         raise ValueError("bento: every tile needs span_cols >= 1 and span_rows >= 1")

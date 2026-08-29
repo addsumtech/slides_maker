@@ -267,6 +267,23 @@ for i, (x, y, w, h) in enumerate(rects):
             gaps.add(round(x2 - (x + w), 3))
 check(len(gaps) <= 1, "bento gutters are ONE value — unequal gutters are what make a modular "
                       "layout read as an accident", str(gaps))
+# `slide` must be READ, not merely accepted. CI's check_param_reach.py caught it being discarded
+# — a parameter a caller sets and the body ignores is either a bug or an undocumented no-op. It now
+# validates the grid rect against the canvas, so a grid placed past the edge is named once instead
+# of surfacing as N off-canvas tiles the caller already filled.
+_prs_b = dk.blank_deck()
+_sl_b = dk.add_slide(_prs_b)
+check(len(dk.bento(_sl_b, 0.6, 1.2, 8.8, 3.9, [(2, 2), (2, 1)], cols=4)) == 2,
+      "bento places an on-canvas grid")
+try:
+    dk.bento(_sl_b, 0.6, 1.2, 12.0, 3.9, [(2, 2)], cols=4)
+    check(False, "bento validates its rect against the canvas", "an off-canvas grid was accepted")
+except ValueError as _e:
+    check("outside the" in str(_e), "bento validates its rect against the CANVAS it is given",
+          str(_e)[:80])
+check(len(dk.bento(None, 0, 0, 8, 4, [(1, 1)], cols=1)) == 1,
+      "...and a geometry-only call with no slide still works")
+
 check(abs(rects[0][2] * rects[0][3]) > abs(rects[2][2] * rects[2][3]) * 3,
       "a 2x2 tile is much larger than a 1x1 — the ranking is in the geometry")
 for bad, why in (((5, 1), "a tile wider than the grid"), ((4, 1), "more tiles than rows")):
