@@ -139,6 +139,20 @@ be reconstructed post-hoc at the delivery gate.
    encourages was, until it existed, the pick nothing verified. Waive in writing with
    `design.register_pixels_waived`; render before the gate runs, since a pixel check with no pixels
    reports NOT CHECKED rather than clean.
+2z. 🔴 **A viewer must be able to DECODE every mark — and the checks now measure that, so the
+   plan sentence will not save you.** Three findings a first human reader raised on a deck that had
+   cleared every gate, each now countable:
+   * `MOTIF_UNEXPLAINED_AT_FIRST_USE` — key the loud motif ON THE SLIDE IT DEBUTS. A legend four
+     slides later used to clear the check and does not now; SKILL.md always called the deferred
+     reading a failed test written as a passing sentence.
+   * `UNNAMED_REPEATED_MARK` — four or more identical marks with no text within reach are reported.
+     A bracket and one word beside the group clears it. Measured: nine unlabelled rules shipped on
+     a cover and the reader's first question was what they were.
+   * the `icon_family: none` waiver's CATEGORY is checked against the built file — `motif-dominant`
+     requires a loud motif to actually exist, `tiny-deck` a deck of 1-2 slides, `template-locked` a
+     real template rather than `blank_deck()` — and it must name EVERY slide the gate flagged, not
+     one of them. Icons are the DEFAULT on categorical content; the carve is real but narrow.
+
 2a. **Plan the deck's ARCHITECTURE before building any page, and build it from the helper.**
    `lint_deck` demands >=4 distinct page skeletons on an 8+-slide deck and reports three adjacent
    slides sharing 75% of their structure — but both fire AFTER the build, when varying the

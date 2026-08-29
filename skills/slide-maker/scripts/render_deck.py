@@ -450,6 +450,67 @@ def _report_file_observations(pptx_path):
 _ICON_NONE_CATEGORIES = ("motif-dominant", "editorial-register", "tiny-deck", "template-locked")
 
 
+def _icon_none_category_holds(cat, pptx_path, flagged):
+    """Is the CLASSIFIED reason true of the built file? Returns (ok, why_not).
+
+    The category was checked against a fixed list of strings and nothing else, so any of the four
+    words cleared the gate. Measured on this repo's own deck: `motif-dominant` was written for a
+    deck, accepted, and the first human reader's first note was "icons should be here". The word
+    was doing the work, not the fact. Each class makes a CHECKABLE claim about the artifact, so
+    check it:
+
+      motif-dominant     the deck must actually carry a LOUD motif — the thing icons would dilute
+      tiny-deck          it must actually be small (<=2 content slides)
+      template-locked    it must actually be built on a template, not a blank deck
+      editorial-register left as declared: "this register would cheapen with icons" is a taste
+                         claim about a look, and forcing a measurement onto it would invent one.
+
+    🔴 And on every class, the waiver must name EVERY slide the gate flagged. Naming one of five
+    was enough before, which let a re-decision cover the page the author had already thought about
+    and skip the four they had not.
+    """
+    try:
+        from pptx import Presentation
+        prs = Presentation(str(pptx_path))
+    except Exception:
+        return True, ""                       # never fail the gate on the reader itself
+    if cat == "motif-dominant":
+        try:
+            import deckkit as _dk
+            loud = [n for n, sl in enumerate(prs.slides, 1)
+                    for sh in sl.shapes if _dk._is_motif(sh, loud=True)]
+        except Exception:
+            return True, ""
+        if not loud:
+            return False, ("category 'motif-dominant' claims icons would dilute a strong motif, but "
+                           "the built deck carries NO loud motif at all (nothing tagged with "
+                           "deckkit.tag_motif(..., loud=True)). Either the motif is not built yet, "
+                           "or this is the casual skip wearing the strongest word on the list")
+    if cat == "tiny-deck":
+        n = len(prs.slides._sldIdLst)
+        if n > 4:
+            return False, ("category 'tiny-deck' on a {}-slide deck — the carve is for a 1-2 slide "
+                           "ask, not for any deck whose author would rather not draw icons"
+                           .format(n))
+    if cat == "template-locked":
+        # python-pptx's DEFAULT template already ships eleven named layouts, so "has layout names"
+        # proves nothing — `blank_deck()` cleared this on the first try. Compare against that known
+        # set instead: a deck whose layouts are exactly the stock ones is not carrying anyone's
+        # template.
+        STOCK = {"Title Slide", "Title and Content", "Section Header", "Two Content", "Comparison",
+                 "Title Only", "Blank", "Content with Caption", "Picture with Caption",
+                 "Title and Vertical Text", "Vertical Title and Text"}
+        try:
+            names = {str(getattr(l, "name", "")) for l in prs.slide_layouts}
+        except Exception:
+            names = set()
+        if names and not (names - STOCK):
+            return False, ("category 'template-locked' but the deck carries only python-pptx's "
+                           "stock layouts — it is a blank deck, and there is no template to be "
+                           "locked by. `deckkit.open_template()` is what makes this class true")
+    return True, ""
+
+
 def _icon_none_waived(gates):
     """True when `icon_family: none` was re-decided against the BUILT slides AND classifies WHY.
 
@@ -460,7 +521,7 @@ def _icon_none_waived(gates):
     cheapen), not 'the content isn't category-rich'. Symmetric with the critic waiver's
     `waived_category`: a waiver that cannot name its own class is the casual skip in disguise.
     """
-    d = (gates or {}).get("design_plan") or {}
+    d = _section(gates, "design_plan")
     named = d.get("icon_none_checked")
     cat = str(d.get("icon_none_category") or "").strip().lower()
     return (isinstance(named, list) and len(named) >= 1) and cat in _ICON_NONE_CATEGORIES
@@ -616,8 +677,36 @@ def _report_icon_waiver(pptx_path, fam, gates=None, delivery=None):
         # zero icons. Asymmetric, so the threshold sits on the side that asks the question. The
         # floors (aspect, non-surface, >=8 body slides below) still exclude carousels/posters/tiny
         # asks, and the waiver stays satisfiable for the real motif-dominant / editorial cases.
+        # …and the CLASSIFIED reason must be true of the built file, not merely be one of four
+        # accepted words. `motif-dominant` on a deck with no loud motif, `tiny-deck` on twelve
+        # slides, `template-locked` on a blank deck — each was accepted, because the check compared
+        # a string to a list. Measured here: `motif-dominant` cleared this gate on a deck whose
+        # first human reader's first note was "icons should be here".
+        _waived = _icon_none_waived(gates)
+        if _waived:
+            _cat = str(_section(gates, "design_plan").get("icon_none_category") or "").strip().lower()
+            _ok, _why = _icon_none_category_holds(_cat, pptx_path, hits)
+            if not _ok:
+                _waived = False
+                print("  [gates] icon waiver REJECTED — {}".format(_why))
+            else:
+                _named = {str(x).strip().lower().replace("slide", "").strip()
+                          for x in (_section(gates, "design_plan").get("icon_none_checked") or [])}
+                # Naming only SOME of the flagged slides is REPORTED, not refused. It was a hold
+                # for one run and it turned out to reject a legitimate `editorial-register` waiver
+                # that had named two of a dozen flagged pages — and the problem this batch actually
+                # had was a category that was FALSE of the built file, which the check above now
+                # catches precisely. A second, blunter rule that fires on lawful use is how a gate
+                # earns the reflex to waive it.
+                _missing = [h for h in hits if str(h) not in _named]
+                if _missing:
+                    print("  [gates] icon waiver names {} of {} flagged slide(s) — not re-decided: "
+                          "{}. Look at those before the hand-off; the category covers the REST, not "
+                          "the pages you have not opened."
+                          .format(len(hits) - len(_missing), len(hits),
+                                  ", ".join(str(m) for m in _missing)))
         _cheap = (len(hits) >= 2 and _tot == 0 and _asp >= 1.2
-                  and delivery != "surface" and not _icon_none_waived(gates))
+                  and delivery != "surface" and not _waived)
         # Only NOW pay for the real content-slide count — the same `body_n` sameness uses, which
         # excludes the cover, the closer and any declared appendix run. Raw slide count is the
         # wrong number: a 12-slide deck whose slides 5+ are declared reference material has three

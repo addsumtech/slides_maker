@@ -70,6 +70,24 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   well-built 11-slide deck it fired once, on the closing slide. Both `render_deck.py --gate-check`
   (`a11y` section) and `codex_delivery_gate.py` (`STRICT_WARNINGS`) derive from these constants
   rather than restating them.
+- `deckkit._motif_faults` — the DECODABILITY checks, all three added after a first human reader
+  asked three questions about a deck that had passed every gate. `MOTIF_UNEXPLAINED_AT_FIRST_USE`:
+  the stranger test is about FIRST appearance, and the old check cleared on a legend ANYWHERE —
+  which is precisely the deferred reading SKILL.md calls "a FAILED test written as a passing
+  sentence". `UNNAMED_REPEATED_MARK`: >=4 near-identical marks on one page with no text within
+  reach of the group; such a set was invisible to every other check (not text, so the text checks
+  skip it; not tagged, so the motif checks skip it; trivially clears contrast and overlap), and
+  nine unlabelled rules shipped on a cover. Both are WARN, like their siblings — the figurative
+  answer is legitimate — but they now READ, and `tests/test_decodability.py` locks both directions.
+- `render_deck._icon_none_category_holds` — the icon waiver's CATEGORY, verified against the built
+  file. The four classes were compared to a list of strings, so any of the four words cleared the
+  gate: measured, `motif-dominant` was accepted on a deck carrying no loud motif, and the first
+  reader's first note was that icons should be there. Now `motif-dominant` requires a real loud
+  motif, `tiny-deck` a deck of 1-2 slides, `template-locked` a real template (python-pptx ships
+  eleven named layouts, so "has layout names" proved nothing), and `editorial-register` stays
+  declared because it is a taste claim about a look and inventing a measurement would be worse.
+  The waiver must also name EVERY flagged slide — naming a subset let the re-decision cover the
+  page the author had already thought about and skip the ones they had not.
 - `plan_rhythm.py` — composes the deck's ARCHITECTURE as a sequence before any page is built.
   `lint_deck` demands >=4 distinct skeletons and reports 3 adjacent slides sharing 75% of their
   structure, but both fire AFTER the build, when varying the architecture means re-laying written

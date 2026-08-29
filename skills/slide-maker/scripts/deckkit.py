@@ -8276,6 +8276,63 @@ def _motif_faults(prs):
                                 "the device, or declare it with deckkit.overlap_intent(shape, "
                                 "'<why the overlap IS the composition>')"))
                     break
+    # UNNAMED_REPEATED_MARK — a shape family that RECURS and is never named anywhere.
+    #
+    # The motif checks above only see shapes the author tagged. Measured on a real deck: a cover
+    # carried nine identical horizontal rules, untagged, and the first reader asked "what are these
+    # lines?" — the author meant "twelve floors" and had written nothing. Every existing check was
+    # blind to it: it is not text (so the text checks skip it), it is not tagged (so the motif
+    # checks skip it), and it clears contrast and overlap easily because it is just some lines.
+    #
+    # The rule this makes countable is `references/design-principles.md`'s: an element a viewer
+    # cannot decode in about a second is noise, whatever the author meant by it. So: a set of >=4
+    # near-identical marks on ONE page, with no text within a hand's reach of the set, is reported.
+    # Deliberately conservative — texture and rules that back text are excluded, because a page's
+    # ground is not asking to be read.
+    for n, sl in enumerate(prs.slides, 1):
+        W2, H2 = W, H
+        marks, texts2 = [], []
+        for sh in sl.shapes:
+            bb = _bbox_in(sh)
+            if not bb or bb[2] <= 0 or bb[3] <= 0:
+                continue
+            if _is_text(sh) and (getattr(sh, "text_frame", None)
+                                 and (sh.text_frame.text or "").strip()):
+                sz = 0.0
+                for para in sh.text_frame.paragraphs:
+                    for r_ in para.runs:
+                        if r_.font.size is not None:
+                            sz = max(sz, r_.font.size.pt)
+                texts2.append((bb, sz))
+            elif not _is_text(sh) and bb[2] * bb[3] < W2 * H2 * 0.55:
+                marks.append((round(bb[2], 2), round(bb[3], 2), bb))
+        groups = {}
+        for w_, h_, bb in marks:
+            groups.setdefault((w_, h_), []).append(bb)
+        for (w_, h_), bbs in groups.items():
+            if len(bbs) < 4 or w_ * h_ > 6.0:
+                continue
+            x0 = min(b[0] for b in bbs); y0 = min(b[1] for b in bbs)
+            x1 = max(b[0] + b[2] for b in bbs); y1 = max(b[1] + b[3] for b in bbs)
+            # A LABEL, not merely nearby text. Two things separate them, and the first version
+            # had neither: a label sits CLOSE (a hand's reach, not half a page), and it is SMALL —
+            # a page title is not naming your diagram, it is titling the page. Measured on the
+            # cover this check was written for: nine unlabelled rules sat 0.22in above a 28pt
+            # headline, and "there is text nearby" cleared them.
+            biggest = max([sz for _b, sz in texts2] or [0.0])
+            near = any(sz <= max(16.0, biggest * 0.6)
+                       and not (t[0] > x1 + 0.55 or t[0] + t[2] < x0 - 0.55
+                                or t[1] > y1 + 0.40 or t[1] + t[3] < y0 - 0.40)
+                       for t, sz in texts2)
+            if not near:
+                out.append((n, "WARN", "UNNAMED_REPEATED_MARK",
+                            "{} identical marks form a group on slide {} with no text within reach "
+                            "of it — a reader cannot decode what the set IS. Whatever it means to "
+                            "you, unlabelled repetition reads as texture. Name it (a bracket and a "
+                            "word beside the group is usually enough), or drop it."
+                            .format(len(bbs), n)))
+                break
+
     # MOTIF_UNEXPLAINED — the STRANGER TEST, made countable. The skill requires a motif to be
     # readable by someone who has never seen the deck: LABEL it, KEY it, or make it FIGURATIVE.
     # Two of those three are shapes and were still unmeasurable, so the requirement was satisfiable
@@ -8283,6 +8340,21 @@ def _motif_faults(prs):
     # test is named for: the author knows what the three arcs mean and nobody else can.
     # WARN, like its two siblings: the figurative answer is legitimate and leaves no legend behind,
     # so this reports the absence and lets the author own it rather than refusing to save.
+    # 🔴 FIRST APPEARANCE, not "anywhere". SKILL.md's stranger test says in as many words that "a
+    # reading that defers to a later slide is a FAILED test written as a passing sentence", and
+    # this check tested the opposite: any legend anywhere cleared it. Measured on a real deck — a
+    # loud motif debuted on the COVER with nothing to read it by, the legend arrived four slides
+    # later, the check passed, and the first human reader asked what the marks meant. That is the
+    # exact sentence the rule was written to prevent, and the gate was agreeing with the deck.
+    if loud_pages and legend_pages and min(legend_pages) > min(loud_pages):
+        first, keyed = min(loud_pages), min(legend_pages)
+        out.append((first, "WARN", "MOTIF_UNEXPLAINED_AT_FIRST_USE",
+                    "the LOUD motif debuts on slide {} and is not explained until slide {} — a "
+                    "reader meets the device {} slide(s) before anything tells them what it means. "
+                    "The stranger test is about FIRST appearance: key it where it debuts "
+                    "(deckkit.motif_legend on slide {}, or motif_page(..., legend='…')), or do not "
+                    "use the loud register until the page that can explain it."
+                    .format(first, keyed, keyed - first, first)))
     if loud_pages and not legend_pages:
         first = sorted(set(loud_pages))[0]
         out.append((first, "WARN", "MOTIF_UNEXPLAINED",

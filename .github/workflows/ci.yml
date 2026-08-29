@@ -241,6 +241,13 @@ jobs:
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/register.log || {
             echo "::error::register-expression suite did not run to completion"; exit 1; }
 
+      - name: Decodability (can a viewer read the marks, measured not claimed)
+        run: |
+          set -o pipefail
+          python tests/test_decodability.py | tee /tmp/decode.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/decode.log || {
+            echo "::error::decodability suite did not run to completion"; exit 1; }
+
       - name: Design capability (architecture, rhythm, and what a page looks like)
         run: |
           set -o pipefail

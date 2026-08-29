@@ -578,6 +578,7 @@ each slide in isolation and can't retrofit rhythm, so this is yours.
   If the quiet is deliberate, record the register exception in the plan.
 - Decide **where the appear-builds fall** here (step 6), not on a separate pass — a built pipeline slide
   *is* a protagonist beat, and whether builds cluster or spread is part of density pacing.
+- 🔴 **Every mark a viewer meets must be decodable WHERE THEY MEET IT — and this is measured now.** `MOTIF_UNEXPLAINED_AT_FIRST_USE` fires when the loud motif debuts before its legend (a reading that defers to a later slide is a failed test, and the old check cleared it). `UNNAMED_REPEATED_MARK` fires on four or more identical marks with no text within reach — a bracket and one word clears it. Both came from a real reader asking "what are these lines?" and "I don't understand this page" about a deck that had passed everything. When you place a repeated device, place its name in the same breath.
 - 🔴 **Get the skeleton column from `plan_rhythm.py`, do not hand-roll it.** The two floors this
   bullet states — **≥4 distinct skeletons** and **never 3 consecutive on one** — are arithmetic, and
   computing them by hand while also choosing forms and protagonists is how a deck ends up with one

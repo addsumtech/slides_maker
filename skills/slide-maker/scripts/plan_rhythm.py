@@ -57,10 +57,40 @@ ROLE_FIT = {
     "closing":    ("statement", "full_bleed"),
     "close":      ("statement", "full_bleed"),
     "appendix":   ("dashboard", "band"),
+    # ── the roles `arc_divergence.py` documents ────────────────────────────────────────────────
+    # Found by building a real deck: an arc written with `diagnosis`/`framework`/`conclusion` — the
+    # vocabulary the arc tool prints in its own template — hit "no role given; rotating the
+    # architecture" on most of its pages, so the role→architecture intelligence, which is the whole
+    # value of this file, silently did not fire. Two tools in one pipeline disagreeing about what a
+    # role IS produces exactly that: no error, no warning, and a plan no better than a rotation.
+    "hook":            ("statement", "full_bleed"),
+    "diagnosis":       ("split", "island"),        # what is wrong, beside why
+    "framework":       ("band", "dashboard"),      # a structure with named parts
+    "idea":            ("statement", "island"),
+    "framework-idea":  ("band", "island"),
+    "case-study":      ("island", "split"),
+    "roadmap":         ("band", "rail"),           # stages in order
+    "conclusion":      ("statement", "island"),
+    "call-to-action":  ("statement", "band"),
+    "objective":       ("statement", "band"),
+    "prerequisite":    ("band", "rail"),
+    "concept":         ("statement", "island"),
+    "worked-example":  ("split", "band"),
+    "misconception":   ("split", "statement"),     # the wrong model beside the right one
+    "counterexample":  ("split", "island"),
+    "practice":        ("dashboard", "gallery"),
+    "check":           ("dashboard", "band"),
+    "recap":           ("band", "dashboard"),
 }
 # The fallback rotation for a role this file does not know. Ordered so consecutive picks are
 # structurally far apart rather than alphabetically adjacent.
 ROTATION = ("split", "island", "band", "dashboard", "rail", "gallery", "statement", "full_bleed")
+# Structural pages are not part of the deck's BODY rhythm — `arc_divergence.py` states the same
+# convention for its order axis ("structural roles are ignored: cover | agenda | divider | closing
+# | section | thanks | qa"). It matters here because a cover and two carry slides all reaching for
+# the boldest architecture can TIE the declared home base and make this file emit a plan its own
+# checker rejects, which is what happened on the first real deck planned with a home.
+STRUCTURAL = ("cover", "agenda", "divider", "closing", "close", "section", "thanks", "qa")
 MIN_DISTINCT = 4        # lint_deck's SKELETON VARIETY floor on an 8+-slide deck
 WINDOW = 3              # LAYOUT SAMENESS reads a 3-slide window, so no repeat inside one
 
@@ -148,6 +178,31 @@ def plan(roles, carry=(), min_distinct=MIN_DISTINCT, home=None):
                     unused.remove(cand)
                     used.add(cand)
                     break
+    # The HOME BASE must end up the plurality, or `check()` rejects a plan this function produced —
+    # measured on a real 12-slide deck where the cover and three carry slides all took `full_bleed`
+    # and tied the declared home. Reserved pages are reserved for good reasons, so the repair takes
+    # the least-committed page instead: a fallback row (one the rotation filled, not a role fit).
+    if home and out:
+        from collections import Counter
+        while True:
+            body = [k for _i, r, k, _w in out if str(r).lower() not in STRUCTURAL]
+            counts = Counter(body or [k for _i, _r, k, _w in out])
+            top, n = counts.most_common(1)[0]
+            if top == home or counts[home] >= n:
+                break
+            movable = [ix for ix, (i, role, k, why) in enumerate(out)
+                       if k != home and i not in carry
+                       and role not in ("cover", "closing", "close", "divider")
+                       and ("rotat" in why or "unused architecture" in why)]
+            movable = [ix for ix in movable
+                       if (ix == 0 or out[ix - 1][2] != home)
+                       and (ix + 1 >= len(out) or out[ix + 1][2] != home)]
+            if not movable:
+                break                              # nothing may move; check() will say so
+            ix = movable[0]
+            i, role, _k, _w = out[ix]
+            out[ix] = (i, role, home,
+                       "moved to the home base so the direction gate's pick is the plurality")
     return out
 
 
@@ -157,8 +212,9 @@ def check(rows, min_distinct=MIN_DISTINCT, home=None):
     picks = [k for _i, _r, k, _w in rows]
     if home and picks:
         from collections import Counter
-        top, n = Counter(picks).most_common(1)[0]
-        if top != home:
+        body = [k for _i, r, k, _w in rows if str(r).lower() not in STRUCTURAL] or picks
+        top, n = Counter(body).most_common(1)[0]
+        if top != home and Counter(body)[home] < n:
             problems.append(
                 "the home base is {!r} but {!r} is the plurality ({} of {}) — the direction gate's "
                 "composition must be the deck's visible default, or the user's pick has been "
@@ -174,16 +230,23 @@ def check(rows, min_distinct=MIN_DISTINCT, home=None):
     return problems
 
 
-def render(rows):
+def render(rows, home=None):
     lines = ["| # | role | skeleton | why |", "|---|---|---|---|"]
     for i, role, pick, why in rows:
         lines.append("| {} | {} | `{}` | {} |".format(i, role, pick, why))
     picks = [k for _i, _r, k, _w in rows]
     lines.append("")
     from collections import Counter
-    top, n = Counter(picks).most_common(1)[0] if picks else ("-", 0)
-    lines.append("{} slides · {} distinct architecture(s) · home base {!r} on {} · no repeat "
-                 "inside a {}-slide window".format(len(rows), len(set(picks)), top, n, WINDOW))
+    # The plurality is judged over BODY slides — a cover is not part of the deck's rhythm — so the
+    # summary has to report the same number `check()` judges, or the two disagree in public.
+    body = [k for _i, r, k, _w in rows if str(r).lower() not in STRUCTURAL] or picks
+    top, n = Counter(body).most_common(1)[0] if body else ("-", 0)
+    lines.append("{} slides · {} distinct architecture(s) · body plurality {!r} on {}{} · no repeat "
+                 "inside a {}-slide window".format(
+                     len(rows), len(set(picks)), top, n,
+                     "" if not home else (" (home base {!r} ✓)".format(home) if top == home
+                                          else " (declared home {!r} — NOT the plurality)".format(home)),
+                     WINDOW))
     return lines
 
 
@@ -301,7 +364,7 @@ def main(argv=None):
         print(json.dumps([{"slide": i, "role": r, "skeleton": k, "why": w}
                           for i, r, k, w in rows], indent=1))
         return 0
-    print("\n".join(render(rows)))
+    print("\n".join(render(rows, a.home)))
     problems = check(rows, home=a.home)
     if problems:
         print("\nthis sequence does NOT clear the floors:\n  - " + "\n  - ".join(problems))

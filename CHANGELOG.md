@@ -11,6 +11,33 @@ section is a distilled summary — the full notes live on the
 
 ### Added
 
+- **Decodability is measured, not asserted.** Three pieces of feedback from the first human reader
+  of a deck this repo built — *「icon 应该是一个必须包含的东西但是这个却没有」*, *「1/5/10/12 的设计我没
+  有看懂」*, *「第一页的那些横线是什么意思」* — and every automated gate had passed the deck. One root
+  cause under all three: **the skill could SAY a visual element was readable, and nothing checked
+  whether the sentence was true.** Each fix turns a rule already written in prose into a measurement
+  over the built file.
+  - **`MOTIF_UNEXPLAINED_AT_FIRST_USE`** — SKILL.md says in as many words that "a reading that
+    defers to a later slide is a FAILED test written as a passing sentence", and the check tested
+    the opposite: a legend ANYWHERE cleared it. Measured: a loud motif debuted on a cover with
+    nothing to read it by, the legend arrived four slides later, the deck passed, and the reader
+    asked what it meant. The stranger test is now about first appearance.
+  - **`UNNAMED_REPEATED_MARK`** — four or more near-identical marks on one page with no LABEL
+    within reach. Such a group was invisible to every existing check: not text, not tagged as a
+    motif, and trivially clearing contrast and overlap. Nine unlabelled rules shipped on a cover.
+    A label is small and close; the first version asked only "is there text nearby" and a 28pt
+    headline 0.22in away cleared them — a page title is not naming your diagram.
+  - **The icon waiver's CATEGORY is verified against the built file.** The four classes were
+    compared to a list of strings, so any of the four words cleared the gate. `motif-dominant` now
+    requires a loud motif to actually exist, `tiny-deck` a deck of 1-2 slides, `template-locked` a
+    real template (python-pptx ships eleven named layouts, so "has layout names" proved nothing and
+    `blank_deck()` cleared it on the first try). `editorial-register` stays declared: it is a taste
+    claim about a look, and inventing a measurement for it would be worse than admitting there is
+    none. Measured: `motif-dominant` was accepted on a deck with no motif at all, and the reader's
+    first note was that icons should be there.
+  Wired into `agents/slide-design.md`, `references/codex-runtime.md` (a non-Claude runtime never
+  reads `agents/`) and SKILL.md, with `tests/test_decodability.py` locking both directions of each.
+
 - **The eight page ARCHITECTURES, as `deckkit.skeleton(slide, kind)`** — statement · split · island
   · dashboard · band · full_bleed · rail · gallery, returning named rects and painting nothing, like
   `columns()`. `lint_deck` has demanded ≥4 distinct skeletons (SKELETON VARIETY) on every 8+-slide
@@ -140,6 +167,11 @@ section is a distilled summary — the full notes live on the
 
 ### Fixed
 
+- **A second, blunter icon rule was withdrawn the same day it was added.** "The waiver must name
+  EVERY flagged slide" rejected a lawful `editorial-register` waiver that had named two of a dozen
+  pages, and the defect this batch actually had — a category FALSE of the built file — is caught
+  precisely by the category check. It reports the un-re-decided slides instead. A blunt rule that
+  fires on lawful use is how a gate earns the reflex to waive it.
 - **`smoke_deckkit.py` used the SHARED system temp directory** (`tempfile.gettempdir()`) for every
   fixture — the smoke image, the CSV, the scaffold assets, and the scaffolds' own `chdir` target —
   so two concurrent runs clobbered each other's files mid-read. Measured: three clean runs alone,
