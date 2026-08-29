@@ -44,3 +44,7 @@ skills/slide-maker/tests/_fixture_plate.png
 .claude/
 skills-lock.json
 OPTIMIZATION_SUMMARY.md
+
+# Render output that lands in the repo when render_deck.py is run without an out dir
+# (it defaults to ./render). Artefacts, never source.
+skills/slide-maker/render/

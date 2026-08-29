@@ -135,6 +135,34 @@ except ValueError:
     check(True, "a typo'd home base is refused — the planner may never propose an architecture "
                 "deckkit cannot build")
 
+# Found by planning a REAL deck: the two tools in this pipeline disagreed about what a role IS.
+# `arc_divergence.py` prints a documented role vocabulary in its own template; 18 of those roles
+# were unknown here, so an arc written in that vocabulary hit "no role given; rotating" on most of
+# its pages and the role→architecture intelligence — the whole value of the file — silently did not
+# fire. No error, no warning, and a plan no better than a rotation.
+_ARC_ROLES = set("hook problem diagnosis framework idea framework-idea method evidence case-study "
+                 "comparison roadmap conclusion call-to-action objective prerequisite concept "
+                 "worked-example misconception counterexample practice check recap".split())
+_unknown = sorted(_ARC_ROLES - set(pr.ROLE_FIT))
+check(not _unknown,
+      "every role arc_divergence documents is one plan_rhythm knows — two tools in one pipeline "
+      "must not disagree about what a role is", "unknown: {}".format(_unknown))
+
+# ...and the planner must never emit a plan its OWN checker rejects. Measured on that same deck: a
+# cover plus three carry slides all reached for the boldest architecture and TIED the declared home.
+_real = pr.plan(["cover", "problem", "diagnosis", "diagnosis", "framework", "method", "method",
+                 "evidence", "method", "evidence", "diagnosis", "conclusion"],
+                carry=(5, 10, 12), home="band")
+check(not pr.check(_real, home="band"),
+      "a real 12-slide plan with a home base clears its own checker — a planner that emits a plan "
+      "its checker rejects is broken", str(pr.check(_real, home="band")))
+check(all("no role given" not in w for _i, _r, _k, w in _real),
+      "...and every row was matched on its ROLE, not filled by the rotation",
+      str([w for _i, _r, _k, w in _real if "no role given" in w]))
+check(pr.STRUCTURAL and "cover" in pr.STRUCTURAL,
+      "structural pages are excluded from the plurality — a cover is not part of the body rhythm, "
+      "which is the same convention arc_divergence states for its order axis")
+
 # skeleton() must FAIL LOUDLY on a division that cannot fit, like its sibling bento(). Before this,
 # n=99 cells / a gap wider than the band / weight at 0 or 1 returned NEGATIVE widths, which
 # python-pptx accepts and renders as garbage far from the cause.
