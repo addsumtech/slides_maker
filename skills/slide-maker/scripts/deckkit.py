@@ -6123,6 +6123,98 @@ def speaker_notes(slide, notes):
     return slide.notes_slide
 
 
+# The eight PAGE ARCHITECTURES `lint_deck`'s SKELETON VARIETY names — statement · split · island ·
+# dashboard · band · full_bleed · rail · gallery. Until this existed the lint DEMANDED at least four
+# distinct skeletons on an 8+-slide deck and the toolkit offered no way to make one: 190 helpers for
+# what goes ON a page, none for how a page is COMPOSED, so every architecture was hand-rolled out of
+# box+text, every deck, from zero. A required rule with no tool to meet it is the asymmetry this
+# skill's own enforcement invariant warns about.
+#
+# These return NAMED RECTS and paint nothing, exactly like `columns()`/`bento()` — the architecture
+# is the product, the content stays yours. They are also cheaper than hand-rolling: one call
+# replaces the block of arithmetic that a build script otherwise repeats per page, and the geometry
+# it returns is derived from the real canvas rather than remembered 16:9 numbers.
+SKELETONS = ("statement", "split", "island", "dashboard", "band", "full_bleed", "rail", "gallery")
+
+
+def skeleton(slide, kind, *, band=None, weight=0.62, gap=0.4, n=3, flip=False):
+    """One of the eight page ARCHITECTURES, as a dict of named rects. Paints nothing.
+
+        statement  {"stage"}                 one block, centred, air around it
+        split      {"lead", "support"}       a dominant column + its support (`weight` = lead share)
+        island     {"island", "caption"}     a panel floating clear of the edges
+        dashboard  {"cells": [...]}          an n x 2 grid of equal cells
+        band       {"bands": [...]}          full-width horizontal registers
+        full_bleed {"bleed", "well"}         edge-to-edge stage + an inset text well. `bleed` is
+                                            the WHOLE canvas and paints over the title band and
+                                            footer — put the page's words in `well`, or draw the
+                                            bleed FIRST and the title on top of it.
+        rail       {"rail", "body"}          a narrow side rail beside the body
+        gallery    {"tiles": [...], "strip"} a row of equal tiles over a caption strip
+
+    `band=` overrides the source rect (default `content_band(slide)`, so the title bar and footer
+    are already respected). `flip=True` mirrors the asymmetric kinds — split, rail, full_bleed —
+    which is what keeps two split pages in one deck from sharing a skeleton fingerprint.
+
+    Raises on an unknown kind rather than guessing: a typo silently returning a default is how a
+    deck ends up with one architecture repeated under eight names.
+    """
+    if kind not in SKELETONS:
+        raise ValueError("skeleton: unknown kind {!r} — one of: {}. (`flip=True` mirrors split, "
+                         "rail and full_bleed.)".format(kind, ", ".join(SKELETONS)))
+    if band is None:
+        band = content_band(slide)
+    x, y, w, h = band
+    try:
+        sw, sh = _slide_size(slide)
+    except Exception:
+        sw, sh = x + w, y + h
+
+    if kind == "statement":
+        pad = min(w * 0.12, 1.2)
+        return {"stage": (x + pad, y + h * 0.18, w - 2 * pad, h * 0.64)}
+    if kind == "split":
+        lead = (w - gap) * (1.0 - weight if flip else weight)
+        rest = w - gap - lead
+        a = (x, y, lead, h)
+        b = (x + lead + gap, y, rest, h)
+        return {"lead": b if flip else a, "support": a if flip else b}
+    if kind == "island":
+        inset = min(w * 0.10, 1.1)
+        cap = 0.62
+        return {"island": (x + inset, y, w - 2 * inset, max(0.8, h - cap - 0.2)),
+                "caption": (x + inset, y + max(0.8, h - cap - 0.2) + 0.2, w - 2 * inset, cap)}
+    if kind == "dashboard":
+        cols_n = max(2, int(n))
+        rows_n = 2
+        cw = (w - gap * (cols_n - 1)) / cols_n
+        ch = (h - gap) / rows_n
+        return {"cells": [(x + c * (cw + gap), y + r * (ch + gap), cw, ch)
+                          for r in range(rows_n) for c in range(cols_n)]}
+    if kind == "band":
+        k = max(2, int(n))
+        bh = (h - gap * (k - 1)) / k
+        return {"bands": [(x, y + i * (bh + gap), w, bh) for i in range(k)]}
+    if kind == "full_bleed":
+        well_h = min(h * 0.34, 2.0)
+        well_w = min(w * 0.56, 6.4)
+        wx = (sw - well_w - x) if flip else x
+        return {"bleed": (0.0, 0.0, sw, sh),
+                "well": (wx, y + h - well_h, well_w, well_h)}
+    if kind == "rail":
+        rw = min(w * 0.26, 2.6)
+        r = (x + w - rw, y, rw, h) if flip else (x, y, rw, h)
+        b = (x, y, w - rw - gap, h) if flip else (x + rw + gap, y, w - rw - gap, h)
+        return {"rail": r, "body": b}
+    # gallery
+    k = max(2, int(n))
+    strip = 0.55
+    th = max(0.8, h - strip - 0.18)
+    tw = (w - gap * (k - 1)) / k
+    return {"tiles": [(x + i * (tw + gap), y, tw, th) for i in range(k)],
+            "strip": (x, y + th + 0.18, w, strip)}
+
+
 def bento(slide, x, y, w, h, tiles, *, gap=0.18, cols=4, rows=None):
     """A MODULAR grid of unequal tiles on one shared rhythm — the layout `columns()` cannot make.
 

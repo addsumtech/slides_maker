@@ -241,6 +241,15 @@ jobs:
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/register.log || {
             echo "::error::register-expression suite did not run to completion"; exit 1; }
 
+      - name: Design capability (architecture, rhythm, and what a page looks like)
+        run: |
+          set -o pipefail
+          python scripts/plan_rhythm.py --selftest
+          python scripts/composition_cues.py --selftest
+          python tests/test_design_capability.py | tee /tmp/designcap.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/designcap.log || {
+            echo "::error::design-capability suite did not run to completion"; exit 1; }
+
       - name: A11y floors, print carve, poster proportion, CVD, bento
         run: |
           set -o pipefail

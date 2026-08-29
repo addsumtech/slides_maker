@@ -26,7 +26,13 @@ from deckkit import RGBColor  # noqa: E402
 def C(h):
     return RGBColor.from_string(h)
 
-TMP = tempfile.gettempdir()
+# A PROCESS-UNIQUE directory, not the shared system temp. Every fixture below — the smoke image,
+# the CSV, the scaffold assets the harness pre-creates, and the scaffolds' own `os.chdir(TMP)` —
+# lived in one path shared by every process on the machine, so two concurrent runs clobbered each
+# other's files mid-read. Measured: this suite passed three times alone and failed once with
+# `picture(): image not found` while another run of the test tree was in flight. Nothing is more
+# expensive to debug than a suite that fails only when something else is running.
+TMP = tempfile.mkdtemp(prefix="smoke-deckkit-")
 IMG = os.path.join(TMP, "_smoke.png")
 from PIL import Image  # noqa: E402
 Image.new("RGB", (800, 450), (120, 150, 200)).save(IMG)

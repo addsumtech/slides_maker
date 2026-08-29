@@ -11,6 +11,38 @@ section is a distilled summary — the full notes live on the
 
 ### Added
 
+- **The eight page ARCHITECTURES, as `deckkit.skeleton(slide, kind)`** — statement · split · island
+  · dashboard · band · full_bleed · rail · gallery, returning named rects and painting nothing, like
+  `columns()`. `lint_deck` has demanded ≥4 distinct skeletons (SKELETON VARIETY) on every 8+-slide
+  deck for a long time, and the toolkit offered no way to make one: 190 helpers for what goes ON a
+  page, none for how a page is COMPOSED, so every architecture was hand-rolled out of box+text, every
+  deck, from zero. A required rule with no tool to meet it is the asymmetry SKILL.md's own
+  enforcement invariant warns about. Verified where it counts: all eight register as **distinct
+  skeletons to lint**, whose fingerprint is geometric — a set differing only in name would score as
+  one and the helper would be decoration.
+- **`scripts/plan_rhythm.py` — compose the sequence BEFORE building.** SKELETON VARIETY and LAYOUT
+  SAMENESS both fire *after* the build, when varying the architecture means re-laying written pages,
+  so it got decided one page at a time in the order the content arrived. This maps each slide's role
+  to the architectures that suit it, rotates when a role's picks are already in the last two pages,
+  and pushes `carried_by` slides toward architectures that can hold a signature move. Deterministic
+  arithmetic — **~40ms, no model call, no round-trip**. Measured on identical content: **8 distinct
+  skeletons planned against 2 improvised.** A proposal, not a verdict.
+- **`scripts/composition_cues.py` — what a page LOOKS like, reported and never gated.** The seven
+  cues an unsupervised slide-quality study validated against human ratings (arXiv 2508.19289;
+  r ≈ 0.83, beating several commercial vision models), three of which were computed nowhere here.
+  🔴 Reported rather than gated on purpose: a number that tracks taste across a corpus does not
+  license a threshold on ONE deck — a quiet ink-wash register and a cluttered mess share a low
+  colorfulness, and this skill protects the first. Its real output is the deck-wide RANGE per cue,
+  because a FLAT range is what a single page's number cannot show: a deliberately dead deck that
+  **linted perfectly clean** reported 6 of 7 cues flat. Reads renders already on disk — no extra
+  render pass, ~0.6s for 14 pages.
+
+  *Why this batch exists:* of twelve blocking gate sections, essentially one pushes upward —
+  `agents/critic.md` calls its distinctiveness axis "the loop's ONE upward-pushing lens" and keeps
+  it non-blocking. The floors had been raised four times in a row; the ceiling machinery had not
+  moved. A deliberately dead deck linted clean, and this repo's own A0 poster passed every gate at
+  one skeleton and 59% occupancy.
+
 - **Accessibility is a FLOOR now, held identically on both runtimes.** `lint_deck.py` had computed
   MISSING ALT-TEXT, NO SLIDE TITLE, DUPLICATE SLIDE TITLES and READING ORDER for a long time and
   printed them as advisory `[warn]`s; measured by grep, **no gate on the shared path read any of
@@ -86,6 +118,12 @@ section is a distilled summary — the full notes live on the
 
 ### Fixed
 
+- **`smoke_deckkit.py` used the SHARED system temp directory** (`tempfile.gettempdir()`) for every
+  fixture — the smoke image, the CSV, the scaffold assets, and the scaffolds' own `chdir` target —
+  so two concurrent runs clobbered each other's files mid-read. Measured: three clean runs alone,
+  then `picture(): image not found` while another run of the test tree was in flight. Now
+  process-unique; four parallel runs pass. Nothing is more expensive to debug than a suite that
+  fails only when something else is running.
 - **`bento()` accepted `slide` and never read it** — caught by CI's `check_param_reach.py` after a
   green local run, because I had run the test suite without the rest of the CI steps. The parameter
   now does real work: it validates the grid rect against the canvas, so a grid placed past the edge

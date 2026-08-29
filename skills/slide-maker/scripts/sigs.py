@@ -103,6 +103,16 @@ CALL-SHAPE CONTRACTS (the ones that have actually gone wrong):
 # than none: it is copied once, fails, and teaches that the tool cannot be trusted. The test is the
 # guarantee; the author of this dict is not.
 EXAMPLES = {
+    # skeleton() RETURNS NAMED RECTS for one of the eight page ARCHITECTURES and paints nothing.
+    # `plan_rhythm.py` proposes which kind each slide gets; this is how you build it.
+    "skeleton": 'R = dk.skeleton(s, "split")            # statement split island dashboard\n'
+                '                                       # band rail gallery full_bleed\n'
+                'lx, ly, lw, lh = R["lead"]\n'
+                'dk.box(s, lx, ly, lw, lh, fill=dk.DEEP)\n'
+                'dk.text(s, lx + 0.25, ly + 0.2, lw - 0.5, lh - 0.4,\n'
+                '        [[("the argument", 18, dk.WHITE, True, False)]])\n'
+                'sx, sy, sw_, sh_ = R["support"]\n'
+                'dk.text(s, sx, sy, sw_, sh_, [[("what qualifies it", 14, dk.DEEP, False, False)]])',
     # bento RETURNS RECTS and paints nothing — the shape most likely to be got wrong, because
     # every other form component in this dict draws. Written as a loop so the return value is
     # visibly the thing you build from.

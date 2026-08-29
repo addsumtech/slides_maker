@@ -70,6 +70,26 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   well-built 11-slide deck it fired once, on the closing slide. Both `render_deck.py --gate-check`
   (`a11y` section) and `codex_delivery_gate.py` (`STRICT_WARNINGS`) derive from these constants
   rather than restating them.
+- `plan_rhythm.py` — composes the deck's ARCHITECTURE as a sequence before any page is built.
+  `lint_deck` demands >=4 distinct skeletons and reports 3 adjacent slides sharing 75% of their
+  structure, but both fire AFTER the build, when varying the architecture means re-laying written
+  pages — so it got decided one page at a time, in the order the content arrived. Maps each slide's
+  ROLE to the architectures that suit it (a result is a thing to look at, a comparison is a set to
+  scan, a process is stages in order), rotates when a role's picks are already in the last two
+  pages, and pushes `carried_by` slides toward architectures that can hold a signature move.
+  Deterministic arithmetic — ~40ms, no model call, no round-trip. Measured: the same content
+  planned scored 8 distinct skeletons against 2 improvised. `--selftest`; a PROPOSAL, not a verdict.
+- `composition_cues.py` — what a rendered page LOOKS like, as the seven cues an unsupervised
+  slide-quality study validated against human ratings (arXiv 2508.19289: whitespace, colorfulness,
+  edge density, brightness contrast, text density, colour harmony, layout balance; r ~= 0.83,
+  beating several commercial vision models). Three of them were computed nowhere here. 🔴 REPORTED,
+  NEVER GATED, deliberately: a number that tracks taste across a corpus does not license a threshold
+  on ONE deck — a quiet ink-wash register and a cluttered mess share a low colorfulness, and this
+  skill protects the first. Its real output is the deck-wide RANGE per cue, because a FLAT range is
+  the signal a single page's number cannot give: measured, a deliberately dead deck that linted
+  clean reported 6 of 7 cues flat. Reads renders already on disk — no extra render pass, ~0.6s for
+  14 pages. Whitespace is measured against the MODAL tone, so a dark register reads as mostly empty
+  rather than 100% full.
 - `check_register_pixels.py` — the register a deck DECLARES must reach its RENDERED PIXELS, and
   must not be a previous deck's. The half `check_style_applied.py` structurally cannot reach: a
   BESPOKE register has no `presets.apply()` call to find, and a build that calls it and then
