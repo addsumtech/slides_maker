@@ -2,7 +2,7 @@
 """The surface kits: do they build the REGISTER, obey it, and stay out of the content's way.
 
 The measurement that motivated the module: one identical page through all 18 presets rendered as
-18 colourways of one page. These tests hold the three properties that stop the six kits from being
+18 colourways of one page. These tests hold the three properties that stop the kits from being
 the same thing with more code — the pages must actually DIFFER, each must obey its own register's
 prohibitions, and the content rect a kit hands back must be usable (nothing loud painted into it).
 That last one is not theoretical: the first render put a memphis triangle through a card corner and
@@ -49,7 +49,11 @@ def _page(register, role="content", index=0):
 # ---------------------------------------------------------------- every kit names a real register
 check(set(rs.registers()) <= set(presets.PRESETS),
       "every kit names a register that actually exists in the preset gallery")
-check(len(rs.registers()) >= 6, "six registers have a surface kit")
+check(sorted(rs.registers()) == sorted(presets.PRESETS),
+      "every one of the {} presets has a surface kit — a register with none would silently be "
+      "back to a colourway".format(len(presets.PRESETS)))
+check(sorted(rs.CARDS) == sorted(rs.GROUNDS),
+      "every kit has BOTH halves: a ground and a card form. A ground alone is wallpaper — the card is what makes the pages differ in shape rather than colour")
 check(not rs.has("no_such_register") and not rs.has(None) and not rs.has(""),
       "has() answers False for a name that is not a register, rather than raising")
 
@@ -104,8 +108,9 @@ try:
             s = dk.add_slide(prs)
             bx, by, bw, bh = rs.ground(s, reg, role=role, index=i)
             cw = min(3.0, bw / 2)
-            rs.card(s, reg, bx, by + 0.6, cw, min(1.8, bh - 0.7), label="L")
-            dk.text(s, bx + 0.2, by + 1.0, cw - 0.4, 0.8,
+            ch = max(0.8, bh - 0.7)          # derived from what is LEFT, never hand-picked
+            rs.card(s, reg, bx, by + 0.6, cw, ch, label="L")
+            dk.text(s, bx + 0.2, by + 0.85, max(0.5, cw - 0.4), max(0.3, ch - 0.4),
                     [[("content on the card", 12, dk.DEEP, False, False)]])
         p = tmp / "{}.pptx".format(reg)
         prs.save(str(p))

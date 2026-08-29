@@ -120,8 +120,9 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   that paints a loud mark inside it raises — the first render put a memphis triangle through a card
   corner and a bauhaus disc through a third card while the docstring promised it could not happen.
   Placement varies by page INDEX, never by a random number, so two builds of a deck stay identical.
-  Six of eighteen registers have a kit; asking for one of the other twelve raises rather than
-  quietly returning a plain page. Both gates NOTE a deck that declared a kitted register and used
+  All 18 registers have a kit; an unknown name raises rather than quietly returning a plain page,
+  and so does painting a surface before `presets.apply()` has set the palette (it used to die on a
+  blend deep inside a builder, with a TypeError that named nothing the caller could fix). Both gates NOTE a deck that declared a kitted register and used
   none of it.
 - `save_register.py` — keeps an INVENTED register after the deck ships. The example library held
   4 while one real look history held 9 that had shipped and been lost, and grep found no script

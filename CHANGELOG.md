@@ -90,10 +90,16 @@ section is a distilled summary — the full notes live on the
   not hypothetical — the first render put a memphis triangle through a card corner and a bauhaus
   disc through the third card while the module's own docstring promised it could not happen, and
   the invariant caught both on the next run. Placement varies by page INDEX, never by a random
-  number, so two builds of one deck stay byte-identical. Six registers have a kit so far (memphis ·
-  bauhaus · risograph · terminal · midcentury · glassmorphism); asking for one of the other twelve
-  raises rather than quietly handing back a plain page, because a silent fallback would ship
-  exactly the colourway-only deck this ends. Every kit is checked against `presets.FORBIDS` by
+  number, so two builds of one deck stay byte-identical. **All 18 registers have a kit** — the
+  first six (memphis · bauhaus · risograph · terminal · midcentury · glassmorphism) validated the
+  architecture, the other twelve were built against the same `surface` prose, and each one's own
+  `guard` shaped it: swiss's `card()` draws NO BOX (a swiss column is a hairline and a measure, and
+  boxing it is how a deck claims swiss and looks like every other card deck), ink_wash's ground is
+  the quietest in the file because its guard protects 留白, synthwave's LOUD grid horizon appears
+  only on a cover or divider while content pages get the faint low-edge register its guard calls
+  system rather than stamping, and blueprint's chrome never touches the ONE coral its guard reserves
+  for the focal path. An unknown name raises rather than quietly handing back a plain page, and so
+  does painting a surface before `presets.apply()` set the palette. Every kit is checked against `presets.FORBIDS` by
   `check_register_guard` in its own test, so a builder that violates the register it claims to
   build fails in CI rather than in a delivered deck. Both `--gate-check` and `codex_delivery_gate`
   NOTE a deck that declared a kitted register and used none of its surface.
