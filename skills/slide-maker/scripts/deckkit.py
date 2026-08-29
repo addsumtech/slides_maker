@@ -492,6 +492,7 @@ def set_geometry(*, radius=None, rule_w=None):
     return {"radius": RADIUS_SCALE, "rule_w": RULE_W_SCALE}
 
 def set_palette(*, deep=None, blue=None, teal=None, magenta=None, slate=None, mute=None,
+                tint=None,
                 mono=None, font=None, display=None, eadisplay=None, eafont=None, accents=None):
     """Re-theme the whole deck in ONE call, right after import and before building. Reassigns the
     palette/font globals AND rewrites every component's colour keyword-default that still points at
@@ -503,7 +504,7 @@ def set_palette(*, deep=None, blue=None, teal=None, magenta=None, slate=None, mu
         deckkit.set_palette(deep='0B1F3A', blue='2563EB', magenta='F97316', mono='Menlo')
 
     Idempotent-safe; call once. Font-only re-theming can still use bare global reassignment."""
-    global DEEP, BLUE, TEAL, MAGENTA, SLATE, MUTE, ACCENTS, MONO, FONT, DISPLAY, EADISPLAY, EAFONT
+    global DEEP, BLUE, TEAL, MAGENTA, SLATE, MUTE, TINT, ACCENTS, MONO, FONT, DISPLAY, EADISPLAY, EAFONT
     remap = {}   # id(old_constant) -> new value, for rewriting frozen signature defaults
 
     def _c(old, new):
@@ -515,6 +516,10 @@ def set_palette(*, deep=None, blue=None, teal=None, magenta=None, slate=None, mu
         return nv
     DEEP = _c(DEEP, deep); BLUE = _c(BLUE, blue); TEAL = _c(TEAL, teal)
     MAGENTA = _c(MAGENTA, magenta); SLATE = _c(SLATE, slate); MUTE = _c(MUTE, mute)
+    # TINT is the PANEL fill — what `callout()` and `table()` fill with. It was the one
+    # palette global `set_palette` could not reach, so every register drew deckkit's pale
+    # blue: on the eight dark registers, a light-blue card on a near-black page.
+    TINT = _c(TINT, tint)
     if mono is not None: MONO = mono
     if font is not None: FONT = font
     if display is not None: DISPLAY = display

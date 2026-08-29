@@ -381,6 +381,25 @@ FORBIDS = {
     "blueprint":     ("rounded",),
 }
 
+
+def panel(name):
+    """The register's PANEL fill — the ground, nudged toward its ink.
+
+    `TINT` is what `callout()` and `table()` fill with, and it was never re-themed, so every
+    register drew deckkit's pale blue: on the eight dark registers that is a light-blue card on a
+    near-black page. Deriving it from the register's own two colours keeps it in the register by
+    construction, which hand-picking eighteen values would not — and it stays correct if a
+    preset's bg or ink is ever retuned.
+
+    The step is small on purpose (12% toward the ink): a panel has to separate from the ground
+    without competing with the content on it. Verified across all 18 registers to sit clear of the
+    ground and still carry the register's ink above the 4.5:1 body floor.
+    """
+    p = PRESETS[name]
+    bg, ink = _rgb(p["bg"]), _rgb(p["ink"])
+    return tuple(int(round(b + (i - b) * 0.12)) for b, i in zip(bg, ink))
+
+
 def apply(name):
     """Apply a preset's COLOUR and its STRUCTURE in one call, then return the preset dict.
 
@@ -428,7 +447,20 @@ def apply(name):
         except Exception:
             pass                                  # a font probe must never break a build
     p = preset(name)
+    # 🔴 The SEMANTIC SLOTS, not just the accent cycle. `apply()` used to pass `deep`, `slate` and
+    # `accents` and nothing else, so BLUE, TEAL, MAGENTA and TINT kept deckkit's own defaults on
+    # every register — and those four are what 33 component signatures default to. Measured: after
+    # `apply("terminal")`, a `callout()` on a black-and-phosphor deck came out with a #E3004F
+    # magenta rule on a #EAF3FA pale-blue panel. The remap machinery in `set_palette` was working
+    # perfectly; it was simply never told the register's colours.
+    #
+    # MAGENTA is the highlight slot (21 component signatures default to it), BLUE the primary and
+    # TEAL the secondary. A register's accents are ordered by intent, so they map straight on; a
+    # register with fewer accents reuses its primary rather than inventing a hue.
+    _acc = list(p["accents"]) or [p["ink"]]
     dk.set_palette(deep=p["ink"], slate=p["muted"], accents=list(p["accents"]),
+                   magenta=_acc[0], blue=_acc[1 % len(_acc)], teal=_acc[2 % len(_acc)],
+                   tint=panel(name),
                    font=p["font"], display=p["display"], mono=p["mono"],
                    eafont=p["ea"], eadisplay=p["ea_display"])
     dk.set_geometry(radius=p["radius"], rule_w=p["rule_w"])

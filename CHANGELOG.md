@@ -9,6 +9,25 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+### Fixed
+
+- **`presets.apply()` only ever re-themed three of the palette slots, so every register drew
+  deckkit's own colours in the other four.** It passed `deep`, `slate` and `accents` — and BLUE,
+  TEAL, MAGENTA and TINT are what **33 component signatures default to**. Measured: after
+  `apply("terminal")`, a `callout()` on a black-and-phosphor deck came out with a `#E3004F` magenta
+  rule on a `#EAF3FA` pale-blue panel. The remap machinery inside `set_palette` — which rewrites
+  frozen signature defaults by id — was working perfectly the whole time; it was simply never told
+  the register's colours. This is the mechanical half of why one page through all 18 presets came
+  out looking like 18 colourways of one page.
+  `apply()` now fills the semantic slots (MAGENTA is the highlight, BLUE the primary, TEAL the
+  secondary; a register with fewer accents reuses its own rather than inventing a hue), and
+  `set_palette` gained the `tint` parameter it was missing so the panel fill can be reached at all.
+- **The panel fill is DERIVED, not hand-picked.** `presets.panel()` steps the register's ground 12%
+  toward its ink, so a panel is in the register by construction and stays correct if a preset's
+  colours are ever retuned — which eighteen hand-picked values would not. Verified across all 18:
+  every panel separates from its ground, and every register's ink clears the 4.5:1 body floor on
+  its own panel (lowest 8.8:1).
+
 ### Added
 
 - **A declared register must be OBEYED, not merely paletted — `scripts/check_register_guard.py`.**

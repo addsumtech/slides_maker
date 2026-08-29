@@ -259,6 +259,41 @@ def main():
                            "dk.set_palette(deep=X)", names, None)
     check("...while a qualifier-free preset pick still HARD blocks", code == 1, code)
 
+    print("\n== apply() fills the SEMANTIC SLOTS, not just the accent cycle ==")
+    # `apply()` passed deep/slate/accents and nothing else, so BLUE, TEAL, MAGENTA and TINT kept
+    # deckkit's own defaults on every register — and those four are what 33 component signatures
+    # default to. Measured: after apply("terminal"), a callout() on a black-and-phosphor deck came
+    # out with a #E3004F magenta rule on a #EAF3FA pale-blue panel. The remap machinery in
+    # set_palette was working; it was simply never told the register's colours.
+    import deckkit as _dk
+    wrong = []
+    for n in presets.names():
+        p = presets.apply(n)
+        acc = list(p["accents"])
+        if tuple(_dk.MAGENTA) != tuple(acc[0]):
+            wrong.append("%s: MAGENTA=%s want %s" % (n, tuple(_dk.MAGENTA), tuple(acc[0])))
+        if tuple(_dk.TINT) != presets.panel(n):
+            wrong.append("%s: TINT=%s want %s" % (n, tuple(_dk.TINT), presets.panel(n)))
+    check("every register rebinds MAGENTA (the highlight slot) and TINT (the panel fill)",
+          not wrong, "; ".join(wrong[:3]))
+
+    # the panel has to separate from the ground AND carry the register's ink
+    thin, unreadable = [], []
+    for n in presets.names():
+        p = presets.preset(n)
+        pa, bg, ink = presets.panel(n), tuple(p["bg"]), tuple(p["ink"])
+        if _dk.contrast_ratio(pa, bg) < 1.12:
+            thin.append("%s %.2f" % (n, _dk.contrast_ratio(pa, bg)))
+        if _dk.contrast_ratio(ink, pa) < 4.5:
+            unreadable.append("%s %.1f" % (n, _dk.contrast_ratio(ink, pa)))
+    check("the derived panel separates from its ground in all 18 registers", not thin,
+          "; ".join(thin))
+    check("...and the register's own ink stays above the 4.5:1 body floor ON the panel",
+          not unreadable, "; ".join(unreadable))
+    check("the panel is DERIVED from bg+ink, not hand-picked per register — it stays correct if a "
+          "preset's colours are ever retuned, which eighteen hand-picked values would not",
+          presets.panel("terminal") != presets.panel("swiss"))
+
     print(f"\n{PASS} passed, {FAIL} failed")
     return 1 if FAIL else 0
 
