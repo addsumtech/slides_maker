@@ -1741,6 +1741,39 @@ _PIXEL_CHECKS = ("TEXT NOT VISIBLE", "CAPTION NOT ALIGNED", "TEXT-ON-IMAGE CONTR
 #       escapes, so counting it would mean declaring your way out of two signals re-fires the gate.
 #   REGISTRATION DRIFT — a precision fault, and it asks for MORE uniformity, not less.
 #   SIZE SPRAWL / UNDERFILLED — per-slide, not deck-level: one fact repeated is four warns.
+# ── ACCESSIBILITY: the floors this file already measured and nobody had to answer for ────────
+# Every code below was computed here and emitted as an advisory `[warn]`, and — measured by grep
+# before this constant existed — NO gate on the shared path read any of them, while the codex path
+# held only the two CONTRAST ones through its STRICT_WARNINGS. So a deck could ship with no image
+# described, no slide titled and the reading order scrambled, and both delivery gates called it
+# clean. This repo already knows how that ends: the deck-level sameness signals were `warns` for
+# months, were read by nobody, and became a gate for exactly this reason.
+#
+# These belong at a floor rather than in the critic's judgement because none of them needs an
+# opinion — a shape either carries a description or it does not, a title is either first in z-order
+# or it is not, a ratio either clears 3:1 or it does not. What they cost when missed is not taste:
+# a screen-reader user gets an unlabelled rectangle, or nothing at all.
+A11Y_CODES = ("MISSING ALT-TEXT", "NO SLIDE TITLE", "DUPLICATE SLIDE TITLES", "READING ORDER",
+              "NON-TEXT CONTRAST", "ICON CONTRAST")
+# The subset that is a HARD floor: an external standard answers it, so there is nothing to weigh.
+A11Y_WCAG = ("NON-TEXT CONTRAST", "ICON CONTRAST")
+# 🔴 …and the subset a GATE may hold a deck on, which is not all of them. `NO SLIDE TITLE` is
+# excluded deliberately: this file's own message for it says "an off-canvas-invisible title is a
+# sanctioned trick for statement slides", i.e. the skill EXPECTS slides that look untitled, and
+# `_find_title` cannot tell a deliberate statement slide from a forgotten title. Measured on an
+# ordinary, competently built 11-slide deck — every content slide titled, no pictures — it fired
+# once, on the CLOSING slide. A gate that fires on a deck built exactly to spec is not a floor; it
+# teaches the reflex this repo's own STRICT_WARNINGS comment warns about, where "a judgment forced
+# through a waiver form becomes a rubber stamp". It stays an advisory warn, where it reads as the
+# nudge it is.
+#
+# What remains blocks because it is unambiguous and the fix is one call: an informative image with
+# no description is a barrier with no upside, two slides sharing a title genuinely breaks
+# screen-reader navigation, a title that is not first in z-order is read out of order, and a
+# contrast ratio either clears 3:1 or it does not.
+A11Y_BLOCKING = ("MISSING ALT-TEXT", "DUPLICATE SLIDE TITLES", "READING ORDER",
+                 "NON-TEXT CONTRAST", "ICON CONTRAST")
+
 SAMENESS_CODES = ("LAYOUT SAMENESS", "SKELETON VARIETY", "CARD DOMINANCE",
                   "BOTTOM-STRIP MONOCULTURE", "TITLE-RULE MONOCULTURE",
                   "ENVELOPE MONOCULTURE", "FLAT RHYTHM")
@@ -3461,6 +3494,9 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
         stats_out.update(deck_stats)
         # Whether the render-backed members of SAMENESS_CODES could run at all. A gate that cannot
         # tell "did not fire" from "never ran" is the failure `_report_pixel_skip` exists to stop.
+        # The per-slide warn stream, so a gate reads the SAME measurement the report printed
+        # rather than re-deriving it. `A11Y_CODES` is the only consumer today.
+        stats_out["slide_warns"] = list(j_warns)
         stats_out["render_signals_ran"] = bool(lums)
         stats_out["render_skip_reason"] = (
             _SKIP.get("reason") or (None if lums else "no render directory beside the deck"))

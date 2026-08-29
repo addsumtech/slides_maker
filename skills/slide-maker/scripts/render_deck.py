@@ -1389,6 +1389,91 @@ def _style_applied_gate(design, pptx):
         print(f"  [--] STYLE APPLIED: NOT CHECKED — {msg}")
 
 
+def _LD_A11Y_CODES():
+    import lint_deck as _ld
+    return _ld.A11Y_BLOCKING
+
+
+def _LD_A11Y_WCAG():
+    import lint_deck as _ld
+    return _ld.A11Y_WCAG
+
+
+def _LD_A11Y_ALL():
+    import lint_deck as _ld
+    return _ld.A11Y_CODES
+
+
+def _check_a11y(pptx, delivery, gates):
+    """The accessibility floors lint already measured and no gate on this path ever read.
+
+    Measured by grep before this existed: MISSING ALT-TEXT, NO SLIDE TITLE, DUPLICATE SLIDE TITLES
+    and READING ORDER were emitted as advisory `[warn]`s and consumed by NOTHING on either runtime,
+    while the codex path held only the two WCAG contrast codes. A deck could therefore ship with no
+    image described, no slide titled and the reading order scrambled, and both delivery gates
+    called it clean. This repo has run that experiment already — the deck-level sameness signals
+    were warns nobody read, which is why they became a gate.
+
+    None of these needs an opinion, which is why they can hold a deck when the critic's taste calls
+    cannot: a shape either carries a description or it does not, a title is either first in z-order
+    or it is not, a ratio either clears 3:1 or it does not.
+
+    A deck may still be handed over with them open — a throwaway internal review, a deck for one
+    sighted person — but in WRITING, with the count, so the user learns what they are accepting:
+
+        {"a11y": {"waived": "internal 10-minute review, no distribution",
+                  "waived_category": "not-distributed"}}
+    """
+    if not isinstance(gates, dict):
+        gates = {}
+    stats, _aspect = _sameness_stats(pptx, delivery)      # one lint run, already cached above
+    warns = stats.get("slide_warns")
+    if warns is None:
+        print("  [--] A11Y: NOT CHECKED — this lint build does not surface the per-slide warn "
+              "stream. NOT the same as clean.")
+        return
+    codes = _LD_A11Y_CODES()
+    advisory = [c for c in _LD_A11Y_ALL() if c not in codes]
+    hits, noted = {}, {}
+    for w in warns:
+        text = str(w.get("text") if isinstance(w, dict) else w)
+        code = text.split(":", 1)[0].strip()
+        if code in codes:
+            hits.setdefault(code, []).append(w.get("slide") if isinstance(w, dict) else None)
+        elif code in advisory:
+            noted.setdefault(code, []).append(w.get("slide") if isinstance(w, dict) else None)
+    if noted:
+        print("  [--] a11y advisory: {} — not held here (a statement slide may carry an "
+              "off-canvas title on purpose), but check them if this deck is distributed."
+              .format(" · ".join("{} (slide {})".format(c, ", ".join(str(x) for x in v))
+                                 for c, v in sorted(noted.items()))))
+    waiver = gates.get("a11y") or {}
+    if not hits:
+        print("[gates] a11y: 0 of {} floor(s) fired (alt-text · slide titles · reading order · "
+              "non-text contrast)".format(len(codes)))
+        return
+    fired = " · ".join("{} ({} slide{})".format(c, len(v), "" if len(v) == 1 else "s")
+                       for c, v in sorted(hits.items()))
+    if waiver.get("waived"):
+        why = str(waiver.get("waived") or "")
+        if len(why.strip()) < 24:
+            die("`a11y.waived` needs a real reason, not '{}'. Say what makes these acceptable on "
+                "THIS deck — who reads it, and how.".format(why.strip()))
+        print("[gates] a11y WAIVED [{}] — {} — NOT ACCESSIBLE\n        {}\n        Say this in the "
+              "hand-off note too; a waiver the user never sees is a silence."
+              .format(waiver.get("waived_category") or "uncategorised", fired, why))
+        return
+    wcag = [c for c in hits if c in _LD_A11Y_WCAG()]
+    die("this deck does not clear the accessibility floors:\n    - " + fired
+        + ("\n    {} of those are WCAG ratios, which are arithmetic rather than judgement."
+           .format(len(wcag)) if wcag else "")
+        + "\n    Fix: deckkit.alt_text(shape, '<one line>') on informative images (alt='' for "
+          "purely decorative); give every slide a title (an off-canvas title is a sanctioned trick "
+          "for statement slides) and add it FIRST so z-order matches reading order; raise "
+          "icon/mark contrast to 3:1.\n    Or waive in writing: "
+          '{"a11y": {"waived": "<who reads this deck, and how>", "waived_category": "<kind>"}}')
+
+
 def _register_pixels_gate(pptx):
     """The declared register must reach the RENDERED PIXELS — and must not be the last deck's.
 
@@ -2580,6 +2665,9 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
         # protagonist that is not a sentence, whether the palette does any work — and that half now
         # has a gate of its own, below.
         _check_sameness(pptx, delivery, gates)
+
+    with _gate_section('a11y'):
+        _check_a11y(pptx, delivery, gates)
 
     with _gate_section('surface'):
         _surface_gate(pptx, gates)

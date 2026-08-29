@@ -51,10 +51,14 @@ def check(cond, msg, detail=""):
     (OKS if cond else FAILS).append(msg if cond else "{} — {}".format(msg, detail))
 
 
-def build(fmt_name, runs):
+def build(fmt_name, runs, figures=()):
+    """`figures` are stand-in graphic blocks — a board that is all prose fails PROPORTION, which is
+    the point of that check, so every fixture that must PASS carries real figures like a real board."""
     f = formats.get(fmt_name)
     prs = dk.blank_deck(f.w_in, f.h_in)
     s = dk.add_slide(prs)
+    for fx, fy, fw, fh in figures:
+        dk.box(s, fx, fy, fw, fh, fill=dk.TINT)
     for txt, pt, x, y, w, h in runs:
         dk.text(s, x, y, w, h, [[(txt, pt, dk.DEEP, False, False)]])
     _n[0] += 1
@@ -87,19 +91,20 @@ check(not formats.get("wide").type_floors,
 # ── 2. the poster contract, on real built decks ──────────────────────────────────────────────
 FULL = [("A result worth crossing a hall for", 110, 1.6, 1.6, 29.9, 4.4),
         ("Methods", 42, 1.6, 7.5, 14.0, 1.4),
-        ("Measured over every deck the skill built.", 26, 1.6, 9.2, 14.0, 12.0),
+        ("Measured over every deck the skill built.", 26, 1.6, 9.2, 14.0, 2.4),
         ("Results", 42, 17.5, 7.5, 14.0, 1.4),
-        ("Two prose rules now fail loudly.", 26, 17.5, 9.2, 14.0, 12.0),
-        ("Limitations", 42, 1.6, 23.0, 14.0, 1.4),
-        ("One site, one operator, no held-out cohort.", 26, 1.6, 24.7, 14.0, 19.0),
-        ("Next", 42, 17.5, 23.0, 14.0, 1.4),
-        ("Record accent hexes in the look history.", 26, 17.5, 24.7, 14.0, 19.0)]
-probs, facts = cs.check(build("poster_a0", FULL))
+        ("Two prose rules now fail loudly.", 26, 17.5, 9.2, 14.0, 2.4),
+        ("Limitations", 42, 1.6, 26.5, 14.0, 1.4),
+        ("One site, one operator, no held-out cohort.", 26, 1.6, 28.2, 14.0, 2.4),
+        ("Next", 42, 17.5, 26.5, 14.0, 1.4),
+        ("Record accent hexes in the look history.", 26, 17.5, 28.2, 14.0, 2.4)]
+FIGS = [(1.6, 12.4, 14.0, 12.8), (17.5, 12.4, 14.0, 12.8), (1.6, 31.4, 29.9, 13.4)]
+probs, facts = cs.check(build("poster_a0", FULL, FIGS))
 check(not probs, "a well-set A0 poster passes clean", "{} ({})".format(probs, facts))
 
 # REGRESSION: a 27pt body must not be mistaken for a section head and judged against 36pt.
 body27 = [r if r[1] != 26 else (r[0], 27, r[2], r[3], r[4], r[5]) for r in FULL]
-check("TYPE FLOOR" not in codes(build("poster_a0", body27)),
+check("TYPE FLOOR" not in codes(build("poster_a0", body27, FIGS)),
       "a 27pt body clears the 24pt body floor and is NOT judged against the 36pt section floor",
       "the first version guessed the role from the size, then judged the size against that role")
 
@@ -110,6 +115,26 @@ slideish = build("poster_a0", [("A result worth crossing a hall for", 46, 1.6, 1
 msgs = [m for c, m in cs.check(slideish)[0] if c == "TYPE FLOOR"]
 check(len(msgs) >= 2, "a poster typeset at SLIDE sizes fails the body AND the display floor",
       "{} TYPE FLOOR finding(s)".format(len(msgs)))
+
+# PROPORTION: a board can be FULL and still be a wall of prose, and the title must not be counted
+# as prose — a poster title is a required element and is supposed to be enormous. Measured: a
+# landscape A0 with a correct 110pt title scored 46% text and failed while its body was four short
+# lines, which penalised exactly the boards that size their title right.
+check("PROPORTION" in codes(build("poster_a0", FULL)),
+      "the same board with NO figures fails PROPORTION — FILL says the board is used, PROPORTION "
+      "says used by what", "got {}".format(codes(build("poster_a0", FULL))))
+_p, _f = cs.check(build("poster_a0", FULL, FIGS))
+check("PROPORTION" not in {c for c, _ in _p},
+      "...and with figures it passes ({})".format(_f.get("proportion")), str(_f))
+_huge_title = [(t, 200 if pt == 110 else pt, x, y, w, h) for t, pt, x, y, w, h in FULL]
+_p, _f = cs.check(build("poster_a0", _huge_title, FIGS))
+check("PROPORTION" not in {c for c, _ in _p},
+      "a BIGGER title does not push a board over the prose cap — headlines are navigation, "
+      "not text to read ({})".format(_f.get("proportion")), str(_f))
+_wordy = [(t if pt != 26 else (t + " ") * 12, pt, x, y, w, h) for t, pt, x, y, w, h in FULL]
+check("TEXT BLOCK" in codes(build("poster_a0", _wordy, FIGS)),
+      "a block past ~50 words is caught — nobody reads a paragraph standing at a poster",
+      "got {}".format(codes(build("poster_a0", _wordy, FIGS))))
 
 # REGRESSION: a half-empty board. Measured at 43% on a real A0 render that passed every gate.
 sparse = build("poster_a0", [("A result worth crossing a hall for", 110, 1.6, 1.6, 29.9, 4.4),
@@ -138,13 +163,13 @@ check("MISSING SECTION" not in codes(bill, waive_sections="a purely descriptive 
 # poster it has no limitations section — and the only escape would switch the check OFF.
 nl = build("poster_a0", [("Een resultaat dat de zaal doorkruist", 110, 1.6, 1.6, 29.9, 4.4),
                          ("Methode", 42, 1.6, 7.5, 14.0, 1.4),
-                         ("Wij hebben elk gebouwd deck gemeten.", 26, 1.6, 9.2, 14.0, 12.0),
+                         ("Wij hebben elk gebouwd deck gemeten.", 26, 1.6, 9.2, 14.0, 2.4),
                          ("Resultaten", 42, 17.5, 7.5, 14.0, 1.4),
-                         ("Twee regels falen nu luid.", 26, 17.5, 9.2, 14.0, 12.0),
-                         ("Beperkingen", 42, 1.6, 23.0, 14.0, 1.4),
-                         ("Een locatie, een operator.", 26, 1.6, 24.7, 14.0, 19.0),
-                         ("Vervolg", 42, 17.5, 23.0, 14.0, 1.4),
-                         ("Leg accentkleuren vast.", 26, 17.5, 24.7, 14.0, 19.0)])
+                         ("Twee regels falen nu luid.", 26, 17.5, 9.2, 14.0, 2.4),
+                         ("Beperkingen", 42, 1.6, 26.5, 14.0, 1.4),
+                         ("Een locatie, een operator.", 26, 1.6, 28.2, 14.0, 2.4),
+                         ("Vervolg", 42, 17.5, 26.5, 14.0, 1.4),
+                         ("Leg accentkleuren vast.", 26, 17.5, 28.2, 14.0, 2.4)], FIGS)
 check("MISSING SECTION" in codes(nl),
       "a Dutch poster trips MISSING SECTION on the built-in English/Chinese word lists",
       "if it did not, the extension point below would be untested")
@@ -219,13 +244,14 @@ for name, w, h in (("a0-landscape", 46.81, 33.11), ("a1-landscape", 33.11, 23.39
 land = build("poster_a0_land",
              [("A claim across the hall", 110, 1.6, 1.6, 43.0, 4.4),
               ("Methods", 42, 1.6, 7.5, 20.0, 1.4),
-              ("Measured on every built deck.", 26, 1.6, 9.2, 20.0, 10.0),
+              ("Measured on every built deck.", 26, 1.6, 9.2, 20.0, 2.2),
               ("Results", 42, 24.0, 7.5, 20.0, 1.4),
-              ("Two rules now fail loudly.", 26, 24.0, 9.2, 20.0, 10.0),
-              ("Limitations", 42, 1.6, 20.5, 20.0, 1.4),
-              ("One site, one operator.", 26, 1.6, 22.2, 20.0, 9.0),
-              ("Next", 42, 24.0, 20.5, 20.0, 1.4),
-              ("Record accent hexes.", 26, 24.0, 22.2, 20.0, 9.0)])
+              ("Two rules now fail loudly.", 26, 24.0, 9.2, 20.0, 2.2),
+              ("Limitations", 42, 1.6, 22.5, 20.0, 1.4),
+              ("One site, one operator.", 26, 1.6, 24.2, 20.0, 2.2),
+              ("Next", 42, 24.0, 22.5, 20.0, 1.4),
+              ("Record accent hexes.", 26, 24.0, 24.2, 20.0, 2.2)],
+             [(1.6, 12.0, 20.0, 9.0), (24.0, 12.0, 20.0, 9.0), (1.6, 27.0, 42.4, 4.5)])
 probs, facts = cs.check(land)
 check(not probs and facts.get("format", "").startswith("poster_a0_land"),
       "a well-set LANDSCAPE A0 board resolves and passes", "{} {}".format(probs, facts))
@@ -248,14 +274,14 @@ for _y in range(20, 60):                       # a thin band of ink on a big gro
     for _x in range(20, 300):
         _im.putpixel((_x, _y), (0xE2, 0x5A, 0x33))
 _im.save(_rd / "slide01.png")
-_probs, _facts = cs.check(build("poster_a0", FULL), renders=str(_rd))
+_probs, _facts = cs.check(build("poster_a0", FULL, FIGS), renders=str(_rd))
 check("committed" in (_facts.get("fill") or "") and _facts.get("ink"),
       "FILL says COMMITTED, and the render's real ink share is reported beside it",
       "{} / {}".format(_facts.get("fill"), _facts.get("ink")))
 check("large gap" in (_facts.get("ink") or ""),
       "...and a wide gap between the two is named, so 82%% committed is never read as 82%% full",
       str(_facts.get("ink")))
-_probs, _facts = cs.check(build("poster_a0", FULL))
+_probs, _facts = cs.check(build("poster_a0", FULL, FIGS))
 check(_facts.get("fill") and not _facts.get("ink"),
       "with no renders the check still runs and simply says nothing about ink",
       "{} / {}".format(_facts.get("fill"), _facts.get("ink")))

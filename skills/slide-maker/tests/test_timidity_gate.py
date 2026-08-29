@@ -74,7 +74,10 @@ def build(dest, *, visual=False, timid_cover=True, n=12, pics=False):
             from PIL import Image
             f = dest / f"p{i}.png"
             Image.new("RGB", (400, 300), (120, 140, 160)).save(f)
-            dk.picture(s, str(f), 7.6, 2.2, 4.4, 3.0, fit="contain")
+            # alt= because the a11y gate holds MISSING ALT-TEXT on informative images,
+            # and a fixture that omits it is testing the wrong thing.
+            dk.picture(s, str(f), 7.6, 2.2, 4.4, 3.0, fit="contain",
+                       alt="a photographic protagonist for slide %d" % (i + 1))
         if visual and 0 < i < n - 1 and i % 2:
             dk.native_chart(s, 1.0, 3.2, 6.0, 3.0, ["a", "b", "c"],
                             [("s", [3, 5, 4])], kind="bar")

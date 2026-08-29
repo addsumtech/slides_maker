@@ -241,6 +241,13 @@ jobs:
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/register.log || {
             echo "::error::register-expression suite did not run to completion"; exit 1; }
 
+      - name: A11y floors, print carve, poster proportion, CVD, bento
+        run: |
+          set -o pipefail
+          python tests/test_a11y_and_surface_extras.py | tee /tmp/a11y.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/a11y.log || {
+            echo "::error::a11y/surface-extras suite did not run to completion"; exit 1; }
+
       - name: Register pixels (the look must arrive, and must not be the last deck's)
         run: |
           set -o pipefail

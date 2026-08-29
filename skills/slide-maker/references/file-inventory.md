@@ -50,6 +50,26 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   `render_deck.py --gate-check` and `codex_delivery_gate.py` — never copied, so the two paths
   cannot grow two answers. `--selftest` proves it both ways. It checks the CALL, not the
   pixels; `tests/test_register_expression.py` covers the other half.
+- `palette_audit.py` — also SIMULATES colour vision deficiency (Viénot–Brettel–Mollon, in LMS)
+  and names any pair that stops being two colours. `dk.OKABE_ITO` had been recommended for years
+  with nothing checking a palette, so the advice only helped whoever already remembered it. The
+  bar is ABSOLUTE distance after simulation, not how much the pair changed: Okabe-Ito's worst
+  red-green pair lands at 68 and the classic matplotlib red/green at 56, and any *ratio* cut sits
+  in a 6-point gap that would flag the set this skill recommends. Deuteranopia/protanopia (~8% of
+  men) and tritanopia (rarer than 1 in 10,000) are reported separately — Okabe-Ito itself collides
+  under tritanopia, and a check that called it unsafe would train people to dismiss it. The
+  simulation runs in LMS on purpose: the first version used the widely-copied RGB-space matrices
+  and turned pure green PINK-GREY under deuteranopia while leaving greys correct, which looks fine
+  until you check it against a reference.
+- `lint_deck.A11Y_CODES` / `A11Y_BLOCKING` — the accessibility codes this file already computed
+  and printed as advisory `[warn]`s. Measured by grep before the split existed, no gate on the
+  shared path read any of them and the codex path held only the two WCAG contrast codes, so the
+  same deck was accessible or not depending on which runtime shipped it. `A11Y_BLOCKING` is what a
+  gate may hold a deck on and deliberately EXCLUDES `NO SLIDE TITLE`: lint's own message for it
+  calls an off-canvas title "a sanctioned trick for statement slides", and on an ordinary
+  well-built 11-slide deck it fired once, on the closing slide. Both `render_deck.py --gate-check`
+  (`a11y` section) and `codex_delivery_gate.py` (`STRICT_WARNINGS`) derive from these constants
+  rather than restating them.
 - `check_register_pixels.py` — the register a deck DECLARES must reach its RENDERED PIXELS, and
   must not be a previous deck's. The half `check_style_applied.py` structurally cannot reach: a
   BESPOKE register has no `presets.apply()` call to find, and a build that calls it and then
@@ -67,7 +87,13 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   because both callers wrap this module in try/except and anything RAISED would silently become
   "NOT CHECKED" for the whole deck. Waive with `design_plan.register_pixels_waived`. Imported by `render_deck.py --gate-check` (section
   `register_pixels`) and `codex_delivery_gate.py`. `--selftest` proves it both ways. It judges
-  COLOUR only — composition is the sameness gate's and the critic's.
+  COLOUR only — composition is the sameness gate's and the critic's. `DARK GROUND ON A PRINTED
+  BOARD` is the print carve: the freshness rule once told a real A0 poster to "move the VALUE (dark
+  for a light run)" and the board was rebuilt dark, which is the one ground print shops uniformly
+  advise against (ink, drying, streaking, surcharges, and light hairlines thinning at print
+  resolution). On a `chrome == "print"` format the repeat is still reported, but the advice becomes
+  paper warmth and accent hue; a dark canvas becomes its own finding. A projected deck is untouched
+  — 8 of the 18 registers are dark.
 - `check_surface.py` — the canvas format's contract, checked against the BUILT deck. `formats.py`
   was producer-only: measured by grep, `import formats` appeared in two files and both write
   formats, so every per-surface rule in `references/canvas-formats.md` was advisory by
@@ -87,7 +113,10 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   HOLLOW FILL is switched off in `--surface` mode, so on a board nobody was reporting either
   number. A deck with no slides, and an unregistered canvas, report NOT CHECKED, never clean. Waive required sections with `design_plan.surface_sections_waived`. Imported by
   `render_deck.py --gate-check` (section `surface`) and `codex_delivery_gate.py`; `--selftest`
-  proves it on built fixtures.
+  proves it on built fixtures. `PROPORTION` and `TEXT BLOCK` hold a printed board to the ~20-25%
+  text / 40-50% graphics split the poster literature converges on (a panel drawn BEHIND text counts
+  as a container, not a graphic — otherwise a bigger box would pass the check) and to ~50-word
+  blocks.
 - `check_design_contracts.py` — the DESIGN stack's index guard: every self-verify cross-reference in
   the tree resolves to a real item, the `### Design self-verify (a–s)` header covers every item the
   list actually defines (and its spelled-out count matches), the shared design thresholds agree

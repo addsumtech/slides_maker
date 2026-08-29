@@ -221,6 +221,39 @@ def look_history(taste_path):
     return rows
 
 
+def printed_surface(deck_dir, design):
+    """The registered Format for this deck if it is PRINTED AT ACTUAL SIZE, else None.
+
+    Freshness is a rule about a RUN of decks; ink on paper is a rule about one board, and the
+    second one wins where they meet. Recovered from the built .pptx beside the renders, or from a
+    declared `format`, because a render is just pixels and cannot say how it will be reproduced.
+    """
+    try:
+        import formats
+    except Exception:
+        return None
+    name = (design or {}).get("format")
+    if name:
+        try:
+            fmt = formats.get(name)
+            return fmt if fmt.chrome == "print" else None
+        except KeyError:
+            return None
+    try:
+        from pptx import Presentation
+    except ImportError:
+        return None
+    for deck in sorted(Path(deck_dir).glob("*.pptx")):
+        try:
+            prs = Presentation(str(deck))
+            fmt = formats.match(prs.slide_width / 914400.0, prs.slide_height / 914400.0)
+        except Exception:
+            continue
+        if fmt is not None and fmt.chrome == "print":
+            return fmt
+    return None
+
+
 def check(deck_dir, renders=None, taste=None, recent=3, design=None):
     """Return (problems, facts). Empty problems means clean.
 
@@ -239,8 +272,17 @@ def check(deck_dir, renders=None, taste=None, recent=3, design=None):
         if gp.exists():
             try:
                 gates = json.loads(gp.read_text(encoding="utf-8"))
-            except ValueError as exc:
-                return [("UNREADABLE GATES", "{}: {}".format(gp, exc))], facts
+            except (ValueError, OSError) as exc:
+                # OSError as well as ValueError, and REPORTED rather than raised. Both callers
+                # wrap this module in try/except, so anything that escapes here becomes a silent
+                # "NOT CHECKED" for the whole deck. Measured: on macOS, a deck under ~/Downloads
+                # became unreadable mid-session (TCC), and `read_text` raised PermissionError —
+                # not a ValueError — straight past this handler.
+                return [("UNREADABLE GATES",
+                         "{}: {}. The plan could not be read, so nothing here was checked — that "
+                         "is not the same as clean. On macOS this is usually the privacy layer "
+                         "over ~/Downloads or ~/Desktop; move the deck elsewhere or grant access."
+                         .format(gp, exc))], facts
         design = gates.get("design_plan") or {}
     if design.get("waived") or design.get("register_pixels_waived"):
         facts["waived"] = True
@@ -340,21 +382,68 @@ def check(deck_dir, renders=None, taste=None, recent=3, design=None):
     #
     # And the ground is where the repetition actually is: seven of those eight canvases were pale
     # warm/cool near-whites. That is a house style nobody asked for.
+    # 🔴 …and where a board is PRINTED, this rule yields. Measured consequence, on this repo's own
+    # work: GROUND REPEAT fired on an A0 poster whose canvas matched a recent deck's, the advice
+    # said "move the VALUE (dark for a light run)", and the board was rebuilt DARK — which for a
+    # printed poster is the wrong direction on every count print shops name: it burns ink, dries
+    # slowly and streaks, several university shops surcharge it, and light hairlines are lost
+    # because print resolution does not match the screen the deck was designed on. A freshness rule
+    # that cannot tell a board from a projector will keep giving that advice. So on a printed
+    # surface the repeat is still REPORTED — a house style is still a house style — but the fix is
+    # named in the terms that surface allows (paper warmth, accent hue, type register), and a dark
+    # ground becomes a finding of its own rather than the remedy.
+    printed = printed_surface(deck_dir, design)
+    if printed is not None:
+        facts["printed"] = printed.label
+
     hist = look_history(taste) if taste else []
     facts["history"] = len(hist)
     ground = field[0][0] if field else None
+
+    if printed is not None and ground is not None and _band(ground) == "dark":
+        problems.append(("DARK GROUND ON A PRINTED BOARD",
+                         "this {} has a dark canvas ({}). On a screen that is a legitimate "
+                         "register; on paper it is the one choice print shops uniformly advise "
+                         "against — it burns ink, dries slowly and streaks, several university "
+                         "shops surcharge it, and light hairlines thin out because print "
+                         "resolution does not match the screen this was designed on. Use a paper "
+                         "ground and keep the dark for panels and figures, or record the choice "
+                         "with design_plan.register_pixels_waived if the board is being produced "
+                         "some other way (a fabric banner, a screen)."
+                         .format(printed.label, _hx(ground))))
+
     if hist and ground:
         recent_rows = hist[-recent:]
         for deck, cols in recent_rows:
             if _near(cols[0], ground, SAME_LOOK):
+                # On a PRINTED board a light ground is not a choice, it is the medium: the same
+                # print advice that forbids a dark canvas leaves only pale stocks, and every pale
+                # stock is within tolerance of every other. Blocking here would demand something
+                # the surface cannot give — so the repeat is REPORTED and the freshness load moves
+                # to the accent and the type, which is where a board can actually vary. A *dark*
+                # ground repeat on a printed board is impossible by definition, since the rule
+                # above already fires on it.
+                if printed is not None and _band(ground) == "light":
+                    facts["ground_note"] = (
+                        "canvas {} is close to {!r}'s {} — on a printed board that is the medium, "
+                        "not a house style (print wants a light stock), so it is reported rather "
+                        "than held. Carry the freshness in the ACCENT and the type register."
+                        .format(_hx(ground), deck, _hx(cols[0])))
+                    break
                 problems.append(("GROUND REPEAT",
                                  "this deck's canvas ({}) is the same value as {!r}'s ({}) — one of "
                                  "the last {} decks. The ground is the first thing seen and the "
                                  "least varied thing in the history; repeating it is how a run of "
-                                 "decks acquires a house style the user never chose. Move the VALUE "
-                                 "(dark for a light run, or a different paper), or record the "
-                                 "repeat as deliberate in the palette line."
-                                 .format(_hx(ground), deck, _hx(cols[0]), len(recent_rows))))
+                                 "decks acquires a house style the user never chose. {}"
+                                 .format(_hx(ground), deck, _hx(cols[0]), len(recent_rows),
+                                         "Vary the PAPER (a warmer or cooler stock) and the accent "
+                                         "hue — not the value: a printed board wants a light "
+                                         "ground, so freshness here has to come from hue and type "
+                                         "rather than from going dark."
+                                         if printed is not None else
+                                         "Move the VALUE (dark for a light run, or a different "
+                                         "paper), or record the repeat as deliberate in the "
+                                         "palette line.")))
                 break
         band = _band(ground)
         same_band = [d for d, c in hist[-8:] if _band(c[0]) == band]
@@ -544,6 +633,8 @@ def main(argv=None):
         return 0
     if facts.get("band"):
         print("look history: {} deck(s) — {}".format(facts.get("history", 0), facts["band"]))
+    if facts.get("ground_note"):
+        print("  [--] " + facts["ground_note"])
     print("pages {} | field: {} | declared: {} | reached the pixels: {} | history: {}".format(
         facts.get("pages", 0),
         ", ".join(facts.get("field", [])) or "-",

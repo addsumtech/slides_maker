@@ -6123,6 +6123,195 @@ def speaker_notes(slide, notes):
     return slide.notes_slide
 
 
+def bento(slide, x, y, w, h, tiles, *, gap=0.18, cols=4, rows=None):
+    """A MODULAR grid of unequal tiles on one shared rhythm — the layout `columns()` cannot make.
+
+    `columns`/`rows` give equal-weight strips, and `columns(weights=…)` varies width but keeps one
+    row. A bento grid varies BOTH axes against a single module, so one message can be split into
+    related units of honestly different importance: the biggest tile is the point, the small ones
+    are the support, and the reader learns the ranking from the geometry before reading a word.
+
+    `tiles` is a list of ``(span_cols, span_rows)`` or ``(span_cols, span_rows, label)``; they are
+    packed left-to-right, top-to-bottom into the first free cell that fits. Returns a list of
+    ``(x, y, w, h)`` rects in the SAME order as `tiles`, so a caller draws its own content into
+    them — this places geometry and paints nothing, exactly like `columns()`.
+
+    The gutter is ONE number for the whole grid on purpose: unequal gutters are what makes a
+    modular layout read as an accident rather than a system, and it is the single most common way
+    this shape is got wrong. `rows` defaults to as many as the tiles need.
+
+    Raises rather than overflowing when the tiles cannot fit the row count — a grid that silently
+    drops its last tile is worse than one that will not build.
+    """
+    if not tiles:
+        return []
+    spans = [(int(t[0]), int(t[1])) for t in tiles]
+    if any(c < 1 or r < 1 for c, r in spans):
+        raise ValueError("bento: every tile needs span_cols >= 1 and span_rows >= 1")
+    if any(c > cols for c, _r in spans):
+        raise ValueError("bento: a tile spans {} of {} columns — widen `cols` or narrow the tile"
+                         .format(max(c for c, _ in spans), cols))
+    need = rows or (sum(c * r for c, r in spans) + cols - 1) // cols + max(r for _c, r in spans)
+    grid = [[False] * cols for _ in range(need)]
+    placed = []
+    for (sc, sr) in spans:
+        spot = None
+        for gy in range(need - sr + 1):
+            for gx in range(cols - sc + 1):
+                if all(not grid[gy + dy][gx + dx] for dy in range(sr) for dx in range(sc)):
+                    spot = (gx, gy)
+                    break
+            if spot:
+                break
+        if spot is None:
+            raise ValueError(
+                "bento: {} tile(s) do not fit in {} column(s) x {} row(s). Give it more rows, "
+                "fewer tiles, or smaller spans — silently dropping a tile would look finished."
+                .format(len(spans) - len(placed), cols, need))
+        gx, gy = spot
+        for dy in range(sr):
+            for dx in range(sc):
+                grid[gy + dy][gx + dx] = True
+        placed.append((gx, gy, sc, sr))
+    used = max(gy + sr for _gx, gy, _sc, sr in placed)
+    cw = (w - gap * (cols - 1)) / float(cols)
+    ch = (h - gap * (used - 1)) / float(used) if used else h
+    return [(x + gx * (cw + gap), y + gy * (ch + gap),
+             sc * cw + (sc - 1) * gap, sr * ch + (sr - 1) * gap)
+            for gx, gy, sc, sr in placed]
+
+
+def qr_panel(slide, x, y, size, url, *, caption="Scan for the preprint", contact=None,
+             scan_ft=5.0, image=None, ink=None, font=None, quiet=True):
+    """A QR code WITH the three things a bare QR code is missing, sized for its scan distance.
+
+    A code on its own is the common failure, and it fails in three ways at once: nobody knows what
+    it points at, anyone who photographs the poster instead of scanning it leaves with nothing, and
+    a code shrunk to fit does not scan from where people stand. So this draws the code, a caption
+    saying what it links to, and the URL in PLAIN TEXT beneath it (plus an optional contact —
+    email or ORCID), and it holds the code to the 10:1 rule of thumb: a code read from 5ft wants
+    about 6in, i.e. ``size >= scan_ft * 12 / 10``. Under that it raises rather than drawing a code
+    that will not scan, because a QR code is verified by a phone at the venue or not at all.
+
+    ``image`` is a pre-rendered QR PNG. Without one this generates the matrix via ``qrcode`` or
+    ``segno`` if either is installed, and otherwise raises with the two ways to supply it — this
+    library does not implement QR encoding, and silently drawing a placeholder square would be the
+    worst outcome available (it looks finished and scans as nothing).
+
+    ``quiet=True`` keeps the mandatory light margin around the code (4 modules); switch it off only
+    when your PNG already carries one. Returns the picture shape.
+    """
+    need = scan_ft * 12.0 / 10.0
+    if size < need - 1e-6:
+        raise ValueError(
+            "qr_panel: {:.2f}in is too small to scan from {:.0f}ft — the 10:1 rule wants >= {:.2f}in. "
+            "Give it the space or state a shorter scan_ft; a code that does not scan is furniture."
+            .format(size, scan_ft, need))
+    # A block of KNOWN size must not be placed where it cannot fit. The caption and the URL live
+    # BELOW the code, so the footprint is taller than `size` and the obvious placement — flush to
+    # a bottom margin — runs off the canvas. Measured on a real A0 board: the code and its caption
+    # overflowed by 2.3in and 3.6in and every gate still passed, because off-canvas is lint's
+    # department and the gates had been run without it.
+    try:
+        sw, sh = _slide_size(slide)
+        need_h = size + 0.12 + 1.0                # code + gap + a conservative caption block
+        if x < -0.01 or y < -0.01 or x + size > sw + 0.01 or y + need_h > sh + 0.01:
+            raise ValueError(
+                "qr_panel: a {:.2f}in code at ({:.2f}, {:.2f}) does not fit a {:.2f}x{:.2f}in "
+                "canvas — the caption and URL sit BELOW the code, so it needs about {:.2f}in of "
+                "height. Move it up, or give it a column of its own."
+                .format(size, x, y, sw, sh, need_h))
+    except ValueError:
+        raise
+    except Exception:
+        pass                                       # not a real slide (a unit test); nothing to check
+
+    path = image
+    if path is None:
+        mod = None
+        for name in ("segno", "qrcode"):
+            try:
+                mod = __import__(name)
+                break
+            except ImportError:
+                continue
+        if mod is None:
+            raise RuntimeError(
+                "qr_panel: no QR encoder available and no `image=` given. Either pass a "
+                "pre-rendered PNG (image='qr.png') or install one of `segno` / `qrcode`. This "
+                "library will not draw a placeholder square: it would look finished and scan as "
+                "nothing.")
+        import tempfile
+        fd, path = tempfile.mkstemp(prefix="qr-", suffix=".png")
+        os.close(fd)
+        border = 4 if quiet else 0
+        if mod.__name__ == "segno":
+            mod.make(url, error="h").save(path, scale=12, border=border)
+        else:
+            q = mod.QRCode(error_correction=mod.constants.ERROR_CORRECT_H, border=border, box_size=12)
+            q.add_data(url)
+            q.make(fit=True)
+            q.make_image(fill_color="black", back_color="white").save(path)
+
+    ink = ink or DEEP
+    font = font or FONT
+    # The caption sizes itself against the CANVAS, not against the code. Sizing it from `size`
+    # alone produced an 11pt URL on an A0 board — under the 24pt floor `check_surface.py` holds
+    # for a printed poster, i.e. this helper generating a violation of this repo's own rule on the
+    # exact surface it was written for. Where the format declares printed floors, they win.
+    body_pt, cap_pt = 11.0, 13.0
+    try:
+        import formats                              # noqa: PLC0415 - optional, canvas-dependent
+        sw, sh = _slide_size(slide)
+        fmt = formats.match(sw, sh)
+        floors = formats.floors(fmt) if fmt else {}
+        if floors.get("body"):
+            body_pt = float(floors["body"])
+            cap_pt = max(body_pt, float(floors.get("section", body_pt)) * 0.8)
+        else:
+            body_pt = max(11.0, sw * 1.4)          # projected: scale with the canvas as usual
+            cap_pt = body_pt * 1.25
+    except Exception:
+        pass
+    pic = picture(slide, path, x, y, size, size, fit="contain",
+                  alt="QR code linking to {}".format(url))
+    cap_y = y + size + 0.12
+    # The URL is the FALLBACK for anyone who photographs the poster instead of scanning it, so it
+    # is the last text on the board that may be hard to read. `mute_for()` measured 2.71:1 against
+    # a pale stock — under the 3:1 floor for text at any size — so the mute is used only when it
+    # actually clears; otherwise the URL keeps the full ink. A muted fallback nobody can read is
+    # the same as no fallback.
+    sub = mute_for(ink)
+    try:
+        ground = _ground_rgb(slide) if "_ground_rgb" in globals() else None
+    except Exception:
+        ground = None
+    try:
+        if ground is not None and contrast_ratio(sub, ground) < 4.5:
+            sub = ink
+        elif ground is None and contrast_ratio(sub, (0xFF, 0xFF, 0xFF)) < 4.5:
+            sub = ink
+    except Exception:
+        sub = ink
+    lines = [[(caption, cap_pt, ink, True, False, font)],
+             [(url, body_pt, sub, False, False, MONO)]]
+    if contact:
+        lines.append([(contact, body_pt, sub, False, False, font)])
+    # The caption box takes the width it can HAVE, not a fixed multiple of the code: a code placed
+    # near the right edge would otherwise hang its caption off the canvas, which lint reports as an
+    # overflow the author never asked for.
+    tw = max(size, 2.0)
+    try:
+        tw = max(size, min(size * 1.9, _slide_size(slide)[0] - x - 0.2))
+    except Exception:
+        pass
+    h = (measure_text([(caption, True)], tw, cap_pt, font=font)
+         + measure_text([(url, False)], tw, body_pt, font=MONO)
+         + (measure_text([(contact, False)], tw, body_pt, font=font) if contact else 0.0))
+    text(slide, x, cap_y, tw, h, lines, space_after=2)
+    return pic
+
+
 def alt_text(shape, description):
     """Set a shape's ACCESSIBILITY alt-text (the screen-reader description). Call it after
     add_picture() — and on any informative figure/diagram — so assistive tech can describe

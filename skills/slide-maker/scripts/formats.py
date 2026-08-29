@@ -66,6 +66,13 @@ class Format:
     # projected deck has neither problem (whitespace across a SEQUENCE is rhythm, not waste), which
     # is why this is per-format and not a global rule.
     fill_range: tuple = field(default_factory=tuple)
+    # (max text share, min graphics share) of the COMPOSED area, for a surface whose proportions
+    # are a published standard rather than a taste call. The poster literature converges on roughly
+    # 20-25% text / 40-50% graphics / 30-40% white space, and it converges because a board is read
+    # standing, by someone deciding in seconds whether to engage: text-dominant boards lose that
+    # decision. Empty = not checked, which is every projected surface — a slide's text/graphic
+    # balance is a per-slide design judgement the critic owns, not a deck-wide ratio.
+    text_graphic: tuple = field(default_factory=tuple)
     # Content a surface is not finished without, ((label, (keyword, …)), …). Prose everywhere else;
     # here it can be checked. See check_surface.py.
     required_sections: tuple = field(default_factory=tuple)
@@ -137,6 +144,7 @@ FORMATS = {f.name: f for f in [
            aliases=("a0", "poster", "a0-portrait", "conference-poster", "海报"),
            type_floors=(("display", 90), ("section", 36), ("body", 24)),
            fill_range=(0.55, 0.90),
+           text_graphic=(0.35, 0.25),
            required_sections=(("methods", ("method", "methods", "approach", "materials",
                                            "procedure", "protocol", "pipeline", "方法")),
                               ("limitations", ("limitation", "limitations", "caveat", "caveats",
@@ -152,6 +160,7 @@ FORMATS = {f.name: f for f in [
            aliases=("a1", "a1-portrait", "poster-a1"),
            type_floors=(("display", 72), ("section", 32), ("body", 20)),
            fill_range=(0.55, 0.90),
+           text_graphic=(0.35, 0.25),
            required_sections=(("methods", ("method", "methods", "approach", "materials",
                                            "procedure", "protocol", "pipeline", "方法")),
                               ("limitations", ("limitation", "limitations", "caveat", "caveats",
@@ -171,6 +180,7 @@ FORMATS = {f.name: f for f in [
            aliases=("a0-landscape", "a0l", "poster-a0-landscape", "横版海报"),
            type_floors=(("display", 90), ("section", 36), ("body", 24)),
            fill_range=(0.55, 0.90),
+           text_graphic=(0.35, 0.25),
            required_sections=(("methods", ("method", "methods", "approach", "materials",
                                            "procedure", "protocol", "pipeline", "方法")),
                               ("limitations", ("limitation", "limitations", "caveat", "caveats",
@@ -185,6 +195,7 @@ FORMATS = {f.name: f for f in [
            aliases=("a1-landscape", "a1l", "poster-a1-landscape"),
            type_floors=(("display", 72), ("section", 32), ("body", 20)),
            fill_range=(0.55, 0.90),
+           text_graphic=(0.35, 0.25),
            required_sections=(("methods", ("method", "methods", "approach", "materials",
                                            "procedure", "protocol", "pipeline", "方法")),
                               ("limitations", ("limitation", "limitations", "caveat", "caveats",

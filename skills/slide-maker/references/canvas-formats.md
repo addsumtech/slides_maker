@@ -128,7 +128,16 @@ type by `FMT.display_scale`.
   `MISSING SECTION` (content a surface is not finished without). `FILL` measures the board area
   COMMITTED to content blocks; where renders exist the check also REPORTS how much of it is
   actually inked, because a poster can be 82% committed and 17% inked — panels drawn and left
-  mostly empty. That gap is reported, not thresholded.
+  mostly empty. That gap is reported, not thresholded. `PROPORTION` and `TEXT BLOCK` hold a printed
+  board to the ~20-25% text / 40-50% graphics split the literature converges on and to ~50-word
+  blocks — a panel drawn BEHIND text counts as a container, not a graphic, so a bigger box does not
+  buy a pass. And a printed board must not go dark: `check_register_pixels.py` reports
+  `DARK GROUND ON A PRINTED BOARD`, and its freshness rule changes its advice on a printed surface
+  (vary the paper and the accent hue, never the value) — ink cost, drying, streaking, print-shop
+  surcharges, and light hairlines thinning at print resolution all point one way.
+  Put the code, its caption and the plain-text URL on with `deckkit.qr_panel()`: it holds the 10:1
+  rule (a code read from 5ft wants ~6in) and always prints the URL beneath, for the many people who
+  photograph a poster instead of scanning it.
   Run it alone with `python3 scripts/check_surface.py <deck.pptx>`; `--selftest` proves it on
   purpose-built fixtures. A canvas matching no registered format reports NOT CHECKED, never clean.
   Waive required sections in writing via `design_plan.surface_sections_waived`.

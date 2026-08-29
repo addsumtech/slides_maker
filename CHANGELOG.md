@@ -11,6 +11,44 @@ section is a distilled summary — the full notes live on the
 
 ### Added
 
+- **Accessibility is a FLOOR now, held identically on both runtimes.** `lint_deck.py` had computed
+  MISSING ALT-TEXT, NO SLIDE TITLE, DUPLICATE SLIDE TITLES and READING ORDER for a long time and
+  printed them as advisory `[warn]`s; measured by grep, **no gate on the shared path read any of
+  them**, while the codex path held only the two WCAG contrast codes — so the same deck was
+  accessible or not depending on which runtime shipped it. `render_deck.py --gate-check` gains an
+  `a11y` section and `codex_delivery_gate.py` derives its `STRICT_WARNINGS` from the same
+  constants, so the floor cannot drift between them.
+  Only the **unambiguous** subset blocks (`A11Y_BLOCKING`). `NO SLIDE TITLE` stays advisory
+  deliberately: lint's own message calls an off-canvas title "a sanctioned trick for statement
+  slides", and measured on an ordinary well-built 11-slide deck it fired once — on the closing
+  slide. A gate that fires on a deck built exactly to spec is not a floor, it is training for the
+  waiver reflex.
+- **Colour-vision simulation in `palette_audit.py`.** `deckkit.OKABE_ITO` had been recommended for
+  years with nothing checking a palette, so the advice only helped whoever already remembered it.
+  Contrast and CVD are different questions: two hues at different lightness always clear a ratio
+  and can still be one colour to a dichromat. The bar is ABSOLUTE distance after simulation, not
+  how much the pair changed — Okabe-Ito's worst red-green pair lands at 68 and the classic
+  matplotlib red/green at 56, so any *ratio* cut sits in a 6-point gap that would flag the set this
+  skill recommends. Deuteranopia/protanopia (~8% of men) and tritanopia (rarer than 1 in 10,000)
+  are reported separately, because Okabe-Ito itself collides under tritanopia.
+- **`deckkit.bento()`** — a modular grid of UNEQUAL tiles on one rhythm, the layout `columns()`
+  could not make (it gives equal-weight strips; `weights=` varies width within one row). One
+  gutter for the whole grid, because unequal gutters are what make a modular layout read as an
+  accident, and it raises rather than silently dropping a tile that will not fit.
+- **`deckkit.qr_panel()`** — a poster QR code with the three things a bare code is missing: a
+  caption saying what it links to, the URL in PLAIN TEXT for the many people who photograph a
+  poster instead of scanning it, and the 10:1 size rule (a code read from 5ft wants ~6in). It
+  raises rather than drawing a placeholder when no encoder is available: a fake code looks finished
+  and scans as nothing.
+- **`PROPORTION` and `TEXT BLOCK` on printed boards** — the poster literature converges on ~20-25%
+  text / 40-50% graphics and ~50-word blocks, because a board is read standing by someone deciding
+  in seconds. This skill's own A0 board was **99% text by composed area** and cleared every check
+  that existed. A panel drawn BEHIND text counts as a container, not a graphic (otherwise a bigger
+  box buys a pass), and headline-sized runs are excluded as navigation rather than prose — counting
+  the title penalised exactly the boards that size it correctly.
+- **Landscape poster boards** were still missing after the last round: `poster_a0_land` /
+  `poster_a1_land`.
+
 - **`scripts/check_register_pixels.py` — the register a deck declares must reach its RENDERED
   PIXELS, and must not be a previous deck's.** SKILL.md named two rules that "survive no matter
   what" — never ship deckkit's default blue, never reuse the last deck's scheme — and scored
@@ -48,6 +86,33 @@ section is a distilled summary — the full notes live on the
 
 ### Fixed
 
+- **`qr_panel()` broke three of this repo's own floors, found by building a real A0 board with
+  it** — every gate passed and the render showed the problems: it sized its caption from the CODE
+  rather than the canvas (an 11pt URL under the 24pt printed body floor), it let a flush-to-the-
+  margin placement run off the board (the caption sits BELOW the code; lint caught the overflow
+  the gates could not), and it set the URL in `mute_for()` at 2.71:1 — under the 3:1 floor for text
+  at any size, on the one line that exists as a fallback for people who photograph a poster instead
+  of scanning it. All three now hold, and all three are regressions in the suite.
+- 🔴 **A light ground repeat on a PRINTED board is reported, not blocked.** Print advice forbids a
+  dark canvas, which leaves only pale stocks, and every pale stock is within tolerance of every
+  other — so `GROUND REPEAT` was asking a board for something the medium cannot give. On a printed
+  surface the repeat is noted and the freshness load moves to the accent and the type register,
+  which is where a board can actually vary. Projected decks are unchanged.
+- 🔴 **The freshness rule was steering printed posters DARK — a defect this session introduced two
+  commits earlier.** `GROUND REPEAT` told a real A0 board its canvas repeated a recent deck and
+  advised "move the VALUE (dark for a light run)", so the board was rebuilt dark. For a printed
+  board that is the one direction print shops uniformly advise against: it burns ink, dries slowly
+  and streaks, several university shops surcharge it, and light hairlines thin out because print
+  resolution does not match the screen it was designed on. `check_register_pixels.py` had no notion
+  of `chrome == "print"`. On a printed surface the repeat is still reported but the advice becomes
+  paper warmth and accent hue, and a dark canvas is now its own finding
+  (`DARK GROUND ON A PRINTED BOARD`). A projected deck is untouched — 8 of the 18 registers are
+  dark.
+- **An unreadable plan file silently switched the colour check off.** `.deck-gates.json` was read
+  under `except ValueError`, so a `PermissionError` — which is what macOS's privacy layer over
+  `~/Downloads` actually raises, hit live in this session — escaped past it and, because both
+  callers wrap the module in try/except, became a silent "NOT CHECKED" for the whole deck. Same
+  class as the corrupt-PNG bug fixed in the previous commit, different file.
 - **Audit of the two gates above, against inputs they were not built on.** Six real defects, all
   found by attacking them rather than by re-reading them:
   - `DECK CHROME` was measuring GEOMETRY — a wide strip low on the card — and got both directions

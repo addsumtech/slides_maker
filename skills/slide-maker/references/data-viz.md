@@ -180,6 +180,7 @@ notation, not a universal style. A bar's **fill** says which data world it shows
   "Performance overview".
 
 ## Colour-blind safety
+- 🔴 **Check the palette, don't just intend it**: `python3 scripts/palette_audit.py --inks …` simulates deuteranopia, protanopia and tritanopia and names any pair that stops being two colours for the ~8% of men with a red-green deficiency. It matters only where two hues carry MEANING (a series, a status, a legend); where they do, separate them by LIGHTNESS or by shape/label as well as hue.
 - `dk.OKABE_ITO` is the colour-blind-safe **categorical fallback** palette — reach for it whenever
   a chart genuinely needs 3+ categorical hues and the deck palette isn't verified safe.
 - **Hue-only ban:** multi-series lines must differ by more than hue — vary linestyle/marker or add

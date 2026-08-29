@@ -102,6 +102,17 @@ be reconstructed post-hoc at the delivery gate.
    in `references/canvas-formats.md` and consumed by nothing. Record the surface as
    `design.format` when it is not `wide`; waive required sections with
    `design.surface_sections_waived`.
+   🔴 **The accessibility floors are held on BOTH paths from one list.** `STRICT_WARNINGS` here is
+   now derived from `lint_deck.A11Y_CODES` rather than restated, and `render_deck.py --gate-check`
+   holds the same codes in its `a11y` section. Before that, this path held the two WCAG contrast
+   codes and the shared path held nothing, so the same deck was accessible or not depending on
+   which runtime shipped it. Missing alt-text, an untitled or duplicate-titled slide, and a
+   scrambled reading order now block on both. Waive in writing with an `a11y` waiver and repeat it
+   in the hand-off note.
+   Also run `python3 scripts/palette_audit.py --inks …` at the palette step: it simulates
+   deuteranopia/protanopia/tritanopia and names any pair that stops being two colours, which
+   contrast ratios cannot see — two hues at different lightness always clear a ratio and can still
+   be one colour to a dichromat.
    🔴 **A type contract is HALF a build contract — APPLY the register, do not just name it.** This
    step listed type tokens and nothing else, so a run following this runbook picked a preset in
    step 1, wrote its name into `design.style_pick`, and then hand-set colours: the register's

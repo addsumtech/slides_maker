@@ -502,7 +502,9 @@ def build_icon_deck(dest: Path, *, logo_every=False, icon_slides=(), label_row=F
             for j in range(3):
                 p = dest.parent / f"iconfx_{i}{j}.png"
                 Image.new("RGB", (64, 64), (200, 40, 40)).save(p)
-                dk.picture(s, str(p), 0.7 + j * 2.6, 3.9, 0.5, 0.5)
+                # alt= for the a11y gate; a decorative mark would pass alt="".
+                dk.picture(s, str(p), 0.7 + j * 2.6, 3.9, 0.5, 0.5,
+                           alt="icon %d" % (j + 1))
     prs.save(str(dest))
 
 

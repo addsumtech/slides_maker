@@ -158,12 +158,145 @@ def main() -> int:
         print(f"  {ink}  {role}")
         for f in fixes:
             print(f"      TEXT twin {f}")
+    # The colour-vision report runs BEFORE any early return. A palette with a contrast problem is
+    # exactly the palette about to be reworked, which is the moment its CVD behaviour is cheapest
+    # to fix — reporting one and swallowing the other would send the author back twice.
+    hits = cvd_collisions([c.upper() if c.startswith("#") else "#" + c.upper()
+                           for c in dict.fromkeys(inks)])
+    common = [h for h in hits if h[0] in CVD_COMMON]
+    rare = [h for h in hits if h[0] not in CVD_COMMON]
+    if common:
+        print("\nCOLOUR VISION — {} pair(s) distinct to you that lose their distinction for a "
+              "red-green colour vision deficiency (~8% of men, ~0.5% of women):".format(len(common)))
+        for kind, a, b, _d, share in common[:8]:
+            print("  {:<13} {} vs {}  ->  {} vs {}   ({:.0%} of the separation left)".format(
+                kind, a, b, simulate(a, kind), simulate(b, kind), share))
+        print("  This matters only where the two carry MEANING — a series, a status, a legend. "
+              "Where they do, separate them by LIGHTNESS or by shape/label as well as hue, or "
+              "take the categorical set from deckkit.OKABE_ITO, which is built for this.")
+    else:
+        print("\nCOLOUR VISION: every pair keeps its distinction under deuteranopia and "
+              "protanopia (~8% of men).")
+    if rare:
+        print("  [--] {} pair(s) also collapse under TRITANOPIA, which is rarer than 1 in 10,000 "
+              "and not sex-linked: {}. Worth knowing, not usually worth redesigning for — "
+              "Okabe-Ito itself collides here.".format(
+                  len(rare), ", ".join("{}/{}".format(a, b) for _k, a, b, _d, _s in rare[:4])))
     if unusable:
         print(f"\n{unusable} token(s) fall under 3.0 somewhere they are used — pick a different "
               f"ground for them, or a different hue.")
         return 1
     print("\nevery token has a stated role. Paste the FILL/TEXT split into the design plan.")
     return 0
+
+
+# ── COLOUR VISION: the palette that separates for you and collapses for 1 reader in 12 ────────
+# `deckkit.OKABE_ITO` has been offered as "the colour-blind-safe categorical fallback" since it was
+# added, and `references/data-viz.md` recommends it — but nothing ever CHECKED a palette, so the
+# recommendation only helped the author who already remembered it. Contrast and CVD are different
+# questions and a palette can pass one while failing the other: two hues at very different
+# lightness always clear a contrast ratio and can still be the same colour to a deuteranope.
+#
+# Roughly 8% of men and 0.5% of women have some colour vision deficiency, so on a room of forty
+# this is not an edge case — it is most rooms. The simulation is Brettel/Viénot-style: convert to
+# linear RGB, project onto the dichromat's plane, convert back.
+# The simulation is Viénot–Brettel–Mollon (1999): sRGB -> linear -> LMS cone response -> project
+# onto the plane the missing cone leaves -> back. Doing it in LMS is not pedantry. The first
+# version of this used the widely-copied 3x3 "RGB-space" matrices instead, and it was WRONG in a
+# way that passes a casual look: greys and white came back unchanged, so it seemed fine, while pure
+# green under deuteranopia came out PINK-GREY (#A59595) when a deuteranope in fact sees it as
+# yellow. A wrong simulation is worse than none — it would have cleared palettes that collapse and
+# flagged palettes that do not.
+_RGB2LMS = ((17.8824, 43.5161, 4.11935),
+            (3.45565, 27.1554, 3.86714),
+            (0.0299566, 0.184309, 1.46709))
+_LMS2RGB = ((0.0809444479, -0.130504409, 0.116721066),
+            (-0.0102485335, 0.0540193266, -0.113614708),
+            (-0.000365296938, -0.00412161469, 0.693511405))
+# Each dichromacy replaces the missing cone's response with a linear function of the other two.
+_CVD = {
+    "deuteranopia": ("M", (0.494207, 0.0, 1.24827)),     # ~6% of men — the common one
+    "protanopia":   ("L", (0.0, 2.02344, -2.52581)),     # ~2% of men
+    "tritanopia":   ("S", (-0.395913, 0.801109, 0.0)),   # rare, and not sex-linked
+}
+
+
+def _mul(m, v):
+    return [sum(m[r][i] * v[i] for i in range(3)) for r in range(3)]
+
+
+def _srgb_to_linear(c):
+    c = c / 255.0
+    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+
+def _linear_to_srgb(c):
+    c = max(0.0, min(1.0, c))
+    v = 12.92 * c if c <= 0.0031308 else 1.055 * (c ** (1 / 2.4)) - 0.055
+    return int(round(max(0.0, min(1.0, v)) * 255))
+
+
+def simulate(hexstr, kind):
+    """`hexstr` as a viewer with `kind` sees it, returned as #RRGGBB."""
+    h = hexstr.lstrip("#")
+    lin = [_srgb_to_linear(int(h[i:i + 2], 16)) for i in (0, 2, 4)]
+    lms = _mul(_RGB2LMS, lin)
+    missing, coef = _CVD[kind]
+    idx = {"L": 0, "M": 1, "S": 2}[missing]
+    lms[idx] = sum(coef[i] * lms[i] for i in range(3))
+    return "#%02X%02X%02X" % tuple(_linear_to_srgb(v) for v in _mul(_LMS2RGB, lms))
+
+
+def _dist(a, b):
+    """Redmean distance — the same approximation check_register_pixels uses, for one answer."""
+    ra = [int(a.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4)]
+    rb = [int(b.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4)]
+    rm = (ra[0] + rb[0]) / 2.0
+    dr, dg, db = ra[0] - rb[0], ra[1] - rb[1], ra[2] - rb[2]
+    return ((2 + rm / 256.0) * dr * dr + 4 * dg * dg + (2 + (255 - rm) / 256.0) * db * db) ** 0.5
+
+
+# The bar is ABSOLUTE distance after simulation — "how different are these two to that viewer" —
+# not how much the pair CHANGED. The first version used the change ratio and it could not do the
+# job: Okabe-Ito's worst common-CVD pair keeps 22% of its separation and the classic red/green
+# mistake keeps 16%, so any ratio cut sits in a 6-point gap and would flag the palette this skill
+# recommends. Measured in absolute terms the two populations are properly apart, because a pair can
+# change a great deal and still be perfectly distinct:
+#
+#     Okabe-Ito, worst pair under deuteranopia/protanopia   68   (#0072B2 vs #CC79A7)
+#     matplotlib red/green                                  56
+#     lightness-matched red/green                           34
+#
+# 60 sits in that gap. A palette BUILT for colour-universal design has to pass, or the check
+# teaches people to ignore it.
+CVD_MIN = 60.0         # below this, the pair has stopped being two colours for that viewer
+CVD_SAME = 26.0        # a pair already this close to everyone is the author's decision, not a finding
+# Prevalence, because a finding should be weighted by how many people it reaches. Red-green
+# deficiency is ~8% of men and ~0.5% of women; tritanopia is rarer than 1 in 10,000 and not
+# sex-linked. They are reported separately rather than summed: Okabe-Ito — built for
+# colour-universal design — DOES collide under tritanopia (its vermillion and reddish-purple both
+# land near #A8A800), and a check that called that palette unsafe would be training people to
+# dismiss it.
+CVD_COMMON = ("deuteranopia", "protanopia")
+
+
+def cvd_collisions(colours, floor=CVD_MIN, same=CVD_SAME):
+    """[(kind, a, b, distance, share_kept)] for pairs that stop being two colours under a CVD.
+
+    Only pairs DISTINCT to a trichromat are considered — two colours already alike are the author's
+    decision, not an accessibility finding.
+    """
+    out = []
+    for kind in _CVD:
+        for i, a in enumerate(colours):
+            for b in colours[i + 1:]:
+                base = _dist(a, b)
+                if base <= same:
+                    continue
+                d = _dist(simulate(a, kind), simulate(b, kind))
+                if d < floor:
+                    out.append((kind, a, b, d, d / base if base else 1.0))
+    return sorted(out, key=lambda r: r[3])
 
 
 try:                                            # console safety: a legacy code page must

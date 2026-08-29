@@ -177,6 +177,7 @@ def check(pptx, format_name=None, waive_sections=None, extra_terms=None, renders
     W, H = prs.slide_width / EMU, prs.slide_height / EMU
 
     sized_runs, text_all, rects = [], [], []
+    blocks, words = [], []
     for idx, slide in enumerate(prs.slides, 1):
         for sh in _shapes(slide):
             try:
@@ -188,6 +189,18 @@ def check(pptx, format_name=None, waive_sections=None, extra_terms=None, renders
                 top = left = wid = hei = 0.0
             if wid > 0.02 and hei > 0.02 and not _is_ground(sh, W, H):
                 rects.append((left, top, wid, hei))
+                body = (sh.text_frame.text or "").strip() if getattr(sh, "has_text_frame", False) else ""
+                # Headline-sized runs are NAVIGATION, not prose. The 20-25% text guidance is about
+                # what a passer-by has to READ; a poster title is a required element and is
+                # supposed to be enormous. Counting it as prose penalised exactly the boards that
+                # size their title correctly — measured, a landscape A0 with a proper 110pt title
+                # scored 46% text and failed while its body copy was four short lines.
+                big = fl.get("section") if fl else None
+                headline = bool(body) and big is not None and any(
+                    pt is not None and pt >= big for _t, pt in _runs(sh))
+                blocks.append((idx, left, top, wid, hei, "" if headline else body, headline))
+                if body:
+                    words.append((idx, body, len(body.split())))
             for txt, pt in _runs(sh):
                 text_all.append(txt)
                 if pt is not None:
@@ -337,6 +350,65 @@ def check(pptx, format_name=None, waive_sections=None, extra_terms=None, renders
                              "floors above are absolute, so density has to come out of the words."
                              .format(cover, hi, fmt.label)))
 
+    # A panel BEHIND text is a container, not a graphic. Counting it as one would make the check
+    # passable by drawing bigger boxes — the same trap `FILL` fell into, where committed area read
+    # as full. Measured on this skill's own A0 board: counting panels as graphics scored it
+    # 39% text / 61% graphics, when what a viewer receives is four blocks of prose in four boxes.
+    text_area = sum(w * h for _i, _l, _t, w, h, b, _hd in blocks if b)
+    graphic_area = 0.0
+    for idx, gl, gt, gw, gh, body, headline in blocks:
+        if body or headline:
+            continue                              # a headline is neither prose nor a graphic
+        covered = 0.0
+        for tidx, tl, tt, tw, th, tbody, _h2 in blocks:
+            if not tbody or tidx != idx:
+                continue
+            ox = min(gl + gw, tl + tw) - max(gl, tl)
+            oy = min(gt + gh, tt + th) - max(gt, tt)
+            if ox > 0 and oy > 0:
+                covered += ox * oy
+        if covered <= 0.35 * (gw * gh):
+            graphic_area += gw * gh          # nothing much sits on it — it IS the graphic
+
+    # ── PROPORTION — a board is read standing, by someone deciding in seconds ──────────────
+    # The one place this skill takes a ratio from a published standard rather than from its own
+    # taste: the poster literature converges on ~20-25% text / 40-50% graphics / 30-40% white
+    # space, and on text blocks of about 50 words, because a passer-by is deciding whether to
+    # engage. `FILL` above answers "is the board used"; this answers "used by WHAT", and a board
+    # can pass the first while being a wall of prose — measured on this skill's own A0 board, which
+    # was almost entirely text and cleared every check that existed.
+    if fmt.text_graphic and (text_area or graphic_area):
+        max_text, min_graphic = fmt.text_graphic
+        composed = text_area + graphic_area
+        t_share, g_share = text_area / composed, graphic_area / composed
+        facts["proportion"] = "{:.0%} text / {:.0%} graphics of the composed area".format(
+            t_share, g_share)
+        if t_share > max_text:
+            problems.append(("PROPORTION",
+                             "{:.0%} of what is composed on this {} is text, over the {:.0%} a "
+                             "printed board should carry. A poster is a visual abstract read "
+                             "standing: the reader is deciding in seconds whether to engage, and "
+                             "prose does not win that decision. Move a block into a figure, a "
+                             "diagram or a table — or cut it."
+                             .format(t_share, fmt.label, max_text)))
+        elif g_share < min_graphic:
+            problems.append(("PROPORTION",
+                             "only {:.0%} of what is composed on this {} is graphic, under the "
+                             "{:.0%} a printed board wants. The single most-cited poster failure "
+                             "is a paper reformatted into columns; whatever the argument is, some "
+                             "of it should be visible without being read."
+                             .format(g_share, fmt.label, min_graphic)))
+        long_blocks = [(i, t, n) for i, t, n in words if n > 60]
+        if long_blocks:
+            worst = max(long_blocks, key=lambda r: r[2])
+            problems.append(("TEXT BLOCK",
+                             "{} text block(s) run past ~50 words — the longest is {} words on "
+                             "slide {} ({!r}). Nobody reads a paragraph standing up at a poster; "
+                             "the block is where a passer-by gives up, and the fix is to cut it or "
+                             "make it a figure, never to set it smaller (the type floors are "
+                             "absolute)."
+                             .format(len(long_blocks), worst[2], worst[0], worst[1][:48])))
+
     # ── MISSING SECTION — content a surface is not finished without ────────────────────────
     if fmt.required_sections:
         if waive_sections:
@@ -370,12 +442,14 @@ def _selftest():
     ok, bad = [], []
     tmp = Path(tempfile.mkdtemp(prefix="surface-"))
 
-    def build(fmt_name, runs, extra=None):
-        """runs = [(text, pt, x, y, w, h)] on ONE slide of the named format."""
+    def build(fmt_name, runs, extra=None, figures=()):
+        """runs = [(text, pt, x, y, w, h)] on ONE slide; `figures` = [(x, y, w, h)] stand-ins."""
         import deckkit as dk
         f = formats.get(fmt_name)
         prs = dk.blank_deck(f.w_in, f.h_in)
         s = dk.add_slide(prs)
+        for fx, fy, fw, fh in figures:
+            dk.box(s, fx, fy, fw, fh, fill=dk.TINT)
         for txt, pt, x, y, w, h in runs:
             dk.text(s, x, y, w, h, [[(txt, pt, dk.DEEP, False, False)]])
         if extra:
@@ -391,17 +465,19 @@ def _selftest():
     good = build("poster_a0", [
         ("A result worth crossing a hall for", 110, 1.6, 1.6, 29.9, 4.4),
         ("Methods", 42, 1.6, 7.5, 14.0, 1.4),
-        ("We measured every deck the skill built and compared them.", 26, 1.6, 9.2, 14.0, 12.0),
+        ("Two sentences, not a column.", 26, 1.6, 9.2, 14.0, 2.4),
         ("Results", 42, 17.5, 7.5, 14.0, 1.4),
-        ("Two prose rules now fail loudly on real decks.", 26, 17.5, 9.2, 14.0, 12.0),
-        ("Limitations", 42, 1.6, 23.0, 14.0, 1.4),
-        ("One site, one operator, no held-out cohort.", 26, 1.6, 24.7, 14.0, 19.0),
-        ("Next", 42, 17.5, 23.0, 14.0, 1.4),
-        ("Record accent hexes so freshness can see more than the ground.", 26, 17.5, 24.7, 14.0, 19.0)])
+        ("Two prose rules now fail loudly.", 26, 17.5, 9.2, 14.0, 2.4),
+        ("Limitations", 42, 1.6, 26.5, 14.0, 1.4),
+        ("One site, one operator.", 26, 1.6, 28.2, 14.0, 2.4),
+        ("Next", 42, 17.5, 26.5, 14.0, 1.4),
+        ("Record accent hexes.", 26, 17.5, 28.2, 14.0, 2.4)],
+        figures=[(1.6, 12.4, 14.0, 12.8), (17.5, 12.4, 14.0, 12.8), (1.6, 31.4, 29.9, 13.4)])
     probs, facts = check(good)
     got = {c for c, _ in probs}
     (ok if not got else bad).append(
-        "a well-set A0 poster passes — {}".format(facts.get("fill")) if not got
+        "a well-set A0 poster passes — {} · {}".format(facts.get("proportion"),
+                                                        facts.get("fill")) if not got
         else "good poster flagged: {} ({})".format(got, facts.get("fill")))
 
     # The defect the eye sees first on a real board and no gate had a name for.
@@ -458,13 +534,15 @@ def _selftest():
     landscape = build("poster_a0_land",
                       [("A claim across the hall", 110, 1.6, 1.6, 43.0, 4.4),
                        ("Methods", 42, 1.6, 7.5, 20.0, 1.4),
-                       ("Measured on every built deck.", 26, 1.6, 9.2, 20.0, 10.0),
+                       ("Measured on every built deck.", 26, 1.6, 9.2, 20.0, 2.2),
                        ("Results", 42, 24.0, 7.5, 20.0, 1.4),
-                       ("Two rules now fail loudly.", 26, 24.0, 9.2, 20.0, 10.0),
-                       ("Limitations", 42, 1.6, 20.5, 20.0, 1.4),
-                       ("One site, one operator.", 26, 1.6, 22.2, 20.0, 9.0),
-                       ("Next", 42, 24.0, 20.5, 20.0, 1.4),
-                       ("Record accent hexes.", 26, 24.0, 22.2, 20.0, 9.0)])
+                       ("Two rules now fail loudly.", 26, 24.0, 9.2, 20.0, 2.2),
+                       ("Limitations", 42, 1.6, 22.5, 20.0, 1.4),
+                       ("One site, one operator.", 26, 1.6, 24.2, 20.0, 2.2),
+                       ("Next", 42, 24.0, 22.5, 20.0, 1.4),
+                       ("Record accent hexes.", 26, 24.0, 24.2, 20.0, 2.2)],
+                      figures=[(1.6, 12.0, 20.0, 9.0), (24.0, 12.0, 20.0, 9.0),
+                               (1.6, 27.0, 42.4, 4.5)])
     got = codes(landscape)
     (ok if not got else bad).append(
         "a LANDSCAPE A0 board resolves to its own format and passes" if not got
@@ -545,6 +623,8 @@ def main(argv=None):
     print("canvas {} -> {}".format(facts.get("canvas"), facts.get("format", "unregistered")))
     if facts.get("floors"):
         print("  printed type floors: " + facts["floors"])
+    if facts.get("proportion"):
+        print("  " + facts["proportion"])
     if facts.get("fill"):
         print("  " + facts["fill"] + ("; " + facts["ink"] if facts.get("ink") else ""))
     if facts.get("sections_waived"):

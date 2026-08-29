@@ -51,10 +51,23 @@ STRICT_STATS = {
 # Deliberately TINY, and only floors with an arithmetic answer. A ratio either clears 3:1 or it
 # does not; whether a component is over-used or a page is too dense is a judgment, and a judgment
 # forced through a waiver form becomes a rubber stamp. Nothing that needs an opinion belongs here.
-STRICT_WARNINGS = {
-    "ICON CONTRAST",                                # WCAG 1.4.11, recolored monochrome icons
-    "NON-TEXT CONTRAST",                            # WCAG 1.4.11, solid marks and connector lines
-}
+# Imported, never re-listed: `render_deck.py --gate-check` holds the SAME codes through its `a11y`
+# section, and two hand-maintained copies of an accessibility floor is how one runtime quietly
+# stops enforcing it. Before this, the asymmetry was already real — this path held the two contrast
+# codes and the shared path held nothing at all, so the same deck was accessible or not depending
+# on which runtime shipped it.
+def _a11y_codes():
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import lint_deck as _ld                     # noqa: PLC0415 - deliberate late import
+        return set(_ld.A11Y_BLOCKING)
+    except Exception:
+        # A floor that cannot be loaded must not silently become no floor. Keep the two WCAG
+        # ratios, which were here before `A11Y_CODES` existed, and say nothing was widened.
+        return {"ICON CONTRAST", "NON-TEXT CONTRAST"}
+
+
+STRICT_WARNINGS = _a11y_codes()
 ICON_HELPERS = {"icon", "icon_card", "icon_tile", "icon_badge", "icon_ghost"}
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
