@@ -149,6 +149,60 @@ for i in range(3):
 check("UNNAMED_REPEATED_MARK" not in codes(prs),
       "three cards are not reported — the floor is 4, so an ordinary card row is untouched")
 
+# It must not fire on LAWFUL composition. Probed against the shapes this toolkit itself builds —
+# the check is on every deck, so a false fire here is the reflex-to-waive problem this batch is
+# otherwise about. TEXTURE is separated by CONTRAST, not by a count: a backdrop is faint by
+# definition ("keep it near #EEE so it never fights body content" is its own docstring), and
+# anything faint enough to be texture sits under the 3:1 floor where NON-TEXT CONTRAST already
+# owns it. The two checks divide the space instead of both firing on a ground.
+def _page(build):
+    prs = dk.blank_deck()
+    sl = dk.add_slide(prs)
+    dk.box(sl, 0, 0, 10, 5.625, fill=dk.WHITE)
+    build(sl)
+    return prs
+
+
+for _label, _build in (
+        ("unit_grid (isotype)", lambda sl: dk.unit_grid(sl, 0.7, 1.5, 8.6, 2.5, 100, "people",
+                                                        filled=62)),
+        ("dot_strip", lambda sl: dk.dot_strip(sl, 0.6, 2.0, 8.0,
+                                              [("A", 70), ("B", 100), ("C", 180)], 0, 200)),
+        ("small_multiples", lambda sl: dk.small_multiples(
+            sl, 0.6, 1.4, 8.8, 3.2, [("a", [1, 2, 3]), ("b", [3, 2, 1]), ("c", [2, 2, 2])])),
+        ("timeline", lambda sl: dk.timeline(sl, 0.7, 2.0, 8.6,
+                                            [("Q1", "a"), ("Q2", "b"), ("Q3", "c")])),
+        ("backdrop_motif texture", lambda sl: (dk.backdrop_motif(sl, kind="grid"),
+                                               dk.text(sl, 0.7, 2.0, 8.6, 0.8,
+                                                       [[("Cover", 40, dk.DEEP, True, False)]]))),
+):
+    check("UNNAMED_REPEATED_MARK" not in codes(_page(_build)),
+          "{} is not reported — a check that fires on lawful composition teaches the waive reflex"
+          .format(_label), str(codes(_page(_build))))
+
+
+def _bento(filled, fill=None):
+    prs = dk.blank_deck()
+    sl = dk.add_slide(prs)
+    dk.box(sl, 0, 0, 10, 5.625, fill=dk.WHITE)
+    for i, (x, y, w, h) in enumerate(dk.bento(sl, 0.6, 1.2, 8.8, 3.9, [(1, 1)] * 8, cols=4)):
+        dk.box(sl, x, y, w, h, fill=fill or dk.TINT)
+        if filled:
+            dk.text(sl, x + 0.12, y + 0.10, w - 0.24, 0.4,
+                    [[("tile %d" % i, 12, dk.DEEP, False, False)]])
+    return prs
+
+
+check("UNNAMED_REPEATED_MARK" not in codes(_bento(True)),
+      "a bento grid with content in its tiles passes")
+check("UNNAMED_REPEATED_MARK" not in codes(_bento(False)),
+      "...and PALE empty tiles are not reported either — TINT reads 1.12:1 on white, which is "
+      "texture by the same contrast test, and NON-TEXT CONTRAST owns anything that faint if it "
+      "was meant to be read")
+check("UNNAMED_REPEATED_MARK" in codes(_bento(False, fill=dk.DEEP)),
+      "...but eight SOLID empty tiles are reported — a skeleton with nothing in it is not a page, "
+      "and a reader cannot decode it either")
+
 # ── 3. the icon waiver's category must be TRUE of the built file ─────────────────────────────
 def _deck(n_slides, loud=False):
     prs = dk.blank_deck()
@@ -189,6 +243,28 @@ check("not re-decided" in src,
       "dozen pages, and the defect this batch actually had — a category FALSE of the built file — "
       "is caught precisely by the check above. A blunt second rule that fires on lawful use is how "
       "a gate earns the reflex to waive it.")
+
+# ── 5. the two runtimes must hold the SAME icon bar ──────────────────────────────────────────
+# Found by auditing this batch: the shared path learned to CHECK each category against the built
+# file while the codex path kept comparing a string to a HAND-COPIED list — under a comment saying
+# to keep them identical, which is the shape that drifts. A deck was motif-dominant-and-fine on one
+# runtime and rejected on the other.
+import importlib.util                                                        # noqa: E402
+
+_spec = importlib.util.spec_from_file_location("cdg_icons", SCRIPTS / "codex_delivery_gate.py")
+_cdg = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_cdg)
+check(tuple(_cdg.ICON_NONE_CATEGORIES) == tuple(rd._ICON_NONE_CATEGORIES),
+      "both runtimes take the icon categories from ONE source, not a hand-copied mirror",
+      "{} vs {}".format(_cdg.ICON_NONE_CATEGORIES, rd._ICON_NONE_CATEGORIES))
+_ev = {"waivers": [{"kind": "icon", "scope": "undeclared-categorical",
+                    "reason": "a reason long enough to clear the width floor",
+                    "category": "motif-dominant"}]}
+check(not _cdg._icon_waiver_ok(_ev, _deck(12), [2, 3]),
+      "the codex path also REJECTS `motif-dominant` on a deck with no loud motif — a floor that "
+      "one runtime enforces and the other does not is not a floor")
+check(_cdg._icon_waiver_ok(_ev, _deck(4, loud=True), [2]),
+      "...and accepts it where the motif is really there")
 
 print("\n".join("  ok   " + m for m in OKS))
 if FAILS:

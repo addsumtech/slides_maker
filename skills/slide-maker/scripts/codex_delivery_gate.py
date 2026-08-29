@@ -496,14 +496,32 @@ def slide_count_from_pptx(path: Path) -> int | None:
         return None
 
 
-# Mirror of render_deck._ICON_NONE_CATEGORIES — the four high-bar reasons a categorical deck may
-# carry no icon family, kept identical across the two gate paths so Codex and the shared path hold
-# the same bar (they have drifted on icons before — this is why `categorical_slides` is one shared
-# definition). Icons are the default on categorical content; skipping them names one of these.
-ICON_NONE_CATEGORIES = ("motif-dominant", "editorial-register", "tiny-deck", "template-locked")
+def _icon_category_source() -> Any:
+    """`render_deck`'s icon-waiver rules — the LIST and the verifier, from one place.
+
+    This was a hand-copied mirror of `_ICON_NONE_CATEGORIES` with a comment saying to keep it
+    identical, which is the shape that drifts: when the shared path learned to CHECK each category
+    against the built file, this path kept comparing a string to a list and any of the four words
+    still cleared it. A deck was therefore motif-dominant-and-fine on Codex and rejected on the
+    shared path — the exact asymmetry the comment above it was written to prevent.
+    """
+    path = Path(__file__).with_name("render_deck.py")
+    spec = importlib.util.spec_from_file_location("slide_maker_render_deck_icons", path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("could not load render_deck.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
-def _icon_waiver_ok(evidence: dict[str, Any]) -> bool:
+try:
+    ICON_NONE_CATEGORIES = tuple(_icon_category_source()._ICON_NONE_CATEGORIES)
+except Exception:      # a floor that cannot be loaded must not silently become no floor
+    ICON_NONE_CATEGORIES = ("motif-dominant", "editorial-register", "tiny-deck", "template-locked")
+
+
+def _icon_waiver_ok(evidence: dict[str, Any], deck_path: Path | None = None,
+                    flagged: list | None = None) -> bool:
     """True when the undeclared-categorical icon waiver carries a CLASSIFIED high-bar category.
 
     Symmetric with render_deck._icon_none_waived: naming a reason is no longer enough — the reason
@@ -517,8 +535,21 @@ def _icon_waiver_ok(evidence: dict[str, Any]) -> bool:
             continue
         if not require_string(entry.get("reason"), "waiver.reason", [], minimum=12):
             continue
-        if str(entry.get("category") or "").strip().lower() in ICON_NONE_CATEGORIES:
-            return True
+        cat = str(entry.get("category") or "").strip().lower()
+        if cat not in ICON_NONE_CATEGORIES:
+            continue
+        # …and the category must be TRUE of the built file, not merely one of four accepted words.
+        # Same code as `render_deck --gate-check`, so the two paths cannot answer differently.
+        if deck_path is not None:
+            try:
+                ok, why = _icon_category_source()._icon_none_category_holds(
+                    cat, deck_path, flagged or [])
+            except Exception:
+                ok, why = True, ""          # never fail the gate on the checker itself
+            if not ok:
+                print("  [--] icon waiver REJECTED — " + why)
+                continue
+        return True
     return False
 
 
@@ -1535,6 +1566,7 @@ def check_icons(
     design_rows: dict[int, dict[str, Any]],
     calls: dict[str, set[str]],
     errors: list[str],
+    deck_path: Path | None = None,
 ) -> None:
     icon_rows = evidence.get("icons", [])
     if not isinstance(icon_rows, list):
@@ -1602,7 +1634,7 @@ def check_icons(
     # it fails the CONTRADICTION: pages that read as category sets, declared as none, and no icon
     # anywhere. Any one of those three being false leaves this silent.
     missed = sorted(set(looks_categorical) - declared)
-    if missed and not icon_rows and not _icon_waiver_ok(evidence):
+    if missed and not icon_rows and not _icon_waiver_ok(evidence, deck_path, missed):
         errors.append(
             "slides {} carry parallel label sets (3+ short peers sharing a baseline across half the "
             "canvas — the shape of a category row) but are declared `categorical: false`, and the "
@@ -1997,7 +2029,7 @@ def evaluate(
                     errors.append("components JSON does not match a fresh audit of the final build and PPTX")
                 audited_components = recomputed
         check_components(evidence, audited_components, design_rows, calls, errors)
-        check_icons(evidence, root, design_rows, calls, errors)
+        check_icons(evidence, root, design_rows, calls, errors, deck_path)
         reviews = check_critics(evidence, root, expected_slides, deck_hash, errors)
         check_visual_contract(evidence, root, deck_path, deck_hash, build_script, reviews, errors)
     return errors

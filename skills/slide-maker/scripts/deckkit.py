@@ -8292,6 +8292,15 @@ def _motif_faults(prs):
     for n, sl in enumerate(prs.slides, 1):
         W2, H2 = W, H
         marks, texts2 = [], []
+        _slide_ground = None                       # the page's own ground, for the texture test
+        for sh in sl.shapes:
+            bb0 = _bbox_in(sh)
+            if bb0 and bb0[2] >= W2 * 0.97 and bb0[3] >= H2 * 0.97:
+                try:
+                    if sh.fill.type == 1:
+                        _slide_ground = tuple(sh.fill.fore_color.rgb)
+                except Exception:
+                    pass
         for sh in sl.shapes:
             bb = _bbox_in(sh)
             if not bb or bb[2] <= 0 or bb[3] <= 0:
@@ -8305,13 +8314,39 @@ def _motif_faults(prs):
                             sz = max(sz, r_.font.size.pt)
                 texts2.append((bb, sz))
             elif not _is_text(sh) and bb[2] * bb[3] < W2 * H2 * 0.55:
-                marks.append((round(bb[2], 2), round(bb[3], 2), bb))
+                # TEXTURE is excluded, and the test for texture is CONTRAST, not a count. A
+                # backdrop is faint by definition — `backdrop_motif`'s own docstring says keep it
+                # near #EEE "so it never fights body content" — and a viewer is not asked to read
+                # it. Anything faint enough to be texture is under the 3:1 non-text floor, where
+                # `NON-TEXT CONTRAST` already owns it if it was meant to be read. So the two checks
+                # divide the space cleanly instead of both firing on a ground.
+                try:
+                    f = sh.fill
+                    rgb = tuple(f.fore_color.rgb) if f.type == 1 else None
+                except Exception:
+                    rgb = None
+                faint = True
+                if rgb is None or _slide_ground is None:
+                    faint = False
+                else:
+                    try:
+                        faint = contrast_ratio(rgb, _slide_ground) < 3.0
+                    except Exception:
+                        faint = False
+                # The faint ones stay IN the group and only lose their vote on whether the group is
+                # texture. An isotype grid's group is all 100 cells, not the 62 that happen to be
+                # filled: dropping the pale ones shrank the bounding box, moved its own caption out
+                # of reach, and reported a chart that was labelled all along.
+                marks.append((round(bb[2], 2), round(bb[3], 2), bb, faint))
         groups = {}
-        for w_, h_, bb in marks:
-            groups.setdefault((w_, h_), []).append(bb)
-        for (w_, h_), bbs in groups.items():
+        for w_, h_, bb, faint in marks:
+            groups.setdefault((w_, h_), []).append((bb, faint))
+        for (w_, h_), members in groups.items():
+            bbs = [b for b, _f in members]
             if len(bbs) < 4 or w_ * h_ > 6.0:
                 continue
+            if all(f for _b, f in members):
+                continue                       # every member is texture-faint — a ground, not a set
             x0 = min(b[0] for b in bbs); y0 = min(b[1] for b in bbs)
             x1 = max(b[0] + b[2] for b in bbs); y1 = max(b[1] + b[3] for b in bbs)
             # A LABEL, not merely nearby text. Two things separate them, and the first version

@@ -167,6 +167,22 @@ section is a distilled summary — the full notes live on the
 
 ### Fixed
 
+- **Audit of the decodability batch — the same drift I had just fixed, one file over.**
+  `codex_delivery_gate.py` kept its OWN hand-copied `ICON_NONE_CATEGORIES`, under a comment saying
+  to keep it identical to the shared path's. So when the shared path learned to CHECK each category
+  against the built file, the codex path went on comparing a string to a list, and a deck was
+  `motif-dominant`-and-fine on one runtime and rejected on the other. Both now take the list AND
+  the verifier from one source; the suite asserts it.
+- **`UNNAMED_REPEATED_MARK` fired on two lawful compositions**, found by probing it against the
+  shapes this toolkit itself builds — which matters more than usual, because a check that fires on
+  lawful use is precisely the thing that teaches the waive reflex this batch is otherwise about.
+  `backdrop_motif`'s texture was reported: a backdrop is faint by definition ("keep it near #EEE so
+  it never fights body content" is its own docstring) and nobody is asked to read it, so texture is
+  now separated by CONTRAST — anything under the 3:1 non-text floor belongs to `NON-TEXT CONTRAST`
+  if it was meant to be read, and the two checks divide the space instead of both firing on a
+  ground. And an isotype `unit_grid` was reported *while carrying its own caption*: dropping the
+  pale cells from the group shrank its bounding box and pushed the label out of reach, so faint
+  members now stay IN the group and only lose their vote on whether the group is texture.
 - **A second, blunter icon rule was withdrawn the same day it was added.** "The waiver must name
   EVERY flagged slide" rejected a lawful `editorial-register` waiver that had named two of a dozen
   pages, and the defect this batch actually had — a category FALSE of the built file — is caught
