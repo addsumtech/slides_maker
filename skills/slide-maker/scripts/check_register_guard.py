@@ -124,23 +124,36 @@ def _rect(sh):
         return None
 
 
-def _is_backing(rect, text_rects):
-    """A primitive with type sitting ON it is a CARD, not a hero form.
+BACKING_INSIDE = 0.6      # how much of the other thing sits within the primitive
+BACKING_WEIGHT = 0.08     # ...and how much of the primitive it takes up, so a speck cannot exempt
+
+
+def _is_backing(rect, others):
+    """A primitive with something sitting ON it is a CARD or a PANEL, not a hero form.
 
     bauhaus's guard is one hero primitive per slide against a confetti of shapes. deckkit draws a
-    card as a shape PLUS a separate text box, so the `has_text` exclusion above never sees the
-    pairing, and two ordinary side-by-side cards read as two oversized primitives — measured on a
-    page with one box and one callout, both flagged. A form somebody set text on top of is
-    furniture the type needs; the hero primitive bauhaus means is the bare one.
+    card as a shape PLUS a separate text box, so a `has_text` test on the shape itself never sees
+    the pairing, and two ordinary side-by-side cards read as two oversized primitives — measured on
+    a page with one box and one callout, both flagged. The same blindness covers the panel behind a
+    chart, an image, or an icon cluster: it carries no text either, and it is just as obviously
+    furniture. So the test is CONTENT ON IT, whatever that content is — at least
+    `BACKING_WEIGHT` of the primitive's own area, so a stray dot cannot launder a real hero shape.
     """
     if not rect:
         return False
     x0, y0, x1, y1 = rect
-    for tx0, ty0, tx1, ty1 in text_rects:
+    own = max(1, (x1 - x0) * (y1 - y0))
+    for other in others:
+        if not other or other == rect:
+            continue
+        tx0, ty0, tx1, ty1 = other
+        o_area = max(1, (tx1 - tx0) * (ty1 - ty0))
+        if o_area >= own:                      # a bigger thing is not sitting ON this one
+            continue
         ox = max(0, min(x1, tx1) - max(x0, tx0))
         oy = max(0, min(y1, ty1) - max(y0, ty0))
-        t_area = max(1, (tx1 - tx0) * (ty1 - ty0))
-        if ox * oy >= 0.6 * t_area:
+        inter = ox * oy
+        if inter >= BACKING_INSIDE * o_area and inter >= BACKING_WEIGHT * own:
             return True
     return False
 
@@ -202,10 +215,9 @@ def check(pptx, register=None, gates=None):
         bigs = 0
         shapes = list(_iter(slide))
         facts_by_shape = [(sh, _shape_facts(sh, canvas)) for sh in shapes]
-        text_rects = [f["rect"] for _sh, f in facts_by_shape
-                      if f["rect"] and _has_text(_sh)]
+        on_page = [f["rect"] for _sh, f in facts_by_shape if f["rect"]]
         for sh, f in facts_by_shape:
-            if f["big_primitive"] and not _is_backing(f["rect"], text_rects):
+            if f["big_primitive"] and not _is_backing(f["rect"], on_page):
                 bigs += 1
             for rule in rules:
                 if rule == "confetti" or rule == "proportional-face":

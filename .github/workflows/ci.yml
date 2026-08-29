@@ -246,6 +246,14 @@ jobs:
           set -o pipefail
           python scripts/check_register_guard.py --selftest
 
+      - name: Register surface (the preset must build its LOOK, not just its colourway)
+        run: |
+          set -o pipefail
+          python scripts/register_surface.py --selftest
+          python tests/test_register_surface.py | tee /tmp/regsurf.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/regsurf.log || {
+            echo "::error::register-surface suite did not run to completion"; exit 1; }
+
       - name: Register write-back (an invented look outlives the folder it shipped in)
         run: |
           set -o pipefail

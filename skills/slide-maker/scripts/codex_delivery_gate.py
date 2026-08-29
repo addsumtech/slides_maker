@@ -1159,6 +1159,42 @@ def check_register_guard(evidence: dict[str, Any], deck_path: Path | None,
         errors.append("{}: {}".format(code.upper(), msg.replace("\n", " ")))
 
 
+def note_register_kit(evidence: dict[str, Any], deck_path: Path | None,
+                      build_script: Path | None) -> None:
+    """A register with a buildable surface, built as a colourway — printed on BOTH runtimes.
+
+    Same module and same wording as `render_deck --gate-check`. Putting it on one path only is the
+    icon drift this gate has already been through twice.
+    """
+    if deck_path is None:
+        return
+    try:
+        path = Path(__file__).with_name("register_surface.py")
+        spec = importlib.util.spec_from_file_location("slide_maker_register_surface", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        csa_path = Path(__file__).with_name("check_style_applied.py")
+        csa_spec = importlib.util.spec_from_file_location("slide_maker_csa_kit", csa_path)
+        csa = importlib.util.module_from_spec(csa_spec)
+        csa_spec.loader.exec_module(csa)
+        design = evidence.get("design") if isinstance(evidence.get("design"), dict) else {}
+        reg, conf = csa.declared_preset(design.get("style_pick"), csa.preset_names(),
+                                        design.get(csa.LOOK_SOURCE_KEY))
+        if conf != "sure" or not reg or not module.has(reg):
+            return
+        src = ""
+        if build_script is not None and build_script.is_file():
+            src = build_script.read_text(encoding="utf-8", errors="ignore")
+        if "register_surface" in src:
+            print(f"  `{reg}` was built with its surface kit, not just its palette")
+            return
+        print(f"  [!!] `{reg}` HAS a buildable surface — register_surface.ground() paints its own "
+              f"furniture and hands back the content rect, and .card() gives its card FORM. This "
+              f"deck used none of it, so what shipped is the register's colourway.")
+    except Exception as exc:
+        print(f"  [--] register kit note NOT RUN — {exc.__class__.__name__}: {exc}")
+
+
 def note_register_kept(evidence: dict[str, Any], deck_path: Path | None) -> None:
     """An INVENTED register must be kept, or it is gone when the folder is — printed, never held.
 
@@ -2085,6 +2121,8 @@ def evaluate(
         check_surface_contract(evidence, deck_path, errors)
         # ...and if the register was INVENTED, say so before the folder is the only copy of it.
         note_register_kept(evidence, deck_path)
+        # ...and if it was a PRESET with a buildable surface, say whether the surface was built.
+        note_register_kit(evidence, deck_path, build_script)
         audited_components = components
         if build_script is not None and deck_path is not None:
             recomputed = recompute_component_audit(build_script, deck_path, errors)

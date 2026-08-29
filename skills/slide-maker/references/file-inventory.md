@@ -108,6 +108,21 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   clean reported 6 of 7 cues flat. Reads renders already on disk — no extra render pass, ~0.6s for
   14 pages. Whitespace is measured against the MODAL tone, so a dark register reads as mostly empty
   rather than 100% full.
+- `register_surface.py` — the half `presets.apply()` never had. apply() calls four things
+  (`set_palette`, `set_geometry`, `set_ground`, the font setters), so one identical page through all
+  18 presets RENDERED as 18 colourways of one page: no memphis bands, no bauhaus primitive, no
+  glass, no overprint, no scanlines. Each preset's `surface` field described all of that correctly,
+  in prose, for an author to build by hand — which is why it was never built. A kit is three things:
+  `ground()` paints the register's furniture and RETURNS the content rect left over, `card()` gives
+  its card FORM (the half that makes the pages differ in shape rather than colour), and the marks
+  (`halftone` · `starburst` · `boomerang` · `zigzag` · `tri` · `scanlines` · `color_band`) are
+  public so a bespoke register can borrow one. The rect it returns is a CONTRACT with teeth: a kit
+  that paints a loud mark inside it raises — the first render put a memphis triangle through a card
+  corner and a bauhaus disc through a third card while the docstring promised it could not happen.
+  Placement varies by page INDEX, never by a random number, so two builds of a deck stay identical.
+  Six of eighteen registers have a kit; asking for one of the other twelve raises rather than
+  quietly returning a plain page. Both gates NOTE a deck that declared a kitted register and used
+  none of it.
 - `save_register.py` — keeps an INVENTED register after the deck ships. The example library held
   4 while one real look history held 9 that had shipped and been lost, and grep found no script
   anywhere that wrote a register or a look-history line: the mechanism was "remember to edit the

@@ -1588,6 +1588,42 @@ def _check_a11y(pptx, delivery, gates):
           '{"a11y": {"waived": "<who reads this deck, and how>", "waived_category": "<kind>"}}')
 
 
+def _register_kit_note(pptx, gates):
+    """The declared register HAS a buildable surface — say so if the deck used none of it.
+
+    `presets.apply()` sets a palette, a corner radius, a ground and a font. Rendered side by side,
+    one page through all 18 presets came out as 18 colourways of one page: no memphis bands, no
+    bauhaus primitive, no glass, no overprint, no scanlines. `register_surface.py` builds those,
+    for the six registers that have a kit so far — and a capability nobody is told about at the
+    moment it applies is the same as one that does not exist. This is the telling. A NOTE, never a
+    hold: a deliberate quiet treatment of a loud register is a real design choice, and holding a
+    finished deck over an unused helper would teach the waiver reflex.
+    """
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    try:
+        import register_surface as rs
+        import check_style_applied as csa
+        d = (gates or {}).get('design_plan') or {}
+        if not isinstance(d, dict):
+            return
+        reg, conf = csa.declared_preset(d.get('style_pick'), csa.preset_names(),
+                                        d.get(csa.LOOK_SOURCE_KEY))
+        if conf != 'sure' or not reg or not rs.has(reg):
+            return
+        deck_dir = Path(pptx).resolve().parent
+        used = any('register_surface' in f.read_text(encoding='utf-8', errors='ignore')
+                   for f in list(deck_dir.glob('*.py')) + list(deck_dir.glob('**/*.py'))[:60])
+    except Exception:
+        return
+    if used:
+        print("[gates] `{}` was built with its surface kit, not just its palette".format(reg))
+        return
+    print("[gates] `{}` HAS a buildable surface — `register_surface.ground()` paints its own "
+          "furniture and hands back the content rect, and `.card()` gives its card FORM. This deck "
+          "used none of it, so what shipped is the register's colourway. A deliberate quiet "
+          "treatment is a legitimate choice; forgetting the kit exists is not.".format(reg))
+
+
 def _register_keep_note(pptx, gates):
     """Say, at hand-off, that an INVENTED register is about to be forgotten.
 
@@ -2859,6 +2895,7 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
 
     with _gate_section('register_guard'):
         _register_guard_gate(pptx, gates)
+        _register_kit_note(pptx, gates)
         _register_keep_note(pptx, gates)
 
     with _gate_section('timidity'):

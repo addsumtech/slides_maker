@@ -70,6 +70,38 @@ section is a distilled summary — the full notes live on the
 
 ### Added
 
+- **The 18 presets now BUILD their look, not just their colourway — `scripts/register_surface.py`.**
+  Asked whether a no-image-generation deck can actually reproduce these styles, the answer was
+  measured rather than remembered: one identical page taken through all 18 presets and RENDERED
+  came out as 18 pages differing only in ground colour, ink, accent, one font swap and a line
+  weight. memphis had no colour bands and no scattered marks, bauhaus no oversized primitive,
+  glassmorphism no glass, risograph no overprint, terminal no scanlines. `apply()` calls exactly
+  four things — `set_palette`, `set_geometry`, `set_ground`, the font setters — and every preset's
+  `surface` field describes the rest correctly, in prose, for an author to build by hand, which in
+  practice meant nobody ever built it.
+  A kit is three things: **`ground()`** paints the register's own furniture and RETURNS the content
+  rect that is left, the way `title_bar()` returns its content top; **`card()`** gives the
+  register's card FORM — a memphis banded card, a bauhaus hard square with a heavy keyline, a riso
+  sticker with an offset plate, a frosted glass panel, a terminal output block — which is the half
+  that makes the pages differ in SHAPE rather than in colour; and the **marks** (`halftone`,
+  `starburst`, `boomerang`, `zigzag`, `tri`, `scanlines`, `color_band`) are public, so a bespoke
+  register can borrow one.
+  The returned rect is a contract with teeth: a kit that paints a loud mark into it RAISES. That is
+  not hypothetical — the first render put a memphis triangle through a card corner and a bauhaus
+  disc through the third card while the module's own docstring promised it could not happen, and
+  the invariant caught both on the next run. Placement varies by page INDEX, never by a random
+  number, so two builds of one deck stay byte-identical. Six registers have a kit so far (memphis ·
+  bauhaus · risograph · terminal · midcentury · glassmorphism); asking for one of the other twelve
+  raises rather than quietly handing back a plain page, because a silent fallback would ship
+  exactly the colourway-only deck this ends. Every kit is checked against `presets.FORBIDS` by
+  `check_register_guard` in its own test, so a builder that violates the register it claims to
+  build fails in CI rather than in a delivered deck. Both `--gate-check` and `codex_delivery_gate`
+  NOTE a deck that declared a kitted register and used none of its surface.
+- **`check_register_guard`'s backing rule now covers panels, not just cards.** A big primitive with
+  ANYTHING substantial sitting on it — a chart, an image, an icon cluster, not only a text box — is
+  furniture rather than a hero form, with a floor on how much of it is covered so a stray dot
+  cannot launder a real primitive.
+
 - **An invented register now OUTLIVES the deck folder — `scripts/save_register.py`.** The skill
   tells you to keep a look you designed, and `registry.py` could only ever *read*: grep found no
   script anywhere that wrote a register or a look-history line, so the mechanism was "remember to
