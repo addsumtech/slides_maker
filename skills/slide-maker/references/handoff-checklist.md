@@ -52,8 +52,11 @@ further:"* line (the terminal consent's recorded headroom; if the user adopts it
 the normal post-delivery feedback loop). Two taste-ecosystem lines ride the same note when they
 apply (`references/user-taste.md`): **(a) the save-this-look offer** — for a freshly-designed look
 (Q1 branch (c), either sub-path) not yet registered, one line: *"save this look to your registry as
-<name>?"*; on an **explicit yes** persist the deck's `style.py` + a `profile.md` per the existing
-registry conventions, distilling the final round's critic `strengths` and any cross-round recurring
+<name>?"*; on an **explicit yes** run **`python3 scripts/save_register.py <deck-dir>`** — it appends
+the register itself (palette, the hues that reached the pixels, the signature move, what the motif
+generates, which slides carry it) to `<registry root>/registers.md`, reading every field out of
+`.deck-gates.json` so nothing is re-described and nothing is re-decided at hand-off — and persist the
+deck's `style.py` + a `profile.md` per the existing registry conventions, distilling the final round's critic `strengths` and any cross-round recurring
 finding dimensions into the profile's existing **Notes** field (hand-off, after the critic loop, is
 when the profile can carry what the vetted deck *proved* — this is collaborative mode's Gate A 7(b)
 persist, re-timed: one save, one owner); **skip the offer entirely under a per-deck auto directive**

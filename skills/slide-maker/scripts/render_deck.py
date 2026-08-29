@@ -1588,6 +1588,39 @@ def _check_a11y(pptx, delivery, gates):
           '{"a11y": {"waived": "<who reads this deck, and how>", "waived_category": "<kind>"}}')
 
 
+def _register_keep_note(pptx, gates):
+    """Say, at hand-off, that an INVENTED register is about to be forgotten.
+
+    The skill's own example library holds four bespoke registers; this user's look history holds
+    nine that were designed, shipped and lost. Measured by grep, no script anywhere wrote one: the
+    mechanism was "remember to edit the markdown", which is not a mechanism. So the skill invents
+    good registers and forgets every one, and every deck starts its design from zero.
+
+    A NOTE, never a hold. Keeping a register is the user's call about their own collection, and a
+    gate that blocked a finished deck over a library entry would be the waive-reflex failure this
+    repo keeps re-learning. But silence is how it stayed at four.
+    """
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    try:
+        import save_register as sr
+        name, _body = sr.entry_for(Path(pptx).resolve().parent)
+    except Exception:
+        return
+    if not name:
+        return
+    try:
+        already = name in sr.kept()
+    except Exception:
+        already = False
+    if already:
+        print("[gates] register `{}` is already kept in your collection".format(name))
+        return
+    print("[gates] this deck invented `{}` — keep it, or it is gone when the folder is:\n"
+          "        python3 scripts/save_register.py {}\n"
+          "        (the library has 4 invented registers; a look history usually has more that "
+          "were shipped and lost)".format(name, Path(pptx).resolve().parent))
+
+
 def _register_guard_gate(pptx, gates):
     """A declared register must be OBEYED, not merely paletted.
 
@@ -2825,6 +2858,7 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
 
     with _gate_section('register_guard'):
         _register_guard_gate(pptx, gates)
+        _register_keep_note(pptx, gates)
 
     with _gate_section('timidity'):
         _check_timidity(pptx, delivery, gates)

@@ -246,6 +246,11 @@ jobs:
           set -o pipefail
           python scripts/check_register_guard.py --selftest
 
+      - name: Register write-back (an invented look outlives the folder it shipped in)
+        run: |
+          set -o pipefail
+          python scripts/save_register.py --selftest
+
       - name: Decodability (can a viewer read the marks, measured not claimed)
         run: |
           set -o pipefail

@@ -73,6 +73,7 @@ evidence, like any other dial.)*
   existing row** (move the dial, `handoff-and-iteration.md`), never appends a contradiction —
   two rows arguing about one dimension is the diverging-sources-of-truth failure.
 - **NO-GOs (≤5 lines)** — hard user vetoes, evidenced the same way.
+- **`registers.md` (beside this file)** — the registers this user has INVENTED, appended by `scripts/save_register.py` at hand-off. The look-history row below records that a deck had a bespoke look; the register file records the look itself, in enough detail to start from again. Both are needed: nine registers were shipped and lost while only the one-line rows survived.
 - **LOOK HISTORY (10 lines)** — one line per delivered deck; the freshness input
   (`agents/slide-design.md` §1 varies at least one foundation against the LAST line).
   🔴 **Write the canvas value AND the accents as HEX**, as the example row does. This is not

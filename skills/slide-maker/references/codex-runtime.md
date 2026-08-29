@@ -168,6 +168,8 @@ be reconstructed post-hoc at the delivery gate.
    identical content: 8 distinct skeletons planned against 2 improvised. It is a PROPOSAL — override
    any row the content argues with, and record the deviation in `design`.
 
+2x. 🔴 **Keep the register you invent.** At hand-off run `python3 scripts/save_register.py <deck-dir>`: it appends the invented register to `<registry root>/registers.md` (the same root `registry.py` resolves for this runtime, so a non-Claude host keeps its own collection), reading the pick, palette, signature move and `motif_generates` straight out of the evidence record — nothing is re-described. Measured before it existed: four kept in the library against nine shipped and lost. Read that file at the design step beside the preset gallery.
+
 2y. 🔴 **`presets.apply()` gives you a PALETTE, not a register.** It sets palette, geometry tokens
    (radius/rule_w) and ground — nothing else. Measured: the same page through all 18 presets came
    out differing only in ground colour, corner radius and rule weight, with none of memphis's

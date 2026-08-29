@@ -108,6 +108,19 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   clean reported 6 of 7 cues flat. Reads renders already on disk — no extra render pass, ~0.6s for
   14 pages. Whitespace is measured against the MODAL tone, so a dark register reads as mostly empty
   rather than 100% full.
+- `save_register.py` — keeps an INVENTED register after the deck ships. The example library held
+  4 while one real look history held 9 that had shipped and been lost, and grep found no script
+  anywhere that wrote a register or a look-history line: the mechanism was "remember to edit the
+  markdown", which is not one. Nothing is re-described — it reads the pick, palette, signature move
+  and `motif_generates` from `.deck-gates.json` and adds the colours `check_register_pixels`
+  measured on the render. Writes to the USER'S registry root beside `taste.md`, never into the
+  skill's own `bespoke-registers.md`, which is a teaching library rather than one user's
+  collection. Preset-based decks are skipped (they are in the gallery already). Idempotent on a
+  NORMALISED name: the gates record carries the English pick and the look history the human-typed
+  one, so `Section Drawing` and `Section Drawing 建筑剖面` are one register, not two — comparing
+  strings kept both on the first run. `--from-history` recovers what a look history already names.
+  `render_deck --gate-check` NOTES an unkept register at hand-off, never blocks: keeping one is the
+  user's call about their own collection.
 - `check_register_guard.py` — the SHAPE-level half of a declared register. `apply()` sets palette,
   geometry tokens and ground and nothing else, so measured, one page through all 18 presets came
   out differing only in ground, radius and rule weight — memphis with no header bands, bauhaus with

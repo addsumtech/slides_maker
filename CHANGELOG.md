@@ -30,6 +30,27 @@ section is a distilled summary — the full notes live on the
 
 ### Added
 
+- **An invented register now OUTLIVES the deck folder — `scripts/save_register.py`.** The skill
+  tells you to keep a look you designed, and `registry.py` could only ever *read*: grep found no
+  script anywhere that wrote a register or a look-history line, so the mechanism was "remember to
+  edit the markdown by hand", which is not a mechanism. Measured: the example library held **4**
+  invented registers while one real user's look history named **9** that had shipped and been
+  lost — recoverable only as a one-line title, never as the look. `save_register.py <deck-dir>`
+  appends the register to `<registry root>/registers.md`, beside `taste.md`, on whatever runtime is
+  hosting; nothing is re-described and nothing re-decided at hand-off, because every field is read
+  back out of `.deck-gates.json` (the pick, the palette, the signature move, what the motif
+  generates, which slides carry it) and joined to the colours `check_register_pixels` measured on
+  the actual render. Preset decks are skipped — they are in the gallery already. It is **idempotent
+  on a normalised name**, which is not pedantry: the gates record carries the English pick and the
+  look history the human-typed one, so `Section Drawing` and `Section Drawing 建筑剖面` are one
+  register — comparing strings kept both on the first real run. `--from-history` recovers what a
+  look history already names (7 on the author's own profile), `--list` shows the collection.
+  `render_deck --gate-check` NOTES an unkept register at hand-off and never blocks: keeping one is
+  the user's call about their own collection. Wired into the hand-off checklist's save-this-look
+  offer, SKILL.md Step 2 (read the collection beside the preset gallery — not to reuse a look, but
+  because a register that already made an argument about X visible is the best start for the next
+  X), and `references/codex-runtime.md`, since a non-Claude runtime never reads `agents/`.
+
 - **A declared register must be OBEYED, not merely paletted — `scripts/check_register_guard.py`.**
   Asked whether the 18 presets' styles actually survive without an image tool, the honest answer
   turned out to be no: the same page through all 18 `presets.apply()` calls produced 18 pages
