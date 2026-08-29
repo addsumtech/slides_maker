@@ -578,6 +578,20 @@ each slide in isolation and can't retrofit rhythm, so this is yours.
   If the quiet is deliberate, record the register exception in the plan.
 - Decide **where the appear-builds fall** here (step 6), not on a separate pass — a built pipeline slide
   *is* a protagonist beat, and whether builds cluster or spread is part of density pacing.
+- 🔴 **Get the skeleton column from `plan_rhythm.py`, do not hand-roll it.** The two floors this
+  bullet states — **≥4 distinct skeletons** and **never 3 consecutive on one** — are arithmetic, and
+  computing them by hand while also choosing forms and protagonists is how a deck ends up with one
+  skeleton under eight names. One call proposes the whole column in ~40ms, deterministically, with
+  no model round-trip:
+
+      python3 scripts/plan_rhythm.py --roles <role,role,…> --carry <n,m> [--home <skeleton>]
+
+  Pass **`--home <skeleton>`** whenever the direction gate chose a `skeleton` token: it makes that
+  composition the map's PLURALITY, which is what the paragraph below requires and what the planner
+  would otherwise quietly override. It is a PROPOSAL — override any row the content argues with, and
+  record the deviation. Build each page from **`deckkit.skeleton(slide, "<kind>")`**, which returns
+  that architecture's named rects (`python3 scripts/sigs.py --example skeleton`); hand-rolling the
+  bone structure out of `box`+`text` is what the helper exists to stop.
 - **Build the rhythm map** (`design-intelligence-addendum.md` §1.2) — one row per content slide:
   ***canvas skeleton** · density · background mode · visual protagonist · emotional register · role in
   rhythm* — and confirm **adjacent rows differ on more than one axis**, not just in title text. The

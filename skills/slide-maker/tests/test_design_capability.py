@@ -115,6 +115,67 @@ check({k for _i, _r, k, _w in pr.plan(list(pr.ROLE_FIT) + ["unknown"] * 4)} <= s
       "every architecture the planner proposes is one deckkit can actually build — the planner and "
       "the builder cannot drift apart")
 
+# The HOME BASE the workflow requires. `agents/slide-design.md`: when the direction gate chose a
+# skeleton token, that skeleton "is the map's PLURALITY: the most-used home base, visibly the deck's
+# default", because the user picked a composition from RENDERED options. A planner that rotated
+# evenly would silently override the pick they actually looked at.
+from collections import Counter                                              # noqa: E402
+
+for _home in ("split", "island", "dashboard", "rail"):
+    _r = pr.plan(["cover", "context", "method", "result", "result", "compare", "evidence",
+                  "takeaway", "next", "close"], home=_home)
+    _top = Counter(k for _i, _ro, k, _w in _r).most_common(1)[0][0]
+    check(_top == _home and not pr.check(_r, home=_home),
+          "home base {!r} becomes the plurality AND still clears both floors".format(_home),
+          "plurality {} / {}".format(_top, pr.check(_r, home=_home)))
+try:
+    pr.plan(["a"] * 8, home="nosuch")
+    check(False, "a typo'd home base is refused", "it reached the plan")
+except ValueError:
+    check(True, "a typo'd home base is refused — the planner may never propose an architecture "
+                "deckkit cannot build")
+
+# skeleton() must FAIL LOUDLY on a division that cannot fit, like its sibling bento(). Before this,
+# n=99 cells / a gap wider than the band / weight at 0 or 1 returned NEGATIVE widths, which
+# python-pptx accepts and renders as garbage far from the cause.
+_p2 = dk.blank_deck()
+_s2 = dk.add_slide(_p2)
+for _label, _kw in (("99 cells", dict(n=99)), ("a gap wider than the band", dict(gap=9.0)),
+                    ("a negative gap", dict(gap=-1.0)),
+                    ("a source band of nothing", dict(band=(0, 0, 0.5, 0.4)))):
+    try:
+        dk.skeleton(_s2, "dashboard", **_kw)
+        check(False, "skeleton refuses {}".format(_label), "it returned rects")
+    except ValueError:
+        check(True, "skeleton refuses {} rather than returning a negative rect".format(_label))
+for _w in (0.0, 1.0):
+    try:
+        dk.skeleton(_s2, "split", weight=_w)
+        check(False, "skeleton('split') refuses weight={}".format(_w), "it returned rects")
+    except ValueError:
+        check(True, "skeleton('split') refuses weight={} — one column would have no width"
+              .format(_w))
+# and every legitimate combination on every registered canvas still builds
+import formats                                                               # noqa: E402
+_broken = []
+for _name in ("wide", "classic", "square", "red", "story", "a4", "a0", "a1", "a0-landscape"):
+    _f = formats.get(_name)
+    _p3 = dk.blank_deck(_f.w_in, _f.h_in)
+    _s3 = dk.add_slide(_p3)
+    for _k in dk.SKELETONS:
+        for _fl in (False, True):
+            try:
+                _R = dk.skeleton(_s3, _k, flip=_fl)
+                for _v in _R.values():
+                    for _rc in (_v if isinstance(_v, list) else [_v]):
+                        if _rc[2] <= 0 or _rc[3] <= 0:
+                            _broken.append("{}/{}".format(_name, _k))
+            except Exception as _e:
+                _broken.append("{}/{}: {}".format(_name, _k, type(_e).__name__))
+check(not _broken,
+      "all eight architectures build on all nine registered canvases, both flips — 16:9 is where "
+      "they were designed, not where they have to work", str(_broken[:3]))
+
 # ── 3. planning beats improvising, on the same content ──────────────────────────────────────
 def _deck(kinds):
     import io
@@ -177,6 +238,43 @@ _dark = _pages("dark", lambda dr, i: dr.rectangle([0, 0, 960, 540], fill=(16, 20
 check(cc.cues(str(next(_dark.glob("slide01.png"))))["whitespace"] > 0.8,
       "a DARK page reads as mostly whitespace — 8 of the 18 registers are dark and none of them "
       "is a full page")
+
+# ── 5. WIRED, not orphaned ───────────────────────────────────────────────────────────────────
+# The failure this audit actually found: all three tools shipped with a mention in SKILL.md and
+# nothing else — 0 in the design agent that builds the rhythm map, 0 in the codex runbook a
+# non-Claude runtime reads, 0 in the example scaffold. A capability nothing points at is the same
+# as a capability that was never added, and this repo has recorded that lesson before.
+ROOT = HERE.parent
+_design = (ROOT / "agents" / "slide-design.md").read_text(encoding="utf-8")
+_critic = (ROOT / "agents" / "critic.md").read_text(encoding="utf-8")
+_codex = (ROOT / "references" / "codex-runtime.md").read_text(encoding="utf-8")
+_skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+_example = (ROOT / "references" / "examples" / "build_example_generic.py").read_text(encoding="utf-8")
+
+check("plan_rhythm" in _design,
+      "the DESIGN agent names plan_rhythm where it builds the rhythm map — the skeleton column is "
+      "arithmetic it was previously asked to do by hand")
+check("--home" in _design,
+      "...and tells it to pass --home when a direction gate picked a composition, so the user's "
+      "pick stays the deck's default")
+check("skeleton(" in _design, "the design agent names the builder for what the plan proposes")
+check("composition_cues" in _critic,
+      "the CRITIC is told to read the composition cues on its distinctiveness axis")
+check("NOT GATED" in _critic or "not gated" in _critic.lower(),
+      "...and told they are reported, never a threshold")
+check("plan_rhythm" in _codex and "composition_cues" in _codex,
+      "the CODEX runbook names both — a non-Claude runtime never reads agents/, so a tool absent "
+      "here does not exist for it")
+check("deckkit.skeleton" in _codex, "...and the builder, with a runnable-example pointer")
+check("plan_rhythm" in _skill and "composition_cues" in _skill,
+      "SKILL.md names both (composition_cues had ZERO mentions when it shipped)")
+check("skeleton(" in _example and "plan_rhythm" in _example,
+      "the EXAMPLE scaffold demonstrates a real skeleton page — the specific failure this repo has "
+      "on record: a new capability that never enters the scaffolding is the same as not adding it")
+
+import sigs                                                                  # noqa: E402
+check("skeleton" in sigs.EXAMPLES,
+      "`sigs.py --example skeleton` hands back a runnable call, like every other form component")
 
 print("\n".join("  ok   " + m for m in OKS))
 if FAILS:

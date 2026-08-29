@@ -139,6 +139,21 @@ be reconstructed post-hoc at the delivery gate.
    encourages was, until it existed, the pick nothing verified. Waive in writing with
    `design.register_pixels_waived`; render before the gate runs, since a pixel check with no pixels
    reports NOT CHECKED rather than clean.
+2a. **Plan the deck's ARCHITECTURE before building any page, and build it from the helper.**
+   `lint_deck` demands >=4 distinct page skeletons on an 8+-slide deck and reports three adjacent
+   slides sharing 75% of their structure — but both fire AFTER the build, when varying the
+   architecture means re-laying pages that are already written. One deterministic call proposes the
+   whole sequence (~40ms, no model round-trip, which matters on this path):
+
+       python3 scripts/plan_rhythm.py --roles <role,role,…> --carry <n,m> [--home <skeleton>]
+
+   Then build each page from `deckkit.skeleton(slide, "<kind>")` — it returns the named rects for
+   one of `statement · split · island · dashboard · band · full_bleed · rail · gallery`, and
+   `python3 scripts/sigs.py --example skeleton` hands back a runnable call. `--home` makes a chosen
+   composition the plurality, which is required whenever a direction gate picked one. Measured on
+   identical content: 8 distinct skeletons planned against 2 improvised. It is a PROPOSAL — override
+   any row the content argues with, and record the deviation in `design`.
+
 2b. **The motif is a BUILT thing, not a described one — and both tiers have primitives.** The
    delivery gate requires `design.motif_generates` (background · markers · the one PAGE whose
    GEOMETRY is the motif), and a runbook that stops at "describe it" is how that page gets
@@ -280,6 +295,14 @@ be reconstructed post-hoc at the delivery gate.
      12 slides of a real deck and was caught only by a human at 5x zoom), and a non-positive text
      box. Exit 1 means not ready; `NOT CHECKED` + exit 2 means it could not run, which is never the
      same as clean. The five judgment items it prints as still-yours stay yours.
+6b. **Read the composition cues before writing the review.** `python3 scripts/composition_cues.py
+   <deck-dir>` reports seven measured cues per page and the deck-wide RANGE for each, from renders
+   already on disk (~0.6s for 14 pages, no extra render pass). The RANGE is the point: a FLAT range
+   is the finding no per-page look can produce — a deliberately dead deck that linted perfectly
+   clean reported 6 of 7 cues flat. Cite the number, not the adjective. 🔴 REPORTED, NOT GATED:
+   a quiet register and a cluttered mess share a low colorfulness, and this skill protects the
+   first, so never turn it into a threshold.
+
 7. **Ask the post-build review question first, then review by lens.** Once the render self-check
    is clean, post the rendered deck (contact sheet + slide PNG paths) and ask the ONE post-build
    question — `fast` (pre-selected default, ~10–20 min) · `standard` (~30–60 min) · `thorough`

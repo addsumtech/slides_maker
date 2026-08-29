@@ -402,6 +402,14 @@ Do not just skim for the first few obvious issues. Run these passes:
      slide whose *form* fights its message — a **bullet list / number table where a designed form
      would land better**: quantitative data with no chart; 3-6 metrics not shown as `scorecard`
      tiles; a sequence not drawn as a `timeline`/pipeline; a core-and-peers idea not a `hub_spoke`;
+     🔴 **On the distinctiveness axis, read `python3 scripts/composition_cues.py <deck-dir>` before
+     you argue.** It reports seven measured cues per page and, more usefully, the deck-wide RANGE
+     for each — and a FLAT range is the finding no per-page look can produce: measured, a
+     deliberately dead deck that linted perfectly clean reported 6 of 7 cues flat. Cite the number
+     ("every page sits within 0.02 on edge density") rather than the adjective ("it feels samey"),
+     which is the difference between a finding the author can act on and one they can dismiss.
+     🔴 It is REPORTED, NOT GATED, and you must not treat it as a threshold: a quiet ink-wash
+     register and a cluttered mess share a low colorfulness, and this skill protects the first.
      a two-axis classification not a `quadrant`; a before→after not a `dumbbell`/`before_after`;
      **options scored against criteria written as prose or a plain table where an `eval_matrix`**
      (Harvey-ball / ✓◐✕ scoring grid) would let the reader compare at a glance; **a dated plan with

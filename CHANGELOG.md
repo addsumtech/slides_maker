@@ -37,6 +37,28 @@ section is a distilled summary — the full notes live on the
   **linted perfectly clean** reported 6 of 7 cues flat. Reads renders already on disk — no extra
   render pass, ~0.6s for 14 pages.
 
+  *Audit of this batch found the failure that matters most and it was not in the code.* All three
+  tools shipped **orphaned**: one mention in SKILL.md and nothing else — 0 in `agents/slide-design.md`,
+  which builds the rhythm map and was still being asked to compute the skeleton column by hand;
+  0 in `references/codex-runtime.md`, which a non-Claude runtime reads instead of `agents/`, so for
+  that runtime they did not exist at all; and 0 in `references/examples/`, which is precisely the
+  lesson this repo already has on record — a capability that never enters the scaffolding is the
+  same as one that was never added. All four are now wired, the example scaffold builds a real
+  `gallery` page, and the suite ASSERTS the wiring so an orphan tool fails the build.
+  Three more from the same audit:
+  - **The planner contradicted a documented workflow rule.** `agents/slide-design.md` requires that
+    when the direction gate chose a skeleton token, that skeleton is the rhythm map's PLURALITY —
+    the user picked a composition from RENDERED options. The planner rotated evenly and would have
+    silently overridden that pick. `--home <skeleton>` now makes it the visible default while both
+    floors still hold, and `check()` reports a plan whose plurality is not the declared home.
+  - **`skeleton()` returned NEGATIVE rects** on a division that cannot fit — 99 cells, a gap wider
+    than the band, `weight` at 0 or 1, a tiny source band. python-pptx accepts those and renders
+    garbage far from the cause, and `bento()`, its sibling, already raised on exactly this.
+  - **A typo'd `--home` reached the plan**, proposing an architecture `deckkit.skeleton()` cannot
+    build — the planner and the builder drifting apart, which this file's own selftest forbids.
+  Verified across all nine registered canvases and both flips, CJK and unknown roles, 60-slide
+  decks, and L/P/RGBA/4x3/corrupt renders.
+
   *Why this batch exists:* of twelve blocking gate sections, essentially one pushes upward —
   `agents/critic.md` calls its distinctiveness axis "the loop's ONE upward-pushing lens" and keeps
   it non-blocking. The floors had been raised four times in a row; the ceiling machinery had not

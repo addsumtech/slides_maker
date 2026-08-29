@@ -65,14 +65,29 @@ MIN_DISTINCT = 4        # lint_deck's SKELETON VARIETY floor on an 8+-slide deck
 WINDOW = 3              # LAYOUT SAMENESS reads a 3-slide window, so no repeat inside one
 
 
-def plan(roles, carry=(), min_distinct=MIN_DISTINCT):
+def plan(roles, carry=(), min_distinct=MIN_DISTINCT, home=None):
     """[(index, role, skeleton, why)] — a sequence that clears both structural floors.
 
     Greedy with a look-back: each page takes the most apt architecture its role wants that is not
     already in the previous `WINDOW - 1` pages; if every apt one is blocked, it falls to the
     rotation. A page named in `carry` (the design plan's `carried_by`) is pushed toward the
     architectures that can hold a signature move rather than the safest fit.
+
+    `home` is the deck's HOME BASE — the architecture that should be its visible default. It exists
+    because `agents/slide-design.md` requires it and this planner would otherwise fight the
+    workflow: when the direction gate has been run, the user picked a composition from RENDERED
+    options, and that skeleton "is the map's PLURALITY: the most-used home base, visibly the deck's
+    default". A planner that rotated evenly would silently override the pick the user actually made
+    and looked at. With `home` set, every page whose role is content-neutral falls back to it rather
+    than to the rotation, so the deck reads as one composition with departures — which is what a
+    house style IS — while the >=4-distinct and no-3-in-a-row floors still hold.
     """
+    # A typo in `home` must not reach the plan. Measured: `--home nosuch` was carried into every
+    # neutral row, proposing an architecture `deckkit.skeleton()` cannot build — the planner and the
+    # builder drifting apart, which is the one thing this file's own selftest forbids.
+    if home is not None and home not in ROTATION:
+        raise ValueError("plan_rhythm: unknown home base {!r} — one of: {}"
+                         .format(home, ", ".join(sorted(ROTATION))))
     BOLD = ("full_bleed", "island", "statement")
     out, recent = [], []
     for i, role in enumerate(roles, 1):
@@ -81,6 +96,17 @@ def plan(roles, carry=(), min_distinct=MIN_DISTINCT):
         if i in carry:
             wants = [k for k in BOLD if k not in wants[:1]] + wants
         pick, why = None, ""
+        # The home base gets FIRST REFUSAL on every page, and is only displaced by the window or by
+        # a page whose job outranks the default: the bookends, which set and close the deck, and the
+        # carry slides, which exist to depart from it. With a 3-slide window the home can land on at
+        # most every third page, which is exactly enough to be the plurality without becoming the
+        # only thing in the deck — the "most-used home base, visibly the deck's default" the design
+        # agent asks for, with departures around it.
+        reserved = key in ("cover", "closing", "close", "divider") or i in carry
+        if home and home not in recent and not reserved:
+            out.append((i, key or "?", home, "the deck's home base (the direction gate's pick)"))
+            recent = ([home] + recent)[:WINDOW - 1]
+            continue
         for cand in wants:
             if cand not in recent:
                 pick = cand
@@ -125,10 +151,18 @@ def plan(roles, carry=(), min_distinct=MIN_DISTINCT):
     return out
 
 
-def check(rows, min_distinct=MIN_DISTINCT):
+def check(rows, min_distinct=MIN_DISTINCT, home=None):
     """[] if the sequence clears both floors, else the reasons it does not."""
     problems = []
     picks = [k for _i, _r, k, _w in rows]
+    if home and picks:
+        from collections import Counter
+        top, n = Counter(picks).most_common(1)[0]
+        if top != home:
+            problems.append(
+                "the home base is {!r} but {!r} is the plurality ({} of {}) — the direction gate's "
+                "composition must be the deck's visible default, or the user's pick has been "
+                "quietly overridden".format(home, top, n, len(picks)))
     if len(rows) >= 8 and len(set(picks)) < min_distinct:
         problems.append("only {} distinct skeleton(s) across {} slides — lint's floor is {}"
                         .format(len(set(picks)), len(rows), min_distinct))
@@ -146,8 +180,10 @@ def render(rows):
         lines.append("| {} | {} | `{}` | {} |".format(i, role, pick, why))
     picks = [k for _i, _r, k, _w in rows]
     lines.append("")
-    lines.append("{} slides · {} distinct architecture(s) · no repeat inside a {}-slide window"
-                 .format(len(rows), len(set(picks)), WINDOW))
+    from collections import Counter
+    top, n = Counter(picks).most_common(1)[0] if picks else ("-", 0)
+    lines.append("{} slides · {} distinct architecture(s) · home base {!r} on {} · no repeat "
+                 "inside a {}-slide window".format(len(rows), len(set(picks)), top, n, WINDOW))
     return lines
 
 
@@ -210,6 +246,21 @@ def _selftest():
     case("every architecture it proposes exists in deckkit.SKELETONS",
          proposed <= names, True, str(proposed - names))
 
+    try:
+        plan(["a"] * 8, home="nosuch")
+        case("a typo'd home base is refused", False, False, "it was carried into the plan")
+    except ValueError:
+        case("a typo'd home base is refused rather than proposing an architecture the builder "
+             "cannot make", True, True)
+    r = plan(["context"] * 10, home="rail")
+    from collections import Counter as _C
+    case("a home base becomes the deck's PLURALITY — the direction gate's pick stays the visible "
+         "default", r, _C(k for _i, _ro, k, _w in r).most_common(1)[0][0] == "rail",
+         str(_C(k for _i, _ro, k, _w in r)))
+    case("...and the >=4-distinct floor still holds with a home base", r,
+         len({k for _i, _ro, k, _w in r}) >= MIN_DISTINCT,
+         str({k for _i, _ro, k, _w in r}))
+
     print("\n".join("  ok   " + x for x in ok))
     if bad:
         print("\n".join("  FAIL " + x for x in bad))
@@ -223,6 +274,8 @@ def main(argv=None):
     ap.add_argument("--roles", help="comma-separated per-slide roles, in order")
     ap.add_argument("--slides", type=int, help="slide count, when the roles are not decided yet")
     ap.add_argument("--carry", help="comma-separated slide numbers carrying the signature move")
+    ap.add_argument("--home", help="the deck's HOME-BASE architecture — the direction gate's picked "
+                                   "composition, which must be the map's plurality")
     ap.add_argument("--gates", help="a deck dir — read roles from its .deck-gates.json content.slides")
     ap.add_argument("--json", action="store_true", help="machine-readable output")
     ap.add_argument("--selftest", action="store_true")
@@ -239,13 +292,17 @@ def main(argv=None):
         ap.print_help()
         return 2
     carry = tuple(int(c) for c in (a.carry or "").replace(" ", "").split(",") if c.isdigit())
-    rows = plan(roles, carry)
+    try:
+        rows = plan(roles, carry, home=a.home)
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        return 2
     if a.json:
         print(json.dumps([{"slide": i, "role": r, "skeleton": k, "why": w}
                           for i, r, k, w in rows], indent=1))
         return 0
     print("\n".join(render(rows)))
-    problems = check(rows)
+    problems = check(rows, home=a.home)
     if problems:
         print("\nthis sequence does NOT clear the floors:\n  - " + "\n  - ".join(problems))
         return 1

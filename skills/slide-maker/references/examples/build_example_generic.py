@@ -47,7 +47,7 @@ from deckkit import (  # noqa: E402
     blank_deck, add_slide, title_bar, footer,
     box, text, bullet, callout, bottom_callout, arrow, chip, modbox, equation_native,
     equation_png,
-    columns, rows, vstack, content_band, measure_bullets, measure_callout,
+    columns, rows, vstack, content_band, skeleton, measure_bullets, measure_callout,
     register_mark, motif_page, motif_legend, tag_motif, page_marker, picture, lint_layout,
     declare_delivery, RGBColor,
     set_font, Inches, PP_ALIGN, MSO_ANCHOR,
@@ -221,8 +221,35 @@ def slide_motif_page(prs):
     # trade-off, not an oversight — the deck's own notes/export carry the title for assistive tech.
 
 
+def slide_architecture(prs):
+    """role=evidence | form=the `gallery` page ARCHITECTURE | static: three cases, one rule |
+    takeaway='The bone structure is a decision, not a leftover'"""
+    s = add_slide(prs)
+    title_bar(s, "Three cases, one rule")
+    # 🔴 THE PAGE'S BONE STRUCTURE COMES FROM `skeleton()`, not from hand-picked rects. `lint_deck`
+    # demands >=4 distinct skeletons on an 8+-slide deck and never 3 consecutive on one — floors
+    # that are pure arithmetic, which is why `scripts/plan_rhythm.py` proposes the whole column in
+    # one ~40ms call before any page is built (pass --home when a direction gate picked a
+    # composition). This page builds what that plan said: `gallery` — a row of equal tiles over a
+    # caption strip. The eight kinds are statement · split · island · dashboard · band ·
+    # full_bleed · rail · gallery; `python3 scripts/sigs.py --example skeleton` prints a runnable
+    # call for any of them.
+    R = skeleton(s, "gallery", n=3)
+    for i, (tx, ty, tw, th) in enumerate(R["tiles"]):
+        box(s, tx, ty, tw, th, fill=TINT)
+        text(s, tx + 0.18, ty + 0.16, tw - 0.36, 0.4,
+             [[("CASE %d" % (i + 1), 12, DEEP, True, False)]], space_after=0)
+        text(s, tx + 0.18, ty + 0.62, tw - 0.36, th - 0.8,
+             [[("What this one shows, in a line.", 13, DEEP, False, False)]], space_after=0)
+    sx, sy, sw_, sh_ = R["strip"]
+    text(s, sx, sy, sw_, sh_, [[("All three fail the same way — which is the rule.",
+                                 14, MAGENTA, True, False)]], space_after=0)
+    footer(s, TAG, page=7)
+    return s
+
+
 SLIDES = [slide_cover, slide_one_idea, slide_pipeline, slide_equation, slide_split,
-          slide_motif_page]
+          slide_motif_page, slide_architecture]
 
 
 def main():

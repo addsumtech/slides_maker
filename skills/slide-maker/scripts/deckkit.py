@@ -6170,10 +6170,34 @@ def skeleton(slide, kind, *, band=None, weight=0.62, gap=0.4, n=3, flip=False):
     except Exception:
         sw, sh = x + w, y + h
 
+    # A division that cannot fit must SAY so. Measured before this existed: `n=99` cells, a gap
+    # wider than the band, `weight` at 0 or 1, or a tiny source rect each returned NEGATIVE widths,
+    # which python-pptx accepts and renders as garbage — and `bento()`, this helper's sibling,
+    # already raises on exactly this. A geometry helper that hands back an impossible rect makes
+    # the caller's page wrong somewhere else, far from the cause.
+    def _fits(count, extent, axis):
+        need = gap * max(0, count - 1)
+        if count < 1 or extent - need <= 0.05:
+            raise ValueError(
+                "skeleton({!r}): {} slot(s) with a {:.2f}in gap need more than the {:.2f}in of {} "
+                "available. Ask for fewer slots, a smaller gap, or a bigger band."
+                .format(kind, count, gap, extent, axis))
+
+    if gap < 0:
+        raise ValueError("skeleton: gap must be >= 0, not {}".format(gap))
+    if w <= 0.05 or h <= 0.05:
+        raise ValueError("skeleton({!r}): the source band is {:.2f}x{:.2f}in — there is nothing to "
+                         "divide. Pass a real `band=` or use a slide with a content band."
+                         .format(kind, w, h))
+
     if kind == "statement":
         pad = min(w * 0.12, 1.2)
         return {"stage": (x + pad, y + h * 0.18, w - 2 * pad, h * 0.64)}
     if kind == "split":
+        if not 0.05 <= weight <= 0.95:
+            raise ValueError("skeleton('split'): weight must be between 0.05 and 0.95, not {} — "
+                             "at the extremes one column has no width.".format(weight))
+        _fits(2, w, "width")
         lead = (w - gap) * (1.0 - weight if flip else weight)
         rest = w - gap - lead
         a = (x, y, lead, h)
@@ -6187,12 +6211,15 @@ def skeleton(slide, kind, *, band=None, weight=0.62, gap=0.4, n=3, flip=False):
     if kind == "dashboard":
         cols_n = max(2, int(n))
         rows_n = 2
+        _fits(cols_n, w, "width")
+        _fits(rows_n, h, "height")
         cw = (w - gap * (cols_n - 1)) / cols_n
         ch = (h - gap) / rows_n
         return {"cells": [(x + c * (cw + gap), y + r * (ch + gap), cw, ch)
                           for r in range(rows_n) for c in range(cols_n)]}
     if kind == "band":
         k = max(2, int(n))
+        _fits(k, h, "height")
         bh = (h - gap * (k - 1)) / k
         return {"bands": [(x, y + i * (bh + gap), w, bh) for i in range(k)]}
     if kind == "full_bleed":
@@ -6202,13 +6229,15 @@ def skeleton(slide, kind, *, band=None, weight=0.62, gap=0.4, n=3, flip=False):
         return {"bleed": (0.0, 0.0, sw, sh),
                 "well": (wx, y + h - well_h, well_w, well_h)}
     if kind == "rail":
+        _fits(2, w, "width")
         rw = min(w * 0.26, 2.6)
         r = (x + w - rw, y, rw, h) if flip else (x, y, rw, h)
         b = (x, y, w - rw - gap, h) if flip else (x + rw + gap, y, w - rw - gap, h)
         return {"rail": r, "body": b}
     # gallery
     k = max(2, int(n))
-    strip = 0.55
+    _fits(k, w, "width")
+    strip = min(0.55, h * 0.35)
     th = max(0.8, h - strip - 0.18)
     tw = (w - gap * (k - 1)) / k
     return {"tiles": [(x + i * (tw + gap), y, tw, th) for i in range(k)],
