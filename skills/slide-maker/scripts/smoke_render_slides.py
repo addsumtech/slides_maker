@@ -36,8 +36,12 @@ def ok(label, fn):
 
 
 def run(*args, cwd=None):
+    # UTF-8 forced on the child: this output is machine-read, not displayed. Inheriting the
+    # console code page makes these assertions fail under a legacy page — the child's
+    # safe_stdio() replaces what it cannot encode, and the parser then cannot find it.
     p = subprocess.run([sys.executable, RENDER] + list(args), cwd=cwd,
-                       capture_output=True, text=True)
+                       capture_output=True, text=True, encoding="utf-8",
+                       env=dict(os.environ, PYTHONIOENCODING="utf-8"))
     return p.returncode, (p.stdout or "") + (p.stderr or "")
 
 
@@ -117,6 +121,13 @@ def main():
 
     print("smoke_render_slides: {} failure(s)".format(len(FAILS)))
     return 1 if FAILS else 0
+
+
+try:                                            # console safety: a legacy code page must
+    from _console import safe_stdio             # degrade a tick, never kill the report
+    safe_stdio()
+except Exception:
+    pass
 
 
 if __name__ == "__main__":

@@ -65,8 +65,12 @@ def _run_div(dirs, d):
     p = os.path.join(d, "dirs.json")
     with open(p, "w", encoding="utf-8") as f:
         json.dump(dirs, f)
+    # UTF-8 forced on the child: this output is machine-read, not displayed. Inheriting the
+    # console code page makes these assertions fail under a legacy page — the child's
+    # safe_stdio() replaces what it cannot encode, and the parser then cannot find it.
     r = subprocess.run([sys.executable, os.path.join(HERE, "directions_diversity.py"), p],
-                       capture_output=True, text=True)
+                       capture_output=True, text=True, encoding="utf-8",
+                       env=dict(os.environ, PYTHONIOENCODING="utf-8"))
     return r.returncode, r.stdout + r.stderr
 
 
@@ -77,7 +81,8 @@ def _flagged(dirs, d):
     with open(p, "w", encoding="utf-8") as f:
         json.dump(dirs, f)
     r = subprocess.run([sys.executable, os.path.join(HERE, "directions_diversity.py"), p, "--json"],
-                       capture_output=True, text=True)
+                       capture_output=True, text=True, encoding="utf-8",
+                       env=dict(os.environ, PYTHONIOENCODING="utf-8"))
     return json.loads(r.stdout)
 
 
@@ -336,6 +341,13 @@ def main():
 
     print("smoke_directions: {} failure(s)".format(len(FAILS)))
     return 1 if FAILS else 0
+
+
+try:                                            # console safety: a legacy code page must
+    from _console import safe_stdio             # degrade a tick, never kill the report
+    safe_stdio()
+except Exception:
+    pass
 
 
 if __name__ == "__main__":

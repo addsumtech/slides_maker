@@ -27,6 +27,7 @@ Run: python3 tests/test_a11y_and_surface_extras.py
 from __future__ import annotations
 
 import json
+import os
 import pathlib
 import sys
 import tempfile
@@ -167,15 +168,19 @@ check("DARK GROUND ON A PRINTED BOARD" not in {c for c, _ in crp.check(paper)[0]
       "a paper ground on the same board passes")
 
 # ── 4. PROPORTION — a board can be full and still be a wall of prose ─────────────────────────
+# Real prose, not terse stand-ins: a run of six words or fewer is a LABEL to this check (see the
+# label rule below), so a fixture of short phrases would be testing the wrong thing.
+_P = ("Running prose of the kind a passer-by is asked to read while standing at the board, "
+      "which is exactly what the proportion guidance is about. ")
 WALL = [("A claim across the hall", 110, 1.6, 1.6, 29.9, 4.4),
         ("Methods", 42, 1.6, 7.5, 14.0, 1.4),
-        ("Prose about the method, at length.", 26, 1.6, 9.2, 14.0, 12.0),
+        (_P * 2, 26, 1.6, 9.2, 14.0, 12.0),
         ("Limitations", 42, 17.5, 7.5, 14.0, 1.4),
-        ("Prose about the limitations, at length.", 26, 17.5, 9.2, 14.0, 12.0),
+        (_P * 2, 26, 17.5, 9.2, 14.0, 12.0),
         ("Results", 42, 1.6, 23.0, 14.0, 1.4),
-        ("More prose.", 26, 1.6, 24.7, 14.0, 19.0),
+        (_P * 3, 26, 1.6, 24.7, 14.0, 19.0),
         ("Next", 42, 17.5, 23.0, 14.0, 1.4),
-        ("Still more prose.", 26, 17.5, 24.7, 14.0, 19.0)]
+        (_P * 3, 26, 17.5, 24.7, 14.0, 19.0)]
 probs, facts = cs.check(build("poster_a0", WALL))
 check("PROPORTION" in {c for c, _ in probs},
       "an all-text board is caught ({}) — FILL says the board is USED, this says used by WHAT"
@@ -186,13 +191,13 @@ check("PROPORTION" in {c for c, _ in probs},
 # rather than sitting under the text. (A box drawn behind a text block is a container — see below.)
 GOOD = [("A claim across the hall", 110, 1.6, 1.6, 29.9, 4.4),
         ("Methods", 42, 1.6, 7.5, 14.0, 1.4),
-        ("Two sentences, not a column.", 26, 1.6, 9.2, 14.0, 2.4),
+        (_P, 26, 1.6, 9.2, 14.0, 2.4),
         ("Limitations", 42, 17.5, 7.5, 14.0, 1.4),
-        ("One site, one operator.", 26, 17.5, 9.2, 14.0, 2.4),
+        (_P, 26, 17.5, 9.2, 14.0, 2.4),
         ("Results", 42, 1.6, 26.5, 14.0, 1.4),
-        ("Two rules now fail loudly.", 26, 1.6, 28.2, 14.0, 2.4),
+        (_P, 26, 1.6, 28.2, 14.0, 2.4),
         ("Next", 42, 17.5, 26.5, 14.0, 1.4),
-        ("Record accent hexes.", 26, 17.5, 28.2, 14.0, 2.4)]
+        (_P, 26, 17.5, 28.2, 14.0, 2.4)]
 
 
 def _figures(s, f):
@@ -216,6 +221,41 @@ check("PROPORTION" in {c for c, _ in probs},
       "a board whose 'graphics' are just panels UNDER its text is still caught ({})"
       .format(facts.get("proportion")),
       "if a container counted as a graphic, drawing a bigger box would pass the check")
+
+# PROSE is what a reader has to READ, not everything containing characters. Classifying by "does
+# this shape have text" mislabelled every LABELLED GRAPHIC: measured, a three-node flowchart scored
+# 100% text / 0% graphics and a results table 69% text, so both were told to add figures they
+# already were.
+def _labelled(kind):
+    f = formats.get("poster_a0")
+    prs = dk.blank_deck(f.w_in, f.h_in)
+    sl = dk.add_slide(prs)
+    dk.text(sl, 1.6, 1.6, 29.9, 4.4, [[("A claim across the hall", 110, dk.DEEP, True, False)]])
+    for i, (hx, hy) in enumerate(((1.6, 7.5), (17.5, 7.5))):
+        dk.text(sl, hx, hy, 14.0, 1.4,
+                [[(["Methods", "Limitations"][i], 42, dk.DEEP, True, False)]])
+        dk.text(sl, hx, hy + 1.7, 14.0, 2.4, [[(_P, 26, dk.DEEP, False, False)]])
+    if kind == "table":
+        dk.table(sl, 1.6, 12.4, 29.9, [["method", "score"], ["ours", "0.91"], ["base", "0.74"]])
+    elif kind == "diagram":
+        dk.node(sl, 3, 14, 8, 3, "In")
+        dk.node(sl, 13, 14, 8, 3, "Model", hub=True)
+        dk.node(sl, 23, 14, 7, 3, "Out")
+    elif kind == "chart":
+        dk.native_chart(sl, 1.6, 12.4, 29.9, 18.0, ["A", "B", "C"], [("v", [3, 5, 9])],
+                        kind="column")
+    _n[0] += 1
+    path = TMP / ("labelled-%s-%d.pptx" % (kind, _n[0]))
+    prs.save(str(path))
+    return path
+
+
+for _kind in ("table", "diagram", "chart"):
+    _probs, _facts = cs.check(_labelled(_kind))
+    check("PROPORTION" not in {c for c, _ in _probs},
+          "a {} counts as a GRAPHIC, not prose ({}) — a table is structured data and a node label "
+          "is a caption on a diagram".format(_kind, _facts.get("proportion")),
+          str(_facts.get("proportion")))
 
 # ── 5. the new components ────────────────────────────────────────────────────────────────────
 rects = dk.bento(None, 0.6, 1.2, 8.8, 3.9, [(2, 2), (2, 1), (1, 1), (1, 1), (4, 1)], cols=4, gap=0.18)
@@ -305,6 +345,66 @@ check(_inks and all(dk.contrast_ratio(i, (0xFF, 0xFF, 0xFF)) >= 3.0 for i in _in
       "every run qr_panel writes clears 3:1 on a light ground — the URL is the fallback for anyone "
       "who photographs the poster, and mute_for() measured 2.71:1 against a pale stock",
       str([(("#%02X%02X%02X" % i), round(dk.contrast_ratio(i, (255, 255, 255)), 2)) for i in _inks]))
+
+# ── 6. what the audit of this batch found ────────────────────────────────────────────────────
+import subprocess                                                            # noqa: E402
+import io                                                                    # noqa: E402
+import contextlib                                                            # noqa: E402
+import render_deck as rd                                                     # noqa: E402
+
+# A MIS-SHAPED gates record must name the field, not raise. Every gate read its record as
+# `gates.get("x") or {}` and then called `.get()`, so a hand-written `.deck-gates.json` carrying
+# `"a11y": "we don't need it"` raised AttributeError — which is not `_GateStop`, so it escaped the
+# section contract and took down the whole run with a traceback. This is the shape a model writing
+# the file by hand actually produces.
+_orig_stats = rd._sameness_stats
+rd._sameness_stats = lambda _p, _d: ({"slide_warns": [{"slide": 2, "text": "MISSING ALT-TEXT: x"}],
+                                      "sameness_codes": ("LAYOUT SAMENESS", "SKELETON VARIETY",
+                                                         "CARD DOMINANCE", "FLAT RHYTHM"),
+                                      "body_n": 10, "render_signals_ran": True}, 1.78)
+try:
+    for _key, _gates, _fn in (("a11y", {"a11y": "nope"}, rd._check_a11y),
+                              ("a11y", {"a11y": ["s"]}, rd._check_a11y),
+                              ("sameness", {"sameness": "skip"}, rd._check_sameness)):
+        _err = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(_err):
+                _fn("x.pptx", "presented", _gates)
+            check(False, "a mis-shaped {!r} record is named, not raised".format(_key), "it passed")
+        except SystemExit:
+            check(_key in _err.getvalue() and "must be an object" in _err.getvalue(),
+                  "a mis-shaped {!r} record dies naming the field, not with a traceback"
+                  .format(_key), _err.getvalue()[:120])
+        except BaseException as _e:
+            check(False, "a mis-shaped {!r} record is named, not raised".format(_key),
+                  "raised {}".format(type(_e).__name__))
+finally:
+    rd._sameness_stats = _orig_stats
+
+# `simulate()` is a public entry point another runtime may call directly, so a malformed colour
+# must fail with a sentence rather than `invalid literal for int() with base 16`.
+for _bad in ("#GGGGGG", "", "#FF00"):
+    try:
+        pa.simulate(_bad, "deuteranopia")
+        check(False, "simulate({!r}) is rejected".format(_bad), "it returned a colour")
+    except ValueError as _e:
+        check("hex colour" in str(_e), "simulate({!r}) fails with a sentence".format(_bad), str(_e))
+check(pa.simulate("#FFF", "deuteranopia") == pa.simulate("#FFFFFF", "deuteranopia"),
+      "simulate accepts the #RGB shorthand people actually type")
+
+# Every CLI must behave IDENTICALLY on a legacy console — same exit code, report intact. The
+# smoke suites failed this: they parse subprocess output, and the child's console-safe `?`
+# substitution broke the parser, telling a Windows user the toolchain was broken when it was not.
+_scripts = sorted(SCRIPTS.glob("*.py"))
+_diff = []
+for _s in _scripts:
+    _u = subprocess.run([sys.executable, str(_s), "--help"], capture_output=True).returncode
+    _c = subprocess.run([sys.executable, str(_s), "--help"], capture_output=True,
+                        env=dict(os.environ, PYTHONIOENCODING="cp1252")).returncode
+    if _u != _c:
+        _diff.append("{} ({} vs {})".format(_s.name, _u, _c))
+check(not _diff, "all {} scripts exit identically under UTF-8 and cp1252".format(len(_scripts)),
+      "; ".join(_diff[:4]))
 
 print("\n".join("  ok   " + m for m in OKS))
 if FAILS:

@@ -237,8 +237,20 @@ def _linear_to_srgb(c):
 
 
 def simulate(hexstr, kind):
-    """`hexstr` as a viewer with `kind` sees it, returned as #RRGGBB."""
-    h = hexstr.lstrip("#")
+    """`hexstr` as a viewer with `kind` sees it, returned as #RRGGBB.
+
+    This is a public entry point — a build script or another runtime may call it directly — so a
+    malformed colour fails with a sentence rather than `invalid literal for int() with base 16`.
+    """
+    h = str(hexstr).strip().lstrip("#")
+    if len(h) == 3:                                # #abc is a legal CSS shorthand people do type
+        h = "".join(c * 2 for c in h)
+    if len(h) != 6 or any(c not in "0123456789abcdefABCDEF" for c in h):
+        raise ValueError("simulate: {!r} is not a hex colour — expected #RRGGBB (or #RGB)"
+                         .format(hexstr))
+    if kind not in _CVD:
+        raise ValueError("simulate: unknown deficiency {!r} — known: {}"
+                         .format(kind, ", ".join(sorted(_CVD))))
     lin = [_srgb_to_linear(int(h[i:i + 2], 16)) for i in (0, 2, 4)]
     lms = _mul(_RGB2LMS, lin)
     missing, coef = _CVD[kind]

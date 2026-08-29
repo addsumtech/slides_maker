@@ -13,6 +13,12 @@ import sys
 import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+try:                                            # console safety: a legacy code page must
+    from _console import safe_stdio             # degrade a tick, never kill the report
+    safe_stdio()
+except Exception:
+    pass
 import deckkit as dk          # noqa: E402
 import designed_charts as dc  # noqa: E402
 from deckkit import RGBColor  # noqa: E402
@@ -519,6 +525,27 @@ def _every_scaffold_runs():
                     _v = max(0, int(210 - _d * (1.4 + 0.12 * _i)))
                     _px[_x, _y] = (28 + _v, 30 + int(_v * 0.92), 36 + int(_v * 0.8))
             _im.save(os.path.join(TMP, _p))
+        # The qr_panel scaffold needs a code to place: this library does not implement QR encoding
+        # and refuses to draw a placeholder, so the scaffold passes `image=`. Deterministic pattern
+        # rather than a flat plate, for the reason above — and with the three finder squares, so it
+        # LOOKS like the thing the scaffold claims to show.
+        import hashlib as _hl
+        _q = _SmkIm.new("RGB", (420, 420), (255, 255, 255))
+        _qp = _q.load()
+        _seed = _hl.sha256(b"slide-maker scaffold").digest()
+        for _i in range(21):
+            for _j in range(21):
+                if (_seed[(_i * 21 + _j) % len(_seed)] >> ((_i + _j) % 8)) & 1:
+                    for _dy in range(16):
+                        for _dx in range(16):
+                            _qp[30 + _i * 17 + _dx, 30 + _j * 17 + _dy] = (0, 0, 0)
+        for _cx, _cy in ((30, 30), (30, 300), (300, 30)):
+            for _dy in range(90):
+                for _dx in range(90):
+                    _edge = _dx < 15 or _dy < 15 or _dx >= 75 or _dy >= 75
+                    _core = 30 <= _dx < 60 and 30 <= _dy < 60
+                    _qp[_cx + _dx, _cy + _dy] = (0, 0, 0) if (_edge or _core) else (255, 255, 255)
+        _q.save(os.path.join(TMP, "qr.png"))
     except Exception:
         pass
     for name, code in sorted(_sigs.EXAMPLES.items()):
@@ -558,9 +585,15 @@ ok("every form component has a scaffold", _scaffolds_cover_the_form_components)
 # (a typo reading as "no such helper" is how a helper gets hand-rolled), and cover BOTH modules.
 def _sigs(*args):
     import subprocess
+    # UTF-8 is FORCED on the child because this output is machine-read, not displayed. Inheriting
+    # the console code page made four of these assertions fail under `PYTHONIOENCODING=cp1252` —
+    # the child's `safe_stdio()` correctly replaced characters it could not encode, and the parser
+    # then could not find them. A Windows user running this suite to check their install would
+    # have been told the toolchain was broken when only the console was.
+    env = dict(os.environ, PYTHONIOENCODING="utf-8")
     return subprocess.run(
         [sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "sigs.py"), *args],
-        capture_output=True, text=True)
+        capture_output=True, text=True, encoding="utf-8", env=env)
 
 
 def _sigs_resolves_deckkit():

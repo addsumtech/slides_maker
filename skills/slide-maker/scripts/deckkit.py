@@ -6182,7 +6182,7 @@ def bento(slide, x, y, w, h, tiles, *, gap=0.18, cols=4, rows=None):
 
 
 def qr_panel(slide, x, y, size, url, *, caption="Scan for the preprint", contact=None,
-             scan_ft=5.0, image=None, ink=None, font=None, quiet=True):
+             scan_ft=None, image=None, ink=None, font=None, quiet=True):
     """A QR code WITH the three things a bare QR code is missing, sized for its scan distance.
 
     A code on its own is the common failure, and it fails in three ways at once: nobody knows what
@@ -6201,6 +6201,19 @@ def qr_panel(slide, x, y, size, url, *, caption="Scan for the preprint", contact
     ``quiet=True`` keeps the mandatory light margin around the code (4 modules); switch it off only
     when your PNG already carries one. Returns the picture shape.
     """
+    # `scan_ft` defaults from the SURFACE. 5ft is a poster assumption — a hall, someone deciding
+    # from a distance — and applying it to a handout demanded a 6in code on an 8.3in page, which
+    # this refused. A held sheet or a phone screen is read at arm's length.
+    if scan_ft is None:
+        scan_ft = 1.5
+        try:
+            import formats                          # noqa: PLC0415 - optional, canvas-dependent
+            sw, sh = _slide_size(slide)
+            fmt = formats.match(sw, sh)
+            if fmt is not None and fmt.w_in * fmt.h_in >= 300.0:
+                scan_ft = 5.0                       # a large-format board, read across a room
+        except Exception:
+            pass
     need = scan_ft * 12.0 / 10.0
     if size < need - 1e-6:
         raise ValueError(

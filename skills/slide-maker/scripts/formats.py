@@ -271,6 +271,13 @@ def band(fmt, *, title=True):
     return x, y, w, h
 
 
+try:                                            # console safety: a legacy code page must
+    from _console import safe_stdio             # degrade a tick, never kill the report
+    safe_stdio()
+except Exception:
+    pass
+
+
 if __name__ == "__main__":
     print(f"{'name':15s} {'label':20s} {'W×H (in)':14s} {'kind':10s} {'safe T/B':10s} "
           f"{'chrome':7s} {'cols':5s} {'type floors (pt)':22s} lint")

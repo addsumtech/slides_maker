@@ -93,7 +93,12 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   advise against (ink, drying, streaking, surcharges, and light hairlines thinning at print
   resolution). On a `chrome == "print"` format the repeat is still reported, but the advice becomes
   paper warmth and accent hue; a dark canvas becomes its own finding. A projected deck is untouched
-  — 8 of the 18 registers are dark.
+  — 8 of the 18 registers are dark. The dark finding is scoped to LARGE-FORMAT boards (>=300 sq in,
+  which keeps A0/A1 in and A4/A3 out): the ink, drying and surcharge evidence is about wide-format
+  poster printing, an A4 sheet is a sixteenth of the ink, and a dark A4 leave-behind is a legitimate
+  design — below the threshold it is a note. And a LIGHT ground repeat on a printed board is
+  reported rather than held, because print advice leaves only pale stocks and every pale stock
+  matches every other; freshness there has to come from the accent and the type.
 - `check_surface.py` — the canvas format's contract, checked against the BUILT deck. `formats.py`
   was producer-only: measured by grep, `import formats` appeared in two files and both write
   formats, so every per-surface rule in `references/canvas-formats.md` was advisory by
@@ -114,9 +119,12 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   number. A deck with no slides, and an unregistered canvas, report NOT CHECKED, never clean. Waive required sections with `design_plan.surface_sections_waived`. Imported by
   `render_deck.py --gate-check` (section `surface`) and `codex_delivery_gate.py`; `--selftest`
   proves it on built fixtures. `PROPORTION` and `TEXT BLOCK` hold a printed board to the ~20-25%
-  text / 40-50% graphics split the poster literature converges on (a panel drawn BEHIND text counts
-  as a container, not a graphic — otherwise a bigger box would pass the check) and to ~50-word
-  blocks.
+  text / 40-50% graphics split the poster literature converges on, and to ~50-word blocks. PROSE is
+  what a reader has to READ: a panel drawn BEHIND text is a container, not a graphic (else a bigger
+  box would pass the check); a run of six words or fewer is a LABEL that rides with the graphic it
+  names (measured, classifying by "has text" scored a three-node flowchart 100% text and a results
+  table 69%, telling both to add figures they already were); and headline-sized runs are navigation,
+  not prose (counting the title penalised boards that size it correctly).
 - `check_design_contracts.py` — the DESIGN stack's index guard: every self-verify cross-reference in
   the tree resolves to a real item, the `### Design self-verify (a–s)` header covers every item the
   list actually defines (and its spelled-out count matches), the shared design thresholds agree

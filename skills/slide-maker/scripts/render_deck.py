@@ -103,6 +103,31 @@ class _GateStop(BaseException):
     """One gate section failed; its remaining checks depend on what just failed."""
 
 
+def _section(gates, key, what="an object"):
+    """`gates[key]` as a dict, or a readable death — never an AttributeError.
+
+    Every gate on this path read its record as `gates.get("x") or {}` and then called `.get()` on
+    the result. That is correct for a missing key and wrong for a MIS-SHAPED one: a hand-written
+    `.deck-gates.json` carrying `"a11y": "we don't need it"` — a plausible mistake, and the shape a
+    model writing the file by hand actually produces — raised
+    `AttributeError: 'str' object has no attribute 'get'`. Because AttributeError is not
+    `_GateStop`, it escaped the section contract and took down the whole run with a traceback
+    instead of naming the field. Measured on `sameness` and `a11y` alike before this existed.
+
+    `scripts/deck_gates.py` writes the right shape; this is for the file someone edited by hand.
+    """
+    val = gates.get(key) if isinstance(gates, dict) else None
+    if val is None or val == {} or val == "":
+        return {}
+    if not isinstance(val, dict):
+        die("`.deck-gates.json` -> {!r} must be {}, not {} ({!r}). A waiver is a record, not a "
+            "sentence:\n    {{\"{}\": {{\"waived\": \"<the reason>\", "
+            "\"waived_category\": \"<kind>\"}}}}\n    `python3 scripts/deck_gates.py check "
+            "<deck-dir>` reports every shape fault in one pass."
+            .format(key, what, type(val).__name__, str(val)[:60], key))
+    return val
+
+
 @contextlib.contextmanager
 def _gate_section(label):
     """Run one INDEPENDENT gate section: a failure inside it never suppresses the others."""
@@ -1447,7 +1472,7 @@ def _check_a11y(pptx, delivery, gates):
               "off-canvas title on purpose), but check them if this deck is distributed."
               .format(" · ".join("{} (slide {})".format(c, ", ".join(str(x) for x in v))
                                  for c, v in sorted(noted.items()))))
-    waiver = gates.get("a11y") or {}
+    waiver = _section(gates, "a11y")
     if not hits:
         print("[gates] a11y: 0 of {} floor(s) fired (alt-text · slide titles · reading order · "
               "non-text contrast)".format(len(codes)))
@@ -1689,7 +1714,7 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
     delivery = _recorded or mode          # one of _KNOWN_DELIVERY, un-aliased
 
     with _gate_section('critic'):
-        critic = gates.get("critic") or {}
+        critic = _section(gates, "critic")
         if critic.get("waived"):
             # A waiver is legitimate — quick decks and hosts without subagent dispatch are real —
             # but an UNCLASSIFIED one is just a sentence, and the model that skipped the loop writes
@@ -1940,7 +1965,7 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
         # blank — you must WRITE why restraint is the position) and it does not relax `carried_by`,
         # `palette`, `type_scale`, `icon_family` or `form_ledger`. And it cannot be claimed above the
         # conservative dial: at balanced+ and above a real signature move is required, not optional.
-        design = gates.get("design_plan") or {}
+        design = _section(gates, "design_plan")
 
         # BUILD SHAPE — was the build fanned out, and if not, why not. The build step is 40-71% of all
         # model-active minutes (SKILL.md, five measured sessions), and the fan-out rule that addresses
@@ -2244,7 +2269,7 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
         # ledger evidence — which is not a cheaper way to pass, it is the work. Same move `e7336e6`
         # made for icons ("ask the FILE, so the check survives a run that writes no record"), applied
         # to the costliest Step-1 decision in the pipeline.
-        content = gates.get("content") or {}
+        content = _section(gates, "content")
         if content.get("waived"):
             print("[gates] arc competition WAIVED — {}".format(content["waived"]))
         else:
@@ -2389,7 +2414,7 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
         # checks that the per-slide plan EXISTS, covers every slide exactly once, and that no two
         # content slides carry the same memory sentence — the cheap mechanical signature of a plan
         # written for the deck rather than per slide.
-        _content = gates.get("content") or {}
+        _content = _section(gates, "content")
         _sw = _content.get("slides_waived")
         if _sw:
             if reason_width(_sw) < 16 or _has_placeholder(_sw):
@@ -2503,7 +2528,7 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
         # the sections above it: `content.slides` and `design_plan` ARE the checkpoints' artifacts,
         # and this ledger prints each checkpoint's mode next to whether its artifact exists. An
         # `approved` claimed over a waived artifact is then a contradiction on a single line.
-        _cn = gates.get("content") or {}
+        _cn = _section(gates, "content")
         _MODES = ("approved", "auto")
         _have = {
             "content": ("slides x{}".format(len(_cn.get("slides") or []))
@@ -2511,10 +2536,10 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
                         else ("WAIVED" if _cn.get("slides_waived") else "NO ARTIFACT")),
             "design": ("design_plan"
                        if isinstance(gates.get("design_plan"), dict)
-                       and not (gates.get("design_plan") or {}).get("waived") else "WAIVED")}
-        _ck = {"content": (gates.get("content") or {}).get("checkpoint"),
-               "design": (gates.get("design") or {}).get("checkpoint")
-               or (gates.get("design_plan") or {}).get("checkpoint")}
+                       and not (_section(gates, "design_plan")).get("waived") else "WAIVED")}
+        _ck = {"content": (_section(gates, "content")).get("checkpoint"),
+               "design": (_section(gates, "design")).get("checkpoint")
+               or (_section(gates, "design_plan")).get("checkpoint")}
         _bad = [k for k, v in _ck.items()
                 if not isinstance(v, dict) or v.get("mode") not in _MODES
                 or reason_width(v.get("record")) < 12 or _has_placeholder(v.get("record"))]
@@ -2565,7 +2590,7 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
         # is the cheaper pre-filter in front of it, and its value is that a MISSING slide is now
         # visible instead of silent. Genuinely no render to look at (a --static/no-render edge, or a
         # deck this gate should not touch)? Waive it in writing.
-        _rs = gates.get("render_selfcheck") or {}
+        _rs = _section(gates, "render_selfcheck")
         _rw = _rs.get("waived")
         if _rw:
             if reason_width(_rw) < 16 or _has_placeholder(_rw):
@@ -2615,7 +2640,7 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
     with _gate_section('provenance'):
         # Provenance: a self-filled tally proves nothing — the refutation pass is what the gate is FOR.
         # Require per-claim verdicts, so "confirmed" means someone tried to break it and could not.
-        prov = gates.get("provenance") or {}
+        prov = _section(gates, "provenance")
         if prov.get("waived"):
             print("[gates] provenance WAIVED — {}".format(prov["waived"]))
         elif prov:
@@ -2790,7 +2815,7 @@ def _check_sameness(pptx, delivery, gates):
     """
     if not isinstance(gates, dict):
         gates = {}
-    waiver = gates.get("sameness") or {}
+    waiver = _section(gates, "sameness")
     stats, aspect = _sameness_stats(pptx, delivery)
     fired = tuple(stats.get("sameness_codes") or ())
     body_n = int(stats.get("body_n") or 0)
@@ -2939,7 +2964,7 @@ def _check_timidity(pptx, delivery, gates):
     fired = tuple(stats.get("timidity_codes") or ())
     body_n = int(stats.get("body_n") or 0)
 
-    design = gates.get("design_plan") or {}
+    design = _section(gates, "design_plan")
     dial = str(design.get("boldness", "")).strip().lower()
     move = str(design.get("signature_move", "")).strip().lower()
     if dial == "conservative" and move.startswith("deliberately restrained"):
@@ -2963,7 +2988,7 @@ def _check_timidity(pptx, delivery, gates):
     tail = "" if ran else "  · NOT CHECKED: {} ({})".format(
         " · ".join(_ld.TIMIDITY_RENDER_DEPENDENT),
         stats.get("render_skip_reason") or "no renders beside the deck")
-    waiver = gates.get("timidity") or {}
+    waiver = _section(gates, "timidity")
 
     if waiver:
         reason = waiver.get("waived")

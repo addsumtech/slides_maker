@@ -68,6 +68,13 @@ def export_notes(pptx_path, out_path=None):
     return out_path, len(prs.slides._sldIdLst)
 
 
+try:                                            # console safety: a legacy code page must
+    from _console import safe_stdio             # degrade a tick, never kill the report
+    safe_stdio()
+except Exception:
+    pass
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("usage: python3 export_notes.py deck.pptx [notes.txt]")

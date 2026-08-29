@@ -44,6 +44,13 @@ def reason_width(text) -> int:
                for ch in text.strip())
 
 
+try:                                            # console safety: a legacy code page must
+    from _console import safe_stdio             # degrade a tick, never kill the report
+    safe_stdio()
+except Exception:
+    pass
+
+
 if __name__ == "__main__":                      # a one-line sanity check, not a test suite
     for s in ("看过了，不用再审", "the box is a fixed template slot", "", None):
         print(reason_width(s), repr(s))

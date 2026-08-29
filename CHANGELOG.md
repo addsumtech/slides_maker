@@ -86,6 +86,31 @@ section is a distilled summary — the full notes live on the
 
 ### Fixed
 
+- **Audit of this batch — seven more, found by attacking it rather than re-reading it.**
+  - **A mis-shaped `.deck-gates.json` crashed the whole gate run with a traceback.** Every gate
+    read its record as `gates.get("x") or {}` and then called `.get()`, so `"a11y": "we don't need
+    it"` — the shape a model writing the file by hand actually produces — raised AttributeError,
+    which is not `_GateStop` and therefore escaped the section contract. Pre-existing and
+    repo-wide; all 16 sites now route through one `_section()` that names the field.
+  - **PROPORTION mislabelled every LABELLED GRAPHIC as prose**: a three-node flowchart scored 100%
+    text and a results table 69%, so both were told to add figures they already were. Prose is what
+    a reader has to READ — a run of six words or fewer is a label that rides with its graphic.
+  - **The dark-ground finding over-reached.** The ink/drying/surcharge evidence is about
+    wide-format poster printing, but the rule fired on A4 handouts too — a sixteenth of the ink,
+    and a dark A4 leave-behind is a legitimate design. Scoped to >=300 sq in; below that it is a
+    note.
+  - **A light ground repeat on a printed board was unsatisfiable**: print advice leaves only pale
+    stocks and every pale stock matches every other. Reported now, not held.
+  - **`qr_panel`'s 5ft scan default was a poster assumption** — it demanded a 6in code on an A4
+    page. The default now comes from the surface.
+  - **The smoke suites failed on a legacy console** for a reason that was not their subject: they
+    parse subprocess output, and the child's console-safe `?` substitution broke the parser. A
+    Windows user checking their install would have been told the toolchain was broken. Machine-read
+    subprocesses now force UTF-8, and 19 entry points that lacked the console guard have it —
+    `smoke_deckkit.py`, `ingest.py` and `written_reason.py` were measured crashing outright.
+  - `palette_audit.simulate()` is a public entry point, so a malformed colour now fails with a
+    sentence rather than `invalid literal for int() with base 16`, and accepts `#RGB`.
+  All 64 scripts now exit identically under UTF-8 and cp1252, asserted in the suite.
 - **`qr_panel()` broke three of this repo's own floors, found by building a real A0 board with
   it** — every gate passed and the render showed the problems: it sized its caption from the CODE
   rather than the canvas (an 11pt URL under the 24pt printed body floor), it let a flush-to-the-

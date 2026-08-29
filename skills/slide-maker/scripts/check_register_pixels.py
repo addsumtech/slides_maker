@@ -400,7 +400,22 @@ def check(deck_dir, renders=None, taste=None, recent=3, design=None):
     facts["history"] = len(hist)
     ground = field[0][0] if field else None
 
-    if printed is not None and ground is not None and _band(ground) == "dark":
+    # Scoped to LARGE-FORMAT boards, which is what the evidence is actually about. The ink,
+    # drying, streaking and surcharge advice comes from academic-poster and wide-format print
+    # guidance; an A4 sheet is 97 sq in against an A0's 1550, so the same solid ground is about a
+    # sixteenth of the ink and no shop surcharges it. Extending a poster finding to a handout would
+    # be reasoning past the source — and a dark A4 leave-behind, programme or menu is a legitimate
+    # design. Below the threshold it is reported instead. (A1 is 775 sq in and A2 386, so 300 keeps
+    # every board in and every document out.)
+    LARGE_FORMAT = 300.0
+    large = printed is not None and printed.w_in * printed.h_in >= LARGE_FORMAT
+    if printed is not None and ground is not None and _band(ground) == "dark" and not large:
+        facts["dark_note"] = (
+            "canvas {} is dark on a printed {} — the ink/drying argument still applies, but the "
+            "poster evidence behind the finding is about large-format boards ({:.0f} sq in here vs "
+            "1550 for A0), so this is a note rather than a hold."
+            .format(_hx(ground), printed.label, printed.w_in * printed.h_in))
+    if large and ground is not None and _band(ground) == "dark":
         problems.append(("DARK GROUND ON A PRINTED BOARD",
                          "this {} has a dark canvas ({}). On a screen that is a legitimate "
                          "register; on paper it is the one choice print shops uniformly advise "
@@ -633,8 +648,9 @@ def main(argv=None):
         return 0
     if facts.get("band"):
         print("look history: {} deck(s) — {}".format(facts.get("history", 0), facts["band"]))
-    if facts.get("ground_note"):
-        print("  [--] " + facts["ground_note"])
+    for note in ("ground_note", "dark_note"):
+        if facts.get(note):
+            print("  [--] " + facts[note])
     print("pages {} | field: {} | declared: {} | reached the pixels: {} | history: {}".format(
         facts.get("pages", 0),
         ", ".join(facts.get("field", [])) or "-",

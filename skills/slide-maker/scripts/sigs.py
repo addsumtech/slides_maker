@@ -103,6 +103,21 @@ CALL-SHAPE CONTRACTS (the ones that have actually gone wrong):
 # than none: it is copied once, fails, and teaches that the tool cannot be trusted. The test is the
 # guarantee; the author of this dict is not.
 EXAMPLES = {
+    # bento RETURNS RECTS and paints nothing — the shape most likely to be got wrong, because
+    # every other form component in this dict draws. Written as a loop so the return value is
+    # visibly the thing you build from.
+    "bento": 'for i, (bx, by, bw, bh) in enumerate(\n'
+             '        dk.bento(s, 0.6, 1.2, 8.8, 3.9,\n'
+             '                 [(2, 2), (2, 1), (1, 1), (1, 1), (4, 1)], cols=4)):\n'
+             '    dk.box(s, bx, by, bw, bh, fill=dk.DEEP if i == 0 else dk.TINT)\n'
+             '    dk.text(s, bx + 0.2, by + 0.15, bw - 0.4, bh - 0.3,\n'
+             '            [[("tile %d" % i, 16 if i else 22,\n'
+             '               dk.WHITE if i == 0 else dk.DEEP, i == 0, False)]])',
+    # qr_panel needs a PRE-RENDERED png unless segno/qrcode is installed; `size` is held to the
+    # 10:1 scan rule and the caption/URL are sized from the CANVAS, not from the code.
+    "qr_panel": 'dk.qr_panel(s, 0.7, 2.4, 1.8, "https://example.org/preprint",\n'
+                '            caption="Scan for the preprint",\n'
+                '            contact="you@lab.nl", image="qr.png")',
     "timeline": 'dk.timeline(s, 0.7, 2.0, 8.6, [("1979", "first"), ("2026", "now", "caption")],\n'
                 '            highlight=1)',
     "stat_row": 'dk.stat_row(s, 0.7, 2.0, 8.6, [("8", "x", "faster"), ("99", "%", "coverage")])',

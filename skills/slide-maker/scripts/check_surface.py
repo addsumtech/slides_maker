@@ -57,6 +57,11 @@ def _fmt_for(prs, name=None):
     return formats.match(prs.slide_width / EMU, prs.slide_height / EMU)
 
 
+# A text run this short is a LABEL, not prose: a node caption, an axis title, a chip, a stat.
+# Six words is the shortest thing that still reads as a sentence in the decks this skill builds.
+_LABEL_WORDS = 6
+
+
 def _is_ground(sh, W, H):
     """A full-bleed background is the canvas, not content — counting it would score every deck 100%."""
     try:
@@ -190,6 +195,14 @@ def check(pptx, format_name=None, waive_sections=None, extra_terms=None, renders
             if wid > 0.02 and hei > 0.02 and not _is_ground(sh, W, H):
                 rects.append((left, top, wid, hei))
                 body = (sh.text_frame.text or "").strip() if getattr(sh, "has_text_frame", False) else ""
+                # PROSE is what a reader has to READ — not everything that contains characters.
+                # Classifying by "does this shape have text" mislabelled every LABELLED GRAPHIC as
+                # prose: measured, a three-node flowchart scored 100% text / 0% graphics and a
+                # results table 69% text, so both were told to add figures they already were. A
+                # table is structured data, a node label is a caption on a diagram, and neither is
+                # the running copy the 20-25% guidance is about.
+                if len(body.split()) <= _LABEL_WORDS:
+                    body = ""                     # a short label rides with the graphic it names
                 # Headline-sized runs are NAVIGATION, not prose. The 20-25% text guidance is about
                 # what a passer-by has to READ; a poster title is a required element and is
                 # supposed to be enormous. Counting it as prose penalised exactly the boards that

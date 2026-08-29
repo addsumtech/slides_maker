@@ -919,6 +919,13 @@ def build_directions_html(directions, out_path, deck_title="Your Deck"):
     return out_path
 
 
+try:                                            # console safety: a legacy code page must
+    from _console import safe_stdio             # degrade a tick, never kill the report
+    safe_stdio()
+except Exception:
+    pass
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 3:
         print("usage: python3 archetypes_html.py directions.json out.html [\"Deck Title\"]")

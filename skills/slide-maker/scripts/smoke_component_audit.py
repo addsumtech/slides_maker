@@ -150,8 +150,11 @@ def main():
             import subprocess
             for args in (["nosuch_build.py", "x.pptx"],
                          [os.path.join(HERE, "component_audit.py"), "/nope/deck.pptx"]):
+                # UTF-8 forced: this output is machine-read, not displayed. Inheriting the
+                # console code page makes the assertion below fail under a legacy page.
                 p = subprocess.run([sys.executable, os.path.join(HERE, "component_audit.py")] + args,
-                                   capture_output=True, text=True)
+                                   capture_output=True, text=True, encoding="utf-8",
+                                   env=dict(os.environ, PYTHONIOENCODING="utf-8"))
                 out = p.stdout + p.stderr
                 assert p.returncode == 1, "a deck that was never opened must not exit 0: %r" % args
                 assert "NOT CHECKED" in out, "it must SAY it did not check: " + out[:120]
@@ -162,6 +165,13 @@ def main():
 
     print("smoke_component_audit: {} failure(s)".format(len(FAILS)))
     return 1 if FAILS else 0
+
+
+try:                                            # console safety: a legacy code page must
+    from _console import safe_stdio             # degrade a tick, never kill the report
+    safe_stdio()
+except Exception:
+    pass
 
 
 if __name__ == "__main__":
