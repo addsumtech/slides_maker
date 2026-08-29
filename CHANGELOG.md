@@ -11,6 +11,32 @@ section is a distilled summary — the full notes live on the
 
 ### Added
 
+- **A declared register must be OBEYED, not merely paletted — `scripts/check_register_guard.py`.**
+  Asked whether the 18 presets' styles actually survive without an image tool, the honest answer
+  turned out to be no: the same page through all 18 `presets.apply()` calls produced 18 pages
+  differing only in **ground colour, corner radius and rule weight**. memphis had none of its
+  coloured header bands, bauhaus none of its primitives, glassmorphism no glass card — and on the
+  dark registers the cards were still pale blue, because `set_palette` does not rebind `TINT`.
+  `apply()` sets palette, geometry tokens and ground; every register's real look lives in its
+  `surface` field, executed by the author reading it or not at all.
+  Nothing measured the difference. `check_style_applied` verifies the CALL; `check_register_pixels`
+  says in its own docstring that it judges COLOUR IDENTITY only. So "declare brutalist, ship its
+  palette on rounded cards with soft shadows" cleared every gate — 「只是一些颜色的搭配就说使用了
+  这个模板」, verifiable and unverified.
+  The new checker reads `presets.FORBIDS`, the machine-settleable half of each preset's own
+  `guard`: **rounded** (swiss/brutalist/ink_wash/blueprint set radius=0 for exactly this reason) ·
+  **gradient** · **soft-shadow** (`shadow.inherit` left True — the theme shadow a raw `add_shape()`
+  forgets to switch off) · **proportional-face** (terminal is mono for EVERY run) · **confetti**
+  (bauhaus's guard: one hero primitive, "never a confetti of shapes (that is memphis)").
+  🔴 **Only 7 of 18 registers declare prohibitions, and that is the design.** "Photography carries
+  ALL the colour", "no diagrams straight on the navy", "no title that isn't a full-sentence
+  conclusion" are equally real rules in `guard` and none is decidable from the file without judging
+  meaning — they stay prose, and the checker REPORTS which registers it could not check rather than
+  letting silence read as a pass. A check that fired on lawful composition would teach the reflex
+  to waive it, which is the failure this whole area is about.
+  Wired into `render_deck --gate-check` (section `register_guard`) and `codex_delivery_gate.py`
+  through the same module.
+
 - **Decodability is measured, not asserted.** Three pieces of feedback from the first human reader
   of a deck this repo built — *「icon 应该是一个必须包含的东西但是这个却没有」*, *「1/5/10/12 的设计我没
   有看懂」*, *「第一页的那些横线是什么意思」* — and every automated gate had passed the deck. One root
@@ -167,6 +193,15 @@ section is a distilled summary — the full notes live on the
 
 ### Fixed
 
+- **Two false positives in the new register-guard checker, both found on real pages rather than
+  fixtures.** A large TITLE BLOCK was counted as an oversized primitive — a text box's `prstGeom`
+  is `rect` like any square — so a bauhaus page carrying exactly one hero circle was reported as
+  confetti; every fixture was text-free, which is precisely why they missed it. And the register
+  was resolved by substring search, so a BESPOKE deck whose `style_pick` read "…beat
+  blueprint-the-preset because…" was checked as `blueprint`: a substring cannot tell the register a
+  deck DECLARES from the rival it says it BEAT. It now uses `check_style_applied.declared_preset`,
+  which already owns that parse including the three-way confidence it needed for the
+  generated-template branch — one parser, one answer.
 - **Audit of the decodability batch — the same drift I had just fixed, one file over.**
   `codex_delivery_gate.py` kept its OWN hand-copied `ICON_NONE_CATEGORIES`, under a comment saying
   to keep it identical to the shared path's. So when the shared path learned to CHECK each category

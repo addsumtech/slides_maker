@@ -108,6 +108,18 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   clean reported 6 of 7 cues flat. Reads renders already on disk — no extra render pass, ~0.6s for
   14 pages. Whitespace is measured against the MODAL tone, so a dark register reads as mostly empty
   rather than 100% full.
+- `check_register_guard.py` — the SHAPE-level half of a declared register. `apply()` sets palette,
+  geometry tokens and ground and nothing else, so measured, one page through all 18 presets came
+  out differing only in ground, radius and rule weight — memphis with no header bands, bauhaus with
+  no primitive. `check_style_applied` verifies the CALL and `check_register_pixels` says in its own
+  docstring that it judges COLOUR only, so "declare brutalist, ship its palette on rounded cards"
+  cleared every gate. Reads `presets.FORBIDS`: rounded · gradient · soft-shadow (shadow.inherit
+  left True) · proportional-face · confetti (>1 oversized primitive). Only 7 of 18 registers
+  declare prohibitions and only OOXML-readable properties are listed — a check that fired on lawful
+  composition would teach the waive reflex, and the undecidable guards ("photography carries ALL
+  the colour") stay prose and are REPORTED as unchecked. The register is resolved by
+  `check_style_applied.declared_preset`, never a substring search: a bespoke deck whose pick read
+  "beat blueprint-the-preset" was checked as `blueprint` on the first try.
 - `check_register_pixels.py` — the register a deck DECLARES must reach its RENDERED PIXELS, and
   must not be a previous deck's. The half `check_style_applied.py` structurally cannot reach: a
   BESPOKE register has no `presets.apply()` call to find, and a build that calls it and then

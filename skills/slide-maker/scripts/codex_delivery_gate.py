@@ -1128,6 +1128,37 @@ def check_surface_contract(evidence: dict[str, Any], deck_path: Path | None,
         errors.append("{}: {}".format(code, msg.replace("\n", " ")))
 
 
+def check_register_guard(evidence: dict[str, Any], deck_path: Path | None,
+                         errors: list[str]) -> None:
+    """The declared register's own shape-level prohibitions, on the built file.
+
+    Same module as `render_deck --gate-check`. A register enforced on one runtime and not the other
+    is the drift this file has already been through twice on icons.
+    """
+    if deck_path is None:
+        return
+    design = evidence.get("design") if isinstance(evidence.get("design"), dict) else {}
+    try:
+        path = Path(__file__).with_name("check_register_guard.py")
+        spec = importlib.util.spec_from_file_location("slide_maker_check_register_guard", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        violations, facts = module.check(deck_path, None, {"design_plan": design})
+    except Exception as exc:
+        print(f"  [--] register guard NOT CHECKED — {exc.__class__.__name__}: {exc} "
+              f"(not the same as clean)")
+        return
+    if facts.get("note"):
+        print("  [--] register guard: " + facts["note"])
+        return
+    if not violations:
+        print("  register guard: {} obeys {}".format(
+            facts.get("register"), " · ".join(facts.get("rules") or [])))
+        return
+    for code, msg in violations:
+        errors.append("{}: {}".format(code.upper(), msg.replace("\n", " ")))
+
+
 def check_register_pixels(evidence: dict[str, Any], deck_path: Path | None,
                          errors: list[str]) -> None:
     """The register the evidence DECLARES must reach the deck's RENDERED PIXELS.
@@ -2018,6 +2049,9 @@ def evaluate(
         # DECLARED -> RENDERED. The line above reads the SOURCE; this reads the PIXELS, which is
         # the only place a bespoke register (no preset call to grep for) can be verified at all.
         check_register_pixels(evidence, deck_path, errors)
+        # DECLARED -> OBEYED. The two lines above read the source and the colour;
+        # this reads whether the register's own prohibitions were respected.
+        check_register_guard(evidence, deck_path, errors)
         # DECLARED SURFACE -> BUILT CANVAS. The registry was producer-only until now.
         check_surface_contract(evidence, deck_path, errors)
         audited_components = components

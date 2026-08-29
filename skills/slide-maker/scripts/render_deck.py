@@ -1588,6 +1588,40 @@ def _check_a11y(pptx, delivery, gates):
           '{"a11y": {"waived": "<who reads this deck, and how>", "waived_category": "<kind>"}}')
 
 
+def _register_guard_gate(pptx, gates):
+    """A declared register must be OBEYED, not merely paletted.
+
+    `check_style_applied.py` verifies the CALL; `check_register_pixels.py` verifies the COLOUR and
+    says in its own docstring that colour is all it judges. Neither can see that a deck declared
+    `brutalist` and shipped rounded cards with soft shadows — measured, 18 registers applied to one
+    page produced 18 pages differing only in ground, radius and rule weight. This checks the
+    shape-level prohibitions each preset's own `guard` states, from `presets.FORBIDS`.
+    """
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    try:
+        import check_register_guard as crg
+    except Exception as exc:
+        print(f"  [--] REGISTER GUARD: NOT CHECKED — {exc.__class__.__name__}: {exc}")
+        return
+    try:
+        violations, facts = crg.check(pptx, None, gates if isinstance(gates, dict) else {})
+    except Exception as exc:
+        print(f"  [--] REGISTER GUARD: NOT CHECKED — {exc.__class__.__name__}: {exc}")
+        return
+    if facts.get("note"):
+        print("  [--] register guard: " + facts["note"])
+        return
+    if not violations:
+        print("[gates] register guard: {} obeys {}".format(
+            facts.get("register"), " · ".join(facts.get("rules") or [])))
+        return
+    die("the deck declares `{}` and breaks its own guard:\n    - ".format(facts.get("register"))
+        + "\n    - ".join("{}: {}".format(c.upper(), m) for c, m in violations)
+        + "\n    These are the register's OWN prohibitions (presets.PRESETS[…]['guard']), and only "
+          "the ones a machine can settle — the rest stay prose."
+        + "\n    Re-run alone: python3 scripts/check_register_guard.py {}".format(pptx))
+
+
 def _register_pixels_gate(pptx):
     """The declared register must reach the RENDERED PIXELS — and must not be the last deck's.
 
@@ -2788,6 +2822,9 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
 
     with _gate_section('register_pixels'):
         _register_pixels_gate(pptx)
+
+    with _gate_section('register_guard'):
+        _register_guard_gate(pptx, gates)
 
     with _gate_section('timidity'):
         _check_timidity(pptx, delivery, gates)

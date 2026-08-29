@@ -241,6 +241,11 @@ jobs:
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/register.log || {
             echo "::error::register-expression suite did not run to completion"; exit 1; }
 
+      - name: Register guard (a declared register must be obeyed, not just paletted)
+        run: |
+          set -o pipefail
+          python scripts/check_register_guard.py --selftest
+
       - name: Decodability (can a viewer read the marks, measured not claimed)
         run: |
           set -o pipefail

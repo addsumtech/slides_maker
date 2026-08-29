@@ -168,6 +168,16 @@ be reconstructed post-hoc at the delivery gate.
    identical content: 8 distinct skeletons planned against 2 improvised. It is a PROPOSAL — override
    any row the content argues with, and record the deviation in `design`.
 
+2y. 🔴 **`presets.apply()` gives you a PALETTE, not a register.** It sets palette, geometry tokens
+   (radius/rule_w) and ground — nothing else. Measured: the same page through all 18 presets came
+   out differing only in ground colour, corner radius and rule weight, with none of memphis's
+   coloured header bands and none of bauhaus's primitives. Each preset's **`surface`** field is an
+   executable spec ("rounded cards with colored header bands"; "one oversized filled PRIMITIVE as
+   the hero shape") — read it from the dict `apply()` returns and BUILD it, or you have shipped a
+   palette wearing a register's name. `scripts/check_register_guard.py` enforces the machine-
+   settleable half of each **`guard`** on both paths (7 of 18 registers declare prohibitions; the
+   rest are reported as NOT CHECKED, never as clean).
+
 2b. **The motif is a BUILT thing, not a described one — and both tiers have primitives.** The
    delivery gate requires `design.motif_generates` (background · markers · the one PAGE whose
    GEOMETRY is the motif), and a runbook that stops at "describe it" is how that page gets

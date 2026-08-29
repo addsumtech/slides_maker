@@ -346,6 +346,41 @@ PRESETS = {
 }
 
 
+
+# ── FORBIDS — the machine-checkable half of each `guard` ─────────────────────────────────────
+#
+# `guard` is prose written for the author, and prose is satisfiable by intending to satisfy it.
+# Measured: the same content under 18 different `presets.apply()` calls produced 18 pages that
+# differed only in ground colour, corner radius and rule weight — memphis without its coloured
+# header bands, bauhaus without a primitive, glassmorphism without a glass card. Declaring a
+# register and shipping its palette is the "只是一些颜色的搭配就说使用了这个模板" failure, and
+# nothing measured it: `check_register_pixels.py` says in its own docstring that it judges COLOUR
+# IDENTITY only.
+#
+# So each preset names the SHAPE-LEVEL prohibitions a machine can settle. Deliberately narrow: a
+# check that fires on lawful composition teaches the reflex to waive it, so this covers only
+# properties that are read straight off the OOXML and need no judgement of taste.
+#
+#   rounded             a shape whose prstGeom is a rounded family (roundRect, round2SameRect…)
+#   gradient            a gradFill anywhere on the shape
+#   soft-shadow         shadow.inherit left True — the theme's soft shadow, never switched off
+#   proportional-face   any run in a face outside the mono whitelist
+#   confetti            more than ONE oversized primitive (>=6% of the canvas)
+#
+# What is NOT here is as deliberate: "photography carries all the colour", "no diagrams straight
+# on the navy", "titles must be full-sentence conclusions" are all real rules in `guard` and none
+# of them is decidable from the file without judging meaning. They stay prose, and the checker
+# reports which registers it could not check rather than implying silence is a pass.
+FORBIDS = {
+    "swiss":         ("rounded", "gradient", "soft-shadow"),
+    "brutalist":     ("rounded", "soft-shadow"),
+    "risograph":     ("gradient", "soft-shadow"),
+    "bauhaus":       ("gradient", "confetti", "soft-shadow"),
+    "terminal":      ("proportional-face",),
+    "ink_wash":      ("rounded", "gradient"),
+    "blueprint":     ("rounded",),
+}
+
 def apply(name):
     """Apply a preset's COLOUR and its STRUCTURE in one call, then return the preset dict.
 

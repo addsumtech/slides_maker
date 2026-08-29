@@ -266,6 +266,101 @@ check(not _cdg._icon_waiver_ok(_ev, _deck(12), [2, 3]),
 check(_cdg._icon_waiver_ok(_ev, _deck(4, loud=True), [2]),
       "...and accepts it where the motif is really there")
 
+# ── 6. a declared register must be OBEYED, not merely paletted ───────────────────────────────
+# Measured on this toolchain: the same content through all 18 `presets.apply()` calls produced 18
+# pages differing only in ground colour, corner radius and rule weight — memphis without its
+# coloured header bands, bauhaus without a primitive. `check_style_applied` verifies the CALL and
+# `check_register_pixels` says in its own docstring that it judges COLOUR only, so "declare
+# brutalist, ship its palette on rounded cards" cleared every gate.
+import check_register_guard as crg                                           # noqa: E402
+import presets as _presets                                                   # noqa: E402
+from pptx.util import Inches as _In                                          # noqa: E402
+from pptx.enum.shapes import MSO_SHAPE as _MS                                # noqa: E402
+
+_gn = [0]
+
+
+def _guard_deck(fn):
+    prs = dk.blank_deck()
+    sl = dk.add_slide(prs)
+    fn(sl)
+    _gn[0] += 1
+    p = TMP / ("guard%d.pptx" % _gn[0])
+    prs.save(str(p))
+    return p
+
+
+def _gcodes(path, reg):
+    return {c for c, _m in crg.check(path, register=reg)[0]}
+
+
+check("rounded" in _gcodes(_guard_deck(
+          lambda sl: dk.box(sl, 1, 1, 3, 2, fill=dk.DEEP, round=True)), "swiss"),
+      "a rounded card under `swiss` is caught — its own guard forbids them, which is why the "
+      "preset sets radius=0")
+check("rounded" not in _gcodes(_guard_deck(
+          lambda sl: dk.box(sl, 1, 1, 3, 2, fill=dk.DEEP)), "swiss"),
+      "...and a square one passes")
+
+
+def _raw(sl):
+    c = sl.shapes.add_shape(_MS.OVAL, _In(5), _In(0), _In(4.6), _In(4.6))
+    c.fill.solid()
+    c.fill.fore_color.rgb = dk.DEEP
+    c.line.fill.background()          # shadow.inherit left True on purpose
+
+
+check("soft-shadow" in _gcodes(_guard_deck(_raw), "bauhaus"),
+      "a raw add_shape() that never switched shadow.inherit off is caught — the author of this "
+      "check made exactly that mistake on the page that motivated it")
+
+
+def _hero_and_title(sl):
+    c = sl.shapes.add_shape(_MS.OVAL, _In(5), _In(0), _In(4.6), _In(4.6))
+    c.fill.solid()
+    c.fill.fore_color.rgb = dk.DEEP
+    c.line.fill.background()
+    c.shadow.inherit = False
+    dk.text(sl, 0.6, 1.0, 5.1, 1.5, [[("three things", 40, dk.DEEP, True, False)]])
+
+
+check("confetti" not in _gcodes(_guard_deck(_hero_and_title), "bauhaus"),
+      "ONE hero primitive beside a large TITLE BLOCK is not confetti — a text box's prstGeom is "
+      "`rect` like any square, and counting geometry alone reported a page carrying exactly one "
+      "circle. Found on a real page: every fixture here was text-free, which is why they missed it")
+
+_v, _f = crg.check(_guard_deck(lambda sl: dk.box(sl, 1, 1, 3, 2, fill=dk.DEEP, round=True)),
+                   register="consulting")
+check(not _v and _f.get("note"),
+      "a register whose guard needs judgement of meaning is REPORTED as unchecked, never passed — "
+      "only 7 of 18 declare machine-settleable prohibitions and the checker says so")
+check(len(_presets.FORBIDS) < len(_presets.PRESETS),
+      "FORBIDS is deliberately a SUBSET — a check that fired on lawful composition would teach the "
+      "waive reflex, which is what this whole area is about")
+
+# The register is read by `check_style_applied.declared_preset`, never by a substring search.
+# Found on the real delivered deck: a BESPOKE look whose pick read "…beat blueprint-the-preset
+# because…" was checked as `blueprint` — a substring cannot tell the register a deck DECLARES from
+# the rival it says it BEAT, and checking a deck against a register it never chose is worse than
+# not checking it.
+_bespoke = {"design_plan": {"style_pick": "bespoke Section Drawing for a toolchain domain - beat "
+                                          "blueprint-the-preset because a true blueprint is a plan "
+                                          "view - anti-pick avoided: the terminal reflex"}}
+_v, _f = crg.check(_guard_deck(lambda sl: dk.box(sl, 1, 1, 3, 2, fill=dk.DEEP, round=True)),
+                   None, _bespoke)
+check(_f.get("register") is None and not _v,
+      "a bespoke pick that NAMES a preset as the rival it beat is not checked against that preset "
+      "— one parser owns this, and it is the one that already handles the generated-template branch",
+      "register={!r}".format(_f.get("register")))
+
+_rd_src = (SCRIPTS / "render_deck.py").read_text(encoding="utf-8")
+_cx_src = (SCRIPTS / "codex_delivery_gate.py").read_text(encoding="utf-8")
+check("_gate_section('register_guard')" in _rd_src,
+      "render_deck registers a `register_guard` section")
+check("check_register_guard" in _cx_src and "check_register_guard.py" in _cx_src,
+      "the codex path runs the SAME module — a register enforced on one runtime only is the drift "
+      "this file has already been through twice on icons")
+
 print("\n".join("  ok   " + m for m in OKS))
 if FAILS:
     print("\n".join("  FAIL " + m for m in FAILS))
