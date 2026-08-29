@@ -49,27 +49,63 @@ solved "how do I make an argument about X visible" is the best starting point fo
 """
 
 
+_ANNOT = "-—–:：(（[【,，、/|"          # separators that introduce a GLOSS, not a new word
+_CJK = "\u2e80-\u9fff\uf900-\ufaff\u3040-\u30ff\uac00-\ud7af"
+
+
 def _norm(name):
-    """A register's identity for the DUPLICATE test, not for display.
+    """A register's identity for the DUPLICATE test, not for display — TOKENS plus how each began.
 
     The same register is named two ways in two records: `.deck-gates.json` carries the pick's
     English name (`bespoke Section Drawing for …`) while the look-history row carries the one the
     author typed for a human (`自创「Section Drawing 建筑剖面」`). Comparing the strings kept both,
     which is how a collection meant to be read becomes a list with the same thing in it twice.
-    So identity is the name with case, spacing and punctuation removed, and one name containing
-    the other counts as the same register — a suffix like 建筑剖面 or `— the ledger` is a gloss on
-    the same invention, not a second one.
+
+    Returns [(token, introduced_by_an_annotation_separator), …]. Case, spacing and punctuation fold
+    away; a Latin<->CJK transition counts as a token boundary, because `改札 Signage` gets typed
+    both with and without the space.
     """
     import unicodedata
     n = unicodedata.normalize("NFKC", str(name or "")).lower()
-    return re.sub(r"[\s\-_·—:：、,，.。'\"「」“”()（）]+", "", n)
+    n = re.sub(r"[\u300c\u300d\u2018\u2019\u201c\u201d\'\"]+", "", n)
+    n = re.sub(r"(?<=[" + _CJK + r"])(?=[0-9a-z])", " ", n)
+    n = re.sub(r"(?<=[0-9a-z])(?=[" + _CJK + r"])", " ", n)
+    out, annot = [], False
+    for piece in re.split(r"([" + re.escape(_ANNOT) + r"\s.。;；)）\]】]+)", n):
+        if not piece:
+            continue
+        if re.fullmatch(r"[" + re.escape(_ANNOT) + r"\s.。;；)）\]】]+", piece):
+            annot = annot or any(c in _ANNOT for c in piece)
+            continue
+        out.append((piece, annot))
+        annot = False
+    return out
+
+
+def _script(tok):
+    return "cjk" if re.search("[" + _CJK + "]", tok) else "latin"
 
 
 def _same(a, b):
-    na, nb = _norm(a), _norm(b)
-    if not na or not nb:
+    """Same register? Equal tokens, or one is the other plus a GLOSS.
+
+    Plain containment was wrong in a way that costs exactly what this file protects: `Grid` and
+    `Gridiron`, `Ledger` and `Ledger Line` came out identical, and the loser vanishes silently
+    under "already kept". A gloss announces itself — it is in the other script (`Section Drawing
+    建筑剖面`) or it arrives after an annotation separator (`Section Drawing — the ledger`). A bare
+    Latin word after a Latin name is a DIFFERENT name, and the tie is broken toward keeping two
+    entries: a visible duplicate is something the reader can merge, a dropped register is gone.
+    """
+    ta, tb = _norm(a), _norm(b)
+    if not ta or not tb:
         return False
-    return na == nb or na.startswith(nb) or nb.startswith(na)
+    if [t for t, _ in ta] == [t for t, _ in tb]:
+        return True
+    short, long_ = (ta, tb) if len(ta) < len(tb) else (tb, ta)
+    if [t for t, _ in long_[:len(short)]] != [t for t, _ in short]:
+        return False
+    extra_tok, extra_annot = long_[len(short)]
+    return bool(extra_annot or _script(extra_tok) != _script(short[-1][0]))
 
 
 def _bespoke_name(style_pick):
@@ -110,7 +146,15 @@ def entry_for(deck_dir):
         gates = json.loads(gp.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
         return None, "could not read {}: {}".format(gp, exc)
-    d = gates.get("design_plan") or {}
+    if not isinstance(gates, dict):
+        return None, "{} is not a gates record (found {})".format(gp, type(gates).__name__)
+    d = gates.get("design_plan")
+    if not isinstance(d, dict):
+        # A hand-edited or half-written record must REPORT, never raise: the same AttributeError
+        # class once took down a whole 16-section gate run, and a hand-off is the worst moment to
+        # meet a traceback from a library-bookkeeping helper.
+        return None, ("{}'s `design_plan` is {}, not an object — nothing to read a register "
+                      "from".format(gp, type(d).__name__))
     pick = d.get("style_pick")
 
     # A preset-based look needs no keeping — it is already in the gallery.
@@ -128,7 +172,8 @@ def entry_for(deck_dir):
         return None, ("`design_plan.style_pick` does not read as a bespoke register "
                       "({!r}) — nothing to keep".format(str(pick or "")[:70]))
 
-    mg = d.get("motif_generates") or {}
+    mg = d.get("motif_generates")
+    mg = mg if isinstance(mg, dict) else {}
     cols = _colours(deck_dir)
     deck = deck_dir.name
     lines = ["", "### `{}` — from: {}".format(name, _domain(pick) or deck)]
@@ -142,7 +187,7 @@ def entry_for(deck_dir):
                        ("page", mg.get("page"))) if f[1]]
     if gen:
         lines.append("- **Generates:** " + " · ".join("{} = {}".format(k, v) for k, v in gen))
-    if d.get("carried_by"):
+    if isinstance(d.get("carried_by"), (list, tuple)) and d["carried_by"]:
         lines.append("- **Carried by:** slide(s) {}".format(
             ", ".join(str(x) for x in d["carried_by"])))
     lines.append("- **Shipped as:** `{}`".format(deck))
@@ -152,6 +197,29 @@ def entry_for(deck_dir):
 def _domain(pick):
     m = re.search(r"\bfor\s+(?:a|an|the)?\s*([^-—·]{3,60})", str(pick or ""), re.I)
     return m.group(1).strip() if m else None
+
+
+def _history_name(look):
+    """The register NAME inside a look-history cell, or None.
+
+    Quoted first — an author who typed the name in 「」 or "" means exactly that span. Then the
+    UNQUOTED forms, because a row reading `bespoke Section Drawing register` is the same fact typed
+    without quotes, and dropping it silently is the loss this whole file exists to stop, arriving
+    as a clean "nothing to recover". A capture that begins with the NOUN (`bespoke register
+    invented for the archive`) names nothing — a stub called "register invented for the archive"
+    would be worse than the missing row, so that goes back to the caller as unreadable.
+    """
+    m = re.search(r"自创\s*[「\"'“]([^」\"'”]+)[」\"'”]|bespoke\s+[\"'“]([^\"'”]+)[\"'”]"
+                  r"|generated\s+[\"'“]([^\"'”]+)[\"'”]", str(look or ""))
+    if not m:
+        m = re.search(r"(?:bespoke|self-invented|自创)\s+([^,;(（]{2,48}?)"
+                      r"\s*(?:register|look|scheme|风格|$|[,;(（])", str(look or ""), re.I)
+    if not m:
+        return None
+    name = next((g for g in m.groups() if g), "").strip()
+    if not name or re.match(r"(?:register|look|scheme|风格)\b", name, re.I):
+        return None
+    return name
 
 
 def from_history():
@@ -170,7 +238,7 @@ def from_history():
         text = t.read_text(encoding="utf-8") if t else ""
     except Exception:
         return []
-    out = []
+    out, unread = [], []
     for line in text.splitlines():
         if not line.startswith("| 20"):
             continue
@@ -178,11 +246,11 @@ def from_history():
         if len(cells) < 4:
             continue
         deck, look, canvas = cells[1], cells[2], cells[3]
-        m = _re.search(r"自创\s*[「\"']([^」\"']+)[」\"']|bespoke\s+[\"'“]([^\"'”]+)[\"'”]"
-                       r"|generated\s+[\"'“]([^\"'”]+)[\"'”]", look)
-        if not m:
+        name = _history_name(look)
+        if not name:
+            if _re.search(r"bespoke|自创|self-invented", look, _re.I):
+                unread.append((deck, look))
             continue
-        name = next(g for g in m.groups() if g)
         body = ["", "### `{}` — from: {}".format(name.strip(), deck),
                 "- **Look:** {}".format(look),
                 "- **Canvas:** {}".format(canvas),
@@ -190,17 +258,46 @@ def from_history():
                 "- *(recovered from the look history — thinner than an entry written at hand-off, "
                 "which also carries the motif's generated background/markers/page)*"]
         out.append((name.strip(), "\n".join(body) + "\n"))
+    for deck, look in unread:
+        print("  ! {}: this row names a bespoke look but no register NAME could be read from it — "
+              "add it by hand if it is worth keeping:\n      {}".format(deck, look[:110]),
+              file=sys.stderr)
     return out
 
 
 def target():
-    """The user's registry root file — never the skill's own example library."""
+    """Where a NEW entry goes — the user's registry root, never the skill's example library."""
     try:
         import registry
         _kind, root = registry.root_for_write()
         return Path(root) / FILE
     except Exception:
         return Path.home() / ".slide-maker" / "slide-templates" / FILE
+
+
+def sources():
+    """Every `registers.md` to READ — one per existing registry root, priority order.
+
+    `registry.taste_file()` scans all roots and `list_templates()` de-duplicates across them, for
+    the same reason: the same person runs Claude Code on one deck and a Codex host on the next, and
+    the roots are `~/.claude/…` and `~/.codex/…`. Reading only the WRITE root would have shown an
+    empty collection to the runtime that did not create it, and then written a second copy of a
+    register that was already kept — a split collection is the failure this file exists to prevent,
+    arriving by a different door. New entries still go to ONE root; reading spans them all.
+    """
+    out = []
+    try:
+        import registry
+        for _kind, root in registry.roots_for_read():
+            f = Path(root) / FILE
+            if f.is_file():
+                out.append(f)
+    except Exception:
+        pass
+    t = target()
+    if t.is_file() and t not in out:
+        out.append(t)
+    return out
 
 
 def save(deck_dir, dry_run=False):
@@ -216,26 +313,53 @@ def save(deck_dir, dry_run=False):
             return 2, "cannot read {}: {}".format(path, exc)
     # Idempotent by NAME: re-running a hand-off, or shipping a revision of the same deck, must not
     # grow a second copy. A register that changed enough to deserve a new entry has a new name.
-    for have in re.findall(r"^### `([^`]+)`", existing, re.M):
-        if _same(have, name):
-            return 0, "`{}` is already kept in {} (as `{}`)".format(name, path, have)
+    for src in sources():
+        try:
+            text = src.read_text(encoding="utf-8")
+        except OSError as exc:
+            # An unreadable collection is not an empty one. macOS TCC revokes access to home
+            # subdirectories mid-session, and skipping the duplicate test in silence is how the
+            # user ends up with two copies of one register and no idea why.
+            print("  ! cannot read {} ({}) — the duplicate test could not consult it, which is "
+                  "NOT the same as it being empty".format(src, exc.__class__.__name__),
+                  file=sys.stderr)
+            continue
+        for have in re.findall(r"^### `([^`]+)`", text, re.M):
+            if _same(have, name):
+                return 0, "`{}` is already kept in {} (as `{}`)".format(name, src, have)
     if dry_run:
         return 0, body
+    # Rewriting the file in place would truncate it first, and this file is the user's design
+    # memory: an interrupt between truncate and write costs the whole collection to add one entry.
+    # Temp-then-replace makes the worst case a stray temp file.
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text((existing or HEADER) + body, encoding="utf-8")
+        tmp = path.with_name(path.name + ".new")
+        tmp.write_text((existing or HEADER) + body, encoding="utf-8")
+        os.replace(str(tmp), str(path))
     except OSError as exc:
         return 2, "cannot write {}: {}".format(path, exc)
     return 0, "kept `{}` in {}".format(name, path)
 
 
 def kept():
-    """The register names already in the user's collection."""
-    path = target()
-    try:
-        return re.findall(r"^### `([^`]+)`", path.read_text(encoding="utf-8"), re.M)
-    except OSError:
-        return []
+    """Every register name in the user's collection, across all registry roots."""
+    names = []
+    for src in sources():
+        try:
+            for n in re.findall(r"^### `([^`]+)`", src.read_text(encoding="utf-8"), re.M):
+                if not any(_same(n, m) for m in names):
+                    names.append(n)
+        except OSError as exc:
+            print("  ! cannot read {} ({}) — listed as absent, which is not the same as "
+                  "empty".format(src, exc.__class__.__name__), file=sys.stderr)
+            continue
+    return names
+
+
+def is_kept(name):
+    """Identity, not string equality — the caller printing a reminder must agree with `save()`."""
+    return any(_same(name, have) for have in kept())
 
 
 def _selftest():
@@ -289,11 +413,45 @@ def _selftest():
             "{!r} and {!r} are {}the same register".format(a, b, "" if want else "NOT ")
             if got == want else "{!r} vs {!r} gave {}".format(a, b, got))
 
+    for a, b in (("Grid", "Gridiron"), ("Rail", "Railyard"), ("Ledger", "Ledger Line"),
+                 ("Bench", "Benchmark")):
+        (ok if not _same(a, b) else bad).append(
+            "{!r} and {!r} stay two registers — a name that merely STARTS with another is not a "
+            "gloss on it, and merging them loses one silently under \"already kept\"".format(a, b)
+            if not _same(a, b) else "{!r} and {!r} were merged".format(a, b))
+
+    for shape, why in (({"design_plan": ["a"]}, "a list"), ({"design_plan": "x"}, "a string"),
+                       ({"design_plan": {"style_pick": "bespoke X for y - beat z",
+                                         "motif_generates": ["nope"],
+                                         "carried_by": "5, 10"}}, "wrong-typed subfields")):
+        dd = tmp / ("shape" + why.replace(" ", ""))
+        dd.mkdir(exist_ok=True)
+        (dd / ".deck-gates.json").write_text(json.dumps(shape), encoding="utf-8")
+        try:
+            entry_for(dd)
+            ok.append("a gates record whose design_plan is {} reports instead of raising".format(why))
+        except Exception as exc:
+            bad.append("design_plan as {} raised {}: {}".format(why, type(exc).__name__, exc))
+
+    for look, want in (("bespoke Section Drawing register", "Section Drawing"),
+                       ("self-invented Ledger Line look for the ledger", "Ledger Line"),
+                       ("bespoke register invented for the archive", None),
+                       ("brutalist preset, tuned", None)):
+        got = _history_name(look)
+        (ok if got == want else bad).append(
+            "look-history row {!r} -> {!r}".format(look[:38], got) if got == want
+            else "row {!r} gave {!r}, wanted {!r}".format(look[:38], got, want))
+
     d = deck("dup", "bespoke Section Drawing for a toolchain domain - beat blueprint")
     import tempfile as _tf
     _root = Path(_tf.mkdtemp())
-    _orig = globals()["target"]
+    # BOTH seams, not just the write one: `sources()` reads every real registry root, so a
+    # selftest that patched only `target` would consult the developer's own collection — and
+    # `Section Drawing` is IN it. That test passes on CI (no collection) and fails on the machine
+    # of anyone who has used the tool, which is the wrong way round.
+    _orig, _orig_src = globals()["target"], globals()["sources"]
     globals()["target"] = lambda: _root / FILE
+    globals()["sources"] = lambda: [_root / FILE] if (_root / FILE).is_file() else []
     try:
         save(d)
         c1, m1 = save(d)
@@ -309,7 +467,7 @@ def _selftest():
             "English pick and the look history the human-typed name, and comparing strings kept "
             "both" if "already kept" in m2 else "gloss duplicate: {}".format(m2))
     finally:
-        globals()["target"] = _orig
+        globals()["target"], globals()["sources"] = _orig, _orig_src
 
     n, why = entry_for(tmp / "nope")
     (ok if n is None and "could not read" in why else bad).append(
@@ -337,7 +495,10 @@ def main(argv=None):
         return _selftest()
     if a.list:
         names = kept()
-        print("{} kept in {}".format(len(names), target()))
+        srcs = sources()
+        print("{} kept in {}".format(len(names), " + ".join(str(x) for x in srcs) or target()))
+        if len(srcs) > 1:
+            print("  (two registry roots on this machine — new entries go to {})".format(target()))
         for n in names:
             print("  " + n)
         return 0

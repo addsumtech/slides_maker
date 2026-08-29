@@ -11,6 +11,46 @@ section is a distilled summary — the full notes live on the
 
 ### Fixed
 
+- **`check_register_guard` fired on a page built from nothing but deckkit helpers — 4 of the 7
+  registers that declare prohibitions.** Found by building one ordinary page (`title_bar` + `box` +
+  `text` + `callout`) under each register and running the checker, which is not what its fixtures
+  did: every fixture shape was hand-made. Two causes. **(1)** `shadow.inherit` is True whenever a
+  shape carries no explicit `<a:effectLst>` — the default state of every text box — and a text box
+  has nothing to inherit FROM, because python-pptx writes no `<p:style>` effectRef for one. So four
+  text boxes were reported as theme shadows under a message blaming "a raw `add_shape()`". The
+  condition is now a live effect REFERENCE with no effect of its own, which is exactly what
+  `add_shape()` leaves behind. **(2)** bauhaus called two ordinary side-by-side cards a confetti of
+  oversized primitives: deckkit draws a card as a shape PLUS a separate text box, so the existing
+  `has_text` exclusion never saw the pairing. A primitive with type set on it is a card, not a hero
+  form. Both are locked by a FALSE-POSITIVE FLOOR in the selftest — an ordinary deckkit page must
+  be clean under every forbidding register — and that test was verified to go red on a mutant with
+  the fixes reverted. A gate that fires on a deck built exactly to spec is not a floor; it is
+  training for the waiver reflex.
+- **`save_register`'s duplicate test merged registers that merely share a prefix.** `Grid` and
+  `Gridiron`, `Rail` and `Railyard`, `Ledger` and `Ledger Line` all came out as one register, and
+  the loser disappeared silently under the words "already kept" — the exact loss the file exists to
+  prevent, arriving through its own de-duplication. Identity is now by TOKEN, and a gloss has to
+  announce itself: the other script (`Section Drawing 建筑剖面`) or an annotation separator
+  (`— the ledger`). A bare Latin word after a Latin name is a different name, and the tie breaks
+  toward keeping two entries — a visible duplicate can be merged by the reader; a dropped register
+  is gone.
+- **The register keep-note existed only on the shared path, and only in codex prose.**
+  `codex_delivery_gate.py` now prints it too, from the same module — the icon drift twice over was
+  a rule that lived in prose on the codex side and therefore did not exist. It also compared names
+  with `in`, so a collection holding `Section Drawing 建筑剖面` was told to keep `Section Drawing`
+  at every hand-off while the tool it pointed at answered "already kept".
+- **`save_register` read only the registry root it writes to**, while `taste_file()` and
+  `list_templates()` have always read across all of them — so a Codex host would have shown an
+  empty collection and written a second copy of a register already kept under `~/.claude`. It also
+  rewrote the file in place; it now writes temp-then-replace, because an interrupt while adding one
+  line should not cost the whole collection. And `--from-history` silently skipped rows naming a
+  bespoke look without quotes (`bespoke Section Drawing register`): those are now recovered, rows
+  it still cannot read are REPORTED, and a capture that is only the noun (`bespoke register
+  invented for…`) is rejected rather than kept as a stub.
+- **A mis-shaped `.deck-gates.json` raised `AttributeError` out of `save_register`** instead of
+  reporting — the same class that once took down a whole 16-section gate run, at the worst possible
+  moment.
+
 - **`presets.apply()` only ever re-themed three of the palette slots, so every register drew
   deckkit's own colours in the other four.** It passed `deep`, `slate` and `accents` — and BLUE,
   TEAL, MAGENTA and TINT are what **33 component signatures default to**. Measured: after

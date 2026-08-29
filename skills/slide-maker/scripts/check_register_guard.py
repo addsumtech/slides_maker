@@ -41,11 +41,13 @@ import argparse
 import json
 import os
 import sys
+import warnings
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 _A = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
+_P = "{http://schemas.openxmlformats.org/presentationml/2006/main}"
 MONO_FACES = {"menlo", "consolas", "monaco", "courier", "courier new", "sf mono", "dejavu sans mono",
               "roboto mono", "ibm plex mono", "jetbrains mono", "source code pro", "fira code",
               "cascadia mono", "cascadia code", "liberation mono", "andale mono", "pt mono"}
@@ -76,6 +78,20 @@ def _shape_facts(sh, canvas):
         area = ((sh.width or 0) / 914400.0) * ((sh.height or 0) / 914400.0)
     except TypeError:
         area = 0.0
+    # `shadow.inherit` is True whenever a shape carries no explicit <a:effectLst> — which is the
+    # DEFAULT state of every text box, and a text box has nothing to inherit FROM: python-pptx's
+    # add_textbox writes no <p:style>, so there is no effectRef pointing at a theme effect. Reading
+    # inherit alone therefore flagged four shapes on a page built entirely from deckkit helpers,
+    # under a message that blamed "a raw add_shape()", and it fired that way under brutalist,
+    # swiss, risograph AND bauhaus — 4 of the 7 registers that declare prohibitions, on a clean
+    # build. A gate that fires on a deck built exactly to spec is not a floor; it is training for
+    # the waiver reflex. The real condition is a live effect REFERENCE with no explicit effect of
+    # its own, which is exactly what `add_shape()` leaves behind and what a theme shadow rides in on.
+    eff = x.find(".//" + _P + "style/" + _A + "effectRef")
+    try:
+        ref_idx = int(eff.get("idx") or 0) if eff is not None else 0
+    except (TypeError, ValueError):
+        ref_idx = 0
     try:
         inherit = bool(sh.shadow.inherit)
     except Exception:
@@ -84,12 +100,49 @@ def _shape_facts(sh, canvas):
         "geom": geom,
         "rounded": bool(geom and "round" in geom.lower()),
         "gradient": x.find(".//" + _A + "gradFill") is not None,
-        "soft-shadow": inherit,
+        "soft-shadow": bool(inherit and ref_idx > 0),
         "faces": {r.get("typeface") for r in x.iter(_A + "latin") if r.get("typeface")},
         "big_primitive": bool(geom in PRIMITIVE_GEOMS and canvas and not has_text
                               and area >= canvas * BIG_PRIMITIVE),
         "area": area,
+        "rect": _rect(sh),
     }
+
+
+def _has_text(sh):
+    try:
+        return bool(sh.has_text_frame and (sh.text_frame.text or "").strip())
+    except Exception:
+        return False
+
+
+def _rect(sh):
+    try:
+        return (sh.left or 0, sh.top or 0, (sh.left or 0) + (sh.width or 0),
+                (sh.top or 0) + (sh.height or 0))
+    except TypeError:
+        return None
+
+
+def _is_backing(rect, text_rects):
+    """A primitive with type sitting ON it is a CARD, not a hero form.
+
+    bauhaus's guard is one hero primitive per slide against a confetti of shapes. deckkit draws a
+    card as a shape PLUS a separate text box, so the `has_text` exclusion above never sees the
+    pairing, and two ordinary side-by-side cards read as two oversized primitives — measured on a
+    page with one box and one callout, both flagged. A form somebody set text on top of is
+    furniture the type needs; the hero primitive bauhaus means is the bare one.
+    """
+    if not rect:
+        return False
+    x0, y0, x1, y1 = rect
+    for tx0, ty0, tx1, ty1 in text_rects:
+        ox = max(0, min(x1, tx1) - max(x0, tx0))
+        oy = max(0, min(y1, ty1) - max(y0, ty0))
+        t_area = max(1, (tx1 - tx0) * (ty1 - ty0))
+        if ox * oy >= 0.6 * t_area:
+            return True
+    return False
 
 
 def _iter(slide):
@@ -147,9 +200,12 @@ def check(pptx, register=None, gates=None):
     hits = {}
     for n, slide in enumerate(prs.slides, 1):
         bigs = 0
-        for sh in _iter(slide):
-            f = _shape_facts(sh, canvas)
-            if f["big_primitive"]:
+        shapes = list(_iter(slide))
+        facts_by_shape = [(sh, _shape_facts(sh, canvas)) for sh in shapes]
+        text_rects = [f["rect"] for _sh, f in facts_by_shape
+                      if f["rect"] and _has_text(_sh)]
+        for sh, f in facts_by_shape:
+            if f["big_primitive"] and not _is_backing(f["rect"], text_rects):
                 bigs += 1
             for rule in rules:
                 if rule == "confetti" or rule == "proportional-face":
@@ -219,6 +275,57 @@ def _selftest():
 
     def codes(path, reg):
         return {c for c, _m in check(path, register=reg)[0]}
+
+    # THE FALSE-POSITIVE FLOOR, first because it is the failure that makes a gate worthless. An
+    # ordinary page built from nothing but deckkit helpers must be clean under EVERY register that
+    # declares prohibitions. Measured before this test existed: 4 of the 7 fired on exactly such a
+    # page — brutalist, swiss, risograph and bauhaus each reported a soft shadow that was four TEXT
+    # BOXES (nothing to inherit from), and bauhaus additionally called two ordinary side-by-side
+    # cards a confetti of oversized primitives. A gate that fires on a deck built exactly to spec
+    # is not a floor; it is training for the waiver reflex.
+    import presets as _pre
+
+    def _ordinary(s, p):
+        y = dk.title_bar(s, "A page built the ordinary way", kicker="probe")
+        dk.box(s, 0.8, y + 0.2, 4.0, 1.6)
+        dk.text(s, 0.9, y + 0.4, 3.8, 0.5, [[("body copy", 14, dk.DEEP, False, False)]])
+        dk.callout(s, 5.2, y + 0.2, 4.0, 1.6, "NOTE", "a callout")
+
+    # The register must be APPLIED first — that is what a real deck does, and radius=0 / the mono
+    # face are half of what makes the page lawful. apply() mutates deckkit's module globals, so the
+    # snapshot below keeps this test from changing the answer of every test after it.
+    _snap = {k: getattr(dk, k) for k in dir(dk) if k.isupper()}
+    dirty = {}
+    try:
+        for r in sorted(_pre.FORBIDS):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                _pre.apply(r)
+            got = sorted(codes(build(_ordinary), r))
+            if got:
+                dirty[r] = got
+    finally:
+        for k, v in _snap.items():
+            setattr(dk, k, v)
+    ok.append("a page built from nothing but deckkit helpers is clean under all {} registers that "
+              "declare prohibitions — the false-positive floor".format(len(_pre.FORBIDS))) \
+        if not dirty else bad.append("clean deckkit page flagged: {}".format(dirty))
+
+    def _card_with_type(s, p):
+        c = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0.5), Inches(1), Inches(5), Inches(4))
+        c.fill.solid(); c.fill.fore_color.rgb = dk.TINT
+        c.line.fill.background(); c.shadow.inherit = False
+        d = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(6), Inches(1), Inches(5), Inches(4))
+        d.fill.solid(); d.fill.fore_color.rgb = dk.TINT
+        d.line.fill.background(); d.shadow.inherit = False
+        dk.text(s, 0.8, 1.3, 4.4, 1.0, [[("type set on the form", 14, dk.DEEP, False, False)]])
+        dk.text(s, 6.3, 1.3, 4.4, 1.0, [[("and on the other", 14, dk.DEEP, False, False)]])
+
+    got = codes(build(_card_with_type), "bauhaus")
+    ok.append("two big forms with TYPE SET ON THEM are cards, not a confetti of hero primitives — "
+              "deckkit draws a card as a shape plus a separate text box, so counting geometry "
+              "alone made every two-card page a bauhaus violation") \
+        if "confetti" not in got else bad.append(str(got))
 
     # rounded — the case radius=0 exists to prevent
     got = codes(build(lambda s, p: dk.box(s, 1, 1, 3, 2, fill=dk.DEEP, round=True)), "swiss")

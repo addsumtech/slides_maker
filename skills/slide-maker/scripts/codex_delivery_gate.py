@@ -1159,6 +1159,35 @@ def check_register_guard(evidence: dict[str, Any], deck_path: Path | None,
         errors.append("{}: {}".format(code.upper(), msg.replace("\n", " ")))
 
 
+def note_register_kept(evidence: dict[str, Any], deck_path: Path | None) -> None:
+    """An INVENTED register must be kept, or it is gone when the folder is — printed, never held.
+
+    `render_deck --gate-check` prints this at hand-off, and this path does not run that gate: it
+    runs this file. Leaving the reminder on the shared path only would have made keeping a register
+    a Claude-only habit, which is the exact drift this gate has already been through twice on
+    icons — the rule lived in prose on the codex side and therefore did not exist. A NOTE, never an
+    error: keeping a register is the user's call about their own collection, and holding a finished
+    deck over a library entry is how a gate teaches the waiver reflex.
+    """
+    if deck_path is None:
+        return
+    try:
+        path = Path(__file__).with_name("save_register.py")
+        spec = importlib.util.spec_from_file_location("slide_maker_save_register", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        name, _body = module.entry_for(deck_path.parent)
+        if not name:
+            return
+        if module.is_kept(name):
+            print(f"  register `{name}` is already kept in your collection")
+            return
+        print(f"  [!!] this deck invented `{name}` — keep it, or it is gone when the folder is:\n"
+              f"       python3 scripts/save_register.py {deck_path.parent}")
+    except Exception as exc:
+        print(f"  [--] register keep-note NOT RUN — {exc.__class__.__name__}: {exc}")
+
+
 def check_register_pixels(evidence: dict[str, Any], deck_path: Path | None,
                          errors: list[str]) -> None:
     """The register the evidence DECLARES must reach the deck's RENDERED PIXELS.
@@ -2054,6 +2083,8 @@ def evaluate(
         check_register_guard(evidence, deck_path, errors)
         # DECLARED SURFACE -> BUILT CANVAS. The registry was producer-only until now.
         check_surface_contract(evidence, deck_path, errors)
+        # ...and if the register was INVENTED, say so before the folder is the only copy of it.
+        note_register_kept(evidence, deck_path)
         audited_components = components
         if build_script is not None and deck_path is not None:
             recomputed = recompute_component_audit(build_script, deck_path, errors)

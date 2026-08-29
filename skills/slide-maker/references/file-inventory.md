@@ -118,7 +118,12 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   collection. Preset-based decks are skipped (they are in the gallery already). Idempotent on a
   NORMALISED name: the gates record carries the English pick and the look history the human-typed
   one, so `Section Drawing` and `Section Drawing 建筑剖面` are one register, not two — comparing
-  strings kept both on the first run. `--from-history` recovers what a look history already names.
+  strings kept both on the first run. A gloss must ANNOUNCE itself (the other script, or an
+  annotation separator): plain containment made `Grid`/`Gridiron` and `Ledger`/`Ledger Line` the
+  same register too, and the loser vanished under "already kept". Reading spans every registry
+  root the way `taste_file()` and `list_templates()` do — the same person runs Claude Code on one
+  deck and a Codex host on the next — while new entries go to one. Writes temp-then-replace,
+  because truncating the user's design memory to add one line is not an acceptable worst case. `--from-history` recovers what a look history already names.
   `render_deck --gate-check` NOTES an unkept register at hand-off, never blocks: keeping one is the
   user's call about their own collection.
 - `check_register_guard.py` — the SHAPE-level half of a declared register. `apply()` sets palette,

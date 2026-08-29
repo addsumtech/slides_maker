@@ -1609,9 +1609,10 @@ def _register_keep_note(pptx, gates):
     if not name:
         return
     try:
-        already = name in sr.kept()
-    except Exception:
-        already = False
+        already = sr.is_kept(name)          # identity, not string equality — `save_register` will
+    except Exception:                       # answer "already kept" for a glossed name, and a
+        already = False                     # reminder that disagrees with the tool it points at
+                                            # gets ignored on the second hand-off and every one after
     if already:
         print("[gates] register `{}` is already kept in your collection".format(name))
         return
