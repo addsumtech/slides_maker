@@ -42,6 +42,7 @@ claims to build fails here rather than in a delivered deck.
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 import warnings
 from pathlib import Path
@@ -881,8 +882,73 @@ CARDS = {
 
 # ------------------------------------------------------------------------------------ the public API
 
+BESPOKE = {}                   # name -> {"forbids": (...), "source": "<file>"} for invented kits
+
+
+def register(name, *, ground=None, card=None, forbids=(), source=None):
+    """Make an INVENTED register a first-class kit — the same standing the 18 presets have.
+
+    Until this existed, a bespoke register got components and a palette and nothing else: its look
+    was hand-built in the deck's own `style.py`, which meant NONE of the contracts applied to it.
+    No returned content rect, no loud-mark invariant, no canvas scaling, no ground-resolved ink, no
+    no-invention rule, and no gate that could see it at all — `check_style_applied.declared_preset`
+    returns None for an invented look, so `check_register_guard` reported it as unchecked. The four
+    registers in `references/bespoke-registers.md` were prose, and every deck that invented one
+    re-derived the rules from scratch and got a different subset of them right.
+
+    A registered kit is indistinguishable from a preset's afterwards: `ground()` and `card()` work,
+    the invariant holds, `sigs.py` documents the entry point, and `forbids` lets the register state
+    its OWN prohibitions so `check_register_guard` can hold it to them — the thing that separates a
+    register from a colourway is what it refuses to do.
+
+        register("ledger", ground=_ledger, card=_card_ledger,
+                 forbids=("gradient",), source=__file__)
+
+    `ground(slide, role, index)` must paint in REFERENCE inches (see `_canvas`) and RETURN the
+    content rect it leaves; `card(slide, x, y, w, h, label)` receives REAL inches and returns
+    `(body, header)`.
+    """
+    key = str(name or "").strip().lower()
+    if not key:
+        raise ValueError("a kit needs a name — it is how the gates, the taste profile and the next "
+                         "deck about this subject refer to it")
+    import presets as _p
+    if key in _p.PRESETS:
+        raise ValueError(
+            "{!r} is a PRESET — registering a kit under a preset's name would silently replace the "
+            "gallery's look with yours, and every later deck asking for {!r} would get something "
+            "else. Invent a name from the subject's own world.".format(name, name))
+    if ground is None or not callable(ground):
+        raise TypeError("register({!r}) needs a callable ground(slide, role, index)".format(name))
+    if card is not None and not callable(card):
+        raise TypeError("register({!r})'s card must be callable(slide, x, y, w, h, label)".format(name))
+    GROUNDS[key] = ground
+    CARDS[key] = card if card is not None else _card_plain
+    BESPOKE[key] = {"forbids": tuple(forbids), "source": source}
+    return key
+
+
+def _card_plain(slide, x, y, w, h, label=None):
+    """The fallback card for a kit that registered a ground and no card form.
+
+    Deliberately plain — a hairline box in the register's own ink. A kit that stops here has only
+    half a register: the card FORM is what makes pages differ in shape rather than in colour.
+    """
+    return dk.box(slide, x, y, w, h, fill=None, line=_blend(dk.GROUND, dk.DEEP, 0.35),
+                  line_w=0.8), None
+
+
+def forbids(register):
+    """What an INVENTED register says it refuses to do — `()` for a preset (see `presets.FORBIDS`)."""
+    return tuple(BESPOKE.get(str(register or "").strip().lower(), {}).get("forbids") or ())
+
+
+def is_bespoke(register):
+    return str(register or "").strip().lower() in BESPOKE
+
+
 def has(register):
-    """Is there a surface kit for this register? All 18 have one; anything else answers False."""
+    """Is there a surface kit for this register? All 18 presets have one, plus any registered."""
     return str(register or "").strip().lower() in GROUNDS
 
 
@@ -959,12 +1025,111 @@ def card(slide, register, x, y, w, h, *, label=None):
         _K[0] = 1.0
 
 
-def registers():
-    """The registers that have a kit, sorted — for a gallery, a doc, or a coverage report."""
-    return sorted(GROUNDS)
+def registers(*, bespoke=None):
+    """Kit names, sorted. `bespoke=True` for invented ones only, `False` for the preset gallery."""
+    if bespoke is None:
+        return sorted(GROUNDS)
+    return sorted(k for k in GROUNDS if (k in BESPOKE) == bool(bespoke))
 
 
 # ------------------------------------------------------------------------------------------ sample
+
+SCAFFOLD = '''#!/usr/bin/env python3
+"""`{name}` — a bespoke surface kit, invented for this subject.
+
+Fill in the two builders below. Everything else is already decided for you: the contracts a kit
+signs are enforced, not remembered.
+
+  · ground(slide, role, index) composes in REFERENCE inches (a 10 x 5.63in canvas) and RETURNS the
+    content rect it leaves. It is SCALED to whatever canvas the deck uses — never call
+    dk._slide_size() here, call _canvas(slide).
+  · Anything loud goes in the MARGINS. Painting a loud mark inside the rect you return RAISES; a
+    full-bleed ground that type can sit on passes texture=True.
+  · Furniture may state the page's OWN facts (its index) and nothing else. No invented brand, no
+    made-up year, no fabricated revision — that is the never-invent rule, broken by the chrome.
+  · Secondary ink is _mute(), never dk.MUTE: MUTE is tuned for a light canvas and measures under
+    the 3:1 floor on a dark one.
+  · role is the page's job (cover / section / content / closer): loud on a cover, quiet on a page.
+  · Placement may vary by INDEX, never by a random number — two builds must be identical.
+
+Run this file to render a three-page preview and look at it.
+"""
+import sys
+from pathlib import Path
+
+sys.path.insert(0, r"{scripts}")
+
+import deckkit as dk                                   # noqa: E402
+import presets                                         # noqa: E402
+import register_surface as rs                          # noqa: E402
+from register_surface import (_canvas, _shape, _note, _text, _hrule, _mute, _blend,  # noqa: E402
+                              color_band, tri, zigzag, halftone, starburst, boomerang, scanlines,
+                              MSO_SHAPE)
+
+NAME = "{name}"
+
+
+def ground(slide, role, index):
+    """Paint {name}'s own furniture; return the content rect (x, y, w, h) it leaves."""
+    W, H = _canvas(slide)
+
+    # ---- the register's signature furniture goes here -------------------------------------
+    # e.g.  color_band(slide, 0, 0.5, dk.MAGENTA)                    a full-bleed band
+    #       _shape(slide, MSO_SHAPE.OVAL, 0.2, H - 0.6, 0.4, 0.4, fill=dk.TEAL)   a margin mark
+    #       _text(slide, 0.6, 0.3, W - 1.2, 0.26,
+    #             [[("SECTION {{:02d}}".format(index + 1), 9.5, _mute(), True, False)]])
+    _hrule(slide, 0.6, 0.78, W - 1.2, _blend(dk.GROUND, dk.DEEP, 0.35))
+
+    top, foot, side = 0.95, 0.6, 0.6
+    return (side, top, W - 2 * side, H - top - foot)
+
+
+def card(slide, x, y, w, h, label=None):
+    """{name}'s CARD FORM. x/y/w/h are REAL inches. Return (body, header) — header may be None."""
+    return dk.box(slide, x, y, w, h, fill=dk.TINT,
+                  line=_blend(dk.GROUND, dk.DEEP, 0.3), line_w=0.9), None
+
+
+rs.register(NAME, ground=ground, card=card,
+            forbids=(),          # what this register REFUSES: "rounded" / "gradient" /
+            source=__file__)     # "soft-shadow" / "confetti" / "proportional-face"
+
+
+if __name__ == "__main__":
+    import warnings
+    warnings.simplefilter("ignore")
+    presets.apply("{base}")                    # the palette this register starts from; retune freely
+    prs = dk.blank_deck()
+    for i, role in enumerate(("cover", "content", "section")):
+        s = dk.add_slide(prs)
+        bx, by, bw, bh = rs.ground(s, NAME, role=role, index=i)
+        _text(s, bx, by, bw, 0.6, [[(NAME.upper() + "  " + role, 26, dk.DEEP, True, False)]])
+        cw = (bw - 0.6) / 3.0
+        for c in range(3):
+            cx = bx + c * (cw + 0.3)
+            rs.card(s, NAME, cx, by + 0.9, cw, bh - 1.1, label="CARD {{}}".format(c + 1))
+            dk.text(s, cx + 0.2, by + 1.2, cw - 0.4, bh - 1.6,
+                    [[("the same three cards on every page", 11, dk.DEEP, False, False)]])
+    out = Path(__file__).with_suffix(".pptx")
+    prs.save(str(out))
+    print("wrote", out, "- render it and LOOK before you call the register done")
+'''
+
+
+def scaffold(name, out_path, base="swiss"):
+    """Write a fillable kit for an invented register, with every contract already wired.
+
+    The alternative, which is what happened before this existed, is that each new bespoke register
+    re-derives the rules from the docs and gets a different subset of them right.
+    """
+    out = Path(out_path)
+    if out.exists():
+        raise FileExistsError("{} already exists — edit it, or choose another path".format(out))
+    out.write_text(SCAFFOLD.format(name=name, base=base,
+                                   scripts=str(Path(__file__).resolve().parent)), encoding="utf-8")
+    return out
+
+
 
 def sample(out_path):
     """One page per kit, same content, so the difference is the REGISTER and nothing else."""
@@ -1092,6 +1257,9 @@ def main(argv=None):
     ap.add_argument("--selftest", action="store_true")
     ap.add_argument("--sample", metavar="OUT.pptx")
     ap.add_argument("--list", action="store_true")
+    ap.add_argument("--new", metavar="NAME", help="scaffold a kit for an INVENTED register")
+    ap.add_argument("--out", metavar="PATH", help="where --new writes (default surface_<name>.py)")
+    ap.add_argument("--base", default="swiss", help="--new: the preset whose palette it starts from")
     a = ap.parse_args(argv)
     if a.selftest:
         return _selftest()
@@ -1102,6 +1270,16 @@ def main(argv=None):
         missing = [r for r in sorted(presets.PRESETS) if r not in GROUNDS]
         print("\n  {} of {} registers have a surface kit; still prose-only: {}".format(
             len(GROUNDS), len(presets.PRESETS), ", ".join(missing)))
+        return 0
+    if a.new:
+        key = re.sub(r"[^a-z0-9_]+", "_", a.new.strip().lower()).strip("_")
+        path = a.out or "surface_{}.py".format(key)
+        try:
+            p = scaffold(a.new.strip(), path, base=a.base)
+        except (FileExistsError, ValueError) as exc:
+            print("cannot scaffold: {}".format(exc))
+            return 2
+        print("wrote {}\n  fill in ground() and card(), then run it: python3 {}".format(p, p))
         return 0
     if a.sample:
         print("wrote", sample(a.sample))

@@ -190,6 +190,13 @@ def entry_for(deck_dir):
     if isinstance(d.get("carried_by"), (list, tuple)) and d["carried_by"]:
         lines.append("- **Carried by:** slide(s) {}".format(
             ", ".join(str(x) for x in d["carried_by"])))
+    # A kit file beside the deck is the register as CODE, and it is the whole difference between a
+    # collection you can read and one you can build from. Recorded by path, relative to the deck.
+    kits = sorted(f.name for f in deck_dir.glob("surface_*.py"))
+    if kits:
+        lines.append("- **Kit:** `{}` — a registered surface kit (`register_surface.register`), so "
+                     "`ground()`/`card()` work for this register the way they do for a preset"
+                     .format(" · ".join(kits)))
     lines.append("- **Shipped as:** `{}`".format(deck))
     return name, "\n".join(lines) + "\n"
 

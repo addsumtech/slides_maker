@@ -124,6 +124,13 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   and so does painting a surface before `presets.apply()` has set the palette (it used to die on a
   blend deep inside a builder, with a TypeError that named nothing the caller could fix). Both gates NOTE a deck that declared a kitted register and used
   none of it.
+- `bespoke_kits.py` — the four registers in `references/bespoke-registers.md`, as runnable kits.
+  The library taught how to invent a register in five prose fields and contained zero lines of code,
+  so every deck that reached for one re-derived the contracts by hand and got a different subset
+  right. Registered through `register_surface.register()`, they arrive with everything a preset's
+  kit has. A motif that NEEDS distinct hues derives them rather than reusing the base palette's one
+  accent — measured: on `swiss` (a single red) `current`'s two-colour crossing rendered in one
+  colour, which does not degrade the look, it deletes the idea.
 - `save_register.py` — keeps an INVENTED register after the deck ships. The example library held
   4 while one real look history held 9 that had shipped and been lost, and grep found no script
   anywhere that wrote a register or a look-history line: the mechanism was "remember to edit the

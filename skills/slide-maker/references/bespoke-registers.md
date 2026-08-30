@@ -42,6 +42,17 @@ you produce.
 
 ## Verified registers
 
+🔴 **All four below are now BUILDABLE, not just describable.** `scripts/bespoke_kits.py`
+registers each one through `register_surface.register()`, so `ground()` and `card()` work for them
+exactly as they do for a preset — the returned content rect, the loud-mark invariant, canvas
+scaling, ground-resolved ink, and each register's own declared prohibitions enforced by
+`check_register_guard`. `import bespoke_kits` is all it takes; `--sample <out.pptx>` renders one
+page per register. They remain STARTING POINTS: each was invented for a specific subject and the
+"fits" clause names its family — adapt it to the subject in front of you rather than pasting it
+because it renders. To invent a new one, `python3 scripts/register_surface.py --new "<name>"`
+scaffolds a kit with every contract already wired, and `scripts/save_register.py` records the kit
+file beside the register when the deck ships.
+
 ### `current` — a live electric BUS (from: EV / energy / autonomy)
 - **Motif:** a horizontal glowing "bus" line that crosses from one colour register to another at a node,
   with tap-off traces to markers. **Means:** the crossing from a present state to a future one (on the

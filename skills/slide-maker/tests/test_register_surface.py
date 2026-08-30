@@ -276,6 +276,55 @@ try:
 finally:
     _restore(snap)
 
+# ------------------------------------------- an INVENTED register can be a kit, not just prose
+# Before `register()`, a bespoke register got a palette and components and nothing else: its look
+# was hand-built in the deck's own style.py, so NONE of the contracts reached it — no returned
+# content rect, no loud-mark invariant, no canvas scaling, no ground-resolved ink, and no gate could
+# see it at all. The library's four worked examples were prose: zero lines of runnable code.
+import bespoke_kits                                   # noqa: E402  (registering IS the import)
+
+check(all(rs.has(n) and rs.is_bespoke(n) for n in bespoke_kits.KITS),
+      "the {} registers in the bespoke library are registered KITS, not prose — ground() and "
+      "card() work for them exactly as they do for a preset".format(len(bespoke_kits.KITS)))
+check(set(rs.registers(bespoke=False)) == set(presets.PRESETS),
+      "...and the two kinds stay distinguishable: registers(bespoke=False) is the preset gallery")
+
+try:
+    rs.register("swiss", ground=lambda sl, r, i: (1, 1, 2, 2))
+    bad.append("a kit was allowed to overwrite a PRESET's look")
+except ValueError as exc:
+    check("PRESET" in str(exc),
+          "registering a kit under a preset's name is REFUSED — it would silently replace the "
+          "gallery's look for every later deck that asked for that preset")
+try:
+    rs.register("no_ground_kit")
+    bad.append("a kit with no ground was accepted")
+except TypeError:
+    check(True, "a kit with no ground() is refused rather than half-registered")
+
+snap = _snapshot()
+try:
+    for name in sorted(bespoke_kits.KITS):
+        presets.apply("swiss")
+        prs = dk.blank_deck()
+        s2 = dk.add_slide(prs)
+        bx, by, bw, bh = rs.ground(s2, name, role="content", index=2)
+        W, H = dk._slide_size(s2)
+        check(bw >= 3.5 and bh >= 1.4 and bx + bw <= W + 1e-6 and by + bh <= H + 1e-6,
+              "`{}` hands back a usable content rect, like any preset kit".format(name))
+    # a motif that NEEDS distinct hues must get them even from a one-accent palette
+    for base in ("swiss", "brutalist", "terminal"):
+        presets.apply(base)
+        hs = [tuple(dk._as_rgb(c)) for c in bespoke_kits._hues(3)]
+        worst = min(sum(abs(a - b) for a, b in zip(hs[i], hs[j]))
+                    for i in range(3) for j in range(i + 1, 3))
+        check(worst > 60,
+              "on `{}` (whose accents are one colour) the three routes still come out three "
+              "colours — a repeated hue is the same failure as a missing one: two routes in one "
+              "hue is one route to a reader (min separation {})".format(base, worst))
+finally:
+    _restore(snap)
+
 # ------------------------------------------------------- the marks are usable outside a kit as well
 snap = _snapshot()
 try:

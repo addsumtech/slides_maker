@@ -170,6 +170,7 @@ def _iter(slide):
 def check(pptx, register=None, gates=None):
     """Return (violations, facts)."""
     import presets
+    import register_surface as _rs
     from pptx import Presentation
 
     facts = {}
@@ -189,6 +190,22 @@ def check(pptx, register=None, gates=None):
                 register = None
         except Exception:
             register = None
+    # A BESPOKE register can now declare prohibitions too — `register_surface.register(..., forbids=)`
+    # — and until this looked for them, an invented look was always "NOT CHECKED": the resolver above
+    # only knows preset names. A register is separated from a colourway by what it refuses to do, so
+    # an invented one that states its refusals deserves the same enforcement a preset's gets.
+    if register is None:
+        try:
+            import register_surface as _rs
+            import save_register as _sr
+            cand = _sr._bespoke_name((gates or {}).get("design_plan", {}).get("style_pick")
+                                     if isinstance((gates or {}).get("design_plan"), dict) else None)
+            if cand and _rs.is_bespoke(str(cand).strip().lower()) and _rs.forbids(cand):
+                register = str(cand).strip().lower()
+                facts["bespoke"] = True
+                facts.pop("confidence", None)
+        except Exception:
+            pass
     facts["register"] = register
     if not register:
         if facts.get("confidence") == "unsure":
@@ -200,7 +217,7 @@ def check(pptx, register=None, gates=None):
                          "bespoke or generated look has no FORBIDS to check, which is not the same "
                          "as clean")
         return [], facts
-    rules = presets.FORBIDS.get(register)
+    rules = presets.FORBIDS.get(register) or _rs.forbids(register)
     if not rules:
         facts["note"] = ("{!r} declares no machine-checkable prohibitions — its `guard` is real but "
                          "needs judgement of meaning, so it stays prose and is NOT CHECKED here"

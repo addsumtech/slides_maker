@@ -101,6 +101,37 @@ section is a distilled summary — the full notes live on the
 
 ### Added
 
+- **An INVENTED register can now be a KIT, with the same standing the 18 presets have.** Asked
+  whether a bespoke register — one designed from the subject's own world — can carry a distinct
+  STYLE rather than just components and a layout, the honest answer was no: its look was hand-built
+  in the deck's own `style.py`, so NONE of the kit contracts reached it. No returned content rect,
+  no loud-mark invariant, no canvas scaling, no ground-resolved ink, no never-invent rule on the
+  chrome, and no gate that could see it — `check_style_applied.declared_preset` returns None for an
+  invented look, so `check_register_guard` reported every bespoke deck as unchecked. Meanwhile
+  `references/bespoke-registers.md`, the library of four registers proved on real decks, contained
+  **zero lines of runnable code**: five prose fields each, which is the right way to teach a
+  register and no way to build one.
+  `register_surface.register(name, ground=…, card=…, forbids=…)` makes an invented register
+  first-class. `forbids` is the part that matters most: what a register REFUSES is what separates it
+  from a colourway, and `check_register_guard` now resolves a bespoke name out of the gates record
+  and enforces the prohibitions that register declares — verified end to end on a gradient under a
+  `ledger` deck. Registering under a preset's name is refused outright, because it would silently
+  replace the gallery's look for every later deck that asked for that preset.
+  `python3 scripts/register_surface.py --new "<name>"` scaffolds a kit with every contract already
+  wired and a runnable three-page preview, so an author fills in furniture rather than re-deriving
+  rules. `scripts/save_register.py` records the kit file beside the register at hand-off, so the
+  next deck on that subject starts from the built look instead of from a description.
+- **The four library registers ship as `scripts/bespoke_kits.py`** — `current` (a live electric bus
+  crossing at a node), `transit-signage` (route colour · numbered roundel · buffer stop), `ledger`
+  (a ruled account page whose balance rule closes or breaks) and `k-space` (acquired vs skipped
+  sampling). Each states its own prohibitions and is checked against them. A motif that NEEDS
+  distinct hues derives them instead of reusing the base palette's accents: rendered on `swiss`
+  (whose accents are a single red), `current`'s two-colour crossing came out in ONE colour and
+  `transit-signage`'s three routes came out as one route — which does not degrade the look, it
+  deletes the idea. They are starting points for their family, not looks to paste; the kits paint
+  the conduit and the junction and leave the end labels to the deck, because those name the two
+  states and a kit that guessed them would be inventing.
+
 - **The 18 presets now BUILD their look, not just their colourway — `scripts/register_surface.py`.**
   Asked whether a no-image-generation deck can actually reproduce these styles, the answer was
   measured rather than remembered: one identical page taken through all 18 presets and RENDERED

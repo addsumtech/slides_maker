@@ -254,6 +254,11 @@ jobs:
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/regsurf.log || {
             echo "::error::register-surface suite did not run to completion"; exit 1; }
 
+      - name: Bespoke kits (an INVENTED register gets a kit, not just prose)
+        run: |
+          set -o pipefail
+          python scripts/bespoke_kits.py --selftest
+
       - name: Register write-back (an invented look outlives the folder it shipped in)
         run: |
           set -o pipefail
