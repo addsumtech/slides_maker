@@ -53,6 +53,10 @@ def check(name, cond, detail=""):
 
 
 def gate(deck, gates):
+    if "interview" not in gates:                 # the four recorded answers are now required;
+        gates = dict(gates, interview={          # no fixture below is ABOUT the interview, so
+            "language": "English", "density": "balanced",     # filling it here keeps each test
+            "length": "medium 9-15", "goal": "inform"})       # about the thing it checks
     (deck.parent / ".deck-gates.json").write_text(json.dumps(gates, ensure_ascii=False),
                                                   encoding="utf-8")
     p = subprocess.run([sys.executable, str(RENDER), str(deck), "--gate-check", "--static"],

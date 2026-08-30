@@ -2628,6 +2628,48 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
         # content slides carry the same memory sentence — the cheap mechanical signature of a plan
         # written for the deck rather than per slide.
         _content = _section(gates, "content")
+
+        # ── THE INTERVIEW'S ANSWERS ARE AN ARTIFACT, not a memory ───────────────────────────────
+        # 🔴 THE FIELD IS TOP-LEVEL `interview`, NOT A NEW ONE: `codex_delivery_gate` has required
+        # `interview.mode` / `.record` / `.length` all along, and the asymmetry was that the CODEX
+        # path demanded the record while the shared path demanded nothing — the same drift as
+        # `content.slides`, one field over. The AXES come from `deck_gates.INTERVIEW_AXES` so the two
+        # gates cannot disagree about what an interview must answer.
+        _iv = _section(gates, "interview")
+        _ivw = _iv.get("waived") or _section(gates, "content").get("interview_waived")
+        if _ivw:
+            if reason_width(_ivw) < 16 or _has_placeholder(_ivw):
+                die("`interview.waived` needs a real reason (>=16 wide) — say why this deck's "
+                    "build needed none of the interview's answers recorded.")
+            print("[gates] interview answers WAIVED — {}".format(_ivw))
+        else:
+            try:
+                sys.path.insert(0, str(Path(__file__).resolve().parent))
+                from deck_gates import INTERVIEW_AXES, INTERVIEW_HINT
+            except Exception:
+                INTERVIEW_AXES = ("language", "density", "length", "goal")
+                INTERVIEW_HINT = {}
+            _missing = [k for k in INTERVIEW_AXES if not str(_iv.get(k) or "").strip()]
+            _bad = [k for k in INTERVIEW_AXES
+                    if k not in _missing and (_has_placeholder(str(_iv[k]))
+                                              or len(str(_iv[k]).strip()) < 2)]
+            if _missing or _bad:
+                die("`interview` is missing the answers the deck was BUILT from: {}.\n"
+                    "  These four are singled out because NOTHING ELSE demands them, which is "
+                    "exactly why\n"
+                    "  they go unasked — measured, LANGUAGE was never asked on a real build and no "
+                    "gate noticed.\n\n"
+                    "    python3 scripts/deck_gates.py set <deck-dir> {}\n\n"
+                    "  Under the auto waiver these are your delegated picks — the waiver removes the "
+                    "STOP, never\n"
+                    '  the record. Or waive: {{"interview": {{"waived": "<why>"}}}}.'.format(
+                        " and ".join("`{}` ({})".format(k, INTERVIEW_HINT.get(k, ""))
+                                     for k in (_missing + _bad)),
+                        " ".join('interview.{}="<{}>"'.format(k, INTERVIEW_HINT.get(k, k))
+                                 for k in INTERVIEW_AXES)))
+            print("[gates] interview: " + " · ".join(
+                "{} {}".format(k, str(_iv[k]).strip()) for k in INTERVIEW_AXES))
+
         _sw = _content.get("slides_waived")
         if _sw:
             if reason_width(_sw) < 16 or _has_placeholder(_sw):

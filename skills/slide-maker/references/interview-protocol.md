@@ -2,6 +2,17 @@
 
 ## Step 0 — personalization, Q1 (template), Q2 (purpose/venue), Q3 (source material)
 
+🔴 **Five questions, a four-slot widget, and the axis that disappears.** A choice UI (Claude Code's
+`AskUserQuestion`) takes FOUR questions per call; this interview has FIVE lines. "Ask them in one
+batched call" therefore truncates the last one silently — and that is the line LANGUAGE lives on.
+Measured: a real deck was built in this repo's own session with language never asked, and the gates
+record carried `delivery`, `builds` and `content.slides` (the three axes something downstream
+demanded) and no answer for language, density, length or goal. Send **two calls**. Then RECORD the
+four: `interview.language / .density / .length / .goal`, required by both gates from one shared list
+(`deck_gates.INTERVIEW_AXES`) and scaffolded by `deck_gates.py --init`. An axis with no artifact
+demanding it is an axis that goes unasked — this file said exactly that about deck length, in prose,
+and the failure moved one axis over.
+
 **Personalize options only from THIS user's own footprint — never a hardcoded or guessed
 domain — and roll past work up into ONE option, drilling in only on pick (Q1's two-stage
 pattern), so personalization never crowds out the general choices.** Any *suggestions* you pre-fill into a question — candidate topics, example

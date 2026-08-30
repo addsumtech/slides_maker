@@ -89,6 +89,10 @@ def build(dest, *, visual=False, timid_cover=True, n=12, pics=False):
 
 def gate(deck, gates, *flags):
     gates = fit_content(gates, deck)
+    if "interview" not in gates:                 # the four recorded answers are now required;
+        gates = dict(gates, interview={          # no fixture below is ABOUT the interview
+            "language": "English", "density": "balanced",
+            "length": "medium 9-15", "goal": "inform"})
     (deck.parent / ".deck-gates.json").write_text(json.dumps(gates, ensure_ascii=False),
                                                   encoding="utf-8")
     p = subprocess.run([sys.executable, str(RENDER), str(deck), "--gate-check", "--static", *flags],

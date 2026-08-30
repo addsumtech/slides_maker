@@ -434,6 +434,18 @@ Before I build, please give me:
 *(No review question here — it is asked at Step 5, AFTER the first clean render, with the deck in
 front of the user. Asking it blind at Step 0 forced a cost decision about a deck nobody had seen.)*
 
+🔴 **A choice UI takes FOUR questions per call and this interview has FIVE lines — so "one batched
+call" silently truncates the last one, which is the line LANGUAGE lives on.** Measured in this
+repo's own session: a real deck was built and language was never asked, while the record carried
+`delivery`, `builds` and `content.slides` — the three axes something downstream demanded — and no
+answer for language, density, length or goal. Send **two calls** (four, then the rest); a host with
+widgets does not get a shorter interview. 🔴 **And RECORD the answers**: `interview.language`,
+`.density`, `.length` and `.goal` are required by `--gate-check` and by the codex gate, from one
+shared axis list (`deck_gates.INTERVIEW_AXES`), and `deck_gates.py --init` scaffolds them. Those
+four are singled out because nothing else demands them — which is exactly why they are the ones
+that go unasked. The waiver is written (`{"interview": {"waived": "<why>"}}`), and under the auto
+directive these are your delegated picks: the waiver removes the STOP, never the record.
+
 🔴 **The length question is on this list because it was MISSING from it**, while
 `references/interview-protocol.md` had carried "deck length is ALWAYS the user's choice — surface
 it, never silently derive it" the whole time. A runtime with a choice UI reads that file and asks;

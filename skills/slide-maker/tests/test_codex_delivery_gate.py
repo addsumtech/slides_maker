@@ -204,6 +204,11 @@ def fixture(root: Path) -> tuple[dict, dict, dict, Path]:
             # The length axis, recorded. It is the question that disappears on a runtime with no
             # choice UI, and a deck silently built at one page is its symptom.
             "length": "user asked for a single-slide record fixture",
+            # ...and the three axes that went the same way one lesson later: LANGUAGE was never
+            # asked on a real build and nothing noticed, because nothing downstream demanded it.
+            "language": "English",
+            "density": "balanced",
+            "goal": "inform",
         },
         "content": {
             "source_mode": "provided",

@@ -65,6 +65,13 @@ def check(name, cond, detail=""):
 
 
 def gate(deck, gates):
+    # Every fixture gets a filled `interview` unless it is testing that field itself: the four
+    # answers are now a required artifact, and a fixture that omits them would be held before it
+    # reaches the thing it means to check. Filling it here rather than in 14 fixtures is also the
+    # honest shape — none of them is about the interview.
+    if "interview" not in gates:
+        gates = dict(gates, interview={"language": "English", "density": "balanced",
+                                       "length": "medium 9-15", "goal": "inform"})
     (deck.parent / ".deck-gates.json").write_text(json.dumps(gates, ensure_ascii=False),
                                                   encoding="utf-8")
     p = subprocess.run([sys.executable, str(RENDER), str(deck), "--gate-check", "--static"],
@@ -322,6 +329,80 @@ def main():
           set(v) >= {"pairs", "flagged", "sketches", "no_ledger"})
     check("...and agrees with calling the module directly",
           v == arc_divergence.check(copy.deepcopy(ARC_CANDIDATES)))
+
+    # ── the INTERVIEW's answers are an artifact ──────────────────────────────────────────────
+    # Measured on this skill's own delivered deck: the record carried `delivery`, `builds` and
+    # `content.slides` and NOT language, density, length or goal. The three that survived are the
+    # three something downstream demanded. LANGUAGE was never asked on that build and nothing
+    # noticed — the axis with no artifact demanding it is the axis that goes unasked, which this
+    # skill had already written down about deck LENGTH, in prose, one axis earlier.
+    print("== the interview's answers are recorded, on both runtimes, from ONE list ==")
+    import importlib.util as _ilu
+    import deck_gates as _dg
+
+    check("there is ONE definition of the axes an interview must answer",
+          _dg.INTERVIEW_AXES == ("language", "density", "length", "goal")
+          and set(_dg.INTERVIEW_HINT) == set(_dg.INTERVIEW_AXES),
+          _dg.INTERVIEW_AXES)
+    check("`deck_gates.py --init` SCAFFOLDS them — a capability that does not enter the skeleton "
+          "is one the next deck rediscovers by failing a gate",
+          set(_dg.template(slides=3).get("interview") or {}) == set(_dg.INTERVIEW_AXES))
+
+    _cdg_path = pathlib.Path(__file__).resolve().parent.parent / "scripts" / "codex_delivery_gate.py"
+    _spec = _ilu.spec_from_file_location("cdg_iv", _cdg_path)
+    _cdg = _ilu.module_from_spec(_spec)
+    _spec.loader.exec_module(_cdg)
+    _base = {"mode": "answered", "record": "asked all five in one turn", "length": "medium 9-15"}
+    _errs = []
+    _cdg.check_content({"interview": _base, "content": {"slides": []}}, pathlib.Path("."), set(), _errs)
+    _named = [e for e in _errs if e.startswith("interview.")]
+    check("codex gate: the axes with no downstream demand are REQUIRED (language · density · goal)",
+          len(_named) == 3 and all(any(a in e for e in _named)
+                                   for a in ("language", "density", "goal")), _named)
+    _errs = []
+    _cdg.check_content({"interview": dict(_base, language="<lang>", density="balanced",
+                                          goal="inform"),
+                        "content": {"slides": []}}, pathlib.Path("."), set(), _errs)
+    check("...and a PLACEHOLDER is not an answer",
+          any("interview.language" in e for e in _errs), _errs)
+    _errs = []
+    _cdg.check_content({"interview": dict(_base, language="中文", density="balanced",
+                                          goal="inform"),
+                        "content": {"slides": []}}, pathlib.Path("."), set(), _errs)
+    check("...and a filled record passes",
+          not [e for e in _errs if e.startswith("interview.")], _errs)
+
+    # The SHARED path, run the way the gate actually runs: a subprocess over a real deck.
+    _tmp = pathlib.Path(tempfile.mkdtemp(prefix="iv-gate-"))
+    _mini = _tmp / "mini.pptx"
+    _mk = subprocess.run([sys.executable, "-c",
+                   "import sys; sys.path.insert(0, %r)\n"
+                   "import warnings; warnings.simplefilter('ignore')\n"
+                   "import deckkit as dk\n"
+                   "p = dk.blank_deck(); dk.add_slide(p); p.save(%r)"
+                   % (str(pathlib.Path(__file__).resolve().parent.parent / "scripts"), str(_mini))],
+                  capture_output=True, text=True)
+    if _mk.returncode == 0 and _mini.is_file():
+        (_tmp / ".deck-gates.json").write_text(json.dumps({"interview": {"language": "中文"}}),
+                                               encoding="utf-8")
+        _out = subprocess.run([sys.executable,
+                        str(pathlib.Path(__file__).resolve().parent.parent / "scripts" / "render_deck.py"),
+                        str(_mini), "--gate-check"], capture_output=True, text=True)
+        _all = _out.stdout + _out.stderr
+        check("shared path: a gates record missing density/length/goal is HELD, and the message "
+              "names the axes",
+              "`interview` is missing" in _all and "density" in _all and "goal" in _all,
+              _all[:300])
+        (_tmp / ".deck-gates.json").write_text(json.dumps({"interview": {
+            "waived": "a one-page internal probe with no audience to interview"}}), encoding="utf-8")
+        _out = subprocess.run([sys.executable,
+                        str(pathlib.Path(__file__).resolve().parent.parent / "scripts" / "render_deck.py"),
+                        str(_mini), "--gate-check"], capture_output=True, text=True)
+        check("...and the written waiver is honoured, like every other waiver in this repo",
+              "interview answers WAIVED" in (_out.stdout + _out.stderr),
+              (_out.stdout + _out.stderr)[:200])
+    else:
+        check("shared-path interview gate (deck could not be built for the probe)", False, _mk.stderr[:200])
 
     print(f"\n{PASS} passed, {FAIL} failed")
     return 1 if FAIL else 0

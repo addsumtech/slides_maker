@@ -11,6 +11,30 @@ section is a distilled summary — the full notes live on the
 
 ### Fixed
 
+- **The interview asked five questions and recorded three, and LANGUAGE was one of the two that
+  vanished.** Checked against this skill's own delivered deck rather than against the docs: the
+  `.deck-gates.json` carried `delivery`, `builds` and `content.slides` — and no answer for
+  **language, density, length, goal, tone or audience**. The three that survived are exactly the
+  three something downstream demanded (`declare_delivery`, the motion manifest, the content gate);
+  the ones that evaporated are the ones nothing asked for. Language was never put to the user on
+  that build and no artifact, lint or gate noticed. SKILL.md had already diagnosed this pattern —
+  for deck LENGTH — and fixed it with a 🔴 line of prose, so the failure simply moved to the next
+  unartifacted axis.
+  There is a mechanical half as well: the interview is FIVE numbered lines and a choice UI takes
+  FOUR questions per call, so "ask them in one batched call" truncates the fifth — which is the line
+  language lives on. SKILL.md now says to send two calls, in layer 1, next to the block that gets
+  copied.
+  `interview.language`, `.density`, `.length` and `.goal` are now REQUIRED by `render_deck
+  --gate-check` and by `codex_delivery_gate`, from one shared list (`deck_gates.INTERVIEW_AXES`) so
+  the two gates cannot disagree about what an interview answers — the same single-source rule that
+  ended the icon drift. 🔴 The field is the EXISTING top-level `interview`, not a new one: the codex
+  path has required `interview.mode` / `.record` / `.length` all along and the shared path required
+  nothing, which is the `content.slides` asymmetry one field over. `deck_gates.py --init` scaffolds
+  the four (a capability that does not enter the skeleton is one the next deck rediscovers by
+  failing a gate), the content checkpoint echoes them back on an `interview:` line so a wrong answer
+  is caught before a slide exists, and the waiver is written like every other in this repo. Verified
+  by running the gate over the very deck that shipped without them — it is held now.
+
 - **A bespoke register's declared prohibitions were enforced in-process and NOWHERE ELSE.**
   Registration happens at import time; the gates run in a fresh process after the build. So the
   `forbids=` that had just been added — the thing that separates a register from a colourway —

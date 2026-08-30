@@ -856,6 +856,26 @@ def check_content(
         # from the ledger's takeaway count". What is being checked is that the question was PUT and
         # its answer recorded, not that a particular integer was hit.
         require_string(interview.get("length"), "interview.length", errors, minimum=4)
+        # ...and the other three axes with nothing downstream demanding them. `length` was required
+        # here first, one axis at a time; the same failure then simply moved to LANGUAGE, which went
+        # unasked on a real build with no artifact, lint or gate noticing. The list is shared with
+        # `render_deck --gate-check` so the two gates cannot disagree about what an interview answers.
+        try:
+            _dg_path = Path(__file__).with_name("deck_gates.py")
+            _dg_spec = importlib.util.spec_from_file_location("slide_maker_deck_gates", _dg_path)
+            _dg = importlib.util.module_from_spec(_dg_spec)
+            _dg_spec.loader.exec_module(_dg)
+            _axes, _hint = _dg.INTERVIEW_AXES, _dg.INTERVIEW_HINT
+        except Exception:
+            _axes, _hint = ("language", "density", "length", "goal"), {}
+        for _axis in _axes:
+            if _axis == "length":
+                continue                       # required above, with its own floor
+            _val = str(interview.get(_axis) or "").strip()
+            if len(_val) < 2 or _val.startswith("<"):
+                errors.append("interview.{} missing or a placeholder ({}) — an axis with no "
+                              "recorded answer is an axis nobody asked about"
+                              .format(_axis, _hint.get(_axis, "")))
 
     content = evidence.get("content")
     if not isinstance(content, dict):

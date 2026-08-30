@@ -43,6 +43,25 @@ GATES = ".deck-gates.json"
 
 DIALS = ("conservative", "balanced+", "bold", "experimental")
 DELIVERIES = ("presented", "textheavy", "selfread", "surface")
+
+# The interview axes that must be RECORDED, and the reason they are a list rather than prose.
+# Measured on a real delivered deck: `.deck-gates.json` carried `delivery`, `builds` and
+# `content.slides` and none of these four. The three that survived are exactly the three something
+# downstream demanded (declare_delivery, the motion manifest, the content gate); the ones that
+# evaporated are the ones nothing asked for. LANGUAGE went unasked on that build and no artifact,
+# lint or gate noticed. There is a mechanical half as well: the interview is five questions and a
+# choice UI takes FOUR per call, so "ask them in one batched call" silently truncates the fifth —
+# which is the line language lives on. `length` was already required on the codex path for exactly
+# this reason, one axis at a time; this is that lesson applied to the rest of them.
+# ONE definition, read by `render_deck --gate-check` and by `codex_delivery_gate` — a second copy is
+# how the two gates have already drifted apart twice.
+INTERVIEW_AXES = ("language", "density", "length", "goal")
+INTERVIEW_HINT = {
+    "language": "中文 / English / bilingual EN+中文",
+    "density": "diagram-heavy / balanced / text-heavy",
+    "length": "the slide count or range the USER saw",
+    "goal": "inform / support a decision / inspire action",
+}
 ANCHOR_ROLES = ("signature", "complex", "data")
 # The body floors render_deck.py enforces, restated here ONLY to warn early. The gate owns them.
 BODY_FLOORS = {"presented": 13.5, "textheavy": 12.0, "selfread": 12.0}
@@ -53,6 +72,9 @@ def template(slides=None, delivery="presented"):
     unfilled template can never be mistaken for a filled one."""
     n = slides or 0
     return {
+        # The interview's answers, scaffolded so they cannot be forgotten: a capability that does
+        # not enter the skeleton is one the next deck rediscovers by failing a gate.
+        "interview": {k: "<{}>".format(INTERVIEW_HINT[k]) for k in INTERVIEW_AXES},
         "delivery": delivery,
         "content": {
             "slides": [{"slide": i + 1, "role": "<cover|hook|evidence|framework|…>",
