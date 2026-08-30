@@ -30,6 +30,19 @@ section is a distilled summary — the full notes live on the
   Two bugs its own selftest caught before it shipped: an EXACT colour match measures 0, and
   `(_dist(...) or 999)` made a perfectly applied accent read as absent; and deriving the body face
   from the median run size called a two-run page's title the body.
+- **Both new checks fired only for authors writing in ENGLISH.** Found by auditing them against
+  inputs they were not built around, which is where each had a hole. The prose check counted words
+  with `.split()`, so a 40-character Chinese motif description was ONE word and slipped through
+  entirely — the same blindness as measuring CJK glyph widths with Latin metrics. And the pick was
+  read with a regex anchored on `picked … of`, while `references/checkpoint-convention.md` says
+  these lines follow the CONVERSATION language: a deck whose record reads `方向闸门:选定 B` reported
+  NOT CHECKED, which is the layering failure this repo keeps re-learning one file over. The pick is
+  now found by matching a direction NAME in the line — language-independent — with a pick-marker
+  (`picked` / `chose` / `选定` / `采用` / …) breaking the tie when the line also names the losers,
+  as the convention asks it to. A bare `B` still never resolves to `B2`.
+- **A deck with no explicit typeface was passing the face axes in silence.** Runs that carry no
+  `<a:latin>` inherit the theme's face, which is not the same as matching the picked one; the axes
+  now report NOT CHECKED and name why, rather than reporting nothing.
 - **A direction's motif fields were rendering the author's notes onto the sample tiles.**
   `cover_motif` / `ambient_motif` are raw HTML by design, so a bespoke register can draw its own
   signature — and nothing checked that what was supplied actually DREW anything. A sentence

@@ -145,18 +145,35 @@ def picked(gates, directions):
         line = str(d.get("direction_gate") or "")
         if isinstance(d.get("direction_pick"), str) and d["direction_pick"].strip():
             line = d["direction_pick"]
-    m = re.search(r"picked\s+`?([^`·\n]+?)`?\s+(?:of\b|$)", line, re.I)
-    want = (m.group(1) if m else line).strip().strip("`\"' ")
-    if not want:
+    if not line.strip():
         return None, "no `direction_gate` line to read the pick from"
-    names = [str(x.get("name") or "") for x in directions]
-    for nm in names:
-        if nm.lower() == want.lower():
-            return nm, None
-    for nm in names:                       # "B" or "B — Aperture" against "B — Aperture (bespoke)"
-        if nm.lower().startswith(want.lower()) or want.lower().startswith(nm.lower()):
-            return nm, None
-    return None, "the recorded pick {!r} matches none of {}".format(want, names)
+    names = [str(x.get("name") or "") for x in directions if str(x.get("name") or "").strip()]
+
+    # 🔴 Read the pick by finding a NAME in the line, not by parsing English prose. The checkpoint
+    # convention says these lines follow the CONVERSATION language, so a Chinese deck writes
+    # `方向闸门:选定 B — Aperture`, and a regex anchored on "picked ... of" reported NOT CHECKED for
+    # every one of them — a check that fires only for the authors already writing in English is the
+    # layering failure this repo keeps re-learning, one file over.
+    hits = sorted(((line.lower().find(nm.lower()), nm) for nm in names
+                   if nm.lower() in line.lower()), key=lambda t: t[0])
+    if not hits:
+        # No full name — fall back to a leading token ("picked B", "选定 B"), matched at a word
+        # boundary so `B` never resolves to `B2`.
+        for nm in sorted(names, key=len, reverse=True):
+            head = re.split(r"\s*[—\-·:]\s*", nm)[0].strip()
+            if head and re.search(r"(?<![\w])" + re.escape(head) + r"(?![\w])", line, re.I):
+                return nm, None
+        return None, "the `direction_gate` line names none of {}".format(names)
+    if len(hits) == 1:
+        return hits[0][1], None
+    # Several names on one line is the NORMAL shape - the convention asks for the losers too. The
+    # pick is the one a pick-marker introduces, in whatever language the line is written in.
+    for m in re.finditer(r"(picked|chose|chosen|selected|selects?|选定|选择|选中|选了|采用|採用|選定)",
+                         line, re.I):
+        after = [(i, nm) for i, nm in hits if i >= m.end()]
+        if after:
+            return min(after, key=lambda t: t[0])[1], None
+    return hits[0][1], None
 
 
 def check(pptx, gates=None, deck_dir=None):
@@ -214,6 +231,14 @@ def check(pptx, gates=None, deck_dir=None):
 
     for axis in ("display", "body"):
         wf, gf = _face(want.get(axis)), got[axis]
+        if wf and not gf:
+            # NOT the same as matching. A deck whose runs carry no explicit <a:latin> inherits the
+            # theme face, and reporting nothing there is the silent-skip this repo treats as a
+            # defect class of its own: "unchecked" and "clean" are different facts.
+            out.setdefault("unchecked", []).append(
+                "{} — the deck sets no explicit typeface on its runs, so the face it will RENDER "
+                "in is the theme's and cannot be read from the file".format(axis))
+            continue
         if wf and gf and wf != gf:
             _flag(axis, "the picked direction's {} face is {!r} and the deck sets {!r} — the slot "
                         "was declared and never read".format(axis, wf, gf))

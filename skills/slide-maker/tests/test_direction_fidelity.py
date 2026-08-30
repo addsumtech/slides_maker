@@ -65,6 +65,34 @@ check(not dd._prose_motif(SHORT),
       "...and a short label inside a mark is not prose; twelve words with no geometry is")
 
 
+check(dd._prose_motif({"cover_motif": "<div>一道切进页面的门洞,你透过它看主题,随着 deck "
+                                     "推进框会越收越窄</div>"}),
+      "🔴 a motif description written in 中文 is caught too — `.split()` counts a 40-character "
+      "Chinese sentence as ONE word, so the first version fired only for authors already writing "
+      "in English, which is the same blindness as measuring CJK widths with Latin metrics")
+check(not dd._prose_motif({"cover_motif": "<div>零叁</div>"}),
+      "...and a short CJK label inside a mark is still not prose")
+
+
+# ------------------------------- the pick is read by NAME, in whatever language the line is written
+NAMED = [{"name": "A — Swiss Red"}, {"name": "B — Aperture (bespoke)"},
+         {"name": "C — Dark Console"}, {"name": "D — Waybill (bespoke)"}]
+for line, want in (
+        ("picked `B — Aperture (bespoke)` of 4 rendered directions (A Swiss Red · C Dark Console)",
+         "B — Aperture (bespoke)"),
+        ("方向闸门:选定 B — Aperture (bespoke),4 个方向里挑的;落选 A — Swiss Red · C — Dark Console",
+         "B — Aperture (bespoke)"),
+        ("已采用「B — Aperture (bespoke)」", "B — Aperture (bespoke)"),
+        ("direction gate: B — Aperture (bespoke)", "B — Aperture (bespoke)"),
+        ("picked D — Waybill (bespoke) of 4 · lost: A — Swiss Red", "D — Waybill (bespoke)")):
+    got, why = cda.picked({"design_plan": {"direction_gate": line}}, NAMED)
+    check(got == want,
+          "the pick reads out of {!r}".format(line[:40]) if got == want
+          else "{!r} -> {!r}, wanted {!r} ({})".format(line[:50], got, want, why))
+check(cda.picked({"design_plan": {"direction_gate": "picked B of 2"}},
+                 [{"name": "B"}, {"name": "B2 — Aperture"}])[0] == "B",
+      "...and a bare `B` never resolves to `B2` — the fallback matches at a word boundary")
+
 # ------------------------------------------------------- the picked direction must be what ships
 def _deck(tmp, *, ground, title_font, title_left, accent_used=True):
     dk.set_palette(deep="1E1B18", magenta="2F6B5F", font="Helvetica Neue", display="Georgia")
@@ -134,6 +162,27 @@ deck3 = _deck(bare, ground="FFFFFF", title_font=dk.FONT, title_left=0.6)
 problems5, facts5 = cda.check(deck3, gates=GATES, deck_dir=bare)
 check(not problems5 and "directions.json" in (facts5.get("note") or ""),
       "a deck that never went through the direction gate is not punished for it, and says so")
+
+# A deck whose runs carry no explicit typeface inherits the theme's face, and that is NOT the same
+# as matching the picked one. Reporting nothing there is the silent-skip class this repo treats as
+# a defect of its own.
+theme = Path(tempfile.mkdtemp(prefix="notheme-"))
+(theme / "directions.json").write_text(json.dumps(DIRS), encoding="utf-8")
+dk.set_palette(deep="1E1B18", magenta="2F6B5F")
+dk.set_ground("F2EFE6")
+_prs = dk.blank_deck()
+_s = dk.add_slide(_prs)
+_tb = _s.shapes.add_textbox(dk.Inches(1), dk.Inches(2), dk.Inches(5), dk.Inches(1))
+_tb.text_frame.text = "a run with no explicit latin face"
+_deck = theme / "d.pptx"
+_prs.save(str(_deck))
+_p, _f = cda.check(_deck, gates=GATES, deck_dir=theme)
+check(any("typeface" in u for u in _f.get("unchecked", [])),
+      "🔴 a deck that sets no explicit typeface reports the face axes as NOT CHECKED rather than "
+      "passing them in silence — unchecked and clean are different facts")
+check("display" not in {a for a, _w in _p},
+      "...and does not invent a divergence it cannot measure")
+
 
 # and the way the gate ACTUALLY runs: a fresh process reading the record off disk. Passing the
 # gates in-process would have tested a path the gate never takes.

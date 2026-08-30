@@ -157,9 +157,17 @@ def _prose_motif(d):
             continue
         if _DRAWS.search(html) or _STYLED_BOX.search(html):
             continue
-        words = re.sub(r"<[^>]+>", " ", html).split()
-        if len(words) >= 12:
-            out.append((key, " ".join(words)[:70]))
+        # CJK-aware on purpose. `.split()` counts a 40-character Chinese description as ONE word,
+        # so a motif field written in 中文 slipped through entirely — the same blindness as
+        # measuring Chinese glyph widths with Latin metrics, and it would have made this check fire
+        # only for the authors already writing in English.
+        text = re.sub(r"<[^>]+>", " ", html)
+        cjk = len(re.findall(r"[\u2e80-\u9fff\uf900-\ufaff\u3040-\u30ff\uac00-\ud7af]", text))
+        latin = len([w for w in re.sub(
+            r"[\u2e80-\u9fff\uf900-\ufaff\u3040-\u30ff\uac00-\ud7af]", " ", text).split()
+            if any(ch.isalpha() for ch in w)])
+        if latin + cjk / 2.0 >= 12:
+            out.append((key, " ".join(text.split())[:70]))
     return out
 
 
