@@ -120,6 +120,103 @@ try:
 finally:
     _restore(snap)
 
+# --------------------------------------------------------------- every canvas this skill supports
+# The kits were composed on 10 x 5.63in. Inches do not travel: measured before the scale layer
+# existed, a memphis triangle was 4.2% of the width there and 1.3% of an A0 poster's, and bauhaus
+# RAISED on portrait because a max() floor on the leftover band pushed the rect back over the hero.
+CANVASES = {"16:9 10in": (10.0, 5.63), "16:9 13.33in": (13.333, 7.5), "4:3": (10.0, 7.5),
+            "9:16 portrait": (5.63, 10.0), "1:1": (7.5, 7.5),
+            "A0 poster": (33.1, 46.8), "A1 landscape": (33.1, 23.4)}
+snap = _snapshot()
+try:
+    for label, (W, H) in CANVASES.items():
+        trouble = []
+        for reg in rs.registers():
+            presets.apply(reg)
+            prs = dk.blank_deck()
+            prs.slide_width, prs.slide_height = int(W * 914400), int(H * 914400)
+            for role in ("cover", "content", "section"):
+                s = dk.add_slide(prs)
+                try:
+                    bx, by, bw, bh = rs.ground(s, reg, role=role, index=2)
+                except Exception as exc:
+                    trouble.append("{}/{} {}".format(reg, role, exc.__class__.__name__))
+                    continue
+                if bx + bw > W + 1e-6 or by + bh > H + 1e-6 or bx < 0 or by < 0:
+                    trouble.append("{}/{} off-canvas".format(reg, role))
+                elif bw < W * 0.35 or bh < H * 0.28:
+                    trouble.append("{}/{} band {:.1f}x{:.1f}".format(reg, role, bw, bh))
+        check(not trouble,
+              "all {} kits build a usable page on {} — no raise, on-canvas, and a content rect "
+              "worth calling a page".format(len(rs.registers()), label)
+              if not trouble else "{}: {}".format(label, trouble[:4]))
+finally:
+    _restore(snap)
+
+# ...and the furniture SCALES with the canvas rather than staying a fixed number of inches.
+snap = _snapshot()
+try:
+    def mark_share(W, H):
+        presets.apply("memphis")
+        prs = dk.blank_deck()
+        prs.slide_width, prs.slide_height = int(W * 914400), int(H * 914400)
+        s = dk.add_slide(prs)
+        rs.ground(s, "memphis", role="content", index=1)
+        biggest = max(((sh.width or 0) / 914400) for sh in s.shapes)
+        return biggest / W
+    small, big = mark_share(10.0, 5.63), mark_share(33.1, 23.4)
+    check(abs(small - big) < 0.05,
+          "a register's furniture keeps its PROPORTION across canvases ({:.1%} of the width on a "
+          "10in slide, {:.1%} on an A1 poster) — it used to be a fixed inch count, which made the "
+          "same mark a third the size on the poster the format table supports".format(small, big))
+finally:
+    _restore(snap)
+
+# ------------------------------------------------- register furniture may not INVENT anything
+# A ground writes chrome, and chrome is text that ships on every page of somebody's deck. The first
+# version put "M A I S O N" on luxury_dark (a brand the deck does not have), "REV A" on blueprint (a
+# revision history), "MCM" in a museum year badge (a fabricated date) and a page number of index+11.
+# The rule the whole skill runs on is never invent; the vocabulary below is the whole of what
+# register furniture is allowed to say, and every number must be the page's OWN index.
+FURNITURE_WORDS = {
+    "sheet", "scale", "section", "edition", "continued", "executive", "summary", "confidential",
+    "keynote", "module", "feature", "page", "analysis", "report", "plate", "catalogue", "issue",
+    "riso", "user", "deck", "slide", "cover", "content", "closer", "note", "card",
+}
+ROMAN = {"i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x", "xi", "xii"}
+import re as _re
+snap = _snapshot()
+try:
+    offenders = []
+    for reg in rs.registers():
+        presets.apply(reg)
+        for idx in (0, 4, 9):
+            prs = dk.blank_deck()
+            slide = dk.add_slide(prs)
+            rs.ground(slide, reg, role="cover" if idx == 0 else "content", index=idx)
+            for sh in slide.shapes:
+                if not (sh.has_text_frame and sh.text_frame.text.strip()):
+                    continue
+                raw = sh.text_frame.text
+                # letter-spaced chrome ("M O D U L E") is one word, not six
+                flat = _re.sub(r"\b(?:[A-Za-z]\s+){1,}[A-Za-z]\b",
+                               lambda m: m.group(0).replace(" ", ""), raw)
+                for tok in _re.findall(r"[A-Za-z]+", flat):
+                    word = tok.lower()
+                    if word not in FURNITURE_WORDS and word not in ROMAN:
+                        offenders.append("{}: word {!r}".format(reg, tok))
+                for num in _re.findall(r"\d+", raw):
+                    if int(num) not in (idx + 1, 1):          # the page's own index, or a 1:1 scale
+                        offenders.append("{}: number {!r} on page index {}".format(reg, num, idx))
+                if _re.search(r"(19|20)\d{2}", raw):
+                    offenders.append("{}: a YEAR in furniture text".format(reg))
+    check(not offenders,
+          "no kit's furniture invents anything — every word is register vocabulary and every "
+          "number is the page's own index ({} kits x 3 pages checked)".format(len(rs.registers()))
+          if not offenders else "invented furniture: {}".format(sorted(set(offenders))[:6]))
+finally:
+    _restore(snap)
+
 # ---------------------------------------------------------- the pages actually differ from each other
 snap = _snapshot()
 try:
@@ -135,6 +232,33 @@ try:
           "one page in eighteen colourways ({} pairs compared)".format(len(pairs)))
     check(all(len(v) >= 2 for v in shapes.values()),
           "every kit actually paints something")
+finally:
+    _restore(snap)
+
+# ------------------------------------------------------- the grounds must survive the deck's own lint
+# A ground writes chrome, and chrome is text. Measured on the first version: `dk.MUTE` used flat
+# across eighteen registers came out at 2.85:1 on blueprint's navy and 2.93:1 on editorial_paper's
+# cream — under the 3:1 floor that applies to text at ANY size, shipped on every page. `mute_for()`
+# resolves the secondary ink FROM THE GROUND, which is exactly why it exists.
+snap = _snapshot()
+try:
+    import subprocess
+    import tempfile as _tf
+    out_dir = Path(_tf.mkdtemp(prefix="regsurf-lint-"))
+    deck = out_dir / "kits.pptx"
+    rs.sample(deck)
+    proc = subprocess.run([sys.executable, str(ROOT / "scripts" / "lint_deck.py"), str(deck)],
+                          capture_output=True, text=True)
+    low = [ln.strip() for ln in proc.stdout.splitlines() if "LOW CONTRAST" in ln]
+    check(not low,
+          "no kit's chrome falls under the 3:1 text-contrast floor on its own ground — every "
+          "secondary ink is resolved with mute_for(), never the light-canvas MUTE token"
+          if not low else "chrome under the floor: {}".format(low[:3]))
+    pad = [ln.strip() for ln in proc.stdout.splitlines() if "TEXT PADDING" in ln]
+    check(not pad,
+          "...and a register's seal/stamp is not reported as a cramped card: one or two glyphs in a "
+          "near-square box is a chop, which is supposed to be filled"
+          if not pad else "padding findings: {}".format(pad[:3]))
 finally:
     _restore(snap)
 

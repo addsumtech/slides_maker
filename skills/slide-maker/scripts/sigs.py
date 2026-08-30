@@ -29,7 +29,11 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-MODULES = ("deckkit", "designed_charts")
+# `register_surface` is here for the same reason the other two are: this lookup is where an agent
+# finds out what already exists, and SKILL.md tells it that a name matching NO helper means "you
+# supply the geometry". Leaving the surface kits out of it therefore did worse than hide them — it
+# told anyone asking for `halftone` or `starburst` to hand-roll the thing that had just been built.
+MODULES = ("deckkit", "designed_charts", "register_surface")
 
 # The three call-shape errors that actually cost round-trips on a real build. They are properties of
 # the API that no single signature line states, so they are printed with every lookup rather than

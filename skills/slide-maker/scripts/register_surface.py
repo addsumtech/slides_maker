@@ -57,6 +57,71 @@ MARGIN = 0.45                  # marks live outside the content band, never on t
 LOUD_MAX = 3                   # the motif budget this skill already states, applied to the ground
 
 
+# ------------------------------------------------------------------------------- canvas scaling
+
+REF_SHORT = 5.63               # the short side of the canvas these kits were composed on
+_K = [1.0]                     # the live scale factor; 1.0 outside a ground()/card() call
+
+
+def _scale_for(slide):
+    """How much bigger than the reference canvas is this one — clamped, never inverted.
+
+    The kits were composed in inches on a 10 x 5.63in canvas, and inches do not travel: on the
+    13.33in variant every mark is proportionally 25% smaller, on a portrait 9:16 page they are
+    proportionally huge, and on an A0 poster — a format `formats.py` supports and
+    `check_surface.py` gates — a 0.42in memphis triangle is 1.3% of the width where it was 4.2%.
+    Everything a kit draws is therefore expressed in REFERENCE inches and multiplied by this on
+    the way to the page. The clamp keeps a very long or very small canvas from producing furniture
+    that is absurd rather than merely scaled.
+    """
+    W, H = _canvas(slide)
+    return max(0.55, min(4.0, min(W, H) / REF_SHORT))
+
+
+def _canvas(slide):
+    """The slide's size in REFERENCE inches — what a builder composes against."""
+    W, H = dk._slide_size(slide)
+    return W / _K[0], H / _K[0]
+
+
+def _T(*vals):
+    """Reference inches -> real inches, for a deckkit helper that takes positions."""
+    return [v * _K[0] for v in vals]
+
+
+def _text(slide, x, y, w, h, runs, **kw):
+    """`dk.text` in reference inches, with the run SIZES scaled too — type is furniture as well."""
+    out = []
+    for para in runs:
+        out.append([tuple(list(r[:1]) + [r[1] * _K[0]] + list(r[2:])) for r in para])
+    return dk.text(slide, *_T(x, y, w, h), out, **kw)
+
+
+def _hrule(slide, x, y, w, color, weight=0.012):
+    return dk.hrule(slide, *_T(x, y, w), color, weight=weight * _K[0])
+
+
+def _seal(slide, x, y, size, char, **kw):
+    return dk.seal(slide, *_T(x, y, size), char, **kw)
+
+
+def _ghost(slide, x, y, w, h, txt, **kw):
+    return dk.ghost_numeral(slide, *_T(x, y, w, h), txt, **kw)
+
+
+def _frame(slide, *, inset=0.32, gap=0.06, color=None, line_w=1.0):
+    return dk.catalogue_frame(slide, inset=inset * _K[0], gap=gap * _K[0], color=color,
+                              line_w=line_w * _K[0])
+
+
+def _grad_rule(slide, x, y, w, c0, c1, *, h=0.05):
+    return dk.gradient_rule(slide, *_T(x, y, w), c0, c1, h=h * _K[0])
+
+
+def _glow(slide, cx, cy, w, h, color, alpha=0.5):
+    return dk.glow(slide, *_T(cx, cy, w, h), color, alpha=alpha)
+
+
 # ---------------------------------------------------------------------------- deterministic spread
 
 def _h(index, salt=0):
@@ -95,6 +160,17 @@ def _record(x, y, w, h, texture):
         _MARKS.append((x, y, x + w, y + h))
 
 
+def _mute():
+    """The secondary ink resolved FROM THIS REGISTER'S GROUND — never the bare `MUTE` token.
+
+    `dk.MUTE` is tuned for a light canvas. Used flat across eighteen registers it measured 2.85:1
+    on blueprint's navy and 2.93:1 on editorial_paper's cream — under the 3:1 floor that applies to
+    text at ANY size, on chrome that ships on every page. `mute_for()` exists for exactly this and
+    the skill has said so for a long time; this file simply did not listen the first time.
+    """
+    return dk.mute_for(dk.GROUND) if dk.GROUND is not None else dk.MUTE
+
+
 def _blend(a, b, t):
     """`t` of the way from colour `a` to colour `b` — how a texture is made faint on any ground."""
     A, B = dk._as_rgb(a), dk._as_rgb(b)          # RGBColor is a bytes-like triple; the API only
@@ -117,6 +193,7 @@ def _note(x, y, w, h):
 def _shape(slide, kind, x, y, w, h, fill=None, line=None, line_w=1.0, rot=None, texture=False):
     """One primitive, flattened the way every deckkit helper flattens: no theme style, no shadow."""
     _record(x, y, w, h, texture)
+    x, y, w, h = _T(x, y, w, h)
     s = dk._flat(slide.shapes.add_shape(kind, Inches(x), Inches(y), Inches(w), Inches(h)))
     if fill is None:
         s.fill.background()
@@ -127,7 +204,7 @@ def _shape(slide, kind, x, y, w, h, fill=None, line=None, line_w=1.0, rot=None, 
         s.line.fill.background()
     else:
         s.line.color.rgb = dk._as_rgb(line)
-        s.line.width = Pt(line_w * getattr(dk, "RULE_W_SCALE", 1.0))
+        s.line.width = Pt(line_w * getattr(dk, "RULE_W_SCALE", 1.0) * _K[0])
     s.shadow.inherit = False
     if rot:
         s.rotation = rot
@@ -138,7 +215,7 @@ def _shape(slide, kind, x, y, w, h, fill=None, line=None, line_w=1.0, rot=None, 
 
 def color_band(slide, y, h, color, *, x=0.0, w=None):
     """A full-bleed band of colour. memphis's header bands, riso's ink bar, a section rule."""
-    W, _H_ = dk._slide_size(slide)
+    W, _H_ = _canvas(slide)
     return _shape(slide, MSO_SHAPE.RECTANGLE, x, y, (W - x) if w is None else w, h, fill=color)
 
 
@@ -158,10 +235,11 @@ def zigzag(slide, x, y, w, h, color, *, teeth=5, line_w=2.5, texture=False):
         x0 = x + i * step
         y0 = y + (0 if i % 2 == 0 else h)
         y1 = y + (h if i % 2 == 0 else 0)
+        _x0, _y0, _x1, _y1 = _T(x0, y0, x0 + step, y1)
         c = dk._flat(slide.shapes.add_connector(
-            1, Inches(x0), Inches(y0), Inches(x0 + step), Inches(y1)))
+            1, Inches(_x0), Inches(_y0), Inches(_x1), Inches(_y1)))
         c.line.color.rgb = dk._as_rgb(color)
-        c.line.width = Pt(line_w * getattr(dk, "RULE_W_SCALE", 1.0))
+        c.line.width = Pt(line_w * getattr(dk, "RULE_W_SCALE", 1.0) * _K[0])
         c.shadow.inherit = False
         out.append(c)
     return out
@@ -198,10 +276,11 @@ def starburst(slide, cx, cy, r, color, *, rays=12, line_w=1.2, index=0, texture=
     for i in range(rays):
         a = (2 * math.pi * i / rays) + (_frac(index, 7) * 0.4)
         rr = r * (1.0 if i % 2 == 0 else 0.62)
+        _x0, _y0, _x1, _y1 = _T(cx, cy, cx + rr * math.cos(a), cy + rr * math.sin(a))
         c = dk._flat(slide.shapes.add_connector(
-            1, Inches(cx), Inches(cy), Inches(cx + rr * math.cos(a)), Inches(cy + rr * math.sin(a))))
+            1, Inches(_x0), Inches(_y0), Inches(_x1), Inches(_y1)))
         c.line.color.rgb = dk._as_rgb(color)
-        c.line.width = Pt(line_w * getattr(dk, "RULE_W_SCALE", 1.0))
+        c.line.width = Pt(line_w * getattr(dk, "RULE_W_SCALE", 1.0) * _K[0])
         c.shadow.inherit = False
         out.append(c)
     return out
@@ -225,13 +304,14 @@ def scanlines(slide, color, *, spacing=0.09, line_w=0.75, top=0.0, bottom=None):
     Kept to a hairline at the register's MUTE colour — a scanline that competes with body type is
     a screen effect, and the point is a screen you can still read.
     """
-    W, H = dk._slide_size(slide)
+    W, H = _canvas(slide)
     bottom = H if bottom is None else bottom
     out, yy = [], top          # a texture by definition: type sits ON it, contrast judges it
     while yy < bottom:
-        c = dk._flat(slide.shapes.add_connector(1, Inches(0), Inches(yy), Inches(W), Inches(yy)))
+        _y, _w = _T(yy, W)
+        c = dk._flat(slide.shapes.add_connector(1, Inches(0), Inches(_y), Inches(_w), Inches(_y)))
         c.line.color.rgb = dk._as_rgb(color)
-        c.line.width = Pt(line_w)
+        c.line.width = Pt(line_w * _K[0])
         c.shadow.inherit = False
         out.append(c)
         yy += spacing
@@ -241,13 +321,13 @@ def scanlines(slide, color, *, spacing=0.09, line_w=0.75, top=0.0, bottom=None):
 # ------------------------------------------------------------------------------------- the grounds
 
 def _band_below(slide, y_top, *, side_margin=0.6, footer_gap=0.55):
-    W, H = dk._slide_size(slide)
+    W, H = _canvas(slide)
     return (side_margin, y_top, W - 2 * side_margin, H - y_top - footer_gap)
 
 
 def _memphis(slide, role, index):
     """cream ground · a colour band that TITLES the page · 2–3 scattered marks in the margins."""
-    W, H = dk._slide_size(slide)
+    W, H = _canvas(slide)
     accent = _pick((dk.MAGENTA, dk.BLUE, dk.TEAL), index, 1)
     band_h = 0.85 if role in ("cover", "section") else 0.5
     color_band(slide, 0, band_h, accent)
@@ -275,10 +355,16 @@ def _memphis(slide, role, index):
 
 def _bauhaus(slide, role, index):
     """ONE oversized primitive, bleeding off an edge, in a primary — never a confetti of shapes."""
-    W, H = dk._slide_size(slide)
+    W, H = _canvas(slide)
     color = _pick((dk.MAGENTA, dk.BLUE, dk.TEAL), index, 2)
-    size = 4.6 if role in ("cover", "section") else 3.4
+    # Sized against the SHORT side, and never so large that the page has nowhere left to be a page.
+    # A fixed 4.6in hero is a third of a 13.33in canvas and four fifths of a portrait one; the first
+    # version simply clamped the leftover band with max(3.2, ...), which quietly pushed the rect
+    # back OVER the primitive — a floor that violates the very contract it was protecting.
+    size = min(W, H) * (0.62 if role in ("cover", "section") else 0.46)
     corner = _pick(("tr", "br", "bl"), index, 3)
+    if W < H * 1.1:                     # a portrait or square page has no room beside a hero
+        corner = "br" if corner != "bl" else "bl"
     x = W - size * 0.55 if corner in ("tr", "br") else -size * 0.45
     y = -size * 0.35 if corner == "tr" else H - size * 0.6
     kind = _pick((MSO_SHAPE.OVAL, MSO_SHAPE.RECTANGLE, MSO_SHAPE.ISOSCELES_TRIANGLE), index, 4)
@@ -289,43 +375,50 @@ def _bauhaus(slide, role, index):
     # Derived from where the primitive ACTUALLY landed, not from a guess at where it lands: the
     # guessed version left a 0.23in overlap that put the hero disc through the third card.
     pad = 0.3
-    if corner in ("tr", "br"):
+    tall = W < H * 1.1                  # portrait/square: the hero takes the FOOT, not a flank
+    if tall:
+        left, right = 0.7, W - 0.7
+        top, bottom = 0.85, min(H - 0.62, y - pad)
+    elif corner in ("tr", "br"):
         left, right = 0.7, x - pad
+        top, bottom = 0.85, (H - 0.62) if corner == "tr" else min(H - 0.62, y - pad)
     else:
         left, right = x + size + pad, W - 0.7
-    top = 0.85
-    bottom = (H - 0.62) if corner == "tr" else min(H - 0.62, y - pad)
-    return (left, top, max(3.2, right - left), max(1.6, bottom - top))
+        top, bottom = 0.85, min(H - 0.62, y - pad) if corner == "bl" else (H - 0.62)
+    return (left, top, right - left, bottom - top)
 
 
 def _risograph(slide, role, index):
     """Two flat inks, deliberately out of register, plus a screen — the whole look is the misfit."""
-    W, H = dk._slide_size(slide)
+    W, H = _canvas(slide)
     a = _pick((dk.MAGENTA, dk.BLUE), index, 6)
     b = dk.TEAL if a is not dk.TEAL else dk.MAGENTA
     bar_y = 0.0 if role in ("cover", "section") else H - 0.72
     bar_h = 1.05 if role in ("cover", "section") else 0.4
     color_band(slide, bar_y, bar_h, a)
     color_band(slide, bar_y + 0.055, bar_h, b, x=0.075, w=W - 0.15)   # the OFFSET plate
+    _text(slide, 0.65, (bar_h + 0.06) if bar_y == 0 else 0.3, W - 1.3, 0.26,
+          [[("RISO ", 9.5, dk.DEEP, True, False, dk.MONO),
+            ("/ {:02d}".format(index + 1), 9.5, a, True, False, dk.MONO)]])
     if bar_y == 0:                                # cover: bar on top, screen in the bottom margin
         top, bottom = bar_h + 0.4, H - 0.95
         halftone(slide, W - 2.6, H - 0.82, 2.4, 0.66, a, rows=4, r_max=0.09, index=index)
     else:                                         # content: bar at the foot, screen in the top one
-        top, bottom = 0.95, bar_y - 0.28
+        top, bottom = 0.98, bar_y - 0.28
         halftone(slide, W - 2.6, 0.14, 2.4, 0.62, a, rows=4, r_max=0.09, index=index)
     return (0.65, top, W - 1.3, bottom - top)
 
 
 def _terminal(slide, role, index):
     """A screen: scanlines, a prompt line for chrome, a block cursor. Everything monospace."""
-    W, H = dk._slide_size(slide)
+    W, H = _canvas(slide)
     # Faint and wide: at MUTE on 0.11in this rendered as ruled notebook paper with the body type
     # sitting on the rules. A phosphor screen is a texture you stop seeing; blend it most of the
     # way back to the ground and give it room.
-    scanlines(slide, _blend(dk.GROUND, dk.MUTE, 0.3), spacing=0.2, line_w=0.6)
-    dk.text(slide, 0.55, 0.3, W - 1.1, 0.3,
-            [[("user@deck", 11, dk.MUTE, False, False, dk.MONO),
-              (":~$ ", 11, dk.MUTE, False, False, dk.MONO),
+    scanlines(slide, _blend(dk.GROUND, _mute(), 0.3), spacing=0.2, line_w=0.6)
+    _text(slide, 0.55, 0.3, W - 1.1, 0.3,
+            [[("user@deck", 11, _mute(), False, False, dk.MONO),
+              (":~$ ", 11, _mute(), False, False, dk.MONO),
               (("cover" if role == "cover" else "slide --{}".format(role)),
                11, dk.MAGENTA, True, False, dk.MONO)]])
     _shape(slide, MSO_SHAPE.RECTANGLE, W - 0.72, H - 0.55, 0.16, 0.26, fill=dk.MAGENTA)
@@ -334,22 +427,25 @@ def _terminal(slide, role, index):
 
 def _midcentury(slide, role, index):
     """Atomic-age marks on warm paper: a burst, a boomerang, one hairline datum."""
-    W, H = dk._slide_size(slide)
+    W, H = _canvas(slide)
     side = _pick(("l", "r"), index, 9)
     cx = (W - 0.95) if side == "r" else 0.95
-    starburst(slide, cx, H - 0.5, 0.42, _pick((dk.MAGENTA, dk.TEAL), index, 10),
+    starburst(slide, cx, H - 0.52, 0.5, _pick((dk.MAGENTA, dk.TEAL), index, 10),
               rays=_pick((10, 12, 14), index, 12), index=index)
-    boomerang(slide, (0.4 if side == "r" else W - 1.9), 0.1, 1.4, 0.62, dk.BLUE, index=index)
+    if _h(index, 16) % 2:                          # ...or the ORBIT its spec names beside the burst
+        _shape(slide, MSO_SHAPE.OVAL, cx - 0.78, H - 0.78, 1.56, 0.52,
+               fill=None, line=_blend(dk.GROUND, dk.DEEP, 0.45), line_w=1.0, rot=-18)
+    boomerang(slide, (0.4 if side == "r" else W - 2.0), 0.08, 1.55, 0.7, dk.BLUE, index=index)
     color_band(slide, H - 0.98, 0.02, dk.DEEP)
     return _band_below(slide, 0.86, side_margin=0.75, footer_gap=1.05)
 
 
 def _glassmorphism(slide, role, index):
     """A lit dark ground — glass only reads as glass on something with light behind it."""
-    W, H = dk._slide_size(slide)
-    dk.glow(slide, _frac(index, 13) * (W - 4.0) + 2.0, 1.2, 6.0, 4.4,
+    W, H = _canvas(slide)
+    _glow(slide, _frac(index, 13) * (W - 4.0) + 2.0, 1.2, 6.0, 4.4,
             _pick((dk.MAGENTA, dk.BLUE), index, 14))
-    dk.glow(slide, _frac(index, 15) * (W - 3.0) + 1.5, H - 1.0, 5.0, 3.6, dk.TEAL, alpha=0.4)
+    _glow(slide, _frac(index, 15) * (W - 3.0) + 1.5, H - 1.0, 5.0, 3.6, dk.TEAL, alpha=0.4)
     return _band_below(slide, 0.9, side_margin=0.7, footer_gap=0.7)
 
 
@@ -360,7 +456,7 @@ def _blueprint(slide, role, index):
     blueprint's guard reserves the ONE coral for the focal path, so nothing here is coral — the
     ground is the sheet, and the accent is spent by the content on the thing that matters.
     """
-    W, H = dk._slide_size(slide)
+    W, H = _canvas(slide)
     step = 0.5
     x = step
     while x < W:                                   # the sheet's grid: texture, type sits on it
@@ -378,7 +474,7 @@ def _blueprint(slide, role, index):
     # focal path, so no chrome here may touch it — apply() binds them to MAGENTA and BLUE, whose
     # names say nothing about which is which.
     line = dk.MAGENTA
-    dk.catalogue_frame(slide, inset=0.3, gap=0.0, color=line, line_w=0.9)
+    _frame(slide, inset=0.3, gap=0.0, color=line, line_w=0.9)
     for cx, cy in ((0.3, 0.3), (W - 0.3, 0.3), (0.3, H - 0.3), (W - 0.3, H - 0.3)):
         _shape(slide, MSO_SHAPE.RECTANGLE, cx - 0.06, cy - 0.06, 0.12, 0.12,
                fill=None, line=line, line_w=0.9)
@@ -386,24 +482,27 @@ def _blueprint(slide, role, index):
     tb_w, tb_h = 2.9, 0.46
     _shape(slide, MSO_SHAPE.RECTANGLE, W - 0.3 - tb_w, H - 0.3 - tb_h, tb_w, tb_h,
            fill=None, line=line, line_w=0.9)
-    dk.text(slide, W - 0.22 - tb_w, H - 0.28 - tb_h, tb_w - 0.16, tb_h - 0.04,
-            [[("SHEET ", 9, dk.MUTE, False, False, dk.MONO),
+    _text(slide, W - 0.22 - tb_w, H - 0.28 - tb_h, tb_w - 0.16, tb_h - 0.04,
+            [[("SHEET ", 9, _mute(), False, False, dk.MONO),
               ("{:02d}".format(index + 1), 9, line, True, False, dk.MONO),
-              ("  ·  SCALE 1:1  ·  REV A", 9, dk.MUTE, False, False, dk.MONO)]])
+              ("  ·  SCALE 1:1", 9, _mute(), False, False, dk.MONO)]])
     return (0.72, 0.85, W - 1.44, H - 0.85 - 1.0)
 
 
 def _brutalist(slide, role, index):
     """A newspaper front page: a slab rule over the masthead, another under it, column hairlines."""
-    W, H = dk._slide_size(slide)
+    W, H = _canvas(slide)
     color_band(slide, 0.42, 0.09, dk.DEEP)
     color_band(slide, 0.78, 0.03, dk.DEEP)
-    dk.text(slide, 0.6, 0.1, W - 1.2, 0.3,
+    _text(slide, 0.6, 0.1, W - 1.2, 0.3,
             [[("SECTION {} ".format(index + 1), 10, dk.DEEP, True, False, dk.MONO),
               ("— " + ("EDITION" if role in ("cover", "section") else "CONTINUED"),
-               10, dk.MUTE, False, False, dk.MONO)]])
+               10, _mute(), False, False, dk.MONO)]])
+    _text(slide, W - 1.5, 0.92, 1.4, 0.9,                       # the big raw numeral, flush right
+          [[("{:02d}".format(index + 1), 46, dk.DEEP, True, False)]], align=dk.PP_ALIGN.RIGHT)
+    _note(W - 1.5, 0.92, 1.4, 0.72)
     cols = 4 if role == "content" else 3
-    top, bottom = 1.05, H - 0.72
+    top, bottom = 1.78, H - 0.72
     for i in range(1, cols):                       # the column grid, stated not implied
         x = 0.6 + (W - 1.2) * i / cols
         c = dk._flat(slide.shapes.add_connector(1, Inches(x), Inches(top), Inches(x), Inches(bottom)))
@@ -415,75 +514,75 @@ def _brutalist(slide, role, index):
 
 def _consulting(slide, role, index):
     """The management-consulting page: a semantic gradient rule on top, a status stamp at the foot."""
-    W, H = dk._slide_size(slide)
-    dk.gradient_rule(slide, 0.0, 0.0, W, dk.BLUE, dk.TEAL, h=0.11)
-    dk.text(slide, 0.62, 0.26, W - 1.24, 0.26,
+    W, H = _canvas(slide)
+    _grad_rule(slide, 0.0, 0.0, W, dk.BLUE, dk.TEAL, h=0.11)
+    _text(slide, 0.62, 0.26, W - 1.24, 0.26,
             [[(("EXECUTIVE SUMMARY" if role in ("cover", "section")
-                else "SECTION {:02d}".format(index + 1)), 9.5, dk.MUTE, True, False)]])
-    dk.hrule(slide, 0.62, H - 0.62, W - 1.24, _blend(dk.GROUND, dk.DEEP, 0.25))
-    dk.text(slide, 0.62, H - 0.55, 3.0, 0.28, [[("CONFIDENTIAL", 8.5, dk.MUTE, True, False)]])
+                else "SECTION {:02d}".format(index + 1)), 9.5, _mute(), True, False)]])
+    _hrule(slide, 0.62, H - 0.62, W - 1.24, _blend(dk.GROUND, dk.DEEP, 0.25))
+    _text(slide, 0.62, H - 0.55, 3.0, 0.28, [[("CONFIDENTIAL", 8.5, _mute(), True, False)]])
     return (0.62, 0.66, W - 1.24, H - 0.66 - 0.78)
 
 
 def _dark_tech(slide, role, index):
     """A product-launch dark page: a tracked mono eyebrow, a warm->cool rule, a faint node field."""
-    W, H = dk._slide_size(slide)
+    W, H = _canvas(slide)
     for i in range(24):                            # the faint node field: texture, never content
         gx = 0.4 + (i % 8) * ((W - 0.8) / 7.0)
         gy = H - 1.5 + (i // 8) * 0.42
         _shape(slide, MSO_SHAPE.OVAL, gx, gy, 0.045, 0.045,
-               fill=_blend(dk.GROUND, dk.INK if hasattr(dk, "INK") else dk.MUTE, 0.35),
+               fill=_blend(dk.GROUND, dk.INK if hasattr(dk, "INK") else _mute(), 0.35),
                texture=True)
-    dk.text(slide, 0.65, 0.34, W - 1.3, 0.28,
+    _text(slide, 0.65, 0.34, W - 1.3, 0.28,
             [[(">_ ", 10, dk.TEAL, True, False, dk.MONO),
               (("K E Y N O T E" if role in ("cover", "section") else
-                "M O D U L E   {:02d}".format(index + 1)), 10, dk.MUTE, True, False, dk.MONO)]])
-    dk.gradient_rule(slide, 0.65, 0.68, 3.4, dk.MAGENTA, dk.BLUE, h=0.045)
+                "M O D U L E   {:02d}".format(index + 1)), 10, _mute(), True, False, dk.MONO)]])
+    _grad_rule(slide, 0.65, 0.68, 3.4, dk.MAGENTA, dk.BLUE, h=0.045)
     return (0.65, 0.95, W - 1.3, H - 0.95 - 1.7)
 
 
 def _eastern_traditional(slide, role, index):
     """Warm paper, a 传统色 swatch column in the margin, one small seal — the colours tell the story."""
-    W, H = dk._slide_size(slide)
+    W, H = _canvas(slide)
     _note(0.34, 0.9, 0.2, 3 * 0.46)
     for i, col in enumerate((dk.MAGENTA, dk.BLUE, dk.TEAL)):   # the named hues, shown as themselves
         _shape(slide, MSO_SHAPE.RECTANGLE, 0.34, 0.9 + i * 0.46, 0.2, 0.36, fill=col)
-    dk.hrule(slide, 0.72, 0.72, W - 1.44, _blend(dk.GROUND, dk.DEEP, 0.3))
-    _note(W - 0.82, H - 0.86, 0.42, 0.42)
-    dk.seal(slide, W - 0.82, H - 0.86, 0.42,
-            dk.cjk_numeral(index + 1) if hasattr(dk, "cjk_numeral") else "印",
-            fill=dk.MAGENTA, shape="square", rounded=False)
+    _hrule(slide, 0.72, 0.72, W - 1.44, _blend(dk.GROUND, dk.DEEP, 0.3))
+    _note(W - 0.86, H - 0.92, 0.48, 0.48)
+    _seal(slide, W - 0.86, H - 0.92, 0.48,
+          dk.cjk_numeral(index + 1) if hasattr(dk, "cjk_numeral") else "印",
+          fill=dk.MAGENTA, tcolor=dk.on(dk.MAGENTA), shape="square", rounded=False)
     return (0.78, 0.92, W - 1.56, H - 0.92 - 1.0)
 
 
 def _editorial_paper(slide, role, index):
     """A magazine spread's chrome: caps eyebrow, hairline, a big ghost folio. Colour is the photo's."""
-    W, H = dk._slide_size(slide)
-    dk.text(slide, 0.7, 0.42, W - 1.4, 0.26,
-            [[("FEATURE", 9.5, dk.MAGENTA, True, False),
-              ("   ·   PAGE {:02d}".format(index + 11), 9.5, dk.MUTE, False, False)]])
-    dk.hrule(slide, 0.7, 0.74, W - 1.4, _blend(dk.GROUND, dk.DEEP, 0.35))
+    W, H = _canvas(slide)
+    _text(slide, 0.7, 0.42, W - 1.4, 0.26,
+            [[("FEATURE", 9.5, _blend(dk.MAGENTA, dk.DEEP, 0.45), True, False),
+              ("   ·   PAGE {:02d}".format(index + 1), 9.5, _mute(), False, False)]])
+    _hrule(slide, 0.7, 0.74, W - 1.4, _blend(dk.GROUND, dk.DEEP, 0.35))
     # The folio lives in the BOTTOM MARGIN, under the band and over the closing rule. It used to
     # sit at H-1.35 at 1.1in tall: inside the content rect and clipped by the page edge, which the
     # render showed and nothing measured until `_note` existed.
     _note(W - 1.35, H - 0.78, 1.05, 0.5)
-    dk.ghost_numeral(slide, W - 1.35, H - 0.78, 1.05, 0.5, "{:02d}".format(index + 11),
+    _ghost(slide, W - 1.35, H - 0.78, 1.05, 0.5, "{:02d}".format(index + 1),
                      color=dk.MAGENTA, opacity=0.16)
-    dk.hrule(slide, 0.7, H - 0.2, W - 1.4, _blend(dk.GROUND, dk.DEEP, 0.35))
+    _hrule(slide, 0.7, H - 0.2, W - 1.4, _blend(dk.GROUND, dk.DEEP, 0.35))
     return (0.7, 0.92, W - 1.4, H - 0.92 - 0.9)
 
 
 def _editorial_report(slide, role, index):
     """Dark gravitas: a roman-numeral section mark, one red hairline, a source line's worth of room."""
-    W, H = dk._slide_size(slide)
+    W, H = _canvas(slide)
     roman = ("I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII")
-    dk.text(slide, 0.72, 0.4, 2.0, 0.3,
+    _text(slide, 0.72, 0.4, 2.0, 0.3,
             [[(roman[index % len(roman)], 11, dk.MAGENTA, True, False),
-              ("   ", 11, dk.MUTE, False, False),
+              ("   ", 11, _mute(), False, False),
               (("REPORT" if role in ("cover", "section") else "ANALYSIS"),
-               11, dk.MUTE, True, False)]])
+               11, _mute(), True, False)]])
     _shape(slide, MSO_SHAPE.RECTANGLE, 0.72, 0.74, 0.85, 0.035, fill=dk.MAGENTA)
-    dk.hrule(slide, 0.72, H - 0.66, W - 1.44, _blend(dk.GROUND, dk.INK if hasattr(dk, "INK") else dk.MUTE, 0.25))
+    _hrule(slide, 0.72, H - 0.66, W - 1.44, _blend(dk.GROUND, dk.INK if hasattr(dk, "INK") else _mute(), 0.25))
     return (0.72, 0.95, W - 1.44, H - 0.95 - 0.85)
 
 
@@ -494,37 +593,49 @@ def _ink_wash(slide, role, index):
     dense grids. So this ground is the quietest in the file on purpose, and the temptation it
     resists (a wash gradient) is also on its FORBIDS list.
     """
-    W, H = dk._slide_size(slide)
+    W, H = _canvas(slide)
     num = dk.cjk_numeral(index + 1) if hasattr(dk, "cjk_numeral") else str(index + 1)
     _note(0.5, 0.85, 0.5, 0.6)
-    dk.text(slide, 0.5, 0.85, 0.5, 1.2,
-            [[(str(num), 22, _blend(dk.GROUND, dk.DEEP, 0.45), False, False)]])
-    dk.hrule(slide, 1.15, 0.78, W - 2.0, _blend(dk.GROUND, dk.DEEP, 0.28))
-    _note(W - 0.78, H - 0.82, 0.36, 0.36)
-    dk.seal(slide, W - 0.78, H - 0.82, 0.36, "印", fill=dk.MAGENTA, shape="square", rounded=False)
+    _text(slide, 0.5, 0.85, 0.5, 1.2,
+          [[(str(num), 22, _blend(dk.GROUND, dk.DEEP, 0.62), False, False)]])
+    _hrule(slide, 1.15, 0.78, W - 2.0, _blend(dk.GROUND, dk.DEEP, 0.28))
+    _note(W - 0.82, H - 0.9, 0.44, 0.44)
+    _seal(slide, W - 0.82, H - 0.9, 0.44, "印", fill=dk.MAGENTA, tcolor=dk.on(dk.MAGENTA),
+          shape="square", rounded=False)
     return (1.15, 1.0, W - 2.3, H - 1.0 - 0.95)
 
 
 def _luxury_dark(slide, role, index):
     """A masthead and an issue line in champagne hairlines, and then a great deal of nothing."""
-    W, H = dk._slide_size(slide)
-    dk.hrule(slide, 0.85, 0.62, W - 1.7, dk.MAGENTA, weight=0.008)
-    dk.text(slide, 0.85, 0.28, W - 1.7, 0.28,
-            [[("M A I S O N", 10, dk.MAGENTA, True, False),
-              ("        ISSUE {:02d}".format(index + 1), 10, dk.MUTE, False, False)]])
-    dk.hrule(slide, 0.85, H - 0.72, W - 1.7, _blend(dk.GROUND, dk.MAGENTA, 0.45), weight=0.006)
+    W, H = _canvas(slide)
+    _hrule(slide, 0.85, 0.62, W - 1.7, dk.MAGENTA, weight=0.008)
+    # No invented masthead NAME here. An earlier version printed "M A I S O N" — a brand this deck
+    # does not have, on every page of it. Register furniture may state the page's own facts (its
+    # index) and nothing else; the masthead word is the author's to supply.
+    _text(slide, 0.85, 0.28, W - 1.7, 0.28,
+          [[("I S S U E   {:02d}".format(index + 1), 10, dk.MAGENTA, True, False)]])
+    _hrule(slide, 0.85, H - 0.72, W - 1.7, _blend(dk.GROUND, dk.MAGENTA, 0.45), weight=0.006)
     return (0.95, 0.95, W - 1.9, H - 0.95 - 1.0)
 
 
 def _museum_memorial(slide, role, index):
     """The exhibition catalogue: a double-line frame inset from the edges, a brass year badge."""
-    W, H = dk._slide_size(slide)
-    dk.catalogue_frame(slide, inset=0.34, gap=0.07, color=dk.MAGENTA, line_w=0.8)
-    dk.text(slide, 0.75, 0.5, W - 1.5, 0.28,
+    W, H = _canvas(slide)
+    # "deep midnight-navy GRADIENT ground" is the first clause of this register's own spec, and a
+    # flat fill was not it. Gradients are not on its guard — museum_memorial forbids full-colour
+    # archival photos and large gold fills, neither of which this is.
+    dk.box(slide, 0, 0, W * _K[0], H * _K[0],
+           grad=[(0.0, _blend(dk.GROUND, dk.MAGENTA, 0.10), 1.0),
+                 (1.0, _blend(dk.GROUND, (0, 0, 0), 0.35), 1.0)], grad_angle=90)
+    _frame(slide, inset=0.34, gap=0.07, color=dk.MAGENTA, line_w=0.8)
+    _text(slide, 0.75, 0.5, W - 1.5, 0.28,
             [[("PLATE {:02d}".format(index + 1), 9.5, dk.MAGENTA, True, False),
-              ("   ·   CATALOGUE", 9.5, dk.MUTE, False, False)]])
-    dk.hrule(slide, 0.75, 0.82, W - 1.5, _blend(dk.GROUND, dk.MAGENTA, 0.4))
-    return (0.85, 1.0, W - 1.7, H - 1.0 - 0.85)
+              ("   ·   CATALOGUE", 9.5, _mute(), False, False)]])
+    _hrule(slide, 0.75, 0.82, W - 1.5, _blend(dk.GROUND, dk.MAGENTA, 0.4))
+    # `year_badge` IS this register's chronology device, and it belongs to the author: a badge
+    # painted here would have to invent a year, and a fabricated date on someone's exhibition deck
+    # is worse than a missing ornament. The ground leaves room for one in the foot margin instead.
+    return (0.85, 1.0, W - 1.7, H - 1.0 - 1.05)
 
 
 def _swiss(slide, role, index):
@@ -534,7 +645,7 @@ def _swiss(slide, role, index):
     at all: a swiss column is a hairline and a measure, and boxing it is the commonest way a deck
     claims swiss while looking like every other card deck.
     """
-    W, H = dk._slide_size(slide)
+    W, H = _canvas(slide)
     top, bottom = 0.95, H - 0.75
     for i in range(1, 4):
         x = 0.75 + (W - 1.5) * i / 4.0
@@ -542,9 +653,9 @@ def _swiss(slide, role, index):
         c.line.color.rgb = dk._as_rgb(_blend(dk.GROUND, dk.DEEP, 0.12))
         c.line.width = Pt(0.5)
         c.shadow.inherit = False
-    dk.hrule(slide, 0.75, 0.78, W - 1.5, dk.DEEP)
+    _hrule(slide, 0.75, 0.78, W - 1.5, dk.DEEP)
     _note(W - 1.45, H - 0.7, 1.05, 0.52)     # the folio goes under the band, not through it
-    dk.ghost_numeral(slide, W - 1.45, H - 0.7, 1.05, 0.52, "{:02d}".format(index + 1),
+    _ghost(slide, W - 1.45, H - 0.7, 1.05, 0.52, "{:02d}".format(index + 1),
                      color=dk.DEEP, opacity=0.1)
     return (0.75, top, W - 1.5, bottom - top)
 
@@ -557,18 +668,22 @@ def _synthwave(slide, role, index):
     role is not decoration here: it decides which of the two this page gets.
     """
     import math
-    W, H = dk._slide_size(slide)
+    W, H = _canvas(slide)
     loud = role in ("cover", "section")
-    # The horizon sits LOW even when loud: on a 10x5.63in canvas a horizon at 0.42H left a
-    # 1.01in content band, which is not a page. The sun rises BEHIND the title (texture), which is
-    # what the register does anyway.
-    hz = H * (0.66 if loud else 0.86)
+    # The horizon sits LOW, and the sun sits ON it, so the page above stays a page. The first
+    # version called the banded sun a TEXTURE and let it lie under the content: rendered, its
+    # saturated bands came out from behind the cards on both sides and read as stripes, not a sun.
+    # A texture is something type can sit on. A sun is not one, so it is a MARK, and the invariant
+    # keeps the content above it.
+    hz = H * (0.78 if loud else 0.86)
+    sun_h, sun_w = 1.15, 3.8
     if loud:
-        for i in range(7):                         # the banded sunset, flat bands (no gradient)
-            t = i / 6.0
+        _note(W / 2 - sun_w / 2, hz - sun_h, sun_w, sun_h)
+        for i in range(6):                         # the banded sunset, flat bands (no gradient)
+            t = i / 5.0
             col = _blend(dk.MAGENTA, dk.BLUE, t)
-            _shape(slide, MSO_SHAPE.RECTANGLE, W / 2 - 1.9, hz - 1.62 + i * 0.22, 3.8, 0.17,
-                   fill=col, texture=True)
+            _shape(slide, MSO_SHAPE.RECTANGLE, W / 2 - sun_w / 2, hz - sun_h + i * (sun_h / 6),
+                   sun_w, sun_h / 6 * 0.82, fill=col, texture=True)
     for i in range(-9, 10):                        # converging lines to the vanishing point
         x_bottom = W / 2 + i * (W / 6.0)
         c = dk._flat(slide.shapes.add_connector(
@@ -584,7 +699,8 @@ def _synthwave(slide, role, index):
         c.line.width = Pt(0.9 if loud else 0.6)
         c.shadow.inherit = False
     _shape(slide, MSO_SHAPE.RECTANGLE, 0, hz - 0.012, W, 0.024, fill=dk.MAGENTA, texture=True)
-    return (0.8, 0.9, W - 1.6, (hz - 0.32 if loud else H - 1.35) - 0.9)
+    bottom = (hz - sun_h - 0.28) if loud else (H - 1.35)
+    return (0.8, 0.9, W - 1.6, bottom - 0.9)
 
 
 GROUNDS = {
@@ -612,11 +728,12 @@ GROUNDS = {
 # --------------------------------------------------------------------------------------- the cards
 
 def _card_memphis(slide, x, y, w, h, label=None):
-    body = dk.box(slide, x, y, w, h, fill=dk.TINT, line=dk.DEEP, line_w=1.6, round=True, r=0.12)
-    head = dk.box(slide, x, y, w, 0.42, fill=dk.MAGENTA, corners="top", r=0.12)
+    k = _K[0]
+    body = dk.box(slide, x, y, w, h, fill=dk.TINT, line=dk.DEEP, line_w=1.6, round=True, r=0.12 * k)
+    head = dk.box(slide, x, y, w, 0.42 * k, fill=dk.MAGENTA, corners="top", r=0.12 * k)
     if label:
-        dk.text(slide, x + 0.18, y + 0.05, w - 0.36, 0.32,
-                [[(label, 12, dk.on(dk.MAGENTA), True, False)]])   # auto-contrast on the band
+        dk.text(slide, x + 0.18 * k, y + 0.05 * k, w - 0.36 * k, 0.32 * k,
+                [[(label, 12 * k, dk.on(dk.MAGENTA), True, False)]])  # auto-contrast on the band
     return body, head
 
 
@@ -630,11 +747,12 @@ def _card_risograph(slide, x, y, w, h, label=None):
 
 
 def _card_terminal(slide, x, y, w, h, label=None):
-    return dk.box(slide, x, y, w, h, fill=None, line=dk.MUTE, line_w=1.0), None
+    return dk.box(slide, x, y, w, h, fill=None, line=_mute(), line_w=1.0), None
 
 
 def _card_midcentury(slide, x, y, w, h, label=None):
-    return dk.box(slide, x, y, w, h, fill=dk.TINT, line=dk.DEEP, line_w=1.0, round=True, r=0.06), None
+    return dk.box(slide, x, y, w, h, fill=dk.TINT, line=dk.DEEP, line_w=1.0,
+                  round=True, r=0.06 * _K[0]), None
 
 
 def _card_glass(slide, x, y, w, h, label=None):
@@ -652,46 +770,51 @@ def _card_blueprint(slide, x, y, w, h, label=None):
 
 def _card_brutalist(slide, x, y, w, h, label=None):
     """A slab: no fill, a rule so heavy it IS the design. Square by the register's own guard."""
+    k = _K[0]
     body = dk.box(slide, x, y, w, h, fill=None, line=dk.DEEP, line_w=3.0)
-    _shape(slide, MSO_SHAPE.RECTANGLE, x, y, w, 0.12, fill=dk.DEEP)
+    _shape(slide, MSO_SHAPE.RECTANGLE, x / k, y / k, w / k, 0.12, fill=dk.DEEP)
     return body, None
 
 
 def _card_consulting(slide, x, y, w, h, label=None):
     """A scorecard tile: white, a navy top keyline, the semantic colour left to the content."""
+    k = _K[0]
     body = dk.box(slide, x, y, w, h, fill=dk.TINT, line=_blend(dk.GROUND, dk.DEEP, 0.2), line_w=0.8,
-                  round=True, r=0.05)
-    _shape(slide, MSO_SHAPE.RECTANGLE, x, y, w, 0.06, fill=dk.BLUE)
+                  round=True, r=0.05 * k)
+    _shape(slide, MSO_SHAPE.RECTANGLE, x / k, y / k, w / k, 0.06, fill=dk.BLUE)
     return body, None
 
 
 def _card_dark_tech(slide, x, y, w, h, label=None):
     """An insight panel with the accent LEFT BAR this register uses instead of a header band."""
+    k = _K[0]
     body = dk.box(slide, x, y, w, h, fill=_blend(dk.GROUND, dk.TINT, 0.35),
-                  line=_blend(dk.GROUND, dk.TEAL, 0.35), line_w=0.9, round=True, r=0.07)
-    _shape(slide, MSO_SHAPE.RECTANGLE, x, y, 0.055, h, fill=dk.TEAL)
+                  line=_blend(dk.GROUND, dk.TEAL, 0.35), line_w=0.9, round=True, r=0.07 * k)
+    _shape(slide, MSO_SHAPE.RECTANGLE, x / k, y / k, 0.055, h / k, fill=dk.TEAL)
     return body, None
 
 
 def _card_eastern(slide, x, y, w, h, label=None):
     """Paper panel, hairline, one ochre rule at the head — the hue is the message here."""
+    k = _K[0]
     body = dk.box(slide, x, y, w, h, fill=_blend(dk.GROUND, dk.DEEP, 0.05),
                   line=_blend(dk.GROUND, dk.DEEP, 0.28), line_w=0.7)
-    _shape(slide, MSO_SHAPE.RECTANGLE, x, y, w * 0.34, 0.04, fill=dk.BLUE)
+    _shape(slide, MSO_SHAPE.RECTANGLE, x / k, y / k, (w * 0.34) / k, 0.04, fill=dk.BLUE)
     return body, None
 
 
 def _card_editorial_paper(slide, x, y, w, h, label=None):
     """No box: a hairline over the measure. The chrome stays neutral so a photo can carry colour."""
-    dk.hrule(slide, x, y, w, _blend(dk.GROUND, dk.DEEP, 0.4))
-    _shape(slide, MSO_SHAPE.RECTANGLE, x, y, 0.5, 0.022, fill=dk.MAGENTA)
+    k = _K[0]
+    dk.hrule(slide, x, y, w, _blend(dk.GROUND, dk.DEEP, 0.4), weight=0.012 * k)
+    _shape(slide, MSO_SHAPE.RECTANGLE, x / k, y / k, 0.5, 0.022, fill=dk.MAGENTA)
     return None, None
 
 
 def _card_editorial_report(slide, x, y, w, h, label=None):
     """A dark panel with one red tick — this register spends its red once per slide."""
     body = dk.box(slide, x, y, w, h, fill=_blend(dk.GROUND, dk.TINT, 0.22),
-                  line=_blend(dk.GROUND, dk.MUTE, 0.3), line_w=0.7)
+                  line=_blend(dk.GROUND, _mute(), 0.3), line_w=0.7)
     return body, None
 
 
@@ -723,14 +846,14 @@ def _card_swiss(slide, x, y, w, h, label=None):
     register's own guard forbids the rounded card; the discipline it actually asks for is to not
     draw the card at all.
     """
-    dk.hrule(slide, x, y, w, dk.DEEP)
+    dk.hrule(slide, x, y, w, dk.DEEP, weight=0.014 * _K[0])
     return None, None
 
 
 def _card_synthwave(slide, x, y, w, h, label=None):
     """A SOLID panel with a neon rim — its guard: keep text on a solid panel where it crosses the grid."""
     body = dk.box(slide, x, y, w, h, fill=_blend(dk.GROUND, (0, 0, 0), 0.35),
-                  line=dk.BLUE, line_w=1.2, round=True, r=0.08)
+                  line=dk.BLUE, line_w=1.2, round=True, r=0.08 * _K[0])
     return body, None
 
 
@@ -788,8 +911,15 @@ def ground(slide, register, *, role="content", index=0):
             "GROUND/DEEP/accents to build from; without them the first blend fails deep inside a "
             "builder with a TypeError that says nothing about the real mistake.".format(reg))
     del _MARKS[:]
-    band = GROUNDS[reg](slide, str(role or "content").lower(), int(index))
-    bx, by, bw, bh = band
+    _K[0] = _scale_for(slide)
+    try:
+        band = GROUNDS[reg](slide, str(role or "content").lower(), int(index))
+    finally:
+        k = _K[0]
+        _K[0] = 1.0
+    band = tuple(v * k for v in band)            # builders compose in REFERENCE inches; the rect
+    bx, by, bw, bh = band                        # a caller places content in must be REAL ones
+    _MARKS[:] = [tuple(v * k for v in m) for m in _MARKS]
     clash = [m for m in _MARKS
              if min(bx + bw, m[2]) - max(bx, m[0]) > 0.02
              and min(by + bh, m[3]) - max(by, m[1]) > 0.02]
@@ -815,7 +945,18 @@ def card(slide, register, x, y, w, h, *, label=None):
     if reg not in CARDS:
         raise KeyError("no card form for register {!r} — kits exist for {}".format(
             register, ", ".join(sorted(CARDS))))
-    return CARDS[reg](slide, x, y, w, h, label)
+    if dk.GROUND is None:
+        raise RuntimeError(
+            "the palette is not set yet — call `presets.apply({!r})` before asking for its card "
+            "form; the card reads the register's own colours.".format(reg))
+    # x/y/w/h arrive in REAL inches (the caller got them from the rect `ground()` returned), but a
+    # header band, a keyline and a 3pt slab border are furniture too: at a fixed 0.42in a memphis
+    # band is a quarter of a card on the reference canvas and a tenth of one on an A1 poster.
+    _K[0] = _scale_for(slide)
+    try:
+        return CARDS[reg](slide, x, y, w, h, label)
+    finally:
+        _K[0] = 1.0
 
 
 def registers():

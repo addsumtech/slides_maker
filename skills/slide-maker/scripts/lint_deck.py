@@ -3247,6 +3247,16 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
                         host = c
             if not host:
                 continue
+            # A STAMP is not a card. `seal()`, `year_badge()`, `chip()` and every icon badge put one
+            # or two glyphs in a near-square box that the glyph is SUPPOSED to fill — that is what a
+            # chop looks like. Measured: a plain `dk.seal(...)` on an otherwise empty slide reported
+            # TEXT PADDING, so every eastern_traditional and ink_wash deck would carry the warning
+            # for using the device its own register prescribes. Padding applies to a card holding a
+            # LINE of text, not to a mark holding a character.
+            glyphs = len((t.get("txt") or "").strip())
+            squarish = 0.6 <= (host["w"] / max(0.01, host["h"])) <= 1.7
+            if glyphs <= 2 and squarish and host["w"] <= 1.2:
+                continue
             rl, rt, rr, rb = _rbox(t)
             nlines = _est_lines(t["paras"], t["w"], t.get("font"), t.get("bold", False))
             if rb > host["b"] - PAD:                          # rendered text crammed against / past the card bottom

@@ -11,6 +11,37 @@ section is a distilled summary — the full notes live on the
 
 ### Fixed
 
+- **The surface kits were composed in inches, and inches do not travel.** A fixed 0.42in memphis
+  triangle is 4.2% of the reference canvas's width and 1.3% of an A0 poster's — a format
+  `formats.py` supports and `check_surface.py` gates — and bauhaus RAISED outright on portrait 9:16,
+  because a `max()` floor on the leftover band pushed the content rect back over the very hero
+  primitive it was protecting. Kits now compose in REFERENCE inches and scale to whatever canvas
+  they are handed (marks, margins, line weights, chrome type and card internals alike), and bauhaus
+  sizes its hero against the short side and takes the FOOT rather than a flank when the page has no
+  room beside one. Seven canvases are held in the tests: 16:9 at both widths, 4:3, portrait, square,
+  A0 and A1.
+- **The kits' own chrome broke two of this skill's oldest rules.** `dk.MUTE` is tuned for a LIGHT
+  canvas, and used flat across eighteen registers it measured **2.85:1** on blueprint's navy and
+  2.93:1 on editorial_paper's cream — under the 3:1 floor that applies to text at any size, shipped
+  on every page. `mute_for(GROUND)` exists for exactly this. And the furniture INVENTED things: an
+  "M A I S O N" masthead (a brand the deck does not have), a "REV A" revision letter, an "MCM" year
+  badge, a page number of index+11. That is the never-invent rule broken by the chrome rather than
+  by the content, which is the harder half to notice. A test now holds the entire vocabulary a
+  ground may say and requires every number to be the page's own index.
+- **`lint_deck`'s TEXT PADDING treated a chop as a cramped card.** A plain `dk.seal()` on an
+  otherwise empty slide reported it, so every `eastern_traditional` and `ink_wash` deck would carry
+  the warning for using the device its own register prescribes. One or two glyphs in a near-square
+  box is a stamp — `seal`, `year_badge`, `chip`, an icon badge — and the glyph is supposed to fill
+  it. Padding still applies to a card holding a line of text, verified with a positive control.
+- **`sigs.py` did not know the surface kits existed.** That lookup is where an agent finds out what
+  is already built, and SKILL.md tells it a name matching NO helper means "you supply the geometry"
+  — so asking for `halftone` or `starburst` actively instructed the author to hand-roll the thing
+  that had just been added. `register_surface` is now a module it resolves.
+- **Four registers were missing furniture their own `surface` spec names**: risograph's mono chrome,
+  brutalist's big raw numeral, museum_memorial's midnight-navy GRADIENT ground, and midcentury's
+  orbit. Found by reading each preset's spec against its builder rather than by looking at the
+  render and liking it.
+
 - **`check_register_guard` fired on a page built from nothing but deckkit helpers — 4 of the 7
   registers that declare prohibitions.** Found by building one ordinary page (`title_bar` + `box` +
   `text` + `callout`) under each register and running the checker, which is not what its fixtures
