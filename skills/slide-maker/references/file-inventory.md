@@ -108,6 +108,17 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   clean reported 6 of 7 cues flat. Reads renders already on disk — no extra render pass, ~0.6s for
   14 pages. Whitespace is measured against the MODAL tone, so a dark register reads as mostly empty
   rather than 100% full.
+- `check_direction_applied.py` — the direction the user PICKED must be the deck that shipped.
+  Four directions are rendered, one is clicked, and the choice was recorded as a sentence and
+  compared to nothing. Measured on a delivered deck: the chosen direction declared a Georgia
+  display face and a centred cover, and the deck shipped Helvetica Neue titles and a low-left
+  cover, because `style.py` set `display=` and every title passed `dk.FONT` — the DISPLAY slot was
+  never read. The author noticed; no gate did, while `check_register_pixels` and
+  `check_style_applied` already existed for the identical class. It compares only what a file can
+  settle — ground, accent presence, display and body faces, and `centred` vs `low-left` — and names
+  skeleton and motif as NOT checked rather than guessing. A deviation is legitimate and recorded
+  per axis in `design_plan.direction_deviations`; an unrecorded one is the version the user cannot
+  see. Run by both gate paths from one module.
 - `register_surface.py` — the half `presets.apply()` never had. apply() calls four things
   (`set_palette`, `set_geometry`, `set_ground`, the font setters), so one identical page through all
   18 presets RENDERED as 18 colourways of one page: no memphis bands, no bauhaus primitive, no

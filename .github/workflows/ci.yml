@@ -246,6 +246,14 @@ jobs:
           set -o pipefail
           python scripts/check_register_guard.py --selftest
 
+      - name: Direction fidelity (the direction the user PICKED must be the deck that ships)
+        run: |
+          set -o pipefail
+          python scripts/check_direction_applied.py --selftest
+          python tests/test_direction_fidelity.py | tee /tmp/dirfid.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/dirfid.log || {
+            echo "::error::direction-fidelity suite did not run to completion"; exit 1; }
+
       - name: Register surface (the preset must build its LOOK, not just its colourway)
         run: |
           set -o pipefail

@@ -132,6 +132,37 @@ def _bespoke(d):
     return bool(d.get("cover_motif") or d.get("ambient_motif"))
 
 
+_DRAWS = re.compile(r"<\s*(svg|circle|rect|path|polygon|polyline|line|ellipse|canvas)\b", re.I)
+_STYLED_BOX = re.compile(r"style\s*=\s*[\"'][^\"']*(background|border|width|height|transform|"
+                         r"clip-path|gradient)", re.I)
+
+
+def _prose_motif(d):
+    """A motif field holding a DESCRIPTION instead of a drawing — reported, because it RENDERS.
+
+    `cover_motif` / `ambient_motif` are raw HTML by design: a bespoke register draws its own
+    signature there. Nothing checked that what was supplied actually draws anything, so a sentence
+    describing the motif — "a framed opening cut into the page, and you look THROUGH it" — was
+    faithfully rendered as literal text across all four sample tiles of a real direction gate. The
+    author picked a direction whose preview was covered in the author's own notes.
+
+    A field is prose when it has words but nothing that makes a shape: no svg or shape element, and
+    no inline style that draws a box. A short label inside a drawing is fine; twelve words with no
+    geometry anywhere is a paragraph in a canvas slot.
+    """
+    out = []
+    for key in ("cover_motif", "ambient_motif"):
+        html = str(d.get(key) or "")
+        if not html.strip():
+            continue
+        if _DRAWS.search(html) or _STYLED_BOX.search(html):
+            continue
+        words = re.sub(r"<[^>]+>", " ", html).split()
+        if len(words) >= 12:
+            out.append((key, " ".join(words)[:70]))
+    return out
+
+
 def _styled(d):
     """A direction carries REAL STYLE DNA when it is a preset (`dna`, stamped by
     `archetypes_html.preset_directions`) OR a bespoke register (its own motif). Everything else is a
@@ -148,9 +179,11 @@ def check(directions):
     # direction is the allowed one; any beyond it are the excess this flags.
     plain = [d.get("name", "?") for d in directions if not _styled(d)]
     colourway_excess = plain[1:]
+    prose = [(d.get("name", "?"), k, t) for d in directions for k, t in _prose_motif(d)]
     return {"pairs": pairs, "flagged": [p for p in pairs if p["too_similar"]],
             "bespoke": bespoke, "no_bespoke": not bespoke,
             "plain": plain, "colourway_excess": colourway_excess,
+            "prose_motifs": prose,
             "modes": {f["name"]: f["mode"] for f in feats},
             "compositions": {f["name"]: "/".join(f["comp"]) for f in feats}}
 
@@ -200,6 +233,18 @@ def main():
         print("             register are yours even when palette and type are not.")
     else:
         print("[bespoke]  v bespoke direction(s): {}".format(", ".join(r["bespoke"])))
+    if r.get("prose_motifs"):
+        print("[motif]    x PROSE IN A DRAWING SLOT: {} field(s) describe the motif instead of "
+              "drawing it".format(len(r["prose_motifs"])))
+        for name, key, text in r["prose_motifs"]:
+            print("             {} · {}: \"{}...\"".format(name, key, text))
+        print("             `cover_motif` / `ambient_motif` are raw HTML and the preview RENDERS")
+        print("             them, so a sentence lands as literal text on every sample tile — the")
+        print("             author then picks a direction whose preview is covered in the author's")
+        print("             own notes. Draw the mark instead: an <svg>, a shape element, or a div")
+        print("             with an inline style that makes a box. Put the description in `note`,")
+        print("             which is what the preview shows as the direction's rationale.")
+
     if r["colourway_excess"]:
         print("[styles]   x UNDER-DESIGNED SET: {} motif-less colourway(s) ({}) beyond the one".format(
             len(r["colourway_excess"]), ", ".join(r["colourway_excess"])))

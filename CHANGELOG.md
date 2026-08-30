@@ -9,6 +9,36 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+### Fixed
+
+- **The direction the user PICKED was compared to nothing.** The branch-(c) gate renders four
+  directions, the author clicks one, and the choice was recorded as a sentence on the design
+  checkpoint's `direction gate:` line — and no check ever asked whether the deck that shipped was
+  that direction. Reported by an author on a real deck: *"我选的 B 和实际最终模版并不一样"*. The
+  picked direction declared a **Georgia** display face and a **centred** cover; the deck shipped
+  Helvetica Neue titles and a low-left cover, because `style.py` set `display=` and every title
+  passed `dk.FONT` — the DISPLAY slot was declared and never read. Two neighbouring checks for the
+  identical class had existed for a long time (`check_register_pixels`: a declared colour must
+  reach the pixels; `check_style_applied`: a declared preset must be called), and the one thing the
+  USER personally chose had none.
+  `check_direction_applied.py` compares ground, accent presence, display and body faces, and
+  `centred` vs `low-left`, and names skeleton and motif as NOT CHECKED rather than guessing at a
+  judgement. A deviation is normal design — a freshness gate moves a ground, a contrast floor moves
+  an accent — and is recorded per axis in `design_plan.direction_deviations`; an unrecorded one is
+  the version the user cannot see. Run by both gate paths from one module, and verified as a
+  subprocess, which is how the gate actually runs.
+  Two bugs its own selftest caught before it shipped: an EXACT colour match measures 0, and
+  `(_dist(...) or 999)` made a perfectly applied accent read as absent; and deriving the body face
+  from the median run size called a two-run page's title the body.
+- **A direction's motif fields were rendering the author's notes onto the sample tiles.**
+  `cover_motif` / `ambient_motif` are raw HTML by design, so a bespoke register can draw its own
+  signature — and nothing checked that what was supplied actually DREW anything. A sentence
+  describing the motif appeared as literal text across all four previews, so the author chose a
+  direction covered in the author's own notes. `directions_diversity.py` now reports prose in a
+  drawing slot: a field with twelve or more words and no svg, shape element or box-making inline
+  style. The description belongs in `note`, which the preview already shows.
+
+
 ## [5.2.0] — 2026-08-30
 
 ### Fixed

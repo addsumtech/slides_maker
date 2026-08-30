@@ -1179,6 +1179,38 @@ def check_register_guard(evidence: dict[str, Any], deck_path: Path | None,
         errors.append("{}: {}".format(code.upper(), msg.replace("\n", " ")))
 
 
+def check_direction_applied(evidence: dict[str, Any], deck_path: Path | None,
+                           errors: list[str]) -> None:
+    """The picked direction vs the built deck — same module as the shared path.
+
+    A direction gate that records the pick and never compares it to the deck is the class of hole
+    this file already closed twice for icons: the rule existed, nothing evaluated it.
+    """
+    if deck_path is None:
+        return
+    design = evidence.get("design") if isinstance(evidence.get("design"), dict) else {}
+    try:
+        path = Path(__file__).with_name("check_direction_applied.py")
+        spec = importlib.util.spec_from_file_location("slide_maker_direction_applied", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        problems, facts = module.check(deck_path, gates={"design_plan": design})
+    except Exception as exc:
+        print(f"  [--] direction NOT CHECKED — {exc.__class__.__name__}: {exc} "
+              f"(not the same as clean)")
+        return
+    if facts.get("note"):
+        print(f"  [--] direction: {facts['note']}")
+        return
+    for line in facts.get("accepted", []):
+        print(f"  direction deviation recorded — {line}")
+    if not problems:
+        print(f"  direction: the deck IS `{facts.get('picked')}`")
+        return
+    for axis, why in problems:
+        errors.append(f"DIRECTION {axis.upper()}: {why}")
+
+
 def note_register_kit(evidence: dict[str, Any], deck_path: Path | None,
                       build_script: Path | None) -> None:
     """A register with a buildable surface, built as a colourway — printed on BOTH runtimes.
@@ -2160,6 +2192,8 @@ def evaluate(
         note_register_kept(evidence, deck_path)
         # ...and if it was a PRESET with a buildable surface, say whether the surface was built.
         note_register_kit(evidence, deck_path, build_script)
+        # ...and the direction the user PICKED must be the deck that shipped.
+        check_direction_applied(evidence, deck_path, errors)
         audited_components = components
         if build_script is not None and deck_path is not None:
             recomputed = recompute_component_audit(build_script, deck_path, errors)

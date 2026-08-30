@@ -1678,6 +1678,40 @@ def _register_keep_note(pptx, gates):
           "were shipped and lost)".format(name, Path(pptx).resolve().parent))
 
 
+def _direction_applied_gate(pptx, gates):
+    """The direction the user PICKED must be the deck that shipped.
+
+    Four directions are rendered, one is clicked, and the choice was recorded as a sentence and
+    compared to nothing. Measured on a real deck: the picked direction declared a Georgia display
+    face and a centred cover, and the deck shipped Helvetica Neue titles and a low-left cover —
+    the DISPLAY slot was set in `style.py` and never read. The author noticed; no gate did.
+    """
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    try:
+        import check_direction_applied as cda
+        problems, facts = cda.check(pptx, gates=gates)
+    except Exception as exc:
+        print("  [--] direction NOT CHECKED — {}: {} (not the same as clean)"
+              .format(exc.__class__.__name__, exc))
+        return
+    if facts.get("note"):
+        print("  [--] direction: {}".format(facts["note"]))
+        return
+    for line in facts.get("accepted", []):
+        print("[gates] direction deviation recorded — {}".format(line))
+    if not problems:
+        print("[gates] direction: the deck IS `{}`, on every axis a file can settle"
+              .format(facts.get("picked")))
+        return
+    die("the deck diverges from the direction the user PICKED (`{}`):\n{}\n\n"
+        "  A deviation is legitimate — a freshness gate moves a ground, a contrast floor moves an\n"
+        "  accent — but it is recorded per axis, because an unrecorded one is the version the user\n"
+        "  cannot see:\n"
+        '    "design_plan": {{"direction_deviations": {{"<axis>": "<why>"}}}}'.format(
+            facts.get("picked"),
+            "\n".join("    {}: {}".format(a.upper(), w) for a, w in problems)))
+
+
 def _register_guard_gate(pptx, gates):
     """A declared register must be OBEYED, not merely paletted.
 
@@ -2959,6 +2993,7 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
 
     with _gate_section('register_guard'):
         _register_guard_gate(pptx, gates)
+        _direction_applied_gate(pptx, gates)
         _register_kit_note(pptx, gates)
         _register_keep_note(pptx, gates)
 
