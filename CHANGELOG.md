@@ -9,6 +9,8 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+## [5.2.0] — 2026-08-30
+
 ### Fixed
 
 - **A runtime with no choice UI now has a COMMAND that carries the interview axes, not a
