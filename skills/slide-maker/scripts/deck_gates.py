@@ -407,6 +407,76 @@ def _selftest():
     return 1 if bad else 0
 
 
+# The interview's questions, carried as DATA so a runtime with no choice UI has something to print
+# rather than something to remember. Written in both languages because SKILL.md says "ask in the
+# USER's language" and then shows only English — an instruction whose example contradicts it is one
+# a hurried reader follows in English.
+INTERVIEW_QUESTIONS = {
+    "en": [
+        ("language", "Which language should the slides be in — English, 中文, or bilingual EN+中文?"),
+        ("density", "How much text per point — diagram-heavy (a phrase, a figure carries it), "
+                    "balanced (one sentence + a visual), or text-heavy (2-3 sentences, reads "
+                    "without a speaker)?"),
+        ("length", "How many slides — short ~5-8, medium ~9-15, long 16+? (For a talk, give me the "
+                   "time budget instead and I'll confirm the count.)"),
+        ("goal", "What should this deck DO — inform, support a decision, or inspire action?"),
+    ],
+    "zh": [
+        ("language", "幻灯片用哪种语言 —— 中文、English,还是中英双语?"),
+        ("density", "每个要点多少字 —— 图为主(一个短语,图承载)、均衡(一句话配一张图),还是"
+                    "文字为主(2-3 句,没有讲者也读得懂)?"),
+        ("length", "要多少页 —— 短 5-8 / 中 9-15 / 长 16+?(如果是要讲的,给我时间预算,我来确认页数。)"),
+        ("goal", "这份 deck 要做成什么 —— 告知、支持一个决策,还是推动行动?"),
+    ],
+}
+
+
+def _cmd_interview(a):
+    """Ask the four unartifacted axes, or record them — one command, for a runtime with no widgets.
+
+    These four are singled out because nothing else downstream demands them, which is exactly why
+    they are the ones that go unasked: measured on a real delivered deck, `delivery`, `builds` and
+    `content.slides` were recorded and language, density, length and goal were not. A host with a
+    choice UI has the axes carried FOR it by the widget; a plain-chat host has nothing carrying
+    them, so it gets this.
+    """
+    g = _load(a.deck_dir) if _path(a.deck_dir).exists() else {}
+    iv = g.get("interview") if isinstance(g.get("interview"), dict) else {}
+    if a.set:
+        bad = [kv for kv in a.set if "=" not in kv]
+        if bad:
+            print("each --set takes axis=answer, got: {}".format(" ".join(bad)), file=sys.stderr)
+            return 2
+        for kv in a.set:
+            k, _, v = kv.partition("=")
+            k = k.strip().lower()
+            if k not in INTERVIEW_AXES:
+                print("{!r} is not an interview axis — expected one of {}".format(
+                    k, ", ".join(INTERVIEW_AXES)), file=sys.stderr)
+                return 2
+            iv[k] = v.strip()
+        g["interview"] = iv
+        _save(a.deck_dir, g)
+        print("recorded: " + " · ".join("{} {}".format(k, iv[k]) for k in INTERVIEW_AXES if iv.get(k)))
+    missing = [k for k in INTERVIEW_AXES if not str(iv.get(k) or "").strip()
+               or str(iv.get(k)).strip().startswith("<")]
+    if a.ask or (missing and not a.set):
+        lang = a.lang or "en"
+        print("\nAsk the user these, in ONE turn, in THEIR language "
+              "(--lang {}):\n".format("/".join(sorted(INTERVIEW_QUESTIONS))))
+        for i, (axis, q) in enumerate(INTERVIEW_QUESTIONS.get(lang, INTERVIEW_QUESTIONS["en"]), 1):
+            mark = " " if axis in missing else "✓"
+            print("  {} {}. {}".format(mark, i, q))
+        print("\nThen record them:\n  python3 scripts/deck_gates.py interview {} \\\n"
+              "      --set language=… --set density=… --set length=… --set goal=…"
+              .format(a.deck_dir))
+    if missing:
+        print("\nstill unanswered: {}".format(", ".join(missing)))
+        return 1
+    print("all four axes answered")
+    return 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0],
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -425,6 +495,13 @@ def main(argv=None):
     p.add_argument("path")
     p.add_argument("value")
     p.set_defaults(fn=_cmd_set)
+
+    p = sub.add_parser("interview", help="ask / record the four axes nothing else demands.")
+    p.add_argument("deck_dir")
+    p.add_argument("--set", action="append", default=[], metavar="AXIS=ANSWER")
+    p.add_argument("--ask", action="store_true", help="print the questions even if all are answered")
+    p.add_argument("--lang", choices=sorted(INTERVIEW_QUESTIONS), help="the USER's language")
+    p.set_defaults(fn=_cmd_interview)
 
     p = sub.add_parser("check", help="report EVERY shape problem at once (never opens the pptx).")
     p.add_argument("deck_dir")

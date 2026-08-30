@@ -46,6 +46,8 @@ sys.path.insert(0, str(HERE))
 
 import arc_divergence  # noqa: E402
 import render_deck as RD  # noqa: E402
+
+SCRIPTS = pathlib.Path(__file__).resolve().parent.parent / "scripts"
 from test_critic_waiver_gate import (  # noqa: E402
     ARC_CANDIDATES, DESIGN_OK, GOOD_REASON, PROV_OK, build_deck, content_ok, selfcheck_ok,
     write_proof,
@@ -398,6 +400,30 @@ def main():
         _out = subprocess.run([sys.executable,
                         str(pathlib.Path(__file__).resolve().parent.parent / "scripts" / "render_deck.py"),
                         str(_mini), "--gate-check"], capture_output=True, text=True)
+        # 🔴 THE COMMAND THE GATE PRINTS MUST RUN AS WRITTEN. The first version told the reader
+        # `deck_gates.py set <dir> interview.language="…"`, and `set` takes `path value`, not
+        # `path=value` — so a runtime with no choice UI, the one that most needs the instruction,
+        # got an argparse error. A gate that answers "how do I fix this" with a command that does
+        # not run has not answered it.
+        (_tmp / ".deck-gates.json").write_text(json.dumps({"interview": {"language": "中文"}}),
+                                               encoding="utf-8")
+        _held = subprocess.run([sys.executable, str(SCRIPTS / "render_deck.py"),
+                                str(_mini), "--gate-check"], capture_output=True, text=True)
+        _cmds = [ln.strip() for ln in (_held.stdout + _held.stderr).splitlines()
+                 if ln.strip().startswith("python3 scripts/deck_gates.py interview")]
+        check("the gate names a command for the runtime that has no widgets", len(_cmds) == 2, _cmds)
+        for _c in _cmds:
+            import shlex
+            _argv = shlex.split(_c.split("#")[0].strip())[1:]          # drop "python3"
+            _argv = [str(SCRIPTS / "deck_gates.py") if x.endswith("deck_gates.py") else x
+                     for x in _argv]
+            _argv = [str(_tmp) if x == "<deck-dir>" else x for x in _argv]
+            _argv = ["zh" if x == "<en|zh>" else x for x in _argv]
+            _run = subprocess.run([sys.executable] + _argv, capture_output=True, text=True)
+            check("...and it RUNS as written ({}…)".format(" ".join(_argv[1:3])),
+                  _run.returncode in (0, 1) and "error:" not in _run.stderr,
+                  (_run.stderr or _run.stdout)[:200])
+
         check("...and the written waiver is honoured, like every other waiver in this repo",
               "interview answers WAIVED" in (_out.stdout + _out.stderr),
               (_out.stdout + _out.stderr)[:200])

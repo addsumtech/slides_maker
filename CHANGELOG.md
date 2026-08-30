@@ -11,6 +11,19 @@ section is a distilled summary — the full notes live on the
 
 ### Fixed
 
+- **A runtime with no choice UI now has a COMMAND that carries the interview axes, not a
+  paragraph asking it to remember them.** `deck_gates.py interview <deck-dir> --lang en|zh` prints
+  the four questions in the USER's language — SKILL.md tells every host to ask in that language and
+  then shows only English, so the one example contradicted the rule — and `--set language=… …`
+  records them. With no `--set` it lists what is still unanswered and exits 1, so it doubles as the
+  pre-flight. A host with widgets has the axes carried by the widget; a plain-chat host had nothing
+  carrying them, which is why this is a command.
+- **The gate's own remedy command did not run as written.** It printed
+  `deck_gates.py set <dir> interview.language="…"`, and `set` takes `path value`, not `path=value` —
+  so the runtime that most needs the instruction got an argparse error. The regression now EXTRACTS
+  the commands from the gate's failure text and executes them, because a gate that answers "how do
+  I fix this" with something that does not run has not answered it.
+
 - **The interview asked five questions and recorded three, and LANGUAGE was one of the two that
   vanished.** Checked against this skill's own delivered deck rather than against the docs: the
   `.deck-gates.json` carried `delivery`, `builds` and `content.slides` — and no answer for

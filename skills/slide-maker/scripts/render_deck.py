@@ -2659,13 +2659,15 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
                     "exactly why\n"
                     "  they go unasked — measured, LANGUAGE was never asked on a real build and no "
                     "gate noticed.\n\n"
-                    "    python3 scripts/deck_gates.py set <deck-dir> {}\n\n"
+                    "    python3 scripts/deck_gates.py interview <deck-dir> --lang <en|zh>   "
+                    "# prints the questions\n"
+                    "    python3 scripts/deck_gates.py interview <deck-dir> {}\n\n"
                     "  Under the auto waiver these are your delegated picks — the waiver removes the "
                     "STOP, never\n"
                     '  the record. Or waive: {{"interview": {{"waived": "<why>"}}}}.'.format(
                         " and ".join("`{}` ({})".format(k, INTERVIEW_HINT.get(k, ""))
                                      for k in (_missing + _bad)),
-                        " ".join('interview.{}="<{}>"'.format(k, INTERVIEW_HINT.get(k, k))
+                        " ".join('--set {}="<{}>"'.format(k, INTERVIEW_HINT.get(k, k))
                                  for k in INTERVIEW_AXES)))
             print("[gates] interview: " + " · ".join(
                 "{} {}".format(k, str(_iv[k]).strip()) for k in INTERVIEW_AXES))

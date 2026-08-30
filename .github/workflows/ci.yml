@@ -254,6 +254,13 @@ jobs:
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/regsurf.log || {
             echo "::error::register-surface suite did not run to completion"; exit 1; }
 
+      - name: Interview axes (the answers are an artifact, on both runtimes)
+        run: |
+          set -o pipefail
+          python tests/test_step1_artifacts.py | tee /tmp/step1.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/step1.log || {
+            echo "::error::step-1 artifacts suite did not run to completion"; exit 1; }
+
       - name: Bespoke kits (an INVENTED register gets a kit, not just prose)
         run: |
           set -o pipefail

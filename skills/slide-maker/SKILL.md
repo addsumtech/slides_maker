@@ -434,6 +434,8 @@ Before I build, please give me:
 *(No review question here — it is asked at Step 5, AFTER the first clean render, with the deck in
 front of the user. Asking it blind at Step 0 forced a cost decision about a deck nobody had seen.)*
 
+🔴 **On a host with NO choice UI — the norm, not the exception — one command carries the axes for you.** `python3 scripts/deck_gates.py interview <deck-dir> --lang en|zh` prints the four questions in the USER's language (this file's fallback block is English because this file is; the command carries 中文 too, so "ask in their language" stops being an instruction whose only example contradicts it), and `… interview <deck-dir> --set language=… --set density=… --set length=… --set goal=…` records them. With no `--set` it lists what is still unanswered and exits 1, so it is also the pre-flight. A plain-chat runtime has nothing carrying these axes — a widget carries them for a host that has one — which is why this is a command and not a paragraph.
+
 🔴 **A choice UI takes FOUR questions per call and this interview has FIVE lines — so "one batched
 call" silently truncates the last one, which is the line LANGUAGE lives on.** Measured in this
 repo's own session: a real deck was built and language was never asked, while the record carried

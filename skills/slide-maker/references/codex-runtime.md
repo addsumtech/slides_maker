@@ -48,7 +48,15 @@ NOT the design checkpoint. Record the checkpoint as `design.checkpoint` in `.cod
 REFUSES a full render until one of them carries a recorded design plan + checkpoint, so the plan cannot
 be reconstructed post-hoc at the delivery gate.
 
-0. 🔴 **Record the four unartifacted answers — `interview.language`, `.density`, `.length`, `.goal` — as well as `.mode`/`.record`.** `length` was required here first, one axis at a time, and the same failure then moved to LANGUAGE: a real build never asked it and no gate noticed. The list is shared with `render_deck --gate-check` (`deck_gates.INTERVIEW_AXES`), so the two paths cannot disagree about what an interview answers.
+0. 🔴 **ASK and RECORD the four unartifacted answers with one command each — you have no choice UI, so nothing else is carrying these axes for you.**
+
+   ```bash
+   python3 scripts/deck_gates.py interview <deck-dir> --lang zh    # prints the 4 questions
+   python3 scripts/deck_gates.py interview <deck-dir> \
+       --set language=中文 --set density=balanced --set length="medium 9-15" --set goal=inform
+   ```
+
+   `--lang en|zh` prints them in the USER's language (SKILL.md says to ask in it and then shows only English; this carries both). Running it with no `--set` lists what is still unanswered and exits 1, so it doubles as the pre-flight. These four — plus `.mode` and `.record` — `length` was required here first, one axis at a time, and the same failure then moved to LANGUAGE: a real build never asked it and no gate noticed. The list is shared with `render_deck --gate-check` (`deck_gates.INTERVIEW_AXES`), so the two paths cannot disagree about what an interview answers.
 
 0. **Ask the whole interview, in plain text, before anything else.** This runbook used to begin at
    Step 2, which left the impression that the interview is the part a bridged runtime can compress.
