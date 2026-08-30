@@ -42,6 +42,7 @@ claims to build fails here rather than in a delivered deck.
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import sys
 import warnings
@@ -936,6 +937,44 @@ def _card_plain(slide, x, y, w, h, label=None):
     """
     return dk.box(slide, x, y, w, h, fill=None, line=_blend(dk.GROUND, dk.DEEP, 0.35),
                   line_w=0.8), None
+
+
+KIT_GLOB = "surface_*.py"      # a deck's own kits live beside it, under this name
+
+
+def load_kits(directory, *, quiet=False):
+    """Import every `surface_*.py` beside a deck, so its INVENTED registers exist in this process.
+
+    Registration happens at import time, which means a kit only exists where its file was imported.
+    The gates do not run inside the build — they run afterwards, in a fresh process — so a bespoke
+    register's declared prohibitions were being enforced exactly nowhere. Measured with a scaffolded
+    kit that forbids gradients and a deck that draws one: caught in-process, and reported by the
+    real gate as "a bespoke look has no FORBIDS to check". A capability that exists in the library
+    and not at hand-off is the shape this repo keeps re-learning.
+
+    Returns `(loaded, errors)`. It never raises: a kit that fails to import must produce a NOTE on
+    the gate, not a traceback that reads like a broken deck.
+    """
+    import importlib.util
+    directory = Path(os.path.expanduser(str(directory)))
+    loaded, errors = [], []
+    try:
+        files = sorted(directory.glob(KIT_GLOB))
+    except OSError as exc:
+        return loaded, ["cannot list {}: {}".format(directory, exc)]
+    for f in files:
+        mod = "slide_maker_kit_" + re.sub(r"[^a-z0-9_]+", "_", f.stem.lower())
+        try:
+            spec = importlib.util.spec_from_file_location(mod, f)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            loaded.append(f.name)
+        except Exception as exc:
+            errors.append("{}: {}: {}".format(f.name, exc.__class__.__name__, exc))
+    if errors and not quiet:
+        for e in errors:
+            print("  ! surface kit did not load — {}".format(e), file=sys.stderr)
+    return loaded, errors
 
 
 def forbids(register):

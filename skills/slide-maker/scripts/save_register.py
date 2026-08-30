@@ -192,7 +192,14 @@ def entry_for(deck_dir):
             ", ".join(str(x) for x in d["carried_by"])))
     # A kit file beside the deck is the register as CODE, and it is the whole difference between a
     # collection you can read and one you can build from. Recorded by path, relative to the deck.
-    kits = sorted(f.name for f in deck_dir.glob("surface_*.py"))
+    # ONE definition of where a deck's kits live — `register_surface.KIT_GLOB` is what the gates
+    # import from, and a second copy of the pattern here is how the two quietly stop agreeing.
+    try:
+        import register_surface as _rs
+        _glob = _rs.KIT_GLOB
+    except Exception:
+        _glob = "surface_*.py"
+    kits = sorted(f.name for f in deck_dir.glob(_glob))
     if kits:
         lines.append("- **Kit:** `{}` — a registered surface kit (`register_surface.register`), so "
                      "`ground()`/`card()` work for this register the way they do for a preset"

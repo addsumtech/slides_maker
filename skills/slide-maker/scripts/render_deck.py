@@ -1606,11 +1606,31 @@ def _register_kit_note(pptx, gates):
         d = (gates or {}).get('design_plan') or {}
         if not isinstance(d, dict):
             return
+        deck_dir = Path(pptx).resolve().parent
         reg, conf = csa.declared_preset(d.get('style_pick'), csa.preset_names(),
                                         d.get(csa.LOOK_SOURCE_KEY))
-        if conf != 'sure' or not reg or not rs.has(reg):
+        if conf != 'sure' or not reg:
+            # An INVENTED register. It gets the kit contracts only if it HAS a kit — otherwise its
+            # look is hand-built and the returned content rect, the loud-mark invariant, the canvas
+            # scaling, the ground-resolved ink and its own declared prohibitions all apply to
+            # nothing. This is the moment to say so, because at hand-off it is still cheap to fix.
+            import save_register as sr
+            name = sr._bespoke_name(d.get('style_pick'))
+            if not name:
+                return
+            if list(deck_dir.glob(rs.KIT_GLOB)):
+                print("[gates] `{}` ships as a surface KIT — the contracts (content rect, "
+                      "loud-mark invariant, canvas scaling, its own prohibitions) apply to "
+                      "it".format(name))
+            else:
+                print("[gates] `{}` is an INVENTED register with no kit beside the deck. Its look "
+                      "is hand-built, so none of the kit contracts reach it and "
+                      "`check_register_guard` has nothing to enforce. "
+                      "`python3 scripts/register_surface.py --new \"{}\" --out {}/surface_x.py` "
+                      "scaffolds one with every contract wired.".format(name, name, deck_dir.name))
             return
-        deck_dir = Path(pptx).resolve().parent
+        if not rs.has(reg):
+            return
         used = any('register_surface' in f.read_text(encoding='utf-8', errors='ignore')
                    for f in list(deck_dir.glob('*.py')) + list(deck_dir.glob('**/*.py'))[:60])
     except Exception:

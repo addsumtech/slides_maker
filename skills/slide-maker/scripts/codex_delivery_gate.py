@@ -1180,7 +1180,24 @@ def note_register_kit(evidence: dict[str, Any], deck_path: Path | None,
         design = evidence.get("design") if isinstance(evidence.get("design"), dict) else {}
         reg, conf = csa.declared_preset(design.get("style_pick"), csa.preset_names(),
                                         design.get(csa.LOOK_SOURCE_KEY))
-        if conf != "sure" or not reg or not module.has(reg):
+        if conf != "sure" or not reg:
+            # Same wording as the shared path: an invented register gets the kit contracts only if
+            # it HAS a kit. Saying it on one runtime only is the drift this gate keeps re-learning.
+            sr_path = Path(__file__).with_name("save_register.py")
+            sr_spec = importlib.util.spec_from_file_location("slide_maker_sr_kit", sr_path)
+            sr = importlib.util.module_from_spec(sr_spec)
+            sr_spec.loader.exec_module(sr)
+            name = sr._bespoke_name(design.get("style_pick"))
+            if not name:
+                return
+            if list(deck_path.parent.glob(module.KIT_GLOB)):
+                print(f"  `{name}` ships as a surface KIT — the contracts apply to it")
+            else:
+                print(f"  [!!] `{name}` is an INVENTED register with no kit beside the deck: its "
+                      f"look is hand-built, so no kit contract reaches it and check_register_guard "
+                      f"has nothing to enforce. register_surface.py --new \"{name}\" scaffolds one.")
+            return
+        if not module.has(reg):
             return
         src = ""
         if build_script is not None and build_script.is_file():

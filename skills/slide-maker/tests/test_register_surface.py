@@ -325,6 +325,74 @@ try:
 finally:
     _restore(snap)
 
+# ------------------------------ a BRAND-NEW register gets everything, in the process the GATE runs in
+# The failure this replaces: registration happens at IMPORT time, and the gates run in a fresh
+# process after the build. So a bespoke register's declared prohibitions were enforced in-process
+# and nowhere else — the real gate said "a bespoke look has no FORBIDS to check". Measured with a
+# scaffolded kit forbidding gradients and a deck drawing one. The test therefore runs the checker
+# as a SUBPROCESS: an in-process assertion would have passed while the capability did not exist.
+import json as _json
+import subprocess as _sp
+import tempfile as _tempfile
+
+snap = _snapshot()
+try:
+    kit_dir = Path(_tempfile.mkdtemp(prefix="newkit-"))
+    made = _sp.run([sys.executable, str(ROOT / "scripts" / "register_surface.py"),
+                    "--new", "tide table", "--out", str(kit_dir / "surface_tide_table.py")],
+                   capture_output=True, text=True)
+    check(made.returncode == 0 and (kit_dir / "surface_tide_table.py").is_file(),
+          "`--new` scaffolds a kit for an invented register, runnable as written")
+    src = (kit_dir / "surface_tide_table.py").read_text(encoding="utf-8")
+    (kit_dir / "surface_tide_table.py").write_text(
+        src.replace("forbids=(),", 'forbids=("gradient",),'), encoding="utf-8")
+
+    ran = _sp.run([sys.executable, str(kit_dir / "surface_tide_table.py")],
+                  capture_output=True, text=True, cwd=str(kit_dir))
+    check(ran.returncode == 0 and (kit_dir / "surface_tide_table.pptx").is_file(),
+          "...and the scaffolded file RUNS on its own, rendering its own preview — an author who "
+          "fills in the two builders can look at the result without wiring anything")
+
+    loaded, errs = rs.load_kits(kit_dir)
+    check(loaded and not errs, "a deck's own kits load from beside it ({})".format(loaded))
+    check(rs.has("tide table") and rs.is_bespoke("tide table")
+          and rs.forbids("tide table") == ("gradient",),
+          "a brand-new invented register is a first-class kit: has() · is_bespoke() · its own "
+          "declared prohibitions")
+
+    for label, (W, H) in CANVASES.items():
+        presets.apply("swiss")
+        prs = dk.blank_deck()
+        prs.slide_width, prs.slide_height = int(W * 914400), int(H * 914400)
+        s2 = dk.add_slide(prs)
+        bx, by, bw, bh = rs.ground(s2, "tide table", role="content", index=2)
+        check(bw >= W * 0.35 and bh >= H * 0.28 and bx + bw <= W + 1e-6 and by + bh <= H + 1e-6,
+              "a NEW register composes a usable page on {} too — the contracts are the kit's, not "
+              "the eighteen's".format(label))
+
+    presets.apply("swiss")
+    prs = dk.blank_deck()
+    s2 = dk.add_slide(prs)
+    bx, by, bw, bh = rs.ground(s2, "tide table", role="content", index=1)
+    dk.box(s2, bx, by + 0.4, 3.0, 1.0, grad=[(0, dk.MAGENTA, 1.0), (1, dk.TINT, 1.0)])
+    deck = kit_dir / "deck.pptx"
+    prs.save(str(deck))
+    (kit_dir / ".deck-gates.json").write_text(_json.dumps({"design_plan": {
+        "style_pick": "bespoke tide table for a coastal domain - beat swiss"}}), encoding="utf-8")
+    out = _sp.run([sys.executable, str(ROOT / "scripts" / "check_register_guard.py"), str(deck)],
+                  capture_output=True, text=True)
+    check("GRADIENT" in out.stdout,
+          "🔴 and a FRESH PROCESS — which is how the gate actually runs — enforces the prohibition "
+          "that new register declared, because the gate loads the kits beside the deck")
+
+    import save_register as _sr
+    name, body = _sr.entry_for(kit_dir)
+    check(name == "tide table" and "surface_tide_table.py" in body,
+          "the write-back records the KIT FILE beside the register, so the next deck on this "
+          "subject starts from the built look rather than from a description")
+finally:
+    _restore(snap)
+
 # ------------------------------------------------------- the marks are usable outside a kit as well
 snap = _snapshot()
 try:

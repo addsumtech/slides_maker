@@ -11,6 +11,27 @@ section is a distilled summary — the full notes live on the
 
 ### Fixed
 
+- **A bespoke register's declared prohibitions were enforced in-process and NOWHERE ELSE.**
+  Registration happens at import time; the gates run in a fresh process after the build. So the
+  `forbids=` that had just been added — the thing that separates a register from a colourway —
+  was checked only where the kit module happened to be imported, which at hand-off is never.
+  Measured with a scaffolded kit forbidding gradients and a deck drawing one: caught in-process,
+  and reported by the real gate as *"a bespoke look has no FORBIDS to check"*. A capability that
+  exists in the library and not at hand-off is the shape this repo keeps re-learning, and an
+  in-process assertion would have passed the whole time. `register_surface.load_kits()` imports the
+  `surface_*.py` beside the deck, `check_register_guard` calls it on both runtimes, and a kit that
+  fails to import produces a NOTE naming it rather than a silent "nothing to check" — unregistered
+  and clean are different facts. Verified as a subprocess, which is the only way this could have
+  been caught.
+- **Both gates now say whether an INVENTED register has a kit at all.** Without one its look is
+  hand-built and none of the contracts reach it — no content rect, no loud-mark invariant, no canvas
+  scaling, no ground-resolved ink, nothing for the guard to enforce — and hand-off is the last cheap
+  moment to hear that. The note names the exact `--new` command, and `save_register` now globs with
+  `register_surface.KIT_GLOB` rather than a second copy of the pattern.
+- Verified on a register the kits were not built around: a scaffolded `tide table` gets the content
+  rect, the invariant, the palette-not-set error, all seven canvases, its own prohibition enforced
+  by a fresh-process gate, and the kit file recorded by the write-back.
+
 - **The surface kits were composed in inches, and inches do not travel.** A fixed 0.42in memphis
   triangle is 4.2% of the reference canvas's width and 1.3% of an A0 poster's — a format
   `formats.py` supports and `check_surface.py` gates — and bauhaus RAISED outright on portrait 9:16,

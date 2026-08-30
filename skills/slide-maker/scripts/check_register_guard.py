@@ -174,6 +174,18 @@ def check(pptx, register=None, gates=None):
     from pptx import Presentation
 
     facts = {}
+    # A deck's OWN kits live beside it and register at import time. The gate runs in a fresh
+    # process, so without this the bespoke register whose prohibitions this function exists to
+    # enforce simply does not exist here — measured: caught in-process, reported as "no FORBIDS to
+    # check" by the real gate.
+    try:
+        _loaded, _kit_errs = _rs.load_kits(Path(pptx).resolve().parent, quiet=True)
+        if _loaded:
+            facts["kits_loaded"] = _loaded
+        if _kit_errs:
+            facts["kit_errors"] = _kit_errs
+    except Exception as exc:
+        facts["kit_errors"] = ["{}: {}".format(exc.__class__.__name__, exc)]
     if register is None:
         d = (gates or {}).get("design_plan") or {}
         # `check_style_applied.declared_preset` already owns this parse, INCLUDING the three-way
@@ -208,6 +220,11 @@ def check(pptx, register=None, gates=None):
             pass
     facts["register"] = register
     if not register:
+        if facts.get("kit_errors"):
+            facts["note"] = ("a surface kit beside this deck failed to import, so any register it "
+                             "declares is NOT REGISTERED here and its prohibitions cannot be "
+                             "checked — {}".format(" · ".join(facts["kit_errors"])[:200]))
+            return [], facts
         if facts.get("confidence") == "unsure":
             facts["note"] = ("`style_pick` names a preset but also carries a non-preset qualifier, "
                              "so the look may not be preset-based — NOT CHECKED rather than checked "

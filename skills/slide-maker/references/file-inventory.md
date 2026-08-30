@@ -124,6 +124,13 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   and so does painting a surface before `presets.apply()` has set the palette (it used to die on a
   blend deep inside a builder, with a TypeError that named nothing the caller could fix). Both gates NOTE a deck that declared a kitted register and used
   none of it.
+- `register_surface.load_kits(dir)` — imports a deck's own `surface_*.py` kits so its INVENTED
+  registers exist in THIS process. Registration happens at import time and the gates run in a fresh
+  process after the build, so without it a bespoke register's declared prohibitions were enforced
+  in-process and nowhere else: measured with a scaffolded kit forbidding gradients and a deck
+  drawing one, the real gate reported "a bespoke look has no FORBIDS to check". Never raises — a
+  kit that fails to import becomes a gate NOTE naming it, because "unregistered" and "clean" are
+  different facts.
 - `bespoke_kits.py` — the four registers in `references/bespoke-registers.md`, as runnable kits.
   The library taught how to invent a register in five prose fields and contained zero lines of code,
   so every deck that reached for one re-derived the contracts by hand and got a different subset
