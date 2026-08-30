@@ -9,6 +9,8 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+## [5.2.0] — 2026-08-30
+
 ### Fixed
 
 - **The direction the user PICKED was compared to nothing.** The branch-(c) gate renders four
@@ -50,9 +52,6 @@ section is a distilled summary — the full notes live on the
   direction covered in the author's own notes. `directions_diversity.py` now reports prose in a
   drawing slot: a field with twelve or more words and no svg, shape element or box-making inline
   style. The description belongs in `note`, which the preview already shows.
-
-
-## [5.2.0] — 2026-08-30
 
 ### Fixed
 
