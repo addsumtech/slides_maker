@@ -11,196 +11,6 @@ section is a distilled summary — the full notes live on the
 
 ## [5.2.0] — 2026-08-30
 
-### Fixed
-
-- **The direction the user PICKED was compared to nothing.** The branch-(c) gate renders four
-  directions, the author clicks one, and the choice was recorded as a sentence on the design
-  checkpoint's `direction gate:` line — and no check ever asked whether the deck that shipped was
-  that direction. Reported by an author on a real deck: *"我选的 B 和实际最终模版并不一样"*. The
-  picked direction declared a **Georgia** display face and a **centred** cover; the deck shipped
-  Helvetica Neue titles and a low-left cover, because `style.py` set `display=` and every title
-  passed `dk.FONT` — the DISPLAY slot was declared and never read. Two neighbouring checks for the
-  identical class had existed for a long time (`check_register_pixels`: a declared colour must
-  reach the pixels; `check_style_applied`: a declared preset must be called), and the one thing the
-  USER personally chose had none.
-  `check_direction_applied.py` compares ground, accent presence, display and body faces, and
-  `centred` vs `low-left`, and names skeleton and motif as NOT CHECKED rather than guessing at a
-  judgement. A deviation is normal design — a freshness gate moves a ground, a contrast floor moves
-  an accent — and is recorded per axis in `design_plan.direction_deviations`; an unrecorded one is
-  the version the user cannot see. Run by both gate paths from one module, and verified as a
-  subprocess, which is how the gate actually runs.
-  Two bugs its own selftest caught before it shipped: an EXACT colour match measures 0, and
-  `(_dist(...) or 999)` made a perfectly applied accent read as absent; and deriving the body face
-  from the median run size called a two-run page's title the body.
-- **Both new checks fired only for authors writing in ENGLISH.** Found by auditing them against
-  inputs they were not built around, which is where each had a hole. The prose check counted words
-  with `.split()`, so a 40-character Chinese motif description was ONE word and slipped through
-  entirely — the same blindness as measuring CJK glyph widths with Latin metrics. And the pick was
-  read with a regex anchored on `picked … of`, while `references/checkpoint-convention.md` says
-  these lines follow the CONVERSATION language: a deck whose record reads `方向闸门:选定 B` reported
-  NOT CHECKED, which is the layering failure this repo keeps re-learning one file over. The pick is
-  now found by matching a direction NAME in the line — language-independent — with a pick-marker
-  (`picked` / `chose` / `选定` / `采用` / …) breaking the tie when the line also names the losers,
-  as the convention asks it to. A bare `B` still never resolves to `B2`.
-- **A deck with no explicit typeface was passing the face axes in silence.** Runs that carry no
-  `<a:latin>` inherit the theme's face, which is not the same as matching the picked one; the axes
-  now report NOT CHECKED and name why, rather than reporting nothing.
-- **A direction's motif fields were rendering the author's notes onto the sample tiles.**
-  `cover_motif` / `ambient_motif` are raw HTML by design, so a bespoke register can draw its own
-  signature — and nothing checked that what was supplied actually DREW anything. A sentence
-  describing the motif appeared as literal text across all four previews, so the author chose a
-  direction covered in the author's own notes. `directions_diversity.py` now reports prose in a
-  drawing slot: a field with twelve or more words and no svg, shape element or box-making inline
-  style. The description belongs in `note`, which the preview already shows.
-
-### Fixed
-
-- **A runtime with no choice UI now has a COMMAND that carries the interview axes, not a
-  paragraph asking it to remember them.** `deck_gates.py interview <deck-dir> --lang en|zh` prints
-  the four questions in the USER's language — SKILL.md tells every host to ask in that language and
-  then shows only English, so the one example contradicted the rule — and `--set language=… …`
-  records them. With no `--set` it lists what is still unanswered and exits 1, so it doubles as the
-  pre-flight. A host with widgets has the axes carried by the widget; a plain-chat host had nothing
-  carrying them, which is why this is a command.
-- **The gate's own remedy command did not run as written.** It printed
-  `deck_gates.py set <dir> interview.language="…"`, and `set` takes `path value`, not `path=value` —
-  so the runtime that most needs the instruction got an argparse error. The regression now EXTRACTS
-  the commands from the gate's failure text and executes them, because a gate that answers "how do
-  I fix this" with something that does not run has not answered it.
-
-- **The interview asked five questions and recorded three, and LANGUAGE was one of the two that
-  vanished.** Checked against this skill's own delivered deck rather than against the docs: the
-  `.deck-gates.json` carried `delivery`, `builds` and `content.slides` — and no answer for
-  **language, density, length, goal, tone or audience**. The three that survived are exactly the
-  three something downstream demanded (`declare_delivery`, the motion manifest, the content gate);
-  the ones that evaporated are the ones nothing asked for. Language was never put to the user on
-  that build and no artifact, lint or gate noticed. SKILL.md had already diagnosed this pattern —
-  for deck LENGTH — and fixed it with a 🔴 line of prose, so the failure simply moved to the next
-  unartifacted axis.
-  There is a mechanical half as well: the interview is FIVE numbered lines and a choice UI takes
-  FOUR questions per call, so "ask them in one batched call" truncates the fifth — which is the line
-  language lives on. SKILL.md now says to send two calls, in layer 1, next to the block that gets
-  copied.
-  `interview.language`, `.density`, `.length` and `.goal` are now REQUIRED by `render_deck
-  --gate-check` and by `codex_delivery_gate`, from one shared list (`deck_gates.INTERVIEW_AXES`) so
-  the two gates cannot disagree about what an interview answers — the same single-source rule that
-  ended the icon drift. 🔴 The field is the EXISTING top-level `interview`, not a new one: the codex
-  path has required `interview.mode` / `.record` / `.length` all along and the shared path required
-  nothing, which is the `content.slides` asymmetry one field over. `deck_gates.py --init` scaffolds
-  the four (a capability that does not enter the skeleton is one the next deck rediscovers by
-  failing a gate), the content checkpoint echoes them back on an `interview:` line so a wrong answer
-  is caught before a slide exists, and the waiver is written like every other in this repo. Verified
-  by running the gate over the very deck that shipped without them — it is held now.
-
-- **A bespoke register's declared prohibitions were enforced in-process and NOWHERE ELSE.**
-  Registration happens at import time; the gates run in a fresh process after the build. So the
-  `forbids=` that had just been added — the thing that separates a register from a colourway —
-  was checked only where the kit module happened to be imported, which at hand-off is never.
-  Measured with a scaffolded kit forbidding gradients and a deck drawing one: caught in-process,
-  and reported by the real gate as *"a bespoke look has no FORBIDS to check"*. A capability that
-  exists in the library and not at hand-off is the shape this repo keeps re-learning, and an
-  in-process assertion would have passed the whole time. `register_surface.load_kits()` imports the
-  `surface_*.py` beside the deck, `check_register_guard` calls it on both runtimes, and a kit that
-  fails to import produces a NOTE naming it rather than a silent "nothing to check" — unregistered
-  and clean are different facts. Verified as a subprocess, which is the only way this could have
-  been caught.
-- **Both gates now say whether an INVENTED register has a kit at all.** Without one its look is
-  hand-built and none of the contracts reach it — no content rect, no loud-mark invariant, no canvas
-  scaling, no ground-resolved ink, nothing for the guard to enforce — and hand-off is the last cheap
-  moment to hear that. The note names the exact `--new` command, and `save_register` now globs with
-  `register_surface.KIT_GLOB` rather than a second copy of the pattern.
-- Verified on a register the kits were not built around: a scaffolded `tide table` gets the content
-  rect, the invariant, the palette-not-set error, all seven canvases, its own prohibition enforced
-  by a fresh-process gate, and the kit file recorded by the write-back.
-
-- **The surface kits were composed in inches, and inches do not travel.** A fixed 0.42in memphis
-  triangle is 4.2% of the reference canvas's width and 1.3% of an A0 poster's — a format
-  `formats.py` supports and `check_surface.py` gates — and bauhaus RAISED outright on portrait 9:16,
-  because a `max()` floor on the leftover band pushed the content rect back over the very hero
-  primitive it was protecting. Kits now compose in REFERENCE inches and scale to whatever canvas
-  they are handed (marks, margins, line weights, chrome type and card internals alike), and bauhaus
-  sizes its hero against the short side and takes the FOOT rather than a flank when the page has no
-  room beside one. Seven canvases are held in the tests: 16:9 at both widths, 4:3, portrait, square,
-  A0 and A1.
-- **The kits' own chrome broke two of this skill's oldest rules.** `dk.MUTE` is tuned for a LIGHT
-  canvas, and used flat across eighteen registers it measured **2.85:1** on blueprint's navy and
-  2.93:1 on editorial_paper's cream — under the 3:1 floor that applies to text at any size, shipped
-  on every page. `mute_for(GROUND)` exists for exactly this. And the furniture INVENTED things: an
-  "M A I S O N" masthead (a brand the deck does not have), a "REV A" revision letter, an "MCM" year
-  badge, a page number of index+11. That is the never-invent rule broken by the chrome rather than
-  by the content, which is the harder half to notice. A test now holds the entire vocabulary a
-  ground may say and requires every number to be the page's own index.
-- **`lint_deck`'s TEXT PADDING treated a chop as a cramped card.** A plain `dk.seal()` on an
-  otherwise empty slide reported it, so every `eastern_traditional` and `ink_wash` deck would carry
-  the warning for using the device its own register prescribes. One or two glyphs in a near-square
-  box is a stamp — `seal`, `year_badge`, `chip`, an icon badge — and the glyph is supposed to fill
-  it. Padding still applies to a card holding a line of text, verified with a positive control.
-- **`sigs.py` did not know the surface kits existed.** That lookup is where an agent finds out what
-  is already built, and SKILL.md tells it a name matching NO helper means "you supply the geometry"
-  — so asking for `halftone` or `starburst` actively instructed the author to hand-roll the thing
-  that had just been added. `register_surface` is now a module it resolves.
-- **Four registers were missing furniture their own `surface` spec names**: risograph's mono chrome,
-  brutalist's big raw numeral, museum_memorial's midnight-navy GRADIENT ground, and midcentury's
-  orbit. Found by reading each preset's spec against its builder rather than by looking at the
-  render and liking it.
-
-- **`check_register_guard` fired on a page built from nothing but deckkit helpers — 4 of the 7
-  registers that declare prohibitions.** Found by building one ordinary page (`title_bar` + `box` +
-  `text` + `callout`) under each register and running the checker, which is not what its fixtures
-  did: every fixture shape was hand-made. Two causes. **(1)** `shadow.inherit` is True whenever a
-  shape carries no explicit `<a:effectLst>` — the default state of every text box — and a text box
-  has nothing to inherit FROM, because python-pptx writes no `<p:style>` effectRef for one. So four
-  text boxes were reported as theme shadows under a message blaming "a raw `add_shape()`". The
-  condition is now a live effect REFERENCE with no effect of its own, which is exactly what
-  `add_shape()` leaves behind. **(2)** bauhaus called two ordinary side-by-side cards a confetti of
-  oversized primitives: deckkit draws a card as a shape PLUS a separate text box, so the existing
-  `has_text` exclusion never saw the pairing. A primitive with type set on it is a card, not a hero
-  form. Both are locked by a FALSE-POSITIVE FLOOR in the selftest — an ordinary deckkit page must
-  be clean under every forbidding register — and that test was verified to go red on a mutant with
-  the fixes reverted. A gate that fires on a deck built exactly to spec is not a floor; it is
-  training for the waiver reflex.
-- **`save_register`'s duplicate test merged registers that merely share a prefix.** `Grid` and
-  `Gridiron`, `Rail` and `Railyard`, `Ledger` and `Ledger Line` all came out as one register, and
-  the loser disappeared silently under the words "already kept" — the exact loss the file exists to
-  prevent, arriving through its own de-duplication. Identity is now by TOKEN, and a gloss has to
-  announce itself: the other script (`Section Drawing 建筑剖面`) or an annotation separator
-  (`— the ledger`). A bare Latin word after a Latin name is a different name, and the tie breaks
-  toward keeping two entries — a visible duplicate can be merged by the reader; a dropped register
-  is gone.
-- **The register keep-note existed only on the shared path, and only in codex prose.**
-  `codex_delivery_gate.py` now prints it too, from the same module — the icon drift twice over was
-  a rule that lived in prose on the codex side and therefore did not exist. It also compared names
-  with `in`, so a collection holding `Section Drawing 建筑剖面` was told to keep `Section Drawing`
-  at every hand-off while the tool it pointed at answered "already kept".
-- **`save_register` read only the registry root it writes to**, while `taste_file()` and
-  `list_templates()` have always read across all of them — so a Codex host would have shown an
-  empty collection and written a second copy of a register already kept under `~/.claude`. It also
-  rewrote the file in place; it now writes temp-then-replace, because an interrupt while adding one
-  line should not cost the whole collection. And `--from-history` silently skipped rows naming a
-  bespoke look without quotes (`bespoke Section Drawing register`): those are now recovered, rows
-  it still cannot read are REPORTED, and a capture that is only the noun (`bespoke register
-  invented for…`) is rejected rather than kept as a stub.
-- **A mis-shaped `.deck-gates.json` raised `AttributeError` out of `save_register`** instead of
-  reporting — the same class that once took down a whole 16-section gate run, at the worst possible
-  moment.
-
-- **`presets.apply()` only ever re-themed three of the palette slots, so every register drew
-  deckkit's own colours in the other four.** It passed `deep`, `slate` and `accents` — and BLUE,
-  TEAL, MAGENTA and TINT are what **33 component signatures default to**. Measured: after
-  `apply("terminal")`, a `callout()` on a black-and-phosphor deck came out with a `#E3004F` magenta
-  rule on a `#EAF3FA` pale-blue panel. The remap machinery inside `set_palette` — which rewrites
-  frozen signature defaults by id — was working perfectly the whole time; it was simply never told
-  the register's colours. This is the mechanical half of why one page through all 18 presets came
-  out looking like 18 colourways of one page.
-  `apply()` now fills the semantic slots (MAGENTA is the highlight, BLUE the primary, TEAL the
-  secondary; a register with fewer accents reuses its own rather than inventing a hue), and
-  `set_palette` gained the `tint` parameter it was missing so the panel fill can be reached at all.
-- **The panel fill is DERIVED, not hand-picked.** `presets.panel()` steps the register's ground 12%
-  toward its ink, so a panel is in the register by construction and stays correct if a preset's
-  colours are ever retuned — which eighteen hand-picked values would not. Verified across all 18:
-  every panel separates from its ground, and every register's ink clears the 4.5:1 body floor on
-  its own panel (lowest 8.8:1).
-
 ### Added
 
 - **An INVENTED register can now be a KIT, with the same standing the 18 presets have.** Asked
@@ -474,6 +284,194 @@ section is a distilled summary — the full notes live on the
   `design_plan.surface_sections_waived`.
 
 ### Fixed
+
+- **The direction the user PICKED was compared to nothing.** The branch-(c) gate renders four
+  directions, the author clicks one, and the choice was recorded as a sentence on the design
+  checkpoint's `direction gate:` line — and no check ever asked whether the deck that shipped was
+  that direction. Reported by an author on a real deck: *"我选的 B 和实际最终模版并不一样"*. The
+  picked direction declared a **Georgia** display face and a **centred** cover; the deck shipped
+  Helvetica Neue titles and a low-left cover, because `style.py` set `display=` and every title
+  passed `dk.FONT` — the DISPLAY slot was declared and never read. Two neighbouring checks for the
+  identical class had existed for a long time (`check_register_pixels`: a declared colour must
+  reach the pixels; `check_style_applied`: a declared preset must be called), and the one thing the
+  USER personally chose had none.
+  `check_direction_applied.py` compares ground, accent presence, display and body faces, and
+  `centred` vs `low-left`, and names skeleton and motif as NOT CHECKED rather than guessing at a
+  judgement. A deviation is normal design — a freshness gate moves a ground, a contrast floor moves
+  an accent — and is recorded per axis in `design_plan.direction_deviations`; an unrecorded one is
+  the version the user cannot see. Run by both gate paths from one module, and verified as a
+  subprocess, which is how the gate actually runs.
+  Two bugs its own selftest caught before it shipped: an EXACT colour match measures 0, and
+  `(_dist(...) or 999)` made a perfectly applied accent read as absent; and deriving the body face
+  from the median run size called a two-run page's title the body.
+- **Both new checks fired only for authors writing in ENGLISH.** Found by auditing them against
+  inputs they were not built around, which is where each had a hole. The prose check counted words
+  with `.split()`, so a 40-character Chinese motif description was ONE word and slipped through
+  entirely — the same blindness as measuring CJK glyph widths with Latin metrics. And the pick was
+  read with a regex anchored on `picked … of`, while `references/checkpoint-convention.md` says
+  these lines follow the CONVERSATION language: a deck whose record reads `方向闸门:选定 B` reported
+  NOT CHECKED, which is the layering failure this repo keeps re-learning one file over. The pick is
+  now found by matching a direction NAME in the line — language-independent — with a pick-marker
+  (`picked` / `chose` / `选定` / `采用` / …) breaking the tie when the line also names the losers,
+  as the convention asks it to. A bare `B` still never resolves to `B2`.
+- **A deck with no explicit typeface was passing the face axes in silence.** Runs that carry no
+  `<a:latin>` inherit the theme's face, which is not the same as matching the picked one; the axes
+  now report NOT CHECKED and name why, rather than reporting nothing.
+- **A direction's motif fields were rendering the author's notes onto the sample tiles.**
+  `cover_motif` / `ambient_motif` are raw HTML by design, so a bespoke register can draw its own
+  signature — and nothing checked that what was supplied actually DREW anything. A sentence
+  describing the motif appeared as literal text across all four previews, so the author chose a
+  direction covered in the author's own notes. `directions_diversity.py` now reports prose in a
+  drawing slot: a field with twelve or more words and no svg, shape element or box-making inline
+  style. The description belongs in `note`, which the preview already shows.
+
+
+- **A runtime with no choice UI now has a COMMAND that carries the interview axes, not a
+  paragraph asking it to remember them.** `deck_gates.py interview <deck-dir> --lang en|zh` prints
+  the four questions in the USER's language — SKILL.md tells every host to ask in that language and
+  then shows only English, so the one example contradicted the rule — and `--set language=… …`
+  records them. With no `--set` it lists what is still unanswered and exits 1, so it doubles as the
+  pre-flight. A host with widgets has the axes carried by the widget; a plain-chat host had nothing
+  carrying them, which is why this is a command.
+- **The gate's own remedy command did not run as written.** It printed
+  `deck_gates.py set <dir> interview.language="…"`, and `set` takes `path value`, not `path=value` —
+  so the runtime that most needs the instruction got an argparse error. The regression now EXTRACTS
+  the commands from the gate's failure text and executes them, because a gate that answers "how do
+  I fix this" with something that does not run has not answered it.
+
+- **The interview asked five questions and recorded three, and LANGUAGE was one of the two that
+  vanished.** Checked against this skill's own delivered deck rather than against the docs: the
+  `.deck-gates.json` carried `delivery`, `builds` and `content.slides` — and no answer for
+  **language, density, length, goal, tone or audience**. The three that survived are exactly the
+  three something downstream demanded (`declare_delivery`, the motion manifest, the content gate);
+  the ones that evaporated are the ones nothing asked for. Language was never put to the user on
+  that build and no artifact, lint or gate noticed. SKILL.md had already diagnosed this pattern —
+  for deck LENGTH — and fixed it with a 🔴 line of prose, so the failure simply moved to the next
+  unartifacted axis.
+  There is a mechanical half as well: the interview is FIVE numbered lines and a choice UI takes
+  FOUR questions per call, so "ask them in one batched call" truncates the fifth — which is the line
+  language lives on. SKILL.md now says to send two calls, in layer 1, next to the block that gets
+  copied.
+  `interview.language`, `.density`, `.length` and `.goal` are now REQUIRED by `render_deck
+  --gate-check` and by `codex_delivery_gate`, from one shared list (`deck_gates.INTERVIEW_AXES`) so
+  the two gates cannot disagree about what an interview answers — the same single-source rule that
+  ended the icon drift. 🔴 The field is the EXISTING top-level `interview`, not a new one: the codex
+  path has required `interview.mode` / `.record` / `.length` all along and the shared path required
+  nothing, which is the `content.slides` asymmetry one field over. `deck_gates.py --init` scaffolds
+  the four (a capability that does not enter the skeleton is one the next deck rediscovers by
+  failing a gate), the content checkpoint echoes them back on an `interview:` line so a wrong answer
+  is caught before a slide exists, and the waiver is written like every other in this repo. Verified
+  by running the gate over the very deck that shipped without them — it is held now.
+
+- **A bespoke register's declared prohibitions were enforced in-process and NOWHERE ELSE.**
+  Registration happens at import time; the gates run in a fresh process after the build. So the
+  `forbids=` that had just been added — the thing that separates a register from a colourway —
+  was checked only where the kit module happened to be imported, which at hand-off is never.
+  Measured with a scaffolded kit forbidding gradients and a deck drawing one: caught in-process,
+  and reported by the real gate as *"a bespoke look has no FORBIDS to check"*. A capability that
+  exists in the library and not at hand-off is the shape this repo keeps re-learning, and an
+  in-process assertion would have passed the whole time. `register_surface.load_kits()` imports the
+  `surface_*.py` beside the deck, `check_register_guard` calls it on both runtimes, and a kit that
+  fails to import produces a NOTE naming it rather than a silent "nothing to check" — unregistered
+  and clean are different facts. Verified as a subprocess, which is the only way this could have
+  been caught.
+- **Both gates now say whether an INVENTED register has a kit at all.** Without one its look is
+  hand-built and none of the contracts reach it — no content rect, no loud-mark invariant, no canvas
+  scaling, no ground-resolved ink, nothing for the guard to enforce — and hand-off is the last cheap
+  moment to hear that. The note names the exact `--new` command, and `save_register` now globs with
+  `register_surface.KIT_GLOB` rather than a second copy of the pattern.
+- Verified on a register the kits were not built around: a scaffolded `tide table` gets the content
+  rect, the invariant, the palette-not-set error, all seven canvases, its own prohibition enforced
+  by a fresh-process gate, and the kit file recorded by the write-back.
+
+- **The surface kits were composed in inches, and inches do not travel.** A fixed 0.42in memphis
+  triangle is 4.2% of the reference canvas's width and 1.3% of an A0 poster's — a format
+  `formats.py` supports and `check_surface.py` gates — and bauhaus RAISED outright on portrait 9:16,
+  because a `max()` floor on the leftover band pushed the content rect back over the very hero
+  primitive it was protecting. Kits now compose in REFERENCE inches and scale to whatever canvas
+  they are handed (marks, margins, line weights, chrome type and card internals alike), and bauhaus
+  sizes its hero against the short side and takes the FOOT rather than a flank when the page has no
+  room beside one. Seven canvases are held in the tests: 16:9 at both widths, 4:3, portrait, square,
+  A0 and A1.
+- **The kits' own chrome broke two of this skill's oldest rules.** `dk.MUTE` is tuned for a LIGHT
+  canvas, and used flat across eighteen registers it measured **2.85:1** on blueprint's navy and
+  2.93:1 on editorial_paper's cream — under the 3:1 floor that applies to text at any size, shipped
+  on every page. `mute_for(GROUND)` exists for exactly this. And the furniture INVENTED things: an
+  "M A I S O N" masthead (a brand the deck does not have), a "REV A" revision letter, an "MCM" year
+  badge, a page number of index+11. That is the never-invent rule broken by the chrome rather than
+  by the content, which is the harder half to notice. A test now holds the entire vocabulary a
+  ground may say and requires every number to be the page's own index.
+- **`lint_deck`'s TEXT PADDING treated a chop as a cramped card.** A plain `dk.seal()` on an
+  otherwise empty slide reported it, so every `eastern_traditional` and `ink_wash` deck would carry
+  the warning for using the device its own register prescribes. One or two glyphs in a near-square
+  box is a stamp — `seal`, `year_badge`, `chip`, an icon badge — and the glyph is supposed to fill
+  it. Padding still applies to a card holding a line of text, verified with a positive control.
+- **`sigs.py` did not know the surface kits existed.** That lookup is where an agent finds out what
+  is already built, and SKILL.md tells it a name matching NO helper means "you supply the geometry"
+  — so asking for `halftone` or `starburst` actively instructed the author to hand-roll the thing
+  that had just been added. `register_surface` is now a module it resolves.
+- **Four registers were missing furniture their own `surface` spec names**: risograph's mono chrome,
+  brutalist's big raw numeral, museum_memorial's midnight-navy GRADIENT ground, and midcentury's
+  orbit. Found by reading each preset's spec against its builder rather than by looking at the
+  render and liking it.
+
+- **`check_register_guard` fired on a page built from nothing but deckkit helpers — 4 of the 7
+  registers that declare prohibitions.** Found by building one ordinary page (`title_bar` + `box` +
+  `text` + `callout`) under each register and running the checker, which is not what its fixtures
+  did: every fixture shape was hand-made. Two causes. **(1)** `shadow.inherit` is True whenever a
+  shape carries no explicit `<a:effectLst>` — the default state of every text box — and a text box
+  has nothing to inherit FROM, because python-pptx writes no `<p:style>` effectRef for one. So four
+  text boxes were reported as theme shadows under a message blaming "a raw `add_shape()`". The
+  condition is now a live effect REFERENCE with no effect of its own, which is exactly what
+  `add_shape()` leaves behind. **(2)** bauhaus called two ordinary side-by-side cards a confetti of
+  oversized primitives: deckkit draws a card as a shape PLUS a separate text box, so the existing
+  `has_text` exclusion never saw the pairing. A primitive with type set on it is a card, not a hero
+  form. Both are locked by a FALSE-POSITIVE FLOOR in the selftest — an ordinary deckkit page must
+  be clean under every forbidding register — and that test was verified to go red on a mutant with
+  the fixes reverted. A gate that fires on a deck built exactly to spec is not a floor; it is
+  training for the waiver reflex.
+- **`save_register`'s duplicate test merged registers that merely share a prefix.** `Grid` and
+  `Gridiron`, `Rail` and `Railyard`, `Ledger` and `Ledger Line` all came out as one register, and
+  the loser disappeared silently under the words "already kept" — the exact loss the file exists to
+  prevent, arriving through its own de-duplication. Identity is now by TOKEN, and a gloss has to
+  announce itself: the other script (`Section Drawing 建筑剖面`) or an annotation separator
+  (`— the ledger`). A bare Latin word after a Latin name is a different name, and the tie breaks
+  toward keeping two entries — a visible duplicate can be merged by the reader; a dropped register
+  is gone.
+- **The register keep-note existed only on the shared path, and only in codex prose.**
+  `codex_delivery_gate.py` now prints it too, from the same module — the icon drift twice over was
+  a rule that lived in prose on the codex side and therefore did not exist. It also compared names
+  with `in`, so a collection holding `Section Drawing 建筑剖面` was told to keep `Section Drawing`
+  at every hand-off while the tool it pointed at answered "already kept".
+- **`save_register` read only the registry root it writes to**, while `taste_file()` and
+  `list_templates()` have always read across all of them — so a Codex host would have shown an
+  empty collection and written a second copy of a register already kept under `~/.claude`. It also
+  rewrote the file in place; it now writes temp-then-replace, because an interrupt while adding one
+  line should not cost the whole collection. And `--from-history` silently skipped rows naming a
+  bespoke look without quotes (`bespoke Section Drawing register`): those are now recovered, rows
+  it still cannot read are REPORTED, and a capture that is only the noun (`bespoke register
+  invented for…`) is rejected rather than kept as a stub.
+- **A mis-shaped `.deck-gates.json` raised `AttributeError` out of `save_register`** instead of
+  reporting — the same class that once took down a whole 16-section gate run, at the worst possible
+  moment.
+
+- **`presets.apply()` only ever re-themed three of the palette slots, so every register drew
+  deckkit's own colours in the other four.** It passed `deep`, `slate` and `accents` — and BLUE,
+  TEAL, MAGENTA and TINT are what **33 component signatures default to**. Measured: after
+  `apply("terminal")`, a `callout()` on a black-and-phosphor deck came out with a `#E3004F` magenta
+  rule on a `#EAF3FA` pale-blue panel. The remap machinery inside `set_palette` — which rewrites
+  frozen signature defaults by id — was working perfectly the whole time; it was simply never told
+  the register's colours. This is the mechanical half of why one page through all 18 presets came
+  out looking like 18 colourways of one page.
+  `apply()` now fills the semantic slots (MAGENTA is the highlight, BLUE the primary, TEAL the
+  secondary; a register with fewer accents reuses its own rather than inventing a hue), and
+  `set_palette` gained the `tint` parameter it was missing so the panel fill can be reached at all.
+- **The panel fill is DERIVED, not hand-picked.** `presets.panel()` steps the register's ground 12%
+  toward its ink, so a panel is in the register by construction and stays correct if a preset's
+  colours are ever retuned — which eighteen hand-picked values would not. Verified across all 18:
+  every panel separates from its ground, and every register's ink clears the 4.5:1 body floor on
+  its own panel (lowest 8.8:1).
+
 
 - **Two false positives in the new register-guard checker, both found on real pages rather than
   fixtures.** A large TITLE BLOCK was counted as an oversized primitive — a text box's `prstGeom`
