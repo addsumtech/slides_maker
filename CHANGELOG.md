@@ -94,8 +94,8 @@ section is a distilled summary — the full notes live on the
   generates, which slides carry it) and joined to the colours `check_register_pixels` measured on
   the actual render. Preset decks are skipped — they are in the gallery already. It is **idempotent
   on a normalised name**, which is not pedantry: the gates record carries the English pick and the
-  look history the human-typed one, so `Section Drawing` and `Section Drawing 建筑剖面` are one
-  register — comparing strings kept both on the first real run. `--from-history` recovers what a
+  look history the human-typed one, so `Section Drawing` and the same name with a Chinese gloss
+  appended are one register — comparing strings kept both on the first real run. `--from-history` recovers what a
   look history already names (7 on the author's own profile), `--list` shows the collection.
   `render_deck --gate-check` NOTES an unkept register at hand-off and never blocks: keeping one is
   the user's call about their own collection. Wired into the hand-off checklist's save-this-look
@@ -311,10 +311,11 @@ section is a distilled summary — the full notes live on the
   with `.split()`, so a 40-character Chinese motif description was ONE word and slipped through
   entirely — the same blindness as measuring CJK glyph widths with Latin metrics. And the pick was
   read with a regex anchored on `picked … of`, while `references/checkpoint-convention.md` says
-  these lines follow the CONVERSATION language: a deck whose record reads `方向闸门:选定 B` reported
-  NOT CHECKED, which is the layering failure this repo keeps re-learning one file over. The pick is
+  these lines follow the CONVERSATION language, so a deck whose record line is written in Chinese —
+  a Chinese label, a Chinese pick-marker, then the direction's name — reported NOT CHECKED, which is the layering failure this repo keeps re-learning one file over. The pick is
   now found by matching a direction NAME in the line — language-independent — with a pick-marker
-  (`picked` / `chose` / `选定` / `采用` / …) breaking the tie when the line also names the losers,
+  (`picked` / `chose` / `selected` and their Chinese equivalents) breaking the tie when the line
+  also names the losers,
   as the convention asks it to. A bare `B` still never resolves to `B2`.
 - **A deck with no explicit typeface was passing the face axes in silence.** Runs that carry no
   `<a:latin>` inherit the theme's face, which is not the same as matching the picked one; the axes
@@ -436,15 +437,15 @@ section is a distilled summary — the full notes live on the
   `Gridiron`, `Rail` and `Railyard`, `Ledger` and `Ledger Line` all came out as one register, and
   the loser disappeared silently under the words "already kept" — the exact loss the file exists to
   prevent, arriving through its own de-duplication. Identity is now by TOKEN, and a gloss has to
-  announce itself: the other script (`Section Drawing 建筑剖面`) or an annotation separator
-  (`— the ledger`). A bare Latin word after a Latin name is a different name, and the tie breaks
+  announce itself: it is in the other script (a Chinese gloss after a Latin name) or it arrives
+  after an annotation separator (`— the ledger`). A bare Latin word after a Latin name is a different name, and the tie breaks
   toward keeping two entries — a visible duplicate can be merged by the reader; a dropped register
   is gone.
 - **The register keep-note existed only on the shared path, and only in codex prose.**
   `codex_delivery_gate.py` now prints it too, from the same module — the icon drift twice over was
   a rule that lived in prose on the codex side and therefore did not exist. It also compared names
-  with `in`, so a collection holding `Section Drawing 建筑剖面` was told to keep `Section Drawing`
-  at every hand-off while the tool it pointed at answered "already kept".
+  with `in`, so a collection holding that name plus its Chinese gloss was told to keep
+  `Section Drawing` at every hand-off while the tool it pointed at answered "already kept".
 - **`save_register` read only the registry root it writes to**, while `taste_file()` and
   `list_templates()` have always read across all of them — so a Codex host would have shown an
   empty collection and written a second copy of a register already kept under `~/.claude`. It also
