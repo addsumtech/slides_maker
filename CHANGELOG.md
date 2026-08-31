@@ -69,7 +69,7 @@ section is a distilled summary — the full notes live on the
   architecture, the other twelve were built against the same `surface` prose, and each one's own
   `guard` shaped it: swiss's `card()` draws NO BOX (a swiss column is a hairline and a measure, and
   boxing it is how a deck claims swiss and looks like every other card deck), ink_wash's ground is
-  the quietest in the file because its guard protects 留白, synthwave's LOUD grid horizon appears
+  the quietest in the file because its guard protects negative space, synthwave's LOUD grid horizon appears
   only on a cover or divider while content pages get the faint low-edge register its guard calls
   system rather than stamping, and blueprint's chrome never touches the ONE coral its guard reserves
   for the focal path. An unknown name raises rather than quietly handing back a plain page, and so
@@ -113,8 +113,8 @@ section is a distilled summary — the full notes live on the
   `surface` field, executed by the author reading it or not at all.
   Nothing measured the difference. `check_style_applied` verifies the CALL; `check_register_pixels`
   says in its own docstring that it judges COLOUR IDENTITY only. So "declare brutalist, ship its
-  palette on rounded cards with soft shadows" cleared every gate — 「只是一些颜色的搭配就说使用了
-  这个模板」, verifiable and unverified.
+  palette on rounded cards with soft shadows" cleared every gate — reported as "you call it using the template when it is only a colour
+  pairing" (translated from the author's Chinese), verifiable and unverified.
   The new checker reads `presets.FORBIDS`, the machine-settleable half of each preset's own
   `guard`: **rounded** (swiss/brutalist/ink_wash/blueprint set radius=0 for exactly this reason) ·
   **gradient** · **soft-shadow** (`shadow.inherit` left True — the theme shadow a raw `add_shape()`
@@ -130,8 +130,9 @@ section is a distilled summary — the full notes live on the
   through the same module.
 
 - **Decodability is measured, not asserted.** Three pieces of feedback from the first human reader
-  of a deck this repo built — *「icon 应该是一个必须包含的东西但是这个却没有」*, *「1/5/10/12 的设计我没
-  有看懂」*, *「第一页的那些横线是什么意思」* — and every automated gate had passed the deck. One root
+  of a deck this repo built — *"icons are something a deck must include, and this one has none"*, *"I could not
+  understand the design of slides 1, 5, 10 and 12"*, *"what do those rules on the first page
+  mean?"* (translated from the author's Chinese) — and every automated gate had passed the deck. One root
   cause under all three: **the skill could SAY a visual element was readable, and nothing checked
   whether the sentence was true.** Each fix turns a rule already written in prose into a measurement
   over the built file.
@@ -288,7 +289,8 @@ section is a distilled summary — the full notes live on the
 - **The direction the user PICKED was compared to nothing.** The branch-(c) gate renders four
   directions, the author clicks one, and the choice was recorded as a sentence on the design
   checkpoint's `direction gate:` line — and no check ever asked whether the deck that shipped was
-  that direction. Reported by an author on a real deck: *"我选的 B 和实际最终模版并不一样"*. The
+  that direction. Reported by an author on a real deck: *"the B I picked is not the same as the final
+  template"* (translated from the author's Chinese). The
   picked direction declared a **Georgia** display face and a **centred** cover; the deck shipped
   Helvetica Neue titles and a low-left cover, because `style.py` set `display=` and every title
   passed `dk.FONT` — the DISPLAY slot was declared and never read. Two neighbouring checks for the
@@ -905,7 +907,7 @@ only kind worth shipping a release for.
 
 - **CJK widths were short by ~46%.** `_ink_rect` took a run's face from `run.font.name`, which
   python-pptx reads out of `<a:latin>` — but a Chinese glyph renders from `<a:ea>`. So every
-  geometry check on a 中文 deck (`TEXT_OVERLAP`, `OFF_CANVAS`, `ESCAPES_CARD`, `vstack`'s block
+  geometry check on a Chinese deck (`TEXT_OVERLAP`, `OFF_CANVAS`, `ESCAPES_CARD`, `vstack`'s block
   heights) was scored in a Latin face: 27 full-width characters at 13pt measured **2.6181in
   against a true 4.8750in**. Its signature in practice is the worst kind — a page collides after
   a generous-looking margin was left, so the operator blames their own arithmetic. Resolved
@@ -1018,7 +1020,7 @@ every one of these had already passed the build-time lint AND the render-time li
   than replacing it, because the existing bands were calibrated against the old number.
 
 ### Fixed
-- 🔴 **On a 中文 deck the declared display face reached ZERO glyphs, and the documented call shape
+- 🔴 **On a Chinese deck the declared display face reached ZERO glyphs, and the documented call shape
   was the reason.** A run tuple carries one font slot, in position 6, and it writes `<a:latin>`;
   CJK glyphs render from `<a:ea>`, which takes `EAFONT`. So `(title, 40, INK, True, False,
   "Songti SC")` set the Latin face of a run whose Latin content is a stray acronym. This is the
@@ -1582,7 +1584,7 @@ below is additive.
 
 ### Fixed — self-verify (q) is now actually ENFORCED (it pointed at hooks that didn't exist)
 - The integration audit found new item (q) ("style runs through every slide") named a critic check and
-  a plan field that were both fictional, so the "只有首尾页" failure could still ship uncaught. Wired it
+  a plan field that were both fictional, so the "only the first and last page" failure could still ship uncaught. Wired it
   for real: a **`interior register:` contract-card field** (`agents/critic.md`), a **`register_interiors`
   Lens-B check** (`critic.md` schema + `references/review-rubrics.md`), and a **PRE-FLIGHT tick (6b)**
   (`SKILL.md`). A style dressed only on the bookends, with no `none — <reason>` carve, is now a finding.
@@ -1599,8 +1601,9 @@ below is additive.
   contract-card assembly list now echoes the `interior register:` field the critic reads, and two stale
   doc/comment references were corrected.
 
-### Added — the chosen style now runs through EVERY slide, not just the cover (的风格要走所有页)
-- A user reported a style that "只有首尾页" — lived only on the first/last page. Root cause: the
+### Added — the chosen style now runs through EVERY slide, not just the cover
+- A user reported a style that lived "only on the first and last page" (translated from their
+  Chinese). Root cause: the
   direction-gate preview rendered each preset's DNA on the **cover only**; interior archetype slides
   carried palette+type but no motif. **`archetypes_html._dna_ambient()`** now renders a quiet
   **ambient register signature** (a corner mark, edge rule, faint grid/scanline, recurring numeral/
@@ -1634,8 +1637,8 @@ below is additive.
 
 ### Changed — the direction gate is now PRESET-DRIVEN (real styles, not colour schemes)
 - The 3 directions shown at Gate A are now the **3 best-fit named presets** rendered with their own
-  **DNA**, not three synthesised palette/font combos. A user reported the old gate "只是不同的颜色搭配"
-  (just different colour pairings) — true: it varied palette + fonts + composition but carried no
+  **DNA**, not three synthesised palette/font combos. A user reported the old gate was "just different colour pairings"
+  (translated from their Chinese) — true: it varied palette + fonts + composition but carried no
   register motif, so Swiss and Bauhaus looked like the same slide in two colourways.
 - **`archetypes_html.preset_directions([names])`** — new bridge that converts preset names into
   direction tokens carrying a `dna` marker; **`_dna_cover()`** renders each preset's signature motif
@@ -2032,7 +2035,7 @@ below is additive.
 - **`render_deck` out-dir safety** — the pre-existing `rmtree(out)` could wipe a user directory
   (passing `.` as out deleted the pptx itself); now the dir is only removed when it holds nothing
   but this deck's own render products (OS junk tolerated, `.git`/foreign PDFs route to a safe
-  per-file clean). Special-character deck names (spaces/中文/&) verified; viewer title HTML-escaped;
+  per-file clean). Special-character deck names (spaces / CJK characters / &) verified; viewer title HTML-escaped;
   preview link is a proper `file:///` URI via `Path.as_uri()`. Docs synced (handoff-and-iteration's
   stale "PDF on request", FAQ §5 pipeline products, large-deck section-PDF cleanup, icons.md cache note).
 
@@ -2057,10 +2060,10 @@ below is additive.
   handling, ASCII-punctuation splits and rounding had drifted (~19% heavier on Chinese prose), so
   Chinese PDFs crossed long-source thresholds earlier than equivalent English ones (verified equal
   on mixed samples now).
-- Checkpoint-table headers: documented that they follow the conversation language (the 中文 column
+- Checkpoint-table headers: documented that they follow the conversation language (the Chinese column
   names in SKILL.md are not fixed for English decks). FAQ: added the `PINGFANG ON MACOS` row and
   named `CJK TIGHT LEADING` in its row. README EN/CN micro-drifts aligned (fraction/matrix fallback
-  wording, 独立复核, structured analysis, interview tab labels).
+  wording, the independent-review label, structured analysis, interview tab labels).
 
 ## [3.4.0] - 2026-07-19
 
