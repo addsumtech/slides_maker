@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import os
 import re
 import sys
 from pathlib import Path
@@ -208,6 +209,52 @@ def item8_hygiene(prs):
     return ("PASS", "no placeholder / TODO / AI-generated / unfilled template slot on any slide")
 
 
+# Fonts that live INSIDE an application bundle are the trap this helper exists for. MS Office on
+# macOS ships Calibri / Cambria / Aptos in its own app folder rather than installing them system-
+# wide: PowerPoint renders them perfectly, and LibreOffice (the render loop) and the width
+# measurement path cannot see them at all. So a deck set in Calibri on such a machine is laid out
+# against a SUBSTITUTE's metrics and "verified" against a render of a face the audience will never
+# see - a different and quieter failure than the font simply being absent, which is all item 10
+# used to be able to say. LibreOffice's own bundled fonts are the mirror image: the render sees
+# them, the measurement does not.
+_BUNDLED_FONT_DIRS = (
+    ("Microsoft Office", "/Applications/Microsoft PowerPoint.app/Contents/Resources/DFonts"),
+    ("Microsoft Office", "/Applications/Microsoft Word.app/Contents/Resources/DFonts"),
+    ("Microsoft Office", "/Applications/Microsoft Excel.app/Contents/Resources/DFonts"),
+    ("Microsoft Office",
+     "/Library/Application Support/Microsoft/Office365/User Content.localized/Fonts"),
+    ("LibreOffice", "/Applications/LibreOffice.app/Contents/Resources/fonts/truetype"),
+)
+
+
+def _norm_face(name):
+    return "".join(ch for ch in str(name).lower() if ch.isalnum())
+
+
+def _bundled_only(name):
+    """Which app bundle carries this face, when the system font path does not. None if nowhere.
+
+    Matches on the FILE STEM starting with the normalised family name, never the reverse:
+    `Cambria.ttc` must not answer for `Cambria Math`, which is a separate font and is frequently
+    absent even where Office is installed.
+    """
+    want = _norm_face(name)
+    if not want:
+        return None
+    for label, d in _BUNDLED_FONT_DIRS:
+        try:
+            entries = os.listdir(d)
+        except OSError:
+            continue
+        for fn in entries:
+            stem, ext = os.path.splitext(fn)
+            if ext.lower() not in (".ttf", ".ttc", ".otf"):
+                continue
+            if _norm_face(stem).startswith(want):
+                return label
+    return None
+
+
 def item10_fonts(prs):
     used = set()
     for s in prs.slides:
@@ -225,6 +272,25 @@ def item10_fonts(prs):
     except Exception:
         return ("NOT CHECKABLE", f"fonts used: {sorted(used)}; could not enumerate installed fonts")
     missing = sorted(f for f in used if f not in have)
+
+    # Split the two failures apart. They need opposite responses, and conflating them is how a
+    # build ships layout computed against a font it never actually saw.
+    bundled = [(f, _bundled_only(f)) for f in missing]
+    hidden = [(f, app) for f, app in bundled if app]
+    absent = [f for f, app in bundled if not app]
+    if hidden:
+        parts = ["font(s) installed ONLY inside an application bundle: {}. That app renders them; "
+                 "LibreOffice and this build's width measurement do NOT, so this deck's geometry "
+                 "was laid out against a SUBSTITUTE and the render you verified is not the face "
+                 "the audience sees. Either pick a system-wide face (Times New Roman / Arial / "
+                 "Georgia), or copy those font files into ~/Library/Fonts so the render loop can "
+                 "see them, then rebuild.".format(
+                     ", ".join("{} (inside {})".format(f, app) for f, app in hidden))]
+        if absent:
+            parts.append("Separately, {} resolve(s) NOWHERE on this machine - that one is the "
+                         "ordinary tofu risk, and for a math font it means every formula "
+                         "falls back.".format(", ".join(absent)))
+        return ("ADVISORY", " ".join(parts) + " (used: {})".format(sorted(used)))
     if missing:
         # ADVISORY, not a failure. Whether a font is installed on the machine running this
         # check says nothing about the machine the deck will be PRESENTED on - which is the

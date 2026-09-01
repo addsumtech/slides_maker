@@ -117,6 +117,15 @@ Don't reuse the previous deck's scheme out of habit.
 > weights, density, tint fractions within the locked palette; a saturation transform of a locked
 > palette is a re-litigation and goes back to the user.
 
+**Type by register (the academic default).** For a **lab meeting, group progress update,
+conference talk, job talk or thesis defense**, the expected face is a conference face — **Times New
+Roman** (serif, and the right answer whenever the deck carries equations, because prose and math
+then share one face), or **Calibri / Arial** for a sans register — with **Courier New** for mono. A
+characterful designer sans reads as marketing in that room. 🔴 And check that the face is installed
+SYSTEM-WIDE, not just inside an app bundle: Office's Calibri/Cambria on macOS are invisible to the
+render loop and to the width measurement, so a deck set in them is laid out and "verified" against
+a substitute (`font-guidance.md` → the app-bundle section). Override with a stated clause.
+
 **Non-Latin decks:** the font names below are Latin. For Chinese/Japanese/Korean, pick
 the script-appropriate equivalent and set `deckkit.EAFONT` — sans (modern/corporate/
 talks) → Heiti SC / PingFang SC / Noto Sans CJK; serif (formal/defense) → Songti SC /
@@ -127,6 +136,9 @@ Noto Serif CJK; brush → Kaiti SC. See `references/multilingual.md`.
 ## Research meeting with a supervisor / lab group
 Working session, expert audience, frequent. Optimize for *fast technical read*, not
 polish. Calm, low-chrome, content-forward.
+- **Type:** the academic default — Times New Roman (or Calibri/Arial for a sans register),
+  Courier New for mono; equations in the SAME face as the body. See the Type-by-register note
+  above; a designer sans is the wrong signal in this room.
 - **Palette:** restrained — one cool primary (slate/navy or deep teal), grey body,
   a single saturated accent reserved for "look here / the new result". Avoid busy
   multi-colour.
@@ -155,6 +167,8 @@ scannable.
 A *spoken* talk to a room, often dim. Big, legible, one message per slide; built to
 be followed at the back of the hall. **Venue conventions dominate** — if step 0 found
 an official template or venue norms, those override this section.
+- **Type:** the academic default — Times New Roman, or the venue template's own face when step 0
+  found one (venue conventions dominate here). Size for the back of the hall before anything else.
 - **Palette:** higher contrast for projection; a strong dark or strong light base
   (not mid-grey), one vivid accent. Avoid thin light-grey text — it disappears on a
   projector.
@@ -173,6 +187,8 @@ A *spoken* talk to a whole department — like a conference talk in legibility, 
 longer, more personal, and selling a research *program*, not one paper. It must read
 as "a confident future colleague," authoritative yet warm, and accessible at the back
 of a room holding people far from your subfield.
+- **Type:** the academic default — Times New Roman for an equation-heavy talk, Calibri/Arial for a
+  slide-native one. Consistency across every slide matters more than the choice.
 - **Palette:** projection-grade contrast like a conference talk — a strong base + one
   vivid accent — but a touch warmer and more personal than a sterile corporate scheme.
   One consistent **program colour** running through the arc (the through-line you keep
@@ -232,6 +248,8 @@ modern, visual; the product itself is the hero.
 ## Thesis defense
 Formal, rigorous, complete; an expert committee that will probe. Serious and
 authoritative, but still legible as a talk.
+- **Type:** the academic default — Times New Roman throughout, equations included, so the formulas
+  read as part of the argument rather than pasted into it.
 - **Palette:** sober and classic — deep navy/charcoal/maroon base, restrained accent,
   excellent contrast. Nothing trendy or playful.
 - **Density:** moderate; completeness matters more than minimalism, but never a wall

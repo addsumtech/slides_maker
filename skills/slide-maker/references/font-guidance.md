@@ -8,8 +8,10 @@ will be opened*, and flag the dependency at hand-off.
 
 ## Cross-platform-safe Latin fonts
 Reliable on Windows + macOS (and close enough on Linux/LibreOffice via metric clones):
-- **Sans:** Calibri, Arial, Verdana, Tahoma, Trebuchet MS. (Calibri ships with MS Office;
-  on a Mac *without* Office it may substitute — Arial is the safest universal sans.)
+- **Sans:** Calibri, Arial, Verdana, Tahoma, Trebuchet MS. (Calibri ships with MS Office — and
+  on macOS it ships *inside the app bundle*, invisible to the render loop and to the width
+  measurement even when Office IS installed; see the app-bundle section below. Arial is the
+  safest universal sans.)
 - **Serif:** Georgia, Times New Roman, Cambria.
 - **Mono (code):** Consolas, Courier New.
 LibreOffice (what `render_deck.sh` uses) substitutes Calibri→Carlito, Cambria→Caladea,
@@ -17,6 +19,57 @@ etc. — metric-compatible, so the render is representative.
 
 `deckkit` defaults: `FONT="Calibri"`, `MONO="Consolas"`, `EQFONT="Arial"`, `EQ_MATHFONT="STIX Two Math"` (editable native math). Override them
 right after import to match a brand or to maximise portability (`deckkit.FONT="Arial"`).
+
+## The ACADEMIC / LAB register — the expected default is a conference face, not a designer face
+**A lab meeting, a group progress update, a conference talk, a job talk and a thesis defense all
+share one type convention, and it is not the one a design-led deck reaches for: Times New Roman,
+Calibri, or Arial.** That room reads papers, posters and templates set in those faces all day, so
+they are invisible in the right way — the type gets out of the way of the physics. A characterful
+humanist or geometric sans (Avenir Next, Futura, Poppins, Gill Sans, Montserrat) is a *good face*
+that carries the wrong signal here: it reads as marketing, and on a page of equations it also
+mismatches the math, because the formula and the sentence around it end up in two different worlds.
+- **Serif register** (papers, defenses, anything equation-heavy): **Times New Roman** throughout —
+  display, body AND `EQ_MATHFONT`. One face for prose and math is what makes a formula look like
+  part of the argument instead of pasted in.
+- **Sans register** (slide-native talks, engineering status updates): **Calibri** (the face most
+  institutional .pptx templates are themed in — check the template's own `majorFont`/`minorFont`
+  before choosing anything else) or **Arial** where Calibri cannot be verified (below).
+- **Mono**: **Courier New**, not Consolas or Menlo — Consolas needs Office, Menlo is macOS-only.
+- This is a DEFAULT, not a floor. A deck that is deliberately editorial, a branded institutional
+  template with its own type, or a user who asks for something else all override it — say which in
+  one clause where the design plan records decisions.
+
+## 🔴 A font that lives inside an APP BUNDLE is a font this pipeline cannot verify
+Portability is usually framed as "will the *recipient* have it". There is a second, quieter failure
+that costs more, because it corrupts the build's own evidence.
+
+**On macOS, Microsoft Office does not install Calibri, Cambria or Aptos system-wide — it carries
+them inside its own app folder** (`/Applications/Microsoft PowerPoint.app/Contents/Resources/DFonts`).
+PowerPoint renders them perfectly. **LibreOffice — the render loop — and the width-measurement path
+cannot see them at all.** So a deck set in Calibri on such a machine is:
+- **laid out against a substitute's metrics**, which silently voids every "measure, never hand-pick"
+  guarantee (`measure_text`, `vstack`, `bottom_callout`, `fit_text_size` — all of them), and
+- **"verified" against a render of a face nobody will see**, so the Step-5 render self-check passes
+  on pixels that are not the deliverable.
+
+Both linters stay green throughout, because neither knows which font actually got used.
+**`preflight_check.py` item 10 now detects this specifically** and says so in those terms rather
+than the generic "may be fine where the deck is presented". Three responses, in order:
+1. **Pick a system-wide face** (Times New Roman, Arial, Georgia, Courier New are installed on stock
+   macOS *and* Windows). This is the default answer and needs no permission.
+2. **Make the bundled font visible to the renderer** — copy those files into `~/Library/Fonts`, then
+   rebuild so the measurements and the render are of the real face. It changes the user's font
+   environment, so **ask first**.
+3. **Ship it unverified, knowingly** — legitimate when the deck must match an institutional theme,
+   but then say in the hand-off that the layout was computed against a substitute.
+
+**`Cambria Math` is not implied by having Office.** Measured on a machine with PowerPoint installed:
+Cambria, Cambria Bold and Cambria Italic were in the bundle and **Cambria Math was not present at
+all** — so `EQ_MATHFONT = "Cambria Math"` would have tofu'd every formula. Set the math font to a
+face you have confirmed is installed; **Times New Roman is the safe academic answer**, since
+`equation_native` writes real text runs (italic variables, true sub/superscripts) and Times carries
+Σ Φ ∇ λ ⟨⟩ and the rest of the operators an MR/ML deck needs. `equation_png` remains the
+font-independent escape for 2-D math.
 
 ## Type pairing — give different roles different fonts (don't ship one font everywhere)
 **This applies to EVERY deck, in any language** — a Latin/English deck benefits from role-based
@@ -49,7 +102,9 @@ CJK (or other) text should ride a clean Latin face while the script keeps its ow
 ## Equations: native math needs a math font; raster is font-independent
 **`equation_native`** (the editable default) renders real text runs in a **math font** (`EQ_MATHFONT`
 = STIX Two Math; `Cambria Math` for Office) — its glyphs (ℒ Σ ‖) **tofu if that font is absent** on the
-opening machine (STIX ships on neither stock macOS nor Windows; Cambria Math needs MS Office). **`equation_png`**
+opening machine (STIX ships on neither stock macOS nor Windows; Cambria Math needs MS Office **and is
+frequently missing even where Office is installed** — verify it, don't assume it. For an academic deck
+set `EQ_MATHFONT` to **Times New Roman**: system-wide on macOS and Windows, and it matches the body). **`equation_png`**
 rasterises math with matplotlib's bundled fonts, so it carries **no font dependency** and renders
 identically anywhere — so when the math font can't be guaranteed (or the formula is 2-D), **fall back to
 `equation_png`**. Flag the math-font dependency at hand-off (see `design-principles.md`).

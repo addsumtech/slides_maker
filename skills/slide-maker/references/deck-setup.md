@@ -96,3 +96,16 @@ Cambria Math — for native `equation_native` math; `EQFONT` only affects inline
 dependency at hand-off. Editable `equation_native` math needs a **math font** (STIX Two Math / Cambria
 Math) for its glyphs — flag that dependency; `equation_png` is font-independent (rasterised).
 Full list, fallbacks, and tofu recovery in `references/font-guidance.md`.
+
+**🔴 Two font rules that are decided HERE, before the first `set_palette`.** (1) **The academic /
+lab / conference register expects a conference face** — Times New Roman (serif, and the answer
+whenever the deck carries equations, so prose and math share one face), or Calibri / Arial for a
+sans register, with Courier New for mono; a designer sans reads as marketing in that room
+(`design-by-purpose.md` → Type by register). (2) **A font that lives inside an APP BUNDLE cannot be
+verified by this pipeline** — on macOS, Office keeps Calibri / Cambria / Aptos inside
+`/Applications/Microsoft *.app/Contents/Resources/DFonts`, where PowerPoint sees them and
+LibreOffice and the width measurement do not, so the deck gets laid out against a substitute and
+the render self-check verifies a face nobody will see. `preflight_check.py` item 10 detects this
+case by name; the default fix is a system-wide face. `Cambria Math` in particular is **often absent
+even where Office is installed** — verify it before setting `EQ_MATHFONT`, or use Times New Roman.
+Full rationale: `references/font-guidance.md`.

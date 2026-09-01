@@ -11,6 +11,46 @@ section is a distilled summary — the full notes live on the
 
 ### Added
 
+- **The type question a lab room actually asks, and the font trap that voids the build's own
+  evidence.** Asked for a lab-meeting deck, the pipeline set it in Avenir Next and the user
+  corrected it: *对于实验室或者会议场景，ppt的默认字体应该是new times或者calibri*. Nothing was
+  broken — the rule simply was not written anywhere. `design-by-purpose.md` gives every academic
+  purpose a **Palette · Density · Layout · Icons · Signature** row and **no type row at all**, so
+  the face was inherited from whatever the template profile happened to name, and a characterful
+  designer sans reads as marketing in a room that spends its day in papers and posters. The four
+  academic purposes (research meeting · conference talk · job talk · thesis defense) now carry a
+  `Type:` line pointing at one shared **Type by register** note: Times New Roman for the serif
+  register — display, body AND `EQ_MATHFONT`, so a formula looks like part of the argument rather
+  than pasted into it — Calibri/Arial for a sans register, Courier New for mono.
+  🔴 **The second half is the one with teeth, because it corrupts the build's own evidence.**
+  Portability was only ever framed as *will the RECIPIENT have this font*. On macOS, Microsoft
+  Office does not install Calibri, Cambria or Aptos system-wide — it carries them INSIDE its app
+  folder (`/Applications/Microsoft PowerPoint.app/Contents/Resources/DFonts`). PowerPoint renders
+  them; **LibreOffice — the render loop — and the width-measurement path cannot see them at all.**
+  A deck set in Calibri on such a machine is laid out against a substitute's metrics, which
+  silently voids every measure-never-hand-pick guarantee (`measure_text`, `vstack`,
+  `bottom_callout`, `fit_text_size`), and is then "verified" at Step 5 against a render of a face
+  nobody will see — with both linters green throughout, because neither knows which font got used.
+  `preflight_check.py` item 10 used to answer that case with *"may be fine where the deck is
+  presented"*: the wrong risk, stated reassuringly. It now scans the known app-bundle font
+  directories and reports the two failures APART — a face that resolves NOWHERE keeps the old
+  presenter-machine wording, a face that resolves only inside a bundle is told it laid out against
+  a SUBSTITUTE, and when both are present both are said, so a bundled body font cannot swallow a
+  genuinely missing math font. The family match is `stem.startswith(family)` and never the
+  reverse, because `Cambria.ttc` must not answer for **`Cambria Math`** — measured on a machine
+  with PowerPoint installed, Cambria, Cambria Bold and Cambria Italic were all present and
+  **Cambria Math was not there at all**, so `EQ_MATHFONT = "Cambria Math"` would have tofu'd every
+  formula on a deck whose author had every reason to believe Office guaranteed it.
+  Wired the way this repo makes a rule real: the reason in `references/font-guidance.md` (both new
+  sections), the trigger in `references/deck-setup.md` §Fonts — the file SKILL.md routes to before
+  the first `set_palette` — the per-purpose default where the art director reads it, the check in
+  `preflight_check.py`, and `tests/test_font_verifiability.py` holding all of it, including that
+  the check stays QUIET on the face it recommends (a check that fires on its own advice is one
+  authors learn to ignore).
+
+
+### Added
+
 - **A photo can now CARRY a page, as a component rather than a hand-roll — `deckkit.photo_backdrop`.**
   `references/image-generation.md` has named three placements for a content image for a long time —
   full-bleed background, side panel, inline figure — and the first of them was the only one with no
