@@ -1259,6 +1259,7 @@ The helper set, by job:
   mis-places that line — and tags each bar so the build-time **`DATUM SCALE`** check can confirm the
   geometry still matches the numbers. A bar you draw yourself is unchecked, not assumed correct;
   `mark_datum(shape, value, group=)` opts it in.
+- **A photo carrying the page:** **`photo_backdrop`** — the image FULL-BLEED, the words on a solid panel placed where `image_fx.quiet_region` MEASURES the picture calmest, returning `(x, y, w, h, ink)` with the ink resolved against the panel rather than against the photograph, and the attribution credit set inside it. `alt=` is required (a missing one is a blocking a11y finding) and an alpha under **0.88** RAISES — a scrim only dims linework, it does not remove it, so `scrim_overlay` is the component that means a deliberate wash. `panel=` overrides the measurement (`left`/`right`/`bottom`), `panel="none"` returns the safe rect with an ink chosen from the image's own luminance and hands you the contrast.
 - **Surface (dark / glass / print):** `glass_card`/`glow`/`scrim_overlay` (gradient+alpha fill),
   `offset_shadow` (hard letterpress/riso shadow).
   **`slide_background(s, color)` paints a SOLID page backdrop — use it instead of

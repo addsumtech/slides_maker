@@ -246,6 +246,13 @@ jobs:
           set -o pipefail
           python scripts/check_register_guard.py --selftest
 
+      - name: Photo backdrop (the panel goes where the image measures calmest)
+        run: |
+          set -o pipefail
+          python tests/test_photo_backdrop.py | tee /tmp/photobd.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/photobd.log || {
+            echo "::error::photo-backdrop suite did not run to completion"; exit 1; }
+
       - name: Direction fidelity (the direction the user PICKED must be the deck that ships)
         run: |
           set -o pipefail

@@ -107,6 +107,18 @@ CALL-SHAPE CONTRACTS (the ones that have actually gone wrong):
 # than none: it is copied once, fails, and teaches that the tool cannot be trusted. The test is the
 # guarantee; the author of this dict is not.
 EXAMPLES = {
+    # photo_backdrop() places the photo FULL-BLEED and returns the content rect on a solid panel
+    # over the image's calmest region, plus the ink to use on it. `alt` is required and an alpha
+    # under 0.88 raises: a scrim only dims linework, it does not remove it.
+    "photo_backdrop": 'x, y, w, h, ink = dk.photo_backdrop(\n'
+                      '    s, "skyline.png",\n'
+                      '    alt="a city skyline under an open sky",\n'
+                      '    credit="Photographer / CC BY-SA")     # placed INSIDE the panel\n'
+                      'dk.text(s, x, y, w, 1.0, [[("The claim", 30, ink, True, False)]])\n'
+                      '# panel="left"|"right"|"bottom" overrides the measurement;\n'
+                      '# panel="none" gives the safe rect and an ink chosen from the image\'s own\n'
+                      '# luminance - and then the contrast is yours to own.',
+
     # skeleton() RETURNS NAMED RECTS for one of the eight page ARCHITECTURES and paints nothing.
     # `plan_rhythm.py` proposes which kind each slide gets; this is how you build it.
     "skeleton": 'R = dk.skeleton(s, "split")            # statement split island dashboard\n'

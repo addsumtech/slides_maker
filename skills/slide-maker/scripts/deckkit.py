@@ -2282,6 +2282,144 @@ def spec_list(slide, x, y, lines, *, font=None, color=DEEP, size=12, gap=0.32):
     return cy
 
 
+def photo_backdrop(slide, path, *, alt, panel="quiet", width=0.46, alpha=1.0, fill=None,
+                   pad=0.34, credit=None, band=0.42):
+    """A photo FULL-BLEED with the content on a near-opaque panel over the image's CALMEST region.
+
+    THE FORM. A sourced photograph carrying a page, with the words on a solid block rather than
+    floating on the picture. It is one of the three placements `image-generation.md` names for a
+    content image (full-bleed background · side panel · inline figure), it was the only one with no
+    component, and every part of it existed while the composition did not: `picture(fit="cover")`,
+    `slide_background`, `scrim_overlay`, `photo_card`, `bottom_callout`. Hand-rolled, the same three
+    things go wrong each time — the panel lands where the picture is busiest, the ink is chosen by
+    eye against a photograph rather than against the panel, and the panel is made translucent enough
+    to look elegant and too translucent to read.
+
+    WHERE THE PANEL GOES IS MEASURED, not picked. `image_fx.quiet_region()` scores the image by
+    local luminance variance and returns its calmest rectangle; the panel is snapped to the clean
+    architectural shape nearest that region — a left band, a right band, or a lower band — so the
+    words sit over the least informative part of the photograph and the subject stays visible.
+    `panel="left"|"right"|"bottom"` overrides it, `panel="none"` returns the full safe rect for a
+    page whose text sits directly on the picture (then YOU own the contrast).
+
+    🔴 THE ALPHA FLOOR IS THE RULE, NOT A DEFAULT. SKILL.md's render self-check says a scrim only
+    DIMS a bright line — it does not remove it — so text over image linework needs a near-opaque
+    panel (alpha >= 0.88). Passing less raises here rather than shipping a page whose title has a
+    balustrade running through it; for a deliberate gradient wash, `scrim_overlay` is the component
+    that means that, and it says so in its own name.
+
+    Returns `(x, y, w, h, ink)` — the content rect INSIDE the panel, and the ink colour resolved
+    against the panel's own fill (`on()`), never against the photograph.
+
+    `alt` is required: a photograph is informative content, and a missing alt-text is a BLOCKING
+    accessibility finding at hand-off, so the component will not let a deck acquire one.
+    `credit="Photographer / CC BY-SA"` places the attribution line an attribution-required licence
+    needs ON THE SLIDE, which is what `check_image_provenance` looks for.
+
+    🔴 WHEN NOT TO USE THE PANEL AT ALL. This puts an opaque block over the calmest part of the
+    picture — which is right when the photograph is busy everywhere and the words have nowhere to
+    stand, and wrong when that calm part is the best thing in the frame. A wide clean sky covered
+    by a panel throws the sky away and keeps the clutter. There, `panel="none"` is the stronger
+    page: it returns the safe rect and an ink chosen from the image's own measured luminance, and
+    the words sit ON the photograph. Look at the render and decide; the measurement can tell you
+    WHERE the picture is calmest and cannot tell you whether it is calm enough to write on.
+    """
+    if not str(alt or "").strip():
+        raise ValueError(
+            "photo_backdrop(): `alt` is required. A full-bleed photograph is informative content, "
+            "and MISSING ALT-TEXT is a blocking accessibility finding at hand-off — pass one "
+            "sentence describing what the photograph shows.")
+    if panel not in ("quiet", "left", "right", "top", "bottom", "none"):
+        raise ValueError("photo_backdrop(): panel must be quiet / left / right / top / bottom / "
+                         "none, got {!r}".format(panel))
+    if panel != "none" and alpha < 0.88:
+        raise ValueError(
+            "photo_backdrop(): alpha={:.2f} is under the 0.88 floor. A scrim only DIMS the image's "
+            "linework, it does not remove it, so a title over a photograph needs a near-opaque "
+            "panel (SKILL.md render self-check, 'Text over an image'). For a deliberate gradient "
+            "wash use `scrim_overlay()`, which is the component that means that.".format(alpha))
+
+    W, H = _slide_size(slide)
+    pic = picture(slide, path, 0, 0, W, H, fit="cover")
+    alt_text(pic, alt)
+
+    lum = None
+    if panel in ("quiet", "none"):
+        try:
+            import image_fx
+            fx, fy, fw, fh, lum = image_fx.quiet_region(path)
+            if panel == "quiet":
+                cx, cy = fx + fw / 2.0, fy + fh / 2.0
+                # Snap the measured region to a clean architectural shape: a raw grid rectangle is
+                # an awkward block, a band is a composition. A WIDE calm region becomes the band on
+                # its own side — top or bottom — and a TALL one becomes the side band. An earlier
+                # version had no top band at all, so a picture that was calm across the sky pushed
+                # the words onto a side, which is the opposite of what the measurement said.
+                if fw >= 0.62 and fh <= 0.55:
+                    panel = "bottom" if cy > 0.5 else "top"
+                else:
+                    panel = "left" if cx < 0.5 else "right"
+        except Exception as exc:                       # unreadable image, no Pillow, odd mode
+            print("[deckkit] photo_backdrop: could not measure the image's calm region ({}: {}) — "
+                  "falling back to a left band. That is a guess, not a measurement."
+                  .format(exc.__class__.__name__, exc))
+            if panel == "quiet":
+                panel = "left"
+
+    if panel == "none":
+        # No panel, so the ink cannot come from one: it comes from the image's own measured
+        # luminance, which is the whole reason `quiet_region` returns it.
+        x, y, w, h = content_band(slide)
+        bright = (lum if lum is not None else 255) > 150
+        return (x, y, w, h, RGBColor(0x14, 0x14, 0x14) if bright else RGBColor(0xF5, 0xF5, 0xF5))
+
+    pw = max(2.0, W * float(width))
+    # A side band has to hold a COLUMN of text. On a narrow canvas it cannot: at width=0.46 a
+    # portrait 9:16 page leaves 1.9in of usable measure, which is a caption, not a page. Fall back
+    # to the horizontal band on the calm side and say so, rather than returning a rect the caller
+    # will discover is too thin only when the text wraps to one word a line.
+    if panel in ("left", "right") and (pw - 2 * pad) < 2.6:
+        panel = "bottom"
+        print("[deckkit] photo_backdrop: a {:.1f}in side band would leave {:.1f}in of measure on "
+              "this canvas — using the lower band instead, which is the shape that holds a column "
+              "here.".format(pw, pw - 2 * pad))
+    if panel == "left":
+        px, py, pw_, ph = 0.0, 0.0, pw, H
+    elif panel == "right":
+        px, py, pw_, ph = W - pw, 0.0, pw, H
+    elif panel == "top":
+        bh = max(1.2, H * float(band))
+        px, py, pw_, ph = 0.0, 0.0, W, bh
+    else:                                              # bottom band
+        bh = max(1.2, H * float(band))
+        px, py, pw_, ph = 0.0, H - bh, W, bh
+
+    ground = fill if fill is not None else (GROUND if GROUND is not None else WHITE)
+    if alpha >= 1.0:
+        box(slide, px, py, pw_, ph, fill=ground, line=None)
+    else:
+        # A FLAT gradient is how a solid fill carries alpha here: both stops the same colour, both
+        # at the requested opacity. `pic_alpha` sets a PICTURE's opacity and cannot tint a shape,
+        # and a second overlay rectangle would double the ink the contrast checks measure.
+        box(slide, px, py, pw_, ph, grad=[(0.0, ground, alpha), (1.0, ground, alpha)], line=None)
+    ink = on(ground)
+
+    if credit:
+        # INSIDE the panel, in the panel's own ink. The first version put it on the photograph and
+        # picked its colour from the CALM region's luminance — so a credit sitting on the dark
+        # buildings at the foot of a bright-sky picture was set in dark ink and vanished. The panel
+        # is the one surface on this page whose contrast is known.
+        # Aligned to the panel's SHAPE: a side band reads down its left edge, a horizontal band
+        # reads across, so the credit tucks into the inner corner rather than stranding itself at
+        # the foot of a tall band with nothing beside it.
+        _al = PP_ALIGN.RIGHT if panel in ("top", "bottom") else PP_ALIGN.LEFT
+        text(slide, px + pad, py + ph - pad - 0.24, max(1.2, pw_ - 2 * pad), 0.24,
+             [[(str(credit), 8.5, ink, False, False)]], align=_al)
+
+    foot = (0.34 if credit else 0.0)      # the credit lives inside the panel, so it reserves space
+    return (px + pad, py + pad, pw_ - 2 * pad, ph - 2 * pad - foot, ink)
+
+
 def photo_card(slide, x, y, w, h, *, role="info", accent=MAGENTA, r=0.1, alpha=0.92):
     """A translucent tinted card to hold text ON a photo (keeps the image visible behind). `role`:
     'info' (light), 'primary' (dark), 'accent' (accent tint). Returns the text colour to use on it."""

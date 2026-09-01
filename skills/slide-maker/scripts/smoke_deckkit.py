@@ -531,6 +531,23 @@ def _every_scaffold_runs():
                     _v = max(0, int(210 - _d * (1.4 + 0.12 * _i)))
                     _px[_x, _y] = (28 + _v, 30 + int(_v * 0.92), 36 + int(_v * 0.8))
             _im.save(os.path.join(TMP, _p))
+        # The photo_backdrop scaffold needs a PHOTO-LIKE plate, and one with a measurably calm
+        # region: the component's whole claim is that it puts the panel where the picture is
+        # quietest, so a fixture of uniform noise would let a broken measurement pass. Calm sky
+        # across the top, a busy skyline along the bottom-left.
+        _sky = _SmkIm.new("RGB", (640, 360), (150, 170, 195))
+        _sp = _sky.load()
+        for _y in range(360):
+            for _x in range(640):
+                _t = _y / 360.0
+                _sp[_x, _y] = (int(120 + 60 * (1 - _t)), int(145 + 55 * (1 - _t)),
+                               int(180 + 40 * (1 - _t)))
+        for _bx in range(0, 340, 34):
+            _bh = 60 + (_bx * 7) % 130
+            for _y in range(360 - _bh, 360):
+                for _x in range(_bx, min(_bx + 28, 640)):
+                    _sp[_x, _y] = (52, 56, 64) if ((_x + _y) % 11) else (206, 198, 158)
+        _sky.save(os.path.join(TMP, "skyline.png"))
         # The qr_panel scaffold needs a code to place: this library does not implement QR encoding
         # and refuses to draw a placeholder, so the scaffold passes `image=`. Deterministic pattern
         # rather than a flat plate, for the reason above — and with the three finder squares, so it

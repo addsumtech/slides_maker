@@ -60,6 +60,7 @@ EMITTERS = set()
 
 # form components + the concrete guarantee each one gives that a hand-roll does not
 FORM_GUARANTEE = {
+    "photo_backdrop": "the content panel is placed where the image MEASURES calmest, and the ink is resolved against the panel rather than against the photograph",
     "sankey": "ribbon width strictly proportional to value on ONE deck-wide scale",
     "venn": "zone labels placed and SIZED from each region's own geometry",
     "native_chart": "a real editable chart; axis derived from the data, non-Latin labels render",

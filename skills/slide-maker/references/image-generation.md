@@ -110,7 +110,8 @@ How a plate sits on the slide is part of the system, so keep it consistent and p
   single content slide** when the other content slides have none — it reads as arbitrary and breaks
   the deck's visual system (the eye asks "why does only this slide have a top image?"). A generated
   content plate **needn't be a header at all** — place it where it *serves the content*: a full-bleed
-  background under native text, a **side panel** beside the points, or an **inline figure** in the
+  background under native text (**`deckkit.photo_backdrop`** builds that one: panel position measured
+  from the image, ink resolved against the panel, credit inside it), a **side panel** beside the points, or an **inline figure** in the
   content area. Title chrome is the `title_bar`/`editorial_header` job, not a generated image's.
 - **One treatment family across the plated slides.** When several content slides carry a plate, give
   them the **same role and framing** (e.g. all right-side panels, or all full-bleed dividers) and one

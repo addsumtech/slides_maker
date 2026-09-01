@@ -9,6 +9,42 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+### Added
+
+- **A photo can now CARRY a page, as a component rather than a hand-roll — `deckkit.photo_backdrop`.**
+  `references/image-generation.md` has named three placements for a content image for a long time —
+  full-bleed background, side panel, inline figure — and the first of them was the only one with no
+  component. Every part existed (`picture(fit="cover")`, `slide_background`, `scrim_overlay`,
+  `photo_card`, `bottom_callout`) and the composition did not, so it was assembled by hand each time
+  and the same three things went wrong: the panel landed where the picture was busiest, the ink was
+  chosen by eye against a photograph instead of against the panel, and the panel was made
+  translucent enough to look elegant and too translucent to read.
+  The panel's position is MEASURED: `image_fx.quiet_region()` scores the image by local luminance
+  variance, and the panel snaps to the clean architectural shape nearest that region — a left, right,
+  top or lower band — so the words sit over the least informative part and the subject stays visible.
+  It returns `(x, y, w, h, ink)` with the ink resolved against the panel, never against the
+  photograph. 🔴 An alpha under **0.88 raises**, because a scrim only DIMS the image's linework and
+  a title over a balustrade stays crossed by it (SKILL.md's render self-check has said so for a long
+  time and nothing enforced it); `scrim_overlay` remains the component that means a deliberate wash.
+  `alt=` is required, so a deck cannot acquire a blocking accessibility finding it would only meet
+  at hand-off, and `credit=` places the attribution line inside the panel, which is where
+  `check_image_provenance` looks for it.
+  🔴 **And it says when NOT to use the panel.** An opaque block over a wide clean sky throws the sky
+  away and keeps the clutter; `panel="none"` returns the safe rect with an ink chosen from the
+  image's own measured luminance and lets the words sit on the photograph. The measurement can say
+  where a picture is calmest and cannot say whether it is calm enough to write on — that is a look,
+  and both the docstring and the routing row say so.
+  Wired the way this repo makes a capability real rather than merely present: a row in
+  `references/form-selection.md` (with the dose rule — a full-bleed plate under a bullet list is the
+  oldest way to make a deck look designed and say less), a line in SKILL.md's inline component
+  catalogue, its guarantee in `component_audit.FORM_GUARANTEE`, and a runnable `sigs.py --example`
+  scaffold that the smoke suite EXECUTES against a fixture whose calm region is measurable.
+  Two defects the RENDER found and the tests did not: the credit was placed on the photograph and
+  coloured from the calm region's luminance, so a credit at the foot of a bright-sky picture was set
+  in dark ink over dark buildings; and a side band on a portrait canvas left 1.9in of measure, which
+  is a caption rather than a page — it now falls back to the horizontal band and says why.
+
+
 ## [5.2.0] — 2026-08-30
 
 ### Added
