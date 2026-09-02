@@ -54,6 +54,15 @@ from pathlib import Path
 
 REPO = "addsumtech/slides_maker"
 RAW_VERSION_URL = f"https://raw.githubusercontent.com/{REPO}/main/skills/slide-maker/VERSION"
+# 🔴 A VERSION STRING CANNOT ANSWER "am I running what main has". It only moves on a RELEASE, so
+# every commit between releases is invisible to it — which is exactly the development case.
+# Measured: a copy whose SKILL.md had been truncated to 2,000 bytes of 278,400 passed this check
+# SILENTLY, because its VERSION still read 5.2.0. In one real session the installed copy was three
+# commits behind, this said nothing, and a whole deck was built by a skill that did not contain
+# rules the repo had already fixed and pushed. `SKILL.sha256` is committed beside the skill and
+# says what main's tree hashes to, so a copy can compare its own content against it.
+RAW_FINGERPRINT_URL = (f"https://raw.githubusercontent.com/{REPO}/main/"
+                       "skills/slide-maker/SKILL.sha256")
 CACHE_HOURS = 24
 NET_TIMEOUT = 6          # seconds; a slow network must not make a deck slow to start
 GIT_TIMEOUT = 8
@@ -165,6 +174,27 @@ def copy_shape(local: str | None) -> dict | None:
 
     A Claude Code PLUGIN install is also a copy on disk, but its update path is the plugin
     system — telling it `npx skills add` would install a second, competing copy beside it."""
+    shape = "plugin" if any("plugins" == part or "plugins" in part
+                            for part in SKILL_ROOT.parts[:-2]) else "copy"
+
+    # CONTENT FIRST, and usually the only request: if this tree hashes to what main hashes to,
+    # the version necessarily matches too and there is nothing to say. A mismatch is the case
+    # VERSION cannot see, so only then is it worth asking what the released version is.
+    local_fp = remote_fp = None
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from skill_fingerprint import fingerprint as _fp
+        local_fp = _fp()
+        req = urllib.request.Request(RAW_FINGERPRINT_URL,
+                                     headers={"User-Agent": "slide-maker-version-check"})
+        with urllib.request.urlopen(req, timeout=NET_TIMEOUT) as r:
+            remote_fp = r.read().decode("ascii", "replace").split()[0].strip()
+    except Exception:
+        local_fp = remote_fp = None      # any failure here falls back to the VERSION compare
+    if local_fp and remote_fp and local_fp == remote_fp:
+        return {"shape": shape, "local": local, "remote": local, "dirty": None, "behind": 0,
+                "drift": None, "fingerprint": local_fp}
+
     try:
         req = urllib.request.Request(RAW_VERSION_URL,
                                      headers={"User-Agent": "slide-maker-version-check"})
@@ -179,10 +209,14 @@ def copy_shape(local: str | None) -> dict | None:
     # diff against, so whether the user edited it is genuinely unknowable here — and the update
     # prompt must say "I cannot tell" rather than "you have no local changes", which would be a
     # claim that quietly licenses overwriting someone's work.
-    shape = "plugin" if any("plugins" == part or "plugins" in part
-                            for part in SKILL_ROOT.parts[:-2]) else "copy"
+    version_behind = 1 if (lv is None or lv < rv) else 0
+    # Same released version, different tree = work landed on main since the last release. That is
+    # the state this check was blind to, and it is the state a developer is in most of the time.
+    content_drift = bool(local_fp and remote_fp and local_fp != remote_fp)
     return {"shape": shape, "local": local, "remote": remote, "dirty": None,
-            "behind": 1 if (lv is None or lv < rv) else 0}
+            "behind": 1 if (version_behind or content_drift) else 0,
+            "drift": "version" if version_behind else ("content" if content_drift else None),
+            "fingerprint": local_fp}
 
 
 # ── report ─────────────────────────────────────────────────────────────────────────────
@@ -218,6 +252,13 @@ def notice(res: dict) -> str | None:
         n = res["behind"]
         return (f"slide-maker is {n} commit{'s' if n != 1 else ''} behind "
                 f"{REPO}@main{local_work(res)}")
+    if res.get("drift") == "content":
+        # Direction is genuinely unknowable from a hash, so the wording does not claim one — and
+        # it names local edits, because on a copied install those are the other way to get here.
+        return (f"slide-maker's installed copy DIFFERS from {REPO}@main at the same version "
+                f"({res.get('local') or 'unknown'}) — it is not running what main has. Commits "
+                f"land between releases, so VERSION cannot see this. (Local edits to the "
+                f"installed copy look the same from here.)")
     return (f"slide-maker {res.get('remote')} is available "
             f"(installed: {res.get('local') or 'unknown'}){local_work(res)}")
 

@@ -1,5 +1,17 @@
 # Hand-off & iterating after delivery — don't lose the user's edits
 
+🔴 **You no longer have to REMEMBER to check whether the user hand-edited the deck.** `declare_delivery`
+records the sha256 of what the build script saved, and `render_deck.py --gate-check` reports
+`EDITED SINCE BUILD` when the file on disk no longer matches it. Measured, and the reason this exists:
+a user edited a delivered deck in PowerPoint and saved it beside the built one — it was invisible to
+every tool in the repo, and was noticed only because the folder had moved. The reconcile procedure
+below was documented the whole time and nothing ever said it was needed.
+🔴 **It reports, and never blocks.** Hand-editing a delivered deck is normal, and the right response
+depends on intent — what was missing was any way to KNOW. Its honest limit: it tells you at the gate,
+not before a rebuild overwrites, so run `--gate-check` before you regenerate a deck you have handed
+over.
+
+
 The deck doesn't stop mattering once it's saved. Two things go wrong *after* delivery,
 and both are avoidable:
 1. The user doesn't realize the deck is fully editable (or is afraid to touch it).

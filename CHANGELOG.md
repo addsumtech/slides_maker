@@ -11,6 +11,61 @@ section is a distilled summary — the full notes live on the
 
 ### Added
 
+- **A copied install can finally tell it is not running what main has.** `check_version.py`
+  compared `skills/slide-maker/VERSION`, which only moves on a RELEASE — so every commit between
+  releases was invisible, which is precisely the development case. Tested directly: a copy whose
+  `SKILL.md` had been truncated to 2,000 bytes of 278,400 — **99.3% of the skill gone** — passed
+  `check_version.py --force` silently with exit 0, because its VERSION still read `5.2.0`. The real
+  cost, in one session: the installed copy was three commits behind, the check said nothing, and a
+  whole deck was built by a skill that did not contain rules the repo had already fixed and pushed;
+  it was noticed only because someone happened to `ls` the install path.
+  `scripts/skill_fingerprint.py` hashes the tree (paths included, so a rename or deletion moves it;
+  caches, OS turds and the fingerprint file itself excluded), `SKILL.sha256` is committed beside the
+  skill and says what main hashes to, and the copy shape compares its OWN content against that file.
+  **Content first, and usually the only request** — if the trees agree the version necessarily does
+  too. A CI step regenerates and fails on a stale fingerprint, because "remember to regenerate it"
+  is exactly the habit this repo keeps proving does not hold. Every failure path stays silent: a
+  fingerprint fetch that fails falls back to the old VERSION compare, and both unavailable returns
+  None, so this can never be the reason a deck did not get built.
+
+### Fixed
+
+- **Three rules whose documented exception could not be recorded — so the record had to lie.**
+  Each was hit in one session, and they share a shape.
+  🔴 **`material_probe` had NO waiver arm** (`grep -c 'material_probe.*waiv'` → 0 in both gates)
+  while SKILL.md says the probe is skipped on "a registered/provided template or a Mode-A mimic …
+  or a 1-2 slide tiny ask". A deck on a registered template had to invent a probe artifact and
+  write a note into its own record explaining that the gate and the prose disagreed. Both paths now
+  take `{"waived": "<which template / mimic / how many slides>", "waived_category":
+  "registered-template | provided-template | mode-a-mimic | tiny-ask"}`, share one carve
+  vocabulary, and **refuse `conservative` by name** — Step 2 says restraint is a material decision
+  too. A bare category with no written reason is refused as well.
+  🔴 **`icon_none_category` could not say "the user asked for no icons".** The four values each make
+  a claim about the DECK; a deck whose user said 「不需要icon」 was filed `template-locked` — a
+  different claim, and one the Codex gate VERIFIES against the built file, so the forced label can
+  fail for the wrong reason too. `user-declined` added on both runtimes, with a test that they
+  carry the same set.
+  🔴 **`NO NOTES` had no recordable opt-out, though its twin does.** `builds="static"` exists so a
+  user's decision stops reading as an omission; removing the spoken script is the same kind of
+  decision and had nowhere to live, so the warning fired on every lint run forever and was waived
+  by hand each time. `declare_delivery(..., notes="none")` records it and the warning stands down —
+  **and says so**, so a silenced warning is visible rather than merely absent. 🔴 **The word budget
+  is deliberately NOT raised**: the skill's position is that sentences belong in the notes, so a
+  deck carrying them on the slides is a real tension worth still seeing, and moving the ceiling
+  would use the tooling to endorse what the skill argues against.
+- **Hand-edits to a delivered deck were invisible to every tool in the repo.**
+  `handoff-and-iteration.md` documented the reconcile procedure the whole time and nothing ever
+  said a reconcile was NEEDED. Measured: a user edited a delivered deck in PowerPoint and saved it
+  beside the built one; it was found only because the folder had moved. `declare_delivery` now
+  records the sha256 of what the build script saved, and `--gate-check` reports `EDITED SINCE
+  BUILD` when the file no longer matches. It **reports and never blocks** — hand-editing a
+  delivered deck is normal and the right response depends on intent; what was missing was any way
+  to know. Its honest limit is documented too: it fires at the gate, not before a rebuild
+  overwrites, so run `--gate-check` before regenerating a deck you have handed over.
+
+
+### Added
+
 - **The research progress deck: the arc it needs, the ledger that keeps it honest, and one geometry
   trap.** Four defects from a single delivered lab-meeting deck, none of which the pipeline could
   have caught.

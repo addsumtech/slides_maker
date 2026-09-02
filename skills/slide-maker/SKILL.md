@@ -858,6 +858,12 @@ must classify WHY from four reasons where an icon family would genuinely HURT �
 strong constructed motif icons would dilute, the ≤3-loud budget), `editorial-register` (a data/editorial
 register — FT/Economist — icons would cheapen into corporate), `tiny-deck` (a 1–2 slide ask), or
 `template-locked` (a provided template that carries its own marks) — recorded as
+🔴 **A FIFTH category exists: `user-declined` — the user asked for no icons.** The four above each
+make a claim about the DECK, and none of them can say *the user decided*, so a deck whose user said
+「不需要icon」 had to be filed `template-locked` — a different claim, and one the Codex gate VERIFIES
+against the built file, so the forced label can also fail for the wrong reason. It is their deck; a
+gate has no standing to second-guess that, only to record it. `icon_none_checked` still names every
+flagged slide.
 `design_plan.icon_none_category` + `icon_none_checked: [slides]` (Codex: an `icon` waiver with
 `category`). A bare "not category-rich" no longer clears it, and the category explains the REST of the
 deck — it is **never** a licence to drop icons from the categorical slides that do have them (a
@@ -1047,6 +1053,13 @@ than the current working directory, so `python /path/to/build_<deck>.py` works f
 >    (`design_plan.signature_proof` is now a LIST of `{role, slide, png}` — one contract in
 >    `scripts/anchor_proof.py`, imported by both gate paths so they cannot drift apart).
 >
+> 🔴 **The carve is now RECORDABLE, which it was not:** `{"material_probe": {"waived": "<which
+> template / which mimic / how many slides>", "waived_category": "registered-template |
+> provided-template | mode-a-mimic | tiny-ask"}}`. Both gate paths accept it and both refuse
+> `conservative` as a category, because this block says restraint is a material decision too. Before
+> this the gate had no waiver arm at all, so a deck on a registered template had to invent a probe
+> artifact and write a note explaining that the gate and this text disagreed — a rule whose
+> documented exception cannot be recorded forces a false record.
 > **Skip only when:** `boldness: conservative` with its "deliberately restrained" clause recorded (no
 > risk was taken, so there is nothing to prove), or a 1–2 slide tiny-ask. A registered/provided template
 > does NOT skip it — a borrowed look still has a signature slide, and that is exactly where a template
@@ -1838,6 +1851,14 @@ its 1.5–3.0 band is the TEXT-ON-IMAGE CONTRAST `[warn]`.
 
 **🔴 RECORD the delivery mode once, in the build script, instead of retyping a flag:**
 `dk.declare_delivery(OUT, "selfread")` beside `prs.save(OUT)` — one of `presented` · `textheavy` ·
+🔴 **And `notes="none"` when the user declined the spoken script** —
+`dk.declare_delivery(OUT, "presented", builds="static", notes="none")`. Exactly the same argument
+one rule later: `NO NOTES` fires on a presented deck with empty speaker notes, and a user who asks
+for the script to be removed has made a decision that had nowhere to live, so the warning fired on
+every lint run forever and was waived by hand each time. 🔴 **It silences that ONE warning and
+nothing else — the word budget is deliberately NOT raised.** The skill's position is that the
+sentences belong in the notes, so a deck carrying them on the slides instead is a real tension worth
+still seeing; moving the ceiling would use the tooling to endorse what the skill argues against.
 `selfread` · `surface`. **Pass `builds="static"` on a presented deck whose user opted OUT of
 appear-builds** (`dk.declare_delivery(OUT, "presented", builds="static")`): the builds choice is a
 user decision exactly like the mode, and it was the one still carried by memory — without it

@@ -527,7 +527,8 @@ def _icon_category_source() -> Any:
 try:
     ICON_NONE_CATEGORIES = tuple(_icon_category_source()._ICON_NONE_CATEGORIES)
 except Exception:      # a floor that cannot be loaded must not silently become no floor
-    ICON_NONE_CATEGORIES = ("motif-dominant", "editorial-register", "tiny-deck", "template-locked")
+    ICON_NONE_CATEGORIES = ("motif-dominant", "editorial-register", "tiny-deck",
+                            "template-locked", "user-declined")
 
 
 def _icon_waiver_ok(evidence: dict[str, Any], deck_path: Path | None = None,

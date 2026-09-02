@@ -2140,7 +2140,8 @@ def _declared_boldness(deck_path, gates_path=None):
     return None
 
 
-def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False, icon_ev=None, boldness=None):
+def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False, icon_ev=None, boldness=None,
+                 notes_ok=False):
     if not rows:
         return {}
     n = len(rows)
@@ -2684,7 +2685,7 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False, icon_ev=None, b
         warns.append("NO BUILDS: a presented deck with zero appear-builds — the motion manifest "
                      "should name build:/static:+reason per slide (anim.py Build). If the user opted "
                      "OUT of appear-builds, this is expected — pass --static to silence it.")
-    if mode in ("presented", "textheavy") and n > 2:
+    if mode in ("presented", "textheavy") and n > 2 and not notes_ok:
         no_notes = sum(1 for r in rows if not r.get("notes_words"))
         if no_notes:
             warns.append(f"NO NOTES: {no_notes} of {n} slides have empty speaker notes on a presented "
@@ -2764,7 +2765,7 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False, icon_ev=None, b
 
 
 def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=False,
-         gates_path=None, stats_out=None):
+         gates_path=None, stats_out=None, notes_ok=False):
     """Lint a deck. Returns the count of HARD layout findings (the exit code's source).
 
     `stats_out`, when given a dict, is filled with the deck-stats measurement — including
@@ -3499,6 +3500,7 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
     except Exception:
         _icon_ev = None
     deck_stats = _print_stats(stats_rows, mode, sw, sh, lums=lums, static_ok=static_ok,
+                              notes_ok=notes_ok,
                               icon_ev=_icon_ev, boldness=_declared_boldness(path, gates_path))
     if stats_out is not None:
         stats_out.update(deck_stats)
@@ -3671,4 +3673,18 @@ if __name__ == "__main__":
                       "down (the user opted out; this is not a missing motion manifest)")
         except Exception:
             pass
-    sys.exit(1 if lint(args[0], mode, json_out, renders_dir, static_ok, gates_path) > 0 else 0)
+    # Same shape, one rule later: a user who declined the spoken script has made a decision, and
+    # before this there was nowhere to put it, so NO NOTES fired forever and was waived by hand.
+    # It silences that ONE warning and nothing else — the word budget is deliberately untouched,
+    # because a deck carrying its sentences on the slides is a real tension worth still seeing.
+    notes_ok = False
+    try:
+        _blob, _ = _gates_blob(args[0], gates_path)
+        if str(_blob.get("notes") or "").strip() == "none":
+            notes_ok = True
+            print("[lint] notes: RECORDED as none in .deck-gates.json — NO NOTES stands down "
+                  "(the user declined the spoken script). The word budget is unchanged.")
+    except Exception:
+        pass
+    sys.exit(1 if lint(args[0], mode, json_out, renders_dir, static_ok, gates_path,
+                       notes_ok=notes_ok) > 0 else 0)

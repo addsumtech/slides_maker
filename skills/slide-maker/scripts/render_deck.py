@@ -447,7 +447,19 @@ def _report_file_observations(pptx_path):
 #   template-locked    a registered/provided template that carries its own marks or forbids them
 # 🔴 They are NOT a licence to drop icons from the CATEGORICAL slides that do have them — a deck may
 # be motif-dominant AND still put icons on its one roster page. The category explains the REST.
-_ICON_NONE_CATEGORIES = ("motif-dominant", "editorial-register", "tiny-deck", "template-locked")
+#   user-declined     the USER asked for no icons. It is their deck; this is not a taste
+#                     claim the gate can second-guess, and forcing an author to file it
+#                     under one of the other four produces a FALSE record — measured: a
+#                     deck whose user said 不需要icon was filed `template-locked`, which
+#                     is a different claim, and the Codex gate VERIFIES that claim against
+#                     the file, so a forced label can also fail for the wrong reason.
+_ICON_NONE_CATEGORIES = ("motif-dominant", "editorial-register", "tiny-deck",
+                         "template-locked", "user-declined")
+
+# The Step-2 carves the material probe may be skipped under. `conservative` is deliberately absent:
+# SKILL.md says restraint is a material decision too, and a page is where you see whether it reads
+# as deliberate or as nothing.
+MATERIAL_PROBE_CARVES = ("registered-template", "provided-template", "mode-a-mimic", "tiny-ask")
 
 
 def _icon_none_category_holds(cat, pptx_path, flagged):
@@ -2354,7 +2366,27 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
             # rectangles under the sentence `signature move: 封面自己演示论点` — true of nothing on
             # the page. The concept gates all passed; no step ever asked what the device is made of.
             probe = design.get("material_probe")
-            if not isinstance(probe, dict):
+            # 🔴 THE CARVE SKILL.md DOCUMENTS, finally expressible. Step 2 says the probe is
+            # skipped "when the look is not yours to invent: a registered/provided template or a
+            # Mode-A mimic (the material is the template's), or a 1-2 slide tiny ask" — and the
+            # gate had no waiver arm at all, so a deck on a registered template had to invent a
+            # probe artifact and write a note explaining that the gate and the prose disagree.
+            # A rule whose documented exception cannot be recorded forces a false record.
+            if isinstance(probe, dict) and probe.get("waived"):
+                _mc = str(probe.get("waived_category") or "").strip().lower()
+                if _mc not in MATERIAL_PROBE_CARVES:
+                    die("`design_plan.material_probe.waived` needs a `waived_category` naming the "
+                        "carve: {}.\n  `boldness: conservative` is NOT one of them — Step 2 says "
+                        "so explicitly: restraint is a material decision too, and a page is where "
+                        "you see whether it reads as deliberate or as nothing."
+                        .format(" | ".join(MATERIAL_PROBE_CARVES)))
+                if reason_width(probe.get("waived")) < 20:
+                    die("`design_plan.material_probe.waived` needs a written reason, not just a "
+                        "category — which template, which mimic, how many slides.")
+                print("[gates] material probe: WAIVED [{}] — {}".format(
+                    _mc, str(probe.get("waived"))[:80]))
+                probe = None
+            elif not isinstance(probe, dict):
                 die('`design_plan.material_probe` is missing. Step 2 opens by BUILDING one real '
                     'slide — the signature page in the register you invented — rendering it, and '
                     'looking at it, before any of this plan is written.\n'
@@ -2362,22 +2394,25 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
                     '                        "safe_version": "<what the DEFAULT version of this '
                     'page would have been — if it is about the same thing, the register is a look, '
                     'not a move>"}}')
-            ppng = Path(str(probe.get("png") or ""))
-            if not ppng.is_absolute():
-                ppng = Path(pptx).parent / ppng
-            if not str(probe.get("png") or "") or not ppng.exists() or ppng.stat().st_size < 512:
-                die('`design_plan.material_probe.png` must point at a REAL rendered slide '
-                    '({!r} is missing or empty). The probe is the artifact; a plan describing it '
-                    'is not.'.format(str(probe.get("png") or "")))
-            if _png_is_flat(ppng):
-                die('`design_plan.material_probe.png` is a single flat colour — not a render.')
-            if reason_width(probe.get("safe_version")) < 20:
-                die('`design_plan.material_probe.safe_version` must say in one line what the SAFE '
-                    'version of that page would have been. It is the whole test: if the honest '
-                    'answer is "about the same thing", the register is a look rather than a move, '
-                    'and that is worth discovering before twenty declarations are written on it.')
-            print("[gates] material probe: {} · safe version would have been: {}".format(
-                probe.get("png"), str(probe.get("safe_version"))[:90]))
+            if probe is not None:      # None == waived above, with a category and a reason
+                ppng = Path(str(probe.get("png") or ""))
+                if not ppng.is_absolute():
+                    ppng = Path(pptx).parent / ppng
+                if (not str(probe.get("png") or "") or not ppng.exists()
+                        or ppng.stat().st_size < 512):
+                    die('`design_plan.material_probe.png` must point at a REAL rendered slide '
+                        '({!r} is missing or empty). The probe is the artifact; a plan describing '
+                        'it is not.'.format(str(probe.get("png") or "")))
+                if _png_is_flat(ppng):
+                    die('`design_plan.material_probe.png` is a single flat colour — not a render.')
+                if reason_width(probe.get("safe_version")) < 20:
+                    die('`design_plan.material_probe.safe_version` must say in one line what the '
+                        'SAFE version of that page would have been. It is the whole test: if the '
+                        'honest answer is "about the same thing", the register is a look rather '
+                        'than a move, and that is worth discovering before twenty declarations '
+                        'are written on it.')
+                print("[gates] material probe: {} · safe version would have been: {}".format(
+                    probe.get("png"), str(probe.get("safe_version"))[:90]))
 
             cb = design["carried_by"]
             if not isinstance(cb, list) or len(cb) < 2:
@@ -2789,6 +2824,27 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
                         if _extra else ""))
             print("[gates] content plan: {} row(s), one per slide, {} distinct takeaway(s)"
                   .format(len(_rows), len(_takeaways)))
+
+            # HAS THE DECK BEEN EDITED SINCE THE BUILD SCRIPT LAST PRODUCED IT? `declare_delivery`
+            # records the hash of what it saved; a mismatch means somebody opened the .pptx and
+            # saved it. Reported, never fatal: hand-editing a delivered deck is normal and the
+            # right response depends on intent — what was missing is any way to KNOW, so a
+            # regenerate silently clobbered work nobody could see. Measured on a real hand-off.
+            _rec_sha = str(gates.get("deck_sha256") or "").strip()
+            if _rec_sha:
+                try:
+                    import hashlib as _hlib   # module-level import is deliberately absent here
+                    _hh = _hlib.sha256()
+                    with open(pptx, "rb") as _fh:
+                        for _c in iter(lambda: _fh.read(1 << 20), b""):
+                            _hh.update(_c)
+                    if _hh.hexdigest() != _rec_sha:
+                        print("[gates] 🔴 EDITED SINCE BUILD: {} no longer matches what the build "
+                              "script produced. Somebody saved over it — re-running the build will "
+                              "DISCARD those edits. Reconcile first: scripts/extract_deck.py, and "
+                              "`references/handoff-and-iteration.md`.".format(Path(pptx).name))
+                except OSError:
+                    pass
 
             # THE OPEN LEDGER — what the SOURCE ITSELF marks as not yet established. A claim that
             # lives on the source's future-work / open-gate list and reaches a slide in the

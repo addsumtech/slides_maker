@@ -42,6 +42,15 @@ jobs:
             $( [ -f "$ALLOW" ] && echo --allow "$ALLOW" ) \
             --report /tmp/skill-lost.md
 
+      # SKILL.sha256 is what lets a COPIED install tell it is not running what main has. A version
+      # STRING only moves on a release, so every commit between releases was invisible to
+      # check_version.py -- measured, a copy with 99.3% of SKILL.md missing passed it silently.
+      # The fingerprint only works if it is CURRENT, and "remember to regenerate it" is exactly the
+      # kind of habit this repo keeps proving does not hold. So it is a build failure instead.
+      - name: Skill fingerprint is current
+        run: |
+          python scripts/skill_fingerprint.py --check
+
       # Credential scan that discriminates by SHAPE (length + Shannon entropy), not by prefix.
       # A prefix matcher flags this repo on every run, because the direction-gate preview names its
       # CSS classes after slide skeletons — sk-body, sk-split, sk-rail. A report that is always

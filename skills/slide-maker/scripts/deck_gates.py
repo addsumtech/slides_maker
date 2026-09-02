@@ -41,6 +41,11 @@ from pathlib import Path
 
 GATES = ".deck-gates.json"
 
+# Kept in lockstep with render_deck.MATERIAL_PROBE_CARVES — the two gates have drifted on
+# duplicated field vocabularies before, and a pre-flight that rejects what the gate accepts is
+# worse than no pre-flight.
+MATERIAL_PROBE_CARVES = ("registered-template", "provided-template", "mode-a-mimic", "tiny-ask")
+
 DIALS = ("conservative", "balanced+", "bold", "experimental")
 DELIVERIES = ("presented", "textheavy", "selfread", "surface")
 
@@ -227,7 +232,20 @@ def check(gates):
 
     probe = _need(gates, "design_plan.material_probe", problems, dict,
                   why="Step 2 opens by BUILDING one real slide and looking at it.")
-    if isinstance(probe, dict):
+    # Step 2's documented carve — a registered/provided template, a Mode-A mimic, a 1-2 slide ask —
+    # is now expressible. It had no waiver arm at all, so a deck on a registered template had to
+    # invent an artifact and note that the gate and the prose disagreed. `conservative` is
+    # deliberately not a carve: SKILL.md says restraint is a material decision too.
+    if isinstance(probe, dict) and probe.get("waived"):
+        cat = str(probe.get("waived_category") or "").strip().lower()
+        if cat not in MATERIAL_PROBE_CARVES:
+            problems.append("`design_plan.material_probe.waived` needs a `waived_category` from: "
+                            "{}. (`conservative` is NOT one — Step 2 says so.)"
+                            .format(" | ".join(MATERIAL_PROBE_CARVES)))
+        elif _ph(probe.get("waived")) or len(str(probe.get("waived")).strip()) < 20:
+            problems.append("`design_plan.material_probe.waived` needs a written reason beside the "
+                            "category — which template, which mimic, how many slides.")
+    elif isinstance(probe, dict):
         for k in ("png", "safe_version"):
             if not probe.get(k) or _ph(probe.get(k)):
                 problems.append("`design_plan.material_probe.{}` is empty or a placeholder."

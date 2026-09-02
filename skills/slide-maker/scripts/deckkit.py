@@ -6171,7 +6171,7 @@ def overlap_intent(shape, reason):
 DELIVERY_MODES = ("presented", "textheavy", "selfread", "surface")
 
 
-def declare_delivery(where, mode, builds=None):
+def declare_delivery(where, mode, builds=None, notes=None):
     """Record HOW this deck will be consumed, in `<deck dir>/.deck-gates.json`, from the build
     script — so the lint's budgets do not depend on an operator remembering a CLI flag.
 
@@ -6212,6 +6212,36 @@ def declare_delivery(where, mode, builds=None):
             raise ValueError("builds must be 'static' (the user opted out) or 'builds' (opted "
                              "in), got %r" % (builds,))
         gates["builds"] = builds
+    if notes is not None:
+        # The SAME argument, one rule later. `NO NOTES` fires on a presented deck with empty
+        # speaker notes, and a user who asks for the spoken script to be removed has made a
+        # decision — but there was nowhere to record it, so the warning fired on every lint run
+        # forever and was waived by hand each time. `builds="static"` exists for exactly this
+        # shape; this is its twin.
+        # 🔴 It records the CHOICE only. It does NOT move the word budget: the skill's position is
+        # that sentences belong in the notes, so a deck without them carrying more text is a real
+        # tension worth seeing, not one to silence by raising the ceiling.
+        if notes not in ("none", "notes"):
+            raise ValueError("notes must be 'none' (the user declined the spoken script) or "
+                             "'notes' (the deck carries them), got %r" % (notes,))
+        gates["notes"] = notes
+    # THE BUILD FINGERPRINT. `handoff-and-iteration.md` documents how to reconcile a user's
+    # hand-edits before regenerating — and nothing anywhere DETECTED that a reconcile was needed.
+    # Measured: a user edited a delivered deck in PowerPoint and saved it beside the built one;
+    # it was invisible to every tool, and was noticed only because the folder had moved. Recording
+    # what the build produced turns "remember to check" into a check: the deck is untouched while
+    # this hash matches, and a mismatch means somebody edited it after the last build.
+    if not _os.path.isdir(where):
+        try:
+            import hashlib as _hl
+            _h = _hl.sha256()
+            with open(where, "rb") as _fh:
+                for _chunk in iter(lambda: _fh.read(1 << 20), b""):
+                    _h.update(_chunk)
+            gates["deck_sha256"] = _h.hexdigest()
+            gates["deck_file"] = _os.path.basename(where)
+        except OSError:
+            pass                      # never let bookkeeping fail a build that already succeeded
     with open(path, "w", encoding="utf-8") as fh:
         _json.dump(gates, fh, ensure_ascii=False, indent=1)
         fh.write("\n")
