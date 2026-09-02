@@ -107,6 +107,30 @@ check("open ledger:" in _cc,
       "...and the content checkpoint carries an `open ledger:` line, so the user sees the sweep's "
       "result before a slide is designed")
 
+# 🔴 BOTH RUNTIMES, or the floor is only a floor on one of them.
+_cg = (SCRIPTS / "codex_delivery_gate.py").read_text(encoding="utf-8")
+check('if "open_ledger" not in content' in _cg,
+      "🔴 the CODEX gate binds it too — this is the exact shape the repo has drifted on twice, and "
+      "a floor kept in one runtime is how the other quietly stops enforcing it")
+check('"open_ledger": [' in _cg,
+      "...and the Codex evidence SKELETON carries the field, because a runtime filling a template "
+      "copies its shape: a check with no scaffold is a field nobody can fill")
+_cr = (ROOT / "references" / "codex-runtime.md").read_text(encoding="utf-8")
+check("open_ledger" in _cr,
+      "...and codex-runtime.md — the file that runtime reads before Step 2 — says so in prose")
+
+# BOTH streams on purpose: `--template` puts the JSON skeleton on stdout so it stays pipeable and
+# the shape LISTING on stderr, so a test that reads only stdout checks the wrong stream and passes
+# for the wrong reason.
+_r = __import__("subprocess").run(
+    [sys.executable, str(SCRIPTS / "arc_divergence.py"), "--template"],
+    capture_output=True, text=True)
+_tpl = (_r.stdout or "") + (_r.stderr or "")
+check("method-pivot" in _tpl,
+      "🔴 and `arc_divergence.py --template` PRINTS the new shape — that listing is the lookup an "
+      "agent actually reads to pick one, and a shape in the enum but not in the listing is a shape "
+      "nobody chooses")
+
 
 # ------------------------------------------- 4. measure and place must name the same spacing
 runs = [("a sentence long enough to wrap across several lines inside a fairly narrow column", False)]
@@ -116,8 +140,12 @@ check(wider > base,
       "🔴 `measure_text` takes `line_spacing=`, so measuring at the default and placing at 1.16 is "
       "no longer a silent ~4% shortfall — the defect that drew a divider through the line above it "
       "while both linters called the page clean ({:.3f} -> {:.3f}in)".format(base, wider))
-check(abs(wider / base - 1.16 / 1.12) < 0.02,
-      "...and the ratio tracks the two factors, so the number means what the caller passed")
+check(abs(wider / base - 1.16) < 0.02,
+      "🔴 ...and it COMPOSES with the natural line height rather than replacing it — spcPct is a "
+      "multiplier on the face's own line height, so 1.16 must buy 16%, not the 3.6% you get by "
+      "substituting 1.16 for the 1.12 default. The first version of this fix substituted, which is "
+      "optimistic in the one direction this module forbids, and still looked correct because it "
+      "was larger than the default (ratio {:.3f})".format(wider / base))
 
 cjk = [("一段足够长的中文句子用来测试换行与行距下限的行为", False)]
 check(dk.measure_text(cjk, 2.4, 12, line_spacing=1.0) >= dk.measure_text(cjk, 2.4, 12) - 1e-9,

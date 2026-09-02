@@ -52,6 +52,36 @@ section is a distilled summary — the full notes live on the
   broke seven fixtures, which is the cost of a real gate; they share one constructor and it now
   carries the field.
 
+### Fixed
+
+- **Audit of the change above — three defects, one of them in the fix itself.**
+  🔴 **`measure_text(line_spacing=)` was computing the wrong number.** `line_spacing` is an OOXML
+  spcPct MULTIPLIER on the face's natural line height; the first version SUBSTITUTED it for
+  `line_h_factor` instead of composing with it, so `line_spacing=1.16` bought 3.6% where the truth
+  is 16%. That is optimistic in the one direction this module forbids — and it still looked like a
+  fix, because 1.16 is larger than the 1.12 default, so the original defect went away. deckkit's own
+  `callout` had the correct shape all along (`line_h_factor=_LINT_LINE_H * 1.2` beside
+  `line_spacing=1.2`) and the new code did not match it. **The test had enshrined the wrong ratio**,
+  which is how nobody would have noticed; it now asserts that 1.16 buys 16%. The CJK floor takes the
+  larger of the requested spacing and `CJK_LS`, because the realistic drift is measuring tight and
+  then placing at the default.
+  🔴 **The Codex path had no binding at all.** `content.open_ledger` was enforced by
+  `render_deck.py --gate-check` and `deck_gates.py check` and was absent from
+  `codex_delivery_gate.py` — the exact asymmetry this repo has already drifted on twice, and on the
+  runtime a non-Claude agent actually uses. It is now checked there, present in the Codex evidence
+  SKELETON (a check with no scaffold is a field nobody can fill), and stated in
+  `references/codex-runtime.md`, which that runtime reads before Step 2.
+  **A non-Claude agent would have met the rule for the first time at HAND-OFF.** The field lived in
+  `content-plan-spec.md` with two gates behind it, which satisfies the layering rule but discovers
+  it after the deck is built — and this is a CONTENT-time artifact, so the fix is re-reading the
+  source. SKILL.md Step 1 now names it beside the claim ledger (a sibling paragraph; the lossless
+  check still accounts for 2466/2466 baseline lines). Both block messages also say that a deck with
+  no source material writes `[]`.
+  One thing the audit CONFIRMED rather than fixed: `arc_divergence.py --template` does print
+  `method-pivot`, because that listing is generated from `_SHAPES` rather than hardcoded — but it
+  prints it on **stderr** (stdout stays pipeable JSON), and the test that claimed to check it was
+  reading stdout only. It now reads both streams.
+
 
 ### Added
 

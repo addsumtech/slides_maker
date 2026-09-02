@@ -141,6 +141,16 @@ TEMPLATE = {
         # template in copies its SHAPE. Measured: decks arriving at one page when the user named
         # no length. `slide_count: 10` above and a one-row list below contradicted each other,
         # and the example won, because an example is concrete and a number is not.
+        # Every claim the SOURCE ITSELF marks as not yet established — future work, an open gate,
+        # "cannot establish", a roadmap item, a TODO. None may reach a slide in the established
+        # voice. `[]` is a legitimate value and records that the sweep happened.
+        "open_ledger": [
+            {
+                "claim": "<what the source says is NOT yet shown>",
+                "source": "<where it says so — file:line, section, page>",
+                "in_deck": "absent | stated as open on slide N",
+            },
+        ],
         "slides": [
             {
                 "slide": 1,
@@ -901,6 +911,32 @@ def check_content(
                 require_string(source.get("locator"), f"{label}.locator", errors, minimum=12)
             else:
                 errors.append(f"{label}.kind must be provided or web")
+
+    # THE OPEN LEDGER — mirrors `render_deck.py --gate-check` exactly. A claim the SOURCE ITSELF
+    # marks as not yet established (future work, an open gate, "cannot establish", a TODO) is
+    # TRACEABLE, so never-invent and the claim ledger both pass it; promoting it to a result is a
+    # separate fidelity failure and an expert room catches it instantly. `[]` is legitimate and
+    # records that the sweep happened — this blocks the missing KEY, never the count. Added here in
+    # the same change as the shared path: a floor kept in one runtime only is how the other quietly
+    # stops enforcing it, which these two gates have already drifted on twice.
+    if "open_ledger" not in content:
+        errors.append("content.open_ledger missing — record every claim the SOURCE marks as NOT "
+                      "yet established (claim + where it says so + absent|stated as open on slide "
+                      "N); none of them may reach a slide in the established voice. Use [] when "
+                      "the source marks nothing as open, or the deck has no source material — that "
+                      "records the sweep.")
+    else:
+        open_rows = content.get("open_ledger")
+        if not isinstance(open_rows, list):
+            errors.append("content.open_ledger must be a list of rows (use [] when nothing is open)")
+        else:
+            for index, row in enumerate(open_rows):
+                if not isinstance(row, dict):
+                    errors.append(f"content.open_ledger[{index}] must be an object")
+                    continue
+                require_string(row.get("claim"), f"content.open_ledger[{index}].claim", errors)
+                require_string(row.get("source"), f"content.open_ledger[{index}].source", errors,
+                               minimum=6)
 
     slides = content.get("slides")
     if not isinstance(slides, list):

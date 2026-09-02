@@ -213,6 +213,9 @@ def fixture(root: Path) -> tuple[dict, dict, dict, Path]:
         "content": {
             "source_mode": "provided",
             "sources": [{"kind": "provided", "path": source.name, "sha256": sha256(source)}],
+            # `[]` records that the source was swept and marks nothing as unresolved — the gate
+            # blocks the missing KEY, never the count.
+            "open_ledger": [],
             "slides": [
                 {
                     "slide": 1,

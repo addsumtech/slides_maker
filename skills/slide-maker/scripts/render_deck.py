@@ -2804,7 +2804,8 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
                     '    "open_ledger": [{"claim": "…", "source": "…", '
                     '"in_deck": "absent | stated as open on slide N"}]\n'
                     "  None of those rows may appear on a slide in the ESTABLISHED voice. Write "
-                    "[] when the source marks nothing as open; that records the sweep.")
+                    "[] when the source marks nothing as open, or when the deck has no source "
+                    "material at all; either way that records the sweep.")
             _open = _content.get("open_ledger")
             if not isinstance(_open, list):
                 die("`content.open_ledger` must be a LIST of rows (use [] when nothing is open).")

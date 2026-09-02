@@ -592,6 +592,17 @@ source span, not memory:
 
 - **The field list is in `references/content-plan-spec.md` §Comprehension brief — read it before writing (or checking) the brief.** It holds the one-sentence message + its verbatim source sentence, the contributions, the method essence, the one-row-per-figure-AND-table spec, the nuance/limitation quotes, and the claim-ledger columns (same spec as `agents/content-planner.md` §1–2).
 
+🔴 **Sweep the source for what IT says is NOT yet established, and record it — `content.open_ledger`.**
+Future work · next steps · a roadmap · an open gate · "cannot establish" · "not yet" · a TODO. One row
+each: `claim | where the source says so | absent from the deck, or stated AS OPEN on slide N`. **No row
+may reach a slide in the established voice.** This is a DIFFERENT failure from inventing and neither the
+never-invent rule nor the claim ledger can see it: the fact really is in the source, promoted from
+hypothesis to result, so it verifies clean and ships. Measured on a research deck: a slide asserted that
+extra respiratory bins helped the reconstruction while the source listed exactly that as an untested
+gate — the kind of thing an expert room catches in one sentence. `[]` is a legitimate value and records
+that the sweep happened (a no-source deck writes `[]`); BOTH gate paths block the missing KEY and never
+the count. Field spec: `references/content-plan-spec.md`.
+
 **This is a hard gate, not a sanity check.** Self-verify the brief against the source; if any
 field is empty, hedged, or untraced — or the emphasis test fails (your one-sentence message
 would surprise the authors) — you have NOT understood it: re-read or log an open question.

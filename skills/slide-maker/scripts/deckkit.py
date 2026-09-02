@@ -4314,9 +4314,18 @@ def measure_text(runs, w, size, *, line_h_factor=1.12, pad=0.0, font=None,
     ``text(..., line_spacing=1.16)`` — and the pair cannot drift. The CJK floor still applies:
     a CJK-bearing block never measures below the pitch its script-aware default renders."""
     nlines = _measure_lines(runs, size, w, font=font)
-    factor = line_h_factor if line_spacing is None else float(line_spacing)
+    # `line_spacing` is an OOXML spcPct MULTIPLIER on the face's natural line height, not the
+    # em-per-line itself — so it COMPOSES with `line_h_factor`, it does not replace it. Getting
+    # this wrong is optimistic in the direction the whole module forbids: replacing gave 1.16
+    # where the truth is 1.12 x 1.16 = 1.30, an 11% under-reservation that still looked like a
+    # fix because it happened to be bigger than the default. deckkit's own `callout` shows the
+    # correct shape — it passes `line_h_factor=_LINT_LINE_H * 1.2` beside `line_spacing=1.2`.
+    factor = line_h_factor if line_spacing is None else line_h_factor * float(line_spacing)
     if any(_has_cjk(t) for (t, *_r) in runs):
-        factor = max(factor, 1.2 * CJK_LS)
+        # The CJK floor takes the LARGER of what was asked for and text()'s own CJK default,
+        # because the realistic drift is measuring tight and then placing at the default.
+        cjk_pct = CJK_LS if line_spacing is None else max(float(line_spacing), CJK_LS)
+        factor = max(factor, 1.2 * cjk_pct)
     return nlines * (size / 72.0 * factor) + pad
 
 

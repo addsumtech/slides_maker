@@ -400,6 +400,13 @@ lost each, and `arc_divergence.py`'s verdict) and the DESIGN direction** (`desig
 governing picture** (`design.concept`: chosen + the two it beat), per-slide form
 ledger, four clean-branch direction tokens and preview, final rendered signature proof, categorical
 icon assets, visual-contract manifest/result, and two separate critic JSON files.
+🔴 **EVERY deck carries `content.open_ledger`** — one row per claim the SOURCE ITSELF marks as not
+yet established (future work · an open gate · "cannot establish" · a roadmap item · a TODO), each with
+the locator that says so, and none of them may appear on a slide in the ESTABLISHED voice. This is a
+different failure from inventing and the claim ledger cannot see it: the claim really is in the source,
+promoted from hypothesis to result, so it verifies clean. `[]` is legitimate and records that the sweep
+happened — the gate blocks the missing KEY, never the count, and mirrors `render_deck.py --gate-check`
+exactly, because a floor kept in one runtime only is how the other quietly stops enforcing it.
 🔴 **A WEB-RESEARCHED deck (`source_mode: "web"`) additionally carries the three research floors from
 `content-planner.md` §2(e):** `content.coverage` (全面, the domain enumerated + swept), `content.lifecycle`
 (准确/全面, every featured product/version/entity checked live-vs-discontinued as of today — a headlined
