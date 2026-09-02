@@ -11,6 +11,50 @@ section is a distilled summary — the full notes live on the
 
 ### Added
 
+- **The research progress deck: the arc it needs, the ledger that keeps it honest, and one geometry
+  trap.** Four defects from a single delivered lab-meeting deck, none of which the pipeline could
+  have caught.
+  **The commonest lab deck there is had no ARC SHAPE.** *What we built · what it showed · why we are
+  changing approach* was filed as `problem-turn-evidence` — whose evidence proves the NEW thing, so
+  a planner following it puts the prior work's results AFTER the turn, which is exactly where they
+  landed and where the user had to reorder them by hand. `method-pivot` names the shape and, more
+  importantly, the three things it inverts: the retired approach's RESULTS come **before** the
+  pivot, in the order the steps produced them; every step of the retired method carries **what it
+  was FOR**, not only what it did (the purposes are what the pivot later contradicts); and the deck
+  **ends on STATUS**, because the replacement's slide is not evidence and a deck that stops there
+  implies a result it does not have. `design-by-purpose.md` → *Research meeting* carries the same
+  three moves on the design side, plus the rule that **an enumerated step owes a result or an
+  explicit "not yet reported"** — a later slide cannot argue from a measurement the deck never
+  showed.
+  🔴 **The OPEN ledger — a fidelity failure the never-invent rule structurally cannot see.** A slide
+  asserted that extra respiratory bins helped the reconstruction while the source listed *"tests
+  whether each bin helps"* as an open gate. The fact was really in the source; it was promoted from
+  hypothesis to result — so the claim ledger verified it and waved it through, because the claim
+  **is** traceable. `content.open_ledger` records every claim the SOURCE ITSELF marks as not yet
+  established (future work · an open gate · "cannot establish" · a roadmap item · a TODO) with its
+  locator, and **no row may reach a slide in the established voice**. `[]` is legitimate and records
+  that the sweep happened: both `deck_gates.py check` and `render_deck.py --gate-check` block the
+  missing KEY and never the count, the same way `form_reach` blocks the missing decision rather than
+  the number. The content checkpoint gains an `open ledger:` line so the user sees the sweep before
+  a slide is designed.
+  🔴 **`measure_text` now takes `line_spacing=`, and it is the third member of a family `sigs.py`
+  already documents.** `text()` accepted any `line_spacing`; `measure_text` assumed its own
+  `line_h_factor` and nothing tied them together, so a height measured at the default and placed at
+  1.16 reserved ~4% too little. Measured: a divider derived from that return was drawn straight
+  through the last line of the block above it, and **both linters called the page clean** — the
+  geometry they check is computed from the same short number. The CJK floor still binds after an
+  explicit override, so a small spacing cannot push a CJK block under the pitch its script-aware
+  default renders.
+  Wired the way this repo makes a rule real: the shape in `arc_divergence._SHAPES`, the order it
+  implies in `content-planner.md` §3, the design half in `design-by-purpose.md`, the field spec in
+  `content-plan-spec.md`, the checkpoint line in `checkpoint-convention.md`, both gate paths, the
+  contract in `sigs.py`, and `tests/test_research_pivot.py` over all of it. Adding a required field
+  broke seven fixtures, which is the cost of a real gate; they share one constructor and it now
+  carries the field.
+
+
+### Added
+
 - **The type question a lab room actually asks, and the font trap that voids the build's own
   evidence.** Asked for a lab-meeting deck, the pipeline set it in Avenir Next and the user
   corrected it: *对于实验室或者会议场景，ppt的默认字体应该是new times或者calibri*. Nothing was

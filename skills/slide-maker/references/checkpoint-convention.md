@@ -42,7 +42,7 @@ REVISE the pick and say so in the next FYI — riding a wrong guess to delivery 
 delegation must never produce. Content checkpoint = the deck
 memory sentence + a 2-line brief/ledger DIGEST (the comprehension brief's one-sentence message +
 🔴 an **`interview:` line** first — `interview: language <…> · density <…> · length <…> · goal <…>`, the four answers the deck is being built from, echoed back so the user can catch a wrong one before a slide exists (measured: on a real build LANGUAGE was never asked and nothing anywhere noticed, because unlike delivery and the motion manifest nothing downstream demanded it; `--gate-check` and the codex gate now require the same four from `deck_gates.INTERVIEW_AXES`) + a claim-ledger tally, e.g. `ledger: 14 claims · 14 verified · 0 open` — full brief + ledger stay
-in the plan, posted on request or on any digest anomaly) + emotional-curve line + pace check +
+in the plan, posted on request or on any digest anomaly) + 🔴 an **`open ledger:`** line — `open ledger: N claim(s) the source marks as unresolved · none stated as established` (or `0 — the source marks nothing as open`), the artifact that keeps a hypothesis from reaching a slide as a result + emotional-curve line + pace check +
 **(long source only) a 1-line Source-coverage DIGEST** (`source: 320 pp · built-around 4 ch ·
 summarised 3 · cut 5` + the chosen slice — full per-chapter map in the plan) + **(video source only)
 the transcript-status line** (supplied locator, or "visual-only — spoken content is a GAP") + ONE table (`# | 角色 | 记忆句(takeaway) |

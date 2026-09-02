@@ -2789,6 +2789,35 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
                         if _extra else ""))
             print("[gates] content plan: {} row(s), one per slide, {} distinct takeaway(s)"
                   .format(len(_rows), len(_takeaways)))
+
+            # THE OPEN LEDGER — what the SOURCE ITSELF marks as not yet established. A claim that
+            # lives on the source's future-work / open-gate list and reaches a slide in the
+            # established voice is traceable, so never-invent and the claim ledger both pass it;
+            # an expert room does not. Measured: a research deck asserted that extra respiratory
+            # bins helped the reconstruction while the source listed exactly that as an untested
+            # gate. `[]` is legitimate and records that the sweep happened — this blocks the
+            # missing KEY, never the count, the same way `form_reach` blocks the missing decision.
+            if "open_ledger" not in _content:
+                die("`content.open_ledger` is missing. Sweep the source for what IT marks as not "
+                    "yet established — future work, an open gate, 'cannot establish', a roadmap "
+                    "item, a TODO — and record one row each:\n"
+                    '    "open_ledger": [{"claim": "…", "source": "…", '
+                    '"in_deck": "absent | stated as open on slide N"}]\n'
+                    "  None of those rows may appear on a slide in the ESTABLISHED voice. Write "
+                    "[] when the source marks nothing as open; that records the sweep.")
+            _open = _content.get("open_ledger")
+            if not isinstance(_open, list):
+                die("`content.open_ledger` must be a LIST of rows (use [] when nothing is open).")
+            for _i, _r in enumerate(_open):
+                if not isinstance(_r, dict) or not str(_r.get("claim") or "").strip():
+                    die("`content.open_ledger[{}]` needs a `claim`.".format(_i))
+                if not str(_r.get("source") or "").strip():
+                    die("`content.open_ledger[{}]` needs a `source` — where the material says it "
+                        "is unresolved. Without the locator the row is an opinion about the "
+                        "material rather than a reading of it.".format(_i))
+            print("[gates] open ledger: {} claim(s) the source marks as unresolved{}"
+                  .format(len(_open),
+                          "" if _open else " — swept, nothing open"))
             # The units column exists to make an about-to-be-empty or about-to-be-dense page visible
             # AT THE CHECKPOINT rather than at the render. Printed, never fatal: a 0 on a pure-image
             # beat and a 6 on a spoken one are both legitimate, and only the author knows which.

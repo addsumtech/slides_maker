@@ -73,6 +73,16 @@ _SHAPES = (
     "contribution-first",    # the research claim up front, the work as its support
     "chronological",         # the story in the order it happened
     "survey",                # a landscape with no single climax
+    # --- the RESEARCH PIVOT ---------------------------------------------------------------
+    # The commonest lab-meeting deck there is — "here is what we built, here is what it showed,
+    # here is why we are changing approach" — had no shape, so it was filed as
+    # `problem-turn-evidence`. That mislabel is not cosmetic: in problem-turn-evidence the
+    # evidence proves the NEW thing, and a planner following it puts the results after the turn.
+    # In a pivot the evidence belongs to the approach being RETIRED and the new one has none yet,
+    # so the order inverts and the deck must end on STATUS rather than proof. Measured: a real
+    # progress deck placed the prior work's result pages after the pivot and had to be reordered
+    # by the user, and a later edit deleted the status page without anything noticing.
+    "method-pivot",          # what we built & why -> what it showed -> where it stopped -> what replaces it -> what is not yet known
     # --- INSTRUCTIONAL shapes ---------------------------------------------------------------
     # The nine above are all shapes of an ARGUMENT or a REPORT, and the closed list therefore
     # refused a lecture outright: `concept-example-check` and `misconception-first` were rejected

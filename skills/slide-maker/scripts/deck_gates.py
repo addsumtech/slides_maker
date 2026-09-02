@@ -84,6 +84,13 @@ def template(slides=None, delivery="presented"):
                       [{"slide": 1, "role": "<role>", "takeaway": "<takeaway>",
                         "evidence": ["<locator>"], "units": 3}],
             "checkpoint": {"mode": "<approved|auto>", "record": "<how it was delivered>"},
+            # Every claim the SOURCE ITSELF marks as not yet established — future work, an open
+            # gate, "cannot establish", a roadmap item, a TODO. The deck may reference these, but
+            # never in the established voice. `[]` is a legitimate value and means the question was
+            # asked; the gate blocks the missing KEY, never the count.
+            "open_ledger": [{"claim": "<what the source marks as NOT yet shown>",
+                             "source": "<where it says so>",
+                             "in_deck": "<absent | stated as open on slide N>"}],
             "arc": {
                 "candidates": [{"name": "<arc name>", "shape": "<evidence-build|…>",
                                 "opening_roles": ["<role>", "<role>", "<role>"],
@@ -192,6 +199,31 @@ def check(gates):
             if not isinstance(r, dict) or not r.get("why_lost") or _ph(r.get("why_lost")):
                 problems.append("`design_plan.concept.rejected[{}]` needs a `why_lost` clause."
                                 .format(i))
+
+    content = gates.get("content")
+    if isinstance(content, dict):
+        if "open_ledger" not in content:
+            problems.append(
+                "`content.open_ledger` is missing. It records every claim the SOURCE ITSELF marks "
+                "as NOT yet established (future work, an open gate, 'cannot establish', a TODO) so "
+                "that none of them reaches a slide in the established voice. Measured: a deck "
+                "asserted that extra respiratory bins helped the reconstruction, while the source "
+                "listed exactly that as an untested gate — the fact was IN the source, promoted to "
+                "the wrong modality, which the never-invent rule does not catch. `[]` is a valid "
+                "value and means the question was asked.")
+        else:
+            rows = content.get("open_ledger")
+            if not isinstance(rows, list):
+                problems.append("`content.open_ledger` must be a LIST of rows (use [] when the "
+                                "source marks nothing as unresolved).")
+            else:
+                for i, r in enumerate(rows):
+                    if not isinstance(r, dict) or not r.get("claim") or _ph(r.get("claim")):
+                        problems.append("`content.open_ledger[{}]` needs a `claim`.".format(i))
+                    elif not r.get("source") or _ph(r.get("source")):
+                        problems.append("`content.open_ledger[{}]` needs a `source` — where the "
+                                        "source says it is unresolved. Without the locator the row "
+                                        "is an opinion about the material.".format(i))
 
     probe = _need(gates, "design_plan.material_probe", problems, dict,
                   why="Step 2 opens by BUILDING one real slide and looking at it.")
@@ -360,6 +392,7 @@ def _selftest():
     d["signature_proof"] = [{"role": r, "slide": i + 4, "png": "render/slide%02d.png" % (i + 4)}
                             for i, r in enumerate(ANCHOR_ROLES)]
     d["checkpoint"] = {"mode": "approved", "record": "posted in chat"}
+    g["content"]["open_ledger"] = []          # swept; the source marks nothing as unresolved
     g["critic"] = {"waived": "user declined with the deck visible", "waived_category": "user-waived"}
     g["render_selfcheck"] = {"slides": [{"n": i + 1, "verdict": "ok"} for i in range(3)]}
     probs = check(g)

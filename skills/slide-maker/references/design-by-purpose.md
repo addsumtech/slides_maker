@@ -139,6 +139,19 @@ polish. Calm, low-chrome, content-forward.
 - **Type:** the academic default — Times New Roman (or Calibri/Arial for a sans register),
   Courier New for mono; equations in the SAME face as the body. See the Type-by-register note
   above; a designer sans is the wrong signal in this room.
+- 🔴 **Structure — when the update reports a CHANGE OF APPROACH, three things move.** Use the
+  `method-pivot` arc (`content-planner.md` §3). (a) **The prior work's RESULTS go BEFORE the
+  pivot**, grouped, in the order the steps produced them — a room asked to accept a direction
+  change before seeing what the old direction showed has no basis to accept it. (b) **Every step
+  of the retired method carries WHAT IT WAS FOR**, not only what it did; the purposes are what the
+  pivot later contradicts, and a recap without them is a list rather than an argument. (c) **The
+  deck ENDS ON STATUS** — what is established and what is not — because the new method's slide is
+  not evidence, and a deck that stops there implies a result it does not have. Each of these three
+  was a correction on a real delivered deck, twice by the user.
+- 🔴 **Every step you enumerate owes a result, or an explicit "no result yet".** If the method
+  recap numbers four steps and the deck shows outcomes for three, the room notices the gap — and a
+  later slide that rests on the missing one (a measurement, a benchmark) is arguing from something
+  it never showed. Say the outcome inline where it is used, or mark the step as not-yet-reported.
 - **Palette:** restrained — one cool primary (slate/navy or deep teal), grey body,
   a single saturated accent reserved for "look here / the new result". Avoid busy
   multi-colour.

@@ -48,6 +48,13 @@ CALL-SHAPE CONTRACTS (the ones that have actually gone wrong):
     honest attempt: passing text()'s paragraphs raises `not enough values to unpack (expected 2)`.
         h = dk.measure_text([(body, False)], w, 14)      # measure
         dk.text(s, x, y, w, h, [[(body, 14, dk.DEEP, False, False, dk.FONT)]])   # place
+    🔴 …and the SAME LINE SPACING. `text()` takes `line_spacing=`; `measure_text` assumed its own
+    default and nothing tied them together, so measuring at the default and placing at 1.16
+    reserves ~4% too little. Measured: a divider derived from that return was drawn through the
+    last line of the block above it, and BOTH linters passed the page — the geometry they check
+    is computed from the same short number. Pass the value to both:
+        h = dk.measure_text(runs, w, 12, line_spacing=1.16)                     # measure AT it
+        dk.text(s, x, y, w, h, paras, line_spacing=1.16)                        # place AT it
     🔴 The measure and the place must name the SAME face. measure_text takes `font=` — pass it
     whenever you place in anything but the deck default, above all MONO. Measured: the same
     command string is 4.04in in Helvetica and 5.44in in Courier, so measuring mono text in the

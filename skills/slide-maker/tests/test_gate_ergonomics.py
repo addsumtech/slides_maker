@@ -67,6 +67,9 @@ d.update({"boldness": "bold",
           "signature_proof": [{"role": r, "slide": i + 4, "png": "render/x.png"}
                               for i, r in enumerate(("signature", "complex", "data"))],
           "checkpoint": {"mode": "approved", "record": "posted"}})
+# `[]` is the legitimate "swept the source, nothing it marks as open" value — the gate blocks the
+# missing KEY, never the count.
+filled["content"]["open_ledger"] = []
 filled["critic"] = {"waived": "user declined", "waived_category": "user-waived"}
 filled["render_selfcheck"] = {"slides": [{"n": 1, "verdict": "ok"}, {"n": 2, "verdict": "ok"}]}
 check(deck_gates.check(filled) == [], "a filled record is shape-clean", deck_gates.check(filled))

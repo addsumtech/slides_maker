@@ -491,6 +491,28 @@ guessing it — one object per candidate, all seven fields required:
 one-clause reason). `roles` is the §4 role vocabulary and is **open** — an unrecognised role is
 accepted, not refused, and only reported so a typo stays visible.
 
+🔴 **A RESEARCH PROGRESS deck that reports a CHANGE OF APPROACH picks `method-pivot`, and the
+order it implies is the opposite of the one it is usually confused with.** The commonest lab-meeting
+deck there is — *here is what we built, here is what it showed, here is why we are changing
+approach* — had no shape, so it got filed as `problem-turn-evidence`. That mislabel moves pages: in
+`problem-turn-evidence` the evidence proves the NEW thing, so a planner following it puts the
+results **after** the turn. In a pivot the evidence belongs to the approach being **retired**, and
+the replacement usually has none yet. So `method-pivot` fixes three things the generic shape gets
+wrong, and each of them was a real correction on a delivered deck:
+1. **The prior work's RESULTS come BEFORE the pivot**, grouped, in the order the steps produced
+   them. A room asked to accept a direction change before seeing what the old direction showed has
+   no basis to accept it.
+2. **Every step of the retired method carries WHAT IT WAS FOR, not just what it did.** A method
+   recap without purposes is a list; with them it is an argument, and the purposes are what the
+   pivot later contradicts. (`design-by-purpose.md` → *Research meeting* carries the design half.)
+3. **The deck ENDS ON STATUS, not on the new method.** The replacement's slide is not evidence, and
+   a deck that stops there implies a result it does not have. The closing beat states what is
+   established and what is not — which is the `open` ledger below, on a slide.
+Roles that match: `problem` · `method` · `evidence` (×N, the retired approach's) · `diagnosis` ·
+`idea` · `method` · `roadmap`. Its `objection` is almost always *"you are abandoning something that
+works"*, and its `closing_ask` is agreement on the direction, never agreement that the new thing
+works.
+
 🔴 **A TEACHING deck picks from the instructional shapes, not from the argument ones.**
 `--template` prints them in two groups. The argue/report group (`evidence-build`,
 `contribution-first`, `recommendation-first`, …) was for a long time the *whole* list, so a lecture

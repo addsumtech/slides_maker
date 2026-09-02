@@ -4288,7 +4288,8 @@ def measure_bullets(items, w, size=17, gap=0.26):
     return total
 
 
-def measure_text(runs, w, size, *, line_h_factor=1.12, pad=0.0, font=None):
+def measure_text(runs, w, size, *, line_h_factor=1.12, pad=0.0, font=None,
+                 line_spacing=None):
     """Height (inches) a plain :func:`text` block of ``runs`` = [(text, bold), ...] needs at
     ``size`` within width ``w``. ``pad`` adds top+bottom slack. CJK-aware: when the runs carry
     CJK, the per-line factor rises to ``1.2 × CJK_LS`` (the pitch text()'s script-aware default
@@ -4300,9 +4301,20 @@ def measure_text(runs, w, size, *, line_h_factor=1.12, pad=0.0, font=None):
     in Helvetica and 5.44in in Courier — **26% narrow**, enough to report a 9.2in line as
     fitting an 8.25in box. Nothing downstream can catch that, because the box is then built to
     the wrong size and every later check agrees with the box. ``fit_text_size`` has always
-    taken ``font``; this signature was the asymmetry."""
+    taken ``font``; this signature was the asymmetry.
+
+    🔴 ``line_spacing`` is the THIRD member of that family, and the quietest. :func:`text` takes
+    a ``line_spacing`` the caller may set to anything; this function assumed ``line_h_factor``
+    and nothing tied the two together — so ``h = measure_text(...)`` placed into
+    ``text(..., line_spacing=1.16)`` reserves the height of 1.12 and renders 1.16, about 4%
+    short. Measured on a real deck: a divider derived from that return was drawn straight
+    through the last line of the block above it, and BOTH linters called the page clean,
+    because the geometry they check is computed from the same short number. Pass the SAME value
+    to both — ``measure_text(runs, w, size, line_spacing=1.16)`` beside
+    ``text(..., line_spacing=1.16)`` — and the pair cannot drift. The CJK floor still applies:
+    a CJK-bearing block never measures below the pitch its script-aware default renders."""
     nlines = _measure_lines(runs, size, w, font=font)
-    factor = line_h_factor
+    factor = line_h_factor if line_spacing is None else float(line_spacing)
     if any(_has_cjk(t) for (t, *_r) in runs):
         factor = max(factor, 1.2 * CJK_LS)
     return nlines * (size / 72.0 * factor) + pad

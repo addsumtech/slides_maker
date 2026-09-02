@@ -126,6 +126,10 @@ def content_ok(n_slides: int = 3) -> dict:
                     "rejected": [{"name": "recommendation-first",
                                   "why_lost": "there is no decision to lead with here"}]},
             "slides": rows,
+            # `[]` records that the source was swept and marks nothing as unresolved — the value
+            # a no-source fixture legitimately carries. The gate blocks the missing KEY, never the
+            # count, so a fixture must still say which it is.
+            "open_ledger": [],
             "checkpoint": {"mode": "approved",
                            "record": "CI fixture — table presented, approved as-is"}}
 

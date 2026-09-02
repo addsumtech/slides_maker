@@ -11,6 +11,18 @@
   name the carrying element (it drives which row the build highlights + the assertion title).
   A figure whose carrying element you cannot name is one you haven't understood.
 - Any **nuance/limitation** the authors stress, quoted.
+- 🔴 **The OPEN ledger — every claim the SOURCE ITSELF marks as NOT yet established**, one row:
+  `claim | where the source says so | absent from the deck, or stated AS OPEN on slide N`.
+  Sweep for the source's own hedges: *future work · next steps · a roadmap · a gate · "cannot
+  establish" · "not yet" · "to be tested" · TODO · an untested flag*. **A row here may never appear
+  on a slide in the established voice.** This is a DIFFERENT failure from inventing: the fact is
+  really in the source, promoted from hypothesis to result — which the never-invent rule and the
+  claim ledger both wave through, because the claim *is* traceable. Measured on a delivered
+  research deck: a slide asserted that extra respiratory bins helped the reconstruction while the
+  source listed *"tests whether each bin helps"* as an open gate; an expert room catches that
+  instantly and it costs the whole deck's credibility. `[]` is a legitimate value — it records that
+  the sweep happened. Recorded as `content.open_ledger`; `deck_gates.py check` blocks the missing
+  KEY, never the count.
 - A **claim ledger** (per `content-planner.md` §2): every number/date/name/citation/superlative/
   dated-event as a row with source + verbatim value + verified?(Y/N) + as-of date; an unverifiable
   claim is cut or marked open, never shipped.
