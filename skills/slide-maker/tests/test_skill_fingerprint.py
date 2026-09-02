@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """A COPIED install must be able to tell it is not running what main has.
 
+The comparison is git BLOB SHAs fetched from GitHub's trees API — nothing is generated into the
+repo, so there is no artifact to keep fresh and none to go stale. It is deliberately ONE-
+DIRECTIONAL (does everything I HAVE match main?), because an installer chooses what to copy:
+`npx skills add` lands ~55 files where the tree has ~193, and demanding an exact set would report
+"differs" on every correct install forever.
+
 🔴 THE MEASURED DEFECT. `check_version.py` on a copy install compared `VERSION` against the one on
 GitHub. `VERSION` only moves on a RELEASE, so every commit between releases — the development case,
 which is most of the time — was invisible. Tested directly before this file existed: a copy whose
@@ -36,53 +42,63 @@ def check(cond, why):
     (ok if cond else bad).append(why)
 
 
-# ---------------------------------------------------------------- the fingerprint itself
+# ---------------------------------------------------------------- blob SHAs, not a tree hash
+import subprocess as _sp                                                          # noqa: E402
+
+repo_file = ROOT / "VERSION"
+git_sha = _sp.run(["git", "hash-object", str(repo_file)], capture_output=True, text=True,
+                  cwd=str(ROOT)).stdout.strip()
+check(git_sha and sf.blob_sha(repo_file) == git_sha,
+      "🔴 `blob_sha` equals what `git hash-object` produces — the whole approach rests on it, "
+      "because it lets a copy with no git compute the same identity GitHub already stores")
+
 tmp = Path(tempfile.mkdtemp(prefix="fp-"))
 tree = tmp / "skill"
 (tree / "scripts").mkdir(parents=True)
-(tree / "SKILL.md").write_text("rule one\nrule two\n", encoding="utf-8")
+(tree / "SKILL.md").write_text("rule one\n", encoding="utf-8")
 (tree / "scripts" / "a.py").write_text("print(1)\n", encoding="utf-8")
-
-base = sf.fingerprint(tree)
-check(base == sf.fingerprint(tree),
-      "the fingerprint is deterministic — the same tree hashes the same twice, or every install "
-      "would report a difference that is not one")
-
-(tree / "SKILL.md").write_text("rule one\nrule two\nrule three\n", encoding="utf-8")
-check(sf.fingerprint(tree) != base,
-      "🔴 a CONTENT change moves it — this is the case VERSION is blind to, since a commit between "
-      "releases leaves the version string untouched")
-
-(tree / "SKILL.md").write_text("rule one\nrule two\n", encoding="utf-8")
-check(sf.fingerprint(tree) == base, "...and reverting the content restores the hash")
-
-(tree / "scripts" / "a.py").rename(tree / "scripts" / "b.py")
-check(sf.fingerprint(tree) != base,
-      "🔴 a RENAME moves it too — the digest covers PATHS, not just contents, so a file moved or "
-      "deleted cannot slip through a contents-only hash")
-(tree / "scripts" / "b.py").rename(tree / "scripts" / "a.py")
-
 (tree / "scripts" / "__pycache__").mkdir()
-(tree / "scripts" / "__pycache__" / "a.cpython-313.pyc").write_bytes(b"\x00\x01")
+(tree / "scripts" / "__pycache__" / "a.cpython-313.pyc").write_bytes(b"\x00")
 (tree / ".DS_Store").write_bytes(b"\x00")
-(tree / "SKILL.sha256").write_text(base + "\n", encoding="utf-8")
-check(sf.fingerprint(tree) == base,
-      "🔴 caches, OS turds and the fingerprint FILE ITSELF are excluded — two identical installs "
-      "must agree, and including SKILL.sha256 in its own input is self-referential")
+
+blobs = sf.local_blobs(tree)
+check(set(blobs) == {"SKILL.md", "scripts/a.py"},
+      "🔴 caches and OS turds are pruned — they differ between two identical installs, so "
+      "comparing them would report a difference that is not one (got {})".format(sorted(blobs)))
+
+before = dict(blobs)
+(tree / "SKILL.md").write_text("rule one\nrule two\n", encoding="utf-8")
+check(sf.local_blobs(tree)["SKILL.md"] != before["SKILL.md"],
+      "a CONTENT change moves that file's sha — the case VERSION is blind to, since a commit "
+      "between releases leaves the version string untouched")
 
 
-# ------------------------------------------------------ the committed file cannot go stale
-r = subprocess.run([sys.executable, str(SCRIPTS / "skill_fingerprint.py"), "--check"],
-                   capture_output=True, text=True)
-check(r.returncode == 0,
-      "`--check` passes on this repo, so the committed SKILL.sha256 matches the tree ({})"
-      .format((r.stdout or r.stderr).strip()[:70]))
-check("--write" in (r.stdout + r.stderr) or r.returncode == 0,
-      "...and when it fails it names the one command that fixes it, because a stale fingerprint "
-      "silently disables the check for EVERY copied install")
+# ----------------------------------------------- the comparison is SUBSET-aware, on purpose
+real_remote = sf.remote_blobs
+sf.remote_blobs = lambda: dict(before, **{"only/on/main.md": "0" * 40})
+matches, differing = sf.compare(tree)
+sf.remote_blobs = real_remote
+check(matches is False and differing == ["SKILL.md"],
+      "🔴 a file whose content differs is reported")
+check("only/on/main.md" not in differing,
+      "🔴 ...and a file main has that this copy does NOT is IGNORED — `npx skills add` lands ~55 "
+      "files where the tree has ~193, so demanding an exact set would report 'differs' on every "
+      "correct install forever")
 
+sf.remote_blobs = lambda: dict(sf.local_blobs(tree))
+matches, differing = sf.compare(tree)
+sf.remote_blobs = real_remote
+check(matches is True and differing == [],
+      "...and a copy whose every file matches main is reported current")
 
-# --------------------------------------------------- copy_shape: content first, then version
+sf.remote_blobs = lambda: None
+matches, differing = sf.compare(tree)
+sf.remote_blobs = real_remote
+check(matches is None,
+      "🔴 unavailable is NOT 'current' — offline/rate-limited/truncated returns None, and every "
+      "caller says nothing, so this can never be the reason a deck did not get built")
+
+# ------------------------------------- copy_shape: CONTENT first, VERSION only when it differs
 class _Resp(io.BytesIO):
     def __enter__(self):
         return self
@@ -91,61 +107,70 @@ class _Resp(io.BytesIO):
         return False
 
 
-def _patched(fp_body, version_body, calls):
+real_open = cv.urllib.request.urlopen
+real_compare = sf.compare
+
+
+def _version_server(body, calls):
     def _open(req, timeout=None):
-        url = req.full_url if hasattr(req, "full_url") else str(req)
-        calls.append(url)
-        if url.endswith("SKILL.sha256"):
-            if fp_body is None:
-                raise OSError("simulated network failure")
-            return _Resp(fp_body.encode())
-        return _Resp(version_body.encode())
+        calls.append(req.full_url if hasattr(req, "full_url") else str(req))
+        if body is None:
+            raise OSError("simulated network failure")
+        return _Resp(body.encode())
     return _open
 
 
-real_open = cv.urllib.request.urlopen
-local_fp = sf.fingerprint()
-
 calls = []
-cv.urllib.request.urlopen = _patched(local_fp, "5.2.0", calls)
+sf.compare = lambda *a, **k: (True, [])
+cv.urllib.request.urlopen = _version_server("5.2.0", calls)
 res = cv.copy_shape("5.2.0")
-cv.urllib.request.urlopen = real_open
+sf.compare, cv.urllib.request.urlopen = real_compare, real_open
 check(res and res.get("behind") == 0 and res.get("drift") is None,
-      "a copy whose tree hashes to main's is reported CURRENT")
-check(len(calls) == 1,
-      "...and it cost ONE request, not two — the fingerprint settles the common case on its own "
-      "({} call(s))".format(len(calls)))
+      "a copy whose every file matches main is reported CURRENT")
+check(not calls,
+      "🔴 ...without fetching VERSION at all — if the CONTENT agrees the version necessarily does, "
+      "so the common case costs one API call and no second request ({} extra)".format(len(calls)))
 
 calls = []
-cv.urllib.request.urlopen = _patched("deadbeef" * 8, "5.2.0", calls)
+sf.compare = lambda *a, **k: (False, ["scripts/deckkit.py", "SKILL.md", "a.md", "b.md"])
+cv.urllib.request.urlopen = _version_server("5.2.0", calls)
 res = cv.copy_shape("5.2.0")
-cv.urllib.request.urlopen = real_open
+sf.compare, cv.urllib.request.urlopen = real_compare, real_open
 check(res and res.get("behind") == 1 and res.get("drift") == "content",
-      "🔴 a copy at the SAME released version but a different tree is reported BEHIND — the exact "
-      "state that used to pass silently, and the state a developer is in between releases")
+      "🔴 a copy at the SAME released version but different content is reported BEHIND — the exact "
+      "state that used to pass silently, and the one a developer is in between releases")
 msg = cv.notice(res) or ""
 check("DIFFERS" in msg and "VERSION cannot see this" in msg,
-      "...and the notice says what actually happened rather than 'a new version is available', "
-      "which would be false: the version is identical")
+      "...and the notice says what happened rather than 'a new version is available', which would "
+      "be false: the version is identical")
+check("scripts/deckkit.py" in msg and "and 1 more" in msg,
+      "...and it NAMES the files, capped — a bare 'differs' leaves the reader no way to judge "
+      "whether it matters ({})".format(msg[-90:]))
 check("Local edits" in msg,
-      "...and it names local edits as the other way to reach this state, because a hash cannot "
-      "tell direction and claiming one would be a guess")
+      "...and names local edits as the other way to reach this state, because a hash cannot tell "
+      "direction and claiming one would be a guess")
 
 calls = []
-cv.urllib.request.urlopen = _patched(None, "5.3.0", calls)
+sf.compare = lambda *a, **k: (None, [])
+cv.urllib.request.urlopen = _version_server("5.3.0", calls)
 res = cv.copy_shape("5.2.0")
-cv.urllib.request.urlopen = real_open
+sf.compare, cv.urllib.request.urlopen = real_compare, real_open
 check(res and res.get("behind") == 1 and res.get("drift") == "version",
-      "🔴 when the fingerprint fetch FAILS the check falls back to the old VERSION compare rather "
-      "than going quiet — a new capability must not remove the one that already worked")
+      "🔴 when the content comparison is UNAVAILABLE the check falls back to the old VERSION "
+      "compare rather than going quiet — a new capability must not remove the one that worked")
 
 calls = []
-cv.urllib.request.urlopen = _patched(None, "", calls)
+sf.compare = lambda *a, **k: (None, [])
+cv.urllib.request.urlopen = _version_server(None, calls)
 res = cv.copy_shape("5.2.0")
-cv.urllib.request.urlopen = real_open
+sf.compare, cv.urllib.request.urlopen = real_compare, real_open
 check(res is None,
       "...and with BOTH unavailable it returns None — offline stays silent by design, so this can "
       "never be the reason a deck did not get built")
+
+check(not (ROOT / "SKILL.sha256").exists(),
+      "🔴 and NOTHING is generated into the repo: no committed artifact means none to regenerate "
+      "on every commit, none to conflict on every merge, and none to silently go stale")
 
 shutil.rmtree(tmp, ignore_errors=True)
 
