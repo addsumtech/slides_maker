@@ -95,6 +95,23 @@ check([p for p in dg.check(g) if "material_probe" in p],
       "slides — a bare category is a label, not a decision")
 
 
+# 🔴 the carve VOCABULARY, which is what this file is about: a recordable exception must be a
+# named category plus a written reason, and `conservative` is deliberately not one of these names.
+import material_probe as mp                                                       # noqa: E402
+check(dg.MATERIAL_PROBE_CARVES is mp.CARVES and rd.MATERIAL_PROBE_CARVES is mp.CARVES,
+      "🔴 both gates read the material-probe carve list from `material_probe.py` by IDENTITY, not "
+      "a copy of the same words (the AST + contract assertions live in test_material_probe.py)")
+check("conservative" not in mp.CARVES and mp.waiver_faults({"waived": "x" * 40,
+                                                            "waived_category": "conservative"}),
+      "...and `conservative` is not in that vocabulary: the ANCHOR proof carves for it — a deck "
+      "that took no risk has nothing to prove — but the MATERIAL probe asks what the device is "
+      "MADE of, and restraint is a material decision too")
+check(len(mp.waiver_faults({"waived_category": "tiny-ask"})) == 1
+      and "reason" in mp.waiver_faults({"waived_category": "tiny-ask"})[0],
+      "...and a bare category with no written reason is a label, not a decision — the same rule "
+      "every other recordable exception in this file is held to")
+
+
 # ----------------------------------------------------- 2. the icon reason that could not be said
 for mod, name in ((rd, "shared"), (cg, "codex")):
     cats = getattr(mod, "_ICON_NONE_CATEGORIES", None) or getattr(mod, "ICON_NONE_CATEGORIES")

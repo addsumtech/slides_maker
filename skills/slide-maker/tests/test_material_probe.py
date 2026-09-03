@@ -61,6 +61,49 @@ def check(name, cond, detail=""):
         print(f"  FAIL {name}\n       {str(detail)[:320]}")
 
 
+def anti_drift():
+    """The same shape as tests/test_anchor_proof.py, one field earlier.
+
+    The carve list had been hand-written into TWO gates, and adding the Codex arm would have made a
+    third copy — while the shared/Codex pair has already diverged on exactly this kind of field: the
+    anchor proof's file key was spelled `path` in one gate and `png` in the other, so a bridged run
+    wrote what its own gate demanded and the other rejected it for the key name alone.
+    """
+    import ast
+    import material_probe as mp
+
+    print("== one contract module, imported by every gate path ==")
+    for name in ("render_deck.py", "deck_gates.py", "codex_delivery_gate.py"):
+        src = (SKILL / "scripts" / name).read_text(encoding="utf-8")
+        imported = any(
+            (isinstance(n, ast.Import) and any(a.name == "material_probe" for a in n.names))
+            or (isinstance(n, ast.ImportFrom) and n.module == "material_probe")
+            for n in ast.walk(ast.parse(src)))
+        check("%s imports the shared material_probe contract rather than restating it" % name,
+              imported,
+              "a local copy looks correct in review and simply stops being the same rule six "
+              "months later — which is what happened to the anchor proof's file key")
+        check("...and %s carries no private copy of the carve tuple" % name,
+              '"registered-template", "provided-template"' not in src)
+
+    check("🔴 BOTH spellings are the contract, so neither runtime is blocked for its own word",
+          mp.file_value({"png": "a.png"}) == "a.png" and mp.file_value({"path": "b"}) == "b",
+          "the shared gate's skeleton says `png`; every Codex evidence record spells a file `path`")
+    check("...and reading two keys does not mean accepting neither",
+          mp.file_value({}) == "" and mp.file_value(None) == "")
+    check("...and a blank `waived` is not a waiver, so whitespace cannot buy the carve",
+          not mp.is_waived({"waived": "   "}))
+    check("🔴 `conservative` is refused BY NAME, with the reason attached",
+          any("conservative" in f for f in
+              mp.waiver_faults({"waived": "x" * 40, "waived_category": "conservative"})),
+          "it carves the Step-4 ANCHOR proof — a deck that took no risk has nothing to prove — and "
+          "deliberately not this one; whoever meets the error is exactly who needs to know why")
+    check("...and maintenance-boundaries.md tells the next person what re-inlining it would cost",
+          "material_probe.py" in
+          (SKILL / "references" / "maintenance-boundaries.md").read_text(encoding="utf-8"),
+          "check_skill_lossless.py would score that refactor perfect while the property disappears")
+
+
 def gate(deck, gates):
     gates = fit_content(gates, deck)
     if "interview" not in gates:                 # the four recorded answers are now required;
@@ -143,6 +186,8 @@ def main():
         check("a blank anchor is refused", rc != 0 and "single flat colour" in out, out)
         check("...and says what the anchor proof is FOR",
               "rendered evidence where the design decision is made" in out, out)
+
+    anti_drift()
 
     print(f"\n{PASS} passed, {FAIL} failed")
     return 1 if FAIL else 0

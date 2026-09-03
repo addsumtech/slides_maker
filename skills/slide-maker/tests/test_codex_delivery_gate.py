@@ -149,8 +149,10 @@ def fixture(root: Path) -> tuple[dict, dict, dict, Path]:
         encoding="utf-8",
     )
     proof = root / "slide-1.png"
+    probe_png = root / "probe-slide-1.png"
     icon = root / "feature.png"
     write_png(proof)
+    write_png(probe_png)
     write_png(icon, 512, 512, alpha=True)
     build = root / "build_deck.py"
     # APPLIES the register the evidence declares (`design.style_pick` = editorial_report). The
@@ -354,6 +356,15 @@ def fixture(root: Path) -> tuple[dict, dict, dict, Path]:
             "direction_gate": "n/a - CI fixture, no direction gate was run",
             "signature_move": "A visible evidence rail connects source, build, and review.",
             "carried_by": [1],
+            # The Step-2 probe: a page BUILT and looked at before the plan's declarations. Spelled
+            # `path` here, which is this runtime's file key — the shared gate's skeleton says `png`,
+            # and material_probe.py reads either so a bridged run cannot be rejected for spelling.
+            "material_probe": {
+                "path": probe_png.name,
+                "sha256": sha256(probe_png),
+                "pptx_sha256": sha256(deck),
+                "safe_version": "A plain bulleted agenda with the same three words as headings.",
+            },
             "signature_proof": {
                 "slide": 1,
                 "path": proof.name,
@@ -542,7 +553,67 @@ def main() -> int:
         if component_errors:
             failures.append("a same-slide, registered component emitter was incorrectly blocked")
 
+        # 🔴 THE STEP-2 MATERIAL PROBE, which this gate did not require at all until now — it was
+        # a floor on the shared path only, so a Codex-verified deck skipped it. Four ways to fail:
         components = fresh_component_audit(build, root / evidence["deck"]["pptx"])
+        keep_probe = json.loads(json.dumps(evidence["design"]["material_probe"]))
+
+        del evidence["design"]["material_probe"]
+        errors = gate.evaluate(lint, components, build, evidence, root)
+        if not any("material_probe" in e for e in errors):
+            failures.append("a design plan with NO material probe passed the Codex gate — the "
+                            "Step-2 artifact the shared gate has always demanded")
+
+        # `conservative` carves the ANCHOR proof and deliberately does NOT carve this one.
+        evidence["design"]["material_probe"] = {
+            "waived": "the deck is deliberately restrained, no signature risk was taken",
+            "waived_category": "conservative"}
+        errors = gate.evaluate(lint, components, build, evidence, root)
+        if not any("material_probe" in e and "conservative" in e for e in errors):
+            failures.append("`conservative` waived the material probe — it carves the anchor proof "
+                            "(no risk taken, nothing to prove) but not the question of what the "
+                            "device is MADE of, and the error must say so")
+
+        evidence["design"]["material_probe"] = {"waived": "locked corporate template",
+                                                "waived_category": "registered-template"}
+        errors = gate.evaluate(lint, components, build, evidence, root)
+        if any("material_probe" in e for e in errors):
+            failures.append("a properly-claimed carve was blocked: "
+                            + "; ".join(e for e in errors if "material_probe" in e))
+
+        # (deep-copy on every restore: binding the name to `keep_probe` and then mutating it would
+        # corrupt the pristine copy, and every later "restore" would restore the corruption)
+        evidence["design"]["material_probe"] = json.loads(json.dumps(keep_probe))
+        evidence["design"]["material_probe"]["pptx_sha256"] = "0" * 64
+        errors = gate.evaluate(lint, components, build, evidence, root)
+        if not any("material_probe" in e and "final PPTX" in e for e in errors):
+            failures.append("a probe PNG unbound to the delivered PPTX passed — a render of an "
+                            "earlier build is not evidence about the deck being handed over")
+        evidence["design"]["material_probe"] = json.loads(json.dumps(keep_probe))
+
+        evidence["design"]["material_probe"]["safe_version"] = "nicer"
+        errors = gate.evaluate(lint, components, build, evidence, root)
+        if not any("safe_version" in e for e in errors):
+            failures.append("a one-word `safe_version` passed — the comparison IS the test")
+        evidence["design"]["material_probe"] = json.loads(json.dumps(keep_probe))
+
+        # ...and the SHARED gate's spelling (`png`) must not be rejected here either — the
+        # `path`-vs-`png` split is exactly what anchor_proof.py was created after.
+        evidence["design"]["material_probe"] = json.loads(json.dumps(keep_probe))
+        evidence["design"]["material_probe"]["png"] = \
+            evidence["design"]["material_probe"].pop("path")
+        errors = gate.evaluate(lint, components, build, evidence, root)
+        if any("material_probe" in e for e in errors):
+            failures.append("a probe spelled the SHARED gate's way (`png`) was rejected by the "
+                            "Codex gate: " + "; ".join(e for e in errors if "material_probe" in e))
+        evidence["design"]["material_probe"] = json.loads(json.dumps(keep_probe))
+
+        # ...and the fixture's own probe, correctly filled, must not be blocked.
+        errors = gate.evaluate(lint, components, build, evidence, root)
+        if any("material_probe" in e for e in errors):
+            failures.append("the fixture's valid material probe was blocked: "
+                            + "; ".join(e for e in errors if "material_probe" in e))
+
         proof = root / evidence["design"]["signature_proof"]["path"]
         proof.write_bytes(b"")
         evidence["design"]["signature_proof"]["sha256"] = sha256(proof)

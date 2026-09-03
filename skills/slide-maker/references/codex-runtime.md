@@ -400,6 +400,20 @@ lost each, and `arc_divergence.py`'s verdict) and the DESIGN direction** (`desig
 governing picture** (`design.concept`: chosen + the two it beat), per-slide form
 ledger, four clean-branch direction tokens and preview, final rendered signature proof, categorical
 icon assets, visual-contract manifest/result, and two separate critic JSON files.
+🔴 **`design.material_probe` is required here too, as of this change.** Step 2 opens by BUILDING one
+real page — the slide the signature move lands on, in the register you invented — rendering it, and
+LOOKING at it, before the plan's twenty declarations are written; the record is that PNG (bound to a
+SHA-256 and to the final PPTX, as every proof here is) plus the one sentence that is the whole test:
+*what would the SAFE version of this page have been?* If the honest answer is "about the same thing",
+the register is a look rather than a move. It was enforced by `render_deck.py --gate-check` and
+**absent from this gate entirely**, so a Codex-verified deck skipped a Step-2 floor — the runtime
+asymmetry this file exists to close. Claim the carve instead when the look is not yours to invent:
+`{"waived": "<which template / mimic / how many slides>", "waived_category":
+"registered-template | provided-template | mode-a-mimic | tiny-ask"}`. 🔴 `conservative` is NOT a
+carve here, unlike `signature_proof` — that one proves a RISK survived the build and a deck that took
+none has nothing to prove; this one asks what the device is MADE of, and restraint is a material
+decision too. The carve list and the waiver rules live in `scripts/material_probe.py`, imported by
+every gate path, because a per-gate copy is exactly the drift `anchor_proof.py` was created to stop.
 🔴 **EVERY deck carries `content.open_ledger`** — one row per claim the SOURCE ITSELF marks as not
 yet established (future work · an open gate · "cannot establish" · a roadmap item · a TODO), each with
 the locator that says so, and none of them may appear on a slide in the ESTABLISHED voice. This is a

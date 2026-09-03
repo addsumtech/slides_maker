@@ -456,10 +456,11 @@ def _report_file_observations(pptx_path):
 _ICON_NONE_CATEGORIES = ("motif-dominant", "editorial-register", "tiny-deck",
                          "template-locked", "user-declined")
 
-# The Step-2 carves the material probe may be skipped under. `conservative` is deliberately absent:
-# SKILL.md says restraint is a material decision too, and a page is where you see whether it reads
-# as deliberate or as nothing.
-MATERIAL_PROBE_CARVES = ("registered-template", "provided-template", "mode-a-mimic", "tiny-ask")
+# The Step-2 carve vocabulary lives in ONE module, imported by every gate path — the same lesson
+# `anchor_proof.py` was created for, after these two gates diverged on that field's file key.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from material_probe import (CARVES as MATERIAL_PROBE_CARVES,  # noqa: E402
+                            file_value as _mp_file, waiver_faults as _mp_faults)
 
 
 def _icon_none_category_holds(cat, pptx_path, flagged):
@@ -2373,18 +2374,11 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
             # probe artifact and write a note explaining that the gate and the prose disagree.
             # A rule whose documented exception cannot be recorded forces a false record.
             if isinstance(probe, dict) and probe.get("waived"):
-                _mc = str(probe.get("waived_category") or "").strip().lower()
-                if _mc not in MATERIAL_PROBE_CARVES:
-                    die("`design_plan.material_probe.waived` needs a `waived_category` naming the "
-                        "carve: {}.\n  `boldness: conservative` is NOT one of them — Step 2 says "
-                        "so explicitly: restraint is a material decision too, and a page is where "
-                        "you see whether it reads as deliberate or as nothing."
-                        .format(" | ".join(MATERIAL_PROBE_CARVES)))
-                if reason_width(probe.get("waived")) < 20:
-                    die("`design_plan.material_probe.waived` needs a written reason, not just a "
-                        "category — which template, which mimic, how many slides.")
+                for _f in _mp_faults(probe):
+                    die("`design_plan.material_probe.waived` " + _f)
                 print("[gates] material probe: WAIVED [{}] — {}".format(
-                    _mc, str(probe.get("waived"))[:80]))
+                    str(probe.get("waived_category")).strip().lower(),
+                    str(probe.get("waived"))[:80]))
                 probe = None
             elif not isinstance(probe, dict):
                 die('`design_plan.material_probe` is missing. Step 2 opens by BUILDING one real '
@@ -2395,14 +2389,14 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
                     'page would have been — if it is about the same thing, the register is a look, '
                     'not a move>"}}')
             if probe is not None:      # None == waived above, with a category and a reason
-                ppng = Path(str(probe.get("png") or ""))
+                _pv = _mp_file(probe)      # `png` or `path` — the Codex records spell it `path`
+                ppng = Path(_pv)
                 if not ppng.is_absolute():
                     ppng = Path(pptx).parent / ppng
-                if (not str(probe.get("png") or "") or not ppng.exists()
-                        or ppng.stat().st_size < 512):
+                if not _pv or not ppng.exists() or ppng.stat().st_size < 512:
                     die('`design_plan.material_probe.png` must point at a REAL rendered slide '
                         '({!r} is missing or empty). The probe is the artifact; a plan describing '
-                        'it is not.'.format(str(probe.get("png") or "")))
+                        'it is not.'.format(_pv))
                 if _png_is_flat(ppng):
                     die('`design_plan.material_probe.png` is a single flat colour — not a render.')
                 if reason_width(probe.get("safe_version")) < 20:
@@ -2412,7 +2406,7 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
                         'than a move, and that is worth discovering before twenty declarations '
                         'are written on it.')
                 print("[gates] material probe: {} · safe version would have been: {}".format(
-                    probe.get("png"), str(probe.get("safe_version"))[:90]))
+                    _pv, str(probe.get("safe_version"))[:90]))
 
             cb = design["carried_by"]
             if not isinstance(cb, list) or len(cb) < 2:

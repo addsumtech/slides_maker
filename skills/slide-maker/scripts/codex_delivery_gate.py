@@ -297,6 +297,20 @@ TEMPLATE = {
         ],
         "signature_move": "<repeated, deliberate visual device>",
         "carried_by": [1, 5],
+        # The Step-2 MATERIAL PROBE — ONE real page, built and LOOKED AT before the plan's twenty
+        # declarations are written, plus the one sentence that is the whole test: what would the
+        # SAFE version of this page have been? The contract lives in material_probe.py; this gate
+        # binds the artifact to a SHA-256 and to the final PPTX, as it does every other proof.
+        # Claim the carve instead when the look is not yours to invent:
+        #   {"waived": "<which template / mimic / how many slides>",
+        #    "waived_category": "registered-template|provided-template|mode-a-mimic|tiny-ask"}
+        "material_probe": {
+            "path": "render/slide-3.png",
+            "sha256": "<sha256>",
+            "pptx_sha256": "<must equal deck.sha256>",
+            "safe_version": "<what the DEFAULT version of this page would have been — if it is "
+                            "about the same thing, the register is a look, not a move>",
+        },
         # The ANCHOR PROOF — three rendered pages, three different failures. `signature` proves the
         # aesthetic risk survived the build; `complex` proves the design holds the deck's densest
         # page; `data` proves the charts speak the same visual language the type did.
@@ -1611,6 +1625,30 @@ def check_design(
     # weaken it to the weaker of the two.
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import anchor_proof as _ap
+
+    # THE STEP-2 MATERIAL PROBE. It was enforced by render_deck.py --gate-check and absent HERE,
+    # so a Codex-verified deck skipped a Step-2 floor entirely — the runtime asymmetry this repo
+    # keeps having to close. 🔴 `conservative` does NOT carve it (unlike signature_proof above):
+    # restraint is a material decision too, and a page is where you see whether it reads as
+    # deliberate or as nothing.
+    import material_probe as _mp
+    _probe = design.get("material_probe")
+    if _mp.is_waived(_probe):
+        for _f in _mp.waiver_faults(_probe):
+            errors.append("design.material_probe.waived " + _f)
+    elif not isinstance(_probe, dict):
+        errors.append("design.material_probe " + _mp.MISSING)
+    else:
+        _pp = check_hashed_file(root, _mp.file_value(_probe), _probe.get("sha256"),
+                                "design.material_probe", errors, minimum_bytes=512)
+        if _pp is not None:
+            _dim = png_dimensions(_pp)
+            if _dim is None or _dim[0] < 640 or _dim[1] < 360:
+                errors.append("design.material_probe must be a rendered PNG of at least 640x360")
+        if _probe.get("pptx_sha256") != deck_hash:
+            errors.append("design.material_probe is not bound to the final PPTX SHA-256")
+        require_string(_probe.get("safe_version"), "design.material_probe.safe_version", errors,
+                       minimum=_mp.MIN_REASON)
 
     proof = design.get("signature_proof")
     if carved and proof is None:

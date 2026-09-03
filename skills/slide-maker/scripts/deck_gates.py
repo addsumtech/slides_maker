@@ -41,10 +41,11 @@ from pathlib import Path
 
 GATES = ".deck-gates.json"
 
-# Kept in lockstep with render_deck.MATERIAL_PROBE_CARVES — the two gates have drifted on
-# duplicated field vocabularies before, and a pre-flight that rejects what the gate accepts is
-# worse than no pre-flight.
-MATERIAL_PROBE_CARVES = ("registered-template", "provided-template", "mode-a-mimic", "tiny-ask")
+# ONE module owns the carve vocabulary — see material_probe.py for why a per-gate copy is exactly
+# the drift `anchor_proof.py` was created to stop.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from material_probe import (CARVES as MATERIAL_PROBE_CARVES,  # noqa: E402
+                            file_value as _mp_file, waiver_faults as _mp_faults)
 
 DIALS = ("conservative", "balanced+", "bold", "experimental")
 DELIVERIES = ("presented", "textheavy", "selfread", "surface")
@@ -237,19 +238,14 @@ def check(gates):
     # invent an artifact and note that the gate and the prose disagreed. `conservative` is
     # deliberately not a carve: SKILL.md says restraint is a material decision too.
     if isinstance(probe, dict) and probe.get("waived"):
-        cat = str(probe.get("waived_category") or "").strip().lower()
-        if cat not in MATERIAL_PROBE_CARVES:
-            problems.append("`design_plan.material_probe.waived` needs a `waived_category` from: "
-                            "{}. (`conservative` is NOT one — Step 2 says so.)"
-                            .format(" | ".join(MATERIAL_PROBE_CARVES)))
-        elif _ph(probe.get("waived")) or len(str(probe.get("waived")).strip()) < 20:
-            problems.append("`design_plan.material_probe.waived` needs a written reason beside the "
-                            "category — which template, which mimic, how many slides.")
+        for _f in _mp_faults(probe):
+            problems.append("`design_plan.material_probe.waived` " + _f)
     elif isinstance(probe, dict):
-        for k in ("png", "safe_version"):
-            if not probe.get(k) or _ph(probe.get(k)):
-                problems.append("`design_plan.material_probe.{}` is empty or a placeholder."
-                                .format(k))
+        _pv = _mp_file(probe)          # `png` or `path`; the Codex evidence records use `path`
+        if not _pv or _ph(_pv):
+            problems.append("`design_plan.material_probe.png` is empty or a placeholder.")
+        if not probe.get("safe_version") or _ph(probe.get("safe_version")):
+            problems.append("`design_plan.material_probe.safe_version` is empty or a placeholder.")
 
     proof = _need(gates, "design_plan.signature_proof", problems, list)
     if isinstance(proof, list):
@@ -418,6 +414,27 @@ def _selftest():
         ok.append("a fully-filled record passes")
     else:
         bad.append("a filled record still fails: {}".format(probs))
+
+    # 🔴 THE SPELLING, both ways. This gate's skeleton says `png`; every Codex evidence record
+    # spells a file `path`. That exact split — `path` in one gate, `png` in the other — is what
+    # made a bridged run write what its own gate demanded and the other reject it, and it is why
+    # anchor_proof.py exists. material_probe.file_value() reads either, so neither runtime can be
+    # blocked for using its own word.
+    g_path = json.loads(json.dumps(g))
+    g_path["design_plan"]["material_probe"] = {"path": "render/slide04.png",
+                                               "safe_version": "two captioned pictures"}
+    if check(g_path):
+        bad.append("a probe spelled the CODEX way (`path`) was rejected by this gate: {}"
+                   .format(check(g_path)))
+    else:
+        ok.append("a probe spelled `path` (the Codex records' key) passes here too")
+    g_none = json.loads(json.dumps(g))
+    g_none["design_plan"]["material_probe"] = {"safe_version": "two captioned pictures"}
+    if any("material_probe" in p for p in check(g_none)):
+        ok.append("...and a probe naming NO file under either key is still caught")
+    else:
+        bad.append("a probe with no file at all passed — reading two keys must not mean "
+                   "accepting neither")
 
     g2 = json.loads(json.dumps(g))
     g2["design_plan"]["boldness"] = "bold — because it is a launch"
