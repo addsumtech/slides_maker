@@ -144,6 +144,13 @@ TEMPLATE = {
         # Every claim the SOURCE ITSELF marks as not yet established — future work, an open gate,
         # "cannot establish", a roadmap item, a TODO. None may reach a slide in the established
         # voice. `[]` is a legitimate value and records that the sweep happened.
+        # WHO THIS IS FOR AND WHAT THEY HAVE TO DECIDE — written before the research, because the
+        # frame aims the research. On a NO-SOURCE deck this replaces the comprehension brief.
+        "audience_brief": {
+            "who": "<who is in the room, and what they are about to do>",
+            "decisions": [{"decision": "<what they must decide>",
+                           "needs": "<what they need in hand to decide it>"}],
+        },
         "open_ledger": [
             {
                 "claim": "<what the source says is NOT yet shown>",
@@ -934,6 +941,17 @@ def check_content(
     # records that the sweep happened — this blocks the missing KEY, never the count. Added here in
     # the same change as the shared path: a floor kept in one runtime only is how the other quietly
     # stops enforcing it, which these two gates have already drifted on twice.
+    import audience_brief as _ab
+    _brief = content.get("audience_brief")
+    if _ab.is_waived(_brief):
+        for _f in _ab.waiver_faults(_brief):
+            errors.append("content.audience_brief.waived " + _f)
+    elif _brief is None:
+        errors.append("content.audience_brief " + _ab.MISSING.split("\n")[0])
+    else:
+        for _f in _ab.faults(_brief):
+            errors.append("content.audience_brief: " + _f)
+
     if "open_ledger" not in content:
         errors.append("content.open_ledger missing — record every claim the SOURCE marks as NOT "
                       "yet established (claim + where it says so + absent|stated as open on slide "

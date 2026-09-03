@@ -201,6 +201,7 @@ def main():
             {"name": "chronological", "shape": "chronological",
              "roles": ["hook", "case-study", "roadmap"],
              "audience_question": "how did the project actually unfold over the year",
+     "serves_goal": "it reaches the decision through the measurement that rules the rival out",
              "objection": "a story is not a result",
              "closing_ask": "keep the team funded through the next milestone",
              "evidence": ["c2", "c4"]}]

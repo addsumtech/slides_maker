@@ -217,7 +217,18 @@ def fixture(root: Path) -> tuple[dict, dict, dict, Path]:
             "sources": [{"kind": "provided", "path": source.name, "sha256": sha256(source)}],
             # `[]` records that the source was swept and marks nothing as unresolved — the gate
             # blocks the missing KEY, never the count.
-            "open_ledger": [],
+            # who the fixture deck is for and what they have to decide — the frame that aims the
+        # research, required since a deck built for travellers shipped a land-survey thesis
+        "audience_brief": {
+            "who": "the two reviewers deciding whether this workflow evidence is sufficient",
+            "decisions": [{"decision": "accept the evidence record or send it back",
+                           "needs": "which gates ran and what each one measured"},
+                          {"decision": "whether the design decisions were made or defaulted",
+                           "needs": "the boldness dial and the signature move, with their sources"},
+                          {"decision": "whether to run the deck again",
+                           "needs": "the lint's remaining warnings and why each was accepted"}],
+        },
+        "open_ledger": [],
             "slides": [
                 {
                     "slide": 1,
@@ -244,6 +255,7 @@ def fixture(root: Path) -> tuple[dict, dict, dict, Path]:
                      "shape": "evidence-build",
                      "roles": ["problem", "evidence", "conclusion"],
                      "audience_question": "does the measurement actually hold up",
+                        "serves_goal": "it reaches the decision through the measurement that rules the rival out",
                      "objection": "one record is not a result",
                      "closing_ask": "accept the single-record fixture as evidence",
                      "evidence": ["c1", "c2"]},
@@ -251,6 +263,7 @@ def fixture(root: Path) -> tuple[dict, dict, dict, Path]:
                      "shape": "recommendation-first",
                      "roles": ["conclusion", "evidence", "roadmap"],
                      "audience_question": "should the fixture ship as the CI default",
+                        "serves_goal": "it puts the recommendation first so the room can stop reading early",
                      "objection": "nobody has run it on the other host",
                      "closing_ask": "make it the default gate fixture",
                      "evidence": ["c1", "c3"]},

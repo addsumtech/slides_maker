@@ -90,6 +90,7 @@ ARC_CANDIDATES = [
      "shape": "problem-turn-evidence",
      "roles": ["problem", "diagnosis", "evidence", "conclusion"],
      "audience_question": "why did the recovery fall over on this cohort",
+     "serves_goal": "it reaches the decision through the measurement that rules the rival out",
      "objection": "the model is overfit to the training scanner",
      "closing_ask": "fund a second acquisition round on the other scanner",
      "evidence": ["c1", "c2"]},
@@ -97,6 +98,7 @@ ARC_CANDIDATES = [
      "shape": "recommendation-first",
      "roles": ["conclusion", "evidence", "roadmap"],
      "audience_question": "should the pipeline ship this quarter or next",
+     "serves_goal": "it puts the recommendation first so the room can stop reading early",
      "objection": "nobody has measured the latency budget end to end",
      "closing_ask": "approve the December ship date",
      "evidence": ["c1", "c3"]},
@@ -130,6 +132,16 @@ def content_ok(n_slides: int = 3) -> dict:
             # a no-source fixture legitimately carries. The gate blocks the missing KEY, never the
             # count, so a fixture must still say which it is.
             "open_ledger": [],
+            # Who this fixture deck is FOR and what they have to decide — the frame that aims the
+            # research, required since a deck built for travellers shipped a land-survey thesis
+            "audience_brief": {
+                "who": "the reviewer deciding whether this recovery method is worth adopting",
+                "decisions": [{"decision": "adopt the method or keep the current one",
+                               "needs": "the held-out result and what it cost to get"},
+                              {"decision": "whether the overfit explanation is ruled out",
+                               "needs": "the measurement that separates the two"},
+                              {"decision": "what to run next",
+                               "needs": "which scanner the result has not been shown on"}]},
             "checkpoint": {"mode": "approved",
                            "record": "CI fixture — table presented, approved as-is"}}
 

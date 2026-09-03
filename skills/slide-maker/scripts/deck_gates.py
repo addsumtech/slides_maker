@@ -44,6 +44,7 @@ GATES = ".deck-gates.json"
 # ONE module owns the carve vocabulary — see material_probe.py for why a per-gate copy is exactly
 # the drift `anchor_proof.py` was created to stop.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import audience_brief as ab  # noqa: E402
 from material_probe import (CARVES as MATERIAL_PROBE_CARVES,  # noqa: E402
                             file_value as _mp_file, waiver_faults as _mp_faults)
 
@@ -90,6 +91,14 @@ def template(slides=None, delivery="presented"):
                       [{"slide": 1, "role": "<role>", "takeaway": "<takeaway>",
                         "evidence": ["<locator>"], "units": 3}],
             "checkpoint": {"mode": "<approved|auto>", "record": "<how it was delivered>"},
+            # WHAT THE AUDIENCE HAS TO DECIDE, in the order they face it — written BEFORE the
+            # information is gathered, because the frame is what aims the gathering. On a
+            # no-source deck this replaces the comprehension brief: there is no source to
+            # comprehend, and a brief about the SUBJECT ships a deck about the subject.
+            "audience_brief": {
+                "who": "<who is in the room, and what they are about to do>",
+                "decisions": [{"decision": "<what they must decide>",
+                               "needs": "<what they need in hand to decide it>"}]},
             # Every claim the SOURCE ITSELF marks as not yet established — future work, an open
             # gate, "cannot establish", a roadmap item, a TODO. The deck may reference these, but
             # never in the established voice. `[]` is a legitimate value and means the question was
@@ -208,6 +217,15 @@ def check(gates):
 
     content = gates.get("content")
     if isinstance(content, dict):
+        brief = content.get("audience_brief")
+        if ab.is_waived(brief):
+            for f in ab.waiver_faults(brief):
+                problems.append("`content.audience_brief.waived` " + f)
+        elif brief is None:
+            problems.append("`content.audience_brief` " + ab.MISSING.split("\n")[0])
+        else:
+            for f in ab.faults(brief):
+                problems.append("`content.audience_brief`: " + f)
         if "open_ledger" not in content:
             problems.append(
                 "`content.open_ledger` is missing. It records every claim the SOURCE ITSELF marks "
@@ -406,6 +424,14 @@ def _selftest():
     d["signature_proof"] = [{"role": r, "slide": i + 4, "png": "render/slide%02d.png" % (i + 4)}
                             for i, r in enumerate(ANCHOR_ROLES)]
     d["checkpoint"] = {"mode": "approved", "record": "posted in chat"}
+    g["content"]["audience_brief"] = {
+        "who": "the three people who sign off the migration, deciding whether to fund phase 2",
+        "decisions": [{"decision": "fund phase 2 or stop here",
+                       "needs": "what phase 1 actually cost against its estimate"},
+                      {"decision": "which team owns the rollout",
+                       "needs": "where the work landed last time and what it displaced"},
+                      {"decision": "what to tell the board in March",
+                       "needs": "one number they can repeat without a caveat"}]}
     g["content"]["open_ledger"] = []          # swept; the source marks nothing as unresolved
     g["critic"] = {"waived": "user declined with the deck visible", "waived_category": "user-waived"}
     g["render_selfcheck"] = {"slides": [{"n": i + 1, "verdict": "ok"} for i in range(3)]}

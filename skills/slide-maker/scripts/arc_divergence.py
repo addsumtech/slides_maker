@@ -235,6 +235,14 @@ def _features(d):
         "ask": _required_text(d, "closing_ask"),
         "question": _required_text(d, "audience_question"),
         "objection": _required_text(d, "objection"),
+        # 🔴 HOW THIS CANDIDATE SERVES THE RECORDED `interview.goal`. Required, because the axis
+        # this competition kept being decided on was elegance. Measured: a deck whose recorded
+        # goal was "they leave able to plan a trip" picked its arc because "it is the only
+        # candidate whose organising idea also does the organising work … nothing is easier to
+        # remember a week later", and rejected the practical candidate for becoming "the same
+        # list every travel site gives me" — which, for someone planning a trip, is the
+        # deliverable. The goal was in the record the whole time and was never used to score.
+        "serves_goal": _required_text(d, "serves_goal"),
         "evidence": {str(x) for x in ev},
     }
 
@@ -266,6 +274,13 @@ def check(arcs):
     if len(set(names)) != len(names):
         raise ValueError("two candidates share a name: {}".format(names))
     pairs = [_pair(x, y) for x, y in itertools.combinations(feats, 2)]
+    # Three candidates that serve the goal in the same words are one candidate. This is the
+    # goal-side twin of the stance check: it catches the set where `serves_goal` was filled in
+    # afterwards, from the same sentence, to satisfy the field.
+    same_goal = [{"a": x["name"], "b": y["name"], "overlap": round(_overlap(x["serves_goal"],
+                                                                           y["serves_goal"]), 2)}
+                 for x, y in itertools.combinations(feats, 2)
+                 if _overlap(x["serves_goal"], y["serves_goal"]) >= OVERLAP_T]
     top = max((len(f["evidence"]) for f in feats), default=0)
     # A candidate nobody bothered to develop is not an alternative, it is a foil. This is the arc
     # equivalent of directions_diversity's no-bespoke check, and it catches the collapse a pure
@@ -281,6 +296,7 @@ def check(arcs):
     no_ledger = not top
     return {"pairs": pairs, "flagged": [p for p in pairs if p["too_similar"]],
             "sketches": sketches, "count": len(feats), "no_ledger": no_ledger,
+            "same_goal": same_goal,
             "unknown_roles": sorted({r for f in feats for r in f["unknown_roles"]}),
             "shapes": {f["name"]: f["shape"] for f in feats},
             "evidence": {f["name"]: len(f["evidence"]) for f in feats}}
@@ -291,6 +307,7 @@ TEMPLATE = [
      "shape": "contribution-first",
      "roles": ["problem", "method", "evidence", "comparison", "conclusion"],
      "audience_question": "<the question this room is actually asking>",
+     "serves_goal": "<how THIS arc serves the recorded interview.goal — not why it is elegant>",
      "objection": "<the objection this arc pre-empts>",
      "closing_ask": "<what the room should do or believe>",
      "evidence": ["<claim-ledger id>", "<claim-ledger id>"]},
@@ -298,6 +315,7 @@ TEMPLATE = [
      "shape": "recommendation-first",
      "roles": ["conclusion", "evidence", "roadmap", "call-to-action"],
      "audience_question": "<a DIFFERENT question>",
+     "serves_goal": "<a DIFFERENT way of serving the SAME goal>",
      "objection": "<a DIFFERENT objection>",
      "closing_ask": "<a DIFFERENT ask>",
      # Comparable depth on purpose: a candidate carrying under half the winner's evidence is
@@ -343,7 +361,7 @@ def main():
     except Exception as e:                                        # noqa: BLE001
         print("[arcs] could not read candidates: {}".format(e))
         sys.exit(1)
-    bad = bool(r["flagged"] or r["sketches"] or r["no_ledger"])
+    bad = bool(r["flagged"] or r["sketches"] or r["no_ledger"] or r["same_goal"])
     if a.as_json:
         print(json.dumps(r, indent=1, ensure_ascii=False))
         sys.exit(2 if bad else 0)
@@ -375,6 +393,13 @@ def main():
         print("           ESCAPE: a decision arc legitimately carries less evidence than a")
         print("           contribution arc. If that is the case here, keep it and record the")
         print("           reason on the `arc gate:` line.")
+    if r["same_goal"]:
+        print("[goal]     x candidates that serve the goal in the SAME words: "
+              + " · ".join("{} vs {} ({:.2f})".format(g["a"], g["b"], g["overlap"])
+                           for g in r["same_goal"]))
+        print("           `serves_goal` filled from one sentence is the field being satisfied, "
+              "not the competition being run. Say how EACH arc gets this room to the recorded\n"
+              "           goal by a different route — or drop the one that has no distinct route.")
     if r["no_ledger"]:
         print("[effort]   x NO CANDIDATE NAMES ITS EVIDENCE. Every `evidence` list is empty, so the")
         print("           effort comparison has nothing to compare and the competition is three")

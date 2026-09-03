@@ -40,7 +40,9 @@ ok, bad = [], []
 
 
 def check(cond, good, why=""):
-    (ok if cond else bad).append(good if cond else "{}{}".format(good, why and " — " + why))
+    (ok if cond else bad).append(good if cond else "{}{}".format(
+        good, (" — " + ("; ".join(map(str, why)) if isinstance(why, list) else str(why)))
+        if why else ""))
 
 
 # ── deck_gates.py: the shapes, before the round-trip ──────────────────────────────────────────
@@ -70,6 +72,11 @@ d.update({"boldness": "bold",
 # `[]` is the legitimate "swept the source, nothing it marks as open" value — the gate blocks the
 # missing KEY, never the count.
 filled["content"]["open_ledger"] = []
+filled["content"]["audience_brief"] = {
+    "who": "the two editors deciding whether to run this investigation",
+    "decisions": [{"decision": "run it or hold it", "needs": "which claim is the weakest link"},
+                  {"decision": "how much legal review", "needs": "which lines name a person"},
+                  {"decision": "what the headline claims", "needs": "the one fact that survives"}]}
 filled["critic"] = {"waived": "user declined", "waived_category": "user-waived"}
 filled["render_selfcheck"] = {"slides": [{"n": 1, "verdict": "ok"}, {"n": 2, "verdict": "ok"}]}
 check(deck_gates.check(filled) == [], "a filled record is shape-clean", deck_gates.check(filled))

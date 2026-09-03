@@ -1,5 +1,35 @@
 # Content plan spec
 
+## Audience brief — write this FIRST, and aim the gathering at it
+
+🔴 **Before the comprehension brief, before any search: what do the people in the room have to
+DECIDE, in the order they will face it, and what do they need in hand to decide each one?** That
+list is the frame, and the frame is what aims the information gathering — so a wrong frame gathers
+the wrong facts and every later gate passes.
+
+    "audience_brief": {
+      "who": "<who is in the room, and what they are about to do>",
+      "decisions": [{"decision": "<what they must decide>",
+                     "needs": "<what they need in hand to decide it>"}, …]
+    }
+
+At least three decisions, each with its `needs` — the `needs` half is what does the aiming; a
+decision with no stated need gathers nothing. Contract, carves and messages:
+`scripts/audience_brief.py`, imported by `deck_gates.py`, `render_deck.py --gate-check` and
+`codex_delivery_gate.py`.
+
+🔴 **On a NO-SOURCE deck this REPLACES the comprehension brief below.** There is no source to
+comprehend; a brief written anyway becomes a summary of the SUBJECT, and that is the failure this
+field exists for. Measured: a deck built from `audience = people planning a trip` and `goal = they
+leave able to plan one` shipped a thesis on an 1837 land survey, because Step 1 described the city,
+the arc candidates were all generated inside that frame, and the winner was scored on elegance
+rather than on the recorded goal. The research followed the frame — chain lengths and inscription
+years verified, daily cost and distances never asked for.
+
+**The test when you cannot tell which you have written:** read the takeaway spine top to bottom. If
+it reads as true statements ABOUT the subject rather than as answers to what this room must decide,
+the frame is wrong. Patching the missing topic onto it fixes the symptom and keeps the frame.
+
 ## Comprehension brief — the required fields and the claim-ledger columns
 
 - The **one-sentence message** + the verbatim source sentence it derives from (+ where).

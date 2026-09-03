@@ -2665,6 +2665,30 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
                 print("[gates] arc competition: {} candidates scored HERE — none is a rewording of "
                       "another, none is a sketch; won: {}".format(len(cands), _chosen))
 
+    with _gate_section('content.audience_brief'):
+        # 🔴 WHO THIS IS FOR AND WHAT THEY HAVE TO DECIDE — written BEFORE the information is
+        # gathered, because the frame is what aims the gathering. See audience_brief.py for the
+        # measured failure: a deck built from `audience = people planning a trip` shipped a
+        # thesis on an 1837 land survey, because the Step-1 brief described the SUBJECT and the
+        # arc was then competed inside that frame and scored on elegance rather than on the
+        # recorded goal. Every later gate passed.
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import audience_brief as _ab
+        _brief = (gates.get("content") or {}).get("audience_brief")
+        if _ab.is_waived(_brief):
+            for _f in _ab.waiver_faults(_brief):
+                die("`content.audience_brief.waived` " + _f)
+            print("[gates] audience brief: WAIVED [{}] — {}".format(
+                str(_brief.get("waived_category")).strip().lower(),
+                str(_brief.get("waived"))[:70]))
+        elif _brief is None:
+            die("`content.audience_brief` " + _ab.MISSING)
+        else:
+            for _f in _ab.faults(_brief):
+                die("`content.audience_brief`: " + _f)
+            print("[gates] audience brief: {} decision(s) — {}".format(
+                len(_brief.get("decisions") or []), str(_brief.get("who"))[:64]))
+
     with _gate_section('content.slides'):
         # THE CONTENT CHECKPOINT BECOMES AN ARTIFACT ON THIS PATH TOO. Step 1 ends in a table —
         # `# | 角色 | 记忆句 | 承载证据 | units` (references/checkpoint-convention.md) — and on the

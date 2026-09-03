@@ -33,8 +33,26 @@ ok, bad = [], []
 TMP = pathlib.Path(tempfile.mkdtemp(prefix="arcs-"))
 
 
-def _arc(name, shape, roles, q, obj, ask, ev):
+_GOAL_ROUTES = (
+    "measurement first: the number that rules the rival out is on page two",
+    "recommendation first, so the room can stop reading and still act",
+    "chronology: the step that is still unproven is visible by where it sits",
+    "side by side, so the choice itself is the page",
+    "cost of doing nothing up front, smallest next step at the close",
+    "one worked case carried end to end, so the method is inferred rather than argued",
+    "objection first: the thing they will say out loud is answered before it is said",
+)
+
+
+def _arc(name, shape, roles, q, obj, ask, ev, goal=None):
     return {"name": name, "shape": shape, "roles": roles, "audience_question": q,
+            # every candidate must name how it serves the RECORDED goal, by its own route —
+            # the axis this competition kept being decided on was elegance
+            # 🔴 a DETERMINISTIC index, not hash(): Python salts str hashes per process, so the
+            # first version picked a different route for the same fixture on every run and this
+            # suite passed or failed by luck. Two runs must be identical — the same rule the kits
+            # follow for placement.
+            "serves_goal": goal or _GOAL_ROUTES[sum(map(ord, name)) % len(_GOAL_ROUTES)],
             "objection": obj, "closing_ask": ask, "evidence": ev}
 
 

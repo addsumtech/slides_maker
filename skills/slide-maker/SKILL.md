@@ -546,6 +546,12 @@ planner is *one mind* — it may fan out *reading* across multiple documents, bu
 understanding, arc, and per-slide message itself; never split one paper across blind agents. For a
 quick, low-stakes deck you may do this pass inline yourself rather than dispatching — but
 the deep-understanding and planning standard below is the same either way.
+🔴 **Each arc candidate carries a `serves_goal` clause, and the competition is scored on the
+recorded `interview.goal` BEFORE it is scored on elegance.** `arc_divergence.py` requires the field
+and reports a set whose candidates serve the goal in the same words — that collapse is the field
+being satisfied rather than the competition being run. The order is the point: an arc chosen for
+being memorable and *then* checked against the goal is an arc chosen for being memorable.
+
 **🔴 The arc is COMPETED, not derived — 2–3 candidates over one ledger.** The planner returns 2–3
 candidate arcs (each naming its audience question, the objection it pre-empts, its closing ask and
 the ledger ids it carries), you run `python3 scripts/arc_divergence.py <arcs>.json`, and **YOU pick**
@@ -595,6 +601,39 @@ paper end-to-end (intro → method → **every results table/figure** → conclu
 very long PDF / large corpus — do NOT fake a single linear read: classify the size, then
 run **long-source mode** (map → triage → deep-read the load-bearing ~20% + a blocking
 Source-coverage map). See the long-source bullet below and `content-planner.md` §1.)*
+
+🔴 **BEFORE any of that, write the AUDIENCE BRIEF — what the people in the room have to DECIDE,
+in the order they will face it, each with what they need in hand — and aim the information
+gathering at THAT list.** It is a required field (`content.audience_brief`, checked by
+`deck_gates.py`, `--gate-check` and the Codex gate from one contract in `scripts/audience_brief.py`)
+and it carries an `audience:` line onto the Step-1 checkpoint. 🔴 **On a deck with NO SOURCE it
+REPLACES the comprehension brief**: there is nothing to comprehend, so a brief written anyway is a
+summary of the SUBJECT, and a subject brief ships a deck *about* the topic where one *for* the
+audience was asked for.
+
+> **Measured, twice, and the second time the rule already existed.** (1) 「介绍巴黎的 PPT」 →
+> a deck that correctly refused the Eiffel-tower motif and then also deleted the landmarks, the
+> districts and the food, delivering an argument about 19th-century building regulation. (2) A
+> Melbourne deck built from the recorded answers `audience = people planning a trip` and
+> `goal = they leave able to plan one`: the Step-1 brief described the city, the three arc
+> candidates were all generated inside that frame, and the winner was picked because *"it is the
+> only candidate whose organising idea also does the organising work … nothing is easier to
+> remember a week later"* — a DECK-QUALITY test. The recorded `goal` was never used to score them,
+> and the practical candidate was rejected for becoming *"the same list every travel site gives
+> me"* — which, for someone planning a trip, IS the deliverable. What shipped was a thesis on an
+> 1837 land survey. The frame also aimed the RESEARCH: chains, allotment widths and inscription
+> years were verified; daily cost, distances, a rainy-day alternative and what to skip were never
+> asked for. Every gate passed.
+> 🔴 **Why the existing rule did not fire:** the Paris lesson lives in
+> `references/checkpoint-convention.md` under the *delegated Step-0 picks*, so it binds only under
+> the auto-waiver. The Melbourne build ran a full interview and was never inside its scope. **A
+> correct rule in the wrong scope is not a gate** — which is why the rule is restated HERE, where
+> it binds on every deck, and why it now has a required field instead of a paragraph.
+>
+> **The test, when you cannot tell:** read the takeaway spine top to bottom. If it reads as a set
+> of true statements ABOUT the subject rather than as answers to what this room has to decide, the
+> frame is wrong — and patching a missing topic onto it (the Melbourne rebuild's first move was to
+> bolt two landmark pages onto the survey spine) fixes the symptom and keeps the frame.
 
 Then **write a comprehension brief — a REQUIRED, fixed-field, source-traced artifact** (the
 planner's `agents/content-planner.md` §1 is the spec); every field must trace to a locatable

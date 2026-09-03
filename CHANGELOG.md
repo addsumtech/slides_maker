@@ -11,6 +11,39 @@ section is a distilled summary — the full notes live on the
 
 ### Changed
 
+- **Step 1 now decides WHO the deck is for and what they have to DECIDE, before it gathers
+  anything — `content.audience_brief`.** The pipeline gated the comprehension of a SOURCE
+  thoroughly and the FRAME not at all, so on a deck with no source the brief silently became a
+  summary of the SUBJECT. 🔴 **Measured on a delivered deck:** the interview recorded `audience =
+  people planning a trip` and `goal = they leave able to plan one`; Step 1 wrote a brief about the
+  city, all three arc candidates were generated inside that frame, and the winner was picked
+  because *"it is the only candidate whose organising idea also does the organising work … nothing
+  is easier to remember a week later"* — a deck-quality test, with the recorded goal never used to
+  score. The practical candidate was rejected for becoming *"the same list every travel site gives
+  me"*, which for someone planning a trip IS the deliverable. What shipped was a thesis on an 1837
+  land survey. The frame also aimed the RESEARCH — chain lengths and inscription years verified,
+  daily cost and distances never asked for — and **every gate passed, twice, including a full
+  render self-check.** The field takes `who` plus at least three `{decision, needs}` rows; the
+  `needs` half is what does the aiming, and a decision without it gathers nothing. Contract in
+  `scripts/audience_brief.py`, imported by `deck_gates.py`, `render_deck.py --gate-check` and
+  `codex_delivery_gate.py`; the carve is written (`reference-only | external-deck | tiny-ask |
+  user-waived`) and "the deck was hard to think about" is refused by name.
+- **The arc competition is scored on the recorded goal BEFORE it is scored on elegance.** Every
+  candidate now carries a `serves_goal` clause (`arc_divergence.py` requires it), and a set whose
+  candidates serve the goal in the same words is reported as `same_goal` — that collapse is the
+  field being satisfied rather than the competition being run. An arc chosen for being memorable
+  and *then* checked against the goal is an arc chosen for being memorable.
+- 🔴 **Why this needed new machinery when the rule already existed.** `checkpoint-convention.md`
+  has carried the same lesson since the Paris deck — refuse the obvious PICTURE, never the obvious
+  SUBJECT — but scoped to the auto-waiver's *delegated Step-0 picks*. The failing build ran a full
+  interview and was therefore never inside that rule's scope. **A correct rule in the wrong scope
+  is not a gate.** The rule is now restated in SKILL.md Step 1, where it binds on every deck, with
+  the test for the ambiguous case: read the takeaway spine top to bottom, and if it reads as true
+  statements ABOUT the subject rather than as answers to what the room must decide, the frame is
+  wrong — and bolting the missing topic onto it fixes the symptom and keeps the frame.
+  `tests/test_audience_brief.py` (18 assertions) holds all of it, including an AST check that all
+  three gate paths import the one contract.
+
 - **The Step-2 MATERIAL PROBE is now a floor on the Codex path too, and its contract lives in one
   module.** `render_deck.py --gate-check` has required the probe — one real page BUILT, rendered and
   LOOKED AT before the design plan's twenty declarations are written, plus the one sentence that is
