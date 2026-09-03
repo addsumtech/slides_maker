@@ -2662,8 +2662,19 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
                 print("[gates] arc competition: {} candidates scored HERE — flagged ({}) · "
                       "justified: {}".format(len(cands), _finding, arc["divergence_justified"]))
             else:
+                # put the recorded GOAL and the winner's serves_goal side by side — the failure
+                # this line exists for was never an empty field, it was that nothing ever
+                # displayed the two together (audience_brief.py has the measured case)
+                _goal = str(((gates.get("interview") or {}).get("goal")) or "").strip()
+                _sg = ""
+                for _c in cands:
+                    if str(_c.get("name")) == str(_chosen):
+                        _sg = str(_c.get("serves_goal") or "")[:80]
                 print("[gates] arc competition: {} candidates scored HERE — none is a rewording of "
                       "another, none is a sketch; won: {}".format(len(cands), _chosen))
+                if _goal:
+                    print("[gates]   goal: {}  ·  the winner serves it by: {}".format(
+                        _goal[:60], _sg or "(no serves_goal clause on the winner)"))
 
     with _gate_section('content.audience_brief'):
         # 🔴 WHO THIS IS FOR AND WHAT THEY HAVE TO DECIDE — written BEFORE the information is

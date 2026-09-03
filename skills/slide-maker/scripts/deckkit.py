@@ -1546,7 +1546,11 @@ def mark_datum(shape, value, *, group="bars"):
     Use it on a bar you drew yourself. `bar_scale()` below does it for you and is the better
     route, because it also computes the geometry that this tag then re-checks.
     """
-    shape.name = "%s%s:%s" % (DATUM_TAG, str(group).replace(":", "-")[:40], repr(float(value)))
+    # 🔴 COMPOSES — see `_compose_tag`. Assigning outright erased a motif tag on the same shape
+    # (and the reverse order produced `deckkit-motif-loud:bars:12.0`, a name that parses as a
+    # motif whose "reason" is the lost datum record). A motif page drawn AS bars uses both.
+    _payload = "%s:%s" % (str(group).replace(":", "-")[:40], repr(float(value)))
+    _compose_tag(shape, flag="+datum", reason=_payload)
     return shape
 
 
@@ -2463,18 +2467,74 @@ def _tag_chrome(shape):
     return shape
 
 
+def _compose_tag(shape, tier=None, flag=None, reason=None):
+    """Write a declaration into the shape NAME without erasing the ones already there.
+
+    🔴 THREE functions record a decision in `shape.name` — `tag_motif`, `bleed_intent`,
+    `overlap_intent` — and each of them used to assign it outright, so whichever ran LAST won and
+    the others vanished. An erased declaration reads exactly like one that was never made, so
+    nothing reported it. Measured on a delivered deck whose whole design is a hand-drawn motif:
+    its surface kit called `tag_motif` and then `overlap_intent` on every piece of furniture, and
+    the saved file contained ZERO tagged motif shapes — MOTIF_BUDGET counted none,
+    TEXT_OVER_MOTIF and MOTIF_UNEXPLAINED saw none, and the `icon_family: none — motif-dominant`
+    waiver could not be checked against the file it made a claim about.
+
+    The name is parsed back to a SET of declarations and re-rendered, so call ORDER cannot matter —
+    which is the point: an author has no reason to know that it would.
+
+        deckkit-motif-loud+bleed+overlap:<why>     a loud motif that bleeds and is ridden by type
+        deckkit-bleed:<why>                        a bleed and nothing else
+        deckkit-bleed+overlap:<why>                both declarations, no motif
+    """
+    cur = str(getattr(shape, "name", "") or "")
+    head, _, why = cur.partition(":")
+    have_tier = have_bleed = have_overlap = None
+    if head.startswith(MOTIF_TAG):
+        have_tier = MOTIF_LOUD if "-loud" in head.split("+", 1)[0] else MOTIF_QUIET
+    if head.startswith(BLEED_TAG) or "+bleed" in head:
+        have_bleed = True
+    if head.startswith(OVERLAP_TAG.rstrip(":")) or "+overlap" in head:
+        have_overlap = True
+    have_datum = head.startswith(DATUM_TAG.rstrip(":")) or "+datum" in head
+    if not head.startswith("deckkit-"):
+        why = ""
+    if tier:
+        have_tier = tier
+    if flag == "+bleed":
+        have_bleed = True
+    elif flag == "+overlap":
+        have_overlap = True
+    elif flag == "+datum":
+        have_datum = True
+    if reason is not None:
+        why = reason
+    on = (("+bleed", have_bleed), ("+overlap", have_overlap), ("+datum", have_datum))
+    if have_tier:
+        base, flags = have_tier, [f for f, v in on if v]
+    elif have_bleed:
+        base, flags = BLEED_TAG, [f for f, v in on if v and f != "+bleed"]
+    elif have_overlap:
+        base, flags = OVERLAP_TAG.rstrip(":"), [f for f, v in on if v and f != "+overlap"]
+    elif have_datum:
+        base, flags = DATUM_TAG.rstrip(":"), []
+    else:
+        base, flags = "", []
+    shape.name = base + "".join(flags) + ((":" + str(why)) if why else "")
+    return shape
+
+
 def tag_motif(shape, loud=False):
     """Mark a shape as part of the deck's signature device. Returns the shape.
 
     Reach for this on any motif you draw by hand — `register_mark()` does it for you. An untagged
     motif is invisible to the budget count and to TEXT_OVER_MOTIF, which is the state every deck
-    was in before the tag existed.
+    was in before the tag existed. COMPOSES with `bleed_intent` / `overlap_intent` in any order
+    (see `_compose_tag`).
     """
     try:
-        shape.name = MOTIF_LOUD if loud else MOTIF_QUIET
+        return _compose_tag(shape, tier=(MOTIF_LOUD if loud else MOTIF_QUIET))
     except Exception:
-        pass
-    return shape
+        return shape
 
 
 def _is_motif(sh, loud=None):
@@ -2665,13 +2725,7 @@ def bleed_intent(shape, reason):
     watermark tag all use, because a name survives the save), and it COMPOSES with a motif tag
     rather than overwriting it — a motif that bleeds must stay countable as a motif."""
     try:
-        cur = str(getattr(shape, "name", "") or "")
-        if cur.startswith("deckkit-"):
-            head = cur.split(":", 1)[0]
-            if "+bleed" not in head:
-                shape.name = head + "+bleed:" + str(reason)
-        else:
-            shape.name = BLEED_TAG + ":" + str(reason)
+        _compose_tag(shape, flag="+bleed", reason=" ".join(str(reason).strip().split())[:120])
     except Exception:
         pass
     return shape
@@ -6165,7 +6219,23 @@ def overlap_intent(shape, reason):
         raise ValueError("overlap_intent(reason=%r): write why this overlap is composed, in a "
                          "sentence someone can disagree with later (>=16 chars). An undeclared "
                          "collision and a declared composition must not read the same." % (reason,))
-    shape.name = OVERLAP_TAG + " ".join(str(reason).strip().split())[:120]
+    # 🔴 COMPOSE, never overwrite. This wrote `shape.name = OVERLAP_TAG + reason` outright, and
+    # the declaration therefore ERASED any motif tag already on the shape — the exact failure
+    # `bleed_intent`'s docstring says it composes to avoid ("a motif that bleeds must stay
+    # countable as a motif"). Two declarations sharing one field, and the second one silently won.
+    #
+    # Measured on a delivered deck whose entire design is a hand-drawn motif: its surface kit
+    # called `tag_motif(sh, loud=False)` and then `overlap_intent(sh, …)` on every piece of
+    # furniture, and the saved file contained ZERO tagged motif shapes. MOTIF_BUDGET could not
+    # count them, TEXT_OVER_MOTIF and MOTIF_UNEXPLAINED could not see them, and the
+    # `icon_family: none — motif-dominant` waiver could not be verified against the file it was
+    # making a claim about. Nothing reported any of it, because an absent tag looks exactly like
+    # a deck that never drew a motif.
+    _reason = " ".join(str(reason).strip().split())[:120]
+    try:
+        _compose_tag(shape, flag="+overlap", reason=_reason)
+    except Exception:
+        shape.name = OVERLAP_TAG + _reason
     return shape
 
 DELIVERY_MODES = ("presented", "textheavy", "selfread", "surface")
@@ -8631,8 +8701,15 @@ def _is_motif_ground(sh, bb, W, H):
 def _declared_overlap(sh):
     """overlap_intent() records the declaration in the shape NAME (the same idiom as the watermark
     and motif tags), so read it there rather than from a side table keyed on object identity —
-    python-pptx yields fresh proxies per iteration, so an id()-keyed table would silently miss."""
-    return str(getattr(sh, "name", "") or "").startswith(OVERLAP_TAG)
+    python-pptx yields fresh proxies per iteration, so an id()-keyed table would silently miss.
+
+    🔴 Reads BOTH spellings, because the declaration composes: on a plain shape the name is
+    `deckkit-overlap:<why>`, and on a shape that is already a motif it is
+    `deckkit-motif-quiet+overlap:<why>` — the same `+` idiom `bleed_intent` uses. Checking only
+    the prefix made composition a trade: the motif tag survived and the overlap declaration was
+    lost, which is the same defect one field over."""
+    n = str(getattr(sh, "name", "") or "")
+    return n.startswith(OVERLAP_TAG) or "+overlap" in n.split(":", 1)[0]
 
 
 def _deep_shapes(shapes, container=None):
@@ -8688,7 +8765,7 @@ def _datum_faults(prs):
         groups = {}
         for shp, _cont in _deep_shapes(slide.shapes):
             name = str(getattr(shp, "name", "") or "")
-            if not name.startswith(DATUM_TAG):
+            if not (name.startswith(DATUM_TAG) or "+datum" in name.split(":", 1)[0]):
                 continue
             # A ROTATED bar's width and height are its unrotated box, so neither is the length the
             # reader sees and the encoding axis cannot be inferred. Bars are essentially never
@@ -8701,7 +8778,8 @@ def _datum_faults(prs):
             # nothing while its tests looked like they passed — the exact "green because it
             # stopped looking" failure this check exists to prevent, committed inside the check
             # itself. A tag this module WROTE must parse; if it does not, that is a bug here.
-            body = name[len(DATUM_TAG):]
+            body = name.partition(":")[2] if "+datum" in name.split(":", 1)[0] \
+                else name[len(DATUM_TAG):]
             if ":" not in body:
                 continue                                 # foreign shape borrowing the prefix
             g, raw = body.rsplit(":", 1)

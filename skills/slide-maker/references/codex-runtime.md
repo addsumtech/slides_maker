@@ -414,6 +414,13 @@ carve here, unlike `signature_proof` — that one proves a RISK survived the bui
 none has nothing to prove; this one asks what the device is MADE of, and restraint is a material
 decision too. The carve list and the waiver rules live in `scripts/material_probe.py`, imported by
 every gate path, because a per-gate copy is exactly the drift `anchor_proof.py` was created to stop.
+🔴 **EVERY deck carries `content.audience_brief`** — `who` plus >=3 `{decision, needs}` rows:
+what the room has to DECIDE, in the order they will face it, written BEFORE the research so the
+frame aims the gathering. The evidence skeleton shows the shape; `scripts/audience_brief.py` is the
+contract this gate enforces (a brief whose rows are "understand X" comprehension goals is rejected
+— that is the subject brief in disguise, and the measured failure it exists for is a traveller
+deck that verified survey-chain lengths and never asked what a day costs). Each `content.arc`
+candidate must carry `serves_goal` — scored on the recorded goal before elegance.
 🔴 **EVERY deck carries `content.open_ledger`** — one row per claim the SOURCE ITSELF marks as not
 yet established (future work · an open gate · "cannot establish" · a roadmap item · a TODO), each with
 the locator that says so, and none of them may appear on a slide in the ESTABLISHED voice. This is a

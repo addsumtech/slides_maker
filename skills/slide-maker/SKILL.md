@@ -913,6 +913,16 @@ make a claim about the DECK, and none of them can say *the user decided*, so a d
 against the built file, so the forced label can also fail for the wrong reason. It is their deck; a
 gate has no standing to second-guess that, only to record it. `icon_none_checked` still names every
 flagged slide.
+🔴 **The category is a claim about PAGES, not about the deck — and it is VERIFIED against the
+built file** (`motif-dominant` needs a real loud motif in the file, `tiny-deck` a real tiny deck,
+`template-locked` a real template). A deck-level reason may not cover pages the reason does not
+reach: `motif-dominant` on a deck whose roster pages carry no motif at all is the measured failure
+— a coherence argument overriding a stated default with no per-page test, and the first human
+reader's first note was "icons should be here". Re-decide page by page; the honest answer is
+usually neither zero icons nor an icon everywhere, but icons on the pages where they do work
+nothing else on the page is doing (three DIFFERENT KINDS of fact side by side; the one row a
+reader scans FOR an item) and none where another element already encodes the distinction (a
+position map, semantic colour, numbered routes, the motif itself).
 `design_plan.icon_none_category` + `icon_none_checked: [slides]` (Codex: an `icon` waiver with
 `category`). A bare "not category-rich" no longer clears it, and the category explains the REST of the
 deck — it is **never** a licence to drop icons from the categorical slides that do have them (a

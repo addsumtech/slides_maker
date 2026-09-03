@@ -41,6 +41,21 @@ from __future__ import annotations
 MIN_DECISIONS = 3
 MIN_TEXT = 12
 
+# 🔴 "Understand the 1837 survey" is not a decision — it is a comprehension goal wearing the
+# field's clothes, and a SUBJECT brief rewritten with these verbs passes every shape check.
+# Verified by attacking the field with the exact deck that motivated it: three "understand X"
+# rows cleared `faults()` untouched. A decision is something the audience DOES or CHOOSES;
+# if most rows open with a comprehension verb, the brief is the old failure in the new format.
+_COMPREHENSION_OPENERS = (
+    "understand", "know", "learn", "appreciate", "see ", "grasp", "realise", "realize",
+    "be aware", "get a sense", "了解", "理解", "认识", "知道", "明白", "掌握", "感受")
+
+
+def _is_comprehension(text):
+    t = str(text or "").strip().lower()
+    return any(t.startswith(v) or t.startswith(("to " + v, "to  " + v)) for v in
+               _COMPREHENSION_OPENERS)
+
 # A deck whose audience has no decision to make: the brief is not skipped for being hard, only for
 # being genuinely inapplicable.
 CARVES = ("reference-only", "external-deck", "tiny-ask", "user-waived")
@@ -77,15 +92,23 @@ def faults(brief) -> list[str]:
                    "order they will face them. Fewer than that is a persona, not a brief."
                    .format(MIN_DECISIONS))
         return out
+    comprehension = 0
     for i, r in enumerate(rows):
         if not isinstance(r, dict):
             out.append("`decisions[{}]` must be an object.".format(i))
             continue
         if len(str(r.get("decision") or "").strip()) < MIN_TEXT:
             out.append("`decisions[{}].decision` is empty — name what they must decide.".format(i))
+        elif _is_comprehension(r.get("decision")):
+            comprehension += 1
         if len(str(r.get("needs") or "").strip()) < MIN_TEXT:
             out.append("`decisions[{}].needs` is empty. This is the half that aims the research: "
                        "a decision with no stated need gathers nothing.".format(i))
+    if rows and comprehension * 2 >= len(rows):
+        out.append("most `decisions` open with a comprehension verb (understand/know/了解/理解…) — "
+                   "those are UNDERSTANDING GOALS, which is the subject brief wearing this "
+                   "field's clothes. A decision is something the audience DOES or CHOOSES: "
+                   "go or not, book or skip, fund or stop, which one, when.")
     return out
 
 

@@ -62,6 +62,29 @@ agents.
 
 ## Method
 
+### 0 — Write the AUDIENCE BRIEF before you read or search anything
+
+🔴 **First artifact, before the source is opened and before any web query: what do the people in
+the room have to DECIDE, in the order they will face it, and what does each decision need in
+hand?** Record it as `content.audience_brief` — `who` plus at least three `{decision, needs}` rows
+— required by every gate path (`scripts/audience_brief.py` is the contract). The `needs` half is
+what aims your reading and your searches; a decision with no stated need gathers nothing.
+
+🔴 **A decision is something the audience DOES or CHOOSES — go or not, book or skip, fund or
+stop, which one, when. "Understand X" rows are comprehension goals, and a brief made of them is
+the SUBJECT brief wearing this field's clothes** (the contract rejects a brief where most rows
+open with understand/know/了解/理解…). On a **no-source deck this brief REPLACES the comprehension
+brief below** — there is nothing to comprehend, and writing one anyway produces a summary of the
+subject, which ships a deck *about* the topic where one *for* the audience was asked for.
+Measured: a deck built from `audience = people planning a trip` verified survey-chain lengths and
+inscription years, and never gathered daily cost, distances, or a rainy-day plan — the frame aimed
+the research, and the frame was the subject.
+
+**Carry it into §3:** every arc candidate you return must include a `serves_goal` clause — how
+THAT arc gets this room to the recorded `interview.goal`, by its own route — and candidates are
+scored on the goal BEFORE elegance. `arc_divergence.py` refuses a candidate without the clause and
+reports a set whose clauses are one sentence copied across (`same_goal`).
+
 ### 1 — Understand the material as a human expert would
 Read **all of it**, not the abstract. Run the code's README; read the paper end-to-end
 (intro → method → **every results table/figure** → conclusion); read the doc or existing deck in

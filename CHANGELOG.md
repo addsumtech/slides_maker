@@ -11,6 +11,39 @@ section is a distilled summary — the full notes live on the
 
 ### Changed
 
+- 🔴 **Four declarations shared one field and erased each other — `tag_motif`, `bleed_intent`,
+  `overlap_intent` and `mark_datum` all wrote `shape.name` outright, so whichever ran last won.**
+  An erased declaration reads exactly like one never made, so nothing reported it. Measured on a
+  delivered deck whose entire design is a hand-drawn motif: its surface kit called `tag_motif` and
+  then `overlap_intent` on every piece of furniture, and the saved file contained ZERO tagged motif
+  shapes — MOTIF_BUDGET counted none, TEXT_OVER_MOTIF and MOTIF_UNEXPLAINED saw none, and the
+  `icon_family: none — motif-dominant` waiver could not be verified against the file it made a
+  claim about, on **every kit-built deck, not one**. The datum pair was worse: motif-then-datum
+  erased the motif, and datum-then-motif produced `deckkit-motif-loud:bars:12.0` — a name that
+  parses as a motif whose "reason" is the destroyed datum record. All four now write through ONE
+  composer (`_compose_tag`) that parses the name back to a SET of declarations and re-renders it,
+  so call order cannot matter — `tests/test_shape_declarations.py` holds all 24 orders, the
+  single-declaration spellings byte-for-byte, the reason floor, and (by reading the source) that no
+  family member assigns the name directly, because four careful call sites is exactly what was
+  there when it broke.
+- **The audience brief rejects its own counterfeit.** Attacked with the deck that motivated it: a
+  brief whose `decisions` are all "understand X" rows passed untouched — comprehension goals are
+  the SUBJECT brief wearing the field's clothes. `audience_brief.faults()` now rejects a brief
+  where most rows open with a comprehension verb (understand/know/了解/理解/认识…), in both
+  scripts; a brief with a minority of such rows still passes.
+- **The recorded goal and the winning arc's `serves_goal` are now displayed side by side** at
+  `--gate-check` (and `arc_divergence.check(goal=…)` reports per-candidate `goal_echo`). Reported,
+  never blocking — cross-language overlap is legitimately zero — because the measured failure was
+  never an empty field: it was that nothing ever put the goal and the clause in one line of output.
+- **Non-Claude coverage for the audience brief**: `agents/content-planner.md` opens with §0 (the
+  brief comes before reading or searching; carried into §3's `serves_goal`), and
+  `references/codex-runtime.md` documents the field beside `open_ledger` — the Codex gate already
+  enforced it; now the prose an agent reads says so too.
+- **The icon waiver's per-page nature is stated where plans are written** (SKILL.md icon rule):
+  the category is a claim about PAGES verified against the built file, a deck-level reason may not
+  cover pages it does not reach, and the honest outcome is usually icons where they do work nothing
+  else on the page is doing — not zero, not everywhere.
+
 - **Step 1 now decides WHO the deck is for and what they have to DECIDE, before it gathers
   anything — `content.audience_brief`.** The pipeline gated the comprehension of a SOURCE
   thoroughly and the FRAME not at all, so on a deck with no source the brief silently became a
