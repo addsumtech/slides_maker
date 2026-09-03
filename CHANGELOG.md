@@ -40,8 +40,9 @@ work rather than re-reading it, and both are held by tests that check the proper
 - **The audience brief rejects its own counterfeit.** Attacked with the deck that motivated it: a
   brief whose `decisions` are all "understand X" rows passed untouched — comprehension goals are
   the SUBJECT brief wearing the field's clothes. `audience_brief.faults()` now rejects a brief
-  where most rows open with a comprehension verb (understand/know/了解/理解/认识…), in both
-  scripts; a brief with a minority of such rows still passes.
+  where most rows open with a comprehension verb — the English set (understand, know, learn,
+  appreciate, grasp) and its Chinese equivalents, so the check holds on a CJK deck too. A brief
+  with a minority of such rows still passes.
 - **The recorded goal and the winning arc's `serves_goal` are now displayed side by side** at
   `--gate-check` (and `arc_divergence.check(goal=…)` reports per-candidate `goal_echo`). Reported,
   never blocking — cross-language overlap is legitimately zero — because the measured failure was
@@ -188,7 +189,7 @@ work rather than re-reading it, and both are held by tests that check the proper
   vocabulary, and **refuse `conservative` by name** — Step 2 says restraint is a material decision
   too. A bare category with no written reason is refused as well.
   🔴 **`icon_none_category` could not say "the user asked for no icons".** The four values each make
-  a claim about the DECK; a deck whose user said 「不需要icon」 was filed `template-locked` — a
+  a claim about the DECK; a deck whose user had asked for no icons was filed `template-locked` — a
   different claim, and one the Codex gate VERIFIES against the built file, so the forced label can
   fail for the wrong reason too. `user-declined` added on both runtimes, with a test that they
   carry the same set.
@@ -289,7 +290,8 @@ work rather than re-reading it, and both are held by tests that check the proper
 
 - **The type question a lab room actually asks, and the font trap that voids the build's own
   evidence.** Asked for a lab-meeting deck, the pipeline set it in Avenir Next and the user
-  corrected it: *对于实验室或者会议场景，ppt的默认字体应该是new times或者calibri*. Nothing was
+  corrected it — for a lab or conference setting, they said, the default should be Times New Roman
+  or Calibri. Nothing was
   broken — the rule simply was not written anywhere. `design-by-purpose.md` gives every academic
   purpose a **Palette · Density · Layout · Icons · Signature** row and **no type row at all**, so
   the face was inherited from whatever the template profile happened to name, and a characterful
