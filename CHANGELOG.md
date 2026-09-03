@@ -9,6 +9,17 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+## [5.3.0] — 2026-09-03
+
+**The release about the frame, and about declarations that erased each other.** Two themes. The
+first: the pipeline gated the comprehension of a SOURCE thoroughly and the FRAME not at all, so a
+deck built for an audience could be written about the subject instead and pass every check — Step 1
+now decides who the deck is FOR before it gathers anything, and the arc is scored on the recorded
+goal before elegance. The second: four functions recorded decisions in the same field and
+overwrote each other, which silently disabled the motif budget, two motif lints, and the
+verification behind the icon waiver on every kit-built deck. Both were found by attacking shipped
+work rather than re-reading it, and both are held by tests that check the property, not the words.
+
 ### Changed
 
 - 🔴 **Four declarations shared one field and erased each other — `tag_motif`, `bleed_intent`,
