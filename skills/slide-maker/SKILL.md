@@ -314,6 +314,16 @@ exits silently, so it can never be the reason a deck did not get built. It lives
 than in a reference because a check nobody triggers is a check that does not exist. Opt out with
 `SLIDE_MAKER_NO_VERSION_CHECK=1`.
 
+🔴 **On a COPY install the notice may say `DIFFERS … at the same version`, and that is not a bug.**
+`--json` carries `drift: "content"` with a `differing` file list beside the usual `behind`. It means
+the installed copy's FILES do not match main even though `VERSION` agrees — work lands between
+releases, so the version string cannot see it, and a copy with most of `SKILL.md` missing used to
+pass silently. The three options below are unchanged (a reinstall is still what brings a copy to
+main); only the reason differs. Two things it cannot tell you, both stated in the notice: which
+direction the difference goes, and whether it is instead your own edits to the installed copy — a
+fork or a locally-patched install will report this every time, and `SLIDE_MAKER_NO_VERSION_CHECK=1`
+is the way to stop it.
+
 **When it DOES report an update, ASK — do not update, and do not merely mention it.** Run
 `check_version.py --json --force` (the ask branch is rare, so skip the cache — `behind` is the one
 field still cached, and this is the decision it feeds) and put the three options to the user **as the first thing in the

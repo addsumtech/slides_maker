@@ -28,6 +28,27 @@ section is a distilled summary — the full notes live on the
   tree, a rate-limit or an offline machine returns None and the check says nothing, and when the
   content comparison cannot be made it falls back to the old VERSION compare rather than going
   quiet. When the content agrees it does not fetch VERSION at all, so the common case is one call.
+- **Audit of the batch above.** Attacked rather than re-read; three things worth recording.
+  🔴 **SKILL.md Step 0.0 described the update prompt purely in terms of VERSIONS**, so a copy that
+  reports `DIFFERS … at the same version` had no matching explanation anywhere an agent reads
+  before asking the user — precisely the gap a non-Claude runtime falls into. Step 0.0 now names
+  the `drift: "content"` case, says the three options are unchanged, and states the two things a
+  hash cannot tell you: which direction the difference goes, and whether it is instead your own
+  edits. A fork or a locally-patched install WILL report this every time; the notice and the prose
+  both name `SLIDE_MAKER_NO_VERSION_CHECK=1` rather than letting it become a nag people learn to
+  ignore.
+  What the audit CONFIRMED rather than fixed, on the Codex path: `user-declined` is present on both
+  runtimes; `notes="none"` needs nothing there because `lint_deck` reads `.deck-gates.json`
+  whatever the runtime and `NO NOTES` is not in `STRICT_STATS`; and hand-edits are already covered
+  more strongly than by the shared path's report — `codex_handoff_guard.py` REFUSES a hand-off
+  whose final PPTX does not match its PASS receipt. Also checked: `declare_delivery` called before
+  `prs.save()` records no hash rather than a wrong one (the gate then skips, which is the safe
+  degradation), a deck built before this change has no recorded hash and is not punished for it,
+  `--json` carries `drift`/`differing` for the update-prompt flow, and `local_blobs()` costs 0.06s
+  over 192 files.
+  One pre-existing asymmetry surfaced and is NOT fixed here: `material_probe` does not exist in
+  `codex_delivery_gate.py` at all, so the Step-2 probe the shared gate enforces has never been a
+  floor on the Codex path. That predates this batch and deserves its own change.
 
 
 ### Added

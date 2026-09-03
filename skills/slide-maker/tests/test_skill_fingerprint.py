@@ -168,6 +168,27 @@ check(res is None,
       "...and with BOTH unavailable it returns None — offline stays silent by design, so this can "
       "never be the reason a deck did not get built")
 
+# the update-prompt flow reads --json, so the new reason must reach it, not just the human line
+import json as _json, subprocess as _sp2                                          # noqa: E402
+_r = _sp2.run([sys.executable, str(SCRIPTS / "check_version.py"), "--json", "--force"],
+              capture_output=True, text=True)
+try:
+    _payload = _json.loads(_r.stdout or "{}")
+except ValueError:
+    _payload = {}
+check(isinstance(_payload, dict) and "shape" in _payload,
+      "`--json` still emits a payload the update-prompt flow can branch on ({})"
+      .format(sorted(_payload)[:6]))
+
+_skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+check("DIFFERS … at the same version" in _skill or "DIFFERS" in _skill,
+      "🔴 SKILL.md Step 0.0 explains the same-version content drift — its prose described the "
+      "update prompt purely in terms of VERSIONS, so a non-Claude agent reading only SKILL.md "
+      "would meet a notice with no matching explanation")
+check("SLIDE_MAKER_NO_VERSION_CHECK=1" in _skill,
+      "...and names the way out for a fork or a locally-patched install, which will report this "
+      "every time and would otherwise just train people to ignore the check")
+
 check(not (ROOT / "SKILL.sha256").exists(),
       "🔴 and NOTHING is generated into the repo: no committed artifact means none to regenerate "
       "on every commit, none to conflict on every merge, and none to silently go stale")
