@@ -68,10 +68,12 @@ def _near(root, name, depth=3):
 
 
 def recorded_series(gates):
+    """{"imagery", "plan"} for an image-led deck — or for an imagery value that is neither "series" nor
+    "selective" (a misspelt switch, e.g. "image-led", must not read as "not a series deck"); else None."""
     for sec in ("design_plan", "design"):
         d = (gates or {}).get(sec) or {}
-        if isinstance(d, dict) and d.get("imagery") == "series":
-            return {"imagery": "series", "plan": d.get("image_series") or None}
+        if isinstance(d, dict) and d.get("imagery") not in (None, "", "selective"):
+            return {"imagery": d.get("imagery"), "plan": d.get("image_series") or None}
     return None
 
 
@@ -84,12 +86,23 @@ def _slide_texts(slide):
 
 
 def check(pptx, rec, deck_dir):
+    findings, facts = [], {"slots": 0, "placed": 0, "generated": 0}
+    if not rec:
+        return findings, facts
+    if rec.get("imagery") != "series":
+        return [("block", "UNKNOWN IMAGERY", "imagery is {!r} — it must be \"series\" (an image-led deck) or "
+                 "\"selective\" (any other deck)".format(rec.get("imagery")))], facts
+    try:
+        return _check(pptx, rec, deck_dir, findings, facts)
+    except Exception as e:                  # a series deck the checks cannot read is not "not checked"
+        return [("block", "SERIES PLAN INVALID", "the image-series checks could not run: {}: {} — fix "
+                 "series.json (python3 scripts/image_series.py check <series.json>)".format(type(e).__name__, e))], facts
+
+
+def _check(pptx, rec, deck_dir, findings, facts):
     import deckkit as dk
     import image_series as ims
     from pptx import Presentation
-    findings, facts = [], {"slots": 0, "placed": 0, "generated": 0}
-    if not rec or rec.get("imagery") != "series":
-        return findings, facts
     if not rec.get("plan"):
         return [("block", "SERIES PLAN MISSING", "imagery is 'series' but design_plan.image_series names no "
                  "series.json — record the plan path")], facts

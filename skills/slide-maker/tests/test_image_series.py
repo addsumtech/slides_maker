@@ -113,6 +113,18 @@ bad(lambda p: p["slots"][1].update(subject="a bright green seedling with fresh l
 bad(lambda p: p["slots"][1].update(subject="一株绿色的薄荷幼苗种在陶盆里"), "FF00FF")
 mg = copy.deepcopy(GOOD); mg["chroma"] = "FF00FF"; mg["slots"][1]["subject"] = "a pink orchid in a glass vase"
 check(any("00B140" in x for x in ims.check(mg)), "a pink subject on the magenta key must be refused: {}".format(ims.check(mg)))
+# a malformed plan is REFUSED with a message, never a traceback (a crash inside the gates read as
+# NOT CHECKED — a soft pass for an image-led deck); a boolean is not a slide number
+for mutate in (lambda p: p["slots"][0].update(frame="arch"), lambda p: p["slots"][0].update(id=["x"]),
+               lambda p: p.update(key=["hero"]), lambda p: p["slots"][0].update(slide=True),
+               lambda p: p["slots"][0].update(focus="centre"), lambda p: p.update(slots={"hero": {}})):
+    mp = copy.deepcopy(GOOD)
+    mutate(mp)
+    try:
+        probs = ims.check(mp)
+        check(probs, "a malformed plan must have problems: {}".format(mp))
+    except Exception as e:
+        fails.append("check() crashed on a malformed plan: {}: {}".format(type(e).__name__, e))
 # a persona WITH its label is valid
 pp = copy.deepcopy(GOOD)
 pp["slots"][0].update(kind="persona", persona_label="虚构人物 · illustrative persona")

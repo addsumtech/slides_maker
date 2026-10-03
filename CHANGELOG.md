@@ -32,8 +32,11 @@ no subject. `check` also refuses a subject that names people under a non-person 
 
 A new delivery gate, shared by `render_deck.py --gate-check` and `codex_delivery_gate.py`, reads the
 tags from the saved file: it blocks a generated picture with no planned slot, an image-led deck with no
-slot placed, and a generated person shown beside a name joined to a role, an attributed quote, or team
-/ testimonial wording without a visible "fictional" label. Team members, customers, testimonials and
+slot placed, a series image placed without `slot_picture` (recognised by its bytes), a misspelt
+`imagery` value or an unreadable plan, and a generated person shown beside a credit line (a name
+joined to a role), an attributed quote, or team / testimonial wording without a visible "fictional"
+label. Checked against 18,133 ordinary English and Chinese lines, the credit-line rule blocks none but
+the literal word "testimonials". Team members, customers, testimonials and
 real people are never generated; a fictional persona is allowed only with its label. Every other deck
 reads the gate as NOT CHECKED and behaves exactly as before.
 

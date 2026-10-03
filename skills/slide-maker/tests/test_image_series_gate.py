@@ -166,6 +166,19 @@ with tempfile.TemporaryDirectory() as td:
     p = build(td, place=("maker",), raw_mira=True, persona_label=False)
     f = cis.check(str(p), rec, td)[0]
     check("UNTAGGED SERIES IMAGE" in codes(f, "block"), "a series image placed without slot_picture must block: {}".format(f))
+    # a misspelled switch ("image-led") is not silently "not a series deck"
+    odd = cis.recorded_series({"design_plan": {"imagery": "image-led", "image_series": "series.json"}})
+    check(odd is not None and "UNKNOWN IMAGERY" in codes(cis.check(str(p), odd, td)[0], "block"),
+          "imagery other than series/selective must block: {}".format(odd))
+    # a plan that would crash the checks blocks instead of reading as NOT CHECKED
+    (Path(td) / "series.json").write_text(json.dumps(dict(PLAN, slots=[dict(PLAN["slots"][0], frame="arch")])),
+                                          encoding="utf-8")
+    try:
+        f = cis.check(str(p), rec, td)[0]
+        check("SERIES PLAN INVALID" in codes(f, "block"), "a malformed plan must block: {}".format(f))
+    except Exception as e:
+        fails.append("the gate crashed on a malformed plan: {}: {}".format(type(e).__name__, e))
+    (Path(td) / "series.json").write_text(json.dumps(PLAN), encoding="utf-8")
     # missing / invalid plan
     check("SERIES PLAN MISSING" in codes(cis.check(str(p), {"imagery": "series", "plan": None}, td)[0], "block"),
           "a series with no plan path must block")

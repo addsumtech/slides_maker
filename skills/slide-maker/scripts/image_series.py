@@ -148,10 +148,15 @@ def check(plan):
             out.append(tag + ": id must match [a-z0-9-] (1-40 chars), e.g. 'hero' or 's03-kettle'")
         elif sid in seen:
             out.append(tag + ": duplicate id")
-        seen.add(sid)
-        if not (isinstance(s.get("slide"), int) and s["slide"] >= 1):
+        else:
+            seen.add(sid)
+        sl_ = s.get("slide")
+        if not (isinstance(sl_, int) and not isinstance(sl_, bool) and sl_ >= 1):
             out.append(tag + ": slide must be the deck slide number (>= 1)")
-        fr = s.get("frame") or {}
+        fr = s.get("frame")
+        if not isinstance(fr, dict):
+            out.append(tag + ": frame must be an object {\"shape\": …, \"w\": …, \"h\": …}")
+            fr = {}
         if fr.get("shape") not in FRAME_SHAPES:
             out.append(tag + ": frame.shape must be one of {}".format(FRAME_SHAPES))
         if not all(isinstance(fr.get(k), (int, float)) and fr.get(k) > 0 for k in ("w", "h")):
@@ -205,7 +210,7 @@ def check(plan):
                                    and all(isinstance(v, (int, float)) and 0 <= v <= 1 for v in fo)):
             out.append(tag + ": focus must be [fx, fy] within 0..1")
     k = plan.get("key")
-    if k is not None and k not in seen:
+    if k is not None and not (isinstance(k, str) and k in seen):
         out.append("key: {!r} is not a slot id".format(k))
     else:
         kid = key_id(plan)
