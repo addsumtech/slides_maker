@@ -129,6 +129,28 @@ with tempfile.TemporaryDirectory() as td:
     # the persona WITHOUT its label
     p = build(td, persona_label=False)
     check("GENERATED PERSON NAMED" in codes(cis.check(str(p), rec, td)[0], "block"), "an unlabelled persona must block")
+    # The final review (2026-10-03) found the first patterns blocking ordinary copy beside a generated
+    # person: any two Title Case words read as a name, a role word anywhere later on the line counted,
+    # a surname-like first character (周 夏 金 方 高) started a "name", any dash after a quote was an
+    # attribution. Each of these named no one — a false block stops delivery ("better a miss").
+    for line in ("In Rotterdam, the project lead explains the plan",
+                 "Last Spring, our garden lead planted beds along the wall",
+                 "Community Gardens — Volunteer Lead Training",
+                 "Open Studio, where volunteers lead the tour",
+                 "Design Sprint - for every product designer",
+                 "Case study: rooftop gardens in Rotterdam",
+                 "The founders of the allotment movement, 1890s",
+                 '"Grow food where people live" — City Plan 2030',
+                 "周末，社区负责人招募", "夏日｜园艺老师带你种菜", "金秋，社区菜园负责人报名",
+                 "方法 · 设计师工作坊", "“城市屋顶菜园计划”——每周六开放"):
+        f = cis.check(str(build(td, maker_lines=[line])), rec, td)[0]
+        check("GENERATED PERSON NAMED" not in codes(f, "block"), "{!r} named no one but blocked".format(line))
+    # ...while a person NAMED beside a generated face still blocks, in both languages
+    for line in ("Ana Ruiz | Lead Gardener", "Mira Chen — Senior Product Designer at Loom",
+                 "李娜，社区园艺负责人", "“每天浇水半小时就够了。”——王芳", "“The wheel taught me patience.” — Ana, potter",
+                 "Dr. Lena Vogt, Professor of Soil Science", "Lucía Gómez, Head of Design", "张伟——首席工程师"):
+        f = cis.check(str(build(td, maker_lines=[line])), rec, td)[0]
+        check("GENERATED PERSON NAMED" in codes(f, "block"), "{!r} names a person and must block".format(line))
     # UNPLANNED GENERATED IMAGE
     p = build(td, untagged_extra=True)
     check("UNPLANNED GENERATED IMAGE" in codes(cis.check(str(p), rec, td)[0], "block"), "a gen tag with no slot must block")

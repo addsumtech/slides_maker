@@ -20,33 +20,44 @@ sys.path.insert(0, str(HERE))
 
 LABELS = ("fictional", "illustrative persona", "persona (illustrative)", "composite persona",
           "虚构", "示意人物", "虚构人物", "人物为虚构")
-TEAM = re.compile(r"\b(our team|meet the team|founders?|testimonials?|what our (customers|clients) say|"
-                  r"customer stor(y|ies)|case study)\b|我们的团队|团队介绍|创始团队|客户评价|用户评价|客户说|"
-                  r"证言|用户心声", re.I)
-ROLE = re.compile(r"\b(CEO|CTO|COO|CFO|founder|co-founder|head of|director|manager|lead|designer|engineer|"
-                  r"researcher|professor|VP)\b", re.I)
-# A NAME joined to a ROLE on ONE line by a separator ("Daniel Okafor, Head of Ceramics" / "张伟｜首席设计师").
-# A bare Title Case heading ("Community Garden Program") is two capitalised words too — so a name alone,
-# or a role word elsewhere on the slide, never blocks. Chinese names need a common surname first, because
-# "城市菜园，社区负责人招募" has the same shape as a name + role.
-EN_NAME = re.compile(r"\b[A-Z][a-z]{1,15}(?: [A-Z]\.)? [A-Z][a-zA-Z'-]{1,20}\b")
-SEP = re.compile(r"^\s*[,|·—–-]")
+TEAM = re.compile(r"\b(our team|meet the team|the team behind|our founders?|meet the founders?|testimonials?|"
+                  r"what our (customers|clients|users) say|customer stor(y|ies))\b"
+                  r"|我们的团队|团队介绍|创始团队|客户评价|用户评价|客户说|证言|用户心声", re.I)
+# A person is NAMED when a name and a role sit together as a credit line — "Daniel Okafor, Head of
+# Ceramics", "Ana Ruiz | Lead Gardener", "张伟｜首席设计师" — or a quote is attributed to a name. The
+# final review (2026-10-03) found the first patterns blocking ordinary copy: any two Title Case words
+# read as a name, a role word ANYWHERE later on the line counted, a surname-like first character (周末,
+# 夏日, 金秋, 方法) began a "name", any dash after a quote was an attribution. Now the name must be the
+# WHOLE segment before a separator, and the role must END the segment after it.
+_SEP = r"\s*(?:,|，|\||｜|·|—{1,2}|–|\s-\s|:|：)\s*"
+_FUNC = (r"(?!(?:In|At|On|For|By|To|From|With|The|A|An|Our|Your|My|Their|This|That|These|Last|Next|"
+         r"Every|Each|All|Open|Join|Meet|Why|How|What|When|Where|Who)\b)")
+_UP = r"[A-ZÀ-ÖØ-Þ]"                                   # a capital, accented ones too (Élodie, Óscar)
+_LO = r"[^\W\d_]"                                       # any letter (Lucía, Gómez)
+_EN_NAME = (r"(?:(?:Dr|Prof|Mr|Mrs|Ms|Mx)\.?\s+)?" + _FUNC + _UP + _LO + r"{1,15}(?:\s+" + _UP + r"\.)?\s+"
+            + _UP + r"(?:" + _LO + r"|['’-]){1,20}")
+_EN_ROLE = (r"(?i:ceo|cto|coo|cfo|vp|founder|co-founder|director|manager|lead|head|designer|engineer|"
+            r"researcher|professor|gardener|teacher|coordinator|organi[sz]er|volunteer|chef|nurse|doctor|"
+            r"farmer|potter|artist|owner|partner|curator)")
+_EN_TAIL = r"(?:\s+(?:of|at|for)\s+[^,，|｜·—–:：]{1,40})?"
+EN_CREDIT = re.compile(r"^\s*" + _EN_NAME + _SEP + r"(?:[A-Z][\w&'’-]*\s+){0,2}" + _EN_ROLE + _EN_TAIL
+                       + r"\s*(?:$|[,，|｜·—–])")
 ZH_SURNAMES = ("王李张刘陈杨黄赵吴周徐孙马朱胡郭何林罗高郑梁谢宋唐许韩冯邓曹彭曾肖田董袁潘蒋蔡余杜叶程苏魏吕"
                "丁任沈姚卢姜崔钟谭陆汪范金石廖贾夏韦方白邹孟熊秦邱江尹薛段雷侯龙史陶黎贺顾毛郝龚邵万钱严武戴莫孔汤")
-ZH_NAME_ROLE = re.compile(r"(?<![一-鿿])[" + ZH_SURNAMES + r"][一-鿿]{1,2}\s*[，,｜|·—]\s*[^\n]{0,12}?"
-                          r"(首席|总监|经理|负责人|设计师|工程师|研究员|教授|创始人|主任|老师)")
-QUOTE_ATTR = re.compile(r"[\"“].{6,}[\"”]\s*[—–-]{1,2}\s*([A-Z][a-z]|[一-鿿])")
+_ZH_NAME = r"(?<![一-鿿])[" + ZH_SURNAMES + r"][一-鿿]{1,2}"
+_ZH_ROLE = r"(?:首席|总监|经理|负责人|设计师|工程师|研究员|教授|创始人|主任|老师|园丁|志愿者|店主|主理人)"
+ZH_CREDIT = re.compile(_ZH_NAME + r"\s*(?:——|[，,｜|·—:：])\s*[^，,｜|·—\n]{0,10}?" + _ZH_ROLE + r"\s*(?:$|[，,｜|·—。])")
+# an attribution is a PERSON: 1-3 capitalised words, or a surname + 1-2 characters — then the line ends
+QUOTE_ATTR = re.compile(r"[\"“].{4,}?[\"”。！？!?.]\s*[\"”]?\s*(?:—{1,2}|–|-)\s*"
+                        r"(?:[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2}|[" + ZH_SURNAMES + r"][一-鿿]{1,2})"
+                        r"\s*(?:$|[,，])")
 
 
 def _named(text):
     for line in re.split(r"[\n\x0b]", text):
-        for m in EN_NAME.finditer(line):
-            rest = line[m.end():]
-            if SEP.match(rest) and ROLE.search(rest):
-                return True
-        if ZH_NAME_ROLE.search(line):
+        if EN_CREDIT.search(line) or ZH_CREDIT.search(line) or QUOTE_ATTR.search(line):
             return True
-    return bool(TEAM.search(text)) or bool(QUOTE_ATTR.search(text))
+    return bool(TEAM.search(text))
 
 
 def _near(root, name, depth=3):
