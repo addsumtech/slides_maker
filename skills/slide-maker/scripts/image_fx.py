@@ -165,6 +165,17 @@ def sticker_outline(src, out=None, *, border=0.035, color="FFFFFF"):
     return out
 
 
+def _dilate(mask, k):
+    """A boolean mask grown by a (2k+1)-square window — exactly PIL's MaxFilter(2k+1), in O(n) with
+    running sums (MaxFilter(37) took ~20 s on a 4000x3000 image: 66 s per cut-out)."""
+    import numpy as np
+    m = np.asarray(mask, dtype=bool).astype(np.int32)
+    c = np.cumsum(np.pad(m, ((0, 0), (k + 1, k))), axis=1)
+    r = (c[:, 2 * k + 1:] - c[:, :-(2 * k + 1)]) > 0
+    c = np.cumsum(np.pad(r.astype(np.int32), ((k + 1, k), (0, 0))), axis=0)
+    return (c[2 * k + 1:, :] - c[:-(2 * k + 1), :]) > 0
+
+
 def chroma_cutout(src, out=None, *, key=None, tol=60, min_subject=0.05):
     """Key a generated subject off a FLAT background colour (the series pipeline prompts for one).
 
@@ -222,8 +233,7 @@ def chroma_cutout(src, out=None, *, key=None, tol=60, min_subject=0.05):
     # came back at alpha 0.61 — visible, but see-through).
     kk = max(2, int(round(min(a.shape[:2]) * 0.006)))
     def _grow(mask):
-        return np.asarray(Image.fromarray((mask * 255).astype(np.uint8), "L").filter(
-            ImageFilter.MaxFilter(2 * kk + 1))) > 0
+        return _dilate(mask, kk)
     near_subject = _grow(alpha >= 0.5)
     near_clear = _grow(alpha < 0.02)
     gone = (alpha < 0.5) & (d >= max(15.0, spread + 8.0)) & ~near_subject
@@ -245,8 +255,7 @@ def chroma_cutout(src, out=None, *, key=None, tol=60, min_subject=0.05):
     keys = [c for c in range(3) if bg[c] > 128] or [int(np.argmax(bg))]
     rest = [c for c in range(3) if c not in keys]
     k = max(2, int(round(min(a.shape[:2]) * 0.006)))
-    keyed = Image.fromarray(((alpha < 1) * 255).astype(np.uint8), "L").filter(ImageFilter.MaxFilter(2 * k + 1))
-    edge_px = (alpha > 0) & (np.asarray(keyed) > 0)
+    edge_px = (alpha > 0) & _dilate(alpha < 1, k)
     if rest:
         excess = np.clip(a[..., keys].min(axis=2) - a[..., rest].max(axis=2), 0, None)
         excess = np.where(edge_px, excess, 0)

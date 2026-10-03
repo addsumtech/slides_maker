@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import image_fx  # noqa: E402
-from PIL import Image, ImageDraw  # noqa: E402
+from PIL import Image, ImageDraw, ImageFilter  # noqa: E402
 
 fails: list[str] = []
 
@@ -132,6 +132,18 @@ with tempfile.TemporaryDirectory() as td:
             fails.append("chroma_cutout accepted {}".format(f.name))
         except ValueError as ex:
             check(word in str(ex), "{}: refusal should mention {!r}: {}".format(f.name, word, ex))
+
+# the masks are grown with an O(n) dilation: PIL's MaxFilter(37) took ~20 s per call on a 4000x3000
+# image (66 s per cut-out, generality probe 2026-10-03). It must equal MaxFilter exactly.
+import numpy as np  # noqa: E402
+import random  # noqa: E402
+_r = random.Random(7)
+for _ in range(25):
+    h, w, k = _r.randint(5, 60), _r.randint(5, 60), _r.randint(1, 6)
+    m = np.array([[_r.random() < 0.05 for _x in range(w)] for _y in range(h)])
+    ref = np.asarray(Image.fromarray((m * 255).astype(np.uint8), "L").filter(ImageFilter.MaxFilter(2 * k + 1))) > 0
+    got = image_fx._dilate(m, k)
+    check(got.shape == m.shape and (got == ref).all(), "_dilate differs from MaxFilter at h={} w={} k={}".format(h, w, k))
 
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_chroma_cutout] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
