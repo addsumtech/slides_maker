@@ -1257,6 +1257,13 @@ jobs:
           grep -qE "\\] ok$" /tmp/visual_languages.log || {
             echo "::error::test_visual_languages did not run to completion"; exit 1; }
 
+      - name: the visual-language gate reads the applied look from the file on both runtimes
+        run: |
+          set -o pipefail
+          python tests/test_visual_language_gate.py | tee /tmp/visual_language_gate.log
+          grep -qE "\\] ok$" /tmp/visual_language_gate.log || {
+            echo "::error::test_visual_language_gate did not run to completion"; exit 1; }
+
       # --- P2 visual languages steps end ---
 
       - name: The Codex scaffold shows every field the Codex gate requires

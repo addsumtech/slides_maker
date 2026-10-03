@@ -685,6 +685,9 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   validates `series.json` (every slot's meaning line, REFERENT RULE, the people rule, frames, the chroma
   key vs the palette), `prompts` writes the Codex generator's manifest, `qc` compares every image with
   the key image, `slot_picture` places a slot and tags it `+gen.<slot>` for the gates.
+- `check_visual_language.py` — the VISUAL LANGUAGE gate: a deck recording `design_plan.visual_language` must be
+  built in it (cover + half the pages carry `+vl.<name>`, its display face used) and keep its `forbids`;
+  unknown names and unreadable decks block. Called by `render_deck.py --gate-check` AND `codex_delivery_gate.py`.
 - `check_image_series.py` — the IMAGE SERIES gate of an image-led deck (`design_plan.imagery:
   "series"`), read from the FILE's `+gen.<slot>` tags and `series.json`: blocks an unplanned generated
   picture, a series with no slot placed, and a generated person given a name/role/quote or team /

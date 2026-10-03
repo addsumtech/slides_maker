@@ -2312,6 +2312,28 @@ def _qa_backup_gate(pptx, gates):
           '{"qa_backup": {"waived": "<why the answer lives somewhere else>"}}')
 
 
+def _visual_language_gate(pptx, gates):
+    """A deck recording a visual language must be BUILT in it (cover + half the pages carry its tag, its
+    display face is used) and keep its prohibitions. Same module as codex_delivery_gate.py. No language
+    recorded -> NOT CHECKED, out loud."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    try:
+        import check_visual_language as cvl
+    except Exception as exc:
+        not_checked(f"  [--] VISUAL LANGUAGE: NOT CHECKED — {exc.__class__.__name__}: {exc}")
+        return
+    rec = cvl.recorded_language(gates)
+    if rec is None:
+        not_checked("  [--] visual language: NOT CHECKED — none recorded (design_plan.visual_language)")
+        return
+    findings, facts = cvl.check(pptx, rec)
+    print("[gates] visual language {}: {} of {} slide(s) built with it".format(rec["name"], facts["tagged"], facts["slides"]))
+    blocks = [f for f in findings if f[0] == "block"]
+    if blocks:
+        die("the recorded visual language does not hold:\n    - "
+            + "\n    - ".join("{}: {}".format(c, m) for _s, c, m in blocks))
+
+
 def _image_series_gate(pptx, gates):
     """An image-led deck's generated series, read from the FILE (+gen.<slot> tags) and series.json:
     every generated picture planned, the people rule, the series QC. Not an image-led deck -> NOT
@@ -3807,6 +3829,9 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
     with _gate_section('image_series'):
         with _gate_step():
             _image_series_gate(pptx, gates)
+    with _gate_section('visual_language'):
+        with _gate_step():
+            _visual_language_gate(pptx, gates)
 
     with _gate_section('fonts'):
         with _gate_step():

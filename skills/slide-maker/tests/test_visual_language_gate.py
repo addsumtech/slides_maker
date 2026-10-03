@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+"""The visual-language gate, read from the file on both runtimes: a recorded language must be APPLIED (cover + half the pages carry its tag, its display face is used) and its prohibitions hold; unknown names and unreadable decks block."""
+from __future__ import annotations
+import sys, tempfile
+from pathlib import Path
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "scripts"))
+fails: list[str] = []
+
+
+def check(cond, msg):
+    if not cond:
+        fails.append(msg)
+
+
+import json
+import deckkit as dk, visual_languages as vl, check_visual_language as cvl
+from PIL import Image
+check(cvl.recorded_language({"design_plan": {"visual_language": "collage", "vl_fonts": "both"}}) == {"name": "collage", "fonts": "both"}, "shared record")
+check(cvl.recorded_language({"design": {"visual_language": "soft"}})["name"] == "soft", "Codex record")
+check(cvl.recorded_language({"design_plan": {"visual_language": None}}) is None, "unset")
+with tempfile.TemporaryDirectory() as td:
+    td = Path(td)
+    img = td / "p.png"
+    im = Image.new("RGB", (600, 400))
+    im.putdata([(150 + (x * 7 + y * 3) % 90, 110 + (x * 3) % 80, 70 + (y * 5) % 60) for y in range(400) for x in range(600)])
+    im.save(img)
+    def deck(kit_pages, plain_pages, name="collage"):
+        prs = dk.blank_deck(13.333, 7.5)
+        k = vl.use(name, prs)
+        for i in range(kit_pages):
+            s = k.new_slide()
+            (k.cover if i == 0 else k.image_text)(s, **({"title": "Repair night", "image": str(img)} if i == 0 else
+                                                        {"title": "Tools", "body": "Shared tools on every bench.", "image": str(img)}))
+        for _ in range(plain_pages):
+            s = k.new_slide()
+            dk.text(s, 0.8, 0.8, 8, 1, [[("Agenda", 28, dk.DEEP, True, False)]])
+        p = td / "d{}{}.pptx".format(kit_pages, plain_pages)
+        prs.save(str(p))
+        return p
+    rec = {"name": "collage", "fonts": "both"}
+    f, facts = cvl.check(str(deck(3, 1)), rec)
+    check(not [x for x in f if x[0] == "block"], "3 kit pages of 4 pass: {}".format(f))
+    f, _ = cvl.check(str(deck(2, 2)), rec)
+    check(not [x for x in f if x[0] == "block"], "Review Focus 5: half the pages + cover pass: {}".format(f))
+    f, _ = cvl.check(str(deck(1, 3)), rec)
+    check(any(c == "LANGUAGE NOT APPLIED" for _s, c, _w in f), "1 of 4 blocks")
+    f, _ = cvl.check(str(deck(0, 3)), rec)
+    check(any(c == "LANGUAGE NOT APPLIED" for _s, c, _w in f), "recorded but never used blocks")
+    f, _ = cvl.check(str(deck(3, 1)), {"name": "nope", "fonts": "both"})
+    check(any(c == "UNKNOWN VISUAL LANGUAGE" for _s, c, _w in f), "unknown name blocks")
+
+    # a crash on a recorded deck is a block, never NOT CHECKED
+    f, _ = cvl.check(str(td / "missing.pptx"), rec)
+    check(any(s_ == "block" for s_, _c, _w in f), "an unreadable deck recorded as a language blocks")
+    # editorial forbids confetti: two big decorative primitives on one page violate it
+    prs = dk.blank_deck(13.333, 7.5)
+    k = vl.use("editorial", prs)
+    s = k.new_slide()
+    k.cover(s, title="Repair night", image=str(img))
+    s2 = k.new_slide()
+    k.section(s2, number="02", title="How it works")
+    dk.box(s2, 7.0, 1.0, 2.5, 2.5, fill="B23A28")
+    dk.box(s2, 10.0, 3.5, 2.5, 2.5, fill="1F4E79")
+    p = td / "confetti.pptx"
+    prs.save(str(p))
+    f, _ = cvl.check(str(p), {"name": "editorial", "fonts": "both"})
+    check(any(c == "FORBIDDEN BY LANGUAGE" for _s, c, _w in f), "editorial's confetti prohibition is enforced: {}".format(f))
+
+print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
+print("[test_visual_language_gate] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
+sys.exit(1 if fails else 0)

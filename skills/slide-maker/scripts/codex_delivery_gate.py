@@ -257,6 +257,9 @@ TEMPLATE = {
         # "selective" (today's rule) and the image-series gate reads NOT CHECKED.
         "imagery": "selective",
         "image_series": None,
+        # a curated visual language (references/visual-languages.md): its name + "both" | "mac" fonts
+        "visual_language": None,
+        "vl_fonts": "both",
         # 🔴 REQUIRED, and absent from this template until it was measured alongside
         # `interview.picks`. Step 4 COMPETES the signature page: build 2-3 different
         # compositions of it, render them in ONE pass, read them blind, pick by what you SAW.
@@ -1662,6 +1665,35 @@ def check_qa_backup(evidence: dict[str, Any], deck_path: Path | None,
             f"evidence file.")
 
 
+def check_visual_language(evidence: dict[str, Any], deck_path: Path | None,
+                          errors: list[str]) -> None:
+    """A recorded visual language must be BUILT in — same module as `render_deck.py --gate-check`.
+    The record is `design.visual_language` (+ `design.vl_fonts`); none recorded is NOT CHECKED, out loud."""
+    if deck_path is None:
+        return
+    try:
+        import importlib.util
+        path = Path(__file__).with_name("check_visual_language.py")
+        spec = importlib.util.spec_from_file_location("slide_maker_check_visual_language", path)
+        if spec is None or spec.loader is None:
+            raise RuntimeError("could not load check_visual_language.py")
+        cvl = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cvl)
+    except Exception as exc:
+        not_checked(f"  [--] VISUAL LANGUAGE NOT CHECKED — {exc.__class__.__name__}: {exc} (not the same as clean)")
+        return
+    rec = cvl.recorded_language(evidence)
+    if rec is None:
+        not_checked("  [--] visual language NOT CHECKED — none recorded (design.visual_language)")
+        return
+    findings, facts = cvl.check(str(deck_path), rec)
+    mark = "[!!]" if any(f[0] == "block" for f in findings) else "[ok]"
+    print("  {} visual language {}: {} of {} slide(s) built with it".format(mark, rec["name"], facts["tagged"], facts["slides"]))
+    for sev, code, why in findings:
+        if sev == "block":
+            errors.append(f"visual language {code}: {why}")
+
+
 def check_image_series(evidence: dict[str, Any], deck_path: Path | None,
                        errors: list[str]) -> None:
     """An image-led deck's generated series — same module as `render_deck.py --gate-check`.
@@ -2775,6 +2807,7 @@ def evaluate(
         check_talk_time(evidence, deck_path, errors)
         check_qa_backup(evidence, deck_path, errors)
         check_image_series(evidence, deck_path, errors)
+        check_visual_language(evidence, deck_path, errors)
         check_citations(evidence, deck_path, errors)
         check_register_pixels(evidence, deck_path, errors)
         # DECLARED -> OBEYED. The two lines above read the source and the colour;
