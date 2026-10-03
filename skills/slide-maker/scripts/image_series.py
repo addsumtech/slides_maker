@@ -161,3 +161,99 @@ def check(plan):
     if k is not None and k not in seen:
         out.append("key: {!r} is not a slot id".format(k))
     return out
+
+
+RENDER_CLAUSE = {
+    "photo": "Render: a natural photograph — real light, real materials, believable depth of field.",
+    "illustration": ("Render: a hand-made illustration, NOT a photograph — visible drawn or painted marks, "
+                     "flat or textured planes; it must not look photographic."),
+}
+
+
+def _aspect_words(w, h):
+    r = w / float(h)
+    if r >= 1.6:
+        return "a wide landscape composition ({:.2f}:1)".format(r)
+    if r <= 0.65:
+        return "a tall portrait composition (1:{:.2f})".format(1 / r)
+    return "a near-square composition ({:.2f}:1)".format(r)
+
+
+def build_prompt(plan, s):
+    pal = ", ".join("#" + p.lstrip("#").upper() for p in plan.get("palette") or [])
+    chroma = "#" + str(plan.get("chroma") or DEFAULT_CHROMA).lstrip("#").upper()
+    fr = s["frame"]
+    lines = [
+        "Use case: one image of an art-directed SERIES for a presentation deck — every image in the "
+        "series must read as made by the same hand.",
+        "Subject: {}.".format(s["subject"]),
+        "Art direction (shared by the whole series): {}.".format(plan["art_direction"]),
+        "Palette: {} — stay within it.".format(pal),
+        RENDER_CLAUSE[plan["render"]],
+        "Composition: {}; the subject centred with generous margin so a {} crop keeps it whole.".format(
+            _aspect_words(fr["w"], fr["h"]), fr["shape"]),
+    ]
+    cz = s.get("calm_zone")
+    if cz and cz != "none":
+        lines.append("Leave a calm, low-detail area at {} for text set over the image.".format(cz))
+    if s.get("cutout"):
+        lines.append("Background: isolated on a perfectly flat, uniform {} background — no shadow, gradient "
+                     "or texture on the background; the whole subject inside the frame with margin on every "
+                     "side; no {} anywhere in the subject.".format(chroma, chroma))
+    if s.get("kind") in ("generic-person", "persona"):
+        lines.append("People: ordinary, non-identifiable people — not a portrait of any real or famous person.")
+    lines.append("Content rules: no text, letters, numbers, signage, logos or watermarks anywhere in the image.")
+    return "\n".join(lines)
+
+
+def prompts(plan, out_dir):
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    items = []
+    for s in plan["slots"]:
+        fn = "slide-{:02d}-{}.png".format(s["slide"], s["id"])
+        items.append({"id": s["id"], "slide": s["slide"], "filename": fn,
+                      "path": str(out_dir / fn), "prompt": build_prompt(plan, s)})
+    (out_dir / "image_prompt_manifest.json").write_text(
+        json.dumps(items, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return items
+
+
+def _print_problems(probs):
+    for p in probs:
+        print("  - " + p)
+    print("image_series: {} problem(s) — fix the plan, then re-run".format(len(probs)))
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    c = sub.add_parser("check", help="validate series.json")
+    c.add_argument("plan")
+    p = sub.add_parser("prompts", help="write image_prompt_manifest.json for generate_images_codex.py")
+    p.add_argument("plan")
+    p.add_argument("out_dir")
+    a = ap.parse_args(argv)
+    try:
+        plan = load(a.plan)
+    except ValueError as e:
+        print(e)
+        return 2
+    probs = check(plan)
+    if probs:
+        _print_problems(probs)
+        return 1
+    if a.cmd == "check":
+        print("image_series: {} slot(s), key {!r} — plan OK".format(len(plan["slots"]), key_id(plan)))
+        print("NEXT: python3 scripts/image_series.py prompts {} <out_dir>".format(a.plan))
+        return 0
+    items = prompts(plan, a.out_dir)
+    man = Path(a.out_dir) / "image_prompt_manifest.json"
+    print("image_series: wrote {} prompt(s) to {}".format(len(items), man))
+    print("NEXT (the key image first, then LOOK at it): python3 scripts/generate_images_codex.py {} --only {}"
+          .format(man, key_id(plan)))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

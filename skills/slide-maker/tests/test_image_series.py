@@ -100,6 +100,46 @@ try:
 except KeyError as e:
     check("hero" in str(e), "slot()'s refusal should list the known ids: {}".format(e))
 
+# ── prompts ──────────────────────────────────────────────────────────────────────────────────
+import generate_images_codex as gic  # noqa: E402
+
+with tempfile.TemporaryDirectory() as td:
+    items = ims.prompts(GOOD, td)
+    man = json.loads((Path(td) / "image_prompt_manifest.json").read_text(encoding="utf-8"))
+    check(man == items and len(items) == 2, "the manifest must hold one item per slot")
+    h = items[0]
+    check(h["id"] == "hero" and h["filename"] == "slide-01-hero.png" and h["slide"] == 1, "item shape: {}".format(h))
+    p0, p1 = items[0]["prompt"], items[1]["prompt"]
+    check(GOOD["art_direction"] in p0 and GOOD["art_direction"] in p1, "every prompt carries the art direction")
+    check("#D9A13B" in p0, "every prompt carries the palette")
+    check("photograph" in p0.lower(), "the RENDER clause is INSIDE the prompt (photo)")
+    check("no text" in p0.lower(), "every prompt forbids text")
+    check("#00B140" in p1 and "#00B140" not in p0, "only the cut-out slot asks for the chroma background")
+    check(gic.check_prompt_topicality(items) == [], "the prompts must pass the generator's topicality check")
+# illustration render goes in verbatim too
+il = copy.deepcopy(GOOD)
+il["render"] = "illustration"
+check("not a photograph" in ims.build_prompt(il, il["slots"][0]).lower(), "illustration render clause")
+# Review Focus 1: a CJK subject still passes the generator's topicality check
+with tempfile.TemporaryDirectory() as td:
+    its = ims.prompts(cj, td)
+    probs = gic.check_prompt_topicality(its)
+    check(not probs, "a CJK-subject prompt fails the generator's topicality check: {}".format(probs))
+# Review Focus 2: extreme frames state their aspect
+tall = copy.deepcopy(GOOD)
+tall["slots"][0]["frame"] = {"shape": "arch", "w": 1.6, "h": 6.4}
+check("tall" in ims.build_prompt(tall, tall["slots"][0]).lower(), "a 1:4 frame must ask for a tall composition")
+wide = copy.deepcopy(GOOD)
+wide["slots"][0]["frame"] = {"shape": "rect", "w": 8.0, "h": 2.0}
+check("wide" in ims.build_prompt(wide, wide["slots"][0]).lower(), "a 4:1 frame must ask for a wide composition")
+# the CLI refuses an invalid plan with exit 1 and lists the problems
+with tempfile.TemporaryDirectory() as td:
+    bp = Path(td) / "series.json"
+    badp = copy.deepcopy(GOOD); badp["slots"][0]["meaning"] = "x"
+    bp.write_text(json.dumps(badp), encoding="utf-8")
+    check(ims.main(["check", str(bp)]) == 1, "check CLI must exit 1 on an invalid plan")
+    check(ims.main(["prompts", str(bp), td]) == 1, "prompts CLI must refuse an invalid plan")
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_image_series] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)
