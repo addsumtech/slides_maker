@@ -136,6 +136,34 @@ def _thread_id(stdout):
     return None
 
 
+_PLAN_TYPE = re.compile(r'"plan_type"\s*:\s*"([a-z_]+)"')
+
+
+def _why_no_image(rollout):
+    """WHY a session produced no image, read from its own transcript — or None when the transcript
+    shows no cause (never a guess). Measured 2026-10-03: the ChatGPT account Codex was signed into had
+    dropped to the FREE plan, which gives a codex session no image tool; the agent's calls failed with
+    "is not a function", it answered TOOL_RETURNS_NO_FILE, and all this script could say was "no image
+    produced"."""
+    if rollout is None:
+        return None
+    try:
+        txt = Path(rollout).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    plans = _PLAN_TYPE.findall(txt)
+    no_tool = "is not a function" in txt and ("image_gen" in txt or "image_generation" in txt)
+    if plans and plans[-1] == "free":
+        return ("the ChatGPT account codex is signed into is on the FREE plan, which gives a codex session "
+                "no image tool. Sign in with a Plus/Pro account (`codex logout && codex login`), or — only "
+                "with the user's explicit go-ahead, it is metered — use scripts/generate_images_openai.py.")
+    if no_tool:
+        return ("codex exposed no image tool in this session (the agent's image calls failed with \"is not "
+                "a function\"). Check `codex features list` shows image_generation enabled and the account's "
+                "plan includes image generation.")
+    return None
+
+
 def _rollout_for_thread(thread_id):
     """The transcript of THIS job's session — found by its exact id, and verified — or None.
 
@@ -403,6 +431,9 @@ def _generate_one(prompt, out_path, *, orientation, timeout, refs=(), ref_intent
                       file=sys.stderr)
                 _extract_from_rollout(roll, produced)
         if not _valid_image(produced):
+            why = _why_no_image(_rollout_for_thread(_thread_id(stdout)))
+            if why:
+                print("  WHY: " + why, file=sys.stderr)
             return False
         out_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(produced), str(out_path))

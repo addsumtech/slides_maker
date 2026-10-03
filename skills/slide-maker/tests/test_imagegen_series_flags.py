@@ -66,6 +66,32 @@ check(gic._orientation_for({}, "landscape") == "landscape", "no item orientation
 check(gic._orient_clause(gic._orientation_for({"orientation": "auto"}, "landscape")) == "",
       "an 'auto' item gets no orientation clause")
 
+# A generation that produced nothing must SAY WHY. Measured 2026-10-03: the ChatGPT account Codex was
+# signed into had dropped to the FREE plan, which gives a codex session no image tool; the agent tried
+# `tools.image_generation` / `tools.image_gen`, got "is not a function", answered TOOL_RETURNS_NO_FILE,
+# and the script printed only "no image produced" — twice, with no cause.
+with tempfile.TemporaryDirectory() as td:
+    roll = Path(td) / "rollout.jsonl"
+    roll.write_text("\n".join(json.dumps(r) for r in (
+        {"type": "session_meta", "payload": {"id": "x"}},
+        {"type": "event_msg", "payload": {"type": "token_count", "rate_limits": {"plan_type": "free"}}},
+        {"type": "response_item", "payload": {"type": "custom_tool_call_output", "output": [
+            {"type": "input_text", "text": "TypeError: tools.image_gen is not a function"}]}},
+        {"type": "response_item", "payload": {"type": "message", "role": "assistant", "content": [
+            {"type": "output_text", "text": "TOOL_RETURNS_NO_FILE"}]}})) + "\n", encoding="utf-8")
+    why = gic._why_no_image(roll)
+    check(why and "free" in why.lower() and "codex login" in why, "a free-plan session must be named: {!r}".format(why))
+    roll.write_text("\n".join(json.dumps(r) for r in (
+        {"type": "event_msg", "payload": {"type": "token_count", "rate_limits": {"plan_type": "plus"}}},
+        {"type": "response_item", "payload": {"type": "custom_tool_call_output", "output": [
+            {"type": "input_text", "text": "TypeError: tools.image_gen is not a function"}]}})) + "\n", encoding="utf-8")
+    why = gic._why_no_image(roll)
+    check(why and "no image tool" in why.lower(), "a session with no image tool must say so: {!r}".format(why))
+    roll.write_text(json.dumps({"type": "event_msg", "payload": {"type": "token_count",
+                                "rate_limits": {"plan_type": "plus"}}}) + "\n", encoding="utf-8")
+    check(gic._why_no_image(roll) is None, "no evidence -> no invented cause")
+    check(gic._why_no_image(None) is None, "no transcript -> no invented cause")
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_imagegen_series_flags] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)
