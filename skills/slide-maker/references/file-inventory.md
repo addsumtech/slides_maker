@@ -405,6 +405,10 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   hardcoded two-host list left every other runtime with no registry at all, so Q1(a) lost the
   saved-templates option and `taste.md` was never read or written, silently. `check_env.py`
   prints the resolved root on every preflight.
+- `ornaments.py` — hand-made marks as native, editable, motif-tagged geometry: `squiggle` (a wave
+  under a claim), `scribble` (a looping pen coil), `brush_stroke` (a swash behind a word), `tape`
+  (translucent, torn ends, holding a print), `scallop` (a badge). Quiet by default, `loud=True` for
+  a hero; the motif budget counts them and TEXT_OVER_MOTIF sees text across them.
 - `rotgeom.py` — where a ROTATED shape paints: the placed box (exact at 90° multiples, so a
   vertical margin label is measured exactly), the exact intersection of two tilted rectangles, and
   point-in-polygon. The one definition both geometry gates (`lint_deck.py`, `deckkit.lint_layout`)

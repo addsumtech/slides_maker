@@ -1166,6 +1166,13 @@ jobs:
           grep -qE "\\] ok$" /tmp/textmark.log || {
             echo "::error::test_text_mark did not run to completion"; exit 1; }
 
+      - name: Ornaments are native, motif-tagged, and visible in the render
+        run: |
+          set -o pipefail
+          python tests/test_ornaments.py | tee /tmp/ornaments.log
+          grep -qE "\\] ok$" /tmp/ornaments.log || {
+            echo "::error::test_ornaments did not run to completion"; exit 1; }
+
       - name: The Codex scaffold shows every field the Codex gate requires
         run: |
           set -o pipefail
