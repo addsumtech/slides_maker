@@ -55,6 +55,9 @@ from pptx.enum.shapes import MSO_SHAPE_TYPE, PP_PLACEHOLDER
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 from pptx.oxml.ns import qn
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import rotgeom  # noqa: E402 — where a rotated shape PAINTS; the same definition lint_layout uses
+
 EMU = 914400.0
 TOL = 0.05        # inches — ignore hairline/touching overlaps
 CONTAIN = 0.90    # A is "inside" B when >=90% of A's area lies within B
@@ -290,6 +293,23 @@ def _boxes(slide, sw, sh, slide_no=None, record=True):
             continue
         if not w or not h or w <= 0 or h <= 0:
             continue
+        # Where the shape PAINTS. `s.left/top/width/height` are the UNROTATED frame; a rotated
+        # shape paints that frame turned about its centre. Every geometry check below reads
+        # l/t/w/h, so they become the placed footprint (exact at 90deg multiples); text still
+        # WRAPS inside the frame, so the frame is kept as fl/ft/fw/fh for the text-flow checks.
+        # Measured 2026-10-03: reading the frame made a correct vertical margin label a hard
+        # OVERFLOW and let the same label run through a paragraph with no finding at all.
+        try:
+            _rot = rotgeom.norm(s.rotation)
+        except Exception:
+            _rot = 0.0
+        # (underscored: this function already binds `ft` to the FILL TYPE further down)
+        _fl, _ft, _fw, _fh = l, t, w, h
+        poly = None
+        if _rot:
+            l, t, w, h = rotgeom.placed(_fl, _ft, _fw, _fh, _rot)
+            if not rotgeom.is_axis(_rot):
+                poly = rotgeom.corners(_fl, _ft, _fw, _fh, _rot)
         full = s.text_frame.text.strip() if s.has_text_frame else ""
         txt = full.replace("\n", " ")[:26]
         paras, size, align, anchor, mathfont = [], 0.0, None, None, None
@@ -377,6 +397,7 @@ def _boxes(slide, sw, sh, slide_no=None, record=True):
         except Exception:
             tph = False
         out.append({"l": l, "t": t, "w": w, "h": h, "r": l + w, "b": t + h, "zi": zi,
+                    "rot": _rot, "fl": _fl, "ft": _ft, "fw": _fw, "fh": _fh, "poly": poly,
                     "runs": run_colors, "fill": fill_rgb, "unk": fill_unk, "pic": is_pic, "grad": is_grad,
                     "icon": icon_ink,
                     "st": str(s.shape_type).split()[0], "txt": txt, "full": full, "size": size or 12.0,
@@ -614,8 +635,20 @@ _CLOSERS = set("。．，、！？：；）》】」』〕〗｝….,!?:;)]}、�
 def _cjk(t): return any(ord(ch) > 0x2E80 for ch in t["full"])
 
 
+def _frame(t):
+    """The record as its UNROTATED frame — where its text wraps. The same object when unrotated."""
+    if not t.get("rot"):
+        return t
+    f = dict(t)
+    f.update(l=t["fl"], t=t["ft"], w=t["fw"], h=t["fh"], r=t["fl"] + t["fw"],
+             b=t["ft"] + t["fh"], rot=0.0, poly=None)
+    return f
+
+
 def _txt_h(t):
-    return _est_lines(t["paras"], t["w"], t.get("font"), t.get("bold", False)) * (t["size"] / 72.0) * (1.4 if _cjk(t) else 1.25)
+    f = _frame(t)
+    return _est_lines(f["paras"], f["w"], f.get("font"), f.get("bold", False)) * \
+        (f["size"] / 72.0) * (1.4 if _cjk(f) else 1.25)
 
 
 def _nat_width(t):                                       # natural one-line width of the widest paragraph
@@ -625,6 +658,19 @@ def _nat_width(t):                                       # natural one-line widt
 
 
 def _rbox(t):
+    """The RENDERED bounding box of the text on the slide. For a rotated box the ink is laid out
+    in the frame, then turned with the frame about the FRAME's centre."""
+    if not t.get("rot"):
+        return _rbox_frame(t)
+    f = _frame(t)
+    l, tt, r, b = _rbox_frame(f)
+    cx, cy = f["l"] + f["w"] / 2.0, f["t"] + f["h"] / 2.0
+    bl, bt, bw, bh = rotgeom.bbox(rotgeom.rotate(rotgeom.rect_poly(l, tt, r - l, b - tt),
+                                                 cx, cy, t["rot"]))
+    return (bl, bt, bl + bw, bt + bh)
+
+
+def _rbox_frame(t):
     """The RENDERED bounding box of the text — alignment- and anchor-aware (so a centred /
     middle-anchored label isn't mistaken for cramped-against-the-edge)."""
     tw = min(_nat_width(t), t["w"]) or t["w"]; eh = _txt_h(t)
@@ -718,13 +764,26 @@ def _run_cjk_no_ea(run):
 
 
 def _inter(a, b):
-    return (max(0.0, min(a["r"], b["r"]) - max(a["l"], b["l"])),
-            max(0.0, min(a["b"], b["b"]) - max(a["t"], b["t"])))
+    """(x-extent, y-extent) of the overlap of two records. When either is TILTED, the product is
+    the EXACT intersection area (rotgeom): x-extent is the overlap's real horizontal span and
+    y-extent the area-equivalent height. Every caller multiplies the pair or thresholds each side
+    against a hairline, and both stay meaningful. Synthetic rect dicts (l/t/r/b only) work too."""
+    pa, pb = a.get("poly"), b.get("poly")
+    if pa is None and pb is None:
+        return (max(0.0, min(a["r"], b["r"]) - max(a["l"], b["l"])),
+                max(0.0, min(a["b"], b["b"]) - max(a["t"], b["t"])))
+    A, bb = rotgeom.overlap(
+        pa or rotgeom.rect_poly(a["l"], a["t"], a["r"] - a["l"], a["b"] - a["t"]),
+        pb or rotgeom.rect_poly(b["l"], b["t"], b["r"] - b["l"], b["b"] - b["t"]))
+    if not A or bb is None or bb[2] <= 0:
+        return (0.0, 0.0)
+    return (bb[2], A / bb[2])
 
 
 def _frac_inside(a, b):
     ix, iy = _inter(a, b)
-    return (ix * iy) / (a["w"] * a["h"] + 1e-9)
+    # the shape's TRUE area: a tilted frame's axis box over-states it
+    return (ix * iy) / (a.get("fw", a["w"]) * a.get("fh", a["h"]) + 1e-9)
 
 
 def _lum(hex6):
@@ -3142,9 +3201,15 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
                 r0 = max(0, int((o["t"] - _rt) / rh_ * GH))
                 r1 = min(GH, int(math.ceil((o["b"] - _rt) / rh_ * GH)))
                 thin_shape = min(o["w"], o["h"]) <= 0.06
+                # a TILTED occluder covers only the cells inside its polygon, not its axis box
+                _poly = o.get("poly")
                 for rr in range(r0, max(r1, r0 + 1)):
                     row, rrow = cov[rr], rules[rr]
+                    _cy = _rt + (rr + 0.5) / GH * rh_
                     for cc in range(c0, max(c1, c0 + 1)):
+                        if _poly is not None and not rotgeom.contains_point(
+                                _poly, (_rl + (cc + 0.5) / GW * rw_, _cy)):
+                            continue
                         row[cc] = 1
                         if thin_shape:
                             rrow[cc] = 1
@@ -3496,7 +3561,7 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
             if glyphs <= 2 and squarish and host["w"] <= 1.2:
                 continue
             rl, rt, rr, rb = _rbox(t)
-            nlines = _est_lines(t["paras"], t["w"], t.get("font"), t.get("bold", False))
+            nlines = _est_lines(t["paras"], _frame(t)["w"], t.get("font"), t.get("bold", False))
             if rb > host["b"] - PAD:                          # rendered text crammed against / past the card bottom
                 kind = "runs PAST" if rb > host["b"] + 0.03 else "is cramped against (< pad)"
                 finds.append(f"TEXT PADDING: '{t['txt']}' (~{nlines} lines) {kind} the card bottom "
@@ -3508,8 +3573,8 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
             pill = next((c for c in fills if abs(c["l"] - t["l"]) < 0.06 and abs(c["t"] - t["t"]) < 0.06
                          and abs(c["w"] - t["w"]) < 0.16 and abs(c["h"] - t["h"]) < 0.16), None)
             if pill:
-                nl = _est_lines(t["paras"], t["w"] - 0.10, t.get("font"), t.get("bold", False))         # inner pad
-                if nl * (t["size"] / 72.0) * (1.4 if _cjk(t) else 1.25) > t["h"] - 0.02:
+                nl = _est_lines(t["paras"], _frame(t)["w"] - 0.10, t.get("font"), t.get("bold", False))  # inner pad
+                if nl * (t["size"] / 72.0) * (1.4 if _cjk(t) else 1.25) > _frame(t)["h"] - 0.02:
                     finds.append(f"CHIP/LABEL TOO SMALL: '{t['txt']}' (~{nl} lines) overruns its "
                                  f"{round(t['w'],2)}×{round(t['h'],2)}in pill — size the chip to its text (or shorten)")
         # 6e) TEXT-vs-TEXT collision: the RENDERED bottom of an upper text box overruns the rendered TOP of a
@@ -3526,15 +3591,38 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
                 if min(arr, brr) - max(arl, brl) < 0.30:               # must share an x-column
                     continue
                 if arb > brt + 0.06:
-                    finds.append(f"TEXT COLLISION: '{a['txt']}' (~{_est_lines(a['paras'], a['w'])} lines) overruns "
+                    finds.append(f"TEXT COLLISION: '{a['txt']}' (~{_est_lines(a['paras'], _frame(a)['w'])} lines) overruns "
                                  f"into the text below '{b['txt']}' — add vertical gap or size the box")
+                    break
+        # 6f) a ROTATED text's ink laid across another text's ink. 6e reasons about COLUMNS of
+        #     horizontal text (>=0.30in shared) and a vertical label's ink is about that wide, so
+        #     a label run straight through a paragraph passed it (measured 2026-10-03). Exact
+        #     polygons, rotated text only — an unrotated deck never enters this loop.
+        def _rpoly(t):
+            if not t.get("rot"):
+                l_, t_, r_, b_ = _rbox(t)
+                return rotgeom.rect_poly(l_, t_, r_ - l_, b_ - t_)
+            f = _frame(t)
+            l_, t_, r_, b_ = _rbox_frame(f)
+            return rotgeom.rotate(rotgeom.rect_poly(l_, t_, r_ - l_, b_ - t_),
+                                  f["l"] + f["w"] / 2.0, f["t"] + f["h"] / 2.0, t["rot"])
+        for a in [x for x in txts if x.get("rot")]:
+            pa_ = _rpoly(a)
+            for b in txts:
+                if b is a or (b.get("grp") is not None and b.get("grp") == a.get("grp")):
+                    continue
+                A_, _ = rotgeom.overlap(pa_, _rpoly(b))
+                if A_ > 0.02:
+                    finds.append(f"TEXT COLLISION: rotated '{a['txt']}' runs across '{b['txt']}' "
+                                 f"({A_:.2f}in² of ink overlap) — move the label into the margin "
+                                 f"or shorten it")
                     break
         # 6b) orphaned punctuation / widow: a wrapped box whose LAST line is just a punctuation mark
         #     (the 避头尾 bug — a lone 。/，pushed to its own row) or a single orphaned CJK glyph
         for t in [s for s in bx if s["text"] and s["w"] > 0]:
-            if _est_lines(t["paras"], t["w"], t.get("font"), t.get("bold", False)) < 2:
+            if _est_lines(t["paras"], _frame(t)["w"], t.get("font"), t.get("bold", False)) < 2:
                 continue
-            ll = _last_line(t["paras"], t["w"], t.get("font"), t.get("bold", False)).strip()
+            ll = _last_line(t["paras"], _frame(t)["w"], t.get("font"), t.get("bold", False)).strip()
             if ll and all(c in _CLOSERS for c in ll):
                 finds.append(f"ORPHANED PUNCTUATION: the last line of '{t['txt']}' is just '{ll}' — "
                              f"widen the box / lower the size / reword so the mark stays attached (避头尾)")

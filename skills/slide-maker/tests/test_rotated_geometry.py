@@ -68,7 +68,101 @@ check(A == 0.0 and bb is None, "disjoint rects overlap nothing")
 check(rg.contains_point(dia, (0.0, 0.0)) and not rg.contains_point(dia, (0.49, 0.49)),
       "point-in-rotated-rect")
 
-# ── (the gate sections follow) ──────────────────────────────────────────────────────────────────
+# ── gate: lint_deck (render-time) ────────────────────────────────────────────────────────────────
+from pptx import Presentation  # noqa: E402
+from pptx.dml.color import RGBColor  # noqa: E402
+from pptx.util import Inches, Pt  # noqa: E402
+
+import lint_deck  # noqa: E402
+
+
+def _tb(shapes, x, y, w, h, text, size=20, rot=0, face="Arial"):
+    t = shapes.add_textbox(Inches(x), Inches(y), Inches(w), Inches(h))
+    t.text_frame.word_wrap = True
+    r = t.text_frame.paragraphs[0].add_run()
+    r.text, r.font.size, r.font.name = text, Pt(size), face
+    r.font.color.rgb = RGBColor(20, 20, 20)
+    if any(ord(c) > 0x2E80 for c in text):              # CJK renders from <a:ea>, not <a:latin>
+        from pptx.oxml.ns import qn
+        from lxml import etree
+        ea = etree.SubElement(r._r.get_or_add_rPr(), qn("a:ea"))
+        ea.set("typeface", face)
+    t.rotation = rot
+    return t
+
+
+def _card(shapes, x, y, w, h, rot):
+    from pptx.enum.shapes import MSO_SHAPE
+    c = shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(x), Inches(y), Inches(w), Inches(h))
+    c.fill.solid()
+    c.fill.fore_color.rgb = RGBColor(0xE8, 0x5D, 0x3F)
+    c.line.fill.background()
+    c.rotation = rot
+    return c
+
+
+def probe_deck(path):
+    prs = Presentation()
+    prs.slide_width, prs.slide_height = Inches(13.333), Inches(7.5)
+    blank = prs.slide_layouts[6]
+    # 1 — CORRECT: vertical labels in both margins (Latin at 90, CJK at 270)
+    s = prs.slides.add_slide(blank)
+    _tb(s.shapes, 0.8, 0.8, 8, 1.0, "A correct page with vertical margin labels", 28)
+    _tb(s.shapes, 10.2, 3.5, 5.0, 0.5, "EVERY PAGE OPENS A POSSIBILITY", 16, rot=90)
+    _tb(s.shapes, -1.9, 3.5, 5.0, 0.5, "每一页都打开一种可能", 16, rot=270, face="PingFang SC")
+    # 2 — BROKEN: the rotated label runs through a paragraph
+    s = prs.slides.add_slide(blank)
+    _tb(s.shapes, 0.8, 0.5, 8, 0.6, "A broken page", 28)
+    _tb(s.shapes, 4.2, 3.5, 5.0, 0.5, "EVERY PAGE OPENS A POSSIBILITY", 16, rot=90)
+    _tb(s.shapes, 5.6, 2.0, 2.6, 0.9, "Body copy the vertical label slices through.", 18)
+    # 3 — CORRECT: two parallel 8deg cards whose AXIS boxes overlap but whose shapes do not
+    s = prs.slides.add_slide(blank)
+    _tb(s.shapes, 0.8, 0.5, 8, 0.6, "Tilted, apart", 28)
+    _card(s.shapes, 1.0, 2.0, 2.0, 3.0, 8)
+    _card(s.shapes, 3.15, 2.0, 2.0, 3.0, 8)
+    # 4 — BROKEN: the same pair, really overlapping
+    s = prs.slides.add_slide(blank)
+    _tb(s.shapes, 0.8, 0.5, 8, 0.6, "Tilted, colliding", 28)
+    _card(s.shapes, 1.0, 2.0, 2.0, 3.0, 8)
+    _card(s.shapes, 2.90, 2.0, 2.0, 3.0, 8)
+    # 5 — CORRECT: a vertical label inside an UNROTATED group
+    s = prs.slides.add_slide(blank)
+    _tb(s.shapes, 0.8, 0.5, 8, 0.6, "Grouped label", 28)
+    g = s.shapes.add_group_shape()
+    _tb(g.shapes, 10.2, 3.5, 5.0, 0.5, "EVERY PAGE OPENS A POSSIBILITY", 16, rot=90)
+    prs.save(str(path))
+
+
+def deck_findings(path):
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        lint_deck.lint(str(path))
+    by = {}
+    for line in buf.getvalue().splitlines():
+        line = line.strip()
+        if line.startswith("slide ") and ":" in line:
+            try:
+                n = int(line.split(":", 1)[0].split()[1])
+            except ValueError:
+                continue
+            by.setdefault(n, []).append(line)
+    return by
+
+
+with tempfile.TemporaryDirectory() as td:
+    deck = Path(td) / "rot.pptx"
+    probe_deck(deck)
+    f = deck_findings(deck)
+    s1 = [x for x in f.get(1, []) if "EVERY PAGE" in x or "每一页" in x]
+    check(not s1, "lint_deck: correct vertical labels flagged: {}".format(s1))
+    s2 = [x for x in f.get(2, []) if "EVERY PAGE" in x or "Body copy" in x]
+    check(s2, "lint_deck: a rotated label through body copy produced no finding on slide 2")
+    s3 = [x for x in f.get(3, []) if "OVERLAP" in x]
+    check(not s3, "lint_deck: tilted cards that do not touch were called overlapping: {}".format(s3))
+    s4 = [x for x in f.get(4, []) if "OVERLAP" in x]
+    check(s4, "lint_deck: two tilted cards really overlapping produced no OVERLAP")
+    s5 = [x for x in f.get(5, []) if "OVERFLOW" in x]
+    check(not s5, "lint_deck: a grouped vertical label was called off-canvas: {}".format(s5))
 
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_rotated_geometry] {}".format(
