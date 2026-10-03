@@ -247,6 +247,10 @@ def prompts(plan, out_dir):
     return items
 
 
+# Calibrated on REAL series (2026-10-03, metered gpt-image, key image as style reference): a warm photo
+# series measured colour distance 2.1-12.9 and hue 0.07-0.19 from its key, a watercolour series 6.0-7.0
+# and 0.07-0.10, and a planted cold-neon picture of the same subject 44.0 and 0.86. Both thresholds sit
+# in that gap; a synthetic pair would have flattered them.
 DE_MAX = 25.0      # mean-colour distance (CIE76) from the key beyond which an image is OFF-SERIES
 HIST_MAX = 0.6     # hue-histogram distance (L1/2) beyond which an image is OFF-SERIES
 ASPECT_MAX = 0.35  # |image aspect - frame aspect| / frame aspect beyond which the crop loses too much

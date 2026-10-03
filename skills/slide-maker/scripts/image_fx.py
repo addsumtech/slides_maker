@@ -212,20 +212,23 @@ def chroma_cutout(src, out=None, *, key=None, tol=60, min_subject=0.05):
     if share < min_subject:
         raise ValueError("chroma_cutout(): only {:.1%} of {} is subject after keying — no usable subject; "
                          "regenerate it larger".format(share, src))
-    # despill: in an EDGE BAND, no KEY channel (green; red+blue for magenta) may exceed the strongest
-    # non-key channel. The band is every visible pixel within a few px of the keyed-out region — not
-    # only the partly transparent ones: the mixed subject/key pixels just inside a soft edge are far
-    # enough from the key to stay OPAQUE and still carry its colour (measured: a green outline on the
-    # first version). The interior is untouched, so a green subject on a magenta key keeps its green.
+    # despill: in an EDGE BAND, remove only the key's EXCESS — how far the weakest KEY channel (green; red
+    # and blue for magenta) rises above the strongest other one — from every key channel. The band is
+    # every visible pixel within a few px of the keyed-out region, not only the partly transparent ones:
+    # the mixed subject/key pixels just inside a soft edge stay OPAQUE and still carry the key (measured:
+    # a green outline on the first version). A pixel with no excess is the subject's own colour and is
+    # left exactly as it is — capping each key channel AT the others instead turned a real orange pot rim
+    # olive (191,164,95 -> 164,164,95). The interior is untouched either way.
     keys = [c for c in range(3) if bg[c] > 128] or [int(np.argmax(bg))]
     rest = [c for c in range(3) if c not in keys]
     k = max(2, int(round(min(a.shape[:2]) * 0.006)))
     keyed = Image.fromarray(((alpha < 1) * 255).astype(np.uint8), "L").filter(ImageFilter.MaxFilter(2 * k + 1))
     edge_px = (alpha > 0) & (np.asarray(keyed) > 0)
     if rest:
-        cap = a[..., rest].max(axis=2)
+        excess = np.clip(a[..., keys].min(axis=2) - a[..., rest].max(axis=2), 0, None)
+        excess = np.where(edge_px, excess, 0)
         for c in keys:
-            a[..., c] = np.where(edge_px, np.minimum(a[..., c], cap), a[..., c])
+            a[..., c] = a[..., c] - excess
     rgba = np.dstack([a, alpha * 255.0]).clip(0, 255).astype(np.uint8)
     out = out or os.path.splitext(src)[0] + ".cut.png"
     Image.fromarray(rgba, "RGBA").save(out)
