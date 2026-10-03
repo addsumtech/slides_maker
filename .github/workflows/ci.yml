@@ -1229,6 +1229,13 @@ jobs:
           grep -qE "\\] ok$" /tmp/feather.log || {
             echo "::error::test_feather did not run to completion"; exit 1; }
 
+      - name: surfaces.grain_background lays a tiled paper ground in the slide background
+        run: |
+          set -o pipefail
+          python tests/test_surfaces.py | tee /tmp/surfaces.log
+          grep -qE "\\] ok$" /tmp/surfaces.log || {
+            echo "::error::test_surfaces did not run to completion"; exit 1; }
+
       # --- P2 visual languages steps end ---
 
       - name: The Codex scaffold shows every field the Codex gate requires

@@ -668,6 +668,9 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   near-duplicates, a possible-watermark heuristic, and EXIF rotation (`--fix` bakes it in). Its
   `--contact-sheet` is ONE labelled PNG of every candidate plus a sha256 — the artifact that makes
   looking cheap, and that a critic's consent can name.
+- `surfaces.py` — grounds that are not flat colour: `grain_background(slide, color, strength=)` sets a
+  deterministic tiled grain/paper tile as the slide's real background (`<p:bg>`), never a picture shape,
+  amplitude capped so text contrast holds.
 - `image_series.py` — the ART-DIRECTED IMAGE SERIES for an image-led deck (`imagery: series`): `check`
   validates `series.json` (every slot's meaning line, REFERENT RULE, the people rule, frames, the chroma
   key vs the palette), `prompts` writes the Codex generator's manifest, `qc` compares every image with

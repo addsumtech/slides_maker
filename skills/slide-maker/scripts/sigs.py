@@ -34,7 +34,7 @@ sys.path.insert(0, HERE)
 # supply the geometry". Leaving the surface kits out of it therefore did worse than hide them — it
 # told anyone asking for `halftone` or `starburst` to hand-roll the thing that had just been built.
 MODULES = ("deckkit", "designed_charts", "register_surface", "citations", "ornaments", "image_fx",
-           "image_series")
+           "image_series", "surfaces")
 
 # The three call-shape errors that actually cost round-trips on a real build. They are properties of
 # the API that no single signature line states, so they are printed with every lookup rather than
@@ -330,6 +330,9 @@ EXAMPLES = {
     "feather": 'import image_fx\n'
                'f = image_fx.feather("skyline.png", radius=0.1)       # edges fade into the ground\n'
                'dk.picture(s, f, 1.0, 0.6, 8.0, 4.4, fit="contain", alt="a city skyline")',
+    "grain_background": 'import surfaces\n'
+                        'surfaces.grain_background(s, "F3EBDD", strength=5)   # a paper ground; text stays crisp\n'
+                        'dk.text(s, 0.8, 0.8, 8, 1, [[("On paper", 28, dk.DEEP, True, False)]])',
     "sticker_outline": 'import image_fx\n'
                        'st = image_fx.sticker_outline("cutout.png")      # needs a transparent cut-out\n'
                        'dk.picture(s, st, 6.6, 0.6, 2.6, 3.4, fit="contain", alt="a cut-out subject")',
