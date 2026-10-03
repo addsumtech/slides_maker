@@ -45,9 +45,22 @@ k.closing(k.new_slide(), title="Bring one broken thing.", line="And bring a neig
   a balanced measure). A title, quote, label or line with clause punctuation INSIDE it breaks after its
   clauses when they fit ("带着坏东西来，/ 带着好东西走", "Bring it broken. / Take it home working.") —
   at down to 0.7x its size, never with more lines, set as one paragraph per line.
-- **Ordinary pages in the same look** (agenda, bullets, charts): `k.new_slide()` gives the language's
-  ground; `rs.card(slide, "<name>", x, y, w, h, label=…)` gives its card; `rs.ground(slide, "<name>",
-  role=…)` its furniture and content rect.
+- **Ordinary pages in the same look** (agenda, bullets, charts) — every page starts with `k.new_slide()`,
+  which paints the language's ground (and its grain) and marks the slide as built in the language, so the
+  delivery gate counts it; a plain `dk.add_slide()` page is NOT in the language. Then:
+  ```python
+  s = k.new_slide()
+  x, y, w, h = rs.ground(s, "editorial", role="content", index=2)   # furniture; returns the content rect
+  body, header = rs.card(s, "editorial", x, y + 0.9, w, h - 1.0, label=None)  # SHAPES, not a rect
+  dk.text(s, body.left.inches + 0.3, body.top.inches + 0.25, body.width.inches - 0.6, body.height.inches - 0.5,
+          [[k.run("1.  Why a repair café", 20)], [k.run("2.  How an evening runs", 20)]])
+  ```
+  `rs.ground` returns the content rect `(x, y, w, h)` in inches; `rs.card` returns `(body, header)` —
+  python-pptx shapes (`header` is None for a card with no band), so read `body.left.inches` and friends.
+  `body` is the WHOLE card: with `label=…` the label sits inside its top, so start the content below it
+  (`header.top.inches + header.height.inches`), or it lands on the label.
+  Make every run with `k.run(text, size, color=None, bold=False, role="body")`: it picks the language's
+  face and, for Chinese, Japanese or Korean text, that script's East-Asian face — never type a font name.
 - **Any canvas:** every page has a landscape and a portrait layout (portrait when W < 1.2 H).
 
 ## Fonts
@@ -76,16 +89,21 @@ never chosen. CJK runs are never italic; a collage CJK headline is bold (Impact 
 
 ## Record and gates
 
+`python3 scripts/visual_languages.py --gates collage --deck <deck> --for "a neighbourhood repair café"`
+prints the exact commands, with the language's own hex codes in the palette (the register-pixels gate
+holds a palette that never reached a pixel, so never type them yourself):
+
 ```bash
 python3 scripts/deck_gates.py set <deck> design_plan.visual_language collage
 python3 scripts/deck_gates.py set <deck> design_plan.vl_fonts both
 python3 scripts/deck_gates.py set <deck> design_plan.style_pick "bespoke collage for a neighbourhood repair café"
 python3 scripts/deck_gates.py set <deck> design_plan.look_source bespoke
+python3 scripts/deck_gates.py set <deck> design_plan.palette "ground #… ink #… accents #… #…"   # from --gates
 ```
 
-(Codex evidence: the same two fields under `design`.) Put the language's hex codes in
-`design_plan.palette` so the register-pixels gate can find them. The delivery gate on both runtimes then
-checks that the cover and at least half the pages were built with the language's page functions, that its
+(Codex evidence: the same five values under `design` — `--gates` names them.) The delivery gate on both runtimes then
+checks that the cover was built with `cover()` and at least half the pages are in the language (its page
+functions, or ordinary pages started with `k.new_slide()`), that its
 display face is used, and that its prohibitions hold (`editorial` and `storybook` forbid confetti) — a
 recorded language that was not applied blocks. The register notes name it a curated language whose kit
 ships with the skill (nothing to scaffold or keep with `save_register.py`).

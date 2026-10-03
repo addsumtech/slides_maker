@@ -32,8 +32,8 @@ with tempfile.TemporaryDirectory() as td:
             s = k.new_slide()
             (k.cover if i == 0 else k.image_text)(s, **({"title": "Repair night", "image": str(img)} if i == 0 else
                                                         {"title": "Tools", "body": "Shared tools on every bench.", "image": str(img)}))
-        for _ in range(plain_pages):
-            s = k.new_slide()
+        for _ in range(plain_pages):                 # PLAIN: not even the kit's new_slide()
+            s = dk.add_slide(prs)
             dk.text(s, 0.8, 0.8, 8, 1, [[("Agenda", 28, dk.DEEP, True, False)]])
         p = td / "d{}{}.pptx".format(kit_pages, plain_pages)
         prs.save(str(p))
@@ -66,6 +66,30 @@ with tempfile.TemporaryDirectory() as td:
     prs.save(str(p))
     f, _ = cvl.check(str(p), {"name": "editorial", "fonts": "both"})
     check(any(c == "FORBIDDEN BY LANGUAGE" for _s, c, _w in f), "editorial's confetti prohibition is enforced: {}".format(f))
+
+    # ordinary pages started with k.new_slide() (agenda, charts) are IN the language: a chart-heavy deck built
+    # exactly as the reference says must pass; padding with plain slides still blocks (Task 13 run, 2026-10-04)
+    prs = dk.blank_deck(13.333, 7.5)
+    k = vl.use("collage", prs)
+    k.cover(k.new_slide(), title="Repair night", image=str(img))
+    k.data(k.new_slide(), number="1", label="evening a month")
+    for _ in range(8):
+        s_ = k.new_slide()
+        dk.text(s_, 0.8, 0.8, 8, 1, [[k.run("Agenda", 28)]])
+    p = td / "chart_heavy.pptx"
+    prs.save(str(p))
+    f, facts = cvl.check(str(p), {"name": "collage", "fonts": "both"})
+    check(not [x for x in f if x[0] == "block"], "a deck of kit pages + ordinary k.new_slide() pages passes: {} {}".format(f, facts))
+    prs = dk.blank_deck(13.333, 7.5)
+    k = vl.use("collage", prs)
+    k.cover(k.new_slide(), title="Repair night", image=str(img))
+    for _ in range(8):
+        s_ = dk.add_slide(prs)
+        dk.text(s_, 0.8, 0.8, 8, 1, [[("Agenda", 28, dk.DEEP, True, False)]])
+    p = td / "plain_padded.pptx"
+    prs.save(str(p))
+    f, _ = cvl.check(str(p), {"name": "collage", "fonts": "both"})
+    check(any(c == "LANGUAGE NOT APPLIED" for _s, c, _w in f), "a cover + plain slides still blocks: {}".format(f))
 
     # a recorded curated language is a KIT that ships with the skill — the register notes on both runtimes
     # must say so, not call it an INVENTED register and advise scaffolding a kit and saving it (real-deck

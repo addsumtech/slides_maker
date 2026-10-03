@@ -377,6 +377,16 @@ def load():
             if getattr(fn, "__module__", None) != m:  # skip re-exports, keep each helper's real home
                 continue
             out.setdefault(name, (m, fn))
+    # The visual-language page functions are METHODS of the kit `visual_languages.use()` returns. They were
+    # invisible here, so `sigs.py cover` answered with deckkit.cover — a different call — and `section`,
+    # `quote`, `data` resolved to nothing (a docs-only run, 2026-10-04). Listed as Kit.<name>.
+    try:
+        import visual_languages as _vl
+        for name, fn in vars(_vl.Kit).items():
+            if not name.startswith("_") and inspect.isfunction(fn):
+                out.setdefault("Kit." + name, ("visual_languages", fn))
+    except Exception as e:
+        print(f"sigs: cannot list the visual-language kit ({type(e).__name__}: {e})", file=sys.stderr)
     return out
 
 
@@ -450,7 +460,11 @@ def show(name, mod, fn, full=False):
         sig = str(inspect.signature(fn))
     except (TypeError, ValueError):
         sig = "(signature unavailable)"
-    print(f"\n{'─' * 78}\n{mod}.{name}{sig}")
+    if name.startswith("Kit."):                  # a method of the kit: k = visual_languages.use("<name>", prs)
+        sig = sig.replace("(self, ", "(", 1).replace("(self)", "()", 1)
+        print(f"\n{'─' * 78}\n{name}{sig}    # k = visual_languages.use(\"<language>\", prs); k.{name[4:]}(...)")
+    else:
+        print(f"\n{'─' * 78}\n{mod}.{name}{sig}")
     doc = inspect.getdoc(fn) or "(no docstring)"
     if full:
         print("\n" + doc)
@@ -541,9 +555,15 @@ def main(argv=None):
 
     missing = []
     for n in a.names:
+        kit = "Kit." + n if not n.startswith("Kit.") else None
         if n in reg:
             m, f = reg[n]
             show(n, m, f, a.full)
+            if kit and kit in reg:               # two helpers share the name — say which is which
+                print(f"\n(also: {kit}, the visual-language page function — a different call)")
+                show(kit, *reg[kit], a.full)
+        elif kit and kit in reg:
+            show(kit, *reg[kit], a.full)
         else:
             missing.append(n)
     print("\n" + "─" * 78)

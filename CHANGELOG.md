@@ -17,7 +17,8 @@ under the deck default `hangingPunct="1"`, probed one mark at a time: in pure-CJ
 the character before it down; an opening bracket never ends a line. Checked against 122 rendered cases:
 pure-CJK text now matches the render in 90 of 94 (was 25 of 94); text that mixes in Latin or digits keeps
 the old conservative count (the renderer's autospace is not modelled). Found when a two-line Chinese title
-read as three lines to lint.
+read as three lines to lint. Korean wraps at spaces, never between syllables, and is now measured that way:
+on 60 rendered Korean cases the under-counts (the direction that hides an overflow) fell from 11 to 2.
 
 ### Visual languages: four complete image-led looks
 
@@ -32,7 +33,9 @@ landscape and a portrait layout. Text is flowed by measured height and refused �
 it cannot fit; titles never end in a lone word or one or two CJK characters, and a title or quote with
 clause punctuation breaks after its clauses ("带着坏东西来，/ 带着好东西走") when they fit. The direction preview shows
 each language's bundled, labelled style sample, and a new gate on both runtimes blocks a recorded
-language that was not applied.
+language that was not applied. `sigs.py` lists the kit's page functions as `Kit.cover` … `Kit.closing`;
+`visual_languages.py --gates <name>` prints the whole record, the language's palette hexes included;
+ordinary pages started with `k.new_slide()` count as in the language.
 
 New general primitives: `display_type` (stacked headlines sized by REAL glyph width — measure_text
 called a too-wide single word "one line" and the render broke it mid-word —, two-tone, and outlined

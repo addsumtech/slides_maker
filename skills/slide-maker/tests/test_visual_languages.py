@@ -350,12 +350,60 @@ _got = vl._break_lines(k_, "quote", "数据显示，参与者的满意度很高�
 check(_got == ["数据显示，", "参与者的满", "意度很高", "（详见附", "录）。"], "engine: opening bracket moves down: {}".format(_got))
 _got = vl._break_lines(k_, "quote", "2026年的数据（n=120）显示，满意度为 87%。", 28, 7.75 + vl._INSET)
 check(len(_got) == 2, "engine: a mark after Latin does not hang (two lines rendered): {}".format(_got))
+# Korean wraps at spaces, never between syllables (LibreOffice probe, 2026-10-04)
+k_.ea_face = lambda role, text: "Apple SD Gothic Neo"
+_got = vl._break_lines(k_, "quote", "옥상에서도 채소가 자란다", 24, 7 * 24 / 72.0 + vl._INSET + 0.02)
+check(_got == ["옥상에서도", "채소가 자란다"], "engine: Korean breaks at the space: {}".format(_got))
+_got = vl._break_lines(k_, "quote", "가나다라마바사", 24, 6 * 24 / 72.0 + vl._INSET + 0.02)
+check(_got == ["가나다라마바사"], "engine: a Korean word is never split between syllables: {}".format(_got))
 k_.ea_face = _orig_face
 # no clause punctuation, or a clause too long for any line: unchanged, never refused
 p_ = dk.blank_deck(13.333, 7.5)
 k_ = vl.use("editorial", p_)
 k_.cover(k_.new_slide(), title="Bring one broken thing to the hall", image=_ph)
 k_.cover(k_.new_slide(), title="A very long first clause that cannot possibly sit on one line of a narrow column, then a tail", image=_ph)
+
+# ── Task 14 generality probe (2026-10-04): an empty page is refused, an explicit line break is measured ──
+p_ = dk.blank_deck(13.333, 7.5)
+k_ = vl.use("soft", p_)
+for kw in (dict(title="", kicker=""), dict(title="   ", kicker=" ")):
+    try:
+        k_.cover(k_.new_slide(), **kw)
+        fails.append("a cover with nothing on it ({}) was built silently".format(kw))
+    except ValueError as e:
+        check("cover" in str(e), "the refusal names the page: {}".format(e))
+k_.cover(k_.new_slide(), title="  ", image=_ph)                      # an image-only cover is a real cover
+s_ = k_.new_slide()
+r_ = k_.cover(s_, kicker="Two lines", title="Line one\nLine two", subtitle="A subtitle under it")
+_tsz = [p__.runs[0].font.size.pt for sh in s_.shapes if getattr(sh, "has_text_frame", False)
+        and "Line one" in sh.text_frame.text for p__ in sh.text_frame.paragraphs if p__.runs][0]
+check(r_["rects"]["title"][3] >= 2 * _tsz * dk._LINT_LINE_H / 72.0,
+      "an explicit line break is measured as two lines: {:.2f}in for {:.0f}pt".format(r_["rects"]["title"][3], _tsz))
+
+# ── Task 13 (a docs-only non-Claude run, 2026-10-04): what it could not find, it guessed ──
+import subprocess
+def _run(*args):
+    return subprocess.run([sys.executable] + list(args), cwd=str(ROOT), capture_output=True, text=True)
+# sigs.py resolved `cover` to deckkit.cover (a different call) and knew no `section`/`quote`/`data`
+r_ = _run("scripts/sigs.py", "cover")
+check("Kit.cover(" in r_.stdout and "deckkit.cover(" in r_.stdout, "sigs cover shows BOTH covers: {}".format(r_.stdout[:300]))
+r_ = _run("scripts/sigs.py", "section", "image_text", "quote", "data", "closing", "new_slide", "run")
+check(r_.returncode == 0 and all("Kit.{}(".format(n) in r_.stdout for n in ("section", "image_text", "quote", "data", "closing", "new_slide", "run")),
+      "sigs resolves every Kit page function: rc={} {}".format(r_.returncode, r_.stderr[:200]))
+check("kicker=None" in r_.stdout and "image=None" in r_.stdout, "the Kit page signatures name their keyword fields")
+# the palette the register-pixels gate reads was never stated; the run guessed it and was held
+r_ = _run("scripts/visual_languages.py", "--gates", "editorial", "--deck", "my-deck", "--for", "a repair café")
+_pal = vl.LANGS["editorial"]["palette"]
+check(r_.returncode == 0 and "deck_gates.py set my-deck design_plan.visual_language editorial" in r_.stdout
+      and "design_plan.palette" in r_.stdout and all(h.upper() in r_.stdout.upper() for h in [_pal["ground"], _pal["ink"]] + list(_pal["text_accents"])),
+      "--gates prints the full record with the language's hexes: {}".format(r_.stdout[:400] + r_.stderr[:200]))
+check("design.visual_language" in r_.stdout, "--gates names the Codex evidence fields too")
+# the ordinary-page recipe: what new_slide paints, what ground/card return, how to make a run
+_ref = (ROOT / "references" / "visual-languages.md").read_text(encoding="utf-8")
+for needle in ("--gates", "k.run(", "body.left", "returns the content rect", "paints the language's ground"):
+    check(needle in _ref, "references/visual-languages.md never says {!r}".format(needle))
+check("autospace" in (ROOT / "references" / "multilingual.md").read_text(encoding="utf-8"),
+      "multilingual.md explains the preview gap before ASCII punctuation after Hangul")
 
 # ── Task 10: bundled samples (the direction preview shows them) ──
 A = ROOT / "assets" / "vl"

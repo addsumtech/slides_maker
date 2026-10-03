@@ -131,7 +131,11 @@ class Kit:
                 self.face(role), self.ea_face(role, text))
 
     def new_slide(self):
+        """A slide in the language: paints the language's ground (its grain, where it has one) and names the
+        slide `vl.<language>` (the OOXML slide name, nothing drawn) — so an ordinary page built on it (agenda,
+        chart) counts as IN the language for the delivery gate, which a plain dk.add_slide page does not."""
         s = dk.add_slide(self.prs)
+        s._element.cSld.set("name", "vl." + self.name)
         if self.L["grain"]:
             import surfaces
             surfaces.grain_background(s, self.L["palette"]["ground"], strength=self.L["grain"])
@@ -358,9 +362,10 @@ def _field_height(k, field, text, size, w):
 def _widest_word_fits(k, field, text, size, w):
     import display_type as dt
     role, bold = TYPE[k.name][field][1], TYPE[k.name][field][2]
-    if dk._has_cjk(text):
-        return True
-    face = k.face(role)
+    korean = any(dk._is_hangul(ord(c)) for c in text)
+    if dk._has_cjk(text) and not korean:
+        return True                       # Chinese/Japanese break between characters; Korean words do not
+    face = k.ea_face(role, text) if korean else k.face(role)
     return all((dt._glyph_width(word, size, face, bold) or 0) <= (w - _INSET) for word in text.split())
 
 
@@ -375,9 +380,12 @@ def _break_lines(k, field, text, size, w):
     cjk = dk._has_cjk(text)
     face = k.ea_face(role, text) if cjk else k.face(role)
     italic = italic and not cjk
-    units, joiner = (list(text), "") if cjk else (text.split(" "), " ")
+    korean = any(dk._is_hangul(ord(c)) for c in text)     # wraps at spaces, like Latin (LibreOffice probe)
+    units, joiner = (list(text), "") if cjk and not korean else (text.split(" "), " ")
     limit = w - _INSET
-    may_hang = cjk and not any(c.isascii() and c.isalnum() for c in text) and limit >= 2 * size / 72.0
+    may_hang = (cjk and not korean and not any(c.isascii() and c.isalnum() for c in text)
+                and limit >= 2 * size / 72.0)
+    cjk = cjk and not korean                               # below: per-character CJK rules only
 
     def width(s_):
         return dt._glyph_width(s_, size, face, bold, italic) or 0
@@ -411,7 +419,8 @@ def _widowed(k, field, text, size, w):
     if len(ls) < 2:
         return False
     last = ls[-1].strip()
-    return len(last) <= 2 if dk._has_cjk(text) else len(last.split()) <= 1
+    korean = any(dk._is_hangul(ord(c)) for c in text)
+    return len(last) <= 2 if dk._has_cjk(text) and not korean else len(last.split()) <= 1
 
 
 _NO_WIDOW = ("title", "quote", "label", "line", "subtitle")
@@ -529,11 +538,13 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None):
     gaps = {f: (max(HEAD_GAP, 2 * GAP * s) if head in (f, nxt) else gap) for f, nxt in zip(order, order[1:])}
     gaps[order[-1]] = 0.0
 
-    phrased = {}                                   # field -> its explicit clause lines (_phrase_lines)
+    # field -> its explicit lines: the author's own line breaks ("Line one\nLine two"), or clause lines
+    # (_phrase_lines). One paragraph per line; each measured on its own, as dk.text sets them.
+    phrased = {f: [l_.strip() for l_ in t.split("\n") if l_.strip()] for f, t in items if "\n" in t}
 
     def fheight(f, t, sz, fw):
-        if f in phrased:                           # one paragraph per line, line spacing per paragraph as dk.text
-            return sum(sz / 72.0 * dk._LINT_LINE_H * (dk.CJK_LS if dk._has_cjk(l_) else 1.0) for l_ in phrased[f]) + 0.06
+        if f in phrased:
+            return sum(_field_height(k, f, l_, sz, fw) - 0.06 for l_ in phrased[f]) + 0.06
         return _field_height(k, f, t, sz, fw)
 
     def total():
@@ -556,7 +567,7 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None):
                                  k.name, page, worst[0], _field_height(k, worst[0], worst[1], floors[worst[0]], w),
                                  floors[worst[0]], h, total()))
     for f, t in items:
-        if f not in _NO_WIDOW:
+        if f not in _NO_WIDOW or f in phrased:            # the author's own breaks are kept as given
             continue
         sz, tries = sizes[f], 0
         while _widowed(k, f, t, sz, w) and sz * 0.95 >= floors[f] and tries < 10:
@@ -765,7 +776,11 @@ def _compose(k, slide, page, fields, image):
     lay = LAYOUTS[k.name][page][orient]
     n0 = len(slide.shapes)
     index = len(k.prs.slides)
-    items = [(f, str(fields[f])) for f in PAGE_FIELDS[page] if fields.get(f) not in (None, "")]
+    items = [(f, str(fields[f]).strip()) for f in PAGE_FIELDS[page]
+             if fields.get(f) is not None and str(fields[f]).strip()]       # whitespace is no text
+    if not items and image is None:
+        raise ValueError("{}.{}(): nothing to place — every field is empty and there is no image (a blank page "
+                         "is never what was meant; pass the words)".format(k.name, page))
     if page == "quote" and fields.get("quote"):
         items = [("mark", "“")] + [it for it in items if it[0] != "mark"]
     if image is not None and lay["image"]:
@@ -811,7 +826,16 @@ def _page(page):
                                                                                     list(PAGE_FIELDS[page]) + ["image"]))
         return _compose(self, slide, page, fields, image)
     fn.__name__ = page
-    fn.__doc__ = "Compose a {} page: fields {} plus image= (a slot id, a path, or None).".format(page, PAGE_FIELDS[page])
+    fn.__doc__ = ("Compose a {} page: keyword fields {} plus image= (a P1 slot id, a file path, or None; the collage "
+                  "cover/closing take a list of up to 4). Returns {{'rects': {{field: (x, y, w, h)}}, ...}}; refuses "
+                  "with VLTextOverflow when even the floor sizes overflow, ValueError when there is nothing to place."
+                  .format(page, PAGE_FIELDS[page]))
+    import inspect as _insp                      # a real signature, so sigs.py prints the fields by name
+    _P = _insp.Parameter
+    fn.__signature__ = _insp.Signature(
+        [_P("self", _P.POSITIONAL_OR_KEYWORD), _P("slide", _P.POSITIONAL_OR_KEYWORD)]
+        + [_P(f, _P.KEYWORD_ONLY, default=None) for f in PAGE_FIELDS[page] if not (page == "quote" and f == "mark")]
+        + [_P("image", _P.KEYWORD_ONLY, default=None)])
     return fn
 
 
@@ -907,6 +931,26 @@ def direction(name, *, fonts="both"):
             "font_display": f["display"], "font_body": f["body"], "cover": L["cover"], "skeleton": L["skeleton"],
             "sample": "data:image/jpeg;base64," + base64.b64encode(sample.read_bytes()).decode("ascii")}
 
+def _print_gates(name, deck, topic, fonts):
+    """The record a deck in `name` needs, as runnable commands — including the palette hexes the register-pixels
+    gate reads, which a docs-only run had to GUESS (and the guess was held: DECLARED HUES ABSENT, 2026-10-04)."""
+    import shlex
+    if name not in LANGS:
+        print("visual_languages: no language {!r} — one of {}".format(name, sorted(LANGS)), file=sys.stderr)
+        return 2
+    p = LANGS[name]["palette"]
+    pal = "ground #{} ink #{} accents {}".format(p["ground"], p["ink"], " ".join("#" + h for h in p["text_accents"]))
+    pick = "bespoke {}".format(name) + (" for {}".format(topic) if topic else "")
+    d = shlex.quote(str(deck))
+    print("# record the {} language (shared runtime: <deck>/.deck-gates.json)".format(name))
+    for key, val in (("visual_language", name), ("vl_fonts", fonts), ("style_pick", pick),
+                     ("look_source", "bespoke"), ("palette", pal)):
+        print("python3 scripts/deck_gates.py set {} design_plan.{} {}".format(d, key, shlex.quote(val)))
+    print("# Codex runtime: the same five values in .codex-deck-evidence.json as design.visual_language, "
+          "design.vl_fonts, design.style_pick, design.look_source and design.palette")
+    return 0
+
+
 def main(argv=None):
     import argparse
     import shlex
@@ -915,7 +959,13 @@ def main(argv=None):
     ap.add_argument("--sample-sheet", nargs=2, metavar=("RENDER_DIR", "OUT_JPG"),
                     help="contact a rendered sample's four pages into one JPEG")
     ap.add_argument("--list", action="store_true", help="list the languages")
+    ap.add_argument("--gates", metavar="NAME", help="print the exact record commands for a deck in this language")
+    ap.add_argument("--deck", metavar="DECK_DIR", default="<deck-dir>", help="with --gates: the deck folder")
+    ap.add_argument("--for", dest="topic", metavar="TOPIC", default=None, help="with --gates: what the deck is for")
+    ap.add_argument("--fonts", choices=("both", "mac"), default="both", help="with --gates: the fonts= you passed to use()")
     a = ap.parse_args(argv)
+    if a.gates:
+        return _print_gates(a.gates, a.deck, a.topic, a.fonts)
     if a.list or not (a.sample or a.sample_sheet):
         for n, L in LANGS.items():
             print("{:10s} fonts both: {}  mac: {}".format(n, L["fonts"]["both"], L["fonts"]["mac"]))

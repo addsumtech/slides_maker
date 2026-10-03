@@ -76,17 +76,22 @@ def _check(pptx, rec, findings, facts):
     facts["slides"] = len(slides)
     tagged, faces = [], set()
     for n, slide in enumerate(slides, 1):
-        if any(dk.vl_name(sh) == name for sh in slide.shapes):
+        # built with a page function (tagged shapes), or started with the kit's new_slide() — an ordinary page
+        # (agenda, chart) in the language's ground, which the reference sanctions; a plain add_slide is neither
+        if (any(dk.vl_name(sh) == name for sh in slide.shapes)
+                or slide._element.cSld.get("name") == "vl." + name):
             tagged.append(n)
         for el in slide._element.iter(qn("a:latin")):
             faces.add(el.get("typeface"))
     facts["tagged"] = len(tagged)
-    if not slides or 1 not in tagged or len(tagged) * 2 < len(slides):
+    cover_built = any(dk.vl_name(sh) == name for sh in slides[0].shapes) if slides else False
+    if not slides or not cover_built or len(tagged) * 2 < len(slides):
         findings.append(("block", "LANGUAGE NOT APPLIED", "{} records the {!r} language but {} of {} slide(s) were "
-                         "built with its page functions{} — build the cover and at least half the pages with "
-                         "visual_languages.use({!r}, prs) page functions (cover, section, image_text, quote, data, "
-                         "closing)".format(Path(str(pptx)).name, name, len(tagged), len(slides),
-                                           "" if 1 in tagged else " and the cover was not", name)))
+                         "built in it{} — build the cover with the kit's cover() and at least half the pages "
+                         "with visual_languages.use({!r}, prs): its page functions (cover, section, image_text, "
+                         "quote, data, closing), or ordinary pages started with k.new_slide()"
+                         .format(Path(str(pptx)).name, name, len(tagged), len(slides),
+                                 "" if cover_built else " and the cover was not built with cover()", name)))
     if not (faces & want):
         findings.append(("block", "DISPLAY FACE MISSING", "no text uses {}'s display face {} for fonts={!r} — the "
                          "look did not reach the deck".format(name, sorted(want), fonts)))
