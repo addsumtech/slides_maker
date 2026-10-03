@@ -114,7 +114,12 @@ def probe_deck(path):
     s = prs.slides.add_slide(blank)
     _tb(s.shapes, 0.8, 0.5, 8, 0.6, "A broken page", 28)
     _tb(s.shapes, 4.2, 3.5, 5.0, 0.5, "EVERY PAGE OPENS A POSSIBILITY", 16, rot=90)
-    _tb(s.shapes, 5.6, 2.0, 2.6, 0.9, "Body copy the vertical label slices through.", 18)
+    # a paragraph, not a two-word caption: under a SUBSTITUTED face (CI's Linux runner) the
+    # build-time gate deflates multi-line ink by the fallback's slack, by design, so a crossing
+    # that is only just over TEXT_OVERLAP's 22% bar on the real face falls under it (measured
+    # 2026-10-03). The render-time 6f check catches the short case either way.
+    _tb(s.shapes, 5.6, 2.0, 2.6, 1.6, "Body copy the vertical label slices straight through, "
+        "line after line, down the whole paragraph.", 18)
     # 3 — CORRECT: two parallel 8deg cards whose AXIS boxes overlap but whose shapes do not
     s = prs.slides.add_slide(blank)
     _tb(s.shapes, 0.8, 0.5, 8, 0.6, "Tilted, apart", 28)
