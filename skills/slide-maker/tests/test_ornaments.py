@@ -100,6 +100,56 @@ with tempfile.TemporaryDirectory() as td:
                                    "scallop": (6.0, 2.2, 1.8, 1.8)}.items():
             check(red_in(x, y, w, h) > 15, "{} drew nothing visible in the render".format(name))
 
+# ── tape is MEANT to overlap the print it holds; both gates must honour that ──────────────────
+# Measured on the end-to-end sample (2026-10-03): tape on a tilted print was a HARD render-time
+# OVERLAP. Two causes: lint_deck read an overlap declaration only from a name STARTING with
+# `deckkit-overlap`, so a motif that also declares one (`deckkit-motif-quiet+overlap:<why>`) was
+# refused at render time though lint_layout honoured it; and tape() declared nothing.
+import contextlib  # noqa: E402
+import io  # noqa: E402
+
+import lint_deck  # noqa: E402
+from PIL import Image as _Im  # noqa: E402
+
+with tempfile.TemporaryDirectory() as td:
+    ph = Path(td) / "ph.png"
+    _im = _Im.new("RGB", (400, 300))
+    _im.putdata([(60 + x // 8, 40 + y // 8, 30) for y in range(300) for x in range(400)])
+    _im.save(ph)
+    p2 = dk.blank_deck(13.333, 7.5)
+
+    def _page(title):
+        sl = dk.add_slide(p2)
+        dk.slide_background(sl, dk.WHITE)
+        dk.text(sl, 0.6, 0.4, 8, 0.8, [[(title, 28, dk.DEEP, True, False)]])
+        return sl
+
+    sl = _page("Tape on a print")
+    dk.picture(sl, str(ph), 4.0, 1.6, 4.0, 3.0, fit="cover", rotation=-4, alt="a test print")
+    orn.tape(sl, 5.2, 1.4, 1.6, 0.42, "C9A227")
+    # a hand-made motif that ALSO declares an overlap, crossing a picture — the composed name
+    sl = _page("Declared motif on a picture")
+    dk.picture(sl, str(ph), 4.0, 1.6, 4.0, 3.0, fit="cover", alt="a test print")
+    m = dk.box(sl, 7.4, 2.0, 1.4, 0.6, fill=dk.RGBColor.from_string("2F5BEA"))
+    dk.tag_motif(m)
+    dk.overlap_intent(m, "the badge is pinned to the corner of the print")
+    check("+overlap" in m.name and m.name.startswith("deckkit-motif"), "composed name: " + m.name)
+    # the control: the SAME motif with no declaration must still be an OVERLAP
+    sl = _page("Undeclared motif on a picture")
+    dk.picture(sl, str(ph), 4.0, 1.6, 4.0, 3.0, fit="cover", alt="a test print")
+    m2 = dk.box(sl, 7.4, 2.0, 1.4, 0.6, fill=dk.RGBColor.from_string("2F5BEA"))
+    dk.tag_motif(m2)
+    deck2 = Path(td) / "tape.pptx"
+    p2.save(str(deck2))
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        lint_deck.lint(str(deck2))
+    lines = buf.getvalue().splitlines()
+    ov = lambda n: [ln for ln in lines if ln.strip().startswith("slide {}: OVERLAP".format(n))]  # noqa: E731
+    check(not ov(1), "lint_deck: tape holding a print is an OVERLAP: {}".format(ov(1)))
+    check(not ov(2), "lint_deck: a motif's composed overlap declaration was ignored: {}".format(ov(2)))
+    check(ov(3), "lint_deck: the undeclared control must still be an OVERLAP")
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_ornaments] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)

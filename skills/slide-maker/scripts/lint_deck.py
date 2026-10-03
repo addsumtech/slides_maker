@@ -421,7 +421,12 @@ def _boxes(slide, sw, sh, slide_no=None, record=True):
                     # as the motif and watermark tags), so it survives the save and can be read
                     # here from the file — which is the only reason this gate can honour the same
                     # declaration the build-time gate does.
-                    "declared": str(getattr(s, "name", "") or "").startswith("deckkit-overlap"),
+                    # BOTH spellings, as deckkit._declared_overlap reads them: a motif that also
+                    # declares an overlap is named `deckkit-motif-quiet+overlap:<why>`, and reading
+                    # the prefix only refused here what lint_layout honoured (measured 2026-10-03:
+                    # tape holding a print was a hard OVERLAP at render time only).
+                    "declared": (str(getattr(s, "name", "") or "").startswith("deckkit-overlap")
+                                 or "+overlap" in str(getattr(s, "name", "") or "").split(":", 1)[0]),
                     # The motif tag, read from the NAME for the same reason `declared` is: it
                     # survives the save, so this file-level gate can reason about the deck's
                     # signature device exactly as the build-time one does.
