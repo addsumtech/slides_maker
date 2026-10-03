@@ -28,6 +28,24 @@ def recorded_language(gates):
     return None
 
 
+def library_kit(gates, name):
+    """The note for a register that IS the deck's recorded curated visual language, else None. The register
+    notes on both runtimes ask it first: the record this skill prescribes ("bespoke <name> for …") otherwise
+    reads as an INVENTED register, and both runtimes advised scaffolding a kit and saving it to the library
+    for a look whose kit ships with the skill (real-deck gate-check, 2026-10-03)."""
+    rec = recorded_language(gates)
+    if not rec or not name or str(rec.get("name") or "").strip().lower() != str(name).strip().lower():
+        return None
+    try:
+        import visual_languages as vl
+    except Exception:
+        return None
+    if str(name).strip().lower() not in vl.LANGS:
+        return None
+    return ("`{}` is a curated visual language — its kit ships with the skill (scripts/visual_languages.py), "
+            "so the kit contracts and its own prohibitions apply; nothing to scaffold or keep".format(name))
+
+
 def check(pptx, rec):
     findings, facts = [], {"slides": 0, "tagged": 0}
     if not rec:

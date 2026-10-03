@@ -42,7 +42,9 @@ k.closing(k.new_slide(), title="Bring one broken thing.", line="And bring a neig
 - **Text that cannot fit** shrinks toward each field's floor size; if even the floors overflow, the page
   raises `vl.VLTextOverflow` naming the page, the field and the inches — shorten the copy, never
   truncate it. Titles never end in a lone word or one or two CJK characters (shrunk a little, or set in
-  a balanced measure).
+  a balanced measure). A title, quote, label or line with clause punctuation INSIDE it breaks after its
+  clauses when they fit ("带着坏东西来，/ 带着好东西走", "Bring it broken. / Take it home working.") —
+  at down to 0.7x its size, never with more lines, set as one paragraph per line.
 - **Ordinary pages in the same look** (agenda, bullets, charts): `k.new_slide()` gives the language's
   ground; `rs.card(slide, "<name>", x, y, w, h, label=…)` gives its card; `rs.ground(slide, "<name>",
   role=…)` its furniture and content rect.
@@ -85,7 +87,14 @@ python3 scripts/deck_gates.py set <deck> design_plan.look_source bespoke
 `design_plan.palette` so the register-pixels gate can find them. The delivery gate on both runtimes then
 checks that the cover and at least half the pages were built with the language's page functions, that its
 display face is used, and that its prohibitions hold (`editorial` and `storybook` forbid confetti) — a
-recorded language that was not applied blocks.
+recorded language that was not applied blocks. The register notes name it a curated language whose kit
+ships with the skill (nothing to scaffold or keep with `save_register.py`).
+
+All four grounds are light paper. The register-pixels gate compares a deck's ground with the user's last
+decks (GROUND REPEAT, from the look history); after a run of cream decks it holds any of the four. That
+is the freshness rule doing its job — answer it with another direction, or, when the repeat is the point
+(a series in one house look), a written `design_plan.register_pixels_waived` saying so. Never repaint the
+language's ground by hand: the ground, its grain and its card are one look.
 
 ## Direction gate
 

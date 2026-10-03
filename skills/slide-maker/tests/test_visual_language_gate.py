@@ -67,6 +67,42 @@ with tempfile.TemporaryDirectory() as td:
     f, _ = cvl.check(str(p), {"name": "editorial", "fonts": "both"})
     check(any(c == "FORBIDDEN BY LANGUAGE" for _s, c, _w in f), "editorial's confetti prohibition is enforced: {}".format(f))
 
+    # a recorded curated language is a KIT that ships with the skill — the register notes on both runtimes
+    # must say so, not call it an INVENTED register and advise scaffolding a kit and saving it (real-deck
+    # gate-check, 2026-10-03: the record this reference prescribes drew both wrong notes)
+    import contextlib, io
+    import render_deck as rd, codex_delivery_gate as cdg
+    rec_dir = td / "vl-deck"
+    rec_dir.mkdir()
+    vp = rec_dir / "deck.pptx"
+    deck(3, 1, name="editorial").rename(vp)
+    plan = {"visual_language": "editorial", "vl_fonts": "both", "look_source": "bespoke",
+            "style_pick": "bespoke editorial for a neighbourhood repair café"}
+    (rec_dir / ".deck-gates.json").write_text(json.dumps({"design_plan": plan}), encoding="utf-8")
+    for label, call in (("render_deck kit note", lambda: rd._register_kit_note(str(vp), {"design_plan": plan})),
+                        ("render_deck keep note", lambda: rd._register_keep_note(str(vp), {"design_plan": plan})),
+                        ("codex kit note", lambda: cdg.note_register_kit({"design": plan}, vp, None)),
+                        ("codex keep note", lambda: cdg.note_register_kept({"design": plan}, vp))):
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            call()
+        out = buf.getvalue()
+        check("INVENTED" not in out and "keep it" not in out and "--new" not in out,
+              "{} misreads a curated language as invented: {!r}".format(label, out[:160]))
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        rd._register_kit_note(str(vp), {"design_plan": plan})
+        cdg.note_register_kit({"design": plan}, vp, None)
+    check(buf.getvalue().count("curated visual language") == 2, "both kit notes name the curated language: {!r}".format(buf.getvalue()))
+    # control: an invented register with no language recorded still hears both notes
+    inv = dict(plan, visual_language=None, style_pick="bespoke workshop-ledger for a repair café")
+    (rec_dir / ".deck-gates.json").write_text(json.dumps({"design_plan": inv}), encoding="utf-8")
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        rd._register_kit_note(str(vp), {"design_plan": inv})
+        rd._register_keep_note(str(vp), {"design_plan": inv})
+    check("INVENTED" in buf.getvalue() and "keep it" in buf.getvalue(), "an invented register still gets both notes: {!r}".format(buf.getvalue()[:200]))
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_visual_language_gate] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)

@@ -1860,6 +1860,11 @@ def _register_kit_note(pptx, gates):
             name = sr._bespoke_name(d.get('style_pick'))
             if not name:
                 return
+            import check_visual_language as cvl
+            lib = cvl.library_kit(gates, name)
+            if lib:
+                print("[gates] " + lib)
+                return
             if list(deck_dir.glob(rs.KIT_GLOB)):
                 print("[gates] `{}` ships as a surface KIT — the contracts (content rect, "
                       "loud-mark invariant, canvas scaling, its own prohibitions) apply to "

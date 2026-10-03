@@ -171,6 +171,14 @@ def entry_for(deck_dir):
     if not name:
         return None, ("`design_plan.style_pick` does not read as a bespoke register "
                       "({!r}) — nothing to keep".format(str(pick or "")[:70]))
+    # A curated visual language ships with the skill — the keep note on BOTH runtimes reads this.
+    try:
+        import check_visual_language as _cvl
+        _lib = _cvl.library_kit(gates, name)
+    except Exception:
+        _lib = None
+    if _lib:
+        return None, _lib
 
     mg = d.get("motif_generates")
     mg = mg if isinstance(mg, dict) else {}

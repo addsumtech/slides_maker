@@ -1439,6 +1439,14 @@ def note_register_kit(evidence: dict[str, Any], deck_path: Path | None,
             name = sr._bespoke_name(design.get("style_pick"))
             if not name:
                 return
+            cvl_path = Path(__file__).with_name("check_visual_language.py")
+            cvl_spec = importlib.util.spec_from_file_location("slide_maker_cvl_kit", cvl_path)
+            cvl = importlib.util.module_from_spec(cvl_spec)
+            cvl_spec.loader.exec_module(cvl)
+            lib = cvl.library_kit(evidence, name)
+            if lib:
+                print(f"  {lib}")
+                return
             if list(deck_path.parent.glob(module.KIT_GLOB)):
                 print(f"  `{name}` ships as a surface KIT — the contracts apply to it")
             else:

@@ -107,6 +107,7 @@ with tempfile.TemporaryDirectory() as td:
                     ("section", dict(number="02", title=T["kicker"])),
                     ("image_text", dict(title=T["kicker"], body=T["body"], image=str(img))),
                     ("quote", dict(quote=T["quote"], attribution=T["attr"])),
+                    ("quote", dict(quote=T["quote"], attribution=T["attr"], image=str(img))),
                     ("data", dict(number=T["num"], label=T["label"], note=T["body"])),
                     ("closing", dict(title=T["title"], image=str(img))),
                 ]
@@ -128,8 +129,14 @@ with tempfile.TemporaryDirectory() as td:
                                         want = {vl.EA_FACES[scr][x]["mac"] for x in ("serif", "sans")}
                                         check(ea is not None and ea.get("typeface") in want,
                                               "{} {} {} {}: {} run without a {} face".format(name, cname, lang, page, scr, scr))
-                crit = [f for f in dk.lint_layout(prs, verbose=False) if f[1] == "CRITICAL"]
+                found = dk.lint_layout(prs, verbose=False)
+                crit = [f for f in found if f[1] == "CRITICAL"]
                 check(not crit, "{} {} {}: lint criticals: {}".format(name, cname, lang, [(f[0], f[2], f[3][:90]) for f in crit][:3]))
+                # the engine's own spacing must not draw the deck's own spacing warnings (real decks, 2026-10-03:
+                # every title sat 0.16in above its body — HEADLINE_CROWDED — and collage quote cards nearly
+                # touched their print on a 10in canvas — SLIVER_GAP; the matrix read only CRITICALs)
+                warn = [f for f in found if f[2] in ("HEADLINE_CROWDED", "SLIVER_GAP")]
+                check(not warn, "{} {} {}: spacing warnings: {}".format(name, cname, lang, [(f[0], f[2], f[3][:70]) for f in warn][:3]))
     # Review Focus 2: an impossible title is refused, naming page and field
     prs = dk.blank_deck(13.333, 7.5)
     k = vl.use("editorial", prs)
@@ -147,6 +154,8 @@ with tempfile.TemporaryDirectory() as td:
 # ── defects found by LOOKING at rendered decks (2026-10-03) ──
 from PIL import ImageFont  # noqa: E402
 E = 914400.0
+def _norm(x):                    # a title set as clause lines is one paragraph per line
+    return x.replace("\n", "").replace("\v", "").replace(" ", "")
 def _runs(slide):
     for sh in slide.shapes:
         if getattr(sh, "has_text_frame", False):
@@ -194,15 +203,23 @@ def _lines(text, size, face, width):
     wd = lambda t: fnt.getlength(t) / 10.0 / 72.0
     units = list(text) if dk._has_cjk(text) else text.split(" ")
     joiner = "" if dk._has_cjk(text) else " "
+    hang, close = "，。、；：！？．", "）」』》】〉〕"      # LibreOffice, probed 2026-10-03
     lines, cur = [], ""
     for u in units:
         nxt = (cur + joiner + u) if cur else u
-        if cur and u in "，。、；：！？）」』》":
-            cur = nxt                         # hangs at the line end, never starts a line
-        elif cur and wd(nxt) > width:
-            lines.append(cur); cur = u
-        else:
+        if not cur or wd(nxt) <= width:
             cur = nxt
+        elif u in hang and wd(cur) <= width:
+            cur = nxt                         # ONE mark hangs at the line end
+        elif u in hang + close:               # a bracket or a second mark takes the hung mark and the
+            n_ = len(cur) - len(cur.rstrip(hang))   # ideograph before it down: "一二三四五 / 六。」"
+            n_ = n_ + 1 if len(cur) > n_ + 1 else n_
+            if 0 < n_ < len(cur):
+                lines.append(cur[:-n_]); cur = cur[-n_:] + u
+            else:
+                cur = nxt
+        else:
+            lines.append(cur); cur = u
     return lines + [cur]
 _wtd = Path(tempfile.mkdtemp())
 _wimg = _wtd / "photo.png"
@@ -215,15 +232,10 @@ for name, title, cjk in (("editorial", "We fix it with you, not for you", False)
     k = vl.use(name, prs)
     s = k.new_slide()
     r = (k.section(s, number="02", title=title) if not cjk else k.image_text(s, title=title, body="一把小铲、一个喷壶。", image=str(_wimg)))
-    tb = [sh for sh in s.shapes if getattr(sh, "has_text_frame", False) and sh.text_frame.text == title][0]
+    tb = [sh for sh in s.shapes if getattr(sh, "has_text_frame", False) and _norm(sh.text_frame.text) == _norm(title)][0]
     run = tb.text_frame.paragraphs[0].runs[0]
     face = (run._r.find(".//" + dk.qn("a:ea")).get("typeface") if cjk else run.font.name)
-    ls = _lines(title, run.font.size.pt, face, tb.width / E - 0.056)
-    # the renderer never starts a line with closing CJK punctuation — it hangs it on the line before
-    for i_ in range(1, len(ls)):
-        while ls[i_] and ls[i_][0] in "，。、；：！？）」』》":
-            ls[i_ - 1] += ls[i_][0]
-            ls[i_] = ls[i_][1:]
+    ls = [l_ for p_ in tb.text_frame.paragraphs for l_ in _lines(p_.text, run.font.size.pt, face, tb.width / E - 0.056)]
     last = ls[-1]
     check(len(ls) == 1 or (len(last) > 2 if cjk else len(last.split()) > 1),
           "{}: widow — {!r} ends with the lone line {!r}".format(name, title, last))
@@ -234,13 +246,10 @@ k = vl.use("collage", prs)
 s_ = k.new_slide()
 ttl = "楼顶和阳台，也能长出一季菜"
 k.cover(s_, kicker="城市里的小菜园", title=ttl, subtitle="从一个小花盆开始。", image=[str(_wimg), str(_wimg), str(_wimg)])
-tb = [sh for sh in s_.shapes if getattr(sh, "has_text_frame", False) and sh.text_frame.text == ttl][0]
+tb = [sh for sh in s_.shapes if getattr(sh, "has_text_frame", False) and _norm(sh.text_frame.text) == _norm(ttl)][0]
 run = tb.text_frame.paragraphs[0].runs[0]
-ls = _lines(ttl, run.font.size.pt, run._r.find(".//" + dk.qn("a:ea")).get("typeface"), tb.width / E - 0.056)
-for i_ in range(1, len(ls)):
-    while ls[i_] and ls[i_][0] in "，。、；：！？）」』》":
-        ls[i_ - 1] += ls[i_][0]
-        ls[i_] = ls[i_][1:]
+ls = [l_ for p_ in tb.text_frame.paragraphs
+      for l_ in _lines(p_.text, run.font.size.pt, run._r.find(".//" + dk.qn("a:ea")).get("typeface"), tb.width / E - 0.056)]
 check(len(ls) == 1 or len(ls[-1]) > 2, "collage cover: widow {!r} (lines {})".format(ls[-1], ls))
 
 # portrait renders (2026-10-03): an italic quote wrapped to one more line than measured and ran into its
@@ -250,18 +259,19 @@ k = vl.use("editorial", prs)
 s_ = k.new_slide()
 q = "The visitor holds the screwdriver; the volunteer only guides."
 r = k.quote(s_, quote=q, attribution="How every repair begins", image=str(_wimg))
-qb = [sh for sh in s_.shapes if getattr(sh, "has_text_frame", False) and sh.text_frame.text == q][0]
+qb = [sh for sh in s_.shapes if getattr(sh, "has_text_frame", False) and _norm(sh.text_frame.text) == _norm(q)][0]
 qr = qb.text_frame.paragraphs[0].runs[0]
 it_lines = []
 fnt = ImageFont.truetype("/System/Library/Fonts/Supplemental/Georgia Italic.ttf", int(qr.font.size.pt * 10))
-cur = ""
-for wd_ in q.split(" "):
-    nxt = (cur + " " + wd_) if cur else wd_
-    if cur and fnt.getlength(nxt) / 10.0 / 72.0 > qb.width / E - 0.056:
-        it_lines.append(cur); cur = wd_
-    else:
-        cur = nxt
-it_lines.append(cur)
+for qp_ in qb.text_frame.paragraphs:
+    cur = ""
+    for wd_ in qp_.text.split(" "):
+        nxt = (cur + " " + wd_) if cur else wd_
+        if cur and fnt.getlength(nxt) / 10.0 / 72.0 > qb.width / E - 0.056:
+            it_lines.append(cur); cur = wd_
+        else:
+            cur = nxt
+    it_lines.append(cur)
 need = len(it_lines) * qr.font.size.pt * dk._LINT_LINE_H / 72.0
 check(qb.height / E + 0.02 >= need, "an italic quote's box holds its italic lines: {:.2f}in for {} lines needing {:.2f}in".format(qb.height / E, len(it_lines), need))
 prs = dk.blank_deck(5.625, 10.0)
@@ -269,9 +279,10 @@ k = vl.use("soft", prs)
 s_ = k.new_slide()
 ct = "这个周末，先种下第一株"
 k.closing(s_, title=ct, line="几个月后，就有自己的收获。", image=str(_wimg))
-tb = [sh for sh in s_.shapes if getattr(sh, "has_text_frame", False) and sh.text_frame.text == ct][0]
+tb = [sh for sh in s_.shapes if getattr(sh, "has_text_frame", False) and _norm(sh.text_frame.text) == _norm(ct)][0]
 run = tb.text_frame.paragraphs[0].runs[0]
-ls = _lines(ct, run.font.size.pt, run._r.find(".//" + dk.qn("a:ea")).get("typeface"), tb.width / E - 0.056)
+ls = [l_ for p_ in tb.text_frame.paragraphs
+      for l_ in _lines(p_.text, run.font.size.pt, run._r.find(".//" + dk.qn("a:ea")).get("typeface"), tb.width / E - 0.056)]
 check(len(ls) == 1 or len(ls[-1]) > 2, "soft portrait closing: widow {!r} (lines {})".format(ls[-1], ls))
 for name, page in (("collage", "quote"), ("soft", "quote"), ("soft", "image_text")):
     prs = dk.blank_deck(5.625, 10.0)
@@ -288,6 +299,63 @@ for name, page in (("collage", "quote"), ("soft", "quote"), ("soft", "image_text
               and sh.width / E > 2.0 and sh.height / E > 1.0)]
     for c in cards:
         check(c.height / E <= text_h + 1.0, "{} {} portrait: a card {:.2f}in tall around {:.2f}in of text".format(name, page, c.height / E, text_h))
+
+# ── Task 12 (real decks, 2026-10-03): a display line breaks at its clauses when they fit ──
+# "带着坏东西来，带着 / 好东西走" and "Bring it broken. Take / it home working." passed every gate; a reader sees the
+# phrase torn in two. When the clauses fit — at the same size in a narrower measure, or a little smaller — the
+# breaks land after the clause punctuation; never with more lines than before.
+def _drawn_lines(k_, slide, field, text):
+    """The lines a text box sets: its paragraphs, each broken by the engine's glyph model at the box width."""
+    norm = lambda x: x.replace("\n", "").replace("\v", "").replace(" ", "")
+    for sh in slide.shapes:
+        if getattr(sh, "has_text_frame", False) and norm(sh.text_frame.text) == norm(text):
+            out = []
+            for p_ in sh.text_frame.paragraphs:
+                out += vl._break_lines(k_, field, p_.text, p_.runs[0].font.size.pt, sh.width / E)
+            return out
+    raise AssertionError("no text box holds {!r}".format(text))
+_ph = str(ROOT / "assets" / "vl" / "photo" / "hall-repair.jpg")
+for lang_name, W_, H_, field, page, kw, want_first_end in (
+        ("soft", 13.333, 7.5, "title", "cover", dict(kicker="社区修理咖啡馆", title="带着坏东西来，带着好东西走", image=_ph), "，"),
+        ("collage", 13.333, 7.5, "title", "cover", dict(kicker="社区修理咖啡馆", title="带着坏东西来，带着好东西走", image=[_ph, _ph, _ph]), "，"),
+        ("collage", 5.625, 10.0, "title", "cover", dict(kicker="社区修理咖啡馆", title="带着坏东西来，带着好东西走", image=[_ph, _ph]), "，"),
+        ("editorial", 13.333, 7.5, "title", "cover", dict(kicker="A repair café", title="Bring it broken. Take it home working.", image=_ph), "."),
+        ("soft", 13.333, 7.5, "quote", "quote", dict(quote="The visitor holds the screwdriver; the volunteer only guides.", attribution="How every repair begins", image=_ph), ";"),
+        ("storybook", 5.625, 10.0, "title", "cover", dict(kicker="都市の小さな菜園", title="屋上でも、野菜はちゃんと育つ", image=_ph), "、")):
+    p_ = dk.blank_deck(W_, H_)
+    k_ = vl.use(lang_name, p_)
+    s_ = k_.new_slide()
+    getattr(k_, page)(s_, **kw)
+    ls_ = _drawn_lines(k_, s_, field, kw[field])
+    check(all(l_.rstrip().endswith(want_first_end) for l_ in ls_[:-1]),                 # one line is fine too
+          "{} {}x{} {}: {} breaks mid-phrase: {}".format(lang_name, W_, H_, page, field, ls_))
+# the engine's line model, against the same LibreOffice probe: marks hang, brackets push the ideograph before
+# them down ("一二三四五 / 六）") — the model hung brackets too and predicted one line where two rendered
+p_ = dk.blank_deck(13.333, 7.5)
+k_ = vl.use("editorial", p_)
+_w6 = 6 * 24 / 72.0 + vl._INSET + 0.02
+_orig_face = k_.ea_face
+k_.ea_face = lambda role, text: "Songti SC"
+for mark in "，。、；：！？．":
+    check(vl._break_lines(k_, "quote", "一二三四五六" + mark, 24, _w6) == ["一二三四五六" + mark],
+          "engine line model hangs {}: {}".format(mark, vl._break_lines(k_, "quote", "一二三四五六" + mark, 24, _w6)))
+for mark in "）」』》】〉〕":
+    check(vl._break_lines(k_, "quote", "一二三四五六" + mark, 24, _w6) == ["一二三四五", "六" + mark],
+          "engine line model pushes 六 down with {}: {}".format(mark, vl._break_lines(k_, "quote", "一二三四五六" + mark, 24, _w6)))
+for tail in ("。」", "，」", "！？", "」。"):
+    check(vl._break_lines(k_, "quote", "一二三四五六" + tail, 24, _w6) == ["一二三四五", "六" + tail],
+          "engine line model pushes 六{} down: {}".format(tail, vl._break_lines(k_, "quote", "一二三四五六" + tail, 24, _w6)))
+# rendered in LibreOffice (corpus, 2026-10-03): an opening bracket never ends a line; mixed text never hangs
+_got = vl._break_lines(k_, "quote", "数据显示，参与者的满意度很高（详见附录）。", 48, 3.57 + vl._INSET)
+check(_got == ["数据显示，", "参与者的满", "意度很高", "（详见附", "录）。"], "engine: opening bracket moves down: {}".format(_got))
+_got = vl._break_lines(k_, "quote", "2026年的数据（n=120）显示，满意度为 87%。", 28, 7.75 + vl._INSET)
+check(len(_got) == 2, "engine: a mark after Latin does not hang (two lines rendered): {}".format(_got))
+k_.ea_face = _orig_face
+# no clause punctuation, or a clause too long for any line: unchanged, never refused
+p_ = dk.blank_deck(13.333, 7.5)
+k_ = vl.use("editorial", p_)
+k_.cover(k_.new_slide(), title="Bring one broken thing to the hall", image=_ph)
+k_.cover(k_.new_slide(), title="A very long first clause that cannot possibly sit on one line of a narrow column, then a tail", image=_ph)
 
 # ── Task 10: bundled samples (the direction preview shows them) ──
 A = ROOT / "assets" / "vl"

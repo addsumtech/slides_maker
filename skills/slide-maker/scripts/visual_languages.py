@@ -330,6 +330,8 @@ LAYOUTS = {
 }
 
 GAP = 0.10            # inches between flowed fields at a 7.5in short side
+HEAD_GAP = 0.20       # after the page's display field: lint's HEADLINE_CROWDED asks >= 0.18in of INK, and ink
+                      # sits inside the box, so a box gap of 0.20 (never scaled below it) clears it by construction
 _INSET = 0.056        # text() insets 0.028in a side
 _FOOT = 0.55          # keep text out of the reserved footer band
 
@@ -364,27 +366,43 @@ def _widest_word_fits(k, field, text, size, w):
 
 def _break_lines(k, field, text, size, w):
     """Greedy line breaks with the real glyph widths of the face the run renders in (words for Latin,
-    characters for CJK) — an approximation of the renderer, good enough to see a widow."""
+    characters for CJK) — an approximation of the renderer, good enough to see a widow. CJK line ends as
+    LibreOffice sets them (deckkit _CJK_HANG / _CJK_CLOSE / _CJK_OPEN, probed): ONE closing mark hangs past
+    the measure — in pure CJK text only, as measure_text; a closing bracket, or a second mark, takes the hung
+    mark and the ideograph before it down; an opening bracket never ends a line."""
     import display_type as dt
     role, bold, italic = TYPE[k.name][field][1], TYPE[k.name][field][2], TYPE[k.name][field][4]
     cjk = dk._has_cjk(text)
     face = k.ea_face(role, text) if cjk else k.face(role)
     italic = italic and not cjk
     units, joiner = (list(text), "") if cjk else (text.split(" "), " ")
+    limit = w - _INSET
+    may_hang = cjk and not any(c.isascii() and c.isalnum() for c in text) and limit >= 2 * size / 72.0
+
+    def width(s_):
+        return dt._glyph_width(s_, size, face, bold, italic) or 0
     lines, cur = [], ""
     for u in units:
         nxt = (cur + joiner + u) if cur else u
-        if cur and u in _HANG:
-            cur = nxt                    # closing CJK punctuation hangs at the line end (kinsoku)
-        elif cur and (dt._glyph_width(nxt, size, face, bold, italic) or 0) > w - _INSET:
+        if not cur or width(nxt) <= limit:
+            cur = nxt
+        elif may_hang and u in dk._CJK_HANG and width(cur) <= limit:
+            cur = nxt                                      # one closing mark hangs at the line end
+        elif cjk and (u in dk._CJK_CLOSE or u in dk._CJK_HANG):
+            hung = len(cur) - len(cur.rstrip(dk._CJK_HANG))
+            take = hung + 1 if len(cur) > hung + 1 else hung
+            if 0 < take < len(cur):
+                lines.append(cur[:-take])
+                cur = cur[-take:] + u                      # "一二三四五 / 六。」"
+            else:
+                cur = nxt                                  # nothing to carry: it overflows, as the renderer does
+        elif cjk and len(cur) > 1 and cur[-1] in dk._CJK_OPEN:
+            lines.append(cur[:-1])                         # "意度很高 / （详见附"
+            cur = cur[-1] + u
+        else:
             lines.append(cur)
             cur = u
-        else:
-            cur = nxt
     return lines + [cur]
-
-
-_HANG = "，。、；：！？）」』》"
 
 
 def _widowed(k, field, text, size, w):
@@ -397,6 +415,76 @@ def _widowed(k, field, text, size, w):
 
 
 _NO_WIDOW = ("title", "quote", "label", "line", "subtitle")
+_CLAUSE_CJK = "，。、；：！？"
+_CLAUSE_LATIN = ".,;:!?—–"
+_CLOSE = "）」』》\"'”’)"
+
+
+def _at_clause(line):
+    t = line.rstrip().rstrip(_CLOSE)
+    return bool(t) and t[-1] in _CLAUSE_CJK + _CLAUSE_LATIN
+
+
+def _clause_cuts(text):
+    """Offsets just after each clause mark INSIDE the text: a full-width mark anywhere, an ASCII mark or dash
+    only before a space (so "3.5" and "e.g.x" never cut) — Korean uses ASCII marks between spaced words."""
+    cuts, n = [], len(text)
+    for i, ch in enumerate(text[:-1]):
+        if ch in _CLAUSE_CJK or (ch in _CLAUSE_LATIN and text[i + 1] == " "):
+            j = i + 1
+            while j < n and text[j] in _CLOSE:
+                j += 1
+            if text[j:].strip():
+                cuts.append(j)
+    return sorted(set(cuts))
+
+
+def _one_line(k, f, seg, size, w):
+    """The segment sits on ONE line by both models (the glyph break and measure_text, which lint reads), with
+    3% to spare for a renderer a little wider than either."""
+    role, bold = TYPE[k.name][f][1], TYPE[k.name][f][2]
+    face = k.ea_face(role, seg) if dk._has_cjk(seg) else k.face(role)
+    ww = w * 0.97
+    return (len(_break_lines(k, f, seg, size, ww)) == 1
+            and dk._measure_lines([(seg, bold)], size, max(0.2, ww - _INSET), font=face) == 1)
+
+
+def _phrase_lines(k, f, t, sz, w, min_size):
+    """(size, lines) with every break after a clause mark — "带着坏东西来，/ 带着好东西走", "Bring it broken. /
+    Take it home working." — clauses packed greedily, at the largest size from sz down to min_size, never more
+    lines than the plain break at sz. None when the text already breaks at its clauses, has none, or a clause
+    cannot sit on one line. Greedy WRAPPING cannot do this at any measure (it fills the first line), so the
+    lines are set as explicit paragraphs."""
+    cuts = _clause_cuts(t)
+    if not cuts:
+        return None
+    base = _break_lines(k, f, t, sz, w)
+    if len(base) < 2 or all(_at_clause(l_) for l_ in base[:-1]):
+        return None
+    steps, s = [], sz
+    while s > min_size + 1e-6:
+        steps.append(s)
+        s *= 0.95
+    for s in steps + [min_size]:                      # 5% steps, and the bound itself
+        lines, start, last_ok = [], 0, None
+        for b in cuts + [len(t)]:
+            if _one_line(k, f, t[start:b].strip(), s, w):
+                last_ok = b
+                continue
+            if last_ok is None:
+                lines = None                         # a clause wider than the line at this size
+                break
+            lines.append(t[start:last_ok].strip())
+            start, last_ok = last_ok, None
+            if not _one_line(k, f, t[start:b].strip(), s, w):
+                lines = None
+                break
+            last_ok = b
+        if lines is not None:
+            lines.append(t[start:].strip())
+            if len(lines) <= len(base):
+                return s, lines
+    return None
 
 
 def _balanced_width(k, f, t, sz, w):
@@ -436,9 +524,20 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None):
         sizes[f], floors[f], widths[f] = base * s, max(9.0, floor * s), w
     gap = GAP * s
     order = [f for f, _ in items]
+    head = max(order, key=lambda f: TYPE[k.name][f][0])          # the display field, by design
+    # both sides of it: when the title sits low on a cover, lint reads the kicker above it as the headline
+    gaps = {f: (max(HEAD_GAP, 2 * GAP * s) if head in (f, nxt) else gap) for f, nxt in zip(order, order[1:])}
+    gaps[order[-1]] = 0.0
+
+    phrased = {}                                   # field -> its explicit clause lines (_phrase_lines)
+
+    def fheight(f, t, sz, fw):
+        if f in phrased:                           # one paragraph per line, line spacing per paragraph as dk.text
+            return sum(sz / 72.0 * dk._LINT_LINE_H * (dk.CJK_LS if dk._has_cjk(l_) else 1.0) for l_ in phrased[f]) + 0.06
+        return _field_height(k, f, t, sz, fw)
 
     def total():
-        return sum(_field_height(k, f, t, sizes[f], widths[f]) for f, t in items) + gap * (len(items) - 1)
+        return sum(fheight(f, t, sizes[f], widths[f]) + gaps[f] for f, t in items)
     for f, t in items:
         while sizes[f] > floors[f] and not _widest_word_fits(k, f, t, sizes[f], w):
             sizes[f] = max(floors[f], sizes[f] * 0.94)
@@ -462,6 +561,11 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None):
         sz, tries = sizes[f], 0
         while _widowed(k, f, t, sz, w) and sz * 0.95 >= floors[f] and tries < 10:
             sz, tries = sz * 0.95, tries + 1
+        # clause breaks first: down to 0.7x (a display line still), or to what the widow fix shrinks to anyway
+        fit = _phrase_lines(k, f, t, sizes[f], w, max(floors[f], min(0.7 * sizes[f], sz)))
+        if fit is not None:
+            sizes[f], phrased[f] = fit
+            continue
         if not _widowed(k, f, t, sz, w):
             sizes[f] = sz
             continue
@@ -477,10 +581,10 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None):
         sz = round(sizes[f], 1)
         fw = widths[f]
         fx = x + (w - fw) / 2.0 if align == "c" else x
-        fh = _field_height(k, f, t, sz, fw)
+        fh = fheight(f, t, sz, fw)
         rects[f] = (fx, cy, fw, fh)
         plan.append((f, t, sz, (fx, cy, fw, fh)))
-        cy += fh + gap
+        cy += fh + gaps[f]
 
     def draw():
         al = {"l": PP_ALIGN.LEFT, "c": PP_ALIGN.CENTER}[align]
@@ -492,6 +596,10 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None):
             if f == "number" and k.name == "collage" and len(t) <= 6:
                 import display_type as dt
                 dt.outlined(slide, fx, fy, fw, fh, t, color=_hex(k.L["palette"]["text_accents"][0]), face=k.face("numeral"))
+                continue
+            if f in phrased:
+                dk.text(slide, fx, fy, fw, fh, [[k.run(l_, sz, color, bold, role, italic)] for l_ in phrased[f]],
+                        align=al, space_after=0)
                 continue
             run = k.run(t, sz, color, bold, role, italic)
             if f == "kicker" and k.name == "collage":
@@ -592,6 +700,31 @@ def _oval(slide, x, y, w, h, color, why):
     return sh
 
 
+_CLEAR = 0.12         # inches between a card/note behind the text and a print beside it (lint SLIVER_GAP < 0.10)
+
+
+def _card_geom(lay, col):
+    """(x, y, w, h, rotation) of the card or note drawn behind a text column, or None. One definition for the
+    drawing and for the room a picture beside it must leave (a print 0.05in from the note, 2026-10-03)."""
+    x, y, w, h = col
+    if "note" in lay["deco"]:
+        return (x - 0.22, y - 0.20, w + 0.44, h + 0.40, -1.5)
+    if "card" in lay["deco"]:
+        return (x - 0.18, y - 0.16, w + 0.36, h + 0.32, 0.0)
+    return None
+
+
+def _keep_clear(lay, col):
+    """What a picture beside the column must stay out of: the column, or the painted card around it plus _CLEAR."""
+    g = _card_geom(lay, col) if col else None
+    if g is None:
+        return col
+    import rotgeom
+    pts = rotgeom.corners(*g)
+    xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+    return (min(xs) - _CLEAR, min(ys) - _CLEAR, max(xs) - min(xs) + 2 * _CLEAR, max(ys) - min(ys) + 2 * _CLEAR)
+
+
 def _deco_before(k, slide, page, lay, img_rect, col, index):
     """Decoration that sits UNDER the content (painted first)."""
     p = k.L["palette"]
@@ -600,12 +733,13 @@ def _deco_before(k, slide, page, lay, img_rect, col, index):
         _oval(slide, x - w * 0.10, y + h * 0.18, w * 0.62, w * 0.62, p["accents"][index % len(p["accents"])],
               "a soft colour blob behind the picture; carries no information")
     if "card" in lay["deco"] and col and img_rect is None:
-        x, y, w, h = col
-        dk.box(slide, x - 0.18, y - 0.16, w + 0.36, h + 0.32, fill=_hex(p["panel"]), round=True, r=0.28)
+        cx, cy, cw, ch, _rot = _card_geom(lay, col)
+        dk.box(slide, cx, cy, cw, ch, fill=_hex(p["panel"]), round=True, r=0.28)
     if "note" in lay["deco"] and col and img_rect is None:
         x, y, w, h = col
-        card = dk.box(slide, x - 0.22, y - 0.20, w + 0.44, h + 0.40, fill="FFFFFF")
-        card.rotation = -1.5
+        cx, cy, cw, ch, rot = _card_geom(lay, col)
+        card = dk.box(slide, cx, cy, cw, ch, fill="FFFFFF")
+        card.rotation = rot
         import ornaments
         ornaments.tape(slide, x + w * 0.38, y - 0.36, w * 0.24, 0.30, "EDE3C8", rotation=2.0, seed=index, holds=card)
     # "circle" is drawn by _flow under the number itself (an underlay), never across the column
@@ -642,7 +776,7 @@ def _compose(k, slide, page, fields, image):
     if img_rect is not None and lay["treat"] != "bleed":
         _deco_before(k, slide, page, lay, img_rect, None, index)          # blobs under the picture
     if img_rect is not None:
-        panel = _place_image(k, slide, image, img_rect, lay, page, keep_clear=col)
+        panel = _place_image(k, slide, image, img_rect, lay, page, keep_clear=_keep_clear(lay, col))
         if panel is not None:
             col = panel
     underlay = {}
