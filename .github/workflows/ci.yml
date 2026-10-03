@@ -1173,6 +1173,13 @@ jobs:
           grep -qE "\\] ok$" /tmp/ornaments.log || {
             echo "::error::test_ornaments did not run to completion"; exit 1; }
 
+      - name: sticker_outline follows the silhouette and refuses an opaque photo
+        run: |
+          set -o pipefail
+          python tests/test_sticker_outline.py | tee /tmp/sticker.log
+          grep -qE "\\] ok$" /tmp/sticker.log || {
+            echo "::error::test_sticker_outline did not run to completion"; exit 1; }
+
       - name: The Codex scaffold shows every field the Codex gate requires
         run: |
           set -o pipefail

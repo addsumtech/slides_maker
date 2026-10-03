@@ -675,6 +675,8 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   enforce one contract.
 - `image_fx.py` — `duotone(img, ink_a, ink_b)` / `grayscale(img)` — preprocess a colour photo to the
   deck's ink so it doesn't fight the accent (riso/brutalist/ink/luxury/museum). See `design-gallery.md`.
+  `sticker_outline(img)` — a die-cut border grown from a transparent cut-out's own alpha (it
+  refuses an opaque photo: there is no silhouette to follow).
 - `palette_audit.py` — resolve a palette into FILL-only vs TEXT-safe tokens ONCE, before the build,
   with the darkened twin per ground (`--inks`/`--grounds`, or `--from-style <deck>/style.py`). The
   two-token rule already exists in SKILL.md and is still easy to break because the check is
