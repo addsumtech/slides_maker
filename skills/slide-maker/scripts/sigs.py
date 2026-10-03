@@ -34,7 +34,7 @@ sys.path.insert(0, HERE)
 # supply the geometry". Leaving the surface kits out of it therefore did worse than hide them — it
 # told anyone asking for `halftone` or `starburst` to hand-roll the thing that had just been built.
 MODULES = ("deckkit", "designed_charts", "register_surface", "citations", "ornaments", "image_fx",
-           "image_series", "surfaces", "display_type")
+           "image_series", "surfaces", "display_type", "collage")
 
 # The three call-shape errors that actually cost round-trips on a real build. They are properties of
 # the API that no single signature line states, so they are printed with every lookup rather than
@@ -340,6 +340,9 @@ EXAMPLES = {
                 '            color=dk.DEEP, accent=dk.RGBColor(0xB2, 0x3A, 0x28), face="Georgia")',
     "outlined": 'import display_type as dt\n'
                 'dt.outlined(s, 0.6, 0.6, 3.0, 2.0, "07", color="B23A28")   # a hollow section number',
+    "collage": 'import collage\n'
+               'collage.collage(s, (5.0, 0.4, 4.6, 4.8), ["skyline.png", "gt_c1.png", "ours_c1.png"],\n'
+               '                seed=3, keep_clear=(0.4, 0.6, 4.2, 2.4))   # tilted prints + tape',
     "sticker_outline": 'import image_fx\n'
                        'st = image_fx.sticker_outline("cutout.png")      # needs a transparent cut-out\n'
                        'dk.picture(s, st, 6.6, 0.6, 2.6, 3.4, fit="contain", alt="a cut-out subject")',
