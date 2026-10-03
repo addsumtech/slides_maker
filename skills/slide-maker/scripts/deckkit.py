@@ -432,6 +432,7 @@ WATERMARK_TAG = "deckkit-watermark"
 # Prefix for a DELIBERATE overlap. The reason travels in the shape name, so the declaration is
 # evidence carried by the artifact rather than a claim in a plan file nobody re-reads.
 OVERLAP_TAG = "deckkit-overlap:"
+DECOR_TAG = "deckkit-decor"      # `decorative()`: pure ornament, exempt from NON-TEXT CONTRAST
 # Prefix for a LENGTH-ENCODED datum: `deckkit-datum:<group>:<value>`. Same idiom as the tags
 # above — the fact travels in the shape name, so it survives the save and a checker can read the
 # author's INTENT (the number) next to the geometry that claims to show it.
@@ -2978,6 +2979,7 @@ def _compose_tag(shape, tier=None, flag=None, reason=None):
     if head.startswith(OVERLAP_TAG.rstrip(":")) or "+overlap" in head:
         have_overlap = True
     have_datum = head.startswith(DATUM_TAG.rstrip(":")) or "+datum" in head
+    have_decor = head.startswith(DECOR_TAG) or "+decor" in head
     if not head.startswith("deckkit-"):
         why = ""
     if tier:
@@ -2988,9 +2990,12 @@ def _compose_tag(shape, tier=None, flag=None, reason=None):
         have_overlap = True
     elif flag == "+datum":
         have_datum = True
+    elif flag == "+decor":
+        have_decor = True
     if reason is not None:
         why = reason
-    on = (("+bleed", have_bleed), ("+overlap", have_overlap), ("+datum", have_datum))
+    on = (("+bleed", have_bleed), ("+overlap", have_overlap), ("+datum", have_datum),
+          ("+decor", have_decor))
     if have_tier:
         base, flags = have_tier, [f for f, v in on if v]
     elif have_bleed:
@@ -2998,7 +3003,9 @@ def _compose_tag(shape, tier=None, flag=None, reason=None):
     elif have_overlap:
         base, flags = OVERLAP_TAG.rstrip(":"), [f for f, v in on if v and f != "+overlap"]
     elif have_datum:
-        base, flags = DATUM_TAG.rstrip(":"), []
+        base, flags = DATUM_TAG.rstrip(":"), (["+decor"] if have_decor else [])
+    elif have_decor:
+        base, flags = DECOR_TAG, []
     else:
         base, flags = "", []
     shape.name = base + "".join(flags) + ((":" + str(why)) if why else "")
@@ -7077,6 +7084,38 @@ def small_multiples(slide, x, y, w, h, panels, *, categories=None, cols=None, ki
                 except Exception:
                     pass
     return y + rows_n * (ph + 0.24) + (rows_n - 1) * gap
+
+
+def decorative(shape, reason):
+    """Declare a shape PURE DECORATION — nothing a viewer needs to read rides on seeing it — so the
+    render gate's NON-TEXT CONTRAST (WCAG 1.4.11, a hard floor at hand-off) does not hold it.
+
+    WCAG 1.4.11 exempts decoration, but no check can tell a washi-tape strip from a status dot that
+    carries meaning; a blanket exemption for every ornament would let a meaningful mark through
+    unread. So the author decides, per shape, with a sentence (language-fair floor, CJK counts
+    double) — and the lint PRINTS every exemption with its reason, so a deck that declares its way
+    out of everything is visible. Decided by the user, 2026-10-03.
+
+        t = orn.tape(s, 6.0, 1.2, 1.6, 0.42, "F2D16B", holds=pic)
+        dk.decorative(t, "washi tape is ornament; no meaning rides on seeing it")
+
+    Composes with the motif tag and with `overlap_intent` / `bleed_intent` in any order. It waives
+    NON-TEXT CONTRAST only — text contrast, OCCLUSION and every geometry check still apply."""
+    try:
+        from written_reason import reason_width
+    except Exception:                                    # a missing helper must not loosen the floor
+        def reason_width(s):
+            return len(s.strip()) if isinstance(s, str) else 0
+    if reason_width(reason) < 16:
+        raise ValueError("decorative(reason=%r): say why nothing rides on seeing this shape, in a "
+                         "sentence someone can disagree with later (>=16 Latin-equivalent; a CJK "
+                         "character counts 2)." % (reason,))
+    _reason = " ".join(str(reason).strip().split())[:120]
+    try:
+        _compose_tag(shape, flag="+decor", reason=_reason)
+    except Exception:
+        pass
+    return shape
 
 
 def overlap_intent(shape, reason):

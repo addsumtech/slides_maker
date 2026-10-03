@@ -114,6 +114,7 @@ def _no_real_alt(descr):
 
 _A = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
 _GROUP_SKIP = []          # (slide#, why) — groups whose geometry cannot be mapped, reported at the end
+_DECOR_SEEN = []          # (slide#, why) — shapes DECLARED decorative, exempt from NON-TEXT CONTRAST
 
 
 def _group_tf(g):
@@ -444,6 +445,10 @@ def _boxes(slide, sw, sh, slide_no=None, record=True):
                     # the prefix only refused here what lint_layout honoured (measured 2026-10-03:
                     # tape holding a print was a hard OVERLAP at render time only).
                     "declared": _declared_overlap(s),
+                    # `decorative()` — pure ornament, exempt from NON-TEXT CONTRAST, with a reason
+                    "decor": ("+decor" in str(getattr(s, "name", "") or "").split(":", 1)[0]
+                              or str(getattr(s, "name", "") or "").startswith("deckkit-decor")),
+                    "decor_why": str(getattr(s, "name", "") or "").partition(":")[2],
                     # The motif tag, read from the NAME for the same reason `declared` is: it
                     # survives the save, so this file-level gate can reason about the deck's
                     # signature device exactly as the build-time one does.
@@ -2332,6 +2337,18 @@ def _report_group_skip():
                   key=lambda kv: (kv[0] is None, kv[0]))
 
 
+def _report_decorative():
+    """Every NON-TEXT CONTRAST exemption, with the reason the author wrote — a declared exception
+    is printed, never silent, so a deck that declares its way out of everything is visible."""
+    by = {}
+    for sn, why in _DECOR_SEEN:
+        by.setdefault(why, []).append(sn)
+    for why, sns in by.items():
+        print("  [declared] decorative ×%d (slide %s) — exempt from NON-TEXT CONTRAST: %s"
+              % (len(sns), ", ".join(str(v) for v in sorted(set(sns))), why))
+    return sorted(by.items())
+
+
 def _report_pixel_skip():
     if _SKIP.get("reason"):
         print("  [skipped] %s — NOT checked: %s" % (_SKIP["reason"], ", ".join(_PIXEL_CHECKS)))
@@ -3104,6 +3121,7 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
     136 words a slide and the gate said 4. Read-only channel; nothing about lint changes.
     """
     _GROUP_SKIP.clear()          # a second lint() in one process must not inherit the first's skips
+    _DECOR_SEEN.clear()
     try:
         prs = Presentation(path)
     except Exception:
@@ -3795,6 +3813,10 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
         for i, s in enumerate(bx):
             if not s["solid"] or s["text"] or s["bg"] or s["pic"] or not s["fill"]:
                 continue
+            if s.get("decor"):
+                # DECLARED pure decoration (WCAG 1.4.11 exempts it) — printed, never silent
+                _DECOR_SEEN.append((si + 1, s.get("decor_why") or "(no reason recorded)"))
+                continue
             if s["w"] * s["h"] >= 1.2:                   # small marks only — panels/cards excluded
                 continue
             cx, cy = (s["l"] + s["r"]) / 2, (s["t"] + s["b"]) / 2
@@ -3835,6 +3857,10 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
                 from pptx.enum.dml import MSO_FILL
                 if shp.line.fill.type != MSO_FILL.SOLID:
                     continue
+                _nm = str(getattr(shp, "name", "") or "")
+                if "+decor" in _nm.split(":", 1)[0] or _nm.startswith("deckkit-decor"):
+                    _DECOR_SEEN.append((si + 1, _nm.partition(":")[2] or "(no reason recorded)"))
+                    continue                             # DECLARED pure decoration — printed
                 lc = str(shp.line.color.rgb)             # theme colour raises → silent skip
                 mx = (shp.left + shp.width / 2) / EMU
                 my = (shp.top + shp.height / 2) / EMU
@@ -3928,6 +3954,7 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
     print(f"\n{path}: {total} layout finding(s){tail}")
     _report_pixel_skip()   # "clean" must never mean "clean, but three checks never ran"
     _report_group_skip()   # nor "clean, but one slide's shapes were never mapped"
+    _report_decorative()   # nor "clean" when shapes were declared out of a WCAG floor
     if _STATS_ERR:
         print("  [BROKEN] per-slide statistics crashed on %d slide(s) — NOT checked on them: "
               "TEXT WALL, LAYOUT SAMENESS, UNDERFILLED, FLAT RHYTHM, body-size floor. This is a "

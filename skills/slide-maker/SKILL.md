@@ -1397,6 +1397,11 @@ The helper set, by job:
   declares that one overlap and refuses a print the tape does not touch), never confetti. A number set on a
   small `scallop` badge reads as text over a device: declare it with `dk.overlap_intent(<the TEXT
   shape>, "<why>")` — the check reads the declaration from the text, not from the badge.
+- **Pure decoration:** `dk.decorative(shape, "<why>")` declares that nothing a viewer must read
+  rides on a shape — a pale washi tape, a hairline flourish — so the hand-off floor NON-TEXT CONTRAST
+  (WCAG 1.4.11, which exempts decoration) does not hold it. Per shape, with a sentence (CJK counts
+  double toward the floor); the lint PRINTS every exemption with its reason. Undeclared, a mark under
+  3:1 on the page ground is still held — the check cannot tell ornament from a meaningful mark.
 - **Text & blocks:** `bullet`, `callout` (auto-grows), `chip`, `modbox` (a labelled MODULE box —
   reach for it as the node when mapping architecture modules / code files / system parts joined by
   `connector`, where a plain `node` is too bare; role word + optional filename/tag), `arrow`, `table` (highlight

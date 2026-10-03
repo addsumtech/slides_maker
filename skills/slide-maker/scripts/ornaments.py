@@ -152,7 +152,8 @@ def tape(slide, x, y, w, h, color, *, rotation=-4.0, alpha=0.75, seed=0, loud=Fa
     shape (final review, 2026-10-03). 🔴 Where it sits on the PAGE
     ground it is a small mark under WCAG 1.4.11: a pale washi tone on a light page (e.g. F2D16B on
     F4EEE3, 1.29:1) is a NON-TEXT CONTRAST finding, which the hand-off gate holds the deck on —
-    pick a tape colour at >= 3:1 against the page, or keep it over the picture."""
+    pick a tape colour at >= 3:1 against the page, keep it over the picture, or, when it is pure
+    ornament, say so: `dk.decorative(tape_shape, "<why nothing rides on it>")`."""
     _need(w=w, h=h)
     if not 0.0 < alpha <= 1.0:
         raise ValueError("tape(): alpha must be within (0, 1]")

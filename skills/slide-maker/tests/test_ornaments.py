@@ -163,6 +163,64 @@ with tempfile.TemporaryDirectory() as td:
     check(ov(3), "lint_deck: the undeclared control must still be an OVERLAP")
     check(ov(4), "lint_deck: tape with no holds= across a solid card must be an OVERLAP")
 
+
+# ── a pale tape on the page ground: NON-TEXT CONTRAST unless DECLARED decorative, per shape ─────
+# Decided by the user (2026-10-03): WCAG 1.4.11 exempts pure decoration, but the check cannot tell
+# decoration from a mark someone must read — so the author says so, per shape, with a reason the
+# lint prints. Undeclared, it is still held.
+with tempfile.TemporaryDirectory() as td:
+    pd = dk.blank_deck(13.333, 7.5)
+    PAPER = dk.RGBColor.from_string("F4EEE3")
+    for declare in (False, True):
+        sl = dk.add_slide(pd)
+        dk.slide_background(sl, PAPER)
+        dk.text(sl, 0.6, 0.4, 8, 0.8, [[("Decor", 28, dk.DEEP, True, False)]])
+        tp_ = orn.tape(sl, 6.0, 3.0, 1.6, 0.42, "F2D16B")          # on the page ground, pale
+        if declare:
+            dk.decorative(tp_, "washi tape is ornament; no meaning rides on seeing it")
+            check(dk._is_motif(tp_), "decorative() erased the motif tag: " + tp_.name)
+            check("+decor" in tp_.name, "decorative() did not record itself in the name: " + tp_.name)
+    dpath = Path(td) / "decor.pptx"
+    pd.save(str(dpath))
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        lint_deck.lint(str(dpath))
+    outd = buf.getvalue()
+    lns = outd.splitlines()
+    ntc = lambda n: [ln for ln in lns if ln.strip().startswith("slide {}:".format(n)) and "NON-TEXT CONTRAST" in ln]  # noqa: E731
+    check(ntc(1), "an UNDECLARED pale tape on the page must still be NON-TEXT CONTRAST")
+    check(not ntc(2), "a tape DECLARED decorative was still held: {}".format(ntc(2)))
+    check("washi tape is ornament" in outd, "the decorative declaration and its reason are not printed")
+    # the reason floor is the language-fair one: 8 CJK characters say as much as 16 Latin
+    sl = dk.add_slide(pd)
+    t_short = orn.tape(sl, 1.0, 1.0, 1.2, 0.4, "F2D16B")
+    try:
+        dk.decorative(t_short, "pretty")
+        fails.append("decorative() accepted a reason that says nothing")
+    except ValueError:
+        pass
+    dk.decorative(orn.tape(sl, 3.0, 1.0, 1.2, 0.4, "F2D16B"), "胶带只是装饰，不承载信息")
+    # the LINE branch of the same check (connectors) honours the same declaration
+    pl = dk.blank_deck(13.333, 7.5)
+    for declare in (False, True):
+        sl = dk.add_slide(pl)
+        dk.slide_background(sl, PAPER)
+        dk.text(sl, 0.6, 0.4, 8, 0.8, [[("Lines", 28, dk.DEEP, True, False)]])
+        ln_ = dk._flat(sl.shapes.add_connector(1, dk.Inches(1.0), dk.Inches(3.0), dk.Inches(6.0), dk.Inches(3.0)))
+        ln_.line.color.rgb = dk.RGBColor.from_string("EADFC9")
+        ln_.line.width = dk.Pt(2)
+        if declare:
+            dk.decorative(ln_, "a hairline flourish under the fold; it carries nothing")
+    lpath = Path(td) / "lines.pptx"
+    pl.save(str(lpath))
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        lint_deck.lint(str(lpath))
+    ll_ = buf.getvalue().splitlines()
+    nl = lambda n: [x for x in ll_ if x.strip().startswith("slide {}:".format(n)) and "NON-TEXT CONTRAST: line" in x]  # noqa: E731
+    check(nl(1), "an undeclared pale connector must still be NON-TEXT CONTRAST")
+    check(not nl(2), "a connector DECLARED decorative was still held: {}".format(nl(2)))
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_ornaments] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)

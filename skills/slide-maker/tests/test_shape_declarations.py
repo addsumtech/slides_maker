@@ -59,7 +59,10 @@ OPS = {"motif": lambda sh: dk.tag_motif(sh, loud=True),
        # `mark_datum` and `tag_motif` erased each other in BOTH directions, and the datum-first
        # order produced `deckkit-motif-loud:bars:12.0` — a name that parses as a motif whose
        # "reason" is the lost datum record. A motif page drawn AS bars uses both.
-       "datum": lambda sh: dk.mark_datum(sh, 12.0, group="bars")}
+       "datum": lambda sh: dk.mark_datum(sh, 12.0, group="bars"),
+       # the FIFTH (2026-10-03): `decorative` — pure ornament, exempt from NON-TEXT CONTRAST. A
+       # washi tape is a motif that holds its print (overlap) and is decoration, all at once.
+       "decor": lambda sh: dk.decorative(sh, "washi tape is ornament; no meaning rides on it")}
 
 lost = []
 for order in itertools.permutations(OPS):
@@ -67,10 +70,11 @@ for order in itertools.permutations(OPS):
     for k in order:
         OPS[k](sh)
     if not (dk._is_motif(sh) and dk._is_motif(sh, loud=True)
-            and dk._declared_overlap(sh) and "+bleed" in sh.name and "+datum" in sh.name):
+            and dk._declared_overlap(sh) and "+bleed" in sh.name and "+datum" in sh.name
+            and "+decor" in sh.name):
         lost.append("->".join(order) + " => " + sh.name)
 check(not lost,
-      "🔴 all 24 orders of tag_motif / bleed_intent / overlap_intent / mark_datum keep every "
+      "🔴 all 120 orders of tag_motif / bleed_intent / overlap_intent / mark_datum / decorative keep every "
       "declaration — "
       "the composer parses the name back to a SET and re-renders it, so order cannot matter "
       "(lost: %s)" % (lost or "none"))
@@ -81,7 +85,9 @@ for label, fn, want in (
         ("overlap alone", lambda sh: dk.overlap_intent(sh, OVER_WHY), "deckkit-overlap:"),
         ("quiet motif alone", lambda sh: dk.tag_motif(sh, loud=False), "deckkit-motif-quiet"),
         ("loud motif alone", lambda sh: dk.tag_motif(sh, loud=True), "deckkit-motif-loud"),
-        ("datum alone", lambda sh: dk.mark_datum(sh, 12.0, group="bars"), "deckkit-datum:")):
+        ("datum alone", lambda sh: dk.mark_datum(sh, 12.0, group="bars"), "deckkit-datum:"),
+        ("decorative alone", lambda sh: dk.decorative(sh, "washi tape is ornament; no meaning rides on it"),
+         "deckkit-decor:")):
     sh = fresh()
     fn(sh)
     check(sh.name.startswith(want) and "+bleed+bleed" not in sh.name
@@ -121,7 +127,8 @@ check(_floor,
       "without one")
 
 src = (ROOT / "scripts" / "deckkit.py").read_text(encoding="utf-8")
-_family = ("def tag_motif", "def bleed_intent", "def overlap_intent", "def mark_datum")
+_family = ("def tag_motif", "def bleed_intent", "def overlap_intent", "def mark_datum",
+           "def decorative")
 _bare = []
 for _d in _family:
     _i = src.index(_d)

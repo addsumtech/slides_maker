@@ -58,6 +58,12 @@ highlighted run to the highlight check — white on a navy highlight over a ligh
 an overlap declaration through deckkit's own reader rather than a copy of it. CI runs the motif pages
 under a substituted face too, which found the radial key sitting on a ray.
 
+`dk.decorative(shape, "<why>")`: a per-shape declaration that a mark is pure ornament, exempting it
+from `NON-TEXT CONTRAST` (WCAG 1.4.11 exempts decoration). Chosen over a blanket exemption for every
+ornament, which would let a meaningful mark through unread: the reason is required (language-fair
+floor), every exemption is printed with it, and an undeclared pale mark is still held. It composes
+with the motif, bleed, overlap and datum declarations in all 120 orders.
+
 ## [5.6.0] — 2026-09-25
 
 **The release about what a deck is asked to do in a room, and about "passed" that was not
