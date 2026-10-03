@@ -686,6 +686,7 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   deck's ink so it doesn't fight the accent (riso/brutalist/ink/luxury/museum). See `design-gallery.md`.
   `sticker_outline(img)` — a die-cut border grown from a transparent cut-out's own alpha (it
   refuses an opaque photo: there is no silhouette to follow).
+  `feather(img)` — fades an illustration's edges into the ground (the storybook language).
   `chroma_cutout(img, key=)` — keys a generated subject off its flat background (the image-series
   cut-out slots), despilling the edge band; it refuses a background that is not flat, a subject
   touching the frame edge, or a key that leaves no usable subject.

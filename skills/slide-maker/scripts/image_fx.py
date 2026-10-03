@@ -265,3 +265,22 @@ def chroma_cutout(src, out=None, *, key=None, tol=60, min_subject=0.05):
     out = out or os.path.splitext(src)[0] + ".cut.png"
     Image.fromarray(rgba, "RGBA").save(out)
     return out
+
+
+def feather(src, out=None, *, radius=0.08):
+    """Fade an image's EDGES to transparent so an illustration melts into the paper ground (the
+    storybook language). `radius` is a fraction of the short side. Existing alpha is multiplied, so a
+    cut-out stays cut out. Returns the out path (default `<stem>.feather.png`)."""
+    from PIL import ImageChops, ImageDraw, ImageFilter
+    if not (0 < radius < 0.5):
+        raise ValueError("feather(): radius must be in (0, 0.5) — a fraction of the short side, got {!r}".format(radius))
+    im = Image.open(src).convert("RGBA")
+    w, h = im.size
+    r = max(1, int(round(min(w, h) * radius)))
+    mask = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(mask).rectangle((r, r, w - 1 - r, h - 1 - r), fill=255)
+    mask = mask.filter(ImageFilter.GaussianBlur(r * 0.6))
+    im.putalpha(ImageChops.multiply(im.getchannel("A"), mask))
+    out = out or os.path.splitext(src)[0] + ".feather.png"
+    im.save(out)
+    return out

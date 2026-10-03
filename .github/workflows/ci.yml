@@ -1222,6 +1222,15 @@ jobs:
           grep -qE "\\] ok$" /tmp/imageseriesgate.log || {
             echo "::error::test_image_series_gate did not run to completion"; exit 1; }
 
+      - name: image_fx.feather fades an illustration into the paper
+        run: |
+          set -o pipefail
+          python tests/test_feather.py | tee /tmp/feather.log
+          grep -qE "\\] ok$" /tmp/feather.log || {
+            echo "::error::test_feather did not run to completion"; exit 1; }
+
+      # --- P2 visual languages steps end ---
+
       - name: The Codex scaffold shows every field the Codex gate requires
         run: |
           set -o pipefail
