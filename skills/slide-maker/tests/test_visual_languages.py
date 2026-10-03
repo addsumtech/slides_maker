@@ -289,6 +289,30 @@ for name, page in (("collage", "quote"), ("soft", "quote"), ("soft", "image_text
     for c in cards:
         check(c.height / E <= text_h + 1.0, "{} {} portrait: a card {:.2f}in tall around {:.2f}in of text".format(name, page, c.height / E, text_h))
 
+# ── Task 10: bundled samples (the direction preview shows them) ──
+A = ROOT / "assets" / "vl"
+readme = (A / "README.md").read_text(encoding="utf-8") if (A / "README.md").exists() else ""
+check("AI-generated" in readme and "not real people" in readme, "assets/vl/README.md states the images' provenance")
+for name in vl.LANGS:
+    sp_ = A / "samples" / "{}.jpg".format(name)
+    check(sp_.exists(), "a bundled sample for {}".format(name))
+    if sp_.exists():
+        check(sp_.stat().st_size <= 350 * 1024, "{} sample <= 350 KB".format(name))
+        check(Image.open(sp_).size[0] >= 800, "{} sample >= 800px wide".format(name))
+for f in vl.SAMPLE_IMAGES.values():
+    for x in f:
+        check((A / x).exists(), "sample source {} is bundled".format(x))
+
+# a page never writes beside the caller's images (a feathered copy landed in the skill's own assets/)
+_ftd = Path(tempfile.mkdtemp())
+_src = _ftd / "ill.png"
+Image.open(_wimg).save(_src)
+prs = dk.blank_deck(13.333, 7.5)
+k = vl.use("storybook", prs)
+k.cover(k.new_slide(), title="A balcony garden", image=str(_src))
+check(sorted(p_.name for p_ in _ftd.iterdir()) == ["ill.png"], "a storybook page wrote beside the source image: {}".format(
+    sorted(p_.name for p_ in _ftd.iterdir())))
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_visual_languages] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)

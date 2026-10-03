@@ -315,7 +315,7 @@ LAYOUTS = {
                     "port": L_((.06, .04, .88, .38), "feather", (.08, .46, .84, .46), col_noimg=(.08, .22, .84, .60), align="c")},
         "image_text": {"land": L_((.03, .08, .53, .84), "feather", (.60, .16, .34, .68)),
                        "port": L_((.04, .03, .92, .46), "feather", (.08, .52, .84, .42), anchor="top")},
-        "quote": {"land": L_((.40, .03, .20, .22), "feather", (.14, .28, .72, .58), col_noimg=(.14, .18, .72, .66), align="c"),
+        "quote": {"land": L_((.34, .02, .32, .34), "feather", (.14, .38, .72, .50), col_noimg=(.14, .18, .72, .66), align="c"),
                   "port": L_((.30, .03, .40, .20), "feather", (.08, .27, .84, .64), col_noimg=(.08, .18, .84, .70), align="c")},
         "data": {"land": L_((.58, .08, .38, .84), "feather", (.08, .14, .48, .72), col_noimg=(.12, .14, .76, .72)),
                  "port": L_((.06, .03, .88, .36), "feather", (.08, .42, .84, .50), col_noimg=(.08, .20, .84, .66))},
@@ -544,7 +544,7 @@ def _place_image(k, slide, image, rect, lay, page, keep_clear=None):
                     dk._compose_tag(sh, gen=slot_id)
         return (bx, by, bw, bh)
     if treat == "feather":
-        pic = dk.picture(slide, image_fx.feather(path), x, y, w, h, fit="contain", alt=alt)
+        pic = dk.picture(slide, _feathered(path), x, y, w, h, fit="contain", alt=alt)
     elif slot_id and not frame_is_custom(frame):
         import image_series as ims
         pic = ims.slot_picture(slide, k.plan, slot_id, x, y, w, h, image_dir=k.image_dir)
@@ -554,6 +554,22 @@ def _place_image(k, slide, image, rect, lay, page, keep_clear=None):
     if slot_id:
         dk._compose_tag(pic, gen=slot_id)
     return None
+
+
+def _feathered(path):
+    """A feathered copy in a CACHE folder — never beside the caller's image (it once landed in the
+    skill's own assets/). Keyed by the source's path, size and mtime, so an edited source is redone."""
+    import hashlib
+    import tempfile
+    import image_fx
+    st = Path(path).stat()
+    key = hashlib.sha1("{}|{}|{}".format(Path(path).resolve(), st.st_size, st.st_mtime_ns).encode()).hexdigest()[:16]
+    d = Path(tempfile.gettempdir()) / "slide-maker-feather"
+    d.mkdir(parents=True, exist_ok=True)
+    out = d / "feather-{}.png".format(key)
+    if not out.exists():
+        image_fx.feather(str(path), out=str(out))
+    return str(out)
 
 
 def frame_is_custom(frame):
@@ -662,3 +678,90 @@ def _page(page):
 
 for _pg in PAGE_FIELDS:
     setattr(Kit, _pg, _page(_pg))
+
+
+# ════════════════════════════════════════════════════════════════════════════════════════════════
+# Bundled samples — the direction preview shows these ("style sample — not your content").
+# ════════════════════════════════════════════════════════════════════════════════════════════════
+ASSETS = HERE.parent / "assets" / "vl"
+SAMPLE_IMAGES = {
+    "photo": ["photo/hall-repair.jpg", "photo/tools-tray.jpg", "photo/bench-toaster.jpg", "photo/jacket-mend.jpg",
+              "photo/table-mended.jpg", "photo/kettle-cutout.png"],
+    "watercolour": ["watercolour/rooftop-garden.jpg", "watercolour/garden-tools.jpg", "watercolour/balcony-watering.jpg",
+                    "watercolour/harvest-basket.jpg", "watercolour/seedling-cutout.png"],
+}
+_SAMPLE_COPY = {
+    "photo": dict(kicker="A neighbourhood repair café", title="Bring it broken. Take it home working.",
+                  it_title="Everything you need is on the table",
+                  body="Screwdrivers, a soldering iron, thread and a multimeter, shared on every bench.",
+                  quote="The visitor holds the screwdriver; the volunteer only guides.", attr="How every repair begins",
+                  num="1", label="evening a month", note="Short enough to fit around work."),
+    "watercolour": dict(kicker="A small city garden", title="A balcony can grow a season of vegetables",
+                        it_title="You need very few tools", body="A trowel, a watering can, twine and a few packets of seed.",
+                        quote="Half an hour of watering a day is enough.", attr="A balcony gardener",
+                        num="1", label="pot is enough to begin", note="A window sill will do."),
+}
+
+
+def build_sample(name, out_dir, *, W=13.333, H=7.5):
+    """A four-page sample deck of `name` (cover, image_text, quote, data) from the bundled images."""
+    kind = "watercolour" if name == "storybook" else "photo"
+    imgs = [str(ASSETS / x) for x in SAMPLE_IMAGES[kind]]
+    T = _SAMPLE_COPY[kind]
+    prs = dk.blank_deck(W, H)
+    k = use(name, prs)
+    k.cover(k.new_slide(), kicker=T["kicker"], title=T["title"], image=imgs[:3] if name == "collage" else imgs[0])
+    k.image_text(k.new_slide(), kicker=T["kicker"], title=T["it_title"], body=T["body"], image=imgs[1])
+    k.quote(k.new_slide(), quote=T["quote"], attribution=T["attr"], image=imgs[2])
+    k.data(k.new_slide(), number=T["num"], label=T["label"], note=T["note"], image=imgs[3])
+    out = Path(out_dir) / "sample-{}.pptx".format(name)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    prs.save(str(out))
+    return out
+
+
+def sample_sheet(render_dir, out_jpg, *, width=1400):
+    """A 2x2 contact of a rendered sample's four pages (slide01..04.png) as one JPEG."""
+    from PIL import Image
+    pngs = [Path(render_dir) / "slide{:02d}.png".format(i) for i in range(1, 5)]
+    missing = [p.name for p in pngs if not p.exists()]
+    if missing:
+        raise FileNotFoundError("sample_sheet(): {} not rendered in {} — run render_deck.py first".format(missing, render_dir))
+    ims = [Image.open(p).convert("RGB") for p in pngs]
+    cw = (width - 30) // 2
+    ch = int(cw * ims[0].size[1] / ims[0].size[0])
+    sheet = Image.new("RGB", (width, ch * 2 + 30), (255, 255, 255))
+    for i, im in enumerate(ims):
+        sheet.paste(im.resize((cw, ch)), (10 + (i % 2) * (cw + 10), 10 + (i // 2) * (ch + 10)))
+    sheet.save(out_jpg, quality=78, optimize=True)
+    return out_jpg
+
+
+def main(argv=None):
+    import argparse
+    import shlex
+    ap = argparse.ArgumentParser(description="visual languages: build the bundled samples")
+    ap.add_argument("--sample", metavar="OUT_DIR", help="build sample-<name>.pptx for every language")
+    ap.add_argument("--sample-sheet", nargs=2, metavar=("RENDER_DIR", "OUT_JPG"),
+                    help="contact a rendered sample's four pages into one JPEG")
+    ap.add_argument("--list", action="store_true", help="list the languages")
+    a = ap.parse_args(argv)
+    if a.list or not (a.sample or a.sample_sheet):
+        for n, L in LANGS.items():
+            print("{:10s} fonts both: {}  mac: {}".format(n, L["fonts"]["both"], L["fonts"]["mac"]))
+        return 0
+    if a.sample_sheet:
+        print(sample_sheet(*a.sample_sheet))
+        return 0
+    for n in LANGS:
+        out = build_sample(n, a.sample)
+        rd = Path(a.sample) / ("render-" + n)
+        print("built", out)
+        print("NEXT: python3 scripts/render_deck.py {} {}".format(shlex.quote(str(out)), shlex.quote(str(rd))))
+        print("then: python3 scripts/visual_languages.py --sample-sheet {} {}".format(
+            shlex.quote(str(rd)), shlex.quote(str(ASSETS / "samples" / (n + ".jpg")))))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
