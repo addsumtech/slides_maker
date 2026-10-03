@@ -33,7 +33,7 @@ sys.path.insert(0, HERE)
 # finds out what already exists, and SKILL.md tells it that a name matching NO helper means "you
 # supply the geometry". Leaving the surface kits out of it therefore did worse than hide them — it
 # told anyone asking for `halftone` or `starburst` to hand-roll the thing that had just been built.
-MODULES = ("deckkit", "designed_charts", "register_surface", "citations")
+MODULES = ("deckkit", "designed_charts", "register_surface", "citations", "ornaments", "image_fx")
 
 # The three call-shape errors that actually cost round-trips on a real build. They are properties of
 # the API that no single signature line states, so they are printed with every lookup rather than
@@ -297,6 +297,23 @@ EXAMPLES = {
                  'dc.roc_curve("roc.png",\n'
                  '             [("Model", [0, 0, 1, 1, 0, 1], [0.1, 0.4, 0.35, 0.8, 0.2, 0.7])])\n'
                  'dk.picture(s, "roc.png", 2.6, 1.0, 4.8, 4.3, fit="contain")   # keep it square',
+    # The editorial forms. frosted_panel RETURNS the content rect and the ink measured on the
+    # glass; mark() is a run, used INSIDE a text() paragraph; the ornaments are motif-tagged.
+    "frosted_panel": 'bd = dk.picture(s, "skyline.png", 0, 0, 10, 5.625, fit="cover",\n'
+                     '                alt="a city skyline under an open sky")\n'
+                     'x, y, w, h, ink = dk.frosted_panel(s, bd, 5.4, 0.8, 4.0, 2.2)\n'
+                     'dk.text(s, x, y, w, 0.8, [[("The claim", 24, ink, True, False)]])',
+    "mark": 'dk.text(s, 0.6, 0.6, 8.8, 1.6, [[\n'
+            '    ("BUILD THE SMALLEST ", 36, dk.DEEP, True, False),\n'
+            '    dk.mark(("OBJECT", 36, dk.DEEP, True, False), "D4FF3A"),\n'
+            '    (" THAT ASKS A QUESTION", 36, dk.DEEP, True, False)]])',
+    "squiggle": 'import ornaments as orn\n'
+                'dk.text(s, 0.6, 0.6, 6.0, 0.8, [[("The claim", 30, dk.DEEP, True, False)]])\n'
+                'orn.squiggle(s, 0.7, 1.45, 3.4, 0.3, "E5483B")   # under the claim',
+    "tape": 'import ornaments as orn\n'
+            'dk.picture(s, "skyline.png", 3.0, 1.2, 3.6, 2.7, fit="cover", rotation=-3,\n'
+            '           alt="a city skyline under an open sky")   # a pinned print\n'
+            'orn.tape(s, 4.1, 0.98, 1.4, 0.4, "F2D16B")        # holding it to the page',
 }
 
 
@@ -357,6 +374,11 @@ _EXTRA_GUARANTEES = {
                       "than printed with `n.d.`; each DOI is clickable in the deck's own ink",
     "set_link_color": "the DECK's hyperlink colour, because a renderer paints a linked run in the "
                       "theme's hlink colour whatever fill the run itself carries",
+    "frosted_panel": "the blur is the picture region really under the panel, and the ink clears "
+                     "4.5:1 against the glass's dark and light ends at the lightest wash that "
+                     "allows it — or it refuses",
+    "mark": "the highlight is a run property, so it follows the glyphs through every wrap, and an "
+            "ink under WCAG on it is refused",
     "link": "a slide jump or a URL, with the scheme checked — a link target can come from the "
             "material the deck was built from, and javascript:/file:/data: in a delivered deck is "
             "somebody else's machine",

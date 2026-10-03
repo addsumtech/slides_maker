@@ -9,6 +9,32 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+### Editorial primitives, and rotated shapes measured where they paint
+
+Both geometry gates read a rotated shape's UNROTATED frame. Measured on a probe deck: a correct
+vertical margin label was a CRITICAL `OFF_CANVAS` at build time (so `strict=True` refused to save)
+and a hard `OVERFLOW` after the render, while the same label laid through body copy produced no
+finding in either gate. `scripts/rotgeom.py` is now the one definition of where a rotated shape
+paints — exact at 90° multiples, with an exact intersection for tilted pairs — and both gates use
+it, including `TEXT_OVER_MOTIF`, `TEXT_GRAZES_SHAPE` and `FOOTER BAND`; text still wraps in its
+frame. A new render-time check catches rotated text laid across other text, which the column-based
+`TEXT COLLISION` cannot see. Unrotated shapes measure exactly as before.
+
+On that footing, the drawing vocabulary of image-led editorial decks:
+
+- `picture(shape=…)`: ellipse, arch, snip, notch and blob masks — the test samples the LibreOffice
+  render to prove the mask clips — plus `rotation=` and a crop `focus=`.
+- `dk.mark()`: a native highlight behind chosen words that follows the wrap, CJK included. An ink
+  under WCAG on its highlight is refused, and the contrast gate reads a highlight as that run's
+  backing, so a hand-written pair is caught too.
+- `scripts/ornaments.py`: squiggle, scribble, brush stroke, tape and scallop — native, editable, and
+  tagged as motif so the budget and `TEXT_OVER_MOTIF` see them.
+- `image_fx.sticker_outline`: a die-cut border grown from a cut-out's own alpha; an opaque photo is
+  refused, because outlining its frame would hand back a bordered rectangle.
+- `frosted_panel`: real glass, blurred from exactly the picture region under the panel, with the ink
+  judged on the glass's own pixels at the lightest wash that clears 4.5:1. A blur that comes out one
+  flat colour is drawn as a box, by the same flatness rule `ASSET NOT USABLE` uses.
+
 ## [5.6.0] — 2026-09-25
 
 **The release about what a deck is asked to do in a room, and about "passed" that was not

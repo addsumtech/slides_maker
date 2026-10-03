@@ -1378,6 +1378,24 @@ The helper set, by job:
   seventeen times internally and exposed it nowhere. `disc(s, x, y, d, fill=…, line=…, line_w=…)`
   takes the same grammar as `box`, places from the TOP-LEFT like every other primitive, and is
   flattened so it carries no inherited theme shadow.
+- **Editorial picture forms:** `picture(..., fit="cover", shape="ellipse"|"arch"|"snip"|"notch"|"blob")`
+  clips a photo to a circle, an arch, chamfered corners, a notched card or an organic blob (the
+  mask is real in the render, not just the XML); `focus=(fx, fy)` aims the crop so a face is not
+  cut off; `rotation=` tilts a pinned print. Both gates measure a rotated shape where it PAINTS —
+  exact at 90°, so a vertical margin label is safe. A cut-out PNG becomes a sticker with
+  `image_fx.sticker_outline(path)` (it refuses an opaque photo: cut the subject out first).
+  🔴 A masked or rotated picture is still a CONTENT image — alt text and the referent rule apply.
+- **Highlighted words:** `dk.mark(run, color)` puts one run on a highlighter block inside a
+  `text()` paragraph — native `<a:highlight>`, follows the wrap, works for CJK. A shape drawn behind
+  the word instead is placed by guesswork and drifts off it when the line wraps. `mark()` refuses an
+  ink under WCAG on its highlight (pick the ink with `dk.on(color)`); the render gate reads the
+  highlight as that run's backing.
+- **Hand-made marks (`scripts/ornaments.py`):** `squiggle` · `scribble` · `brush_stroke` · `tape` ·
+  `scallop` — native editable geometry, tagged as quiet motif (`loud=True` for a hero), so the motif
+  budget counts them and TEXT_OVER_MOTIF sees a caption laid across one. Use one or two that MEAN
+  something (a squiggle under the claim, tape holding the print), never confetti. A number set on a
+  small `scallop` badge reads as text over a device: declare it with `dk.overlap_intent(<the TEXT
+  shape>, "<why>")` — the check reads the declaration from the text, not from the badge.
 - **Text & blocks:** `bullet`, `callout` (auto-grows), `chip`, `modbox` (a labelled MODULE box —
   reach for it as the node when mapping architecture modules / code files / system parts joined by
   `connector`, where a plain `node` is too bare; role word + optional filename/tag), `arrow`, `table` (highlight
@@ -1537,6 +1555,10 @@ The helper set, by job:
 - **A photo carrying the page:** **`photo_backdrop`** — the image FULL-BLEED, the words on a solid panel placed where `image_fx.quiet_region` MEASURES the picture calmest, returning `(x, y, w, h, ink)` with the ink resolved against the panel rather than against the photograph, and the attribution credit set inside it. `alt=` is required (a missing one is a blocking a11y finding) and an alpha under **0.88** RAISES — a scrim only dims linework, it does not remove it, so `scrim_overlay` is the component that means a deliberate wash. `panel=` overrides the measurement (`left`/`right`/`bottom`), `panel="none"` returns the safe rect with an ink chosen from the image's own luminance and hands you the contrast.
 - **Surface (dark / glass / print):** `glass_card`/`glow`/`scrim_overlay` (gradient+alpha fill),
   `offset_shadow` (hard letterpress/riso shadow).
+- **Glass over a photo:** `frosted_panel(slide, backdrop_pic, x, y, w, h)` blurs exactly the part of
+  the placed photo under the panel and returns `(x, y, w, h, ink)` — the ink measured against the
+  glass's own dark and light ends, at the lightest wash that lets it clear 4.5:1 (or it raises).
+  `glass_card` stays the vector fake for dark UI grounds.
   **`slide_background(s, color)` paints a SOLID page backdrop — use it instead of
   `box(s, 0, 0, W, H, fill=…)`.** It writes the real `<p:bg>`, so the backdrop is not a shape the
   user can select, drag or delete while editing (a full-canvas rect is, and click-dragging any
