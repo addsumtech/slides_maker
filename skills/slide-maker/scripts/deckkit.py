@@ -1369,6 +1369,110 @@ def glass_card(slide, x, y, w, h, tint, *, accent=None, r=0.14, rim=1.0):
     return body
 
 
+_GLASS_ALPHAS = (0.20, 0.28, 0.36, 0.45, 0.55, 0.65, 0.75, 0.85)
+
+
+def frosted_panel(slide, backdrop, x, y, w, h, *, tint="FFFFFF", alpha=None, blur=0.18, r=0.16,
+                  rim=True):
+    """REAL frosted glass over a photo: the blurred crop of exactly the part of `backdrop` (a
+    picture placed by `picture()`) that lies under the panel, a translucent `tint` wash and a thin
+    rim. Returns ``(x, y, w, h, ink)`` — the content rect (inset 0.18in) and the ink to set on it,
+    chosen against the panel's own pixels: it clears 4.5:1 against both the dark (10th percentile)
+    and light (90th percentile) ends of the glass, or this RAISES and tells you to raise `alpha`.
+    `blur` is the blur radius as a fraction of the panel's shorter side; `alpha` is the tint's share.
+    `alpha=None` (default) uses the LIGHTEST wash that lets an ink clear 4.5:1 — a real mid-tone
+    photo region refused a fixed 30% wash (measured 2026-10-03: glass from luminance 111 to 140,
+    best ink 3.76:1), so a fixed default would refuse the commonest case. Pass a number to fix it;
+    a number that cannot work is refused, never quietly raised.
+
+        bd = dk.picture(s, "field.jpg", 0, 0, 13.333, 7.5, fit="cover", alt="…")
+        x, y, w, h, ink = dk.frosted_panel(s, bd, 7.4, 1.2, 5.2, 2.6, alpha=0.45)
+        dk.text(s, x, y, w, 1.0, [[("The claim", 26, ink, True, False)]])
+
+    `glass_card` is the vector fake for dark UI grounds; this one is for photography. A blurred
+    crop of the WRONG region reads as a grey slab with illegible text (measured 2026-10-03), so the
+    region is computed from the backdrop's placement and crop. It refuses a rotated or shape-masked
+    backdrop and a panel not wholly over the IMAGE (a `fit="contain"` letterbox is not image) —
+    in each case the blurred region would not be what the viewer sees behind the glass."""
+    import io as _io
+    from PIL import Image, ImageFilter
+    if _shape_rot(backdrop):
+        raise ValueError("frosted_panel(): the backdrop is rotated — place it unrotated")
+    spPr = backdrop._element.spPr
+    g = spPr.find(qn("a:prstGeom"))
+    if spPr.find(qn("a:custGeom")) is not None or (g is not None and g.get("prst") not in ("rect", "roundRect")):
+        raise ValueError("frosted_panel(): the backdrop is masked to a shape — glass needs a "
+                         "rectangular image behind it")
+    if not (w > 0 and h > 0):
+        raise ValueError("frosted_panel(): non-positive panel {}x{}".format(w, h))
+    if alpha is not None and not 0.0 <= alpha <= 1.0:
+        raise ValueError("frosted_panel(): alpha must be within [0, 1]")
+    im = Image.open(_io.BytesIO(backdrop.image.blob)).convert("RGB")
+    iw, ih = im.size
+    cl, cr = backdrop.crop_left or 0.0, backdrop.crop_right or 0.0
+    ct, cb = backdrop.crop_top or 0.0, backdrop.crop_bottom or 0.0
+    bx, by = backdrop.left / 914400.0, backdrop.top / 914400.0
+    bw, bh = backdrop.width / 914400.0, backdrop.height / 914400.0
+    sides = [n for n, c in (("left", x < bx - 1e-6), ("top", y < by - 1e-6),
+                            ("right", x + w > bx + bw + 1e-6), ("bottom", y + h > by + bh + 1e-6)) if c]
+    if sides:
+        raise ValueError("frosted_panel(): the panel runs outside the image on the {} — keep it "
+                         "wholly over the picture".format(", ".join(sides)))
+    vx0, vy0 = cl * iw, ct * ih                                  # the visible source window (px)
+    vw, vh = (1.0 - cl - cr) * iw, (1.0 - ct - cb) * ih
+    sx0, sy0 = vx0 + (x - bx) / bw * vw, vy0 + (y - by) / bh * vh
+    sx1, sy1 = vx0 + (x + w - bx) / bw * vw, vy0 + (y + h - by) / bh * vh
+    crop = im.crop((int(sx0), int(sy0), max(int(round(sx1)), int(sx0) + 1),
+                    max(int(round(sy1)), int(sy0) + 1)))
+    frosted = crop.filter(ImageFilter.GaussianBlur(max(1.0, blur * min(crop.size))))
+    # the glass the reader sees: blur blended with the tint at `alpha`; judge the ink on its ENDS
+    t_rgb = tuple(_as_rgb(tint))
+
+    def _judge(a_):
+        comp = Image.blend(frosted, Image.new("RGB", frosted.size, t_rgb), a_).convert("L")
+        lum = sorted(comp.getdata())
+        lo_, hi_ = lum[int(0.10 * (len(lum) - 1))], lum[int(0.90 * (len(lum) - 1))]
+        ends = (RGBColor(lo_, lo_, lo_), RGBColor(hi_, hi_, hi_))
+        ink_ = max((WHITE, _BLACK), key=lambda c: min(contrast_ratio(c, e) for e in ends))
+        return ink_, min(contrast_ratio(ink_, e) for e in ends), lo_, hi_
+
+    for a_ in ((alpha,) if alpha is not None else _GLASS_ALPHAS):
+        best, worst, lo, hi = _judge(a_)
+        if worst >= 4.5:
+            alpha = a_
+            break
+    else:
+        raise ValueError("frosted_panel(): no ink clears 4.5:1 on this glass (best {:.2f}:1 — it "
+                         "runs from luminance {} to {}{}); raise alpha= or move the panel onto a "
+                         "calmer region (image_fx.quiet_region)".format(
+                             worst, lo, hi, "" if alpha is not None else
+                             ", even at the heaviest automatic wash"))
+    probe = frosted.convert("RGBA")
+    if max(probe.size) > 64:
+        probe = probe.resize((64, 64), Image.NEAREST)          # sampled as ASSET NOT USABLE does
+    probe_px = list(probe.getdata())
+    if _flat_bucket(probe_px, len(probe_px)):
+        # A blur of a calm region can come out ONE colour — then it is a plate, not a picture,
+        # and ASSET NOT USABLE (rightly) says so. Draw it as the box it is; it looks identical.
+        mr, mg, mb = (sum(c[i] for c in probe_px) // len(probe_px) for i in range(3))
+        box(slide, x, y, w, h, fill=RGBColor(mr, mg, mb), round=True, r=r)
+    else:
+        buf = _io.BytesIO()
+        frosted.save(buf, format="PNG")
+        buf.seek(0)
+        plate = slide.shapes.add_picture(buf, Inches(x), Inches(y), Inches(w), Inches(h))
+        _round_pic_geom(plate, r, w, h)
+        alt_text(plate, "")                                      # decorative: the photo has the alt
+    wash = box(slide, x, y, w, h, round=True, r=r, grad=[(0.0, tint, alpha), (1.0, tint, alpha)])
+    if rim:
+        wash.line.color.rgb = WHITE
+        wash.line.width = Pt(0.75)
+    else:
+        wash.line.fill.background()
+    pad = 0.18
+    return (x + pad, y + pad, w - 2 * pad, h - 2 * pad, best)
+
+
 def offset_shadow(slide, x, y, w, h, fill, *, dx=0.06, dy=0.06, shadow=None,
                   line=None, line_w=2.0, round=True, r=0.1):
     """A HARD offset 'sticker' / letterpress shadow (riso / print look): a crisp solid shadow
@@ -9785,6 +9889,20 @@ def _datum_faults(prs):
     return out
 
 
+def _flat_bucket(opaque, total):
+    """True when one colour bucket (5 bits/channel) covers >= 99.5% of `total` sampled pixels.
+
+    ONE definition of "a flat plate", shared by ASSET NOT USABLE and `frosted_panel` — the latter
+    draws a flat glass as a box() instead of a picture, which is this check's own advice, so the
+    two cannot disagree about what flat means. `opaque` is an iterable of RGBA tuples."""
+    counts, top = {}, 0
+    for r, g, b, _a in opaque:
+        k = (r // 8, g // 8, b // 8)
+        c = counts[k] = counts.get(k, 0) + 1
+        top = max(top, c)
+    return top >= 0.995 * total
+
+
 def _asset_faults(prs):
     """ASSET NOT USABLE — a picture that arrived but cannot carry anything.
 
@@ -9856,13 +9974,7 @@ def _asset_faults(prs):
                             f"is a hole in the layout. A crop or export that produced an empty "
                             f"frame still writes a valid file."))
                 continue
-            counts = {}
-            top = 0
-            for r, g, b, _a in op:
-                k = (r // 8, g // 8, b // 8)
-                c = counts[k] = counts.get(k, 0) + 1
-                top = max(top, c)
-            if top >= 0.995 * len(px):                   # vs the FULL frame, so icons are safe
+            if _flat_bucket(op, len(px)):                # vs the FULL frame, so icons are safe
                 out.append((n, "CRITICAL", "ASSET NOT USABLE",
                             f"picture '{nm[:40] or '(unnamed)'}' is one flat colour across the "
                             f"whole frame — the shape of a failed generation or an empty canvas. "

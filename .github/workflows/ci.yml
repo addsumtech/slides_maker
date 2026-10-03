@@ -1180,6 +1180,13 @@ jobs:
           grep -qE "\\] ok$" /tmp/sticker.log || {
             echo "::error::test_sticker_outline did not run to completion"; exit 1; }
 
+      - name: frosted_panel blurs the region really under it, or refuses
+        run: |
+          set -o pipefail
+          python tests/test_frosted_panel.py | tee /tmp/frosted.log
+          grep -qE "\\] ok$" /tmp/frosted.log || {
+            echo "::error::test_frosted_panel did not run to completion"; exit 1; }
+
       - name: The Codex scaffold shows every field the Codex gate requires
         run: |
           set -o pipefail
