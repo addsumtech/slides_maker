@@ -145,6 +145,14 @@ with tempfile.TemporaryDirectory() as td:
         nxt = [l for l in out.splitlines() if l.startswith("NEXT")]
         check(rc == 0 and nxt and "image_series.py cutout" in nxt[0] and str(pp) in nxt[0],
               "after the series, NEXT must be the cutout step: {}".format(nxt))
+        # a FAILED run still says what comes next — the same command, once its WHY is fixed (a printed-
+        # output-only agent run, 2026-10-03, stalled exactly here)
+        gic._generate_one = lambda prompt, out_path, **kw: False
+        (gen / "slide-02-tools.png").unlink()
+        rc, out = run([str(man), "--only", "tools"])
+        nxt = [l for l in out.splitlines() if l.startswith("NEXT")]
+        check(rc == 1 and nxt and "--only tools" in nxt[0] and "generate_images_codex.py" in nxt[0],
+              "a failed run must print the command to rerun: {}".format(nxt))
     finally:
         gic._generate_one, gic._have_codex = real_one, real_have
 

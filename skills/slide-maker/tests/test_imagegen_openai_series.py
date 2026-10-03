@@ -114,6 +114,12 @@ with tempfile.TemporaryDirectory() as td:
         nxt = [l for l in out.splitlines() if l.startswith("NEXT")]
         check(rc == 0 and nxt and "generate_images_openai.py" in nxt[0] and "--style-ref" in nxt[0],
               "after the key, NEXT must be the metered --style-ref run: {}".format(nxt))
+        def _boom(item, out_path, args, api_key):
+            raise RuntimeError("HTTP 400: billing hard limit")
+        gio._generate_item = _boom
+        rc, out = run([str(man), "--only", "hero", "--overwrite", "--api-key-env", "SM_TEST_KEY"])
+        nxt = [l for l in out.splitlines() if l.startswith("NEXT")]
+        check(rc == 1 and nxt and "--only hero" in nxt[0], "a failed metered run must print the rerun command: {}".format(nxt))
     finally:
         gio._generate_item = real
         os.environ.pop("SM_TEST_KEY", None)

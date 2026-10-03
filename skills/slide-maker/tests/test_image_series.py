@@ -360,7 +360,8 @@ for _vals, _what in ((ims.KINDS, "kind"), (ims.NOT_GENERATABLE, "refused kind"),
                      (ims.RENDERS, "render"), (ims.CHROMAS, "chroma"), (ims.FRAME_SHAPES, "frame shape")):
     _miss = [v for v in _vals if "`{}`".format(v) not in _sec]
     check(not _miss, "image-generation.md's series section does not name {} value(s) {}".format(_what, _miss))
-for _needle in ("image_series.load(", "sys.path.insert", "calm_zone", "[fx, fy]", "only these two"):
+for _needle in ("image_series.load(", "sys.path.insert", "calm_zone", "[fx, fy]", "only these two",
+                "deck_gates.py set", "English and Chinese credit lines"):
     check(_needle in _sec, "image-generation.md's series section never says {!r}".format(_needle))
 
 # ...and the generator's gate reads the SUBJECT of a series item, not its boilerplate

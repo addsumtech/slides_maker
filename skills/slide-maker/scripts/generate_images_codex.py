@@ -583,13 +583,18 @@ def check_prompt_topicality(items, min_nouns=MIN_SUBJECT_NOUNS):
 
 
 
-def _series_next(items, script, manifest, out_of, only, style_ref):
+def _series_next(items, script, manifest, out_of, only, style_ref, failed=False):
     """The NEXT line after a successful run of an image-SERIES manifest, so an agent that follows only
     printed output reaches the end (final review, 2026-10-03: neither generator printed a next step)."""
     plans = {it.get("series_plan") for it in items if it.get("series_plan")}
     if len(plans) != 1:
         return None
     plan = plans.pop()
+    if failed:      # a failed run still names its next step: the same command, once the cause is fixed
+        again = (" --only " + shlex.quote(str(only))) if only else ""
+        again += (" --style-ref " + shlex.quote(str(style_ref))) if style_ref else ""
+        return "NEXT (once the cause above is fixed): python3 scripts/{} {}{}".format(
+            script, shlex.quote(str(manifest)), again)
     if only:
         key = out_of(items[0])
         return ("NEXT (LOOK at {} first; to redo it: --overwrite --only {}): python3 scripts/{} {} --style-ref {}"
@@ -765,9 +770,9 @@ def main(argv=None):
                     print(f"  FAILED: {out_path} — {exc}", file=sys.stderr); failed += 1
 
     print(f"done: generated {ok}, skipped {skipped}, failed {failed}")
-    if not failed and not args.dry_run:
+    if not args.dry_run:
         nxt = _series_next(items, "generate_images_codex.py", manifest, lambda it: resolved[id(it)],
-                           args.only, style_ref)
+                           args.only, style_ref, failed=bool(failed))
         if nxt:
             print(nxt)
     return 1 if failed else 0

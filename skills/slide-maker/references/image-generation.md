@@ -62,6 +62,8 @@ look.)* It is entered ONLY by picking an image-led direction at the direction ga
 (`interview-protocol.md`); picking it records `design_plan.imagery: "series"` and
 `design_plan.image_series: "<deck>/series.json"` (Codex evidence: the same two keys under `design`) —
 an absolute path, or one relative to the deck folder; `imagery` takes only `"series"` or `"selective"`.
+Write them with `python3 scripts/deck_gates.py set <deck> design_plan.imagery series` and
+`python3 scripts/deck_gates.py set <deck> design_plan.image_series series.json`.
 Every other deck keeps `imagery: "selective"` — the rule above, unchanged.
 
 Three floors that do not relax:
@@ -80,7 +82,10 @@ customers, testimonials and any real person are NOT generatable (`check` refuses
 photo, or no portrait. A subject that NAMES people ("volunteers' hands…", "一位老人…") is a person
 slot whatever else it shows — `check` refuses it under `scene`/`object`/`illustration` (measured: a
 "scene" of volunteers' hands came back as four people, out of the people gate's sight). The delivery
-gate blocks a generated person set beside a name joined to a role,
+gate reads English and Chinese credit lines; in any other language a name set beside a generated
+person is NOT caught (telling a place name from a person's name there would block ordinary headings),
+so the persona label is the rule whatever the language. It blocks a generated person set beside a
+name joined to a role,
 a quote attribution, or team / testimonial wording, when the slide carries no 'fictional' label.
 
 **The plan — `series.json`.** One JSON object; `python3 scripts/image_series.py check` names every
