@@ -1194,6 +1194,13 @@ jobs:
           grep -qE "\\] ok$" /tmp/imageseries.log || {
             echo "::error::test_image_series did not run to completion"; exit 1; }
 
+      - name: generate_images_codex makes the key first and the series in its style
+        run: |
+          set -o pipefail
+          python tests/test_imagegen_series_flags.py | tee /tmp/imagegenflags.log
+          grep -qE "\\] ok$" /tmp/imagegenflags.log || {
+            echo "::error::test_imagegen_series_flags did not run to completion"; exit 1; }
+
       - name: The Codex scaffold shows every field the Codex gate requires
         run: |
           set -o pipefail
