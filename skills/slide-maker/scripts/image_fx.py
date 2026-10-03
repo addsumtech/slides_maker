@@ -212,6 +212,29 @@ def chroma_cutout(src, out=None, *, key=None, tol=60, min_subject=0.05):
     if share < min_subject:
         raise ValueError("chroma_cutout(): only {:.1%} of {} is subject after keying — no usable subject; "
                          "regenerate it larger".format(share, src))
+    # The key must not EAT part of the subject. Measured (final review, 2026-10-03): green leaves on the
+    # green key came back fully transparent while the pot kept the subject share up — "OK", leaves gone.
+    # An eaten pixel is made (partly) transparent although its colour is clearly NOT the background
+    # (farther from it than the background's own noise) and it lies away from the subject's soft edge.
+    # A hole that IS the background (a handle's loop) is the key colour itself, so it does not count.
+    # Two ways: (a) a clearly non-background pixel keyed fully away, off the subject's soft edge; (b) a
+    # half-transparent pixel deep INSIDE the subject, far from the true background (pale-green leaves
+    # came back at alpha 0.61 — visible, but see-through).
+    kk = max(2, int(round(min(a.shape[:2]) * 0.006)))
+    def _grow(mask):
+        return np.asarray(Image.fromarray((mask * 255).astype(np.uint8), "L").filter(
+            ImageFilter.MaxFilter(2 * kk + 1))) > 0
+    near_subject = _grow(alpha >= 0.5)
+    near_clear = _grow(alpha < 0.02)
+    gone = (alpha < 0.5) & (d >= max(15.0, spread + 8.0)) & ~near_subject
+    see_through = (alpha > 0.02) & (alpha < 0.98) & ~near_clear
+    eaten = gone | see_through
+    subject_px = float((alpha >= 0.5).sum())
+    if eaten.sum() > max(200, 0.02 * subject_px):
+        other = "FF00FF" if int(np.argmax(bg)) == 1 else "00B140"
+        raise ValueError("chroma_cutout(): keying {} also removed part of the SUBJECT ({:.0%} of it — colours "
+                         "close to the key, e.g. green leaves on a green key). Regenerate it on the other key: "
+                         "set the plan's \"chroma\" to {}.".format(src, eaten.sum() / subject_px, other))
     # despill: in an EDGE BAND, remove only the key's EXCESS — how far the weakest KEY channel (green; red
     # and blue for magenta) rises above the strongest other one — from every key channel. The band is
     # every visible pixel within a few px of the keyed-out region, not only the partly transparent ones:

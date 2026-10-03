@@ -95,6 +95,30 @@ with tempfile.TemporaryDirectory() as td:
     mg = td / "mg.png"
     scene((255, 0, 255), (46, 125, 50)).save(mg)
     check(image_fx.chroma_cutout(str(mg), key="#ff00ff").endswith(".cut.png"), "the right key passes, any case/#")
+    # the key must not EAT part of the subject: green leaves on the green key came back fully transparent
+    # while the pot kept the subject share up — "OK" with the leaves gone (final review, 2026-10-03)
+    for leaf in ((20, 165, 60), (40, 150, 60)):
+        im = Image.new("RGB", (400, 400), (0, 177, 64))
+        dr = ImageDraw.Draw(im)
+        dr.rectangle((150, 230, 250, 340), fill=(170, 100, 60))                     # the pot
+        for box in ((90, 60, 190, 150), (210, 60, 310, 150), (150, 120, 250, 220)):  # three big leaves
+            dr.ellipse(box, fill=leaf)
+        lp = td / "leafy.png"
+        im.save(lp)
+        try:
+            image_fx.chroma_cutout(str(lp))
+            fails.append("chroma_cutout keyed away {} leaves on the green key without refusing".format(leaf))
+        except ValueError as ex:
+            check("FF00FF" in str(ex), "the refusal should name the other key: {}".format(ex))
+    # ...but a hole that IS the background (a kettle handle's loop) is not an eaten subject
+    loop = Image.new("RGB", (400, 400), (0, 177, 64))
+    dl = ImageDraw.Draw(loop)
+    dl.rectangle((120, 180, 280, 340), fill=(230, 220, 190))
+    dl.ellipse((130, 60, 270, 200), fill=(40, 40, 40))
+    dl.ellipse((160, 90, 240, 170), fill=(0, 177, 64))                             # the loop shows the key
+    lo = td / "loop.png"
+    loop.save(lo)
+    check(image_fx.chroma_cutout(str(lo)).endswith(".cut.png"), "a background-coloured hole must pass")
     # refusals
     n = td / "noisy.png"
     scene((0, 177, 64), (150, 92, 60), noise=70).save(n)

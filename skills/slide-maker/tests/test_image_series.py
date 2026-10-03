@@ -108,6 +108,11 @@ check(any("key" in x for x in ims.check(ck)), "a cut-out first slot cannot be th
 # used to clear the generator's topicality gate, so "an abstract soft gradient backdrop" sailed through
 for subj in ("an abstract soft gradient backdrop", "抽象柔和的渐变背景"):
     bad(lambda p, subj=subj: p["slots"][1].update(subject=subj), "subject")
+# a cut-out whose subject IS the key's colour is refused before any money is spent
+bad(lambda p: p["slots"][1].update(subject="a bright green seedling with fresh leaves in a clay pot"), "FF00FF")
+bad(lambda p: p["slots"][1].update(subject="一株绿色的薄荷幼苗种在陶盆里"), "FF00FF")
+mg = copy.deepcopy(GOOD); mg["chroma"] = "FF00FF"; mg["slots"][1]["subject"] = "a pink orchid in a glass vase"
+check(any("00B140" in x for x in ims.check(mg)), "a pink subject on the magenta key must be refused: {}".format(ims.check(mg)))
 # a persona WITH its label is valid
 pp = copy.deepcopy(GOOD)
 pp["slots"][0].update(kind="persona", persona_label="虚构人物 · illustrative persona")

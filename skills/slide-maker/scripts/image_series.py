@@ -39,6 +39,14 @@ FRAME_SHAPES = ("rect",) + tuple(PIC_SHAPES)
 CHROMA_MIN_DE = 30.0   # a palette colour closer than this to the key colour would be keyed away with it
 SLOT_ID = re.compile(r"^[a-z0-9][a-z0-9-]{0,39}$")
 CHROMAS = ("00B140", "FF00FF")
+# subjects whose OWN colour is the key's: keyed, they lose themselves (measured: green leaves on green)
+KEY_COLOURED = {
+    "00B140": re.compile(r"\b(green|leaf|leaves|leafy|plants?|seedlings?|sprouts?|herbs?|basil|mint|lettuce|"
+                         r"cucumbers?|grass|moss|ferns?|cact(?:us|i)|succulents?|lime|spinach|kale|broccoli|"
+                         r"peas?)\b|绿|叶|幼苗|嫩芽|草|植物|生菜|黄瓜|青菜|菠菜|苔|仙人掌|多肉|薄荷|豆角", re.I),
+    "FF00FF": re.compile(r"\b(pink|magenta|purple|violet|fuchsia|orchids?|beet(?:root)?s?|lavender|plum)\b"
+                         r"|粉色|粉红|紫|玫红|洋红|薰衣草|甜菜", re.I),
+}
 DEFAULT_CHROMA = "00B140"
 HEX6 = re.compile(r"^[0-9A-Fa-f]{6}$")
 FLOOR_MEANING, FLOOR_ART, FLOOR_SUBJECT = 24, 24, 12
@@ -184,6 +192,12 @@ def check(plan):
         elif ref == "stylized" and render != "illustration":
             out.append(tag + ": a stylized referent needs render 'illustration' — a photographic fake of a "
                        "real subject is the fidelity bug the REFERENT RULE exists for")
+        if s.get("cutout") is True and chroma in CHROMAS:
+            hit = KEY_COLOURED[chroma].search(str(s.get("subject") or ""))
+            if hit:
+                other = [c for c in CHROMAS if c != chroma][0]
+                out.append(tag + ": a cut-out of {!r} on the {} key would lose the subject's own colour — set "
+                           "\"chroma\": \"{}\"".format(hit.group(0), chroma, other))
         if not isinstance(s.get("cutout", False), bool):
             out.append(tag + ": cutout must be true or false")
         fo = s.get("focus")
