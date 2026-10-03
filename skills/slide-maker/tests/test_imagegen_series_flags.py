@@ -94,6 +94,24 @@ with tempfile.TemporaryDirectory() as td:
     check(gic._why_no_image(roll) is None, "no evidence -> no invented cause")
     check(gic._why_no_image(None) is None, "no transcript -> no invented cause")
 
+# --only selects EXACTLY one item: with slots "hero" and "s04-hero", a suffix match picked both — the
+# second then got made WITHOUT the style reference and was skipped as "existing" by the --style-ref run
+with tempfile.TemporaryDirectory() as td:
+    td = Path(td)
+    m2 = td / "image_prompt_manifest.json"
+    m2.write_text(json.dumps([
+        {"id": "hero", "slide": 1, "filename": "slide-01-hero.png", "prompt": "a lamp on a workbench in a hall", "subject": "a lamp on a workbench"},
+        {"id": "s04-hero", "slide": 4, "filename": "slide-04-s04-hero.png", "prompt": "a kettle on a counter in a kitchen", "subject": "a kettle on a counter"}]),
+        encoding="utf-8")
+    rc, out = run([str(m2), "--dry-run", "--only", "hero", "--out-dir", str(td)])
+    check(rc == 0 and "slide-01-hero.png" in out and "slide-04-s04-hero.png" not in out,
+          "--only hero must not also select s04-hero: " + out[-300:])
+    m2.write_text(json.dumps([
+        {"slide": 1, "filename": "slide-01-a-hero.png", "prompt": "a lamp on a workbench in a hall"},
+        {"slide": 2, "filename": "slide-02-b-hero.png", "prompt": "a kettle on a counter in a kitchen"}]), encoding="utf-8")
+    rc, out = run([str(m2), "--dry-run", "--only", "hero", "--out-dir", str(td)])
+    check(rc == 2 and "matches 2" in out, "an --only that matches two items must refuse: rc={} {}".format(rc, out[-200:]))
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_imagegen_series_flags] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)

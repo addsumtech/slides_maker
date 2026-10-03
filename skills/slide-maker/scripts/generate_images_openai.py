@@ -213,13 +213,21 @@ def main(argv=None):
     if args.limit is not None:
         items = items[: max(0, args.limit)]
     if args.only:
-        def _hit(it):
-            stem = Path(str(it.get("filename") or it.get("path") or "")).stem
-            return it.get("id") == args.only or stem == args.only or stem.endswith("-" + args.only)
-        items = [it for it in items if _hit(it)]
-        if not items:
+        # EXACT id first, then exact stem, then a unique "-ID" suffix — never several: with slots "hero"
+        # and "s04-hero" a suffix match picked both, and the second was made without the style reference
+        def _stem(it):
+            return Path(str(it.get("filename") or it.get("path") or "")).stem
+        sel = ([it for it in items if it.get("id") == args.only]
+               or [it for it in items if _stem(it) == args.only]
+               or [it for it in items if _stem(it).endswith("-" + args.only)])
+        if not sel:
             print(f"error: no manifest item matches --only {args.only!r}", file=sys.stderr)
             return 2
+        if len(sel) > 1:
+            print(f"error: --only {args.only!r} matches {len(sel)} items ({', '.join(_stem(i) for i in sel)}) — "
+                  f"pass the exact slot id", file=sys.stderr)
+            return 2
+        items = sel
     if args.style_ref:
         args.style_ref = Path(args.style_ref).expanduser()
         if not args.style_ref.is_file() or args.style_ref.suffix.lower() not in (".jpg", ".jpeg", ".png", ".webp"):
