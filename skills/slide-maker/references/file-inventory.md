@@ -405,6 +405,10 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   hardcoded two-host list left every other runtime with no registry at all, so Q1(a) lost the
   saved-templates option and `taste.md` was never read or written, silently. `check_env.py`
   prints the resolved root on every preflight.
+- `rotgeom.py` — where a ROTATED shape paints: the placed box (exact at 90° multiples, so a
+  vertical margin label is measured exactly), the exact intersection of two tilted rectangles, and
+  point-in-polygon. The one definition both geometry gates (`lint_deck.py`, `deckkit.lint_layout`)
+  import — before it, both read the unrotated frame and were wrong in both directions.
 - **`sigs.py`** — one lookup, many helpers: exact signature + docstring head for every named deckkit/designed_charts helper, plus the run-tuple and RGBColor call-shape contracts. `--search TERM` to find one, `--list` for all, `--full` for whole docstrings. Use it BEFORE writing a build script; reading deckkit.py one function at a time costs a round-trip per question.
 - `lint_deck.py` — deterministic **render-time** layout lint and complement to deckkit's build-time
   `lint_layout`: re-checks geometry on the final file (off-slide overflow · block/image collision

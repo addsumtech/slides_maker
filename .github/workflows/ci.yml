@@ -1145,6 +1145,13 @@ jobs:
           grep -qE "\\] ok$" /tmp/disc.log || {
             echo "::error::test_disc_primitive did not run to completion"; exit 1; }
 
+      - name: Rotated shapes are measured where they paint (both gates)
+        run: |
+          set -o pipefail
+          python tests/test_rotated_geometry.py | tee /tmp/rotgeom.log
+          grep -qE "\\] ok$" /tmp/rotgeom.log || {
+            echo "::error::test_rotated_geometry did not run to completion"; exit 1; }
+
       - name: The Codex scaffold shows every field the Codex gate requires
         run: |
           set -o pipefail
