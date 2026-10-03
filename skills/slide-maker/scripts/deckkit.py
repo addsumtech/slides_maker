@@ -2966,9 +2966,10 @@ def _tag_chrome(shape):
 
 
 _GEN_RE = re.compile(r"(?:^deckkit-gen\.|\+gen\.)([a-z0-9][a-z0-9-]*)")
+_VL_RE = re.compile(r"(?:^deckkit-vl\.|\+vl\.)([a-z0-9][a-z0-9-]*)")
 
 
-def _compose_tag(shape, tier=None, flag=None, reason=None, gen=None):
+def _compose_tag(shape, tier=None, flag=None, reason=None, gen=None, vl=None):
     """Write a declaration into the shape NAME without erasing the ones already there.
 
     🔴 THREE functions record a decision in `shape.name` — `tag_motif`, `bleed_intent`,
@@ -2988,6 +2989,7 @@ def _compose_tag(shape, tier=None, flag=None, reason=None, gen=None):
         deckkit-bleed+overlap:<why>                both declarations, no motif
         deckkit-motif-quiet+overlap+gen.hero       a generated series picture (slot 'hero'), a FLAG:
                                                    it never takes the one reason slot
+        deckkit-vl.collage                         composed by a visual language (visual_languages)
     """
     cur = str(getattr(shape, "name", "") or "")
     head, _, why = cur.partition(":")
@@ -3002,6 +3004,8 @@ def _compose_tag(shape, tier=None, flag=None, reason=None, gen=None):
     have_decor = head.startswith(DECOR_TAG) or "+decor" in head
     m = _GEN_RE.search(head)
     have_gen = m.group(1) if m else None
+    mv = _VL_RE.search(head)
+    have_vl = mv.group(1) if mv else None
     if not head.startswith("deckkit-"):
         why = ""
     if tier:
@@ -3018,6 +3022,8 @@ def _compose_tag(shape, tier=None, flag=None, reason=None, gen=None):
         why = reason
     if gen:
         have_gen = gen
+    if vl:
+        have_vl = vl
     on = (("+bleed", have_bleed), ("+overlap", have_overlap), ("+datum", have_datum),
           ("+decor", have_decor))
     if have_tier:
@@ -3037,8 +3043,20 @@ def _compose_tag(shape, tier=None, flag=None, reason=None, gen=None):
             flags = flags + ["+gen." + have_gen]
         else:
             base = "deckkit-gen." + have_gen
+    if have_vl:
+        if base:
+            flags = flags + ["+vl." + have_vl]
+        else:
+            base = "deckkit-vl." + have_vl
     shape.name = base + "".join(flags) + ((":" + str(why)) if why else "")
     return shape
+
+
+def vl_name(shape):
+    """The visual language a shape was composed by (`visual_languages`), or None."""
+    head = str(getattr(shape, "name", "") or "").split(":", 1)[0]
+    m = _VL_RE.search(head)
+    return m.group(1) if m else None
 
 
 def generated_slot(shape):

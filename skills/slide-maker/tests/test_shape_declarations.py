@@ -97,6 +97,22 @@ dk._compose_tag(sh, gen="hero")
 check(sh.name == "deckkit-gen.hero" and dk.generated_slot(sh) == "hero", "gen alone: " + sh.name)
 check(dk.generated_slot(fresh()) is None, "an untagged shape has no generated slot")
 
+VL_OPS = dict(GEN_OPS)
+VL_OPS["vl"] = lambda sh: dk._compose_tag(sh, vl="collage")
+lost_v = []
+for order in itertools.permutations(["motif", "overlap", "gen", "vl", "decor"]):
+    sh = fresh()
+    for k in order:
+        VL_OPS[k](sh)
+    if not (dk.vl_name(sh) == "collage" and dk.generated_slot(sh) == "s03-kettle" and dk._is_motif(sh)
+            and dk._declared_overlap(sh) and "+decor" in sh.name):
+        lost_v.append("->".join(order) + " => " + sh.name)
+check(not lost_v, "all orders keep the visual-language tag beside the others (lost: %s)" % (lost_v or "none"))
+sh = fresh()
+dk._compose_tag(sh, vl="editorial")
+check(sh.name == "deckkit-vl.editorial" and dk.vl_name(sh) == "editorial", "vl alone: " + sh.name)
+check(dk.vl_name(fresh()) is None, "an untagged shape has no language")
+
 # The single-declaration paths are the common case and must stay exactly as they were.
 for label, fn, want in (
         ("bleed alone", lambda sh: dk.bleed_intent(sh, BLEED_WHY), "deckkit-bleed:"),
