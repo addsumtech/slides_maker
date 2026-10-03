@@ -109,3 +109,37 @@ def quiet_region(path, *, grid=4):
     cells = [(gx, gy) for gx in range(x0, x1 + 1) for gy in range(y0, y1 + 1)]
     lum = sum(scores[c][1] for c in cells) / len(cells)
     return (x0 / grid, y0 / grid, (x1 - x0 + 1) / grid, (y1 - y0 + 1) / grid, lum)
+
+
+def sticker_outline(src, out=None, *, border=0.035, color="FFFFFF"):
+    """A die-cut STICKER border around a transparent cut-out: the subject's own silhouette, grown by
+    `border` (fraction of the shorter side) and filled with `color`, under the unchanged subject.
+    Returns the out path (default `<src>.sticker.png`). Place it with `deckkit.picture(...,
+    fit="contain")` — the transparency is the shape, so no mask is needed.
+
+    The cut-paper / doodle registers put people and objects on the page as stickers; the border
+    has to follow the silhouette, so it is built from the alpha channel (a blur-and-threshold
+    dilation, which grows ROUND — a max-filter grows square and would square off every corner).
+
+    RAISES ValueError for an image with no transparency — there is no silhouette to follow, and a
+    white-bordered RECTANGLE would look like a working sticker. Cut the subject out first."""
+    from PIL import ImageFilter
+    im = Image.open(src)
+    if im.mode not in ("RGBA", "LA", "PA") and "transparency" not in im.info:
+        raise ValueError("sticker_outline(): {} has no alpha channel — nothing to outline; cut the "
+                         "subject out first".format(src))
+    im = im.convert("RGBA")
+    alpha = im.getchannel("A")
+    if alpha.getextrema()[0] == 255:
+        raise ValueError("sticker_outline(): {} is fully opaque — cut the subject out first"
+                         .format(src))
+    px = max(1, int(round(border * min(im.size))))
+    solid = alpha.point(lambda v: 255 if v > 24 else 0)
+    grown = solid.filter(ImageFilter.GaussianBlur(px / 2.0)).point(lambda v: 255 if v > 6 else 0)
+    rgb = _hex(color)
+    base = Image.new("RGBA", im.size, tuple(rgb) + (0,))
+    base.putalpha(grown)
+    base.alpha_composite(im)
+    out = out or os.path.splitext(src)[0] + ".sticker.png"
+    base.save(out)
+    return out
