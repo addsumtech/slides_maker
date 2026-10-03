@@ -83,6 +83,17 @@ for subj in ("volunteers' hands repairing a broken table lamp on a workbench",
              "two neighbours leaning over a disassembled toaster in a hall",
              "一位老人在社区菜园里给番茄浇水的场景"):
     bad(lambda p, subj=subj: p["slots"][0].update(subject=subj, kind="scene"), "generic-person")
+# ...and OBJECTS named after people stay objects (final review, 2026-10-03): the suggested fix (kind
+# generic-person) would add "People: ordinary people…" to a knife still-life's prompt
+for subj in ("a chef's knife on a walnut cutting board", "baby carrots in a ceramic bowl",
+             "a vintage coffee maker on a counter", "a potter's wheel in an empty studio",
+             "a man-made lake at dawn", "a granite rock face at dusk", "an old clock face with brass hands",
+             "kid gloves on a wooden table", "手工人偶摆在木桌上", "用户界面草图贴在白板上"):
+    ok_ = copy.deepcopy(GOOD); ok_["slots"][0].update(subject=subj, kind="object")
+    check(ims.check(ok_) == [], "{!r} is an object but was refused: {}".format(subj, ims.check(ok_)))
+# ...while a person's own hands or face still make it a person slot
+for subj in ("a potter's hands shaping wet clay on a turning wheel", "a farmer's weathered face in morning light"):
+    bad(lambda p, subj=subj: p["slots"][0].update(subject=subj, kind="scene"), "generic-person")
 # ...while subjects that name no one stay valid ("hand-thrown" is a making word, not a person)
 for subj in ("a hand-thrown stoneware kettle with an ash glaze on linen",
              "a long workbench with a soldering iron and spools of thread",

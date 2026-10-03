@@ -46,12 +46,24 @@ FLOOR_MEANING, FLOOR_ART, FLOOR_SUBJECT = 24, 24, 12
 # "scene" for "volunteers' hands repairing a lamp" came back as four people, and the people gate only
 # reads person kinds. Bare 人 is not a word here (人工, 人行道); the CJK list is people words.
 PEOPLE = re.compile(
-    r"\b(people|persons?|man|men|woman|women|child(?:ren)?|kids?|boys?|girls?|bab(?:y|ies)|volunteers?|"
-    r"visitors?|neighbou?rs?|workers?|farmers?|students?|teachers?|famil(?:y|ies)|crowds?|couples?|"
-    r"customers?|patients?|doctors?|nurses?|chefs?|artisans?|potters?|makers?|gardeners?|"
-    r"grand(?:mother|father|parents?)s?|elderly|adults?|teen(?:ager)?s?|portraits?|faces?)(?:'s|s')?\b"
-    r"|人们|行人|路人|老人|孩子|儿童|小孩|志愿者|邻居|农民|学生|老师|家人|一家人|居民|顾客|用户|工人|"
+    r"\b(people|persons?|man(?![-‐])|men|woman|women|child(?:ren)?|boys?|girls?|volunteers?|visitors?|"
+    r"neighbou?rs?|workers?|farmers?|students?|teachers?|famil(?:y|ies)|crowds?|couples?|customers?|"
+    r"patients?|doctors?|nurses?|chefs?|artisans?|potters?|gardeners?|grand(?:mother|father|parents?)s?|"
+    r"elderly|adults?|teen(?:ager)?s?)((?:'|’)s|s(?:'|’))?\b"
+    r"|人们|行人|路人|老人|孩子|儿童|小孩|志愿者|邻居|农民|学生|老师|家人|一家人|居民|顾客|(?<!手)工人|"
     r"妈妈|爸爸|奶奶|爷爷|女孩|男孩|女士|先生|手艺人|园丁|陶艺师|师傅|游客|观众|人群", re.I)
+# a possessive names a person only when their body follows ("a potter's hands"); "a potter's wheel",
+# "a chef's knife" are objects (final review, 2026-10-03). Words that are mostly objects — maker, face,
+# baby, kid, portrait, 用户 — are not in the list at all.
+_BODY = re.compile(r"\s+(?:[\w-]+\s+)?(hands?|fingers?|arms?|face|faces|eyes|smile|feet|shoulders?|back)\b", re.I)
+
+
+def _names_people(subject):
+    for m in PEOPLE.finditer(subject or ""):
+        if m.lastindex and m.group(2) and not _BODY.match(subject[m.end():]):
+            continue
+        return m.group(0)
+    return None
 
 
 def load(path):
@@ -144,10 +156,11 @@ def check(plan):
         elif kind not in KINDS:
             out.append(tag + ": kind must be one of {}".format(KINDS))
         if kind in KINDS and kind not in ("generic-person", "persona"):
-            m = PEOPLE.search(str(s.get("subject") or ""))
-            if m:
-                out.append(tag + ": the subject names people ({!r}) — set kind 'generic-person' (or 'persona' "
-                           "with its label), so the people rule is checked on its slide".format(m.group(0)))
+            who = _names_people(str(s.get("subject") or ""))
+            if who:
+                out.append(tag + ": the subject names people ({!r}) — if no person is meant, rephrase the subject; "
+                           "if one is, set kind 'generic-person' (or 'persona' with its label), so the people "
+                           "rule is checked on its slide".format(who))
         if kind == "persona" and not (isinstance(s.get("persona_label"), str) and s["persona_label"].strip()):
             out.append(tag + ": a persona needs persona_label — the visible 'fictional' label set on its slide")
         if reason_width(s.get("subject")) < FLOOR_SUBJECT:
