@@ -219,6 +219,99 @@ def prompts(plan, out_dir):
     return items
 
 
+DE_MAX = 25.0      # mean-colour distance (CIE76) from the key beyond which an image is OFF-SERIES
+HIST_MAX = 0.6     # hue-histogram distance (L1/2) beyond which an image is OFF-SERIES
+ASPECT_MAX = 0.35  # |image aspect - frame aspect| / frame aspect beyond which the crop loses too much
+
+
+def image_stats(path, *, exclude=None):
+    """Mean Lab, saturation, luminance spread and a saturation-weighted hue histogram. `exclude` (an
+    'RRGGBB' key colour) drops the pixels near it — a cut-out slot is generated on the key, and its
+    background must not be what the series is compared on."""
+    from PIL import Image
+    im = Image.open(path).convert("RGB")
+    size = im.size
+    im.thumbnail((128, 128))
+    px = list(im.getdata())
+    if exclude:
+        kc = tuple(int(exclude[i:i + 2], 16) for i in (0, 2, 4))
+        keep = [p for p in px if math.dist(p, kc) > 60]
+        if len(keep) >= max(16, len(px) // 50):
+            px = keep
+            im = Image.new("RGB", (len(px), 1))
+            im.putdata(px)
+    n = float(len(px))
+    mean = tuple(sum(p[i] for p in px) / n for i in range(3))
+    lab = _lab("{:02X}{:02X}{:02X}".format(*(int(round(c)) for c in mean)))
+    hsv = list(im.convert("HSV").getdata())
+    sat = sum(p[1] for p in hsv) / (255.0 * n)
+    lum = [0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2] for p in px]
+    mu = sum(lum) / n
+    lum_std = (sum((v - mu) ** 2 for v in lum) / n) ** 0.5
+    hist = [0.0] * 12
+    for h_, s_, v_ in hsv:
+        hist[h_ * 12 // 256] += s_ / 255.0
+    tot = sum(hist) or 1.0
+    return {"lab": lab, "sat": sat, "lum_std": lum_std, "hue_hist": [v / tot for v in hist],
+            "size": size}
+
+
+def _hist_d(a, b):
+    return sum(abs(x - y) for x, y in zip(a, b)) / 2.0
+
+
+def qc(plan, gen_dir, *, de_max=None, hist_max=None):
+    """Compare every slot's image with the KEY image; flag MISSING / OFF-SERIES / ASPECT / CUTOUT and the
+    per-file image_qc flags. Writes series-qc.json beside the images and returns the report."""
+    import image_qc
+    de_max = DE_MAX if de_max is None else de_max
+    hist_max = HIST_MAX if hist_max is None else hist_max
+    gen_dir = Path(gen_dir)
+    kid = key_id(plan)
+    files = {s["id"]: gen_dir / "slide-{:02d}-{}.png".format(s["slide"], s["id"]) for s in plan["slots"]}
+    chroma = str(plan.get("chroma") or DEFAULT_CHROMA).lstrip("#").upper()
+    key_stats = (image_stats(files[kid], exclude=chroma if slot(plan, kid).get("cutout") else None)
+                 if files[kid].exists() else None)
+    rows, outliers, recs = [], [], []
+    for s in plan["slots"]:
+        f, flags, row = files[s["id"]], [], {"id": s["id"], "file": str(files[s["id"]])}
+        if not f.exists():
+            flags.append("MISSING: no image at {} — generate it".format(f.name))
+        else:
+            st = image_stats(f, exclude=chroma if s.get("cutout") else None)
+            w, h = st["size"]
+            far = abs((w / float(h)) - (s["frame"]["w"] / float(s["frame"]["h"]))) / (s["frame"]["w"] / float(s["frame"]["h"]))
+            if far > ASPECT_MAX:
+                flags.append("ASPECT: {}x{} is far from the {:.2f}:1 frame — regenerate at the frame's aspect".format(
+                    w, h, s["frame"]["w"] / float(s["frame"]["h"])))
+            if key_stats is not None and s["id"] != kid:
+                de = math.dist(st["lab"], key_stats["lab"])
+                hd = _hist_d(st["hue_hist"], key_stats["hue_hist"])
+                row.update(delta_e=round(de, 1), hist=round(hd, 2))
+                if de > de_max or hd > hist_max:
+                    flags.append("OFF-SERIES: colour distance {:.1f} (max {}) / hue {:.2f} (max {}) from the key "
+                                 "— regenerate with --style-ref <key>".format(de, de_max, hd, hist_max))
+            if s.get("cutout"):
+                cut = f.with_name(f.stem + ".cut.png")
+                if not cut.exists():
+                    flags.append("CUTOUT: no {} — run image_fx.chroma_cutout on it".format(cut.name))
+            rec = image_qc.inspect(str(f))
+            recs.append(rec)
+            flags += ["{}: {}".format(c, m) for c, m in rec.get("flags", [])
+                      if not (s.get("cutout") and c == "LETTERBOX")]   # the flat key IS uniform bands
+        row["flags"] = flags
+        if flags and s["id"] != kid and any(x.startswith("OFF-SERIES") for x in flags):
+            outliers.append(s["id"])
+        rows.append(row)
+    rep = {"key": kid, "slots": rows, "outliers": outliers, "acknowledged": {}}
+    (gen_dir / "series-qc.json").write_text(json.dumps(rep, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    if recs:
+        try:
+            image_qc.contact_sheet(recs, str(gen_dir / "_series_contact.png"))
+        except Exception:
+            pass
+    return rep
+
 def _print_problems(probs):
     for p in probs:
         print("  - " + p)
@@ -233,6 +326,9 @@ def main(argv=None):
     p = sub.add_parser("prompts", help="write image_prompt_manifest.json for generate_images_codex.py")
     p.add_argument("plan")
     p.add_argument("out_dir")
+    q = sub.add_parser("qc", help="compare every generated image with the key image")
+    q.add_argument("plan")
+    q.add_argument("--dir", required=True, help="the folder the generator wrote the images into")
     a = ap.parse_args(argv)
     try:
         plan = load(a.plan)
@@ -247,6 +343,18 @@ def main(argv=None):
         print("image_series: {} slot(s), key {!r} — plan OK".format(len(plan["slots"]), key_id(plan)))
         print("NEXT: python3 scripts/image_series.py prompts {} <out_dir>".format(a.plan))
         return 0
+    if a.cmd == "qc":
+        rep = qc(plan, a.dir)
+        flagged = [r for r in rep["slots"] if r["flags"]]
+        for r in flagged:
+            for f in r["flags"]:
+                print("  [{}] {}".format(r["id"], f))
+        print("image_series qc: {} slot(s), {} flagged, outliers {} — wrote {}".format(
+            len(rep["slots"]), len(flagged), rep["outliers"] or "none", Path(a.dir) / "series-qc.json"))
+        if not flagged:
+            print("NEXT: place each slot with image_series.slot_picture(slide, plan, slot_id, x, y, w, h, "
+                  "image_dir=...) and look at the contact sheet {}".format(Path(a.dir) / "_series_contact.png"))
+        return 1 if flagged else 0
     items = prompts(plan, a.out_dir)
     man = Path(a.out_dir) / "image_prompt_manifest.json"
     print("image_series: wrote {} prompt(s) to {}".format(len(items), man))

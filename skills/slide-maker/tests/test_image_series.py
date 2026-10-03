@@ -140,6 +140,60 @@ with tempfile.TemporaryDirectory() as td:
     check(ims.main(["check", str(bp)]) == 1, "check CLI must exit 1 on an invalid plan")
     check(ims.main(["prompts", str(bp), td]) == 1, "prompts CLI must refuse an invalid plan")
 
+# ── QC: consistency with the key image ───────────────────────────────────────────────────────
+from PIL import Image  # noqa: E402
+
+def warm(path, shift=0, size=(400, 300)):
+    im = Image.new("RGB", size)
+    im.putdata([(200 + (x * 30) // size[0], 150 + shift + (y * 20) // size[1], 90 + shift)
+                for y in range(size[1]) for x in range(size[0])])
+    im.save(path)
+
+with tempfile.TemporaryDirectory() as td:
+    td = Path(td)
+    plan = copy.deepcopy(GOOD)
+    plan["slots"].append({"id": "odd", "slide": 4, "frame": {"shape": "rect", "w": 3, "h": 2},
+                          "subject": "a stoneware cup on a linen cloth in daylight", "kind": "object",
+                          "cutout": False, "alt": "a cup", "referent": "generic-concrete",
+                          "meaning": "the everyday object the craft ends in; the cup closes the story"})
+    warm(td / "slide-01-hero.png", size=(300, 400))                       # the key (arch frame 4.2x5.6)
+    warm(td / "slide-03-kettle.png", shift=8, size=(300, 300))
+    Image.new("RGB", (300, 200)).save(td / "slide-04-odd.png")
+    odd = Image.open(td / "slide-04-odd.png")
+    odd.putdata([(20, 60 + (x % 50), 200) for y in range(200) for x in range(300)])       # cold blue: off-series
+    odd.save(td / "slide-04-odd.png")
+    # the kettle slot is a cut-out: it needs its keyed file
+    rep = ims.qc(plan, td)
+    flags = {s["id"]: s["flags"] for s in rep["slots"]}
+    check(any("OFF-SERIES" in f for f in flags["odd"]), "a cold-blue image in a warm series must be OFF-SERIES: {}".format(flags))
+    check(not any("OFF-SERIES" in f for f in flags["kettle"]), "a near-key image must not be OFF-SERIES: {}".format(flags))
+    check(any("CUTOUT" in f for f in flags["kettle"]), "a cut-out slot without its .cut.png must say so")
+    check((td / "series-qc.json").exists(), "qc writes series-qc.json")
+    check(rep["key"] == "hero" and "hero" not in rep["outliers"], "the key is the reference, never an outlier")
+    # a CUT-OUT slot is generated on the key colour: its subject matches the series, its background
+    # never will — the comparison must read the SUBJECT, or every cut-out is "off-series"
+    kim = Image.new("RGB", (300, 300), (0, 177, 64))
+    from PIL import ImageDraw  # noqa: E402
+    sub = Image.open(td / "slide-01-hero.png").resize((180, 180))
+    kim.paste(sub, (60, 60))
+    kim.save(td / "slide-03-kettle.png")
+    repc = ims.qc(plan, td)
+    fk = {s["id"]: s["flags"] for s in repc["slots"]}["kettle"]
+    check(not any("OFF-SERIES" in f for f in fk), "a warm subject on the green key is in-series: {}".format(fk))
+    check(not any(f.startswith("LETTERBOX") for f in fk), "the flat key colour is not a letterbox: {}".format(fk))
+    # ...and when the KEY image itself is a cut-out, the others are compared with its subject
+    pk = copy.deepcopy(plan); pk["key"] = "kettle"
+    fh = {s["id"]: s["flags"] for s in ims.qc(pk, td)["slots"]}["hero"]
+    check(not any("OFF-SERIES" in f for f in fh), "a cut-out key must be compared on its subject: {}".format(fh))
+    # Review Focus 2: an image far from its frame's aspect is flagged
+    warm(td / "slide-01-hero.png", size=(800, 200))                       # 4:1 for a 3:4 arch frame
+    rep2 = ims.qc(plan, td)
+    check(any("ASPECT" in f for f in {s["id"]: s["flags"] for s in rep2["slots"]}["hero"]), "aspect mismatch flagged")
+    # missing file
+    (td / "slide-04-odd.png").unlink()
+    rep3 = ims.qc(plan, td)
+    check(any("MISSING" in f for f in {s["id"]: s["flags"] for s in rep3["slots"]}["odd"]), "missing file flagged")
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_image_series] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)
