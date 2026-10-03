@@ -150,3 +150,39 @@ def contains_point(poly, pt):
         if orient * ((x2 - x1) * (y - y1) - (y2 - y1) * (x - x1)) < -1e-12:
             return False
     return True
+
+
+def centreline(poly, w, h):
+    """The long axis of a rotated frame as a segment ((x0, y0), (x1, y1)). `poly` is its four
+    painted corners in frame order (TL, TR, BR, BL); `w`/`h` the frame size — the long axis runs
+    along whichever is larger. This is what a thin tilted RULE draws."""
+    tl, tr, br, bl = poly
+    if w >= h:
+        return (((tl[0] + bl[0]) / 2.0, (tl[1] + bl[1]) / 2.0),
+                ((tr[0] + br[0]) / 2.0, (tr[1] + br[1]) / 2.0))
+    return (((tl[0] + tr[0]) / 2.0, (tl[1] + tr[1]) / 2.0),
+            ((bl[0] + br[0]) / 2.0, (bl[1] + br[1]) / 2.0))
+
+
+def seg_in_rect(p, q, rect):
+    """Length of segment p-q inside the axis-aligned rect (l, t, w, h) — Liang-Barsky clipping.
+    0.0 when the segment misses the rect or the rect is empty."""
+    l, t, w, h = rect
+    if w <= 0 or h <= 0:
+        return 0.0
+    x0, y0 = p
+    dx, dy = q[0] - x0, q[1] - y0
+    u0, u1 = 0.0, 1.0
+    for pk, qk in ((-dx, x0 - l), (dx, l + w - x0), (-dy, y0 - t), (dy, t + h - y0)):
+        if pk == 0:
+            if qk < 0:
+                return 0.0
+            continue
+        r = qk / pk
+        if pk < 0:
+            u0 = max(u0, r)
+        else:
+            u1 = min(u1, r)
+        if u0 > u1:
+            return 0.0
+    return (u1 - u0) * math.hypot(dx, dy)

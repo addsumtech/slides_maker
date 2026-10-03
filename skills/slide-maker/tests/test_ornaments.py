@@ -125,8 +125,8 @@ with tempfile.TemporaryDirectory() as td:
         return sl
 
     sl = _page("Tape on a print")
-    dk.picture(sl, str(ph), 4.0, 1.6, 4.0, 3.0, fit="cover", rotation=-4, alt="a test print")
-    orn.tape(sl, 5.2, 1.4, 1.6, 0.42, "C9A227")
+    pr = dk.picture(sl, str(ph), 4.0, 1.6, 4.0, 3.0, fit="cover", rotation=-4, alt="a test print")
+    orn.tape(sl, 5.2, 1.4, 1.6, 0.42, "C9A227", holds=pr)
     # a hand-made motif that ALSO declares an overlap, crossing a picture — the composed name
     sl = _page("Declared motif on a picture")
     dk.picture(sl, str(ph), 4.0, 1.6, 4.0, 3.0, fit="cover", alt="a test print")
@@ -139,6 +139,18 @@ with tempfile.TemporaryDirectory() as td:
     dk.picture(sl, str(ph), 4.0, 1.6, 4.0, 3.0, fit="cover", alt="a test print")
     m2 = dk.box(sl, 7.4, 2.0, 1.4, 0.6, fill=dk.RGBColor.from_string("2F5BEA"))
     dk.tag_motif(m2)
+    # 4: tape NOT told what it holds, laid across a solid data card — that is still an OVERLAP
+    #    (final review: a blanket self-declaration waived tape against ANY solid shape)
+    sl = _page("Stray tape on a card")
+    dk.box(sl, 4.0, 1.6, 4.0, 2.4, fill=dk.RGBColor.from_string("DDE6F5"))
+    orn.tape(sl, 7.2, 1.4, 1.6, 0.42, "C9A227")
+    # holds= a shape the tape does not touch is refused, not declared
+    far = dk.picture(sl, str(ph), 0.4, 5.0, 1.5, 1.2, fit="cover", alt="a far print")
+    try:
+        orn.tape(sl, 10.0, 1.0, 1.2, 0.4, "C9A227", holds=far)
+        fails.append("tape(holds=) accepted a print it does not touch")
+    except ValueError:
+        pass
     deck2 = Path(td) / "tape.pptx"
     p2.save(str(deck2))
     buf = io.StringIO()
@@ -149,6 +161,7 @@ with tempfile.TemporaryDirectory() as td:
     check(not ov(1), "lint_deck: tape holding a print is an OVERLAP: {}".format(ov(1)))
     check(not ov(2), "lint_deck: a motif's composed overlap declaration was ignored: {}".format(ov(2)))
     check(ov(3), "lint_deck: the undeclared control must still be an OVERLAP")
+    check(ov(4), "lint_deck: tape with no holds= across a solid card must be an OVERLAP")
 
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_ornaments] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))

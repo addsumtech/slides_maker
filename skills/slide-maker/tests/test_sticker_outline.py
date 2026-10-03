@@ -34,19 +34,36 @@ with tempfile.TemporaryDirectory() as td:
     im.save(src)
     out = image_fx.sticker_outline(str(src), str(td / "st.png"), border=0.05)
     o = Image.open(out).convert("RGBA")
-    check(o.size == im.size, "the outline must not change the canvas size")
-    check(o.getpixel((200, 250))[:3] == (30, 80, 200), "the subject must stay on top, unchanged")
-    check(o.getpixel((200, 92))[3] == 255 and o.getpixel((200, 92))[:3] == (255, 255, 255),
+    # the canvas grows by the border on every side (so a subject at an edge keeps its border);
+    # every original pixel sits at (+d, +d)
+    d = (o.size[0] - im.size[0]) // 2
+    check(d > 0 and o.size == (im.size[0] + 2 * d, im.size[1] + 2 * d), "canvas must grow evenly")
+    check(o.getpixel((200 + d, 250 + d))[:3] == (30, 80, 200), "the subject must stay on top, unchanged")
+    check(o.getpixel((200 + d, 92 + d))[3] == 255 and o.getpixel((200 + d, 92 + d))[:3] == (255, 255, 255),
           "a white border must appear just outside the subject")
     check(o.getpixel((5, 5))[3] == 0, "far outside the silhouette must stay transparent")
     # the border FOLLOWS the silhouette: beside the ellipse's waist it is white, at the frame's
     # corner region (outside the ellipse + border) it is still transparent
-    check(o.getpixel((95, 250))[3] == 255, "the border must hug the side of the silhouette")
-    check(o.getpixel((110, 110))[3] == 0, "the border must not square off the silhouette's corner")
+    check(o.getpixel((95 + d, 250 + d))[3] == 255, "the border must hug the side of the silhouette")
+    check(o.getpixel((110 + d, 110 + d))[3] == 0, "the border must not square off the silhouette's corner")
     # default output path, and a colour given as a tuple
     out2 = image_fx.sticker_outline(str(src), color=(250, 220, 40))
     check(out2.endswith(".sticker.png") and Path(out2).exists(), "default out path")
-    check(Image.open(out2).convert("RGBA").getpixel((200, 92))[:3] == (250, 220, 40), "tuple colour")
+    o2 = Image.open(out2).convert("RGBA")
+    d2 = (o2.size[0] - im.size[0]) // 2
+    check(o2.getpixel((200 + d2, 92 + d2))[:3] == (250, 220, 40), "tuple colour")
+    # a TIGHT cut-out (background-removal tools crop to the subject): the subject touches every
+    # edge, so a same-size canvas has no room for the border. The canvas grows by the border.
+    tight = td / "tight.png"
+    ti = Image.new("RGBA", (300, 400), (0, 0, 0, 0))
+    ImageDraw.Draw(ti).ellipse((0, 0, 299, 399), fill=(30, 80, 200, 255))
+    ti.save(tight)
+    to = Image.open(image_fx.sticker_outline(str(tight), str(td / "tight_st.png"), border=0.05)).convert("RGBA")
+    pad_px = to.size[0] - 300
+    check(pad_px > 0 and to.size == (300 + pad_px, 400 + pad_px),
+          "a tight cut-out must get a canvas grown by the border on every side, got {}".format(to.size))
+    check(to.getpixel((to.size[0] // 2, pad_px // 2 - 1))[3] == 255,
+          "no border above a subject that touched the top edge")
     for bad in ("opaque.jpg", "opaque.png"):
         Image.new("RGB", (50, 50), (200, 10, 10)).save(td / bad)
         try:

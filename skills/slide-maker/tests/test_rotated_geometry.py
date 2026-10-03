@@ -236,6 +236,160 @@ check("TEXT_GRAZES_SHAPE" in _codes(mp, 2) or "TEXT_OVERLAP" in _codes(mp, 2),
       "TEXT_GRAZES_SHAPE: a rotated label dipping into a filled bar was not seen "
       "(got {})".format(_codes(mp, 2)))
 
+# ── TILTED (non-axis) shapes: position from the painted polygon, CLASSIFICATION from the frame ──
+# Final review, 2026-10-03, every case confirmed BASE-vs-HEAD by probe: using the tilted shape's
+# axis box where the polygon or the frame was needed produced false hard findings (a tilted kicker
+# near body copy; a thin tilted rail read as a "card") AND silenced real ones (a tilted motif bar
+# read as a "ground", a 2deg strike rule no longer "thin", a vertical label stealing the headline).
+INK = dk.RGBColor.from_string("141414")
+tp = dk.blank_deck(13.333, 7.5)
+
+
+def _slide(title):
+    sl = dk.add_slide(tp)
+    dk.slide_background(sl, dk.WHITE)
+    dk.text(sl, 0.8, 0.4, 11, 0.8, [[(title, 32, INK, True, False)]])
+    return sl
+
+
+def _kicker(sl):
+    lab = dk.text(sl, 3.0, 3.0, 6.0, 0.6, [[("A TILTED KICKER LABEL ACROSS", 24, INK, True, False)]])
+    lab.rotation = -10
+    return lab
+
+
+# find a body position whose ink is CLEAR of the tilted kicker's ink polygon but inside its axis box
+_probe = dk.blank_deck(13.333, 7.5)
+_ps = dk.add_slide(_probe)
+_lab = _kicker(_ps)
+_lb = dk._bbox_in(_lab)
+_li = dk._placed_ink(_lab, _lb, dk._ink_rect(_lab, _lb)[0])
+apart = None
+for _by in [v / 20 for v in range(40, 80)]:
+    for _bx in (2.4, 3.0, 6.0, 7.2, 8.0):
+        _b = dk.text(_ps, _bx, _by, 2.4, 0.5, [[("Body copy", 20, INK, False, False)]])
+        _bb = dk._bbox_in(_b)
+        _bi = dk._ink_rect(_b, _bb)[0]
+        _ax = max(0, min(_li[0] + _li[2], _bi[0] + _bi[2]) - max(_li[0], _bi[0])) * \
+            max(0, min(_li[1] + _li[3], _bi[1] + _bi[3]) - max(_li[1], _bi[1]))
+        # past TEXT_OVERLAP's own bar (> 0.05in2 and > 22% of the smaller ink) on the AXIS box
+        if apart is None and _ax > max(0.06, 0.30 * _bi[2] * _bi[3]) \
+                and dk._overlap_area(_li, _bi) == 0.0:
+            apart = (_bx, _by)
+check(apart is not None, "fixture: no position clear of the tilted kicker inside its axis box")
+apart = apart or (8.0, 3.95)
+
+s1 = _slide("Tilted kicker, body clear")                     # 1  correct
+_kicker(s1)
+dk.text(s1, apart[0], apart[1], 2.4, 0.5, [[("Body copy", 20, INK, False, False)]])
+s2 = _slide("Tilted kicker, body crossed")                   # 2  broken
+_kicker(s2)
+dk.text(s2, 4.6, 3.05, 2.4, 0.5, [[("Body copy", 20, INK, False, False)]])
+s3 = _slide("Thin tilted rail above a label")                # 3  correct (no card)
+rail = dk.box(s3, 1.0, 1.4, 5.45, 0.28, fill=dk.RGBColor.from_string("2F5BEA"))
+rail.rotation = 9
+dk.text(s3, 1.2, 1.78, 4.4, 0.36, [[("DOMESTIC LEARNER VOLUME", 14, INK, True, False)]])
+s4 = _slide("Tilted motif bar under a caption")              # 4  broken (text over motif)
+bar = dk.box(s4, 2.0, 3.5, 6.0, 0.3, fill=dk.RGBColor.from_string("E5483B"))
+bar.rotation = 10
+dk.tag_motif(bar)
+dk.text(s4, 3.5, 3.3, 3.0, 0.7, [[("Caption across", 24, INK, False, False)]])
+s5 = _slide("Strike")                                        # 5  broken (rule through text)
+dk.text(s5, 1.0, 2.0, 6.0, 0.8, [[("The old plan we abandoned", 28, INK, False, False)]])
+rule = dk.box(s5, 1.0, 2.38, 5.6, 0.03, fill=dk.RGBColor.from_string("E5483B"))
+rule.rotation = 2
+s6 = dk.add_slide(tp)                                        # 6  broken (headline crowded)
+dk.slide_background(s6, dk.WHITE)
+dk.text(s6, 1.4, 0.5, 10, 0.8, [[("A headline that sits on top", 36, INK, True, False)]])
+dk.text(s6, 1.4, 1.12, 9, 1.0, [[("Body copy placed right under the headline with no gap.", 20, INK, False, False)]])
+vl = dk.text(s6, -1.9, 3.5, 5.0, 0.5, [[("SECTION ONE · THE SETUP", 16, INK, False, False)]],
+             align=dk.PP_ALIGN.RIGHT)
+vl.rotation = 270
+
+tl = dk.lint_layout(tp, verbose=False)
+
+
+def _has(n, code, sev=None):
+    return any(s_ == n and c == code and (sev is None or sv == sev) for (s_, sv, c, m) in tl)
+
+
+check(not _has(1, "TEXT_OVERLAP"), "C1 build: body CLEAR of a tilted kicker is a TEXT_OVERLAP")
+check(_has(2, "TEXT_OVERLAP", "CRITICAL"), "C1 build: body crossed by a tilted kicker not caught")
+check(_has(4, "TEXT_OVER_MOTIF"), "I1a: a caption across a TILTED motif bar went silent")
+check(_has(5, "RULE_THROUGH_TEXT", "CRITICAL"), "I1b build: a 2deg strike rule through text went silent")
+check(_has(6, "HEADLINE_CROWDED"), "I1c: a vertical label stole the headline; HEADLINE_CROWDED silent")
+
+with tempfile.TemporaryDirectory() as td:
+    dp = Path(td) / "tilt.pptx"
+    tp.save(str(dp))
+    tf_ = deck_findings(dp)
+    c1 = [x for x in tf_.get(1, []) if "TEXT COLLISION" in x]
+    check(not c1, "C1 render: body CLEAR of a tilted kicker is a TEXT COLLISION: {}".format(c1))
+    c2 = [x for x in tf_.get(2, []) if "TEXT COLLISION" in x]
+    check(c2, "C1 render: body crossed by a tilted kicker not caught")
+    pad = [x for x in tf_.get(3, []) if "TEXT PADDING" in x]
+    check(not pad, "C2: a thin tilted rail was read as a card: {}".format(pad))
+    rt = [x for x in tf_.get(5, []) if "RULE THROUGH TEXT" in x]
+    check(rt, "I1b render: a 2deg strike rule through text went silent")
+    # a big print tilted 4deg is still CONTENT, not the page background
+    bp = Presentation()
+    bp.slide_width, bp.slide_height = Inches(13.333), Inches(7.5)
+    from PIL import Image as _Im
+    _ph = Path(td) / "ph.png"
+    _im = _Im.new("RGB", (600, 350))
+    _im.putdata([(80 + x // 6, 60 + y // 6, 40) for y in range(350) for x in range(600)])
+    _im.save(_ph)
+    bs = bp.slides.add_slide(bp.slide_layouts[6])
+    pic = bs.shapes.add_picture(str(_ph), Inches(0.66), Inches(0.25), Inches(12.0), Inches(7.0))
+    pic.rotation = 4
+    rec = [r for r in lint_deck._boxes(bs, 13.333, 7.5) if r.get("pic")][0]
+    check(not rec["bg"], "I1: a 12x7 print tilted 4deg was classified as the page background")
+
+# ── found re-running real decks after the fix pass (2026-10-03) ─────────────────────────────────
+# TEXT PADDING is a question about text in a card of the SAME orientation: a 270deg label whose
+# painted top reaches into an unrotated picture is not "running past the picture's bottom" (a real
+# deck's "Fourier" arrow label), while rotated text overflowing its own rotated chip IS — measured
+# in the shared frame, as the base code did. And 6f must not fire on two vertical labels set at an
+# ordinary line pitch: its floor is TEXT_OVERLAP's absolute 0.05in2, not the ink estimate's noise.
+rp = dk.blank_deck(13.333, 7.5)
+
+
+def _rslide():
+    sl = dk.add_slide(rp)
+    dk.slide_background(sl, dk.WHITE)
+    return sl
+
+
+sa = _rslide()                                               # 1  correct: different orientations
+dk.box(sa, 5.0, 1.0, 2.0, 1.0, fill=dk.RGBColor.from_string("DDE6F5"))
+fo = dk.text(sa, 5.5, 2.0, 0.94, 0.4, [[("Fourier", 16, INK, False, False)]])
+fo.rotation = 270
+sb = _rslide()                                               # 2  broken: overflows its own chip
+chip = dk.box(sb, 4.0, 3.0, 3.0, 0.5, fill=dk.RGBColor.from_string("DDE6F5"))
+chip.rotation = 90
+ov_t = dk.text(sb, 4.0, 3.0, 3.0, 0.5, [[("A label far too long to fit inside its little rotated chip at all", 16, INK, False, False)]])
+ov_t.rotation = 90
+sc = _rslide()                                               # 3  correct: ordinary 0.18in pitch
+for i, w_ in enumerate(("4 chamber", "2 chamber")):
+    v = dk.text(sc, 4.0 + 0.18 * i, 3.0, 1.3, 0.32, [[(w_, 13, INK, False, False)]])
+    v.rotation = 270
+sd = _rslide()                                               # 4  broken: 0.10in pitch, glyphs collide
+for i, w_ in enumerate(("4 chamber", "2 chamber")):
+    v = dk.text(sd, 4.0 + 0.10 * i, 3.0, 1.3, 0.32, [[(w_, 13, INK, False, False)]])
+    v.rotation = 270
+with tempfile.TemporaryDirectory() as td:
+    dp = Path(td) / "rp.pptx"
+    rp.save(str(dp))
+    rf = deck_findings(dp)
+    check(not [x for x in rf.get(1, []) if "TEXT PADDING" in x],
+          "a 270deg label reaching into an unrotated picture was judged for padding: {}".format(rf.get(1)))
+    check([x for x in rf.get(2, []) if "TEXT PADDING" in x or "CHIP/LABEL" in x],
+          "rotated text overflowing its own rotated chip went silent: {}".format(rf.get(2)))
+    check(not [x for x in rf.get(3, []) if "TEXT COLLISION" in x],
+          "two vertical labels at an ordinary 0.18in pitch were a TEXT COLLISION: {}".format(rf.get(3)))
+    check([x for x in rf.get(4, []) if "TEXT COLLISION" in x],
+          "two vertical labels at a 0.10in pitch (glyphs collide) were not caught")
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_rotated_geometry] {}".format(
     "FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))

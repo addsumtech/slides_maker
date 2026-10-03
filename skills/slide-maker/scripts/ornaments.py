@@ -142,10 +142,14 @@ def brush_stroke(slide, x, y, w, h, color, *, seed=0, rotation=0.0, loud=False):
     return _shape(slide, x, y, w, h, path, fill=color, loud=loud, rotation=rotation)
 
 
-def tape(slide, x, y, w, h, color, *, rotation=-4.0, alpha=0.75, seed=0, loud=False):
+def tape(slide, x, y, w, h, color, *, rotation=-4.0, alpha=0.75, seed=0, loud=False, holds=None):
     """A strip of translucent TAPE with torn (zig-zag) short ends — holding a print to the page.
 
-    It declares its own overlap (holding the print IS the overlap). 🔴 Where it sits on the PAGE
+    `holds=<the picture or card it is stuck to>` declares that overlap — holding the print IS the
+    overlap — after checking the tape really touches it (a `holds=` it does not touch RAISES).
+    Without `holds=` nothing is declared, so tape laid across any other solid shape is still an
+    OVERLAP: a helper that declared for itself on every call was a standing waiver against ANY
+    shape (final review, 2026-10-03). 🔴 Where it sits on the PAGE
     ground it is a small mark under WCAG 1.4.11: a pale washi tone on a light page (e.g. F2D16B on
     F4EEE3, 1.29:1) is a NON-TEXT CONTRAST finding, which the hand-off gate holds the deck on —
     pick a tape colour at >= 3:1 against the page, or keep it over the picture."""
@@ -163,9 +167,13 @@ def tape(slide, x, y, w, h, color, *, rotation=-4.0, alpha=0.75, seed=0, loud=Fa
             for i in range(teeth + 1)]
     path = '<a:path w="{u}" h="{u}">{d}</a:path>'.format(u=_U, d=_ring(right + left))
     sh = _shape(slide, x, y, w, h, path, fill=color, alpha=alpha, loud=loud, rotation=rotation)
-    # Tape EXISTS to overlap the print it holds, so it says so: the declaration composes with the
-    # motif tag and waives the solid-vs-solid GEOMETRY only — OCCLUSION, contrast and
-    # TEXT_OVER_MOTIF still apply (a tape laid over text is still caught).
+    if holds is None:
+        return sh
+    # The declaration composes with the motif tag and waives the solid-vs-solid GEOMETRY only —
+    # OCCLUSION, contrast and TEXT_OVER_MOTIF still apply (tape laid over text is still caught).
+    if dk._overlap_area(dk._placed_box(sh), dk._placed_box(holds)) <= 0.0:
+        raise ValueError("tape(holds=…): the tape does not touch the shape it claims to hold — "
+                         "move it onto the print's edge")
     return dk.overlap_intent(sh, "tape holds the print it is stuck to")
 
 

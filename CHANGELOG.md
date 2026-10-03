@@ -18,7 +18,16 @@ finding in either gate. `scripts/rotgeom.py` is now the one definition of where 
 paints — exact at 90° multiples, with an exact intersection for tilted pairs — and both gates use
 it, including `TEXT_OVER_MOTIF`, `TEXT_GRAZES_SHAPE` and `FOOTER BAND`; text still wraps in its
 frame. A new render-time check catches rotated text laid across other text, which the column-based
-`TEXT COLLISION` cannot see. Unrotated shapes measure exactly as before.
+`TEXT COLLISION` cannot see. Unrotated shapes measure exactly as before — checked on 126 real decks,
+byte-identical findings.
+
+🔴 A tilted shape is POSITIONED by where it paints and CLASSIFIED by its own size. The first cut
+used a tilted shape's axis box for both, and an independent review found it wrong both ways on probe
+and real decks: a thin rail at 9° became a "card" (false hard `TEXT PADDING`), a tilted kicker clear
+of the body copy a CRITICAL `TEXT_OVERLAP`, while a 2° strike rule stopped being "thin", a tilted
+motif bar became a "ground", and a vertical margin label stole the headline — silencing three checks.
+Thin, card, ground, background and headline are now decided from the frame or the true area; text
+padding is judged only between text and a card of the same orientation.
 
 On that footing, the drawing vocabulary of image-led editorial decks:
 
@@ -28,9 +37,13 @@ On that footing, the drawing vocabulary of image-led editorial decks:
   under WCAG on its highlight is refused, and the contrast gate reads a highlight as that run's
   backing, so a hand-written pair is caught too.
 - `scripts/ornaments.py`: squiggle, scribble, brush stroke, tape and scallop — native, editable, and
-  tagged as motif so the budget and `TEXT_OVER_MOTIF` see them.
-- `image_fx.sticker_outline`: a die-cut border grown from a cut-out's own alpha; an opaque photo is
-  refused, because outlining its frame would hand back a bordered rectangle.
+  tagged as motif so the budget and `TEXT_OVER_MOTIF` see them. `tape(..., holds=pic)` declares the
+  one overlap it exists for, and refuses a print it does not touch; without `holds=` nothing is
+  waived. `lint_deck` now reads an overlap declaration composed onto a motif, as `lint_layout`
+  already did.
+- `image_fx.sticker_outline`: a die-cut border grown from a cut-out's own alpha, on a canvas grown by
+  the border so a tightly cropped subject keeps it at every edge; an opaque photo is refused, because
+  outlining its frame would hand back a bordered rectangle.
 - `frosted_panel`: real glass, blurred from exactly the picture region under the panel, with the ink
   judged on the glass's own pixels at the lightest wash that clears 4.5:1. A blur that comes out one
   flat colour is drawn as a box, by the same flatness rule `ASSET NOT USABLE` uses.

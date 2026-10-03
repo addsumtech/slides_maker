@@ -9726,7 +9726,7 @@ def _is_motif_ground(sh, bb, W, H):
     and both are well under the floor."""
     if bb[2] >= W * 0.92 and bb[3] >= H * 0.92:
         return True
-    if (bb[2] * bb[3]) < (W * H) * 0.03:
+    if _area_of(bb) < (W * H) * 0.03:                 # TRUE area: a tilted bar's axis box is not it
         return False                                  # rules, rings, nodes: devices, whatever fill
     try:
         return sh.fill.type == MSO_FILL.SOLID
@@ -10546,7 +10546,11 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
                 # actually erases its text is still caught.
                 continue
             rw, rh = bb_r[2], bb_r[3]
-            thin, long_ = min(rw, rh), max(rw, rh)
+            _poly_r = getattr(bb_r, "poly", None)
+            # a TILTED rule: its thickness is the FRAME's (its axis box at 2deg is 7x thicker —
+            # measured, final review 2026-10-03, a 5.6 x 0.03 strike rule stopped counting as one)
+            _fr = _bbox_in(sh_r) if _poly_r is not None else bb_r
+            thin, long_ = min(_fr[2], _fr[3]), max(_fr[2], _fr[3])
             if thin > RULE_MAX_THICK or long_ < RULE_MIN_LEN:
                 continue                                   # not a rule: a panel, a chip, a dot
             try:
@@ -10559,7 +10563,12 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
                 if ink_t is None or sh_t is sh_r:
                     continue
                 ix0, iy0, iw, ih = ink_t
-                if horiz:
+                if _poly_r is not None:
+                    # its centreline, clipped to the ink inset by the same pad on every side
+                    p_, q_ = rotgeom.centreline(_poly_r, _fr[2], _fr[3])
+                    cross = rotgeom.seg_in_rect(p_, q_, (ix0 + RULE_INSIDE_PAD, iy0 + RULE_INSIDE_PAD,
+                                                         iw - 2 * RULE_INSIDE_PAD, ih - 2 * RULE_INSIDE_PAD))
+                elif horiz:
                     cy = bb_r[1] + rh / 2.0
                     if not (iy0 + RULE_INSIDE_PAD < cy < iy0 + ih - RULE_INSIDE_PAD):
                         continue                           # above or below the ink — the normal case
@@ -10725,7 +10734,23 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
         #      a phantom overlap — keeping the "never fabricates when fonts are substituted" promise.
         def _deflate(t):
             ink, s = t[1], t[3]
-            return (ink[0], ink[1]+s/2.0, ink[2], max(0.03, ink[3]-s))
+            poly = getattr(ink, "poly", None)
+            if poly is None:
+                return (ink[0], ink[1]+s/2.0, ink[2], max(0.03, ink[3]-s))
+            # A TILTED ink keeps its polygon (dropping it made the axis box the overlap, and a
+            # tilted kicker clear of the body copy read as a CRITICAL TEXT_OVERLAP — final review
+            # 2026-10-03). The substituted-font slack shrinks it along its OWN vertical.
+            if not s:
+                return ink
+            tl, tr, br, bl = poly
+            hx, hy = bl[0] - tl[0], bl[1] - tl[1]
+            hl = math.hypot(hx, hy) or 1.0
+            d = min(s / 2.0, max(0.0, (hl - 0.03) / 2.0))
+            ux, uy = hx / hl * d, hy / hl * d
+            npoly = [(tl[0]+ux, tl[1]+uy), (tr[0]+ux, tr[1]+uy), (br[0]-ux, br[1]-uy), (bl[0]-ux, bl[1]-uy)]
+            out = _Placed(rotgeom.bbox(npoly))
+            out.poly = npoly
+            return out
         def _declared(t):
             return (getattr(t[0], "name", "") or "").startswith(OVERLAP_TAG)
         for i in range(len(text_inks)):
@@ -10737,7 +10762,7 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
                     continue
                 a, b = _deflate(text_inks[i]), _deflate(text_inks[j])
                 ov = _overlap_area(a, b)
-                if ov > overlap_tol and ov > 0.22*min(a[2]*a[3], b[2]*b[3]):
+                if ov > overlap_tol and ov > 0.22*min(_area_of(a), _area_of(b)):
                     ta = _snip(text_inks[i][0].text_frame.text,18)
                     tb = _snip(text_inks[j][0].text_frame.text,18)
                     _hint = ""
@@ -10781,6 +10806,9 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
                 continue
             if _declared(t):                          # deliberately composed — not a collision
                 continue
+            if _shape_rot(_sh):
+                continue                              # a rotated margin label is not the headline
+                                                      # (it stole the slot and silenced the check)
             _fs = _max_font_pt(_sh) if "_max_font_pt" in dir() else None
             _key = _fs if _fs else _ink[3]            # font size when known, else ink height
             if _head is None or _key > _head[0]:

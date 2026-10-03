@@ -311,9 +311,9 @@ EXAMPLES = {
                 'dk.text(s, 0.6, 0.6, 6.0, 0.8, [[("The claim", 30, dk.DEEP, True, False)]])\n'
                 'orn.squiggle(s, 0.7, 1.45, 3.4, 0.3, "E5483B")   # under the claim',
     "tape": 'import ornaments as orn\n'
-            'dk.picture(s, "skyline.png", 3.0, 1.2, 3.6, 2.7, fit="cover", rotation=-3,\n'
-            '           alt="a city skyline under an open sky")   # a pinned print\n'
-            'orn.tape(s, 4.1, 0.98, 1.4, 0.4, "F2D16B")        # holding it to the page',
+            'pic = dk.picture(s, "skyline.png", 3.0, 1.2, 3.6, 2.7, fit="cover", rotation=-3,\n'
+            '                 alt="a city skyline under an open sky")   # a pinned print\n'
+            'orn.tape(s, 4.1, 0.98, 1.4, 0.4, "F2D16B", holds=pic)   # holding it to the page',
 }
 
 

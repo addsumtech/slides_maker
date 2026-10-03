@@ -117,6 +117,10 @@ def sticker_outline(src, out=None, *, border=0.035, color="FFFFFF"):
     Returns the out path (default `<src>.sticker.png`). Place it with `deckkit.picture(...,
     fit="contain")` — the transparency is the shape, so no mask is needed.
 
+    The canvas GROWS by the border on every side (every original pixel moves by the same offset):
+    background-removal tools crop tight to the subject, and on a same-size canvas a subject
+    touching the edge got no border exactly at its head and feet (final review, 2026-10-03).
+
     The cut-paper / doodle registers put people and objects on the page as stickers; the border
     has to follow the silhouette, so it is built from the alpha channel (a blur-and-threshold
     dilation, which grows ROUND — a max-filter grows square and would square off every corner).
@@ -134,6 +138,11 @@ def sticker_outline(src, out=None, *, border=0.035, color="FFFFFF"):
         raise ValueError("sticker_outline(): {} is fully opaque — cut the subject out first"
                          .format(src))
     px = max(1, int(round(border * min(im.size))))
+    pad = px + 2                                     # room for the border wherever the subject is
+    grown_im = Image.new("RGBA", (im.size[0] + 2 * pad, im.size[1] + 2 * pad), (0, 0, 0, 0))
+    grown_im.paste(im, (pad, pad))
+    im = grown_im
+    alpha = im.getchannel("A")
     solid = alpha.point(lambda v: 255 if v > 24 else 0)
     grown = solid.filter(ImageFilter.GaussianBlur(px / 2.0)).point(lambda v: 255 if v > 6 else 0)
     rgb = _hex(color)

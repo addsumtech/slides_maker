@@ -304,11 +304,22 @@ def _boxes(slide, sw, sh, slide_no=None, record=True):
         except Exception:
             _rot = 0.0
         # (underscored: this function already binds `ft` to the FILL TYPE further down)
+        # POSITION comes from where it paints (l/t/r/b); SIZE CLASSIFICATION (thin rule, card,
+        # small mark, page background) comes from the shape's true size. At 90deg multiples the
+        # two agree exactly. For a TILT they do not: the axis box of a 5.45 x 0.28 rail at 9deg is
+        # 1.13in tall — a "card" — and of a 5.6 x 0.03 rule at 2deg 0.22in — no longer "thin".
+        # Measured (final review, 2026-10-03): that one confusion produced false hard TEXT
+        # PADDING on a real deck AND silenced RULE THROUGH TEXT. So a tilted record keeps its
+        # frame w/h, and r/b carry the painted extent.
         _fl, _ft, _fw, _fh = l, t, w, h
         poly = None
+        _pr = _pb = None
         if _rot:
-            l, t, w, h = rotgeom.placed(_fl, _ft, _fw, _fh, _rot)
-            if not rotgeom.is_axis(_rot):
+            _pl, _pt, _pw, _ph = rotgeom.placed(_fl, _ft, _fw, _fh, _rot)
+            l, t, _pr, _pb = _pl, _pt, _pl + _pw, _pt + _ph
+            if rotgeom.is_axis(_rot):
+                w, h = _pw, _ph
+            else:
                 poly = rotgeom.corners(_fl, _ft, _fw, _fh, _rot)
         full = s.text_frame.text.strip() if s.has_text_frame else ""
         txt = full.replace("\n", " ")[:26]
@@ -408,7 +419,8 @@ def _boxes(slide, sw, sh, slide_no=None, record=True):
                 PP_PLACEHOLDER.TITLE, PP_PLACEHOLDER.CENTER_TITLE)
         except Exception:
             tph = False
-        out.append({"l": l, "t": t, "w": w, "h": h, "r": l + w, "b": t + h, "zi": zi,
+        out.append({"l": l, "t": t, "w": w, "h": h, "zi": zi,
+                    "r": l + w if _pr is None else _pr, "b": t + h if _pb is None else _pb,
                     "rot": _rot, "fl": _fl, "ft": _ft, "fw": _fw, "fh": _fh, "poly": poly,
                     "runs": run_colors, "run_hl": run_hl, "fill": fill_rgb, "unk": fill_unk, "pic": is_pic, "grad": is_grad,
                     "icon": icon_ink,
@@ -1801,7 +1813,7 @@ def _slide_stats(slide, bx, sw, sh):
         if _s["bg"] or _s["t"] >= footer_y or _s["w"] <= 0 or _s["h"] <= 0:
             continue
         _a = _s["w"] * _s["h"]
-        _lean_num += _a * (_s["l"] + _s["w"] / 2.0)
+        _lean_num += _a * ((_s["l"] + _s["r"]) / 2.0 if _s.get("poly") else _s["l"] + _s["w"] / 2.0)
         _lean_den += _a
     lean_x = ((_lean_num / _lean_den) - sw / 2.0) / (sw / 2.0) if _lean_den > 0 else 0.0
     # card-dominance input: how much of the canvas is covered by LARGE solid panels/cards (the
@@ -3260,6 +3272,26 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
                                 f"end of the block above it, or draw it before the text")
                             break
                         b0 = None
+            # A TILTED thin shape painted over the text: the row bands above cannot see it — it
+            # crosses the rows diagonally, so no single row reaches the 50% that makes a band
+            # (measured, final review 2026-10-03: a 2deg strike rule through a line went silent).
+            # Measure its centreline inside the glyph zone (above the underline band) instead.
+            if not any(f.startswith("RULE THROUGH TEXT") and s["txt"][:28] in f for f in finds):
+                _lh = max(s.get("size", 12), 1) / 72.0 * 1.25
+                _zone = (_rl, _rt, _rr - _rl, (_rb - min(0.045, 0.30 * _lh)) - _rt)
+                for k in range(ti + 1, len(bx)):
+                    o = bx[k]
+                    if (not o.get("poly") or o["text"] or o.get("bg") or o.get("unk") or o["pic"]
+                            or not o["fill"] or min(o["w"], o["h"]) > 0.06):
+                        continue
+                    p_, q_ = rotgeom.centreline(o["poly"], o["w"], o["h"])
+                    span = rotgeom.seg_in_rect(p_, q_, _zone)
+                    if span >= 0.5 * (_rr - _rl):
+                        finds.append(
+                            f"RULE THROUGH TEXT: a tilted {span:.2f}in rule is painted OVER "
+                            f"'{s['txt'][:28]}' — derive the rule's position from the measured "
+                            f"end of the block above it, or draw it before the text")
+                        break
             back = _backing_fill(bx, ti, chrome=chrome)
             # A run on a HIGHLIGHT is judged against the highlight, whatever the shape backing
             # resolves to — otherwise dark ink on a dark highlight passes, because the backing this
@@ -3568,9 +3600,19 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
         # a "card" for padding is a SMALL filled block (not a full/half-slide scrim or background plate)
         cards = [s for s in bx if s["solid"] and not s["bg"] and not s["text"] and s["h"] > 0.35
                  and s["w"] * s["h"] < 0.45 * sw * sh]
-        for t in [s for s in bx if s["text"]]:
+        for t0 in [s for s in bx if s["text"]]:
+            # Padding is a question about text in a card of the SAME orientation, asked in their
+            # shared FRAME (exactly the base behaviour for such a pair). A label at 270deg reaching
+            # into an unrotated picture is not "running past its bottom" — measured on a real deck,
+            # the placed-space version called a rotated arrow label that fits a padding fault.
+            _tr = t0.get("rot") or 0.0
+            t = _frame(t0)
             host = None
-            for c in cards:
+            for c0 in cards:
+                _d = ((c0.get("rot") or 0.0) - _tr) % 180.0   # a card has no text: 180deg-periodic
+                if min(_d, 180.0 - _d) > 0.5:
+                    continue                     # different orientation: not this check's question
+                c = _frame(c0)
                 if c["l"] - 0.12 <= t["l"] and t["r"] <= c["r"] + 0.12 and c["t"] - 0.12 <= t["t"] <= c["b"] - 0.05:
                     if host is None or c["b"] < host["b"]:
                         host = c
@@ -3586,8 +3628,8 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
             squarish = 0.6 <= (host["w"] / max(0.01, host["h"])) <= 1.7
             if glyphs <= 2 and squarish and host["w"] <= 1.2:
                 continue
-            rl, rt, rr, rb = _rbox(t)
-            nlines = _est_lines(t["paras"], _frame(t)["w"], t.get("font"), t.get("bold", False))
+            rl, rt, rr, rb = _rbox_frame(t)                   # `t` is the frame record here
+            nlines = _est_lines(t["paras"], t["w"], t.get("font"), t.get("bold", False))
             if rb > host["b"] - PAD:                          # rendered text crammed against / past the card bottom
                 kind = "runs PAST" if rb > host["b"] + 0.03 else "is cramped against (< pad)"
                 finds.append(f"TEXT PADDING: '{t['txt']}' (~{nlines} lines) {kind} the card bottom "
@@ -3607,9 +3649,11 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
         #     lower one in the same column (the wrap-collision a 'declared-box' overlap check never sees).
         txts = [s for s in bx if s["text"] and not s["bg"] and s["t"] < sh - 0.55 and len(s["full"].strip()) > 1]
         for a in txts:
+            if a.get("rot"):
+                continue                                         # 6f owns rotated text, exactly
             arl, art, arr, arb = _rbox(a)
             for b in txts:
-                if b is a:
+                if b is a or b.get("rot"):
                     continue
                 brl, brt, brr, brb = _rbox(b)
                 if brt <= art + 0.05:                                  # b must sit clearly below a
@@ -3638,7 +3682,10 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
                 if b is a or (b.get("grp") is not None and b.get("grp") == a.get("grp")):
                     continue
                 A_, _ = rotgeom.overlap(pa_, _rpoly(b))
-                if A_ > 0.02:
+                # the same absolute floor as build-time TEXT_OVERLAP (overlap_tol=0.05in2): the
+                # ink boxes are ESTIMATES, and two vertical labels set at an ordinary line pitch
+                # overlapped by 0.02-0.04in2 of estimate on a real deck while their glyphs did not
+                if A_ > 0.05:
                     finds.append(f"TEXT COLLISION: rotated '{a['txt']}' runs across '{b['txt']}' "
                                  f"({A_:.2f}in² of ink overlap) — move the label into the margin "
                                  f"or shorten it")
