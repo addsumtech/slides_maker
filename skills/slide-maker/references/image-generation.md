@@ -82,12 +82,32 @@ slot whatever else it shows — `check` refuses it under `scene`/`object`/`illus
 gate blocks a generated person set beside a name joined to a role,
 a quote attribution, or team / testimonial wording, when the slide carries no 'fictional' label.
 
-**The plan — `series.json`.** `art_direction` (one line a stranger could paint from) · `palette` (2-8
-`RRGGBB`) · `render` (`photo` | `illustration` — it goes INTO every prompt) · `chroma` (the cut-out
-key: `00B140`, or `FF00FF` when the subject or palette is green — `check` refuses a key near a
-palette colour) · `key` (optional; the first slot by default) · `slots`: `{id, slide, frame: {shape,
-w, h}, subject, kind, cutout, calm_zone, focus, alt, meaning, referent, persona_label}` — `shape` is
-`rect` or a `picture()` shape (`ellipse`/`arch`/`snip`/`notch`/`blob`), `w`/`h` the inches it fills.
+**The plan — `series.json`.** One JSON object; `python3 scripts/image_series.py check` names every
+field it refuses, but write it right the first time:
+
+| field | value |
+|---|---|
+| `art_direction` | one line a stranger could paint from (≥ 24 wide; CJK counts 2) — verbatim in every prompt |
+| `palette` | 2-8 `"RRGGBB"` strings |
+| `render` | `photo` or `illustration` — the render clause goes INSIDE every prompt |
+| `chroma` | the cut-out key — only these two values: `00B140` (default) or `FF00FF` (when the subject or palette is green; `check` refuses a key near a palette colour). It is the colour the generator is ASKED for, not one sampled from an image |
+| `key` | optional slot id of the KEY image (default: the first slot); it must not be a cut-out |
+| `slots` | a list of slot objects, below |
+
+| slot field | value |
+|---|---|
+| `id` | `[a-z0-9-]`, 1-40 chars, unique — the image file is `slide-NN-<id>.png` (NN = `slide`, two digits) |
+| `slide` | the deck slide number it sits on (≥ 1) |
+| `frame` | `{"shape": …, "w": inches, "h": inches}` — `shape` is `rect`, `ellipse`, `arch`, `snip`, `notch` or `blob`; `w`/`h` the box it will fill (its aspect steers the generation) |
+| `subject` | what is in the picture (≥ 12 wide) |
+| `kind` | `scene`, `object`, `illustration`, `generic-person` or `persona` (with `persona_label`); `team-member`, `customer`, `testimonial` and `real-person` are refused |
+| `cutout` | `true` → generated on the `chroma` key and cut out; default `false` |
+| `calm_zone` | optional — where text will sit over the image, as words (`"left"`, `"upper left"`, `"right"`), or `"none"`; it goes into the prompt as "leave a calm, low-detail area at …" |
+| `focus` | optional `[fx, fy]`, each 0..1 — the point a cover crop keeps (default `[0.5, 0.5]`) |
+| `alt` | the alt text (required) |
+| `meaning` | what this image SAYS on its slide (≥ 24 wide) |
+| `referent` | `generic-concrete`, `stylized` (needs `render: "illustration"`) — `real-specific` is refused |
+| `persona_label` | `persona` only: the visible label set on its slide, e.g. "Illustrative persona" / "虚构人物" |
 
 **The commands, in order** (each prints the next one):
 
@@ -113,8 +133,21 @@ with the key (mean colour + hue histogram; a cut-out on its subject only), flags
 `_series_contact.png` — LOOK at the contact sheet. An outlier is regenerated with `--style-ref`, or
 kept with a reason in `series-qc.json` → `"acknowledged": {"<id>": "<why it stays>"}`.
 
-**Placement.** `image_series.slot_picture(s, plan, "<id>", x, y, w, h, image_dir="<deck>/assets/generated")`
-applies the slot's frame shape, focus and alt text, places the keyed PNG for a cut-out, and tags the
+**Placement.** In the deck's build script (it usually lives in the deck folder, outside `scripts/`):
+
+```python
+import sys
+sys.path.insert(0, "<skill>/scripts")      # the folder holding deckkit.py and image_series.py
+import deckkit as dk
+import image_series as ims
+
+plan = ims.load("<deck>/series.json")      # the same plan `check` passed
+pic = ims.slot_picture(s, plan, "hero", 0.6, 0.6, 4.2, 5.6, image_dir="<deck>/assets/generated")
+```
+
+`image_series.load(path)` reads the plan (a refusal names the file);
+`image_series.slot_picture(s, plan, "<id>", x, y, w, h, image_dir=…)` applies the slot's frame shape,
+focus and alt text, places the keyed PNG for a cut-out, and tags the
 picture `+gen.<id>`. Never place a series image with `dk.picture` directly: the delivery gate reads
 the tags from the saved file and blocks an image-led deck with no slot placed, or a generated picture
 with no slot. A cut-out that wants a die-cut border: `image_fx.sticker_outline` on its `.cut.png`.

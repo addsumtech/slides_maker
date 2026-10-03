@@ -295,6 +295,19 @@ with tempfile.TemporaryDirectory() as td:
     except FileNotFoundError as e:
         check("--only hero" in str(e), "the refusal should print the command that makes it: {}".format(e))
 
+# ── the docs name every value the code accepts (a restricted-agent run, 2026-10-03, had to guess the
+# kind list from one example sentence, read chroma as "a colour like this", and found how to get `plan`
+# and import the helpers only from source-adjacent output) ──────────────────────────────────────────
+_doc = (ROOT / "references" / "image-generation.md").read_text(encoding="utf-8")
+_sec = _doc[_doc.index("## Image-led decks"):]
+_sec = _sec[:_sec.index("\n## ", 5)]
+for _vals, _what in ((ims.KINDS, "kind"), (ims.NOT_GENERATABLE, "refused kind"), (ims.REFERENTS, "referent"),
+                     (ims.RENDERS, "render"), (ims.CHROMAS, "chroma"), (ims.FRAME_SHAPES, "frame shape")):
+    _miss = [v for v in _vals if "`{}`".format(v) not in _sec]
+    check(not _miss, "image-generation.md's series section does not name {} value(s) {}".format(_what, _miss))
+for _needle in ("image_series.load(", "sys.path.insert", "calm_zone", "[fx, fy]", "only these two"):
+    check(_needle in _sec, "image-generation.md's series section never says {!r}".format(_needle))
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_image_series] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)

@@ -221,7 +221,9 @@ be reconstructed post-hoc at the delivery gate.
    (LOOK at the key image) → the same command with `--style-ref <the key image>` instead of `--only` →
    `python3 scripts/image_series.py cutout <deck>/series.json --dir <deck>/assets/generated` →
    `python3 scripts/image_series.py qc <deck>/series.json --dir <deck>/assets/generated`. Place every
-   slot with `image_series.slot_picture(s, plan, "<id>", x, y, w, h, image_dir=…)` — never
+   slot with `image_series.slot_picture(s, plan, "<id>", x, y, w, h, image_dir=…)` (`plan =
+   image_series.load("<deck>/series.json")`; a build script outside `scripts/` first does
+   `sys.path.insert(0, "<skill>/scripts")`) — never
    `dk.picture` for a series image: the delivery gate blocks an image-led deck with no slot placed
    through it, a generated picture with no slot, and a generated person beside a name/role/quote with
    no visible 'fictional' label. `python3 scripts/sigs.py --example slot_picture` prints a call the
