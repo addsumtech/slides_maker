@@ -398,6 +398,22 @@ check(r_.returncode == 0 and "deck_gates.py set my-deck design_plan.visual_langu
       and "design_plan.palette" in r_.stdout and all(h.upper() in r_.stdout.upper() for h in [_pal["ground"], _pal["ink"]] + list(_pal["text_accents"])),
       "--gates prints the full record with the language's hexes: {}".format(r_.stdout[:400] + r_.stderr[:200]))
 check("design.visual_language" in r_.stdout, "--gates names the Codex evidence fields too")
+# …and every command it prints RUNS as printed, on a fresh deck folder with a space and CJK in its path
+# (2026-10-04: on a fresh folder all five `set` lines failed — the record must be init-ed first)
+_fresh = Path(tempfile.mkdtemp()) / "我的 deck"
+_fresh.mkdir()
+r_ = _run("scripts/visual_languages.py", "--gates", "soft", "--deck", str(_fresh), "--for", "城市小菜园")
+_cmds = [l_ for l_ in r_.stdout.splitlines() if l_.startswith("python3 ")]
+_rcs = [subprocess.run(c_, shell=True, cwd=str(ROOT), capture_output=True, text=True).returncode for c_ in _cmds]
+_rec = json.loads((_fresh / ".deck-gates.json").read_text(encoding="utf-8")) if (_fresh / ".deck-gates.json").exists() else {}
+check(_cmds and not any(_rcs) and (_rec.get("design_plan") or {}).get("visual_language") == "soft"
+      and "#" in str((_rec.get("design_plan") or {}).get("palette")),
+      "--gates commands run verbatim on a fresh folder: rcs={} record={}".format(_rcs, (_rec.get("design_plan") or {}).get("visual_language")))
+r_ = _run("scripts/visual_languages.py", "--gates", "soft", "--deck", str(_fresh))
+check("deck_gates.py init" not in r_.stdout, "an existing record is not init-ed again")
+r_ = _run("scripts/visual_languages.py", "--gates", "soft")
+check(r_.returncode != 0 and "--deck" in r_.stderr and "<deck" not in r_.stdout,
+      "--gates without --deck refuses instead of printing a placeholder path: {}".format(r_.stdout[:120]))
 # the ordinary-page recipe: what new_slide paints, what ground/card return, how to make a run
 _ref = (ROOT / "references" / "visual-languages.md").read_text(encoding="utf-8")
 for needle in ("--gates", "k.run(", "body.left", "returns the content rect", "paints the language's ground"):

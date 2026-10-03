@@ -943,6 +943,8 @@ def _print_gates(name, deck, topic, fonts):
     pick = "bespoke {}".format(name) + (" for {}".format(topic) if topic else "")
     d = shlex.quote(str(deck))
     print("# record the {} language (shared runtime: <deck>/.deck-gates.json)".format(name))
+    if not (Path(str(deck)) / ".deck-gates.json").exists():        # `set` refuses a record that was never made
+        print("python3 scripts/deck_gates.py init {}".format(d))
     for key, val in (("visual_language", name), ("vl_fonts", fonts), ("style_pick", pick),
                      ("look_source", "bespoke"), ("palette", pal)):
         print("python3 scripts/deck_gates.py set {} design_plan.{} {}".format(d, key, shlex.quote(val)))
@@ -960,11 +962,15 @@ def main(argv=None):
                     help="contact a rendered sample's four pages into one JPEG")
     ap.add_argument("--list", action="store_true", help="list the languages")
     ap.add_argument("--gates", metavar="NAME", help="print the exact record commands for a deck in this language")
-    ap.add_argument("--deck", metavar="DECK_DIR", default="<deck-dir>", help="with --gates: the deck folder")
+    ap.add_argument("--deck", metavar="DECK_DIR", help="with --gates (required): the deck folder")
     ap.add_argument("--for", dest="topic", metavar="TOPIC", default=None, help="with --gates: what the deck is for")
     ap.add_argument("--fonts", choices=("both", "mac"), default="both", help="with --gates: the fonts= you passed to use()")
     a = ap.parse_args(argv)
     if a.gates:
+        if not a.deck:                    # a printed placeholder path runs nowhere — refuse instead
+            print("visual_languages: --gates needs --deck <the deck folder>, so every printed command runs as "
+                  "printed", file=sys.stderr)
+            return 2
         return _print_gates(a.gates, a.deck, a.topic, a.fonts)
     if a.list or not (a.sample or a.sample_sheet):
         for n, L in LANGS.items():
