@@ -3463,7 +3463,78 @@ def _round_pic_geom(pic, radius_in, w_in, h_in):
     av.append(av.makeelement(qn('a:gd'), {'name': 'adj', 'fmla': f'val {adj}'}))
 
 
-def picture(slide, path, x, y, w, h, fit="contain", alt=None, round=False, r=None):
+PIC_SHAPES = ("ellipse", "arch", "snip", "notch", "blob")
+_A_NS = "http://schemas.openxmlformats.org/drawingml/2006/main"
+
+
+def _pic_geom(pic, shape, w_in, h_in, seed=0):
+    """Clip a picture to `shape`. prstGeom where OOXML has one (ellipse, arch, snip); custGeom for
+    the two it lacks (notch: a rect with a concave quarter-circle bite at the top-right; blob: a
+    smooth closed outline, varied by `seed`). Verified 2026-10-03: LibreOffice clips pictures to
+    both kinds, so the mask reaches the render, not just the XML."""
+    import random
+    spPr = pic._element.spPr
+    old = spPr.find(qn("a:prstGeom"))
+    if old is None:
+        old = spPr.find(qn("a:custGeom"))
+    if shape in ("ellipse", "arch", "snip"):
+        prst, adj = {"ellipse": ("ellipse", {}),
+                     "arch": ("round2SameRect", {"adj1": 50000, "adj2": 0}),
+                     "snip": ("snip2DiagRect", {"adj1": 0, "adj2": 16667})}[shape]
+        g = spPr.makeelement(qn("a:prstGeom"), {"prst": prst})
+        av = g.makeelement(qn("a:avLst"), {})
+        g.append(av)
+        for k, v in adj.items():
+            av.append(av.makeelement(qn("a:gd"), {"name": k, "fmla": "val {}".format(v)}))
+    else:
+        W, H = int(Inches(w_in)), int(Inches(h_in))
+        if shape == "notch":
+            n = int(0.24 * min(W, H))
+            path = ('<a:path w="{W}" h="{H}"><a:moveTo><a:pt x="0" y="0"/></a:moveTo>'
+                    '<a:lnTo><a:pt x="{x0}" y="0"/></a:lnTo>'
+                    '<a:arcTo wR="{n}" hR="{n}" stAng="10800000" swAng="-5400000"/>'
+                    '<a:lnTo><a:pt x="{W}" y="{H}"/></a:lnTo><a:lnTo><a:pt x="0" y="{H}"/></a:lnTo>'
+                    '<a:close/></a:path>').format(W=W, H=H, n=n, x0=W - n)
+        else:                                               # blob
+            rnd = random.Random(seed)
+            N = 8
+            pts = []
+            for i in range(N):
+                a = 2 * math.pi * i / N
+                rho = 1.0 - 0.14 * rnd.random()
+                pts.append((W / 2 + W / 2 * rho * math.cos(a), H / 2 + H / 2 * rho * math.sin(a)))
+
+            def cl(v, hi):                                  # keep every point inside the frame
+                return int(min(max(v, 0), hi))
+            segs = []
+            for i in range(N):
+                p0, p1, p2, p3 = pts[i - 1], pts[i], pts[(i + 1) % N], pts[(i + 2) % N]
+                c1 = (p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6)
+                c2 = (p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6)
+                segs.append('<a:cubicBezTo><a:pt x="{}" y="{}"/><a:pt x="{}" y="{}"/>'
+                            '<a:pt x="{}" y="{}"/></a:cubicBezTo>'.format(
+                                cl(c1[0], W), cl(c1[1], H), cl(c2[0], W), cl(c2[1], H),
+                                cl(p2[0], W), cl(p2[1], H)))
+            path = ('<a:path w="{W}" h="{H}"><a:moveTo><a:pt x="{x}" y="{y}"/></a:moveTo>{s}'
+                    '<a:close/></a:path>').format(W=W, H=H, x=cl(pts[0][0], W),
+                                                  y=cl(pts[0][1], H), s="".join(segs))
+        g = parse_xml(
+            '<a:custGeom xmlns:a="{ns}"><a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/>'
+            '<a:rect l="0" t="0" r="r" b="b"/><a:pathLst>{p}</a:pathLst></a:custGeom>'.format(
+                ns=_A_NS, p=path))
+    if old is not None:
+        old.addprevious(g)
+        spPr.remove(old)
+    else:
+        xfrm = spPr.find(qn("a:xfrm"))
+        if xfrm is not None:
+            xfrm.addnext(g)
+        else:
+            spPr.insert(0, g)
+
+
+def picture(slide, path, x, y, w, h, fit="contain", alt=None, round=False, r=None, *,
+            shape=None, rotation=0.0, focus=(0.5, 0.5), seed=0):
     """Place an image in a frame without distorting it.
 
     `fit="contain"` shows the whole image inside the frame, letterboxed by whitespace.
@@ -3475,6 +3546,14 @@ def picture(slide, path, x, y, w, h, fit="contain", alt=None, round=False, r=Non
     cards/panels so a square photo doesn't sit among rounded blocks (a consistency tell). For an
     image inside a rounded frame, use a radius ≈ the frame's radius minus the border so the curves
     stay concentric. Default radius is 8% of the image's shorter side.
+
+    `shape=` clips the image to an editorial form: "ellipse" (a circle in a square frame),
+    "arch" (rounded top), "snip" (two chamfered corners), "notch" (a concave bite at the
+    top-right — room for a badge or arrow chip), "blob" (an organic outline; `seed=` varies it).
+    Use `fit="cover"` with a shape — the frame is filled and the crop keeps the image's aspect;
+    `focus=(fx, fy)` (0..1) aims the crop window (0 = keep the left/top edge), so a face is not
+    cut off. `shape` and `round`/`r` are mutually exclusive. `rotation=` tilts the picture
+    clockwise in degrees (a pinned print, a tilted polaroid); both gates measure it where it paints.
 
     Pass `alt` for informative images; pass `alt=""` for decorative plates. Returns the
     picture shape. Requires Pillow for reliable aspect-ratio reads, matching the rest of
@@ -3488,6 +3567,14 @@ def picture(slide, path, x, y, w, h, fit="contain", alt=None, round=False, r=Non
         iw, ih = im.size
     if iw <= 0 or ih <= 0:
         raise ValueError(f"cannot read image dimensions for {path}")
+
+    if shape is not None and shape not in PIC_SHAPES:
+        raise ValueError("picture(): shape must be one of {} (got {!r})".format(PIC_SHAPES, shape))
+    if shape is not None and (round or r is not None):
+        raise ValueError("picture(): pass shape= OR round=/r=, not both")
+    fx, fy = focus
+    if not (0.0 <= fx <= 1.0 and 0.0 <= fy <= 1.0):
+        raise ValueError("picture(): focus must be within (0..1, 0..1), got {!r}".format(focus))
 
     img_ar = iw / ih
     frame_ar = w / h
@@ -3506,20 +3593,23 @@ def picture(slide, path, x, y, w, h, fit="contain", alt=None, round=False, r=Non
         pic = slide.shapes.add_picture(path, Inches(px), Inches(py), width=Inches(pw), height=Inches(ph))
     elif fit == "cover":
         pic = slide.shapes.add_picture(path, Inches(x), Inches(y), width=Inches(w), height=Inches(h))
-        if img_ar > frame_ar:
-            crop = (1.0 - frame_ar / img_ar) / 2.0
-            pic.crop_left = crop
-            pic.crop_right = crop
+        if img_ar > frame_ar:                 # the crop window is aimed by `focus` (0.5 = centred)
+            crop = 1.0 - frame_ar / img_ar
+            pic.crop_left, pic.crop_right = crop * fx, crop * (1.0 - fx)
         elif img_ar < frame_ar:
-            crop = (1.0 - img_ar / frame_ar) / 2.0
-            pic.crop_top = crop
-            pic.crop_bottom = crop
+            crop = 1.0 - img_ar / frame_ar
+            pic.crop_top, pic.crop_bottom = crop * fy, crop * (1.0 - fy)
     else:
         raise ValueError("fit must be 'contain' or 'cover'")
 
     if round or r is not None:
         pwp, php = (pw, ph) if fit == "contain" else (w, h)
         _round_pic_geom(pic, r if r is not None else 0.08 * min(pwp, php), pwp, php)
+    if shape is not None:
+        pwp, php = (pw, ph) if fit == "contain" else (w, h)
+        _pic_geom(pic, shape, pwp, php, seed=seed)
+    if rotation:
+        pic.rotation = float(rotation)
     if alt is not None:
         alt_text(pic, alt)
     return pic

@@ -1152,6 +1152,13 @@ jobs:
           grep -qE "\\] ok$" /tmp/rotgeom.log || {
             echo "::error::test_rotated_geometry did not run to completion"; exit 1; }
 
+      - name: picture() masks, rotates and aims its crop (and the render clips)
+        run: |
+          set -o pipefail
+          python tests/test_picture_shapes.py | tee /tmp/picshapes.log
+          grep -qE "\\] ok$" /tmp/picshapes.log || {
+            echo "::error::test_picture_shapes did not run to completion"; exit 1; }
+
       - name: The Codex scaffold shows every field the Codex gate requires
         run: |
           set -o pipefail
