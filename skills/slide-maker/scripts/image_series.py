@@ -287,6 +287,7 @@ def prompts(plan, out_dir, plan_path=None):
 # in that gap; a synthetic pair would have flattered them.
 DE_MAX = 25.0      # mean-colour distance (CIE76) from the key beyond which an image is OFF-SERIES
 HIST_MAX = 0.6     # hue-histogram distance (L1/2) beyond which an image is OFF-SERIES
+LOW_SAT = 0.08     # mean saturation below which a picture's hue histogram is noise
 ASPECT_MAX = 0.35  # |image aspect - frame aspect| / frame aspect beyond which the crop loses too much
 
 
@@ -375,7 +376,10 @@ def qc(plan, gen_dir, *, de_max=None, hist_max=None, plan_path=None):
             # is not colour-compared (measured: a cream kettle read 30.3 from a warm hall scene)
             if key_stats is not None and s["id"] != kid and not s.get("cutout"):
                 de = math.dist(st["lab"], key_stats["lab"])
-                hd = _hist_d(st["hue_hist"], key_stats["hue_hist"])
+                # hue is NOISE when both pictures are near-grey (a black-and-white series): a hair of warm
+                # tint against a hair of cool tint read 1.00 — the colour distance still catches a real outlier
+                hd = (0.0 if max(st["sat"], key_stats["sat"]) < LOW_SAT
+                      else _hist_d(st["hue_hist"], key_stats["hue_hist"]))
                 row.update(delta_e=round(de, 1), hist=round(hd, 2))
                 if de > de_max or hd > hist_max:
                     flags.append("OFF-SERIES: colour distance {:.1f} (max {}) / hue {:.2f} (max {}) from the key "

@@ -356,6 +356,26 @@ with tempfile.TemporaryDirectory() as td:
     check(gic.check_prompt_topicality(its) == [], "a Chinese subject must pass on its own words: {}".format(
         gic.check_prompt_topicality(its)))
 
+# a black-and-white series: hue is noise when there is almost no saturation (final review: a hair of warm
+# tint against a hair of cool tint read hue distance 1.00 -> a false OFF-SERIES, and "regenerate" costs)
+with tempfile.TemporaryDirectory() as td:
+    td = Path(td)
+    bw = copy.deepcopy(GOOD)
+    bw["slots"][1]["cutout"] = False
+    def grey(path, tint, size=(300, 300)):
+        im = Image.new("RGB", size)
+        im.putdata([tuple(max(0, min(255, (x * 200) // size[0] + 30 + t)) for t in tint)
+                    for y in range(size[1]) for x in range(size[0])])
+        im.save(path)
+    grey(td / "slide-01-hero.png", (3, 0, -3), size=(300, 400))
+    grey(td / "slide-03-kettle.png", (-3, 0, 3))
+    fb = {r["id"]: r["flags"] for r in ims.qc(bw, td)["slots"]}["kettle"]
+    check(not any("OFF-SERIES" in f for f in fb), "a near-grey pair must not be off-series on hue noise: {}".format(fb))
+    # ...but a saturated picture in a grey series is still off-series
+    Image.new("RGB", (300, 300), (230, 40, 160)).save(td / "slide-03-kettle.png")
+    fb = {r["id"]: r["flags"] for r in ims.qc(bw, td)["slots"]}["kettle"]
+    check(any("OFF-SERIES" in f for f in fb), "a magenta image in a grey series must be off-series: {}".format(fb))
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_image_series] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)
