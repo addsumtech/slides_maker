@@ -238,6 +238,40 @@ def main():
     except Exception as exc:
         check("a table and a timeline pack into one vstack with no CRITICAL", False, repr(exc))
 
+    # CJK line ends, as LibreOffice renders them (probe, 2026-10-03: six ideographs + one mark in a box six
+    # ideographs wide, 24pt Songti SC). The deck's default text style declares hangingPunct="1": the eight
+    # marks below HANG past the measure (one line); a closing bracket does not — the ideograph before it
+    # moves down with it (two lines). measure_text counted the hung marks as a second line, so a clause
+    # title that renders in two lines read as three to lint and tripped TEXT_OVER_MOTIF on its own squiggle.
+    em24 = 24 / 72.0
+    for mark in "，。、；：！？．":
+        n = dk._measure_lines([("一二三四五六" + mark, False)], 24, 6 * em24 + 0.02, font="Songti SC")
+        check("measure_text hangs %s at the line end (renders as one line)" % mark, n == 1, n)
+    for mark in "）」』》】〉〕":
+        n = dk._measure_lines([("一二三四五六" + mark, False)], 24, 6 * em24 + 0.02, font="Songti SC")
+        check("measure_text wraps before a closing bracket %s (renders as two lines)" % mark, n == 2, n)
+    # only ONE mark hangs; a bracket after it, or a second mark, takes the mark and the ideograph down
+    # ("一二三四五 / 六。」", "一二三四五 / 六！？", "一二三四五 / 六」。" — same probe)
+    for tail in ("。」", "，」", "！？", "」。"):
+        n = dk._measure_lines([("一二三四五六" + tail, False)], 24, 6 * em24 + 0.02, font="Songti SC")
+        check("measure_text pushes 六%s down as one unit (renders as two lines)" % tail, n == 2, n)
+    # an opening bracket never ends a line (corpus render: "数据显示，/ 参与者的满 / 意度很高 / （详见附 / 录）。")
+    n = dk._measure_lines([("数据显示，参与者的满意度很高（详见附录）。", False)], 48, 3.57, font="Songti SC")
+    check("measure_text moves an opening bracket down to its text (five lines, as rendered)", n == 5, n)
+    # a line carrying Latin never hangs (autospace fills it) — both rendered in LibreOffice, corpus 2026-10-03
+    n = dk._measure_lines([("用 Python 写一个脚本：读取 CSV、清洗数据、画图。工具其实很少：一把小铲、一个喷壶、一卷麻绳。",
+                            False)], 28, 2.14, font="Hiragino Sans GB")
+    check("measure_text does not hang a mark on a line that carries Latin (10 lines, as rendered)", n == 10, n)
+    n = dk._measure_lines([("2026年的数据（n=120）显示，满意度为 87%。", False)], 28, 7.75, font="Songti SC")
+    check("a full stop after '87%' does not hang (two lines, as rendered)", n == 2, n)
+    # one ideograph per line (a 60pt line in a 1-1.9in column) — the renderer cannot hang there; rendered
+    # 17 lines at all three widths, and an under-count is the direction that hides a real overflow
+    for w_ in (1.04, 1.38, 1.62):
+        n = dk._measure_lines([("他说：「先从一个花盆开始。」然后笑了。", False)], 60, w_, font="Songti SC")
+        check("a one-ideograph column never under-counts (>= 17 rendered lines at %.2fin)" % w_, n >= 17, n)
+    n = dk._measure_lines([("一二三四五六。」七八九十一二", False)], 24, 6 * em24 + 0.02, font="Songti SC")
+    check("after the push the next line holds 六。」 + four ideographs, then wraps (three lines)", n == 3, n)
+
     print("\n{} passed, {} failed".format(len(PASS), len(FAIL)))
     return 1 if FAIL else 0
 

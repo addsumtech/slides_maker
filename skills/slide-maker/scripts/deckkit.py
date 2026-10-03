@@ -5086,6 +5086,16 @@ def _lines_heuristic(text, size_pt, avail_in):
     return max(1, -(-eff // cpl))
 
 
+# CJK line ends as LibreOffice sets them under the deck default hangingPunct="1" (probed 2026-10-03: six
+# ideographs + one mark in a box six ideographs wide): these marks HANG past the measure, one line ...
+_CJK_HANG = "，。、；：！？．"
+# ... but only ONE: a closing bracket never starts a line, and neither does a second mark — the ideograph
+# before it (and a hung mark) moves down WITH it ("一二三四五 / 六）", "/ 六。」", "/ 六！？")
+_CJK_CLOSE = "）」』》】〉〕"
+# ... and an opening bracket never ENDS a line: it moves down to the text it opens ("意度很高 / （详见附")
+_CJK_OPEN = "（「『《【〈〔"
+
+
 def _measure_lines(runs, size_pt, avail_in, font=None):
     """How many lines styled text wraps to — MEASURED, not estimated.
 
@@ -5093,7 +5103,13 @@ def _measure_lines(runs, size_pt, avail_in, font=None):
     Narrow runs are measured with the REAL Latin font's glyph advances (Pillow, the bold
     parts measured bold); CJK / full-width glyphs are one em (= size_pt) by definition.
     A greedy line-breaker then counts wraps, breaking at spaces, between CJK glyphs, and at
-    CJK↔Latin boundaries (Latin words stay whole). Because it uses the same font metrics the
+    CJK↔Latin boundaries (Latin words stay whole); a closing CJK mark hangs at the line end
+    (_CJK_HANG), a closing bracket takes the ideograph before it down (_CJK_CLOSE) and an opening
+    bracket never ends a line (_CJK_OPEN). Text that also carries Latin or digits never hangs: the
+    renderer puts autospace between the scripts, which this does not model, so mixed lines are fuller
+    than measured and the old extra line hid that — a hang there under-counted 11 of 12 rendered
+    cases (corpus vs LibreOffice, 2026-10-03). Hanging is the one rule that LOWERS a count, so it is
+    kept to pure CJK text, where it matched the render in 37 of 40 changed cases. Because it uses the same font metrics the
     renderer does, the count matches the rendered layout far more closely than a chars-per-
     line guess. Falls back to `_lines_heuristic` if Pillow or the font can't be loaded — so a
     build never breaks over measurement. Lazy-imports Pillow/matplotlib."""
@@ -5120,28 +5136,54 @@ def _measure_lines(runs, size_pt, avail_in, font=None):
             elif _is_wide(ord(ch)):
                 if word:
                     items.append((getlen("".join(word), bold), "w")); word = []
-                items.append((float(size_pt), "c"))
+                items.append((float(size_pt), "h" if ch in _CJK_HANG else ("b" if ch in _CJK_CLOSE else
+                                                                     ("o" if ch in _CJK_OPEN else "c"))))
             else:
                 word.append(ch)
         if word:
             items.append((getlen("".join(word), bold), "w"))
 
+    # pure CJK only (see the docstring), and a line of at least two ideographs: in a one-ideograph
+    # column the renderer cannot hang (it would leave the line empty) — 3 under-counts in the corpus
+    may_hang = not any(k_ == "w" for _w, k_ in items) and avail >= 2 * size_pt
     x = 0.0
     lines = 1
+    line = []                                               # the current line's items, for a bracket's push
     for w, kind in items:
         if kind == "s":                                     # a space never forces a wrap
             if x > 0:
                 x += w
+                line.append((w, kind))
+            continue
+        if kind == "h" and may_hang and x > 0 and x <= avail + 1e-9:   # ONE mark hangs past the measure
+            x += w
+            line.append((w, kind))
+            continue
+        if kind in ("b", "h") and x + w > avail and x > 0:
+            # a bracket — or a second mark — takes the hung mark before it and the ideograph before
+            # that down with it ("开 / 始。」", "五 / 六！？")
+            carry = []
+            while line and line[-1][1] == "h":
+                carry.insert(0, line.pop())
+            if line and line[-1][1] == "c" and len(line) > 1:
+                carry.insert(0, line.pop())
+            lines += 1
+            line = carry + [(w, kind)]
+            x = sum(c[0] for c in line)
             continue
         if w > avail:                                       # an UNBREAKABLE token wider than the line:
             if x > 0:                                        # the renderer keeps it on ONE line and lets
                 lines += 1                                   # it overflow horizontally — count 1 line, not
             x = avail                                        # w//avail (which fabricated phantom height,
-            continue                                         # e.g. a scorecard's "99.9%" measured as 2 lines)
+            line = [(w, kind)]                               # e.g. a scorecard's "99.9%" measured as 2 lines)
+            continue
         if x + w > avail and x > 0:
             lines += 1
-            x = 0.0
+            carry = [line.pop()] if line and line[-1][1] == "o" and len(line) > 1 else []
+            line = carry                                    # an opening bracket goes down with its text
+            x = sum(c[0] for c in line)
         x += w
+        line.append((w, kind))
     return max(1, lines)
 
 

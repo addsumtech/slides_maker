@@ -238,6 +238,12 @@ and tell the user which font the deck expects.
   **widening the box / lowering the size a touch / rebreaking the line** so punctuation stays attached
   to its character; for a hard case, hand-place the break. Same idea in Latin: don't let a lone ")" or
   "." wrap to its own line.
+  `measure_text` and lint count lines the way LibreOffice sets them under the deck default
+  `hangingPunct="1"` (probed and checked against renders): in pure-CJK text ONE closing mark
+  (`，。、；：！？．`) hangs past the measure instead of wrapping; a closing bracket (`）」』》】〉〕`) or
+  a second mark takes the character before it down to the next line; an opening bracket never ends a
+  line. Text that also carries Latin or digits never hangs — the renderer's autospace between the
+  scripts is not modelled, so such lines are counted conservatively.
 - **Density.** A CJK character carries more meaning per glyph, so for a **presented** deck terse
   points matter even more — resist filling the line just because it fits. *(A read-alone / reference
   CJK deck may run denser like any read-alone deck — then keep the script-aware leading (never below ~1.25× font size — `line_spacing` ≈1.04 — for CJK body) and the
