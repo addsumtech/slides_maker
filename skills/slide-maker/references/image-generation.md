@@ -60,7 +60,8 @@ pages, because it is the deck's register, not decoration. *(Measured 2026-10-03:
 this skill could only give a few slides a plate, each prompted alone, and no image held another's
 look.)* It is entered ONLY by picking an image-led direction at the direction gate
 (`interview-protocol.md`); picking it records `design_plan.imagery: "series"` and
-`design_plan.image_series: "<deck>/series.json"` (Codex evidence: the same two keys under `design`).
+`design_plan.image_series: "<deck>/series.json"` (Codex evidence: the same two keys under `design`) —
+an absolute path, or one relative to the deck folder; `imagery` takes only `"series"` or `"selective"`.
 Every other deck keeps `imagery: "selective"` — the rule above, unchanged.
 
 Three floors that do not relax:
@@ -130,8 +131,10 @@ rather than ship a fringe. *(Measured: a watercolour key image's paper won over 
 cut-out came back on cream; keyed anyway, its own cream highlights went with the background.)* `qc` compares every image
 with the key (mean colour + hue histogram; a cut-out on its subject only), flags MISSING / OFF-SERIES
 / ASPECT / CUTOUT plus `image_qc`'s per-file flags, and writes `series-qc.json` and
-`_series_contact.png` — LOOK at the contact sheet. An outlier is regenerated with `--style-ref`, or
-kept with a reason in `series-qc.json` → `"acknowledged": {"<id>": "<why it stays>"}`.
+`_series_contact.png` — LOOK at the contact sheet. For every flagged slot `qc` prints the exact
+command that regenerates it; a slot kept ON PURPOSE (the flag is the style itself) gets a reason in
+`series-qc.json` → `"acknowledged": {"<id>": "<why it stays>"}` (a reason, not "ok"), which survives
+re-runs — then rerun `qc` until it prints the placement NEXT line.
 
 **Placement.** In the deck's build script (it usually lives in the deck folder, outside `scripts/`):
 
