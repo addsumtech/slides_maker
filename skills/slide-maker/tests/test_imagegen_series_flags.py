@@ -112,6 +112,42 @@ with tempfile.TemporaryDirectory() as td:
     rc, out = run([str(m2), "--dry-run", "--only", "hero", "--out-dir", str(td)])
     check(rc == 2 and "matches 2" in out, "an --only that matches two items must refuse: rc={} {}".format(rc, out[-200:]))
 
+# a series run says what comes NEXT, so an agent following printed output does not stop after the key
+# (final review, 2026-10-03: neither generator printed a next step). Generation is stubbed — no codex.
+import image_series as ims  # noqa: E402
+_plan = {"art_direction": "warm documentary photography in a community hall, window light",
+         "palette": ["F3EBDD", "C98A3D", "2F6F6A"], "render": "photo",
+         "slots": [{"id": "hero", "slide": 1, "frame": {"shape": "rect", "w": 4, "h": 3}, "kind": "object",
+                    "subject": "a table lamp being repaired on a wooden workbench", "alt": "a lamp",
+                    "referent": "generic-concrete", "meaning": "broken things get fixed here, by neighbours"},
+                   {"id": "tools", "slide": 2, "frame": {"shape": "rect", "w": 4, "h": 3}, "kind": "object",
+                    "subject": "a wooden tray of screwdrivers and a soldering iron", "alt": "tools",
+                    "referent": "generic-concrete", "meaning": "the shared tools a visitor finds on arrival"}]}
+with tempfile.TemporaryDirectory() as td:
+    td = Path(td)
+    pp = td / "series.json"
+    pp.write_text(json.dumps(_plan), encoding="utf-8")
+    gen = td / "gen"
+    ims.prompts(_plan, gen, plan_path=pp)
+    man = gen / "image_prompt_manifest.json"
+    real_one, real_have = gic._generate_one, gic._have_codex
+
+    def _fake(prompt, out_path, **kw):
+        Image.new("RGB", (64, 48), (120, 90, 60)).save(out_path)
+        return True
+    gic._generate_one, gic._have_codex = _fake, (lambda: True)
+    try:
+        rc, out = run([str(man), "--only", "hero"])
+        nxt = [l for l in out.splitlines() if l.startswith("NEXT")]
+        check(rc == 0 and nxt and "--style-ref" in nxt[0] and str(gen / "slide-01-hero.png") in nxt[0]
+              and "<" not in nxt[0], "after the key, NEXT must be the --style-ref run: {}".format(nxt))
+        rc, out = run([str(man), "--style-ref", str(gen / "slide-01-hero.png")])
+        nxt = [l for l in out.splitlines() if l.startswith("NEXT")]
+        check(rc == 0 and nxt and "image_series.py cutout" in nxt[0] and str(pp) in nxt[0],
+              "after the series, NEXT must be the cutout step: {}".format(nxt))
+    finally:
+        gic._generate_one, gic._have_codex = real_one, real_have
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_imagegen_series_flags] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)

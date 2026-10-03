@@ -265,7 +265,7 @@ def build_prompt(plan, s):
     return "\n".join(lines)
 
 
-def prompts(plan, out_dir):
+def prompts(plan, out_dir, plan_path=None):
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     items = []
@@ -273,6 +273,7 @@ def prompts(plan, out_dir):
         fn = "slide-{:02d}-{}.png".format(s["slide"], s["id"])
         items.append({"id": s["id"], "slide": s["slide"], "filename": fn, "orientation": "auto",
                       "subject": s["subject"],
+                      **({"series_plan": str(Path(plan_path).resolve())} if plan_path else {}),
                       "aspect": round(s["frame"]["w"] / float(s["frame"]["h"]), 3),
                       "path": str(out_dir / fn), "prompt": build_prompt(plan, s)})
     (out_dir / "image_prompt_manifest.json").write_text(
@@ -466,7 +467,7 @@ def main(argv=None):
             print("  [{}] {}".format(k, v))
         if not res:
             print("image_series cutout: the plan has no cut-out slot")
-        elif not bad_:
+        if not bad_:
             print("NEXT: python3 scripts/image_series.py qc {} --dir {}".format(a.plan, a.dir))
         return 1 if bad_ else 0
     if a.cmd == "qc":
@@ -481,7 +482,7 @@ def main(argv=None):
             print("NEXT: place each slot with image_series.slot_picture(slide, plan, slot_id, x, y, w, h, "
                   "image_dir=...) and look at the contact sheet {}".format(Path(a.dir) / "_series_contact.png"))
         return 1 if flagged else 0
-    items = prompts(plan, a.out_dir)
+    items = prompts(plan, a.out_dir, plan_path=a.plan)
     man = Path(a.out_dir) / "image_prompt_manifest.json"
     print("image_series: wrote {} prompt(s) to {}".format(len(items), man))
     print("NEXT (the key image first, then LOOK at it): python3 scripts/generate_images_codex.py {} --only {}"

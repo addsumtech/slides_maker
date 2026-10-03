@@ -570,6 +570,22 @@ def check_prompt_topicality(items, min_nouns=MIN_SUBJECT_NOUNS):
     return out
 
 
+
+def _series_next(items, script, manifest, out_of, only, style_ref):
+    """The NEXT line after a successful run of an image-SERIES manifest, so an agent that follows only
+    printed output reaches the end (final review, 2026-10-03: neither generator printed a next step)."""
+    plans = {it.get("series_plan") for it in items if it.get("series_plan")}
+    if len(plans) != 1:
+        return None
+    plan = plans.pop()
+    if only:
+        key = out_of(items[0])
+        return ("NEXT (LOOK at {} first; to redo it: --overwrite --only {}): python3 scripts/{} {} --style-ref {}"
+                .format(key, only, script, manifest, key))
+    if style_ref:
+        return "NEXT: python3 scripts/image_series.py cutout {} --dir {}".format(plan, Path(manifest).resolve().parent)
+    return None
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Generate images from a manifest via the Codex CLI (no API key).")
     ap.add_argument("manifest", help="Path to image_prompt_manifest.json.")
@@ -735,6 +751,11 @@ def main(argv=None):
                     print(f"  FAILED: {out_path} — {exc}", file=sys.stderr); failed += 1
 
     print(f"done: generated {ok}, skipped {skipped}, failed {failed}")
+    if not failed and not args.dry_run:
+        nxt = _series_next(items, "generate_images_codex.py", manifest, lambda it: resolved[id(it)],
+                           args.only, style_ref)
+        if nxt:
+            print(nxt)
     return 1 if failed else 0
 
 

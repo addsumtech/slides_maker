@@ -88,6 +88,36 @@ with tempfile.TemporaryDirectory() as td:
     rc, out = run([str(m2), "--dry-run", "--only", "hero", "--out-dir", str(td)])
     check(rc == 2 and "matches 2" in out, "an --only that matches two items must refuse: rc={} {}".format(rc, out[-200:]))
 
+# a series run prints the NEXT step (generation stubbed — no network, no spend)
+import image_series as ims  # noqa: E402
+_plan = {"art_direction": "warm documentary photography in a community hall, window light",
+         "palette": ["F3EBDD", "C98A3D", "2F6F6A"], "render": "photo",
+         "slots": [{"id": "hero", "slide": 1, "frame": {"shape": "rect", "w": 4, "h": 3}, "kind": "object",
+                    "subject": "a table lamp being repaired on a wooden workbench", "alt": "a lamp",
+                    "referent": "generic-concrete", "meaning": "broken things get fixed here, by neighbours"}]}
+with tempfile.TemporaryDirectory() as td:
+    td = Path(td)
+    pp = td / "series.json"
+    pp.write_text(json.dumps(_plan), encoding="utf-8")
+    ims.prompts(_plan, td / "gen", plan_path=pp)
+    man = td / "gen" / "image_prompt_manifest.json"
+    real = gio._generate_item
+
+    def _fake(item, out_path, args, api_key):
+        Image.new("RGB", (64, 48), (120, 90, 60)).save(out_path)
+        return out_path
+    gio._generate_item = _fake
+    import os  # noqa: E402
+    os.environ["SM_TEST_KEY"] = "x"
+    try:
+        rc, out = run([str(man), "--only", "hero", "--api-key-env", "SM_TEST_KEY"])
+        nxt = [l for l in out.splitlines() if l.startswith("NEXT")]
+        check(rc == 0 and nxt and "generate_images_openai.py" in nxt[0] and "--style-ref" in nxt[0],
+              "after the key, NEXT must be the metered --style-ref run: {}".format(nxt))
+    finally:
+        gio._generate_item = real
+        os.environ.pop("SM_TEST_KEY", None)
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_imagegen_openai_series] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)
