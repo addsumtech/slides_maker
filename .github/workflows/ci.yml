@@ -1201,6 +1201,13 @@ jobs:
           grep -qE "\\] ok$" /tmp/imagegenflags.log || {
             echo "::error::test_imagegen_series_flags did not run to completion"; exit 1; }
 
+      - name: chroma_cutout keys a flat background or refuses
+        run: |
+          set -o pipefail
+          python tests/test_chroma_cutout.py | tee /tmp/chromacut.log
+          grep -qE "\\] ok$" /tmp/chromacut.log || {
+            echo "::error::test_chroma_cutout did not run to completion"; exit 1; }
+
       - name: The Codex scaffold shows every field the Codex gate requires
         run: |
           set -o pipefail

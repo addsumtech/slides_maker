@@ -163,3 +163,62 @@ def sticker_outline(src, out=None, *, border=0.035, color="FFFFFF"):
     out = out or os.path.splitext(src)[0] + ".sticker.png"
     base.save(out)
     return out
+
+
+def chroma_cutout(src, out=None, *, tol=60, min_subject=0.05):
+    """Key a generated subject off a FLAT background colour (the series pipeline prompts for one).
+
+    The background colour is estimated from the frame's outer ring; pixels within `tol/2` of it become
+    transparent, a soft ramp to `tol` keeps the edge smooth, and the key colour's spill is pulled out of
+    the edge pixels. Returns the out path (default `<src>.cut.png`).
+
+    RAISES ValueError — never hands back a half-keyed image that looks like a working sticker — when the
+    background is not FLAT (regenerate on a flatter background), when the subject touches the frame EDGE
+    (regenerate with margin), or when less than `min_subject` of the frame is subject."""
+    import numpy as np
+    from PIL import ImageFilter
+    im = Image.open(src).convert("RGB")
+    a = np.asarray(im).astype(np.float32)
+    # Classify the border on a MEDIAN-FILTERED copy: grain/noise vanishes there, a subject crossing
+    # the edge does not — that is what tells "not flat" from "touches the edge".
+    sm = np.asarray(im.filter(ImageFilter.MedianFilter(5))).astype(np.float32)
+    sides_sm = [sm[:2].reshape(-1, 3), sm[-2:].reshape(-1, 3), sm[:, :2].reshape(-1, 3), sm[:, -2:].reshape(-1, 3)]
+    sides_raw = [a[:2].reshape(-1, 3), a[-2:].reshape(-1, 3), a[:, :2].reshape(-1, 3), a[:, -2:].reshape(-1, 3)]
+    bg = np.median(np.concatenate(sides_sm), axis=0)
+    hit = [float((np.linalg.norm(sd - bg, axis=1) > tol * 0.5).mean()) > 0.02 for sd in sides_sm]
+    if sum(hit) >= 3:
+        raise ValueError("chroma_cutout(): the background of {} is not flat (a gradient or a subject that fills "
+                         "the frame) — regenerate it on a flatter, uniform background with margin".format(src))
+    clear = [sd for sd, h_ in zip(sides_raw, hit) if not h_]
+    spread = float(np.percentile(np.linalg.norm(np.concatenate(clear) - bg, axis=1), 90))
+    if spread > tol * 0.5:
+        raise ValueError("chroma_cutout(): the background of {} is not flat (border spread {:.0f} > {:.0f}: "
+                         "texture or noise) — regenerate it on a flatter, uniform background".format(
+                             src, spread, tol * 0.5))
+    if any(hit):
+        raise ValueError("chroma_cutout(): the subject of {} touches the frame edge — regenerate it with "
+                         "margin on every side".format(src))
+    d = np.linalg.norm(a - bg, axis=2)
+    alpha = np.clip((d - tol * 0.5) / (tol * 0.5), 0.0, 1.0)
+    share = float((alpha > 0.5).mean())
+    if share < min_subject:
+        raise ValueError("chroma_cutout(): only {:.1%} of {} is subject after keying — no usable subject; "
+                         "regenerate it larger".format(share, src))
+    # despill: in an EDGE BAND, no KEY channel (green; red+blue for magenta) may exceed the strongest
+    # non-key channel. The band is every visible pixel within a few px of the keyed-out region — not
+    # only the partly transparent ones: the mixed subject/key pixels just inside a soft edge are far
+    # enough from the key to stay OPAQUE and still carry its colour (measured: a green outline on the
+    # first version). The interior is untouched, so a green subject on a magenta key keeps its green.
+    keys = [c for c in range(3) if bg[c] > 128] or [int(np.argmax(bg))]
+    rest = [c for c in range(3) if c not in keys]
+    k = max(2, int(round(min(a.shape[:2]) * 0.006)))
+    keyed = Image.fromarray(((alpha < 1) * 255).astype(np.uint8), "L").filter(ImageFilter.MaxFilter(2 * k + 1))
+    edge_px = (alpha > 0) & (np.asarray(keyed) > 0)
+    if rest:
+        cap = a[..., rest].max(axis=2)
+        for c in keys:
+            a[..., c] = np.where(edge_px, np.minimum(a[..., c], cap), a[..., c])
+    rgba = np.dstack([a, alpha * 255.0]).clip(0, 255).astype(np.uint8)
+    out = out or os.path.splitext(src)[0] + ".cut.png"
+    Image.fromarray(rgba, "RGBA").save(out)
+    return out
