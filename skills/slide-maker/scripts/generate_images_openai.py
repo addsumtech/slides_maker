@@ -18,10 +18,54 @@ from pathlib import Path
 
 
 API_URL = "https://api.openai.com/v1/images/generations"
+EDITS_URL = "https://api.openai.com/v1/images/edits"
 DEFAULT_MODEL = "gpt-image-2"
 DEFAULT_SIZE = "2048x1152"
 DEFAULT_QUALITY = "medium"
 DEFAULT_FORMAT = "png"
+
+
+# The sizes an item's aspect is snapped to (an image-series item carries its slot's w/h as "aspect";
+# image_series.prompts writes it). Nearest by log-ratio, so 3:4 and 4:3 are equally far from square.
+SIZES = (("2048x1152", 2048 / 1152), ("1536x1024", 1.5), ("1024x1024", 1.0), ("1024x1536", 1024 / 1536))
+
+
+def _size_for(item, default):
+    """The size to request for this item: the nearest SIZES entry to its own `aspect`, else the CLI
+    size. Measured 2026-10-03: every image of a series was requested at one 2048x1152, so a tall arch
+    slot got a landscape picture to crop."""
+    a = item.get("aspect")
+    if not isinstance(a, (int, float)) or a <= 0:
+        return default
+    import math
+    return min(SIZES, key=lambda sz: abs(math.log(a / sz[1])))[0]
+
+
+def _with_style(prompt):
+    """The prompt for a generation made beside the series' KEY image (the edits endpoint sees the
+    image itself): match its look, never its subject."""
+    return (prompt + "\n\nThe attached image is an earlier image of the SAME series: match its palette, "
+            "light, colour temperature, grain or brushwork and rendering, so the two read as one series. "
+            "Do NOT copy its subject, its objects or its composition — the subject is the one described "
+            "above.")
+
+
+def _multipart(fields, files):
+    """(body, content_type) for a multipart/form-data POST — `files` is [(field, path)]."""
+    import uuid
+    boundary = "sm-" + uuid.uuid4().hex
+    out = []
+    for k, v in fields.items():
+        out.append(('--%s\r\nContent-Disposition: form-data; name="%s"\r\n\r\n%s\r\n'
+                    % (boundary, k, v)).encode("utf-8"))
+    for k, path in files:
+        path = Path(path)
+        ctype = {".png": "image/png", ".webp": "image/webp"}.get(path.suffix.lower(), "image/jpeg")
+        out.append(('--%s\r\nContent-Disposition: form-data; name="%s"; filename="%s"\r\n'
+                    'Content-Type: %s\r\n\r\n' % (boundary, k, path.name, ctype)).encode("utf-8"))
+        out.append(path.read_bytes() + b"\r\n")
+    out.append(("--%s--\r\n" % boundary).encode("utf-8"))
+    return b"".join(out), "multipart/form-data; boundary=" + boundary
 
 
 def _load_manifest(path):
@@ -56,14 +100,20 @@ def _api_error(exc):
     return f"{exc.code} {exc.reason}"
 
 
-def _request_image(api_key, payload, *, timeout, retries):
-    body = json.dumps(payload).encode("utf-8")
+def _request_image(api_key, payload, *, timeout, retries, files=None):
+    """POST a generation — JSON to /generations, or multipart to /edits when `files` (the series'
+    style reference) are given."""
+    if files:
+        body, ctype = _multipart(payload, files)
+        url = EDITS_URL
+    else:
+        body, ctype, url = json.dumps(payload).encode("utf-8"), "application/json", API_URL
     headers = {
         "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
+        "Content-Type": ctype,
     }
     for attempt in range(retries + 1):
-        req = urllib.request.Request(API_URL, data=body, headers=headers, method="POST")
+        req = urllib.request.Request(url, data=body, headers=headers, method="POST")
         try:
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 return json.loads(resp.read().decode("utf-8"))
@@ -105,10 +155,11 @@ def _resolve_out_path(item, out_dir):
 def _generate_item(item, out_path, args, api_key):
     """Generate one image (blocking). Independent per item — safe to run concurrently:
     each writes a distinct file, shares no mutable state. Returns out_path on success."""
+    style_ref = getattr(args, "style_ref", None)
     payload = {
         "model": args.model,
-        "prompt": item["prompt"],
-        "size": args.size,
+        "prompt": _with_style(item["prompt"]) if style_ref else item["prompt"],
+        "size": _size_for(item, args.size),
         "quality": args.quality,
         "output_format": args.output_format,
     }
@@ -116,12 +167,13 @@ def _generate_item(item, out_path, args, api_key):
         payload["background"] = args.background
     if args.moderation:
         payload["moderation"] = args.moderation
-    result = _request_image(api_key, payload, timeout=args.timeout, retries=args.retries)
+    result = _request_image(api_key, payload, timeout=args.timeout, retries=args.retries,
+                            files=[("image[]", style_ref)] if style_ref else None)
     _write_response_image(result, out_path)
     return out_path
 
 
-def main():
+def main(argv=None):
     ap = argparse.ArgumentParser(
         description="Generate images from image_prompt_manifest.json using the OpenAI Images API."
     )
@@ -135,6 +187,12 @@ def main():
     ap.add_argument("--background", choices=["opaque", "auto"], help="Background mode when supported by the selected model.")
     ap.add_argument("--moderation", choices=["auto", "low"], help="Moderation strictness when supported by the selected model.")
     ap.add_argument("--limit", type=int, help="Generate only the first N manifest entries.")
+    ap.add_argument("--only", metavar="ID",
+                    help="generate only the item whose id (or filename stem) is ID — an image series' "
+                         "KEY image first, so it can be looked at before the rest are made in its style")
+    ap.add_argument("--style-ref", metavar="PATH",
+                    help="the series' approved KEY image: every generation goes to the edits endpoint "
+                         "WITH it, told to match its look — not its subject or composition")
     ap.add_argument("--overwrite", action="store_true",
                     help="Regenerate and overwrite existing files (default: skip files that already exist).")
     ap.add_argument("--dry-run", action="store_true", help="Print planned outputs without calling the API.")
@@ -143,7 +201,7 @@ def main():
     ap.add_argument("--concurrency", type=int, default=3,
                     help="Images generated in parallel (I/O-bound HTTP; near-linear speedup for a "
                          "multi-image deck — hero+divider+plate at once). Lower to 1 if you hit rate limits.")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
     api_key = os.environ.get(args.api_key_env, "")
     if not api_key and not args.dry_run:
@@ -153,6 +211,21 @@ def main():
     items = _load_manifest(args.manifest)
     if args.limit is not None:
         items = items[: max(0, args.limit)]
+    if args.only:
+        def _hit(it):
+            stem = Path(str(it.get("filename") or it.get("path") or "")).stem
+            return it.get("id") == args.only or stem == args.only or stem.endswith("-" + args.only)
+        items = [it for it in items if _hit(it)]
+        if not items:
+            print(f"error: no manifest item matches --only {args.only!r}", file=sys.stderr)
+            return 2
+    if args.style_ref:
+        args.style_ref = Path(args.style_ref).expanduser()
+        if not args.style_ref.is_file() or args.style_ref.suffix.lower() not in (".jpg", ".jpeg", ".png", ".webp"):
+            print(f"error: --style-ref {args.style_ref} is not an image file — generate and LOOK at the key "
+                  f"first (--only <key-id>), then pass its path", file=sys.stderr)
+            return 2
+        print(f"style reference: {args.style_ref} (sent with every generation, edits endpoint)")
     if args.out_dir:
         Path(args.out_dir).mkdir(parents=True, exist_ok=True)
 
@@ -162,7 +235,7 @@ def main():
     for item in items:
         out_path = _resolve_out_path(item, args.out_dir)
         out_path.parent.mkdir(parents=True, exist_ok=True)
-        label = f"slide {item.get('slide', '?')}: {out_path}"
+        label = f"slide {item.get('slide', '?')}: {out_path} ({_size_for(item, args.size)})"
         if out_path.exists() and not args.overwrite:
             print(f"skip existing: {out_path}")
             skipped += 1

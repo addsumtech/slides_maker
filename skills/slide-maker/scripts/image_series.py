@@ -213,6 +213,7 @@ def prompts(plan, out_dir):
     for s in plan["slots"]:
         fn = "slide-{:02d}-{}.png".format(s["slide"], s["id"])
         items.append({"id": s["id"], "slide": s["slide"], "filename": fn, "orientation": "auto",
+                      "aspect": round(s["frame"]["w"] / float(s["frame"]["h"]), 3),
                       "path": str(out_dir / fn), "prompt": build_prompt(plan, s)})
     (out_dir / "image_prompt_manifest.json").write_text(
         json.dumps(items, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

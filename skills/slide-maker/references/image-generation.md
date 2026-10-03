@@ -115,7 +115,11 @@ the tags from the saved file and blocks an image-led deck with no slot placed, o
 with no slot. A cut-out that wants a die-cut border: `image_fx.sticker_outline` on its `.cut.png`.
 
 Billing is unchanged: the Codex subscription path above; `generate_images_openai.py` only with the
-user's explicit go-ahead (the BILLING GATE below).
+user's explicit go-ahead (the BILLING GATE below). When the Codex run fails, its `WHY:` line names the
+cause it read from the session (measured: an account on the FREE plan has no image tool). With that
+go-ahead, the metered path runs the same two steps — `python3 scripts/generate_images_openai.py
+<manifest> --only <key-id>`, then `--style-ref <the key image>` — taking each slot's size from its
+`aspect` and sending the key image itself to the edits endpoint.
 
 ## When to use image generation
 

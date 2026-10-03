@@ -111,6 +111,9 @@ with tempfile.TemporaryDirectory() as td:
     check(h["id"] == "hero" and h["filename"] == "slide-01-hero.png" and h["slide"] == 1, "item shape: {}".format(h))
     check(all(it.get("orientation") == "auto" for it in items),
           "series items carry orientation 'auto' — the aspect is already in each prompt")
+    check(items[0].get("aspect") == round(4.2 / 5.6, 3) and items[1].get("aspect") == 1.0,
+          "series items carry their slot's aspect (the metered path picks its size from it): {}".format(
+              [it.get("aspect") for it in items]))
     p0, p1 = items[0]["prompt"], items[1]["prompt"]
     check(GOOD["art_direction"] in p0 and GOOD["art_direction"] in p1, "every prompt carries the art direction")
     check("#D9A13B" in p0, "every prompt carries the palette")

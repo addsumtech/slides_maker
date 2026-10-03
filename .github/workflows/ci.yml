@@ -1201,6 +1201,13 @@ jobs:
           grep -qE "\\] ok$" /tmp/imagegenflags.log || {
             echo "::error::test_imagegen_series_flags did not run to completion"; exit 1; }
 
+      - name: generate_images_openai runs a series as faithfully as the Codex path
+        run: |
+          set -o pipefail
+          python tests/test_imagegen_openai_series.py | tee /tmp/imagegenopenai.log
+          grep -qE "\\] ok$" /tmp/imagegenopenai.log || {
+            echo "::error::test_imagegen_openai_series did not run to completion"; exit 1; }
+
       - name: chroma_cutout keys a flat background or refuses
         run: |
           set -o pipefail
