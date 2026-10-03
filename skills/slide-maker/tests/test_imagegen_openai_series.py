@@ -68,6 +68,7 @@ with tempfile.TemporaryDirectory() as td:
           and (td / "slide-01-hero.png").read_bytes() in body, "multipart body must carry fields and the file")
 p = gio._with_style("a tray of tools")
 check(p.startswith("a tray of tools") and "do not copy its subject" in p.lower(), "style instruction: " + p)
+check("background" in p.lower() and "wins" in p.lower(), "the prompt's background must win: " + p)
 
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_imagegen_openai_series] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))

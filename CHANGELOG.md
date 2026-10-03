@@ -20,10 +20,15 @@ writes the prompts with the render mode and the no-text rule INSIDE each prompt,
 generated image with the key image (`qc`, with a contact sheet), and places each slot with its frame,
 focus and alt text (`slot_picture`), tagging it `+gen.<slot>` through the shared shape-name composer.
 `generate_images_codex.py` gains `--only <id>` (make the key image first and look at it) and
-`--style-ref <key>` (every other image matches its look, not its subject). `image_fx.chroma_cutout`
-keys a generated subject off its flat background — despilling an edge band, because the opaque mixed
-pixels of a soft edge carried a visible green outline — and refuses a background that is not flat, a
-subject touching the frame edge, or a key that leaves no subject.
+`--style-ref <key>` (every other image matches its look, not its subject); the metered
+`generate_images_openai.py` gains the same two flags (the key image goes to the edits endpoint) and
+sizes each slot from its aspect, and a Codex run that produces nothing now prints WHY, read from its
+own session (an account on the FREE plan has no image tool). `image_series.py cutout` keys every
+cut-out slot off the plan's own key colour with `image_fx.chroma_cutout` — despilling an edge band,
+because the opaque mixed pixels of a soft edge carried a visible green outline — and refuses a
+background that is not the key colour (a watercolour cut-out returned on cream paper lost its own
+cream highlights when keyed anyway), not flat, a subject touching the frame edge, or a key that leaves
+no subject. `check` also refuses a subject that names people under a non-person kind.
 
 A new delivery gate, shared by `render_deck.py --gate-check` and `codex_delivery_gate.py`, reads the
 tags from the saved file: it blocks a generated picture with no planned slot, an image-led deck with no

@@ -219,7 +219,7 @@ be reconstructed post-hoc at the delivery gate.
    `python3 scripts/image_series.py prompts <deck>/series.json <deck>/assets/generated` →
    `python3 scripts/generate_images_codex.py <deck>/assets/generated/image_prompt_manifest.json --only <key-id>`
    (LOOK at the key image) → the same command with `--style-ref <the key image>` instead of `--only` →
-   `image_fx.chroma_cutout(<image>)` on each cut-out slot →
+   `python3 scripts/image_series.py cutout <deck>/series.json --dir <deck>/assets/generated` →
    `python3 scripts/image_series.py qc <deck>/series.json --dir <deck>/assets/generated`. Place every
    slot with `image_series.slot_picture(s, plan, "<id>", x, y, w, h, image_dir=…)` — never
    `dk.picture` for a series image: the delivery gate blocks an image-led deck with no slot placed

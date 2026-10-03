@@ -69,6 +69,19 @@ with tempfile.TemporaryDirectory() as td:
     # ...while a green SUBJECT on a magenta key keeps its own green inside (the despill is an edge band)
     check(go.getpixel((150, 150))[:3] == (46, 125, 50), "a magenta-key despill must not touch the green interior: {}"
           .format(go.getpixel((150, 150))))
+    # the background must be the key colour ASKED for: measured 2026-10-03, a watercolour series' style
+    # reference won over the prompt and a cut-out came back on cream PAPER; keyed anyway, the subject's
+    # own cream highlights went with it (holes in a pot rim, specks through the soil) and nothing said so
+    cream = td / "cream.png"
+    scene((252, 243, 224), (196, 120, 70)).save(cream)
+    try:
+        image_fx.chroma_cutout(str(cream), key="FF00FF")
+        fails.append("chroma_cutout keyed a cream background when FF00FF was asked for")
+    except ValueError as ex:
+        check("key" in str(ex) and "FF00FF" in str(ex), "the refusal should name the asked-for key: {}".format(ex))
+    mg = td / "mg.png"
+    scene((255, 0, 255), (46, 125, 50)).save(mg)
+    check(image_fx.chroma_cutout(str(mg), key="#ff00ff").endswith(".cut.png"), "the right key passes, any case/#")
     # refusals
     n = td / "noisy.png"
     scene((0, 177, 64), (150, 92, 60), noise=70).save(n)

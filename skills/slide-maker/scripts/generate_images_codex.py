@@ -337,7 +337,8 @@ def style_clause(name):
             "grain or brushwork and rendering, so the two read as one series — describe that look in "
             "concrete words INSIDE the image prompt you pass to the tool (the tool cannot see the file). "
             "Do NOT copy its subject, its objects or its composition — the subject is the one in the "
-            "prompt above.").format(name)
+            "prompt above. If the prompt asks for a flat background colour (a cut-out), the prompt's "
+            "background wins over the reference's.").format(name)
 
 
 # MEASURED, twice, on real generations. Putting "render it as an illustration, not a photograph"

@@ -58,6 +58,8 @@ with tempfile.TemporaryDirectory() as td:
 cl = gic.style_clause("_style-ref.png")
 check("_style-ref.png" in cl and "do not copy its subject" in cl.lower(), "style clause wording: " + cl)
 check("REAL subject" not in cl, "the style clause must not reuse the real-photo wording")
+check("background" in cl.lower() and "prompt" in cl.lower() and "wins" in cl.lower(),
+      "the prompt's background (a cut-out's flat key) must win over the reference's: " + cl)
 
 # a series item states its OWN aspect in its prompt; the generator's --orientation default ("landscape",
 # appended INSIDE the prompt) would contradict a tall arch. An item's own "orientation" wins.

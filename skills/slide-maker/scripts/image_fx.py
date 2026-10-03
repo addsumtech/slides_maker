@@ -165,7 +165,7 @@ def sticker_outline(src, out=None, *, border=0.035, color="FFFFFF"):
     return out
 
 
-def chroma_cutout(src, out=None, *, tol=60, min_subject=0.05):
+def chroma_cutout(src, out=None, *, key=None, tol=60, min_subject=0.05):
     """Key a generated subject off a FLAT background colour (the series pipeline prompts for one).
 
     The background colour is estimated from the frame's outer ring; pixels within `tol/2` of it become
@@ -185,6 +185,14 @@ def chroma_cutout(src, out=None, *, tol=60, min_subject=0.05):
     sides_sm = [sm[:2].reshape(-1, 3), sm[-2:].reshape(-1, 3), sm[:, :2].reshape(-1, 3), sm[:, -2:].reshape(-1, 3)]
     sides_raw = [a[:2].reshape(-1, 3), a[-2:].reshape(-1, 3), a[:, :2].reshape(-1, 3), a[:, -2:].reshape(-1, 3)]
     bg = np.median(np.concatenate(sides_sm), axis=0)
+    if key:
+        kh = str(key).lstrip("#").upper()
+        kc = np.array([int(kh[i:i + 2], 16) for i in (0, 2, 4)], dtype=np.float32)
+        if float(np.linalg.norm(bg - kc)) > tol:
+            raise ValueError("chroma_cutout(): the background of {} is #{:02X}{:02X}{:02X}, not the key colour #{} "
+                             "asked for — regenerate it on the key. Keying another ground also removes the "
+                             "subject's own matching colours (measured: a cut-out returned on cream paper lost "
+                             "its cream highlights).".format(src, *(int(round(c)) for c in bg), kh))
     hit = [float((np.linalg.norm(sd - bg, axis=1) > tol * 0.5).mean()) > 0.02 for sd in sides_sm]
     if sum(hit) >= 3:
         raise ValueError("chroma_cutout(): the background of {} is not flat (a gradient or a subject that fills "

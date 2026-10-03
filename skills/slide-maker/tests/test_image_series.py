@@ -89,6 +89,10 @@ for subj in ("a hand-thrown stoneware kettle with an ash glaze on linen",
              "雨后的城市屋顶菜园，番茄架和水壶"):
     ok_ = copy.deepcopy(GOOD); ok_["slots"][0].update(subject=subj, kind="scene")
     check(ims.check(ok_) == [], "{!r} names no one but was refused: {}".format(subj, ims.check(ok_)))
+# the KEY sets the series' look, so it must be a graded picture, not a cut-out object
+bad(lambda p: p.update(key="kettle"), "key")
+ck = copy.deepcopy(GOOD); ck["slots"] = [ck["slots"][1], ck["slots"][0]]       # a cut-out FIRST, no key
+check(any("key" in x for x in ims.check(ck)), "a cut-out first slot cannot be the default key: {}".format(ims.check(ck)))
 # a persona WITH its label is valid
 pp = copy.deepcopy(GOOD)
 pp["slots"][0].update(kind="persona", persona_label="虚构人物 · illustrative persona")
@@ -150,6 +154,9 @@ check("tall" in ims.build_prompt(tall, tall["slots"][0]).lower(), "a 1:4 frame m
 wide = copy.deepcopy(GOOD)
 wide["slots"][0]["frame"] = {"shape": "rect", "w": 8.0, "h": 2.0}
 check("wide" in ims.build_prompt(wide, wide["slots"][0]).lower(), "a 4:1 frame must ask for a wide composition")
+el = copy.deepcopy(GOOD); el["slots"][0]["frame"] = {"shape": "ellipse", "w": 3, "h": 3}
+check(" a ellipse" not in ims.build_prompt(el, el["slots"][0]), "article before a vowel-initial shape")
+check("湿泥。" in ims.build_prompt(cj, cj["slots"][0]), "a CJK subject ends with a CJK full stop, not '.'")
 # the CLI refuses an invalid plan with exit 1 and lists the problems
 with tempfile.TemporaryDirectory() as td:
     bp = Path(td) / "series.json"
@@ -209,10 +216,51 @@ with tempfile.TemporaryDirectory() as td:
     fk = {s["id"]: s["flags"] for s in repc["slots"]}["kettle"]
     check(not any("OFF-SERIES" in f for f in fk), "a warm subject on the green key is in-series: {}".format(fk))
     check(not any(f.startswith("LETTERBOX") for f in fk), "the flat key colour is not a letterbox: {}".format(fk))
+    # ...and a cut-out is an isolated OBJECT: its colour is the object's, not the series' grade, so it is
+    # not colour-compared at all. Measured 2026-10-03 on a real series: a cream kettle cut-out read 30.3
+    # from a warm hall scene and was flagged OFF-SERIES while plainly belonging to the series.
+    kim2 = Image.new("RGB", (300, 300), (0, 177, 64))
+    ImageDraw.Draw(kim2).ellipse((70, 60, 230, 250), fill=(238, 228, 200))
+    kim2.save(td / "slide-03-kettle.png")
+    rk = {s["id"]: s for s in ims.qc(plan, td)["slots"]}["kettle"]
+    check(not any("OFF-SERIES" in f for f in rk["flags"]) and rk.get("delta_e") is None,
+          "a cut-out is not colour-compared: {}".format(rk))
+    kim.save(td / "slide-03-kettle.png")
     # ...and when the KEY image itself is a cut-out, the others are compared with its subject
     pk = copy.deepcopy(plan); pk["key"] = "kettle"
     fh = {s["id"]: s["flags"] for s in ims.qc(pk, td)["slots"]}["hero"]
     check(not any("OFF-SERIES" in f for f in fh), "a cut-out key must be compared on its subject: {}".format(fh))
+    # `cutout` cuts every cut-out slot with the PLAN's key — and refuses one generated on the wrong ground
+    cut_plan = td / "plan.json"
+    cut_plan.write_text(json.dumps(plan), encoding="utf-8")
+    import contextlib, io  # noqa: E401,E402
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        rc = ims.main(["cutout", str(cut_plan), "--dir", str(td)])
+    check(rc == 0 and (td / "slide-03-kettle.cut.png").exists(), "cutout must key the kettle slot: rc={} {}".format(rc, buf.getvalue()))
+    rq = {s["id"]: s for s in ims.qc(plan, td)["slots"]}["kettle"]
+    check(not any(f.startswith("CUTOUT") for f in rq["flags"]), "after `cutout` the CUTOUT flag clears: {}".format(rq["flags"]))
+    (td / "slide-03-kettle.cut.png").unlink()
+    Image.new("RGB", (300, 300), (252, 243, 224)).save(td / "slide-03-kettle.png")
+    ImageDraw.Draw(Image.open(td / "slide-03-kettle.png")).ellipse((60, 60, 240, 240))
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        rc = ims.main(["cutout", str(cut_plan), "--dir", str(td)])
+    check(rc == 1 and "kettle" in buf.getvalue() and not (td / "slide-03-kettle.cut.png").exists(),
+          "a cut-out on the wrong ground must be refused, naming the slot: rc={} {}".format(rc, buf.getvalue()[-200:]))
+    kim.save(td / "slide-03-kettle.png")
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        ims.main(["qc", str(cut_plan), "--dir", str(td)])
+    cl = [l for l in buf.getvalue().splitlines() if "CUTOUT" in l]
+    check(cl and "<" not in cl[0] and str(cut_plan) in cl[0], "the CUTOUT line must run as printed: {}".format(cl))
+    # paper margins are the MEDIUM of an illustration series, not a padded export: no LETTERBOX there
+    lb = Image.new("RGB", (400, 300), (250, 244, 228))
+    lb.paste(Image.open(td / "slide-01-hero.png").resize((400, 200)), (0, 50))
+    lb.save(td / "slide-04-odd.png")
+    il_plan = copy.deepcopy(plan); il_plan["render"] = "illustration"
+    fo = {s["id"]: s["flags"] for s in ims.qc(il_plan, td)["slots"]}["odd"]
+    check(not any(f.startswith("LETTERBOX") for f in fo), "an illustration's paper margin is not a letterbox: {}".format(fo))
     # Review Focus 2: an image far from its frame's aspect is flagged
     warm(td / "slide-01-hero.png", size=(800, 200))                       # 4:1 for a 3:4 arch frame
     rep2 = ims.qc(plan, td)

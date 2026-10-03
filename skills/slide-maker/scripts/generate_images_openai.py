@@ -47,7 +47,8 @@ def _with_style(prompt):
     return (prompt + "\n\nThe attached image is an earlier image of the SAME series: match its palette, "
             "light, colour temperature, grain or brushwork and rendering, so the two read as one series. "
             "Do NOT copy its subject, its objects or its composition — the subject is the one described "
-            "above.")
+            "above. If this prompt asks for a flat background colour (a cut-out), the prompt's background "
+            "wins over the reference's.")
 
 
 def _multipart(fields, files):

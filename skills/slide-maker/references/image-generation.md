@@ -97,15 +97,17 @@ python3 scripts/image_series.py prompts <deck>/series.json <deck>/assets/generat
 python3 scripts/generate_images_codex.py <deck>/assets/generated/image_prompt_manifest.json --only <key-id>
 #   LOOK at the key image; regenerate it (--overwrite --only <key-id>) until it IS the series' look
 python3 scripts/generate_images_codex.py <deck>/assets/generated/image_prompt_manifest.json --style-ref <deck>/assets/generated/slide-NN-<key-id>.png
-python3 -c "import sys; sys.path.insert(0, 'scripts'); import image_fx; print(image_fx.chroma_cutout('<deck>/assets/generated/slide-NN-<id>.png'))"
+python3 scripts/image_series.py cutout <deck>/series.json --dir <deck>/assets/generated
 python3 scripts/image_series.py qc <deck>/series.json --dir <deck>/assets/generated
 ```
 
 The key image is generated ALONE first so it can be judged before anything is made in its style;
 `--style-ref` then stages it beside every other generation with an instruction to match its palette,
-light, grain and rendering — never its subject. `chroma_cutout` (cut-out slots only) keys the flat
-background away and refuses, loudly, a background that is not flat, a subject touching the frame edge
-or a key that leaves no subject — regenerate rather than ship a fringe. `qc` compares every image
+light, grain and rendering — never its subject. `cutout` keys every cut-out slot off the plan's own
+`chroma` (`image_fx.chroma_cutout(path, key=…)`) and refuses, loudly, a background that is not that
+key colour, not flat, a subject touching the frame edge, or a key that leaves no subject — regenerate
+rather than ship a fringe. *(Measured: a watercolour key image's paper won over the prompt and a
+cut-out came back on cream; keyed anyway, its own cream highlights went with the background.)* `qc` compares every image
 with the key (mean colour + hue histogram; a cut-out on its subject only), flags MISSING / OFF-SERIES
 / ASPECT / CUTOUT plus `image_qc`'s per-file flags, and writes `series-qc.json` and
 `_series_contact.png` — LOOK at the contact sheet. An outlier is regenerated with `--style-ref`, or

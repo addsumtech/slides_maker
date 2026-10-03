@@ -175,6 +175,12 @@ def check(plan):
     k = plan.get("key")
     if k is not None and k not in seen:
         out.append("key: {!r} is not a slot id".format(k))
+    else:
+        kid = key_id(plan)
+        ks = next((x for x in slots if isinstance(x, dict) and x.get("id") == kid), {})
+        if ks.get("cutout"):
+            out.append("key: {!r} is a cut-out — the series' look is READ from the key image, so it must be a "
+                       "graded picture; set \"key\" to a scene slot".format(kid))
     return out
 
 
@@ -194,6 +200,12 @@ def _aspect_words(w, h):
     return "a near-square composition ({:.2f}:1)".format(r)
 
 
+def _stop(text):
+    """End a sentence in its own script's full stop: a Chinese subject gets 。, a Latin one gets '.'."""
+    t = str(text).rstrip().rstrip("。.")
+    return t + ("。" if t and "\u3000" <= t[-1] <= "\u9fff" else ".")
+
+
 def build_prompt(plan, s):
     pal = ", ".join("#" + p.lstrip("#").upper() for p in plan.get("palette") or [])
     chroma = "#" + str(plan.get("chroma") or DEFAULT_CHROMA).lstrip("#").upper()
@@ -201,12 +213,12 @@ def build_prompt(plan, s):
     lines = [
         "Use case: one image of an art-directed SERIES for a presentation deck — every image in the "
         "series must read as made by the same hand.",
-        "Subject: {}.".format(s["subject"]),
-        "Art direction (shared by the whole series): {}.".format(plan["art_direction"]),
+        "Subject: {}".format(_stop(s["subject"])),
+        "Art direction (shared by the whole series): {}".format(_stop(plan["art_direction"])),
         "Palette: {} — stay within it.".format(pal),
         RENDER_CLAUSE[plan["render"]],
-        "Composition: {}; the subject centred with generous margin so a {} crop keeps it whole.".format(
-            _aspect_words(fr["w"], fr["h"]), fr["shape"]),
+        "Composition: {}; the subject centred with generous margin so the {} frame's crop keeps it "
+        "whole.".format(_aspect_words(fr["w"], fr["h"]), fr["shape"]),
     ]
     cz = s.get("calm_zone")
     if cz and cz != "none":
@@ -276,7 +288,28 @@ def _hist_d(a, b):
     return sum(abs(x - y) for x, y in zip(a, b)) / 2.0
 
 
-def qc(plan, gen_dir, *, de_max=None, hist_max=None):
+def cutout(plan, gen_dir):
+    """Key every cut-out slot's image off the PLAN's chroma colour -> {slot id: .cut.png path or the
+    refusal}. A slot generated on any other ground is refused, never keyed: keying cream paper also
+    removes the subject's cream highlights."""
+    import image_fx
+    key = str(plan.get("chroma") or DEFAULT_CHROMA).lstrip("#").upper()
+    res = {}
+    for s in plan["slots"]:
+        if not s.get("cutout"):
+            continue
+        f = Path(gen_dir) / "slide-{:02d}-{}.png".format(s["slide"], s["id"])
+        if not f.exists():
+            res[s["id"]] = "MISSING: no image at {} — generate it".format(f.name)
+            continue
+        try:
+            res[s["id"]] = image_fx.chroma_cutout(str(f), key=key)
+        except ValueError as e:
+            res[s["id"]] = "REFUSED: {}".format(e)
+    return res
+
+
+def qc(plan, gen_dir, *, de_max=None, hist_max=None, plan_path=None):
     """Compare every slot's image with the KEY image; flag MISSING / OFF-SERIES / ASPECT / CUTOUT and the
     per-file image_qc flags. Writes series-qc.json beside the images and returns the report."""
     import image_qc
@@ -300,7 +333,9 @@ def qc(plan, gen_dir, *, de_max=None, hist_max=None):
             if far > ASPECT_MAX:
                 flags.append("ASPECT: {}x{} is far from the {:.2f}:1 frame — regenerate at the frame's aspect".format(
                     w, h, s["frame"]["w"] / float(s["frame"]["h"])))
-            if key_stats is not None and s["id"] != kid:
+            # a cut-out is an isolated OBJECT: its colour is the object's, not the series' grade, so it
+            # is not colour-compared (measured: a cream kettle read 30.3 from a warm hall scene)
+            if key_stats is not None and s["id"] != kid and not s.get("cutout"):
                 de = math.dist(st["lab"], key_stats["lab"])
                 hd = _hist_d(st["hue_hist"], key_stats["hue_hist"])
                 row.update(delta_e=round(de, 1), hist=round(hd, 2))
@@ -310,11 +345,15 @@ def qc(plan, gen_dir, *, de_max=None, hist_max=None):
             if s.get("cutout"):
                 cut = f.with_name(f.stem + ".cut.png")
                 if not cut.exists():
-                    flags.append("CUTOUT: no {} — run image_fx.chroma_cutout on it".format(cut.name))
+                    flags.append("CUTOUT: no {} — run: python3 scripts/image_series.py cutout {} "
+                                 "--dir {}".format(cut.name, plan_path or "<series.json>", gen_dir))
             rec = image_qc.inspect(str(f))
+            # a cut-out's flat key IS uniform bands, and an illustration's paper margin is its medium —
+            # neither is a padded export (measured: LETTERBOX on 4 of 5 watercolours); on the sheet too
+            if s.get("cutout") or plan.get("render") == "illustration":
+                rec["flags"] = [fl for fl in rec.get("flags", []) if fl[0] != "LETTERBOX"]
             recs.append(rec)
-            flags += ["{}: {}".format(c, m) for c, m in rec.get("flags", [])
-                      if not (s.get("cutout") and c == "LETTERBOX")]   # the flat key IS uniform bands
+            flags += ["{}: {}".format(c, m) for c, m in rec.get("flags", [])]
         row["flags"] = flags
         if flags and s["id"] != kid and any(x.startswith("OFF-SERIES") for x in flags):
             outliers.append(s["id"])
@@ -362,6 +401,9 @@ def main(argv=None):
     p = sub.add_parser("prompts", help="write image_prompt_manifest.json for generate_images_codex.py")
     p.add_argument("plan")
     p.add_argument("out_dir")
+    c2 = sub.add_parser("cutout", help="key every cut-out slot off the plan's chroma colour")
+    c2.add_argument("plan")
+    c2.add_argument("--dir", required=True, help="the folder the generator wrote the images into")
     q = sub.add_parser("qc", help="compare every generated image with the key image")
     q.add_argument("plan")
     q.add_argument("--dir", required=True, help="the folder the generator wrote the images into")
@@ -380,8 +422,18 @@ def main(argv=None):
         print("NEXT: python3 scripts/image_series.py prompts {} {}".format(
             a.plan, Path(a.plan).resolve().parent / "assets" / "generated"))
         return 0
+    if a.cmd == "cutout":
+        res = cutout(plan, a.dir)
+        bad_ = {k: v for k, v in res.items() if not str(v).endswith(".cut.png")}
+        for k, v in res.items():
+            print("  [{}] {}".format(k, v))
+        if not res:
+            print("image_series cutout: the plan has no cut-out slot")
+        elif not bad_:
+            print("NEXT: python3 scripts/image_series.py qc {} --dir {}".format(a.plan, a.dir))
+        return 1 if bad_ else 0
     if a.cmd == "qc":
-        rep = qc(plan, a.dir)
+        rep = qc(plan, a.dir, plan_path=a.plan)
         flagged = [r for r in rep["slots"] if r["flags"]]
         for r in flagged:
             for f in r["flags"]:
