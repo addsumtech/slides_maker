@@ -22,20 +22,31 @@ import deckkit as dk  # noqa: E402
 _LINE_H = 1.12
 
 
-def _glyph_width(text, size, face, bold):
+def _italic_file(face, bold):
+    """The installed ITALIC file of `face`, or None (matplotlib's own lookup, no fallback)."""
+    try:
+        from matplotlib import font_manager as fm
+        f = fm.findfont(fm.FontProperties(family=face, style="italic", weight="bold" if bold else "normal"),
+                        fallback_to_default=False)
+        return f if "italic" in f.lower() or "oblique" in f.lower() else None
+    except Exception:
+        return None
+
+
+def _glyph_width(text, size, face, bold, italic=False):
     """The rendered width of `text` (inches) from the font file's own advances. dk.measure_text breaks
     only at spaces, so it calls a too-wide single word "one line" — LibreOffice breaks it mid-word
-    (measured: "BROKEN" at 199.6pt = 8.68in in a 4.94in box, rendered "BRO / KEN"). A bold run on a face
-    with no bold file is emboldened synthetically by the renderer, a few percent wider."""
+    (measured: "BROKEN" at 199.6pt = 8.68in in a 4.94in box, rendered "BRO / KEN"). An italic run is
+    measured with the face's real italic file when one is installed."""
     from PIL import ImageFont
     f = dk._font_file(face, bold=bold) if face else None
     if f is None:
         return None
-    fnt = ImageFont.truetype(str(f), max(8, int(size * 10)))
-    w = fnt.getlength(text) / 10.0 / 72.0
-    if bold and str(dk._font_file(face, bold=True)) == str(dk._font_file(face)):
-        w *= 1.04
-    return w
+    itf = _italic_file(face, bold) if italic else None
+    fnt = ImageFont.truetype(str(itf or f), max(8, int(size * 10)))
+    # Synthetic bold / slant does NOT change advance widths in the renderer (measured 2026-10-03: Impact
+    # 72pt regular vs bold = 913px both; Hiragino Sans GB +0.4%), so no allowance is added for them.
+    return fnt.getlength(text) / 10.0 / 72.0
 
 
 def _one_line_size(text, w, face, bold, lo, hi):
@@ -108,4 +119,6 @@ def outlined(slide, x, y, w, h, text, *, color, face="Arial Black", stroke=None)
     d.mkdir(parents=True, exist_ok=True)
     out = d / "outlined-{}.png".format(key)
     im.save(out)
-    return dk.picture(slide, str(out), x, y, w, h, fit="contain", alt=text)
+    ar = im.width / float(im.height)
+    pw, ph = (h * ar, h) if h * ar <= w else (w, w / ar)     # its own aspect, anchored top-left
+    return dk.picture(slide, str(out), x, y, pw, ph, fit="contain", alt=text)
