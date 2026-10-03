@@ -93,6 +93,10 @@ for subj in ("a hand-thrown stoneware kettle with an ash glaze on linen",
 bad(lambda p: p.update(key="kettle"), "key")
 ck = copy.deepcopy(GOOD); ck["slots"] = [ck["slots"][1], ck["slots"][0]]       # a cut-out FIRST, no key
 check(any("key" in x for x in ims.check(ck)), "a cut-out first slot cannot be the default key: {}".format(ims.check(ck)))
+# a subject must name a THING: the prompt boilerplate alone ("presentation deck", "same hand", "crop")
+# used to clear the generator's topicality gate, so "an abstract soft gradient backdrop" sailed through
+for subj in ("an abstract soft gradient backdrop", "抽象柔和的渐变背景"):
+    bad(lambda p, subj=subj: p["slots"][1].update(subject=subj), "subject")
 # a persona WITH its label is valid
 pp = copy.deepcopy(GOOD)
 pp["slots"][0].update(kind="persona", persona_label="虚构人物 · illustrative persona")
@@ -307,6 +311,18 @@ for _vals, _what in ((ims.KINDS, "kind"), (ims.NOT_GENERATABLE, "refused kind"),
     check(not _miss, "image-generation.md's series section does not name {} value(s) {}".format(_what, _miss))
 for _needle in ("image_series.load(", "sys.path.insert", "calm_zone", "[fx, fy]", "only these two"):
     check(_needle in _sec, "image-generation.md's series section never says {!r}".format(_needle))
+
+# ...and the generator's gate reads the SUBJECT of a series item, not its boilerplate
+gen_plan = copy.deepcopy(GOOD)
+gen_plan["slots"][1]["subject"] = "an abstract soft gradient backdrop"     # bypassing check()
+with tempfile.TemporaryDirectory() as td:
+    its = ims.prompts(gen_plan, td)
+    thin = gic.check_prompt_topicality(its)
+    check(any(t[0] == 1 for t in thin), "a generic series subject must fail the generator's gate: {}".format(thin))
+    check(not any(t[0] == 0 for t in thin), "a real subject must pass it: {}".format(thin))
+    its = ims.prompts(cj, td)
+    check(gic.check_prompt_topicality(its) == [], "a Chinese subject must pass on its own words: {}".format(
+        gic.check_prompt_topicality(its)))
 
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_image_series] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))

@@ -152,6 +152,11 @@ def check(plan):
             out.append(tag + ": a persona needs persona_label — the visible 'fictional' label set on its slide")
         if reason_width(s.get("subject")) < FLOOR_SUBJECT:
             out.append(tag + ": subject must say what is in the picture (>= {} wide)".format(FLOOR_SUBJECT))
+        else:
+            import generate_images_codex as _gic
+            if len(_gic.subject_terms(str(s.get("subject")))) < _gic.SERIES_MIN_SUBJECT_TERMS:
+                out.append(tag + ": the subject names no THING a stranger could picture (only style/mood "
+                           "words: {!r}) — say what is in the picture".format(s.get("subject")))
         if reason_width(s.get("meaning")) < FLOOR_MEANING:
             out.append(tag + ": meaning — what this image SAYS on its slide (>= {} wide). A slot with "
                        "nothing to say does not exist".format(FLOOR_MEANING))
@@ -240,6 +245,7 @@ def prompts(plan, out_dir):
     for s in plan["slots"]:
         fn = "slide-{:02d}-{}.png".format(s["slide"], s["id"])
         items.append({"id": s["id"], "slide": s["slide"], "filename": fn, "orientation": "auto",
+                      "subject": s["subject"],
                       "aspect": round(s["frame"]["w"] / float(s["frame"]["h"]), 3),
                       "path": str(out_dir / fn), "prompt": build_prompt(plan, s)})
     (out_dir / "image_prompt_manifest.json").write_text(

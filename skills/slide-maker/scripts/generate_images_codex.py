@@ -512,6 +512,27 @@ def topic_terms(s):
 
 MIN_SUBJECT_NOUNS = 6
 
+# Chinese has no spaces, so topic_terms() counts a Chinese subject as 0 — a Chinese prompt passed the
+# gate only on its English boilerplate. A Chinese subject is counted by its own characters once the
+# style/mood words and particles are removed, two characters to a term.
+_ZH_STYLE = ("抽象", "渐变", "背景", "柔和", "色彩", "颜色", "风格", "氛围", "质感", "光影", "光线", "纹理",
+             "简约", "高级", "唯美", "梦幻", "科技感", "未来感", "意境", "画面", "图案", "插画", "照片", "水彩")
+_ZH_PARTICLES = "的了和与在里上中下着地得是很很一个"
+SERIES_MIN_SUBJECT_TERMS = 2
+
+
+def subject_terms(s):
+    """Content terms of an image SUBJECT, language-fair: English words via topic_terms, plus Chinese
+    content characters (style words and particles removed) counted two to a term."""
+    s = s or ""
+    terms = set(topic_terms(s))
+    han = s
+    for w in _ZH_STYLE:
+        han = han.replace(w, "")
+    han = "".join(ch for ch in han if "\u4e00" <= ch <= "\u9fff" and ch not in _ZH_PARTICLES)
+    terms |= {"zh:" + han[i:i + 2] for i in range(0, len(han) - 1, 2)}
+    return terms
+
 
 def check_prompt_topicality(items, min_nouns=MIN_SUBJECT_NOUNS):
     """(findings, ...) — prompts too thin on SUBJECT vocabulary to be depicting anything.
@@ -535,6 +556,14 @@ def check_prompt_topicality(items, min_nouns=MIN_SUBJECT_NOUNS):
     """
     out = []
     for i, it in enumerate(items):
+        if it.get("subject"):
+            # an image-series item: its prompt is mostly shared boilerplate ("presentation deck", "same
+            # hand", "crop") that alone cleared this gate — measured: "an abstract soft gradient
+            # backdrop" scored 38. Its SUBJECT is what must name a thing.
+            nouns = sorted(subject_terms(it["subject"]))
+            if len(nouns) < SERIES_MIN_SUBJECT_TERMS:
+                out.append((i, it.get("filename") or it.get("path") or "?", nouns))
+            continue
         nouns = sorted(topic_terms(it.get("prompt", "")))
         if len(nouns) < min_nouns:
             out.append((i, it.get("filename") or it.get("path") or "?", nouns))
