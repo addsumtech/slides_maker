@@ -668,6 +668,10 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   near-duplicates, a possible-watermark heuristic, and EXIF rotation (`--fix` bakes it in). Its
   `--contact-sheet` is ONE labelled PNG of every candidate plus a sha256 — the artifact that makes
   looking cheap, and that a critic's consent can name.
+- `image_series.py` — the ART-DIRECTED IMAGE SERIES for an image-led deck (`imagery: series`): `check`
+  validates `series.json` (every slot's meaning line, REFERENT RULE, the people rule, frames, the chroma
+  key vs the palette), `prompts` writes the Codex generator's manifest, `qc` compares every image with
+  the key image, `slot_picture` places a slot and tags it `+gen.<slot>` for the gates.
 - `check_image_provenance.py` — holds each `image_sources` evidence token against the ledger and
   against the BUILT deck: a `searched, none found` rung must be backed by a recorded search (an
   `unreachable` network is refused as one), and an attribution-required photo must be credited on

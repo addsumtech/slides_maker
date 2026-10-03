@@ -1187,6 +1187,13 @@ jobs:
           grep -qE "\\] ok$" /tmp/frosted.log || {
             echo "::error::test_frosted_panel did not run to completion"; exit 1; }
 
+      - name: image_series plans, prompts, QCs and places an art-directed series
+        run: |
+          set -o pipefail
+          python tests/test_image_series.py | tee /tmp/imageseries.log
+          grep -qE "\\] ok$" /tmp/imageseries.log || {
+            echo "::error::test_image_series did not run to completion"; exit 1; }
+
       - name: The Codex scaffold shows every field the Codex gate requires
         run: |
           set -o pipefail
