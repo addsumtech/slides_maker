@@ -76,6 +76,8 @@ _DEFAULTS = {
     # `dna` name switch, so a bespoke direction renders a real style, not a motif-less colourway.
     "cover_motif": None,        # raw HTML: this bespoke register's signature motif on the cover
     "ambient_motif": None,      # raw HTML: its quiet register signature for interior slides
+    "vl": None,          # a curated visual language (visual_languages.direction)
+    "sample": None,      # its bundled style sample, a data:image/ URI
 }
 
 _COVERS = ("centred", "low-left", "split-vertical", "full-bleed-type")
@@ -156,6 +158,9 @@ def _norm(d):
         if k in s and not _FONT_OK.match(str(s[k])):
             warn.append(f"{s['name']}.{k}={s[k]!r}")
             s[k] = _DEFAULTS[k]
+    if s.get("sample") and not _SAMPLE_OK.match(str(s["sample"])):
+        warn.append(f"{s['name']}.sample (not a data:image/ URI — dropped)")
+        s["sample"] = None
     for k in ("cover_motif", "ambient_motif"):
         if s.get(k):
             cleaned = sanitize_motif(s[k])
@@ -385,8 +390,18 @@ def _dna_ambient(S):
     return f'<div class="dna-amb dna-amb-{d}">{inner}</div>'
 
 
+_SAMPLE_OK = re.compile(r"^data:image/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$")
+
+
 def _slide_cover(S, deck_title="Deck Title"):
     name = S["name"]
+    if S.get("sample"):
+        # a curated visual language previews as its REAL rendered sample, labelled so nobody mistakes
+        # the sample's photographs and copy for their own deck
+        return f'''<div class="slide cover cov-sample" style="background:{S['bg']};padding:0">
+      <img src="{S['sample']}" alt="style sample of {_esc(name)}" style="width:100%;height:100%;object-fit:contain;display:block">
+      <div class="cover-tag" style="color:{S['ink']};background:rgba(255,255,255,.85);padding:2px 6px">Style sample — not your content · 风格样张，不是你的内容 · Direction: {_esc(name)}</div>
+    </div>'''
     # Faithful cover: a DARK deck gets a dark cover (its bg + light ink title); a LIGHT deck gets
     # a bold inverted cover (ink panel + light title). Avoids the inverted/low-contrast preview bug.
     if _is_dark(S["bg"]):

@@ -313,6 +313,28 @@ k.cover(k.new_slide(), title="A balcony garden", image=str(_src))
 check(sorted(p_.name for p_ in _ftd.iterdir()) == ["ill.png"], "a storybook page wrote beside the source image: {}".format(
     sorted(p_.name for p_ in _ftd.iterdir())))
 
+# ── Task 9: a visual language at the direction gate ──
+import directions_diversity as dd, archetypes_html as ah  # noqa: E401,E402
+d = vl.direction("collage")
+check(d["vl"] == "collage" and d["sample"].startswith("data:image/jpeg;base64,") and d["cover"] in ah._COVERS
+      and d["skeleton"] in ah._SKELETONS, "a direction dict: {}".format({k: str(v)[:30] for k, v in d.items()}))
+pres = ah.preset_directions(["swiss", "editorial_paper"])
+bes = {"name": "repair bench", "bg": "#F3EBDD", "ink": "#3B2F2A", "accent": "#C98A3D", "cover_motif": "<svg></svg>",
+       "ambient_motif": "<svg></svg>", "cover": "low-left", "skeleton": "island"}
+r = dd.check(pres + [d, bes])
+check(not r["colourway_excess"] and not r["no_bespoke"], "a vl direction is styled and the bespoke one still counts: {}".format(r))
+r2 = dd.check(pres + [d])
+check(r2["no_bespoke"], "a vl direction does NOT satisfy the bespoke requirement")
+_htd = Path(tempfile.mkdtemp())
+ah.build_directions_html([d] + pres + [bes], str(_htd / "dirs.html"))
+html = (_htd / "dirs.html").read_text(encoding="utf-8")
+check("<img" in html and "style sample" in html.lower() and "not your content" in html.lower(), "the preview shows the labelled sample")
+bad_ = dict(d, sample="javascript:alert(1)")
+ah.build_directions_html([bad_] + pres, str(_htd / "bad.html"))
+check("javascript:" not in (_htd / "bad.html").read_text(encoding="utf-8"), "a non-image sample is dropped")
+for n_ in vl.LANGS:
+    check(vl.direction(n_)["name"], "{} has a direction".format(n_))
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_visual_languages] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)

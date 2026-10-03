@@ -176,7 +176,7 @@ def _styled(d):
     `archetypes_html.preset_directions`) OR a bespoke register (its own motif). Everything else is a
     motif-less colourway — legitimate ONCE (the branch-(c) colour-scheme option D), a tell of an
     under-designed set beyond that."""
-    return bool(d.get("dna") or _bespoke(d))
+    return bool(d.get("dna") or d.get("vl") or _bespoke(d))     # vl: a curated visual language
 
 
 def check(directions):

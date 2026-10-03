@@ -737,6 +737,37 @@ def sample_sheet(render_dir, out_jpg, *, width=1400):
     return out_jpg
 
 
+_DISPLAY_NAMES = {"editorial": "Editorial magazine", "soft": "Soft organic", "collage": "Collage scrapbook",
+                  "storybook": "Watercolour storybook"}
+_RATIONALE = {"editorial": "photo-led and quiet: big bleed photographs, a serif display voice, pull quotes",
+              "soft": "photo-led and warm: arch and blob frames, pastel ground, rounded cards",
+              "collage": "photo-led and loud: tilted taped prints, heavy headlines, highlighter and squiggles",
+              "storybook": "illustration-led: a watercolour series melting into paper, serif type"}
+
+
+def direction(name, *, fonts="both"):
+    """A direction for the direction gate (archetypes_html / directions_diversity): this language's tokens
+    plus its bundled style SAMPLE (a data URI the preview shows, labelled "style sample — not your
+    content"). `vl` marks it STYLED for the diversity check — it never counts as the topic-invented
+    bespoke direction the gate also requires."""
+    import base64
+    if name not in LANGS:
+        raise KeyError("visual_languages.direction(): unknown language {!r} — one of {}".format(name, sorted(LANGS)))
+    L = LANGS[name]
+    p = L["palette"]
+    f = dict(L["fonts"]["both"])
+    if fonts == "mac":
+        f.update(L["fonts"]["mac"])
+    sample = ASSETS / "samples" / "{}.jpg".format(name)
+    if not sample.exists():
+        raise FileNotFoundError("visual_languages.direction(): no bundled sample at {} — rebuild it: python3 "
+                                "scripts/visual_languages.py --sample <dir>".format(sample))
+    return {"name": _DISPLAY_NAMES[name], "vl": name, "rationale": _RATIONALE[name],
+            "bg": "#" + _hex(p["ground"]), "ink": "#" + _hex(p["ink"]), "accent": "#" + _hex(p["text_accents"][0]),
+            "accents": ["#" + _hex(a) for a in p["text_accents"]],
+            "font_display": f["display"], "font_body": f["body"], "cover": L["cover"], "skeleton": L["skeleton"],
+            "sample": "data:image/jpeg;base64," + base64.b64encode(sample.read_bytes()).decode("ascii")}
+
 def main(argv=None):
     import argparse
     import shlex
