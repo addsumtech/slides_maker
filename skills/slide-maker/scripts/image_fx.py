@@ -137,6 +137,14 @@ def sticker_outline(src, out=None, *, border=0.035, color="FFFFFF"):
     if alpha.getextrema()[0] == 255:
         raise ValueError("sticker_outline(): {} is fully opaque — cut the subject out first"
                          .format(src))
+    # a SPECK of transparency (one stray pixel, a rounded-corner export) is still a rectangle;
+    # a cut-out has a background removed — require a real share of transparent pixels
+    _hist = alpha.histogram()
+    _clear = sum(_hist[:25]) / float(im.size[0] * im.size[1])
+    if _clear < 0.05:
+        raise ValueError("sticker_outline(): only {:.1%} of {} is transparent — that is a photo "
+                         "with a speck of transparency, not a cut-out; remove the background "
+                         "first".format(_clear, src))
     px = max(1, int(round(border * min(im.size))))
     pad = px + 2                                     # room for the border wherever the subject is
     grown_im = Image.new("RGBA", (im.size[0] + 2 * pad, im.size[1] + 2 * pad), (0, 0, 0, 0))

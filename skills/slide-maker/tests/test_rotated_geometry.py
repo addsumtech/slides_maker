@@ -395,6 +395,20 @@ with tempfile.TemporaryDirectory() as td:
     check([x for x in rf.get(4, []) if "TEXT COLLISION" in x],
           "two vertical labels at a 0.10in pitch (glyphs collide) were not caught")
 
+
+# ── deferred from the final review: 6f reports a crossing PAIR once, not once from each side ───
+dp_ = dk.blank_deck(13.333, 7.5)
+sx = dk.add_slide(dp_)
+dk.slide_background(sx, dk.WHITE)
+for ang in (90, 270):
+    v = dk.text(sx, 4.0, 3.0, 4.0, 0.4, [[("CROSSING LABELS HERE", 16, INK, True, False)]])
+    v.rotation = ang
+with tempfile.TemporaryDirectory() as td:
+    dpp = Path(td) / "pair.pptx"
+    dp_.save(str(dpp))
+    pf = [x for x in deck_findings(dpp).get(1, []) if "TEXT COLLISION: rotated" in x]
+    check(len(pf) == 1, "6f should report the crossing pair once, got {}".format(len(pf)))
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_rotated_geometry] {}".format(
     "FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))

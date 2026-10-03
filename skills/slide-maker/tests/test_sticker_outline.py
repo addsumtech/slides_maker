@@ -79,6 +79,23 @@ with tempfile.TemporaryDirectory() as td:
     except ValueError:
         pass
 
+
+# ── deferred from the final review: a SPECK of transparency is not a cut-out ───────────────────
+with tempfile.TemporaryDirectory() as td:
+    td = Path(td)
+    speck = Image.new("RGBA", (200, 200), (120, 140, 160, 255))
+    speck.putpixel((0, 0), (0, 0, 0, 0))
+    speck.save(td / "speck.png")
+    rounded = Image.new("RGBA", (200, 200), (0, 0, 0, 0))
+    ImageDraw.Draw(rounded).rounded_rectangle((0, 0, 199, 199), radius=16, fill=(120, 140, 160, 255))
+    rounded.save(td / "rounded.png")
+    for nm in ("speck.png", "rounded.png"):
+        try:
+            image_fx.sticker_outline(str(td / nm))
+            fails.append("sticker_outline accepted a photo that is essentially opaque: " + nm)
+        except ValueError:
+            pass
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_sticker_outline] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)

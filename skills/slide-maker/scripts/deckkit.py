@@ -950,13 +950,17 @@ def _pangu_para(para):
         if not _pangu_exempt_run(r[5] if len(r) > 5 else None):
             r[0] = pangu(r[0])
     ins = _PANGU_SEAM
-    for a, b in zip(out, out[1:]):
+    for k, (a, b) in enumerate(zip(out, out[1:])):
         if (_pangu_exempt_run(a[5] if len(a) > 5 else None)
                 or _pangu_exempt_run(b[5] if len(b) > 5 else None) or not a[0] or not b[0]):
             continue
         if CJK_SPACING == "spaced":
             if ins.fullmatch(a[0][-1] + b[0][0]):
-                a[0] += " "
+                if (getattr(para[k], "highlight", None) is not None
+                        and getattr(para[k + 1], "highlight", None) is None):
+                    b[0] = " " + b[0]                 # keep the space off the highlighter block
+                else:
+                    a[0] += " "
         else:
             while a[0].endswith(" ") and a[0].rstrip(" ") and b[0] \
                     and ins.fullmatch(a[0].rstrip(" ")[-1] + b[0][0]):
@@ -1019,6 +1023,12 @@ def mark(run, color):
     if not isinstance(run, tuple) or len(run) < 5:
         raise TypeError("mark(): pass a run tuple (text, size, color, bold, italic[, font[, ea]])")
     txt, size, ink, bold = run[0], run[1], run[2], run[3]
+    if size is None:
+        raise TypeError("mark(): {!r} has no explicit size — a highlight's contrast floor depends "
+                        "on it (4.5:1, or 3:1 from 18pt); pass the size in the run".format(str(txt)[:24]))
+    if ink is None:
+        raise TypeError("mark(): {!r} has no explicit colour — its contrast against the highlight "
+                        "cannot be checked; pass the ink in the run (dk.on(color))".format(str(txt)[:24]))
     hl = _as_rgb(color)
     need = 3.0 if (size >= 18 or (bold and size >= 14)) else 4.5
     ratio = contrast_ratio(_as_rgb(ink), hl)
@@ -1372,6 +1382,12 @@ def glass_card(slide, x, y, w, h, tint, *, accent=None, r=0.14, rim=1.0):
 _GLASS_ALPHAS = (0.20, 0.28, 0.36, 0.45, 0.55, 0.65, 0.75, 0.85)
 
 
+class _Glass(tuple):
+    """frosted_panel's ``(x, y, w, h, ink)`` — it unpacks to five, and carries the wash it used
+    as ``.alpha`` (a ladder that climbed to 0.85 is a white card, not glass: say so)."""
+    alpha = None
+
+
 def frosted_panel(slide, backdrop, x, y, w, h, *, tint="FFFFFF", alpha=None, blur=0.18, r=0.16,
                   rim=True):
     """REAL frosted glass over a photo: the blurred crop of exactly the part of `backdrop` (a
@@ -1386,8 +1402,10 @@ def frosted_panel(slide, backdrop, x, y, w, h, *, tint="FFFFFF", alpha=None, blu
     a number that cannot work is refused, never quietly raised.
 
         bd = dk.picture(s, "field.jpg", 0, 0, 13.333, 7.5, fit="cover", alt="…")
-        x, y, w, h, ink = dk.frosted_panel(s, bd, 7.4, 1.2, 5.2, 2.6, alpha=0.45)
-        dk.text(s, x, y, w, 1.0, [[("The claim", 26, ink, True, False)]])
+        g = dk.frosted_panel(s, bd, 7.4, 1.2, 5.2, 2.6)
+        x, y, w, h, ink = g                     # g.alpha = the wash it used
+        dk.text(s, x, y, w, h, [[("The claim", 26, ink, True, False)]],
+                anchor=dk.MSO_ANCHOR.MIDDLE)
 
     `glass_card` is the vector fake for dark UI grounds; this one is for photography. A blurred
     crop of the WRONG region reads as a grey slab with illegible text (measured 2026-10-03), so the
@@ -1469,8 +1487,14 @@ def frosted_panel(slide, backdrop, x, y, w, h, *, tint="FFFFFF", alpha=None, blu
         wash.line.width = Pt(0.75)
     else:
         wash.line.fill.background()
+    if alpha >= 0.65:
+        print("frosted_panel: the wash climbed to {:.2f} — at that opacity the panel reads as a "
+              "tinted card, not glass; a calmer region of the photo (image_fx.quiet_region) keeps "
+              "the frost".format(alpha), file=_sys_rg.stderr)
     pad = 0.18
-    return (x + pad, y + pad, w - 2 * pad, h - 2 * pad, best)
+    out = _Glass((x + pad, y + pad, w - 2 * pad, h - 2 * pad, best))
+    out.alpha = alpha
+    return out
 
 
 def offset_shadow(slide, x, y, w, h, fill, *, dx=0.06, dy=0.06, shadow=None,

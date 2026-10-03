@@ -302,7 +302,8 @@ EXAMPLES = {
     "frosted_panel": 'bd = dk.picture(s, "skyline.png", 0, 0, 10, 5.625, fit="cover",\n'
                      '                alt="a city skyline under an open sky")\n'
                      'x, y, w, h, ink = dk.frosted_panel(s, bd, 5.4, 0.8, 4.0, 2.2)\n'
-                     'dk.text(s, x, y, w, 0.8, [[("The claim", 24, ink, True, False)]])',
+                     'dk.text(s, x, y, w, h, [[("The claim", 24, ink, True, False)]],\n'
+                     '        anchor=dk.MSO_ANCHOR.MIDDLE)',
     "mark": 'dk.text(s, 0.6, 0.6, 8.8, 1.6, [[\n'
             '    ("BUILD THE SMALLEST ", 36, dk.DEEP, True, False),\n'
             '    dk.mark(("OBJECT", 36, dk.DEEP, True, False), "D4FF3A"),\n'

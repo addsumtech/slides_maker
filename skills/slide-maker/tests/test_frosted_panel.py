@@ -152,6 +152,40 @@ with tempfile.TemporaryDirectory() as td:
             if f[1] == "CRITICAL" and f[0] in (1, 2, 3, 4)]
     check(not crit, "frosted panels produced CRITICAL layout findings: {}".format(crit))
 
+
+# ── deferred from the final review: say which wash was used; the scaffold lints clean ──────────
+with tempfile.TemporaryDirectory() as td:
+    td = Path(td)
+    src7 = td / "mid7.png"
+    im7 = Image.new("RGB", (1600, 900))
+    im7.putdata([(40 + (x * 50) // 1600,) * 3 for y in range(900) for x in range(1600)])
+    im7.save(src7)
+    p7 = dk.blank_deck(13.333, 7.5)
+    s7 = dk.add_slide(p7)
+    bd7 = dk.picture(s7, str(src7), 0, 0, 13.333, 7.5, fit="cover", alt="a mid-tone plate")
+    res = dk.frosted_panel(s7, bd7, 0.3, 1.0, 12.7, 2.0)
+    x7, y7, w7, h7, ink7 = res                                   # still unpacks to five
+    xml_a = int(list(s7.shapes)[-1]._element.xml.split('<a:alpha val="')[1].split('"')[0]) / 100000.0
+    check(abs(getattr(res, "alpha", -1) - xml_a) < 1e-6,
+          "frosted_panel must report the wash it used (.alpha), got {!r}".format(getattr(res, "alpha", None)))
+    # the documented scaffold (sigs) must not teach a layout the gate warns about
+    import sigs  # noqa: E402
+    Image.new("RGB", (1600, 900), (90, 120, 160)).save(td / "skyline.png")
+    _im8 = Image.open(td / "skyline.png")
+    _im8.putdata([(70 + (x * 60) // 1600, 100 + (y * 40) // 900, 150) for y in range(900) for x in range(1600)])
+    _im8.save(td / "skyline.png")
+    p8 = dk.blank_deck(10, 5.625)
+    s8 = p8.slides.add_slide(p8.slide_layouts[6])
+    import os as _os  # noqa: E402
+    _cwd = _os.getcwd()
+    _os.chdir(td)
+    try:
+        exec(compile(sigs.EXAMPLES["frosted_panel"], "<scaffold>", "exec"), {"dk": dk, "s": s8, "prs": p8})
+    finally:
+        _os.chdir(_cwd)
+    off = [f for f in dk.lint_layout(p8, verbose=False) if f[2] == "OFFCENTER"]
+    check(not off, "the frosted_panel scaffold teaches an OFFCENTER layout: {}".format(off))
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_frosted_panel] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)

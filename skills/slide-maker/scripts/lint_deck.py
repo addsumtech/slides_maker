@@ -79,6 +79,12 @@ try:                                                  # reuse deckkit's font-ava
 except Exception:
     def _fsub(_name):                                 # can't check → never warn (no false positive)
         return False
+try:                                                  # ONE reading of an overlap declaration: both
+    from deckkit import _declared_overlap               #   spellings, composed onto a motif or not
+except Exception:
+    def _declared_overlap(sh):
+        n = str(getattr(sh, "name", "") or "")
+        return n.startswith("deckkit-overlap") or "+overlap" in n.split(":", 1)[0]
 try:                                                  # real glyph advances, same metrics the build uses
     from deckkit import _pil_font as _dk_pil_font, _MEAS_PREC as _dk_prec
 except Exception:
@@ -437,8 +443,7 @@ def _boxes(slide, sw, sh, slide_no=None, record=True):
                     # declares an overlap is named `deckkit-motif-quiet+overlap:<why>`, and reading
                     # the prefix only refused here what lint_layout honoured (measured 2026-10-03:
                     # tape holding a print was a hard OVERLAP at render time only).
-                    "declared": (str(getattr(s, "name", "") or "").startswith("deckkit-overlap")
-                                 or "+overlap" in str(getattr(s, "name", "") or "").split(":", 1)[0]),
+                    "declared": _declared_overlap(s),
                     # The motif tag, read from the NAME for the same reason `declared` is: it
                     # survives the save, so this file-level gate can reason about the deck's
                     # signature device exactly as the build-time one does.
@@ -3347,6 +3352,11 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
             for ti, s in enumerate(bx):
                 if not s["text"] or not s["runs"] or s["size"] < 8:
                     continue
+                if s.get("run_hl") and all(s["run_hl"]):
+                    # every run sits on its own HIGHLIGHT: what the reader sees behind the glyphs
+                    # is the highlight, which 1b judged — the photo around the word is not it
+                    # (measured: white on navy on a light photo read as a hard 1.46:1 here)
+                    continue
                 back = _backing_fill(bx, ti, chrome=chrome)
                 if not (back == "UNKNOWN" or (back is None and unk_plate)):
                     continue                             # solid/resolvable backing → 1b's territory
@@ -3676,16 +3686,20 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
             l_, t_, r_, b_ = _rbox_frame(f)
             return rotgeom.rotate(rotgeom.rect_poly(l_, t_, r_ - l_, b_ - t_),
                                   f["l"] + f["w"] / 2.0, f["t"] + f["h"] / 2.0, t["rot"])
+        _seen6f = set()
         for a in [x for x in txts if x.get("rot")]:
             pa_ = _rpoly(a)
             for b in txts:
                 if b is a or (b.get("grp") is not None and b.get("grp") == a.get("grp")):
                     continue
+                if frozenset((id(a), id(b))) in _seen6f:
+                    continue                                     # the pair, from its other side
                 A_, _ = rotgeom.overlap(pa_, _rpoly(b))
                 # the same absolute floor as build-time TEXT_OVERLAP (overlap_tol=0.05in2): the
                 # ink boxes are ESTIMATES, and two vertical labels set at an ordinary line pitch
                 # overlapped by 0.02-0.04in2 of estimate on a real deck while their glyphs did not
                 if A_ > 0.05:
+                    _seen6f.add(frozenset((id(a), id(b))))
                     finds.append(f"TEXT COLLISION: rotated '{a['txt']}' runs across '{b['txt']}' "
                                  f"({A_:.2f}in² of ink overlap) — move the label into the margin "
                                  f"or shorten it")

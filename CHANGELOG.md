@@ -48,6 +48,16 @@ On that footing, the drawing vocabulary of image-led editorial decks:
   judged on the glass's own pixels at the lightest wash that clears 4.5:1. A blur that comes out one
   flat colour is drawn as a box, by the same flatness rule `ASSET NOT USABLE` uses.
 
+Follow-ups from the review's deferred list: `frosted_panel` reports the wash it used (`.alpha`) and
+says so when it climbed past 0.65 (a tinted card, not glass), and its documented call centres the
+text; `sticker_outline` refuses an image whose transparency is a speck (under 5%), not a cut-out;
+`mark()` names a missing size or colour instead of crashing, and with `CJK_SPACING="spaced"` the seam
+space after a marked word is no longer painted; the render-time text-on-image check leaves a fully
+highlighted run to the highlight check — white on a navy highlight over a light photo was a hard
+`TEXT ON IMAGE` at 1.46:1; a crossing pair of rotated labels is reported once; and `lint_deck` reads
+an overlap declaration through deckkit's own reader rather than a copy of it. CI runs the motif pages
+under a substituted face too, which found the radial key sitting on a ray.
+
 ## [5.6.0] — 2026-09-25
 
 **The release about what a deck is asked to do in a room, and about "passed" that was not

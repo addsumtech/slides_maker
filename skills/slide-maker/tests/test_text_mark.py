@@ -95,6 +95,66 @@ check("HIDDEN" in out and ("INVISIBLE TEXT" in out or "LOW CONTRAST" in out),
 check(not any("OBJECT" in ln and ("INVISIBLE" in ln or "CONTRAST" in ln) for ln in out.splitlines()),
       "a legible marked word was reported as low contrast")
 
+
+# ── deferred from the final review (2026-10-03) ─────────────────────────────────────────────────
+# an INHERITED size or colour (None) is refused with a message that says so, not a crash
+for bad_run, word in ((("X", None, INK, True, False), "size"), (("X", 20, None, True, False), "colour")):
+    try:
+        dk.mark(bad_run, LIME)
+        fails.append("mark() accepted a run with no explicit {}".format(word))
+    except TypeError as e:
+        check(word in str(e), "mark()'s refusal should name the missing {}: {}".format(word, e))
+    except Exception as e:                                                # noqa: BLE001
+        fails.append("mark() crashed with {} on a run with no {}".format(type(e).__name__, word))
+# CJK_SPACING="spaced": the seam space between a MARKED run and the next must not be painted
+# yellow — it moves to the start of the right-hand run
+dk.CJK_SPACING = "spaced"
+try:
+    t3 = dk.text(s, 0.6, 5.0, 12, 1.2, [[dk.mark(("学得快", 32, INK, True, False, "Arial", "PingFang SC"),
+                                                 "FFD400"),
+                                         ("AI", 32, INK, True, False, "Arial", "PingFang SC")]])
+finally:
+    dk.CJK_SPACING = None
+runs3 = t3.text_frame.paragraphs[0].runs
+hl_runs = [r for r in runs3 if r._r.find(dk.qn("a:rPr") + "/" + dk.qn("a:highlight")) is not None]
+check(hl_runs and not hl_runs[0].text.endswith(" "),
+      "the seam space was appended to the highlighted run: {!r}".format([r.text for r in runs3]))
+check(" " in "".join(r.text for r in runs3), "the CJK/Latin seam space vanished altogether")
+
+# 1c (render-time text-on-image) must not judge a HIGHLIGHTED run against the photo behind its
+# highlight — 1b already judged it against the highlight, which is what the reader sees
+import subprocess  # noqa: E402
+import render_deck as rd  # noqa: E402
+from PIL import Image as _Im  # noqa: E402
+soffice = rd.find_soffice()
+if not soffice:
+    fails.append("LibreOffice not found — the render half of this test did not run")
+else:
+    with tempfile.TemporaryDirectory() as td:
+        td = Path(td)
+        ph = td / "dark.png"
+        _im = _Im.new("RGB", (800, 450))
+        # a LIGHT photo; white ink on a NAVY highlight — the reader sees white on navy, while the
+        # pixels around the word are light (the reviewer's probe: the estimate fell to 1.93:1)
+        _im.putdata([(215 + x // 40, 210 + y // 30, 200) for y in range(450) for x in range(800)])
+        _im.save(ph)
+        p4 = dk.blank_deck(13.333, 7.5)
+        s4 = dk.add_slide(p4)
+        dk.picture(s4, str(ph), 0, 0, 13.333, 7.5, fit="cover", alt="a dark plate")
+        dk.text(s4, 1.0, 3.0, 11, 1.2, [[dk.mark(("MARKED", 40, dk.WHITE, True, False), "1A2B45")]])
+        d4 = td / "m4.pptx"
+        p4.save(str(d4))
+        subprocess.run([soffice, "--headless", "--convert-to", "pdf", "--outdir", str(td), str(d4)],
+                       check=True, capture_output=True, timeout=180)
+        import fitz  # noqa: E402
+        (td / "render").mkdir()
+        fitz.open(str(td / "m4.pdf"))[0].get_pixmap(dpi=60).save(str(td / "render" / "slide01.png"))
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            lint_deck.lint(str(d4), renders_dir=str(td / "render"))
+        bad1c = [ln for ln in buf.getvalue().splitlines() if "MARKED" in ln and "IMAGE" in ln]
+        check(not bad1c, "1c judged a highlighted run against the photo: {}".format(bad1c))
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_text_mark] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)
