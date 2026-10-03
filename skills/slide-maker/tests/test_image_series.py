@@ -34,7 +34,7 @@ GOOD = {
     "render": "photo",
     "slots": [
         {"id": "hero", "slide": 1, "frame": {"shape": "arch", "w": 4.2, "h": 5.6},
-         "subject": "a potter's hands shaping wet clay on a turning wheel", "kind": "scene",
+         "subject": "a potter's hands shaping wet clay on a turning wheel", "kind": "generic-person",
          "cutout": False, "calm_zone": "none", "focus": [0.5, 0.3], "alt": "a potter's hands shaping clay",
          "meaning": "making by hand is the deck's argument; the hands carry it before any word does",
          "referent": "generic-concrete"},
@@ -76,6 +76,19 @@ bad(lambda p: p.update(palette=["F4F1E6", "00A651", "1B5E20"], chroma="00B140"),
 g = copy.deepcopy(GOOD)
 g.update(palette=["F4F1E6", "00A651", "1B5E20"], chroma="FF00FF")
 check(ims.check(g) == [], "a green palette on a magenta key is valid: {}".format(ims.check(g)))
+# a subject that NAMES people cannot hide under a non-person kind: measured 2026-10-03, a "scene" slot
+# for "volunteers' hands repairing a lamp" came back as four people — and the people gate only reads
+# person kinds, so a name + role beside that picture would have passed. English and Chinese.
+for subj in ("volunteers' hands repairing a broken table lamp on a workbench",
+             "two neighbours leaning over a disassembled toaster in a hall",
+             "一位老人在社区菜园里给番茄浇水的场景"):
+    bad(lambda p, subj=subj: p["slots"][0].update(subject=subj, kind="scene"), "generic-person")
+# ...while subjects that name no one stay valid ("hand-thrown" is a making word, not a person)
+for subj in ("a hand-thrown stoneware kettle with an ash glaze on linen",
+             "a long workbench with a soldering iron and spools of thread",
+             "雨后的城市屋顶菜园，番茄架和水壶"):
+    ok_ = copy.deepcopy(GOOD); ok_["slots"][0].update(subject=subj, kind="scene")
+    check(ims.check(ok_) == [], "{!r} names no one but was refused: {}".format(subj, ims.check(ok_)))
 # a persona WITH its label is valid
 pp = copy.deepcopy(GOOD)
 pp["slots"][0].update(kind="persona", persona_label="虚构人物 · illustrative persona")

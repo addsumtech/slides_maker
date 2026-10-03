@@ -76,7 +76,10 @@ Three floors that do not relax:
 name, role or quote beside them. `kind: "persona"` — a fictional persona may carry a name ONLY with a
 visible label on its slide (`persona_label`, e.g. "Illustrative persona" / "虚构人物"). Team members,
 customers, testimonials and any real person are NOT generatable (`check` refuses the kind): a real
-photo, or no portrait. The delivery gate blocks a generated person set beside a name joined to a role,
+photo, or no portrait. A subject that NAMES people ("volunteers' hands…", "一位老人…") is a person
+slot whatever else it shows — `check` refuses it under `scene`/`object`/`illustration` (measured: a
+"scene" of volunteers' hands came back as four people, out of the people gate's sight). The delivery
+gate blocks a generated person set beside a name joined to a role,
 a quote attribution, or team / testimonial wording, when the slide carries no 'fictional' label.
 
 **The plan — `series.json`.** `art_direction` (one line a stranger could paint from) · `palette` (2-8
