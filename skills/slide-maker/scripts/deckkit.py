@@ -85,6 +85,11 @@ from pptx.oxml.ns import qn, nsdecls
 from pptx.oxml import parse_xml
 import math
 import re
+import os as _os_rg
+import sys as _sys_rg
+
+_sys_rg.path.insert(0, _os_rg.path.dirname(_os_rg.path.abspath(__file__)))
+import rotgeom  # noqa: E402 — where a rotated shape PAINTS; the one definition lint_deck shares
 
 # ---- default professional palette (a neutral blue scheme). NOT tied to any brand —
 # when building on a template, override these with the template's real theme colours.
@@ -8918,12 +8923,84 @@ def _bbox_in(sh):
     except Exception:
         return None
 
+class _Placed(tuple):
+    """A placed (l, t, w, h) that also carries the rotated CORNERS when the shape is tilted, so
+    `_overlap_area` / `_contains` can be exact while every edge comparison still reads the tuple."""
+    poly = None
+
+
+def _shape_rot(sh):
+    """The shape's rotation in degrees, [0, 360); 0 for anything that has none."""
+    try:
+        return rotgeom.norm(sh.rotation)
+    except Exception:
+        return 0.0
+
+
+def _placed(bb, rot):
+    """Where frame `bb` rotated by `rot` actually paints (exact at 90deg multiples). OOXML stores a
+    rotated shape as its UNROTATED frame plus `rot`; measuring the frame made a correct vertical
+    margin label a CRITICAL OFF_CANVAS (measured 2026-10-03), so placement checks read this."""
+    if bb is None or not rotgeom.is_rotated(rot):
+        return bb
+    out = _Placed(rotgeom.placed(bb[0], bb[1], bb[2], bb[3], rot))
+    if not rotgeom.is_axis(rot):
+        out.poly = rotgeom.corners(bb[0], bb[1], bb[2], bb[3], rot)
+    return out
+
+
+def _placed_box(sh):
+    """`_bbox_in` for GEOMETRY questions: where the shape paints, not its unrotated frame."""
+    return _placed(_bbox_in(sh), _shape_rot(sh))
+
+
+def _placed_ink(sh, bb, ink):
+    """Ink rect `ink`, measured inside FRAME `bb`, turned with the frame about the frame centre."""
+    rot = _shape_rot(sh)
+    if ink is None or bb is None or not rotgeom.is_rotated(rot):
+        return ink
+    pts = rotgeom.rotate(rotgeom.rect_poly(ink[0], ink[1], ink[2], ink[3]),
+                         bb[0] + bb[2] / 2.0, bb[1] + bb[3] / 2.0, rot)
+    out = _Placed(rotgeom.bbox(pts))
+    if not rotgeom.is_axis(rot):
+        out.poly = pts
+    return out
+
+
 def _overlap_area(a, b):
-    ox = max(0.0, min(a[0]+a[2], b[0]+b[2]) - max(a[0], b[0]))
-    oy = max(0.0, min(a[1]+a[3], b[1]+b[3]) - max(a[1], b[1]))
-    return ox * oy
+    pa, pb = getattr(a, "poly", None), getattr(b, "poly", None)
+    if pa is None and pb is None:
+        ox = max(0.0, min(a[0]+a[2], b[0]+b[2]) - max(a[0], b[0]))
+        oy = max(0.0, min(a[1]+a[3], b[1]+b[3]) - max(a[1], b[1]))
+        return ox * oy
+    A, _ = rotgeom.overlap(pa or rotgeom.rect_poly(a[0], a[1], a[2], a[3]),
+                           pb or rotgeom.rect_poly(b[0], b[1], b[2], b[3]))
+    return A
+
+def _inter_xy(a, b):
+    """(x-extent, y-extent) of the overlap of two placed rects — the inline `ix, iy` the motif and
+    graze checks always computed, unchanged when neither is tilted. When either carries a polygon,
+    ix is the overlap's real horizontal span and ix * iy its EXACT area (iy = area / ix)."""
+    if getattr(a, "poly", None) is None and getattr(b, "poly", None) is None:
+        return (max(0.0, min(a[0] + a[2], b[0] + b[2]) - max(a[0], b[0])),
+                max(0.0, min(a[1] + a[3], b[1] + b[3]) - max(a[1], b[1])))
+    A, bb = rotgeom.overlap(getattr(a, "poly", None) or rotgeom.rect_poly(a[0], a[1], a[2], a[3]),
+                            getattr(b, "poly", None) or rotgeom.rect_poly(b[0], b[1], b[2], b[3]))
+    if not A or bb is None or bb[2] <= 0:
+        return (0.0, 0.0)
+    return (bb[2], A / bb[2])
+
+
+def _area_of(r):
+    """A placed rect's TRUE area — its polygon's when tilted (the axis box over-states it)."""
+    poly = getattr(r, "poly", None)
+    return rotgeom.area(poly) if poly is not None else r[2] * r[3]
+
 
 def _contains(outer, pt):
+    poly = getattr(outer, "poly", None)
+    if poly is not None:
+        return rotgeom.contains_point(poly, pt)
     return (outer[0] <= pt[0] <= outer[0]+outer[2]) and (outer[1] <= pt[1] <= outer[1]+outer[3])
 
 def _natural_width_in(runs, size_pt, font):
@@ -9218,18 +9295,18 @@ def _motif_faults(prs):
             if _is_motif(sh):
                 if _is_motif(sh, loud=True):
                     loud_pages.append(n)
-                if not _is_motif_ground(sh, bb, W, H):
-                    motifs.append((sh, bb))
+                pb = _placed(bb, _shape_rot(sh))          # where a tilted mark (tape) PAINTS
+                if not _is_motif_ground(sh, pb, W, H):
+                    motifs.append((sh, pb))
             elif _is_text(sh) and not _is_watermark(sh):
-                r = _ink_rect(sh, bb)
+                r = _ink_rect(sh, bb)                     # measured in the frame, then placed
                 if r and r[0]:
-                    texts.append((sh, r[0]))
+                    texts.append((sh, _placed_ink(sh, bb, r[0])))
         for tsh, tr in texts:
             if _declared_overlap(tsh):
                 continue
             for msh, mb in motifs:
-                ix = max(0.0, min(tr[0] + tr[2], mb[0] + mb[2]) - max(tr[0], mb[0]))
-                iy = max(0.0, min(tr[1] + tr[3], mb[1] + mb[3]) - max(tr[1], mb[1]))
+                ix, iy = _inter_xy(tr, mb)
                 if ix > 0.04 and iy > 0.04:
                     txt = (tsh.text_frame.text or "").strip().replace("\n", " ")[:26]
                     out.append((n, "WARN", "TEXT_OVER_MOTIF",
@@ -9755,7 +9832,7 @@ def _graze_faults(prs):
                 continue                      # a full-bleed ground is not something to graze
             if bb[2] * bb[3] >= W * H * 0.5:
                 continue                      # a half-canvas panel is a ground, not a mark
-            marks.append(bb)
+            marks.append(_placed(bb, _shape_rot(sh)))
         if not marks:
             continue                          # nothing to collide with — never measure the ink
         for sh in slide.shapes:
@@ -9766,14 +9843,13 @@ def _graze_faults(prs):
                 continue
             r = _ink_rect(sh, bb)
             if r and r[0]:
-                texts.append((sh, r[0]))
+                texts.append((sh, _placed_ink(sh, bb, r[0])))
         for tsh, tr in texts:
-            ink_a = tr[2] * tr[3]
+            ink_a = _area_of(tr)
             if ink_a <= 0:
                 continue
             for mb in marks:
-                ix = max(0.0, min(tr[0] + tr[2], mb[0] + mb[2]) - max(tr[0], mb[0]))
-                iy = max(0.0, min(tr[1] + tr[3], mb[1] + mb[3]) - max(tr[1], mb[1]))
+                ix, iy = _inter_xy(tr, mb)
                 a = ix * iy
                 if a <= MIN_DIP * MIN_DIP:
                     continue
@@ -9872,7 +9948,7 @@ def _footer_band_faults(prs):
             try:
                 if not getattr(_sh, "has_text_frame", False) or not _sh.text_frame.text.strip():
                     continue
-                _bb = _bbox_in(_sh)
+                _bb = _placed_box(_sh)
                 if _bb and _bb[1] > sh_in - 0.6:
                     foot_tops.append(_bb[1])
             except Exception:
@@ -9885,15 +9961,17 @@ def _footer_band_faults(prs):
                     continue
                 if _is_watermark(sh):
                     continue
-                bb = _bbox_in(sh)
-                if bb is None:
+                fb = _bbox_in(sh)                 # the FRAME: what the text wraps inside
+                if fb is None:
                     continue
+                bb = _placed(fb, _shape_rot(sh))  # where it PAINTS (a no-op unrotated)
                 if bb[2] >= sw * 0.92 and bb[3] >= sh_in * 0.92:
                     continue                      # a full-bleed ground, not a content block
-                r = _ink_rect(sh, bb)
+                r = _ink_rect(sh, fb)
                 if not r:
                     continue
-                ink_b = r[0][1] + r[0][3]
+                _ink = _placed_ink(sh, fb, r[0])
+                ink_b = _ink[1] + _ink[3]
                 if bb[1] > sh_in - 0.6:
                     continue                      # this line IS the footer chrome (same rule)
                 if bb[1] < limit - 0.04 and ink_b + FOOTER_BAND_PAD > limit:
@@ -10035,7 +10113,11 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
                     pass
             if bb is None: continue
             r = _ink_rect(sh, bb) if (_is_text(sh) and not _is_watermark(sh)) else None
-            info.append((sh, bb, st, (r[0] if r else None), r)); zof[id(sh)] = zi
+            # `bb` above is the FRAME — what the text wraps inside — and `r` stays frame-space
+            # (OVERFLOW compares r[0] with r[1], both frame-relative). The bbox and ink every
+            # PLACEMENT check reads become where the shape paints (a no-op when unrotated).
+            ink = _placed_ink(sh, bb, r[0]) if r else None
+            info.append((sh, _placed(bb, _shape_rot(sh)), st, ink, r)); zof[id(sh)] = zi
         # CJK runs with no <a:ea> font — fully detectable from the in-memory pptx, so fail at
         # BUILD time instead of after the expensive render round-trip (lint_deck re-checks as the
         # backstop): without the EA slot, PowerPoint/LibreOffice pick an uncontrolled fallback
