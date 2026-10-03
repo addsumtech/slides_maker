@@ -9,6 +9,29 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+### Image-led decks: an art-directed image series
+
+The image rule — plates only on the few slides that earn them — stays the default. A deck whose picked
+direction is **image-led** (`design_plan.imagery: "series"`, Codex `design.imagery`) may now carry ONE
+art-directed image series across most pages, the way the image-led "visual language" decks studied
+on skillry.dev do. `scripts/image_series.py` checks the plan (`series.json`: an art direction, a
+palette, a render mode, and per slot a frame, a subject, a meaning line, a referent and a people kind),
+writes the prompts with the render mode and the no-text rule INSIDE each prompt, compares every
+generated image with the key image (`qc`, with a contact sheet), and places each slot with its frame,
+focus and alt text (`slot_picture`), tagging it `+gen.<slot>` through the shared shape-name composer.
+`generate_images_codex.py` gains `--only <id>` (make the key image first and look at it) and
+`--style-ref <key>` (every other image matches its look, not its subject). `image_fx.chroma_cutout`
+keys a generated subject off its flat background — despilling an edge band, because the opaque mixed
+pixels of a soft edge carried a visible green outline — and refuses a background that is not flat, a
+subject touching the frame edge, or a key that leaves no subject.
+
+A new delivery gate, shared by `render_deck.py --gate-check` and `codex_delivery_gate.py`, reads the
+tags from the saved file: it blocks a generated picture with no planned slot, an image-led deck with no
+slot placed, and a generated person shown beside a name joined to a role, an attributed quote, or team
+/ testimonial wording without a visible "fictional" label. Team members, customers, testimonials and
+real people are never generated; a fictional persona is allowed only with its label. Every other deck
+reads the gate as NOT CHECKED and behaves exactly as before.
+
 ### Editorial primitives, and rotated shapes measured where they paint
 
 Both geometry gates read a rotated shape's UNROTATED frame. Measured on a probe deck: a correct

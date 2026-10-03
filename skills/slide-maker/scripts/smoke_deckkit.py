@@ -554,6 +554,24 @@ def _every_scaffold_runs():
         from PIL import ImageDraw as _SmkDraw
         _SmkDraw.Draw(_cut).ellipse((40, 30, 260, 330), fill=(214, 92, 60, 255))
         _cut.save(os.path.join(TMP, "cutout.png"))
+        # The slot_picture scaffold places a slot of an IMAGE SERIES: it needs the plan and the
+        # slot's generated image, named the way image_series.prompts names it (slide-NN-<id>.png).
+        import json as _sj
+        with open(os.path.join(TMP, "series.json"), "w", encoding="utf-8") as _f:
+            _sj.dump({"art_direction": "warm documentary photography, soft window light, film grain",
+                      "palette": ["F3EBDD", "C98A3D", "2F6F6A"], "render": "photo",
+                      "slots": [{"id": "hero", "slide": 1, "frame": {"shape": "arch", "w": 3.2, "h": 4.2},
+                                 "subject": "hands repairing a table lamp on a workbench", "kind": "scene",
+                                 "cutout": False, "alt": "hands repairing a lamp",
+                                 "referent": "generic-concrete",
+                                 "meaning": "the deck's promise in one picture: broken things get fixed here"}]},
+                     _f)
+        _hero = _SmkIm.new("RGB", (480, 630))
+        _hp = _hero.load()
+        for _y in range(630):
+            for _x in range(480):
+                _hp[_x, _y] = (150 + (_x * 60) // 480, 110 + (_y * 50) // 630, 70 + ((_x + _y) % 23))
+        _hero.save(os.path.join(TMP, "slide-01-hero.png"))
         # The qr_panel scaffold needs a code to place: this library does not implement QR encoding
         # and refuses to draw a placeholder, so the scaffold passes `image=`. Deterministic pattern
         # rather than a flat plate, for the reason above — and with the three finder squares, so it
@@ -695,6 +713,15 @@ def _sigs_examples_cover_editorial_helpers():
 ok("sigs --search a|b matches either term", _sigs_search_alternation)
 ok("sigs finds the editorial helpers by the words a builder types", _sigs_finds_editorial_helpers_by_task_words)
 ok("every editorial helper has a runnable --example", _sigs_examples_cover_editorial_helpers)
+
+
+def _sigs_example_covers_slot_picture():
+    import sigs as _s
+    assert "slot_picture" in _s.EXAMPLES, "slot_picture has no runnable --example"
+    assert "image_series.slot_picture(" in _sigs("--search", "series").stdout, "--search series misses slot_picture"
+
+
+ok("the image-series placement has a runnable --example", _sigs_example_covers_slot_picture)
 
 # TOFU GATE: matplotlib draws a hollow box for a glyph the font lacks and only WARNS, so a caption
 # or a caller-supplied label can ship as ▯▯▯ with every gate green — radar's own range note did

@@ -33,7 +33,8 @@ sys.path.insert(0, HERE)
 # finds out what already exists, and SKILL.md tells it that a name matching NO helper means "you
 # supply the geometry". Leaving the surface kits out of it therefore did worse than hide them — it
 # told anyone asking for `halftone` or `starburst` to hand-roll the thing that had just been built.
-MODULES = ("deckkit", "designed_charts", "register_surface", "citations", "ornaments", "image_fx")
+MODULES = ("deckkit", "designed_charts", "register_surface", "citations", "ornaments", "image_fx",
+           "image_series")
 
 # The three call-shape errors that actually cost round-trips on a real build. They are properties of
 # the API that no single signature line states, so they are printed with every lookup rather than
@@ -323,6 +324,9 @@ EXAMPLES = {
                'n = dk.text(s, 7.4, 1.0, 1.5, 1.5, [[("12", 36, dk.WHITE, True, False)]],\n'
                '            align=dk.PP_ALIGN.CENTER, anchor=dk.MSO_ANCHOR.MIDDLE)\n'
                'dk.overlap_intent(n, "the count sits on its badge")   # declared on the TEXT',
+    "slot_picture": 'import image_series as ims\n'
+                    'plan = ims.load("series.json")                 # validated by: image_series.py check\n'
+                    'ims.slot_picture(s, plan, "hero", 0.6, 0.6, 3.2, 4.2, image_dir=".")   # arch + alt + +gen tag',
     "sticker_outline": 'import image_fx\n'
                        'st = image_fx.sticker_outline("cutout.png")      # needs a transparent cut-out\n'
                        'dk.picture(s, st, 6.6, 0.6, 2.6, 3.4, fit="contain", alt="a cut-out subject")',
@@ -361,6 +365,9 @@ def load():
 # suppresses — a separate concern from what --example prints). Without these, --example printed the
 # filler "a form component" while SKILL.md promises "plus the guarantee it makes".
 _EXTRA_GUARANTEES = {
+    "slot_picture": "the slot's own frame shape, focus and alt text from series.json (the keyed PNG for a "
+                    "cut-out), tagged +gen.<slot> — the tag the image-series delivery gate reads from "
+                    "the saved file",
     "gantt": "every bar keyed to ONE shared axis_scale, so durations are comparable across lanes",
     "dumbbell_board": "a per-row scale, and direction-aware value labels placed OUTWARD so they "
                       "cannot collide with the dumbbell",

@@ -1659,6 +1659,12 @@ The helper set, by job:
   on;** a chart whose source sits 14 pages away is unsourced at the moment someone doubts it.
 - **Photo on-brand (`scripts/image_fx.py`):** `duotone` / `grayscale` so a colour photo doesn't fight
   the accent (riso/brutalist/ink/luxury/museum), then `picture(fit="cover")`.
+- **Image-led decks (`imagery: series`):** when the picked direction is image-led, imagery may sit on
+  most pages as ONE art-directed series — plan it in `series.json` (every slot's meaning line, the
+  REFERENT RULE, the people rule), generate the key image first and the rest with `--style-ref`, QC it,
+  and place every slot with `image_series.slot_picture` (never `dk.picture`: the gate reads its tags).
+  Read `references/image-generation.md` → "Image-led decks — the SERIES exception" BEFORE writing the
+  plan; `python3 scripts/image_series.py check` refuses a plan that breaks it.
 
 If the user gave a **style example** (Q4),
 build to your **style brief** of it *per the chosen mimic mode* (`references/style-analysis.md`) —

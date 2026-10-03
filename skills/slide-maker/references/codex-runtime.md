@@ -211,6 +211,22 @@ be reconstructed post-hoc at the delivery gate.
    `--example <name>` hands back a call the smoke suite runs. Both gates measure rotated shapes where
    they paint, so tilted prints and vertical margin labels are checked like any other shape.
 
+2t. 🔴 **An image-led deck runs the SERIES pipeline.** When the picked direction is image-led, record
+   `"design": {"imagery": "series", "image_series": "<deck>/series.json"}` in the evidence file, write
+   the plan (`references/image-generation.md` → "Image-led decks — the SERIES exception": every slot's
+   `meaning`, `referent` and `kind`), then run, in order, the command each step prints:
+   `python3 scripts/image_series.py check <deck>/series.json` →
+   `python3 scripts/image_series.py prompts <deck>/series.json <deck>/assets/generated` →
+   `python3 scripts/generate_images_codex.py <deck>/assets/generated/image_prompt_manifest.json --only <key-id>`
+   (LOOK at the key image) → the same command with `--style-ref <the key image>` instead of `--only` →
+   `image_fx.chroma_cutout(<image>)` on each cut-out slot →
+   `python3 scripts/image_series.py qc <deck>/series.json --dir <deck>/assets/generated`. Place every
+   slot with `image_series.slot_picture(s, plan, "<id>", x, y, w, h, image_dir=…)` — never
+   `dk.picture` for a series image: the delivery gate blocks an image-led deck with no slot placed
+   through it, a generated picture with no slot, and a generated person beside a name/role/quote with
+   no visible 'fictional' label. `python3 scripts/sigs.py --example slot_picture` prints a call the
+   smoke suite runs.
+
 2v. 🔴 **An invented register gets a KIT, not hand-built style code.** `register_surface.register(name, ground=…, card=…, forbids=…)` — then `ground()`/`card()` work for it as for a preset, and `check_register_guard` enforces the prohibitions it declares. `python3 scripts/register_surface.py --new "<name>"` scaffolds one with the contracts wired; `python3 scripts/bespoke_kits.py --sample <out.pptx>` renders the four library registers (`current` · `transit-signage` · `ledger` · `k-space`) to adapt from. `save_register.py` records the kit file at hand-off. 🔴 **Write the kit into the DECK FOLDER** (`--out <deck-dir>/surface_<name>.py`): `check_register_guard` loads `surface_*.py` from beside the deck, which is the only reason a bespoke register's prohibitions are enforceable at gate time — the gate runs in a fresh process and a kit that was never imported there does not exist. The gate also tells you whether an invented register has a kit at all.
 
 2y. 🔴 **`presets.apply()` gives you a PALETTE, not a register.** It sets palette, geometry tokens
