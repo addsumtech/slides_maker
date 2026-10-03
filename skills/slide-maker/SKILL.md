@@ -1673,6 +1673,11 @@ build to your **style brief** of it *per the chosen mimic mode* (`references/sty
 borrowed components + signature motif, but keep the topic-fit palette/type already locked in the
 Step-2 design plan — do NOT carry the example's colours.
 A few rules that matter (see `references/design-principles.md`):
+- **Visual languages (`editorial` · `soft` · `collage` · `storybook`):** when the picked direction is a
+  visual language (`"vl"` in `directions.json`), READ `references/visual-languages.md` before the build
+  script: `visual_languages.use(name, prs)` gives the palette, system fonts (both platforms by default,
+  per script for CJK) and ground, and its six page functions lay out your own copy and images — never
+  hand-roll those pages. Record `design_plan.visual_language`; the delivery gate checks it was applied.
 - **Use the source's own figures, WHOLE — integral is the default.** For *any* deck
   (research, work, exec, teaching): if the source — paper, report, doc, existing slide, or a
   chart already produced from the code/data — has a figure (architecture, results, a plot),

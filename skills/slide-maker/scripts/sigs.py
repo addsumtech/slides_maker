@@ -343,6 +343,10 @@ EXAMPLES = {
     "collage": 'import collage\n'
                'collage.collage(s, (5.0, 0.4, 4.6, 4.8), ["skyline.png", "gt_c1.png", "ours_c1.png"],\n'
                '                seed=3, keep_clear=(0.4, 0.6, 4.2, 2.4))   # tilted prints + tape',
+    "vl_cover": 'import visual_languages as vl\n'
+                'k = vl.use("editorial", prs)               # fonts="both": faces on macOS AND Windows\n'
+                'pg = k.new_slide()\n'
+                'k.cover(pg, title="Bring it broken, take it home working", kicker="A repair café", image="skyline.png")',
     "sticker_outline": 'import image_fx\n'
                        'st = image_fx.sticker_outline("cutout.png")      # needs a transparent cut-out\n'
                        'dk.picture(s, st, 6.6, 0.6, 2.6, 3.4, fit="contain", alt="a cut-out subject")',

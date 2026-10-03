@@ -242,6 +242,11 @@ four template choices:
        - **This gate also fires on the lighter case-(b) offer** (unsure-on-style / brand-defining,
          2–3 directions) because it is the same machinery — which is the right default, since those
          are exactly the decks where an invented register pays most.
+       - **A curated visual language.** A direction may be one of the four visual languages —
+         `visual_languages.direction("editorial" | "soft" | "collage" | "storybook")` returns its entry for
+         `directions.json`, previewed by its bundled sample ("style sample — not your content"). It counts
+         as a STYLED direction, never as the topic-invented bespoke one. Picking it records
+         `design_plan.visual_language` (`references/visual-languages.md`).
        - **An image-led direction (only when an image tool is available).** One of the offered
          directions MAY be image-led: its visual language is a coherent series of art-directed
          pictures on most pages, and its preview shows an imagery-led composition. Mark it in

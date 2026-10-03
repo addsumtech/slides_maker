@@ -603,7 +603,12 @@ def _every_scaffold_runs():
                  'title={Sparse MRI}, journal={MRM}, year={2007}, doi={10.1002/mrm.21391}}\n'
                  '@inproceedings{schlemper2018, author={Schlemper, J. and Rueckert, D.}, '
                  'title={A deep cascade}, booktitle={IPMI}, year={2018}}\n')
+    # an example may set the deck's palette/fonts/ground (visual_languages.use, presets.apply): restore
+    # deckkit's module state after each one, or every later example and check runs in its look
+    _dk_state = {k_: getattr(dk, k_) for k_ in dir(dk) if k_.isupper() and not k_.startswith("_")}
     for name, code in sorted(_sigs.EXAMPLES.items()):
+        for k_, v_ in _dk_state.items():
+            setattr(dk, k_, v_)
         p = dk.blank_deck(10, 5.625)
         sl = p.slides.add_slide(p.slide_layouts[6])
         try:
@@ -722,6 +727,17 @@ def _sigs_example_covers_slot_picture():
 
 
 ok("the image-series placement has a runnable --example", _sigs_example_covers_slot_picture)
+
+
+def _sigs_examples_cover_visual_languages():
+    import sigs as _s
+    miss = [n for n in ("feather", "grain_background", "stacked", "two_tone", "outlined", "collage", "vl_cover")
+            if n not in _s.EXAMPLES]
+    assert not miss, "P2 helpers with no runnable --example: {}".format(miss)
+    assert "visual_languages.use(" in _sigs("--search", "language").stdout, "--search language misses visual_languages.use"
+
+
+ok("the visual-language helpers have runnable --examples", _sigs_examples_cover_visual_languages)
 
 # TOFU GATE: matplotlib draws a hollow box for a glyph the font lacks and only WARNS, so a caption
 # or a caller-supplied label can ship as ▯▯▯ with every gate green — radar's own range note did

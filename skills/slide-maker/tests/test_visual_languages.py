@@ -335,6 +335,17 @@ check("javascript:" not in (_htd / "bad.html").read_text(encoding="utf-8"), "a n
 for n_ in vl.LANGS:
     check(vl.direction(n_)["name"], "{} has a direction".format(n_))
 
+# ── Task 11: the reference names what the code does ──
+_ref = (ROOT / "references" / "visual-languages.md")
+_doc = _ref.read_text(encoding="utf-8") if _ref.exists() else ""
+for needle in list(vl.LANGS) + list(vl.PAGE_FIELDS) + ["design_plan.visual_language", "design_plan.vl_fonts",
+               "deck_gates.py set", "unverified", "VLTextOverflow", "fonts=\"mac\"", "rs.card", "plan=", "direction("]:
+    check(needle in _doc, "references/visual-languages.md never says {!r}".format(needle))
+for scr in vl.EA_FACES:
+    for kind in ("serif", "sans"):
+        for plat in ("mac", "win"):
+            check(vl.EA_FACES[scr][kind][plat] in _doc, "the EA face {} is not in the reference".format(vl.EA_FACES[scr][kind][plat]))
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_visual_languages] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)

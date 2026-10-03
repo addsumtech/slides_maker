@@ -9,6 +9,26 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+### Visual languages: four complete image-led looks
+
+Picking a visual language now gives a whole finished deck. `scripts/visual_languages.py` offers four —
+`editorial` (bleed photographs, serif display, pull quotes), `soft` (arch / ellipse / blob frames,
+pastel ground, rounded cards), `collage` (tilted taped prints, heavy headlines, highlighter and
+squiggles) and `storybook` (a watercolour series feathered into paper) — each with a palette whose text
+inks pass contrast, system fonts that exist on macOS AND Windows by default (`fonts="mac"` unlocks
+Mac-only faces), East-Asian faces chosen per SCRIPT (Han, kana, Hangul), a ground and card registered
+with register_surface, and six page functions (cover, section, image_text, quote, data, closing) in a
+landscape and a portrait layout. Text is flowed by measured height and refused — never truncated — when
+it cannot fit; titles never end in a lone word or one or two CJK characters. The direction preview shows
+each language's bundled, labelled style sample, and a new gate on both runtimes blocks a recorded
+language that was not applied.
+
+New general primitives: `display_type` (stacked headlines sized by REAL glyph width — measure_text
+called a too-wide single word "one line" and the render broke it mid-word —, two-tone, and outlined
+marks drawn as pictures because LibreOffice renders a native hollow run filled), `surfaces.grain_background`
+(a tiled grain/paper ground in the slide background), `collage` (taped prints that never cover more than
+a quarter of a neighbour or enter the text-safe rect) and `image_fx.feather`.
+
 ### Image-led decks: an art-directed image series
 
 The image rule — plates only on the few slides that earn them — stays the default. A deck whose picked

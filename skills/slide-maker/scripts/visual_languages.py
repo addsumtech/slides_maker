@@ -139,6 +139,11 @@ class Kit:
 
 
 def use(name, prs, *, fonts="both", plan=None, image_dir=None, platform=None):
+    """Start a deck in a curated VISUAL LANGUAGE ("editorial", "soft", "collage", "storybook"): sets the
+    palette, fonts and ground, and returns a Kit whose page functions — cover, section, image_text, quote,
+    data, closing — lay out your own words and images in that language. fonts="both" uses only faces on
+    macOS AND Windows; fonts="mac" unlocks Mac-only faces. plan/image_dir let image= take P1 series slot
+    ids. Record design_plan.visual_language = name (references/visual-languages.md)."""
     if name not in LANGS:
         raise KeyError("visual_languages.use(): unknown language {!r} — one of {}".format(name, sorted(LANGS)))
     if fonts not in ("both", "mac"):
