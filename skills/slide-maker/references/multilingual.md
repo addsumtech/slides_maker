@@ -244,6 +244,12 @@ and tell the user which font the deck expects.
   a second mark takes the character before it down to the next line; an opening bracket never ends a
   line. Text that also carries Latin or digits never hangs — the renderer's autospace between the
   scripts is not modelled, so such lines are counted conservatively.
+  Korean wraps at SPACES, never between syllables: a Hangul word is measured whole (a word wider than the
+  line overflows rather than breaking), as LibreOffice sets it.
+- **The gap before a comma in a preview is the renderer, not your text.** LibreOffice's autospace puts a
+  visible gap between Hangul/CJK and ASCII punctuation or Latin (`고맙습니다 .`, `토스터 ,`, `87% 。`) —
+  it is not in the file, and language tags on the run do not remove it (probed 2026-10-04). Do not edit the
+  copy to chase it. (PowerPoint was not available to check; it has no such autospace setting for slides.)
 - **Density.** A CJK character carries more meaning per glyph, so for a **presented** deck terse
   points matter even more — resist filling the line just because it fits. *(A read-alone / reference
   CJK deck may run denser like any read-alone deck — then keep the script-aware leading (never below ~1.25× font size — `line_spacing` ≈1.04 — for CJK body) and the

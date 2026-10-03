@@ -4629,6 +4629,14 @@ def _is_wide(o):
             or 0xFFE0 <= o <= 0xFFE6 or 0x20000 <= o <= 0x3FFFD)
 
 
+def _is_hangul(o):
+    """Hangul syllables and jamo. Korean wraps at SPACES, never between syllables (LibreOffice probe,
+    2026-10-04: "가나다라마바사" in a box six syllables wide stays on one line and overflows) — so a
+    Hangul run is measured as a WORD, not as a row of ideographs."""
+    return (0xAC00 <= o <= 0xD7A3 or 0x1100 <= o <= 0x11FF or 0x3130 <= o <= 0x318F
+            or 0xA960 <= o <= 0xA97F or 0xD7B0 <= o <= 0xD7FF)
+
+
 def _disp_len(s):
     """Display width in 'Latin-char' units: CJK / full-width glyphs count as 2. Used only by
     the heuristic FALLBACK in `_measure_lines`; the primary path measures real glyph
@@ -5103,7 +5111,8 @@ def _measure_lines(runs, size_pt, avail_in, font=None):
     Narrow runs are measured with the REAL Latin font's glyph advances (Pillow, the bold
     parts measured bold); CJK / full-width glyphs are one em (= size_pt) by definition.
     A greedy line-breaker then counts wraps, breaking at spaces, between CJK glyphs, and at
-    CJK↔Latin boundaries (Latin words stay whole); a closing CJK mark hangs at the line end
+    CJK↔Latin boundaries (Latin words — and Korean words, see `_is_hangul` — stay whole); a
+    closing CJK mark hangs at the line end
     (_CJK_HANG), a closing bracket takes the ideograph before it down (_CJK_CLOSE) and an opening
     bracket never ends a line (_CJK_OPEN). Text that also carries Latin or digits never hangs: the
     renderer puts autospace between the scripts, which this does not model, so mixed lines are fuller
@@ -5127,21 +5136,26 @@ def _measure_lines(runs, size_pt, avail_in, font=None):
 
     items = []                                              # (width_pt, kind): 'w'ord 's'pace 'c'jk
     for text, bold in runs:
-        word = []
+        word, hw = [], 0                                    # a word's Latin chars, and its Hangul (1 em each)
+
+        def _word():
+            return ((getlen("".join(word), bold) if word else 0.0) + hw * float(size_pt), "w")
         for ch in text:
             if ch == " ":
-                if word:
-                    items.append((getlen("".join(word), bold), "w")); word = []
+                if word or hw:
+                    items.append(_word()); word, hw = [], 0
                 items.append((getlen(" ", bold), "s"))
+            elif _is_hangul(ord(ch)):
+                hw += 1                                     # Korean wraps at spaces: part of the word
             elif _is_wide(ord(ch)):
-                if word:
-                    items.append((getlen("".join(word), bold), "w")); word = []
+                if word or hw:
+                    items.append(_word()); word, hw = [], 0
                 items.append((float(size_pt), "h" if ch in _CJK_HANG else ("b" if ch in _CJK_CLOSE else
                                                                      ("o" if ch in _CJK_OPEN else "c"))))
             else:
                 word.append(ch)
-        if word:
-            items.append((getlen("".join(word), bold), "w"))
+        if word or hw:
+            items.append(_word())
 
     # pure CJK only (see the docstring), and a line of at least two ideographs: in a one-ideograph
     # column the renderer cannot hang (it would leave the line empty) — 3 under-counts in the corpus

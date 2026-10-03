@@ -272,6 +272,18 @@ def main():
     n = dk._measure_lines([("一二三四五六。」七八九十一二", False)], 24, 6 * em24 + 0.02, font="Songti SC")
     check("after the push the next line holds 六。」 + four ideographs, then wraps (three lines)", n == 3, n)
 
+    # Korean wraps at SPACES, never between syllables (LibreOffice probe, 2026-10-04: "가나다라마바사" in a box
+    # six syllables wide stays on ONE line and overflows; "옥상에서도 채소가 자란다" breaks at the space).
+    # Breaking between syllables under-counted 11 of 60 rendered Korean cases, by up to two lines.
+    n = dk._measure_lines([("가나다라마바사", False)], 24, 6 * em24 + 0.02, font="Apple SD Gothic Neo")
+    check("a Korean word is never broken between syllables (one line, as rendered)", n == 1, n)
+    n = dk._measure_lines([("옥상에서도 채소가 자란다", False)], 24, 7 * em24 + 0.02, font="Apple SD Gothic Neo")
+    check("Korean breaks at the space (two lines, as rendered)", n == 2, n)
+    for t_, sz_, w_, want in (("동네 수리 카페는 한 달에 한 번 저녁에 열립니다. 동네 수리 카페는 한 달에 한 번 저녁에 열립니다.", 40, 3.72, 10),
+                              ("작은 화분 하나로 시작하면 충분합니다. 고장 난 물건을 가져오세요. 고쳐서 가져가세요.", 24, 2.29, 8)):
+        n = dk._measure_lines([(t_, False)], sz_, w_, font="AppleMyungjo")
+        check("a rendered Korean case is not under-counted ({} lines rendered)".format(want), n >= want, n)
+
     print("\n{} passed, {} failed".format(len(PASS), len(FAIL)))
     return 1 if FAIL else 0
 
