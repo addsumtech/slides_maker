@@ -1250,6 +1250,13 @@ jobs:
           grep -qE "\\] ok$" /tmp/collage.log || {
             echo "::error::test_collage did not run to completion"; exit 1; }
 
+      - name: visual_languages builds four complete looks on every canvas and script
+        run: |
+          set -o pipefail
+          python tests/test_visual_languages.py | tee /tmp/visual_languages.log
+          grep -qE "\\] ok$" /tmp/visual_languages.log || {
+            echo "::error::test_visual_languages did not run to completion"; exit 1; }
+
       # --- P2 visual languages steps end ---
 
       - name: The Codex scaffold shows every field the Codex gate requires

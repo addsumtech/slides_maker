@@ -34,7 +34,7 @@ sys.path.insert(0, HERE)
 # supply the geometry". Leaving the surface kits out of it therefore did worse than hide them — it
 # told anyone asking for `halftone` or `starburst` to hand-roll the thing that had just been built.
 MODULES = ("deckkit", "designed_charts", "register_surface", "citations", "ornaments", "image_fx",
-           "image_series", "surfaces", "display_type", "collage")
+           "image_series", "surfaces", "display_type", "collage", "visual_languages")
 
 # The three call-shape errors that actually cost round-trips on a real build. They are properties of
 # the API that no single signature line states, so they are printed with every lookup rather than
