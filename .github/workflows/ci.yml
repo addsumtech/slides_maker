@@ -1159,6 +1159,13 @@ jobs:
           grep -qE "\\] ok$" /tmp/picshapes.log || {
             echo "::error::test_picture_shapes did not run to completion"; exit 1; }
 
+      - name: mark() highlights words natively, and the contrast gate reads the highlight
+        run: |
+          set -o pipefail
+          python tests/test_text_mark.py | tee /tmp/textmark.log
+          grep -qE "\\] ok$" /tmp/textmark.log || {
+            echo "::error::test_text_mark did not run to completion"; exit 1; }
+
       - name: The Codex scaffold shows every field the Codex gate requires
         run: |
           set -o pipefail

@@ -964,7 +964,70 @@ def _pangu_para(para):
             while b[0].startswith(" ") and a[0] and b[0].lstrip(" ") \
                     and ins.fullmatch(a[0][-1] + b[0].lstrip(" ")[0]):
                 b[0] = b[0][1:]
-    return [tuple(r) for r in out]
+    rebuilt = [tuple(r) for r in out]
+    # a `mark()`ed run must survive the rebuild — losing it would silently drop the highlight
+    for i, orig in enumerate(para):
+        hl = getattr(orig, "highlight", None)
+        if hl is not None:
+            rebuilt[i] = _Marked(rebuilt[i])
+            rebuilt[i].highlight = hl
+    return rebuilt
+
+
+class _Marked(tuple):
+    """A run tuple that also carries a highlighter colour. Unpacks exactly like the run it wraps,
+    so every reader of run tuples keeps working; only `text()` looks for `.highlight`."""
+    highlight = None
+
+
+# rPr children that must come AFTER <a:highlight> (CT_TextCharacterProperties sequence)
+_HL_SUCCESSORS = ("uLnTx", "uLn", "uFillTx", "uFill", "latin", "ea", "cs", "sym",
+                  "hlinkClick", "hlinkMouseOver", "rtl", "extLst")
+
+
+def _set_highlight(run, color):
+    """Write <a:highlight> on a python-pptx run, in schema order."""
+    rPr = run._r.get_or_add_rPr()
+    for old in rPr.findall(qn("a:highlight")):
+        rPr.remove(old)
+    h = rPr.makeelement(qn("a:highlight"), {})
+    h.append(h.makeelement(qn("a:srgbClr"), {"val": str(_as_rgb(color))}))
+    nxt = next((ch for ch in rPr if isinstance(ch.tag, str)
+                and ch.tag.rsplit("}", 1)[-1] in _HL_SUCCESSORS), None)
+    if nxt is not None:
+        nxt.addprevious(h)
+    else:
+        rPr.append(h)
+    return run
+
+
+def mark(run, color):
+    """A run set on a HIGHLIGHTER block — the editorial move of putting one or two words of a
+    headline on colour. Native `<a:highlight>`: it follows the glyphs through every wrap, in any
+    script, and stays editable. Use it INSIDE a text() paragraph in place of the plain run:
+
+        dk.text(s, x, y, w, h, [[("BUILD THE SMALLEST ", 54, INK, True, False),
+                                 dk.mark(("OBJECT", 54, INK, True, False), "D4FF3A"),
+                                 (" THAT ASKS A QUESTION", 54, INK, True, False)]])
+
+    A separate shape behind the word has to be positioned by guesswork and drifts off it when the
+    line wraps (measured 2026-10-03: a guessed block covered half of "NEED ROOM").
+
+    RAISES ValueError when the ink fails WCAG on the highlight (4.5:1, or 3:1 for text >= 18pt or
+    bold >= 14pt) — pick the ink with `dk.on(color)`. The render gate also reads the highlight as
+    the run's backing, so a pair written by hand is caught there."""
+    if not isinstance(run, tuple) or len(run) < 5:
+        raise TypeError("mark(): pass a run tuple (text, size, color, bold, italic[, font[, ea]])")
+    txt, size, ink, bold = run[0], run[1], run[2], run[3]
+    hl = _as_rgb(color)
+    need = 3.0 if (size >= 18 or (bold and size >= 14)) else 4.5
+    ratio = contrast_ratio(_as_rgb(ink), hl)
+    if ratio < need:
+        raise ValueError("mark(): {!r} ink on its highlight is {:.2f}:1, under {}:1 — use "
+                         "dk.on({!r}) for the ink".format(str(txt)[:24], ratio, need, str(hl)))
+    out = _Marked(run)
+    out.highlight = hl
+    return out
 
 
 def text(slide, x, y, w, h, runs, align=PP_ALIGN.LEFT, anchor=MSO_ANCHOR.TOP,
@@ -1022,7 +1085,8 @@ def text(slide, x, y, w, h, runs, align=PP_ALIGN.LEFT, anchor=MSO_ANCHOR.TOP,
             p.line_spacing = line_spacing
         else:
             p.line_spacing = CJK_LS if any(_has_cjk(t) for (t, *_rest) in para) else 1.0
-        for (txt, size, color, bold, italic, *rest) in para:
+        for _run in para:
+            (txt, size, color, bold, italic, *rest) = _run
             r = p.add_run(); r.text = txt
             # rest = [latin_face, ea_face] — the SEVENTH slot is the East-Asian face, and it
             # exists because the sixth one cannot do that job. A run tuple's font goes to
@@ -1035,6 +1099,8 @@ def text(slide, x, y, w, h, runs, align=PP_ALIGN.LEFT, anchor=MSO_ANCHOR.TOP,
             set_font(r, size, color, bold, italic,
                      rest[0] if rest else None,
                      ea=rest[1] if len(rest) > 1 else None)
+            if getattr(_run, "highlight", None) is not None:
+                _set_highlight(r, _run.highlight)     # a `mark()`ed run
     return tb
 
 

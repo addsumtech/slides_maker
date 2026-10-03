@@ -350,6 +350,7 @@ def _boxes(slide, sw, sh, slide_no=None, record=True):
         except Exception:
             descr = None
         run_colors = []                                  # (snippet, RGB-hex or None=inherited)
+        run_hl = []                                      # per run, aligned: <a:highlight> hex or None
         if s.has_text_frame:
             for p in s.text_frame.paragraphs:
                 for r in p.runs:
@@ -359,6 +360,17 @@ def _boxes(slide, sw, sh, slide_no=None, record=True):
                         except Exception:
                             run_colors.append((r.text.strip()[:24],
                                                None if r.font.color.type is None else "THEME"))
+                        # a HIGHLIGHT is that run's backing, whatever the shape is filled with
+                        # (deckkit.mark() writes it; a hand-made deck can too)
+                        _h = None
+                        try:
+                            _rpr = r._r.find(qn("a:rPr"))
+                            _hc = (None if _rpr is None
+                                   else _rpr.find(qn("a:highlight") + "/" + qn("a:srgbClr")))
+                            _h = None if _hc is None else str(_hc.get("val") or "").upper() or None
+                        except Exception:
+                            _h = None
+                        run_hl.append(_h)
         fill_rgb = None                                  # solid-fill colour of this shape, if resolvable
         fill_unk = False                                 # True = fill exists but colour unknowable
         try:                                             #   (gradient/picture/pattern, or theme solid)
@@ -398,7 +410,7 @@ def _boxes(slide, sw, sh, slide_no=None, record=True):
             tph = False
         out.append({"l": l, "t": t, "w": w, "h": h, "r": l + w, "b": t + h, "zi": zi,
                     "rot": _rot, "fl": _fl, "ft": _ft, "fw": _fw, "fh": _fh, "poly": poly,
-                    "runs": run_colors, "fill": fill_rgb, "unk": fill_unk, "pic": is_pic, "grad": is_grad,
+                    "runs": run_colors, "run_hl": run_hl, "fill": fill_rgb, "unk": fill_unk, "pic": is_pic, "grad": is_grad,
                     "icon": icon_ink,
                     "st": str(s.shape_type).split()[0], "txt": txt, "full": full, "size": size or 12.0,
                     "paras": paras, "solid": s.shape_type in SOLID, "align": align, "anchor": anchor,
@@ -3244,30 +3256,39 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
                             break
                         b0 = None
             back = _backing_fill(bx, ti, chrome=chrome)
+            # A run on a HIGHLIGHT is judged against the highlight, whatever the shape backing
+            # resolves to — otherwise dark ink on a dark highlight passes, because the backing this
+            # check reads is the shape's fill. Unhighlighted runs take the original path exactly.
+            _hls = s.get("run_hl") or [None] * len(s["runs"])
+            _resolved_back = bool(back) and back != "UNKNOWN"
             if back == "UNKNOWN":
-                continue                                 # picture/gradient backing → unknowable, skip
-            _resolved_back = bool(back)
-            if not back:
-                if dark_plate or unk_plate:
-                    continue                             # unresolved / plate canvas → skip (no false positive)
-                back = "FFFFFF"                          # confident light canvas → check grey-on-white
-            for snip, rc in s["runs"]:
+                back = None                              # picture/gradient backing → unknowable
+            elif not back:
+                # unresolved / plate canvas → unknowable; confident light canvas → grey-on-white
+                back = None if (dark_plate or unk_plate) else "FFFFFF"
+            if back is None and not any(_hls):
+                continue                                 # unknowable, and nothing highlighted
+            for (snip, rc), _hl in zip(s["runs"], _hls):
+                _bk = _hl or back
+                if _bk is None:
+                    continue
+                _res = True if _hl else _resolved_back   # a highlight IS a resolved backing
                 if rc == "THEME":
                     continue
                 ink = rc if rc else "000000"
-                ratio = _contrast(ink, back)
+                ratio = _contrast(ink, _bk)
                 if ratio < 1.8:
                     finds.append(f"INVISIBLE TEXT: '{snip}' ink #{ink}"
                                  + (" (no explicit colour, defaults to black)" if rc is None else "")
-                                 + f" on fill #{back} — contrast {ratio:.2f}:1, unreadable")
+                                 + f" on fill #{_bk} — contrast {ratio:.2f}:1, unreadable")
                 elif ratio < 3.0:
                     # 3:1 is WCAG's floor for text at ANY size — large-text and bold carve-outs
                     # only relax the bar to 3.0, never below it. So a RESOLVED backing under 3.0 is
                     # unreadable on every reading of the spec and is a hard finding; the promotion
                     # needs no knowledge of size or weight, which is why it is safe to make here.
-                    msg = (f"LOW CONTRAST: '{snip}' ink #{ink} on fill #{back} — {ratio:.2f}:1 "
+                    msg = (f"LOW CONTRAST: '{snip}' ink #{ink} on fill #{_bk} — {ratio:.2f}:1 "
                            f"(under 3:1, the floor for text at ANY size)")
-                    (finds if _resolved_back else warns).append(msg)
+                    (finds if _res else warns).append(msg)
                 elif ratio < 4.5 and s["size"] >= 12:
                     # The 3.0-4.5 band stays a WARN on purpose. WCAG relaxes the bar to 3:1 for
                     # large text (>=18pt, or >=14pt BOLD) and this pass does not collect weight, so
@@ -3275,7 +3296,7 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
                     # Measured: promoting this band hard-failed the skill's OWN reference deck four
                     # times, on accent labels at 4.27:1 — a 0.23 shortfall on a kicker is a judgement
                     # call, not a defect, and a gate that blocks on it teaches people to bypass it.
-                    warns.append(f"BODY CONTRAST: '{snip}' ink #{ink} on fill #{back} — {ratio:.2f}:1 "
+                    warns.append(f"BODY CONTRAST: '{snip}' ink #{ink} on fill #{_bk} — {ratio:.2f}:1 "
                                  f"(body-size text targets >=4.5:1; large/bold text may sit here)")
         # 1c) TEXT-ON-IMAGE contrast (render-based): text whose backing resolves to a picture /
         #     gradient ("UNKNOWN") is exactly what 1b must skip — when renders exist, sample the
