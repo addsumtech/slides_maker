@@ -371,6 +371,13 @@ def qc(plan, gen_dir, *, de_max=None, hist_max=None, plan_path=None):
     hist_max = HIST_MAX if hist_max is None else hist_max
     gen_dir = Path(gen_dir)
     kid = key_id(plan)
+    # an acknowledgement ("kept on purpose: <why>") survives every re-run — qc used to rewrite it to {}
+    ack = {}
+    try:
+        old = json.loads((gen_dir / "series-qc.json").read_text(encoding="utf-8")).get("acknowledged") or {}
+        ack = {k: v for k, v in old.items() if isinstance(k, str) and isinstance(v, str)}
+    except (OSError, ValueError, AttributeError):
+        pass
     files = {s["id"]: gen_dir / "slide-{:02d}-{}.png".format(s["slide"], s["id"]) for s in plan["slots"]}
     chroma = str(plan.get("chroma") or DEFAULT_CHROMA).lstrip("#").upper()
     key_stats = (image_stats(files[kid], exclude=chroma if slot(plan, kid).get("cutout") else None)
@@ -417,10 +424,12 @@ def qc(plan, gen_dir, *, de_max=None, hist_max=None, plan_path=None):
             recs.append(rec)
             flags += ["{}: {}".format(c, m) for c, m in rec.get("flags", [])]
         row["flags"] = flags
+        if flags and reason_width(ack.get(s["id"])) >= FLOOR_SUBJECT:
+            row["acknowledged"] = ack[s["id"]]
         if flags and s["id"] != kid and any(x.startswith("OFF-SERIES") for x in flags):
             outliers.append(s["id"])
         rows.append(row)
-    rep = {"key": kid, "slots": rows, "outliers": outliers, "acknowledged": {}}
+    rep = {"key": kid, "slots": rows, "outliers": outliers, "acknowledged": ack}
     (gen_dir / "series-qc.json").write_text(json.dumps(rep, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     if recs:
         try:
@@ -508,16 +517,37 @@ def main(argv=None):
         return 1 if bad_ else 0
     if a.cmd == "qc":
         rep = qc(plan, a.dir, plan_path=a.plan)
-        flagged = [r for r in rep["slots"] if r["flags"]]
-        for r in flagged:
+        qpath = Path(a.dir) / "series-qc.json"
+        man = Path(a.dir) / "image_prompt_manifest.json"
+        kid = rep["key"]
+        key_img = Path(a.dir) / "slide-{:02d}-{}.png".format(slot(plan, kid)["slide"], kid)
+        open_ = []
+        for r in rep["slots"]:
             for f in r["flags"]:
                 print("  [{}] {}".format(r["id"], f))
-        print("image_series qc: {} slot(s), {} flagged, outliers {} — wrote {}".format(
-            len(rep["slots"]), len(flagged), rep["outliers"] or "none", Path(a.dir) / "series-qc.json"))
-        if not flagged:
-            print("NEXT: place each slot with image_series.slot_picture(slide, plan, slot_id, x, y, w, h, "
-                  "image_dir=...) and look at the contact sheet {}".format(Path(a.dir) / "_series_contact.png"))
-        return 1 if flagged else 0
+            if r["flags"] and r.get("acknowledged"):
+                print("  [{}] acknowledged: {}".format(r["id"], r["acknowledged"]))
+            elif r["flags"]:
+                open_.append(r)
+        for r in open_:
+            if any(not f.startswith("CUTOUT") for f in r["flags"]):
+                if r["id"] == kid:
+                    print("  fix [{}] (the KEY — every other slot follows it): python3 scripts/generate_images_codex.py "
+                          "{} --overwrite --only {}".format(r["id"], _q(man), _q(r["id"])))
+                else:
+                    print("  fix [{}]: python3 scripts/generate_images_codex.py {} --overwrite --only {} --style-ref {}"
+                          .format(r["id"], _q(man), _q(r["id"]), _q(key_img)))
+        print("image_series qc: {} slot(s), {} flagged ({} open), outliers {} — wrote {}".format(
+            len(rep["slots"]), sum(1 for r in rep["slots"] if r["flags"]), len(open_), rep["outliers"] or "none", qpath))
+        if open_:
+            print("  To keep a flagged slot ON PURPOSE (the flag is the style itself), record why in {} -> "
+                  "\"acknowledged\": {{\"<id>\": \"<the reason>\"}} and rerun qc.".format(qpath))
+            print("NEXT: fix or acknowledge the slot(s) above, then rerun: python3 scripts/image_series.py qc {} --dir {}"
+                  .format(_q(a.plan), _q(a.dir)))
+            return 1
+        print("NEXT: place each slot with image_series.slot_picture(slide, plan, slot_id, x, y, w, h, image_dir=...) "
+              "and look at the contact sheet {}".format(Path(a.dir) / "_series_contact.png"))
+        return 0
     items = prompts(plan, a.out_dir, plan_path=a.plan)
     man = Path(a.out_dir) / "image_prompt_manifest.json"
     print("image_series: wrote {} prompt(s) to {}".format(len(items), man))

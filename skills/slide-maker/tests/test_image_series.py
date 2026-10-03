@@ -445,6 +445,42 @@ with tempfile.TemporaryDirectory() as td:
     check(bool(aspect_flags({"shape": "rect", "w": 1, "h": 1}, (450, 300))) == bool(aspect_flags({"shape": "rect", "w": 3, "h": 2}, (300, 300))),
           "the aspect check must be symmetric (1:1 frame/3:2 image vs 3:2 frame/1:1 image)")
 
+# a flagged slot gets a RUNNABLE fix, and an acknowledgement with a reason survives the next qc run
+with tempfile.TemporaryDirectory() as td:
+    td = Path(td)
+    qp = copy.deepcopy(GOOD)
+    qp["slots"] = [dict(qp["slots"][0]), dict(qp["slots"][0], id="odd", slide=2, frame={"shape": "rect", "w": 3, "h": 2})]
+    pf = td / "series.json"
+    pf.write_text(json.dumps(qp), encoding="utf-8")
+    ims.prompts(qp, td, plan_path=pf)
+    tex = Image.new("RGB", (300, 400))                     # a textured warm key: a smooth gradient is a FLAT PLATE
+    tex.putdata([(120 + (x * 7 + y * 13) % 120, 80 + (x * 3 + y) % 100, 40 + (y * 5) % 70)
+                 for y in range(400) for x in range(300)])
+    tex.save(td / "slide-01-hero.png")
+    cold = Image.new("RGB", (300, 200))
+    cold.putdata([(20, 60 + (x % 50), 200) for y in range(200) for x in range(300)])
+    cold.save(td / "slide-02-odd.png")
+    buf = _io.StringIO()
+    with _cl.redirect_stdout(buf):
+        rc = ims.main(["qc", str(pf), "--dir", str(td)])
+    fixes = [l for l in buf.getvalue().splitlines() if "--overwrite --only odd" in l]
+    check(rc == 1 and fixes and "--style-ref" in fixes[0] and _runnable(fixes[0], [td / "image_prompt_manifest.json"]),
+          "a flagged slot must get a runnable regenerate command: {}".format(buf.getvalue()[-400:]))
+    check("acknowledged" in buf.getvalue(), "qc must say how to keep a flagged slot on purpose")
+    rep_ = json.loads((td / "series-qc.json").read_text(encoding="utf-8"))
+    rep_["acknowledged"] = {"odd": "kept: the cold night scene is the deck's deliberate turn"}
+    (td / "series-qc.json").write_text(json.dumps(rep_), encoding="utf-8")
+    with _cl.redirect_stdout(_io.StringIO()):
+        rc2 = ims.main(["qc", str(pf), "--dir", str(td)])
+    rep2 = json.loads((td / "series-qc.json").read_text(encoding="utf-8"))
+    check(rc2 == 0 and rep2.get("acknowledged", {}).get("odd"),
+          "an acknowledged slot passes and the acknowledgement survives: rc={} {}".format(rc2, rep2.get("acknowledged")))
+    rep2["acknowledged"] = {"odd": "ok"}
+    (td / "series-qc.json").write_text(json.dumps(rep2), encoding="utf-8")
+    with _cl.redirect_stdout(_io.StringIO()):
+        rc3 = ims.main(["qc", str(pf), "--dir", str(td)])
+    check(rc3 == 1, "a one-word acknowledgement is not a reason")
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_image_series] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)
