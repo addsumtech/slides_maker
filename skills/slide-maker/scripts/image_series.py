@@ -212,7 +212,7 @@ def prompts(plan, out_dir):
     items = []
     for s in plan["slots"]:
         fn = "slide-{:02d}-{}.png".format(s["slide"], s["id"])
-        items.append({"id": s["id"], "slide": s["slide"], "filename": fn,
+        items.append({"id": s["id"], "slide": s["slide"], "filename": fn, "orientation": "auto",
                       "path": str(out_dir / fn), "prompt": build_prompt(plan, s)})
     (out_dir / "image_prompt_manifest.json").write_text(
         json.dumps(items, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
@@ -361,7 +361,8 @@ def main(argv=None):
         return 1
     if a.cmd == "check":
         print("image_series: {} slot(s), key {!r} — plan OK".format(len(plan["slots"]), key_id(plan)))
-        print("NEXT: python3 scripts/image_series.py prompts {} <out_dir>".format(a.plan))
+        print("NEXT: python3 scripts/image_series.py prompts {} {}".format(
+            a.plan, Path(a.plan).resolve().parent / "assets" / "generated"))
         return 0
     if a.cmd == "qc":
         rep = qc(plan, a.dir)

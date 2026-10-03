@@ -59,6 +59,13 @@ cl = gic.style_clause("_style-ref.png")
 check("_style-ref.png" in cl and "do not copy its subject" in cl.lower(), "style clause wording: " + cl)
 check("REAL subject" not in cl, "the style clause must not reuse the real-photo wording")
 
+# a series item states its OWN aspect in its prompt; the generator's --orientation default ("landscape",
+# appended INSIDE the prompt) would contradict a tall arch. An item's own "orientation" wins.
+check(gic._orientation_for({"orientation": "auto"}, "landscape") == "auto", "an item's orientation must win")
+check(gic._orientation_for({}, "landscape") == "landscape", "no item orientation -> the CLI default")
+check(gic._orient_clause(gic._orientation_for({"orientation": "auto"}, "landscape")) == "",
+      "an 'auto' item gets no orientation clause")
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_imagegen_series_flags] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)

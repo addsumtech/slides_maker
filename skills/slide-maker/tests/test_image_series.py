@@ -109,6 +109,8 @@ with tempfile.TemporaryDirectory() as td:
     check(man == items and len(items) == 2, "the manifest must hold one item per slot")
     h = items[0]
     check(h["id"] == "hero" and h["filename"] == "slide-01-hero.png" and h["slide"] == 1, "item shape: {}".format(h))
+    check(all(it.get("orientation") == "auto" for it in items),
+          "series items carry orientation 'auto' — the aspect is already in each prompt")
     p0, p1 = items[0]["prompt"], items[1]["prompt"]
     check(GOOD["art_direction"] in p0 and GOOD["art_direction"] in p1, "every prompt carries the art direction")
     check("#D9A13B" in p0, "every prompt carries the palette")
@@ -139,6 +141,16 @@ with tempfile.TemporaryDirectory() as td:
     bp.write_text(json.dumps(badp), encoding="utf-8")
     check(ims.main(["check", str(bp)]) == 1, "check CLI must exit 1 on an invalid plan")
     check(ims.main(["prompts", str(bp), td]) == 1, "prompts CLI must refuse an invalid plan")
+    # the NEXT line printed by `check` must run as printed — no <placeholder>
+    gp = Path(td) / "ok.json"
+    gp.write_text(json.dumps(GOOD), encoding="utf-8")
+    import contextlib, io  # noqa: E401,E402
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        ims.main(["check", str(gp)])
+    nxt = [l for l in buf.getvalue().splitlines() if l.startswith("NEXT")]
+    check(nxt and "<" not in nxt[0] and str(Path(td) / "assets" / "generated") in nxt[0],
+          "check's NEXT line must be runnable as printed: {}".format(nxt))
 
 # ── QC: consistency with the key image ───────────────────────────────────────────────────────
 from PIL import Image  # noqa: E402

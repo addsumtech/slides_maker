@@ -334,6 +334,14 @@ def _render_clause(intent):
     return _RENDER_MODE if intent in ("stylized-illustration", "fallback-rung") else ""
 
 
+def _orientation_for(item, default):
+    """An item's own `orientation` wins over the CLI default. An image-series item states its slot's
+    aspect inside its prompt and carries "auto", because the default ("landscape", appended INSIDE the
+    prompt) would ask a tall arch slot for a wide 16:9 picture."""
+    o = item.get("orientation")
+    return o if o in ("landscape", "portrait", "auto") else default
+
+
 def _orient_clause(orientation):
     # appended INSIDE the verbatim <IMAGE_PROMPT> block, so it steers the generation (not plumbing)
     if orientation == "landscape":
@@ -634,7 +642,7 @@ def main(argv=None):
         worklist.append((item, out_path))
 
     def _work(item, out_path):                              # independent per item (own file, own subprocess)
-        return _generate_one(item["prompt"], out_path, orientation=args.orientation,
+        return _generate_one(item["prompt"], out_path, orientation=_orientation_for(item, args.orientation),
                              timeout=args.timeout,
                              refs=item.get("_refs") or refs_for(item, args.ref_dir),
                              ref_intent=args.ref_intent, style_ref=style_ref)
