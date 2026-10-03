@@ -299,7 +299,11 @@ def prompts(plan, out_dir, plan_path=None):
 DE_MAX = 25.0      # mean-colour distance (CIE76) from the key beyond which an image is OFF-SERIES
 HIST_MAX = 0.6     # hue-histogram distance (L1/2) beyond which an image is OFF-SERIES
 LOW_SAT = 0.08     # mean saturation below which a picture's hue histogram is noise
-ASPECT_MAX = 0.35  # |image aspect - frame aspect| / frame aspect beyond which the crop loses too much
+# ASPECT compares the image with what a generator CAN make for the frame — between 2:3 and 16:9 (the
+# metered path's sizes; the Codex tool steers by prompt within about the same range) — on a log scale,
+# so 1:1-vs-3:2 and 3:2-vs-1:1 are the same distance. A 1:4 arch used to be told "regenerate" forever.
+GEN_ASPECT = (2 / 3.0, 16 / 9.0)
+ASPECT_TOL = 1.35  # image aspect / reachable aspect (or its inverse) beyond which the crop loses too much
 
 
 def image_stats(path, *, exclude=None):
@@ -379,10 +383,11 @@ def qc(plan, gen_dir, *, de_max=None, hist_max=None, plan_path=None):
         else:
             st = image_stats(f, exclude=chroma if s.get("cutout") else None)
             w, h = st["size"]
-            far = abs((w / float(h)) - (s["frame"]["w"] / float(s["frame"]["h"]))) / (s["frame"]["w"] / float(s["frame"]["h"]))
-            if far > ASPECT_MAX:
-                flags.append("ASPECT: {}x{} is far from the {:.2f}:1 frame — regenerate at the frame's aspect".format(
-                    w, h, s["frame"]["w"] / float(s["frame"]["h"])))
+            fa = s["frame"]["w"] / float(s["frame"]["h"])
+            reach = min(max(fa, GEN_ASPECT[0]), GEN_ASPECT[1])
+            if abs(math.log((w / float(h)) / reach)) > math.log(ASPECT_TOL):
+                flags.append("ASPECT: {}x{} ({:.2f}:1) is far from the {:.2f}:1 frame (a generator reaches {:.2f}:1 "
+                             "for it) — regenerate this slot".format(w, h, w / float(h), fa, reach))
             # a cut-out is an isolated OBJECT: its colour is the object's, not the series' grade, so it
             # is not colour-compared (measured: a cream kettle read 30.3 from a warm hall scene)
             if key_stats is not None and s["id"] != kid and not s.get("cutout"):

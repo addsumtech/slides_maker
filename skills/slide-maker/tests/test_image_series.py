@@ -429,6 +429,22 @@ with tempfile.TemporaryDirectory() as td:
     cl = [l for l in buf.getvalue().splitlines() if "CUTOUT" in l]
     check(cl and _runnable(cl[0], [sp, gen]), "the CUTOUT command must run as printed: {}".format(cl))
 
+# ASPECT asks only for what a generator CAN make (between 2:3 and 16:9), symmetrically: a 1:4 arch got
+# "regenerate at the frame's aspect" forever, and a 1:1 frame with a 3:2 image was flagged while a 3:2
+# frame with a 1:1 image was not (generality probe / final review, 2026-10-03)
+with tempfile.TemporaryDirectory() as td:
+    td = Path(td)
+    ap = copy.deepcopy(GOOD)
+    ap["slots"] = [dict(ap["slots"][0], cutout=False)]
+    def aspect_flags(frame, size):
+        ap["slots"][0]["frame"] = frame
+        warm(td / "slide-01-hero.png", size=size)
+        return [f for f in {r["id"]: r["flags"] for r in ims.qc(ap, td)["slots"]}["hero"] if f.startswith("ASPECT")]
+    check(not aspect_flags({"shape": "arch", "w": 1, "h": 4}, (300, 450)), "a 1:4 frame given the tallest image a generator makes must pass")
+    check(aspect_flags({"shape": "arch", "w": 1, "h": 4}, (450, 300)), "a 1:4 frame given a LANDSCAPE image must be flagged")
+    check(bool(aspect_flags({"shape": "rect", "w": 1, "h": 1}, (450, 300))) == bool(aspect_flags({"shape": "rect", "w": 3, "h": 2}, (300, 300))),
+          "the aspect check must be symmetric (1:1 frame/3:2 image vs 3:2 frame/1:1 image)")
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_image_series] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)
