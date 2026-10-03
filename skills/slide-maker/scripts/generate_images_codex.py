@@ -531,6 +531,17 @@ def subject_terms(s):
         han = han.replace(w, "")
     han = "".join(ch for ch in han if "\u4e00" <= ch <= "\u9fff" and ch not in _ZH_PARTICLES)
     terms |= {"zh:" + han[i:i + 2] for i in range(0, len(han) - 1, 2)}
+    # every other script counts too (generality probe, 2026-10-03: Korean, Arabic, Russian and kana-only
+    # subjects scored 0 and were refused): a word of a space-separated script (Hangul, Arabic, Cyrillic,
+    # Greek, Devanagari…) is a term; an unspaced run (kana, Thai) counts one term per 3 characters
+    for tok in re.findall(r"[^\W\d_]+", s):
+        rest = "".join(ch for ch in tok if not ("\u4e00" <= ch <= "\u9fff") and ord(ch) > 127)
+        if len(rest) < 2:
+            continue
+        if any("\u3040" <= ch <= "\u30ff" or "\u0e00" <= ch <= "\u0e7f" for ch in rest):
+            terms |= {"u:" + rest[i:i + 3] for i in range(0, len(rest) - 2, 3)}
+        else:
+            terms.add("u:" + rest.lower())
     return terms
 
 

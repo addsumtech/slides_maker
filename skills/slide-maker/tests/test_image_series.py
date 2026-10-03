@@ -125,6 +125,13 @@ for mutate in (lambda p: p["slots"][0].update(frame="arch"), lambda p: p["slots"
         check(probs, "a malformed plan must have problems: {}".format(mp))
     except Exception as e:
         fails.append("check() crashed on a malformed plan: {}: {}".format(type(e).__name__, e))
+# the subject check is language-fair beyond English and Chinese: Korean, Arabic, Russian, kana-only
+# Japanese subjects were refused as "names no thing" (generality probe, 2026-10-03) — every script counts
+for subj in ("나무 테이블 위에 놓인 찻주전자와 찻잔", "إبريق شاي خزفي مصنوع يدويا على طاولة خشبية",
+             "глиняный чайник ручной работы на деревянном столе", "きのテーブルのうえにおかれたきゅうすとゆのみ",
+             "木のテーブルの上に置かれた急須と湯呑み"):
+    lp = copy.deepcopy(GOOD); lp["slots"][0].update(subject=subj, kind="scene")
+    check(ims.check(lp) == [], "{!r} names things but was refused: {}".format(subj, ims.check(lp)))
 # a persona WITH its label is valid
 pp = copy.deepcopy(GOOD)
 pp["slots"][0].update(kind="persona", persona_label="虚构人物 · illustrative persona")
