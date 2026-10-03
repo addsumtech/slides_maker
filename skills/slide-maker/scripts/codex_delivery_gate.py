@@ -252,6 +252,11 @@ TEMPLATE = {
         "checkpoint": {"mode": "approved", "record": "<decision record>"},
     },
     "design": {
+        # image-led decks only (references/image-generation.md, the SERIES exception): picking the
+        # image-led direction records "series" + the path of its series.json; everything else stays
+        # "selective" (today's rule) and the image-series gate reads NOT CHECKED.
+        "imagery": "selective",
+        "image_series": None,
         # 🔴 REQUIRED, and absent from this template until it was measured alongside
         # `interview.picks`. Step 4 COMPETES the signature page: build 2-3 different
         # compositions of it, render them in ONE pass, read them blind, pick by what you SAW.
@@ -1657,6 +1662,42 @@ def check_qa_backup(evidence: dict[str, Any], deck_path: Path | None,
             f"evidence file.")
 
 
+def check_image_series(evidence: dict[str, Any], deck_path: Path | None,
+                       errors: list[str]) -> None:
+    """An image-led deck's generated series — same module as `render_deck.py --gate-check`.
+    The record is `design.imagery: "series"` + `design.image_series: <series.json>`; anything else
+    is NOT CHECKED, out loud."""
+    if deck_path is None:
+        return
+    try:
+        import importlib.util
+        path = Path(__file__).with_name("check_image_series.py")
+        spec = importlib.util.spec_from_file_location("slide_maker_check_image_series", path)
+        if spec is None or spec.loader is None:
+            raise RuntimeError("could not load check_image_series.py")
+        cis = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cis)
+    except Exception as exc:
+        not_checked(f"  [--] IMAGE SERIES NOT CHECKED — {exc.__class__.__name__}: {exc} (not the same as clean)")
+        return
+    rec = cis.recorded_series(evidence)
+    if rec is None:
+        not_checked("  [--] image series NOT CHECKED — not an image-led deck (design.imagery is not 'series')")
+        return
+    try:
+        findings, facts = cis.check(str(deck_path), rec, str(deck_path.resolve().parent))
+    except Exception as exc:
+        not_checked(f"  [--] image series NOT CHECKED — {exc} (not clean)")
+        return
+    print("  [ok] image series: {} of {} slot(s) placed, {} generated picture(s)".format(
+        facts["placed"], facts["slots"], facts["generated"]))
+    for sev, code, why in findings:
+        if sev == "block":
+            errors.append(f"image series {code}: {why}")
+        else:
+            print(f"  [--] image series: {code}: {why}")
+
+
 def check_citations(evidence: dict[str, Any], deck_path: Path | None,
                     errors: list[str]) -> None:
     """Every marker resolves, every entry is cited, and every line comes from the .bib.
@@ -2733,6 +2774,7 @@ def evaluate(
         check_fonts_resolve(evidence, deck_path, errors)
         check_talk_time(evidence, deck_path, errors)
         check_qa_backup(evidence, deck_path, errors)
+        check_image_series(evidence, deck_path, errors)
         check_citations(evidence, deck_path, errors)
         check_register_pixels(evidence, deck_path, errors)
         # DECLARED -> OBEYED. The two lines above read the source and the colour;

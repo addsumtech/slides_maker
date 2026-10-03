@@ -59,7 +59,7 @@ CONTRACTS = ("anchor_proof", "material_probe", "audience_brief", "blind_read", "
 # static scan cannot replace it: the extractor that failed loops over a tuple of candidate key
 # names, which no regex reads.
 RECORD_FED = ("purpose", "surface", "content.audience_brief", "checkpoints", "design_plan",
-               "talk_time", "qa_backup", "citations")
+               "talk_time", "qa_backup", "citations", "image_series")
 
 REACH_SUITE = "tests/test_schema_reach.py"
 

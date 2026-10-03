@@ -219,6 +219,25 @@ ck(cc.recorded_citations(_half) is None,
    "...and a plan with a bibliography but NO keys reads as nothing recorded — half a plan cannot "
    "be checked against the deck, and reporting it as clean is the failure this suite exists for")
 
+print("\n— IMAGE SERIES: an image-led deck's series plan must be readable from both records")
+import check_image_series as cis                                          # noqa: E402
+
+# The shared record keeps plan-side fields in `design_plan`, the Codex file in `design`. Picking the
+# image-led direction writes imagery: "series" + the series.json path; every scaffold starts at
+# "selective", which must read as NOT an image-led deck — never as a series with no plan.
+sh_s = json.loads(json.dumps(SH)); sh_s["design_plan"].update(imagery="series", image_series="s.json")
+cx_s = json.loads(json.dumps(CX)); cx_s.setdefault("design", {}).update(imagery="series", image_series="s.json")
+for rec, label in ((sh_s, "shared .deck-gates.json"), (cx_s, "Codex evidence")):
+    got = cis.recorded_series(rec)
+    ck(got == {"imagery": "series", "plan": "s.json"}, "%s -> the series plan reads back (got %r)" % (label, got))
+ck(SH["design_plan"].get("imagery") == "selective" and CX["design"].get("imagery") == "selective",
+   "both scaffolds WRITE the switch, at its default — an agent can see it exists")
+ck(cis.recorded_series(SH) is None and cis.recorded_series(CX) is None,
+   "an unfilled scaffold is NOT an image-led deck on either runtime — the gate says NOT CHECKED")
+_noplan = json.loads(json.dumps(SH)); _noplan["design_plan"]["imagery"] = "series"
+ck(cis.recorded_series(_noplan) == {"imagery": "series", "plan": None},
+   "...and 'series' with no plan path reads as a series WITHOUT a plan, which the gate blocks")
+
 print("\n— the loop is closed: every record-FED gate section is covered here")
 import re                                                                 # noqa: E402
 import check_gate_parity as gp                                            # noqa: E402

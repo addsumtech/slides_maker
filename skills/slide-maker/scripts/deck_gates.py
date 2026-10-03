@@ -151,6 +151,10 @@ def template(slides=None, delivery="presented"):
                 "divergence": "<ok|flagged … → rediverged|justified: …>"},
         },
         "design_plan": {
+            # image-led decks only (references/image-generation.md, the SERIES exception): "series"
+            # + the path of its series.json; any other deck keeps "selective" (today's rule).
+            "imagery": "selective",
+            "image_series": None,
             "concept": {"chosen": "<what this deck is a PICTURE of — via <core concepts> → "
                                   "<visual language>>",
                         "rejected": [{"concept": "<the runner-up>", "why_lost": "<one clause>"},

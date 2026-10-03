@@ -2312,6 +2312,37 @@ def _qa_backup_gate(pptx, gates):
           '{"qa_backup": {"waived": "<why the answer lives somewhere else>"}}')
 
 
+def _image_series_gate(pptx, gates):
+    """An image-led deck's generated series, read from the FILE (+gen.<slot> tags) and series.json:
+    every generated picture planned, the people rule, the series QC. Not an image-led deck -> NOT
+    CHECKED, out loud. Same module as codex_delivery_gate.py."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    try:
+        import check_image_series as cis
+    except Exception as exc:
+        not_checked(f"  [--] IMAGE SERIES: NOT CHECKED — {exc.__class__.__name__}: {exc}")
+        return
+    rec = cis.recorded_series(gates)
+    if rec is None:
+        not_checked("  [--] image series: NOT CHECKED — not an image-led deck "
+                    "(design_plan.imagery is not 'series')")
+        return
+    try:
+        findings, facts = cis.check(pptx, rec, str(Path(pptx).resolve().parent))
+    except Exception as exc:
+        not_checked(f"  [--] image series: NOT CHECKED — {exc}")
+        return
+    print("[gates] image series: {} of {} slot(s) placed, {} generated picture(s)".format(
+        facts["placed"], facts["slots"], facts["generated"]))
+    for sev, code, why in findings:
+        if sev != "block":
+            print(f"  [--] image series: {code}: {why}")
+    blocks = [f for f in findings if f[0] == "block"]
+    if blocks:
+        die("the image series does not hold:\n    - "
+            + "\n    - ".join("{}: {}".format(c, m) for _s, c, m in blocks))
+
+
 def _surface_gate(pptx, gates):
     """A canvas format's contract, checked against the built deck instead of trusted.
 
@@ -3773,6 +3804,9 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
     with _gate_section('citations'):
         with _gate_step():
             _citations_gate(pptx, gates)
+    with _gate_section('image_series'):
+        with _gate_step():
+            _image_series_gate(pptx, gates)
 
     with _gate_section('fonts'):
         with _gate_step():

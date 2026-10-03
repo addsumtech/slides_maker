@@ -1208,6 +1208,13 @@ jobs:
           grep -qE "\\] ok$" /tmp/chromacut.log || {
             echo "::error::test_chroma_cutout did not run to completion"; exit 1; }
 
+      - name: the image-series gate reads planned slots and the people rule from the file
+        run: |
+          set -o pipefail
+          python tests/test_image_series_gate.py | tee /tmp/imageseriesgate.log
+          grep -qE "\\] ok$" /tmp/imageseriesgate.log || {
+            echo "::error::test_image_series_gate did not run to completion"; exit 1; }
+
       - name: The Codex scaffold shows every field the Codex gate requires
         run: |
           set -o pipefail

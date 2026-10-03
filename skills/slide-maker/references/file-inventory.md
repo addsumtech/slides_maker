@@ -672,6 +672,11 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   validates `series.json` (every slot's meaning line, REFERENT RULE, the people rule, frames, the chroma
   key vs the palette), `prompts` writes the Codex generator's manifest, `qc` compares every image with
   the key image, `slot_picture` places a slot and tags it `+gen.<slot>` for the gates.
+- `check_image_series.py` — the IMAGE SERIES gate of an image-led deck (`design_plan.imagery:
+  "series"`), read from the FILE's `+gen.<slot>` tags and `series.json`: blocks an unplanned generated
+  picture, a series with no slot placed, and a generated person given a name/role/quote or team /
+  testimonial framing without a visible 'fictional' label; notes unplaced slots and a missing or
+  unresolved series QC. Called by `render_deck.py --gate-check` AND `codex_delivery_gate.py`.
 - `check_image_provenance.py` — holds each `image_sources` evidence token against the ledger and
   against the BUILT deck: a `searched, none found` rung must be backed by a recorded search (an
   `unreachable` network is refused as one), and an attribution-required photo must be credited on
