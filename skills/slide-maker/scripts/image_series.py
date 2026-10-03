@@ -312,6 +312,26 @@ def qc(plan, gen_dir, *, de_max=None, hist_max=None):
             pass
     return rep
 
+def slot_picture(slide, plan, slot_id, x, y, w, h, *, image_dir):
+    """Place a series slot's image into (x, y, w, h) with the PLAN's frame, focus and alt text, and tag it
+    `+gen.<slot>` — the gates read the tag from the saved file. A cut-out slot places its keyed PNG."""
+    import deckkit as dk
+    s = slot(plan, slot_id)
+    base = Path(image_dir) / "slide-{:02d}-{}.png".format(s["slide"], s["id"])
+    path = base.with_name(base.stem + ".cut.png") if s.get("cutout") else base
+    if not path.exists():
+        raise FileNotFoundError("slot_picture(): no image at {} — make it: python3 scripts/generate_images_codex.py "
+                                "<manifest> --only {}{}".format(path, s["id"],
+                                "  then image_fx.chroma_cutout on it" if s.get("cutout") else ""))
+    if s.get("cutout"):
+        pic = dk.picture(slide, str(path), x, y, w, h, fit="contain", alt=s["alt"])
+    else:
+        shape = None if s["frame"]["shape"] == "rect" else s["frame"]["shape"]
+        pic = dk.picture(slide, str(path), x, y, w, h, fit="cover", shape=shape,
+                         focus=tuple(s.get("focus") or (0.5, 0.5)), alt=s["alt"])
+    dk._compose_tag(pic, gen=s["id"])
+    return pic
+
 def _print_problems(probs):
     for p in probs:
         print("  - " + p)

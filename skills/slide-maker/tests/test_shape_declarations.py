@@ -79,6 +79,24 @@ check(not lost,
       "the composer parses the name back to a SET and re-renders it, so order cannot matter "
       "(lost: %s)" % (lost or "none"))
 
+# the SIXTH: a generated picture's provenance (image_series.slot_picture) — a flag in the name HEAD, so it
+# never takes the one reason slot the others share. Composes with motif / bleed / overlap / decor.
+GEN_OPS = {k: v for k, v in OPS.items() if k != "datum"}          # a generated picture is never a datum bar
+GEN_OPS["gen"] = lambda sh: dk._compose_tag(sh, gen="s03-kettle")
+lost_g = []
+for order in itertools.permutations(GEN_OPS):
+    sh = fresh()
+    for k in order:
+        GEN_OPS[k](sh)
+    if not (dk.generated_slot(sh) == "s03-kettle" and dk._is_motif(sh) and dk._declared_overlap(sh)
+            and "+bleed" in sh.name and "+decor" in sh.name):
+        lost_g.append("->".join(order) + " => " + sh.name)
+check(not lost_g, "all 120 orders keep the generated-slot tag beside the other four (lost: %s)" % (lost_g or "none"))
+sh = fresh()
+dk._compose_tag(sh, gen="hero")
+check(sh.name == "deckkit-gen.hero" and dk.generated_slot(sh) == "hero", "gen alone: " + sh.name)
+check(dk.generated_slot(fresh()) is None, "an untagged shape has no generated slot")
+
 # The single-declaration paths are the common case and must stay exactly as they were.
 for label, fn, want in (
         ("bleed alone", lambda sh: dk.bleed_intent(sh, BLEED_WHY), "deckkit-bleed:"),

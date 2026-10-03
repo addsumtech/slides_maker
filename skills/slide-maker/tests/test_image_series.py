@@ -194,6 +194,31 @@ with tempfile.TemporaryDirectory() as td:
     rep3 = ims.qc(plan, td)
     check(any("MISSING" in f for f in {s["id"]: s["flags"] for s in rep3["slots"]}["odd"]), "missing file flagged")
 
+# ── placement ────────────────────────────────────────────────────────────────────────────────
+import deckkit as dk  # noqa: E402
+with tempfile.TemporaryDirectory() as td:
+    td = Path(td)
+    warm(td / "slide-01-hero.png", size=(300, 400))
+    kett = Image.new("RGBA", (300, 300), (0, 0, 0, 0))
+    from PIL import ImageDraw  # noqa: E402
+    ImageDraw.Draw(kett).ellipse((40, 40, 260, 260), fill=(150, 92, 60, 255))
+    kett.save(td / "slide-03-kettle.cut.png")
+    warm(td / "slide-03-kettle.png", size=(300, 300))
+    prs = dk.blank_deck(13.333, 7.5)
+    s1 = dk.add_slide(prs)
+    pic = ims.slot_picture(s1, GOOD, "hero", 0.6, 0.8, 4.2, 5.6, image_dir=td)
+    check(dk.generated_slot(pic) == "hero", "slot_picture must tag the picture with its slot")
+    check("round2SameRect" in pic._element.xml, "the hero's arch frame must be applied")
+    check(pic._element.find(".//" + dk.qn("p:cNvPr")).get("descr") == GOOD["slots"][0]["alt"], "alt from the plan")
+    s3 = dk.add_slide(prs)
+    cp = ims.slot_picture(s3, GOOD, "kettle", 6.0, 1.0, 3.0, 3.0, image_dir=td)
+    check(dk.generated_slot(cp) == "kettle" and cp.image.content_type == "image/png", "cut-out slot places the keyed PNG")
+    try:
+        ims.slot_picture(s3, GOOD, "hero", 1, 1, 1, 1, image_dir=td / "nowhere")
+        fails.append("slot_picture accepted a missing image")
+    except FileNotFoundError as e:
+        check("--only hero" in str(e), "the refusal should print the command that makes it: {}".format(e))
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_image_series] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)

@@ -2965,7 +2965,10 @@ def _tag_chrome(shape):
     return shape
 
 
-def _compose_tag(shape, tier=None, flag=None, reason=None):
+_GEN_RE = re.compile(r"(?:^deckkit-gen\.|\+gen\.)([a-z0-9][a-z0-9-]*)")
+
+
+def _compose_tag(shape, tier=None, flag=None, reason=None, gen=None):
     """Write a declaration into the shape NAME without erasing the ones already there.
 
     🔴 THREE functions record a decision in `shape.name` — `tag_motif`, `bleed_intent`,
@@ -2983,6 +2986,8 @@ def _compose_tag(shape, tier=None, flag=None, reason=None):
         deckkit-motif-loud+bleed+overlap:<why>     a loud motif that bleeds and is ridden by type
         deckkit-bleed:<why>                        a bleed and nothing else
         deckkit-bleed+overlap:<why>                both declarations, no motif
+        deckkit-motif-quiet+overlap+gen.hero       a generated series picture (slot 'hero'), a FLAG:
+                                                   it never takes the one reason slot
     """
     cur = str(getattr(shape, "name", "") or "")
     head, _, why = cur.partition(":")
@@ -2995,6 +3000,8 @@ def _compose_tag(shape, tier=None, flag=None, reason=None):
         have_overlap = True
     have_datum = head.startswith(DATUM_TAG.rstrip(":")) or "+datum" in head
     have_decor = head.startswith(DECOR_TAG) or "+decor" in head
+    m = _GEN_RE.search(head)
+    have_gen = m.group(1) if m else None
     if not head.startswith("deckkit-"):
         why = ""
     if tier:
@@ -3009,6 +3016,8 @@ def _compose_tag(shape, tier=None, flag=None, reason=None):
         have_decor = True
     if reason is not None:
         why = reason
+    if gen:
+        have_gen = gen
     on = (("+bleed", have_bleed), ("+overlap", have_overlap), ("+datum", have_datum),
           ("+decor", have_decor))
     if have_tier:
@@ -3023,8 +3032,20 @@ def _compose_tag(shape, tier=None, flag=None, reason=None):
         base, flags = DECOR_TAG, []
     else:
         base, flags = "", []
+    if have_gen:
+        if base:
+            flags = flags + ["+gen." + have_gen]
+        else:
+            base = "deckkit-gen." + have_gen
     shape.name = base + "".join(flags) + ((":" + str(why)) if why else "")
     return shape
+
+
+def generated_slot(shape):
+    """The image-series slot a picture was placed for (`image_series.slot_picture`), or None."""
+    head = str(getattr(shape, "name", "") or "").split(":", 1)[0]
+    m = _GEN_RE.search(head)
+    return m.group(1) if m else None
 
 
 def tag_motif(shape, loud=False):
