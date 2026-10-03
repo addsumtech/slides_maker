@@ -3300,8 +3300,15 @@ def _device_segments(shapes):
     return segs, rects
 
 
-def _legend_anchor(slide, shapes, sw, sh_h, *, box_w=4.4, box_h=0.5):
-    """The quietest corner of the safe band for a key, MEASURED against the device."""
+def _legend_anchor(slide, shapes, sw, sh_h, *, box_w=4.4, box_h=0.5, ink_w=None):
+    """The quietest spot of the safe band for a key, MEASURED against the device.
+
+    The four corners are tried first, in the old order, so a page that already had a clear corner
+    is unchanged. When EVERY corner touches the device, positions along the two rows are tried too,
+    scored with the key's real ink width (`ink_w`) rather than a fixed 4.4in box: on a 16:9 `radial`
+    fan all four corners touch a ray, the least-bad one put the key on a ray, and the render showed
+    the lowest ray striking through the key's words (measured 2026-10-03, caught by the tilted-rule
+    check once CI's wider fallback face made the crossing long enough to count)."""
     segs, rects = _device_segments(shapes)
     try:
         bx, by, bw, bh = content_band(slide)
@@ -3312,25 +3319,24 @@ def _legend_anchor(slide, shapes, sw, sh_h, *, box_w=4.4, box_h=0.5):
     # the top row is the escape when the device owns the bottom of the page.
     ys = [(by + bh - box_h, None), (by + 0.1, by + 0.1)]
     best, best_score = (cands[0], None), None
-    for y, y_out in ys:
-        for x in cands:
-            r = (x, y, box_w, box_h)
-            score = 0
-            for a, b in segs:
-                for i in range(33):                 # sample the segment across the candidate rect
-                    t = i / 32.0
-                    px_, py_ = a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t
-                    if r[0] <= px_ <= r[0] + r[2] and r[1] <= py_ <= r[1] + r[3]:
-                        score += 1
-                        break
-            for q in rects:
-                if not (q[0] > r[0] + r[2] or q[0] + q[2] < r[0]
-                        or q[1] > r[1] + r[3] or q[1] + q[3] < r[1]):
-                    score += 1
-            if best_score is None or score < best_score:
-                best, best_score = (x, y_out), score
-            if best_score == 0 and (y, x) == (ys[0][0], cands[0]):
-                return best                          # bottom-left keeps the tie-break
+    kw = ink_w if ink_w else box_w
+    # the slide-along positions keep the key's FRAME (>= 2.2in, motif_legend's floor) on the band
+    x_hi = max(bx + 0.2, bx + bw - max(kw, 2.2) - 0.2)
+    slide_xs = [bx + 0.2 + (x_hi - bx - 0.2) * i / 8.0 for i in range(1, 9)]
+    trials = [(y, y_out, x, box_w) for y, y_out in ys for x in cands] + \
+             [(y, y_out, x, kw) for y, y_out in ys for x in slide_xs]
+    for y, y_out, x, w_ in trials:
+        r = (x, y, w_, box_h)
+        # exact clipping, not sampling: a narrow key box can slip between samples on a steep ray
+        score = sum(1 for a, b in segs if rotgeom.seg_in_rect(a, b, r) > 0.0)
+        for q in rects:
+            if not (q[0] > r[0] + r[2] or q[0] + q[2] < r[0]
+                    or q[1] > r[1] + r[3] or q[1] + q[3] < r[1]):
+                score += 1
+        if best_score is None or score < best_score:
+            best, best_score = (x, y_out), score
+        if best_score == 0 and (y, x) == (ys[0][0], cands[0]):
+            return best                              # bottom-left keeps the tie-break
     return best
 
 
@@ -3527,7 +3533,10 @@ def motif_page(slide, kind, *, color=None, second=None, accent=None, faint=False
         # reconstructed as real segments, since a shape rotates about its own centre and its frame
         # says nothing about where the drawn line is — and the quietest corner wins, with
         # bottom-left keeping its tie-break.
-        lx, ly = legend_at if legend_at else _legend_anchor(slide, out, sw, sh_h)
+        # the key's real ink: glyph + gap (~0.45in) + its words at motif_legend's 9.5pt, in the
+        # deck face — measured the same way the gate measures it, substituted face included
+        _kw = 0.45 + _natural_width_in([(str(legend), False)], 9.5, FONT)
+        lx, ly = legend_at if legend_at else _legend_anchor(slide, out, sw, sh_h, ink_w=_kw)
         probe_y = ly if ly is not None else sh_h - 0.55
         ink, lw_avail = None, sw - lx - 0.6
         for (rx, ry, rw, rh), fill in reversed(grounds):

@@ -337,6 +337,27 @@ def main():
                   "nothing the viewer can see — a rotated device can pivot itself off the page and "
                   "still leave every lint clean (measured: `radial` rendered an EMPTY 9:16 page)")
 
+    # ── the same pages under a SUBSTITUTED face (what CI's Linux runner measures with) ─────────
+    # Measured 2026-10-03: CI failed `radial on 16:9 saves clean` with RULE_THROUGH_TEXT while macOS
+    # passed. Not a flaky gate — the render shows the lowest ray striking through the key's words on
+    # BOTH machines; the wider fallback face only made the crossing long enough to count. The key's
+    # corner was scored with a fixed 4.4in box at four corners, every one of which a 16:9 fan
+    # touches, so the least-bad one put the key on a ray. The face is the condition, the placement
+    # is the defect.
+    _face0 = dk.FONT
+    dk.FONT = "NoSuchFace Sans"                 # measured with the metric-incompatible fallback
+    try:
+        for W, H, label in CANVASES:
+            for kind in sorted(dk._MOTIF_PAGE_KINDS):
+                pk = dk.blank_deck(W, H)
+                sk = dk.add_slide(pk)
+                dk.motif_page(sk, kind, legend="{} — meaning".format(kind))
+                crit = [f for f in dk.lint_layout(pk, verbose=False) if f[1] == "CRITICAL"]
+                check("{} on {} saves clean under a substituted face".format(kind, label), not crit,
+                      sorted({f[2] for f in crit}))
+    finally:
+        dk.FONT = _face0
+
     # ── bleeding off the canvas is DECLARED, per shape, not switched off deck-wide ─────────────
     print("\ndeclared bleed")
     pb = dk.blank_deck(10.0, 5.625)
