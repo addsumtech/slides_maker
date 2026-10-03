@@ -1236,6 +1236,13 @@ jobs:
           grep -qE "\\] ok$" /tmp/surfaces.log || {
             echo "::error::test_surfaces did not run to completion"; exit 1; }
 
+      - name: display_type stacks, two-tones and outlines headlines that render as measured
+        run: |
+          set -o pipefail
+          python tests/test_display_type.py | tee /tmp/display_type.log
+          grep -qE "\\] ok$" /tmp/display_type.log || {
+            echo "::error::test_display_type did not run to completion"; exit 1; }
+
       # --- P2 visual languages steps end ---
 
       - name: The Codex scaffold shows every field the Codex gate requires
