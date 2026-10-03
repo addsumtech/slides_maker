@@ -308,6 +308,27 @@ EXAMPLES = {
             '    ("BUILD THE SMALLEST ", 36, dk.DEEP, True, False),\n'
             '    dk.mark(("OBJECT", 36, dk.DEEP, True, False), "D4FF3A"),\n'
             '    (" THAT ASKS A QUESTION", 36, dk.DEEP, True, False)]])',
+    # picture(shape=) clips a photo to an editorial form; focus aims the cover crop.
+    "picture": 'dk.picture(s, "skyline.png", 0.6, 0.8, 2.6, 2.6, fit="cover", shape="ellipse",\n'
+               '           focus=(0.5, 0.0), alt="a city skyline under an open sky")\n'
+               '# shape="arch"|"snip"|"notch"|"blob"; rotation=-4 tilts a pinned print',
+    "scribble": 'import ornaments as orn\n'
+                'orn.scribble(s, 0.6, 3.6, 3.6, 1.0, "1A1A1A", loops=3, seed=2)   # a pen coil',
+    "brush_stroke": 'import ornaments as orn\n'
+                    'orn.brush_stroke(s, 0.6, 1.2, 4.2, 0.8, "F2C230", seed=4)    # the swash first\n'
+                    'n = dk.text(s, 0.9, 1.3, 3.8, 0.6, [[("ONE NUMBER", 28, dk.DEEP, True, False)]])\n'
+                    'dk.overlap_intent(n, "the number sits on its brush swash")',
+    "scallop": 'import ornaments as orn\n'
+               'orn.scallop(s, 7.4, 1.0, 1.5, "2F5BEA")\n'
+               'n = dk.text(s, 7.4, 1.0, 1.5, 1.5, [[("12", 36, dk.WHITE, True, False)]],\n'
+               '            align=dk.PP_ALIGN.CENTER, anchor=dk.MSO_ANCHOR.MIDDLE)\n'
+               'dk.overlap_intent(n, "the count sits on its badge")   # declared on the TEXT',
+    "sticker_outline": 'import image_fx\n'
+                       'st = image_fx.sticker_outline("cutout.png")      # needs a transparent cut-out\n'
+                       'dk.picture(s, st, 6.6, 0.6, 2.6, 3.4, fit="contain", alt="a cut-out subject")',
+    "decorative": 'import ornaments as orn\n'
+                  't = orn.tape(s, 6.0, 4.4, 1.6, 0.42, "F2D16B")     # pale tape on the page ground\n'
+                  'dk.decorative(t, "washi tape is ornament; no meaning rides on seeing it")',
     "squiggle": 'import ornaments as orn\n'
                 'dk.text(s, 0.6, 0.6, 6.0, 0.8, [[("The claim", 30, dk.DEEP, True, False)]])\n'
                 'orn.squiggle(s, 0.7, 1.45, 3.4, 0.3, "E5483B")   # under the claim',
@@ -418,7 +439,9 @@ def show(name, mod, fn, full=False):
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Print exact call contracts for slide-maker helpers.")
     ap.add_argument("names", nargs="*", help="helper names, e.g. text box native_chart")
-    ap.add_argument("--search", metavar="TERM", help="find helpers whose name or docstring matches")
+    ap.add_argument("--search", metavar="TERM",
+                    help="find helpers whose name or docstring contains TERM (plain text, any case); "
+                         "'a|b' matches either word")
     ap.add_argument("--full", action="store_true", help="print whole docstrings")
     ap.add_argument("--list", action="store_true", help="list every helper name")
     ap.add_argument("--example", action="store_true",
@@ -438,9 +461,12 @@ def main(argv=None):
         return 0
 
     if a.search:
-        q = a.search.lower()
+        # 'a|b' (or grep-style 'a\\|b') is EITHER word. It was one literal substring, so an agent
+        # that searched the way it greps found nothing and was told so (measured 2026-10-03).
+        import re as _re
+        terms = [t_.strip() for t_ in _re.split(r"\\?\|", a.search.lower()) if t_.strip()] or [""]
         hits = [(n, m, f) for n, (m, f) in reg.items()
-                if q in n.lower() or q in (inspect.getdoc(f) or "").lower()]
+                if any(q in n.lower() or q in (inspect.getdoc(f) or "").lower() for q in terms)]
         if not hits:
             print(f"sigs: nothing matches {a.search!r}")
             return 1

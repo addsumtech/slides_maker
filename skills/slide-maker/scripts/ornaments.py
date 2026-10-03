@@ -37,6 +37,13 @@ def _need(**dims):
             raise ValueError("ornaments: {} must be > 0 (got {!r})".format(k, v))
 
 
+def _count(**counts):
+    """Counts (waves, loops, bumps) are whole numbers >= 1 — a float used to die inside range()."""
+    for k, v in counts.items():
+        if isinstance(v, bool) or not isinstance(v, int) or v < 1:
+            raise ValueError("ornaments: {} must be a whole number >= 1 (got {!r})".format(k, v))
+
+
 def _shape(slide, x, y, w, h, path_xml, *, fill=None, line=None, line_w=2.0, alpha=None,
            loud=False, rotation=0.0):
     """One flattened shape whose geometry is `path_xml` (inside <a:pathLst>), motif-tagged."""
@@ -95,8 +102,9 @@ def _ring(points):
 
 
 def squiggle(slide, x, y, w, h, color, *, waves=4, line_w=3.0, loud=False):
-    """A hand-drawn WAVE line — under a claim, between sections. `waves` full periods across `w`."""
-    _need(w=w, h=h, waves=waves)
+    """Ornament — A hand-drawn WAVE line — under a claim, between sections. `waves` full periods across `w`."""
+    _need(w=w, h=h)
+    _count(waves=waves)
     seg = _U / (2 * waves)
     d = ["<a:moveTo>{}</a:moveTo>".format(_pt(0, _U / 2))]
     for i in range(2 * waves):
@@ -109,8 +117,9 @@ def squiggle(slide, x, y, w, h, color, *, waves=4, line_w=3.0, loud=False):
 
 
 def scribble(slide, x, y, w, h, color, *, loops=3, line_w=2.0, seed=0, loud=False):
-    """A looping pen COIL travelling across `w` — `loops` overlapping loops, a little uneven."""
-    _need(w=w, h=h, loops=loops)
+    """Ornament — A looping pen COIL travelling across `w` — `loops` overlapping loops, a little uneven."""
+    _need(w=w, h=h)
+    _count(loops=loops)
     rnd = random.Random(seed)
     pts = []
     steps = loops * 8
@@ -127,7 +136,7 @@ def scribble(slide, x, y, w, h, color, *, loops=3, line_w=2.0, seed=0, loud=Fals
 
 
 def brush_stroke(slide, x, y, w, h, color, *, seed=0, rotation=0.0, loud=False):
-    """A dry-brush SWASH: a filled band with ragged edges and tapered ends — behind a word, under
+    """Ornament — A dry-brush SWASH: a filled band with ragged edges and tapered ends — behind a word, under
     a number. Deterministic for a given `seed`."""
     _need(w=w, h=h)
     rnd = random.Random(seed)
@@ -143,7 +152,7 @@ def brush_stroke(slide, x, y, w, h, color, *, seed=0, rotation=0.0, loud=False):
 
 
 def tape(slide, x, y, w, h, color, *, rotation=-4.0, alpha=0.75, seed=0, loud=False, holds=None):
-    """A strip of translucent TAPE with torn (zig-zag) short ends — holding a print to the page.
+    """Ornament — A strip of translucent TAPE with torn (zig-zag) short ends — holding a print to the page.
 
     `holds=<the picture or card it is stuck to>` declares that overlap — holding the print IS the
     overlap — after checking the tape really touches it (a `holds=` it does not touch RAISES).
@@ -179,7 +188,7 @@ def tape(slide, x, y, w, h, color, *, rotation=-4.0, alpha=0.75, seed=0, loud=Fa
 
 
 def scallop(slide, x, y, d, color, *, bumps=12, depth=0.10, loud=False):
-    """A SCALLOPED disc of diameter `d` — the badge behind a number or a 'new' stamp.
+    """Ornament — A SCALLOPED disc of diameter `d` — the badge behind a number or a 'new' stamp.
 
     A badge smaller than ~3% of the canvas is a DEVICE to the motif checks, so a number set on it
     is reported as TEXT_OVER_MOTIF (WARN) — the rule is right in general (a caption laid across a
@@ -190,7 +199,8 @@ def scallop(slide, x, y, d, color, *, bumps=12, depth=0.10, loud=False):
                     align=dk.PP_ALIGN.CENTER, anchor=dk.MSO_ANCHOR.MIDDLE)
         dk.overlap_intent(n, "the count sits on its badge")
     """
-    _need(d=d, bumps=bumps)
+    _need(d=d)
+    _count(bumps=bumps)
     if not 0.0 < depth < 0.5:
         raise ValueError("scallop(): depth must be within (0, 0.5)")
     n = bumps * 4

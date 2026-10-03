@@ -1011,9 +1011,13 @@ def mark(run, color):
     headline on colour. Native `<a:highlight>`: it follows the glyphs through every wrap, in any
     script, and stays editable. Use it INSIDE a text() paragraph in place of the plain run:
 
-        dk.text(s, x, y, w, h, [[("BUILD THE SMALLEST ", 54, INK, True, False),
-                                 dk.mark(("OBJECT", 54, INK, True, False), "D4FF3A"),
-                                 (" THAT ASKS A QUESTION", 54, INK, True, False)]])
+        dk.text(s, x, y, w, h, [[("BUILD THE SMALLEST ", 54, dk.DEEP, True, False),
+                                 dk.mark(("OBJECT", 54, dk.DEEP, True, False), "D4FF3A"),
+                                 (" THAT ASKS A QUESTION", 54, dk.DEEP, True, False)]])
+
+    CJK works the same; give the run its East-Asian face in the SEVENTH slot (or set `dk.EAFONT`),
+    or `lint_layout` reports CJK_NO_EA: `dk.mark(("最小", 54, dk.DEEP, True, False, None, "PingFang SC"), "D4FF3A")`.
+    Colours: 'RRGGBB' / '#RRGGBB' hex, an RGBColor, or an (r, g, b) tuple.
 
     A separate shape behind the word has to be positioned by guesswork and drifts off it when the
     line wraps (measured 2026-10-03: a guessed block covered half of "NEED ROOM").
@@ -1024,6 +1028,9 @@ def mark(run, color):
     if not isinstance(run, tuple) or len(run) < 5:
         raise TypeError("mark(): pass a run tuple (text, size, color, bold, italic[, font[, ea]])")
     txt, size, ink, bold = run[0], run[1], run[2], run[3]
+    if size is not None and (isinstance(size, bool) or not isinstance(size, (int, float))):
+        raise TypeError("mark(): {!r} size must be a number of points, got {!r}".format(
+            str(txt)[:24], size))
     if size is None:
         raise TypeError("mark(): {!r} has no explicit size — a highlight's contrast floor depends "
                         "on it (4.5:1, or 3:1 from 18pt); pass the size in the run".format(str(txt)[:24]))
@@ -1402,11 +1409,16 @@ def frosted_panel(slide, backdrop, x, y, w, h, *, tint="FFFFFF", alpha=None, blu
     best ink 3.76:1), so a fixed default would refuse the commonest case. Pass a number to fix it;
     a number that cannot work is refused, never quietly raised.
 
-        bd = dk.picture(s, "field.jpg", 0, 0, 13.333, 7.5, fit="cover", alt="…")
-        g = dk.frosted_panel(s, bd, 7.4, 1.2, 5.2, 2.6)
+        W, H = prs.slide_width / 914400, prs.slide_height / 914400   # this deck's canvas
+        bd = dk.picture(s, "field.jpg", 0, 0, W, H, fit="cover", alt="…")
+        g = dk.frosted_panel(s, bd, W * 0.55, H * 0.16, W * 0.39, H * 0.35)
         x, y, w, h, ink = g                     # g.alpha = the wash it used
         dk.text(s, x, y, w, h, [[("The claim", 26, ink, True, False)]],
                 anchor=dk.MSO_ANCHOR.MIDDLE)
+
+    Page chrome (`footer`, `title_bar`) assumes a light ground and has no ink of its own: over a
+    full-bleed photo, put it on the glass or on a panel too — the render gate reports TEXT NOT
+    VISIBLE otherwise (measured by an agent following these docs, 2026-10-03).
 
     `glass_card` is the vector fake for dark UI grounds; this one is for photography. A blurred
     crop of the WRONG region reads as a grey slab with illegible text (measured 2026-10-03), so the
@@ -1415,6 +1427,9 @@ def frosted_panel(slide, backdrop, x, y, w, h, *, tint="FFFFFF", alpha=None, blu
     in each case the blurred region would not be what the viewer sees behind the glass."""
     import io as _io
     from PIL import Image, ImageFilter
+    if not hasattr(backdrop, "image"):
+        raise TypeError("frosted_panel(): the backdrop must be a PICTURE placed by picture() — the "
+                        "glass is a blur of its pixels; got a {}".format(type(backdrop).__name__))
     if _shape_rot(backdrop):
         raise ValueError("frosted_panel(): the backdrop is rotated — place it unrotated")
     spPr = backdrop._element.spPr
@@ -3757,7 +3772,7 @@ def picture(slide, path, x, y, w, h, fit="contain", alt=None, round=False, r=Non
     image inside a rounded frame, use a radius ≈ the frame's radius minus the border so the curves
     stay concentric. Default radius is 8% of the image's shorter side.
 
-    `shape=` clips the image to an editorial form: "ellipse" (a circle in a square frame),
+    `shape=` masks / clips the image to an editorial form: "ellipse" (a circle in a square frame),
     "arch" (rounded top), "snip" (two chamfered corners), "notch" (a concave bite at the
     top-right — room for a badge or arrow chip), "blob" (an organic outline; `seed=` varies it).
     Use `fit="cover"` with a shape — the frame is filled and the crop keeps the image's aspect;
@@ -3782,7 +3797,11 @@ def picture(slide, path, x, y, w, h, fit="contain", alt=None, round=False, r=Non
         raise ValueError("picture(): shape must be one of {} (got {!r})".format(PIC_SHAPES, shape))
     if shape is not None and (round or r is not None):
         raise ValueError("picture(): pass shape= OR round=/r=, not both")
-    fx, fy = focus
+    try:
+        fx, fy = (float(v) for v in focus)
+    except (TypeError, ValueError):
+        raise ValueError("picture(): focus must be a pair (fx, fy) of numbers 0..1, e.g. (0.5, 0.0) "
+                         "keeps the top edge; got {!r}".format(focus)) from None
     if not (0.0 <= fx <= 1.0 and 0.0 <= fy <= 1.0):
         raise ValueError("picture(): focus must be within (0..1, 0..1), got {!r}".format(focus))
 
@@ -5883,9 +5902,25 @@ def _hex(c):
     return c if isinstance(c, str) else str(c)   # RGBColor.__str__ -> 'RRGGBB'
 
 def _as_rgb(c):
-    """Accept a colour as an RGBColor OR a hex string ('RRGGBB' or '#RRGGBB') — one convention
-    everywhere, tolerant of a leading '#' so callers don't have to remember to strip it."""
-    return RGBColor.from_string(c.lstrip("#")) if isinstance(c, str) else c
+    """Accept a colour as an RGBColor, a hex string ('RRGGBB' or '#RRGGBB'), or an (r, g, b) tuple
+    of whole numbers 0-255 — one convention everywhere, tolerant of a leading '#'.
+
+    A plain tuple used to pass through unchanged, and a caller that wrote it into XML produced
+    `val="(212, 255, 58)"` — a corrupt file, silently (measured 2026-10-03 through `mark()`). And a
+    word like "yellow" died as `invalid literal for int() with base 16: 'ye'`, which names nothing
+    the caller wrote. Both now come back as an RGBColor or a message that says what a colour is."""
+    if isinstance(c, RGBColor) or c is None:
+        return c
+    if isinstance(c, str):
+        s = c.strip().lstrip("#")
+        if len(s) != 6 or any(ch not in "0123456789abcdefABCDEF" for ch in s):
+            raise ValueError("colour {!r} is not 'RRGGBB' hex — pass e.g. 'D4FF3A' or '#D4FF3A', an "
+                             "RGBColor, or an (r, g, b) tuple".format(c))
+        return RGBColor.from_string(s.upper())
+    if (isinstance(c, (tuple, list)) and len(c) == 3
+            and all(isinstance(v, int) and not isinstance(v, bool) and 0 <= v <= 255 for v in c)):
+        return RGBColor(*c)
+    return c
 
 def _clear_table_style(tbl):
     """Strip PowerPoint's default banded-blue table theme so WE control every fill and

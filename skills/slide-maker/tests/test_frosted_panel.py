@@ -186,6 +186,16 @@ with tempfile.TemporaryDirectory() as td:
     off = [f for f in dk.lint_layout(p8, verbose=False) if f[2] == "OFFCENTER"]
     check(not off, "the frosted_panel scaffold teaches an OFFCENTER layout: {}".format(off))
 
+# ── generalisation probe (2026-10-03): inputs the first tests never tried ──────────────────────
+
+_dg = dk.blank_deck(13.333, 7.5)
+_sgf = dk.add_slide(_dg)
+try:
+    dk.frosted_panel(_sgf, dk.box(_sgf, 0, 0, 3, 3, fill="888888"), 0.5, 0.5, 1, 1)
+    fails.append("frosted_panel accepted a box as its backdrop")
+except TypeError as e:
+    check("picture" in str(e), "frosted_panel's refusal should say it needs a picture: {}".format(e))
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_frosted_panel] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)

@@ -221,6 +221,27 @@ with tempfile.TemporaryDirectory() as td:
     check(nl(1), "an undeclared pale connector must still be NON-TEXT CONTRAST")
     check(not nl(2), "a connector DECLARED decorative was still held: {}".format(nl(2)))
 
+# ── generalisation probe (2026-10-03): inputs the first tests never tried ──────────────────────
+
+_sg = dk.add_slide(prs)
+for fn, kw, word in ((orn.squiggle, {"waves": 2.5}, "waves"), (orn.scribble, {"loops": 1.5}, "loops")):
+    try:
+        fn(_sg, 1, 1, 3, 0.6, RED, **kw)
+        fails.append("{} accepted a non-integer {}".format(fn.__name__, word))
+    except (TypeError, ValueError) as e:
+        check(word in str(e), "{}'s refusal should name {}: {}".format(fn.__name__, word, e))
+try:
+    orn.scallop(_sg, 1, 1, 1.5, RED, bumps=7.5)
+    fails.append("scallop accepted a non-integer bumps")
+except (TypeError, ValueError) as e:
+    check("bumps" in str(e), "scallop's refusal should name bumps: {}".format(e))
+try:
+    orn.squiggle(_sg, 1, 1, 3, 0.4, "red")
+    fails.append("an ornament accepted the colour 'red'")
+except ValueError as e:
+    check("colour" in str(e).lower() or "color" in str(e).lower(),
+          "a bad ornament colour should say so: {}".format(e))
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_ornaments] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)

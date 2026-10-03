@@ -155,6 +155,20 @@ else:
         bad1c = [ln for ln in buf.getvalue().splitlines() if "MARKED" in ln and "IMAGE" in ln]
         check(not bad1c, "1c judged a highlighted run against the photo: {}".format(bad1c))
 
+# ── generalisation probe (2026-10-03): inputs the first tests never tried ──────────────────────
+
+# a plain (r, g, b) tuple is a colour too — it used to be written verbatim into the XML
+# (`val="(212, 255, 58)"`), a corrupt file produced silently
+tt = dk.text(s, 1, 6.2, 4, 0.6, [[dk.mark(("TUPLE", 20, INK, True, False), (212, 255, 58))]])
+check('val="D4FF3A"' in tt._element.xml, "a tuple highlight colour was not written as hex")
+for bad, exc, word in ((("W", 20, INK, True, False), "yellow", "colour"),
+                       (("W", "20", INK, True, False), "D4FF3A", "size")):
+    try:
+        dk.mark(bad, exc)
+        fails.append("mark() accepted a bad {}".format(word))
+    except (TypeError, ValueError) as e:
+        check(word in str(e).lower(), "mark()'s refusal should name the bad {}: {}".format(word, e))
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_text_mark] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)

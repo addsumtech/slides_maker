@@ -121,6 +121,22 @@ with tempfile.TemporaryDirectory() as td:
             check(not is_red(px(x0 + cx, 1.0 + cy)),
                   "{}: frame corner is still painted — the mask did not clip".format(shape))
 
+# ── generalisation probe (2026-10-03): inputs the first tests never tried ──────────────────────
+
+with tempfile.TemporaryDirectory() as td2:
+    _p = Path(td2) / "g.png"
+    _g = Image.new("RGB", (300, 200))
+    _g.putdata([(x % 256, y % 256, 90) for y in range(200) for x in range(300)])
+    _g.save(_p)
+    _d = dk.blank_deck(13.333, 7.5)
+    _s = dk.add_slide(_d)
+    for bad in ("center", (0.5,), (0.5, "top")):
+        try:
+            dk.picture(_s, str(_p), 1, 1, 2, 2, fit="cover", focus=bad, alt="")
+            fails.append("picture() accepted focus={!r}".format(bad))
+        except ValueError as e:
+            check("focus" in str(e), "picture()'s refusal should name focus: {}".format(e))
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_picture_shapes] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)

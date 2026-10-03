@@ -27,7 +27,10 @@ The adapter has two kinds of rules:
   could ship an icon at 2.69:1 and pass. To waive one, record
   `{"kind": "a11y", "warning": "<CODE>", "reason": "<why this mark is decorative>"}`; a decorative
   flourish whose meaning is carried by an adjacent label is a legitimate waiver, and a bare "ok"
-  is refused. Only floors with an arithmetic answer live here: a ratio either clears 3:1 or it
+  is refused. For a mark that is pure decoration you BUILD (a pale washi tape, a hairline flourish),
+  prefer declaring it in the build script: `dk.decorative(shape, "<why nothing rides on seeing it>")`.
+  The lint then never raises the warning for that shape and prints the exemption with its reason;
+  the deck-level waiver stays for marks you cannot edit. Only floors with an arithmetic answer live here: a ratio either clears 3:1 or it
   does not. Density, component reach and form variety stay judgment calls — forcing a judgment
   through a waiver form turns it into a rubber stamp.
 - **Taste-sensitive calls that stay explainable:** components, icon dosage, and form variety. Do not
@@ -196,6 +199,17 @@ be reconstructed post-hoc at the delivery gate.
 2u. 🔴 **The direction you rendered and the deck you ship must be the same one.** `codex_delivery_gate.py` runs `check_direction_applied.py`: ground, accent presence, display/body faces and `centred` vs `low-left` are compared against the picked entry in `directions.json`. Record a deliberate move per axis in `design.direction_deviations` — an unrecorded one is the version the user cannot see. And a direction's `cover_motif`/`ambient_motif` must DRAW (svg / a styled box), never describe: the preview renders them, so prose ships as text on the sample tiles.
 
 2w. 🔴 **Build the register's SURFACE with `register_surface.py`, not by hand from the prose.** `ground(slide, reg, role=…, index=n)` paints the register's furniture and returns the content rect that is left; `card(slide, reg, x, y, w, h)` returns its card FORM; the marks (`halftone`/`starburst`/`boomerang`/`zigzag`/`tri`/`scanlines`/`color_band`) are callable alone for a bespoke look. **All 18 registers have a kit**; a name that is not a register RAISES rather than silently giving you a plain page, and painting a surface before `presets.apply()` set the palette says so instead of dying on a blend. `python3 scripts/sigs.py ground card halftone …` resolves these the same way it resolves deckkit's helpers — look them up before hand-rolling a mark. Kits scale to any canvas the format table supports (13.33in, portrait, A0/A1 posters). `codex_delivery_gate.py` NOTES a deck that declared a kitted register and built none of its surface.
+2s. 🔴 **Editorial forms are library calls — look them up, do not hand-roll them.** A photo in a
+   circle / arch / chamfered / notched card / blob is `picture(..., fit="cover", shape=…, focus=…)`;
+   a tilted pinned print is `picture(..., rotation=-4)` held by `ornaments.tape(..., holds=pic)`; one
+   word on a highlighter block is `dk.mark(run, color)` inside a `text()` paragraph (never a box
+   behind the word — it drifts off when the line wraps); hand-made marks are `ornaments.squiggle` /
+   `scribble` / `brush_stroke` / `scallop` (motif-tagged — a number set ON a brush swash or badge is
+   declared with `overlap_intent` on the TEXT); a die-cut sticker is `image_fx.sticker_outline` on a
+   transparent cut-out; real frosted glass over a photo is `frosted_panel` (it returns the ink to use).
+   `python3 scripts/sigs.py --search "mask|tape|glass|highlight|ornament"` finds all of them and
+   `--example <name>` hands back a call the smoke suite runs. Both gates measure rotated shapes where
+   they paint, so tilted prints and vertical margin labels are checked like any other shape.
 
 2v. 🔴 **An invented register gets a KIT, not hand-built style code.** `register_surface.register(name, ground=…, card=…, forbids=…)` — then `ground()`/`card()` work for it as for a preset, and `check_register_guard` enforces the prohibitions it declares. `python3 scripts/register_surface.py --new "<name>"` scaffolds one with the contracts wired; `python3 scripts/bespoke_kits.py --sample <out.pptx>` renders the four library registers (`current` · `transit-signage` · `ledger` · `k-space`) to adapt from. `save_register.py` records the kit file at hand-off. 🔴 **Write the kit into the DECK FOLDER** (`--out <deck-dir>/surface_<name>.py`): `check_register_guard` loads `surface_*.py` from beside the deck, which is the only reason a bespoke register's prohibitions are enforceable at gate time — the gate runs in a fresh process and a kit that was never imported there does not exist. The gate also tells you whether an invented register has a kit at all.
 

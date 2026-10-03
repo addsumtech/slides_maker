@@ -112,7 +112,7 @@ def quiet_region(path, *, grid=4):
 
 
 def sticker_outline(src, out=None, *, border=0.035, color="FFFFFF"):
-    """A die-cut STICKER border around a transparent cut-out: the subject's own silhouette, grown by
+    """A die-cut STICKER border around a transparent cut-out (cutout): the subject's own silhouette, grown by
     `border` (fraction of the shorter side) and filled with `color`, under the unchanged subject.
     Returns the out path (default `<src>.sticker.png`). Place it with `deckkit.picture(...,
     fit="contain")` — the transparency is the shape, so no mask is needed.
@@ -137,6 +137,9 @@ def sticker_outline(src, out=None, *, border=0.035, color="FFFFFF"):
     if alpha.getextrema()[0] == 255:
         raise ValueError("sticker_outline(): {} is fully opaque — cut the subject out first"
                          .format(src))
+    if sum(alpha.histogram()[25:]) == 0:
+        raise ValueError("sticker_outline(): {} has no subject — every pixel is transparent, so "
+                         "there is nothing to outline".format(src))
     # a SPECK of transparency (one stray pixel, a rounded-corner export) is still a rectangle;
     # a cut-out has a background removed — require a real share of transparent pixels
     _hist = alpha.histogram()

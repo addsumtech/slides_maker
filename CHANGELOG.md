@@ -64,6 +64,18 @@ ornament, which would let a meaningful mark through unread: the reason is requir
 floor), every exemption is printed with it, and an undeclared pale mark is still held. It composes
 with the motif, bleed, overlap and datum declarations in all 120 orders.
 
+A second pass for generality and for agents other than Claude. Probing every primitive with inputs no
+test had used found one silent corruption — a plain `(r, g, b)` tuple given to `mark()` was written
+into the XML as `val="(212, 255, 58)"` — and a run of errors that named nothing the caller wrote. The
+shared colour reader `_as_rgb` now accepts whole-number tuples and refuses anything that is not a
+colour by saying so; `picture(focus=…)`, `mark()` sizes, ornament counts and `frosted_panel`'s
+backdrop are checked with messages that name the argument; `sticker_outline` refuses an image with
+no subject. An agent restricted to SKILL.md, the Codex runbook and `sigs.py` then built a deck with
+all seven features: the gaps it hit are closed — `sigs.py --search` takes `a|b`, the helpers answer
+to the words a builder types (mask, cutout, ornament), every one has a runnable `--example` the
+smoke suite executes, the glass example reads the deck's own canvas size, and the Codex runbook
+points at the editorial forms and at `decorative()` beside its a11y waiver.
+
 ## [5.6.0] — 2026-09-25
 
 **The release about what a deck is asked to do in a room, and about "passed" that was not

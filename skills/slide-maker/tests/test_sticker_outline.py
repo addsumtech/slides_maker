@@ -96,6 +96,17 @@ with tempfile.TemporaryDirectory() as td:
         except ValueError:
             pass
 
+# ── generalisation probe (2026-10-03): inputs the first tests never tried ──────────────────────
+
+with tempfile.TemporaryDirectory() as td:
+    empty = Path(td) / "empty.png"
+    Image.new("RGBA", (120, 120), (0, 0, 0, 0)).save(empty)
+    try:
+        image_fx.sticker_outline(str(empty))
+        fails.append("sticker_outline accepted a fully transparent image (no subject to outline)")
+    except ValueError as e:
+        check("subject" in str(e), "the refusal should say there is no subject: {}".format(e))
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_sticker_outline] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)
