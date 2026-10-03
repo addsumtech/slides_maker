@@ -385,6 +385,10 @@ def qc(plan, gen_dir, *, de_max=None, hist_max=None, plan_path=None):
                 if not cut.exists():
                     flags.append("CUTOUT: no {} — run: python3 scripts/image_series.py cutout {} "
                                  "--dir {}".format(cut.name, plan_path or "<series.json>", gen_dir))
+                elif cut.stat().st_mtime < f.stat().st_mtime:
+                    flags.append("CUTOUT: {} is older than {} (regenerated after it was cut out) — run: python3 "
+                                 "scripts/image_series.py cutout {} --dir {}".format(
+                                     cut.name, f.name, plan_path or "<series.json>", gen_dir))
             rec = image_qc.inspect(str(f))
             # a cut-out's flat key IS uniform bands, and an illustration's paper margin is its medium —
             # neither is a padded export (measured: LETTERBOX on 4 of 5 watercolours); on the sheet too
@@ -405,17 +409,28 @@ def qc(plan, gen_dir, *, de_max=None, hist_max=None, plan_path=None):
             pass
     return rep
 
-def slot_picture(slide, plan, slot_id, x, y, w, h, *, image_dir):
+def slot_picture(slide, plan, slot_id, x, y, w, h, *, image_dir, sticker=False):
     """Place a series slot's image into (x, y, w, h) with the PLAN's frame, focus and alt text, and tag it
-    `+gen.<slot>` — the gates read the tag from the saved file. A cut-out slot places its keyed PNG."""
+    `+gen.<slot>` — the gates read the tag from the saved file. A cut-out slot places its keyed PNG;
+    `sticker=True` places that cut-out with a die-cut border (image_fx.sticker_outline), still tagged."""
     import deckkit as dk
     s = slot(plan, slot_id)
     base = Path(image_dir) / "slide-{:02d}-{}.png".format(s["slide"], s["id"])
     path = base.with_name(base.stem + ".cut.png") if s.get("cutout") else base
+    if sticker and not s.get("cutout"):
+        raise ValueError("slot_picture(): sticker=True needs a cut-out slot — {!r} has \"cutout\": false".format(slot_id))
     if not path.exists():
         raise FileNotFoundError("slot_picture(): no image at {} — make it: python3 scripts/generate_images_codex.py "
-                                "<manifest> --only {}{}".format(path, s["id"],
-                                "  then image_fx.chroma_cutout on it" if s.get("cutout") else ""))
+                                "<manifest> --only {}{}".format(
+                                    path, s["id"], "  then: python3 scripts/image_series.py cutout <series.json> "
+                                    "--dir {}".format(image_dir) if s.get("cutout") else ""))
+    if s.get("cutout") and base.exists() and base.stat().st_mtime > path.stat().st_mtime:
+        raise ValueError("slot_picture(): {} is OLDER than {} — the slot was regenerated after it was cut out; "
+                         "run: python3 scripts/image_series.py cutout <series.json> --dir {}".format(
+                             path.name, base.name, image_dir))
+    if sticker:
+        import image_fx
+        path = Path(image_fx.sticker_outline(str(path)))
     if s.get("cutout"):
         pic = dk.picture(slide, str(path), x, y, w, h, fit="contain", alt=s["alt"])
     else:
@@ -424,6 +439,7 @@ def slot_picture(slide, plan, slot_id, x, y, w, h, *, image_dir):
                          focus=tuple(s.get("focus") or (0.5, 0.5)), alt=s["alt"])
     dk._compose_tag(pic, gen=s["id"])
     return pic
+
 
 def _print_problems(probs):
     for p in probs:

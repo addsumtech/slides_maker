@@ -150,7 +150,7 @@ pic = ims.slot_picture(s, plan, "hero", 0.6, 0.6, 4.2, 5.6, image_dir="<deck>/as
 focus and alt text, places the keyed PNG for a cut-out, and tags the
 picture `+gen.<id>`. Never place a series image with `dk.picture` directly: the delivery gate reads
 the tags from the saved file and blocks an image-led deck with no slot placed, or a generated picture
-with no slot. A cut-out that wants a die-cut border: `image_fx.sticker_outline` on its `.cut.png`.
+with no slot. A cut-out that wants a die-cut border: `slot_picture(..., sticker=True)` (it runs `image_fx.sticker_outline` on the `.cut.png` and keeps the tag). The gate also recognises a series file placed any other way by its bytes and blocks it as UNTAGGED SERIES IMAGE, so `dk.picture` is never a way round the people rule.
 
 Billing is unchanged: the Codex subscription path above; `generate_images_openai.py` only with the
 user's explicit go-ahead (the BILLING GATE below). When the Codex run fails, its `WHY:` line names the

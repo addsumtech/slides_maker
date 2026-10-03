@@ -135,6 +135,35 @@ def check(pptx, rec, deck_dir):
                                  "beside a name/role/quote or team/testimonial framing with no visible "
                                  "'fictional' label — real people get a real photo; a persona is labelled "
                                  "on its slide".format(n, ", ".join(s["id"] for s in people))))
+    # a series image placed WITHOUT slot_picture has no tag, so nothing above (the people rule above all)
+    # could see it — recognise the file itself: picture() embeds the image's bytes unchanged
+    import hashlib
+    dirs = {pp.parent}
+    man = _near(pp.parent, "image_prompt_manifest.json")
+    if man is not None:
+        dirs.add(man.parent)
+    known = {}
+    for sid, sl in slots.items():
+        stem = "slide-{:02d}-{}".format(sl.get("slide", 0), sid)
+        for d in dirs:
+            for suffix in (".png", ".cut.png", ".cut.sticker.png"):
+                f = Path(d) / (stem + suffix)
+                if f.is_file():
+                    known[hashlib.sha1(f.read_bytes()).hexdigest()] = sid
+    if known:
+        for n, slide in enumerate(prs.slides, 1):
+            for sh in slide.shapes:
+                if dk.generated_slot(sh) is not None or not hasattr(sh, "image"):
+                    continue
+                try:
+                    h = hashlib.sha1(sh.image.blob).hexdigest()
+                except Exception:
+                    continue
+                if h in known:
+                    findings.append(("block", "UNTAGGED SERIES IMAGE", "slide {}: slot {!r}'s image was placed "
+                                     "without image_series.slot_picture, so the gate cannot apply the people rule to "
+                                     "it — place it with slot_picture (sticker=True for a die-cut cut-out)"
+                                     .format(n, known[h])))
     facts["placed"] = len(placed)
     if not placed:
         findings.append(("block", "NO SLOT PLACED", "imagery is 'series' but no picture was placed through "

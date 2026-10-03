@@ -298,8 +298,11 @@ with tempfile.TemporaryDirectory() as td:
     kett = Image.new("RGBA", (300, 300), (0, 0, 0, 0))
     from PIL import ImageDraw  # noqa: E402
     ImageDraw.Draw(kett).ellipse((40, 40, 260, 260), fill=(150, 92, 60, 255))
+    warm(td / "slide-03-kettle.png", size=(300, 300))       # generated first, then cut out — the real order
     kett.save(td / "slide-03-kettle.cut.png")
-    warm(td / "slide-03-kettle.png", size=(300, 300))
+    import os as _os  # noqa: E402
+    _t = (td / "slide-03-kettle.png").stat().st_mtime
+    _os.utime(td / "slide-03-kettle.cut.png", (_t + 5, _t + 5))
     prs = dk.blank_deck(13.333, 7.5)
     s1 = dk.add_slide(prs)
     pic = ims.slot_picture(s1, GOOD, "hero", 0.6, 0.8, 4.2, 5.6, image_dir=td)
@@ -309,6 +312,19 @@ with tempfile.TemporaryDirectory() as td:
     s3 = dk.add_slide(prs)
     cp = ims.slot_picture(s3, GOOD, "kettle", 6.0, 1.0, 3.0, 3.0, image_dir=td)
     check(dk.generated_slot(cp) == "kettle" and cp.image.content_type == "image/png", "cut-out slot places the keyed PNG")
+    # a die-cut sticker is a slot_picture option, so the documented route never needs dk.picture
+    sp_ = ims.slot_picture(s3, GOOD, "kettle", 9.4, 1.0, 3.0, 3.0, image_dir=td, sticker=True)
+    check(dk.generated_slot(sp_) == "kettle" and (td / "slide-03-kettle.cut.sticker.png").exists(),
+          "sticker=True must place the die-cut sticker of the cut-out, tagged")
+    # a slot regenerated AFTER its cut-out (--overwrite --only kettle) must not place the old cut-out
+    _os.utime(td / "slide-03-kettle.png", (_t + 60, _t + 60))
+    try:
+        ims.slot_picture(s3, GOOD, "kettle", 6.0, 1.0, 3.0, 3.0, image_dir=td)
+        fails.append("slot_picture placed a cut-out older than its regenerated image")
+    except ValueError as e:
+        check("cutout" in str(e), "the refusal should print the cutout command: {}".format(e))
+    stale = {r["id"]: r["flags"] for r in ims.qc(GOOD, td)["slots"]}["kettle"]
+    check(any(f.startswith("CUTOUT") and "older" in f for f in stale), "qc must flag a stale cut-out: {}".format(stale))
     try:
         ims.slot_picture(s3, GOOD, "hero", 1, 1, 1, 1, image_dir=td / "nowhere")
         fails.append("slot_picture accepted a missing image")

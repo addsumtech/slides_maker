@@ -47,7 +47,7 @@ PLAN = {"art_direction": "warm editorial craft photography, soft window daylight
 
 
 def build(td, *, persona_label=True, name_on_maker=False, team_words=False, place=("maker", "mira"),
-          untagged_extra=False, maker_lines=()):
+          untagged_extra=False, maker_lines=(), raw_mira=False):
     td = Path(td)
     for s in PLAN["slots"]:
         im = Image.new("RGB", (300, 360))
@@ -67,6 +67,8 @@ def build(td, *, persona_label=True, name_on_maker=False, team_words=False, plac
         dk.text(s1, 5.0, 4.6 + 0.5 * i, 7, 0.5, [[(line, 14, dk.DEEP, False, False)]])
     if "mira" in place:
         ims.slot_picture(s2, PLAN, "mira", 0.6, 0.8, 3.0, 3.0, image_dir=td)
+    if raw_mira:                       # the series image placed WITHOUT slot_picture: no tag on it
+        dk.picture(s2, str(td / "slide-02-mira.png"), 0.6, 0.8, 3.0, 3.0, fit="cover", alt="persona portrait")
     dk.text(s2, 4.0, 1.0, 8, 1.0, [[("Mira, 29, product designer", 24, dk.DEEP, True, False)]])
     if persona_label:
         dk.text(s2, 4.0, 2.2, 8, 0.6, [[("Illustrative persona", 14, dk.DEEP, False, False)]])
@@ -159,6 +161,11 @@ with tempfile.TemporaryDirectory() as td:
     check("NO SLOT PLACED" in codes(cis.check(str(p), rec, td)[0], "block"), "a series with nothing placed must block")
     p = build(td, place=("maker",))
     check("SLOT NOT PLACED" in codes(cis.check(str(p), rec, td)[0], "note"), "one unplaced slot is a NOTE")
+    # a series image placed with dk.picture carries no tag, so the people rule could not see it — the
+    # gate recognises the file itself (picture() embeds the bytes unchanged) and blocks (final review)
+    p = build(td, place=("maker",), raw_mira=True, persona_label=False)
+    f = cis.check(str(p), rec, td)[0]
+    check("UNTAGGED SERIES IMAGE" in codes(f, "block"), "a series image placed without slot_picture must block: {}".format(f))
     # missing / invalid plan
     check("SERIES PLAN MISSING" in codes(cis.check(str(p), {"imagery": "series", "plan": None}, td)[0], "block"),
           "a series with no plan path must block")
