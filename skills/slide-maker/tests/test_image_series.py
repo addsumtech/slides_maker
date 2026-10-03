@@ -395,6 +395,40 @@ with tempfile.TemporaryDirectory() as td:
     fb = {r["id"]: r["flags"] for r in ims.qc(bw, td)["slots"]}["kettle"]
     check(any("OFF-SERIES" in f for f in fb), "a magenta image in a grey series must be off-series: {}".format(fb))
 
+# every printed command runs AS PRINTED, even when the deck folder has a space or CJK in its name
+# (generality probe, 2026-10-03: "My Deck 菜园" split into three arguments)
+import shlex  # noqa: E402
+import contextlib as _cl, io as _io  # noqa: E401,E402
+
+
+def _runnable(line, must_exist=()):
+    cmd = line[line.index("python3"):]
+    toks = shlex.split(cmd)
+    # a path token is whole when it, its parent or its grandparent exists (an output folder the step creates)
+    return all(Path(t).exists() or Path(t).parent.exists() or Path(t).parent.parent.exists()
+               for t in toks if "/" in t and not t.startswith("scripts/")) \
+        and all(str(m) in toks for m in must_exist)
+
+
+with tempfile.TemporaryDirectory() as td:
+    deck = Path(td) / "My Deck 菜园"
+    deck.mkdir()
+    sp = deck / "series.json"
+    sp.write_text(json.dumps(GOOD), encoding="utf-8")
+    gen = deck / "assets" / "generated"
+    for argv, want in ((["check", str(sp)], [sp]), (["prompts", str(sp), str(gen)], [gen / "image_prompt_manifest.json"])):
+        buf = _io.StringIO()
+        with _cl.redirect_stdout(buf):
+            ims.main(argv)
+        nxt = [l for l in buf.getvalue().splitlines() if l.startswith("NEXT")]
+        check(nxt and _runnable(nxt[0], want), "{} NEXT must run as printed: {}".format(argv[0], nxt))
+    warm(gen / "slide-03-kettle.png", size=(300, 300))
+    buf = _io.StringIO()
+    with _cl.redirect_stdout(buf):
+        ims.main(["qc", str(sp), "--dir", str(gen)])
+    cl = [l for l in buf.getvalue().splitlines() if "CUTOUT" in l]
+    check(cl and _runnable(cl[0], [sp, gen]), "the CUTOUT command must run as printed: {}".format(cl))
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_image_series] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)

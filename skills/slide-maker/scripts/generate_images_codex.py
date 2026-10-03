@@ -26,6 +26,7 @@ import re
 import secrets
 import shutil
 import subprocess
+import shlex
 import sys
 import tempfile
 from pathlib import Path
@@ -592,10 +593,12 @@ def _series_next(items, script, manifest, out_of, only, style_ref):
     if only:
         key = out_of(items[0])
         return ("NEXT (LOOK at {} first; to redo it: --overwrite --only {}): python3 scripts/{} {} --style-ref {}"
-                .format(key, only, script, manifest, key))
+                .format(key, only, script, shlex.quote(str(manifest)), shlex.quote(str(key))))
     if style_ref:
-        return "NEXT: python3 scripts/image_series.py cutout {} --dir {}".format(plan, Path(manifest).resolve().parent)
+        return "NEXT: python3 scripts/image_series.py cutout {} --dir {}".format(
+            shlex.quote(plan), shlex.quote(str(Path(manifest).resolve().parent)))
     return None
+
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Generate images from a manifest via the Codex CLI (no API key).")

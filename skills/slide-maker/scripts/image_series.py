@@ -22,6 +22,7 @@ import json
 import math
 import os
 import re
+import shlex
 import sys
 from pathlib import Path
 
@@ -72,6 +73,11 @@ def _names_people(subject):
             continue
         return m.group(0)
     return None
+
+
+def _q(x):
+    """A path as ONE shell word, so a printed command runs as printed in "My Deck 菜园/" too."""
+    return shlex.quote(str(x))
 
 
 def load(path):
@@ -393,11 +399,11 @@ def qc(plan, gen_dir, *, de_max=None, hist_max=None, plan_path=None):
                 cut = f.with_name(f.stem + ".cut.png")
                 if not cut.exists():
                     flags.append("CUTOUT: no {} — run: python3 scripts/image_series.py cutout {} "
-                                 "--dir {}".format(cut.name, plan_path or "<series.json>", gen_dir))
+                                 "--dir {}".format(cut.name, _q(plan_path or "<series.json>"), _q(gen_dir)))
                 elif cut.stat().st_mtime < f.stat().st_mtime:
                     flags.append("CUTOUT: {} is older than {} (regenerated after it was cut out) — run: python3 "
                                  "scripts/image_series.py cutout {} --dir {}".format(
-                                     cut.name, f.name, plan_path or "<series.json>", gen_dir))
+                                     cut.name, f.name, _q(plan_path or "<series.json>"), _q(gen_dir)))
             rec = image_qc.inspect(str(f))
             # a cut-out's flat key IS uniform bands, and an illustration's paper margin is its medium —
             # neither is a padded export (measured: LETTERBOX on 4 of 5 watercolours); on the sheet too
@@ -432,11 +438,11 @@ def slot_picture(slide, plan, slot_id, x, y, w, h, *, image_dir, sticker=False):
         raise FileNotFoundError("slot_picture(): no image at {} — make it: python3 scripts/generate_images_codex.py "
                                 "<manifest> --only {}{}".format(
                                     path, s["id"], "  then: python3 scripts/image_series.py cutout <series.json> "
-                                    "--dir {}".format(image_dir) if s.get("cutout") else ""))
+                                    "--dir {}".format(_q(image_dir)) if s.get("cutout") else ""))
     if s.get("cutout") and base.exists() and base.stat().st_mtime > path.stat().st_mtime:
         raise ValueError("slot_picture(): {} is OLDER than {} — the slot was regenerated after it was cut out; "
                          "run: python3 scripts/image_series.py cutout <series.json> --dir {}".format(
-                             path.name, base.name, image_dir))
+                             path.name, base.name, _q(image_dir)))
     if sticker:
         import image_fx
         path = Path(image_fx.sticker_outline(str(path)))
@@ -483,7 +489,7 @@ def main(argv=None):
     if a.cmd == "check":
         print("image_series: {} slot(s), key {!r} — plan OK".format(len(plan["slots"]), key_id(plan)))
         print("NEXT: python3 scripts/image_series.py prompts {} {}".format(
-            a.plan, Path(a.plan).resolve().parent / "assets" / "generated"))
+            _q(a.plan), _q(Path(a.plan).resolve().parent / "assets" / "generated")))
         return 0
     if a.cmd == "cutout":
         res = cutout(plan, a.dir)
@@ -493,7 +499,7 @@ def main(argv=None):
         if not res:
             print("image_series cutout: the plan has no cut-out slot")
         if not bad_:
-            print("NEXT: python3 scripts/image_series.py qc {} --dir {}".format(a.plan, a.dir))
+            print("NEXT: python3 scripts/image_series.py qc {} --dir {}".format(_q(a.plan), _q(a.dir)))
         return 1 if bad_ else 0
     if a.cmd == "qc":
         rep = qc(plan, a.dir, plan_path=a.plan)
@@ -511,7 +517,7 @@ def main(argv=None):
     man = Path(a.out_dir) / "image_prompt_manifest.json"
     print("image_series: wrote {} prompt(s) to {}".format(len(items), man))
     print("NEXT (the key image first, then LOOK at it): python3 scripts/generate_images_codex.py {} --only {}"
-          .format(man, key_id(plan)))
+          .format(_q(man), _q(key_id(plan))))
     return 0
 
 

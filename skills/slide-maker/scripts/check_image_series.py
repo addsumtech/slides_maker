@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import re
+import shlex
 import sys
 from pathlib import Path
 
@@ -189,8 +190,8 @@ def _check(pptx, rec, deck_dir, findings, facts):
     if qc is None:
         man = _near(pp.parent, "image_prompt_manifest.json")
         findings.append(("note", "SERIES QC MISSING", "no series-qc.json — run: python3 scripts/image_series.py "
-                         "qc {} --dir {}".format(pp, man.parent if man else "<the folder the images were "
-                                                 "generated into>")))
+                         "qc {} --dir {}".format(shlex.quote(str(pp)), shlex.quote(str(man.parent)) if man else
+                                                 "<the folder the images were generated into>")))
     else:
         rep = json.loads(qc.read_text(encoding="utf-8"))
         ack = rep.get("acknowledged") or {}
