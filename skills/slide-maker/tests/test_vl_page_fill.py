@@ -44,7 +44,13 @@ for name in vl.LANGS:
                      and sh.text_frame.text.strip() == num for p_ in sh.text_frame.paragraphs for r_ in p_.runs if r_.font.size]
             base = vl.TYPE[name]["number"][0] * min(W, H) / 7.5
             if len(num) <= 3 and sizes:
-                check(max(sizes) >= 1.2 * base, "{}: the figure is set big ({:.0f}pt vs the language's {:.0f}pt)".format(tag, max(sizes), base))
+                # big = 1.2x the language's size, OR as wide as the figure may be (half the column landscape, 86%
+                # portrait) — a wide face hits that cap first (Linux CI's substitute for Impact: "120" at 1.18x)
+                fw = dk._natural_width_in([(num, bool(vl.TYPE[name]["number"][2]))], max(sizes), k.face("numeral"))
+                colw = vl.LAYOUTS[name]["data"]["land" if W > H else "port"]["col_noimg"][2] * W
+                capped = fw >= 0.9 * (0.50 if W > H else 0.86) * colw
+                check(max(sizes) >= 1.2 * base or capped, "{}: the figure is set big ({:.0f}pt vs the language's {:.0f}pt, "
+                      "{:.2f}in wide of a {:.2f}in column)".format(tag, max(sizes), base, fw, colw))
 
 # 2. storybook: a portrait illustration takes the tall frame
 port = str(ROOT / "assets" / "vl" / "watercolour" / "balcony-watering.jpg")
