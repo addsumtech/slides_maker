@@ -1299,6 +1299,13 @@ jobs:
           grep -qE "\\] ok$" /tmp/text_contrast.log || {
             echo "::error::test_text_contrast did not run to completion"; exit 1; }
 
+      - name: East-Asian faces follow the script (Hangul/kana under a Han face)
+        run: |
+          set -o pipefail
+          python tests/test_ea_script_face.py | tee /tmp/ea_script_face.log
+          grep -qE "\\] ok$" /tmp/ea_script_face.log || {
+            echo "::error::test_ea_script_face did not run to completion"; exit 1; }
+
       # --- P2 visual languages steps end ---
 
       - name: The Codex scaffold shows every field the Codex gate requires

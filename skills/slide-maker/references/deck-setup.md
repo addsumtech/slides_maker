@@ -127,7 +127,10 @@ branches. The defaults are Latin-only, so set a script-appropriate font before
 building: `deckkit.EAFONT = "Hiragino Sans GB"` (macOS render-loop-safe; or Microsoft YaHei / Noto Sans
 CJK SC), keeping `FONT` for Latin/numbers. This tags every run with a CJK `<a:ea>` font
 so it renders correctly *and portably* (not an uncontrolled fallback), and mixed
-中文+English stays right. Pick the CJK font to the purpose, emphasize with weight/colour
+中文+English stays right. A run whose script the face cannot draw — Korean under a Chinese face
+(Hiragino Sans GB has no Hangul) — gets that script's face of the same register instead (Apple SD
+Gothic Neo / Malgun Gothic; kana: Hiragino Sans / Yu Gothic), read from the installed face's own
+character map; `retrofit_ea` does the same, and `CJK_NO_EA` names a face for the deck's script. Pick the CJK font to the purpose, emphasize with weight/colour
 not italic (CJK has no true italic), and flag the font dependency at hand-off. Full
 guidance + RTL limits in `references/multilingual.md`.
 

@@ -32,11 +32,7 @@ import deckkit as dk  # noqa: E402
 import register_surface as rs  # noqa: E402
 from pptx.enum.shapes import MSO_SHAPE  # noqa: E402
 
-EA_FACES = {
-    "han": {"serif": {"mac": "Songti SC", "win": "SimSun"}, "sans": {"mac": "Hiragino Sans GB", "win": "Microsoft YaHei"}},
-    "kana": {"serif": {"mac": "Hiragino Mincho ProN", "win": "Yu Mincho"}, "sans": {"mac": "Hiragino Sans", "win": "Yu Gothic"}},
-    "hangul": {"serif": {"mac": "AppleMyungjo", "win": "Batang"}, "sans": {"mac": "Apple SD Gothic Neo", "win": "Malgun Gothic"}},
-}   # the "win" faces: Microsoft's documented defaults — unverified here
+EA_FACES = dk.EA_FACES   # one table, in deckkit; the "win" faces: Microsoft's documented defaults — unverified here
 
 LANGS = {
     "editorial": {
@@ -158,15 +154,7 @@ def _contrast(a, b):
     return (la + 0.05) / (lb + 0.05)
 
 
-def script_of(text):
-    t = text or ""
-    if any("가" <= ch <= "힯" or "ᄀ" <= ch <= "ᇿ" for ch in t):
-        return "hangul"
-    if any("぀" <= ch <= "ヿ" for ch in t):
-        return "kana"
-    if any("一" <= ch <= "鿿" for ch in t):
-        return "han"
-    return None
+script_of = dk.script_of                  # one definition, in deckkit (its EA face choice reads it too)
 
 
 def _platform(platform=None):

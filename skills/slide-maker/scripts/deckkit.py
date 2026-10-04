@@ -695,6 +695,75 @@ def _set_ea(rPr, typeface):
     return True
 
 
+# East-Asian faces per SCRIPT and register, per platform — one table for deckkit, visual_languages and the lint
+# advice. A Chinese face has no Hangul (Hiragino Sans GB: none in its cmap), so a Korean run under the deck's Han
+# EAFONT fell back to whatever the renderer found. The "win" faces are Microsoft's documented defaults (unverified
+# here: no Windows renderer on the build machine).
+EA_FACES = {
+    "han": {"serif": {"mac": "Songti SC", "win": "SimSun"}, "sans": {"mac": "Hiragino Sans GB", "win": "Microsoft YaHei"}},
+    "kana": {"serif": {"mac": "Hiragino Mincho ProN", "win": "Yu Mincho"}, "sans": {"mac": "Hiragino Sans", "win": "Yu Gothic"}},
+    "hangul": {"serif": {"mac": "AppleMyungjo", "win": "Batang"}, "sans": {"mac": "Apple SD Gothic Neo", "win": "Malgun Gothic"}},
+}
+EA_LINUX = {"han": "Noto Sans CJK SC", "kana": "Noto Sans CJK JP", "hangul": "Noto Sans CJK KR"}
+
+
+def script_of(text):
+    """'hangul' / 'kana' / 'han' for the CJK script a string carries (Hangul or kana win over Han), else None."""
+    t = text or ""
+    if any("가" <= ch <= "힯" or "ᄀ" <= ch <= "ᇿ" for ch in t):
+        return "hangul"
+    if any("぀" <= ch <= "ヿ" for ch in t):
+        return "kana"
+    if any("一" <= ch <= "鿿" for ch in t):
+        return "han"
+    return None
+
+
+_CMAP_CACHE = {}
+
+
+def _face_covers(face, text):
+    """True/False: the INSTALLED file of `face` has a glyph for every non-space character of `text`; None when
+    the face is not installed here (nothing to read — never guess)."""
+    if not face or _font_substituted(face):
+        return None
+    res = _font_face(face)
+    if not res:
+        return None
+    key = tuple(res)
+    if key not in _CMAP_CACHE:
+        try:
+            from fontTools.ttLib import TTFont
+            _CMAP_CACHE[key] = set(TTFont(res[0], fontNumber=res[1] or 0, lazy=True).getBestCmap() or {})
+        except Exception:
+            _CMAP_CACHE[key] = None
+    cmap = _CMAP_CACHE[key]
+    if cmap is None:
+        return None
+    return all(ord(c) in cmap for c in text if not c.isspace())
+
+
+def _serif_face(face):
+    f = str(face or "").lower()
+    return any(k in f for k in ("song", "ming", "mincho", "myungjo", "batang", "serif", "simsun", "kai", "fangsong"))
+
+
+def _ea_for_text(face, text):
+    """The EA face to set on a run of `text`: `face`, unless it is installed here and CANNOT draw the run's CJK
+    (Hangul under a Chinese face) — then that script's face of the same register for this platform."""
+    if not face or not _has_cjk(text or ""):
+        return face
+    cjk = "".join(c for c in text if _has_cjk(c))
+    if _face_covers(face, cjk) is not False:
+        return face
+    scr = script_of(cjk)
+    if scr is None:
+        return face
+    plat = "mac" if _sys_rg.platform == "darwin" else ("win" if _sys_rg.platform.startswith("win") else "linux")
+    alt = EA_LINUX[scr] if plat == "linux" else EA_FACES[scr]["serif" if _serif_face(face) else "sans"][plat]
+    return alt if _face_covers(alt, cjk) is not False else face
+
+
 def _apply_ea(run, typeface):
     """Set the East-Asian (<a:ea>) typeface so PowerPoint/Keynote render CJK glyphs with
     the chosen font (Latin chars keep the <a:latin> font). python-pptx only writes
@@ -851,7 +920,8 @@ def retrofit_ea(prs, face=None, *, layouts=False, verbose=True):
     n = 0
     for slide in prs.slides:
         for el in _cjk_runs_missing_ea(slide.shapes._spTree):
-            if _stamp_ea(el, face):
+            _t = el.find(qn('a:t'))
+            if _stamp_ea(el, _ea_for_text(face, _t.text if _t is not None else "")):
                 n += 1
         for defrpr in _chart_ea_parts(slide):
             if _set_ea(defrpr, face):
@@ -881,7 +951,7 @@ def set_font(run, size, color, bold=False, italic=False, font=None, ea=None):
     run.font.color.rgb = color
     eaf = ea or EAFONT                     # also tag CJK font when set (mixed CN/EN stays correct)
     if eaf:
-        _apply_ea(run, eaf)
+        _apply_ea(run, _ea_for_text(eaf, getattr(run, "text", "")))   # a face that cannot draw the script yields
 
 
 CJK_LS = 1.12             # default line_spacing (OOXML spcPct — a multiple of SINGLE spacing,
@@ -10901,12 +10971,14 @@ def _lint_layout_impl(prs, *, verbose=True, strict=False, overlap_tol=0.05, esca
                              "number bobs. Route runs containing digits to a LINING-figure face "
                              "(Helvetica Neue / Arial / Cambria); see references/font-guidance.md"))
         if bad_ea:
+            _scr = script_of("".join(bad_ea)) or "han"           # advise a face for THIS deck's script
+            _fm, _fw, _fl = EA_FACES[_scr]["sans"]["mac"], EA_FACES[_scr]["sans"]["win"], EA_LINUX[_scr]
             findings.append((n, "CRITICAL", "CJK_NO_EA",
                              f"{len(bad_ea)} CJK run(s) carry no <a:ea> font (e.g. '{bad_ea[0]}') — the "
                              "renderer picks an uncontrolled fallback and 避头尾 never engages. FIX "
                              "THIS DECK, one line above this lint: "
-                             "deckkit.retrofit_ea(prs, 'Hiragino Sans GB')  (Microsoft YaHei on "
-                             "Windows, Noto Sans CJK SC on Linux — the face is REQUIRED unless "
+                             f"deckkit.retrofit_ea(prs, '{_fm}')  ({_fw} on "
+                             f"Windows, {_fl} on Linux — the face is REQUIRED unless "
                              "EAFONT is already set, and it also reaches groups, table cells, "
                              "fields and charts, which this check cannot see). THEN set "
                              "deckkit.EAFONT at the top of the script: if these runs came from "

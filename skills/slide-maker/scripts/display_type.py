@@ -107,20 +107,7 @@ def covers(face, text):
     """True when the INSTALLED file of `face` has a glyph for every non-space character of `text` (its cmap).
     A face without the glyphs draws hollow boxes in a raster — Impact has no CJK, so a collage "三成" came
     out as tofu with every gate green (final review, 2026-10-04)."""
-    if dk._font_substituted(face):
-        return False
-    res = dk._font_face(face)
-    if not res:
-        return False
-    key = tuple(res)
-    if key not in _CMAP_CACHE:
-        try:
-            from fontTools.ttLib import TTFont
-            _CMAP_CACHE[key] = set(TTFont(res[0], fontNumber=res[1] or 0, lazy=True).getBestCmap() or {})
-        except Exception:
-            _CMAP_CACHE[key] = set()
-    cmap = _CMAP_CACHE[key]
-    return all(ord(c) in cmap for c in text if not c.isspace())
+    return dk._face_covers(face, text) is True          # one cmap reader, in deckkit; not installed = False
 
 
 def outlined(slide, x, y, w, h, text, *, color, face="Arial Black", stroke=None):
