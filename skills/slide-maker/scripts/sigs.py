@@ -339,7 +339,10 @@ EXAMPLES = {
                 'dt.two_tone(s, 0.6, 0.6, 8.0, 1.2, "Bring it broken.", ["broken."], size=40,\n'
                 '            color=dk.DEEP, accent=dk.RGBColor(0xB2, 0x3A, 0x28), face="Georgia")',
     "outlined": 'import display_type as dt\n'
-                'dt.outlined(s, 0.6, 0.6, 3.0, 2.0, "07", color="B23A28")   # a hollow section number',
+                'if dt.covers("Arial Black", "07"):   # installed here AND draws every character (else: boxes)\n'
+                '    dt.outlined(s, 0.6, 0.6, 3.0, 2.0, "07", color="B23A28", face="Arial Black")   # a hollow number\n'
+                'else:                                # no such face here (Linux): set the number as text\n'
+                '    dk.text(s, 0.6, 0.6, 3.0, 2.0, [[("07", 96, dk.DEEP, True, False, "Arial Black")]])',
     "collage": 'import collage\n'
                'collage.collage(s, (5.0, 0.4, 4.6, 4.8), ["skyline.png", "gt_c1.png", "ours_c1.png"],\n'
                '                seed=3, keep_clear=(0.4, 0.6, 4.2, 2.4))   # tilted prints + tape',
