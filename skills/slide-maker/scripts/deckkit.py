@@ -5160,12 +5160,18 @@ def _measure_lines(runs, size_pt, avail_in, font=None):
     items = []                                              # (width_pt, kind): 'w'ord 's'pace 'c'jk
     for text, bold in runs:
         word = []                                           # the current word's characters, in order
+        hw = [0]                                            # how many of them are Hangul
 
         def _flush():
             # Korean wraps at spaces (a Hangul run is part of the word, one em a syllable) — but a word wider
             # than the WHOLE line breaks between syllables ("인공지능기반의 / 료영상재구성"), so it goes in
-            # as syllables. A word with no Hangul is measured exactly as it always was.
-            hang_n = sum(1 for c in word if _is_hangul(ord(c)))
+            # as syllables. A word with no Hangul is measured exactly as it always was (and as fast).
+            if not hw[0]:
+                if word:
+                    items.append((getlen("".join(word), bold), "w"))
+                    word.clear()
+                return
+            hang_n, hw[0] = hw[0], 0
             latin = "".join(c for c in word if not _is_hangul(ord(c)))
             wd = (getlen(latin, bold) if latin else 0.0) + hang_n * float(size_pt)
             if hang_n and wd > avail:
@@ -5186,8 +5192,11 @@ def _measure_lines(runs, size_pt, avail_in, font=None):
             if ch == " ":
                 _flush()
                 items.append((getlen(" ", bold), "s"))
+            elif ord(ch) < 0x1100:                          # nothing below U+1100 is Hangul or wide: the
+                word.append(ch)                             # common Latin case pays one compare
             elif _is_hangul(ord(ch)):
                 word.append(ch)                             # Korean wraps at spaces: part of the word
+                hw[0] += 1
             elif _is_wide(ord(ch)):
                 _flush()
                 items.append((float(size_pt), "h" if ch in _CJK_HANG else ("b" if ch in _CJK_CLOSE else
