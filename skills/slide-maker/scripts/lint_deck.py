@@ -79,12 +79,10 @@ try:                                                  # reuse deckkit's font-ava
 except Exception:
     def _fsub(_name):                                 # can't check → never warn (no false positive)
         return False
-try:                                                  # ONE reading of an overlap declaration: both
-    from deckkit import _declared_overlap               #   spellings, composed onto a motif or not
-except Exception:
-    def _declared_overlap(sh):
-        n = str(getattr(sh, "name", "") or "")
-        return n.startswith("deckkit-overlap") or "+overlap" in n.split(":", 1)[0]
+# ONE reading of an overlap declaration — deckkit's: both spellings, composed onto a motif or not. There used
+# to be an inline copy as a fallback; a second copy is how two readings drift apart, and deckkit sits in this
+# folder with the same dependencies, so a failure to import it is a broken install that should say so.
+from deckkit import _declared_overlap                   # noqa: E402
 try:                                                  # real glyph advances, same metrics the build uses
     from deckkit import _pil_font as _dk_pil_font, _MEAS_PREC as _dk_prec
 except Exception:
@@ -331,6 +329,7 @@ def _boxes(slide, sw, sh, slide_no=None, record=True):
         full = s.text_frame.text.strip() if s.has_text_frame else ""
         txt = full.replace("\n", " ")[:26]
         paras, size, align, anchor, mathfont = [], 0.0, None, None, None
+        pspace = []                                      # (space_before, space_after) pt, one per kept paragraph
         _face, _bold = None, False
         if s.has_text_frame:
             size = max((r.font.size.pt for p in s.text_frame.paragraphs for r in p.runs if r.font.size),
@@ -352,6 +351,11 @@ def _boxes(slide, sw, sh, slide_no=None, record=True):
                         mathfont = r.font.name           # an equation_native run in a math font
                 if pr:
                     paras.append(pr)
+                    try:                                 # paragraph spacing in points (None = inherited 0)
+                        pspace.append((p.space_before.pt if p.space_before is not None else 0.0,
+                                       p.space_after.pt if p.space_after is not None else 0.0))
+                    except Exception:
+                        pspace.append((0.0, 0.0))
             if _faces:
                 (_face, _bold) = max(_faces, key=_faces.get)
             else:
@@ -432,7 +436,7 @@ def _boxes(slide, sw, sh, slide_no=None, record=True):
                     "runs": run_colors, "run_hl": run_hl, "fill": fill_rgb, "unk": fill_unk, "pic": is_pic, "grad": is_grad,
                     "icon": icon_ink,
                     "st": str(s.shape_type).split()[0], "txt": txt, "full": full, "size": size or 12.0,
-                    "paras": paras, "solid": s.shape_type in SOLID, "align": align, "anchor": anchor,
+                    "paras": paras, "pspace": pspace, "solid": s.shape_type in SOLID, "align": align, "anchor": anchor,
                     "font": _face, "bold": _bold,
                     "text": bool(s.has_text_frame and txt), "descr": descr, "mathfont": mathfont,
                     "title_ph": tph, "bg": (w * h) >= 0.95 * (sw * sh), "grp": grp,
@@ -876,11 +880,31 @@ def _glyph_bands(im, s, sw, sh):
         return None                                      # too few pixels to be evidence
     line_h = max(s.get("size", 12), 1) / 72.0 * 1.2
     n = max(1, min(12, int(round((rb - rt) / line_h))))
+    pix_bands = [(y0 + int((y1 - y0) * i / float(n)), y0 + int((y1 - y0) * (i + 1) / float(n))) for i in range(n)]
+    # Paragraph SPACING moves every later line down: equal bands over the ink rect then fall into the gaps, and a
+    # healthy spaced list read "line 2 of 5 renders as a flat field" (a docs-only run's agenda, 2026-10-04). With
+    # spacing recorded, place each line where it is: paragraph by paragraph, the same pitch the ink rect uses.
+    ps = s.get("pspace") or []
+    if not s.get("rot") and ps and len(ps) == len(s.get("paras") or []) and any(b_ or a_ for b_, a_ in ps):
+        f = _frame(s)
+        pitch = (s["size"] / 72.0) * (1.4 if _cjk(f) else 1.25)
+        rows, y = [], 0.0
+        for i, pr in enumerate(s["paras"]):
+            if i:
+                y += ps[i][0] / 72.0
+            for _ in range(max(1, _est_lines([pr], f["w"], f.get("font"), f.get("bold", False)))):
+                rows.append((y, y + pitch))
+                y += pitch
+            if i < len(s["paras"]) - 1:
+                y += ps[i][1] / 72.0
+        an = s.get("anchor")
+        k = 0.5 if an == MSO_ANCHOR.MIDDLE else (1.0 if an == MSO_ANCHOR.BOTTOM else 0.0)
+        top = rt - (y - (rb - rt)) * k                   # the anchor holds the BLOCK's top/middle/bottom
+        pix_bands = [(max(0, min(H - 1, int((top + a_) / sh * H))), max(0, min(H, int((top + b_) / sh * H))))
+                     for a_, b_ in rows[:12]]
     px = im.load()
     out = []
-    for i in range(n):
-        by0 = y0 + int((y1 - y0) * i / float(n))
-        by1 = y0 + int((y1 - y0) * (i + 1) / float(n))
+    for by0, by1 in pix_bands:
         if by1 - by0 < 4:
             return None                                  # bands too thin to judge
         step = max(1, (x1 - x0) // 220)                   # cap the walk; glyph edges survive it
@@ -3387,9 +3411,13 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
                 if im_r is False:
                     break                                # render unreadable → skip the slide
                 worst = None                             # (est, snip) — one verdict per shape
-                for snip, rc in s["runs"]:
+                _hl_1c = s.get("run_hl") or [None] * len(s["runs"])
+                for (snip, rc), _h1c in zip(s["runs"], _hl_1c):
                     if rc == "THEME" or len(snip) < 4:
                         continue                         # theme ink unresolvable; tiny runs skipped
+                    if _h1c:
+                        continue                         # a highlighted run reads on its highlight (1b judges
+                                                         # it); in a MIXED box it read as 1.23:1 on the photo
                     ink_lum = _lum(rc if rc else "000000")
                     bg = _region_bg_lum(im_r, s, sw, sh, ink_lum)
                     if bg is None:

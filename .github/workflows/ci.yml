@@ -1285,6 +1285,13 @@ jobs:
           grep -qE "\\] ok$" /tmp/render_cli.log || {
             echo "::error::test_render_cli did not run to completion"; exit 1; }
 
+      - name: Render-time lint corner cases (paragraph spacing, highlighted runs on photos, rotated pairs)
+        run: |
+          set -o pipefail
+          python tests/test_lint_deck_pixels.py | tee /tmp/lint_deck_pixels.log
+          grep -qE "\\] ok$" /tmp/lint_deck_pixels.log || {
+            echo "::error::test_lint_deck_pixels did not run to completion"; exit 1; }
+
       # --- P2 visual languages steps end ---
 
       - name: The Codex scaffold shows every field the Codex gate requires
