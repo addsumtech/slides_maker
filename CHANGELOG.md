@@ -9,6 +9,16 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+### Kit-built decks no longer trip false layout findings
+
+Found by building a real 10-slide deck end to end on the `collage` language. A visual-language kit stamps
+`+vl.<name>` on every shape it draws, which turns a declaration's name into `deckkit-overlap+vl.collage:<why>`
+— a spelling three readers did not know: the render-time OVERLAP check (12 false findings on a three-print
+collage cover), the build-time TEXT_OVERLAP check, and DATUM SCALE (a decorative or kit-stamped datum bar
+silently dropped out of the truth check). All three now read the name's `+` tokens. Separately, UNEVEN CARD
+HEIGHTS no longer treats a shape nested inside another card (a photo inside its print border) as a sibling —
+on a generated corpus of 120 card rows it went from 4 false positives / 0 missed to 0 / 0.
+
 ### Visual languages: a contrast ground each, chosen against your recent decks
 
 Every visual language now has its own light paper and ONE contrast ground — `editorial` on warm-black

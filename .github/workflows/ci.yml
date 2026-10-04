@@ -983,6 +983,13 @@ jobs:
           grep -qE "(^[0-9]+ passed, 0 failed|\\] ok$)" /tmp/shapedeclara.log || {
             echo "::error::test_shape_declarations did not run to completion"; exit 1; }
 
+      - name: Uneven card heights (a nested photo is not a sibling card)
+        run: |
+          set -o pipefail
+          python tests/test_uneven_cards_nested.py | tee /tmp/unevennested.log
+          grep -qE "(^[0-9]+ passed, 0 failed|\\] ok$)" /tmp/unevennested.log || {
+            echo "::error::test_uneven_cards_nested did not run to completion"; exit 1; }
+
       - name: Review integrity (a consent must name a reviewed artifact)
         run: |
           set -o pipefail
