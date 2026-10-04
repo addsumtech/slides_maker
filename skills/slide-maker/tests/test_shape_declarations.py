@@ -182,6 +182,17 @@ check(dk._is_motif(sh, loud=True) and sh.name.endswith("bars:12.0"),
       "🔴 datum-then-motif keeps BOTH — this order used to produce `deckkit-motif-loud:bars:12.0`, "
       "which parses as a motif whose reason is the datum record it destroyed")
 
+# 🔴 MEASURED 2026-10-04: a visual-language kit stamps `+vl.<name>` on every shape it draws, so an
+# overlap declaration on a collage print is saved as `deckkit-overlap+vl.collage:<why>` — a THIRD
+# spelling. The reader knew only `deckkit-overlap:` and `+overlap`, so the render-time lint refused
+# twelve declared overlaps on a three-print collage cover that the build-time gate had passed.
+for extra in ({"vl": "collage"}, {"gen": "s01-cover"}, {"vl": "collage", "gen": "s01-cover"}):
+    sh = fresh()
+    dk.overlap_intent(sh, OVER_WHY)
+    dk._compose_tag(sh, **extra)
+    check(dk._declared_overlap(sh),
+          "overlap declaration survives a later %s tag (name %r)" % ("+".join(extra), sh.name))
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

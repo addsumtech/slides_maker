@@ -10361,7 +10361,11 @@ def _declared_overlap(sh):
     the prefix made composition a trade: the motif tag survived and the overlap declaration was
     lost, which is the same defect one field over."""
     n = str(getattr(sh, "name", "") or "")
-    return n.startswith(OVERLAP_TAG) or "+overlap" in n.split(":", 1)[0]
+    head = n.split(":", 1)[0]
+    # …and a THIRD: `_compose_tag` writes the base WITHOUT its colon when other flags follow, so a
+    # kit-stamped print reads `deckkit-overlap+vl.collage:<why>` (measured 2026-10-04: twelve declared
+    # collage-cover overlaps refused at render time only). Parse the head's `+` tokens, not a prefix.
+    return head.split("+", 1)[0] == OVERLAP_TAG.rstrip(":") or "+overlap" in head
 
 
 def _deep_shapes(shapes, container=None):
