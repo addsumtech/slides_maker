@@ -234,7 +234,9 @@ be reconstructed post-hoc at the delivery gate.
 2u. 🔴 **A visual language builds with its page functions.** When the picked direction is a visual
    language (`"vl"` in `directions.json`), read `references/visual-languages.md`, then in the build
    script: `k = visual_languages.use("<name>", prs)` and one page function per slide —
-   `k.cover / section / image_text / quote / data / closing(k.new_slide(), …)` — with ordinary pages
+   `k.cover / section / image_text / quote / data / closing(k.new_slide(), …)`, each inside its own
+   `def slide_NN(prs, k):` (the gate maps every `design.slides[].function` to a `def` in the build script and
+   reads the calls inside it, so module-level calls read as "function absent") — with ordinary pages
    ALSO started with `k.new_slide()` and built on `register_surface.card(slide, "<name>", …)` and
    `k.run(text, size)` runs. `python3 scripts/sigs.py cover section quote` prints the kit's page functions
    as `Kit.<name>` (a bare `cover` also exists in deckkit — a different call). Record it with the command
@@ -484,7 +486,8 @@ interview answer at all — each reads the built file itself):
    a callout next to a title, a component value next to a neighbouring diagram, or an icon whose glyph
    carries a specific meaning. Each zone names its exact text target or geometry, what it must clear,
    and a minimum `0.12in` gap; each semantic icon records the actual `lucide:*` build token and a
-   sentence explaining its job. After render, run `codex_visual_contract.py` to recompute these checks
+   sentence explaining its job. The manifest opens `{"schema": "slide-maker-codex-visual-contract/v1",
+   "zones": [...], "icons": [...]}` (empty lists are legal). After render, run `codex_visual_contract.py` to recompute these checks
    against the final PPTX and produce small PNG crops for review. This is intentionally not a generic
    box-overlap lint: it makes the few high-risk relationships explicit without penalising deliberate
    overlays or bespoke composition.
@@ -567,7 +570,8 @@ python3 scripts/codex_delivery_gate.py --init .codex-deck-evidence.json
 Fill it from actual artifacts, not memory. The v2 record binds the final PPTX and build script to their
 SHA-256 hashes; stores the source/claim ledger, content and design checkpoint records, **both
 competitions — the CONTENT arc (`content.arc`: the arc that won, the ones it beat with the clause that
-lost each, and `arc_divergence.py`'s verdict) and the DESIGN direction** (`design.direction`), **the
+lost each, and `arc_divergence.py`'s verdict; `python3 scripts/arc_divergence.py --template` prints a skeleton and
+the CLOSED list of `shape` values the gate accepts) and the DESIGN direction** (`design.direction`), **the
 governing picture** (`design.concept`: chosen + the two it beat), per-slide form
 ledger, four clean-branch direction tokens and preview, final rendered signature proof, categorical
 icon assets, visual-contract manifest/result, and two separate critic JSON files.
@@ -604,8 +608,9 @@ placeholder, an empty page, planned icons the reader cannot see → `fixed`), **
 `refuted` is a legal exit and a fake fix is not. Measured on a shipped 15-page deck: ten hard
 findings, one of them a body-vs-source-line number contradiction that had already cleared the
 provenance gate, the critic, and fifteen `ok` self-check verdicts. No independent reader in this
-runtime? Claim `waived_category: "no-reader"` — it records that the deck shipped **unread**, which
-is a different statement from claiming it was read.
+runtime? REPLACE `answers` and `findings` with `{"waived": "<why no independent reader read this deck>",
+"waived_category": "no-reader"}` (both keys; a category beside unanswered `answers` is not a waiver) — it
+records that the deck shipped **unread**, which is a different statement from claiming it was read.
 🔴 **The taste ledger is consulted at design time** — `scripts/taste_ledger.py list --binds-at
 design --format prompt` prints what THIS user has already corrected by hand on earlier decks, and
 `design_plan.taste_applied` records one row per active entry (`applied: true`, or `applied: false`

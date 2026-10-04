@@ -415,7 +415,8 @@ check("kicker=None" in r_.stdout and "image=None" in r_.stdout, "the Kit page si
 # the palette the register-pixels gate reads was never stated; the run guessed it and was held
 r_ = _run("scripts/visual_languages.py", "--gates", "editorial", "--deck", "my-deck", "--for", "a repair café")
 _pal = vl.LANGS["editorial"]["palette"]
-check(r_.returncode == 0 and "deck_gates.py set my-deck design_plan.visual_language editorial" in r_.stdout
+check(r_.returncode == 0 and "deck_gates.py set " in r_.stdout                 # the deck's path is printed absolute now
+      and "my-deck design_plan.visual_language editorial" in r_.stdout
       and "design_plan.palette" in r_.stdout and all(h.upper() in r_.stdout.upper() for h in [_pal["ground"], _pal["ink"]] + list(_pal["text_accents"])),
       "--gates prints the full record with the language's hexes: {}".format(r_.stdout[:400] + r_.stderr[:200]))
 check("design.visual_language" in r_.stdout, "--gates names the Codex evidence fields too")

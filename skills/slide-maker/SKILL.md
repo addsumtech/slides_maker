@@ -2158,6 +2158,8 @@ photo/gradient with no opaque backing, exactly the class solid-fill contrast che
 its 1.5–3.0 band is the TEXT-ON-IMAGE CONTRAST `[warn]`.
 **TEXT CONTRAST** (WCAG 1.4.3) is in the accessibility set too: text under 14pt, or under 18pt and not bold,
 below 4.5:1 on a fill is held at hand-off (not advisory), and the finding names the nearest ink that keeps the hue.
+A slide whose visible title is not first in reading order (a kicker above it) or sits low: `deckkit.a11y_title(slide,
+"<title>")` declares it — a TITLE placeholder above the canvas, nothing drawn; the visual-language pages call it themselves.
 
 **🔴 RECORD the delivery mode once, in the build script, instead of retyping a flag:**
 `dk.declare_delivery(OUT, "selfread")` beside `prs.save(OUT)` — one of `presented` · `textheavy` ·

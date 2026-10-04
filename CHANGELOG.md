@@ -55,13 +55,29 @@ A run the deck's East-Asian face cannot draw — Korean under a Chinese face (Hi
 Hangul) — gets that script's face of the same register, read from the installed face's character map, in
 `text()` and `retrofit_ea`; `CJK_NO_EA` now names a face for the deck's own script.
 
+### Screen-reader titles, and helpers that pass the floors under every preset
+
+`deckkit.a11y_title(slide, text)` gives a slide its title for screen readers — a TITLE placeholder above the canvas,
+first in reading order, nothing drawn — the "off-canvas title" the docs had long called the sanctioned trick, which
+no helper made (a plain text box there is an OFF_CANVAS critical). Every visual-language page declares its own, so a
+kicker set above a title no longer holds the hand-off on READING ORDER. Under every shipped preset, deckkit's own
+helpers now clear TEXT CONTRAST (`consort_flow`, `corner_tab`, `org_tree`, `segmented_bar`; 19 palettes x 64 examples:
+0 findings), the readable-ink pickers fall back to pure black (it, or white, always clears 4.58:1), and TEXT CONTRAST
+judges only a size and weight the run itself carries — an inherited 28pt template title is not "12pt text". Both
+runtimes print the right remedy per accessibility code.
+
 ### Smaller fixes
 
 An explicit `generate_images_openai.py --size` is honoured (each item's aspect picks the size only when it
 is left off) and `--moderation` is sent to generations only; image-series prompts carry absolute paths; the
 series gate reads labels as whole, non-negated words and notes a slot placed twice, on another slide, or a
 qc report older than its images; a visual-language image that is neither a file nor a slot says how to
-pass the plan (or lists the plan's slots); the overflow refusal leads with the total height.
+pass the plan (or lists the plan's slots); the overflow refusal leads with the total height. `ground="auto"` resolves
+on the deck's real canvas in `direction()` (`W=`, `H=`) and `--gates` (it reads the built deck; a printed board stays
+light), and `--gates` prints commands with `deck_gates.py`'s full path, so they run as printed from any folder.
+LOW_RES_IMAGE reads pictures in placeholders and in scaled groups at the size they are drawn. Components (node,
+chip, callout, bullets, …) measure their text inside `text()`'s insets; `measure_text` takes a plain string.
+`lint_deck.py --help`; `declare_delivery("self-read")`; a half-made blind-read waiver names the missing field.
 
 
 ### CJK line ends are measured the way the renderer sets them

@@ -1327,6 +1327,13 @@ jobs:
           grep -qE "\\] ok$" /tmp/inset_contract.log || {
             echo "::error::test_inset_contract did not run to completion"; exit 1; }
 
+      - name: Screen-reader titles (a11y_title) and every visual-language page declares one
+        run: |
+          set -o pipefail
+          python tests/test_a11y_title.py | tee /tmp/a11y_title.log
+          grep -qE "\\] ok$" /tmp/a11y_title.log || {
+            echo "::error::test_a11y_title did not run to completion"; exit 1; }
+
       # --- P2 visual languages steps end ---
 
       - name: The Codex scaffold shows every field the Codex gate requires

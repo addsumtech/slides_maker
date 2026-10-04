@@ -1756,6 +1756,11 @@ def _LD_A11Y_WCAG():
     return _ld.A11Y_WCAG
 
 
+def _LD_A11Y_REMEDY():
+    import lint_deck as _ld
+    return _ld.A11Y_REMEDY
+
+
 def _LD_A11Y_ALL():
     import lint_deck as _ld
     return _ld.A11Y_CODES
@@ -1824,10 +1829,9 @@ def _check_a11y(pptx, delivery, gates):
     die("this deck does not clear the accessibility floors:\n    - " + fired
         + ("\n    {} of those are WCAG ratios, which are arithmetic rather than judgement."
            .format(len(wcag)) if wcag else "")
-        + "\n    Fix: deckkit.alt_text(shape, '<one line>') on informative images (alt='' for "
-          "purely decorative); give every slide a title (an off-canvas title is a sanctioned trick "
-          "for statement slides) and add it FIRST so z-order matches reading order; raise "
-          "icon/mark contrast to 3:1.\n    Or waive in writing: "
+        + "\n    Fix:" + "".join("\n      - {}: {}".format(c, _LD_A11Y_REMEDY().get(c, "remediate it"))
+                             for c in sorted(hits))
+        + "\n    Or waive in writing: "
           '{"a11y": {"waived": "<who reads this deck, and how>", "waived_category": "<kind>"}}')
 
 

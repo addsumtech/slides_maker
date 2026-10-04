@@ -43,6 +43,36 @@ check(not fired(4), "20pt is large text — 3:1 suffices: {}".format(fired(4)))
 check("TEXT CONTRAST" in ld.A11Y_WCAG and "TEXT CONTRAST" in ld.A11Y_BLOCKING and "TEXT CONTRAST" in ld.A11Y_CODES,
       "the hand-off a11y floors hold it on both runtimes (it is in A11Y_WCAG / A11Y_BLOCKING)")
 
+# A size or weight that is INHERITED was not read: the run is not judged as 12pt (the lint's fallback) — a template
+# title or raw python-pptx text at the deck's 18pt default is large text and clears WCAG at 3:1 (final review: a
+# 3.45:1 default-size headline was held as "12pt text"). Unknown -> the advisory band, never a blocking guess.
+from pptx.util import Inches as _In, Pt as _Pt
+from pptx.enum.shapes import MSO_SHAPE as _MS
+prs = dk.blank_deck(13.333, 7.5)
+s_ = dk.add_slide(prs)
+sh_ = s_.shapes.add_shape(_MS.RECTANGLE, _In(1), _In(2), _In(6), _In(1.5))
+sh_.fill.solid(); sh_.fill.fore_color.rgb = dk.RGBColor.from_string("FFFFFF")
+r_ = sh_.text_frame.paragraphs[0].add_run(); r_.text = "Large default-size headline"
+r_.font.color.rgb = dk.RGBColor.from_string("8A8A8A")                 # 3.45:1, no size, no bold of its own
+s_ = dk.add_slide(prs)
+sh_ = s_.shapes.add_shape(_MS.RECTANGLE, _In(1), _In(2), _In(6), _In(1.5))
+sh_.fill.solid(); sh_.fill.fore_color.rgb = dk.RGBColor.from_string("FFFFFF")
+r_ = sh_.text_frame.paragraphs[0].add_run(); r_.text = "Fifteen point, weight inherited"
+r_.font.size = _Pt(15); r_.font.color.rgb = dk.RGBColor.from_string("8A8A8A")
+s_ = dk.add_slide(prs)
+sh_ = s_.shapes.add_shape(_MS.RECTANGLE, _In(1), _In(2), _In(6), _In(1.5))
+sh_.fill.solid(); sh_.fill.fore_color.rgb = dk.RGBColor.from_string("FFFFFF")
+r_ = sh_.text_frame.paragraphs[0].add_run(); r_.text = "Twelve point, weight inherited"
+r_.font.size = _Pt(12); r_.font.color.rgb = dk.RGBColor.from_string("8A8A8A")
+inh = td / "inherited.pptx"
+prs.save(str(inh))
+r = subprocess.run([sys.executable, str(ROOT / "scripts" / "lint_deck.py"), str(inh), "--static"], capture_output=True, text=True)
+out = r.stdout + r.stderr
+check(not fired(1), "a run with NO size of its own is not judged as 12pt: {}".format(fired(1)))
+check(not fired(2), "15pt with an inherited weight may be bold (large) — advisory, not held: {}".format(fired(2)))
+check(fired(3), "12pt is normal text at any weight — still held: {}".format(out[-300:]))
+check(not any("12pt" in l_ for l_ in fired(1) + fired(2)), "no size is printed that was not read")
+
 # deckkit's OWN helpers must clear the floor with their defaults — the callout's 11pt bold label
 # was MAGENTA on TINT at 4.27:1, so every deck with a takeaway bar would now be held at hand-off.
 # The label text reaches 4.5:1; the accent BAR keeps the exact accent (it is non-text, 3:1).
@@ -99,6 +129,63 @@ for c_, bg_ in ((dk.MAGENTA, dk.TINT), (dk.GOLD, dk.WHITE), (dk.TEAL, dk.DEEP), 
     got = dk._ink_reaching(c_, bg_, 4.5)
     check(dk.contrast_ratio(got, bg_) >= 4.5, "_ink_reaching #{} on #{} reaches 4.5:1 (got {:.2f})".format(
         c_, bg_, dk.contrast_ratio(got, bg_)))
+
+# callout(fill=None) — an unfilled callout — built before the label ink learned its fill; it must still build, the
+# label in the caller's own accent (there is no fill to measure against)
+try:
+    _p0 = dk.blank_deck(); _s0 = dk.add_slide(_p0)
+    dk.callout(_s0, 0.5, 1.0, 9.0, 0.6, "NOTE", "an unfilled callout", fill=None)
+    _lab0 = [r_ for sh in _s0.shapes if sh.has_text_frame for p_ in sh.text_frame.paragraphs for r_ in p_.runs][0]
+    check(str(_lab0.font.color.rgb) == str(dk.MAGENTA), "callout(fill=None) keeps the accent label: #{}".format(_lab0.font.color.rgb))
+except Exception as e:
+    check(False, "callout(fill=None) builds (it did before this branch): {!r}".format(e))
+
+# Both runtimes say the RIGHT remedy per code: TEXT CONTRAST is 4.5:1 for text (WCAG 1.4.3), not "3:1 … why this mark
+# is decorative" — a non-Claude agent following that text aims for the wrong floor (final review 2026-10-04)
+check(set(ld.A11Y_BLOCKING) <= set(getattr(ld, "A11Y_REMEDY", {})), "every blocking a11y code has a remedy line")
+check("4.5:1" in getattr(ld, "A11Y_REMEDY", {}).get("TEXT CONTRAST", ""), "the TEXT CONTRAST remedy names 4.5:1")
+for _rt in ("codex_delivery_gate.py", "render_deck.py"):
+    _src = (ROOT / "scripts" / _rt).read_text(encoding="utf-8")
+    check("A11Y_REMEDY" in _src, "{} prints the per-code remedy (lint_deck.A11Y_REMEDY)".format(_rt))
+check("WCAG 1.4.11 3:1 floor" not in (ROOT / "scripts" / "codex_delivery_gate.py").read_text(encoding="utf-8"),
+      "the codex gate no longer calls every a11y code a 3:1 mark floor")
+
+# Property: on ANY ground, the inks deckkit picks reach 4.5:1 — black or white always does (>= 4.58:1), so "no ink
+# reaches" is never true; a near-black #111111 pole printed it for #1F8A70 / #E0392B (final review).
+_grid = [dk.RGBColor(r_, g_, b_) for r_ in range(0, 256, 17) for g_ in range(0, 256, 17) for b_ in range(0, 256, 17)]
+_bad_leg = [str(g_) for g_ in _grid if dk.contrast_ratio(dk._legible_ink(g_), g_) < 4.5]
+check(not _bad_leg, "_legible_ink reaches 4.5:1 on every ground of a 16^3 grid: {} fail, e.g. {}".format(len(_bad_leg), _bad_leg[:4]))
+_bad_reach = []
+for g_ in _grid[::7]:
+    for c_ in (dk.MAGENTA, dk.WHITE, dk.GOLD, dk.RGBColor(0x1F, 0x8A, 0x70)):
+        try:
+            if dk.contrast_ratio(dk._ink_reaching(c_, g_, 4.5), g_) < 4.5:
+                _bad_reach.append((str(c_), str(g_)))
+        except ValueError:
+            _bad_reach.append((str(c_), str(g_), "raised"))
+check(not _bad_reach, "_ink_reaching reaches 4.5:1 on every ground (never raises): {}".format(_bad_reach[:4]))
+
+# Every shipped preset: the helpers that set small text on their own fills clear WCAG 1.4.3 (the final review found
+# consort_flow, corner_tab (via eval_matrix), org_tree and segmented_bar held under editorial_paper / consulting / eastern_traditional
+# / luxury_dark / editorial_report / memphis — the default-palette sweep could not see it).
+import presets, sigs, io as _io, contextlib as _cl
+_snap = dk._state_snapshot()
+_held = []
+for _pn in presets.PRESETS:
+    dk._state_restore(_snap)
+    with _cl.redirect_stdout(_io.StringIO()), _cl.redirect_stderr(_io.StringIO()):
+        presets.apply(_pn)
+    _prs = dk.blank_deck(10, 5.625)
+    for _ex in ("consort_flow", "eval_matrix", "org_tree", "segmented_bar"):   # eval_matrix carries corner_tab
+        _sl = _prs.slides.add_slide(_prs.slide_layouts[6])
+        with _cl.redirect_stdout(_io.StringIO()):
+            exec(compile(sigs.EXAMPLES[_ex], _ex, "exec"), {"dk": dk, "s": _sl, "prs": _prs})
+    _sl = _prs.slides.add_slide(_prs.slide_layouts[6]); dk.callout(_sl, 0.5, 1.0, 9.0, 0.6, "NOTE", "a callout")
+    _f = td / "preset-{}.pptx".format(_pn)
+    _prs.save(str(_f))
+    _held += ["{}: {}".format(_pn, l_.strip()[:120]) for l_ in _lint_static(_f)]
+dk._state_restore(_snap)
+check(not _held, "every preset: deckkit's helpers raise no TEXT CONTRAST ({}): {}".format(len(_held), _held[:4]))
 
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_text_contrast] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))

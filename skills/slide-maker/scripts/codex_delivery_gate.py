@@ -68,6 +68,15 @@ def _a11y_codes():
 
 
 STRICT_WARNINGS = _a11y_codes()
+
+
+def _a11y_remedy(code):
+    """lint_deck.A11Y_REMEDY[code] — the same remedy render_deck prints (never a second, drifting copy)."""
+    try:
+        import lint_deck as _ld                     # noqa: PLC0415 - deliberate late import
+        return _ld.A11Y_REMEDY.get(code) or "remediate it"
+    except Exception:
+        return "remediate it"
 ICON_HELPERS = {"icon", "icon_card", "icon_tile", "icon_badge", "icon_ghost"}
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -907,9 +916,9 @@ def check_lint(lint: dict[str, Any], delivery: str, evidence: dict[str, Any], er
                                         ", ".join(str(n) for n in sorted(hit[code])))
                      if hit[code] else "")
             errors.append(
-                f"{code}{where} is below the WCAG 1.4.11 3:1 floor — remediate it, or record a "
-                f"waiver {{\"kind\": \"a11y\", \"warning\": \"{code}\", \"reason\": \"…\"}} saying "
-                f"why this mark is decorative")
+                f"{code}{where} is an accessibility floor — {_a11y_remedy(code)}; or record a waiver "
+                f"{{\"kind\": \"a11y\", \"warning\": \"{code}\", \"reason\": \"…\"}} saying why it is "
+                f"acceptable for this deck's readers")
 
 
 def check_render_selfcheck(

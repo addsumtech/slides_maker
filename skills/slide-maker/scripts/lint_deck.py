@@ -282,6 +282,20 @@ def _slide_bg_box(slide, sw, sh):
             "declared": False, "hollow": False, "motif": False, "bled": False}
 
 
+_A11Y_TITLE_TAG = "deckkit-a11ytitle"
+
+
+def _a11y_title_text(slide):
+    """The text of deckkit.a11y_title()'s screen-reader title when it is the slide's FIRST shape, else None."""
+    try:
+        first = next(iter(slide.shapes))
+    except StopIteration:
+        return None
+    if str(getattr(first, "name", "") or "").startswith(_A11Y_TITLE_TAG) and getattr(first, "has_text_frame", False):
+        return first.text_frame.text.strip() or None
+    return None
+
+
 def _boxes(slide, sw, sh, slide_no=None, record=True):
     out = []
     _bg = _slide_bg_box(slide, sw, sh)
@@ -289,6 +303,8 @@ def _boxes(slide, sw, sh, slide_no=None, record=True):
         out.append(_bg)                                  # index 0 = below every real shape
     for zi, (s, tf, grp) in enumerate(_flat_shapes(slide.shapes, slide_no=slide_no,
                                                   record=record)):
+        if str(getattr(s, "name", "") or "").startswith(_A11Y_TITLE_TAG):
+            continue                                     # deckkit.a11y_title: off-canvas by design, read by the title checks only
         try:
             dx, dy, sx, sy = tf
             l = (s.left * sx + dx) / EMU
@@ -706,8 +722,13 @@ def _nat_width(t):                                       # natural one-line widt
 
 
 def _wcag_normal(size_pt, bold):
-    """WCAG 1.4.3: text that is NOT "large" (>=18pt, or >=14pt bold) — it needs 4.5:1."""
-    return size_pt is not None and not (size_pt >= 18 or (size_pt >= 14 and bold))
+    """WCAG 1.4.3: True only when the run is KNOWN to be normal (not "large": >=18pt, or >=14pt bold) — it needs
+    4.5:1. `size_pt`/`bold` are what the run itself carries (None = inherited, not read): under 14pt it is normal at
+    any weight; 14-18pt is normal only when it is known not bold. Anything not read is not judged — a template title
+    inheriting 28pt was held as "12pt text" (the fallback size) in the final review."""
+    if size_pt is None:
+        return False
+    return size_pt < 14 or (size_pt < 18 and bold is False)
 
 
 def _rbox(t):
@@ -2138,6 +2159,21 @@ A11Y_WCAG = ("NON-TEXT CONTRAST", "ICON CONTRAST", "TEXT CONTRAST")
 A11Y_BLOCKING = ("MISSING ALT-TEXT", "DUPLICATE SLIDE TITLES", "READING ORDER",
                  "NON-TEXT CONTRAST", "ICON CONTRAST", "TEXT CONTRAST")
 
+# What to DO about each held code — one table both runtimes print, so the remedy cannot drift between them (the codex
+# gate called every code "the WCAG 1.4.11 3:1 floor … why this mark is decorative", text included).
+A11Y_REMEDY = {
+    "MISSING ALT-TEXT": "deckkit.alt_text(shape, '<one line>') on each informative image (alt='' only when purely decorative)",
+    "DUPLICATE SLIDE TITLES": "give each slide its own title",
+    "READING ORDER": "add each slide's title FIRST, so the z-order a screen reader follows matches the reading order, "
+                     "or declare it: deckkit.a11y_title(slide, '<title>') sits first, off the canvas",
+    "NO SLIDE TITLE": "deckkit.a11y_title(slide, '<title>') — a title for screen readers, off the canvas, first in order",
+    "NON-TEXT CONTRAST": "raise the mark to 3:1 against what is behind it (WCAG 1.4.11), or, for pure ornament, "
+                         "deckkit.decorative(shape, '<why nothing rides on seeing it>')",
+    "ICON CONTRAST": "recolour the icon to 3:1 against its backing (WCAG 1.4.11)",
+    "TEXT CONTRAST": "set the ink the finding names (it keeps the hue and reaches 4.5:1, WCAG 1.4.3), lighten the fill, "
+                     "or set the text large (18pt, or 14pt bold) — text is never decorative",
+}
+
 SAMENESS_CODES = ("LAYOUT SAMENESS", "SKELETON VARIETY", "CARD DOMINANCE",
                   "BOTTOM-STRIP MONOCULTURE", "TITLE-RULE MONOCULTURE",
                   "ENVELOPE MONOCULTURE", "FLAT RHYTHM")
@@ -3384,13 +3420,13 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
                     msg = (f"LOW CONTRAST: '{snip}' ink #{ink} on fill #{_bk} — {ratio:.2f}:1 "
                            f"(under 3:1, the floor for text at ANY size)")
                     (finds if _res else warns).append(msg)
-                elif ratio < 4.5 and _res and _wcag_normal(_rsz or s["size"], _rb):
+                elif ratio < 4.5 and _res and _wcag_normal(_rsz, _rb):
                     # WCAG 1.4.3 needs NO judgement here: "large text" is >=18pt, or >=14pt BOLD, so text
                     # under 14pt is normal at any weight and needs 4.5:1. This band was a WARN because
                     # "this pass does not collect weight" — weight only matters from 14pt up, and the run's
                     # own size and weight are read now. A 12.5pt caption at 3.38:1 passed the hand-off
                     # a11y gate clean (a docs-only run, 2026-10-03). Held there as TEXT CONTRAST.
-                    _sz_ = _rsz or s["size"]
+                    _sz_ = _rsz                          # read from the run (_wcag_normal needs it)
                     try:                                 # the nearest ink that clears it, hue kept — pasteable
                         _fix = "#{} keeps the hue at 4.5:1".format(_ink_reaching(ink, _bk, 4.5))
                     except ValueError:                   # a mid-toned fill no ink reaches 4.5:1 on
@@ -3844,19 +3880,23 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
         # --- a11y structure [warn]s: slide title presence + reading order (screen readers
         #     navigate by title and read shapes in z-order) ---
         t_idx = _find_title(bx, sh)
-        if t_idx is not None:
+        _a11y_t = _a11y_title_text(slide)               # deckkit.a11y_title: the title, first in order by construction
+        if _a11y_t:
+            titles.append((si + 1, " ".join(_a11y_t.split()).lower(), _a11y_t.replace("\n", " ")[:40]))
+        elif t_idx is not None:
             titles.append((si + 1, " ".join(bx[t_idx]["full"].split()).lower(),
                            bx[t_idx]["full"].replace("\n", " ")[:40]))
-        if si > 0 and any((s["text"] or s["solid"]) and not s["bg"] for s in bx):
+        if si > 0 and not _a11y_t and any((s["text"] or s["solid"]) and not s["bg"] for s in bx):
             if t_idx is None:
                 warns.append("NO SLIDE TITLE: screen readers navigate by titles — give the slide a "
-                             "title (an off-canvas-invisible title is a sanctioned trick for "
-                             "statement slides)")
+                             "title: deckkit.a11y_title(slide, '<title>') adds one off the canvas (nothing "
+                             "is drawn), first in reading order")
             else:
                 first_txt = next((i for i, s in enumerate(bx) if s["text"]), None)
                 if first_txt is not None and first_txt != t_idx:
                     warns.append("READING ORDER: the title is not first in shape order — screen "
-                                 "readers read z-order; reorder so the title is added first")
+                                 "readers read z-order; add the title first, or declare it with "
+                                 "deckkit.a11y_title(slide, '<title>') (first by construction)")
         # --- NON-TEXT CONTRAST [warn] (WCAG 1.4.11): small solid marks (icon discs, chips) and
         #     connector lines vs the resolvable fill BEHIND them. A chip that merely backs a
         #     coincident text label is the text checks' territory; anything unresolvable
@@ -4075,6 +4115,12 @@ except Exception:
 
 if __name__ == "__main__":
     argv = sys.argv[1:]
+    if any(a in ("-h", "--help") for a in argv):         # was an "unrecognised option" error (non-Claude run)
+        print("usage: python3 lint_deck.py DECK.pptx [--selfread | --briefing | --surface | --textheavy | --static]\n"
+              "                            [--renders RENDER_DIR] [--gates GATES.json] [--json OUT.json]\n"
+              "  each delivery mode is also spelled --mode=NAME; renders default to the 'render' folder beside the deck.\n"
+              "  What each code means and its first fix: references/troubleshooting-faq.md")
+        sys.exit(0)
     args = [a for a in argv if not a.startswith("--")]
     mode = "selfread" if any(a in ("--mode=selfread", "--selfread") for a in argv) else "presented"
     if any(a in ("--mode=surface", "--surface") for a in argv):

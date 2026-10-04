@@ -233,8 +233,11 @@ def use(name, prs, *, fonts="both", plan=None, image_dir=None, platform=None, gr
         raise ValueError("visual_languages.use(): fonts must be 'both' (macOS + Windows faces) or 'mac', got {!r}".format(fonts))
     if ground == "auto":
         ground, why = _auto_ground(name, prs)
-        print("[visual_languages] {}: ground {!r} ({}) — {}; record it with --gates {} --ground {}".format(
-            name, ground, VARIANTS[name][ground]["label_zh"], why, name, ground))
+        import shlex as _shq
+        print("[visual_languages] {}: ground {!r} ({}) — {}. Record it (DECK_DIR = the folder the deck is saved in, "
+              "TOPIC = what it is for): python3 {} --gates {} --ground {} --deck DECK_DIR --for TOPIC".format(
+                  name, ground, VARIANTS[name][ground]["label_zh"], why, _shq.quote(str(Path(__file__).resolve())),
+                  name, ground))
     if ground not in VARIANTS[name]:
         raise ValueError("visual_languages.use(): ground must be 'auto' or one of {} for {}, got {!r}".format(
             sorted(VARIANTS[name]), name, ground))
@@ -1007,7 +1010,14 @@ def _page(page):
         if bad:
             raise TypeError("{}.{}(): unknown field(s) {} — this page takes {}".format(self.name, page, sorted(bad),
                                                                                     list(PAGE_FIELDS[page]) + ["image"]))
-        return _compose(self, slide, page, fields, image)
+        out = _compose(self, slide, page, fields, image)
+        # the page's title for screen readers: the kicker is set above it, or the title sits low, so neither lint
+        # reading (a TITLE placeholder, or large text in the top 28%) found it — READING ORDER held the hand-off
+        ttl = (" ".join(str(fields.get(f) or "") for f in ("number", "label")) if page == "data"
+               else fields.get("quote") if page == "quote" else fields.get("title"))
+        if ttl and str(ttl).strip():
+            dk.a11y_title(slide, str(ttl), ea=self.ea_face("display", str(ttl)))   # the kit's own face for its script
+        return out
     fn.__name__ = page
     fn.__doc__ = ("Compose a {} page: keyword fields {} plus image= (a P1 slot id, a file path, or None; the collage "
                   "cover/closing take a list of up to 4). Returns {{'rects': {{field: (x, y, w, h)}}, ...}}; refuses "
@@ -1095,17 +1105,18 @@ _RATIONALE = {"editorial": "photo-led and quiet: big bleed photographs, a serif 
               "storybook": "illustration-led: a watercolour series melting into paper, serif type"}
 
 
-def direction(name, *, fonts="both", ground="light"):
+def direction(name, *, fonts="both", ground="light", W=13.333, H=7.5):
     """A direction for the direction gate (archetypes_html / directions_diversity): this language's tokens
     plus its bundled style SAMPLE (a data URI the preview shows, labelled "style sample — not your
     content"). `vl` marks it STYLED for the diversity check — it never counts as the topic-invented
     bespoke direction the gate also requires. ground= as use(): "light", the contrast ground, or "auto" (the
-    look history decides) — the preview then shows the ground the deck will be built on."""
+    look history decides) — the preview then shows the ground the deck will be built on. W, H: the deck's canvas in
+    inches, which "auto" reads as use() does (a printed board stays light)."""
     import base64
     if name not in LANGS:
         raise KeyError("visual_languages.direction(): unknown language {!r} — one of {}".format(name, sorted(LANGS)))
     if ground == "auto":
-        ground, _why = _auto_ground(name, dk.blank_deck(13.333, 7.5))
+        ground, _why = _auto_ground(name, dk.blank_deck(W, H))
     if ground not in VARIANTS[name]:
         raise ValueError("visual_languages.direction(): ground must be 'auto' or one of {} for {}".format(
             sorted(VARIANTS[name]), name))
@@ -1133,7 +1144,16 @@ def _print_gates(name, deck, topic, fonts, ground="light"):
         print("visual_languages: no language {!r} — one of {}".format(name, sorted(LANGS)), file=sys.stderr)
         return 2
     if ground == "auto":
-        ground, why = _auto_ground(name, dk.blank_deck(13.333, 7.5))
+        # resolve on the BUILT deck's canvas, as use() did — a default 16:9 recorded the contrast ground for an A4
+        # board that use() built light (final review 2026-10-04); no single deck to read means no guess
+        decks = sorted(q for q in Path(str(deck)).glob("*.pptx") if not q.name.startswith("~$"))
+        if len(decks) != 1:
+            print("visual_languages: --ground auto reads the canvas of the built deck, and {} has {} .pptx — pass the "
+                  "ground use() printed when it built the deck (one of: {})".format(
+                      deck, len(decks), ", ".join(VARIANTS[name])), file=sys.stderr)
+            return 2
+        from pptx import Presentation as _P
+        ground, why = _auto_ground(name, _P(str(decks[0])))
         print("# ground 'auto' → {} ({}): {}".format(ground, VARIANTS[name][ground]["label_zh"], why))
     if ground not in VARIANTS[name]:
         print("visual_languages: {} has no ground {!r} — one of {} (or auto)".format(name, ground, sorted(VARIANTS[name])),
@@ -1142,13 +1162,16 @@ def _print_gates(name, deck, topic, fonts, ground="light"):
     p = VARIANTS[name][ground]["palette"]
     pal = "ground #{} ink #{} accents {}".format(p["ground"], p["ink"], " ".join("#" + h for h in p["text_accents"]))
     pick = "bespoke {}".format(name) + (" for {}".format(topic) if topic else "")
-    d = shlex.quote(str(deck))
+    d = shlex.quote(str(Path(str(deck)).resolve()))
+    # the script's ABSOLUTE path: the commands run as printed from any folder (`python3 scripts/deck_gates.py` ran only
+    # from the skill folder; a docs-only agent working in its deck folder path-prefixed every one, 2026-10-04)
+    dg = shlex.quote(str(HERE / "deck_gates.py"))
     print("# record the {} language (shared runtime: <deck>/.deck-gates.json)".format(name))
     if not (Path(str(deck)) / ".deck-gates.json").exists():        # `set` refuses a record that was never made
-        print("python3 scripts/deck_gates.py init {}".format(d))
+        print("python3 {} init {}".format(dg, d))
     for key, val in (("visual_language", name), ("vl_fonts", fonts), ("vl_ground", ground), ("style_pick", pick),
                      ("look_source", "bespoke"), ("palette", pal)):
-        print("python3 scripts/deck_gates.py set {} design_plan.{} {}".format(d, key, shlex.quote(val)))
+        print("python3 {} set {} design_plan.{} {}".format(dg, d, key, shlex.quote(val)))
     print("# Codex runtime: the same six values in .codex-deck-evidence.json as design.visual_language, "
           "design.vl_fonts, design.vl_ground, design.style_pick, design.look_source and design.palette")
     return 0

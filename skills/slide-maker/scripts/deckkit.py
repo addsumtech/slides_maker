@@ -143,6 +143,8 @@ def contrast_ratio(c1, c2):
 
 
 _BLACK = RGBColor(0x11, 0x11, 0x11)   # near-black escalation ink for the muddy mid-luminance band
+_PURE_BLACK = RGBColor(0, 0, 0)       # the last resort: black or white ALWAYS clears 4.58:1, #111111 does not
+                                      # (4.43:1 on #1F8A70 — a preset's accent, final review 2026-10-04)
 
 
 def _legible_ink(bg, light=None, dark=None):
@@ -156,8 +158,11 @@ def _legible_ink(bg, light=None, dark=None):
     dark = DEEP if dark is None else dark
     cw, cd = contrast_ratio(light, bg), contrast_ratio(dark, bg)
     best = light if cw >= cd else dark
-    if contrast_ratio(best, bg) < 4.5 and contrast_ratio(_BLACK, bg) > max(cw, cd):
-        return _BLACK
+    if contrast_ratio(best, bg) < 4.5:
+        for alt in (_BLACK, _PURE_BLACK, WHITE):        # near-black first (the house escalation), then the poles
+            if contrast_ratio(alt, bg) >= 4.5:
+                return alt
+        return max((best, _BLACK, _PURE_BLACK, WHITE), key=lambda c_: contrast_ratio(c_, bg))
     return best
 
 
@@ -222,8 +227,14 @@ def _ink_reaching(color, bg, target=4.5):
     c, g = _as_rgbc(color), _as_rgbc(bg)
     if contrast_ratio(c, g) >= target:
         return c
-    pole = _BLACK if contrast_ratio(_BLACK, g) >= contrast_ratio(WHITE, g) else WHITE
-    if contrast_ratio(pole, g) < target:
+    # toward the pole on the colour's OWN side of the ground (a light accent on a dark card lightens), unless that
+    # pole cannot reach the target there — then the other one (white text on a mid green turns dark). Pure black, not
+    # #111111: black or white always clears 4.58:1, so at 4.5 or 3.0 this never raises.
+    lighter = contrast_ratio(c, _PURE_BLACK) > contrast_ratio(g, _PURE_BLACK)
+    for pole in ((WHITE, _PURE_BLACK) if lighter else (_PURE_BLACK, WHITE)):
+        if contrast_ratio(pole, g) >= target:
+            break
+    else:
         raise ValueError("no ink reaches %.1f:1 on #%s — the ground itself is too mid-toned for text"
                          % (target, g))
     lo, hi = 0.0, 1.0                                    # smallest blend that clears the target
@@ -5665,7 +5676,7 @@ def callout(slide, x, y, w, h, label, body, label_c=MAGENTA, fill=TINT, body_c=D
     # text box spans the card's full height so MSO_ANCHOR.MIDDLE centres on the card's true
     # centre (y + h/2). A y-offset here with the same height would push the text below centre.
     text(slide, x + 0.24, y, w - 0.44, h,
-         [[(label + "  ", 11, _ink_reaching(label_c, fill, _text_floor(11, True)), True, False),
+         [[(label + "  ", 11, label_c if fill is None else _ink_reaching(label_c, fill, _text_floor(11, True)), True, False),
            (body, 12.5, body_c, False, False)]],
          anchor=MSO_ANCHOR.MIDDLE, space_after=0, line_spacing=1.08)
     return y + h   # bottom edge, so callers can keep a margin below
@@ -7041,7 +7052,8 @@ def org_tree(slide, x, y, w, h, root, *, accent=None, node_h=0.42, gap_y=0.42,
                 line=(None if depth == 0 else acc), line_w=1.1, round=True, r=0.08)
         text(slide, nx, ny, node_w, node_h,
              [[(label, label_size if depth == 0 else label_size - 1,
-                _as_rgb(WHITE) if depth == 0 else _as_rgb(DEEP), depth == 0, False, font or FONT)]],
+                _as_rgb(_legible_ink(_as_rgbc(acc))) if depth == 0 else _as_rgb(DEEP), depth == 0, False,
+                font or FONT)]],
              align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
         if kids:
             busy = ny + node_h + gap_y / 2
@@ -7453,6 +7465,72 @@ def small_multiples(slide, x, y, w, h, panels, *, categories=None, cols=None, ki
     return y + rows_n * (ph + 0.24) + (rows_n - 1) * gap
 
 
+A11Y_TITLE_TAG = "deckkit-a11ytitle"
+
+
+def a11y_title(slide, text, *, ea=None):
+    """Give `slide` a title for screen readers and the outline — a TITLE placeholder FIRST in reading order, placed
+    wholly ABOVE the canvas so nothing is drawn. For a statement page, or a page whose visible title is set below a
+    kicker or low on the page (lint_deck's NO SLIDE TITLE / READING ORDER read only a TITLE placeholder, or the first
+    large text in the top 28%). Returns the shape. Refuses empty text, and a slide that already has a title placeholder
+    (put the text in that one). `ea`: the East-Asian face for CJK text (a visual language passes its own); default
+    EAFONT as set_font applies it, else the script's face for this platform.
+
+    The docs called an off-canvas title "the sanctioned trick for statement slides" and nothing made one: a docs-only
+    agent's plain text box above the canvas tripped OFF_CANVAS and DUPLICATE_TEXT and blocked the build (2026-10-04).
+    Both checks skip this shape by its tag.
+
+        dk.a11y_title(s, "How an evening runs")
+    """
+    from pptx.enum.shapes import PP_PLACEHOLDER as _PPH
+    from xml.sax.saxutils import escape as _esc
+    from pptx.oxml import parse_xml as _parse
+    t = " ".join(str(text or "").split())
+    if not t:
+        raise ValueError("a11y_title(): the title text is empty — a screen reader would announce nothing")
+    for sh in slide.shapes:
+        try:
+            if sh.is_placeholder and sh.placeholder_format.type in (_PPH.TITLE, _PPH.CENTER_TITLE):
+                raise ValueError("a11y_title(): this slide already has a title placeholder ({!r}) — put the text in "
+                                 "it".format(sh.name))
+        except (AttributeError, KeyError):
+            continue
+    W, H = _slide_size(slide)
+    h = 0.5
+    sid = slide.shapes._next_shape_id
+    sp = _parse(
+        '<p:sp xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" '
+        'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+        '<p:nvSpPr><p:cNvPr id="{id}" name="{tag}"/><p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr>'
+        '<p:nvPr><p:ph type="title"/></p:nvPr></p:nvSpPr>'
+        '<p:spPr><a:xfrm><a:off x="0" y="{y}"/><a:ext cx="{cx}" cy="{cy}"/></a:xfrm></p:spPr>'
+        '<p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1000"/><a:t>{t}</a:t></a:r></a:p></p:txBody>'
+        '</p:sp>'.format(id=sid, tag=A11Y_TITLE_TAG, y=-int((h + 0.5) * 914400), cx=int(W * 914400),
+                         cy=int(h * 914400), t=_esc(t)))
+    tree = slide.shapes._spTree
+    tree.insert(2, sp)                                   # after nvGrpSpPr + grpSpPr: first in reading order
+    for sh in slide.shapes:
+        if sh.shape_id == sid:
+            # a lining face: the deck's, unless it sets old-style figures (Georgia) — the lining-digits rule reads
+            # every run, drawn or not
+            face = FONT if not has_oldstyle_figures(FONT) else "Arial"
+            for r in sh.text_frame.paragraphs[0].runs:
+                set_font(r, 10, DEEP, font=face)
+                if ea and _has_cjk(t):
+                    _apply_ea(r, ea)
+                elif _has_cjk(t) and r._r.find(".//" + qn("a:ea")) is None:   # EAFONT unset: still a face for its script
+                    scr = script_of(t) or "han"
+                    plat = "mac" if _sys_rg.platform == "darwin" else ("win" if _sys_rg.platform.startswith("win") else "linux")
+                    _apply_ea(r, EA_LINUX[scr] if plat == "linux" else EA_FACES[scr]["sans"][plat])
+            return sh
+    raise RuntimeError("a11y_title(): the title shape was not found after inserting it")
+
+
+def _is_a11y_title(sh):
+    """The off-canvas title a11y_title() made: never content, never a layout fault."""
+    return str(getattr(sh, "name", "") or "").startswith(A11Y_TITLE_TAG)
+
+
 def decorative(shape, reason):
     """Declare a shape PURE DECORATION — nothing a viewer needs to read rides on seeing it — so the
     render gate's NON-TEXT CONTRAST (WCAG 1.4.11, a hard floor at hand-off) does not hold it.
@@ -7526,14 +7604,25 @@ def _low_res_findings(slide, n):
     its crop) are spread under LOW_RES_WARN_PPI over its frame. Vector images (SVG, EMF/WMF) and declared
     pictures (low_res_intent, decorative) are skipped."""
     out = []
+    from pptx.shapes.picture import Picture as _Pic
 
-    def walk(shapes):
+    def _grp_scale(g):
+        """How much a group draws its children larger than their own size (its ext over its chExt)."""
+        try:
+            x = g._element.grpSpPr.find(qn("a:xfrm"))
+            ext, ch = x.find(qn("a:ext")), x.find(qn("a:chExt"))
+            return (int(ext.get("cx")) / max(1, int(ch.get("cx"))), int(ext.get("cy")) / max(1, int(ch.get("cy"))))
+        except Exception:
+            return (1.0, 1.0)
+
+    def walk(shapes, sx=1.0, sy=1.0):
         for sh in shapes:
-            if sh.shape_type == 6:                       # a group: its pictures count too
-                yield from walk(sh.shapes)
-            elif sh.shape_type == 13:
-                yield sh
-    for sh in walk(slide.shapes):
+            if sh.shape_type == 6:                       # a group: its pictures count too, at the size it DRAWS them
+                gx, gy = _grp_scale(sh)
+                yield from walk(sh.shapes, sx * gx, sy * gy)
+            elif isinstance(sh, _Pic):                   # a picture, or a picture PLACEHOLDER holding the user's photo
+                yield sh, sx, sy
+    for sh, sx, sy in walk(slide.shapes):
         try:
             if _declared_lowres(sh):
                 continue
@@ -7542,7 +7631,7 @@ def _low_res_findings(slide, n):
             im = sh.image
             if im.content_type in ("image/x-emf", "image/x-wmf", "image/emf", "image/wmf", "image/svg+xml"):
                 continue
-            w_in, h_in = sh.width / 914400.0, sh.height / 914400.0
+            w_in, h_in = sh.width / 914400.0 * sx, sh.height / 914400.0 * sy
             if max(w_in, h_in) < LOW_RES_MIN_SIDE or min(w_in, h_in) <= 0:
                 continue
             pw, ph = im.size
@@ -7646,6 +7735,9 @@ def declare_delivery(where, mode, builds=None, notes=None):
     """
     import json as _json
     import os as _os                     # deckkit has no module-level `os` — see _ea_face et al.
+    if isinstance(mode, str) and mode.replace("-", "").replace("_", "") in DELIVERY_MODES:
+        mode = mode.replace("-", "").replace("_", "")   # the prose writes "self-read"; the mode is selfread (case kept:
+                                                        # "Presented" stays refused, as test_delivery_record pins)
     if mode not in DELIVERY_MODES:
         raise ValueError("delivery must be one of %s, got %r" % (", ".join(DELIVERY_MODES), mode))
     # 🔴 AFTER the save, never before: this hashes the file ON DISK. Called first, it records a
@@ -8674,7 +8766,8 @@ def consort_flow(slide, x, y, w, h, stages, *, accent=None, ink=None, mute=None,
             eh = 0.30 + 0.20 * len(excl)
             ey = ay + gap / 2 - eh / 2
             box(slide, ex_x, ey, ex_w, eh, fill=ex, line=None, round=True)
-            paras = [[rows[0]]] + [[("  %s  (%s)" % (r, f"{k:,}"), label_size - 0.5, mc, False,
+            rc = _ink_reaching(mc, ex, _text_floor(label_size - 0.5, False))   # the reasons are small text too
+            paras = [[rows[0]]] + [[("  %s  (%s)" % (r, f"{k:,}"), label_size - 0.5, rc, False,
                                      False, font or FONT)] for r, k in excl]
             text(slide, ex_x + 0.14, ey, ex_w - 0.28, eh, paras, space_after=0, line_spacing=1.04)
             connector(slide, (x + bw / 2, ay + gap / 2), (ex_x, ey + eh / 2), color=mc)
@@ -9178,7 +9271,7 @@ def corner_tab(slide, card_x, card_y, card_w, label, *, fill=None, tcolor=None, 
     bottom meets the card's top edge so it reads as attached WITHOUT overlapping into the card (no
     false overlap lint). Build the card first, then call this with the card's x/y/w."""
     f = fill if fill is not None else MAGENTA
-    tc = tcolor if tcolor is not None else WHITE
+    tc = tcolor if tcolor is not None else _legible_ink(_as_rgbc(f))   # 9.5pt bold is normal text: 4.5:1
     bx = card_x + card_w / 2 - w / 2
     ty = card_y - h            # bottom edge meets the card top — attached, not overlapping
     box(slide, bx, ty, w, h, fill=f, round=True, r=h / 2)
@@ -10810,8 +10903,8 @@ def _deck_level_faults(prs):
     for n, slide in enumerate(prs.slides, 1):
         seen = {}
         for sh in slide.shapes:
-            if not getattr(sh, "has_text_frame", False):
-                continue
+            if not getattr(sh, "has_text_frame", False) or _is_a11y_title(sh):
+                continue                                 # the screen-reader title repeats the visible one by design
             t = " ".join((sh.text_frame.text or "").split())
             # long enough to be content rather than a shared token ("是", "N/A", an axis tick)
             if not t or (len(t) < 8 and _cjk_n(t) < 4):
@@ -11172,8 +11265,8 @@ def _lint_layout_impl(prs, *, verbose=True, strict=False, overlap_tol=0.05, esca
                 off = [s for s, c in (("left", ext[0] < -budget), ("top", ext[1] < -budget),
                                       ("right", ext[0]+ext[2] > W+budget+slack),
                                       ("bottom", ext[1]+ext[3] > H+budget+slack)) if c]
-                if off and _declared_bleed(sh):
-                    off = []                     # declared, per shape, with a written reason
+                if off and (_declared_bleed(sh) or _is_a11y_title(sh)):
+                    off = []                     # declared, per shape, with a written reason (or a11y_title's own)
                 if off and not ((is_pic or is_wm) and full_bleed):
                     findings.append((n, "CRITICAL", "OFF_CANVAS",
                         f"{'text' if ink is not None else ('image' if is_pic else 'shape')} extends past the "

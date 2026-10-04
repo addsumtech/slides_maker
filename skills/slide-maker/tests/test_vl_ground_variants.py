@@ -141,6 +141,62 @@ key, why = vl._auto_ground("editorial", poster, taste=taste("F5EFE1", "F2EEE5", 
 check(key == "light" and "print" in why, "a printed board stays light: {} {}".format(key, why))
 k = vl.use("soft", dk.blank_deck(13.333, 7.5), ground="auto")
 check(k.ground in vl.VARIANTS["soft"], "use(ground='auto') resolves to a variant: {}".format(k.ground))
+# auto resolves on the REAL canvas everywhere: use(), direction() and --gates agreed only on 16:9 — an A4 board built
+# light was recorded (and previewed) on the contrast ground (final review 2026-10-04)
+import os as _os, registry as _reg
+_cream = taste("F5EFE1", "F2EEE5", "F4EFE6")
+_orig_tf = _reg.taste_file
+_reg.taste_file = lambda: Path(_cream)
+try:
+    check(vl.use("editorial", dk.blank_deck(8.27, 11.69), ground="auto").ground == "light", "use(): A4 stays light")
+    check(vl.direction("editorial", ground="auto", W=8.27, H=11.69)["vl_ground"] == "light",
+          "direction(ground='auto', W=, H=) resolves on the board's canvas: A4 stays light")
+    check(vl.direction("editorial", ground="auto")["vl_ground"] == "ink", "direction(): 16:9 after cream decks -> ink")
+finally:
+    _reg.taste_file = _orig_tf
+_home = Path(tempfile.mkdtemp())
+(_home / ".slide-maker" / "slide-templates").mkdir(parents=True)
+(_home / ".slide-maker" / "slide-templates" / "taste.md").write_text(Path(_cream).read_text(encoding="utf-8"), encoding="utf-8")
+_env = dict(_os.environ, HOME=str(_home))
+_a4 = Path(tempfile.mkdtemp()); dk.blank_deck(8.27, 11.69).save(str(_a4 / "board.pptx"))
+r_ = subprocess.run([sys.executable, "scripts/visual_languages.py", "--gates", "editorial", "--ground", "auto", "--deck", str(_a4)],
+                    cwd=str(ROOT), capture_output=True, text=True, env=_env)
+check(r_.returncode == 0 and "design_plan.vl_ground light" in r_.stdout,
+      "--gates --ground auto reads the deck's canvas: an A4 board records light: {}".format(r_.stdout[-300:] + r_.stderr[-200:]))
+_wide = Path(tempfile.mkdtemp()); dk.blank_deck(13.333, 7.5).save(str(_wide / "deck.pptx"))
+r_ = subprocess.run([sys.executable, "scripts/visual_languages.py", "--gates", "editorial", "--ground", "auto", "--deck", str(_wide)],
+                    cwd=str(ROOT), capture_output=True, text=True, env=_env)
+check(r_.returncode == 0 and "design_plan.vl_ground ink" in r_.stdout, "...and a 16:9 deck after cream decks records ink: {}".format(r_.stdout[-200:]))
+r_ = subprocess.run([sys.executable, "scripts/visual_languages.py", "--gates", "editorial", "--ground", "auto", "--deck", str(Path(tempfile.mkdtemp()))],
+                    cwd=str(ROOT), capture_output=True, text=True, env=_env)
+check(r_.returncode == 2 and "printed" in r_.stderr, "--ground auto with no built deck refuses (it cannot know the canvas) and "
+      "points to the ground use() printed: {}".format(r_.stderr[-300:]))
+# use()'s hint is a runnable command: the script's path and --deck, not a bare flag
+import io as _io2, contextlib as _cl2
+_buf = _io2.StringIO()
+_reg.taste_file = lambda: Path(_cream)
+try:
+    with _cl2.redirect_stdout(_buf):
+        vl.use("editorial", dk.blank_deck(13.333, 7.5), ground="auto")
+finally:
+    _reg.taste_file = _orig_tf
+check("visual_languages.py --gates editorial --ground ink --deck" in _buf.getvalue() and "python3 " in _buf.getvalue(),
+      "use(ground='auto') prints the record command with the script path and --deck: {}".format(_buf.getvalue()))
+# --gates prints commands that RUN AS PRINTED from wherever the agent is (a docs-only agent ran them from its own deck
+# folder and had to path-prefix every one: they said `python3 scripts/deck_gates.py`, 2026-10-04)
+_elsewhere = Path(tempfile.mkdtemp())
+_deckdir = Path(tempfile.mkdtemp()) / "my deck 菜园"
+_deckdir.mkdir()
+r_ = subprocess.run([sys.executable, str(ROOT / "scripts" / "visual_languages.py"), "--gates", "collage", "--ground", "slate",
+                     "--deck", str(_deckdir), "--for", "a repair café"], cwd=str(_elsewhere), capture_output=True, text=True)
+_cmds = [l_ for l_ in r_.stdout.splitlines() if l_.startswith("python3 ")]
+check(r_.returncode == 0 and len(_cmds) >= 6, "--gates printed its commands: {}".format(r_.stdout[-300:] + r_.stderr[-200:]))
+for _c in _cmds:
+    _rr = subprocess.run(_c, shell=True, cwd=str(_elsewhere), capture_output=True, text=True)
+    check(_rr.returncode == 0, "printed command runs as printed from another folder: {} -> {}".format(_c[:90], (_rr.stdout + _rr.stderr)[-200:]))
+import json as _js
+_rec = _js.loads((_deckdir / ".deck-gates.json").read_text(encoding="utf-8")) if (_deckdir / ".deck-gates.json").exists() else {}
+check((_rec.get("design_plan") or {}).get("vl_ground") == "slate", "...and the record holds vl_ground slate: {}".format(_rec.get("design_plan")))
 # the direction preview and the record name the variant
 d_ = vl.direction("editorial", ground="ink")
 check(d_["bg"].lstrip("#").upper() == vl.VARIANTS["editorial"]["ink"]["palette"]["ground"] and d_["sample"] != vl.direction("editorial", ground="light")["sample"],

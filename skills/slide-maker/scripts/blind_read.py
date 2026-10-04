@@ -598,6 +598,12 @@ def faults(rec, slide_count=None) -> list[str]:
     out: list[str] = []
     if not isinstance(rec, dict):
         return [MISSING]
+    if str(rec.get("waived_category") or "").strip() and not is_waived(rec):
+        # a half-made waiver: the category is claimed but the reason was put elsewhere (a docs-only agent kept
+        # answers/findings beside it and only heard "answers is missing", 2026-10-04)
+        return ["a waiver needs `waived` (the reason) beside `waived_category` — replace answers/findings with "
+                '{"waived": "<why no independent reader read this deck>", "waived_category": "%s"}'
+                % str(rec.get("waived_category")).strip()]
     answers = rec.get("answers")
     if not isinstance(answers, list) or not answers:
         out.append("`answers` is missing — one answer object per slide, from a reader that was not "

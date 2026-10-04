@@ -68,6 +68,9 @@ k.closing(k.new_slide(), title="Bring one broken thing.", line="And bring a neig
   East-Asian face — never type a font name — and sets digits in a LINING face where the language's face has
   old-style figures (Georgia), so "Repair café 2026" never bobs.
 - **Any canvas:** every page has a landscape and a portrait layout (portrait when W < 1.2 H).
+- **Screen readers:** every page declares its title with `deckkit.a11y_title` (the quote page: the quote; the data
+  page: number + label) — first in reading order, above the canvas, nothing drawn — so a kicker set above the title
+  never trips READING ORDER. Ordinary `k.new_slide()` pages need their own title (or `dk.a11y_title`).
 
 ## Grounds
 
@@ -83,9 +86,9 @@ Each language has its own light paper and ONE contrast ground; every text ink pa
 `use(name, prs, ground=…)`: `"light"` (the default — the same deck on every machine), the contrast key, or
 `"auto"` — the light ground unless the last three decks in your look history already sit on it (the
 register-pixels GROUND REPEAT distance), then the contrast one; a printed board (A4, the A0/A1 posters) always
-stays light, and no history means light. `auto` prints what it chose and the `--gates … --ground …` to record
-it. `vl.direction(name, ground="auto")` shows the sample of that same ground, so the picked preview and the
-built deck agree. `python3 scripts/visual_languages.py --list` lists every language's grounds.
+stays light, and no history means light. `auto` prints what it chose and the `--gates … --ground …` command that
+records it (fill in its `DECK_DIR` and `TOPIC`). `vl.direction(name, ground="auto", W=…, H=…)` — the deck's canvas in
+inches, 13.333 x 7.5 by default — shows the sample of that same ground, so the picked preview and the built deck agree. `python3 scripts/visual_languages.py --list` lists every language's grounds.
 
 ## Fonts
 
@@ -114,7 +117,9 @@ never chosen. CJK runs are never italic; a collage CJK headline is bold (Impact 
 ## Record and gates
 
 `python3 scripts/visual_languages.py --gates collage --ground slate --deck <deck> --for "a neighbourhood repair café"`
-(`--ground` = the ground the deck was built on; `auto` resolves as `use()` does) prints the exact commands,
+(`--ground` = the ground the deck was built on; the commands carry `deck_gates.py`'s full path, so they run as
+printed from any folder; `auto` reads the canvas of the one built `.pptx` in `--deck` and
+resolves as `use()` did — with no built deck it refuses, so pass the ground `use()` printed) prints the exact commands,
 with that ground's own hex codes in the palette (the register-pixels gate holds a palette that never reached a
 pixel, so never type them yourself):
 

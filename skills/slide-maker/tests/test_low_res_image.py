@@ -70,6 +70,37 @@ try:
 except Exception:
     pass
 
+# A picture PLACEHOLDER filled with the user's photo (the template path, where low-res sources are likeliest) and a
+# picture inside a SCALED group are measured at the size they are drawn (final review 2026-10-04: both were silent).
+from PIL import Image as _Im
+from pptx import Presentation as _Pr
+from pptx.util import Inches as _In
+_Im.new("RGB", (400, 300), (200, 80, 60)).save(str(td / "small400.png"))
+_pp = _Pr()
+_pp.slide_width, _pp.slide_height = _In(13.333), _In(7.5)
+_ps = _pp.slides.add_slide(_pp.slide_layouts[8])                 # "Picture with Caption": a picture placeholder
+_ph = [q for q in _ps.placeholders if q.placeholder_format.type == 18][0]
+_ph.width, _ph.height = _In(6), _In(4.5)
+_ph.insert_picture(str(td / "small400.png"))
+_f = dk._low_res_findings(_ps, 1)
+check(_f and _f[0][1] == "WARN" and "67 ppi" in _f[0][3], "a 400x300 photo in a 6x4.5in picture placeholder (67 ppi) warns: {}".format(_f))
+_gp = dk.blank_deck(13.333, 7.5)
+_gs = dk.add_slide(_gp)
+_g = _gs.shapes.add_group_shape()
+_g.shapes.add_picture(str(td / "small400.png"), _In(0), _In(0), _In(4), _In(3))
+_gx = _g._element.grpSpPr.find(dk.qn("a:xfrm"))
+_gx.ext.cx, _gx.ext.cy = _In(10), _In(7.5)                       # drawn at 10x7.5in ...
+_gx.chExt.cx, _gx.chExt.cy = _In(4), _In(3)                      # ... from a 4x3in child space
+_f = dk._low_res_findings(_gs, 1)
+check(_f and "40 ppi" in _f[0][3] and "10.0x7.5in" in _f[0][3], "a picture in a group scaled 2.5x is measured as drawn (40 ppi): {}".format(_f))
+_gs2 = dk.add_slide(_gp)
+_g2 = _gs2.shapes.add_group_shape()
+_g2.shapes.add_picture(str(td / "small400.png"), _In(0), _In(0), _In(10), _In(7.5))
+_gx2 = _g2._element.grpSpPr.find(dk.qn("a:xfrm"))
+_gx2.ext.cx, _gx2.ext.cy = _In(4), _In(3)                        # a 10in child drawn at 4in: 100 ppi, fine
+_gx2.chExt.cx, _gx2.chExt.cy = _In(10), _In(7.5)
+check(not dk._low_res_findings(_gs2, 2), "a group scaled DOWN is not flagged at its child size: {}".format(dk._low_res_findings(_gs2, 2)))
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_low_res_image] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)

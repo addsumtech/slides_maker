@@ -88,6 +88,25 @@ pic = dk.picture(s, str(bg), 0, 0, 10, 5.625, fit="cover", alt="a blue field")
 g = dk.frosted_panel(s, pic, 5.4, 0.8, 4.0, 2.2)
 check(getattr(g, "alpha", None) is not None, "frosted_panel reports the wash it used (.alpha)")
 
+# Restricted non-Claude run (2026-10-04), docs + printed output only:
+# (1) the runbook said "claim waived_category: no-reader"; the agent kept answers/findings beside it and the gate only
+#     said "answers is missing" — a half-made waiver now says which field it lacks and the whole shape
+import blind_read as _br
+_hf = _br.faults({"waived_category": "no-reader", "answers": "no reader here", "findings": "n/a"}, 3)
+check(_hf and "waived" in _hf[0] and "no-reader" in _hf[0] and "answers" not in _hf[0].split("—")[0],
+      "a half-made blind_read waiver names the missing `waived` field: {}".format(_hf[:1]))
+# (2) the prose spells it "self-read"; the enum is "selfread" — the hyphenated word is the same mode
+_dd = Path(tempfile.mkdtemp())
+try:
+    dk.declare_delivery(str(_dd), "self-read")
+    check("selfread" in (_dd / ".deck-gates.json").read_text(encoding="utf-8"), "declare_delivery('self-read') records selfread")
+except Exception as e:
+    check(False, "declare_delivery('self-read') is accepted as selfread: {!r}".format(e))
+# (3) lint_deck.py --help prints its usage and exits 0 (it was an "unrecognised option" error)
+import subprocess as _sp
+_r = _sp.run([sys.executable, str(ROOT / "scripts" / "lint_deck.py"), "--help"], capture_output=True, text=True)
+check(_r.returncode == 0 and "--renders" in _r.stdout, "lint_deck.py --help: rc {} {}".format(_r.returncode, (_r.stdout + _r.stderr)[:160]))
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_followup_minors] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)

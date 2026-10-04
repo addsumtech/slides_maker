@@ -171,8 +171,11 @@ Render-time **advisory `[warn]`s** (never fail the exit code): `LOW CONTRAST` / 
 **`UNSOURCED NUMBER`** — plus the
 **accessibility set**: `TEXT-ON-IMAGE CONTRAST` (the 1.5–3.0 band of the hard check above),
 `NO SLIDE TITLE` / `DUPLICATE SLIDE TITLES` (screen readers navigate by unique titles; an
-off-canvas-invisible title is the sanctioned trick for statement slides), `READING ORDER` (title
-should be first in z-order — add it first in the build code), `NON-TEXT CONTRAST` (solid marks/lines
+off-canvas-invisible title is the sanctioned trick for statement slides —
+`deckkit.a11y_title(slide, "<title>")` makes it: a TITLE placeholder above the canvas, first in reading order,
+skipped by OFF_CANVAS and DUPLICATE_TEXT; a plain text box there is an OFF_CANVAS critical), `READING ORDER` (title
+should be first in z-order — add it first in the build code, or declare it with `a11y_title`; every
+visual-language page does this itself), `NON-TEXT CONTRAST` (solid marks/lines
 < 3:1 vs backing, WCAG 1.4.11), and `ICON CONTRAST` (the same floor for a recolored
 monochrome icon; it is reported separately because icons are pictures and the shape-based
 check skips them — the remedy is a darker tone of the same hue, or a plate under the icon).

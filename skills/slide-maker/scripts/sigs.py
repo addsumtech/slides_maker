@@ -356,6 +356,8 @@ EXAMPLES = {
     "sticker_outline": 'import image_fx\n'
                        'st = image_fx.sticker_outline("cutout.png")      # needs a transparent cut-out\n'
                        'dk.picture(s, st, 6.6, 0.6, 2.6, 3.4, fit="contain", alt="a cut-out subject")',
+    "a11y_title": 'dk.text(s, 0.6, 3.6, 8.8, 1.0, [[("Bring it broken, take it home working", 34, dk.DEEP, True, False)]])\n'
+                  'dk.a11y_title(s, "Bring it broken, take it home working")   # the title screen readers navigate by',
     "decorative": 'import ornaments as orn\n'
                   't = orn.tape(s, 6.0, 4.4, 1.6, 0.42, "F2D16B")     # pale tape on the page ground\n'
                   'dk.decorative(t, "washi tape is ornament; no meaning rides on seeing it")',
