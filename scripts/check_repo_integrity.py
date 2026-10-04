@@ -91,6 +91,37 @@ def untracked_ci_paths():
     return out
 
 
+def workflow_parse_problems():
+    """A workflow GitHub cannot parse runs NOTHING — and reports "a workflow file issue", not a red test. Three step
+    names written as `- name: Deferred minors: state restore, …` (an unquoted ': ' inside a plain YAML scalar) did
+    exactly that on a push whose every local check was green, because no local check parsed the file (2026-10-04).
+    PyYAML parses it when it is installed (this step runs before `pip install`); the step-name rule always runs."""
+    out = []
+    wf = os.path.join(ROOT, ".github", "workflows")
+    if not os.path.isdir(wf):
+        return out
+    name_pat = re.compile(r"^\s*-?\s*name:\s+(?![\"'|>])(.*)$")
+    try:
+        import yaml
+    except ImportError:
+        yaml = None
+    for fn in sorted(os.listdir(wf)):
+        if not fn.endswith((".yml", ".yaml")):
+            continue
+        path = os.path.join(wf, fn)
+        text = open(path, encoding="utf-8", errors="ignore").read()
+        for n, line in enumerate(text.splitlines(), 1):
+            m = name_pat.match(line)
+            if m and (": " in m.group(1) or m.group(1).rstrip().endswith(":")):
+                out.append((fn, n, "step name has an unquoted ': ' — quote it or use ' — ': %s" % line.strip()[:90]))
+        if yaml is not None:
+            try:
+                yaml.safe_load(text)
+            except Exception as e:                      # noqa: BLE001 — any parse failure is the finding
+                out.append((fn, 0, "does not parse as YAML: %s" % str(e).replace("\n", " ")[:160]))
+    return out
+
+
 def main():
     global ROOT
     r = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True)
@@ -109,12 +140,15 @@ def main():
         bad.append("UNTRACKED CI PATH    %s runs `%s`, which is not tracked by git — the step "
                    "cannot work on a fresh clone." % (wf, path))
 
+    for wf, n, why in workflow_parse_problems():
+        bad.append("WORKFLOW UNPARSEABLE %s%s: %s — GitHub would run no job at all." % (wf, (":%d" % n) if n else "", why))
+
     if bad:
         print("%d repo-integrity problem(s):\n" % len(bad))
         for b in bad:
             print("  " + b + "\n")
         return 1
-    print("repo integrity ok — no ignored source files, every CI script path is tracked")
+    print("repo integrity ok — no ignored source files, every CI script path is tracked, every workflow parses")
     return 0
 
 

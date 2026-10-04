@@ -1306,14 +1306,14 @@ jobs:
           grep -qE "\\] ok$" /tmp/ea_script_face.log || {
             echo "::error::test_ea_script_face did not run to completion"; exit 1; }
 
-      - name: Deferred minors: state restore, slot hints, overflow total, cut-out refusal
+      - name: Deferred minors — state restore, slot hints, overflow total, cut-out refusal
         run: |
           set -o pipefail
           python tests/test_followup_minors.py | tee /tmp/followup_minors.log
           grep -qE "\\] ok$" /tmp/followup_minors.log || {
             echo "::error::test_followup_minors did not run to completion"; exit 1; }
 
-      - name: Image-series minors: labels, slot cross-checks, stale qc, paths, size/moderation
+      - name: Image-series minors — labels, slot cross-checks, stale qc, paths, size/moderation
         run: |
           set -o pipefail
           python tests/test_image_series_minors.py | tee /tmp/image_series_minors.log
@@ -1334,7 +1334,7 @@ jobs:
           grep -qE "\\] ok$" /tmp/a11y_title.log || {
             echo "::error::test_a11y_title did not run to completion"; exit 1; }
 
-      - name: Codex gate: a user-named look records design.direction branch user-named
+      - name: Codex gate — a user-named look records design.direction branch user-named
         run: |
           set -o pipefail
           python tests/test_direction_user_named.py | tee /tmp/direction_user_named.log
