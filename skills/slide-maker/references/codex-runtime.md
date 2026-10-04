@@ -22,7 +22,9 @@ The adapter has two kinds of rules:
   frame with no image in it are not judgment calls. If a bar genuinely should not be measured,
   do not tag it — an untagged bar is unchecked, which is an honest state, unlike a waived one.
 - **Accessibility floors (`STRICT_WARNINGS`): remediate or waive, never ignore.** `ICON CONTRAST`
-  and `NON-TEXT CONTRAST` are WCAG 1.4.11's 3:1 floor for marks that carry meaning. They arrive as
+  and `NON-TEXT CONTRAST` are WCAG 1.4.11's 3:1 floor for marks that carry meaning. `TEXT CONTRAST` is
+  WCAG 1.4.3's 4.5:1 for text under 14pt, or under 18pt and not bold, on a fill — the finding names the
+  nearest ink that keeps the hue; use it. The set is `lint_deck.A11Y_BLOCKING`, read by both runtimes. They arrive as
   per-slide *warnings*, a stream the gate previously had no strict path for at all — so a deck
   could ship an icon at 2.69:1 and pass. To waive one, record
   `{"kind": "a11y", "warning": "<CODE>", "reason": "<why this mark is decorative>"}`; a decorative

@@ -1678,6 +1678,8 @@ A few rules that matter (see `references/design-principles.md`):
   script: `visual_languages.use(name, prs)` gives the palette, system fonts (both platforms by default,
   per script for CJK) and ground, and its six page functions lay out your own copy and images — never
   hand-roll those pages. Record `design_plan.visual_language`; the delivery gate checks it was applied.
+  Build with `ground="auto"` (light paper, or the language's contrast ground when your last decks already
+  sit on light paper) and record what it printed with `visual_languages.py --gates NAME --ground G`.
 - **Use the source's own figures, WHOLE — integral is the default.** For *any* deck
   (research, work, exec, teaching): if the source — paper, report, doc, existing slide, or a
   chart already produced from the code/data — has a figure (architecture, results, a plot),
@@ -2154,6 +2156,8 @@ monochrome icon vs its backing — icons are PICTURES, so the check above cannot
 include **TEXT ON IMAGE** — a render-pixel contrast estimate (<1.5:1) for text sitting on a
 photo/gradient with no opaque backing, exactly the class solid-fill contrast checks can't see;
 its 1.5–3.0 band is the TEXT-ON-IMAGE CONTRAST `[warn]`.
+**TEXT CONTRAST** (WCAG 1.4.3) is in the accessibility set too: text under 14pt, or under 18pt and not bold,
+below 4.5:1 on a fill is held at hand-off (not advisory), and the finding names the nearest ink that keeps the hue.
 
 **🔴 RECORD the delivery mode once, in the build script, instead of retyping a flag:**
 `dk.declare_delivery(OUT, "selfread")` beside `prs.save(OUT)` — one of `presented` · `textheavy` ·

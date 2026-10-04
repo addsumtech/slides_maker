@@ -9,6 +9,61 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+### Visual languages: a contrast ground each, chosen against your recent decks
+
+Every visual language now has its own light paper and ONE contrast ground — `editorial` on warm-black
+`ink`, `soft` on plum-indigo `dusk`, `collage` on dark-grey `slate`, `storybook` on green `meadow` paper —
+each with inks that pass 4.5:1 on its ground and its cards. `vl.use(name, prs, ground="auto")` reads the
+look history and takes the contrast ground when the last three decks already sit on the light one (the
+register-pixels GROUND REPEAT distance); a printed board always stays light, and no history means light.
+`auto` prints what it chose and the `--gates … --ground …` command that records it; the gate on both
+runtimes validates the recorded `vl_ground`. `--sample` builds both grounds; the watercolours are tinted
+onto the meadow paper rather than leaving pale patches.
+
+### Low-resolution images are caught at build time
+
+A picture whose effective resolution on the slide is under 72 ppi is a `LOW_RES_IMAGE` warning, under
+36 ppi a critical (long side 1.5in or more, crops applied, vector and declared-decorative images exempt;
+`dk.low_res_intent(shape, reason)` records a deliberate one). Read by both runtimes.
+
+### Small text must clear 4.5:1 — and deckkit's own helpers now do
+
+`lint_deck` reads each run's size and weight, so WCAG 1.4.3 needs no guess: text under 14pt, or under 18pt
+and not bold, needs 4.5:1 on a resolved backing. It is `TEXT CONTRAST`, held at hand-off with the other
+a11y floors (a 12.5pt caption at 3.38:1 used to pass the gate). The callout label and `consort_flow`'s
+exclusion label were themselves 4.27:1 (accent on tint): their text is now moved the least distance that
+reaches the floor (E3004F → DC014D), while the accent bar keeps the exact accent. The collage language's
+washi tape is declared decorative — it was a NON-TEXT CONTRAST on every collage page.
+
+### Measurement: over-wide words and the text inset
+
+A token wider than the line (a URL, an identifier, "99.9%" at display size, a long German compound) is
+measured the way the renderer breaks it — at `/ . _ - ? & =`, then per character, on a new line — instead
+of as one line. `measure_text` and `fit_text_size` subtract the text box's own left/right inset, which is
+why a Japanese headline that measured one line rendered two.
+
+### render_deck and lint
+
+`render_deck.py --help`; renders land beside the deck by default (where the gates read them); a `--slides`
+list that covers every slide is a full render, not a probe; printed next-step commands are quoted. The
+13.333x7.5 PowerPoint page is a registered canvas (`wide13`). `TEXT NOT VISIBLE` models paragraph spacing,
+text-on-image contrast honours a highlight, and a rotated overlapping pair is reported once.
+
+### East-Asian faces follow the script
+
+A run the deck's East-Asian face cannot draw — Korean under a Chinese face (Hiragino Sans GB has no
+Hangul) — gets that script's face of the same register, read from the installed face's character map, in
+`text()` and `retrofit_ea`; `CJK_NO_EA` now names a face for the deck's own script.
+
+### Smaller fixes
+
+An explicit `generate_images_openai.py --size` is honoured (each item's aspect picks the size only when it
+is left off) and `--moderation` is sent to generations only; image-series prompts carry absolute paths; the
+series gate reads labels as whole, non-negated words and notes a slot placed twice, on another slide, or a
+qc report older than its images; a visual-language image that is neither a file nor a slot says how to
+pass the plan (or lists the plan's slots); the overflow refusal leads with the total height.
+
+
 ### CJK line ends are measured the way the renderer sets them
 
 `measure_text` (and every lint check that counts lines) now follows how LibreOffice breaks CJK lines
