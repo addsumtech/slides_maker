@@ -21,6 +21,7 @@ its own imports.
 """
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -124,11 +125,24 @@ class Kit:
         return dk.RGBColor.from_string(_hex(v))
 
     def run(self, text, size, color=None, bold=False, role="body", italic=False):
+        """One run in the language: its face for `role`, the script's East-Asian face, no CJK italics. A run that
+        is mostly digits is set in a LINING face when the role's face has old-style figures (Georgia)."""
         cjk = dk._has_cjk(text)
         if cjk and role in ("display", "numeral") and self.L.get("ea_heavy"):
             bold = True                      # Impact/Arial Black have no CJK: the EA face carries the weight
         return (text, size, color or self.color("ink"), bold, italic and not cjk,   # Chinese has no italics
-                self.face(role), self.ea_face(role, text))
+                dk.numeral_run_face(text, self.face(role)), self.ea_face(role, text))
+
+    def runs(self, text, size, color=None, bold=False, role="body", italic=False):
+        """The runs of one paragraph: run(), with every digit sequence inside an OLD-STYLE figure face (Georgia)
+        split into a run in a lining face of the same register — "Repair café 2026" never bobs (final review,
+        2026-10-04; lining figures always). Use it for any text that may contain digits."""
+        r = self.run(text, size, color, bold, role, italic)
+        if not any(c.isdigit() for c in text) or not dk.has_oldstyle_figures(r[5]):
+            return [r]
+        lining = dk.numeral_face(r[5])
+        return [((part,) + r[1:5] + ((lining if part[0].isdigit() else r[5]),) + r[6:])
+                for part in re.split(r"(\d(?:[\d,.:/%\u2013-]*\d)?%?)", text) if part]
 
     def new_slide(self):
         """A slide in the language: paints the language's ground (its grain, where it has one) and names the
@@ -166,6 +180,7 @@ def use(name, prs, *, fonts="both", plan=None, image_dir=None, platform=None):
                    eafont=EA_FACES["han"][k.L["ea"]["body"]][k.platform],
                    eadisplay=EA_FACES["han"][k.L["ea"]["display"]][k.platform])
     dk.set_ground(_hex(p["ground"]))
+    dk.HANG_PUNCT = dk.deck_hangs_punct(prs)     # CJK line ends follow what THIS deck declares
     return k
 
 
@@ -344,9 +359,33 @@ def _canvas(k):
     return k.prs.slide_width / 914400.0, k.prs.slide_height / 914400.0
 
 
+def _unbreakable_overwide(k, field, text, size, w):
+    """The first word the renderer cannot keep whole AND will not break sensibly: a Latin token (identifier,
+    URL, compound) wider than the column. A Korean word that is too wide breaks between syllables and is
+    measured that way; Chinese/Japanese break between characters. None when every such word fits."""
+    import display_type as dt
+    if dk._has_cjk(text) and not any(dk._is_hangul(ord(c)) for c in text):
+        return None
+    role, bold = TYPE[k.name][field][1], TYPE[k.name][field][2]
+    for word in text.split():
+        if dk._has_cjk(word):
+            continue
+        if (dt._glyph_width(word, size, k.face(role), bold) or 0) > w - _INSET:
+            return word
+    return None
+
+
+def _outlinable(k, text):
+    """A collage numeral is drawn as an outlined picture only when its face is installed here and draws every
+    character; otherwise it is a text run (the EA face for CJK) — never tofu, never a refused page on a machine
+    without Impact (Linux, 2026-10-04)."""
+    import display_type as dt
+    return k.name == "collage" and len(text) <= 6 and dt.covers(k.face("numeral"), text)
+
+
 def _field_height(k, field, text, size, w):
     _sz, role, bold = size, TYPE[k.name][field][1], TYPE[k.name][field][2]
-    if field == "number" and k.name == "collage" and len(text) <= 6:
+    if field == "number" and _outlinable(k, text):
         return size / 72.0 * 1.0                                   # an outlined picture, one line
     runs = [(text, bold)]
     # measure East-Asian text with the EA face it renders in: a Latin face's metrics made a Korean quote
@@ -383,15 +422,24 @@ def _break_lines(k, field, text, size, w):
     korean = any(dk._is_hangul(ord(c)) for c in text)     # wraps at spaces, like Latin (LibreOffice probe)
     units, joiner = (list(text), "") if cjk and not korean else (text.split(" "), " ")
     limit = w - _INSET
-    may_hang = (cjk and not korean and not any(c.isascii() and c.isalnum() for c in text)
+    may_hang = (dk.HANG_PUNCT and cjk and not korean and not any(c.isascii() and c.isalnum() for c in text)
                 and limit >= 2 * size / 72.0)
     cjk = cjk and not korean                               # below: per-character CJK rules only
 
     def width(s_):
         return dt._glyph_width(s_, size, face, bold, italic) or 0
+    # (separator, unit) pairs; a Korean word wider than the whole line goes in as syllables — the renderer
+    # breaks it between them ("인공지능기반의 / 료영상재구성", final review 2026-10-04)
+    toks = []
+    for i_, u in enumerate(units):
+        sep = joiner if i_ else ""
+        if korean and len(u) > 1 and width(u) > limit:
+            toks += [(sep if j_ == 0 else "", c_) for j_, c_ in enumerate(u)]
+        else:
+            toks.append((sep, u))
     lines, cur = [], ""
-    for u in units:
-        nxt = (cur + joiner + u) if cur else u
+    for sep, u in toks:
+        nxt = (cur + sep + u) if cur else u
         if not cur or width(nxt) <= limit:
             cur = nxt
         elif may_hang and u in dk._CJK_HANG and width(cur) <= limit:
@@ -552,6 +600,10 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None):
     for f, t in items:
         while sizes[f] > floors[f] and not _widest_word_fits(k, f, t, sizes[f], w):
             sizes[f] = max(floors[f], sizes[f] * 0.94)
+        bad = _unbreakable_overwide(k, f, t, sizes[f], w) if not (f == "number" and _outlinable(k, t)) else None
+        if bad:                           # it would break mid-word and run into the next field (final review)
+            raise VLTextOverflow("{}.{}(): the {}'s word {!r} is wider than the {:.2f}in column even at the floor size "
+                                 "{:.0f}pt — shorten it, or break it with a space".format(k.name, page, f, bad, w, sizes[f]))
     guard = 0
     while total() > h and guard < 200:
         guard += 1
@@ -604,18 +656,18 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None):
             if underlay and f in underlay:
                 underlay[f]((fx, fy, fw, fh))
             color = k.color("text_accents") if ckey == "accent" else k.color("ink")
-            if f == "number" and k.name == "collage" and len(t) <= 6:
+            if f == "number" and _outlinable(k, t):
                 import display_type as dt
                 dt.outlined(slide, fx, fy, fw, fh, t, color=_hex(k.L["palette"]["text_accents"][0]), face=k.face("numeral"))
                 continue
             if f in phrased:
-                dk.text(slide, fx, fy, fw, fh, [[k.run(l_, sz, color, bold, role, italic)] for l_ in phrased[f]],
+                dk.text(slide, fx, fy, fw, fh, [k.runs(l_, sz, color, bold, role, italic) for l_ in phrased[f]],
                         align=al, space_after=0)
                 continue
-            run = k.run(t, sz, color, bold, role, italic)
+            rr = k.runs(t, sz, color, bold, role, italic)
             if f == "kicker" and k.name == "collage":
-                run = dk.mark(run, _hex(k.L["palette"]["accents"][0]))
-            dk.text(slide, fx, fy, fw, fh, [[run]], align=al)
+                rr = [dk.mark(x, _hex(k.L["palette"]["accents"][0])) for x in rr]
+            dk.text(slide, fx, fy, fw, fh, [rr], align=al)
     return rects, draw
 
 
@@ -783,6 +835,17 @@ def _compose(k, slide, page, fields, image):
                          "is never what was meant; pass the words)".format(k.name, page))
     if page == "quote" and fields.get("quote"):
         items = [("mark", "“")] + [it for it in items if it[0] != "mark"]
+    if page == "image_text" and image is None:
+        raise ValueError("{}.image_text(): image= is required — the page IS a picture beside its text (for text "
+                         "alone use section() or quote())".format(k.name))
+    if isinstance(image, (list, tuple)):          # never silently drop a picture the caller passed
+        cap = 4 if lay["treat"] == "collage" else 1
+        if not image:
+            raise ValueError("{}.{}(): image= is an empty list — pass a path or slot id, or None".format(k.name, page))
+        if len(image) > cap:
+            raise ValueError("{}.{}(): {} images given but this page places {} — {}".format(
+                k.name, page, len(image), cap, "a collage takes 1 to 4" if cap == 4 else
+                "pass one image (only the collage cover and closing take a list)"))
     if image is not None and lay["image"]:
         img_rect = _frac(lay["image"], W, H)
         col = _frac(lay["col"], W, H) if lay["col"] else None        # None: a bleed image measures its panel

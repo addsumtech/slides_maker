@@ -15,6 +15,22 @@ def check(cond, msg):
 
 import deckkit as dk, register_surface as rs
 import visual_languages as vl
+# Face-precise checks: their expected values were MEASURED with the macOS faces (and the both-platform ones).
+# The ubuntu CI runner has none of them — every name resolves to a DejaVu stand-in there — so those checks
+# record a SKIP, printed at the end, instead of failing on the stand-in's widths. Everything else runs.
+FACES_HERE = sys.platform == "darwin" and not any(dk._font_substituted(f) for f in (
+    "Georgia", "Impact", "Arial Black", "Trebuchet MS", "Songti SC", "Hiragino Sans GB", "AppleMyungjo",
+    "Apple SD Gothic Neo"))
+skipped: list[str] = []
+
+
+def check_mac(cond, msg):
+    if FACES_HERE:
+        check(cond, msg)
+    else:
+        skipped.append(msg)
+
+
 check(set(vl.LANGS) == {"editorial", "soft", "collage", "storybook"}, "four languages")
 MAC_ONLY = {"Didot", "Bodoni 72", "Baskerville", "Arial Rounded MT Bold", "Avenir Next", "Helvetica Neue",
             "Bradley Hand", "Noteworthy", "Marker Felt", "Futura", "Optima", "Gill Sans"}
@@ -23,7 +39,7 @@ for name, L in vl.LANGS.items():
     both = set(L["fonts"]["both"].values())
     check(not (both & MAC_ONLY), "{}: fonts='both' must not use a Mac-only face: {}".format(name, both & MAC_ONLY))
     for f in both:
-        check(not dk._font_substituted(f), "{}: both-platform face {!r} must be installed here".format(name, f))
+        check_mac(not dk._font_substituted(f), "{}: both-platform face {!r} must be installed here".format(name, f))
     check(L["fonts"]["both"]["numeral"] not in ("Georgia", "Constantia", "Hoefler Text"), "{}: numerals in a lining face".format(name))
     pal = L["palette"]
     for ink in [pal["ink"]] + pal["text_accents"]:
@@ -32,7 +48,8 @@ for name, L in vl.LANGS.items():
 for scr in ("han", "kana", "hangul"):
     for kind in ("serif", "sans"):
         f = vl.EA_FACES[scr][kind]["mac"]
-        check(f not in ON_DEMAND and not dk._font_substituted(f), "{} {} mac face {!r} must be a system face".format(scr, kind, f))
+        check(f not in ON_DEMAND, "{} {} mac face {!r} must not be an on-demand face".format(scr, kind, f))
+        check_mac(not dk._font_substituted(f), "{} {} mac face {!r} must be a system face".format(scr, kind, f))
 check(vl.script_of("城市菜园") == "han" and vl.script_of("きのテーブル") == "kana" and vl.script_of("木のテーブル") == "kana"
       and vl.script_of("나무 테이블") == "hangul" and vl.script_of("Garden") is None, "script detection")
 prs = dk.blank_deck(13.333, 7.5)
@@ -40,7 +57,7 @@ k = vl.use("storybook", prs)
 s = k.new_slide()
 check(s._element.find(".//" + dk.qn("a:tile")) is not None, "storybook paints a grain ground")
 r = k.run("나무 테이블", 20, role="body")
-check(r[6] == vl.EA_FACES["hangul"]["serif"]["mac"] or r[6] == vl.EA_FACES["hangul"]["sans"]["mac"], "a Hangul run gets a Hangul face: {}".format(r))
+check(r[6] in (vl.EA_FACES["hangul"]["serif"][k.platform], vl.EA_FACES["hangul"]["sans"][k.platform]), "a Hangul run gets a Hangul face: {}".format(r))
 for bad in (lambda: vl.use("nope", prs), lambda: vl.use("editorial", prs, fonts="win")):
     try:
         bad()
@@ -126,7 +143,7 @@ with tempfile.TemporaryDirectory() as td:
                                     scr = vl.script_of(r.text)
                                     if scr:
                                         ea = r._r.find(".//" + dk.qn("a:ea"))
-                                        want = {vl.EA_FACES[scr][x]["mac"] for x in ("serif", "sans")}
+                                        want = {vl.EA_FACES[scr][x][k.platform] for x in ("serif", "sans")}
                                         check(ea is not None and ea.get("typeface") in want,
                                               "{} {} {} {}: {} run without a {} face".format(name, cname, lang, page, scr, scr))
                 found = dk.lint_layout(prs, verbose=False)
@@ -181,7 +198,7 @@ k = vl.use("collage", prs)
 s = k.new_slide()
 r = k.section(s, number="02", kicker="How it works", title="We fix it with you")
 pics = [sh for sh in s.shapes if sh.shape_type == 13]
-check(pics and abs(pics[0].left / E - r["rects"]["title"][0]) < 0.05, "the outlined number starts at the column's left edge")
+check_mac(pics and abs(pics[0].left / E - r["rects"]["title"][0]) < 0.05, "the outlined number starts at the column's left edge")
 # Chinese has no italics; collage CJK display is heavy
 prs = dk.blank_deck(13.333, 7.5)
 k = vl.use("storybook", prs)
@@ -327,7 +344,7 @@ for lang_name, W_, H_, field, page, kw, want_first_end in (
     s_ = k_.new_slide()
     getattr(k_, page)(s_, **kw)
     ls_ = _drawn_lines(k_, s_, field, kw[field])
-    check(all(l_.rstrip().endswith(want_first_end) for l_ in ls_[:-1]),                 # one line is fine too
+    check_mac(all(l_.rstrip().endswith(want_first_end) for l_ in ls_[:-1]),                 # one line is fine too
           "{} {}x{} {}: {} breaks mid-phrase: {}".format(lang_name, W_, H_, page, field, ls_))
 # the engine's line model, against the same LibreOffice probe: marks hang, brackets push the ideograph before
 # them down ("一二三四五 / 六）") — the model hung brackets too and predicted one line where two rendered
@@ -337,25 +354,27 @@ _w6 = 6 * 24 / 72.0 + vl._INSET + 0.02
 _orig_face = k_.ea_face
 k_.ea_face = lambda role, text: "Songti SC"
 for mark in "，。、；：！？．":
-    check(vl._break_lines(k_, "quote", "一二三四五六" + mark, 24, _w6) == ["一二三四五六" + mark],
+    check_mac(vl._break_lines(k_, "quote", "一二三四五六" + mark, 24, _w6) == ["一二三四五六" + mark],
           "engine line model hangs {}: {}".format(mark, vl._break_lines(k_, "quote", "一二三四五六" + mark, 24, _w6)))
 for mark in "）」』》】〉〕":
-    check(vl._break_lines(k_, "quote", "一二三四五六" + mark, 24, _w6) == ["一二三四五", "六" + mark],
+    check_mac(vl._break_lines(k_, "quote", "一二三四五六" + mark, 24, _w6) == ["一二三四五", "六" + mark],
           "engine line model pushes 六 down with {}: {}".format(mark, vl._break_lines(k_, "quote", "一二三四五六" + mark, 24, _w6)))
 for tail in ("。」", "，」", "！？", "」。"):
-    check(vl._break_lines(k_, "quote", "一二三四五六" + tail, 24, _w6) == ["一二三四五", "六" + tail],
+    check_mac(vl._break_lines(k_, "quote", "一二三四五六" + tail, 24, _w6) == ["一二三四五", "六" + tail],
           "engine line model pushes 六{} down: {}".format(tail, vl._break_lines(k_, "quote", "一二三四五六" + tail, 24, _w6)))
 # rendered in LibreOffice (corpus, 2026-10-03): an opening bracket never ends a line; mixed text never hangs
 _got = vl._break_lines(k_, "quote", "数据显示，参与者的满意度很高（详见附录）。", 48, 3.57 + vl._INSET)
-check(_got == ["数据显示，", "参与者的满", "意度很高", "（详见附", "录）。"], "engine: opening bracket moves down: {}".format(_got))
+check_mac(_got == ["数据显示，", "参与者的满", "意度很高", "（详见附", "录）。"], "engine: opening bracket moves down: {}".format(_got))
 _got = vl._break_lines(k_, "quote", "2026年的数据（n=120）显示，满意度为 87%。", 28, 7.75 + vl._INSET)
-check(len(_got) == 2, "engine: a mark after Latin does not hang (two lines rendered): {}".format(_got))
+check_mac(len(_got) == 2, "engine: a mark after Latin does not hang (two lines rendered): {}".format(_got))
 # Korean wraps at spaces, never between syllables (LibreOffice probe, 2026-10-04)
 k_.ea_face = lambda role, text: "Apple SD Gothic Neo"
 _got = vl._break_lines(k_, "quote", "옥상에서도 채소가 자란다", 24, 7 * 24 / 72.0 + vl._INSET + 0.02)
-check(_got == ["옥상에서도", "채소가 자란다"], "engine: Korean breaks at the space: {}".format(_got))
-_got = vl._break_lines(k_, "quote", "가나다라마바사", 24, 6 * 24 / 72.0 + vl._INSET + 0.02)
-check(_got == ["가나다라마바사"], "engine: a Korean word is never split between syllables: {}".format(_got))
+check_mac(_got == ["옥상에서도", "채소가 자란다"], "engine: Korean breaks at the space: {}".format(_got))
+for _t in ("가나다라마바사아자차", "인공지능기반의료영상재구성"):     # wider than the line: syllable breaks, as rendered
+    _got = vl._break_lines(k_, "quote", _t, 24, 6 * 24 / 72.0 + vl._INSET + 0.02)
+    check_mac(2 <= len(_got) <= 3 and "".join(_got) == _t,                  # never fewer lines than the 2 rendered
+          "engine: an over-wide Korean word breaks between syllables: {}".format(_got))
 k_.ea_face = _orig_face
 # no clause punctuation, or a clause too long for any line: unchanged, never refused
 p_ = dk.blank_deck(13.333, 7.5)
@@ -421,6 +440,97 @@ for needle in ("--gates", "k.run(", "body.left", "returns the content rect", "pa
 check("autospace" in (ROOT / "references" / "multilingual.md").read_text(encoding="utf-8"),
       "multilingual.md explains the preview gap before ASCII punctuation after Hangul")
 
+# ── Final review (2026-10-04) #1: an outlined numeral is drawn only when its face can draw it ──
+import display_type as dt
+def _pics_alt(slide):
+    return [sh._element.nvPicPr.cNvPr.get("descr") for sh in slide.shapes if sh.shape_type == 13]
+def _texts(slide):
+    return [sh.text_frame.text for sh in slide.shapes if getattr(sh, "has_text_frame", False)]
+p_ = dk.blank_deck(13.333, 7.5)
+k_ = vl.use("collage", p_)
+try:
+    dt.outlined(k_.new_slide(), 1, 1, 2, 1, "三成", color="B23A28", face="Impact")
+    fails.append("outlined() drew '三成' in Impact, which has no CJK glyphs (tofu)")
+except ValueError as e:
+    check("三" in str(e) or "draw" in str(e) or "installed" in str(e), "the refusal names what it cannot draw: {}".format(e))
+for num in ("三成", "第一章", "세 번"):
+    s_ = k_.new_slide()
+    k_.data(s_, number=num, label="label")
+    check(num not in _pics_alt(s_) and any(num in t for t in _texts(s_)),
+          "collage number {!r} is set as text (outlined would be tofu): pics={} texts={}".format(num, _pics_alt(s_), _texts(s_)))
+s_ = k_.new_slide()
+k_.section(s_, number="02", title="How it works")
+check_mac("02" in _pics_alt(s_), "a Latin collage numeral is still the outlined picture")
+_sub = dk._font_substituted
+dk._font_substituted = lambda n: True if n in ("Impact", "Arial Black") else _sub(n)
+try:
+    s_ = k_.new_slide()
+    k_.section(s_, number="02", title="How it works")          # Linux: Impact not installed
+    check("02" not in _pics_alt(s_) and any("02" in t for t in _texts(s_)),
+          "without Impact installed the collage numeral falls back to text instead of refusing the page")
+except Exception as e:
+    fails.append("a collage page raises when Impact is not installed: {}: {}".format(type(e).__name__, e))
+finally:
+    dk._font_substituted = _sub
+
+# ── Final review #3: a token wider than the column at the floor size is refused, never collided ──
+p_ = dk.blank_deck(13.333, 7.5)
+k_ = vl.use("editorial", p_)
+try:
+    k_.image_text(k_.new_slide(), title="Why torch.nn.functional.scaled_dot_product_attention is fast",
+                  body="It fuses three kernels.", image=_ph)
+    fails.append("an identifier wider than the column at the floor size was set (it rendered into the body)")
+except vl.VLTextOverflow as e:
+    check("title" in str(e) and "scaled_dot_product_attention" in str(e), "the refusal names the field and the word: {}".format(e))
+k_.image_text(k_.new_slide(), title="데이터품질관리체계구축사업", body="세 개의 팀이 함께합니다.", image=_ph)   # breaks between syllables
+
+# ── Final review #4: the engine hangs a mark only when the deck declares it ──
+p_ = dk.blank_deck(13.333, 7.5)
+for el in [p_.part._element] + [m._element for m in p_.slide_masters]:
+    for node in el.iter():
+        if node.get("hangingPunct") is not None:
+            node.set("hangingPunct", "0")
+_hp = dk.HANG_PUNCT
+k_ = vl.use("editorial", p_)
+_of = k_.ea_face
+k_.ea_face = lambda role, text: "Songti SC"
+check_mac(vl._break_lines(k_, "quote", "一二三四五六。", 24, 6 * 24 / 72.0 + vl._INSET + 0.02) == ["一二三四五", "六。"],
+      "a deck without hanging punctuation: the mark takes 六 down")
+k_.ea_face = _of
+dk.HANG_PUNCT = _hp
+
+# ── Final review #6: digits are never set in an old-style figure face (Georgia), whole run or mixed ──
+for _ln in ("editorial", "storybook"):
+    p_ = dk.blank_deck(13.333, 7.5)
+    k_ = vl.use(_ln, p_)
+    k_.cover(k_.new_slide(), kicker="Since 2019", title="Repair café 2026", image=_ph)
+    k_.section(k_.new_slide(), number="03", title="1984 to 2026")
+    k_.closing(k_.new_slide(), title="2026", line="See you on 12 March.")
+    k_.quote(k_.new_slide(), quote="We fixed 40 lamps in 3 hours.", attribution="Volunteer, 2025")
+    _old = [(sl_i, r_.text, r_.font.name) for sl_i, sl in enumerate(p_.slides, 1) for sh, r_ in _runs(sl)
+            if any(c.isdigit() for c in r_.text) and dk.has_oldstyle_figures(r_.font.name or "")]
+    check(not _old, "{}: digits set in an old-style figure face: {}".format(_ln, _old[:4]))
+    check(not [f for f in dk.lint_layout(p_, verbose=False) if f[2] == "OLDSTYLE_FIGURES"], "{}: OLDSTYLE_FIGURES".format(_ln))
+    _r = k_.runs("Repair café 2026", 30, role="display")
+    check(len(_r) == 2 and _r[1][0] == "2026" and not dk.has_oldstyle_figures(_r[1][5]), "k.runs splits the digits: {}".format(_r))
+
+# ── Final review (re-graded): images the caller passed are never silently dropped ──
+def _refuses(fn, label, words):
+    try:
+        fn()
+        fails.append("{} was accepted".format(label))
+    except (ValueError, TypeError) as e:
+        check(any(w_ in str(e) for w_ in words), "{}: the refusal says why: {}".format(label, e))
+p_ = dk.blank_deck(13.333, 7.5)
+k_ = vl.use("collage", p_)
+_refuses(lambda: k_.image_text(k_.new_slide(), title="Tools", body="Shared."), "image_text without an image", ("image",))
+_refuses(lambda: k_.cover(k_.new_slide(), title="Repair night", image=[_ph] * 5), "a collage cover with 5 images", ("4", "5"))
+_refuses(lambda: k_.cover(k_.new_slide(), title="Repair night", image=[]), "an empty image list", ("empty", "image"))
+k_e = vl.use("editorial", dk.blank_deck(13.333, 7.5))
+_refuses(lambda: k_e.cover(k_e.new_slide(), title="Repair night", image=[_ph, _ph]), "two images on a single-image page", ("one", "1"))
+k_.cover(k_.new_slide(), title="Repair night", image=[_ph] * 4)                  # four prints is the collage maximum
+k_e.cover(k_e.new_slide(), title="Repair night", image=[_ph])                    # a one-item list is one image
+
 # ── Task 10: bundled samples (the direction preview shows them) ──
 A = ROOT / "assets" / "vl"
 readme = (A / "README.md").read_text(encoding="utf-8") if (A / "README.md").exists() else ""
@@ -478,6 +588,9 @@ for scr in vl.EA_FACES:
         for plat in ("mac", "win"):
             check(vl.EA_FACES[scr][kind][plat] in _doc, "the EA face {} is not in the reference".format(vl.EA_FACES[scr][kind][plat]))
 
+if skipped:
+    print("  skip {} face-precise check(s): this machine lacks the macOS faces they were measured with "
+          "(e.g. {!r})".format(len(skipped), skipped[0][:80]))
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_visual_languages] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)

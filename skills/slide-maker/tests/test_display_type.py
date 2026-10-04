@@ -47,8 +47,21 @@ check(str(runs[1].font.color.rgb) == "B23A28", "accent colour on the accent word
 zt = dt.two_tone(s, 0.8, bottom + 1.1, 7.0, 0.8, "楼顶也能种菜", ["种菜"], size=28, color=dk.DEEP,
                  accent=dk.RGBColor(0xB2, 0x3A, 0x28), ea="Songti SC")
 check([r.text for r in zt.text_frame.paragraphs[0].runs] == ["楼顶也能", "种菜"], "CJK split")
-pic = dt.outlined(s, 9.2, zbottom + 0.2, 3.0, 1.6, "07", color="B23A28")
-check(pic.shape_type == 13 and pic._element.find(".//" + dk.qn("p:cNvPr")).get("descr") == "07", "a picture with alt text")
+if dk._font_substituted("Arial Black"):          # the ubuntu CI runner: outlined() must REFUSE a stand-in face
+    print("  skip outlined('07') picture: Arial Black is not installed here — checking the refusal instead")
+    try:
+        dt.outlined(s, 9.2, zbottom + 0.2, 3.0, 1.6, "07", color="B23A28")
+        fails.append("outlined drew with a stand-in for a face that is not installed")
+    except ValueError as e:
+        check("installed" in str(e), str(e))
+else:
+    pic = dt.outlined(s, 9.2, zbottom + 0.2, 3.0, 1.6, "07", color="B23A28")
+    check(pic.shape_type == 13 and pic._element.find(".//" + dk.qn("p:cNvPr")).get("descr") == "07", "a picture with alt text")
+try:                                              # a face that cannot draw the text refuses (it would draw boxes)
+    dt.outlined(s, 1, 1, 1, 1, "三成", color="B23A28", face="Impact")
+    fails.append("outlined accepted '三成' in Impact, which has no CJK glyphs")
+except ValueError:
+    pass
 for bad in ("TOO LONG!", ""):
     try:
         dt.outlined(s, 1, 1, 1, 1, bad, color="B23A28")

@@ -35,13 +35,16 @@ k.closing(k.new_slide(), title="Bring one broken thing.", line="And bring a neig
 ```
 
 - **Pages:** `cover`, `section`, `image_text`, `quote`, `data`, `closing` — keyword fields only; `image=`
-  is optional everywhere except `image_text`. Each returns `{"rects": {field: (x, y, w, h)}, …}`.
+  is optional everywhere except `image_text` (which refuses without one). A list of images is for the
+  collage cover and closing only (1 to 4); anywhere else, or empty, or longer, it is refused rather than
+  silently cut. A page with no text and no image is refused. Each returns `{"rects": {field: (x, y, w, h)}, …}`.
 - **Images:** a file path (the user's photo, a fetched public-domain image), or — with
   `vl.use(name, prs, plan=plan, image_dir=…)` — a P1 image-series slot id (placed with `slot_picture`,
   so the series gate still sees it). A missing image raises `FileNotFoundError`.
 - **Text that cannot fit** shrinks toward each field's floor size; if even the floors overflow, the page
   raises `vl.VLTextOverflow` naming the page, the field and the inches — shorten the copy, never
-  truncate it. Titles never end in a lone word or one or two CJK characters (shrunk a little, or set in
+  truncate it. A single token wider than the column even at the floor (a code identifier, a URL) is
+  refused the same way, naming the word; a long Korean compound breaks between syllables instead. Titles never end in a lone word or one or two CJK characters (shrunk a little, or set in
   a balanced measure). A title, quote, label or line with clause punctuation INSIDE it breaks after its
   clauses when they fit ("带着坏东西来，/ 带着好东西走", "Bring it broken. / Take it home working.") —
   at down to 0.7x its size, never with more lines, set as one paragraph per line.
@@ -53,14 +56,16 @@ k.closing(k.new_slide(), title="Bring one broken thing.", line="And bring a neig
   x, y, w, h = rs.ground(s, "editorial", role="content", index=2)   # furniture; returns the content rect
   body, header = rs.card(s, "editorial", x, y + 0.9, w, h - 1.0, label=None)  # SHAPES, not a rect
   dk.text(s, body.left.inches + 0.3, body.top.inches + 0.25, body.width.inches - 0.6, body.height.inches - 0.5,
-          [[k.run("1.  Why a repair café", 20)], [k.run("2.  How an evening runs", 20)]])
+          [k.runs("1.  Why a repair café", 20), k.runs("2.  How an evening runs", 20)])
   ```
   `rs.ground` returns the content rect `(x, y, w, h)` in inches; `rs.card` returns `(body, header)` —
   python-pptx shapes (`header` is None for a card with no band), so read `body.left.inches` and friends.
   `body` is the WHOLE card: with `label=…` the label sits inside its top, so start the content below it
   (`header.top.inches + header.height.inches`), or it lands on the label.
-  Make every run with `k.run(text, size, color=None, bold=False, role="body")`: it picks the language's
-  face and, for Chinese, Japanese or Korean text, that script's East-Asian face — never type a font name.
+  Make every paragraph with `k.runs(text, size, color=None, bold=False, role="body")` (a list of runs; one
+  run is `k.run(…)`): it picks the language's face and, for Chinese, Japanese or Korean text, that script's
+  East-Asian face — never type a font name — and sets digits in a LINING face where the language's face has
+  old-style figures (Georgia), so "Repair café 2026" never bobs.
 - **Any canvas:** every page has a landscape and a portrait layout (portrait when W < 1.2 H).
 
 ## Fonts
