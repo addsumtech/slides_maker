@@ -1306,6 +1306,20 @@ jobs:
           grep -qE "\\] ok$" /tmp/ea_script_face.log || {
             echo "::error::test_ea_script_face did not run to completion"; exit 1; }
 
+      - name: Deferred minors: state restore, slot hints, overflow total, cut-out refusal
+        run: |
+          set -o pipefail
+          python tests/test_followup_minors.py | tee /tmp/followup_minors.log
+          grep -qE "\\] ok$" /tmp/followup_minors.log || {
+            echo "::error::test_followup_minors did not run to completion"; exit 1; }
+
+      - name: Image-series minors: labels, slot cross-checks, stale qc, paths, size/moderation
+        run: |
+          set -o pipefail
+          python tests/test_image_series_minors.py | tee /tmp/image_series_minors.log
+          grep -qE "\\] ok$" /tmp/image_series_minors.log || {
+            echo "::error::test_image_series_minors did not run to completion"; exit 1; }
+
       # --- P2 visual languages steps end ---
 
       - name: The Codex scaffold shows every field the Codex gate requires

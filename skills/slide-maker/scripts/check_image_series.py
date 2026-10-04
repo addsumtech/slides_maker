@@ -54,6 +54,23 @@ QUOTE_ATTR = re.compile(r"[\"“].{4,}?[\"”。！？!?.]\s*[\"”]?\s*(?:—{1
                         r"\s*(?:$|[,，])")
 
 
+_NEG = ("non-", "non ", "not ", "非", "不是", "并非")
+
+
+def _label_in(label, low):
+    """`label` occurs in `low` as a label — a whole word (Latin) and not negated: "non-fictional" and "非虚构"
+    (non-fiction) contain "fictional" / "虚构" and are the OPPOSITE claim (P1 review, deferred)."""
+    import re as _re
+    for m in _re.finditer(_re.escape(label), low):
+        a, b = m.start(), m.end()
+        if label[:1].isascii() and ((a and low[a - 1].isalnum()) or (b < len(low) and low[b].isalnum())):
+            continue                                     # inside a longer word
+        if any(low[:a].endswith(n) for n in _NEG):
+            continue                                     # negated
+        return True
+    return False
+
+
 def _named(text):
     for line in re.split(r"[\n\x0b]", text):
         if EN_CREDIT.search(line) or ZH_CREDIT.search(line) or QUOTE_ATTR.search(line):
@@ -133,7 +150,14 @@ def _check(pptx, rec, deck_dir, findings, facts):
                                  "{!r} has no slot in series.json — plan it (with its meaning line) or remove it"
                                  .format(n, sid)))
                 continue
-            placed[sid] = n
+            if sid in placed and placed[sid] != n:
+                findings.append(("note", "SLOT PLACED TWICE", "slot {!r} is placed on slides {} and {} — a series "
+                                 "image says one thing once; give the second page its own slot".format(sid, placed[sid], n)))
+            elif slots[sid].get("slide") not in (None, n):
+                findings.append(("note", "SLOT ON ANOTHER SLIDE", "slot {!r} is planned for slide {} and placed on "
+                                 "slide {} — fine if the deck was reordered; update the plan's slide so its file "
+                                 "name and meaning follow".format(sid, slots[sid]["slide"], n)))
+            placed.setdefault(sid, n)
             gens.append(slots[sid])
         people = [s for s in gens if s.get("kind") in ("generic-person", "persona")]
         if people:
@@ -141,7 +165,7 @@ def _check(pptx, rec, deck_dir, findings, facts):
             low = txt.lower()
             labels = [l.lower() for l in LABELS] + [str(s.get("persona_label", "")).lower() for s in people
                                                     if s.get("persona_label")]
-            labelled = any(l and l in low for l in labels)
+            labelled = any(l and _label_in(l, low) for l in labels)
             named = _named(txt)
             unlabelled_persona = any(s.get("kind") == "persona" for s in people) and not labelled
             if (named and not labelled) or unlabelled_persona:
@@ -195,6 +219,12 @@ def _check(pptx, rec, deck_dir, findings, facts):
     else:
         rep = json.loads(qc.read_text(encoding="utf-8"))
         ack = rep.get("acknowledged") or {}
+        _qt = qc.stat().st_mtime
+        newer = [Path(r.get("file", "")).name for r in rep.get("slots") or []
+                 if r.get("file") and Path(r["file"]).is_file() and Path(r["file"]).stat().st_mtime > _qt]
+        if newer:
+            findings.append(("note", "SERIES QC STALE", "{} changed after series-qc.json was written — the report "
+                             "judged older images; rerun qc".format(", ".join(newer))))
         for sid in rep.get("outliers") or []:
             if sid not in ack:
                 findings.append(("note", "SERIES QC OUTLIER", "slot {!r} is OFF-SERIES — regenerate it with "

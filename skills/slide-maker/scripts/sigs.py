@@ -327,6 +327,9 @@ EXAMPLES = {
     "slot_picture": 'import image_series as ims\n'
                     'plan = ims.load("series.json")                 # validated by: image_series.py check\n'
                     'ims.slot_picture(s, plan, "hero", 0.6, 0.6, 3.2, 4.2, image_dir=".")   # arch + alt + +gen tag',
+    "chroma_cutout": 'import image_fx\n'
+                     'cut = image_fx.chroma_cutout("subject_on_key.png", key="00FF00")   # a generated subject on a flat key\n'
+                     'dk.picture(s, cut, 1.0, 0.6, 3.0, 3.0, fit="contain", alt="the subject, cut out")',
     "feather": 'import image_fx\n'
                'f = image_fx.feather("skyline.png", radius=0.1)       # edges fade into the ground\n'
                'dk.picture(s, f, 1.0, 0.6, 8.0, 4.4, fit="contain", alt="a city skyline")',

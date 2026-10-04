@@ -277,7 +277,7 @@ def build_prompt(plan, s):
 
 
 def prompts(plan, out_dir, plan_path=None):
-    out_dir = Path(out_dir)
+    out_dir = Path(out_dir).resolve()          # absolute: a generator run from another folder must find them
     out_dir.mkdir(parents=True, exist_ok=True)
     items = []
     for s in plan["slots"]:
@@ -434,8 +434,9 @@ def qc(plan, gen_dir, *, de_max=None, hist_max=None, plan_path=None):
     if recs:
         try:
             image_qc.contact_sheet(recs, str(gen_dir / "_series_contact.png"))
-        except Exception:
-            pass
+        except Exception as exc:                 # said, not swallowed: the sheet is how the series is looked at
+            print("image_series qc: the contact sheet could not be written ({}: {}) — the report above still "
+                  "stands; look at the images one by one".format(type(exc).__name__, exc), file=sys.stderr)
     return rep
 
 def slot_picture(slide, plan, slot_id, x, y, w, h, *, image_dir, sticker=False):

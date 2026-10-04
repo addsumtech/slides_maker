@@ -37,12 +37,13 @@ def run(argv):
     return rc, buf.getvalue()
 
 
-# each slot's aspect picks the nearest size the API takes; no aspect -> the CLI size, as before
-check(gio._size_for({"aspect": 0.75}, "2048x1152") == "1024x1536", "a 3:4 arch slot must ask for a portrait size")
-check(gio._size_for({"aspect": 1.0}, "2048x1152") == "1024x1024", "a square slot -> square")
-check(gio._size_for({"aspect": 2.65}, "2048x1152") == "2048x1152", "a wide band -> the widest size")
-check(gio._size_for({"aspect": 1.45}, "2048x1152") == "1536x1024", "a 3:2 slot -> 1536x1024")
-check(gio._size_for({}, "2048x1152") == "2048x1152", "no aspect -> the CLI default, unchanged")
+# without --size each slot's aspect picks the nearest size the API takes; an explicit --size wins for every item
+check(gio._size_for({"aspect": 0.75}, None) == "1024x1536", "a 3:4 arch slot must ask for a portrait size")
+check(gio._size_for({"aspect": 1.0}, None) == "1024x1024", "a square slot -> square")
+check(gio._size_for({"aspect": 2.65}, None) == "2048x1152", "a wide band -> the widest size")
+check(gio._size_for({"aspect": 1.45}, None) == "1536x1024", "a 3:2 slot -> 1536x1024")
+check(gio._size_for({}, None) == gio.DEFAULT_SIZE, "no aspect and no --size -> the default size")
+check(gio._size_for({"aspect": 0.75}, "2048x1152") == "2048x1152", "an explicit --size wins over the item aspect")
 
 with tempfile.TemporaryDirectory() as td:
     td = Path(td)

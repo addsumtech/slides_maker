@@ -720,8 +720,13 @@ request a key when native imagegen or `codex` is present.
 export OPENAI_API_KEY="$(cat ~/.openai_key)"
 python3 scripts/generate_images_openai.py \
   ~/Downloads/<deck>/assets/generated/image_prompt_manifest.json \
-  --model gpt-image-2 --size 2048x1152 --quality medium
+  --model gpt-image-2 --quality medium
 ```
+
+Leave `--size` off: each item's `aspect` (an image-series slot's frame) picks the nearest size the API
+takes — a tall arch gets a portrait image — and an item without one gets 2048x1152. `--size WxH` forces
+that one size on EVERY item. `--moderation` applies to generations only (the style-reference request has
+no such parameter; the script says so and leaves it out).
 
 Both scripts share the manifest format and the `--out-dir` / `--limit` / `--overwrite` / `--dry-run`
 flags, save each output to the manifest path (e.g. `slide-01.png`), and skip existing files by default.

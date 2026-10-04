@@ -583,6 +583,27 @@ def set_palette(*, deep=None, blue=None, teal=None, magenta=None, slate=None, mu
                     _obj.__defaults__ = tuple(remap.get(id(v), v) for v in _obj.__defaults__)
 
 
+def _state_snapshot():
+    """deckkit's module STATE: its upper-case globals AND the keyword/positional defaults `set_palette` rewrites
+    in place. Restoring only the globals left 38 function defaults on the previous palette (smoke's examples ran
+    in each other's look)."""
+    import types as _types
+    g = {k: v for k, v in globals().items() if k.isupper() and not k.startswith("_")}
+    fn = {n: (dict(f.__kwdefaults__) if f.__kwdefaults__ else None, f.__defaults__)
+          for n, f in globals().items() if isinstance(f, _types.FunctionType)}
+    return g, fn
+
+
+def _state_restore(snap):
+    g, fn = snap
+    globals().update(g)
+    for n, (kw, d) in fn.items():
+        f = globals().get(n)
+        if f is not None and hasattr(f, "__defaults__"):
+            f.__kwdefaults__ = dict(kw) if kw else kw
+            f.__defaults__ = d
+
+
 # ====================================================================== text
 # CT_TextCharacterProperties orders its children, and <a:ea> sits after <a:latin> but BEFORE all of
 # these. Appending to the end is only safe when none of them is present — on a deck we built that is

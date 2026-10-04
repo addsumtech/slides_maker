@@ -554,6 +554,10 @@ def _every_scaffold_runs():
         from PIL import ImageDraw as _SmkDraw
         _SmkDraw.Draw(_cut).ellipse((40, 30, 260, 330), fill=(214, 92, 60, 255))
         _cut.save(os.path.join(TMP, "cutout.png"))
+        # The chroma_cutout scaffold keys a subject off a FLAT key colour, as image_series generates it.
+        _key = _SmkIm.new("RGB", (300, 360), (0, 255, 0))
+        _SmkDraw.Draw(_key).ellipse((40, 30, 260, 330), fill=(214, 92, 60))
+        _key.save(os.path.join(TMP, "subject_on_key.png"))
         # The slot_picture scaffold places a slot of an IMAGE SERIES: it needs the plan and the
         # slot's generated image, named the way image_series.prompts names it (slide-NN-<id>.png).
         import json as _sj
@@ -605,10 +609,9 @@ def _every_scaffold_runs():
                  'title={A deep cascade}, booktitle={IPMI}, year={2018}}\n')
     # an example may set the deck's palette/fonts/ground (visual_languages.use, presets.apply): restore
     # deckkit's module state after each one, or every later example and check runs in its look
-    _dk_state = {k_: getattr(dk, k_) for k_ in dir(dk) if k_.isupper() and not k_.startswith("_")}
+    _dk_state = dk._state_snapshot()          # globals AND the function defaults set_palette rewrites
     for name, code in sorted(_sigs.EXAMPLES.items()):
-        for k_, v_ in _dk_state.items():
-            setattr(dk, k_, v_)
+        dk._state_restore(_dk_state)
         p = dk.blank_deck(10, 5.625)
         sl = p.slides.add_slide(p.slide_layouts[6])
         try:

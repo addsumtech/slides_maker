@@ -690,10 +690,10 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None):
         sizes[big] = max(floors[big], sizes[big] * 0.94)
     if total() > h + 0.02:
         worst = max(items, key=lambda it: _field_height(k, it[0], it[1], floors[it[0]], w))
-        raise VLTextOverflow("{}.{}(): the {} needs {:.2f}in at the floor size {:.0f}pt but the column is {:.2f}in "
-                             "(all fields together: {:.2f}in) — shorten it".format(
-                                 k.name, page, worst[0], _field_height(k, worst[0], worst[1], floors[worst[0]], w),
-                                 floors[worst[0]], h, total()))
+        raise VLTextOverflow("{}.{}(): all fields together need {:.2f}in at their floor sizes but the column is "
+                             "{:.2f}in — shorten the copy; the longest is the {} ({:.2f}in at {:.0f}pt)".format(
+                                 k.name, page, total(), h, worst[0],
+                                 _field_height(k, worst[0], worst[1], floors[worst[0]], w), floors[worst[0]]))
     for f, t in items:
         if f not in _NO_WIDOW or f in phrased:            # the author's own breaks are kept as given
             continue
@@ -767,7 +767,15 @@ def _resolve(k, image):
         return str(path), sl["alt"], sl["id"]
     p = Path(str(image))
     if not p.is_file():
-        raise FileNotFoundError("{}: no image at {}".format(k.name, p))
+        hint = ""
+        if not p.suffix and "/" not in str(image) and "\\" not in str(image):
+            if k.plan:                                   # a plan is passed: the id is not one of its slots
+                hint = " — {!r} is not a slot of the image-series plan (its slots: {})".format(
+                    str(image), ", ".join(str(s_.get("id")) for s_ in k.plan.get("slots", [])) or "none")
+            else:
+                hint = (" — if {!r} is an image-series slot id, pass plan= and image_dir= to visual_languages.use() "
+                        "so it resolves to that slot's image".format(str(image)))
+        raise FileNotFoundError("{}: no image at {}{}".format(k.name, p, hint))
     return str(p), p.stem.replace("-", " ").replace("_", " "), None
 
 

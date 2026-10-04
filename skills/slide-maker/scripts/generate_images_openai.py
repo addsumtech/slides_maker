@@ -31,13 +31,15 @@ DEFAULT_FORMAT = "png"
 SIZES = (("2048x1152", 2048 / 1152), ("1536x1024", 1.5), ("1024x1024", 1.0), ("1024x1536", 1024 / 1536))
 
 
-def _size_for(item, default):
-    """The size to request for this item: the nearest SIZES entry to its own `aspect`, else the CLI
-    size. Measured 2026-10-03: every image of a series was requested at one 2048x1152, so a tall arch
-    slot got a landscape picture to crop."""
+def _size_for(item, explicit):
+    """The size to request: an EXPLICIT --size wins (it was silently overridden by every item's aspect); else
+    the nearest SIZES entry to the item's own `aspect`; else DEFAULT_SIZE. Measured 2026-10-03: every image of a
+    series was requested at one 2048x1152, so a tall arch slot got a landscape picture to crop."""
+    if explicit:
+        return explicit
     a = item.get("aspect")
     if not isinstance(a, (int, float)) or a <= 0:
-        return default
+        return DEFAULT_SIZE
     import math
     return min(SIZES, key=lambda sz: abs(math.log(a / sz[1])))[0]
 
@@ -167,8 +169,12 @@ def _generate_item(item, out_path, args, api_key):
     }
     if args.background:
         payload["background"] = args.background
-    if args.moderation:
-        payload["moderation"] = args.moderation
+    if args.moderation and not style_ref:
+        payload["moderation"] = args.moderation     # generations only: the SDK's images.edit() has no moderation
+    elif args.moderation and not getattr(args, "_moderation_noted", False):
+        print("note: --moderation applies to generations only; the style-reference (edits) request has no "
+              "such parameter, so it is not sent", file=sys.stderr)
+        args._moderation_noted = True
     result = _request_image(api_key, payload, timeout=args.timeout, retries=args.retries,
                             files=[("image[]", style_ref)] if style_ref else None)
     _write_response_image(result, out_path)
@@ -206,7 +212,8 @@ def main(argv=None):
     ap.add_argument("--out-dir", help="Override output directory. Defaults to manifest item paths.")
     ap.add_argument("--api-key-env", default="OPENAI_API_KEY", help="Environment variable holding the API key.")
     ap.add_argument("--model", default=DEFAULT_MODEL, help=f"Image model. Default: {DEFAULT_MODEL}.")
-    ap.add_argument("--size", default=DEFAULT_SIZE, help=f"Output size. Default: {DEFAULT_SIZE}.")
+    ap.add_argument("--size", default=None, help=f"Output size for EVERY image. Default: each item's own aspect "
+                                                 f"(else {DEFAULT_SIZE}).")
     ap.add_argument("--quality", default=DEFAULT_QUALITY, help=f"Quality: low, medium, high, or auto. Default: {DEFAULT_QUALITY}.")
     ap.add_argument("--output-format", default=DEFAULT_FORMAT, choices=["png", "webp", "jpeg"], help="Image file format.")
     ap.add_argument("--background", choices=["opaque", "auto"], help="Background mode when supported by the selected model.")
