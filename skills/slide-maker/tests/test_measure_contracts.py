@@ -272,15 +272,40 @@ def main():
     n = dk._measure_lines([("一二三四五六。」七八九十一二", False)], 24, 6 * em24 + 0.02, font="Songti SC")
     check("after the push the next line holds 六。」 + four ideographs, then wraps (three lines)", n == 3, n)
 
-    # Korean wraps at SPACES, never between syllables (LibreOffice probe, 2026-10-04: "가나다라마바사" in a box
-    # six syllables wide stays on ONE line and overflows; "옥상에서도 채소가 자란다" breaks at the space).
-    # Breaking between syllables under-counted 11 of 60 rendered Korean cases, by up to two lines.
-    n = dk._measure_lines([("가나다라마바사", False)], 24, 6 * em24 + 0.02, font="Apple SD Gothic Neo")
-    check("a Korean word is never broken between syllables (one line, as rendered)", n == 1, n)
+    # hanging is the DECK's declaration, not an assumption (final review, 2026-10-04): with hangingPunct="0", or
+    # absent everywhere in the inheritance chain, LibreOffice does not hang and "一二三四五六。" renders on 2 lines
+    prs_h = dk.blank_deck()
+    check("python-pptx's default template declares hanging punctuation", dk.deck_hangs_punct(prs_h) is True)
+    for el in [prs_h.part._element] + [m._element for m in prs_h.slide_masters]:
+        for node in el.iter():
+            if node.get("hangingPunct") is not None:
+                node.set("hangingPunct", "0")
+    check("a deck that declares hangingPunct=0 does not hang", dk.deck_hangs_punct(prs_h) is False)
+    _prev = dk.HANG_PUNCT
+    dk.lint_layout(prs_h, verbose=False)
+    check("lint_layout restores the hanging flag after its run", dk.HANG_PUNCT == _prev, dk.HANG_PUNCT)
+    dk.HANG_PUNCT = False
+    try:
+        n = dk._measure_lines([("一二三四五六。", False)], 24, 6 * em24 + 0.02, font="Songti SC")
+        check("without declared hanging the mark wraps (two lines)", n == 2, n)
+    finally:
+        dk.HANG_PUNCT = _prev
+    # Korean wraps at SPACES; a word wider than the whole line breaks between syllables (LibreOffice renders,
+    # 2026-10-04: "옥상에서도 / 채소가 자란다"; "가나다라마바사 / 아자차", "인공지능기반의 / 료영상재구성",
+    # "데이터품질관 / 리 체계 구축"). Syllable breaks everywhere under-counted 11 of 60 rendered cases; a whole
+    # over-wide word counted as ONE line under-counted every compound longer than the line (final review).
+    for t_, f_ in (("가나다라마바사아자차", "Apple SD Gothic Neo"), ("인공지능기반의료영상재구성", "Apple SD Gothic Neo"),
+                   ("데이터품질관리 체계 구축", "AppleMyungjo")):
+        n = dk._measure_lines([(t_, False)], 24, 6 * em24 + 0.02, font=f_)
+        # never FEWER than rendered (one em a syllable is a deliberate over-estimate of SD Gothic's 0.865 em)
+        check("an over-wide Korean word breaks between syllables: {} (>= two lines, as rendered)".format(t_), 2 <= n <= 3, n)
     n = dk._measure_lines([("옥상에서도 채소가 자란다", False)], 24, 7 * em24 + 0.02, font="Apple SD Gothic Neo")
     check("Korean breaks at the space (two lines, as rendered)", n == 2, n)
     for t_, sz_, w_, want in (("동네 수리 카페는 한 달에 한 번 저녁에 열립니다. 동네 수리 카페는 한 달에 한 번 저녁에 열립니다.", 40, 3.72, 10),
                               ("작은 화분 하나로 시작하면 충분합니다. 고장 난 물건을 가져오세요. 고쳐서 가져가세요.", 24, 2.29, 8)):
+        if dk._font_substituted("AppleMyungjo"):   # rendered on macOS; its spaces are AppleMyungjo's 0.4 em
+            print("  skip rendered Korean case ({} lines): AppleMyungjo is not installed here".format(want))
+            continue
         n = dk._measure_lines([(t_, False)], sz_, w_, font="AppleMyungjo")
         check("a rendered Korean case is not under-counted ({} lines rendered)".format(want), n >= want, n)
 

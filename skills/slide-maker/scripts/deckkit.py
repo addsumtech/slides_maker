@@ -4630,9 +4630,9 @@ def _is_wide(o):
 
 
 def _is_hangul(o):
-    """Hangul syllables and jamo. Korean wraps at SPACES, never between syllables (LibreOffice probe,
-    2026-10-04: "가나다라마바사" in a box six syllables wide stays on one line and overflows) — so a
-    Hangul run is measured as a WORD, not as a row of ideographs."""
+    """Hangul syllables and jamo. Korean wraps at SPACES (LibreOffice renders, 2026-10-04: "옥상에서도 /
+    채소가 자란다") — so a Hangul run is measured as a WORD, not as a row of ideographs; a word wider than
+    the whole line breaks between syllables ("인공지능기반의 / 료영상재구성")."""
     return (0xAC00 <= o <= 0xD7A3 or 0x1100 <= o <= 0x11FF or 0x3130 <= o <= 0x318F
             or 0xA960 <= o <= 0xA97F or 0xD7B0 <= o <= 0xD7FF)
 
@@ -5097,11 +5097,34 @@ def _lines_heuristic(text, size_pt, avail_in):
 # CJK line ends as LibreOffice sets them under the deck default hangingPunct="1" (probed 2026-10-03: six
 # ideographs + one mark in a box six ideographs wide): these marks HANG past the measure, one line ...
 _CJK_HANG = "，。、；：！？．"
+# ... but only when the DECK declares hanging punctuation: with hangingPunct="0", or absent everywhere in the
+# inheritance chain, LibreOffice does not hang (final review, 2026-10-04). python-pptx's default template
+# declares "1". lint_layout() sets this from the deck it lints; visual_languages.use() from the deck it builds.
+HANG_PUNCT = True
 # ... but only ONE: a closing bracket never starts a line, and neither does a second mark — the ideograph
 # before it (and a hung mark) moves down WITH it ("一二三四五 / 六）", "/ 六。」", "/ 六！？")
 _CJK_CLOSE = "）」』》】〉〕"
 # ... and an opening bracket never ENDS a line: it moves down to the text it opens ("意度很高 / （详见附")
 _CJK_OPEN = "（「『《【〈〔"
+
+
+def deck_hangs_punct(prs):
+    """True when `prs` declares hanging punctuation (hangingPunct="1") at level 1 of its default text style or
+    a master's text styles, and nothing there says "0". Absent everywhere = no hanging, as LibreOffice renders."""
+    vals = []
+    try:
+        roots = [prs.part._element.find(qn("p:defaultTextStyle"))]
+        for m in prs.slide_masters:
+            tx = m._element.find(qn("p:txStyles"))
+            if tx is not None:
+                roots += [tx.find(qn(t)) for t in ("p:titleStyle", "p:bodyStyle", "p:otherStyle")]
+        for r in roots:
+            lv = r.find(qn("a:lvl1pPr")) if r is not None else None
+            if lv is not None and lv.get("hangingPunct") is not None:
+                vals.append(lv.get("hangingPunct"))
+    except Exception:
+        return False
+    return "0" not in vals and "1" in vals
 
 
 def _measure_lines(runs, size_pt, avail_in, font=None):
@@ -5111,8 +5134,8 @@ def _measure_lines(runs, size_pt, avail_in, font=None):
     Narrow runs are measured with the REAL Latin font's glyph advances (Pillow, the bold
     parts measured bold); CJK / full-width glyphs are one em (= size_pt) by definition.
     A greedy line-breaker then counts wraps, breaking at spaces, between CJK glyphs, and at
-    CJK↔Latin boundaries (Latin words — and Korean words, see `_is_hangul` — stay whole); a
-    closing CJK mark hangs at the line end
+    CJK↔Latin boundaries (Latin words — and Korean words that fit a line, see `_is_hangul` — stay
+    whole); a closing CJK mark hangs at the line end
     (_CJK_HANG), a closing bracket takes the ideograph before it down (_CJK_CLOSE) and an opening
     bracket never ends a line (_CJK_OPEN). Text that also carries Latin or digits never hangs: the
     renderer puts autospace between the scripts, which this does not model, so mixed lines are fuller
@@ -5136,30 +5159,46 @@ def _measure_lines(runs, size_pt, avail_in, font=None):
 
     items = []                                              # (width_pt, kind): 'w'ord 's'pace 'c'jk
     for text, bold in runs:
-        word, hw = [], 0                                    # a word's Latin chars, and its Hangul (1 em each)
+        word = []                                           # the current word's characters, in order
 
-        def _word():
-            return ((getlen("".join(word), bold) if word else 0.0) + hw * float(size_pt), "w")
+        def _flush():
+            # Korean wraps at spaces (a Hangul run is part of the word, one em a syllable) — but a word wider
+            # than the WHOLE line breaks between syllables ("인공지능기반의 / 료영상재구성"), so it goes in
+            # as syllables. A word with no Hangul is measured exactly as it always was.
+            hang_n = sum(1 for c in word if _is_hangul(ord(c)))
+            latin = "".join(c for c in word if not _is_hangul(ord(c)))
+            wd = (getlen(latin, bold) if latin else 0.0) + hang_n * float(size_pt)
+            if hang_n and wd > avail:
+                buf = ""
+                for c in word:
+                    if _is_hangul(ord(c)):
+                        if buf:
+                            items.append((getlen(buf, bold), "w")); buf = ""
+                        items.append((float(size_pt), "c"))
+                    else:
+                        buf += c
+                if buf:
+                    items.append((getlen(buf, bold), "w"))
+            elif word:
+                items.append((wd, "w"))
+            word.clear()
         for ch in text:
             if ch == " ":
-                if word or hw:
-                    items.append(_word()); word, hw = [], 0
+                _flush()
                 items.append((getlen(" ", bold), "s"))
             elif _is_hangul(ord(ch)):
-                hw += 1                                     # Korean wraps at spaces: part of the word
+                word.append(ch)                             # Korean wraps at spaces: part of the word
             elif _is_wide(ord(ch)):
-                if word or hw:
-                    items.append(_word()); word, hw = [], 0
+                _flush()
                 items.append((float(size_pt), "h" if ch in _CJK_HANG else ("b" if ch in _CJK_CLOSE else
                                                                      ("o" if ch in _CJK_OPEN else "c"))))
             else:
                 word.append(ch)
-        if word or hw:
-            items.append(_word())
+        _flush()
 
     # pure CJK only (see the docstring), and a line of at least two ideographs: in a one-ideograph
     # column the renderer cannot hang (it would leave the line empty) — 3 under-counts in the corpus
-    may_hang = not any(k_ == "w" for _w, k_ in items) and avail >= 2 * size_pt
+    may_hang = HANG_PUNCT and not any(k_ == "w" for _w, k_ in items) and avail >= 2 * size_pt
     x = 0.0
     lines = 1
     line = []                                               # the current line's items, for a bracket's push
@@ -10524,6 +10563,17 @@ def _deck_level_faults(prs):
 
 
 def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol=0.07, edge_tol=0.03):
+    global HANG_PUNCT
+    prev = HANG_PUNCT
+    HANG_PUNCT = deck_hangs_punct(prs)          # the deck being linted decides how its CJK line ends break
+    try:
+        return _lint_layout_impl(prs, verbose=verbose, strict=strict, overlap_tol=overlap_tol,
+                                 escape_tol=escape_tol, edge_tol=edge_tol)
+    finally:
+        HANG_PUNCT = prev
+
+
+def _lint_layout_impl(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol=0.07, edge_tol=0.03):
     """Build-time GEOMETRY self-check. Walk every shape on every slide — HOWEVER it was placed,
     manual coords or the grid/stack helpers — and report the high-signal faults that otherwise
     cost a whole visual-critic round. Reasons about each text box's INK rectangle (where glyphs
@@ -11090,6 +11140,9 @@ def lint_layout(prs, *, verbose=True, strict=False, overlap_tol=0.05, escape_tol
                               else " — rerun with verbose=True to list each")
                            + "; plain-language dictionary: references/troubleshooting-faq.md §4")
     return findings
+
+
+lint_layout.__doc__ = _lint_layout_impl.__doc__     # the public name carries the documented contract
 
 
 def fit_text_size(runs, w, h, start_size, *, font=None, min_size=9.0, line_h=_LINT_LINE_H, pad=0.0):
