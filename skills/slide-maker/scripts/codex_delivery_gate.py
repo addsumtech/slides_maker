@@ -1889,6 +1889,28 @@ def check_register_pixels(evidence: dict[str, Any], deck_path: Path | None,
         errors.append("{}: {}".format(code, msg.replace("\n", " ")))
 
 
+def _check_user_named_direction(direction: dict[str, Any], design: dict[str, Any], errors: list[str]) -> None:
+    """design.direction branch "user-named": the USER named the look (a visual language by name), so there was no
+    competition to stage — record the look and their own words instead of four preview directions. direction_gate
+    already had this carve ("n/a - user supplied the look"); design.direction had none, and a docs-only agent whose user
+    said "editorial" stayed blocked on "four named preview directions" (2026-10-04). The two records must agree."""
+    look = direction.get("look")
+    if not isinstance(look, str) or not look.strip():
+        errors.append('design.direction (user-named) needs `look`: the look the user named, e.g. "visual language: editorial"')
+        look = ""
+    if reason_width(direction.get("user_words")) < 8:
+        errors.append("design.direction (user-named) needs `user_words`: the user's own words naming the look, verbatim "
+                      "(not a paraphrase, not 'ok')")
+    dg = design.get("direction_gate")
+    if not (isinstance(dg, str) and dg.strip().lower().replace("—", "-").startswith("n/a")):
+        errors.append('design.direction is user-named but design.direction_gate records a competition — a look the user '
+                      'named is recorded there as "n/a - user supplied the look"')
+    vlang = design.get("visual_language")
+    if isinstance(vlang, str) and vlang.strip() and vlang.strip().lower() not in look.lower():
+        errors.append("design.direction (user-named) look {!r} does not name the recorded visual_language {!r} — the "
+                      "look built must be the one the user named".format(look, vlang))
+
+
 def check_design(
     evidence: dict[str, Any],
     root: Path,
@@ -1903,6 +1925,8 @@ def check_design(
     direction = design.get("direction")
     if not isinstance(direction, dict):
         errors.append("design.direction missing")
+    elif direction.get("branch") == "user-named":
+        _check_user_named_direction(direction, design, errors)
     else:
         branch = direction.get("branch")
         if branch not in {"clean", "provided-template", "generated-template", "mimic"}:

@@ -78,6 +78,8 @@ light), and `--gates` prints commands with `deck_gates.py`'s full path, so they 
 LOW_RES_IMAGE reads pictures in placeholders and in scaled groups at the size they are drawn. Components (node,
 chip, callout, bullets, …) measure their text inside `text()`'s insets; `measure_text` takes a plain string.
 `lint_deck.py --help`; `declare_delivery("self-read")`; a half-made blind-read waiver names the missing field.
+On the Codex runtime a look the user NAMED is recorded as `design.direction` branch `user-named` (the look and their
+own words) instead of four preview directions nobody asked for — `direction_gate` already had that carve.
 
 
 ### CJK line ends are measured the way the renderer sets them

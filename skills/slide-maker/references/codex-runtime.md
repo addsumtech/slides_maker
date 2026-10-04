@@ -232,7 +232,11 @@ be reconstructed post-hoc at the delivery gate.
    smoke suite runs.
 
 2u. 🔴 **A visual language builds with its page functions.** When the picked direction is a visual
-   language (`"vl"` in `directions.json`), read `references/visual-languages.md`, then in the build
+   language (`"vl"` in `directions.json`) — or the USER named one ("make it editorial"): then there was no
+   competition to stage, so record `design.direction` as `{"branch": "user-named", "look": "visual language:
+   <name>", "user_words": "<their words, verbatim>"}` and `design.direction_gate` as `"n/a - user supplied the
+   look"` (no preview directions; the gate checks the two agree and that the look names the recorded
+   `visual_language`) — read `references/visual-languages.md`, then in the build
    script: `k = visual_languages.use("<name>", prs)` and one page function per slide —
    `k.cover / section / image_text / quote / data / closing(k.new_slide(), …)`, each inside its own
    `def slide_NN(prs, k):` (the gate maps every `design.slides[].function` to a `def` in the build script and

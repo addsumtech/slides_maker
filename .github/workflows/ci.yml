@@ -1334,6 +1334,13 @@ jobs:
           grep -qE "\\] ok$" /tmp/a11y_title.log || {
             echo "::error::test_a11y_title did not run to completion"; exit 1; }
 
+      - name: Codex gate: a user-named look records design.direction branch user-named
+        run: |
+          set -o pipefail
+          python tests/test_direction_user_named.py | tee /tmp/direction_user_named.log
+          grep -qE "\\] ok$" /tmp/direction_user_named.log || {
+            echo "::error::test_direction_user_named did not run to completion"; exit 1; }
+
       # --- P2 visual languages steps end ---
 
       - name: The Codex scaffold shows every field the Codex gate requires
