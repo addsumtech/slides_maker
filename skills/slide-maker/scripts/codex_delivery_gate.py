@@ -358,7 +358,8 @@ TEMPLATE = {
         # is not in the example scaffold is a capability that does not get produced.
         # A deck with no content images writes the string "n/a - <why>".
         # The direction competition: the candidates themselves, re-scored at delivery.
-        "direction_gate": {"candidates": "directions.json", "picked": "<the chosen direction>"},
+        "direction_gate": {"candidates": "directions.json", "picked": "<the chosen direction>",
+                           "images": "<photos | illustrations | none>"},
         "image_sources": [
             "slide <n> | <subject> | sourced - <origin> (<licence>) | <file>",
             "slide <n> | <subject> | generated - <tool>",
@@ -2105,6 +2106,9 @@ def check_design(
                               "motif-less colourway")
                 if _r["colourway_excess"]:
                     _f.append("more than one motif-less colourway")
+                _imgf = _dd.images_fault(_dg.get("images"), _c)          # same rule as render_deck.py
+                if _imgf:
+                    _f.append(_imgf)
                 if _f and not str(_dg.get("waived", "")).strip():
                     errors.append("design.direction_gate does not hold up when re-scored: "
                                   + "; ".join(_f) + " — rediverge, or record `waived`")

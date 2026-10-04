@@ -1348,6 +1348,20 @@ jobs:
           grep -qE "\\] ok$" /tmp/vl_number_disc.log || {
             echo "::error::test_vl_number_disc did not run to completion"; exit 1; }
 
+      - name: A deck with pictures offers a visual language among its directions (both gates)
+        run: |
+          set -o pipefail
+          python tests/test_direction_vl_rule.py | tee /tmp/direction_vl_rule.log
+          grep -qE "\\] ok$" /tmp/direction_vl_rule.log || {
+            echo "::error::test_direction_vl_rule did not run to completion"; exit 1; }
+
+      - name: Data page figure fills its page; storybook portrait illustrations take the tall frame
+        run: |
+          set -o pipefail
+          python tests/test_vl_page_fill.py | tee /tmp/vl_page_fill.log
+          grep -qE "\\] ok$" /tmp/vl_page_fill.log || {
+            echo "::error::test_vl_page_fill did not run to completion"; exit 1; }
+
       # --- P2 visual languages steps end ---
 
       - name: The Codex scaffold shows every field the Codex gate requires

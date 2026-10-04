@@ -413,17 +413,28 @@ LAYOUTS = {
     },
     "storybook": {
         "cover": {"land": L_((.06, .03, .88, .64), "feather", (.12, .69, .76, .25), col_noimg=(.12, .24, .76, .52), anchor="top", align="c"),
-                  "port": L_((.03, .03, .94, .52), "feather", (.08, .58, .84, .35), col_noimg=(.08, .24, .84, .52), anchor="top", align="c")},
+                  "port": L_((.03, .03, .94, .52), "feather", (.08, .58, .84, .35), col_noimg=(.08, .24, .84, .52), anchor="top", align="c"),
+                  # *_tall: a PORTRAIT illustration — contained in a wide frame it filled 27-50% of it (a sliver on
+                  # the quote page, the user, 2026-10-04); picked by the picture's own aspect (_compose)
+                  "land_tall": L_((.05, .05, .44, .90), "feather", (.53, .22, .40, .56), align="c"),
+                  "port_tall": L_((.14, .03, .72, .58), "feather", (.08, .64, .84, .30), anchor="top", align="c")},
         "section": {"land": L_((.54, .08, .42, .84), "feather", (.08, .18, .44, .64), col_noimg=(.12, .18, .76, .64), align="l"),
-                    "port": L_((.06, .04, .88, .38), "feather", (.08, .46, .84, .46), col_noimg=(.08, .22, .84, .60), align="c")},
+                    "port": L_((.06, .04, .88, .38), "feather", (.08, .46, .84, .46), col_noimg=(.08, .22, .84, .60), align="c"),
+                    "port_tall": L_((.20, .03, .60, .50), "feather", (.08, .56, .84, .38), align="c")},
         "image_text": {"land": L_((.03, .08, .53, .84), "feather", (.60, .16, .34, .68)),
-                       "port": L_((.04, .03, .92, .46), "feather", (.08, .52, .84, .42), anchor="top")},
+                       "port": L_((.04, .03, .92, .46), "feather", (.08, .52, .84, .42), anchor="top"),
+                       "port_tall": L_((.18, .03, .64, .48), "feather", (.08, .54, .84, .40), anchor="top")},
         "quote": {"land": L_((.34, .02, .32, .34), "feather", (.14, .38, .72, .50), col_noimg=(.14, .18, .72, .66), align="c"),
-                  "port": L_((.30, .03, .40, .20), "feather", (.08, .27, .84, .64), col_noimg=(.08, .18, .84, .70), align="c")},
+                  "port": L_((.30, .03, .40, .20), "feather", (.08, .27, .84, .64), col_noimg=(.08, .18, .84, .70), align="c"),
+                  "land_tall": L_((.08, .08, .32, .84), "feather", (.44, .16, .48, .68), align="c"),
+                  "port_tall": L_((.25, .03, .50, .36), "feather", (.08, .42, .84, .50), align="c")},
         "data": {"land": L_((.58, .08, .38, .84), "feather", (.08, .14, .48, .72), col_noimg=(.12, .14, .76, .72)),
-                 "port": L_((.06, .03, .88, .36), "feather", (.08, .42, .84, .50), col_noimg=(.08, .20, .84, .66))},
+                 "port": L_((.06, .03, .88, .36), "feather", (.08, .42, .84, .50), col_noimg=(.08, .20, .84, .66)),
+                 "port_tall": L_((.20, .03, .60, .44), "feather", (.08, .50, .84, .44))},
         "closing": {"land": L_((.15, .03, .70, .62), "feather", (.12, .68, .76, .25), col_noimg=(.12, .30, .76, .40), anchor="top", align="c"),
-                    "port": L_((.04, .03, .92, .52), "feather", (.08, .58, .84, .34), col_noimg=(.08, .30, .84, .40), anchor="top", align="c")},
+                    "port": L_((.04, .03, .92, .52), "feather", (.08, .58, .84, .34), col_noimg=(.08, .30, .84, .40), anchor="top", align="c"),
+                    "land_tall": L_((.05, .05, .44, .90), "feather", (.53, .22, .40, .56), align="c"),
+                    "port_tall": L_((.16, .03, .68, .56), "feather", (.08, .62, .84, .32), anchor="top", align="c")},
     },
 }
 
@@ -640,7 +651,7 @@ def _balanced_width(k, f, t, sz, w):
     return None
 
 
-def _flow(k, slide, page, col, items, *, anchor, align, underlay=None):
+def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=None):
     """PLAN the fields of one page in its column by measured height; returns (rects, draw).
 
     Sizes start at the language's sizes (scaled to the canvas), shrink toward each field's floor until
@@ -657,7 +668,7 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None):
     sizes, floors, widths = {}, {}, {}
     for f, _t in items:
         base, *_rest, floor = TYPE[k.name][f]
-        sizes[f], floors[f], widths[f] = base * s, max(9.0, floor * s), w
+        sizes[f], floors[f], widths[f] = (start or {}).get(f, base * s), max(9.0, floor * s), w
     gap = GAP * s
     order = [f for f, _ in items]
     head = max(order, key=lambda f: TYPE[k.name][f][0])          # the display field, by design
@@ -752,6 +763,51 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None):
                 rr = k.runs(t, sz, color, bold, role, italic)
             dk.text(slide, fx, fy, fw, fh, [rr], align=al)
     return rects, draw
+
+
+def _data_hero(k, slide, page, col, items, lay, underlay, orient):
+    """A data page with no picture: the figure IS the page. It was the language's stack at its usual size in a column
+    80% wide — the figure, label and note filled its top-left quarter (the user, looking at the gallery, 2026-10-04).
+    Now the figure is set as tall as the column allows (and never wider than about half of it); on a landscape canvas
+    the label and note sit beside it, centred on it, so the page reads across; on a portrait one they stack below.
+    Fitting is still _flow's: a long number, a long label or CJK text shrinks toward the floors, never past them."""
+    x, y, w, h = col
+    fields = dict(items)
+    num = fields.get("number")
+    if not num:
+        return _flow(k, slide, page, col, items, anchor=lay["anchor"], align=lay["align"], underlay=underlay)
+    bold, face = TYPE[k.name]["number"][2], k.face("numeral")
+    s = min(*_canvas(k)) / 7.5
+    rest = [it for it in items if it[0] != "number"]
+    side = orient == "land" and bool(rest)
+    tall = (0.80 if side else 0.55) * h * 72.0 / 1.2            # a line of the figure at ~1.2 em
+    adv = dk._natural_width_in([(num, bool(bold))], tall, face)
+    room = (0.50 if side else 0.86) * w
+    if adv > room:
+        tall *= room / adv
+    start = {"number": tall, "label": TYPE[k.name]["label"][0] * s * (1.9 if side else 1.45),
+             "note": TYPE[k.name]["note"][0] * s * (1.35 if side else 1.2)}
+    if not side:
+        return _flow(k, slide, page, col, items, anchor="middle", align=lay["align"], underlay=underlay, start=start)
+    line_h = tall / 72.0 * 1.2
+    nw = dk._natural_width_in([(num, bool(bold))], tall, face) + (0.5 * line_h if "circle" in lay["deco"] else 0.0) \
+        + 0.15 * line_h
+    gutter = max(0.35, 0.06 * w)
+    # the figure + caption GROUP is centred on the page (it hugged the left edge with half the page empty): the
+    # caption column is as wide as its longest line wants (capped by what is left), the group shifts by the slack
+    cw_room = max(1.0, w - nw - gutter)
+    want = max(dk._natural_width_in([(t, False)], start.get(f, 12), k.face("display" if f == "label" else "body"))
+               for f, t in rest) + 0.1
+    cw = min(cw_room, max(want, 0.35 * cw_room))
+    x0 = x + max(0.0, (w - (nw + gutter + cw)) / 2.0)
+    r1, d1 = _flow(k, slide, page, (x0, y, nw, h), [("number", num)], anchor="middle", align="l",
+                   underlay=underlay, start=start)
+    r2, d2 = _flow(k, slide, page, (x0 + nw + gutter, y, cw, h), rest, anchor="middle", align="l", start=start)
+
+    def draw():
+        d1()
+        d2()
+    return dict(r1, **r2), draw
 
 
 def _frac(rect, W, H):
@@ -953,6 +1009,15 @@ def _compose(k, slide, page, fields, image):
     W, H = _canvas(k)
     orient = "land" if W >= H * 1.2 else "port"
     lay = LAYOUTS[k.name][page][orient]
+    if lay["treat"] == "feather" and image is not None and not isinstance(image, (list, tuple)) \
+            and LAYOUTS[k.name][page].get(orient + "_tall"):
+        try:                                       # a portrait picture takes the frame drawn for one
+            from PIL import Image as _PI
+            _iw, _ih = _PI.open(_resolve(k, image)[0]).size
+            if _iw / float(_ih) < 0.85:
+                lay = LAYOUTS[k.name][page][orient + "_tall"]
+        except Exception:
+            pass                                   # an unresolvable image is refused where it is placed, as before
     n0 = len(slide.shapes)
     index = len(k.prs.slides)
     items = [(f, str(fields[f]).strip()) for f in PAGE_FIELDS[page]
@@ -1009,7 +1074,11 @@ def _compose(k, slide, page, fields, image):
                   pill=sw > h + 1e-6)
             return dx
         underlay["number"] = _disc
-    rects, draw = _flow(k, slide, page, col, items, anchor=lay["anchor"], align=lay["align"], underlay=underlay) if items else ({}, None)
+    if page == "data" and img_rect is None and items:
+        rects, draw = _data_hero(k, slide, page, col, items, lay, underlay, orient)
+    else:
+        rects, draw = _flow(k, slide, page, col, items, anchor=lay["anchor"], align=lay["align"],
+                            underlay=underlay) if items else ({}, None)
     if rects:
         xs = [r[0] for r in rects.values()] + [r[0] + r[2] for r in rects.values()]
         ys = [r[1] for r in rects.values()] + [r[1] + r[3] for r in rects.values()]

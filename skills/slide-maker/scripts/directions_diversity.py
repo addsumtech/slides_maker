@@ -179,6 +179,25 @@ def _styled(d):
     return bool(d.get("dna") or d.get("vl") or _bespoke(d))     # vl: a curated visual language
 
 
+IMAGES = ("photos", "illustrations", "none")
+
+
+def images_fault(images, directions):
+    """The visual-language rule, held by BOTH runtimes' direction gates: a deck that HAS pictures — the user's photos or
+    illustrations — offers at least one visual language among its directions. The docs said one MAY be offered and
+    nothing ever asked, so the four image-led looks rarely reached the people they were built for (2026-10-04).
+    `images` is what the direction-gate record states. Returns the fault, or None."""
+    v = str(images or "").strip().lower()
+    if v not in IMAGES:
+        return ("record `images`: photos | illustrations | none — the pictures this deck has (the user's photos, "
+                "illustrations, or none); a deck with pictures offers a visual language among its directions")
+    if v == "none" or any(isinstance(d, dict) and d.get("vl") for d in (directions or [])):
+        return None
+    hint = "storybook (a watercolour series)" if v == "illustrations" else "editorial, soft or collage (photo-led)"
+    return ("the deck has {} but no direction is a visual language — offer one with "
+            "visual_languages.direction('<name>'), e.g. {} (references/visual-languages.md)".format(v, hint))
+
+
 def check(directions):
     feats = [_features(d) for d in directions]
     pairs = [_pair(x, y) for x, y in itertools.combinations(feats, 2)]

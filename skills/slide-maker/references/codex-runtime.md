@@ -403,9 +403,14 @@ interview answer at all — each reads the built file itself):
    from rendered alternatives or it was not, and both are recordable.
 
    ```json
-   "direction_gate": {"candidates": "directions.json", "picked": "<the one chosen>"}
+   "direction_gate": {"candidates": "directions.json", "picked": "<the one chosen>", "images": "photos"}
    "direction_gate": "n/a - <locked template | mimic | user supplied the look | tiny ask>"
    ```
+
+   `images` (`photos | illustrations | none`) states the pictures the deck has — the user's photos, their
+   illustrations, or none. With pictures, at least ONE candidate is a visual language
+   (`visual_languages.direction("<name>")`: photos → editorial / soft / collage, illustrations → storybook),
+   or the gate holds the deck; the set's named `waived` is the escape.
 
    `codex_delivery_gate.py` runs `scripts/directions_diversity.py` over the candidates ITSELF, so
    a verdict you type is not evidence the check ran. It scores two things a preset list quietly

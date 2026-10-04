@@ -1678,6 +1678,8 @@ A few rules that matter (see `references/design-principles.md`):
   script: `visual_languages.use(name, prs)` gives the palette, system fonts (both platforms by default,
   per script for CJK) and ground, and its six page functions lay out your own copy and images — never
   hand-roll those pages. Record `design_plan.visual_language`; the delivery gate checks it was applied.
+  A deck with the user's photos or illustrations OFFERS at least one visual language among its directions
+  (`direction_gate.images: photos | illustrations | none` — both gates hold it; `references/interview-protocol.md`).
   Build with `ground="auto"` (light paper, or the language's contrast ground when your last decks already
   sit on light paper) and record what it printed with `visual_languages.py --gates NAME --ground G`.
 - **Use the source's own figures, WHOLE — integral is the default.** For *any* deck

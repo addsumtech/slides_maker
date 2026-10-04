@@ -1518,7 +1518,8 @@ def _direction_gate(design, deck_dir):
         die('`design_plan.direction_gate` is missing. The look was either CHOSEN from rendered\n'
             '    alternatives (branch c) or it was not, and both are recordable:\n'
             '      "direction_gate": {"candidates": "directions.json" | [ {...}, ... ],\n'
-            '                         "picked": "<the direction the user chose>"}\n'
+            '                         "picked": "<the direction the user chose>",\n'
+            '                         "images": "photos | illustrations | none"}\n'
             '      "direction_gate": "n/a - <locked template | mimic | user supplied the look | '
             'tiny ask>"\n'
             '    It is re-scored here with scripts/directions_diversity.py, the way the arc\n'
@@ -1560,6 +1561,9 @@ def _direction_gate(design, deck_dir):
     if r["colourway_excess"]:
         faults.append("more than one motif-less colourway: {}".format(
             ", ".join(r["colourway_excess"])))
+    _imgf = directions_diversity.images_fault(dg.get("images"), cands)   # pictures -> a visual language offered
+    if _imgf:
+        faults.append(_imgf)
     if faults and not str(dg.get("waived", "")).strip():
         die("the direction competition does not hold up when re-scored:\n    - "
             + "\n    - ".join(faults)

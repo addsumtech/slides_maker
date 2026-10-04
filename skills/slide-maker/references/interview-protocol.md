@@ -246,7 +246,11 @@ four template choices:
          `visual_languages.direction("editorial" | "soft" | "collage" | "storybook")` returns its entry for
          `directions.json`, previewed by its bundled sample ("style sample — not your content"). It counts
          as a STYLED direction, never as the topic-invented bespoke one. Picking it records
-         `design_plan.visual_language` (`references/visual-languages.md`).
+         `design_plan.visual_language` (`references/visual-languages.md`). 🔴 **When the deck HAS pictures —
+         the user's photos or illustrations — at least ONE offered direction is a visual language**
+         (photos → editorial / soft / collage by tone; illustrations → storybook), and the gate record states
+         it: `direction_gate.images: photos | illustrations | none`. Both runtimes' gates hold a picture deck
+         whose set has none, unless the set records a named `waived`.
        - **An image-led direction (only when an image tool is available).** One of the offered
          directions MAY be image-led: its visual language is a coherent series of art-directed
          pictures on most pages, and its preview shows an imagery-led composition. Mark it in

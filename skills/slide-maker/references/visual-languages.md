@@ -67,7 +67,12 @@ k.closing(k.new_slide(), title="Bring one broken thing.", line="And bring a neig
   run is `k.run(…)`): it picks the language's face and, for Chinese, Japanese or Korean text, that script's
   East-Asian face — never type a font name — and sets digits in a LINING face where the language's face has
   old-style figures (Georgia), so "Repair café 2026" never bobs.
-- **Any canvas:** every page has a landscape and a portrait layout (portrait when W < 1.2 H).
+- **Any canvas:** every page has a landscape and a portrait layout (portrait when W < 1.2 H). A storybook page given a
+  PORTRAIT illustration (width/height < 0.85) takes its tall frame — beside the text on a landscape slide, taller on a
+  portrait one — so the picture is not shrunk into a frame drawn for a landscape one.
+- **A data page with no picture** sets the figure big — about 60% of the column's height on a landscape slide, with
+  the label and note beside it; stacked below it on a portrait one — never wider than half the column, so a long
+  number shrinks rather than crowding the label.
 - **Screen readers:** every page declares its title with `deckkit.a11y_title` (the quote page: the quote; the data
   page: number + label) — first in reading order, above the canvas, nothing drawn — so a kicker set above the title
   never trips READING ORDER. Ordinary `k.new_slide()` pages need their own title (or `dk.a11y_title`).
