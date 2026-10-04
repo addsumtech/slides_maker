@@ -193,6 +193,51 @@ for extra in ({"vl": "collage"}, {"gen": "s01-cover"}, {"vl": "collage", "gen": 
     check(dk._declared_overlap(sh),
           "overlap declaration survives a later %s tag (name %r)" % ("+".join(extra), sh.name))
 
+# 🔴 The same composed spelling reaches EVERY reader of a `<base>:` tag, not just the render-time
+# overlap one fixed above — found by listing all of them (2026-10-05). Two more were blind to it:
+#   · build-time TEXT_OVERLAP read `deckkit-overlap:` only, so a kit-stamped text box carrying a
+#     declared overlap was refused as a collision — the declaration the render gate now honours;
+#   · DATUM SCALE read `deckkit-datum:` only, so a bar declared decorative or stamped by a kit
+#     (`deckkit-datum+decor:g:2.0`) dropped out of the truth check while its group still printed.
+def _lint_codes(p):
+    with __import__("contextlib").redirect_stdout(__import__("io").StringIO()):
+        return {(n, code) for n, _sev, code, *_ in dk.lint_layout(p, verbose=False)}
+
+
+for extra in ({}, {"vl": "collage"}, {"gen": "s01-cover", "vl": "collage"}):
+    p2 = dk.blank_deck()
+    s2 = dk.add_slide(p2)
+    big = dk.text(s2, 0.5, 1.0, 6.0, 1.4, [[("GIANT", 80, dk.DEEP, True, False)]])
+    dk.overlap_intent(big, OVER_WHY)
+    if extra:
+        dk._compose_tag(big, **extra)
+    dk.text(s2, 1.0, 1.4, 4.0, 0.5, [[("a caption riding it", 14, dk.DEEP, False, False)]])
+    check((1, "TEXT_OVERLAP") not in _lint_codes(p2),
+          "build-time TEXT_OVERLAP honours a declaration with {} composed onto it (name {!r})"
+          .format("+".join(extra) or "nothing", big.name))
+p3 = dk.blank_deck()
+s3 = dk.add_slide(p3)
+dk.text(s3, 0.5, 1.0, 6.0, 1.4, [[("GIANT", 80, dk.DEEP, True, False)]])
+dk.text(s3, 1.0, 1.4, 4.0, 0.5, [[("a caption riding it", 14, dk.DEEP, False, False)]])
+check((1, "TEXT_OVERLAP") in _lint_codes(p3), "control: an UNDECLARED text collision is still TEXT_OVERLAP")
+
+for extra in ({}, {"flag": "+decor", "reason": None}, {"vl": "collage"}):
+    p4 = dk.blank_deck()
+    s4 = dk.add_slide(p4)
+    # values 1 and 2 drawn 2.0in and 3.0in long: the lengths say 1 : 1.5, the data says 1 : 2
+    for i, (v, ln) in enumerate(((1.0, 2.0), (2.0, 3.0))):
+        bar = dk.box(s4, 1.0, 1.0 + i * 0.6, ln, 0.3, fill="2F5BEA")
+        dk.mark_datum(bar, v, group="probe")
+        if extra:
+            kw = dict(extra)
+            if kw.get("reason", 1) is None:
+                kw.pop("reason")
+            dk._compose_tag(bar, **kw)
+    names = [sh.name for sh in s4.shapes]
+    check(any(code == "DATUM SCALE" for _n, _sev, code, *_ in dk._datum_faults(p4)),
+          "DATUM SCALE still reads a datum with {} composed onto it ({})"
+          .format("+".join(k.strip("+") for k in extra) or "nothing", names[0]))
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

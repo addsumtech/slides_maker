@@ -10421,7 +10421,10 @@ def _datum_faults(prs):
         groups = {}
         for shp, _cont in _deep_shapes(slide.shapes):
             name = str(getattr(shp, "name", "") or "")
-            if not (name.startswith(DATUM_TAG) or "+datum" in name.split(":", 1)[0]):
+            # head tokens, not a prefix: `_compose_tag` drops the colon when flags follow, so a datum
+            # that is also decorative or kit-stamped reads `deckkit-datum+decor:<g>:<v>`
+            _head = name.split(":", 1)[0]
+            if not (_head.split("+", 1)[0] == DATUM_TAG.rstrip(":") or "+datum" in _head):
                 continue
             # A ROTATED bar's width and height are its unrotated box, so neither is the length the
             # reader sees and the encoding axis cannot be inferred. Bars are essentially never
@@ -10434,8 +10437,7 @@ def _datum_faults(prs):
             # nothing while its tests looked like they passed — the exact "green because it
             # stopped looking" failure this check exists to prevent, committed inside the check
             # itself. A tag this module WROTE must parse; if it does not, that is a bug here.
-            body = name.partition(":")[2] if "+datum" in name.split(":", 1)[0] \
-                else name[len(DATUM_TAG):]
+            body = name.partition(":")[2]                # the record after the head, either spelling
             if ":" not in body:
                 continue                                 # foreign shape borrowing the prefix
             g, raw = body.rsplit(":", 1)
@@ -11389,7 +11391,7 @@ def _lint_layout_impl(prs, *, verbose=True, strict=False, overlap_tol=0.05, esca
             out.poly = npoly
             return out
         def _declared(t):
-            return (getattr(t[0], "name", "") or "").startswith(OVERLAP_TAG)
+            return _declared_overlap(t[0])           # every spelling, as the render-time gate reads it
         for i in range(len(text_inks)):
             for j in range(i+1, len(text_inks)):
                 # a DECLARED overlap is a composition, not a collision. Either side may carry it —
