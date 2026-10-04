@@ -1748,8 +1748,8 @@ def takeaway_rail(slide, x, y, w, label, hero, body, *, accent=MAGENTA, ink=DEEP
     # Every band is MEASURED — the label and hero can each wrap, and the body box was a fixed
     # 2.0in. See measure_takeaway_rail for both defects. Returns the bottom y, so a caller can
     # place under the rail or hand it to vstack.
-    lab_h = max(0.30, _measure_lines([(label.upper(), True)], 11, w) * 11 / 72.0 * _LINT_LINE_H)
-    hero_h = max(0.90, _measure_lines([(hero, True)], 34, w) * 34 / 72.0 * _LINT_LINE_H)
+    lab_h = max(0.30, _measure_lines([(label.upper(), True)], 11, w - TEXT_INSET_LR) * 11 / 72.0 * _LINT_LINE_H)
+    hero_h = max(0.90, _measure_lines([(hero, True)], 34, w - TEXT_INSET_LR) * 34 / 72.0 * _LINT_LINE_H)
     body_h = measure_text([(body, False)], w, 14, line_h_factor=_LINT_LINE_H * 1.2)
     text(slide, x, y, w, lab_h, [[(label.upper(), 11, accent, True, False)]], space_after=0)
     text(slide, x, y + lab_h + 0.04, w, hero_h, [[(hero, 34, ink, True, False)]], space_after=0)
@@ -2858,7 +2858,7 @@ def venn(slide, x, y, w, h, sets, *, zones=None, accents=None, ink=None, mute=No
         sz = fit_text_size([(str(lab), len(key) > 1)], zw, zh, zone_size, font=fnt, min_size=7.5)
         # fit_text_size returns the FLOOR when nothing fits, so re-measure AT the size actually used
         _lh = max(_LINT_LINE_H, 1.2 * CJK_LS) if _has_cjk(str(lab)) else _LINT_LINE_H
-        need = _measure_lines([(str(lab), len(key) > 1)], sz, zw, font=fnt) * (sz / 72.0 * _lh)
+        need = _measure_lines([(str(lab), len(key) > 1)], sz, zw - TEXT_INSET_LR, font=fnt) * (sz / 72.0 * _lh)
         if need > zh + 0.004:
             raise ValueError(
                 f"venn(): zone {kk!r} label {str(lab)[:24]!r} cannot fit its region "
@@ -5262,6 +5262,22 @@ def deck_hangs_punct(prs):
     return "0" not in vals and "1" in vals
 
 
+def _as_runs(runs):
+    """`runs` as [(text, bold), ...]: a plain string is one regular run, a single (text, bold) pair one run.
+    A string was iterated character by character and died on an unpacking error that named nothing
+    (measured: the first call any of us made with a string, twice). Anything else malformed says what it needs."""
+    if isinstance(runs, str):
+        return [(runs, False)]
+    if isinstance(runs, tuple) and len(runs) == 2 and isinstance(runs[0], str) and not isinstance(runs[1], str):
+        return [runs]
+    out = list(runs)
+    for r in out:
+        if not (isinstance(r, (tuple, list)) and len(r) == 2 and isinstance(r[0], str)):
+            raise TypeError("runs must be a string or a list of (text, bold) pairs, e.g. [(\"Bring it broken\", "
+                            "True)] — a text() run (text, size, colour, bold, italic) is not one; got {!r}".format(r))
+    return out
+
+
 def _measure_lines(runs, size_pt, avail_in, font=None):
     """How many lines styled text wraps to — MEASURED, not estimated.
 
@@ -5281,6 +5297,7 @@ def _measure_lines(runs, size_pt, avail_in, font=None):
     line guess. Falls back to `_lines_heuristic` if Pillow or the font can't be loaded — so a
     build never breaks over measurement. Lazy-imports Pillow/matplotlib."""
     fontname = font or FONT
+    runs = _as_runs(runs)
     flat = "".join(t for t, _ in runs)
     if not flat:
         return 1
@@ -5293,6 +5310,12 @@ def _measure_lines(runs, size_pt, avail_in, font=None):
         return _lines_heuristic(flat, size_pt, avail_in)
 
     items = []                                              # (width_pt, kind): 'w'ord 's'pace 'c'jk
+    _chw = {}                                               # one glyph's width, per (char, bold): an over-wide
+    def chw(ch, b):                                         # word breaks per character, and characters repeat
+        k_ = (ch, b)
+        if k_ not in _chw:
+            _chw[k_] = getlen(ch, b)
+        return _chw[k_]
     for text, bold in runs:
         word = []                                           # the current word's characters, in order
         hw = [0]                                            # how many of them are Hangul
@@ -5318,7 +5341,7 @@ def _measure_lines(runs, size_pt, avail_in, font=None):
                             if sgw <= avail:
                                 items.append((sgw, "c"))
                             else:
-                                items.extend((getlen(ch, bold), "c") for ch in seg)
+                                items.extend((chw(ch, bold), "c") for ch in seg)
                     else:
                         items.append((ww, "w"))
                     word.clear()
@@ -5421,7 +5444,7 @@ def measure_callout(label, body, w):
     """Height (inches) :func:`callout` will draw for this ``label``+``body`` at width ``w``.
     Measure it BEFORE placing so the box can be positioned to clear the footer / the block
     below — the single source of truth for the callout height formula."""
-    nlines = _measure_lines([(label + "  ", True), (body, False)], 12.5, w - 0.44)
+    nlines = _measure_lines([(label + "  ", True), (body, False)], 12.5, w - 0.44 - TEXT_INSET_LR)
     return 0.30 + 0.245 * nlines   # 0.30 = top+bottom padding: snug to the text but not cramped
 
 
@@ -5435,7 +5458,9 @@ def _stacked_text_h(lines, w, *, pad=0.0, line_h_factor=1.12):
     for txt, size, bold, font in lines:
         if not txt:
             continue
-        n = max(1, _measure_lines([(txt, bool(bold))], size, w, font=font))
+        # `w` is the text() frame; the words are set in it minus its 2pt insets (TEXT_INSET_LR) — measured at the
+        # frame, a word between the two widths counted one line short and the node was built too small
+        n = max(1, _measure_lines([(txt, bool(bold))], size, max(0.05, w - TEXT_INSET_LR), font=font))
         total += size / 72.0 * line_h_factor * n
     return total + pad
 
@@ -5462,7 +5487,7 @@ def measure_modbox(role, fname, w):
     """
     role_h = _stacked_text_h([(ln, 16, True, None) for ln in role.split("\n")],
                              w - 0.1, line_h_factor=0.92 * 1.12)
-    fname_h = max(0.30, _measure_lines([(fname, False)], 9.5, w - 0.1, font=MONO)
+    fname_h = max(0.30, _measure_lines([(fname, False)], 9.5, w - 0.1 - TEXT_INSET_LR, font=MONO)
                   * 9.5 / 72.0 * _LINT_LINE_H)
     return round(0.12 + max(0.55, role_h) + fname_h + 0.04, 4)
 
@@ -5525,8 +5550,8 @@ def measure_takeaway_rail(label, hero, body, w):
     y+1.30. For a one-line label and hero the arithmetic below is 0.30 + 0.04 + 0.90 + 0.06 =
     1.30 exactly, so the common case is unchanged byte for byte.
     """
-    lab_h = max(0.30, _measure_lines([(label.upper(), True)], 11, w) * 11 / 72.0 * _LINT_LINE_H)
-    hero_h = max(0.90, _measure_lines([(hero, True)], 34, w) * 34 / 72.0 * _LINT_LINE_H)
+    lab_h = max(0.30, _measure_lines([(label.upper(), True)], 11, w - TEXT_INSET_LR) * 11 / 72.0 * _LINT_LINE_H)
+    hero_h = max(0.90, _measure_lines([(hero, True)], 34, w - TEXT_INSET_LR) * 34 / 72.0 * _LINT_LINE_H)
     body_h = measure_text([(body, False)], w, 14, line_h_factor=_LINT_LINE_H * 1.2)
     return round(lab_h + 0.04 + hero_h + 0.06 + body_h + 0.03, 4)
 
@@ -5547,7 +5572,7 @@ def measure_bullets(items, w, size=17, gap=0.26):
     line_h = size / 72.0 * 1.12
     total = 0.0
     for i, (lead, rest) in enumerate(items):
-        nlines = _measure_lines([(lead, True), (rest, False)], size, w - 0.22)
+        nlines = _measure_lines([(lead, True), (rest, False)], size, w - 0.22 - TEXT_INSET_LR)
         total += line_h * nlines
         if i < len(items) - 1:
             total += gap
@@ -5581,6 +5606,7 @@ def measure_text(runs, w, size, *, line_h_factor=1.12, pad=0.0, font=None,
     a CJK-bearing block never measures below the pitch its script-aware default renders."""
     # text() sets the words in the box MINUS its 2pt left/right insets; measured at the full width, a title exactly
     # as wide as its box came back one line and rendered two (2026-10-04)
+    runs = _as_runs(runs)
     nlines = _measure_lines(runs, size, max(0.05, w - TEXT_INSET_LR), font=font)
     # `line_spacing` is an OOXML spcPct MULTIPLIER on the face's natural line height, not the
     # em-per-line itself — so it COMPOSES with `line_h_factor`, it does not replace it. Getting
@@ -5622,7 +5648,7 @@ def bullet(slide, x, y, w, items, size=17, gap=0.26, marker=BLUE, lead_c=DEEP, b
              space_after=0, line_spacing=1.02)
         # MEASURED line count (real glyph metrics; bold lead measured bold) so the marker
         # advance matches the renderer's layout — no phantom or missing lines.
-        nlines = _measure_lines([(lead, True), (rest, False)], size, w - 0.22)
+        nlines = _measure_lines([(lead, True), (rest, False)], size, w - 0.22 - TEXT_INSET_LR)
         cy += line_h * nlines + gap
     return cy
 
@@ -6399,7 +6425,7 @@ def code_block(slide, x, y, w, code, size=12, lang=None, highlight_lines=None,
     for _k, _ln in enumerate(lines, start=1):
         if not _ln.strip():
             continue
-        if _measure_lines([(_ln, _k in hl)], size, _avail, font=MONO) > 1:
+        if _measure_lines([(_ln, _k in hl)], size, _avail - TEXT_INSET_LR, font=MONO) > 1:
             _over.append(_k)
     if _over:
         _shown = ", ".join(str(k) for k in _over[:4]) + ("…" if len(_over) > 4 else "")
@@ -11413,6 +11439,7 @@ def fit_text_size(runs, w, h, start_size, *, font=None, min_size=9.0, line_h=_LI
     metrics; returns `min_size` if even that overflows (then shorten the text or grow the box).
     CJK-aware: CJK runs are measured at the pitch text()'s script-aware default renders
     (``1.2 × CJK_LS``), so the returned size actually fits."""
+    runs = _as_runs(runs)
     aw, ah = max(0.2, w - pad - TEXT_INSET_LR), max(0.1, h-pad)   # text()'s own 2pt insets come off the width
     if any(_has_cjk(t) for (t, *_r) in runs):
         line_h = max(line_h, 1.2 * CJK_LS)

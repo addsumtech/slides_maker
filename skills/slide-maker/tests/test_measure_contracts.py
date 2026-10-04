@@ -42,6 +42,13 @@ LONG = ("A much longer interpretation that keeps going well past what a two-inch
         "room, and nobody measured it before placing the rail, and nothing in the pipeline asked.")
 
 
+def _try(fn):
+    try:
+        return fn()
+    except Exception as e:                       # the old behaviour: a crash, reported as a value that matches nothing
+        return "raised " + repr(e)[:80]
+
+
 def check(name, cond, detail=""):
     (PASS if cond else FAIL).append(name)
     print(("  ok   " if cond else "  FAIL ") + name
@@ -334,6 +341,24 @@ def main():
         check("a Latin title 0.02in wider than its text measures two lines (rendered 2)", h >= 1.9 * lh, round(h / lh, 2))
         sz = dk.fit_text_size([("Bring it broken today", True)], 5.603, 0.75, 40, font="Arial")
         check("fit_text_size fits it on one line inside the insets", sz < 40, sz)
+
+    # A plain string is one regular run (it was iterated per character and died on an unpacking error naming
+    # nothing — the first call made with a string, twice); a lone (text, bold) pair is one run; a text() run
+    # tuple says what is wanted instead of being read with its SIZE as the bold flag.
+    T = "Bring it broken, take it home working"
+    check("measure_text takes a plain string as one regular run",
+          _try(lambda: dk.measure_text(T, 2.4, 20)) == dk.measure_text([(T, False)], 2.4, 20))
+    check("fit_text_size takes a plain string",
+          _try(lambda: dk.fit_text_size(T, 2.4, 0.8, 30)) == dk.fit_text_size([(T, False)], 2.4, 0.8, 30))
+    check("a lone (text, bold) pair is one run",
+          _try(lambda: dk.measure_text((T, True), 2.4, 20)) == dk.measure_text([(T, True)], 2.4, 20))
+    try:
+        dk.measure_text([(T, 20, dk.DEEP, True, False)], 2.4, 20)
+        check("a text() run tuple is refused, naming the (text, bold) shape", False, "accepted")
+    except TypeError as e:
+        check("a text() run tuple is refused, naming the (text, bold) shape", "(text, bold)" in str(e), str(e))
+    except Exception as e:
+        check("a text() run tuple is refused, naming the (text, bold) shape", False, repr(e))
 
     print("\n{} passed, {} failed".format(len(PASS), len(FAIL)))
     return 1 if FAIL else 0

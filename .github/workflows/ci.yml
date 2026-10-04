@@ -1320,6 +1320,13 @@ jobs:
           grep -qE "\\] ok$" /tmp/image_series_minors.log || {
             echo "::error::test_image_series_minors did not run to completion"; exit 1; }
 
+      - name: Components measure inside text() insets (node, chip, modbox, callout)
+        run: |
+          set -o pipefail
+          python tests/test_inset_contract.py | tee /tmp/inset_contract.log
+          grep -qE "\\] ok$" /tmp/inset_contract.log || {
+            echo "::error::test_inset_contract did not run to completion"; exit 1; }
+
       # --- P2 visual languages steps end ---
 
       - name: The Codex scaffold shows every field the Codex gate requires
