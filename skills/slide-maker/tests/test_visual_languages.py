@@ -279,8 +279,10 @@ r = k.quote(s_, quote=q, attribution="How every repair begins", image=str(_wimg)
 qb = [sh for sh in s_.shapes if getattr(sh, "has_text_frame", False) and _norm(sh.text_frame.text) == _norm(q)][0]
 qr = qb.text_frame.paragraphs[0].runs[0]
 it_lines = []
-fnt = ImageFont.truetype("/System/Library/Fonts/Supplemental/Georgia Italic.ttf", int(qr.font.size.pt * 10))
-for qp_ in qb.text_frame.paragraphs:
+import display_type as _dt_it
+_gi = _dt_it._italic_file("Georgia", False)          # the installed Georgia Italic file (None on the ubuntu runner)
+fnt = ImageFont.truetype(_gi, int(qr.font.size.pt * 10)) if _gi else None
+for qp_ in (qb.text_frame.paragraphs if fnt else []):
     cur = ""
     for wd_ in qp_.text.split(" "):
         nxt = (cur + " " + wd_) if cur else wd_
@@ -290,7 +292,7 @@ for qp_ in qb.text_frame.paragraphs:
             cur = nxt
     it_lines.append(cur)
 need = len(it_lines) * qr.font.size.pt * dk._LINT_LINE_H / 72.0
-check(qb.height / E + 0.02 >= need, "an italic quote's box holds its italic lines: {:.2f}in for {} lines needing {:.2f}in".format(qb.height / E, len(it_lines), need))
+check_mac(fnt is not None and qb.height / E + 0.02 >= need, "an italic quote's box holds its italic lines: {:.2f}in for {} lines needing {:.2f}in".format(qb.height / E, len(it_lines), need))
 prs = dk.blank_deck(5.625, 10.0)
 k = vl.use("soft", prs)
 s_ = k.new_slide()
