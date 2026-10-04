@@ -3853,6 +3853,16 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
                 break
         # 7) uneven card heights in a row (sibling cards must share ONE height)
         cset = [s for s in bx if s["solid"] and not s["bg"] and not s["text"] and s["h"] > 0.5 and s["w"] < 0.6 * sw]
+
+        # A shape NESTED inside another candidate is part of that card (a photo inside its print
+        # border, a panel inside a frame), never its sibling. Rows are bucketed by a rounded top, so
+        # without this a nested shape joined its own container's row or not depending on the third
+        # decimal of a coordinate (measured 2026-10-04: two equal taped prints reported as uneven).
+        def _nested(a, b, tol=0.02):
+            return (a is not b and a["w"] * a["h"] < b["w"] * b["h"]
+                    and a["l"] >= b["l"] - tol and a["t"] >= b["t"] - tol
+                    and a["l"] + a["w"] <= b["l"] + b["w"] + tol and a["t"] + a["h"] <= b["t"] + b["h"] + tol)
+        cset = [c for c in cset if not any(_nested(c, o) for o in cset)]
         bycol = {}                                  # dedupe layered shapes per (top,left): keep the tallest (the card, not its header band)
         for c in cset:
             key = (round(c["t"] * 10), round(c["l"] * 10))
