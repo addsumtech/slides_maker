@@ -1341,6 +1341,13 @@ jobs:
           grep -qE "\\] ok$" /tmp/direction_user_named.log || {
             echo "::error::test_direction_user_named did not run to completion"; exit 1; }
 
+      - name: Soft language number shape holds and centres the figure (circle or pill)
+        run: |
+          set -o pipefail
+          python tests/test_vl_number_disc.py | tee /tmp/vl_number_disc.log
+          grep -qE "\\] ok$" /tmp/vl_number_disc.log || {
+            echo "::error::test_vl_number_disc did not run to completion"; exit 1; }
+
       # --- P2 visual languages steps end ---
 
       - name: The Codex scaffold shows every field the Codex gate requires

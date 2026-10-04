@@ -733,7 +733,8 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None):
         for f, t, sz, (fx, fy, fw, fh) in plan:
             _base, role, bold, ckey, italic, _floor = TYPE[k.name][f]
             if underlay and f in underlay:
-                underlay[f]((fx, fy, fw, fh))
+                _dx = underlay[f]((fx, fy, fw, fh), t, sz) or 0.0
+                fx, fw = fx + _dx, fw - max(0.0, _dx)          # the figure moves to the shape's centre
             color = k.color("text_accents") if ckey == "accent" else k.color("ink")
             if f == "number" and _outlinable(k, t):
                 import display_type as dt
@@ -874,9 +875,12 @@ def frame_is_custom(frame):
     return frame not in (None, "rect")
 
 
-def _oval(slide, x, y, w, h, color, why):
+def _oval(slide, x, y, w, h, color, why, pill=False):
     from pptx.util import Inches
-    sh = dk._flat(slide.shapes.add_shape(MSO_SHAPE.OVAL, Inches(x), Inches(y), Inches(w), Inches(h)))
+    kind = MSO_SHAPE.ROUNDED_RECTANGLE if pill else MSO_SHAPE.OVAL
+    sh = dk._flat(slide.shapes.add_shape(kind, Inches(x), Inches(y), Inches(w), Inches(h)))
+    if pill:
+        sh.adjustments[0] = 0.5                          # fully round ends: a pill one line high
     sh.fill.solid()
     sh.fill.fore_color.rgb = dk.RGBColor.from_string(_hex(color))
     sh.line.fill.background()
@@ -984,9 +988,23 @@ def _compose(k, slide, page, fields, image):
     if "circle" in lay["deco"]:
         acc = k.P["accents"]
 
-        def _disc(r, _c=_readable_under(acc[1 % len(acc)], k.P["ink"], k.P["ground"])):
+        def _disc(r, t, sz, _c=_readable_under(acc[1 % len(acc)], k.P["ink"], k.P["ground"])):
+            # The shape HOLDS the number, centred on it: it was one line-height across from the box's left edge, so a
+            # "1" sat left of centre and the "2" of "02" stood outside it (the user, 2026-10-04). One figure: a
+            # circle; wider: a pill of the same height (the flow's line does not change). Returns how far to move
+            # the number's box so its measured ink sits at the shape's centre.
             x, y, w, h = r
-            _oval(slide, x - h * 0.10, y, h, h, _c, "a soft colour disc behind the figure; carries no information")
+            bold = TYPE[k.name]["number"][2]
+            adv = dk._natural_width_in([(str(t), bool(bold))], sz, k.face("numeral"))
+            sw = max(h, adv + 0.5 * h)                   # a quarter of the height clear on each side
+            if lay["align"] == "c":
+                sx, dx = x + (w - sw) / 2.0, 0.0
+            else:
+                sx = x - h * 0.10
+                dx = (sx + sw / 2.0) - (x + dk.TEXT_INSET_LR / 2.0 + adv / 2.0)
+            _oval(slide, sx, y, sw, h, _c, "a soft colour disc behind the figure; carries no information",
+                  pill=sw > h + 1e-6)
+            return dx
         underlay["number"] = _disc
     rects, draw = _flow(k, slide, page, col, items, anchor=lay["anchor"], align=lay["align"], underlay=underlay) if items else ({}, None)
     if rects:
