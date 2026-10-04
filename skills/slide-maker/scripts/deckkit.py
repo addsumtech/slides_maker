@@ -433,6 +433,7 @@ WATERMARK_TAG = "deckkit-watermark"
 # evidence carried by the artifact rather than a claim in a plan file nobody re-reads.
 OVERLAP_TAG = "deckkit-overlap:"
 DECOR_TAG = "deckkit-decor"      # `decorative()`: pure ornament, exempt from NON-TEXT CONTRAST
+LOWRES_TAG = "deckkit-lowres"    # `low_res_intent()`: the pixels are the point, exempt from LOW_RES_IMAGE
 # Prefix for a LENGTH-ENCODED datum: `deckkit-datum:<group>:<value>`. Same idiom as the tags
 # above — the fact travels in the shape name, so it survives the save and a checker can read the
 # author's INTENT (the number) next to the geometry that claims to show it.
@@ -3002,6 +3003,7 @@ def _compose_tag(shape, tier=None, flag=None, reason=None, gen=None, vl=None):
         have_overlap = True
     have_datum = head.startswith(DATUM_TAG.rstrip(":")) or "+datum" in head
     have_decor = head.startswith(DECOR_TAG) or "+decor" in head
+    have_lowres = head.startswith(LOWRES_TAG) or "+lowres" in head
     m = _GEN_RE.search(head)
     have_gen = m.group(1) if m else None
     mv = _VL_RE.search(head)
@@ -3018,6 +3020,8 @@ def _compose_tag(shape, tier=None, flag=None, reason=None, gen=None, vl=None):
         have_datum = True
     elif flag == "+decor":
         have_decor = True
+    elif flag == "+lowres":
+        have_lowres = True
     if reason is not None:
         why = reason
     if gen:
@@ -3025,7 +3029,7 @@ def _compose_tag(shape, tier=None, flag=None, reason=None, gen=None, vl=None):
     if vl:
         have_vl = vl
     on = (("+bleed", have_bleed), ("+overlap", have_overlap), ("+datum", have_datum),
-          ("+decor", have_decor))
+          ("+decor", have_decor), ("+lowres", have_lowres))
     if have_tier:
         base, flags = have_tier, [f for f, v in on if v]
     elif have_bleed:
@@ -3033,9 +3037,11 @@ def _compose_tag(shape, tier=None, flag=None, reason=None, gen=None, vl=None):
     elif have_overlap:
         base, flags = OVERLAP_TAG.rstrip(":"), [f for f, v in on if v and f != "+overlap"]
     elif have_datum:
-        base, flags = DATUM_TAG.rstrip(":"), (["+decor"] if have_decor else [])
+        base, flags = DATUM_TAG.rstrip(":"), [f for f, v in on if v and f in ("+decor", "+lowres")]
     elif have_decor:
-        base, flags = DECOR_TAG, []
+        base, flags = DECOR_TAG, (["+lowres"] if have_lowres else [])
+    elif have_lowres:
+        base, flags = LOWRES_TAG, []
     else:
         base, flags = "", []
     if have_gen:
@@ -7296,6 +7302,89 @@ def decorative(shape, reason):
     return shape
 
 
+def low_res_intent(shape, reason):
+    """Declare a picture whose PIXELS ARE THE POINT — pixel art, a screenshot of a low-resolution screen, a
+    deliberately blown-up detail — so LOW_RES_IMAGE does not hold it. Returns the shape.
+
+    LOW_RES_IMAGE measures what a viewer gets: the source pixels that stay visible after the crop, spread over
+    the frame's inches (a 13.33in slide on a 1080p screen is ~144 ppi; under 72 it reads soft, under 36 the
+    pixels show as blocks). It cannot tell a thumbnail stretched by accident from a sprite enlarged on purpose,
+    so the author says which, per picture, with a sentence (>=16 Latin-equivalent, CJK counts 2). Composes
+    with the other declarations in any order; waives LOW_RES_IMAGE only."""
+    try:
+        from written_reason import reason_width
+    except Exception:                                    # a missing helper must not loosen the floor
+        def reason_width(s):
+            return len(s.strip()) if isinstance(s, str) else 0
+    if reason_width(reason) < 16:
+        raise ValueError("low_res_intent(reason=%r): say why the visible pixels are the point, in a sentence "
+                         "someone can disagree with later (>=16 Latin-equivalent; a CJK character counts 2)."
+                         % (reason,))
+    try:
+        _compose_tag(shape, flag="+lowres", reason=" ".join(str(reason).strip().split())[:120])
+    except Exception:
+        pass
+    return shape
+
+
+def _declared_lowres(sh):
+    n = str(getattr(sh, "name", "") or "")
+    head = n.split(":", 1)[0]
+    return head.startswith(LOWRES_TAG) or "+lowres" in head or head.startswith(DECOR_TAG) or "+decor" in head
+
+
+LOW_RES_WARN_PPI = 72.0      # 2x upscale on a 1080p screen (~144 ppi for a 13.33in slide): visibly soft
+LOW_RES_HARD_PPI = 36.0      # 4x: the pixels show as blocks
+LOW_RES_MIN_SIDE = 1.5       # inches — a smaller picture (an icon, an avatar) is not checked
+
+
+def _low_res_findings(slide, n):
+    """(n, severity, "LOW_RES_IMAGE", msg) for each raster picture on `slide` whose VISIBLE source pixels (after
+    its crop) are spread under LOW_RES_WARN_PPI over its frame. Vector images (SVG, EMF/WMF) and declared
+    pictures (low_res_intent, decorative) are skipped."""
+    out = []
+
+    def walk(shapes):
+        for sh in shapes:
+            if sh.shape_type == 6:                       # a group: its pictures count too
+                yield from walk(sh.shapes)
+            elif sh.shape_type == 13:
+                yield sh
+    for sh in walk(slide.shapes):
+        try:
+            if _declared_lowres(sh):
+                continue
+            if sh._element.xpath(".//*[local-name()='svgBlip']"):
+                continue                                 # PowerPoint draws the vector, not the fallback PNG
+            im = sh.image
+            if im.content_type in ("image/x-emf", "image/x-wmf", "image/emf", "image/wmf", "image/svg+xml"):
+                continue
+            w_in, h_in = sh.width / 914400.0, sh.height / 914400.0
+            if max(w_in, h_in) < LOW_RES_MIN_SIDE or min(w_in, h_in) <= 0:
+                continue
+            pw, ph = im.size
+            vis_w = pw * max(0.0, 1.0 - (sh.crop_left or 0) - (sh.crop_right or 0))
+            vis_h = ph * max(0.0, 1.0 - (sh.crop_top or 0) - (sh.crop_bottom or 0))
+            ppi = min(vis_w / w_in, vis_h / h_in)
+        except Exception:
+            continue
+        if ppi >= LOW_RES_WARN_PPI:
+            continue
+        alt = ""
+        try:
+            alt = sh._element.nvPicPr.cNvPr.get("descr") or sh.name
+        except Exception:
+            pass
+        need = int(round(max(w_in, h_in) * 144))
+        out.append((n, "CRITICAL" if ppi < LOW_RES_HARD_PPI else "WARN", "LOW_RES_IMAGE",
+                    "picture '{}' shows {:.0f}x{:.0f} source px over {:.1f}x{:.1f}in = {:.0f} ppi (a 13.33in slide on a "
+                    "1080p screen is ~144 ppi; under {:.0f} it reads soft, under {:.0f} the pixels show as blocks) — use a "
+                    "larger source (~{} px on its long side for this size), place it smaller, or, if the pixels are the "
+                    "point, declare deckkit.low_res_intent(pic, why)".format(
+                        str(alt)[:40], vis_w, vis_h, w_in, h_in, ppi, LOW_RES_WARN_PPI, LOW_RES_HARD_PPI, need)))
+    return out
+
+
 def overlap_intent(shape, reason):
     """Declare that THIS element is meant to sit under (or over) other text — a composed overlap.
 
@@ -10672,6 +10761,10 @@ def _lint_layout_impl(prs, *, verbose=True, strict=False, overlap_tol=0.05, esca
         # display numeral, where the number visibly bobs up and down and misaligns with adjacent
         # CJK/Latin. This rule was documented in five reference files and still shipped repeatedly —
         # prose is advisory, so it is a deterministic gate now (SKILL.md's enforcement invariant).
+        # LOW_RES_IMAGE — a raster whose visible pixels are spread too thin over its frame (user's decision,
+        # 2026-10-04: < 72 ppi WARN, < 36 ppi CRITICAL, long side >= 1.5in). A 12x8 px source filled a 4in frame
+        # with every gate green; nothing measured the pixels a viewer actually gets.
+        findings.extend(_low_res_findings(slide, n))
         # INHERITED_EFFECT — a shape still carrying the theme <p:style>. python-pptx stamps it on
         # every autoshape/connector/freeform, and LibreOffice renders its soft drop shadow even
         # when spPr says <a:effectLst/>. deckkit strips it via _flat(); a shape that still has one
