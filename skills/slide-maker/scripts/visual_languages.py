@@ -996,7 +996,10 @@ def _compose(k, slide, page, fields, image):
             x, y, w, h = r
             bold = TYPE[k.name]["number"][2]
             adv = dk._natural_width_in([(str(t), bool(bold))], sz, k.face("numeral"))
-            sw = max(h, adv + 0.5 * h)                   # a quarter of the height clear on each side
+            # a circle while the figure's ink is narrow enough to sit well inside it (<= 0.62 of its height — any single
+            # figure in any face: DejaVu's "1" is 0.56, Trebuchet's 0.45); wider, a pill with a quarter-height margin
+            # each side. A width-only rule made DejaVu's "1" a near-circle pill on Linux CI (2026-10-04).
+            sw = h if adv <= 0.62 * h else adv + 0.5 * h
             if lay["align"] == "c":
                 sx, dx = x + (w - sw) / 2.0, 0.0
             else:
