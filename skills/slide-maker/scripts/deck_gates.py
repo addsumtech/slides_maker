@@ -155,9 +155,11 @@ def template(slides=None, delivery="presented"):
             # + the path of its series.json; any other deck keeps "selective" (today's rule).
             "imagery": "selective",
             "image_series": None,
-            # a curated visual language (references/visual-languages.md): name + "both" | "mac" fonts
+            # a curated visual language (references/visual-languages.md): name + "both" | "mac" fonts + the
+            # ground it was built on ("light" or its contrast ground — visual_languages.py --gates prints all)
             "visual_language": None,
             "vl_fonts": "both",
+            "vl_ground": None,
             "concept": {"chosen": "<what this deck is a PICTURE of — via <core concepts> → "
                                   "<visual language>>",
                         "rejected": [{"concept": "<the runner-up>", "why_lost": "<one clause>"},

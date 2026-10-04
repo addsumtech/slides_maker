@@ -24,7 +24,8 @@ def recorded_language(gates):
     for sec in ("design_plan", "design"):
         d = (gates or {}).get(sec) or {}
         if isinstance(d, dict) and d.get("visual_language") not in (None, ""):
-            return {"name": d.get("visual_language"), "fonts": d.get("vl_fonts") or "both"}
+            return {"name": d.get("visual_language"), "fonts": d.get("vl_fonts") or "both",
+                    "ground": d.get("vl_ground") or None}
     return None
 
 
@@ -66,6 +67,10 @@ def _check(pptx, rec, findings, facts):
     if name not in vl.LANGS:
         return [("block", "UNKNOWN VISUAL LANGUAGE", "design_plan.visual_language is {!r} — one of {}"
                  .format(rec.get("name"), sorted(vl.LANGS)))], facts
+    ground = rec.get("ground")
+    if ground not in (None, "") and ground not in vl.VARIANTS[name]:
+        return [("block", "UNKNOWN GROUND VARIANT", "vl_ground is {!r} — {} has {}".format(
+            ground, name, sorted(vl.VARIANTS[name])))], facts
     fonts = rec.get("fonts") if rec.get("fonts") in ("both", "mac") else "both"
     L = vl.LANGS[name]
     want = {L["fonts"]["both"]["display"]}

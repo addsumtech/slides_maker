@@ -69,6 +69,78 @@ LANGS = {
         "forbids": ("confetti",), "cover": "centred", "skeleton": "statement"},
 }
 
+# Each language's GROUNDS: its own light paper, and ONE contrast ground (user's decision, 2026-10-04). All four
+# light grounds are cream paper, and the register-pixels gate holds a deck whose ground repeats the last decks'
+# — after a run of cream decks it held every language. Every text ink passes 4.5:1 on its ground AND panel.
+# The storybook contrast is a meadow-green PAPER, not a dark ground: its light watercolours would halo on dark.
+VARIANTS = {
+    "editorial": {
+        "light": {"label": "paper", "label_zh": "纸面版", "grain": 3, "palette": LANGS["editorial"]["palette"]},
+        "ink": {"label": "ink", "label_zh": "墨黑版", "grain": 3,
+                "palette": {"ground": "1B1A17", "ink": "F3EEE5", "mute": "B8B0A3", "panel": "27251F",
+                            "accents": ["D9553C", "5C8FC4"], "text_accents": ["EE7A62", "8DB4DD"]}}},
+    "soft": {
+        "light": {"label": "cream", "label_zh": "奶油版", "grain": 0, "palette": LANGS["soft"]["palette"]},
+        "dusk": {"label": "dusk", "label_zh": "暮色版", "grain": 0,
+                 "palette": {"ground": "2E2940", "ink": "F6EEE6", "mute": "CFC5D6", "panel": "3A3450",
+                             "accents": ["E8A88F", "9DB8A0", "B9A6D3"], "text_accents": ["F2B49B", "A8CFB1", "CBB8EA"]}}},
+    "collage": {
+        "light": {"label": "kraft", "label_zh": "牛皮纸版", "grain": 6, "palette": LANGS["collage"]["palette"]},
+        "slate": {"label": "slate", "label_zh": "深灰纸版", "grain": 6,
+                  "palette": {"ground": "2B2A27", "ink": "F4EEE2", "mute": "C2B9AA", "panel": "3B3934",
+                              "accents": ["F2C230", "E4572E", "2E86AB"], "text_accents": ["F2C230", "F08A64", "7CC3E3"]}}},
+    "storybook": {
+        "light": {"label": "paper", "label_zh": "纸面版", "grain": 5, "palette": LANGS["storybook"]["palette"]},
+        "meadow": {"label": "meadow", "label_zh": "草地纸版", "grain": 5,
+                   "palette": {"ground": "C3D1B5", "ink": "222E1F", "mute": "3F4B36", "panel": "D3DECA",
+                               "accents": ["E2734B", "7FA35B", "F2C14E"], "text_accents": ["772C11", "314526", "584108"]}}},
+}
+_ACTIVE = {}    # language -> the ground key use() set; rs.ground()/rs.card() (no kit) follow it
+
+
+def _pal(name):
+    return VARIANTS[name][_ACTIVE.get(name, "light")]["palette"]
+
+
+def _rgb(h):
+    h = _hex(h)
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def _auto_ground(name, prs, taste=None):
+    """(ground key, why) for use(ground="auto"): the language's light ground unless the look history's last three
+    decks already sit on it (register-pixels' GROUND REPEAT distance), then its contrast ground. A printed board
+    (a registered print format) stays light — print takes a light ground. No history: light."""
+    try:
+        import formats
+        fmt = formats.match(prs.slide_width / 914400.0, prs.slide_height / 914400.0)
+    except Exception:
+        fmt = None
+    if fmt is not None and getattr(fmt, "chrome", "") == "print":
+        return "light", "a printed board ({}) takes a light ground".format(fmt.label)
+    if taste is None:
+        try:
+            import registry
+            t = registry.taste_file()
+            taste = str(t) if t else None
+        except Exception:
+            taste = None
+    if not taste:
+        return "light", "no look history on this machine"
+    import check_register_pixels as crp
+    recent = [cols[0] for _d, cols in crp.look_history(taste)[-3:] if cols]
+    if not recent:
+        return "light", "the look history is empty"
+    order = ["light"] + [k_ for k_ in VARIANTS[name] if k_ != "light"]
+    dist = {k_: min(crp._dist(c, _rgb(VARIANTS[name][k_]["palette"]["ground"])) for c in recent) for k_ in order}
+    for k_ in order:
+        if dist[k_] > crp.SAME_LOOK:
+            return k_, ("the last {} deck(s) sit on other grounds".format(len(recent)) if k_ == "light" else
+                        "the last {} deck(s) already sit on the light ground (distance {:.0f} <= {:.0f})".format(
+                            len(recent), dist["light"], crp.SAME_LOOK))
+    best = max(order, key=lambda k_: dist[k_])
+    return best, "every ground repeats a recent deck; {} is the furthest (distance {:.0f})".format(best, dist[best])
+
 
 def _hex(c):
     return c.lstrip("#").upper()
@@ -102,9 +174,12 @@ def _platform(platform=None):
 
 
 class Kit:
-    def __init__(self, name, prs, fonts, plan, image_dir, platform):
+    def __init__(self, name, prs, fonts, plan, image_dir, platform, ground="light"):
         self.name, self.prs, self.fonts, self.plan, self.image_dir = name, prs, fonts, plan, image_dir
         self.L, self.platform = LANGS[name], _platform(platform)
+        self.ground = ground
+        self.P = VARIANTS[name][ground]["palette"]       # the palette of the ground this deck is built on
+        self.grain = VARIANTS[name][ground]["grain"]
         self._fonts = dict(self.L["fonts"]["both"])
         if fonts == "mac":
             self._fonts.update(self.L["fonts"]["mac"])
@@ -120,7 +195,7 @@ class Kit:
         return EA_FACES[scr][kind]["mac" if self.platform == "mac" else "win"]
 
     def color(self, key, i=0):
-        p = self.L["palette"]
+        p = self.P
         v = p[key][i] if isinstance(p[key], list) else p[key]
         return dk.RGBColor.from_string(_hex(v))
 
@@ -150,28 +225,38 @@ class Kit:
         chart) counts as IN the language for the delivery gate, which a plain dk.add_slide page does not."""
         s = dk.add_slide(self.prs)
         s._element.cSld.set("name", "vl." + self.name)
-        if self.L["grain"]:
+        if self.grain:
             import surfaces
-            surfaces.grain_background(s, self.L["palette"]["ground"], strength=self.L["grain"])
+            surfaces.grain_background(s, self.P["ground"], strength=self.grain)
         return s
 
 
-def use(name, prs, *, fonts="both", plan=None, image_dir=None, platform=None):
+def use(name, prs, *, fonts="both", plan=None, image_dir=None, platform=None, ground="light"):
     """Start a deck in a curated VISUAL LANGUAGE ("editorial", "soft", "collage", "storybook"): sets the
     palette, fonts and ground, and returns a Kit whose page functions — cover, section, image_text, quote,
     data, closing — lay out your own words and images in that language. fonts="both" uses only faces on
     macOS AND Windows; fonts="mac" unlocks Mac-only faces. plan/image_dir let image= take P1 series slot
-    ids. Record design_plan.visual_language = name (references/visual-languages.md)."""
+    ids. ground="light" (default), the language's contrast ground (VARIANTS[name]), or "auto": the light ground
+    unless your last decks already sit on it (the look history) — then the contrast one; printed boards stay
+    light. Record design_plan.visual_language = name and vl_ground (references/visual-languages.md)."""
     if name not in LANGS:
         raise KeyError("visual_languages.use(): unknown language {!r} — one of {}".format(name, sorted(LANGS)))
     if fonts not in ("both", "mac"):
         raise ValueError("visual_languages.use(): fonts must be 'both' (macOS + Windows faces) or 'mac', got {!r}".format(fonts))
-    k = Kit(name, prs, fonts, plan, image_dir, platform)
+    if ground == "auto":
+        ground, why = _auto_ground(name, prs)
+        print("[visual_languages] {}: ground {!r} ({}) — {}; record it with --gates {} --ground {}".format(
+            name, ground, VARIANTS[name][ground]["label_zh"], why, name, ground))
+    if ground not in VARIANTS[name]:
+        raise ValueError("visual_languages.use(): ground must be 'auto' or one of {} for {}, got {!r}".format(
+            sorted(VARIANTS[name]), name, ground))
+    k = Kit(name, prs, fonts, plan, image_dir, platform, ground)
+    _ACTIVE[name] = ground
     if fonts == "mac":
         missing = [f for f in set(k._fonts.values()) if dk._font_substituted(f)]
         if missing:
             raise ValueError("visual_languages.use(): fonts='mac' needs {} — not installed here; use fonts='both'".format(missing))
-    p = k.L["palette"]
+    p = k.P
     ta = p["text_accents"]
     dk.set_palette(deep=_hex(p["ink"]), slate=_hex(p["mute"]), mute=_hex(p["mute"]), tint=_hex(p["panel"]),
                    magenta=_hex(ta[0]), blue=_hex(ta[1 % len(ta)]), teal=_hex(ta[2 % len(ta)]),
@@ -192,7 +277,7 @@ def _ground_editorial(slide, role, index):
 
 def _soft_fill(index):
     """The soft language's blob colour for page `index` — its fill-only accents in turn (never text)."""
-    acc = LANGS["soft"]["palette"]["accents"]
+    acc = _pal("soft")["accents"]
     return dk.RGBColor.from_string(acc[index % len(acc)])
 
 
@@ -216,13 +301,16 @@ def _ground_storybook(slide, role, index):
 def _card_for(name):
     """The language's card: its panel colour; soft is rounded, the others square."""
     def card(slide, x, y, w, h, label=None):
-        p = LANGS[name]["palette"]
+        p = _pal(name)                        # the ground use() set: a card on the ink ground is an ink card
         soft = name == "soft"
         body = dk.box(slide, x, y, w, h, fill=_hex(p["panel"]), line=None, round=soft, r=0.22 if soft else None)
         header = None
         if label:
+            scr = script_of(label)            # a Korean label gets a Hangul face, not the deck's Han face
+            ea = (EA_FACES[scr][LANGS[name]["ea"]["body"]][_platform()],) if scr else ()
             header = dk.text(slide, x + 0.16, y + 0.12, max(0.5, w - 0.32), 0.4,
-                             [[(label, 12, dk.RGBColor.from_string(_hex(p["text_accents"][0])), True, False)]])
+                             [[(label, 12, dk.RGBColor.from_string(_hex(p["text_accents"][0])), True, False,
+                                LANGS[name]["fonts"]["both"]["body"]) + ea]])
         return body, header
     card.__name__ = "_card_" + name
     return card
@@ -658,15 +746,18 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None):
             color = k.color("text_accents") if ckey == "accent" else k.color("ink")
             if f == "number" and _outlinable(k, t):
                 import display_type as dt
-                dt.outlined(slide, fx, fy, fw, fh, t, color=_hex(k.L["palette"]["text_accents"][0]), face=k.face("numeral"))
+                dt.outlined(slide, fx, fy, fw, fh, t, color=_hex(k.P["text_accents"][0]), face=k.face("numeral"))
                 continue
             if f in phrased:
                 dk.text(slide, fx, fy, fw, fh, [k.runs(l_, sz, color, bold, role, italic) for l_ in phrased[f]],
                         align=al, space_after=0)
                 continue
-            rr = k.runs(t, sz, color, bold, role, italic)
             if f == "kicker" and k.name == "collage":
-                rr = [dk.mark(x, _hex(k.L["palette"]["accents"][0])) for x in rr]
+                hl = _hex(k.P["accents"][0])         # highlighter: the text reads on the HIGHLIGHT, not the ground
+                ink = max((k.P["ink"], LANGS[k.name]["palette"]["ink"]), key=lambda c: _contrast(c, hl))
+                rr = [dk.mark(x, hl) for x in k.runs(t, sz, dk.RGBColor.from_string(_hex(ink)), bold, role, italic)]
+            else:
+                rr = k.runs(t, sz, color, bold, role, italic)
             dk.text(slide, fx, fy, fw, fh, [rr], align=al)
     return rects, draw
 
@@ -713,14 +804,14 @@ def _place_image(k, slide, image, rect, lay, page, keep_clear=None):
     path, alt, slot_id = _resolve(k, first)
     if treat == "bleed":
         n0 = len(slide.shapes)
-        bx, by, bw, bh, _ink = dk.photo_backdrop(slide, path, alt=alt, panel="quiet", fill=_hex(k.L["palette"]["panel"]))
+        bx, by, bw, bh, _ink = dk.photo_backdrop(slide, path, alt=alt, panel="quiet", fill=_hex(k.P["panel"]))
         if slot_id:
             for sh in list(slide.shapes)[n0:]:
                 if sh.shape_type == 13:
                     dk._compose_tag(sh, gen=slot_id)
         return (bx, by, bw, bh)
     if treat == "feather":
-        pic = dk.picture(slide, _feathered(path), x, y, w, h, fit="contain", alt=alt)
+        pic = dk.picture(slide, _feathered(path, _paper_tint(k)), x, y, w, h, fit="contain", alt=alt)
     elif slot_id and not frame_is_custom(frame):
         import image_series as ims
         pic = ims.slot_picture(slide, k.plan, slot_id, x, y, w, h, image_dir=k.image_dir)
@@ -732,20 +823,51 @@ def _place_image(k, slide, image, rect, lay, page, keep_clear=None):
     return None
 
 
-def _feathered(path):
+def _paper_tint(k):
+    """Per-channel factors that move the language's light paper to the ground this deck is on, or None on the
+    light ground. A watercolour is transparent: painted on green paper, its cream paper IS green — without this
+    every illustration sat as a pale patch on the meadow ground (looked at, 2026-10-04)."""
+    if k.ground == "light":
+        return None
+    a, b = _rgb(LANGS[k.name]["palette"]["ground"]), _rgb(k.P["ground"])
+    return tuple(round(b[i] / float(max(1, a[i])), 4) for i in range(3))
+
+
+def _feathered(path, tint=None):
     """A feathered copy in a CACHE folder — never beside the caller's image (it once landed in the
-    skill's own assets/). Keyed by the source's path, size and mtime, so an edited source is redone."""
+    skill's own assets/). Keyed by the source's path, size, mtime and tint, so an edited source is redone.
+    `tint` (per-channel factors, _paper_tint) multiplies the picture onto a non-light paper first."""
     import hashlib
     import tempfile
     import image_fx
     st = Path(path).stat()
-    key = hashlib.sha1("{}|{}|{}".format(Path(path).resolve(), st.st_size, st.st_mtime_ns).encode()).hexdigest()[:16]
+    key = hashlib.sha1("{}|{}|{}|{}".format(Path(path).resolve(), st.st_size, st.st_mtime_ns, tint).encode()).hexdigest()[:16]
     d = Path(tempfile.gettempdir()) / "slide-maker-feather"
     d.mkdir(parents=True, exist_ok=True)
     out = d / "feather-{}.png".format(key)
     if not out.exists():
-        image_fx.feather(str(path), out=str(out))
+        src = str(path)
+        if tint:
+            from PIL import Image
+            im = Image.open(path).convert("RGBA")
+            r, g, b, a = im.split()
+            r, g, b = (ch.point(lambda v, f=f: min(255, int(round(v * f)))) for ch, f in zip((r, g, b), tint))
+            src = str(d / "tinted-{}.png".format(key))
+            Image.merge("RGBA", (r, g, b, a)).save(src)
+        image_fx.feather(src, out=str(out))
     return str(out)
+
+
+def _readable_under(fill, ink, ground, floor=3.0):
+    """`fill` blended toward `ground` until `ink` reads on it at `floor`:1 (large text) — a decorative disc under
+    a figure must not drown it: soft dusk's light "1" sat on the pale sage disc at 1.87:1 (2026-10-04)."""
+    f, g = _rgb(fill), _rgb(ground)
+    for i in range(11):
+        t = i / 10.0
+        hx = "{:02X}{:02X}{:02X}".format(*(int(round(f[j] * (1 - t) + g[j] * t)) for j in range(3)))
+        if _contrast(ink, hx) >= floor:
+            return hx
+    return _hex(ground)
 
 
 def frame_is_custom(frame):
@@ -790,7 +912,7 @@ def _keep_clear(lay, col):
 
 def _deco_before(k, slide, page, lay, img_rect, col, index):
     """Decoration that sits UNDER the content (painted first)."""
-    p = k.L["palette"]
+    p = k.P
     if "blob" in lay["deco"] and img_rect and col is None:
         x, y, w, h = img_rect
         _oval(slide, x - w * 0.10, y + h * 0.18, w * 0.62, w * 0.62, p["accents"][index % len(p["accents"])],
@@ -801,7 +923,7 @@ def _deco_before(k, slide, page, lay, img_rect, col, index):
     if "note" in lay["deco"] and col and img_rect is None:
         x, y, w, h = col
         cx, cy, cw, ch, rot = _card_geom(lay, col)
-        card = dk.box(slide, cx, cy, cw, ch, fill="FFFFFF")
+        card = dk.box(slide, cx, cy, cw, ch, fill=_hex(p["panel"]))    # the ground's own paper (white on kraft)
         card.rotation = rot
         import ornaments
         ornaments.tape(slide, x + w * 0.38, y - 0.36, w * 0.24, 0.30, "EDE3C8", rotation=2.0, seed=index, holds=card)
@@ -811,7 +933,7 @@ def _deco_before(k, slide, page, lay, img_rect, col, index):
 def _deco_after(k, slide, page, lay, rects):
     """Decoration that sits over the page edge of the content (painted last)."""
     import ornaments
-    p = k.L["palette"]
+    p = k.P
     if "rule" in lay["deco"] and rects:
         first = min(rects.values(), key=lambda r: r[1])
         x, y, w, _h = first
@@ -859,9 +981,9 @@ def _compose(k, slide, page, fields, image):
             col = panel
     underlay = {}
     if "circle" in lay["deco"]:
-        acc = k.L["palette"]["accents"]
+        acc = k.P["accents"]
 
-        def _disc(r, _c=acc[1 % len(acc)]):
+        def _disc(r, _c=_readable_under(acc[1 % len(acc)], k.P["ink"], k.P["ground"])):
             x, y, w, h = r
             _oval(slide, x - h * 0.10, y, h, h, _c, "a soft colour disc behind the figure; carries no information")
         underlay["number"] = _disc
@@ -929,18 +1051,22 @@ _SAMPLE_COPY = {
 }
 
 
-def build_sample(name, out_dir, *, W=13.333, H=7.5):
-    """A four-page sample deck of `name` (cover, image_text, quote, data) from the bundled images."""
+def _sample_stem(name, ground):
+    return name if ground == "light" else "{}-{}".format(name, ground)
+
+
+def build_sample(name, out_dir, *, W=13.333, H=7.5, ground="light"):
+    """A four-page sample deck of `name` on `ground` (cover, image_text, quote, data) from the bundled images."""
     kind = "watercolour" if name == "storybook" else "photo"
     imgs = [str(ASSETS / x) for x in SAMPLE_IMAGES[kind]]
     T = _SAMPLE_COPY[kind]
     prs = dk.blank_deck(W, H)
-    k = use(name, prs)
+    k = use(name, prs, ground=ground)
     k.cover(k.new_slide(), kicker=T["kicker"], title=T["title"], image=imgs[:3] if name == "collage" else imgs[0])
     k.image_text(k.new_slide(), kicker=T["kicker"], title=T["it_title"], body=T["body"], image=imgs[1])
     k.quote(k.new_slide(), quote=T["quote"], attribution=T["attr"], image=imgs[2])
     k.data(k.new_slide(), number=T["num"], label=T["label"], note=T["note"], image=imgs[3])
-    out = Path(out_dir) / "sample-{}.pptx".format(name)
+    out = Path(out_dir) / "sample-{}.pptx".format(_sample_stem(name, ground))
     out.parent.mkdir(parents=True, exist_ok=True)
     prs.save(str(out))
     return out
@@ -971,48 +1097,62 @@ _RATIONALE = {"editorial": "photo-led and quiet: big bleed photographs, a serif 
               "storybook": "illustration-led: a watercolour series melting into paper, serif type"}
 
 
-def direction(name, *, fonts="both"):
+def direction(name, *, fonts="both", ground="light"):
     """A direction for the direction gate (archetypes_html / directions_diversity): this language's tokens
     plus its bundled style SAMPLE (a data URI the preview shows, labelled "style sample — not your
     content"). `vl` marks it STYLED for the diversity check — it never counts as the topic-invented
-    bespoke direction the gate also requires."""
+    bespoke direction the gate also requires. ground= as use(): "light", the contrast ground, or "auto" (the
+    look history decides) — the preview then shows the ground the deck will be built on."""
     import base64
     if name not in LANGS:
         raise KeyError("visual_languages.direction(): unknown language {!r} — one of {}".format(name, sorted(LANGS)))
+    if ground == "auto":
+        ground, _why = _auto_ground(name, dk.blank_deck(13.333, 7.5))
+    if ground not in VARIANTS[name]:
+        raise ValueError("visual_languages.direction(): ground must be 'auto' or one of {} for {}".format(
+            sorted(VARIANTS[name]), name))
     L = LANGS[name]
-    p = L["palette"]
+    p = VARIANTS[name][ground]["palette"]
     f = dict(L["fonts"]["both"])
     if fonts == "mac":
         f.update(L["fonts"]["mac"])
-    sample = ASSETS / "samples" / "{}.jpg".format(name)
+    sample = ASSETS / "samples" / "{}.jpg".format(_sample_stem(name, ground))
     if not sample.exists():
         raise FileNotFoundError("visual_languages.direction(): no bundled sample at {} — rebuild it: python3 "
                                 "scripts/visual_languages.py --sample <dir>".format(sample))
-    return {"name": _DISPLAY_NAMES[name], "vl": name, "rationale": _RATIONALE[name],
+    return {"name": _DISPLAY_NAMES[name] + ("" if ground == "light" else " · " + VARIANTS[name][ground]["label"]),
+            "vl": name, "vl_ground": ground, "rationale": _RATIONALE[name],
             "bg": "#" + _hex(p["ground"]), "ink": "#" + _hex(p["ink"]), "accent": "#" + _hex(p["text_accents"][0]),
             "accents": ["#" + _hex(a) for a in p["text_accents"]],
             "font_display": f["display"], "font_body": f["body"], "cover": L["cover"], "skeleton": L["skeleton"],
             "sample": "data:image/jpeg;base64," + base64.b64encode(sample.read_bytes()).decode("ascii")}
 
-def _print_gates(name, deck, topic, fonts):
+def _print_gates(name, deck, topic, fonts, ground="light"):
     """The record a deck in `name` needs, as runnable commands — including the palette hexes the register-pixels
     gate reads, which a docs-only run had to GUESS (and the guess was held: DECLARED HUES ABSENT, 2026-10-04)."""
     import shlex
     if name not in LANGS:
         print("visual_languages: no language {!r} — one of {}".format(name, sorted(LANGS)), file=sys.stderr)
         return 2
-    p = LANGS[name]["palette"]
+    if ground == "auto":
+        ground, why = _auto_ground(name, dk.blank_deck(13.333, 7.5))
+        print("# ground 'auto' → {} ({}): {}".format(ground, VARIANTS[name][ground]["label_zh"], why))
+    if ground not in VARIANTS[name]:
+        print("visual_languages: {} has no ground {!r} — one of {} (or auto)".format(name, ground, sorted(VARIANTS[name])),
+              file=sys.stderr)
+        return 2
+    p = VARIANTS[name][ground]["palette"]
     pal = "ground #{} ink #{} accents {}".format(p["ground"], p["ink"], " ".join("#" + h for h in p["text_accents"]))
     pick = "bespoke {}".format(name) + (" for {}".format(topic) if topic else "")
     d = shlex.quote(str(deck))
     print("# record the {} language (shared runtime: <deck>/.deck-gates.json)".format(name))
     if not (Path(str(deck)) / ".deck-gates.json").exists():        # `set` refuses a record that was never made
         print("python3 scripts/deck_gates.py init {}".format(d))
-    for key, val in (("visual_language", name), ("vl_fonts", fonts), ("style_pick", pick),
+    for key, val in (("visual_language", name), ("vl_fonts", fonts), ("vl_ground", ground), ("style_pick", pick),
                      ("look_source", "bespoke"), ("palette", pal)):
         print("python3 scripts/deck_gates.py set {} design_plan.{} {}".format(d, key, shlex.quote(val)))
-    print("# Codex runtime: the same five values in .codex-deck-evidence.json as design.visual_language, "
-          "design.vl_fonts, design.style_pick, design.look_source and design.palette")
+    print("# Codex runtime: the same six values in .codex-deck-evidence.json as design.visual_language, "
+          "design.vl_fonts, design.vl_ground, design.style_pick, design.look_source and design.palette")
     return 0
 
 
@@ -1028,27 +1168,31 @@ def main(argv=None):
     ap.add_argument("--deck", metavar="DECK_DIR", help="with --gates (required): the deck folder")
     ap.add_argument("--for", dest="topic", metavar="TOPIC", default=None, help="with --gates: what the deck is for")
     ap.add_argument("--fonts", choices=("both", "mac"), default="both", help="with --gates: the fonts= you passed to use()")
+    ap.add_argument("--ground", default="light", help="with --gates: the ground the deck was built on (light, the "
+                    "language's contrast ground, or auto)")
     a = ap.parse_args(argv)
     if a.gates:
         if not a.deck:                    # a printed placeholder path runs nowhere — refuse instead
             print("visual_languages: --gates needs --deck <the deck folder>, so every printed command runs as "
                   "printed", file=sys.stderr)
             return 2
-        return _print_gates(a.gates, a.deck, a.topic, a.fonts)
+        return _print_gates(a.gates, a.deck, a.topic, a.fonts, a.ground)
     if a.list or not (a.sample or a.sample_sheet):
         for n, L in LANGS.items():
-            print("{:10s} fonts both: {}  mac: {}".format(n, L["fonts"]["both"], L["fonts"]["mac"]))
+            print("{:10s} fonts both: {}  mac: {}  grounds: {}".format(n, L["fonts"]["both"], L["fonts"]["mac"], ", ".join(
+                "{} ({})".format(g, V["label_zh"]) for g, V in VARIANTS[n].items())))
         return 0
     if a.sample_sheet:
         print(sample_sheet(*a.sample_sheet))
         return 0
     for n in LANGS:
-        out = build_sample(n, a.sample)
-        rd = Path(a.sample) / ("render-" + n)
-        print("built", out)
-        print("NEXT: python3 scripts/render_deck.py {} {}".format(shlex.quote(str(out)), shlex.quote(str(rd))))
-        print("then: python3 scripts/visual_languages.py --sample-sheet {} {}".format(
-            shlex.quote(str(rd)), shlex.quote(str(ASSETS / "samples" / (n + ".jpg")))))
+        for g in VARIANTS[n]:
+            out = build_sample(n, a.sample, ground=g)
+            rd = Path(a.sample) / ("render-" + _sample_stem(n, g))
+            print("built", out)
+            print("NEXT: python3 scripts/render_deck.py {} {}".format(shlex.quote(str(out)), shlex.quote(str(rd))))
+            print("then: python3 scripts/visual_languages.py --sample-sheet {} {}".format(
+                shlex.quote(str(rd)), shlex.quote(str(ASSETS / "samples" / (_sample_stem(n, g) + ".jpg")))))
     return 0
 
 

@@ -236,9 +236,11 @@ be reconstructed post-hoc at the delivery gate.
    ALSO started with `k.new_slide()` and built on `register_surface.card(slide, "<name>", …)` and
    `k.run(text, size)` runs. `python3 scripts/sigs.py cover section quote` prints the kit's page functions
    as `Kit.<name>` (a bare `cover` also exists in deckkit — a different call). Record it with the command
-   `python3 scripts/visual_languages.py --gates <name> --deck <deck> --for "<what the deck is for>"`
-   prints: five values, the language's own palette hexes included (Codex evidence: the same five under
-   `design`). The delivery gate blocks a recorded language that was not applied.
+   `python3 scripts/visual_languages.py --gates <name> --ground <ground> --deck <deck> --for "<what the deck is for>"`
+   prints: six values, that ground's own palette hexes included (Codex evidence: the same six under
+   `design`). Build with `use(name, prs, ground="auto")` — it prints the ground it chose (the contrast one
+   after a run of cream decks; printed boards stay light). The delivery gate blocks a recorded language that
+   was not applied, or an unknown ground.
    `python3 scripts/sigs.py --example vl_cover` prints a call the smoke suite runs.
 
 2v. 🔴 **An invented register gets a KIT, not hand-built style code.** `register_surface.register(name, ground=…, card=…, forbids=…)` — then `ground()`/`card()` work for it as for a preset, and `check_register_guard` enforces the prohibitions it declares. `python3 scripts/register_surface.py --new "<name>"` scaffolds one with the contracts wired; `python3 scripts/bespoke_kits.py --sample <out.pptx>` renders the four library registers (`current` · `transit-signage` · `ledger` · `k-space`) to adapt from. `save_register.py` records the kit file at hand-off. 🔴 **Write the kit into the DECK FOLDER** (`--out <deck-dir>/surface_<name>.py`): `check_register_guard` loads `surface_*.py` from beside the deck, which is the only reason a bespoke register's prohibitions are enforceable at gate time — the gate runs in a fresh process and a kit that was never imported there does not exist. The gate also tells you whether an invented register has a kit at all.

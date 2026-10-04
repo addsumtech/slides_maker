@@ -16,7 +16,7 @@ def check(cond, msg):
 import json
 import deckkit as dk, visual_languages as vl, check_visual_language as cvl
 from PIL import Image
-check(cvl.recorded_language({"design_plan": {"visual_language": "collage", "vl_fonts": "both"}}) == {"name": "collage", "fonts": "both"}, "shared record")
+check(cvl.recorded_language({"design_plan": {"visual_language": "collage", "vl_fonts": "both"}}) == {"name": "collage", "fonts": "both", "ground": None}, "shared record")
 check(cvl.recorded_language({"design": {"visual_language": "soft"}})["name"] == "soft", "Codex record")
 check(cvl.recorded_language({"design_plan": {"visual_language": None}}) is None, "unset")
 with tempfile.TemporaryDirectory() as td:

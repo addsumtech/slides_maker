@@ -24,7 +24,8 @@ import register_surface as rs
 import visual_languages as vl
 
 prs = dk.blank_deck(13.333, 7.5)
-k = vl.use("collage", prs)                       # fonts="both" (default): faces on macOS AND Windows
+k = vl.use("collage", prs, ground="auto")       # fonts="both" (default): faces on macOS AND Windows;
+                                                 # ground="auto": light, or the contrast ground after cream decks
 k.cover(k.new_slide(), kicker="A repair café", title="Bring it broken", subtitle="Once a month",
         image=["<deck>/a.jpg", "<deck>/b.jpg", "<deck>/c.jpg"])     # collage cover: up to 4 images
 k.section(k.new_slide(), number="02", kicker="How it works", title="We fix it with you")
@@ -68,6 +69,24 @@ k.closing(k.new_slide(), title="Bring one broken thing.", line="And bring a neig
   old-style figures (Georgia), so "Repair café 2026" never bobs.
 - **Any canvas:** every page has a landscape and a portrait layout (portrait when W < 1.2 H).
 
+## Grounds
+
+Each language has its own light paper and ONE contrast ground; every text ink passes 4.5:1 on both:
+
+| language | `light` | contrast ground |
+|---|---|---|
+| editorial | warm paper | `ink` — warm black, paper-white type, the same red |
+| soft | cream | `dusk` — deep plum-indigo, the pastel blobs kept |
+| collage | kraft | `slate` — dark grey paper, white prints, dark note cards |
+| storybook | paper | `meadow` — green paper; the watercolours are tinted onto it, as if painted there |
+
+`use(name, prs, ground=…)`: `"light"` (the default — the same deck on every machine), the contrast key, or
+`"auto"` — the light ground unless the last three decks in your look history already sit on it (the
+register-pixels GROUND REPEAT distance), then the contrast one; a printed board (A4, the A0/A1 posters) always
+stays light, and no history means light. `auto` prints what it chose and the `--gates … --ground …` to record
+it. `vl.direction(name, ground="auto")` shows the sample of that same ground, so the picked preview and the
+built deck agree. `python3 scripts/visual_languages.py --list` lists every language's grounds.
+
 ## Fonts
 
 `fonts="both"` (default) uses only faces present on macOS AND Windows, so the render matches what the
@@ -94,30 +113,32 @@ never chosen. CJK runs are never italic; a collage CJK headline is bold (Impact 
 
 ## Record and gates
 
-`python3 scripts/visual_languages.py --gates collage --deck <deck> --for "a neighbourhood repair café"`
-prints the exact commands, with the language's own hex codes in the palette (the register-pixels gate
-holds a palette that never reached a pixel, so never type them yourself):
+`python3 scripts/visual_languages.py --gates collage --ground slate --deck <deck> --for "a neighbourhood repair café"`
+(`--ground` = the ground the deck was built on; `auto` resolves as `use()` does) prints the exact commands,
+with that ground's own hex codes in the palette (the register-pixels gate holds a palette that never reached a
+pixel, so never type them yourself):
 
 ```bash
 python3 scripts/deck_gates.py set <deck> design_plan.visual_language collage
 python3 scripts/deck_gates.py set <deck> design_plan.vl_fonts both
+python3 scripts/deck_gates.py set <deck> design_plan.vl_ground slate
 python3 scripts/deck_gates.py set <deck> design_plan.style_pick "bespoke collage for a neighbourhood repair café"
 python3 scripts/deck_gates.py set <deck> design_plan.look_source bespoke
 python3 scripts/deck_gates.py set <deck> design_plan.palette "ground #… ink #… accents #… #…"   # from --gates
 ```
 
-(Codex evidence: the same five values under `design` — `--gates` names them.) The delivery gate on both runtimes then
+(Codex evidence: the same six values under `design` — `--gates` names them. An unknown `vl_ground` blocks.) The delivery gate on both runtimes then
 checks that the cover was built with `cover()` and at least half the pages are in the language (its page
 functions, or ordinary pages started with `k.new_slide()`), that its
 display face is used, and that its prohibitions hold (`editorial` and `storybook` forbid confetti) — a
 recorded language that was not applied blocks. The register notes name it a curated language whose kit
 ships with the skill (nothing to scaffold or keep with `save_register.py`).
 
-All four grounds are light paper. The register-pixels gate compares a deck's ground with the user's last
-decks (GROUND REPEAT, from the look history); after a run of cream decks it holds any of the four. That
-is the freshness rule doing its job — answer it with another direction, or, when the repeat is the point
-(a series in one house look), a written `design_plan.register_pixels_waived` saying so. Never repaint the
-language's ground by hand: the ground, its grain and its card are one look.
+The register-pixels gate compares a deck's ground with the user's last decks (GROUND REPEAT, from the look
+history). Build with `ground="auto"` and the language moves to its contrast ground when the light one would
+repeat; if it still holds, rebuild on the other ground, or — when the repeat is the point (a series in one
+house look) — record a written `design_plan.register_pixels_waived` saying so. Never repaint a ground by hand:
+the ground, its grain, its card and its inks are one look, and the variants are what keep them together.
 
 ## Direction gate
 

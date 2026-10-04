@@ -257,9 +257,11 @@ TEMPLATE = {
         # "selective" (today's rule) and the image-series gate reads NOT CHECKED.
         "imagery": "selective",
         "image_series": None,
-        # a curated visual language (references/visual-languages.md): its name + "both" | "mac" fonts
+        # a curated visual language (references/visual-languages.md): its name + "both" | "mac" fonts + the
+        # ground it was built on ("light" or its contrast ground — visual_languages.py --gates prints all)
         "visual_language": None,
         "vl_fonts": "both",
+        "vl_ground": None,
         # 🔴 REQUIRED, and absent from this template until it was measured alongside
         # `interview.picks`. Step 4 COMPETES the signature page: build 2-3 different
         # compositions of it, render them in ONE pass, read them blind, pick by what you SAW.

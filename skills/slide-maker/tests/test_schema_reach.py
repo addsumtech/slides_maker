@@ -241,13 +241,14 @@ ck(cis.recorded_series(_noplan) == {"imagery": "series", "plan": None},
 print("\n— VISUAL LANGUAGE: a recorded visual language must be readable from both records")
 import check_visual_language as cvl                                       # noqa: E402
 
-sh_v = json.loads(json.dumps(SH)); sh_v["design_plan"].update(visual_language="collage", vl_fonts="mac")
-cx_v = json.loads(json.dumps(CX)); cx_v.setdefault("design", {}).update(visual_language="collage", vl_fonts="mac")
+sh_v = json.loads(json.dumps(SH)); sh_v["design_plan"].update(visual_language="collage", vl_fonts="mac", vl_ground="slate")
+cx_v = json.loads(json.dumps(CX)); cx_v.setdefault("design", {}).update(visual_language="collage", vl_fonts="mac", vl_ground="slate")
 for rec, label in ((sh_v, "shared .deck-gates.json"), (cx_v, "Codex evidence")):
     got = cvl.recorded_language(rec)
-    ck(got == {"name": "collage", "fonts": "mac"}, "%s -> the visual language reads back (got %r)" % (label, got))
-ck("visual_language" in SH["design_plan"] and "visual_language" in CX["design"],
-   "both scaffolds WRITE the visual-language field, so an agent can see it exists")
+    ck(got == {"name": "collage", "fonts": "mac", "ground": "slate"},
+       "%s -> the visual language and its ground read back (got %r)" % (label, got))
+ck(all(k in SH["design_plan"] for k in ("visual_language", "vl_ground")) and all(k in CX["design"] for k in ("visual_language", "vl_ground")),
+   "both scaffolds WRITE the visual-language and ground fields, so an agent can see they exist")
 ck(cvl.recorded_language(SH) is None and cvl.recorded_language(CX) is None,
    "an unfilled scaffold records no language on either runtime — the gate says NOT CHECKED")
 
