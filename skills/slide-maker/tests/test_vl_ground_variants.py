@@ -92,6 +92,31 @@ for g in ("light", "meadow"):
     d = crp._dist(paper, rgb(vl.VARIANTS["storybook"][g]["palette"]["ground"]))
     check(d <= 45, "storybook {}: the watercolour's paper matches the slide's (distance {:.0f}, paper {})".format(g, d, paper))
 
+# every language on BOTH grounds, every page: nothing the hand-off a11y gate holds a deck on. The collage
+# note's washi tape (EDE3C8 on the white note, 1.28:1) was a NON-TEXT CONTRAST on every collage page since P2
+# shipped — pure ornament, so it is declared decorative, as soft's blobs are.
+import lint_deck as ld, contextlib, re as _re
+_a11y_dir = Path(tempfile.mkdtemp())
+for name, var in CONTRAST.items():
+    for g in ("light", var):
+        prs = dk.blank_deck(13.333, 7.5)
+        k = vl.use(name, prs, ground=g)
+        img = wc if name == "storybook" else ph
+        k.cover(k.new_slide(), kicker="A repair café", title="Bring it broken", image=[ph, ph] if name == "collage" else img)
+        k.section(k.new_slide(), number="02", kicker="How it works", title="We fix it with you")
+        k.image_text(k.new_slide(), kicker="Tools", title="Tools on every bench", body="Shared tools.", image=img)
+        k.quote(k.new_slide(), quote="The visitor holds the screwdriver.", attribution="A volunteer")
+        k.data(k.new_slide(), number="1", label="evening a month", note="Short enough.")
+        k.closing(k.new_slide(), title="Bring one broken thing.", line="And bring a neighbour.")
+        p_ = _a11y_dir / "a11y-{}-{}.pptx".format(name, g)
+        prs.save(str(p_))
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            ld.lint(str(p_), mode="presented", static_ok=True)
+        held = [l_.strip()[:140] for l_ in buf.getvalue().splitlines()
+                if any(_re.search(r"\]\s+" + _re.escape(c) + ":", l_) for c in ld.A11Y_BLOCKING)]
+        check(not held, "{} {}: the hand-off a11y gate holds nothing: {}".format(name, g, held[:3]))
+
 try:
     vl.use("editorial", dk.blank_deck(13.333, 7.5), ground="neon")
     fails.append("an unknown ground was accepted")

@@ -99,7 +99,10 @@ def collage(slide, region, items, *, seed=0, keep_clear=None, tape=True, border=
         dk.overlap_intent(pic, "a collage print overlapping its neighbour by design")
         if tape and i % 2 == 0:                     # a strip across the print's top edge, held by the print
             tw, th = pw * 0.34, min(0.32, ph * 0.16)
-            ornaments.tape(slide, px + (pw - tw) / 2.0, py - th * 0.45, tw, th, "EDE3C8",
-                           rotation=rot - 3.0, seed=seed + i, holds=frame)
+            t_ = ornaments.tape(slide, px + (pw - tw) / 2.0, py - th * 0.45, tw, th, "EDE3C8",
+                                rotation=rot - 3.0, seed=seed + i, holds=frame)
+            # a pale washi strip on the white border is 1.28:1 — NON-TEXT CONTRAST, which holds the hand-off;
+            # it carries nothing, so say so (the print it holds is the content)
+            dk.decorative(t_, "washi tape holding a print; ornament, nothing rides on seeing it")
         out.append(pic)
     return out

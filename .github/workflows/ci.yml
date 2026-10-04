@@ -1292,6 +1292,13 @@ jobs:
           grep -qE "\\] ok$" /tmp/lint_deck_pixels.log || {
             echo "::error::test_lint_deck_pixels did not run to completion"; exit 1; }
 
+      - name: Small text clears WCAG 1.4.3 (TEXT CONTRAST) and deckkit helpers comply
+        run: |
+          set -o pipefail
+          python tests/test_text_contrast.py | tee /tmp/text_contrast.log
+          grep -qE "\\] ok$" /tmp/text_contrast.log || {
+            echo "::error::test_text_contrast did not run to completion"; exit 1; }
+
       # --- P2 visual languages steps end ---
 
       - name: The Codex scaffold shows every field the Codex gate requires

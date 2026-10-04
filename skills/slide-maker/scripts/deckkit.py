@@ -213,6 +213,39 @@ def _darken_to(color, bg, target=4.5):
     return _blend(c, _BLACK, 0.9)
 
 
+def _ink_reaching(color, bg, target=4.5):
+    """``color`` moved the LEAST distance that makes it clear ``target`` on ``bg`` — toward near-black
+    on a light ground, toward white on a dark one — so an accent label keeps its hue as the key and
+    stays legible. A pair that already clears ``target`` comes back unchanged (byte-identical output).
+    For TEXT set in an accent: the accent's own non-text marks (a rule, a bar) keep the exact accent.
+    Raises if neither pole can reach ``target`` (a ground no ink reaches 4.5:1 on cannot carry text)."""
+    c, g = _as_rgbc(color), _as_rgbc(bg)
+    if contrast_ratio(c, g) >= target:
+        return c
+    pole = _BLACK if contrast_ratio(_BLACK, g) >= contrast_ratio(WHITE, g) else WHITE
+    if contrast_ratio(pole, g) < target:
+        raise ValueError("no ink reaches %.1f:1 on #%s — the ground itself is too mid-toned for text"
+                         % (target, g))
+    lo, hi = 0.0, 1.0                                    # smallest blend that clears the target
+    for _ in range(20):
+        mid = (lo + hi) / 2
+        if contrast_ratio(_blend(c, pole, mid), g) >= target:
+            hi = mid
+        else:
+            lo = mid
+    out = _blend(c, pole, hi)
+    while contrast_ratio(out, g) < target and hi < 1.0:  # 8-bit rounding can land a hair under
+        hi = min(1.0, hi + 0.01)
+        out = _blend(c, pole, hi)
+    return out
+
+
+def _text_floor(size_pt, bold=False):
+    """The WCAG 1.4.3 contrast floor for text of this size: 3.0 for large text (>=18pt, or >=14pt
+    bold), 4.5 for everything else. The same rule lint_deck's TEXT CONTRAST holds at hand-off."""
+    return 3.0 if (size_pt >= 18 or (size_pt >= 14 and bold)) else 4.5
+
+
 def _numlabel(v):
     """A HUMAN number label for on-chart values — never scientific notation. ``f"{v:g}"`` renders
     any magnitude >= 1e6 as '4.58e+06', which is unreadable on a slide; this gives '4.58M' instead
@@ -1047,6 +1080,9 @@ def mark(run, color):
     out = _Marked(run)
     out.highlight = hl
     return out
+
+
+TEXT_INSET_LR = 4 / 72.0     # text() sets 2pt left + 2pt right insets: the width its words actually get is w - this
 
 
 def text(slide, x, y, w, h, runs, align=PP_ALIGN.LEFT, anchor=MSO_ANCHOR.TOP,
@@ -5100,6 +5136,8 @@ def _lines_heuristic(text, size_pt, avail_in):
     return max(1, -(-eff // cpl))
 
 
+# Where a Latin token wider than the whole line can break: after these marks (URLs, identifiers, compounds).
+_OVERWIDE_SPLIT = re.compile(r"[^/._\-?&=]*[/._\-?&=]?")
 # CJK line ends as LibreOffice sets them under the deck default hangingPunct="1" (probed 2026-10-03: six
 # ideographs + one mark in a box six ideographs wide): these marks HANG past the measure, one line ...
 _CJK_HANG = "，。、；：！？．"
@@ -5174,7 +5212,24 @@ def _measure_lines(runs, size_pt, avail_in, font=None):
             # as syllables. A word with no Hangul is measured exactly as it always was (and as fast).
             if not hw[0]:
                 if word:
-                    items.append((getlen("".join(word), bold), "w"))
+                    wtxt = "".join(word)
+                    ww = getlen(wtxt, bold)
+                    if ww > avail and len(wtxt) > 1:
+                        # wider than the whole line: the renderer breaks it — after / . _ - ? & = where it can,
+                        # mid-word where it must (40 rendered cases: 28 exact, 10 over, 2 a URL one line short;
+                        # the old ONE line was right once). Pieces join without a space, so they go in as "c";
+                        # the word first moves to a fresh line ("n"), as the renderer moves it before breaking it.
+                        items.append((0.0, "n"))
+                        for seg in _OVERWIDE_SPLIT.findall(wtxt):
+                            if not seg:
+                                continue
+                            sgw = getlen(seg, bold)
+                            if sgw <= avail:
+                                items.append((sgw, "c"))
+                            else:
+                                items.extend((getlen(ch, bold), "c") for ch in seg)
+                    else:
+                        items.append((ww, "w"))
                     word.clear()
                 return
             hang_n, hw[0] = hw[0], 0
@@ -5213,11 +5268,17 @@ def _measure_lines(runs, size_pt, avail_in, font=None):
 
     # pure CJK only (see the docstring), and a line of at least two ideographs: in a one-ideograph
     # column the renderer cannot hang (it would leave the line empty) — 3 under-counts in the corpus
-    may_hang = HANG_PUNCT and not any(k_ == "w" for _w, k_ in items) and avail >= 2 * size_pt
+    may_hang = (HANG_PUNCT and not any(k_ == "w" for _w, k_ in items) and avail >= 2 * size_pt
+                and not any(c.isascii() and c.isalnum() for c in flat))   # an over-wide Latin word goes in as "c"
     x = 0.0
     lines = 1
     line = []                                               # the current line's items, for a bracket's push
     for w, kind in items:
+        if kind == "n":                                     # an over-wide word starts its own line
+            if x > 0:
+                lines += 1
+                x, line = 0.0, []
+            continue
         if kind == "s":                                     # a space never forces a wrap
             if x > 0:
                 x += w
@@ -5239,12 +5300,14 @@ def _measure_lines(runs, size_pt, avail_in, font=None):
             line = carry + [(w, kind)]
             x = sum(c[0] for c in line)
             continue
-        if w > avail:                                       # an UNBREAKABLE token wider than the line:
-            if x > 0:                                        # the renderer keeps it on ONE line and lets
-                lines += 1                                   # it overflow horizontally — count 1 line, not
-            x = avail                                        # w//avail (which fabricated phantom height,
-            line = [(w, kind)]                               # e.g. a scorecard's "99.9%" measured as 2 lines)
-            continue
+        if w > avail:                                       # a token wider than the whole line BREAKS
+            if x > 0:                                        # mid-word in a wrap-on box (LibreOffice renders,
+                lines += 1                                   # 2026-10-04: "99.9%" 40pt in 1.2in, an identifier,
+            extra = int(-(-w // avail)) - 1                  # a URL, "Donaudampfschifffahrtsgesellschaft" —
+            lines += extra                                   # all counted 1 line, rendered 2-3). A wrap-OFF box
+            x = w - extra * avail                            # stays one line: that caller does not measure lines
+            line = [(x, kind)]                               # (lint_layout passes the box's own wrap; a value
+            continue                                         # box that sets word_wrap=False is never measured)
         if x + w > avail and x > 0:
             lines += 1
             carry = [line.pop()] if line and line[-1][1] == "o" and len(line) > 1 else []
@@ -5425,7 +5488,9 @@ def measure_text(runs, w, size, *, line_h_factor=1.12, pad=0.0, font=None,
     to both — ``measure_text(runs, w, size, line_spacing=1.16)`` beside
     ``text(..., line_spacing=1.16)`` — and the pair cannot drift. The CJK floor still applies:
     a CJK-bearing block never measures below the pitch its script-aware default renders."""
-    nlines = _measure_lines(runs, size, w, font=font)
+    # text() sets the words in the box MINUS its 2pt left/right insets; measured at the full width, a title exactly
+    # as wide as its box came back one line and rendered two (2026-10-04)
+    nlines = _measure_lines(runs, size, max(0.05, w - TEXT_INSET_LR), font=font)
     # `line_spacing` is an OOXML spcPct MULTIPLIER on the face's natural line height, not the
     # em-per-line itself — so it COMPOSES with `line_h_factor`, it does not replace it. Getting
     # this wrong is optimistic in the direction the whole module forbids: replacing gave 1.16
@@ -5483,7 +5548,8 @@ def callout(slide, x, y, w, h, label, body, label_c=MAGENTA, fill=TINT, body_c=D
     # text box spans the card's full height so MSO_ANCHOR.MIDDLE centres on the card's true
     # centre (y + h/2). A y-offset here with the same height would push the text below centre.
     text(slide, x + 0.24, y, w - 0.44, h,
-         [[(label + "  ", 11, label_c, True, False), (body, 12.5, body_c, False, False)]],
+         [[(label + "  ", 11, _ink_reaching(label_c, fill, _text_floor(11, True)), True, False),
+           (body, 12.5, body_c, False, False)]],
          anchor=MSO_ANCHOR.MIDDLE, space_after=0, line_spacing=1.08)
     return y + h   # bottom edge, so callers can keep a margin below
 
@@ -8486,7 +8552,8 @@ def consort_flow(slide, x, y, w, h, stages, *, accent=None, ink=None, mute=None,
         arrow(slide, x + bw / 2 - 0.09, ay + 0.04, 0.18, gap - 0.08, color=mc, direction="down")
         if excl:
             lost = sum(k for _r, k in excl)
-            rows = [("Excluded  n = %s" % f"{lost:,}", label_size, acc, True, False, font or FONT)]
+            rows = [("Excluded  n = %s" % f"{lost:,}", label_size,
+                     _ink_reaching(acc, ex, _text_floor(label_size, True)), True, False, font or FONT)]
             eh = 0.30 + 0.20 * len(excl)
             ey = ay + gap / 2 - eh / 2
             box(slide, ex_x, ey, ex_w, eh, fill=ex, line=None, round=True)
@@ -11253,7 +11320,7 @@ def fit_text_size(runs, w, h, start_size, *, font=None, min_size=9.0, line_h=_LI
     metrics; returns `min_size` if even that overflows (then shorten the text or grow the box).
     CJK-aware: CJK runs are measured at the pitch text()'s script-aware default renders
     (``1.2 × CJK_LS``), so the returned size actually fits."""
-    aw, ah = max(0.2, w-pad), max(0.1, h-pad)
+    aw, ah = max(0.2, w - pad - TEXT_INSET_LR), max(0.1, h-pad)   # text()'s own 2pt insets come off the width
     if any(_has_cjk(t) for (t, *_r) in runs):
         line_h = max(line_h, 1.2 * CJK_LS)
     s = start_size

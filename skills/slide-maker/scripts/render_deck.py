@@ -1807,7 +1807,7 @@ def _check_a11y(pptx, delivery, gates):
     waiver = _section(gates, "a11y")
     if not hits:
         print("[gates] a11y: 0 of {} floor(s) fired (alt-text · slide titles · reading order · "
-              "non-text contrast)".format(len(codes)))
+              "non-text contrast · text contrast)".format(len(codes)))
         return
     fired = " · ".join("{} ({} slide{})".format(c, len(v), "" if len(v) == 1 else "s")
                        for c, v in sorted(hits.items()))

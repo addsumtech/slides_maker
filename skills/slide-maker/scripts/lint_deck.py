@@ -82,7 +82,7 @@ except Exception:
 # ONE reading of an overlap declaration — deckkit's: both spellings, composed onto a motif or not. There used
 # to be an inline copy as a fallback; a second copy is how two readings drift apart, and deckkit sits in this
 # folder with the same dependencies, so a failure to import it is a broken install that should say so.
-from deckkit import _declared_overlap                   # noqa: E402
+from deckkit import _declared_overlap, _ink_reaching   # noqa: E402
 try:                                                  # real glyph advances, same metrics the build uses
     from deckkit import _pil_font as _dk_pil_font, _MEAS_PREC as _dk_prec
 except Exception:
@@ -373,6 +373,7 @@ def _boxes(slide, sw, sh, slide_no=None, record=True):
             descr = None
         run_colors = []                                  # (snippet, RGB-hex or None=inherited)
         run_hl = []                                      # per run, aligned: <a:highlight> hex or None
+        run_fmt = []                                     # per run, aligned: (size pt or None, bold True/False/None)
         if s.has_text_frame:
             for p in s.text_frame.paragraphs:
                 for r in p.runs:
@@ -393,6 +394,10 @@ def _boxes(slide, sw, sh, slide_no=None, record=True):
                         except Exception:
                             _h = None
                         run_hl.append(_h)
+                        try:
+                            run_fmt.append((r.font.size.pt if r.font.size is not None else None, r.font.bold))
+                        except Exception:
+                            run_fmt.append((None, None))
         fill_rgb = None                                  # solid-fill colour of this shape, if resolvable
         fill_unk = False                                 # True = fill exists but colour unknowable
         try:                                             #   (gradient/picture/pattern, or theme solid)
@@ -433,7 +438,7 @@ def _boxes(slide, sw, sh, slide_no=None, record=True):
         out.append({"l": l, "t": t, "w": w, "h": h, "zi": zi,
                     "r": l + w if _pr is None else _pr, "b": t + h if _pb is None else _pb,
                     "rot": _rot, "fl": _fl, "ft": _ft, "fw": _fw, "fh": _fh, "poly": poly,
-                    "runs": run_colors, "run_hl": run_hl, "fill": fill_rgb, "unk": fill_unk, "pic": is_pic, "grad": is_grad,
+                    "runs": run_colors, "run_hl": run_hl, "run_fmt": run_fmt, "fill": fill_rgb, "unk": fill_unk, "pic": is_pic, "grad": is_grad,
                     "icon": icon_ink,
                     "st": str(s.shape_type).split()[0], "txt": txt, "full": full, "size": size or 12.0,
                     "paras": paras, "pspace": pspace, "solid": s.shape_type in SOLID, "align": align, "anchor": anchor,
@@ -698,6 +703,11 @@ def _nat_width(t):                                       # natural one-line widt
     face, bold = t.get("font"), t.get("bold", False)
     return max((sum(_text_w(s_, sz, face, bold) for s_, sz in pr)
                 for pr in t["paras"]), default=0.0)
+
+
+def _wcag_normal(size_pt, bold):
+    """WCAG 1.4.3: text that is NOT "large" (>=18pt, or >=14pt bold) — it needs 4.5:1."""
+    return size_pt is not None and not (size_pt >= 18 or (size_pt >= 14 and bold))
 
 
 def _rbox(t):
@@ -2108,9 +2118,9 @@ _PIXEL_CHECKS = ("TEXT NOT VISIBLE", "CAPTION NOT ALIGNED", "TEXT-ON-IMAGE CONTR
 # or it is not, a ratio either clears 3:1 or it does not. What they cost when missed is not taste:
 # a screen-reader user gets an unlabelled rectangle, or nothing at all.
 A11Y_CODES = ("MISSING ALT-TEXT", "NO SLIDE TITLE", "DUPLICATE SLIDE TITLES", "READING ORDER",
-              "NON-TEXT CONTRAST", "ICON CONTRAST")
+              "NON-TEXT CONTRAST", "ICON CONTRAST", "TEXT CONTRAST")
 # The subset that is a HARD floor: an external standard answers it, so there is nothing to weigh.
-A11Y_WCAG = ("NON-TEXT CONTRAST", "ICON CONTRAST")
+A11Y_WCAG = ("NON-TEXT CONTRAST", "ICON CONTRAST", "TEXT CONTRAST")
 # 🔴 …and the subset a GATE may hold a deck on, which is not all of them. `NO SLIDE TITLE` is
 # excluded deliberately: this file's own message for it says "an off-canvas-invisible title is a
 # sanctioned trick for statement slides", i.e. the skill EXPECTS slides that look untitled, and
@@ -2126,7 +2136,7 @@ A11Y_WCAG = ("NON-TEXT CONTRAST", "ICON CONTRAST")
 # screen-reader navigation, a title that is not first in z-order is read out of order, and a
 # contrast ratio either clears 3:1 or it does not.
 A11Y_BLOCKING = ("MISSING ALT-TEXT", "DUPLICATE SLIDE TITLES", "READING ORDER",
-                 "NON-TEXT CONTRAST", "ICON CONTRAST")
+                 "NON-TEXT CONTRAST", "ICON CONTRAST", "TEXT CONTRAST")
 
 SAMENESS_CODES = ("LAYOUT SAMENESS", "SKELETON VARIETY", "CARD DOMINANCE",
                   "BOTTOM-STRIP MONOCULTURE", "TITLE-RULE MONOCULTURE",
@@ -3352,7 +3362,8 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
                 back = None if (dark_plate or unk_plate) else "FFFFFF"
             if back is None and not any(_hls):
                 continue                                 # unknowable, and nothing highlighted
-            for (snip, rc), _hl in zip(s["runs"], _hls):
+            _fmts = s.get("run_fmt") or [(None, None)] * len(s["runs"])
+            for (snip, rc), _hl, (_rsz, _rb) in zip(s["runs"], _hls, _fmts):
                 _bk = _hl or back
                 if _bk is None:
                     continue
@@ -3373,13 +3384,27 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
                     msg = (f"LOW CONTRAST: '{snip}' ink #{ink} on fill #{_bk} — {ratio:.2f}:1 "
                            f"(under 3:1, the floor for text at ANY size)")
                     (finds if _res else warns).append(msg)
+                elif ratio < 4.5 and _res and _wcag_normal(_rsz or s["size"], _rb):
+                    # WCAG 1.4.3 needs NO judgement here: "large text" is >=18pt, or >=14pt BOLD, so text
+                    # under 14pt is normal at any weight and needs 4.5:1. This band was a WARN because
+                    # "this pass does not collect weight" — weight only matters from 14pt up, and the run's
+                    # own size and weight are read now. A 12.5pt caption at 3.38:1 passed the hand-off
+                    # a11y gate clean (a docs-only run, 2026-10-03). Held there as TEXT CONTRAST.
+                    _sz_ = _rsz or s["size"]
+                    try:                                 # the nearest ink that clears it, hue kept — pasteable
+                        _fix = "#{} keeps the hue at 4.5:1".format(_ink_reaching(ink, _bk, 4.5))
+                    except ValueError:                   # a mid-toned fill no ink reaches 4.5:1 on
+                        _fix = "no ink reaches 4.5:1 on this fill — change the fill"
+                    warns.append(f"TEXT CONTRAST: '{snip}' ink #{ink} on fill #{_bk} — {ratio:.2f}:1; "
+                                 f"{_sz_:g}pt{' bold' if _rb else ''} text needs 4.5:1 (WCAG 1.4.3 — only 18pt, "
+                                 f"or 14pt bold, is large text) — {_fix}, or lighten the fill")
                 elif ratio < 4.5 and s["size"] >= 12:
-                    # The 3.0-4.5 band stays a WARN on purpose. WCAG relaxes the bar to 3:1 for
-                    # large text (>=18pt, or >=14pt BOLD) and this pass does not collect weight, so
-                    # a hard failure here would rest on a guess about whether a 12pt label is bold.
-                    # Measured: promoting this band hard-failed the skill's OWN reference deck four
-                    # times, on accent labels at 4.27:1 — a 0.23 shortfall on a kicker is a judgement
-                    # call, not a defect, and a gate that blocks on it teaches people to bypass it.
+                    # Reached only by LARGE text (>=18pt, or >=14pt bold) or a run whose size is not
+                    # set: WCAG AA asks 3:1 of large text, so this is advice, not a floor. Normal-size
+                    # text in this band is TEXT CONTRAST above. (The reference deck's four 4.27:1
+                    # accent labels that once made promoting this band look wrong were deckkit's own
+                    # callout label — fixed at the source: `_ink_reaching` lifts the label text to
+                    # 4.5:1 and keeps the accent bar exact.)
                     warns.append(f"BODY CONTRAST: '{snip}' ink #{ink} on fill #{_bk} — {ratio:.2f}:1 "
                                  f"(body-size text targets >=4.5:1; large/bold text may sit here)")
         # 1c) TEXT-ON-IMAGE contrast (render-based): text whose backing resolves to a picture /

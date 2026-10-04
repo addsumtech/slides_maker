@@ -926,7 +926,9 @@ def _deco_before(k, slide, page, lay, img_rect, col, index):
         card = dk.box(slide, cx, cy, cw, ch, fill=_hex(p["panel"]))    # the ground's own paper (white on kraft)
         card.rotation = rot
         import ornaments
-        ornaments.tape(slide, x + w * 0.38, y - 0.36, w * 0.24, 0.30, "EDE3C8", rotation=2.0, seed=index, holds=card)
+        dk.decorative(ornaments.tape(slide, x + w * 0.38, y - 0.36, w * 0.24, 0.30, "EDE3C8", rotation=2.0,
+                                     seed=index, holds=card),
+                      "washi tape holding the note card; ornament, nothing rides on seeing it")
     # "circle" is drawn by _flow under the number itself (an underlay), never across the column
 
 

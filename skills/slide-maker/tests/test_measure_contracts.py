@@ -309,6 +309,32 @@ def main():
         n = dk._measure_lines([(t_, False)], sz_, w_, font="AppleMyungjo")
         check("a rendered Korean case is not under-counted ({} lines rendered)".format(want), n >= want, n)
 
+    # A Latin token wider than the line BREAKS mid-word in a wrap-on box (LibreOffice renders, 2026-10-04) — it was
+    # counted as one line, under-counting every identifier, URL, long compound and big number in a narrow box.
+    for t_, sz_, w_, f_, rendered in (("99.9%", 40, 1.2, "Arial", 2), ("BROKEN", 120, 3.5, "Impact", 2),
+                                      ("torch.nn.functional.scaled_dot_product_attention", 20, 3.0, "Arial", 3),
+                                      ("https://example.com/a/very/long/path/to/the/report.pdf", 16, 2.5, "Arial", 3),
+                                      ("Donaudampfschifffahrtsgesellschaft", 28, 3.0, "Arial", 3)):
+        if dk._font_substituted(f_):
+            print("  skip over-wide token {!r}: {} is not installed here".format(t_[:20], f_))
+            continue
+        n = dk._measure_lines([(t_, False)], sz_, w_, font=f_)
+        check("an over-wide token breaks mid-word: {} (rendered {})".format(t_[:24], rendered), rendered <= n <= rendered + 1, n)
+
+    # measure_text / fit_text_size measured at the BOX width, but text() sets its text in the box minus its 2pt
+    # insets: a title exactly as wide as its box measured ONE line and rendered TWO (LibreOffice, 2026-10-04 — the
+    # P1 Japanese run's "measure_text mispredicts a headline wrap after widening a box"; Latin too).
+    if not dk._font_substituted("Hiragino Sans GB"):
+        lh = 38 / 72.0 * 1.2 * dk.CJK_LS
+        h = dk.measure_text([("都市の菜園、はじめよう", True)], 5.806, 38, font="Hiragino Sans GB")
+        check("a CJK title exactly its box's width measures two lines (rendered 2)", h >= 1.9 * lh, round(h / lh, 2))
+    if not dk._font_substituted("Arial"):
+        lh = 40 / 72.0 * 1.12
+        h = dk.measure_text([("Bring it broken today", True)], 5.603, 40, font="Arial")
+        check("a Latin title 0.02in wider than its text measures two lines (rendered 2)", h >= 1.9 * lh, round(h / lh, 2))
+        sz = dk.fit_text_size([("Bring it broken today", True)], 5.603, 0.75, 40, font="Arial")
+        check("fit_text_size fits it on one line inside the insets", sz < 40, sz)
+
     print("\n{} passed, {} failed".format(len(PASS), len(FAIL)))
     return 1 if FAIL else 0
 
