@@ -320,6 +320,21 @@ r = subprocess.run([sys.executable, str(SCRIPTS / "check_surface.py"), "--selfte
                    capture_output=True, text=True)
 check(r.returncode == 0, "check_surface.py --selftest passes", (r.stdout + r.stderr)[-400:])
 
+# PowerPoint's OWN default 16:9 (13.33x7.5in) matched no format, so every deck built at that size — the visual
+# languages' examples included — had its surface contract skipped ("matches no registered format … NOT the same
+# as clean"), 2026-10-04.
+import formats as _fm, deckkit as _dk                                     # noqa: E402
+_m = _fm.match(13.333, 7.5)
+check(_m is not None and _m.name == "wide13", "13.33x7.5 (PowerPoint's default 16:9) is a registered surface", _m)
+check(_fm.get("powerpoint").name == "wide13" and _fm.get("13.33x7.5").name == "wide13", "its aliases resolve")
+check(_fm.match(10.0, 5.625).name == "wide", "the 10in deck is still 'wide'")
+_td = pathlib.Path(tempfile.mkdtemp())
+_prs = _dk.blank_deck(13.333, 7.5)
+_dk.text(_dk.add_slide(_prs), 0.8, 0.8, 8, 1, [[("A 13.33in deck", 32, _dk.DEEP, True, False)]])
+_prs.save(str(_td / "w13.pptx"))
+_pr, _facts = cs.check(str(_td / "w13.pptx"))
+check("format" in _facts and "note" not in _facts, "a 13.33in deck gets its surface contract", _facts)
+
 print("\n".join("  ok   " + m for m in OKS))
 if FAILS:
     print("\n".join("  FAIL " + m for m in FAILS))

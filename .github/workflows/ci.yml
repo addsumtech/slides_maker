@@ -1264,6 +1264,27 @@ jobs:
           grep -qE "\\] ok$" /tmp/visual_language_gate.log || {
             echo "::error::test_visual_language_gate did not run to completion"; exit 1; }
 
+      - name: Low-resolution pictures (visible pixels over the frame, WARN < 72 ppi, CRITICAL < 36)
+        run: |
+          set -o pipefail
+          python tests/test_low_res_image.py | tee /tmp/low_res_image.log
+          grep -qE "\\] ok$" /tmp/low_res_image.log || {
+            echo "::error::test_low_res_image did not run to completion"; exit 1; }
+
+      - name: Visual-language grounds (a contrast ground per language, ground='auto' avoids the look history)
+        run: |
+          set -o pipefail
+          python tests/test_vl_ground_variants.py | tee /tmp/vl_ground_variants.log
+          grep -qE "\\] ok$" /tmp/vl_ground_variants.log || {
+            echo "::error::test_vl_ground_variants did not run to completion"; exit 1; }
+
+      - name: render_deck command line (--help, renders beside the deck, --slides of every slide is a full render)
+        run: |
+          set -o pipefail
+          python tests/test_render_cli.py | tee /tmp/render_cli.log
+          grep -qE "\\] ok$" /tmp/render_cli.log || {
+            echo "::error::test_render_cli did not run to completion"; exit 1; }
+
       # --- P2 visual languages steps end ---
 
       - name: The Codex scaffold shows every field the Codex gate requires

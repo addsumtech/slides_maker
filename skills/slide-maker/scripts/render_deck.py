@@ -8,7 +8,7 @@ no shell required. The .sh wrapper just delegates here.
 Usage:
     python3 render_deck.py /path/to/deck.pptx [out_dir]
     # Windows:  python scripts\\render_deck.py C:\\path\\deck.pptx
-Output: <out_dir>/slide01.png, slide02.png, ...   (default out_dir: ./render)
+Output: <out_dir>/slide01.png, slide02.png, ...   (default out_dir: render/ beside the deck)
 
 Requires: LibreOffice + pymupdf (python -m pip install pymupdf). One-time installs.
 Override LibreOffice discovery with the SOFFICE env var (full path to the binary).
@@ -17,6 +17,7 @@ import contextlib
 import json
 import os
 import re
+import shlex
 import sys
 import shutil
 import tempfile
@@ -4353,7 +4354,21 @@ def _design_plan_and_checkpoint_present(deck_dir):
     return False
 
 
+_OPTIONS = """
+Options (the output dir is POSITIONAL; default: render/ beside the deck, where the gates read it):
+  --slides N[,M]      render only these 1-indexed slides (a probe: up to 3, not all — the design checkpoint holds
+                      a render of every slide)
+  --fast              re-render only the slides that changed since the last render
+  --deliverables      also write the PDF and viewer.html beside the deck (alias --final; the hand-off run)
+  --gate-check        run every hand-off gate on the saved deck, without rendering
+  --selfread / --textheavy / --surface   lint modes (also spelled --mode=NAME)
+  -h, --help          this text"""
+
+
 def main(argv):
+    if any(a in ("-h", "--help") for a in argv):          # it answered "unrecognised option(s): --help"
+        print((__doc__ or "").strip() + "\n" + _OPTIONS)
+        return 0
     # --deliverables (alias --final): ALSO park the PDF beside the .pptx and write viewer.html.
     # OFF by default: while a deck is still being iterated, those two are pure churn — they are
     # regenerated every round, clutter the deck root, and go stale the moment the user hand-edits
@@ -4448,7 +4463,9 @@ def main(argv):
         die("usage: python3 render_deck.py /path/to/deck.pptx [out_dir] "
             "[--fast | --slides N[,M]] [--deliverables] [--gate-check]")
     pptx = argv[0]
-    out = argv[1] if len(argv) > 1 else "./render"
+    # BESIDE the deck by default — where lint_deck, the register-pixels gate and --gate-check read renders.
+    # It was "./render" (the process's working directory): run from anywhere else and every reader came up empty.
+    out = argv[1] if len(argv) > 1 else os.path.join(os.path.dirname(os.path.abspath(pptx)), "render")
 
     if not os.path.isfile(pptx):
         die("no such file: " + pptx)
@@ -4474,10 +4491,14 @@ def main(argv):
     # before the plan is final); a deck with fewer slides than the plan (a probe/sample build); a deck
     # with no content plan or a 1–3 slide tiny ask (`_cp >= 4`). --gate-check / --deliverables already
     # run the deeper hand-off design_plan gate, so they are past this by construction.
-    if only is None and not gate_only and not deliverables:
+    # A PROBE is a few slides (<= 3) and fewer than all of them; `--slides` naming every slide is a full render
+    # with extra steps, and was a way past this gate (found by a docs-only run, 2026-10-04).
+    _n_slides = _pptx_slide_count(pptx) if os.path.isfile(pptx) else 0
+    _probe = only is not None and len(set(only)) <= 3 and len(set(only)) < _n_slides
+    if not _probe and not gate_only and not deliverables:
         _dd = os.path.dirname(os.path.abspath(pptx)) or "."
         _cp = _content_plan_slide_count(_dd)
-        if _cp >= 4 and _pptx_slide_count(pptx) >= _cp and not _design_plan_and_checkpoint_present(_dd):
+        if _cp >= 4 and _n_slides >= _cp and not _design_plan_and_checkpoint_present(_dd):
             die("STEP 2 NOT DONE — this deck has an approved content plan ({0} slides) but no design "
                 "plan + design checkpoint recorded, and it is about to be FULL-rendered.\n"
                 "  Step 2 (design plan + \U0001f534 design checkpoint) is BRANCH-INVARIANT — it runs on "
@@ -4490,7 +4511,8 @@ def main(argv):
                 "CHECKPOINT, and record it: in `.deck-gates.json` as `design_plan` + "
                 "`design_plan.checkpoint` ({{\"mode\": \"approved\"|\"auto\", \"record\": \"…\"}}), "
                 "or on the Codex path in `.codex-deck-evidence.json` as `design` + `design.checkpoint`.\n"
-                "  Rendering ONE probe slide first is expected and exempt — use `--slides N`.".format(_cp))
+                "  Rendering a probe first is expected and exempt — `--slides N` (up to 3 slides, not all of "
+                "them).".format(_cp))
 
     soffice = find_soffice()
     if not soffice:
@@ -4586,7 +4608,8 @@ def main(argv):
     if fast and changed is not None and not changed:
         print("no slide changed since the last render — nothing to re-render")
         print("next: python3 {} {} --renders {}".format(
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), "lint_deck.py"), pptx, out))
+            shlex.quote(os.path.join(os.path.dirname(os.path.abspath(__file__)), "lint_deck.py")),
+            shlex.quote(pptx), shlex.quote(out)))
         return 0
 
 
@@ -4883,7 +4906,8 @@ def main(argv):
                   "without --fast) before handing the deck over".format(
                       " and ".join(_stale), "is" if len(_stale) == 1 else "are"), file=sys.stderr)
     print("next: python3 {} {} --renders {}  # render-time lint, then the actor-critic loop".format(
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "lint_deck.py"), pptx, out))
+        shlex.quote(os.path.join(os.path.dirname(os.path.abspath(__file__)), "lint_deck.py")),
+        shlex.quote(pptx), shlex.quote(out)))
     # The render self-check is the single largest round-trip sink in the pipeline: one image Read
     # per slide, one message each, every message re-sending the whole conversation. SKILL.md Step 5
     # says to batch those reads, and a measured run showed the prose alone did not move it — the
@@ -4905,8 +4929,9 @@ def main(argv):
                   "variety, chrome repetition. It CANNOT settle a per-slide question (body text "
                   "is unreadable at that size), so it never replaces the reads below.".format(_cs))
         print("      then read ALL {} slide PNGs in ONE message (one tool block per slide, same "
-              "message), and record a one-line verdict per slide:".format(len(_pngs)))
-        print("      " + "  ".join(os.path.join(out, f) for f in _pngs))
+              "message), and record a one-line verdict per slide — one path per line:".format(len(_pngs)))
+        for f in _pngs:                       # one per line: a path with a space cannot be split wrongly
+            print("      " + os.path.join(out, f))
 
 
 def _viewer_html(title, slides):

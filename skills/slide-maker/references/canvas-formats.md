@@ -73,6 +73,7 @@ an explicit width, derive it from the band (`bw`), never a 16:9-remembered numbe
 | fmt | surface | layout DNA | type & density | pitfalls to avoid |
 |---|---|---|---|---|
 | `wide` 16:9 | talks, meetings | the skill's default — everything in SKILL.md assumes it | presented budget | — |
+| `wide13` 16:9 at 13.33×7.5in | the same, at PowerPoint's own default page size | `wide` scaled by 4/3 (margins, title band, `display_scale` 1.333) — `blank_deck(13.333, 7.5)`; recognised from the canvas, so it needs no `format:` line | presented budget | assuming a 10in deck's inch values on it |
 | `classic` 4:3 | legacy projector, some defenses | same DNA as wide; the extra height takes **one more stacked row** (or a taller figure), splits stay 2-col | presented budget | shrinking type to "use" the height; letterboxing a 16:9 layout with dead bands |
 | `square` 1:1 | IG/FB feed post | **centered, poster-like**: one hook line + one visual + 3–5 scannable points, vertically stacked; generous margins | ONE idea per card; display ×1.15 | 2-col splits (cramped at 7.5in); deck chrome; body prose |
 | `red` 3:4 | 小红书 image note | **vertical flow**: bold hook top (≈upper third) → content middle → payoff/handle bottom; list-cards may carry 4–6 short rows; card 1 of a carousel = pure hook cover | ONE idea per card; display ×1.25; 封面 hook ≥ ~10% of canvas height | side-by-side columns; small dense text (rednote is browsed at phone size); ignoring top/bottom safe zones |

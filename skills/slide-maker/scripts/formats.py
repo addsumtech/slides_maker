@@ -86,6 +86,16 @@ FORMATS = {f.name: f for f in [
            density_units="presented budget (~40 words); balanced fullness",
            columns_ok=True, lint_flags=(),
            aliases=("16:9", "16x9", "ppt", "landscape", "widescreen", "default")),
+    # PowerPoint's OWN default 16:9 page. The same shape as `wide` at 4/3 the inches, so its margins and title
+    # band scale with it; it matched no format before 2026-10-04, and every deck built at this size had its
+    # surface contract skipped as "matches no registered format".
+    Format("wide13", "PPT 16:9 (13.33in, PowerPoint's default)", 13.333, 7.5, "landscape",
+           "talks · meetings · screens, built at PowerPoint's own default page size",
+           margin=0.73, safe_top=0.0, safe_bottom=0.0, chrome="full",
+           title_band=1.73, display_scale=1.333,
+           density_units="presented budget (~40 words); balanced fullness",
+           columns_ok=True, lint_flags=(),
+           aliases=("13.33x7.5", "13.333x7.5", "powerpoint", "16:9-13", "widescreen-13")),
     Format("classic", "PPT 4:3", 10.0, 7.5, "landscape",
            "legacy projectors · some academic defenses/venues",
            margin=0.55, safe_top=0.0, safe_bottom=0.0, chrome="full",
