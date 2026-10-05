@@ -188,7 +188,7 @@ GIF (shared palette; `max_px` caps the longest side to help keep the file under 
 **Time:** the encode is a second or two for a short clip — the real cost is computing the frames, so a
 GIF slide fits the same compute-in-the-asset-step rhythm as a static figure, not a separate time sink.
 Keep it modest (a few-second loop, ~10–15 fps, longest side ~720–960px). *(This is for one looping clip
-embedded IN a slide; to narrate the WHOLE deck as a video, that's the separate `slides-to-video` skill.)*
+embedded IN a slide; to narrate the WHOLE deck as a video, that's the separate `topic-to-video` skill (formerly `slides-to-video`).)*
 ```python
 frames = [render_frame(t) for t in range(24)]      # your computed frames (PIL / ndarray / PNG path)
 dk.make_gif(frames, "results/kspace_fill.gif", fps=12, max_px=900)
