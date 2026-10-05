@@ -23,6 +23,11 @@ def cr(a, b):
     la, lb = sorted((lum(a), lum(b)), reverse=True)
     return (la + 0.05) / (lb + 0.05)
 
+def vl_native_fields():
+    import vl_native
+    return vl_native.POSTER_FIELDS
+
+
 td = Path(tempfile.mkdtemp())
 check(vl.NATIVE == ("ink", "poster", "cutpaper", "drafting"), "the four native languages are named")
 check(set(vl.NATIVE) | set(vl.IMAGE_LED) == set(vl.LANGS), "every language is native or image-led")
@@ -188,6 +193,83 @@ for bad_items in (["一"], ["一", "二", "三", "四", "五"], ["一", ""]):
         check(False, "ink: points with {} refused".format(bad_items))
     except ValueError:
         check(True, "ink: points with {} refused".format(bad_items))
+
+# ── poster ──
+for g, fields in vl_native_fields().items():
+    for i, fl in enumerate(fields):
+        for a, b, what in ((fl["ink"], fl["bg"], "ink"), (fl["accent"], fl["bg"], "accent"),
+                           (fl["panel_ink"], fl["panel"], "panel ink"), (fl["panel_accent"], fl["panel"], "panel accent"),
+                           (fl["hl_ink"], fl["hl"], "highlight ink")):
+            check(cr(a, b) >= 4.5, "poster/{} field {} {} {} on {}: {:.2f}".format(g, i, what, a, b, cr(a, b)))
+assert_matrix("poster")
+with contextlib.redirect_stdout(io.StringIO()):
+    prs = dk.blank_deck(13.333, 7.5); k = vl.use("poster", prs)
+bgs = []
+for _ in range(5):
+    s = k.new_slide()
+    bgs.append(k.field["bg"])
+check(bgs[0] != bgs[1] and bgs[4] == bgs[0], "poster: each page takes the next colour field, cycling")
+try:
+    k.cover(k.new_slide(), title="Make the room smaller", highlight="garden")
+    check(False, "poster: a highlight that is not in the title is refused")
+except ValueError:
+    check(True, "poster: a highlight that is not in the title is refused")
+s = k.new_slide()
+k.cover(s, title="Make the room smaller", highlight="room")
+check(any("a:highlight" in sh._element.xml for sh in s.shapes if getattr(sh, "has_text_frame", False)),
+      "poster: the highlighted word sits on a highlighter")
+# poster display type breaks like the rest of the kit: at a clause mark first, never a lone CJK character or a
+# lone word on the last line (seen on the first render: "一盏茶的时 / 间", "慢下来，看 / 见日常")
+def lines_of(slide):
+    import vl_native
+    out = []
+    for sh in slide.shapes:
+        if getattr(sh, "has_text_frame", False) and sh.text_frame.text.strip():
+            out.append([p_.text for p_ in sh.text_frame.paragraphs])
+    return out
+for g in vl.VARIANTS["poster"]:
+    for W, H in ((13.333, 7.5), (7.5, 13.333)):
+        prs = dk.blank_deck(W, H)
+        with contextlib.redirect_stdout(io.StringIO()):
+            k = vl.use("poster", prs, ground=g)
+        for page, kw in (("closing", dict(title="一盏茶的时间")), ("section", dict(number="二", title="慢下来，看见日常")),
+                         ("data", dict(number="3", label="泡，滋味最浓")), ("points", dict(title="一盏茶的时间", items=["洗盏", "候汤"]))):
+            s = k.new_slide()
+            out = getattr(k, page)(s, **kw)
+            r = out["rects"]["title" if "title" in kw else "label"]
+            txt = kw.get("title") or kw.get("label")
+            shape = [sh for sh in s.shapes if getattr(sh, "has_text_frame", False) and sh.text_frame.text.replace("\n", "").replace("\x0b", "") .replace(" ", "") == txt.replace(" ", "")]
+            check(shape, "poster/{} {}: the {} is one text box".format(g, page, txt))
+            if not shape:
+                continue
+            import vl_native
+            fld = "title" if page in ("closing", "points") else "label"
+            # the visible title, not the 10pt a11y title deckkit parks off the page for screen readers
+            shape = sorted(shape, key=lambda sh: -sh.text_frame.paragraphs[0].runs[0].font.size.pt)
+            sz = shape[0].text_frame.paragraphs[0].runs[0].font.size.pt
+            ls = [p_.text for p_ in shape[0].text_frame.paragraphs]
+            broken = ls if len(ls) > 1 else vl._break_lines(k, fld, txt, sz, shape[0].width / 914400.0)
+            check(len(broken[-1].strip()) > 2 or len(broken) == 1,
+                  "poster/{}/{}x{} {}: no lone character on the last line: {}".format(g, W, H, page, broken))
+            if "，" in txt and len(broken) > 1:
+                check(broken[0].endswith("，"), "poster/{} {}: a two-line clause breaks at its comma: {}".format(g, page, broken))
+# ordinary pages on poster (k.new_slide + rs.card + dk.DEEP) stay readable on EVERY field (Review Focus 3): the
+# field changes per page, so the deck's default ink, its card and the card's label follow it
+import register_surface as rs
+for g in vl.VARIANTS["poster"]:
+    prs = dk.blank_deck(13.333, 7.5)
+    with contextlib.redirect_stdout(io.StringIO()):
+        k = vl.use("poster", prs, ground=g)
+    for i in range(4):
+        s = k.new_slide()
+        bg = k.field["bg"]
+        body, header = rs.card(s, "poster", 1.0, 1.5, 5.0, 3.0, label="Agenda")
+        fill = str(body.fill.fore_color.rgb)
+        ink = str(dk.DEEP)
+        lab = str(header.text_frame.paragraphs[0].runs[0].font.color.rgb)
+        check(cr(ink, bg) >= 4.5, "poster/{} page {}: dk.DEEP {} reads on the field {} ({:.2f})".format(g, i, ink, bg, cr(ink, bg)))
+        check(cr(ink, fill) >= 4.5, "poster/{} page {}: dk.DEEP {} reads on rs.card {} ({:.2f})".format(g, i, ink, fill, cr(ink, fill)))
+        check(cr(lab, fill) >= 4.5, "poster/{} page {}: the card label {} reads on it ({:.2f})".format(g, i, lab, cr(lab, fill)))
 
 for line in ok:
     print("  ok   " + line)

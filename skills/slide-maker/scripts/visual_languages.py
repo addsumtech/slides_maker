@@ -147,10 +147,11 @@ IMAGE_LED = ("editorial", "soft", "collage", "storybook")    # built around the 
 # words only the CALLER can give — never invented by the kit; absent means nothing is drawn
 NATIVE_EXTRAS = {"ink": ("seal",), "poster": ("highlight",), "cutpaper": ("icons",), "drafting": ("project",)}
 _ACTIVE = {}    # language -> the ground key use() set; rs.ground()/rs.card() (no kit) follow it
+_PAL_OVERRIDE = {}   # language -> the palette of the CURRENT page, for a language whose palette changes per page (poster)
 
 
 def _pal(name):
-    return VARIANTS[name][_ACTIVE.get(name, "light")]["palette"]
+    return _PAL_OVERRIDE.get(name) or VARIANTS[name][_ACTIVE.get(name, "light")]["palette"]
 
 
 def _rgb(h):
@@ -302,6 +303,7 @@ def use(name, prs, *, fonts="both", plan=None, image_dir=None, platform=None, gr
             sorted(VARIANTS[name]), name, ground))
     k = Kit(name, prs, fonts, plan, image_dir, platform, ground)
     _ACTIVE[name] = ground
+    _PAL_OVERRIDE.pop(name, None)
     if fonts == "mac":
         missing = [f for f in set(k._fonts.values()) if dk._font_substituted(f)]
         if missing:
