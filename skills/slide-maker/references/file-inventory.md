@@ -409,6 +409,10 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   under a claim), `scribble` (a looping pen coil), `brush_stroke` (a swash behind a word), `tape`
   (translucent, torn ends, holding a print), `scallop` (a badge). Quiet by default, `loud=True` for
   a hero; the motif budget counts them and TEXT_OVER_MOTIF sees text across them.
+- `native_art.py` — the drawn surfaces of the native visual languages: ink ridges (fading into mist), seal, ensō,
+  paper hills/cards/clouds/sun with real soft shadows, drafting grid and drawing sheet, iso stack, dimension
+  line, numbered balloon, page-clipped colour block, solid/grid slide backgrounds. Native and editable,
+  deterministic for a seed, never past the page, every angle in range.
 - `rotgeom.py` — where a ROTATED shape paints: the placed box (exact at 90° multiples, so a
   vertical margin label is measured exactly), the exact intersection of two tilted rectangles, and
   point-in-polygon. The one definition both geometry gates (`lint_deck.py`, `deckkit.lint_layout`)

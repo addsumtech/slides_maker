@@ -997,6 +997,13 @@ jobs:
           grep -qE "(^[0-9]+ passed, 0 failed|\\] ok$)" /tmp/ooxmlsafety.log || {
             echo "::error::test_ooxml_safety did not run to completion"; exit 1; }
 
+      - name: Native art (page-clipped, in-range, deterministic)
+        run: |
+          set -o pipefail
+          python tests/test_native_art.py | tee /tmp/nativeart.log
+          grep -qE "(^[0-9]+ passed, 0 failed|\\] ok$)" /tmp/nativeart.log || {
+            echo "::error::test_native_art did not run to completion"; exit 1; }
+
       - name: Review integrity (a consent must name a reviewed artifact)
         run: |
           set -o pipefail
