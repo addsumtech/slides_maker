@@ -3991,6 +3991,20 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
             j_warns.append({"slide": si + 1, "text": m, "severity": "warning"})
         total += len(finds)
         warn_total += len(warns)
+    # PowerPoint safety (ooxml_safety): values PowerPoint repairs that LibreOffice renders, and geometry past
+    # the slide edge, which PowerPoint shows while editing. Both read from the file, never from a render.
+    try:
+        import ooxml_safety as _ox
+        for _sn, _m in _ox.xml_findings(path):
+            print(f"  slide {_sn}: {_m}")
+            j_findings.append({"slide": _sn, "text": _m, "severity": "error"})
+            total += 1
+        for _sn, _m in _ox.beyond_page(prs):
+            print(f"  slide {_sn}: [warn] {_m}")
+            j_warns.append({"slide": _sn, "text": _m, "severity": "warning"})
+            warn_total += 1
+    except ImportError:
+        print("  [lint] ooxml_safety.py is missing — PowerPoint safety NOT CHECKED")
     # duplicate slide titles (deck-level, advisory): screen-reader navigation needs UNIQUE titles
     by_title = {}
     for sn, norm, disp in titles:

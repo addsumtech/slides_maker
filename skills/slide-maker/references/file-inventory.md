@@ -419,6 +419,11 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   [containment excluded] · footer-zone intrusion · text-past-card · uneven rows) AND adds the
   render/parse-only faults (CJK kinsoku/widow · whole-page-image · orphan slides — plus missing EA font as the render-time BACKSTOP; `lint_layout` now catches it at build time as `CJK_NO_EA`, whose fix is `deckkit.retrofit_ea(prs)` on the line above the lint — setting `EAFONT` fixes the next build, not this one);
   run after render, before critic; non-zero on findings. `smoke_deckkit.py` — regression guard for the helpers.
+- `ooxml_safety.py` — **PowerPoint safety**, read from the saved file: values PowerPoint repairs or deletes that
+  LibreOffice renders (angles outside 0..21599999, negative shadow distances, alphas and gradient stops outside
+  0..100000, letter spacing out of range, `spPr`/`rPr` children out of schema order, duplicate shape ids) are
+  CRITICAL; shapes past the slide edge are advisory (`BEYOND THE PAGE`, quiet for `bleed_intent`). `lint_deck`
+  runs it, so both delivery gates hold it.
 - **Delivery-mode flags — the same word does NOT reach every tool.** SKILL.md names each flag at the
   step that uses it; this is the complete map of which tool actually accepts which, because the
   tools diverge and getting it wrong is quiet, not loud. Verified against the parsers, not the prose:

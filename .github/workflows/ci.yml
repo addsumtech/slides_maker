@@ -990,6 +990,13 @@ jobs:
           grep -qE "(^[0-9]+ passed, 0 failed|\\] ok$)" /tmp/unevennested.log || {
             echo "::error::test_uneven_cards_nested did not run to completion"; exit 1; }
 
+      - name: PowerPoint safety (values PowerPoint repairs that LibreOffice renders)
+        run: |
+          set -o pipefail
+          python tests/test_ooxml_safety.py | tee /tmp/ooxmlsafety.log
+          grep -qE "(^[0-9]+ passed, 0 failed|\\] ok$)" /tmp/ooxmlsafety.log || {
+            echo "::error::test_ooxml_safety did not run to completion"; exit 1; }
+
       - name: Review integrity (a consent must name a reviewed artifact)
         run: |
           set -o pipefail
