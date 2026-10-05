@@ -583,9 +583,9 @@ for n_ in vl.LANGS:
 # ── Task 11: the reference names what the code does ──
 _ref = (ROOT / "references" / "visual-languages.md")
 _doc = _ref.read_text(encoding="utf-8") if _ref.exists() else ""
-for needle in list(vl.IMAGE_LED) + [p_ for p_ in vl.PAGE_FIELDS if p_ != "points"] + ["design_plan.visual_language", "design_plan.vl_fonts",
+for needle in list(vl.LANGS) + list(vl.PAGE_FIELDS) + ["seal=", "highlight=", "project=", "icons=", "native_fit", "design_plan.visual_language", "design_plan.vl_fonts",
                "deck_gates.py set", "unverified", "VLTextOverflow", "fonts=\"mac\"", "rs.card", "plan=", "direction(",
-               "ground=\"auto\"", "vl_ground", "--ground", "printed board"] + [k_ for n_ in vl.IMAGE_LED for k_ in vl.VARIANTS[n_]]:
+               "ground=\"auto\"", "vl_ground", "--ground", "printed board"] + [k_ for n_ in vl.VARIANTS for k_ in vl.VARIANTS[n_]]:
     check(needle in _doc, "references/visual-languages.md never says {!r}".format(needle))
 for scr in vl.EA_FACES:
     for kind in ("serif", "sans"):

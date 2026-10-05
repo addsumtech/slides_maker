@@ -1,4 +1,4 @@
-# Visual languages — four complete image-led looks
+# Visual languages — eight complete looks: four image-led, four drawn
 
 **When to read this:** the picked direction is a visual language (its entry in `directions.json` carries
 `"vl": "<name>"`), or the user asks for one of these looks by name. Read it before writing the build script.
@@ -13,6 +13,10 @@ the page functions never invent a word, a number or a name.
 | `soft` | photographs, warm | rounded sans, generous space | cream / pastel, colour blobs | arch, ellipse, blob, rounded cards |
 | `collage` | photographs, loud | heavy headlines, highlighter kicker, squiggles | kraft grain | tilted taped prints, note cards, outlined numbers |
 | `storybook` | illustrations (a P1 watercolour series) | serif display and body | paper grain | feathered illustrations melting into the paper |
+| `ink` | none needed (an ink illustration is optional) | serif; vertical CJK, a carved seal | xuan paper, misty ink ridges | an ensō around the figure |
+| `poster` | none needed (a cut-out object is optional) | Impact display — the headline is the picture | one saturated colour field per page | page-clipped colour blocks |
+| `cutpaper` | none needed (icons from the built-in library) | rounded friendly sans | a layered paper diorama, soft paper shadows | the title card tucked between hills |
+| `drafting` | none needed | Georgia titles, Courier New labels, Times New Roman figures | drafting grid, drawing sheet, title block | an iso stack, numbered leaders, a dimension line |
 
 ## Build
 
@@ -77,6 +81,38 @@ k.closing(k.new_slide(), title="Bring one broken thing.", line="And bring a neig
   page: number + label) — first in reading order, above the canvas, nothing drawn — so a kicker set above the title
   never trips READING ORDER. Ordinary `k.new_slide()` pages need their own title (or `dk.a11y_title`).
 
+## Native languages — drawn, no pictures needed
+
+`ink` (水墨), `poster` (海报大字), `cutpaper` (剪纸层叠) and `drafting` (蓝图技术线稿 — named `drafting` because
+`blueprint` is a preset) draw their own surface with native, editable shapes (`scripts/native_art.py`), so they
+make a finished deck for a talk with no pictures and no image tool. Everything they draw stays on the page, and
+every value they write is one PowerPoint opens without repair (`scripts/ooxml_safety.py`, which `lint_deck` runs).
+
+- **`points`** — `k.points(s, kicker=…, title=…, items=[("Head", "line"), …])`: 2 to 4 points, each a string, a
+  `(head, line)` pair or a `{"head": …, "line": …}` dict. Native languages only; on the image-led four, build
+  the list on an ordinary `k.new_slide()` page (`rs.ground` + `rs.card`).
+- **Words only you can give** — the kit never invents them, and draws nothing when they are absent:
+  - `seal="茶事"` on any `ink` page: one or two characters
+    of your own text, carved into a red seal;
+  - `highlight="room"` on `poster` (`cover`, `section`, `quote`, `closing`): words of that page's own title or
+    quote, set on a highlighter (refused when they are not in it);
+  - `icons=["lucide:wind", …]` on `cutpaper`'s `points`: one icon spec per point;
+  - `project="…"` on any `drafting` page: the words in the sheet's title block; without it the cover title is
+    remembered and carried to every later sheet. Sheets are numbered by themselves.
+- **Vertical CJK** — `ink` sets a title, a quote couplet, a label and its points as vertical columns read right
+  to left ONLY when the text is Chinese or Japanese with no Latin letters or digits; Latin, Hangul or mixed text
+  is set horizontally in the same composition. A vertical field shrinks toward its floor and is refused past
+  its columns, like any other field.
+- **Display type** (`poster`) breaks like the rest of the kit: at a clause mark first, never a lone CJK
+  character or word on the last line; Latin is set in capitals.
+- **Ordinary pages** — `k.new_slide()` gives `poster` the next colour field (the deck's inks — `dk.DEEP` and
+  friends — and `rs.card` follow it, so read `k.color("ink")` for text) and `drafting` its numbered drawing sheet
+  on the grid.
+- **When they are offered** — a deck with no pictures (`direction_gate.images: none`) offers the one that fits
+  the topic and records `direction_gate.native_fit: {"language": "<name>", "why": "<topic reason>"}`; both
+  gates hold it. Guidance, not a rule: culture, history, craft → `ink`; launch, manifesto, brand, opinion →
+  `poster`; children, teaching, workshop, community → `cutpaper`; research, engineering, technical → `drafting`.
+
 ## Grounds
 
 Each language has its own light paper and ONE contrast ground; every text ink passes 4.5:1 on both:
@@ -87,6 +123,10 @@ Each language has its own light paper and ONE contrast ground; every text ink pa
 | soft | cream | `dusk` — deep plum-indigo, the pastel blobs kept |
 | collage | kraft | `slate` — dark grey paper, white prints, dark note cards |
 | storybook | paper | `meadow` — green paper; the watercolours are tinted onto it, as if painted there |
+| ink | xuan paper | `night` — ink-black paper, pale ridges, a moon for the sun |
+| poster | colour fields (cobalt, lime, black, signal orange, one per page) | `paper` — off-white and black fields, cobalt accents |
+| cutpaper | day | `night` — navy sky, a paper moon, dark hills |
+| drafting | vellum | `cyanotype` — blueprint navy, pale linework |
 
 `use(name, prs, ground=…)`: `"light"` (the default — the same deck on every machine), the contrast key, or
 `"auto"` — the light ground unless the last three decks in your look history already sit on it (the
@@ -106,6 +146,10 @@ viewer opens. `fonts="mac"` unlocks Mac-only faces and refuses one that is not i
 | soft | Trebuchet MS / Arial Rounded MT Bold | Trebuchet MS / Avenir Next | Trebuchet MS |
 | collage | Impact / Impact (+ Bradley Hand accents on mac) | Arial / Avenir Next | Impact |
 | storybook | Georgia / Baskerville | Georgia | Times New Roman (lining) |
+| ink | Georgia / Baskerville | Georgia | Times New Roman (lining) |
+| poster | Impact | Arial / Helvetica Neue (meta: Courier New) | Impact |
+| cutpaper | Trebuchet MS / Avenir Next | Trebuchet MS / Avenir Next | Trebuchet MS |
+| drafting | Georgia | Georgia (labels and title block: Courier New) | Times New Roman (lining) |
 
 East-Asian faces follow the SCRIPT of each run — a Chinese face has no Hangul:
 
@@ -156,4 +200,6 @@ the ground, its grain, its card and its inks are one look, and the variants are 
 style sample (the preview shows it, labelled "style sample — not your content"). It counts as a STYLED
 direction, never as the topic-invented bespoke direction the gate also requires. Image-led languages pair
 with the P1 image series (`references/image-generation.md`, the SERIES exception) when the deck's images
-are generated; with the user's own or fetched photos they need no generation at all.
+are generated; with the user's own or fetched photos they need no generation at all. The four native
+languages need no pictures: a deck without any offers the one that fits its topic and records why in
+`direction_gate.native_fit` (see Native languages above).

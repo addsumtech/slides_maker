@@ -191,6 +191,39 @@ cp -r slides_maker-site/templates/decks/zh/nvidia-overview ~/.codex/slide-templa
 python3 skills/slide-maker/scripts/visual_languages.py --sample out/
 ```
 
+## 设计语言：四套原生绘制的风格，不需要图片
+
+另外四套设计语言用 PowerPoint 原生形状画出自己的画面，每个元素都能编辑。所以没有图片、也没有生图工具的 deck，同样能有完整的风格。每套都有浅色底和对比色底，还多一种 `points` 要点页，放两到四个要点。印章上的字、高亮的词、图标、项目名这类内容只来自你，不会被编造。
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="skills/slide-maker/assets/vl/samples/ink.jpg" alt="ink 设计语言示例页"><br/>
+      <sub><strong>ink（水墨）</strong> · 雾中远山、中日文竖排、手刻印章、墨圈托住数字<br/>
+深色底版本：<a href="skills/slide-maker/assets/vl/samples/ink-night.jpg">night</a></sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="skills/slide-maker/assets/vl/samples/poster.jpg" alt="poster 设计语言示例页"><br/>
+      <sub><strong>poster（海报大字）</strong> · 字就是画面，每页一种饱和色场<br/>
+浅色底版本：<a href="skills/slide-maker/assets/vl/samples/poster-paper.jpg">paper</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="skills/slide-maker/assets/vl/samples/cutpaper.jpg" alt="cutpaper 设计语言示例页"><br/>
+      <sub><strong>cutpaper（剪纸层叠）</strong> · 层层彩纸剪出的小景，标题卡插在山丘之间<br/>
+深色底版本：<a href="skills/slide-maker/assets/vl/samples/cutpaper-night.jpg">night</a></sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="skills/slide-maker/assets/vl/samples/drafting.jpg" alt="drafting 设计语言示例页"><br/>
+      <sub><strong>drafting（蓝图技术线稿）</strong> · 带编号的图纸、每个要点一层等轴测板、带尺寸线的数字<br/>
+晒图蓝版本：<a href="skills/slide-maker/assets/vl/samples/drafting-cyanotype.jpg">cyanotype</a></sub>
+    </td>
+  </tr>
+</table>
+
+**什么时候会用到。** 原生绘制，不需要图片——deck 没有图片时会推荐。候选风格里会有一套最贴合主题的（文化、器物 → 水墨；发布会、宣言 → 海报大字；教学、儿童 → 剪纸层叠；科研、工程 → 蓝图技术线稿），选择理由会一并记录。
+
 ---
 
 ## slide-maker 不一样在哪

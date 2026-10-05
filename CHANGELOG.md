@@ -9,6 +9,25 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+### Four native visual languages — no pictures needed
+
+`ink` (misty ink ridges, vertical Chinese and Japanese, a carved seal, an ensō around the figure), `poster` (the
+headline is the picture, one saturated field per page), `cutpaper` (a layered paper diorama, the title card tucked
+between hills) and `drafting` (a numbered drawing sheet, one iso layer per point, a dimensioned figure) join the four
+image-led languages. They draw their surface with native, editable shapes, so a deck with no pictures and no image
+tool gets a finished look; each has a light and a contrast ground and a new `points` page. Words the kit cannot
+invent (a seal's characters, a highlighted word, icons, a project name) come only from the caller. A deck with no
+pictures now offers the native language that fits its topic and records why (`direction_gate.native_fit`, on both
+runtimes).
+
+### PowerPoint safety
+
+`lint_deck` now reads the saved file for values PowerPoint repairs or deletes but LibreOffice renders: angles out
+of range, negative shadow distances, alphas and gradient stops out of range, `spPr`/`rPr` children out of schema
+order, and duplicate shape ids. These are CRITICAL. It also reports shapes past the slide edge, which PowerPoint shows while
+editing (advisory; quiet for a declared bleed). Found when a look-dev deck rendered cleanly and PowerPoint repaired
+it.
+
 ## [5.7.0] — 2026-10-05
 
 **The release about decks led by their pictures.** Four complete visual languages (`editorial`, `soft`,

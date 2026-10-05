@@ -191,6 +191,39 @@ contrast ground: <a href="skills/slide-maker/assets/vl/samples/storybook-meadow.
 python3 skills/slide-maker/scripts/visual_languages.py --sample out/
 ```
 
+## Visual languages: four drawn looks, no pictures needed
+
+Four more languages draw their own surface with native, editable shapes, so a deck with no pictures (and no image tool) still gets a finished look. Each has a light and a contrast ground and a `points` page for two to four ideas; words the kit cannot invent (a seal's characters, a highlighted word, icons, a project name) come only from you.
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="skills/slide-maker/assets/vl/samples/ink.jpg" alt="ink visual language sample pages"><br/>
+      <sub><strong>ink</strong> · misty ink ridges, vertical Chinese and Japanese, a carved seal, an ensō around the figure<br/>
+contrast ground: <a href="skills/slide-maker/assets/vl/samples/ink-night.jpg">night</a></sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="skills/slide-maker/assets/vl/samples/poster.jpg" alt="poster visual language sample pages"><br/>
+      <sub><strong>poster</strong> · the headline is the picture, one saturated colour field per page<br/>
+contrast ground: <a href="skills/slide-maker/assets/vl/samples/poster-paper.jpg">paper</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="skills/slide-maker/assets/vl/samples/cutpaper.jpg" alt="cutpaper visual language sample pages"><br/>
+      <sub><strong>cutpaper</strong> · a layered paper diorama, the title card tucked between the hills<br/>
+contrast ground: <a href="skills/slide-maker/assets/vl/samples/cutpaper-night.jpg">night</a></sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="skills/slide-maker/assets/vl/samples/drafting.jpg" alt="drafting visual language sample pages"><br/>
+      <sub><strong>drafting</strong> · a numbered drawing sheet, one iso layer per point, a dimensioned figure<br/>
+contrast ground: <a href="skills/slide-maker/assets/vl/samples/drafting-cyanotype.jpg">cyanotype</a></sub>
+    </td>
+  </tr>
+</table>
+
+**How one gets picked.** Drawn, no pictures needed — offered when your deck has none: the one that fits the topic is among the candidate looks (culture and craft → ink, launch or manifesto → poster, teaching and children → cutpaper, research and engineering → drafting), and the reason is recorded with the choice.
+
 ---
 
 ## What makes slide-maker different

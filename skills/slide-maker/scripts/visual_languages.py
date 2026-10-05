@@ -1234,7 +1234,9 @@ def _page(page):
     fn.__name__ = page
     fn.__doc__ = ("Compose a {} page: keyword fields {} plus image= (a P1 slot id, a file path, or None; the collage "
                   "cover/closing take a list of up to 4). Returns {{'rects': {{field: (x, y, w, h)}}, ...}}; refuses "
-                  "with VLTextOverflow when even the floor sizes overflow, ValueError when there is nothing to place."
+                  "with VLTextOverflow when even the floor sizes overflow, ValueError when there is nothing to place. "
+                  "The native languages also take the words only you can give: seal= (ink), highlight= (poster), "
+                  "icons= (cutpaper points), project= (drafting) — never invented, nothing drawn without them."
                   .format(page, PAGE_FIELDS[page]))
     import inspect as _insp                      # a real signature, so sigs.py prints the fields by name
     _P = _insp.Parameter

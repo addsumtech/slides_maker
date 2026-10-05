@@ -34,7 +34,7 @@ sys.path.insert(0, HERE)
 # supply the geometry". Leaving the surface kits out of it therefore did worse than hide them — it
 # told anyone asking for `halftone` or `starburst` to hand-roll the thing that had just been built.
 MODULES = ("deckkit", "designed_charts", "register_surface", "citations", "ornaments", "image_fx",
-           "image_series", "surfaces", "display_type", "collage", "visual_languages")
+           "image_series", "surfaces", "display_type", "collage", "visual_languages", "native_art")
 
 # The three call-shape errors that actually cost round-trips on a real build. They are properties of
 # the API that no single signature line states, so they are printed with every lookup rather than
@@ -324,6 +324,14 @@ EXAMPLES = {
                'n = dk.text(s, 7.4, 1.0, 1.5, 1.5, [[("12", 36, dk.WHITE, True, False)]],\n'
                '            align=dk.PP_ALIGN.CENTER, anchor=dk.MSO_ANCHOR.MIDDLE)\n'
                'dk.overlap_intent(n, "the count sits on its badge")   # declared on the TEXT',
+    "points": 'import visual_languages as vl\n'
+              'k = vl.use("ink", prs)                         # or "poster" / "cutpaper" / "drafting" — no pictures needed\n'
+              'k.points(k.new_slide(), title="三道工序",\n'
+              '         items=[("洗盏", "器净，心先静"), ("候汤", "水沸，如蟹眼"), ("分茶", "浅斟，留七分")], seal="序")',
+    "ink_ridges": 'import native_art as na\n'
+                  'na.ink_ridges(s, color="1D1C1A", layers=na.INK_LAYERS["land"], keep_clear=[(7.0, 0.5, 1.0, 3.0)])',
+    "clipped_block": 'import native_art as na\n'
+                     'na.clipped_block(s, 7.0, 3.0, 4.0, 4.0, -9, fill="D7FF3B")   # a rotated block, cut to the page',
     "slot_picture": 'import image_series as ims\n'
                     'plan = ims.load("series.json")                 # validated by: image_series.py check\n'
                     'ims.slot_picture(s, plan, "hero", 0.6, 0.6, 3.2, 4.2, image_dir=".")   # arch + alt + +gen tag',
@@ -403,6 +411,12 @@ def load():
 # suppresses — a separate concern from what --example prints). Without these, --example printed the
 # filler "a form component" while SKILL.md promises "plus the guarantee it makes".
 _EXTRA_GUARANTEES = {
+    "points": "2 to 4 points, measured and refused rather than truncated; vertical only for CJK text (ink), "
+              "one iso layer per point (drafting), one icon per point when icons= is given (cutpaper)",
+    "ink_ridges": "ridges fade into mist and never pass the page; over every keep_clear rect the crest stays "
+                  "below the text, falling away on a shoulder rather than a cliff",
+    "clipped_block": "drawn as its polygon cut to the page, so PowerPoint's editing view shows nothing past "
+                     "the slide edge",
     "slot_picture": "the slot's own frame shape, focus and alt text from series.json (the keyed PNG for a "
                     "cut-out), tagged +gen.<slot> — the tag the image-series delivery gate reads from "
                     "the saved file",
