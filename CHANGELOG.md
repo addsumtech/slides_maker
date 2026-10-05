@@ -9,6 +9,20 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+## [5.7.0] — 2026-10-05
+
+**The release about decks led by their pictures.** Four complete visual languages (`editorial`, `soft`,
+`collage` and `storybook`) turn your own words and pictures into a finished deck: system fonts on macOS
+and Windows, a light paper and one contrast ground each, six page layouts in landscape and portrait, and
+text that is measured and refused rather than truncated. An image-led deck can carry one art-directed
+image series across most pages, compared against its key image and gated on both runtimes, and a deck
+that carries pictures (the user's, generated or fetched) is offered at least one visual language among
+its directions. Underneath sit the editorial drawing primitives (masked and rotated pictures, native
+highlights, ornaments, frosted glass), rotated shapes measured where they paint, CJK and Korean line
+ends measured the way the renderer sets them, and new floors for small-text contrast and low-resolution
+images. An end-to-end build of a real deck on the `collage` language then found four lint defects on
+kit-built pages; they are fixed below.
+
 ### Generated or fetched pictures also bring a visual language to the table
 
 The rule that a deck with pictures offers at least one visual language among its directions now counts pictures
