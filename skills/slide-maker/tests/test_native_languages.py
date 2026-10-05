@@ -271,6 +271,49 @@ for g in vl.VARIANTS["poster"]:
         check(cr(ink, fill) >= 4.5, "poster/{} page {}: dk.DEEP {} reads on rs.card {} ({:.2f})".format(g, i, ink, fill, cr(ink, fill)))
         check(cr(lab, fill) >= 4.5, "poster/{} page {}: the card label {} reads on it ({:.2f})".format(g, i, lab, cr(lab, fill)))
 
+# ── cutpaper ──
+assert_matrix("cutpaper")
+import vl_native as _vn
+for g, A in _vn.CUT_ART.items():
+    for disc_ in A["discs"]:
+        check(cr("FFFFFF", disc_) >= 3.0, "cutpaper/{}: a white icon on disc {} clears 3:1".format(g, disc_))
+    for ring in A["rings"][-1:]:
+        pal = vl.VARIANTS["cutpaper"][g]["palette"]
+        check(cr(pal["card_ink"], ring) >= 4.5, "cutpaper/{}: the figure on the inner sun ring reads".format(g))
+# the quote sits on a STACK of offset sheets that shows (the first render hid both sheets behind the card)
+for W, H in ((13.333, 7.5), (10.0, 7.5), (7.5, 13.333)):
+    with contextlib.redirect_stdout(io.StringIO()):
+        prs = dk.blank_deck(W, H); k = vl.use("cutpaper", prs)
+    s = k.new_slide()
+    k.quote(s, quote="Every forest began as one small seed.", attribution="A paper-cut science story")
+    rr = [sh for sh in s.shapes if sh._element.xpath(".//a:prstGeom[@prst='roundRect']")]
+    front = rr[-1]
+    fr, fb = (front.left + front.width) / 914400.0, (front.top + front.height) / 914400.0
+    for sh in rr[:-1]:
+        r_, b_ = (sh.left + sh.width) / 914400.0, (sh.top + sh.height) / 914400.0
+        check(r_ - fr >= 0.12 and b_ - fb >= 0.12, "cutpaper {}x{}: a back sheet shows past the card (right {:+.2f}, bottom {:+.2f})".format(
+            W, H, r_ - fr, b_ - fb))
+# a portrait cover's card fits its words (the first render left a fixed card two-thirds empty under one line)
+with contextlib.redirect_stdout(io.StringIO()):
+    prs = dk.blank_deck(7.5, 13.333); k = vl.use("cutpaper", prs)
+s = k.new_slide()
+out = k.cover(s, kicker="A paper-cut science story", title="How seeds travel")
+tb = max(r_[1] + r_[3] for r_ in out["rects"].values())
+cards = [sh for sh in s.shapes if sh._element.xpath(".//a:prstGeom[@prst='roundRect']")]
+cb = (cards[-1].top + cards[-1].height) / 914400.0
+check(0 <= cb - tb <= 0.75, "cutpaper portrait cover: the card ends just under its words (gap {:.2f}in)".format(cb - tb))
+with contextlib.redirect_stdout(io.StringIO()):
+    prs = dk.blank_deck(13.333, 7.5); k = vl.use("cutpaper", prs)
+s = k.new_slide()
+k.points(s, title="Three ways a seed gets around", items=["Wind", "Water", "Animals"],
+         icons=["lucide:wind", "lucide:droplets", "lucide:paw-print"])
+check(sum(1 for sh in s.shapes if sh.shape_type == 13) == 3, "cutpaper: one icon per point")
+try:
+    k.points(k.new_slide(), title="x", items=["a", "b"], icons=["lucide:wind"])
+    check(False, "cutpaper: icons= must match the points one to one")
+except ValueError:
+    check(True, "cutpaper: icons= must match the points one to one")
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

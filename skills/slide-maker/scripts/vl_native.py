@@ -10,6 +10,7 @@ Nothing here invents a word: seal/highlight/project/icons come from the caller o
 from __future__ import annotations
 
 import copy
+from pathlib import Path
 
 import deckkit as dk
 import native_art as na
@@ -722,5 +723,218 @@ def _poster_points(k, slide, f, image):
                        ink=fld["panel_ink"], mute=fld["panel_ink"])
         draws += [nd, td_]
     _poster_meta(k, slide, kicker)
+    _run_all(draws)
+    return rects
+
+
+# ═══════════════════════════════════ cutpaper 剪纸层叠 ═══════════════════════════════════
+CUT_ART = {
+    "light": {"hills": ("D3E8C9", "A2CFA3", "5AA38A", "2F6F62"), "sun": ("F7D38A", "F2B33D"),
+              "rings": ("FBE6B4", "F7D38A", "F2B33D", "E8902F"), "cloud": "FFFFFF", "sheets": ("F2B33D", "EE8A6B"),
+              "discs": ("C2553A", "2E6DA4", "5B3F6E", "2F7F69")},
+    "night": {"hills": ("2E4A63", "3B6476", "467E7A", "234F4E"), "sun": ("D9CDA6", "F1E7C8"),
+              "rings": ("39466A", "D9CDA6", "F1E7C8", "C9B98A"), "cloud": "C9D3E3", "sheets": ("F1E7C8", "EE8A6B"),
+              "discs": ("C2553A", "2E6DA4", "5B3F6E", "2F7F69")},
+}
+
+
+def _card_flow(k, slide, page, col, items, **kw):
+    return flow(k, slide, page, col, items, ink=k.P["card_ink"], mute=k.P["card_mute"], accent=k.P["card_accent"], **kw)
+
+
+def _back_hills(k, slide, o, seed=1):
+    W, H, s, _o = ctx(k)
+    A = CUT_ART[k.ground]
+    base = (0.61, 0.71) if o == "land" else (0.70, 0.78)
+    na.paper_hill(slide, na.hill_points(W, base[0] * H, 0.16 * H if o == "land" else 0.08 * H, seed, 1.3), H, fill=A["hills"][0])
+    na.paper_hill(slide, na.hill_points(W, base[1] * H, 0.15 * H if o == "land" else 0.07 * H, seed + 3, 1.7), H, fill=A["hills"][1])
+
+
+def _front_hills(k, slide, o, seed=7, low=False):
+    W, H, s, _o = ctx(k)
+    A = CUT_ART[k.ground]
+    if not low:
+        na.paper_hill(slide, na.hill_points(W, (0.82 if o == "land" else 0.86) * H, 0.08 * H, seed, 1.9), H, fill=A["hills"][2])
+    na.paper_hill(slide, na.hill_points(W, (0.92 if o == "land" else 0.93) * H, 0.05 * H, seed + 2, 2.6), H, fill=A["hills"][3])
+
+
+@register("cutpaper", "cover")
+def _cut_cover(k, slide, f, image):
+    W, H, s, o = ctx(k)
+    A = CUT_ART[k.ground]
+    if o == "land":
+        card, sun, clouds = (0.064 * W, 0.14 * H, 0.48 * W, 0.47 * H), (0.76 * W, 0.23 * H, 0.35 * H), \
+            ((0.56 * W, 0.17 * H, 0.15 * W), (0.91 * W, 0.43 * H, 0.11 * W))
+    else:
+        card, sun, clouds = (0.08 * W, 0.10 * H, 0.84 * W, 0.32 * H), (0.70 * W, 0.53 * H, 0.26 * W), \
+            ((0.28 * W, 0.50 * H, 0.30 * W),)
+    pad = 0.4 * s
+    items = [(x_, text_of(f, x_)) for x_ in ("kicker", "title", "subtitle") if text_of(f, x_)]
+    r, d = _card_flow(k, slide, "cover", (card[0] + pad, card[1] + pad, card[2] - 2 * pad, card[3] - 2 * pad), items)
+    text_bottom = max((v[1] + v[3] for v in r.values()), default=card[1])
+    if o != "land":                  # a free-standing card fits its words (landscape keeps its height for the tuck)
+        card = (card[0], card[1], card[2], text_bottom + pad - card[1])
+    na.paper_sun(slide, sun[0], sun[1], (sun[2], sun[2] * 0.7), A["sun"])
+    for cx, cy, cw in clouds:
+        na.cloud(slide, cx, cy, cw, fill=A["cloud"])
+    _back_hills(k, slide, o)
+    na.paper_card(slide, *card)
+    if o == "land":                  # the near hill tucks the card's foot into the scene — never above its words
+        foot = card[1] + card[3]
+        tuck = max(text_bottom + 0.15 * s, foot - 0.30 * s)
+        right = card[0] + card[2]
+        pts = [(W * i / 16.0, min(H - 0.3, tuck + 0.12 * s * _math.sin(i * 0.9) + max(0.0, W * i / 16.0 - right) * 0.16))
+               for i in range(17)]
+        near = na.paper_hill(slide, pts, H, fill=A["hills"][2])
+        dk.overlap_intent(near, "the near paper hill tucks the title card's foot into the scene")
+        _front_hills(k, slide, o, low=True)
+    else:
+        _front_hills(k, slide, o)
+    d()
+    return r
+
+
+@register("cutpaper", "section")
+def _cut_section(k, slide, f, image):
+    W, H, s, o = ctx(k)
+    A = CUT_ART[k.ground]
+    num, kicker, title = text_of(f, "number"), text_of(f, "kicker"), text_of(f, "title")
+    cx, cy, d0 = (0.24 * W, 0.46 * H, 0.52 * H) if o == "land" else (0.50 * W, 0.26 * H, 0.56 * W)
+    rects, draws = {}, []
+    if num:
+        r, d = _card_flow(k, slide, "section", (cx - d0 * 0.3, cy - d0 * 0.3, d0 * 0.6, d0 * 0.6), [("number", num)],
+                          anchor="middle", align="c", start={"number": 120 * s})
+        rects.update(r); draws.append(d)
+    col = (0.48 * W, 0.24 * H, 0.44 * W, 0.46 * H) if o == "land" else (0.08 * W, 0.56 * H, 0.84 * W, 0.28 * H)
+    items = [(x_, t) for x_, t in (("kicker", kicker), ("title", title)) if t]
+    r, d = flow(k, slide, "section", col, items, anchor="middle" if o == "land" else "top")
+    rects.update(r); draws.append(d)
+    na.paper_sun(slide, cx, cy, (d0, d0 * 0.72), (A["rings"][1], A["rings"][3]))
+    _front_hills(k, slide, o, seed=11)
+    _run_all(draws)
+    return rects
+
+
+@register("cutpaper", "image_text")
+def _cut_image_text(k, slide, f, image):
+    W, H, s, o = ctx(k)
+    frame = (0.06 * W, 0.10 * H, 0.46 * W, 0.76 * H) if o == "land" else (0.08 * W, 0.05 * H, 0.84 * W, 0.44 * H)
+    card = (0.57 * W, 0.18 * H, 0.37 * W, 0.62 * H) if o == "land" else (0.08 * W, 0.53 * H, 0.84 * W, 0.36 * H)
+    pad = 0.35 * s
+    items = [(x_, text_of(f, x_)) for x_ in ("kicker", "title", "body", "caption") if text_of(f, x_)]
+    r, d = _card_flow(k, slide, "image_text", (card[0] + pad, card[1] + pad, card[2] - 2 * pad, card[3] - 2 * pad), items,
+                      anchor="middle")
+    na.paper_card(slide, *frame)
+    inset = 0.14 * s
+    place_image(k, slide, image, (frame[0] + inset, frame[1] + inset, frame[2] - 2 * inset, frame[3] - 2 * inset), "image_text")
+    na.paper_card(slide, *card)
+    d()
+    return r
+
+
+@register("cutpaper", "quote")
+def _cut_quote(k, slide, f, image):
+    W, H, s, o = ctx(k)
+    A = CUT_ART[k.ground]
+    card = (0.12 * W, 0.17 * H, 0.76 * W, 0.61 * H) if o == "land" else (0.08 * W, 0.18 * H, 0.84 * W, 0.56 * H)
+    # the stack SHOWS: each sheet is the card's own size, offset down and right so it peeks past the card's edges
+    # (the plan's smaller sheets sat wholly behind it — measured 2026-10-05, nothing but a rotated corner showed)
+    for (dx, dy, rot), col in zip(((0.42, 0.40, 2.5), (0.22, 0.20, -1.5)), A["sheets"]):
+        na.paper_card(slide, card[0] + dx * s, card[1] + dy * s, card[2], card[3], fill=col, rotation=rot)
+    na.paper_card(slide, *card)
+    pad = 0.6 * s
+    items = [(x_, text_of(f, x_)) for x_ in ("quote", "attribution") if text_of(f, x_)]
+    items = [("mark", "“")] + items
+    r, d = _card_flow(k, slide, "quote", (card[0] + pad, card[1] + pad * 0.6, card[2] - 2 * pad, card[3] - 1.2 * pad), items,
+                      anchor="middle")
+    d()
+    return r
+
+
+@register("cutpaper", "data")
+def _cut_data(k, slide, f, image):
+    W, H, s, o = ctx(k)
+    A = CUT_ART[k.ground]
+    num, label, note = text_of(f, "number"), text_of(f, "label"), text_of(f, "note")
+    cx, cy, D = (0.27 * W, 0.50 * H, min(0.86 * H, 0.52 * W)) if o == "land" else (0.50 * W, 0.28 * H, 0.86 * W)
+    cx = max(cx, D / 2.0 + 0.1 * s)              # the whole sun on the page, on any canvas (4:3 ran 0.52in off it)
+    rects, draws = {}, []
+    if num:
+        inner = D * 0.39
+        r, d = _card_flow(k, slide, "data", (cx - inner / 2, cy - inner / 2, inner, inner), [("number", num)],
+                          anchor="middle", align="c")
+        rects.update(r); draws.append(d)
+    col = (cx + D / 2 + 0.5 * s, 0.24 * H, 0.94 * W - (cx + D / 2 + 0.5 * s), 0.50 * H) if o == "land" else \
+        (0.08 * W, cy + D / 2 + 0.4 * s, 0.84 * W, 0.84 * H - (cy + D / 2 + 0.4 * s))
+    items = [(x_, t) for x_, t in (("label", label), ("note", note)) if t]
+    r, d = flow(k, slide, "data", col, items, anchor="middle" if o == "land" else "top")
+    rects.update(r); draws.append(d)
+    na.paper_sun(slide, cx, cy, tuple(D * x for x in (1.0, 0.78, 0.58, 0.39)), A["rings"])
+    _run_all(draws)
+    return rects
+
+
+@register("cutpaper", "closing")
+def _cut_closing(k, slide, f, image):
+    W, H, s, o = ctx(k)
+    A = CUT_ART[k.ground]
+    card = (0.22 * W, 0.16 * H, 0.56 * W, 0.36 * H) if o == "land" else (0.08 * W, 0.12 * H, 0.84 * W, 0.30 * H)
+    pad = 0.4 * s
+    items = [(x_, text_of(f, x_)) for x_ in ("title", "line") if text_of(f, x_)]
+    r, d = _card_flow(k, slide, "closing", (card[0] + pad, card[1] + pad, card[2] - 2 * pad, card[3] - 2 * pad), items,
+                      anchor="middle", align="c")
+    na.paper_sun(slide, 0.85 * W, (0.14 if o == "land" else 0.50) * H, (0.16 * min(W, H), 0.11 * min(W, H)), A["sun"])
+    _back_hills(k, slide, o, seed=21)
+    na.paper_card(slide, *card)
+    _front_hills(k, slide, o, seed=23)
+    d()
+    return r
+
+
+@register("cutpaper", "points")
+def _cut_points(k, slide, f, image):
+    import icons as _ic
+    import tempfile as _tf
+    W, H, s, o = ctx(k)
+    A = CUT_ART[k.ground]
+    pts = points_of(f.get("items"))
+    icons_ = f.get("icons")
+    if icons_ is not None and (not isinstance(icons_, (list, tuple)) or len(icons_) != len(pts)):
+        raise ValueError("cutpaper.points(): icons= takes one icon spec per point ({} points), got {!r}".format(len(pts), icons_))
+    rects, draws = {}, []
+    head_items = [(x_, text_of(f, x_)) for x_ in ("kicker", "title") if text_of(f, x_)]
+    r, d = flow(k, slide, "points", (0.07 * W, 0.08 * H, 0.86 * W, 0.16 * H), head_items)
+    rects.update(r); draws.append(d)
+    n = len(pts)
+    if o == "land":
+        gap, top, ch = 0.35 * s, 0.28 * H, 0.48 * H
+        cw = (0.86 * W - (n - 1) * gap) / n
+        cards = [(0.07 * W + i * (cw + gap), top, cw, ch) for i in range(n)]
+    else:
+        gap, top = 0.25 * s, 0.24 * H
+        ch = (0.64 * H - (n - 1) * gap) / n
+        cards = [(0.08 * W, top + i * (ch + gap), 0.84 * W, ch) for i in range(n)]
+    _front_hills(k, slide, o, seed=31, low=True)
+    for i, ((cx, cy, cw, chh), (head, line)) in enumerate(zip(cards, pts)):
+        na.paper_card(slide, cx, cy, cw, chh)
+        dd = min(1.1 * s, chh * 0.38, cw * 0.38)
+        dx, dy = cx + 0.3 * s + dd / 2, cy + 0.3 * s + dd / 2
+        na.disc(slide, dx, dy, dd, A["discs"][i % len(A["discs"])], shadow=True)
+        if icons_:
+            png = str(Path(_tf.gettempdir()) / "slide-maker-native-art" / "icon_{}.png".format(str(icons_[i]).replace(":", "_")))
+            Path(png).parent.mkdir(parents=True, exist_ok=True)
+            _ic.icon_png(icons_[i], png, color="FFFFFF", px=200)
+            draws.append(lambda png=png, dx=dx, dy=dy, dd=dd, head=head: dk.icon(slide, png, dx - dd * 0.3, dy - dd * 0.3, dd * 0.6, alt=head))
+        else:
+            nr, nd = flow(k, slide, "points", (dx - dd / 2, dy - dd / 2, dd, dd), [("mark", str(i + 1))], align="c",
+                          anchor="middle", ink="FFFFFF", accent="FFFFFF", start={"mark": dd * 72 * 0.5})
+            draws.append(nd)
+        if o == "land":
+            tcol = (cx + 0.3 * s, cy + 0.45 * s + dd, cw - 0.6 * s, chh - dd - 0.7 * s)
+        else:
+            tcol = (cx + 0.6 * s + dd, cy + 0.25 * s, cw - dd - 0.9 * s, chh - 0.5 * s)
+        tr, td_ = _card_flow(k, slide, "points", tcol, [(x_, t) for x_, t in (("item_head", head), ("item_line", line)) if t],
+                             anchor="top")
+        draws.append(td_)
     _run_all(draws)
     return rects
