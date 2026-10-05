@@ -378,13 +378,23 @@ def drawing_sheet(slide, *, ink, mute, accent, number, project, face):
     seg(slide, split, by, split, by + bh, ink, w=0.5)
     lab = max(8.0, 8.0 * s)
     if project:
-        dk.text(slide, bx + 0.08 * s, by + 0.06 * s, split - bx - 0.14 * s, bh - 0.12 * s,
-                [[("PROJECT", lab, rgb(mute), False, False, face)],
-                 [(str(project), max(9.0, 10.0 * s), rgb(ink), True, False, face, face)]], space_after=0)
+        title_block_project(slide, (bx, by, bw, bh), project, ink=ink, mute=mute, face=face)
     dk.text(slide, split + 0.08 * s, by + 0.06 * s, bx + bw - split - 0.14 * s, bh - 0.12 * s,
             [[("SHEET", lab, rgb(mute), False, False, face)],
              [("{:02d}".format(number), max(14.0, 16.0 * s), rgb(accent), True, False, face)]], space_after=0)
     return (0.9 * s, 0.78 * s, W - 1.8 * s, H - 1.56 * s), (bx, by, bw, bh)
+
+
+def title_block_project(slide, block, project, *, ink, mute, face):
+    """The caller's project words in a drawing sheet's title block (left field)."""
+    W, H = page_size(slide)
+    s = min(W, H) / 7.5
+    bx, by, bw, bh = block
+    split = bx + bw * 0.66
+    rgb = lambda c: dk._as_rgb(hexstr(c))              # noqa: E731
+    dk.text(slide, bx + 0.08 * s, by + 0.06 * s, split - bx - 0.14 * s, bh - 0.12 * s,
+            [[("PROJECT", max(8.0, 8.0 * s), rgb(mute), False, False, face)],
+             [(str(project), max(9.0, 10.0 * s), rgb(ink), True, False, face, face)]], space_after=0)
 
 
 def _iso(cx, cy, a, b):

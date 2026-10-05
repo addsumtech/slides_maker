@@ -938,3 +938,194 @@ def _cut_points(k, slide, f, image):
         draws.append(td_)
     _run_all(draws)
     return rects
+
+
+# ═══════════════════════════════════ drafting 蓝图技术线稿 ═══════════════════════════════════
+def _bp_ground(k, slide):
+    na.grid_background(slide, base=k.P["ground"], ink=k.P["ink"])
+    content, block = na.drawing_sheet(slide, ink=k.P["ink"], mute=k.P["mute"], accent=k.P["text_accents"][0],
+                                      number=len(k.prs.slides), project=k.project, face=k.face("mono"))
+    k._sheet = (content, block, k.project)            # the words this sheet's title block carries (None: none yet)
+
+
+GROUNDS["drafting"] = _bp_ground
+
+
+def _bp_area(k):
+    """The sheet's content rect above the title block, and the block itself."""
+    W, H, s, o = ctx(k)
+    (cx, cy, cw, ch), block, _done = k._sheet
+    return (cx, cy, cw, block[1] - 0.15 * s - cy), block
+
+
+def _bp_project(k, slide, f, fallback=None):
+    """Remember the caller's project words (project=, else the cover title) and make THIS sheet's title block carry
+    them: written when the ground had none yet (the cover is where the title first arrives), rewritten in place when
+    the caller names a new project on a later sheet."""
+    words = text_of(f, "project") or k.project or fallback
+    if not words:
+        return
+    k.project = words
+    content, block, drawn = k._sheet
+    if drawn == words:
+        return
+    if drawn is None:
+        na.title_block_project(slide, block, words, ink=k.P["ink"], mute=k.P["mute"], face=k.face("mono"))
+    else:
+        for sh in slide.shapes:
+            ps = sh.text_frame.paragraphs if getattr(sh, "has_text_frame", False) else []
+            if len(ps) >= 2 and ps[0].text == "PROJECT" and ps[1].text == drawn and ps[1].runs:
+                ps[1].runs[0].text = words
+                for r_ in ps[1].runs[1:]:
+                    r_.text = ""
+                break
+    k._sheet = (content, block, words)
+
+
+@register("drafting", "cover")
+def _bp_cover(k, slide, f, image):
+    W, H, s, o = ctx(k)
+    (cx, cy, cw, ch), _b = _bp_area(k)
+    _bp_project(k, slide, f, fallback=text_of(f, "title"))
+    col = (cx, cy + 0.10 * ch, cw * (0.62 if o == "land" else 1.0), ch * 0.80)
+    items = [(x_, text_of(f, x_)) for x_ in ("kicker", "title", "subtitle") if text_of(f, x_)]
+    r, d = flow(k, slide, "cover", col, items, anchor="middle")
+    d()
+    return r
+
+
+@register("drafting", "section")
+def _bp_section(k, slide, f, image):
+    W, H, s, o = ctx(k)
+    (cx, cy, cw, ch), _b = _bp_area(k)
+    _bp_project(k, slide, f)
+    num, kicker, title = text_of(f, "number"), text_of(f, "kicker"), text_of(f, "title")
+    rects, draws = {}, []
+    dd = min(1.8 * s, ch * 0.5)
+    by_ = cy + (ch - dd) / 2 if o == "land" else cy + 0.1 * ch
+    if num:
+        na.balloon(slide, cx, by_, dd, num, ink=k.P["ink"], accent=k.P["text_accents"][0], face=k.face("mono"),
+                   fill=k.P["ground"])
+    col = (cx + dd + 0.5 * s, cy, cw - dd - 0.5 * s, ch) if o == "land" else (cx, by_ + dd + 0.4 * s, cw, ch * 0.5)
+    items = [(x_, t) for x_, t in (("kicker", kicker), ("title", title)) if t]
+    r, d = flow(k, slide, "section", col, items, anchor="middle" if o == "land" else "top")
+    rects.update(r); draws.append(d)
+    _run_all(draws)
+    return rects
+
+
+@register("drafting", "image_text")
+def _bp_image_text(k, slide, f, image):
+    W, H, s, o = ctx(k)
+    (cx, cy, cw, ch), _b = _bp_area(k)
+    _bp_project(k, slide, f)
+    img = (cx, cy, cw * 0.56, ch) if o == "land" else (cx, cy, cw, ch * 0.50)
+    col = (cx + cw * 0.62, cy + 0.1 * ch, cw * 0.38, ch * 0.8) if o == "land" else (cx, cy + ch * 0.56, cw, ch * 0.44)
+    items = [(x_, text_of(f, x_)) for x_ in ("kicker", "title", "body", "caption") if text_of(f, x_)]
+    r, d = flow(k, slide, "image_text", col, items, anchor="middle" if o == "land" else "top")
+    place_image(k, slide, image, img, "image_text")
+    d()
+    return r
+
+
+@register("drafting", "quote")
+def _bp_quote(k, slide, f, image):
+    W, H, s, o = ctx(k)
+    (cx, cy, cw, ch), _b = _bp_area(k)
+    _bp_project(k, slide, f)
+    has_img = image is not None
+    col = (cx, cy + 0.12 * ch, cw * (0.58 if has_img and o == "land" else 0.85), ch * 0.72)
+    items = [(x_, text_of(f, x_)) for x_ in ("quote", "attribution") if text_of(f, x_)]
+    r, d = flow(k, slide, "quote", col, items, anchor="middle")
+    if has_img:
+        place_image(k, slide, image, (cx + cw * 0.64, cy, cw * 0.36, ch) if o == "land" else (cx, cy + ch * 0.6, cw, ch * 0.4),
+                    "quote")
+    d()
+    return r
+
+
+@register("drafting", "data")
+def _bp_data(k, slide, f, image):
+    W, H, s, o = ctx(k)
+    (cx, cy, cw, ch), _b = _bp_area(k)
+    _bp_project(k, slide, f)
+    num, label, note = text_of(f, "number"), text_of(f, "label"), text_of(f, "note")
+    rects, draws = {}, []
+    nrect = (cx, cy, cw * 0.40, ch) if o == "land" else (cx, cy, cw, ch * 0.48)
+    if num:
+        r, d = flow(k, slide, "data", nrect, [("number", num)], anchor="middle", align="c")
+        rects.update(r); draws.append(d)
+        nr = r.get("number", nrect)
+        # beside the numeral's INK (it is centred in its rect): the plan clamped x to 46% of the width, which put the
+        # line through the "3" on a portrait sheet
+        import display_type as _dt
+        nsz = (nr[3] - 0.06) / 1.2 * 72.0                  # one line: _field_height's model, inverted
+        ink_w = _dt._glyph_width(num, nsz, k.face("numeral"), vl.TYPE[k.name]["number"][2]) or nr[2] * 0.5
+        dxl = nr[0] + nr[2] / 2.0 + ink_w / 2.0 + 0.3 * s
+        draws.append(lambda: na.dimension_line(slide, dxl, nr[1] + 0.1 * nr[3], nr[1] + 0.9 * nr[3], ink=k.P["ink"]))
+    col = (cx + cw * 0.50, cy + 0.15 * ch, cw * 0.50, ch * 0.7) if o == "land" else (cx, cy + ch * 0.54, cw, ch * 0.44)
+    items = [(x_, t) for x_, t in (("label", label), ("note", note)) if t]
+    r, d = flow(k, slide, "data", col, items, anchor="middle" if o == "land" else "top")
+    rects.update(r); draws.append(d)
+    _run_all(draws)
+    return rects
+
+
+@register("drafting", "closing")
+def _bp_closing(k, slide, f, image):
+    W, H, s, o = ctx(k)
+    (cx, cy, cw, ch), _b = _bp_area(k)
+    _bp_project(k, slide, f)
+    col = (cx, cy + 0.15 * ch, cw * (0.70 if o == "land" else 1.0), ch * 0.6)
+    items = [(x_, text_of(f, x_)) for x_ in ("title", "line") if text_of(f, x_)]
+    r, d = flow(k, slide, "closing", col, items, anchor="middle")
+    d()
+    return r
+
+
+@register("drafting", "points")
+def _bp_points(k, slide, f, image):
+    """One iso layer per point, each with a numbered leader to its note. The notes take EVEN slots of the free
+    height, not the layers' gap (measured 2026-10-05: tied to the gap, a note got 0.47in and ordinary copy was
+    refused); the leaders angle from each layer's right corner to its balloon."""
+    W, H, s, o = ctx(k)
+    (cx, cy, cw, ch), _b = _bp_area(k)
+    _bp_project(k, slide, f)
+    pts = points_of(f.get("items"))
+    n = len(pts)
+    rects, draws = {}, []
+    head_items = [(x_, text_of(f, x_)) for x_ in ("kicker", "title") if text_of(f, x_)]
+    r, d = flow(k, slide, "points", (cx, cy, cw * (0.62 if o == "land" else 1.0), ch * (0.30 if o == "land" else 0.20)),
+                head_items)
+    rects.update(r); draws.append(d)
+    top = max((v[1] + v[3] for v in r.values()), default=cy) + 0.35 * s
+    avail = cy + ch - top                                  # above the title block: where the notes go
+    thick = 0.18
+    if o == "land":                                        # the block is at the right: the drawing may go lower
+        sheet = k._sheet[0]
+        stack_avail = sheet[1] + sheet[3] - top
+        size = min(cw * 0.26, stack_avail * 0.46)         # the drawing fills the height: the plates, then air between
+        scx, notes_x = cx + cw * 0.26, cx + cw * 0.56
+    else:
+        stack_avail = avail
+        size = min(cw * 0.30, avail * 0.34)
+        scx, notes_x = cx + cw * 0.30, cx + cw * 0.62
+    gap = min(0.9 * s, max(0.35 * s, (stack_avail - size - thick - 0.2 * s) / max(n - 1, 1)))
+    tops = na.iso_stack(slide, scx, top, size, gap, n, ink=k.P["ink"], accent=k.P["accents"][0], accent_layer=0,
+                        thick=thick)
+    bd = 0.42 * s
+    extent = size + (n - 1) * gap + thick                  # the notes span the stack they label (room for their words)
+    slot = min(avail, max(extent, n * 1.05 * s)) / n
+    tx = notes_x + bd + 0.2 * s
+    for i, ((head, line), layer) in enumerate(zip(pts, tops)):
+        ax, ay = layer[1]                                     # the layer's right corner
+        by_ = top + i * slot
+        tr, td_ = flow(k, slide, "points", (tx, by_ - 0.05 * s, cx + cw - tx, slot * 0.92),
+                       [(x_, t) for x_, t in (("item_head", head), ("item_line", line)) if t], anchor="top")
+        draws.append(lambda ax=ax, ay=ay, by_=by_: na.seg(slide, ax, ay, notes_x, by_ + bd / 2, k.P["ink"], w=0.6))
+        draws.append(lambda by_=by_, i=i: na.balloon(slide, notes_x, by_, bd, str(i + 1), ink=k.P["ink"],
+                                                     accent=k.P["text_accents"][0], face=k.face("mono"),
+                                                     fill=k.P["ground"]))
+        draws.append(td_)
+    _run_all(draws)
+    return rects

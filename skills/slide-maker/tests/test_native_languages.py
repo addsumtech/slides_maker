@@ -314,6 +314,64 @@ try:
 except ValueError:
     check(True, "cutpaper: icons= must match the points one to one")
 
+# ── drafting (蓝图技术线稿; `blueprint` is a preset's name) ──
+assert_matrix("drafting")
+with contextlib.redirect_stdout(io.StringIO()):
+    prs = dk.blank_deck(13.333, 7.5); k = vl.use("drafting", prs)
+s1 = k.new_slide()
+k.cover(s1, title="A room built layer by layer", kicker="Schematic 01")
+s2 = k.new_slide()
+k.points(s2, title="Three layers, one frame", items=[("Floor", "One plate"), ("Walls", "Panels slide"), ("Roof", "One span")])
+txt = lambda s: " ".join(sh.text_frame.text for sh in s.shapes if getattr(sh, "has_text_frame", False))
+check("A room built layer by layer" in txt(s2), "drafting: the title block carries the cover title on later sheets")
+check("SHEET" in txt(s1) and "01" in txt(s1) and "02" in txt(s2), "drafting: each sheet is numbered")
+n_tops = sum(1 for sh in s2.shapes if sh.shape_type == 5)        # freeform: the iso stack draws layers as polygons
+check(n_tops >= 9, "drafting: the points page draws one iso layer per point (3 layers x 3 faces)")
+s3 = k.new_slide()
+k.cover(s3, title="Another title", project="A modular reading room")
+check("A modular reading room" in txt(s3), "drafting: project= replaces the remembered title")
+# the dimension line stands BESIDE the numeral's ink, on every canvas (portrait first drew it through the "3")
+import display_type as _dt
+for W, H in ((13.333, 7.5), (10.0, 7.5), (7.5, 13.333)):
+    with contextlib.redirect_stdout(io.StringIO()):
+        prs = dk.blank_deck(W, H); k = vl.use("drafting", prs)
+    s = k.new_slide()
+    k.data(s, number="3", label="layers, one structure.")
+    num = [sh for sh in s.shapes if getattr(sh, "has_text_frame", False) and sh.text_frame.text.strip() == "3"
+           and sh.text_frame.paragraphs[0].runs[0].font.size.pt > 40][0]
+    run = num.text_frame.paragraphs[0].runs[0]
+    gw = _dt._glyph_width("3", run.font.size.pt, run.font.name, bool(run.font.bold))
+    right_ink = (num.left + num.width / 2) / 914400.0 + gw / 2
+    verts = [sh for sh in s.shapes if sh.shape_type == 9 and abs(sh.width) < 914400 * 0.01 and sh.height > 914400]
+    check(verts and min(sh.left / 914400.0 for sh in verts) >= right_ink + 0.05,
+          "drafting {}x{}: the dimension line clears the numeral's ink ({} vs {:.2f})".format(
+              W, H, [round(sh.left / 914400.0, 2) for sh in verts], right_ink))
+# portrait notes sit beside the stack they label, not strung down the whole sheet
+with contextlib.redirect_stdout(io.StringIO()):
+    prs = dk.blank_deck(7.5, 13.333); k = vl.use("drafting", prs)
+s = k.new_slide()
+k.points(s, title="Three layers, one frame", items=[("Floor", "One plate"), ("Walls", "Panels slide"), ("Roof", "One span")])
+balloons = sorted(sh.top / 914400.0 for sh in s.shapes if sh._element.xpath(".//a:prstGeom[@prst='ellipse']"))
+polys = [sh for sh in s.shapes if sh.shape_type == 5]
+stack_bottom = max((sh.top + sh.height) / 914400.0 for sh in polys)
+check(balloons and balloons[-1] <= stack_bottom + 0.6,
+      "drafting portrait: the last note sits beside the stack (balloon {:.2f} vs stack bottom {:.2f})".format(
+          balloons[-1] if balloons else -1, stack_bottom))
+# the Task 3 "ordinary page gets the ground" check passed trivially (every slide has a bg); pin what each ground IS
+P_NS = "{http://schemas.openxmlformats.org/presentationml/2006/main}"
+A_NS = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
+with contextlib.redirect_stdout(io.StringIO()):
+    prs = dk.blank_deck(13.333, 7.5); k = vl.use("poster", prs)
+for _ in range(3):
+    s = k.new_slide()
+    clr = s._element.find(P_NS + "cSld").find(P_NS + "bg").find(".//" + A_NS + "srgbClr")
+    check(clr is not None and clr.get("val") == k.field["bg"], "poster: an ordinary page's background IS its field {}".format(k.field["bg"]))
+with contextlib.redirect_stdout(io.StringIO()):
+    prs = dk.blank_deck(13.333, 7.5); k = vl.use("drafting", prs)
+s = k.new_slide()
+check("SHEET" in txt(s) and s._element.find(P_NS + "cSld").find(P_NS + "bg").find(".//" + A_NS + "blip") is not None,
+      "drafting: an ordinary page is a numbered drawing sheet on the grid")
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:
