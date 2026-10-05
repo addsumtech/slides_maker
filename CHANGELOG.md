@@ -112,7 +112,7 @@ own words) instead of four preview directions nobody asked for — `direction_ga
 
 `measure_text` (and every lint check that counts lines) now follows how LibreOffice breaks CJK lines
 under the deck default `hangingPunct="1"`, probed one mark at a time: in pure-CJK text one closing mark
-(`，。、；：！？．`) hangs past the measure instead of wrapping; a closing bracket, or a second mark, takes
+(a full-width comma, full stop, enumeration comma, semicolon, colon, exclamation or question mark) hangs past the measure instead of wrapping; a closing bracket, or a second mark, takes
 the character before it down; an opening bracket never ends a line. Checked against 122 rendered cases:
 pure-CJK text now matches the render in 90 of 94 (was 25 of 94); text that mixes in Latin or digits keeps
 the old conservative count (the renderer's autospace is not modelled). Found when a two-line Chinese title
@@ -133,7 +133,8 @@ Mac-only faces), East-Asian faces chosen per SCRIPT (Han, kana, Hangul), a groun
 with register_surface, and six page functions (cover, section, image_text, quote, data, closing) in a
 landscape and a portrait layout. Text is flowed by measured height and refused — never truncated — when
 it cannot fit; titles never end in a lone word or one or two CJK characters, and a title or quote with
-clause punctuation breaks after its clauses ("带着坏东西来，/ 带着好东西走") when they fit. The direction preview shows
+clause punctuation breaks after its clauses ("Bring it broken. / Take it home working.", and the same at CJK
+clause punctuation) when they fit. The direction preview shows
 each language's bundled, labelled style sample, and a new gate on both runtimes blocks a recorded
 language that was not applied. `sigs.py` lists the kit's page functions as `Kit.cover` … `Kit.closing`;
 `visual_languages.py --gates <name>` prints the whole record, the language's palette hexes included;

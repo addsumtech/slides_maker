@@ -10,19 +10,17 @@
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude_Code-supported-5b5bd6">
   <img alt="Output: editable PPTX" src="https://img.shields.io/badge/output-native_editable_PPTX-0f766e">
   <a href="https://skillhub.cloud.tencent.com/skills/slides-maker"><img alt="Tencent SkillHub" src="https://img.shields.io/badge/Tencent_SkillHub-get_it-2f6feb"></a>
-  <a href="https://xiaping.coze.com/skill/c0136d99-50d0-4f05-909a-f78fa4be7104"><img alt="Coze" src="https://img.shields.io/badge/Coze-get_it-6653f5"></a>
 </p>
 
 <p align="center">
   <a href="https://clawhub.ai/dong845/skills/slide-maker"><img alt="ClawHub" src="docs/badges/clawhub.svg"></a>
-  <a href="https://chatgpt.com/g/g-6a5b41f0a33881918be69e8b10f8b4ff-slide-maker-gpt"><img alt="ChatGPT GPT Store" src="https://img.shields.io/badge/GPT_Store-slide--maker_(addsum_studio)-10a37f"></a>
 </p>
 
 <p align="center"><sub>Free and open source, built by <a href="https://addsum.top/"><strong>Addsum</strong></a></sub></p>
 
 > **The slide-maker that reads your actual work, never invents a number, ships fully-editable native PowerPoint, and won't hand it over until an independent critic signs off.**
 
-Chat with it in Codex or Claude Code — or, with **zero install, in ChatGPT** via the [slide-maker (addsum studio)](https://chatgpt.com/g/g-6a5b41f0a33881918be69e8b10f8b4ff-slide-maker-gpt). It isn't one prompt guessing at slides: a small team of specialized agents reads your paper / repo / doc (or researches the topic when you have none), plans the story, designs each slide around it, builds a real `.pptx`, and puts it through an independent review you size after seeing the first render.
+Chat with it in Codex or Claude Code. It isn't one prompt guessing at slides: a small team of specialized agents reads your paper / repo / doc (or researches the topic when you have none), plans the story, designs each slide around it, builds a real `.pptx`, and puts it through an independent review you size after seeing the first render.
 
 Most AI-PPT tools race to look pretty in seconds. slide-maker optimizes for the four things that actually matter when the deck is *yours to defend*:
 
@@ -154,6 +152,45 @@ cp -r slides_maker-site/templates/decks/en/nvidia-overview ~/.codex/slide-templa
 The layouts match; only the copy language differs.
 
 
+## Visual languages: four image-led looks
+
+Beside the template gallery, slide-maker ships four complete **visual languages**: whole looks for decks that carry pictures, each with a type voice from system fonts, a paper surface, its own image treatment and six page layouts (cover, section, image + text, quote, data, closing). They lay out *your* words and pictures and never invent a word, a number or a name.
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="skills/slide-maker/assets/vl/samples/editorial.jpg" alt="editorial visual language sample pages"><br/>
+      <sub><strong>editorial</strong> · quiet photographs, large serif display, pull quotes, warm paper<br/>
+contrast ground: <a href="skills/slide-maker/assets/vl/samples/editorial-ink.jpg">ink</a></sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="skills/slide-maker/assets/vl/samples/soft.jpg" alt="soft visual language sample pages"><br/>
+      <sub><strong>soft</strong> · warm photographs, rounded sans, generous space, cream with pastel shapes<br/>
+contrast ground: <a href="skills/slide-maker/assets/vl/samples/soft-dusk.jpg">dusk</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="skills/slide-maker/assets/vl/samples/collage.jpg" alt="collage visual language sample pages"><br/>
+      <sub><strong>collage</strong> · loud photographs as taped prints, heavy headlines, highlighter kickers, kraft grain<br/>
+contrast ground: <a href="skills/slide-maker/assets/vl/samples/collage-slate.jpg">slate</a></sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="skills/slide-maker/assets/vl/samples/storybook.jpg" alt="storybook visual language sample pages"><br/>
+      <sub><strong>storybook</strong> · a watercolour illustration series melting into the paper, serif type<br/>
+contrast ground: <a href="skills/slide-maker/assets/vl/samples/storybook-meadow.jpg">meadow</a></sub>
+    </td>
+  </tr>
+</table>
+
+<p align="center"><sub>Style samples on sample content, not your deck. Each language also has one contrast ground, taken automatically when your recent decks already sit on light paper.</sub></p>
+
+**How one gets picked.** When your deck will carry photos or illustrations (your own, or ones slide-maker generates or fetches for you), at least one of the candidate looks it shows you is a visual language: photos lead to editorial, soft or collage by tone, illustrations to storybook. Or ask for one by name ("use the collage look"). To open the samples as editable decks, build them locally:
+
+```bash
+python3 skills/slide-maker/scripts/visual_languages.py --sample out/
+```
+
 ---
 
 ## What makes slide-maker different
@@ -223,13 +260,8 @@ It does not promise a perfect deck in one shot. It removes the expensive part �
 
 ### Step 1: Install
 
-> **⚡ Don't want to install anything? Use the [slide-maker (addsum studio)](https://chatgpt.com/g/g-6a5b41f0a33881918be69e8b10f8b4ff-slide-maker-gpt) in ChatGPT** — it inherits this skill's
-> ability, so you can make slides right in ChatGPT: open the link or find it in the **GPT Store**.
-> Zero setup; the local install below stays the full-power path.
->
 > **Prefer a marketplace? slide-maker is also published on
-> [Tencent SkillHub](https://skillhub.cloud.tencent.com/skills/slides-maker),
-> [Coze](https://xiaping.coze.com/skill/c0136d99-50d0-4f05-909a-f78fa4be7104), and
+> [Tencent SkillHub](https://skillhub.cloud.tencent.com/skills/slides-maker) and
 > [ClawHub](https://clawhub.ai/dong845/skills/slide-maker) — the last one installs straight into
 > [OpenClaw](https://openclaw.ai), so OpenClaw users get slide-maker too** —
 > grab it there by following each page's install instructions, then come back for the runtime

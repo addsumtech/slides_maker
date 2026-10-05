@@ -10,19 +10,17 @@
   <img alt="Claude Code" src="https://img.shields.io/badge/Claude_Code-supported-5b5bd6">
   <img alt="Output: editable PPTX" src="https://img.shields.io/badge/output-native_editable_PPTX-0f766e">
   <a href="https://skillhub.cloud.tencent.com/skills/slides-maker"><img alt="腾讯 SkillHub" src="https://img.shields.io/badge/%E8%85%BE%E8%AE%AF_SkillHub-%E7%AB%8B%E5%8D%B3%E8%8E%B7%E5%8F%96-2f6feb"></a>
-  <a href="https://xiaping.coze.com/skill/c0136d99-50d0-4f05-909a-f78fa4be7104"><img alt="Coze" src="https://img.shields.io/badge/Coze-%E7%AB%8B%E5%8D%B3%E8%8E%B7%E5%8F%96-6653f5"></a>
 </p>
 
 <p align="center">
   <a href="https://clawhub.ai/dong845/skills/slide-maker"><img alt="ClawHub" src="docs/badges/clawhub_cn.svg"></a>
-  <a href="https://chatgpt.com/g/g-6a5b41f0a33881918be69e8b10f8b4ff-slide-maker-gpt"><img alt="ChatGPT GPT 商店" src="https://img.shields.io/badge/GPT_Store-slide--maker_(addsum_studio)-10a37f"></a>
 </p>
 
 <p align="center"><sub><a href="https://addsum.top/cn/"><strong>增和科技 Addsum</strong></a> 出品 · 免费开源</sub></p>
 
 > **一个会读你真实材料、绝不编造数字、输出真正可编辑的原生 PowerPoint、并且要等独立评审点头才交付的 AI 做 PPT 工具。**
 
-在 Codex 或 Claude Code 里聊几句就行，也可以**零安装**，直接在 ChatGPT 里用 [slide-maker (addsum studio)](https://chatgpt.com/g/g-6a5b41f0a33881918be69e8b10f8b4ff-slide-maker-gpt)。它不是一句 prompt 瞎猜幻灯片：一支各司其职的 **agent 团队**先读懂你的论文、代码、文档（没有材料就先联网调研），规划故事线，围绕它设计每一页，生成一份真正的 `.pptx`，先把渲染稿给你看，再按你定的力度交给独立评审过一遍。
+在 Codex 或 Claude Code 里聊几句就行。它不是一句 prompt 瞎猜幻灯片：一支各司其职的 **agent 团队**先读懂你的论文、代码、文档（没有材料就先联网调研），规划故事线，围绕它设计每一页，生成一份真正的 `.pptx`，先把渲染稿给你看，再按你定的力度交给独立评审过一遍。
 
 多数 AI-PPT 工具都在拼「几秒出漂亮 PPT」。但当这份 deck 是**你要拿去讲、要负责**的东西时，真正重要的是另外四件事，slide-maker 做的就是这四件：
 
@@ -154,6 +152,45 @@ cp -r slides_maker-site/templates/decks/zh/nvidia-overview ~/.codex/slide-templa
 两套的版式一致，文案语言不同。
 
 
+## 设计语言：四套以图为主的整体风格
+
+除了模板库，slide-maker 还内置四套完整的**设计语言**：专为带图片的 deck 准备的整体风格，每套都有自己的字体气质（只用系统字体）、纸面质感、配图处理方式和六种页面版式（封面、章节、图文、引言、数据、结尾）。它们只排你自己的文字和图片，不会编造任何词、数字或名字。
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="skills/slide-maker/assets/vl/samples/editorial.jpg" alt="editorial 设计语言示例页"><br/>
+      <sub><strong>editorial（杂志）</strong> · 安静的照片、大号衬线标题、引文、暖色纸面<br/>
+深色底版本：<a href="skills/slide-maker/assets/vl/samples/editorial-ink.jpg">ink</a></sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="skills/slide-maker/assets/vl/samples/soft.jpg" alt="soft 设计语言示例页"><br/>
+      <sub><strong>soft（柔和）</strong> · 温暖的照片、圆润无衬线字、大留白、奶油底配粉彩形状<br/>
+深色底版本：<a href="skills/slide-maker/assets/vl/samples/soft-dusk.jpg">dusk</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="skills/slide-maker/assets/vl/samples/collage.jpg" alt="collage 设计语言示例页"><br/>
+      <sub><strong>collage（拼贴）</strong> · 胶带贴住的照片、粗重标题、荧光笔标签、牛皮纸纹理<br/>
+深色底版本：<a href="skills/slide-maker/assets/vl/samples/collage-slate.jpg">slate</a></sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="skills/slide-maker/assets/vl/samples/storybook.jpg" alt="storybook 设计语言示例页"><br/>
+      <sub><strong>storybook（绘本）</strong> · 一组晕染进纸面的水彩插画、衬线字<br/>
+彩色底版本：<a href="skills/slide-maker/assets/vl/samples/storybook-meadow.jpg">meadow</a></sub>
+    </td>
+  </tr>
+</table>
+
+<p align="center"><sub>以上是风格示例（示例内容，不是你的 deck）。每套还各有一个对比色底，你最近的 deck 都是浅色纸面时会自动换用。</sub></p>
+
+**什么时候会用到。** 只要你的 deck 会带照片或插画（你自己的，或 slide-maker 帮你生成、抓取的），它给你看的候选风格里至少有一个是设计语言：照片按气质对应 editorial、soft 或 collage，插画对应 storybook。也可以直接点名，比如"用 collage 风格"。想打开可编辑的示例 deck，在本地生成：
+
+```bash
+python3 skills/slide-maker/scripts/visual_languages.py --sample out/
+```
+
 ---
 
 ## slide-maker 不一样在哪
@@ -223,12 +260,8 @@ slide-maker 不是一个 prompt 包办一切，而是一组各有专职的 **age
 
 ### 第一步：安装
 
-> **⚡ 什么都不想装？直接在 ChatGPT 里用 [slide-maker (addsum studio)](https://chatgpt.com/g/g-6a5b41f0a33881918be69e8b10f8b4ff-slide-maker-gpt)。**
-> 它继承了本技能的能力，去 **GPT 商店**搜「slide-maker (addsum studio)」就能开始做幻灯片，零配置；想要完整体验，还是走下面的本地安装。
->
 > **更喜欢从市场一键获取？slide-maker 也已上架
-> [腾讯 SkillHub](https://skillhub.cloud.tencent.com/skills/slides-maker)、
-> [Coze](https://xiaping.coze.com/skill/c0136d99-50d0-4f05-909a-f78fa4be7104) 和
+> [腾讯 SkillHub](https://skillhub.cloud.tencent.com/skills/slides-maker) 和
 > [ClawHub](https://clawhub.ai/dong845/skills/slide-maker)，其中 ClawHub 那份可以直接装进
 > [OpenClaw](https://openclaw.ai)，所以 OpenClaw 用户一样能用 slide-maker。**
 > 按对应页面的说明获取即可，然后回来装下面的运行依赖（无论哪种装法都需要）。
