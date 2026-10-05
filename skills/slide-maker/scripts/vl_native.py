@@ -135,13 +135,14 @@ def vcol(k, slide, right, top, h_max, text, field, *, color=None, spacing=0.12, 
 
 
 def display(k, slide, rect, text, field, *, highlight=None, caps=True, ink=None, hl=None, hl_ink=None,
-            align="l", anchor="t"):
+            align="l", anchor="t", floor=None):
     """PLAN poster-scale type in `rect`: measured, shrinking to the field's floor, refused past it; Latin set in
     capitals; `highlight` (words of the caller's own text) set on a highlighter. Lines break as the rest of the kit
     breaks them (_flow's order): at a clause mark first, else a little smaller, else a balanced narrower measure —
     never a lone CJK character or a lone word on the last line ("一盏茶的时 / 间", seen on the first render).
     Returns (rect, size, draw)."""
-    base, role, bold, ckey, _italic, floor = vl.TYPE[k.name][field]
+    base, role, bold, ckey, _italic, field_floor = vl.TYPE[k.name][field]
+    floor = field_floor if floor is None else floor    # a page may let display type shrink further than its field
     s = ctx(k)[2]
     t = text.upper() if caps and not dk._has_cjk(text) else text
     hi = None
@@ -713,7 +714,9 @@ def _poster_points(k, slide, f, image):
     else:
         trect, (rx, ry, rw, rh) = (0.06 * W, 0.08 * H, 0.88 * W, 0.20 * H), (0.06 * W, 0.34 * H, 0.88 * W, 0.58 * H)
     if title:
-        r, _z, d = display(k, slide, trect, title, "title")
+        # display size first, but a long title shrinks to the label's floor rather than being refused (measured
+        # 2026-10-05: at the title field's 44pt floor, CI's wider Linux faces refused the matrix copy on 4:3)
+        r, _z, d = display(k, slide, trect, title, "title", floor=vl.TYPE[k.name]["label"][5])
         rects["title"] = r; draws.append(d)
     gap = 0.15 * s
     pw = (rw - (n - 1) * gap) / n

@@ -269,6 +269,17 @@ big = max((sh for sh in s.shapes if getattr(sh, "has_text_frame", False) and "TH
           key=lambda sh: sh.text_frame.paragraphs[0].runs[0].font.size.pt)
 check(big.text_frame.paragraphs[0].runs[0].font.size.pt >= 85,
       "poster: a two-word title stacks at display size ({:.0f}pt)".format(big.text_frame.paragraphs[0].runs[0].font.size.pt))
+# a long points title on a narrow poster shrinks to the label floor, never refused (CI's Linux faces measure wider:
+# the matrix copy was refused there at the title field's 44pt floor)
+for W, H in ((10.0, 7.5), (13.333, 7.5), (7.5, 13.333)):
+    with contextlib.redirect_stdout(io.StringIO()):
+        k = vl.use("poster", dk.blank_deck(W, H))
+    try:
+        k.points(k.new_slide(), title="Bring it broken, take it home working, every month of the year",
+                 items=["Share the tools", "Open the door", "Keep it local"])
+        check(True, "poster {}x{}: a long points title fits by shrinking".format(W, H))
+    except vl.VLTextOverflow as e:
+        check(False, "poster {}x{}: a long points title fits by shrinking: {}".format(W, H, e))
 # ordinary pages on poster (k.new_slide + rs.card + dk.DEEP) stay readable on EVERY field (Review Focus 3): the
 # field changes per page, so the deck's default ink, its card and the card's label follow it
 import register_surface as rs
