@@ -443,7 +443,7 @@ TYPE = {
     "ink": {"kicker": (13, "body", False, "mute", False, 10), "title": (52, "display", False, "ink", False, 26),
             "subtitle": (19, "body", False, "mute", False, 12), "body": (17, "body", False, "ink", False, 11),
             "mark": (60, "display", False, "accent", False, 30), "quote": (44, "display", False, "ink", False, 22),
-            "attribution": (15, "body", False, "mute", False, 10), "number": (230, "numeral", False, "ink", False, 72),
+            "attribution": (15, "body", False, "mute", False, 10), "number": (230, "numeral", False, "ink", False, 40),
             "label": (34, "display", False, "ink", False, 16), "note": (16, "body", False, "mute", False, 10),
             "caption": (12, "body", False, "mute", False, 9), "line": (20, "body", False, "ink", False, 12),
             "item_head": (28, "display", False, "ink", False, 14), "item_line": (17, "body", False, "mute", False, 10)},
@@ -457,14 +457,14 @@ TYPE = {
     "cutpaper": {"kicker": (14, "body", True, "accent", False, 10), "title": (60, "display", True, "ink", False, 28),
                  "subtitle": (20, "body", False, "mute", False, 12), "body": (18, "body", False, "ink", False, 11),
                  "mark": (90, "display", True, "accent", False, 40), "quote": (44, "display", True, "ink", False, 20),
-                 "attribution": (13, "body", True, "accent", False, 10), "number": (200, "numeral", True, "ink", False, 64),
+                 "attribution": (13, "body", True, "accent", False, 10), "number": (200, "numeral", True, "ink", False, 36),
                  "label": (44, "display", True, "ink", False, 20), "note": (19, "body", False, "mute", False, 11),
                  "caption": (12, "body", False, "mute", False, 9), "line": (22, "body", False, "ink", False, 12),
                  "item_head": (28, "display", True, "ink", False, 14), "item_line": (17, "body", False, "mute", False, 10)},
     "drafting": {"kicker": (11, "mono", True, "accent", False, 9), "title": (54, "display", False, "ink", False, 26),
                   "subtitle": (16, "display", False, "mute", True, 11), "body": (16, "body", False, "ink", False, 10),
                   "mark": (60, "display", False, "accent", False, 30), "quote": (44, "display", False, "ink", True, 20),
-                  "attribution": (11, "mono", True, "mute", False, 9), "number": (330, "numeral", False, "ink", False, 100),
+                  "attribution": (11, "mono", True, "mute", False, 9), "number": (330, "numeral", False, "ink", False, 48),
                   "label": (46, "display", False, "ink", False, 20), "note": (16, "display", False, "mute", True, 10),
                   "caption": (10, "mono", True, "mute", False, 8), "line": (20, "display", False, "ink", True, 12),
                   "item_head": (11, "mono", True, "ink", False, 9), "item_line": (15, "display", False, "mute", False, 10)},
@@ -1333,6 +1333,18 @@ def build_sample(name, out_dir, *, W=13.333, H=7.5, ground="light"):
     return out
 
 
+def sample_fingerprint(pptx):
+    """sha256 of a sample deck's slide XML — what its JPG was rendered from. tests/test_visual_languages.py rebuilds
+    every sample and compares, so a preview that no longer matches the code fails instead of misleading a pick."""
+    import hashlib
+    import zipfile
+    h = hashlib.sha256()
+    with zipfile.ZipFile(str(pptx)) as z:
+        for n in sorted(n for n in z.namelist() if re.match(r"ppt/slides/slide\d+\.xml$", n)):
+            h.update(z.read(n))
+    return h.hexdigest()
+
+
 def sample_sheet(render_dir, out_jpg, *, width=1400):
     """A 2x2 contact of a rendered sample's four pages (slide01..04.png) as one JPEG."""
     from PIL import Image
@@ -1347,6 +1359,15 @@ def sample_sheet(render_dir, out_jpg, *, width=1400):
     for i, im in enumerate(ims):
         sheet.paste(im.resize((cw, ch)), (10 + (i % 2) * (cw + 10), 10 + (i // 2) * (ch + 10)))
     sheet.save(out_jpg, quality=78, optimize=True)
+    # record which deck this sheet shows (sample-<stem>.pptx beside the render dir, as --sample lays them out)
+    stem = Path(out_jpg).stem
+    deck = Path(render_dir).parent / ("sample-" + stem + ".pptx")
+    if deck.exists():
+        import json
+        man = Path(out_jpg).parent / "manifest.json"
+        rec = json.loads(man.read_text(encoding="utf-8")) if man.exists() else {}
+        rec[stem] = sample_fingerprint(deck)
+        man.write_text(json.dumps(dict(sorted(rec.items())), indent=1) + "\n", encoding="utf-8")
     return out_jpg
 
 

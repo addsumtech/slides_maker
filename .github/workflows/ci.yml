@@ -13,7 +13,7 @@ on:
 jobs:
   smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30      # the job ran 12.4 min before the native languages' tests; apt alone has taken 13
     defaults:
       run:
         working-directory: skills/slide-maker
@@ -1010,6 +1010,13 @@ jobs:
           python tests/test_native_languages.py | tee /tmp/nativelangs.log
           grep -qE "(^[0-9]+ passed, 0 failed|\\] ok$)" /tmp/nativelangs.log || {
             echo "::error::test_native_languages did not run to completion"; exit 1; }
+
+      - name: Native languages on untuned input (long copy, small/square/A4 canvases, alternative layouts)
+        run: |
+          set -o pipefail
+          python tests/test_native_generality.py | tee /tmp/nativegen.log
+          grep -qE "(^[0-9]+ passed, 0 failed|\\] ok$)" /tmp/nativegen.log || {
+            echo "::error::test_native_generality did not run to completion"; exit 1; }
 
       - name: Review integrity (a consent must name a reviewed artifact)
         run: |

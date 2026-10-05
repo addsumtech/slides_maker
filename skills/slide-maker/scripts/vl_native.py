@@ -20,16 +20,35 @@ COMPOSERS = {}     # language -> {page: fn(k, slide, fields, image) -> rects}
 GROUNDS = {}       # language -> fn(k, slide): what every page of the language carries (new_slide)
 
 
-def register(lang, page):
+ALTS = {}          # (language, page) -> how many layouts the page can try before it refuses
+_ALT = [0]         # the layout being tried now (0: the designed one); read with alt()
+
+
+def register(lang, page, alts=1):
+    """Register a page composition. `alts` > 1: the composition reads alt() and offers that many layouts — the
+    designed one first, then roomier ones; compose() tries them in order and refuses only when the last overflows."""
     def deco(fn):
         COMPOSERS.setdefault(lang, {})[page] = fn
+        ALTS[(lang, page)] = alts
         return fn
     return deco
+
+
+def alt():
+    return _ALT[0]
 
 
 def ctx(k):
     W, H = vl._canvas(k)
     return W, H, min(W, H) / 7.5, ("land" if W >= H * 1.2 else "port")
+
+
+def fit_circle(k, cx, cy, d):
+    """The largest diameter <= d whose circle at (cx, cy) stays whole on the page (a margin of 0.1in at 7.5in) — a
+    figure sized for one aspect ran off a square or A4 page (2026-10-05)."""
+    W, H, s, _o = ctx(k)
+    m = 0.1 * s
+    return max(0.2, min(d, 2 * (cx - m), 2 * (W - cx - m), 2 * (cy - m), 2 * (H - cy - m)))
 
 
 def text_of(fields, name):
@@ -62,7 +81,14 @@ def _cjk(ch):
 
 
 def is_vertical(text):
-    """Vertical only for CJK (Han/kana) with no Latin letters or digits — those would lie on their side."""
+    """Vertical only for CJK (Han/kana) with no Latin letters or digits — those would lie on their side — and only in
+    a page's designed layout: when the vertical columns cannot hold the words, the page's second layout sets them
+    horizontally (a 30-character title needs 4 columns; it is set across, not refused)."""
+    return alt() == 0 and is_cjk_text(text)
+
+
+def is_cjk_text(text):
+    """Chinese or Japanese (Han/kana) with no Latin letters or digits — the text vertical setting can carry."""
     t = "".join(ch for ch in (text or "") if not ch.isspace())
     if not t or any(ch.isascii() and ch.isalnum() for ch in t):
         return False
@@ -153,18 +179,32 @@ def display(k, slide, rect, text, field, *, highlight=None, caps=True, ink=None,
     x, y, w, h = rect
     face = k.ea_face(role, t) or k.face(role)
     sz, fl = base * s, max(9.0, floor * s)
+    # measure the weight that RENDERS: Kit.run sets CJK display type bold where the Latin face has no CJK (poster's
+    # Impact), and bold Hiragino is wider — measured light, "预算 budget" was one line and rendered two (2026-10-05)
+    bold = bool(bold) or (dk._has_cjk(t) and role in ("display", "numeral") and bool(k.L.get("ea_heavy")))
 
     def measure(lines_, sz_, w_):
         # reserve what the delivery lint measures (~1.2 em a line; it never credits spacing below single), though
         # the type is SET at 0.86 — measured 2026-10-05: a block reserved at 0.86 read as overlapping the line under it
         return sum(dk.measure_text([(l_, bool(bold))], w_, sz_, font=face, line_h_factor=dk._LINT_LINE_H)
                    for l_ in (lines_ or [t]))
+    import display_type as _dt
+
+    def words_fit(sz_):
+        # LibreOffice breaks "1,250,000" after a comma when it is wider than its box: every word must fit the line
+        if dk._has_cjk(t):
+            return True
+        for wd in t.split():
+            gw = _dt._glyph_width(wd, sz_, face, bold)
+            if gw is not None and gw > w - dk.TEXT_INSET_LR:
+                return False
+        return True
     while True:
         need = measure(None, sz, w)
-        if need <= h or sz <= fl + 1e-6:
+        if (need <= h and words_fit(sz)) or sz <= fl + 1e-6:
             break
         sz = max(fl, sz * 0.93)
-    if need > h + 1e-6:
+    if need > h + 1e-6 or not words_fit(sz):
         raise vl.VLTextOverflow("{}: the {} {!r} does not fit {:.2f}x{:.2f}in even at {:.0f}pt — shorten it".format(
             k.name, field, text[:24], w, h, sz))
     def widowed(sz_, w_):
@@ -232,10 +272,40 @@ def compose(k, slide, page, fields, image):
             and image is None:
         raise ValueError("{}.{}(): nothing to place — pass the words".format(k.name, page))
     n0 = len(slide.shapes)
-    rects = fns[page](k, slide, fields, image) or {}
+    state = dict(k.__dict__)
+    last = None
+    for a in range(ALTS.get((k.name, page), 1)):
+        _ALT[0] = a
+        try:
+            rects = fns[page](k, slide, fields, image) or {}
+            break
+        except vl.VLTextOverflow as e:            # the copy does not fit THIS layout: undo it, try the next
+            last = e
+            _unbuild(slide, n0)
+            k.__dict__.clear()
+            k.__dict__.update(state)
+        finally:
+            _ALT[0] = 0
+    else:
+        raise last
     for sh in list(slide.shapes)[n0:]:
         dk._compose_tag(sh, vl=k.name)
     return {"rects": rects, "image": None, "free": None}
+
+
+def _unbuild(slide, n0):
+    """Remove everything an attempt drew after the first n0 shapes (and the picture links it added), so the next
+    layout starts from the bare ground. Declarations live in shape names, so nothing else needs undoing."""
+    from pptx.oxml.ns import qn
+    for sh in list(slide.shapes)[n0:]:
+        el = sh._element
+        rids = {b.get(qn("r:embed")) for b in el.iter(qn("a:blip")) if b.get(qn("r:embed"))}
+        el.getparent().remove(el)
+        for rid in rids:
+            try:
+                slide.part.drop_rel(rid)
+            except Exception:
+                pass
 
 
 def paint_ground(k, slide):
@@ -265,8 +335,19 @@ def _ink_seal(k, slide, fields, x, y, size):
             face=k.ea_face("display", chars) or k.face("display"))
 
 
-def _ink_sun(k, slide, cx, cy, d):
-    dk.decorative(na.disc(slide, cx, cy, d, k.P["sun"]), "the ink language's sun (a moon on the night ground)")
+def _ink_sun(k, slide, cx, cy, d, clear=()):
+    """The sun (a moon on the night ground) at its designed spot — or its mirror, or high on the page — wherever it
+    stays clear of the words; when nowhere is clear it is left out (it is ornament; the horizontal fallback once put
+    it on the closing title)."""
+    W, H, s, _o = ctx(k)
+    pad = 0.15 * s
+    for x, y in ((cx, cy), (W - cx, cy), (cx, 0.14 * H), (W - cx, 0.14 * H)):
+        r = (x - d / 2, y - d / 2, d, d)
+        on_page = r[0] >= 0.1 and r[1] >= 0.1 and r[0] + d <= W - 0.1 and r[1] + d <= H - 0.1
+        if on_page and not any(r[0] < c[0] + c[2] + pad and c[0] < r[0] + d + pad and r[1] < c[1] + c[3] + pad
+                               and c[1] < r[1] + d + pad for c in clear):
+            dk.decorative(na.disc(slide, x, y, d, k.P["sun"]), "the ink language's sun (a moon on the night ground)")
+            return
 
 
 def _ink_hairline(k, slide, x, y0, y1, alpha=0.45):
@@ -278,7 +359,7 @@ def _run_all(draws):
         d()
 
 
-@register("ink", "cover")
+@register("ink", "cover", alts=2)
 def _ink_cover(k, slide, f, image):
     W, H, s, o = ctx(k)
     title, kicker, sub = text_of(f, "title"), text_of(f, "kicker"), text_of(f, "subtitle")
@@ -302,7 +383,7 @@ def _ink_cover(k, slide, f, image):
         rects.update(r); draws.append(d); clear.extend(r.values())
         low = max((v[1] + v[3] for v in r.values()), default=col[1])
         seal_at = (col[0] + 0.3 * s, low + 0.3 * s)
-    _ink_sun(k, slide, (0.20 if o == "land" else 0.22) * W, (0.30 if o == "land" else 0.58) * H, 0.95 * s)
+    _ink_sun(k, slide, (0.20 if o == "land" else 0.22) * W, (0.30 if o == "land" else 0.58) * H, 0.95 * s, clear=clear)
     na.ink_ridges(slide, color=k.P["ink"], layers=na.INK_LAYERS[o], seed=1,
                   peak_span=(0.0, 0.62) if o == "land" else (0.0, 1.0), keep_clear=clear)
     _run_all(draws)
@@ -311,7 +392,7 @@ def _ink_cover(k, slide, f, image):
     return rects
 
 
-@register("ink", "section")
+@register("ink", "section", alts=2)
 def _ink_section(k, slide, f, image):
     W, H, s, o = ctx(k)
     num, kicker, title = text_of(f, "number"), text_of(f, "kicker"), text_of(f, "title")
@@ -355,7 +436,7 @@ def _ink_image_text(k, slide, f, image):
     return r
 
 
-@register("ink", "quote")
+@register("ink", "quote", alts=2)
 def _ink_quote(k, slide, f, image):
     W, H, s, o = ctx(k)
     q, attr = text_of(f, "quote"), text_of(f, "attribution")
@@ -379,7 +460,7 @@ def _ink_quote(k, slide, f, image):
         rects.update(r); draws.append(d); clear.extend(r.values())
         low = max((v[1] + v[3] for v in r.values()), default=col[1])
         seal_at = (col[0] + 0.2 * s, low + 0.25 * s)
-    _ink_sun(k, slide, 0.21 * W, (0.22 if o == "land" else 0.10) * H, 0.62 * s)
+    _ink_sun(k, slide, 0.21 * W, (0.22 if o == "land" else 0.10) * H, 0.62 * s, clear=clear)
     na.ink_ridges(slide, color=k.P["ink"], layers=na.INK_LAYERS["faint"], seed=3,
                   peak_span=(0.0, 0.45), keep_clear=clear)
     _run_all(draws)
@@ -387,7 +468,7 @@ def _ink_quote(k, slide, f, image):
     return rects
 
 
-@register("ink", "data")
+@register("ink", "data", alts=2)
 def _ink_data(k, slide, f, image):
     W, H, s, o = ctx(k)
     num, label, note = text_of(f, "number"), text_of(f, "label"), text_of(f, "note")
@@ -395,6 +476,7 @@ def _ink_data(k, slide, f, image):
         cx, cy, R = 0.27 * W, 0.50 * H, 0.33 * H
     else:
         cx, cy, R = 0.50 * W, 0.28 * H, 0.32 * W
+    R = fit_circle(k, cx, cy, 2 * R + 0.1 * s) / 2.0 - 0.05 * s     # the brush's wobble stays on the page too
     rects, draws, clear = {}, [], [(cx - R, cy - R, 2 * R, 2 * R)]
     if num:
         inner = (cx - R * 0.70, cy - R * 0.70, R * 1.40, R * 1.40)
@@ -424,7 +506,7 @@ def _ink_data(k, slide, f, image):
     return rects
 
 
-@register("ink", "closing")
+@register("ink", "closing", alts=2)
 def _ink_closing(k, slide, f, image):
     W, H, s, o = ctx(k)
     title, line = text_of(f, "title"), text_of(f, "line")
@@ -444,14 +526,14 @@ def _ink_closing(k, slide, f, image):
         rects.update(r); draws.append(d); clear.extend(r.values())
         low = max((v[1] + v[3] for v in r.values()), default=col[1])
         seal_at = (W / 2.0, low + 0.25 * s)
-    _ink_sun(k, slide, (0.80 if o == "land" else 0.75) * W, (0.20 if o == "land" else 0.52) * H, 1.1 * s)
+    _ink_sun(k, slide, (0.80 if o == "land" else 0.75) * W, (0.20 if o == "land" else 0.52) * H, 1.1 * s, clear=clear)
     na.ink_ridges(slide, color=k.P["ink"], layers=na.INK_LAYERS[o], seed=7, peak_span=(0.2, 1.0), keep_clear=clear)
     _run_all(draws)
     _ink_seal(k, slide, f, seal_at[0] - 0.25 * s, seal_at[1], 0.5 * s)
     return rects
 
 
-@register("ink", "points")
+@register("ink", "points", alts=2)
 def _ink_points(k, slide, f, image):
     W, H, s, o = ctx(k)
     title, kicker = text_of(f, "title"), text_of(f, "kicker")
@@ -485,21 +567,24 @@ def _ink_points(k, slide, f, image):
     else:
         top = 0.10 * H
         head_items = [(x_, t) for x_, t in (("kicker", kicker), ("title", title)) if t]
-        r, d = flow(k, slide, "points", (0.08 * W, top, 0.84 * W, 0.20 * H), head_items, anchor="top")
+        r, d = flow(k, slide, "points", (0.08 * W, top, 0.84 * W, (0.20 if alt() == 0 else 0.30) * H), head_items,
+                    anchor="top")
         rects.update(r); draws.append(d); clear.extend(r.values())
         y0 = max((v[1] + v[3] for v in r.values()), default=top) + 0.35 * s
-        row_h = (0.86 * H - y0) / len(pts)
-        cjk_num = title is not None and is_vertical(title)
+        cols = 1 if (alt() == 0 or len(pts) < 3) else 2         # long copy, 3-4 points: two columns of rows
+        rows = -(-len(pts) // cols)
+        row_h, colw = (0.86 * H - y0) / rows, 0.84 * W / cols
+        cjk_num = title is not None and is_cjk_text(title)
         for i, (head, line) in enumerate(pts):
-            y = y0 + i * row_h
-            nr, nd = flow(k, slide, "points", (0.08 * W, y, 0.9 * s, row_h), [("mark", _NUM_ZH[i] if cjk_num else str(i + 1))],
+            x, y = 0.08 * W + (i % cols) * colw, y0 + (i // cols) * row_h
+            nr, nd = flow(k, slide, "points", (x, y, 0.9 * s, row_h), [("mark", _NUM_ZH[i] if cjk_num else str(i + 1))],
                           start={"mark": 30 * s})
-            tr, td_ = flow(k, slide, "points", (0.08 * W + 1.0 * s, y, 0.76 * W, row_h - 0.12 * s),
+            tr, td_ = flow(k, slide, "points", (x + 1.0 * s, y, colw - 1.15 * s, row_h - 0.12 * s),
                            [(x_, t) for x_, t in (("item_head", head), ("item_line", line)) if t], anchor="top")
             draws += [nd, td_]; clear += list(nr.values()) + list(tr.values())
-            if i < len(pts) - 1:
+            if i // cols < rows - 1:
                 yy = y + row_h - 0.06 * s
-                draws.append(lambda yy=yy: na.seg(slide, 0.08 * W, yy, 0.92 * W, yy, k.P["ink"], w=0.5, alpha=0.25))
+                draws.append(lambda x=x, yy=yy: na.seg(slide, x, yy, x + colw - 0.25 * s, yy, k.P["ink"], w=0.5, alpha=0.25))
         seal_at = (0.86 * W, 0.12 * H)
     na.ink_ridges(slide, color=k.P["ink"], layers=na.INK_LAYERS["faint"], seed=6, peak_span=(0.0, 1.0), keep_clear=clear)
     _run_all(draws)
@@ -598,7 +683,8 @@ def _poster_cover(k, slide, f, image):
         rects.update(r); draws.append(d)
         trect = (trect[0], trect[1], trect[2], trect[3] - 1.0 * s)
     if title:
-        r1, _z, d1 = display(k, slide, trect, title, "title", highlight=hl, hl=fld["hl"], hl_ink=fld["hl_ink"])
+        r1, _z, d1 = display(k, slide, trect, title, "title", highlight=hl, hl=fld["hl"], hl_ink=fld["hl_ink"],
+                             floor=vl.TYPE[k.name]["label"][5])
         rects["title"] = r1; draws.append(d1)
     _blocks(k, slide, blocks)
     _poster_meta(k, slide, kicker)
@@ -646,7 +732,7 @@ def _poster_quote(k, slide, f, image):
     rects, draws = {}, []
     mrect = (0.03 * W, 0.08 * H, 0.18 * W, 0.40 * H) if o == "land" else (0.06 * W, 0.06 * H, 0.30 * W, 0.18 * H)
     qrect = (0.20 * W, 0.20 * H, 0.74 * W, 0.56 * H) if o == "land" else (0.06 * W, 0.26 * H, 0.88 * W, 0.52 * H)
-    r, _z, d = display(k, slide, mrect, "“", "mark", caps=False, ink=fld["accent"])
+    r, _z, d = display(k, slide, mrect, "“", "mark", caps=False, ink=fld["accent"], floor=36)
     draws.append(d)
     if q:
         r1, _z, d1 = display(k, slide, qrect, q, "quote", highlight=hl, hl=fld["hl"], hl_ink=fld["hl_ink"])
@@ -668,7 +754,7 @@ def _poster_data(k, slide, f, image):
     lrect = (0.56 * W, 0.24 * H, 0.40 * W, 0.34 * H) if o == "land" else (0.06 * W, 0.54 * H, 0.88 * W, 0.20 * H)
     rects, draws = {}, []
     if num:
-        r, _z, d = display(k, slide, nrect, num, "number", caps=False, anchor="b")
+        r, _z, d = display(k, slide, nrect, num, "number", caps=False, anchor="b", floor=48)   # 1,250,000 fits one line
         rects["number"] = r; draws.append(d)
     if label:
         r1, _z, d1 = display(k, slide, lrect, label, "label")
@@ -689,7 +775,8 @@ def _poster_closing(k, slide, f, image):
     trect = (0.05 * W, 0.14 * H, 0.70 * W, 0.58 * H) if o == "land" else (0.06 * W, 0.12 * H, 0.88 * W, 0.50 * H)
     rects, draws = {}, []
     if title:
-        r, _z, d = display(k, slide, trect, title, "title", highlight=hl, hl=fld["hl"], hl_ink=fld["hl_ink"])
+        r, _z, d = display(k, slide, trect, title, "title", highlight=hl, hl=fld["hl"], hl_ink=fld["hl_ink"],
+                           floor=vl.TYPE[k.name]["label"][5])
         rects["title"] = r; draws.append(d)
         if line:
             lr, ld = flow(k, slide, "closing", (trect[0], r[1] + r[3] + 0.3 * s, trect[2], 1.0 * s), [("line", line)])
@@ -701,37 +788,63 @@ def _poster_closing(k, slide, f, image):
     return rects
 
 
-@register("poster", "points")
+@register("poster", "points", alts=2)
 def _poster_points(k, slide, f, image):
+    """Points as a rising staircase of panels beside the title; when the steps are too narrow for their words (a
+    small canvas, long lines), the second layout puts the title across the top and the steps underneath as full-width
+    bars that step in, one per point."""
     W, H, s, o = ctx(k)
     fld = k.field
     title, kicker = text_of(f, "title"), text_of(f, "kicker")
     pts = points_of(f.get("items"))
     n = len(pts)
     rects, draws = {}, []
-    if o == "land":
-        trect, (rx, ry, rw, rh) = (0.04 * W, 0.11 * H, 0.42 * W, 0.42 * H), (0.50 * W, 0.30 * H, 0.46 * W, 0.63 * H)
-    else:
-        trect, (rx, ry, rw, rh) = (0.06 * W, 0.08 * H, 0.88 * W, 0.20 * H), (0.06 * W, 0.34 * H, 0.88 * W, 0.58 * H)
-    if title:
-        # display size first, but a long title shrinks to the label's floor rather than being refused (measured
-        # 2026-10-05: at the title field's 44pt floor, CI's wider Linux faces refused the matrix copy on 4:3)
-        r, _z, d = display(k, slide, trect, title, "title", floor=vl.TYPE[k.name]["label"][5])
-        rects["title"] = r; draws.append(d)
     gap = 0.15 * s
-    pw = (rw - (n - 1) * gap) / n
-    for i, (head, line) in enumerate(pts):
-        ph = rh * (0.64 + 0.36 * (i / float(max(n - 1, 1))))
-        px, py = rx + i * (pw + gap), ry + rh - ph
-        dk.box(slide, px, py, pw, ph, fill=fld["panel"])
-        mh = min(1.4 * s, ph * 0.4)
-        nr, nd = flow(k, slide, "points", (px + 0.12 * s, py + 0.10 * s, pw - 0.24 * s, mh),
-                      [("mark", "{:02d}".format(i + 1))], accent=fld["panel_accent"],
-                      start={"mark": min(80.0 * s, pw * 72 * 0.42, mh * 72 / 1.32)})   # the numeral fits its panel
-        tr, td_ = flow(k, slide, "points", (px + 0.14 * s, py + ph * 0.45, pw - 0.28 * s, ph * 0.52),
-                       [(x_, t) for x_, t in (("item_head", head), ("item_line", line)) if t], anchor="bottom",
-                       ink=fld["panel_ink"], mute=fld["panel_ink"])
-        draws += [nd, td_]
+    if alt() == 0:
+        if o == "land":
+            trect, (rx, ry, rw, rh) = (0.04 * W, 0.11 * H, 0.42 * W, 0.42 * H), (0.50 * W, 0.30 * H, 0.46 * W, 0.63 * H)
+        else:
+            trect, (rx, ry, rw, rh) = (0.06 * W, 0.08 * H, 0.88 * W, 0.20 * H), (0.06 * W, 0.34 * H, 0.88 * W, 0.58 * H)
+        if title:
+            # display size first, but a long title shrinks to the label's floor rather than being refused (measured
+            # 2026-10-05: at the title field's 44pt floor, CI's wider Linux faces refused the matrix copy on 4:3)
+            r, _z, d = display(k, slide, trect, title, "title", floor=vl.TYPE[k.name]["label"][5])
+            rects["title"] = r; draws.append(d)
+        pw = (rw - (n - 1) * gap) / n
+        for i, (head, line) in enumerate(pts):
+            ph = rh * (0.64 + 0.36 * (i / float(max(n - 1, 1))))
+            px, py = rx + i * (pw + gap), ry + rh - ph
+            dk.box(slide, px, py, pw, ph, fill=fld["panel"])
+            mh = min(1.4 * s, ph * 0.4)
+            _nr, _z, nd = display(k, slide, (px + 0.12 * s, py + 0.10 * s, pw - 0.24 * s, mh), "{:02d}".format(i + 1),
+                                  "mark", caps=False, ink=fld["panel_accent"], floor=12)   # the numeral fits its panel
+            tr, td_ = flow(k, slide, "points", (px + 0.14 * s, py + ph * 0.45, pw - 0.28 * s, ph * 0.52),
+                           [(x_, t) for x_, t in (("item_head", head), ("item_line", line)) if t], anchor="bottom",
+                           ink=fld["panel_ink"], mute=fld["panel_ink"])
+            draws += [nd, td_]
+    else:
+        # a shorter band than the designed layout's: display type fills the rect it gets, and the steps need the room
+        trect = (0.04 * W, 0.09 * H, 0.92 * W, 0.17 * H) if o == "land" else (0.06 * W, 0.07 * H, 0.88 * W, 0.16 * H)
+        top = trect[1]
+        if title:
+            r, _z, d = display(k, slide, trect, title, "title", floor=vl.TYPE[k.name]["label"][5])
+            rects["title"] = r; draws.append(d)
+            top = r[1] + r[3]
+        rx, ry, rw = trect[0], top + 0.25 * s, trect[2]
+        rh = H * 0.93 - ry
+        ph = (rh - (n - 1) * gap) / n
+        ind = min(0.55 * s, rw * 0.06)
+        for i, (head, line) in enumerate(pts):
+            px, py, pw = rx + i * ind, ry + i * (ph + gap), rw - i * ind
+            dk.box(slide, px, py, pw, ph, fill=fld["panel"])
+            nw = min(1.3 * s, pw * 0.18)
+            _nr, _z, nd = display(k, slide, (px + 0.15 * s, py + 0.04 * s, nw, ph - 0.08 * s), "{:02d}".format(i + 1),
+                                  "mark", caps=False, ink=fld["panel_accent"], anchor="m", floor=12)
+            tx = px + nw + 0.35 * s
+            tr, td_ = flow(k, slide, "points", (tx, py + 0.06 * s, px + pw - 0.2 * s - tx, ph - 0.12 * s),
+                           [(x_, t) for x_, t in (("item_head", head), ("item_line", line)) if t], anchor="middle",
+                           ink=fld["panel_ink"], mute=fld["panel_ink"])
+            draws += [nd, td_]
     _poster_meta(k, slide, kicker)
     _run_all(draws)
     return rects
@@ -768,16 +881,20 @@ def _front_hills(k, slide, o, seed=7, low=False):
     na.paper_hill(slide, na.hill_points(W, (0.92 if o == "land" else 0.93) * H, 0.05 * H, seed + 2, 2.6), H, fill=A["hills"][3])
 
 
-@register("cutpaper", "cover")
+@register("cutpaper", "cover", alts=2)
 def _cut_cover(k, slide, f, image):
     W, H, s, o = ctx(k)
     A = CUT_ART[k.ground]
     if o == "land":
         card, sun, clouds = (0.064 * W, 0.14 * H, 0.48 * W, 0.47 * H), (0.76 * W, 0.23 * H, 0.35 * H), \
             ((0.56 * W, 0.17 * H, 0.15 * W), (0.91 * W, 0.43 * H, 0.11 * W))
+        if alt():                    # long copy: a wider, taller card, still tucked into the hills
+            card = (0.05 * W, 0.07 * H, 0.60 * W, 0.66 * H)
     else:
         card, sun, clouds = (0.08 * W, 0.10 * H, 0.84 * W, 0.32 * H), (0.70 * W, 0.53 * H, 0.26 * W), \
             ((0.28 * W, 0.50 * H, 0.30 * W),)
+        if alt():
+            card = (0.06 * W, 0.06 * H, 0.88 * W, 0.50 * H)
     pad = 0.4 * s
     items = [(x_, text_of(f, x_)) for x_ in ("kicker", "title", "subtitle") if text_of(f, x_)]
     r, d = _card_flow(k, slide, "cover", (card[0] + pad, card[1] + pad, card[2] - 2 * pad, card[3] - 2 * pad), items,
@@ -785,6 +902,10 @@ def _cut_cover(k, slide, f, image):
     text_bottom = max((v[1] + v[3] for v in r.values()), default=card[1])
     if o != "land":                  # a free-standing card fits its words (landscape keeps its height for the tuck)
         card = (card[0], card[1], card[2], text_bottom + pad - card[1])
+    if o != "land":                  # under the card (fitted to its words), never buried beneath it
+        foot = card[1] + card[3]
+        sun = (sun[0], max(sun[1], foot + sun[2] * 0.55 + 0.1 * s), sun[2])
+        clouds = tuple((cx_, max(cy_, foot + 0.22 * cw_ + 0.1 * s), cw_) for cx_, cy_, cw_ in clouds)   # by its height
     na.paper_sun(slide, sun[0], sun[1], (sun[2], sun[2] * 0.7), A["sun"])
     for cx, cy, cw in clouds:
         na.cloud(slide, cx, cy, cw, fill=A["cloud"])
@@ -811,6 +932,7 @@ def _cut_section(k, slide, f, image):
     A = CUT_ART[k.ground]
     num, kicker, title = text_of(f, "number"), text_of(f, "kicker"), text_of(f, "title")
     cx, cy, d0 = (0.24 * W, 0.46 * H, 0.52 * H) if o == "land" else (0.50 * W, 0.26 * H, 0.56 * W)
+    d0 = fit_circle(k, cx, cy, d0)
     rects, draws = {}, []
     if num:
         r, d = _card_flow(k, slide, "section", (cx - d0 * 0.3, cy - d0 * 0.3, d0 * 0.6, d0 * 0.6), [("number", num)],
@@ -869,10 +991,11 @@ def _cut_data(k, slide, f, image):
     num, label, note = text_of(f, "number"), text_of(f, "label"), text_of(f, "note")
     cx, cy, D = (0.27 * W, 0.50 * H, min(0.86 * H, 0.52 * W)) if o == "land" else (0.50 * W, 0.28 * H, 0.86 * W)
     cx = max(cx, D / 2.0 + 0.1 * s)              # the whole sun on the page, on any canvas (4:3 ran 0.52in off it)
+    D = fit_circle(k, cx, cy, D)
     rects, draws = {}, []
     if num:
-        inner = D * 0.39
-        r, d = _card_flow(k, slide, "data", (cx - inner / 2, cy - inner / 2, inner, inner), [("number", num)],
+        inner, wide = D * 0.39, D * 0.72         # the figure is as tall as the inner disc; a long one spans the rings
+        r, d = _card_flow(k, slide, "data", (cx - wide / 2, cy - inner / 2, wide, inner), [("number", num)],
                           anchor="middle", align="c")
         rects.update(r); draws.append(d)
     col = (cx + D / 2 + 0.5 * s, 0.24 * H, 0.94 * W - (cx + D / 2 + 0.5 * s), 0.50 * H) if o == "land" else \
@@ -885,11 +1008,13 @@ def _cut_data(k, slide, f, image):
     return rects
 
 
-@register("cutpaper", "closing")
+@register("cutpaper", "closing", alts=2)
 def _cut_closing(k, slide, f, image):
     W, H, s, o = ctx(k)
     A = CUT_ART[k.ground]
     card = (0.22 * W, 0.16 * H, 0.56 * W, 0.36 * H) if o == "land" else (0.08 * W, 0.12 * H, 0.84 * W, 0.30 * H)
+    if alt():                        # long copy: a roomier card (the paper sun sits behind it, as paper layers do)
+        card = (0.10 * W, 0.08 * H, 0.80 * W, 0.56 * H) if o == "land" else (0.06 * W, 0.07 * H, 0.88 * W, 0.46 * H)
     pad = 0.4 * s
     items = [(x_, text_of(f, x_)) for x_ in ("title", "line") if text_of(f, x_)]
     r, d = _card_flow(k, slide, "closing", (card[0] + pad, card[1] + pad, card[2] - 2 * pad, card[3] - 2 * pad), items,
@@ -902,7 +1027,7 @@ def _cut_closing(k, slide, f, image):
     return r
 
 
-@register("cutpaper", "points")
+@register("cutpaper", "points", alts=2)
 def _cut_points(k, slide, f, image):
     import icons as _ic
     import tempfile as _tf
@@ -914,22 +1039,30 @@ def _cut_points(k, slide, f, image):
         raise ValueError("cutpaper.points(): icons= takes one icon spec per point ({} points), got {!r}".format(len(pts), icons_))
     rects, draws = {}, []
     head_items = [(x_, text_of(f, x_)) for x_ in ("kicker", "title") if text_of(f, x_)]
-    r, d = flow(k, slide, "points", (0.07 * W, 0.08 * H, 0.86 * W, 0.16 * H), head_items)
+    r, d = flow(k, slide, "points", (0.07 * W, 0.08 * H, 0.86 * W, (0.16 if alt() == 0 else 0.30) * H), head_items)
     rects.update(r); draws.append(d)
     n = len(pts)
+    head_bottom = max((v[1] + v[3] for v in r.values()), default=0.08 * H)
     if o == "land":
-        gap, top, ch = 0.35 * s, 0.28 * H, 0.48 * H
+        gap = 0.35 * s
+        top = max(0.28 * H, head_bottom + 0.3 * s) if alt() == 0 else head_bottom + 0.25 * s
+        ch = 0.76 * H - top if alt() == 0 else 0.88 * H - top
         cw = (0.86 * W - (n - 1) * gap) / n
         cards = [(0.07 * W + i * (cw + gap), top, cw, ch) for i in range(n)]
     else:
-        gap, top = 0.25 * s, 0.24 * H
-        ch = (0.64 * H - (n - 1) * gap) / n
-        cards = [(0.08 * W, top + i * (ch + gap), 0.84 * W, ch) for i in range(n)]
+        gap = 0.25 * s
+        top = max(0.24 * H, head_bottom + 0.3 * s) if alt() == 0 else head_bottom + 0.25 * s
+        cols = 1 if (alt() == 0 or n < 3) else 2              # long copy, 3-4 points: a 2-column grid of cards
+        rows = -(-n // cols)
+        ch = ((0.88 * H - top) - (rows - 1) * gap) / rows
+        cwid = (0.84 * W - (cols - 1) * gap) / cols
+        cards = [(0.08 * W + (i % cols) * (cwid + gap), top + (i // cols) * (ch + gap), cwid, ch) for i in range(n)]
     _front_hills(k, slide, o, seed=31, low=True)
     for i, ((cx, cy, cw, chh), (head, line)) in enumerate(zip(cards, pts)):
         na.paper_card(slide, cx, cy, cw, chh)
-        dd = min(1.1 * s, chh * 0.38, cw * 0.38)
-        dx, dy = cx + 0.3 * s + dd / 2, cy + 0.3 * s + dd / 2
+        compact = alt() > 0 and o != "land"
+        dd = min(0.75 * s, chh * 0.30, cw * 0.24) if compact else min(1.1 * s, chh * 0.38, cw * 0.38)
+        dx, dy = (cx + 0.25 * s + dd / 2, cy + 0.25 * s + dd / 2) if compact else (cx + 0.3 * s + dd / 2, cy + 0.3 * s + dd / 2)
         na.disc(slide, dx, dy, dd, A["discs"][i % len(A["discs"])], shadow=True)
         if icons_:
             png = str(Path(_tf.gettempdir()) / "slide-maker-native-art" / "icon_{}.png".format(str(icons_[i]).replace(":", "_")))
@@ -940,7 +1073,9 @@ def _cut_points(k, slide, f, image):
             nr, nd = flow(k, slide, "points", (dx - dd / 2, dy - dd / 2, dd, dd), [("mark", str(i + 1))], align="c",
                           anchor="middle", ink="FFFFFF", accent="FFFFFF", start={"mark": dd * 72 * 0.5})
             draws.append(nd)
-        if o == "land":
+        if compact:
+            tcol = (cx + 0.45 * s + dd, cy + 0.2 * s, cw - dd - 0.65 * s, chh - 0.4 * s)
+        elif o == "land":
             tcol = (cx + 0.3 * s, cy + 0.45 * s + dd, cw - 0.6 * s, chh - dd - 0.7 * s)
         else:
             tcol = (cx + 0.6 * s + dd, cy + 0.25 * s, cw - dd - 0.9 * s, chh - 0.5 * s)
@@ -955,8 +1090,12 @@ def _cut_points(k, slide, f, image):
 def _bp_ground(k, slide):
     na.grid_background(slide, base=k.P["ground"], ink=k.P["ink"])
     content, block = na.drawing_sheet(slide, ink=k.P["ink"], mute=k.P["mute"], accent=k.P["text_accents"][0],
-                                      number=len(k.prs.slides), project=k.project, face=k.face("mono"))
-    k._sheet = (content, block, k.project)            # the words this sheet's title block carries (None: none yet)
+                                      number=len(k.prs.slides), project=None, face=k.face("mono"))
+    drawn = None
+    if k.project and na.title_block_project(slide, block, k.project, ink=k.P["ink"], mute=k.P["mute"],
+                                            face=k.face("mono")):
+        drawn = k.project
+    k._sheet = (content, block, drawn)                # the words this sheet's title block carries (None: none yet)
 
 
 GROUNDS["drafting"] = _bp_ground
@@ -973,24 +1112,29 @@ def _bp_project(k, slide, f, fallback=None):
     """Remember the caller's project words (project=, else the cover title) and make THIS sheet's title block carry
     them: written when the ground had none yet (the cover is where the title first arrives), rewritten in place when
     the caller names a new project on a later sheet."""
-    words = text_of(f, "project") or k.project or fallback
+    explicit = text_of(f, "project")
+    words = explicit or k.project or fallback
     if not words:
         return
-    k.project = words
     content, block, drawn = k._sheet
     if drawn == words:
+        k.project = words
         return
-    if drawn is None:
-        na.title_block_project(slide, block, words, ink=k.P["ink"], mute=k.P["mute"], face=k.face("mono"))
-    else:
-        for sh in slide.shapes:
+    if drawn is not None:                     # a new project on a later sheet: the old words leave the block
+        for sh in list(slide.shapes):
             ps = sh.text_frame.paragraphs if getattr(sh, "has_text_frame", False) else []
-            if len(ps) >= 2 and ps[0].text == "PROJECT" and ps[1].text == drawn and ps[1].runs:
-                ps[1].runs[0].text = words
-                for r_ in ps[1].runs[1:]:
-                    r_.text = ""
+            if len(ps) >= 2 and ps[0].text == "PROJECT" and ps[1].text == drawn:
+                sh._element.getparent().remove(sh._element)
                 break
-    k._sheet = (content, block, words)
+    if na.title_block_project(slide, block, words, ink=k.P["ink"], mute=k.P["mute"], face=k.face("mono")):
+        k.project = words
+        k._sheet = (content, block, words)
+    elif explicit:
+        raise vl.VLTextOverflow("drafting: project={!r} does not fit the sheet's title block even at 7pt — shorten "
+                                "it".format(explicit[:40]))
+    else:                                     # a remembered title too long for the block: the sheet number alone
+        k.project = None
+        k._sheet = (content, block, None)
 
 
 @register("drafting", "cover")
@@ -1094,7 +1238,7 @@ def _bp_closing(k, slide, f, image):
     return r
 
 
-@register("drafting", "points")
+@register("drafting", "points", alts=3)
 def _bp_points(k, slide, f, image):
     """One iso layer per point, each with a numbered leader to its note. The notes take EVEN slots of the free
     height, not the layers' gap (measured 2026-10-05: tied to the gap, a note got 0.47in and ordinary copy was
@@ -1106,10 +1250,14 @@ def _bp_points(k, slide, f, image):
     n = len(pts)
     rects, draws = {}, []
     head_items = [(x_, text_of(f, x_)) for x_ in ("kicker", "title") if text_of(f, x_)]
-    r, d = flow(k, slide, "points", (cx, cy, cw * (0.62 if o == "land" else 1.0), ch * (0.30 if o == "land" else 0.20)),
-                head_items)
+    hw = cw * (0.62 if o == "land" and alt() == 0 else 1.0)
+    hh = ch * ((0.30 if o == "land" else 0.20) if alt() == 0 else (0.36 if o == "land" else 0.26) if alt() == 1
+               else (0.34 if o == "land" else 0.40))
+    # the parts-legend layout is the last resort for long copy: its title starts near its floor and takes only the
+    # height it needs, leaving the rest to the notes
+    r, d = flow(k, slide, "points", (cx, cy, hw, hh), head_items, start={"title": 30 * s} if alt() == 2 else None)
     rects.update(r); draws.append(d)
-    top = max((v[1] + v[3] for v in r.values()), default=cy) + 0.35 * s
+    top = max((v[1] + v[3] for v in r.values()), default=cy) + (0.35 if alt() < 2 else 0.2) * s
     avail = cy + ch - top                                  # above the title block: where the notes go
     thick = 0.18
     if o == "land":                                        # the block is at the right: the drawing may go lower
@@ -1117,10 +1265,16 @@ def _bp_points(k, slide, f, image):
         stack_avail = sheet[1] + sheet[3] - top
         size = min(cw * 0.26, stack_avail * 0.46)         # the drawing fills the height: the plates, then air between
         scx, notes_x = cx + cw * 0.26, cx + cw * 0.56
+        if alt():                                          # long copy: a smaller drawing, the notes get the width
+            size, scx, notes_x = min(cw * 0.19, stack_avail * 0.40), cx + cw * 0.19, cx + cw * 0.42
     else:
         stack_avail = avail
         size = min(cw * 0.30, avail * 0.34)
         scx, notes_x = cx + cw * 0.30, cx + cw * 0.62
+        if alt() == 1:
+            size, scx, notes_x = min(cw * 0.24, avail * 0.30), cx + cw * 0.24, cx + cw * 0.50
+        elif alt() == 2:                                   # the parts legend needs the width more than the drawing
+            size, scx, notes_x = min(cw * 0.13, avail * 0.30), cx + cw * 0.13, cx + cw * 0.30
     gap = min(0.9 * s, max(0.35 * s, (stack_avail - size - thick - 0.2 * s) / max(n - 1, 1)))
     tops = na.iso_stack(slide, scx, top, size, gap, n, ink=k.P["ink"], accent=k.P["accents"][0], accent_layer=0,
                         thick=thick)
@@ -1128,6 +1282,26 @@ def _bp_points(k, slide, f, image):
     extent = size + (n - 1) * gap + thick                  # the notes span the stack they label (room for their words)
     slot = min(avail, max(extent, n * 1.05 * s)) / n
     tx = notes_x + bd + 0.2 * s
+    if alt() == 2:                 # a drawing's parts list: a balloon on each layer, the notes in a numbered legend
+        bd = 0.36 * s                                          # a parts list's balloons are smaller than leaders'
+        bdl = min(bd, gap * 0.9)                               # layer balloons never touch their neighbours
+        notes_x = max(notes_x, scx + size * 0.866 + 0.08 * s + bdl + 0.35 * s)   # nor the legend's balloons
+        cols = 2 if (n >= 3 and (cx + cw - notes_x) / 2 >= 1.6 * s) else 1     # two columns only when each is wide
+        rows = -(-n // cols)
+        lw = (cx + cw - notes_x - (cols - 1) * 0.2 * s) / cols
+        lh = avail / rows
+        for i, ((head, line), layer) in enumerate(zip(pts, tops)):
+            ax, ay = layer[1]
+            lx, ly = notes_x + (i % cols) * (lw + 0.2 * s), top + (i // cols) * lh
+            tr, td_ = flow(k, slide, "points", (lx + bd + 0.15 * s, ly - 0.05 * s, lw - bd - 0.15 * s, lh - 0.03 * s),
+                           [(x_, t) for x_, t in (("item_head", head), ("item_line", line)) if t], anchor="top")
+            for bx_, by2, dd_ in ((ax + 0.08 * s, ay - bdl / 2, bdl), (lx, ly, bd)):
+                draws.append(lambda bx_=bx_, by2=by2, dd_=dd_, i=i: na.balloon(
+                    slide, bx_, by2, dd_, str(i + 1), ink=k.P["ink"], accent=k.P["text_accents"][0],
+                    face=k.face("mono"), fill=k.P["ground"]))
+            draws.append(td_)
+        _run_all(draws)
+        return rects
     for i, ((head, line), layer) in enumerate(zip(pts, tops)):
         ax, ay = layer[1]                                     # the layer's right corner
         by_ = top + i * slot

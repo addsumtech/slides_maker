@@ -28,7 +28,10 @@ SPPR_ORDER = ("xfrm", "custGeom", "prstGeom", "noFill", "solidFill", "gradFill",
 RPR_ORDER = ("ln", "noFill", "solidFill", "gradFill", "blipFill", "pattFill", "grpFill", "effectLst",
              "effectDag", "highlight", "uLnTx", "uLn", "uFillTx", "uFill", "latin", "ea", "cs", "sym",
              "hlinkClick", "hlinkMouseOver", "rtl", "extLst")
-_ANGLE = {"dir", "rot", "ang", "stAng", "swAng"}       # ST_PositiveFixedAngle / ST_FixedAngle in 60000ths
+# ST_PositiveFixedAngle (0..21599999, 60000ths of a degree) — PowerPoint repairs a value outside it. NOT listed:
+# xfrm `rot` (ST_Angle) and arcTo `stAng`/`swAng` (ST_AdjAngle) are SIGNED types; a negative arc sweep is valid.
+_ANGLE = {"dir", "ang", "fadeDir"}
+_ANGLE_TAGS = ("outerShdw", "innerShdw", "prstShdw", "reflection", "lin")
 _POS_COORD = {"blurRad", "dist", "rad"}                 # ST_PositiveCoordinate
 _PCT = {"pos"}                                          # gs pos: ST_PositiveFixedPercentage
 _SLIDE = re.compile(r"ppt/slides/slide(\d+)\.xml$")
@@ -68,9 +71,10 @@ def xml_findings(pptx_path):
                     if not re.fullmatch(r"-?\d+", val or ""):
                         continue
                     v = int(val)
-                    if att in _ANGLE and tag in ("outerShdw", "innerShdw", "lin") and not 0 <= v < 21600000:
+                    if att in _ANGLE and tag in _ANGLE_TAGS and not 0 <= v < 21600000:
                         add("{} {}={} outside 0..21599999".format(tag, att, v))
-                    elif att in _POS_COORD and tag in ("outerShdw", "innerShdw", "glow", "softEdge") and v < 0:
+                    elif att in _POS_COORD and tag in ("outerShdw", "innerShdw", "prstShdw", "reflection", "glow",
+                                                       "softEdge") and v < 0:
                         add("{} {}={} is negative".format(tag, att, v))
                     elif att in _PCT and tag == "gs" and not 0 <= v <= 100000:
                         add("gradient stop pos={} outside 0..100000".format(v))

@@ -386,15 +386,29 @@ def drawing_sheet(slide, *, ink, mute, accent, number, project, face):
 
 
 def title_block_project(slide, block, project, *, ink, mute, face):
-    """The caller's project words in a drawing sheet's title block (left field)."""
+    """The caller's project words in a drawing sheet's title block (left field), measured: 10pt shrinking to 7pt.
+    Returns False and draws NOTHING when they do not fit even then — the caller decides (refuse the caller's own
+    project=, or leave a remembered title out: the sheet number alone)."""
     W, H = page_size(slide)
     s = min(W, H) / 7.5
     bx, by, bw, bh = block
     split = bx + bw * 0.66
+    fw, fh = split - bx - 0.14 * s, bh - 0.12 * s
     rgb = lambda c: dk._as_rgb(hexstr(c))              # noqa: E731
-    dk.text(slide, bx + 0.08 * s, by + 0.06 * s, split - bx - 0.14 * s, bh - 0.12 * s,
-            [[("PROJECT", max(8.0, 8.0 * s), rgb(mute), False, False, face)],
-             [(str(project), max(9.0, 10.0 * s), rgb(ink), True, False, face, face)]], space_after=0)
+    lab = max(8.0, 8.0 * s)
+    lab_h = dk.measure_text([("PROJECT", False)], fw, lab, font=face, line_h_factor=dk._LINT_LINE_H)   # lint's model
+    sz = max(9.0, 10.0 * s)
+    while True:
+        need = lab_h + dk.measure_text([(str(project), True)], fw, sz, font=face, line_h_factor=dk._LINT_LINE_H)
+        if need <= fh or sz <= 7.0:
+            break
+        sz = max(7.0, sz - 0.5)
+    if need > fh + 1e-6:
+        return False
+    dk.text(slide, bx + 0.08 * s, by + 0.06 * s, fw, fh,
+            [[("PROJECT", lab, rgb(mute), False, False, face)],
+             [(str(project), sz, rgb(ink), True, False, face, face)]], space_after=0)
+    return True
 
 
 def _iso(cx, cy, a, b):

@@ -185,11 +185,15 @@ try:
     check(False, "ink: a three-character seal is refused")
 except ValueError:
     check(True, "ink: a three-character seal is refused")
+s = k.new_slide()
+k.cover(s, title="此" * 60)                      # too long for 2 vertical columns: set across, not refused
+check(not any('vert="eaVert"' in sh._element.xml for sh in s.shapes if getattr(sh, "has_text_frame", False)),
+      "ink: a title too long for vertical columns is set horizontally")
 try:
-    k.cover(k.new_slide(), title="此" * 60)
-    check(False, "ink: an impossible vertical title is refused")
+    k.cover(k.new_slide(), title="此" * 400)
+    check(False, "ink: a title too long for ANY layout is refused")
 except vl.VLTextOverflow:
-    check(True, "ink: an impossible vertical title is refused")
+    check(True, "ink: a title too long for ANY layout is refused")
 # a short CJK title stays ONE tall column when it fits at >= 85% of its size (the approved cover), not two short ones
 out = k.cover(k.new_slide(), title="一盏茶的时间", subtitle="慢下来，看见日常")
 rt = out["rects"]["title"]
@@ -424,6 +428,29 @@ with contextlib.redirect_stdout(io.StringIO()):
 body, _h = _rs2.card(dk.add_slide(pe), "poster", 1.0, 1.0, 3.0, 2.0)     # a plain page: no language of its own
 check(str(body.fill.fore_color.rgb) == vl.VARIANTS["poster"]["light"]["palette"]["panel"],
       "a later deck's poster card is the base palette, not the last deck's field ({})".format(body.fill.fore_color.rgb))
+# drafting's title block holds what fits: a long remembered cover title shrinks to fit or is left out (the spec's
+# fallback chain ends at the sheet number alone); an explicit project= that cannot fit is refused (final review)
+LONG = "A modular reading room built layer by layer for every neighbourhood library across the whole city this year"
+with contextlib.redirect_stdout(io.StringIO()):
+    prs = dk.blank_deck(13.333, 7.5); k = vl.use("drafting", prs)
+k.cover(k.new_slide(), title=LONG)
+s2 = k.new_slide()
+blk = [sh for sh in s2.shapes if getattr(sh, "has_text_frame", False) and sh.text_frame.paragraphs[0].text == "PROJECT"]
+if blk:
+    tb_ = blk[0]
+    paras = [(p_.text, p_.runs[0].font.size.pt) for p_ in tb_.text_frame.paragraphs if p_.runs]
+    need = sum(dk.measure_text([(t_, True)], tb_.width / 914400.0, sz_, font="Courier New") for t_, sz_ in paras)
+    check(need <= tb_.height / 914400.0 + 0.02, "drafting: the remembered title fits the title block ({:.2f} vs {:.2f}in)".format(
+        need, tb_.height / 914400.0))
+else:
+    check(True, "drafting: a remembered title too long for the block is left out (sheet number alone)")
+with contextlib.redirect_stdout(io.StringIO()):
+    k = vl.use("drafting", dk.blank_deck(13.333, 7.5))
+try:
+    k.cover(k.new_slide(), title="x", project=LONG + " " + LONG)
+    check(False, "drafting: a project= too long for the title block is refused")
+except vl.VLTextOverflow:
+    check(True, "drafting: a project= too long for the title block is refused")
 # ── found by the non-Claude usability run (2026-10-05) ──
 import register_surface as rs, subprocess as _sp
 with contextlib.redirect_stdout(io.StringIO()):

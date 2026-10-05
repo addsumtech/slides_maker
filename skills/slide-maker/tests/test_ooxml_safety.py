@@ -76,6 +76,22 @@ check(ox.beyond_page(prs) == [], "a declared bleed is quiet")
 p, prs = deck(lambda s: dk.text(s, 1, 1, 4, 1, [[("inside", 18, dk.DEEP, False, False)]]))
 check(ox.beyond_page(prs) == [] and ox.xml_findings(str(p)) == [], "a clean page is clean")
 
+# 4b. the angle rule follows the schema: ST_PositiveFixedAngle attributes (shadow/reflection dir, gradient ang)
+#     must be in range; signed types (xfrm rot, arcTo stAng/swAng — ST_Angle/ST_AdjAngle) may be negative
+def reflection(s):
+    b = dk.box(s, 1, 1, 2, 2, fill="FFFFFF")
+    b._element.spPr.append(etree.fromstring('<a:effectLst xmlns:a="%s"><a:reflection blurRad="6350" stA="50000" '
+                                            'endA="300" dist="0" dir="-5400000" sy="-100000" algn="bl" '
+                                            'rotWithShape="0"/></a:effectLst>' % A))
+p, _ = deck(reflection)
+check(any("reflection" in m for _n, m in ox.xml_findings(str(p))), "a negative reflection dir is a finding")
+def arc(s):
+    import ornaments as orn
+    orn._shape(s, 1, 1, 2, 2, '<a:path w="100000" h="100000"><a:moveTo><a:pt x="0" y="50000"/></a:moveTo>'
+                              '<a:arcTo wR="50000" hR="50000" stAng="10800000" swAng="-5400000"/></a:path>', fill="FFFFFF")
+p, _ = deck(arc)
+check(ox.xml_findings(str(p)) == [], "a counter-clockwise arc (negative swAng, a signed type) is valid: {}".format(
+    ox.xml_findings(str(p))))
 # 5. lint_deck runs it: the negative angle counts as a hard finding
 p, _ = deck(lambda s: shadow(dk.box(s, 1, 1, 2, 2, fill="FFFFFF"), -5400000))
 buf = io.StringIO()
