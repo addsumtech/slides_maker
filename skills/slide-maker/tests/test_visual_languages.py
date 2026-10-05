@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """visual_languages: four complete looks — data, fonts per platform AND per script, contrast, register contracts, page compositions on every canvas and language."""
 from __future__ import annotations
-import sys, tempfile
+import contextlib, io, sys, tempfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -579,6 +579,24 @@ ah.build_directions_html([bad_] + pres, str(_htd / "bad.html"))
 check("javascript:" not in (_htd / "bad.html").read_text(encoding="utf-8"), "a non-image sample is dropped")
 for n_ in vl.LANGS:
     check(vl.direction(n_)["name"], "{} has a direction".format(n_))
+
+# ── the bundled samples are FRESH: each JPG was rendered from the deck today's code builds (final review) ──
+import json as _json, hashlib as _hl
+_man = A / "samples" / "manifest.json"
+if sys.platform != "darwin":
+    print("  skip sample freshness: samples are built and fingerprinted on macOS (other platforms measure fonts differently)")
+else:
+    check(_man.exists(), "assets/vl/samples/manifest.json records which deck each sample was rendered from")
+    _rec = _json.loads(_man.read_text(encoding="utf-8")) if _man.exists() else {}
+    _ftd = Path(tempfile.mkdtemp())
+    for n_ in vl.LANGS:
+        for g_ in vl.VARIANTS[n_]:
+            stem = vl._sample_stem(n_, g_)
+            with contextlib.redirect_stdout(io.StringIO()):
+                p_ = vl.build_sample(n_, str(_ftd), ground=g_)
+            check(_rec.get(stem) == vl.sample_fingerprint(p_),
+                  "sample {}.jpg is current with the code that builds it — else rebuild: python3 scripts/"
+                  "visual_languages.py --sample <dir>, then the NEXT/then lines it prints".format(stem))
 
 # ── Task 11: the reference names what the code does ──
 _ref = (ROOT / "references" / "visual-languages.md")
