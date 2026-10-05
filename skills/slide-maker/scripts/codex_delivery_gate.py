@@ -359,7 +359,7 @@ TEMPLATE = {
         # A deck with no content images writes the string "n/a - <why>".
         # The direction competition: the candidates themselves, re-scored at delivery.
         "direction_gate": {"candidates": "directions.json", "picked": "<the chosen direction>",
-                           "images": "<photos | illustrations | none>"},
+                           "images": "<photos | illustrations | none: the user's, generated or fetched>"},
         "image_sources": [
             "slide <n> | <subject> | sourced - <origin> (<licence>) | <file>",
             "slide <n> | <subject> | generated - <tool>",
@@ -2106,7 +2106,9 @@ def check_design(
                               "motif-less colourway")
                 if _r["colourway_excess"]:
                     _f.append("more than one motif-less colourway")
-                _imgf = _dd.images_fault(_dg.get("images"), _c)          # same rule as render_deck.py
+                _imgf = _dd.images_fault(_dg.get("images"), _c,          # same rule as render_deck.py
+                                         image_sources=design.get("image_sources"),
+                                         imagery=design.get("imagery"))
                 if _imgf:
                     _f.append(_imgf)
                 if _f and not str(_dg.get("waived", "")).strip():

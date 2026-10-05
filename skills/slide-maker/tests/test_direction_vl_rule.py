@@ -84,6 +84,45 @@ check(not any("visual language" in x for x in e), "codex gate: a visual language
 e = cdg_errs({"candidates": plain, "picked": "A"})
 check(any("images" in x for x in e), "codex gate asks for `images` when it is missing: {}".format(e))
 
+# 4. pictures you GENERATE or FETCH count too (the user's rule, 2026-10-05). An end-to-end run had no material, a
+#    paid image tool, and a ten-picture generated series — and the record could only say `none` (no rule) or
+#    `photos` (as if the user had sent them). The deck's own image records are checked against the gate's `images`.
+GEN = ["slide 3 | gadgets on a table | generated — openai gpt-image-2"]
+FETCHED = ["slide 6 | Dartmouth hall | sourced — Wikimedia Commons (CC BY-SA 4.0)"]
+FALLBACK = ["slide 9 | 1890 factory | searched (Commons, Openverse), none found → generated, flagged illustrative"]
+PROVIDED = ["slide 4 | Fig 3 of the paper | provided — user (own material)"]
+f_ = dd.images_fault("none", plain, image_sources=GEN)
+check(f_ and "generated" in f_ and "visual language" in f_,
+      "images: none while the plan GENERATES pictures is a fault: {!r}".format(f_))
+f_ = dd.images_fault("none", plain, image_sources=FETCHED)
+check(f_ and "fetched" in f_, "images: none while the plan FETCHES pictures is a fault: {!r}".format(f_))
+check(dd.images_fault("none", plain, image_sources=FALLBACK),
+      "a search that fell back to a generated picture counts as generated")
+check(dd.images_fault("none", plain, imagery="series"),
+      "images: none on a deck built on a generated image SERIES is a fault")
+check(dd.images_fault("none", plain, image_sources=PROVIDED) is None,
+      "the user's own figures do not force a visual language (a paper's plots are not a photo deck)")
+check(dd.images_fault("none", plain, image_sources="n/a — a text-only briefing") is None,
+      "an n/a image record forces nothing")
+check(dd.images_fault("photos", with_vl, image_sources=GEN, imagery="series") is None,
+      "generated photos + a visual language offered passes")
+m = rd_msg_dp = None
+buf = io.StringIO()
+try:
+    with contextlib.redirect_stderr(buf), contextlib.redirect_stdout(io.StringIO()):
+        rd._direction_gate({"direction_gate": {"candidates": plain, "picked": "A", "images": "none"},
+                            "image_sources": GEN}, str(td))
+    m = ""
+except SystemExit:
+    m = buf.getvalue()
+check("generated" in m and "visual language" in m,
+      "render_deck reads the deck's image records against `images: none`: {}".format(m[-300:]))
+errs: list[str] = []
+cdg.check_design({"design": {"direction_gate": {"candidates": plain, "picked": "A", "images": "none"},
+                             "imagery": "series"}}, td, {1}, "0" * 64, errs)
+check(any(x.startswith("design.direction_gate") and "generated" in x for x in errs),
+      "codex gate reads the same records: {}".format([x for x in errs if x.startswith("design.direction_gate")]))
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_direction_vl_rule] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)

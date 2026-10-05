@@ -246,11 +246,15 @@ four template choices:
          `visual_languages.direction("editorial" | "soft" | "collage" | "storybook")` returns its entry for
          `directions.json`, previewed by its bundled sample ("style sample — not your content"). It counts
          as a STYLED direction, never as the topic-invented bespoke one. Picking it records
-         `design_plan.visual_language` (`references/visual-languages.md`). 🔴 **When the deck HAS pictures —
-         the user's photos or illustrations — at least ONE offered direction is a visual language**
-         (photos → editorial / soft / collage by tone; illustrations → storybook), and the gate record states
-         it: `direction_gate.images: photos | illustrations | none`. Both runtimes' gates hold a picture deck
-         whose set has none, unless the set records a named `waived`.
+         `design_plan.visual_language` (`references/visual-languages.md`). 🔴 **When the deck will carry pictures —
+         the user's photos or illustrations, OR pictures you will generate (an image tool is available and the
+         plan uses imagery) or fetch (real public images) — at least ONE offered direction is a visual
+         language** (photos → editorial / soft / collage by tone; illustrations → storybook), and the gate
+         record states it: `direction_gate.images: photos | illustrations | none` — the KIND of picture,
+         whoever made it. Both runtimes' gates hold a picture deck whose set has none, unless the set records
+         a named `waived`, and they read `images` against the deck's own image records: `none` on a deck whose
+         `image_sources` say `generated`/`sourced` (or whose `imagery` is `series`) is refused as a
+         contradiction. The user's own figures (`provided`) do not count — a paper's plots are not a photo deck.
        - **An image-led direction (only when an image tool is available).** One of the offered
          directions MAY be image-led: its visual language is a coherent series of art-directed
          pictures on most pages, and its preview shows an imagery-led composition. Mark it in

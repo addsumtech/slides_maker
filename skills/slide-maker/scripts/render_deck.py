@@ -1519,7 +1519,7 @@ def _direction_gate(design, deck_dir):
             '    alternatives (branch c) or it was not, and both are recordable:\n'
             '      "direction_gate": {"candidates": "directions.json" | [ {...}, ... ],\n'
             '                         "picked": "<the direction the user chose>",\n'
-            '                         "images": "photos | illustrations | none"}\n'
+            '                         "images": "photos | illustrations | none"}  (the user\'s, generated or fetched)\n'
             '      "direction_gate": "n/a - <locked template | mimic | user supplied the look | '
             'tiny ask>"\n'
             '    It is re-scored here with scripts/directions_diversity.py, the way the arc\n'
@@ -1561,7 +1561,8 @@ def _direction_gate(design, deck_dir):
     if r["colourway_excess"]:
         faults.append("more than one motif-less colourway: {}".format(
             ", ".join(r["colourway_excess"])))
-    _imgf = directions_diversity.images_fault(dg.get("images"), cands)   # pictures -> a visual language offered
+    _imgf = directions_diversity.images_fault(                     # pictures -> a visual language offered
+        dg.get("images"), cands, image_sources=design.get("image_sources"), imagery=design.get("imagery"))
     if _imgf:
         faults.append(_imgf)
     if faults and not str(dg.get("waived", "")).strip():

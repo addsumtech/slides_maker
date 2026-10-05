@@ -9,6 +9,16 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+### Generated or fetched pictures also bring a visual language to the table
+
+The rule that a deck with pictures offers at least one visual language among its directions now counts pictures
+you generate or fetch, not only the user's own. Before, a deck with no material, an image tool and a generated
+image series could only record `images: none` — which switched the rule off — or `photos`, as if the user had
+sent them. `direction_gate.images` now states the KIND of picture whoever made it, and both runtimes' gates read
+it against the deck's own records: `none` while `image_sources` says `generated`/`sourced` (or `imagery` is
+`series`) is refused as a contradiction. The user's own figures (`provided`) do not count — a paper's plots are
+not a photo deck.
+
 ### Kit-built decks no longer trip false layout findings
 
 Found by building a real 10-slide deck end to end on the `collage` language. A visual-language kit stamps

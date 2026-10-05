@@ -196,7 +196,7 @@ def template(slides=None, delivery="presented"):
             "direction_gate": {"verdict": "<the directions_diversity.py verdict>",
                                "picked": "<the direction the user chose>",
                                "candidates": "<path to directions.json>",
-                               "images": "<photos | illustrations | none — the pictures this deck has>"},
+                               "images": "<photos | illustrations | none — the pictures this deck will carry: the user's, generated or fetched>"},
             "build_shape": "<fanout — <n> sections | solo — <reason>>",
             "checkpoint": {"mode": "<approved|auto>", "record": "<how it was delivered>"},
         },

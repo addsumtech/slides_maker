@@ -182,16 +182,58 @@ def _styled(d):
 IMAGES = ("photos", "illustrations", "none")
 
 
-def images_fault(images, directions):
-    """The visual-language rule, held by BOTH runtimes' direction gates: a deck that HAS pictures — the user's photos or
-    illustrations — offers at least one visual language among its directions. The docs said one MAY be offered and
-    nothing ever asked, so the four image-led looks rarely reached the people they were built for (2026-10-04).
-    `images` is what the direction-gate record states. Returns the fault, or None."""
+def planned_pictures(image_sources=None, imagery=None):
+    """The pictures this deck's OWN records say it will GENERATE or FETCH: {"generated": n, "fetched": n}.
+
+    Read from `design_plan.image_sources` with check_image_provenance's own token parser (one grammar, not a
+    second reading of it) and from `design_plan.imagery == "series"` (the generated image-series pipeline).
+    `provided` rows — the user's material — are not counted here: the user's photos are recorded on the gate by
+    the author, and a research deck's provided FIGURES (plots, diagrams) are not a photo-led deck."""
+    out = {"generated": 0, "fetched": 0}
+    try:
+        import check_image_provenance as _cip                     # noqa: PLC0415 — same directory
+    except ImportError:                                           # pragma: no cover — shipped together
+        _cip = None
+    if _cip is not None and not _cip._is_na(image_sources):
+        for row in _cip._rows(image_sources):
+            kind, m = _cip.parse_token(row)
+            if kind == "generated":
+                out["generated"] += 1
+            elif kind == "sourced":
+                out["fetched"] += 1
+            elif kind == "searched" and m is not None and "generated" in (m.group("fallback") or "").lower():
+                out["generated"] += 1
+    if str(imagery or "").strip().lower() == "series" and not out["generated"]:
+        out["generated"] = 1
+    return out
+
+
+def images_fault(images, directions, *, image_sources=None, imagery=None):
+    """The visual-language rule, held by BOTH runtimes' direction gates: a deck that carries pictures offers at
+    least one visual language among its directions. The docs said one MAY be offered and nothing ever asked, so the
+    four image-led looks rarely reached the people they were built for (2026-10-04).
+
+    The pictures may be the user's OR ones the deck will generate or fetch (the user's rule, 2026-10-05): an
+    end-to-end run with no material, a paid image tool and a ten-picture generated series could only record
+    `none` — which waived the rule — or `photos`, as if the user had sent them. So `image_sources` / `imagery`
+    (the deck's own image records) are read against `images`: `none` on a deck that generates or fetches its
+    pictures is a contradiction, reported as one. `images` is what the direction-gate record states.
+    Returns the fault, or None."""
     v = str(images or "").strip().lower()
     if v not in IMAGES:
-        return ("record `images`: photos | illustrations | none — the pictures this deck has (the user's photos, "
-                "illustrations, or none); a deck with pictures offers a visual language among its directions")
-    if v == "none" or any(isinstance(d, dict) and d.get("vl") for d in (directions or [])):
+        return ("record `images`: photos | illustrations | none — the pictures this deck will carry, whoever made "
+                "them (the user's, generated, or fetched); a deck with pictures offers a visual language among its "
+                "directions")
+    if v == "none":
+        made = planned_pictures(image_sources, imagery)
+        if not any(made.values()):
+            return None
+        said = " and ".join("{} {}".format(n, k) for k, n in made.items() if n)
+        return ("the direction gate records images: none, but this deck's own image records plan {} picture(s) "
+                "(design_plan.image_sources / imagery) — pictures you generate or fetch count too: record photos "
+                "or illustrations, and offer a visual language among the directions, e.g. editorial, soft or "
+                "collage (photo-led) or storybook (illustrations) (references/visual-languages.md)".format(said))
+    if any(isinstance(d, dict) and d.get("vl") for d in (directions or [])):
         return None
     hint = "storybook (a watercolour series)" if v == "illustrations" else "editorial, soft or collage (photo-led)"
     return ("the deck has {} but no direction is a visual language — offer one with "

@@ -407,8 +407,9 @@ interview answer at all — each reads the built file itself):
    "direction_gate": "n/a - <locked template | mimic | user supplied the look | tiny ask>"
    ```
 
-   `images` (`photos | illustrations | none`) states the pictures the deck has — the user's photos, their
-   illustrations, or none. With pictures, at least ONE candidate is a visual language
+   `images` (`photos | illustrations | none`) states the KIND of pictures the deck will carry — the user's, or
+   ones you generate or fetch — or none. `none` while `image_sources` records `generated`/`sourced` pictures (or
+   `imagery` is `series`) is refused as a contradiction. With pictures, at least ONE candidate is a visual language
    (`visual_languages.direction("<name>")`: photos → editorial / soft / collage, illustrations → storybook),
    or the gate holds the deck; the set's named `waived` is the escape.
 
