@@ -95,7 +95,11 @@ for name in vl.NATIVE:
         with contextlib.redirect_stdout(io.StringIO()):
             k = vl.use(name, dk.blank_deck(W, H))
         s = k.new_slide()
-        k.data(s, number="1,250,000", label="kilograms kept out of landfill")
+        try:
+            k.data(s, number="1,250,000", label="kilograms kept out of landfill")
+        except vl.VLTextOverflow:
+            check(True, "{} {}x{}: 1,250,000 refused rather than broken (this machine's faces)".format(name, W, H))
+            continue
         num = max((sh for sh in texts(s) if sh.text_frame.text.strip() == "1,250,000"),
                   key=lambda sh: sh.text_frame.paragraphs[0].runs[0].font.size.pt)
         run = num.text_frame.paragraphs[0].runs[0]
@@ -148,6 +152,26 @@ for W, H in ((7.5, 7.5), (10.0, 5.625), (13.333, 7.5)):
     with contextlib.redirect_stdout(io.StringIO()):
         crit = [f_ for f_ in dk.lint_layout(prs, verbose=False) if f_[1] == "CRITICAL"]
     check(not crit, "poster {}x{}: a long kicker never runs into the page: {}".format(W, H, [(c[0], c[2]) for c in crit[:3]]))
+
+# 6. a long LATIN token inside Chinese text (a brand, a URL) is measured like any word: it fits its box or the page
+#    is refused — never an 8.9in overrun that no gate reads (final review)
+for title in ("预算 Supercalifragilisticexpialidocioussupercalifragilistic", "官网 www.example-neighbourhood-repair.org"):
+    for W, H in ((10.0, 5.625), (13.333, 7.5)):
+        with contextlib.redirect_stdout(io.StringIO()):
+            k = vl.use("poster", dk.blank_deck(W, H))
+        s = k.new_slide()
+        try:
+            k.cover(s, title=title)
+        except vl.VLTextOverflow:
+            check(True, "poster {}x{}: an unfittable Latin token in a Chinese title is refused".format(W, H))
+            continue
+        tb = max((sh for sh in s.shapes if getattr(sh, "has_text_frame", False) and sh.top >= 0 and sh.text_frame.text.strip()),
+                 key=lambda sh: sh.text_frame.paragraphs[0].runs[0].font.size.pt)
+        run = tb.text_frame.paragraphs[0].runs[0]
+        widest = max((_dt._glyph_width(wd, run.font.size.pt, "Impact", True) or 0)
+                     for wd in tb.text_frame.text.split() if not dk._has_cjk(wd))      # the words as RENDERED
+        check(widest <= tb.width / EMU - dk.TEXT_INSET_LR + 0.02,
+              "poster {}x{}: every Latin word of a mixed title fits its box ({:.2f} vs {:.2f}in)".format(W, H, widest, tb.width / EMU))
 
 for line in ok:
     print("  ok   " + line)

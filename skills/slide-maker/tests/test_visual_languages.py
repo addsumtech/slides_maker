@@ -583,8 +583,15 @@ for n_ in vl.LANGS:
 # ── the bundled samples are FRESH: each JPG was rendered from the deck today's code builds (final review) ──
 import json as _json, hashlib as _hl
 _man = A / "samples" / "manifest.json"
+# on EVERY platform: each language x ground has a bundled sample and a fingerprint (a new ground or language without
+# its sample fails CI too); the fingerprint COMPARISON needs macOS, where the samples are built and fonts measured
+_stems = {vl._sample_stem(n_, g_) for n_ in vl.LANGS for g_ in vl.VARIANTS[n_]}
+_recs = set(_json.loads(_man.read_text(encoding="utf-8"))) if _man.exists() else set()
+check(_stems <= _recs, "every language x ground has a fingerprinted sample: missing {}".format(sorted(_stems - _recs)))
+check(all((A / "samples" / (st + ".jpg")).exists() for st in _stems), "every language x ground has its sample JPG")
 if sys.platform != "darwin":
-    print("  skip sample freshness: samples are built and fingerprinted on macOS (other platforms measure fonts differently)")
+    print("  skip sample fingerprint comparison: samples are built and fingerprinted on macOS (other platforms measure "
+          "fonts differently) — run tests/test_visual_languages.py on a Mac before a release")
 else:
     check(_man.exists(), "assets/vl/samples/manifest.json records which deck each sample was rendered from")
     _rec = _json.loads(_man.read_text(encoding="utf-8")) if _man.exists() else {}

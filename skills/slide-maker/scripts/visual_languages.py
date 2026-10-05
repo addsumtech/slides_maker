@@ -464,7 +464,7 @@ TYPE = {
     "drafting": {"kicker": (11, "mono", True, "accent", False, 9), "title": (54, "display", False, "ink", False, 26),
                   "subtitle": (16, "display", False, "mute", True, 11), "body": (16, "body", False, "ink", False, 10),
                   "mark": (60, "display", False, "accent", False, 30), "quote": (44, "display", False, "ink", True, 20),
-                  "attribution": (11, "mono", True, "mute", False, 9), "number": (330, "numeral", False, "ink", False, 48),
+                  "attribution": (11, "mono", True, "mute", False, 9), "number": (330, "numeral", False, "ink", False, 40),
                   "label": (46, "display", False, "ink", False, 20), "note": (16, "display", False, "mute", True, 10),
                   "caption": (10, "mono", True, "mute", False, 8), "line": (20, "display", False, "ink", True, 12),
                   "item_head": (11, "mono", True, "ink", False, 9), "item_line": (15, "display", False, "mute", False, 10)},

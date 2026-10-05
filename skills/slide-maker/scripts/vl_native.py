@@ -235,12 +235,16 @@ def display(k, slide, rect, text, field, *, highlight=None, caps=True, ink=None,
                    for l_ in (lines_ or [t]))
     import display_type as _dt
 
+    latin_face = k.face(role)
+
     def words_fit(sz_):
-        # LibreOffice breaks "1,250,000" after a comma when it is wider than its box: every word must fit the line
-        if dk._has_cjk(t):
-            return True
+        # every Latin word must fit the line: LibreOffice breaks "1,250,000" after a comma, and a long token inside
+        # Chinese text ("预算 Supercalifragilistic…", a URL) ran 8.9in past its box with no gate noticing (final
+        # review) — so each non-CJK token is measured in the Latin face it renders in, whatever else the text holds
         for wd in t.split():
-            gw = _dt._glyph_width(wd, sz_, face, bold)
+            if dk._has_cjk(wd):
+                continue                                   # CJK breaks between any two characters
+            gw = _dt._glyph_width(wd, sz_, latin_face, bold)
             if gw is not None and gw > w - dk.TEXT_INSET_LR:
                 return False
         return True
@@ -528,7 +532,7 @@ def _ink_data(k, slide, f, image):
     R = fit_circle(k, cx, cy, 2 * R + 0.1 * s) / 2.0 - 0.05 * s     # the brush's wobble stays on the page too
     rects, draws, clear = {}, [], [(cx - R, cy - R, 2 * R, 2 * R)]
     if num:
-        inner = (cx - R * 0.70, cy - R * 0.70, R * 1.40, R * 1.40)
+        inner = (cx - R * 0.80, cy - R * 0.70, R * 1.60, R * 1.40)   # the brush ring's interior is ~1.66R wide
         r, d = flow(k, slide, "data", inner, [("number", num)], anchor="middle", align="c")
         rects.update(r); draws.append(d)
     if o == "land" and label and is_vertical(label) and (note is None or is_vertical(note)):
@@ -899,11 +903,11 @@ def _poster_points(k, slide, f, image):
             draws += [nd, td_]
     else:
         # a shorter band than the designed layout's: display type fills the rect it gets, and the steps need the room
-        trect = (0.04 * W, 0.09 * H, 0.92 * W, 0.17 * H) if o == "land" else (0.06 * W, 0.07 * H, 0.88 * W, 0.16 * H)
+        trect = (0.04 * W, 0.09 * H, 0.92 * W, 0.17 * H) if o == "land" else (0.06 * W, 0.07 * H, 0.88 * W, 0.21 * H)
         trect = _below_meta(k, trect, kicker)
         top = trect[1]
-        if title:
-            r, _z, d = display(k, slide, trect, title, "title", floor=vl.TYPE[k.name]["label"][5])
+        if title:                    # the roomier layout lets the title go smaller still (20pt) before it refuses
+            r, _z, d = display(k, slide, trect, title, "title", floor=min(20, vl.TYPE[k.name]["label"][5]))
             rects["title"] = r; draws.append(d)
             top = r[1] + r[3]
         rx, ry, rw = trect[0], top + 0.25 * s, trect[2]
@@ -969,8 +973,8 @@ def _cut_cover(k, slide, f, image):
     else:
         card, sun, clouds = (0.08 * W, 0.10 * H, 0.84 * W, 0.32 * H), (0.70 * W, 0.53 * H, 0.26 * W), \
             ((0.28 * W, 0.50 * H, 0.30 * W),)
-        if alt():
-            card = (0.06 * W, 0.06 * H, 0.88 * W, 0.50 * H)
+        if alt():                    # a column with margin for wider faces (Linux substitutes measure wider)
+            card = (0.06 * W, 0.06 * H, 0.88 * W, 0.56 * H)
     pad = 0.4 * s
     items = [(x_, text_of(f, x_)) for x_ in ("kicker", "title", "subtitle") if text_of(f, x_)]
     r, d = _card_flow(k, slide, "cover", (card[0] + pad, card[1] + pad, card[2] - 2 * pad, card[3] - 2 * pad), items,
@@ -1002,12 +1006,14 @@ def _cut_cover(k, slide, f, image):
     return r
 
 
-@register("cutpaper", "section")
+@register("cutpaper", "section", alts=2)
 def _cut_section(k, slide, f, image):
     W, H, s, o = ctx(k)
     A = CUT_ART[k.ground]
     num, kicker, title = text_of(f, "number"), text_of(f, "kicker"), text_of(f, "title")
     cx, cy, d0 = (0.24 * W, 0.46 * H, 0.52 * H) if o == "land" else (0.50 * W, 0.26 * H, 0.56 * W)
+    if alt() and o != "land":                # long copy: a smaller sun higher up, the words get the room below
+        cy, d0 = 0.20 * H, 0.36 * W
     d0 = fit_circle(k, cx, cy, d0)
     rects, draws = {}, []
     if num:
@@ -1015,6 +1021,9 @@ def _cut_section(k, slide, f, image):
                           anchor="middle", align="c", start={"number": 120 * s})
         rects.update(r); draws.append(d)
     col = (0.48 * W, 0.24 * H, 0.44 * W, 0.46 * H) if o == "land" else (0.08 * W, 0.56 * H, 0.84 * W, 0.28 * H)
+    if alt():
+        col = (0.46 * W, 0.12 * H, 0.48 * W, 0.70 * H) if o == "land" else (0.08 * W, cy + d0 / 2 + 0.3 * s, 0.84 * W,
+                                                                             0.86 * H - (cy + d0 / 2 + 0.3 * s))
     items = [(x_, t) for x_, t in (("kicker", kicker), ("title", title)) if t]
     r, d = flow(k, slide, "section", col, items, anchor="middle" if o == "land" else "top")
     rects.update(r); draws.append(d)
@@ -1196,13 +1205,16 @@ def _bp_project(k, slide, f, fallback=None):
     if drawn == words:
         k.project = words
         return
-    if drawn is not None:                     # a new project on a later sheet: the old words leave the block
+    old = None
+    if drawn is not None:                     # a new project on a later sheet: find the old words…
         for sh in list(slide.shapes):
             ps = sh.text_frame.paragraphs if getattr(sh, "has_text_frame", False) else []
             if len(ps) >= 2 and ps[0].text == "PROJECT" and ps[1].text == drawn:
-                sh._element.getparent().remove(sh._element)
+                old = sh
                 break
     if na.title_block_project(slide, block, words, ink=k.P["ink"], mute=k.P["mute"], face=k.face("mono")):
+        if old is not None:                   # …and remove them only once the new ones are in (validate, then mutate)
+            old._element.getparent().remove(old._element)
         k.project = words
         k._sheet = (content, block, words)
     elif explicit:
