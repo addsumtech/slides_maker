@@ -324,6 +324,20 @@ EXAMPLES = {
                'n = dk.text(s, 7.4, 1.0, 1.5, 1.5, [[("12", 36, dk.WHITE, True, False)]],\n'
                '            align=dk.PP_ALIGN.CENTER, anchor=dk.MSO_ANCHOR.MIDDLE)\n'
                'dk.overlap_intent(n, "the count sits on its badge")   # declared on the TEXT',
+    "use": 'import visual_languages as vl\n'
+           'k = vl.use("drafting", prs, ground="auto")       # ink · poster · cutpaper · drafting: no pictures needed\n'
+           'k.cover(k.new_slide(), kicker="Schematic 01", title="A modular bike shelter", project="Bike shelter, phase 1")\n'
+           'k.section(k.new_slide(), number="01", title="The frame")\n'
+           'k.points(k.new_slide(), title="Three parts", items=[("Base", "One cast plate."), ("Posts", "Bolted, not welded."), ("Roof", "A single sheet.")])\n'
+           'k.quote(k.new_slide(), quote="Build the quiet part first.", attribution="Design note")\n'
+           'k.data(k.new_slide(), number="12", label="bikes under one roof")\n'
+           'k.closing(k.new_slide(), title="Questions", line="Thank you.")\n'
+           's = k.new_slide()                                 # an ORDINARY page in the same look\n'
+           'import register_surface as rs\n'
+           'x, y, w, h = rs.ground(s, k.name, role="content", index=7)   # k.name, never another language\'s\n'
+           'body, _hdr = rs.card(s, k.name, x, y + 0.9, w, h - 1.0)\n'
+           'dk.text(s, body.left.inches + 0.3, body.top.inches + 0.25, body.width.inches - 0.6, 1.0,\n'
+           '        [k.runs("1.  Why a shelter", 20)])          # k.runs: the language\'s own ink for its card',
     "points": 'import visual_languages as vl\n'
               'k = vl.use("ink", prs)                         # or "poster" / "cutpaper" / "drafting" — no pictures needed\n'
               'k.points(k.new_slide(), title="三道工序",\n'
@@ -543,6 +557,8 @@ def main(argv=None):
         return 2
 
     if a.example:
+        # a page name (`section`) is the kit's page function, as on the plain lookup path
+        a.names = [n if (n in EXAMPLES or n in reg or "Kit." + n not in reg) else "Kit." + n for n in a.names]
         miss = [n for n in a.names if n not in EXAMPLES]
         for n in a.names:
             if n in EXAMPLES:
@@ -556,7 +572,9 @@ def main(argv=None):
                 m, f = reg[n]
                 print(f"sigs: no copy-paste scaffold for {n!r} yet — its signature and docstring "
                       f"are below. Build the COMPONENT from them; do NOT hand-roll a substitute "
-                      f"out of box/text (SKILL.md Step 4, 🔴 component rule).", file=sys.stderr)
+                      f"out of box/text (SKILL.md Step 4, 🔴 component rule)."
+                      + (" A whole deck in a visual language, every page called: --example use."
+                         if n.startswith("Kit.") else ""), file=sys.stderr)
                 show(n, m, f, a.full)
             else:
                 near = difflib.get_close_matches(n, reg, n=3, cutoff=0.6)
@@ -573,7 +591,9 @@ def main(argv=None):
         # the contracts are what stop the call being wrong in a way no lint can see.
         print("\n" + "─" * 78)
         print(CONTRACTS)
-        return 1 if miss else 0
+        # 1 only for a name that resolves to NO helper: a helper whose signature printed is an answer, and a
+        # non-zero exit after printing it read as total failure (non-Claude run, 2026-10-05)
+        return 1 if any(n not in reg for n in miss) else 0
 
     missing = []
     for n in a.names:

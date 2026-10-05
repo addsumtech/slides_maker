@@ -413,8 +413,13 @@ interview answer at all — each reads the built file itself):
    (`visual_languages.direction("<name>")`: photos → editorial / soft / collage, illustrations → storybook),
    or the gate holds the deck; the set's named `waived` is the escape.
    With `images: none`, at least ONE candidate is a native language (`visual_languages.direction("ink" | "poster"
-   | "cutpaper" | "drafting")`) and the record carries `"native_fit": {"language": "<name>", "why": "<topic
-   reason>"}`; `codex_delivery_gate.py` holds a set without it.
+   | "cutpaper" | "drafting")`) and the record carries `native_fit` BESIDE `images`; `codex_delivery_gate.py`
+   holds a set without it:
+
+   ```json
+   "direction_gate": {"candidates": "directions.json", "picked": "<the one chosen>", "images": "none",
+                      "native_fit": {"language": "ink", "why": "a talk on tea craft: culture and ritual"}}
+   ```
 
    `codex_delivery_gate.py` runs `scripts/directions_diversity.py` over the candidates ITSELF, so
    a verdict you type is not evidence the check ran. It scores two things a preset list quietly

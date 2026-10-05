@@ -929,6 +929,21 @@ def register(name, *, ground=None, card=None, forbids=(), source=None):
     return key
 
 
+def _language_mismatch(slide, reg):
+    """A page started with a visual language's k.new_slide() is named `vl.<language>`. Painting ANOTHER language's
+    ground or card on it is a copied name, not a choice — measured 2026-10-05: the reference's own snippet said
+    "editorial" inside a cutpaper deck, and nothing objected. Raise, naming the page's own language."""
+    try:
+        nm = slide._element.cSld.get("name") or ""
+    except Exception:
+        return
+    own = nm[3:] if nm.startswith("vl.") else None
+    if own and own != reg and str(BESPOKE.get(reg, {}).get("source") or "").endswith("visual_languages.py"):
+        raise ValueError("this page was started in the {0!r} visual language (k.new_slide()), but you asked for "
+                         "{1!r}'s surface — pass {0!r}: rs.ground(s, k.name, ...) / rs.card(s, k.name, ...)".format(
+                             own, reg))
+
+
 def _card_plain(slide, x, y, w, h, label=None):
     """The fallback card for a kit that registered a ground and no card form.
 
@@ -1009,6 +1024,7 @@ def ground(slide, register, *, role="content", index=0):
             "plain page: a caller that asked for a register's surface and got a blank one would "
             "ship the colourway-only deck this module was written to end.".format(
                 register, ", ".join(sorted(GROUNDS))))
+    _language_mismatch(slide, reg)
     if dk.GROUND is None:
         raise RuntimeError(
             "the palette is not set yet — call `presets.apply({!r})` (or `deckkit.set_ground(...)` "
@@ -1050,6 +1066,7 @@ def card(slide, register, x, y, w, h, *, label=None):
     if reg not in CARDS:
         raise KeyError("no card form for register {!r} — kits exist for {}".format(
             register, ", ".join(sorted(CARDS))))
+    _language_mismatch(slide, reg)
     if dk.GROUND is None:
         raise RuntimeError(
             "the palette is not set yet — call `presets.apply({!r})` before asking for its card "

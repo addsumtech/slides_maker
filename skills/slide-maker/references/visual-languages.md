@@ -58,12 +58,13 @@ k.closing(k.new_slide(), title="Bring one broken thing.", line="And bring a neig
   delivery gate counts it; a plain `dk.add_slide()` page is NOT in the language. Then:
   ```python
   s = k.new_slide()
-  x, y, w, h = rs.ground(s, "editorial", role="content", index=2)   # furniture; returns the content rect
-  body, header = rs.card(s, "editorial", x, y + 0.9, w, h - 1.0, label=None)  # SHAPES, not a rect
+  x, y, w, h = rs.ground(s, k.name, role="content", index=2)   # furniture; returns the content rect
+  body, header = rs.card(s, k.name, x, y + 0.9, w, h - 1.0, label=None)  # SHAPES, not a rect
   dk.text(s, body.left.inches + 0.3, body.top.inches + 0.25, body.width.inches - 0.6, body.height.inches - 0.5,
           [k.runs("1.  Why a repair café", 20), k.runs("2.  How an evening runs", 20)])
   ```
-  `rs.ground` returns the content rect `(x, y, w, h)` in inches; `rs.card` returns `(body, header)` —
+  Pass `k.name` — the page's OWN language; another language's name on it is refused. `rs.ground` returns the
+  content rect `(x, y, w, h)` in inches; `rs.card` returns `(body, header)` —
   python-pptx shapes (`header` is None for a card with no band), so read `body.left.inches` and friends.
   `body` is the WHOLE card: with `label=…` the label sits inside its top, so start the content below it
   (`header.top.inches + header.height.inches`), or it lands on the label.
@@ -94,9 +95,10 @@ every value they write is one PowerPoint opens without repair (`scripts/ooxml_sa
 - **Words only you can give** — the kit never invents them, and draws nothing when they are absent:
   - `seal="茶事"` on any `ink` page: one or two characters
     of your own text, carved into a red seal;
-  - `highlight="room"` on `poster` (`cover`, `section`, `quote`, `closing`): words of that page's own title or
-    quote, set on a highlighter (refused when they are not in it);
-  - `icons=["lucide:wind", …]` on `cutpaper`'s `points`: one icon spec per point;
+  - `highlight="room"` on `poster` (`cover`, `section`, `quote`, `closing` — refused on any other page): words of
+    that page's own title or quote, set on a highlighter (refused when they are not in it);
+  - `icons=["lucide:wind", …]` on `cutpaper`'s `points`: one `library:name` spec per point (names as on
+    lucide.dev/icons or tabler.io/icons); an unknown name raises naming the URL it tried — never a blank disc;
   - `project="…"` on any `drafting` page: the words in the sheet's title block; without it the cover title is
     remembered and carried to every later sheet. Sheets are numbered by themselves.
 - **Vertical CJK** — `ink` sets a title, a quote couplet, a label and its points as vertical columns read right
@@ -109,8 +111,12 @@ every value they write is one PowerPoint opens without repair (`scripts/ooxml_sa
   friends — and `rs.card` follow it, so read `k.color("ink")` for text) and `drafting` its numbered drawing sheet
   on the grid.
 - **When they are offered** — a deck with no pictures (`direction_gate.images: none`) offers the one that fits
-  the topic and records `direction_gate.native_fit: {"language": "<name>", "why": "<topic reason>"}`; both
-  gates hold it. Guidance, not a rule: culture, history, craft → `ink`; launch, manifesto, brand, opinion →
+  the topic and records why beside `images`; both gates hold it:
+  ```json
+  "direction_gate": {"candidates": "directions.json", "picked": "<the one chosen>", "images": "none",
+                     "native_fit": {"language": "ink", "why": "a talk on tea craft: culture and ritual"}}
+  ```
+  `native_fit.language` is one of the native languages among the candidates (not necessarily the one picked). Guidance, not a rule: culture, history, craft → `ink`; launch, manifesto, brand, opinion →
   `poster`; children, teaching, workshop, community → `cutpaper`; research, engineering, technical → `drafting`.
 
 ## Grounds
@@ -129,7 +135,8 @@ Each language has its own light paper and ONE contrast ground; every text ink pa
 | drafting | vellum | `cyanotype` — blueprint navy, pale linework |
 
 `use(name, prs, ground=…)`: `"light"` (the default — the same deck on every machine), the contrast key, or
-`"auto"` — the light ground unless the last three decks in your look history already sit on it (the
+`"auto"` (this machine's look history, across every deck built here — pass the ground yourself when the topic
+asks for one, e.g. a children's lesson on light paper) — the light ground unless the last three decks in your look history already sit on it (the
 register-pixels GROUND REPEAT distance), then the contrast one; a printed board (A4, the A0/A1 posters) always
 stays light, and no history means light. `auto` prints what it chose and the `--gates … --ground …` command that
 records it (fill in its `DECK_DIR` and `TOPIC`). `vl.direction(name, ground="auto", W=…, H=…)` — the deck's canvas in

@@ -39,8 +39,15 @@ for n in vl.NATIVE:
         check(cr(p["mute"], p["ground"]) >= 4.5, "{}/{} mute on ground".format(n, g))
         for t in p["text_accents"]:
             check(cr(t, p["ground"]) >= 4.5, "{}/{} text accent {} on ground".format(n, g, t))
-        on_panel = p.get("card_ink", p["ink"])
-        check(cr(on_panel, p["panel"]) >= 4.5, "{}/{} ink on its panel".format(n, g))
+        # an ORDINARY page's card (rs.card fills `panel`) carries text in the DEFAULT inks — not card_ink, which is
+        # for the white paper cards the compositions draw (a non-Claude run set cream-on-white at 1.16:1)
+        for key in ("ink", "mute"):
+            check(cr(p[key], p["panel"]) >= 4.5, "{}/{} {} on its panel (rs.card)".format(n, g, key))
+        for t in p["text_accents"][:1]:
+            check(cr(t, p["panel"]) >= 4.5, "{}/{} the card label {} on its panel".format(n, g, t))
+        for key in ("card_ink", "card_mute", "card_accent"):
+            if key in p:
+                check(cr(p[key], "FFFFFF") >= 4.5, "{}/{} {} on the white paper card".format(n, g, key))
         with contextlib.redirect_stdout(io.StringIO()):
             k = vl.use(n, dk.blank_deck(13.333, 7.5), ground=g)
         check(k.ground == g and k.P["ground"] == p["ground"] or n == "poster", "{}/{} use() sets the ground".format(n, g))
@@ -394,6 +401,32 @@ for n in vl.NATIVE:
         check(sample.exists() and sample.stat().st_size <= 350 * 1024, "{}/{}: a bundled JPG sample <= 350 KB".format(n, g))
         d = vl.direction(n, ground=g)
         check(d["vl"] == n and d["sample"].startswith("data:image/jpeg"), "{}/{}: direction() previews it".format(n, g))
+
+# ── found by the non-Claude usability run (2026-10-05) ──
+import register_surface as rs, subprocess as _sp
+with contextlib.redirect_stdout(io.StringIO()):
+    prs = dk.blank_deck(13.333, 7.5); k = vl.use("cutpaper", prs)
+s = k.new_slide()
+try:
+    rs.ground(s, "editorial", role="content", index=2)
+    check(False, "rs.ground with ANOTHER language's name on a cutpaper page is refused")
+except ValueError as e:
+    check("cutpaper" in str(e), "rs.ground with another language's name names the page's own: {}".format(e))
+check(len(rs.ground(s, "cutpaper", role="content", index=2)) == 4, "rs.ground with the page's own language works")
+for lang, page, kw in (("poster", "data", dict(number="3", label="x", highlight="x")),
+                       ("poster", "points", dict(title="x", items=["a", "b"], highlight="x")),
+                       ("cutpaper", "cover", dict(title="x", icons=["lucide:wind"]))):
+    with contextlib.redirect_stdout(io.StringIO()):
+        k = vl.use(lang, dk.blank_deck(13.333, 7.5))
+    try:
+        getattr(k, page)(k.new_slide(), **kw)
+        check(False, "{}.{}: an extra this page never draws is refused, not silently dropped".format(lang, page))
+    except TypeError as e:
+        check(True, "{}.{}: an extra this page never draws is refused".format(lang, page))
+r = _sp.run([sys.executable, str(ROOT / "scripts" / "sigs.py"), "--example", "section", "use"], capture_output=True, text=True)
+check(r.returncode == 0 and "Kit.section(" in r.stdout and "# use" in r.stdout,
+      "sigs --example: a page name resolves to Kit.<page>, and `use` has a whole-deck scaffold: rc={} {}".format(
+          r.returncode, r.stderr[-200:]))
 
 for line in ok:
     print("  ok   " + line)

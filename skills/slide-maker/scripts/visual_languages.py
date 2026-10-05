@@ -133,7 +133,7 @@ VARIANTS = {
     "cutpaper": {
         "light": {"label": "day", "label_zh": "白天版", "grain": 3, "palette": LANGS["cutpaper"]["palette"]},
         "night": {"label": "paper night", "label_zh": "纸夜版", "grain": 3,
-                  "palette": {"ground": "1D2742", "ink": "F2EEE4", "mute": "C6C9D6", "panel": "FFFFFF",
+                  "palette": {"ground": "1D2742", "ink": "F2EEE4", "mute": "C6C9D6", "panel": "30406A",
                               "accents": ["EE8A6B", "4E8FC7", "5B3F6E", "467E7A"], "text_accents": ["F2A285", "A8D5C4"],
                               "card_ink": "2A2733", "card_mute": "4A4656", "card_accent": "A8442D"}}},
     "drafting": {
@@ -146,6 +146,8 @@ NATIVE = ("ink", "poster", "cutpaper", "drafting")          # drawn, no pictures
 IMAGE_LED = ("editorial", "soft", "collage", "storybook")    # built around the caller's pictures
 # words only the CALLER can give — never invented by the kit; absent means nothing is drawn
 NATIVE_EXTRAS = {"ink": ("seal",), "poster": ("highlight",), "cutpaper": ("icons",), "drafting": ("project",)}
+# the pages that DRAW each extra; on any other page it is refused, never silently dropped (non-Claude run, 2026-10-05)
+EXTRA_PAGES = {"highlight": ("cover", "section", "quote", "closing"), "icons": ("points",)}
 _ACTIVE = {}    # language -> the ground key use() set; rs.ground()/rs.card() (no kit) follow it
 _PAL_OVERRIDE = {}   # language -> the palette of the CURRENT page, for a language whose palette changes per page (poster)
 
@@ -1208,7 +1210,7 @@ def _compose(k, slide, page, fields, image):
 
 def _page(page):
     def fn(self, slide, *, image=None, **fields):
-        extras = set(NATIVE_EXTRAS.get(self.name, ()))
+        extras = {e for e in NATIVE_EXTRAS.get(self.name, ()) if page in EXTRA_PAGES.get(e, (page,))}
         bad = set(fields) - set(PAGE_FIELDS[page]) - ({"line"} if page == "closing" else set()) - extras
         if bad:
             raise TypeError("{}.{}(): unknown field(s) {} — this page takes {}{}".format(
