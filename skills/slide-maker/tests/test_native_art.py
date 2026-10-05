@@ -60,6 +60,14 @@ na.solid_background(dk.add_slide(prs), "1F3BFF")
 p = td / "bg.pptx"; prs.save(str(p))
 check(ox.xml_findings(str(p)) == [], "backgrounds are valid OOXML")
 
+# keep_clear lowers the crest under text with a SHOULDER, never a cliff (a vertical cut read as a broken ridge)
+keep = (9.6, 0.6, 1.0, 4.4)
+for i_, layer in enumerate(na.INK_LAYERS["land"]):
+    pts = na.ridge_points(13.333, 7.5, layer, i_, 1, (0.0, 1.0), [keep])
+    foot = keep[1] + keep[3]
+    check(all(y >= foot for x, y in pts if keep[0] <= x <= keep[0] + keep[2]), "layer {}: the crest stays under the text".format(i_))
+    steep = max(abs(b[1] - a[1]) / (b[0] - a[0]) for a, b in zip(pts, pts[1:]))
+    check(steep <= 2.2, "layer {}: no cliff beside the kept-clear text (steepest slope {:.1f})".format(i_, steep))
 for line in ok:
     print("  ok   " + line)
 for line in bad:

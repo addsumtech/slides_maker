@@ -229,29 +229,42 @@ def grid_background(slide, *, base, ink, step=0.25, major=4, dpi=150):
     return str(path)
 
 
+SHOULDER = 1.6      # how steeply (in/in) a ridge falls away beside kept-clear text: a hillside, not a cut
+
+
+def ridge_points(W, H, layer, i, seed, peak_span, keep_clear):
+    """The crest of ridge layer `i` as 41 (x, y) points. Over a keep_clear rect the crest sits below the rect's
+    foot; beside it the crest is held down by a SHOULDER that relaxes with distance — measured 2026-10-05, a flat
+    clamp left a vertical cut in the ridge at the rect's edge."""
+    bf, af, _top_alpha, _df = layer
+    rnd = random.Random(seed * 31 + i)
+    base, amp = bf * H, af * H
+    lo, hi = peak_span[0] * W, peak_span[1] * W
+    centers = [(rnd.uniform(lo, hi), rnd.uniform(0.45, 1.0) * amp, rnd.uniform(0.06, 0.16) * W) for _ in range(4)]
+    pts = []
+    for j in range(41):
+        x = W * j / 40.0
+        hgt = 0.12 * amp * (1 + math.sin(x / W * 12.0 + seed + i)) / 2.0
+        for cx, a, sp in centers:
+            hgt = max(hgt, a * math.exp(-((x - cx) / sp) ** 2 * 2.2) * (1 + 0.08 * math.sin(x * 9 + seed)))
+        y = base - hgt
+        for kx, ky, kw, kh in keep_clear:
+            d = max(kx - 0.25 - x, 0.0, x - (kx + kw + 0.25))      # how far outside the kept span
+            y = max(y, ky + kh + 0.15 - SHOULDER * d)
+        pts.append((x, y))
+    return pts
+
+
 def ink_ridges(slide, *, color, layers, seed=0, peak_span=(0.0, 0.62), keep_clear=()):
     """Ink-wash ridges, far to near, each fading from its crest into mist. Peaks rise only inside `peak_span`
     (fractions of W); over every `keep_clear` rect the crest stays below the rect's foot — text never sits on
     the wash. Declared decorative: the language's ground, like paper grain."""
     W, H = page_size(slide)
     out = []
-    for i, (bf, af, top_alpha, df) in enumerate(layers):
-        rnd = random.Random(seed * 31 + i)
-        base, amp = bf * H, af * H
-        lo, hi = peak_span[0] * W, peak_span[1] * W
-        centers = [(rnd.uniform(lo, hi), rnd.uniform(0.45, 1.0) * amp, rnd.uniform(0.06, 0.16) * W) for _ in range(4)]
-        pts = []
-        for j in range(41):
-            x = W * j / 40.0
-            hgt = 0.12 * amp * (1 + math.sin(x / W * 12.0 + seed + i)) / 2.0
-            for cx, a, sp in centers:
-                hgt = max(hgt, a * math.exp(-((x - cx) / sp) ** 2 * 2.2) * (1 + 0.08 * math.sin(x * 9 + seed)))
-            y = base - hgt
-            for kx, ky, kw, kh in keep_clear:
-                if kx - 0.25 <= x <= kx + kw + 0.25:
-                    y = max(y, ky + kh + 0.15)
-            pts.append((x, y))
-        sh = band(slide, pts, base + df * H, fill=color)
+    for i, layer in enumerate(layers):
+        bf, _af, top_alpha, df = layer
+        pts = ridge_points(W, H, layer, i, seed, peak_span, keep_clear)
+        sh = band(slide, pts, bf * H + df * H, fill=color)
         fade(sh, color, top_alpha)
         dk.decorative(sh, "an ink-wash ridge: the language's ground, like paper grain")
         out.append(sh)

@@ -100,15 +100,22 @@ def vcol(k, slide, right, top, h_max, text, field, *, color=None, spacing=0.12, 
     refuses past `max_cols` columns at the floor. Returns ((x, y, w, h), size, draw)."""
     base, role, bold, ckey, _italic, floor = vl.TYPE[k.name][field]
     s = ctx(k)[2]
-    sz, fl = base * s, max(9.0, floor * s)
+    fl = max(9.0, floor * s)
     n = len(text)
-    while True:
-        adv = sz * (1.0 + spacing) / 72.0
-        per = max(1, int((h_max - 0.08) // adv))
-        cols = -(-n // per)
-        if cols <= max_cols or sz <= fl + 1e-6:
+    # the FEWEST columns first: one tall column at >= 85% of the size reads as a scroll; two short ones at full size
+    # read as a block (the approved cover). Only the last allowance shrinks all the way to the floor.
+    for target in range(1, max_cols + 1):
+        sz = base * s
+        lo = fl if target == max_cols else max(fl, 0.85 * base * s)
+        while True:
+            adv = sz * (1.0 + spacing) / 72.0
+            per = max(1, int((h_max - 0.08) // adv))
+            cols = -(-n // per)
+            if cols <= target or sz <= lo + 1e-6:
+                break
+            sz = max(lo, sz * 0.96)
+        if cols <= target:
             break
-        sz = max(fl, sz * 0.92)
     if cols > max_cols:
         raise vl.VLTextOverflow("{}: the {} {!r} needs {} vertical columns even at {:.0f}pt — shorten it".format(
             k.name, field, text[:24], cols, sz))
@@ -199,3 +206,263 @@ def paint_ground(k, slide):
         fn(k, slide)
         for sh in list(slide.shapes)[n0:]:
             dk._compose_tag(sh, vl=k.name)
+
+
+# ═══════════════════════════════════ ink 水墨 ═══════════════════════════════════
+import math as _math
+import re as _re
+
+_NUM_ZH = "一二三四"
+
+
+def _ink_seal(k, slide, fields, x, y, size):
+    chars = text_of(fields, "seal")
+    if not chars:
+        return
+    W, H, _s, _o = ctx(k)
+    x = min(max(x, 0.12), W - size - 0.12)
+    y = min(max(y, 0.12), H - size - 0.15)
+    na.seal(slide, x, y, size, chars, fill=k.P["accents"][0], ink="F6EEE6",
+            face=k.ea_face("display", chars) or k.face("display"))
+
+
+def _ink_sun(k, slide, cx, cy, d):
+    dk.decorative(na.disc(slide, cx, cy, d, k.P["sun"]), "the ink language's sun (a moon on the night ground)")
+
+
+def _ink_hairline(k, slide, x, y0, y1, alpha=0.45):
+    return lambda: na.seg(slide, x, y0, x, y1, k.P["ink"], w=0.5, alpha=alpha)
+
+
+def _run_all(draws):
+    for d in draws:
+        d()
+
+
+@register("ink", "cover")
+def _ink_cover(k, slide, f, image):
+    W, H, s, o = ctx(k)
+    title, kicker, sub = text_of(f, "title"), text_of(f, "kicker"), text_of(f, "subtitle")
+    rects, draws, clear = {}, [], []
+    if kicker:
+        r, d = flow(k, slide, "cover", (0.07 * W, 0.06 * H, 0.45 * W, 0.08 * H), [("kicker", kicker)])
+        rects.update(r); draws.append(d); clear.extend(r.values())
+    if title and is_vertical(title) and (sub is None or is_vertical(sub)):
+        r1, _z, d1 = vcol(k, slide, W * (0.90 if o == "land" else 0.92), 0.09 * H,
+                          H * (0.62 if o == "land" else 0.46), title, "title")
+        rects["title"] = r1; draws.append(d1); clear.append(r1)
+        if sub:
+            r2, _z2, d2 = vcol(k, slide, r1[0] - 0.36 * s, 0.12 * H, r1[3] * 0.85, sub, "subtitle")
+            rects["subtitle"] = r2; draws.append(d2); clear.append(r2)
+            draws.append(_ink_hairline(k, slide, r1[0] - 0.18 * s, 0.12 * H, max(r2[1] + r2[3], 0.12 * H + 0.5)))
+        seal_at = (r1[0] + r1[2] / 2.0, r1[1] + r1[3] + 0.2 * s)
+    else:
+        col = (0.50 * W, 0.16 * H, 0.42 * W, 0.40 * H) if o == "land" else (0.08 * W, 0.12 * H, 0.84 * W, 0.34 * H)
+        items = [(x_, t) for x_, t in (("title", title), ("subtitle", sub)) if t]
+        r, d = flow(k, slide, "cover", col, items, anchor="top")
+        rects.update(r); draws.append(d); clear.extend(r.values())
+        low = max((v[1] + v[3] for v in r.values()), default=col[1])
+        seal_at = (col[0] + 0.3 * s, low + 0.3 * s)
+    _ink_sun(k, slide, (0.20 if o == "land" else 0.22) * W, (0.30 if o == "land" else 0.58) * H, 0.95 * s)
+    na.ink_ridges(slide, color=k.P["ink"], layers=na.INK_LAYERS[o], seed=1,
+                  peak_span=(0.0, 0.62) if o == "land" else (0.0, 1.0), keep_clear=clear)
+    _run_all(draws)
+    z = 0.62 * s
+    _ink_seal(k, slide, f, seal_at[0] - z / 2.0, seal_at[1], z)
+    return rects
+
+
+@register("ink", "section")
+def _ink_section(k, slide, f, image):
+    W, H, s, o = ctx(k)
+    num, kicker, title = text_of(f, "number"), text_of(f, "kicker"), text_of(f, "title")
+    rects, draws, clear = {}, [], []
+    left = (0.10 * W, 0.16 * H, 0.38 * W, 0.56 * H) if o == "land" else (0.08 * W, 0.08 * H, 0.84 * W, 0.30 * H)
+    items = [(x_, t) for x_, t in (("kicker", kicker), ("number", num)) if t]
+    r, d = flow(k, slide, "section", left, items, anchor="top", ink=k.P["text_accents"][0], start={"number": 150 * s})
+    rects.update(r); draws.append(d); clear.extend(r.values())
+    if title:
+        if is_vertical(title):
+            r1, _z, d1 = vcol(k, slide, W * (0.86 if o == "land" else 0.90), (0.14 if o == "land" else 0.42) * H,
+                              H * (0.60 if o == "land" else 0.42), title, "title")
+        else:
+            col = (0.52 * W, 0.20 * H, 0.40 * W, 0.50 * H) if o == "land" else (0.08 * W, 0.42 * H, 0.84 * W, 0.34 * H)
+            rr, d1 = flow(k, slide, "section", col, [("title", title)], anchor="top")
+            r1 = rr.get("title", col)
+        rects["title"] = r1; draws.append(d1); clear.append(r1)
+    na.ink_ridges(slide, color=k.P["ink"], layers=na.INK_LAYERS["faint"], seed=2, peak_span=(0.0, 1.0), keep_clear=clear)
+    _run_all(draws)
+    if rects.get("title"):
+        rt, z = rects["title"], 0.5 * s
+        _ink_seal(k, slide, f, rt[0] + rt[2] / 2.0 - z / 2.0, rt[1] + rt[3] + 0.18 * s, z)
+    return rects
+
+
+@register("ink", "image_text")
+def _ink_image_text(k, slide, f, image):
+    W, H, s, o = ctx(k)
+    if o == "land":
+        img, col = (0.04 * W, 0.08 * H, 0.52 * W, 0.84 * H), (0.62 * W, 0.16 * H, 0.32 * W, 0.68 * H)
+    else:
+        img, col = (0.05 * W, 0.04 * H, 0.90 * W, 0.46 * H), (0.08 * W, 0.53 * H, 0.84 * W, 0.40 * H)
+    items = [(x_, text_of(f, x_)) for x_ in ("kicker", "title", "body", "caption") if text_of(f, x_)]
+    r, d = flow(k, slide, "image_text", col, items, anchor="middle" if o == "land" else "top")
+    place_image(k, slide, image, img, "image_text", treat="feather")
+    d()
+    if r:
+        low = max(v[1] + v[3] for v in r.values())
+        z = 0.45 * s
+        _ink_seal(k, slide, f, col[0], low + 0.2 * s, z)
+    return r
+
+
+@register("ink", "quote")
+def _ink_quote(k, slide, f, image):
+    W, H, s, o = ctx(k)
+    q, attr = text_of(f, "quote"), text_of(f, "attribution")
+    rects, draws, clear = {}, [], []
+    if q and is_vertical(q) and (attr is None or is_vertical(attr)) and o == "land":
+        parts = [p for p in _re.split(r"(?<=[，、；])", q) if p]
+        cols = [parts[0], "".join(parts[1:])] if len(parts) > 1 else [q]
+        right, top = 0.80 * W, 0.11 * H
+        for i, c in enumerate(cols):
+            r1, _z, d1 = vcol(k, slide, right, top + i * 0.14 * H, 0.76 * H - i * 0.14 * H, c, "quote")
+            rects["quote%d" % i] = r1; draws.append(d1); clear.append(r1)
+            right = r1[0] - 0.40 * s
+        if attr:
+            r2, _z2, d2 = vcol(k, slide, right, 0.48 * H, 0.32 * H, attr, "attribution")
+            rects["attribution"] = r2; draws.append(d2); clear.append(r2)
+        seal_at = (right - 0.1 * s, 0.82 * H)
+    else:
+        col = (0.14 * W, 0.22 * H, 0.62 * W, 0.50 * H) if o == "land" else (0.08 * W, 0.16 * H, 0.84 * W, 0.46 * H)
+        items = [(x_, t) for x_, t in (("quote", q), ("attribution", attr)) if t]
+        r, d = flow(k, slide, "quote", col, items, anchor="middle")
+        rects.update(r); draws.append(d); clear.extend(r.values())
+        low = max((v[1] + v[3] for v in r.values()), default=col[1])
+        seal_at = (col[0] + 0.2 * s, low + 0.25 * s)
+    _ink_sun(k, slide, 0.21 * W, (0.22 if o == "land" else 0.10) * H, 0.62 * s)
+    na.ink_ridges(slide, color=k.P["ink"], layers=na.INK_LAYERS["faint"], seed=3,
+                  peak_span=(0.0, 0.45), keep_clear=clear)
+    _run_all(draws)
+    _ink_seal(k, slide, f, seal_at[0] - 0.24 * s, seal_at[1], 0.48 * s)
+    return rects
+
+
+@register("ink", "data")
+def _ink_data(k, slide, f, image):
+    W, H, s, o = ctx(k)
+    num, label, note = text_of(f, "number"), text_of(f, "label"), text_of(f, "note")
+    if o == "land":
+        cx, cy, R = 0.27 * W, 0.50 * H, 0.33 * H
+    else:
+        cx, cy, R = 0.50 * W, 0.28 * H, 0.32 * W
+    rects, draws, clear = {}, [], [(cx - R, cy - R, 2 * R, 2 * R)]
+    if num:
+        inner = (cx - R * 0.70, cy - R * 0.70, R * 1.40, R * 1.40)
+        r, d = flow(k, slide, "data", inner, [("number", num)], anchor="middle", align="c")
+        rects.update(r); draws.append(d)
+    if o == "land" and label and is_vertical(label) and (note is None or is_vertical(note)):
+        x0 = cx + R + 0.9 * s
+        r1, _z, d1 = vcol(k, slide, x0 + 1.2 * s, 0.18 * H, 0.60 * H, label, "label")
+        rects["label"] = r1; draws.append(d1); clear.append(r1)
+        if note:
+            r2, _z2, d2 = vcol(k, slide, r1[0] - 0.42 * s, 0.20 * H, 0.52 * H, note, "note")
+            rects["note"] = r2; draws.append(d2); clear.append(r2)
+            draws.append(_ink_hairline(k, slide, r1[0] - 0.21 * s, 0.20 * H, 0.20 * H + max(r1[3], r2[3]), 0.4))
+        seal_at = (r1[0] + r1[2] / 2.0, r1[1] + r1[3] + 0.2 * s)
+    else:
+        hcol = ((cx + R + 0.6 * s, 0.22 * H, 0.92 * W - (cx + R + 0.6 * s), 0.56 * H) if o == "land"
+                else (0.08 * W, cy + R + 0.4 * s, 0.84 * W, 0.88 * H - (cy + R + 0.4 * s)))
+        items = [(x_, t) for x_, t in (("label", label), ("note", note)) if t]
+        r, d = flow(k, slide, "data", hcol, items, anchor="middle" if o == "land" else "top")
+        rects.update(r); draws.append(d); clear.extend(r.values())
+        low = max((v[1] + v[3] for v in r.values()), default=hcol[1])
+        seal_at = (hcol[0] + 0.3 * s, low + 0.25 * s)
+    na.enso(slide, cx, cy, R, R * 0.17, color=k.P["ink"], seed=5)
+    na.ink_ridges(slide, color=k.P["ink"], layers=na.INK_LAYERS["faint"], seed=4, peak_span=(0.4, 1.0), keep_clear=clear)
+    _run_all(draws)
+    _ink_seal(k, slide, f, seal_at[0] - 0.22 * s, seal_at[1], 0.45 * s)
+    return rects
+
+
+@register("ink", "closing")
+def _ink_closing(k, slide, f, image):
+    W, H, s, o = ctx(k)
+    title, line = text_of(f, "title"), text_of(f, "line")
+    rects, draws, clear = {}, [], []
+    if title and is_vertical(title) and (line is None or is_vertical(line)):
+        r1, _z, d1 = vcol(k, slide, W * (0.62 if o == "land" else 0.70), 0.10 * H, H * (0.56 if o == "land" else 0.44),
+                          title, "title")
+        rects["title"] = r1; draws.append(d1); clear.append(r1)
+        if line:
+            r2, _z2, d2 = vcol(k, slide, r1[0] - 0.4 * s, 0.14 * H, r1[3] * 0.8, line, "line")
+            rects["line"] = r2; draws.append(d2); clear.append(r2)
+        seal_at = (r1[0] + r1[2] / 2.0, r1[1] + r1[3] + 0.2 * s)
+    else:
+        col = (0.12 * W, 0.18 * H, 0.76 * W, 0.36 * H) if o == "land" else (0.08 * W, 0.12 * H, 0.84 * W, 0.34 * H)
+        items = [(x_, t) for x_, t in (("title", title), ("line", line)) if t]
+        r, d = flow(k, slide, "closing", col, items, anchor="top", align="c")
+        rects.update(r); draws.append(d); clear.extend(r.values())
+        low = max((v[1] + v[3] for v in r.values()), default=col[1])
+        seal_at = (W / 2.0, low + 0.25 * s)
+    _ink_sun(k, slide, (0.80 if o == "land" else 0.75) * W, (0.20 if o == "land" else 0.52) * H, 1.1 * s)
+    na.ink_ridges(slide, color=k.P["ink"], layers=na.INK_LAYERS[o], seed=7, peak_span=(0.2, 1.0), keep_clear=clear)
+    _run_all(draws)
+    _ink_seal(k, slide, f, seal_at[0] - 0.25 * s, seal_at[1], 0.5 * s)
+    return rects
+
+
+@register("ink", "points")
+def _ink_points(k, slide, f, image):
+    W, H, s, o = ctx(k)
+    title, kicker = text_of(f, "title"), text_of(f, "kicker")
+    pts = points_of(f.get("items"))
+    vertical_ok = (o == "land" and all(is_vertical(h) and (l is None or is_vertical(l)) for h, l in pts)
+                   and (title is None or is_vertical(title)))
+    rects, draws, clear = {}, [], []
+    if vertical_ok:                                    # columns read right to left, as a book is
+        right = 0.93 * W
+        if title:
+            r0, _z, d0 = vcol(k, slide, right, 0.10 * H, 0.60 * H, title, "title")
+            rects["title"] = r0; draws.append(d0); clear.append(r0)
+            right = r0[0] - 0.55 * s
+        n = len(pts)
+        step = min(2.35 * s, (right - 0.10 * W) / n)
+        for i, (head, line) in enumerate(pts):
+            cr_ = right - i * step
+            nr, nd = flow(k, slide, "points", (cr_ - step * 0.75, 0.10 * H, step * 0.6, 0.09 * H), [("mark", _NUM_ZH[i])],
+                          align="c", start={"mark": 30 * s})
+            rh, _z1, dh = vcol(k, slide, cr_ - step * 0.12, 0.23 * H, 0.42 * H, head, "item_head")
+            draws += [nd, dh]; clear += list(nr.values()) + [rh]
+            if line:
+                rl, _z2, dl = vcol(k, slide, rh[0] - 0.18 * s, 0.25 * H, 0.50 * H, line, "item_line")
+                draws.append(dl); clear.append(rl)
+            if i < n - 1:
+                draws.append(_ink_hairline(k, slide, cr_ - step * 0.96, 0.12 * H, 0.76 * H, 0.3))
+        if title:
+            draws.append(_ink_hairline(k, slide, rects["title"][0] - 0.28 * s, 0.12 * H, 0.76 * H, 0.45))
+        seal_at = ((rects["title"][0] + rects["title"][2] / 2.0) if title else right,
+                   (rects["title"][1] + rects["title"][3] + 0.2 * s) if title else 0.82 * H)
+    else:
+        top = 0.10 * H
+        head_items = [(x_, t) for x_, t in (("kicker", kicker), ("title", title)) if t]
+        r, d = flow(k, slide, "points", (0.08 * W, top, 0.84 * W, 0.20 * H), head_items, anchor="top")
+        rects.update(r); draws.append(d); clear.extend(r.values())
+        y0 = max((v[1] + v[3] for v in r.values()), default=top) + 0.35 * s
+        row_h = (0.86 * H - y0) / len(pts)
+        cjk_num = title is not None and is_vertical(title)
+        for i, (head, line) in enumerate(pts):
+            y = y0 + i * row_h
+            nr, nd = flow(k, slide, "points", (0.08 * W, y, 0.9 * s, row_h), [("mark", _NUM_ZH[i] if cjk_num else str(i + 1))],
+                          start={"mark": 30 * s})
+            tr, td_ = flow(k, slide, "points", (0.08 * W + 1.0 * s, y, 0.76 * W, row_h - 0.12 * s),
+                           [(x_, t) for x_, t in (("item_head", head), ("item_line", line)) if t], anchor="top")
+            draws += [nd, td_]; clear += list(nr.values()) + list(tr.values())
+            if i < len(pts) - 1:
+                yy = y + row_h - 0.06 * s
+                draws.append(lambda yy=yy: na.seg(slide, 0.08 * W, yy, 0.92 * W, yy, k.P["ink"], w=0.5, alpha=0.25))
+        seal_at = (0.86 * W, 0.12 * H)
+    na.ink_ridges(slide, color=k.P["ink"], layers=na.INK_LAYERS["faint"], seed=6, peak_span=(0.0, 1.0), keep_clear=clear)
+    _run_all(draws)
+    _ink_seal(k, slide, f, seal_at[0] - 0.25 * s, seal_at[1], 0.5 * s)
+    return rects
