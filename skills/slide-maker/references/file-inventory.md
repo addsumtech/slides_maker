@@ -681,6 +681,11 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   text-safe inks, system fonts per platform (`fonts="both"` default) and per SCRIPT (Han / kana / Hangul),
   a surface, image treatments and six page compositions; registered with register_surface for
   ground/card. Never imported by deckkit/presets/register_surface. See references/visual-languages.md.
+- `vl_native.py` — page compositions of the native visual languages (`ink`, `poster`, `cutpaper`, `drafting`):
+  plans the text first (measured, refused past each field's floor; display type breaks at clause marks, never a
+  lone character), draws the art with the text kept clear, then sets the text; the points page; vertical CJK for
+  `ink`; poster's colour field (with the deck's inks and card following it) and drafting's drawing sheet on every
+  `new_slide()`.
 - `collage.py` — `collage(slide, region, items, seed=, keep_clear=)`: 1-4 images as tilted, white-bordered,
   taped prints; geometry decided first — a print never enters `keep_clear` and never covers more than
   25% of its neighbour; deterministic for a seed; slot items keep the image-series tag.
