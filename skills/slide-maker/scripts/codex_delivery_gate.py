@@ -359,7 +359,7 @@ TEMPLATE = {
         # A deck with no content images writes the string "n/a - <why>".
         # The direction competition: the candidates themselves, re-scored at delivery.
         "direction_gate": {"candidates": "directions.json", "picked": "<the chosen direction>",
-                           "images": "<photos | illustrations | none: the user's, generated or fetched>"},
+                           "images": "<photos | illustrations | none: the user's, generated or fetched; with none, also native_fit: {language, why}>"},
         "image_sources": [
             "slide <n> | <subject> | sourced - <origin> (<licence>) | <file>",
             "slide <n> | <subject> | generated - <tool>",
@@ -2111,6 +2111,9 @@ def check_design(
                                          imagery=design.get("imagery"))
                 if _imgf:
                     _f.append(_imgf)
+                _natf = _dd.native_fault(_dg.get("images"), _c, _dg.get("native_fit"))   # same rule as render_deck.py
+                if _natf:
+                    _f.append(_natf)
                 if _f and not str(_dg.get("waived", "")).strip():
                     errors.append("design.direction_gate does not hold up when re-scored: "
                                   + "; ".join(_f) + " — rediverge, or record `waived`")

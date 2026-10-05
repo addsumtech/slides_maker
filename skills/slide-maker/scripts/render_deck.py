@@ -1565,6 +1565,9 @@ def _direction_gate(design, deck_dir):
         dg.get("images"), cands, image_sources=design.get("image_sources"), imagery=design.get("imagery"))
     if _imgf:
         faults.append(_imgf)
+    _natf = directions_diversity.native_fault(dg.get("images"), cands, dg.get("native_fit"))   # no pictures -> native
+    if _natf:
+        faults.append(_natf)
     if faults and not str(dg.get("waived", "")).strip():
         die("the direction competition does not hold up when re-scored:\n    - "
             + "\n    - ".join(faults)

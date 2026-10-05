@@ -255,6 +255,12 @@ four template choices:
          a named `waived`, and they read `images` against the deck's own image records: `none` on a deck whose
          `image_sources` say `generated`/`sourced` (or whose `imagery` is `series`) is refused as a
          contradiction. The user's own figures (`provided`) do not count — a paper's plots are not a photo deck.
+       - **A native visual language when the deck has no pictures.** When `direction_gate.images` is `none`, at
+         least one offered direction is a NATIVE language — `ink` (culture, history, craft), `poster` (launch,
+         manifesto, brand, opinion), `cutpaper` (children, teaching, workshop, community) or `drafting` (research,
+         engineering, technical) — and the record states the pick and its reason:
+         `direction_gate.native_fit: {"language": "<name>", "why": "<topic reason>"}`. The guidance is an offer,
+         not a rule; the record is the rule. Both runtimes hold it; a named `waived` is the escape.
        - **An image-led direction (only when an image tool is available).** One of the offered
          directions MAY be image-led: its visual language is a coherent series of art-directed
          pictures on most pages, and its preview shows an imagery-led composition. Mark it in

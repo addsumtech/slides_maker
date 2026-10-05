@@ -123,6 +123,26 @@ cdg.check_design({"design": {"direction_gate": {"candidates": plain, "picked": "
 check(any(x.startswith("design.direction_gate") and "generated" in x for x in errs),
       "codex gate reads the same records: {}".format([x for x in errs if x.startswith("design.direction_gate")]))
 
+# 5. a deck with NO pictures offers a native language — the one that fits the topic, with the reason recorded
+ink_dir = vl.direction("ink")
+check(tuple(dd.NATIVE_LANGS) == tuple(vl.NATIVE), "directions_diversity knows the same native languages")
+f_ = dd.native_fault("none", plain)
+check(f_ and "native" in f_ and "drafting" in f_, "no pictures + no native language among the directions is a fault: {!r}".format(f_))
+f_ = dd.native_fault("none", plain[:3] + [ink_dir])
+check(f_ and "native_fit" in f_, "a native language offered without its reason asks for native_fit: {!r}".format(f_))
+check(dd.native_fault("none", plain[:3] + [ink_dir], {"language": "ink", "why": "a talk on tea and craft"}) is None,
+      "a native language with its reason passes")
+check(dd.native_fault("none", plain[:3] + [ink_dir], {"language": "poster", "why": "a manifesto"}) is not None,
+      "native_fit must name a language that was offered")
+check(dd.native_fault("photos", plain) is None, "with pictures the native rule does not apply")
+m = rd_msg({"candidates": plain, "picked": "A", "images": "none"})
+check("native" in m, "render_deck holds a picture-less deck with no native language: {}".format(m[-300:]))
+m = rd_msg({"candidates": plain[:3] + [ink_dir], "picked": "A", "images": "none",
+            "native_fit": {"language": "ink", "why": "a talk on tea and craft"}})
+check("native" not in m, "render_deck: a native language with its reason clears it: {}".format(m[-300:]))
+e = cdg_errs({"candidates": plain, "picked": "A", "images": "none"})
+check(any("native" in x for x in e), "codex gate holds the same deck: {}".format(e))
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_direction_vl_rule] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)
