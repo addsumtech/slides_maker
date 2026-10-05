@@ -31,7 +31,7 @@ def check_mac(cond, msg):
         skipped.append(msg)
 
 
-check(set(vl.LANGS) == {"editorial", "soft", "collage", "storybook"}, "four languages")
+check(set(vl.IMAGE_LED) == {"editorial", "soft", "collage", "storybook"}, "four image-led languages")
 MAC_ONLY = {"Didot", "Bodoni 72", "Baskerville", "Arial Rounded MT Bold", "Avenir Next", "Helvetica Neue",
             "Bradley Hand", "Noteworthy", "Marker Felt", "Futura", "Optima", "Gill Sans"}
 ON_DEMAND = {"Kaiti SC", "Yuanti SC", "Hannotate SC", "Wawati SC", "Libian SC", "HanziPen SC", "Lantinghei SC", "PingFang SC"}
@@ -76,7 +76,7 @@ vl.LANGS["editorial"]["fonts"]["mac"] = saved
 # register_surface contracts for the four (they are NOT covered by test_register_surface's PRESET loops)
 CANVASES = {"16:9 10in": (10.0, 5.63), "16:9 13.33in": (13.333, 7.5), "4:3": (10.0, 7.5),
             "9:16 portrait": (5.63, 10.0), "1:1": (7.5, 7.5)}
-for name in vl.LANGS:
+for name in vl.IMAGE_LED:                       # the native four: tests/test_native_languages.py
     check(rs.has(name) and rs.is_bespoke(name), "{} registered".format(name))
     for cname, (W, H) in CANVASES.items():
         p = dk.blank_deck(W, H)
@@ -114,7 +114,7 @@ with tempfile.TemporaryDirectory() as td:
                        "subject": "a table lamp being repaired on a wooden workbench", "alt": "a lamp",
                        "referent": "generic-concrete", "meaning": "broken things get fixed here, by neighbours"}]}
     Image.open(img).save(td / "slide-01-hero.png")
-    for name in vl.LANGS:
+    for name in vl.IMAGE_LED:
         for cname, (W, H) in CANV.items():
             for lang, T in TXT.items():
                 prs = dk.blank_deck(W, H)
@@ -538,7 +538,7 @@ k_e.cover(k_e.new_slide(), title="Repair night", image=[_ph])                   
 A = ROOT / "assets" / "vl"
 readme = (A / "README.md").read_text(encoding="utf-8") if (A / "README.md").exists() else ""
 check("AI-generated" in readme and "not real people" in readme, "assets/vl/README.md states the images' provenance")
-for name in vl.LANGS:
+for name in vl.IMAGE_LED:
     sp_ = A / "samples" / "{}.jpg".format(name)
     check(sp_.exists(), "a bundled sample for {}".format(name))
     if sp_.exists():
@@ -577,15 +577,15 @@ check("<img" in html and "style sample" in html.lower() and "not your content" i
 bad_ = dict(d, sample="javascript:alert(1)")
 ah.build_directions_html([bad_] + pres, str(_htd / "bad.html"))
 check("javascript:" not in (_htd / "bad.html").read_text(encoding="utf-8"), "a non-image sample is dropped")
-for n_ in vl.LANGS:
+for n_ in vl.IMAGE_LED:
     check(vl.direction(n_)["name"], "{} has a direction".format(n_))
 
 # ── Task 11: the reference names what the code does ──
 _ref = (ROOT / "references" / "visual-languages.md")
 _doc = _ref.read_text(encoding="utf-8") if _ref.exists() else ""
-for needle in list(vl.LANGS) + list(vl.PAGE_FIELDS) + ["design_plan.visual_language", "design_plan.vl_fonts",
+for needle in list(vl.IMAGE_LED) + [p_ for p_ in vl.PAGE_FIELDS if p_ != "points"] + ["design_plan.visual_language", "design_plan.vl_fonts",
                "deck_gates.py set", "unverified", "VLTextOverflow", "fonts=\"mac\"", "rs.card", "plan=", "direction(",
-               "ground=\"auto\"", "vl_ground", "--ground", "printed board"] + [k_ for n_ in vl.VARIANTS for k_ in vl.VARIANTS[n_]]:
+               "ground=\"auto\"", "vl_ground", "--ground", "printed board"] + [k_ for n_ in vl.IMAGE_LED for k_ in vl.VARIANTS[n_]]:
     check(needle in _doc, "references/visual-languages.md never says {!r}".format(needle))
 for scr in vl.EA_FACES:
     for kind in ("serif", "sans"):

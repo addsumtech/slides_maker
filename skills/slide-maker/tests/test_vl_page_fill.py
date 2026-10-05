@@ -21,8 +21,8 @@ def check(cond, msg):
 import deckkit as dk
 import visual_languages as vl
 
-# 1. the data page with no picture
-for name in vl.LANGS:
+# 1. the data page with no picture (the native four: tests/test_native_languages.py)
+for name in vl.IMAGE_LED:
     for W, H in ((13.333, 7.5), (7.5, 10.0)):
         for num, lab in (("1", "evening a month"), ("120", "repairs a year"), ("1,250,000", "每月一个晚上的修理次数")):
             prs = dk.blank_deck(W, H)

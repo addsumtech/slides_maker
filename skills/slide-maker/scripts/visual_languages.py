@@ -63,6 +63,36 @@ LANGS = {
                   "mac": {"display": "Baskerville", "body": "Georgia", "numeral": "Times New Roman"}},
         "ea": {"display": "serif", "body": "serif"}, "grain": 5, "frames": ["feather"],
         "forbids": ("confetti",), "cover": "centred", "skeleton": "statement"},
+    # ── NATIVE languages (P3): drawn, no pictures needed; compositions in vl_native.py ──
+    "ink": {
+        "palette": {"ground": "F1ECE1", "ink": "1D1C1A", "mute": "645C51", "panel": "E8E1D2",
+                    "accents": ["B0362A"], "text_accents": ["A3322A"], "sun": "B0362A"},
+        "fonts": {"both": {"display": "Georgia", "body": "Georgia", "numeral": "Times New Roman"},
+                  "mac": {"display": "Baskerville", "body": "Georgia", "numeral": "Times New Roman"}},
+        "ea": {"display": "serif", "body": "serif"}, "grain": 4, "frames": ["feather"],
+        "forbids": ("confetti",), "cover": "split-vertical", "skeleton": "rail"},
+    "poster": {
+        "palette": {"ground": "1F3BFF", "ink": "F3F0E8", "mute": "F3F0E8", "panel": "141414",
+                    "accents": ["D7FF3B", "FF4B1F", "141414"], "text_accents": ["D7FF3B", "F3F0E8"]},
+        "fonts": {"both": {"display": "Impact", "body": "Arial", "numeral": "Impact", "mono": "Courier New"},
+                  "mac": {"display": "Impact", "body": "Helvetica Neue", "numeral": "Impact", "mono": "Courier New"}},
+        "ea": {"display": "sans", "body": "sans"}, "ea_heavy": True, "grain": 0, "frames": ["rect"],
+        "forbids": (), "cover": "full-bleed-type", "skeleton": "statement"},
+    "cutpaper": {
+        "palette": {"ground": "FBF2E3", "ink": "2A2733", "mute": "4A4656", "panel": "FFFFFF",
+                    "accents": ["EE8A6B", "4E8FC7", "5B3F6E", "5AA38A"], "text_accents": ["A8442D", "2F6F62"],
+                    "card_ink": "2A2733", "card_mute": "4A4656", "card_accent": "A8442D"},
+        "fonts": {"both": {"display": "Trebuchet MS", "body": "Trebuchet MS", "numeral": "Trebuchet MS"},
+                  "mac": {"display": "Avenir Next", "body": "Avenir Next", "numeral": "Avenir Next"}},
+        "ea": {"display": "sans", "body": "sans"}, "grain": 3, "frames": ["rect"],
+        "forbids": (), "cover": "low-left", "skeleton": "island"},
+    "drafting": {
+        "palette": {"ground": "F1EFE8", "ink": "1E3A5F", "mute": "3E5674", "panel": "F1EFE8",
+                    "accents": ["E2552C"], "text_accents": ["B8401A"]},
+        "fonts": {"both": {"display": "Georgia", "body": "Georgia", "numeral": "Times New Roman", "mono": "Courier New"},
+                  "mac": {"display": "Georgia", "body": "Georgia", "numeral": "Times New Roman", "mono": "Courier New"}},
+        "ea": {"display": "serif", "body": "sans"}, "grain": 0, "frames": ["rect"],
+        "forbids": ("confetti",), "cover": "low-left", "skeleton": "split"},
 }
 
 # Each language's GROUNDS: its own light paper, and ONE contrast ground (user's decision, 2026-10-04). All four
@@ -90,7 +120,32 @@ VARIANTS = {
         "meadow": {"label": "meadow", "label_zh": "草地纸版", "grain": 5,
                    "palette": {"ground": "C3D1B5", "ink": "222E1F", "mute": "3F4B36", "panel": "D3DECA",
                                "accents": ["E2734B", "7FA35B", "F2C14E"], "text_accents": ["772C11", "314526", "584108"]}}},
+    "ink": {
+        "light": {"label": "xuan paper", "label_zh": "宣纸版", "grain": 4, "palette": LANGS["ink"]["palette"]},
+        "night": {"label": "ink night", "label_zh": "墨夜版", "grain": 4,
+                  "palette": {"ground": "1C1B19", "ink": "E9E2D2", "mute": "A99F8F", "panel": "262421",
+                              "accents": ["B23A2C"], "text_accents": ["E07A63"], "sun": "E8DEC6"}}},
+    "poster": {
+        "light": {"label": "colour fields", "label_zh": "色场版", "grain": 0, "palette": LANGS["poster"]["palette"]},
+        "paper": {"label": "paper", "label_zh": "白纸版", "grain": 0,
+                  "palette": {"ground": "F3F0E8", "ink": "141414", "mute": "141414", "panel": "E4DFD3",
+                              "accents": ["1F3BFF", "FF4B1F"], "text_accents": ["1F3BFF", "141414"]}}},
+    "cutpaper": {
+        "light": {"label": "day", "label_zh": "白天版", "grain": 3, "palette": LANGS["cutpaper"]["palette"]},
+        "night": {"label": "paper night", "label_zh": "纸夜版", "grain": 3,
+                  "palette": {"ground": "1D2742", "ink": "F2EEE4", "mute": "C6C9D6", "panel": "FFFFFF",
+                              "accents": ["EE8A6B", "4E8FC7", "5B3F6E", "467E7A"], "text_accents": ["F2A285", "A8D5C4"],
+                              "card_ink": "2A2733", "card_mute": "4A4656", "card_accent": "A8442D"}}},
+    "drafting": {
+        "light": {"label": "vellum", "label_zh": "硫酸纸版", "grain": 0, "palette": LANGS["drafting"]["palette"]},
+        "cyanotype": {"label": "cyanotype", "label_zh": "晒图蓝版", "grain": 0,
+                      "palette": {"ground": "123254", "ink": "E4ECF5", "mute": "B7C5D6", "panel": "123254",
+                                  "accents": ["F27D4E"], "text_accents": ["F59A72"]}}},
 }
+NATIVE = ("ink", "poster", "cutpaper", "drafting")          # drawn, no pictures needed (vl_native.py)
+IMAGE_LED = ("editorial", "soft", "collage", "storybook")    # built around the caller's pictures
+# words only the CALLER can give — never invented by the kit; absent means nothing is drawn
+NATIVE_EXTRAS = {"ink": ("seal",), "poster": ("highlight",), "cutpaper": ("icons",), "drafting": ("project",)}
 _ACTIVE = {}    # language -> the ground key use() set; rs.ground()/rs.card() (no kit) follow it
 
 
@@ -166,7 +221,8 @@ class Kit:
         self.name, self.prs, self.fonts, self.plan, self.image_dir = name, prs, fonts, plan, image_dir
         self.L, self.platform = LANGS[name], _platform(platform)
         self.ground = ground
-        self.P = VARIANTS[name][ground]["palette"]       # the palette of the ground this deck is built on
+        self.project, self.field = None, None            # drafting's title-block words; poster's current field
+        self.P = dict(VARIANTS[name][ground]["palette"])  # a COPY of the ground's palette (poster swaps it per page)
         self.grain = VARIANTS[name][ground]["grain"]
         self._fonts = dict(self.L["fonts"]["both"])
         if fonts == "mac":
@@ -216,6 +272,9 @@ class Kit:
         if self.grain:
             import surfaces
             surfaces.grain_background(s, self.P["ground"], strength=self.grain)
+        if self.name in NATIVE:                 # poster's colour field, drafting's drawing sheet
+            import vl_native
+            vl_native.paint_ground(self, s)
         return s
 
 
@@ -289,6 +348,27 @@ def _ground_storybook(slide, role, index):
     return (0.55, 0.5, W - 1.1, H - 1.0)
 
 
+def _ground_ink(slide, role, index):
+    W, H = rs._canvas(slide)
+    return (0.6, 0.55, W - 1.2, H - 1.1)
+
+
+def _ground_poster(slide, role, index):
+    W, H = rs._canvas(slide)
+    return (0.55, 0.85, W - 1.1, H - 1.4)
+
+
+def _ground_cutpaper(slide, role, index):
+    W, H = rs._canvas(slide)
+    return (0.6, 0.6, W - 1.2, H - 1.2)
+
+
+def _ground_drafting(slide, role, index):
+    W, H = rs._canvas(slide)
+    s = min(W, H) / 7.5
+    return (0.9 * s, 0.78 * s, W - 1.8 * s, H - 2.6 * s)      # above the title block
+
+
 def _card_for(name):
     """The language's card: its panel colour; soft is rounded, the others square."""
     def card(slide, x, y, w, h, label=None):
@@ -308,6 +388,7 @@ def _card_for(name):
 
 
 _card_editorial, _card_soft, _card_collage, _card_storybook = (_card_for(n) for n in ("editorial", "soft", "collage", "storybook"))
+_card_ink, _card_poster, _card_cutpaper, _card_drafting = (_card_for(n) for n in ("ink", "poster", "cutpaper", "drafting"))
 
 
 for _n in LANGS:
@@ -355,12 +436,41 @@ TYPE = {
                   "attribution": (14, "body", False, "accent", True, 10), "number": (150, "numeral", False, "accent", False, 44),
                   "label": (24, "display", False, "ink", False, 14), "note": (15, "body", False, "ink", False, 10),
                   "caption": (12, "body", False, "ink", True, 9), "line": (20, "body", False, "ink", True, 12)},
+    "ink": {"kicker": (13, "body", False, "mute", False, 10), "title": (52, "display", False, "ink", False, 26),
+            "subtitle": (19, "body", False, "mute", False, 12), "body": (17, "body", False, "ink", False, 11),
+            "mark": (60, "display", False, "accent", False, 30), "quote": (44, "display", False, "ink", False, 22),
+            "attribution": (15, "body", False, "mute", False, 10), "number": (230, "numeral", False, "ink", False, 72),
+            "label": (34, "display", False, "ink", False, 16), "note": (16, "body", False, "mute", False, 10),
+            "caption": (12, "body", False, "mute", False, 9), "line": (20, "body", False, "ink", False, 12),
+            "item_head": (28, "display", False, "ink", False, 14), "item_line": (17, "body", False, "mute", False, 10)},
+    "poster": {"kicker": (11, "mono", True, "ink", False, 9), "title": (150, "display", False, "ink", False, 44),
+               "subtitle": (20, "body", True, "ink", False, 12), "body": (18, "body", False, "ink", False, 11),
+               "mark": (300, "display", False, "accent", False, 120), "quote": (90, "display", False, "ink", False, 34),
+               "attribution": (12, "mono", True, "accent", False, 10), "number": (380, "numeral", False, "ink", False, 110),
+               "label": (70, "display", False, "ink", False, 26), "note": (19, "body", True, "ink", False, 12),
+               "caption": (12, "body", False, "ink", False, 9), "line": (24, "body", True, "ink", False, 14),
+               "item_head": (18, "body", True, "ink", False, 12), "item_line": (14, "body", False, "ink", False, 10)},
+    "cutpaper": {"kicker": (14, "body", True, "accent", False, 10), "title": (60, "display", True, "ink", False, 28),
+                 "subtitle": (20, "body", False, "mute", False, 12), "body": (18, "body", False, "ink", False, 11),
+                 "mark": (90, "display", True, "accent", False, 40), "quote": (44, "display", True, "ink", False, 20),
+                 "attribution": (13, "body", True, "accent", False, 10), "number": (200, "numeral", True, "ink", False, 64),
+                 "label": (44, "display", True, "ink", False, 20), "note": (19, "body", False, "mute", False, 11),
+                 "caption": (12, "body", False, "mute", False, 9), "line": (22, "body", False, "ink", False, 12),
+                 "item_head": (28, "display", True, "ink", False, 14), "item_line": (17, "body", False, "mute", False, 10)},
+    "drafting": {"kicker": (11, "mono", True, "accent", False, 9), "title": (54, "display", False, "ink", False, 26),
+                  "subtitle": (16, "display", False, "mute", True, 11), "body": (16, "body", False, "ink", False, 10),
+                  "mark": (60, "display", False, "accent", False, 30), "quote": (44, "display", False, "ink", True, 20),
+                  "attribution": (11, "mono", True, "mute", False, 9), "number": (330, "numeral", False, "ink", False, 100),
+                  "label": (46, "display", False, "ink", False, 20), "note": (16, "display", False, "mute", True, 10),
+                  "caption": (10, "mono", True, "mute", False, 8), "line": (20, "display", False, "ink", True, 12),
+                  "item_head": (11, "mono", True, "ink", False, 9), "item_line": (15, "display", False, "mute", False, 10)},
 }
 
 # page -> its fields in column order (the caller's keyword names)
 PAGE_FIELDS = {"cover": ("kicker", "title", "subtitle"), "section": ("number", "kicker", "title"),
                "image_text": ("kicker", "title", "body", "caption"), "quote": ("mark", "quote", "attribution"),
-               "data": ("number", "label", "note"), "closing": ("title", "line")}
+               "data": ("number", "label", "note"), "closing": ("title", "line"),
+               "points": ("kicker", "title", "items")}
 
 
 def L_(image, treat, col, *, col_noimg=None, anchor="middle", align="l", frame="rect", square=False, deco=()):
@@ -746,7 +856,7 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=Non
             if underlay and f in underlay:
                 _dx = underlay[f]((fx, fy, fw, fh), t, sz) or 0.0
                 fx, fw = fx + _dx, fw - max(0.0, _dx)          # the figure moves to the shape's centre
-            color = k.color("text_accents") if ckey == "accent" else k.color("ink")
+            color = (k.color("text_accents") if ckey == "accent" else k.color("mute") if ckey == "mute" else k.color("ink"))
             if f == "number" and _outlinable(k, t):
                 import display_type as dt
                 dt.outlined(slide, fx, fy, fw, fh, t, color=_hex(k.P["text_accents"][0]), face=k.face("numeral"))
@@ -1096,11 +1206,22 @@ def _compose(k, slide, page, fields, image):
 
 def _page(page):
     def fn(self, slide, *, image=None, **fields):
-        bad = set(fields) - set(PAGE_FIELDS[page]) - ({"line"} if page == "closing" else set())
+        extras = set(NATIVE_EXTRAS.get(self.name, ()))
+        bad = set(fields) - set(PAGE_FIELDS[page]) - ({"line"} if page == "closing" else set()) - extras
         if bad:
-            raise TypeError("{}.{}(): unknown field(s) {} — this page takes {}".format(self.name, page, sorted(bad),
-                                                                                    list(PAGE_FIELDS[page]) + ["image"]))
-        out = _compose(self, slide, page, fields, image)
+            raise TypeError("{}.{}(): unknown field(s) {} — this page takes {}{}".format(
+                self.name, page, sorted(bad), list(PAGE_FIELDS[page]) + ["image"],
+                " and {}".format(sorted(extras)) if extras else ""))
+        if self.name in NATIVE:
+            import vl_native
+            out = vl_native.compose(self, slide, page, fields, image)
+        elif page == "points":
+            raise ValueError("{}.points(): the points page belongs to the native languages ({}) — on {} build the "
+                             "list on an ordinary page: s = k.new_slide(); x, y, w, h = rs.ground(s, {!r}, "
+                             "role='content', index=n); then rs.card / dk.text".format(
+                                 self.name, ", ".join(NATIVE), self.name, self.name))
+        else:
+            out = _compose(self, slide, page, fields, image)
         # the page's title for screen readers: the kicker is set above it, or the title sits low, so neither lint
         # reading (a TITLE placeholder, or large text in the top 28%) found it — READING ORDER held the hand-off
         ttl = (" ".join(str(fields.get(f) or "") for f in ("number", "label")) if page == "data"
@@ -1193,6 +1314,11 @@ _RATIONALE = {"editorial": "photo-led and quiet: big bleed photographs, a serif 
               "soft": "photo-led and warm: arch and blob frames, pastel ground, rounded cards",
               "collage": "photo-led and loud: tilted taped prints, heavy headlines, highlighter and squiggles",
               "storybook": "illustration-led: a watercolour series melting into paper, serif type"}
+_DISPLAY_NAMES.update({"ink": "Ink wash", "poster": "Type poster", "cutpaper": "Cut paper", "drafting": "Drafting sheet"})
+_RATIONALE.update({"ink": "drawn, no pictures: misty ink ridges, vertical CJK, a carved seal, an ensō around the figure",
+                   "poster": "drawn, no pictures: the headline is the picture, one saturated field per page",
+                   "cutpaper": "drawn, no pictures: a layered paper diorama with soft paper shadows",
+                   "drafting": "drawn, no pictures: a drawing sheet with grid, title block, dimensions and leaders"})
 
 
 def direction(name, *, fonts="both", ground="light", W=13.333, H=7.5):
