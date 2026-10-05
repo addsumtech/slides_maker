@@ -305,7 +305,7 @@ def use(name, prs, *, fonts="both", plan=None, image_dir=None, platform=None, gr
             sorted(VARIANTS[name]), name, ground))
     k = Kit(name, prs, fonts, plan, image_dir, platform, ground)
     _ACTIVE[name] = ground
-    _PAL_OVERRIDE.pop(name, None)
+    _PAL_OVERRIDE.clear()      # a new deck starts clean: no language keeps the last deck's per-page palette
     if fonts == "mac":
         missing = [f for f in set(k._fonts.values()) if dk._font_substituted(f)]
         if missing:

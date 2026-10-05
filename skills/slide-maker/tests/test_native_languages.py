@@ -413,6 +413,17 @@ for n in vl.NATIVE:
         d = vl.direction(n, ground=g)
         check(d["vl"] == n and d["sample"].startswith("data:image/jpeg"), "{}/{}: direction() previews it".format(n, g))
 
+# the poster's per-page palette does not outlive its deck: a later use() of ANY language starts clean (final review)
+import register_surface as _rs2
+with contextlib.redirect_stdout(io.StringIO()):
+    kp = vl.use("poster", dk.blank_deck(13.333, 7.5))
+for _ in range(3):
+    kp.new_slide()                                   # ends on a non-first field
+with contextlib.redirect_stdout(io.StringIO()):
+    pe = dk.blank_deck(13.333, 7.5); ke = vl.use("editorial", pe)
+body, _h = _rs2.card(dk.add_slide(pe), "poster", 1.0, 1.0, 3.0, 2.0)     # a plain page: no language of its own
+check(str(body.fill.fore_color.rgb) == vl.VARIANTS["poster"]["light"]["palette"]["panel"],
+      "a later deck's poster card is the base palette, not the last deck's field ({})".format(body.fill.fore_color.rgb))
 # ── found by the non-Claude usability run (2026-10-05) ──
 import register_surface as rs, subprocess as _sp
 with contextlib.redirect_stdout(io.StringIO()):
