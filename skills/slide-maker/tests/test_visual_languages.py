@@ -538,7 +538,7 @@ k_e.cover(k_e.new_slide(), title="Repair night", image=[_ph])                   
 A = ROOT / "assets" / "vl"
 readme = (A / "README.md").read_text(encoding="utf-8") if (A / "README.md").exists() else ""
 check("AI-generated" in readme and "not real people" in readme, "assets/vl/README.md states the images' provenance")
-for name in vl.IMAGE_LED:
+for name in vl.LANGS:
     sp_ = A / "samples" / "{}.jpg".format(name)
     check(sp_.exists(), "a bundled sample for {}".format(name))
     if sp_.exists():
@@ -577,7 +577,7 @@ check("<img" in html and "style sample" in html.lower() and "not your content" i
 bad_ = dict(d, sample="javascript:alert(1)")
 ah.build_directions_html([bad_] + pres, str(_htd / "bad.html"))
 check("javascript:" not in (_htd / "bad.html").read_text(encoding="utf-8"), "a non-image sample is dropped")
-for n_ in vl.IMAGE_LED:
+for n_ in vl.LANGS:
     check(vl.direction(n_)["name"], "{} has a direction".format(n_))
 
 # ── Task 11: the reference names what the code does ──

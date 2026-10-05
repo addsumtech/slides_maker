@@ -253,6 +253,15 @@ for g in vl.VARIANTS["poster"]:
                   "poster/{}/{}x{} {}: no lone character on the last line: {}".format(g, W, H, page, broken))
             if "，" in txt and len(broken) > 1:
                 check(broken[0].endswith("，"), "poster/{} {}: a two-line clause breaks at its comma: {}".format(g, page, broken))
+# a headline stacked one word a line ("THREE / MOVES.") is a poster's stack, not a widow — it keeps its size
+with contextlib.redirect_stdout(io.StringIO()):
+    prs = dk.blank_deck(13.333, 7.5); k = vl.use("poster", prs)
+s = k.new_slide()
+k.points(s, title="Three moves.", items=["Share the tools", "Open the door", "Keep it local"])
+big = max((sh for sh in s.shapes if getattr(sh, "has_text_frame", False) and "THREE" in sh.text_frame.text),
+          key=lambda sh: sh.text_frame.paragraphs[0].runs[0].font.size.pt)
+check(big.text_frame.paragraphs[0].runs[0].font.size.pt >= 85,
+      "poster: a two-word title stacks at display size ({:.0f}pt)".format(big.text_frame.paragraphs[0].runs[0].font.size.pt))
 # ordinary pages on poster (k.new_slide + rs.card + dk.DEEP) stay readable on EVERY field (Review Focus 3): the
 # field changes per page, so the deck's default ink, its card and the card's label follow it
 import register_surface as rs
@@ -371,6 +380,20 @@ with contextlib.redirect_stdout(io.StringIO()):
 s = k.new_slide()
 check("SHEET" in txt(s) and s._element.find(P_NS + "cSld").find(P_NS + "bg").find(".//" + A_NS + "blip") is not None,
       "drafting: an ordinary page is a numbered drawing sheet on the grid")
+
+# ── samples + direction ──
+for n in vl.NATIVE:
+    for g in vl.VARIANTS[n]:
+        p = vl.build_sample(n, str(td), ground=g)
+        with contextlib.redirect_stdout(io.StringIO()):
+            crit = [f for f in dk.lint_layout(__import__("pptx").Presentation(str(p)), verbose=False) if f[1] == "CRITICAL"]
+        check(not crit, "{}/{} sample: no critical fault".format(n, g))
+        check(ox.xml_findings(str(p)) == [] and ox.beyond_page(__import__("pptx").Presentation(str(p))) == [],
+              "{}/{} sample: PowerPoint-safe, nothing past the page".format(n, g))
+        sample = vl.ASSETS / "samples" / "{}.jpg".format(vl._sample_stem(n, g))
+        check(sample.exists() and sample.stat().st_size <= 350 * 1024, "{}/{}: a bundled JPG sample <= 350 KB".format(n, g))
+        d = vl.direction(n, ground=g)
+        check(d["vl"] == n and d["sample"].startswith("data:image/jpeg"), "{}/{}: direction() previews it".format(n, g))
 
 for line in ok:
     print("  ok   " + line)

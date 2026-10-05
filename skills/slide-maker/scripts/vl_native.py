@@ -166,15 +166,22 @@ def display(k, slide, rect, text, field, *, highlight=None, caps=True, ink=None,
     if need > h + 1e-6:
         raise vl.VLTextOverflow("{}: the {} {!r} does not fit {:.2f}x{:.2f}in even at {:.0f}pt — shorten it".format(
             k.name, field, text[:24], w, h, sz))
+    def widowed(sz_, w_):
+        # a Latin headline stacked one word a line ("THREE / MOVES.") is a poster's stack, not a widow
+        if not vl._widowed(k, field, t, sz_, w_):
+            return False
+        ls = vl._break_lines(k, field, t, sz_, w_)
+        return dk._has_cjk(t) or len(ls) < 2 or len(ls[-2].split()) > 1
+
     lines, bw = None, w
     if field in vl._NO_WIDOW:
         sz2, tries = sz, 0
-        while vl._widowed(k, field, t, sz2, w) and sz2 * 0.95 >= fl and tries < 10:
+        while widowed(sz2, w) and sz2 * 0.95 >= fl and tries < 10:
             sz2, tries = sz2 * 0.95, tries + 1
         fit = vl._phrase_lines(k, field, t, sz, w, max(fl, min(0.7 * sz, sz2)))
         if fit is not None and (hi is None or any(hi.upper() in l_.upper() for l_ in fit[1])):
             sz2, lines = fit                       # a highlight is never split across a clause break
-        elif vl._widowed(k, field, t, sz2, w):
+        elif widowed(sz2, w):
             sz2 = sz
             bw = vl._balanced_width(k, field, t, sz, w) or w
         if measure(lines, sz2, bw) <= h + 1e-6:
@@ -706,7 +713,7 @@ def _poster_points(k, slide, f, image):
     else:
         trect, (rx, ry, rw, rh) = (0.06 * W, 0.08 * H, 0.88 * W, 0.20 * H), (0.06 * W, 0.34 * H, 0.88 * W, 0.58 * H)
     if title:
-        r, _z, d = display(k, slide, trect, title, "label")
+        r, _z, d = display(k, slide, trect, title, "title")
         rects["title"] = r; draws.append(d)
     gap = 0.15 * s
     pw = (rw - (n - 1) * gap) / n
@@ -770,7 +777,8 @@ def _cut_cover(k, slide, f, image):
             ((0.28 * W, 0.50 * H, 0.30 * W),)
     pad = 0.4 * s
     items = [(x_, text_of(f, x_)) for x_ in ("kicker", "title", "subtitle") if text_of(f, x_)]
-    r, d = _card_flow(k, slide, "cover", (card[0] + pad, card[1] + pad, card[2] - 2 * pad, card[3] - 2 * pad), items)
+    r, d = _card_flow(k, slide, "cover", (card[0] + pad, card[1] + pad, card[2] - 2 * pad, card[3] - 2 * pad), items,
+                      start={"title": 76 * s})
     text_bottom = max((v[1] + v[3] for v in r.values()), default=card[1])
     if o != "land":                  # a free-standing card fits its words (landscape keeps its height for the tuck)
         card = (card[0], card[1], card[2], text_bottom + pad - card[1])
@@ -989,7 +997,7 @@ def _bp_cover(k, slide, f, image):
     _bp_project(k, slide, f, fallback=text_of(f, "title"))
     col = (cx, cy + 0.10 * ch, cw * (0.62 if o == "land" else 1.0), ch * 0.80)
     items = [(x_, text_of(f, x_)) for x_ in ("kicker", "title", "subtitle") if text_of(f, x_)]
-    r, d = flow(k, slide, "cover", col, items, anchor="middle")
+    r, d = flow(k, slide, "cover", col, items, anchor="middle", start={"title": 70 * s})
     d()
     return r
 

@@ -1271,13 +1271,49 @@ _SAMPLE_COPY = {
                         num="1", label="pot is enough to begin", note="A window sill will do."),
 }
 
+# the native languages need no pictures: their samples are words only (still a STYLE sample, not your content)
+_SAMPLE_COPY_NATIVE = {
+    "ink": [("cover", dict(kicker="茶事 · 卷一", title="一盏茶的时间", subtitle="慢下来，看见日常", seal="茶事")),
+            ("points", dict(title="三道工序", items=[("洗盏", "器净，心先静"), ("候汤", "水沸，如蟹眼"), ("分茶", "浅斟，留七分")], seal="序")),
+            ("quote", dict(quote="茶有两种姿态，浮与沉", attribution="茶室题记", seal="记")),
+            ("data", dict(number="3", label="泡，滋味最浓", note="头泡醒茶，三泡正好", seal="茶"))],
+    "poster": [("cover", dict(kicker="A manifesto for neighbourhood rooms", title="Make the room smaller.", highlight="room")),
+               ("points", dict(title="Three moves.", items=["Share the tools", "Open the door", "Keep it local"])),
+               ("quote", dict(quote="A room is a promise you can walk into.", attribution="From the manifesto")),
+               ("data", dict(number="01", label="Room on every street.", note="Close enough to walk to, small enough to share."))],
+    "cutpaper": [("cover", dict(kicker="A paper-cut science story", title="How seeds travel")),
+                 ("points", dict(title="Three ways a seed gets around",
+                                 items=[("Wind", "Wings and parachutes drift far."), ("Water", "Some seeds float to a new shore."),
+                                        ("Animals", "Hooks hitch a ride on fur.")],
+                                 icons=["lucide:wind", "lucide:droplets", "lucide:paw-print"])),
+                 ("quote", dict(quote="Every forest began as one small seed.", attribution="A paper-cut science story")),
+                 ("data", dict(number="1", label="seed is all a forest needs", note="Small beginnings, slow growth."))],
+    "drafting": [("cover", dict(kicker="Schematic 01 · a modular reading room", title="A room built layer by layer.",
+                                 subtitle="Floor, walls and roof drawn as one frame, each layer free to move.")),
+                  ("points", dict(title="Three layers, one frame", items=[("Floor", "One continuous plate."),
+                                                                         ("Walls", "Panels that slide on a track."),
+                                                                         ("Roof", "A single span, no columns.")])),
+                  ("quote", dict(quote="“Draw the quiet first, then the walls.”", attribution="Design principle")),
+                  ("data", dict(number="3", label="layers, one structure.", note="Each layer can be built, moved and reused on its own."))],
+}
+
 
 def _sample_stem(name, ground):
     return name if ground == "light" else "{}-{}".format(name, ground)
 
 
 def build_sample(name, out_dir, *, W=13.333, H=7.5, ground="light"):
-    """A four-page sample deck of `name` on `ground` (cover, image_text, quote, data) from the bundled images."""
+    """A four-page sample deck of `name` on `ground` — cover, image_text, quote, data from the bundled images; the
+    native languages: cover, points, quote, data in words alone."""
+    if name in NATIVE:
+        prs = dk.blank_deck(W, H)
+        k = use(name, prs, ground=ground)
+        for page, fields in _SAMPLE_COPY_NATIVE[name]:
+            getattr(k, page)(k.new_slide(), **fields)
+        out = Path(out_dir) / "sample-{}.pptx".format(_sample_stem(name, ground))
+        out.parent.mkdir(parents=True, exist_ok=True)
+        prs.save(str(out))
+        return out
     kind = "watercolour" if name == "storybook" else "photo"
     imgs = [str(ASSETS / x) for x in SAMPLE_IMAGES[kind]]
     T = _SAMPLE_COPY[kind]
