@@ -135,6 +135,20 @@ deco = [rect_of(sh) for sh in s.shapes if "decor" in sh.name and (sh._element.xp
         and (sh.width / EMU) < 0.6 * 7.5 and sh.top / EMU < card[1] + card[3]]
 check(not deco, "cutpaper 1:1 cover: the sun and cloud sit below the card, not under it ({})".format(len(deco)))
 
+# 5. poster's credit-line kicker is measured: a long one wraps and the page starts below it (the extreme corpus
+#    found it running into the cover title on a square page)
+KICK = "Quarterly review for the neighbourhood repair network and its many volunteers across the city"
+for W, H in ((7.5, 7.5), (10.0, 5.625), (13.333, 7.5)):
+    prs = dk.blank_deck(W, H)
+    with contextlib.redirect_stdout(io.StringIO()):
+        k = vl.use("poster", prs)
+    k.cover(k.new_slide(), kicker=KICK, title="Make the room smaller")
+    k.section(k.new_slide(), number="02", kicker=KICK, title="Why small")
+    k.points(k.new_slide(), kicker=KICK, title="Three moves", items=["Share", "Open", "Stay local"])
+    with contextlib.redirect_stdout(io.StringIO()):
+        crit = [f_ for f_ in dk.lint_layout(prs, verbose=False) if f_[1] == "CRITICAL"]
+    check(not crit, "poster {}x{}: a long kicker never runs into the page: {}".format(W, H, [(c[0], c[2]) for c in crit[:3]]))
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

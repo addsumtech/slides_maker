@@ -18,7 +18,8 @@ image-led languages. They draw their surface with native, editable shapes, so a 
 tool gets a finished look; each has a light and a contrast ground and a new `points` page. Words the kit cannot
 invent (a seal's characters, a highlighted word, icons, a project name) come only from the caller. A deck with no
 pictures now offers the native language that fits its topic and records why (`direction_gate.native_fit`, on both
-runtimes).
+runtimes). Long copy gets a roomier layout before anything is refused (vertical Chinese set across, a full-width
+staircase, a grid of cards, a numbered parts legend), verified on 10in 16:9, 4:3, square and A4-portrait canvases.
 
 ### PowerPoint safety
 

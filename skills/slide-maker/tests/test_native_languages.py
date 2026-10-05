@@ -451,6 +451,36 @@ try:
     check(False, "drafting: a project= too long for the title block is refused")
 except vl.VLTextOverflow:
     check(True, "drafting: a project= too long for the title block is refused")
+# vertical columns break at the CLAUSE, and a couplet is two equal columns (a weak-model run, 2026-10-05: the
+# cover read "宋代点茶：一 / 盏茶里的审美" and the couplet's second line split into two short columns)
+def vparas(slide):
+    """[(paragraph texts, size, visual columns)] of every vertical text box — a paragraph WRAPS into further columns
+    when the box is short, so the column count is read from the box width (vcol sizes it: cols x size x 1.28 + 0.06)."""
+    out = []
+    for sh in slide.shapes:
+        if getattr(sh, "has_text_frame", False) and 'vert="eaVert"' in sh._element.xml:
+            sz = sh.text_frame.paragraphs[0].runs[0].font.size.pt
+            cols = int(round((sh.width / 914400.0 - 0.06) / (sz * 1.28 / 72.0)))
+            out.append(([p_.text for p_ in sh.text_frame.paragraphs], sz, cols))
+    return out
+for W, H in ((13.333, 7.5), (10.0, 5.625)):
+    with contextlib.redirect_stdout(io.StringIO()):
+        k = vl.use("ink", dk.blank_deck(W, H), ground="night")
+    s = k.new_slide()
+    k.cover(s, title="宋代点茶：一盏茶里的审美")
+    vp = vparas(s)
+    check(any(ps == ["宋代点茶：", "一盏茶里的审美"] and c == 2 for ps, _z, c in vp) or any(c == 1 for _p, _z, c in vp),
+          "ink {}x{}: a vertical title breaks its columns at the clause: {}".format(W, H, vp))
+    s = k.new_slide()
+    k.section(s, number="一", title="溯源：宋茶的黄金时代")
+    vp = vparas(s)
+    check(any(ps == ["溯源：", "宋茶的黄金时代"] and c == 2 for ps, _z, c in vp) or any(c == 1 for _p, _z, c in vp),
+          "ink {}x{}: section title breaks at the clause: {}".format(W, H, vp))
+    s = k.new_slide()
+    k.quote(s, quote="琴里知闻唯渌水，茶中故旧是蒙山。", attribution="白居易")
+    vp = [v for v in vparas(s) if "白居易" not in "".join(v[0])]
+    check(len(vp) == 2 and all(len(ps) == 1 and c == 1 for ps, _z, c in vp) and len({z for _p, z, _c in vp}) == 1,
+          "ink {}x{}: the couplet is two single columns at one size: {}".format(W, H, vp))
 # ── found by the non-Claude usability run (2026-10-05) ──
 import register_surface as rs, subprocess as _sp
 with contextlib.redirect_stdout(io.StringIO()):

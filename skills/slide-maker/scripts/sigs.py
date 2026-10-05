@@ -335,9 +335,13 @@ EXAMPLES = {
            's = k.new_slide()                                 # an ORDINARY page in the same look\n'
            'import register_surface as rs\n'
            'x, y, w, h = rs.ground(s, k.name, role="content", index=7)   # k.name, never another language\'s\n'
-           'body, _hdr = rs.card(s, k.name, x, y + 0.9, w, h - 1.0)\n'
-           'dk.text(s, body.left.inches + 0.3, body.top.inches + 0.25, body.width.inches - 0.6, 1.0,\n'
-           '        [k.runs("1.  Why a shelter", 20)])          # k.runs: the language\'s own ink for its card',
+           'rows = ["1.  Why a shelter", "2.  How it is built"]\n'
+           'size = 24 * min(prs.slide_width.inches, prs.slide_height.inches) / 7.5   # scaled with the canvas\n'
+           'rows_h = sum(dk.measure_text([(r, False)], w - 0.8, size, font=k.face("body")) + 0.18 for r in rows)\n'
+           'body, hdr = rs.card(s, k.name, x, y + max(0.0, (h - rows_h - 1.1) / 2), w, rows_h + 1.1, label="Agenda")\n'
+           'top = hdr.top.inches + hdr.height.inches + 0.2 if hdr else body.top.inches + 0.45   # below the label\n'
+           'dk.text(s, body.left.inches + 0.4, top, body.width.inches - 0.8, rows_h, [k.runs(r, size) for r in rows],\n'
+           '        space_after=8)                            # k.runs: the language\'s own face and ink',
     "points": 'import visual_languages as vl\n'
               'k = vl.use("ink", prs)                         # or "poster" / "cutpaper" / "drafting" — no pictures needed\n'
               'k.points(k.new_slide(), title="三道工序",\n'
@@ -425,8 +429,9 @@ def load():
 # suppresses — a separate concern from what --example prints). Without these, --example printed the
 # filler "a form component" while SKILL.md promises "plus the guarantee it makes".
 _EXTRA_GUARANTEES = {
-    "points": "2 to 4 points, measured and refused rather than truncated; vertical only for CJK text (ink), "
-              "one iso layer per point (drafting), one icon per point when icons= is given (cutpaper)",
+    "points": "2 to 4 points, measured; a roomier layout is tried before anything is refused, never truncated; "
+              "vertical only for CJK text (ink), one iso layer per point (drafting), one icon per point when icons= "
+              "is given (cutpaper)",
     "ink_ridges": "ridges fade into mist and never pass the page; over every keep_clear rect the crest stays "
                   "below the text, falling away on a shoulder rather than a cliff",
     "clipped_block": "drawn as its polygon cut to the page, so PowerPoint's editing view shows nothing past "

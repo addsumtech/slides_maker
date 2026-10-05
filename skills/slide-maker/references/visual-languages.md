@@ -58,11 +58,20 @@ k.closing(k.new_slide(), title="Bring one broken thing.", line="And bring a neig
   delivery gate counts it; a plain `dk.add_slide()` page is NOT in the language. Then:
   ```python
   s = k.new_slide()
-  x, y, w, h = rs.ground(s, k.name, role="content", index=2)   # furniture; returns the content rect
-  body, header = rs.card(s, k.name, x, y + 0.9, w, h - 1.0, label=None)  # SHAPES, not a rect
-  dk.text(s, body.left.inches + 0.3, body.top.inches + 0.25, body.width.inches - 0.6, body.height.inches - 0.5,
-          [k.runs("1.  Why a repair café", 20), k.runs("2.  How an evening runs", 20)])
+  x, y, w, h = rs.ground(s, k.name, role="content", index=2)    # furniture; returns the content rect
+  rows = ["1.  Why a repair café", "2.  How an evening runs", "3.  What to bring"]
+  W, H = prs.slide_width.inches, prs.slide_height.inches
+  size = 24 * min(W, H) / 7.5                                     # list type scaled with the canvas, never a tiny 12pt
+  rows_h = sum(dk.measure_text([(r, False)], w - 0.8, size, font=k.face("body")) + 0.18 for r in rows)
+  card_h = rows_h + 1.1                                           # the card fits its words: room for the label band
+  body, header = rs.card(s, k.name, x, y + max(0.0, (h - card_h) / 2), w, card_h, label="Agenda")   # SHAPES
+  top = header.top.inches + header.height.inches + 0.2 if header else body.top.inches + 0.45   # BELOW the label
+  dk.text(s, body.left.inches + 0.4, top, body.width.inches - 0.8, rows_h, [k.runs(r, size) for r in rows], space_after=8)
   ```
+  (Run as written in every language: the card is sized to its words and sits in the content rect; a fixed
+  full-height card under 14pt rows read as an empty page in two test decks. A list of 2–4 items is better as
+  `k.points(...)` on ink, poster and cutpaper; on drafting, `points` draws one plate per item, so keep an agenda
+  there as this ordinary page.)
   Pass `k.name` — the page's OWN language; another language's name on it is refused. `rs.ground` returns the
   content rect `(x, y, w, h)` in inches; `rs.card` returns `(body, header)` —
   python-pptx shapes (`header` is None for a card with no band), so read `body.left.inches` and friends.
@@ -99,14 +108,25 @@ every value they write is one PowerPoint opens without repair (`scripts/ooxml_sa
     that page's own title or quote, set on a highlighter (refused when they are not in it);
   - `icons=["lucide:wind", …]` on `cutpaper`'s `points`: one `library:name` spec per point (names as on
     lucide.dev/icons or tabler.io/icons); an unknown name raises naming the URL it tried — never a blank disc;
-  - `project="…"` on any `drafting` page: the words in the sheet's title block; without it the cover title is
-    remembered and carried to every later sheet. Sheets are numbered by themselves.
+  - `project="…"` on any `drafting` page: the words in the sheet's title block, measured into it (10pt down to
+    7pt; refused when they still do not fit). Without it the cover title is remembered and carried to every later
+    sheet — or left out when too long for the block (the sheet number stands alone). Sheets are numbered by
+    themselves.
 - **Vertical CJK** — `ink` sets a title, a quote couplet, a label and its points as vertical columns read right
   to left ONLY when the text is Chinese or Japanese with no Latin letters or digits; Latin, Hangul or mixed text
   is set horizontally in the same composition. A vertical field shrinks toward its floor and is refused past
   its columns, like any other field.
 - **Display type** (`poster`) breaks like the rest of the kit: at a clause mark first, never a lone CJK
-  character or word on the last line; Latin is set in capitals.
+  character or word on the last line; Latin is set in capitals; a figure (`1,250,000`) stays on one line.
+- **Vertical columns break at the clause** (`ink`): "宋代点茶： / 一盏茶里的审美", never mid-word; a quote couplet
+  is two equal columns at one size.
+- **Long copy gets a roomier layout before it is refused.** Each native page tries its designed layout first,
+  then alternatives: `ink` sets a field horizontally when its vertical columns cannot hold it; `poster`'s points
+  become a full-width staircase under the title; `cutpaper`'s cards grow or form a two-column grid; `drafting`'s
+  notes take more width, then become a numbered parts legend (a balloon on each plate, no leaders).
+  `VLTextOverflow` means even the last layout could not hold the words — shorten them. Verified on 10in 16:9,
+  4:3, square and A4-portrait canvases with 14-word titles and four two-line points
+  (`tests/test_native_generality.py`).
 - **Ordinary pages** — `k.new_slide()` gives `poster` the next colour field (the deck's inks — `dk.DEEP` and
   friends — and `rs.card` follow it, so read `k.color("ink")` for text) and `drafting` its numbered drawing sheet
   on the grid.

@@ -122,37 +122,82 @@ def _color(k, ckey):
     return k.color("text_accents") if ckey == "accent" else k.color("mute") if ckey == "mute" else k.color("ink")
 
 
-def vcol(k, slide, right, top, h_max, text, field, *, color=None, spacing=0.12, max_cols=2):
+_CLAUSE_MARKS = "，。、；：！？"
+
+
+def _clauses(text):
+    """The text cut after each clause mark: "宋代点茶：一盏茶里的审美" -> ["宋代点茶：", "一盏茶里的审美"]."""
+    out, cur = [], ""
+    for ch in text:
+        cur += ch
+        if ch in _CLAUSE_MARKS:
+            out.append(cur)
+            cur = ""
+    if cur:
+        out.append(cur)
+    return out
+
+
+def vcol(k, slide, right, top, h_max, text, field, *, color=None, spacing=0.12, max_cols=2, size=None):
     """PLAN CJK `text` set vertically, right edge at `right`: starts at the field's size, shrinks toward its floor,
-    refuses past `max_cols` columns at the floor. Returns ((x, y, w, h), size, draw)."""
+    refuses past `max_cols` columns at the floor. Columns break AFTER a clause mark when the clauses fit (down to 75%
+    of the size) — "宋代点茶： / 一盏茶里的审美", never "宋代点茶：一 / 盏茶里的审美" (a weak-model run, 2026-10-05).
+    `size=` sets the size (a couplet's two lines match) and refuses when the text needs more than max_cols columns at
+    it. Returns ((x, y, w, h), size, draw)."""
     base, role, bold, ckey, _italic, floor = vl.TYPE[k.name][field]
     s = ctx(k)[2]
     fl = max(9.0, floor * s)
     n = len(text)
-    # the FEWEST columns first: one tall column at >= 85% of the size reads as a scroll; two short ones at full size
-    # read as a block (the approved cover). Only the last allowance shrinks all the way to the floor.
-    for target in range(1, max_cols + 1):
-        sz = base * s
-        lo = fl if target == max_cols else max(fl, 0.85 * base * s)
-        while True:
-            adv = sz * (1.0 + spacing) / 72.0
-            per = max(1, int((h_max - 0.08) // adv))
-            cols = -(-n // per)
-            if cols <= target or sz <= lo + 1e-6:
+
+    def per_col(sz_):
+        return max(1, int((h_max - 0.08) // (sz_ * (1.0 + spacing) / 72.0)))
+    if size is not None:
+        sz, cols = size, -(-n // per_col(size))
+    else:
+        # the FEWEST columns first: one tall column at >= 85% of the size reads as a scroll; two short ones at full
+        # size read as a block (the approved cover). Only the last allowance shrinks all the way to the floor.
+        for target in range(1, max_cols + 1):
+            sz = base * s
+            lo = fl if target == max_cols else max(fl, 0.85 * base * s)
+            while True:
+                cols = -(-n // per_col(sz))
+                if cols <= target or sz <= lo + 1e-6:
+                    break
+                sz = max(lo, sz * 0.96)
+            if cols <= target:
                 break
-            sz = max(lo, sz * 0.96)
-        if cols <= target:
-            break
     if cols > max_cols:
         raise vl.VLTextOverflow("{}: the {} {!r} needs {} vertical columns even at {:.0f}pt — shorten it".format(
             k.name, field, text[:24], cols, sz))
+    paras = [text]
+    clauses = _clauses(text)
+    if cols >= 2 and len(clauses) >= 2:
+        z = sz
+        while z >= max(fl, 0.75 * sz) - 1e-6:           # pack whole clauses into columns, a little smaller if need be
+            per, segs = per_col(z), [""]
+            for c_ in clauses:
+                if len(c_) > per:
+                    segs = None
+                    break
+                if len(segs[-1]) + len(c_) <= per:
+                    segs[-1] += c_
+                else:
+                    segs.append(c_)
+            if segs and len(segs) <= max_cols and (size is None or z == size):
+                paras, sz, cols = segs, z, len(segs)
+                break
+            if size is not None:
+                break
+            z *= 0.96
+    adv = sz * (1.0 + spacing) / 72.0
     w = cols * sz * 1.28 / 72.0 + 0.06
-    h = min(h_max, -(-n // cols) * adv + 0.12)
+    rows = max(len(p_) for p_ in paras) if len(paras) > 1 else -(-n // cols)     # characters in the longest column
+    h = min(h_max, rows * adv + 0.12)
     x = right - w
     col = color or _color(k, ckey)
 
     def draw():
-        tb = dk.text(slide, x, top, w, h, [k.runs(text, sz, col, bold, role)], space_after=0)
+        tb = dk.text(slide, x, top, w, h, [k.runs(p_, sz, col, bold, role) for p_ in paras], space_after=0)
         for p in tb.text_frame.paragraphs:
             for r in p.runs:
                 r._r.get_or_add_rPr().set("spc", str(int(round(sz * spacing * 100))))
@@ -445,8 +490,12 @@ def _ink_quote(k, slide, f, image):
         parts = [p for p in _re.split(r"(?<=[，、；])", q) if p]
         cols = [parts[0], "".join(parts[1:])] if len(parts) > 1 else [q]
         right, top = 0.80 * W, 0.11 * H
-        for i, c in enumerate(cols):
-            r1, _z, d1 = vcol(k, slide, right, top + i * 0.14 * H, 0.76 * H - i * 0.14 * H, c, "quote")
+        # a couplet is two EQUAL columns: one size, each line one column (a weak-model run split the second line
+        # into two short columns because each line was sized on its own)
+        spans = [(top + i * 0.14 * H, 0.76 * H - i * 0.14 * H) for i in range(len(cols))]
+        z = min(vcol(k, slide, right, y_, h_, c, "quote", max_cols=1)[1] for (y_, h_), c in zip(spans, cols))
+        for i, ((y_, h_), c) in enumerate(zip(spans, cols)):
+            r1, _z, d1 = vcol(k, slide, right, y_, h_, c, "quote", max_cols=1, size=z)
             rects["quote%d" % i] = r1; draws.append(d1); clear.append(r1)
             right = r1[0] - 0.40 * s
         if attr:
@@ -647,6 +696,28 @@ def _poster_ground(k, slide):
 GROUNDS["poster"] = _poster_ground
 
 
+def _meta_height(k, kicker):
+    """How tall the credit line's kicker is — measured, so a long one wraps and the page starts below it (a 13-word
+    kicker ran into the cover title on a square page, 2026-10-05)."""
+    W, H, s, _o = ctx(k)
+    if not kicker:
+        return 0.4 * s
+    t = kicker if dk._has_cjk(kicker) else kicker.upper()
+    face = k.ea_face("mono", t) or k.face("mono")
+    return max(0.4 * s, dk.measure_text([(t, True)], 0.62 * W, max(9.0, 11.0 * s), font=face,
+                                        line_h_factor=dk._LINT_LINE_H))
+
+
+def _below_meta(k, rect, kicker):
+    """`rect` starting below the credit line (shortened by what it gave up), when the kicker reaches into it."""
+    W, H, s, _o = ctx(k)
+    x, y, w, h = rect
+    floor_y = 0.045 * H + _meta_height(k, kicker) + 0.12 * s
+    if y >= floor_y:
+        return rect
+    return (x, floor_y, w, max(0.3, h - (floor_y - y)))
+
+
 def _poster_meta(k, slide, kicker):
     """The fine print: the caller's kicker left, the page number right — a poster's credit line."""
     W, H, s, _o = ctx(k)
@@ -655,7 +726,8 @@ def _poster_meta(k, slide, kicker):
     col = dk.RGBColor.from_string(fld["ink"])
     if kicker:
         t = kicker if dk._has_cjk(kicker) else kicker.upper()
-        dk.text(slide, 0.04 * W, 0.045 * H, 0.62 * W, 0.4 * s, [k.runs(t, sz, col, True, "mono")], space_after=0)
+        dk.text(slide, 0.04 * W, 0.045 * H, 0.62 * W, _meta_height(k, kicker), [k.runs(t, sz, col, True, "mono")],
+                space_after=0)
     dk.text(slide, 0.76 * W, 0.045 * H, 0.20 * W, 0.4 * s, [k.runs("{:02d}".format(len(k.prs.slides)), sz, col, True, "mono")],
             align=dk.PP_ALIGN.RIGHT, space_after=0)
 
@@ -676,6 +748,7 @@ def _poster_cover(k, slide, f, image):
     else:
         trect = (0.06 * W, 0.08 * H, 0.88 * W, 0.56 * H)
         blocks = ((0.46 * W, 0.74 * H, 0.60 * W, 0.40 * W, -9.0), (0.70 * W, 0.86 * H, 0.40 * W, 0.20 * H, -9.0))
+    trect = _below_meta(k, trect, kicker)
     rects, draws = {}, []
     if sub:
         srect = (trect[0], trect[1] + trect[3] - 0.9 * s, trect[2], 0.9 * s)
@@ -697,7 +770,8 @@ def _poster_section(k, slide, f, image):
     W, H, s, o = ctx(k)
     fld = k.field
     num, kicker, title, hl = text_of(f, "number"), text_of(f, "kicker"), text_of(f, "title"), text_of(f, "highlight")
-    nrect = (0.04 * W, 0.12 * H, 0.44 * W, 0.80 * H) if o == "land" else (0.06 * W, 0.08 * H, 0.88 * W, 0.40 * H)
+    nrect = _below_meta(k, (0.04 * W, 0.12 * H, 0.44 * W, 0.80 * H) if o == "land" else (0.06 * W, 0.08 * H, 0.88 * W, 0.40 * H),
+                        kicker)
     trect = (0.52 * W, 0.26 * H, 0.44 * W, 0.56 * H) if o == "land" else (0.06 * W, 0.52 * H, 0.88 * W, 0.36 * H)
     rects, draws = {}, []
     if num:
@@ -805,6 +879,7 @@ def _poster_points(k, slide, f, image):
             trect, (rx, ry, rw, rh) = (0.04 * W, 0.11 * H, 0.42 * W, 0.42 * H), (0.50 * W, 0.30 * H, 0.46 * W, 0.63 * H)
         else:
             trect, (rx, ry, rw, rh) = (0.06 * W, 0.08 * H, 0.88 * W, 0.20 * H), (0.06 * W, 0.34 * H, 0.88 * W, 0.58 * H)
+        trect = _below_meta(k, trect, kicker)
         if title:
             # display size first, but a long title shrinks to the label's floor rather than being refused (measured
             # 2026-10-05: at the title field's 44pt floor, CI's wider Linux faces refused the matrix copy on 4:3)
@@ -825,6 +900,7 @@ def _poster_points(k, slide, f, image):
     else:
         # a shorter band than the designed layout's: display type fills the rect it gets, and the steps need the room
         trect = (0.04 * W, 0.09 * H, 0.92 * W, 0.17 * H) if o == "land" else (0.06 * W, 0.07 * H, 0.88 * W, 0.16 * H)
+        trect = _below_meta(k, trect, kicker)
         top = trect[1]
         if title:
             r, _z, d = display(k, slide, trect, title, "title", floor=vl.TYPE[k.name]["label"][5])
