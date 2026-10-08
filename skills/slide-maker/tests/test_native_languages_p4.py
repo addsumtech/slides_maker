@@ -199,6 +199,20 @@ for W, H in ((13.333, 7.5), (10.0, 7.5), (7.5, 7.5), (7.5, 13.333), (10.0, 5.625
     check(len(segs_of(s)) == 3, "starlit {}x{}: one line joins the stars in order ({})".format(W, H, len(segs_of(s))))
     hit = [(sh.text_frame.text[:20]) for g in segs_of(s) for sh in texts(s) if crosses(g, rect_of(sh))]
     check(not hit, "starlit {}x{}: no constellation line crosses words (Review Focus 4): {}".format(W, H, hit[:3]))
+# long Chinese copy on a short page falls to the 2x2 ring: still one star per point, no line through words
+LONGZH = [("共享工具", "一抽屉螺丝刀可以供三张桌子同时使用。"), ("敞开大门", "不用预约，不收费，不问是什么东西。"),
+          ("步行可达", "步行十分钟是我们坚持的距离。"), ("记下每次修理", "每张桌一本笔记，就是明年的培训手册。")]
+import vl_native as _vn
+for W, H in ((10.0, 5.625), (7.5, 7.5), (13.333, 7.5)):
+    prs, k = use("starlit", W, H)
+    s = k.new_slide()
+    _vn._ALT[0] = 2                       # the ring is the LAST layout: drive it directly, every canvas
+    try:
+        _vn.COMPOSERS["starlit"]["points"](k, s, dict(title="长文案", items=LONGZH), None)
+    finally:
+        _vn._ALT[0] = 0
+    hit = [sh.text_frame.text[:12] for g in segs_of(s) for sh in texts(s) if crosses(g, rect_of(sh))]
+    check(len(segs_of(s)) == 3 and not hit, "starlit {}x{}: the ring layout's lines never cross words: {}".format(W, H, hit[:3]))
 # the constellation sits in the room under the title, not crowded against it (sample render, 2026-10-08: the lower
 # half of the page was empty)
 for W, H in ((13.333, 7.5), (10.0, 7.5)):
@@ -455,6 +469,87 @@ k.cover(k.new_slide(), title="Learning to reconstruct")
 s = k.new_slide()
 x, y, w, h = rs.ground(s, k.name, role="content", index=2)
 check(head_texts(s)[:1] == ["Learning to reconstruct"] and y > 0.6, "journal: an ordinary page carries the running head")
+
+# ── tally 数据账本 ──
+EXTRAS["tally"] = lambda lang, n: {"points": {"tags": ["A{}".format(i + 1) for i in range(n)]},
+                                   "data": {"total": "12"}}
+check("tally" in vl.NATIVE and set(vl.VARIANTS["tally"]) == {"light", "night"}, "tally: two grounds")
+assert_palettes("tally")
+for g, V in vl.VARIANTS["tally"].items():
+    p = V["palette"]
+    check(cr(p["chip_ink"], p["lime"]) >= 4.5, "tally/{}: pill ink on the lime pill".format(g))
+    check(cr(p["text_accents"][0], p["track"]) >= 3.0, "tally/{}: the bar's fill reads against its track (3:1, a graphic)".format(g))
+assert_matrix("tally")
+import vl_native2 as v2
+check([v2.num_value(t) for t in ("12", "1,250", "98.6%", " 40 ", "$4.2M", "3–5", "1,25", "")] ==
+      [12.0, 1250.0, 98.6, 40.0, None, None, None, None], "tally: num_value reads plain and percent numbers only")
+# total= draws the right share, or is refused by name (Review Focus 5)
+for num, total, frac in (("12", "40", 0.30), ("1,250", "5,000", 0.25), ("98.6%", "100%", 0.986)):
+    prs, k = use("tally")
+    s = k.new_slide(); k.data(s, number=num, label="of the whole", total=total)
+    bars = sorted((sh.width / EMU for sh in s.shapes if sh._element.xpath(".//a:prstGeom[@prst='roundRect']")
+                   and sh.height / EMU < 0.3 and sh.width / EMU > 0.3), reverse=True)
+    check(len(bars) == 2 and abs(bars[1] / bars[0] - frac) < 0.01,
+          "tally: {} of {} fills {:.0%} of the bar ({})".format(num, total, frac, [round(b, 2) for b in bars]))
+    tt = [sh.text_frame.text for sh in texts(s)]
+    check(num in tt and total in tt, "tally: both numbers stand at the bar's ends")
+for num, total in (("$4.2M", "10"), ("50", "40"), ("12", "0"), ("12%", "40")):
+    prs, k = use("tally")
+    try:
+        k.data(k.new_slide(), number=num, label="x", total=total)
+        check(False, "tally: number={!r} total={!r} is refused".format(num, total))
+    except ValueError as e:
+        check("total" in str(e), "tally: number={!r} total={!r} is refused by name".format(num, total))
+prs, k = use("tally")
+s = k.new_slide(); k.data(s, number="$4.2M", label="budget")
+check(not [sh for sh in s.shapes if sh._element.xpath(".//a:prstGeom[@prst='roundRect']")], "tally: no total → no bar")
+# ledger rows: a rule above each row and one closing the ledger; tags in one-line pills inside the page
+for W, H in ((13.333, 7.5), (10.0, 7.5), (7.5, 13.333), (7.5, 7.5)):
+    prs, k = use("tally", W, H)
+    s = k.new_slide()
+    k.points(s, kicker="Q3 review", title="Three lines on the ledger", tags=["MEMBERS", "LOANS", "REPAIRS"],
+             items=[("New members joined", "Mostly through word of mouth"), ("Tools went out on loan", "Drills and ladders"),
+                    ("Items came back repaired", None)])
+    check(len(segs_of(s)) == 4, "tally {}x{}: three rows, four rules ({})".format(W, H, len(segs_of(s))))
+    pills = [sh for sh in texts(s) if sh.text_frame.text in ("MEMBERS", "LOANS", "REPAIRS", "Q3 review")]
+    check(len(pills) == 4 and all(p.text_frame.word_wrap is False for p in pills), "tally {}x{}: tags and kicker in pills".format(W, H))
+    hit = [g for g in segs_of(s) for sh in texts(s) if crosses(g, rect_of(sh))]
+    check(not hit, "tally {}x{}: no ledger rule crosses words".format(W, H))
+# a kicker too long for a pill is set as plain words, never dropped; a tag too long for its pill is refused by name
+prs, k = use("tally")
+s = k.new_slide()
+LONGK = "A quarterly review of the neighbourhood lending library network and all its volunteers across the city"
+k.cover(s, kicker=LONGK, title="The lending library")
+check(any(sh.text_frame.text == LONGK for sh in texts(s)), "tally: a long kicker is kept as plain words")
+try:
+    k.points(k.new_slide(), title="x", items=["a", "b"], tags=["x" * 400, "y"])   # wider than the page at the floor
+    check(False, "tally: a tag too long for its pill is refused")
+except vl.VLTextOverflow as e:
+    check("tag" in str(e), "tally: a tag too long for its pill is refused by name")
+# the grid is the background picture; an ordinary page gets it
+import register_surface as rs
+prs, k = use("tally")
+s = k.new_slide()
+rect = rs.ground(s, k.name, role="content", index=2)
+check(s._element.find(".//{http://schemas.openxmlformats.org/drawingml/2006/main}blip") is not None and rect[2] > 5,
+      "tally: an ordinary page is on the grid")
+
+# the measure leaves headroom: LibreOffice set "Three lines on the ledger" (11.39in of Arial Black, measured to fit an
+# 11.41in box) on two lines, drawn over the first ledger row; P4 measures in 97% of a column and draws at its full width
+prs, k = use("tally")
+s = k.new_slide()
+k.points(s, kicker="Q3 review", title="Three lines on the ledger", tags=["Members", "Loans", "Repairs"],
+         items=[("New members joined", "Mostly through word of mouth"), ("Tools went out on loan", "Drills and ladders"),
+                ("Items came back repaired", "Fixed at the monthly evening")])
+tt = [sh for sh in texts(s) if sh.text_frame.text == "Three lines on the ledger"][0]
+row = [sh for sh in texts(s) if sh.text_frame.text == "New members joined"][0]
+sz = tt.text_frame.paragraphs[0].runs[0].font.size.pt
+check(dk.measure_text([("Three lines on the ledger", False)], tt.width / EMU * 0.97, sz, font="Arial Black") <= tt.height / EMU + 0.02
+      and row.top >= tt.top + tt.height, "tally: the title holds its words with headroom and the first row starts under it")
+import vl_native2 as _v2h
+_r, _d = _v2h.flow(k, k.new_slide(), "cover", (1.0, 1.0, 8.0, 3.0), [("title", "A title")], anchor="top")
+check(abs(_r["title"][0] - 1.0) < 1e-6 and abs(_r["title"][2] - 8.0) < 0.01 and hasattr(_d, "sizes"),
+      "P4 flow: rects report the full column while the words were measured in 97% of it ({})".format(_r["title"]))
 
 for line in ok:
     print("  ok   " + line)

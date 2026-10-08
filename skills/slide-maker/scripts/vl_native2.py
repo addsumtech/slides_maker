@@ -18,7 +18,36 @@ from pathlib import Path
 import deckkit as dk
 import native_art as na
 import visual_languages as vl
-from vl_native import GROUNDS, _run_all, alt, ctx, display, fit_circle, flow, points_of, register, text_of  # noqa: F401
+from vl_native import GROUNDS, _run_all, alt, ctx, display, fit_circle, points_of, register, text_of  # noqa: F401
+import vl_native as _vn
+
+HEADROOM = 0.97      # words are measured in 97% of a column and drawn at its full width (see flow)
+
+
+def flow(k, slide, page, col, items, **kw):
+    """vl_native.flow with headroom: the words are MEASURED in 97% of the column and the boxes DRAWN at its full width.
+    A renderer can set a line a hair wider than the measure — LibreOffice set "Three lines on the ledger" (11.39in of
+    Arial Black, measured to fit 11.41in) on two lines, drawn over the first ledger row, and lint, reading the same
+    measure, saw nothing. The rects report the drawn boxes; no box grows past its column."""
+    x, y, w, h = col
+    align = kw.get("align", "l")
+    wm = w * HEADROOM
+    dw = w - wm
+    rects, draw = _vn.flow(k, slide, page, (x + dw / 2.0 if align == "c" else x, y, wm, h), items, **kw)
+    out = {f_: ((r[0] - dw / 2.0, r[1], r[2] + dw, r[3]) if align == "c" else (r[0], r[1], r[2] + dw, r[3]))
+           for f_, r in rects.items()}
+
+    def go():
+        from pptx.util import Emu
+        n0 = len(slide.shapes)
+        draw()
+        for sh in list(slide.shapes)[n0:]:
+            if getattr(sh, "has_text_frame", False) and sh.text_frame.text.strip():
+                if align == "c":
+                    sh.left = Emu(int(sh.left - dw / 2.0 * 914400))
+                sh.width = Emu(int(sh.width + dw * 914400))
+    go.sizes = getattr(draw, "sizes", {})
+    return out, go
 
 # Japanese and Korean entries: 要旨 / 초록, 図 n, n面 / n면 confirmed against university thesis guides and newspaper
 # pages (2026-10-08); 今号 / 이번 호 could not be confirmed, so the plain 目次 / 목차 (contents) and 주석 (annotation) stand.
@@ -317,12 +346,13 @@ def _st_closing(k, slide, f, image):
     return r
 
 
-@register("starlit", "points", alts=2)
+@register("starlit", "points", alts=3)
 def _st_points(k, slide, f, image):
     """A constellation: one star per point, joined in order by one gold line. Across a landscape page the stars step
     high, low, high with their words under them; in portrait (and for long copy) they climb a zig-zag at the left
-    with their words beside them. The line never reaches the words: from a high star it drops 0.75s over a whole
-    column span, so at the column's edge it is still above y + 0.375s, and the words start at y + 0.42s."""
+    with their words beside them; the last resort is a 2x2 ring. The line never reaches the words: from a high star it
+    drops 0.75s over a whole column span, so at the column's edge it is still above y + 0.375s, and the words start at
+    y + 0.42s."""
     W, H, s, o = ctx(k)
     pts = points_of(f.get("items"))
     n = len(pts)
@@ -341,6 +371,18 @@ def _st_points(k, slide, f, image):
                 stars.append((x, y))
                 cols.append((x - span / 2 + 0.12 * s, y + 0.42 * s, span - 0.24 * s, 0.92 * H - (y + 0.42 * s)))
             align = "c"
+        elif alt() == 2 and n >= 3:
+            # long copy on a short page: a 2x2 constellation read as a ring (1 → 2 across, down, 3 → 4 back), each star
+            # at its cell's top-left, its words to the right of the star and under the row's line — so a line never
+            # meets words: across-lines run above every label, the down-line runs left of the second label
+            rows_ = -(-n // 2)
+            cw_ = 0.86 * W / 2.0
+            rh = (0.92 * H - t0) / rows_
+            for c_, r_ in [(0, 0), (1, 0), (1, 1), (0, 1)][:n]:
+                x, y = 0.07 * W + c_ * cw_ + 0.25 * s, t0 + r_ * rh + 0.25 * s
+                stars.append((x, y))
+                cols.append((x + 0.30 * s, y + 0.42 * s, cw_ - 0.75 * s, rh - 0.52 * s))
+            align = "l"
         else:
             slot = (0.92 * H - t0) / n
             lx = 0.30 * W
@@ -756,7 +798,7 @@ def _jn_figure(k, slide, f, image):
     return rects
 
 
-@register("journal", "points", alts=2)
+@register("journal", "points", alts=3)
 def _jn_points(k, slide, f, image):
     """Numbered findings (1, 2, 3 in the accent), each a bold head over its line; the caller's margin= beside them
     past an accent rule under its Note label (under the list in portrait or for long copy)."""
@@ -784,12 +826,16 @@ def _jn_points(k, slide, f, image):
             list_bottom = bottom - mh - 0.3 * s
         _mr, md = flow(k, slide, "points", mcol, [("margin_h", caps(label("note", mg))), ("margin", mg)], anchor="top")
         draws.append(md)
-    slot = (list_bottom - ty) / n
-    nw = 0.07 * W
+    ncol = 2 if (alt() == 2 and n >= 3) else 1        # long copy, last resort: the findings in two columns
+    gap = 0.4 * s
+    cw = (lw - (ncol - 1) * gap) / ncol
+    rows = -(-n // ncol)
+    slot = (list_bottom - ty) / rows
+    nw = min(0.07 * W, 0.6 * s) if ncol == 2 else 0.07 * W
     for i, (hd, ln) in enumerate(pts):
-        y = ty + i * slot
-        _nr, nd = flow(k, slide, "points", (0.07 * W, y, nw, slot), [("item_no", str(i + 1))], anchor="top")
-        _tr, td_ = flow(k, slide, "points", (0.07 * W + nw, y, lw - nw, slot - 0.1 * s),
+        x, y = 0.07 * W + (i % ncol) * (cw + gap), ty + (i // ncol) * slot
+        _nr, nd = flow(k, slide, "points", (x, y, nw, slot), [("item_no", str(i + 1))], anchor="top")
+        _tr, td_ = flow(k, slide, "points", (x + nw, y, cw - nw, slot - 0.1 * s),
                         [(x_, t) for x_, t in (("item_head", hd), ("item_line", ln)) if t], anchor="top")
         draws += [nd, td_]
     _run_all(art + draws)
@@ -842,4 +888,236 @@ def _jn_closing(k, slide, f, image):
     r, d = flow(k, slide, "closing", (0.10 * W, top, (0.70 if o == "land" and alt() == 0 else 0.80) * W, H - 0.6 - top),
                 fields(f, ("title", "line")), anchor="middle")
     d()
+    return r
+
+
+# ═══════════════════════════════════ tally 数据账本 ═══════════════════════════════════
+def _tl_ground(k, slide):
+    na.grid_background(slide, base=k.P["ground"], ink=k.P["grid_ink"], step=0.25, major=4)
+
+
+GROUNDS["tally"] = _tl_ground
+
+
+def chip_size(k, text, max_w, field):
+    """The size (pt) a pill of `text` takes to fit `max_w` — the field's size, shrinking toward its floor — or None."""
+    W, H, s, o = ctx(k)
+    base, role, _b, _c, _i, floor = vl.TYPE[k.name][field]
+    sz, face = base * s, k.face(role)
+    while na.chip_width(text, sz, face) > max_w and sz > floor * s + 1e-6:
+        sz = max(floor * s, sz * 0.92)
+    return sz if na.chip_width(text, sz, face) <= max_w else None
+
+
+def tl_chip(k, slide, x, y, text, max_w, *, field="tag", fill=None):
+    """A lime pill (or `fill`) for the caller's words, the darker or lighter ink by contrast. None when it cannot fit."""
+    sz = chip_size(k, text, max_w, field)
+    if sz is None:
+        return None
+    fill = fill or k.P["lime"]
+    ink = k.P["chip_ink"] if vl._contrast(k.P["chip_ink"], fill) >= vl._contrast("FFFFFF", fill) else "FFFFFF"
+    role = vl.TYPE[k.name][field][1]
+    return na.chip(slide, x, y, text, size=sz, fill=fill, ink=ink, face=k.face(role), ea_face=k.ea_face(role, text))
+
+
+def _tl_kicker(k, slide, f, x, y, max_w):
+    """The kicker as a pill; a kicker too long for one is set as plain words — still the caller's, never dropped.
+    Draws at once; returns its foot."""
+    t = text_of(f, "kicker")
+    if not t:
+        return y
+    c = tl_chip(k, slide, x, y, t, max_w, field="kicker")
+    if c:
+        return y + c[3]
+    r, d = flow(k, slide, "kicker", (x, y, max_w, 1.0 * ctx(k)[2]), [("kicker", t)])
+    d()
+    return max(v[1] + v[3] for v in r.values())
+
+
+def num_value(t):
+    """A plain or percent number ("12", "1,250", "98.6%") as a float; None for anything else ("$4.2M", "3–5")."""
+    m = re.fullmatch(r"\s*([0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(\.[0-9]+)?\s*%?\s*", t or "")
+    return float((m.group(1) + (m.group(2) or "")).replace(",", "")) if m else None
+
+
+@register("tally", "cover", alts=2)
+def _tl_cover(k, slide, f, image):
+    W, H, s, o = ctx(k)
+    x, w = 0.07 * W, 0.86 * W
+    y = _tl_kicker(k, slide, f, x, (0.16 if alt() == 0 else 0.07) * H, w) + 0.25 * s
+    r, ds = stack(k, slide, "cover", x, (0.78 if o == "land" else 0.86) * W, y, H - 0.6,
+                  [(fields(f, ("title",)), 0.70 * s), (fields(f, ("subtitle",)), 0.0)], anchor="top")
+    art = []
+    if "title" in r:
+        yb = r["title"][1] + r["title"][3] + 0.30 * s
+        art.append(lambda: dk.box(slide, x, yb, 2.4 * s, 0.09 * s, fill=k.P["text_accents"][0], round=True, r=0.045 * s))
+    _run_all(art + ds)
+    return r
+
+
+@register("tally", "section", alts=2)
+def _tl_section(k, slide, f, image):
+    W, H, s, o = ctx(k)
+    num = text_of(f, "number")
+    rects, draws = {}, []
+    if o == "land" and alt() == 0:
+        nrect, col = (0.07 * W, 0.18 * H, 0.38 * W, 0.64 * H), (0.50 * W, 0.22 * H, 0.43 * W, 0.60 * H)
+    else:
+        nrect, col = (0.07 * W, 0.10 * H, 0.86 * W, 0.34 * H), (0.07 * W, 0.48 * H, 0.86 * W, 0.42 * H)
+    if num:
+        r, d = flow(k, slide, "section", nrect, [("number", num)], anchor="middle", start={"number": 150 * s})
+        rects.update(r); draws.append(d)
+    ky = _tl_kicker(k, slide, f, col[0], col[1], col[2]) + (0.2 * s if text_of(f, "kicker") else 0.0)
+    r, d = flow(k, slide, "section", (col[0], ky, col[2], col[1] + col[3] - ky), fields(f, ("title",)), anchor="top")
+    rects.update(r); draws.append(d)
+    _run_all(draws)
+    return rects
+
+
+@register("tally", "image_text", alts=2)
+def _tl_image_text(k, slide, f, image):
+    """The caller's picture under a hairline frame; kicker pill, title, body and caption beside it."""
+    W, H, s, o = ctx(k)
+    if o == "land":
+        img = (0.07 * W, 0.12 * H, (0.50 if alt() == 0 else 0.44) * W, 0.76 * H)
+        cx0 = img[0] + img[2] + 0.5 * s
+        col = (cx0, 0.12 * H, 0.93 * W - cx0, 0.76 * H)
+    else:
+        img = (0.07 * W, 0.07 * H, 0.86 * W, (0.40 if alt() == 0 else 0.32) * H)
+        cy0 = img[1] + img[3] + 0.4 * s
+        col = (0.07 * W, cy0, 0.86 * W, H - 0.6 - cy0)
+    y = _tl_kicker(k, slide, f, col[0], col[1], col[2]) + (0.2 * s if text_of(f, "kicker") else 0.0)
+    r, d = flow(k, slide, "image_text", (col[0], y, col[2], col[1] + col[3] - y), fields(f, ("title", "body", "caption")),
+                anchor="top")
+    vl._place_image(k, slide, image, img, vl.L_((0, 0, 1, 1), "frame", None), "image_text")
+    frame = dk.box(slide, *img, fill=None, line=dk._as_rgb(k.P["ink"]), line_w=0.75)
+    dk.decorative(frame, "a hairline frame around the picture")
+    d()
+    return r
+
+
+@register("tally", "points", alts=3)
+def _tl_points(k, slide, f, image):
+    """Ledger rows: 01, 02 … in the accent, the point's head and line, the caller's tag in a pill at the right (under
+    the words when the pills are wide); a rule above each row and one closing the ledger. A tag too long for its pill
+    is refused by name, never dropped. Long copy: the title gets more room, then the ledger splits into two columns."""
+    W, H, s, o = ctx(k)
+    pts = points_of(f.get("items"))
+    n = len(pts)
+    tags = tags_of(f, n, "tally")
+    x0, w0 = 0.07 * W, 0.86 * W
+    y = _tl_kicker(k, slide, f, x0, 0.07 * H, w0) + 0.15 * s
+    r, d = flow(k, slide, "points", (x0, y, w0, (0.18 if alt() == 0 else 0.30) * H), fields(f, ("title",)), anchor="top")
+    rects, draws, art = dict(r), [d], []
+    top = max((v[1] + v[3] for v in r.values()), default=y) + 0.40 * s
+    bottom = H - 0.6
+    ncol = 2 if (alt() == 2 and n >= 3) else 1
+    gap = 0.4 * s
+    w = (w0 - (ncol - 1) * gap) / ncol
+    rows = -(-n // ncol)
+    pitch = (bottom - top) / rows
+    tag_sz = vl.TYPE["tally"]["tag"][0] * s
+    tw = (max(na.chip_width(t, tag_sz, k.face("body")) for t in tags) + 0.3 * s) if tags else 0.0
+    beside = bool(tags) and tw <= 0.30 * w
+    nw = (1.7 if alt() == 0 else 1.1) * s
+    for i, (hd, ln) in enumerate(pts):
+        x, ry = x0 + (i % ncol) * (w + gap), top + (i // ncol) * pitch
+        art.append(lambda x=x, ry=ry: na.seg(slide, x, ry - 0.12 * s, x + w, ry - 0.12 * s, k.P["ink"], w=0.6, alpha=0.5))
+        _nr, nd = flow(k, slide, "points", (x, ry, nw, pitch - 0.24 * s), [("item_no", "{:02d}".format(i + 1))],
+                       anchor="middle", start={"item_no": (50 if alt() == 0 else 34) * s})
+        tcol = (x + nw + 0.2 * s, ry, w - nw - 0.2 * s - (tw if beside else 0.0), pitch - 0.24 * s)
+        if tags and not beside:
+            tcol = (tcol[0], tcol[1], tcol[2], tcol[3] - 0.45 * s)
+        _tr, td_ = flow(k, slide, "points", tcol, [(x_, t) for x_, t in (("item_head", hd), ("item_line", ln)) if t],
+                        anchor="middle")
+        draws += [nd, td_]
+        if tags:
+            mw = (tw - 0.3 * s) if beside else tcol[2]
+            if chip_size(k, tags[i], mw, "tag") is None:
+                raise vl.VLTextOverflow("tally.points(): the tag {!r} does not fit its pill even at the floor size — "
+                                        "shorten it".format(tags[i][:40]))
+            ch = tag_sz / 72.0 * 1.9
+            cx_, cy_ = (x + w - tw + 0.3 * s, ry + (pitch - 0.24 * s - ch) / 2.0) if beside else (tcol[0], tcol[1] + tcol[3] + 0.1 * s)
+            draws.append(lambda t=tags[i], cx_=cx_, cy_=cy_, mw=mw: tl_chip(k, slide, cx_, cy_, t, mw))
+    yl = top + rows * pitch - 0.12 * s
+    for c in range(ncol):
+        xc = x0 + c * (w + gap)
+        art.append(lambda xc=xc: na.seg(slide, xc, yl, xc + w, yl, k.P["ink"], w=0.6, alpha=0.5))
+    _run_all(art + draws)
+    return rects
+
+
+@register("tally", "quote", alts=2)
+def _tl_quote(k, slide, f, image):
+    """The quote in heavy type behind a rounded accent bar; the source in a pill (as words when too long for one)."""
+    W, H, s, o = ctx(k)
+    x = (0.10 if alt() == 0 else 0.06) * W
+    a = text_of(f, "attribution")
+    col = (x + 0.45 * s, 0.14 * H, 0.90 * W - x - 0.45 * s, H - 0.6 - 0.14 * H - (0.9 * s if a else 0.0))
+    r, d = flow(k, slide, "quote", col, fields(f, ("quote",)), anchor="middle")
+    rects, draws = dict(r), [d]
+    qt = min((v[1] for v in r.values()), default=col[1])
+    qb = max((v[1] + v[3] for v in r.values()), default=col[1])
+    art = [lambda: dk.box(slide, x, qt, 0.10 * s, max(0.2, qb - qt), fill=k.P["text_accents"][0], round=True, r=0.05 * s)]
+    if a:
+        ay = qb + 0.3 * s
+        if chip_size(k, a, col[2], "attribution") is not None:
+            draws.append(lambda: tl_chip(k, slide, col[0], ay, a, col[2], field="attribution"))
+        else:
+            r2, d2 = flow(k, slide, "quote", (col[0], ay, col[2], H - 0.6 - ay), [("attribution", a)])
+            rects.update(r2); draws.append(d2)
+    _run_all(art + draws)
+    return rects
+
+
+@register("tally", "data", alts=2)
+def _tl_data(k, slide, f, image):
+    """The giant number, its label and note — and, when the caller gives total=, a share bar: the number's share of
+    the total with both numbers at its ends. A total the number cannot be read against is refused, never guessed."""
+    W, H, s, o = ctx(k)
+    num, total = text_of(f, "number"), text_of(f, "total")
+    frac = None
+    if total is not None:
+        v, t = num_value(num), num_value(total)
+        if v is None or t is None or t <= 0:
+            raise ValueError("tally.data(): total= draws a share bar, so number= and total= must both be plain numbers "
+                             "(12, 1,250, 98.6%) — got number={!r}, total={!r}".format(num, total))
+        if ("%" in (num or "")) != ("%" in total):
+            raise ValueError("tally.data(): number= and total= must both be percentages or neither — got {!r} and "
+                             "total={!r}".format(num, total))
+        if v > t:
+            raise ValueError("tally.data(): the number {!r} is larger than total={!r} — a share cannot exceed its whole"
+                             .format(num, total))
+        frac = v / t
+    x, w = 0.07 * W, 0.86 * W
+    bottom = H - 0.6 - (1.0 * s if frac is not None else 0.0)
+    rects, draws, art = {}, [], []
+    if o == "land" and alt() == 0:
+        nrect, col, anchor = (x, 0.12 * H, 0.52 * W, bottom - 0.12 * H), (0.62 * W, 0.18 * H, 0.31 * W, bottom - 0.18 * H), "middle"
+    else:
+        hh = bottom - 0.08 * H
+        nrect, col, anchor = (x, 0.08 * H, w, hh * 0.5), (x, 0.08 * H + hh * 0.52, w, hh * 0.48), "top"
+    if num:
+        r, d = flow(k, slide, "data", nrect, [("number", num)], anchor="middle")
+        rects.update(r); draws.append(d)
+    r, d = flow(k, slide, "data", col, fields(f, ("label", "note")), anchor=anchor)
+    rects.update(r); draws.append(d)
+    if frac is not None:
+        by, sz = bottom + 0.25 * s, vl.TYPE["tally"]["tag"][0] * s
+        art.append(lambda: na.share_bar(slide, x, by, w, frac, track=k.P["track"], fill=k.P["text_accents"][0], h=0.16 * s))
+        art.append(lambda: dk.text(slide, x, by + 0.25 * s, w / 2, 0.35 * s, [k.runs(num, sz, k.color("mute"), True)]))
+        art.append(lambda: dk.text(slide, x + w / 2, by + 0.25 * s, w / 2, 0.35 * s, [k.runs(total, sz, k.color("mute"), True)],
+                                   align=dk.PP_ALIGN.RIGHT))
+    _run_all(art + draws)
+    return rects
+
+
+@register("tally", "closing", alts=2)
+def _tl_closing(k, slide, f, image):
+    W, H, s, o = ctx(k)
+    x = 0.07 * W
+    col = (x, 0.20 * H, (0.78 if o == "land" else 0.86) * W, 0.60 * H) if alt() == 0 else (x, 0.08 * H, 0.86 * W, 0.78 * H)
+    r, d = flow(k, slide, "closing", col, fields(f, ("title", "line")), anchor="middle")
+    yb = max(v[1] + v[3] for v in r.values()) + 0.35 * s
+    _run_all([d, lambda: dk.box(slide, x, yb, 2.4 * s, 0.09 * s, fill=k.P["text_accents"][0], round=True, r=0.045 * s)])
     return r

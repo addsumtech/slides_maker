@@ -115,6 +115,14 @@ LANGS = {
                   "mac": {"display": "Georgia", "body": "Georgia", "numeral": "Times New Roman", "meta": "Arial"}},
         "ea": {"display": "serif", "body": "serif"}, "grain": 0, "frames": ["rect"],
         "forbids": ("confetti",), "cover": "low-left", "skeleton": "rail"},
+    "tally": {
+        "palette": {"ground": "FFFFFF", "ink": "0E0E10", "mute": "5A5F6B", "panel": "F4F6FA",
+                    "accents": ["2438F0", "C6F432"], "text_accents": ["2438F0"],
+                    "lime": "C6F432", "chip_ink": "0E0E10", "grid_ink": "1E2A60", "track": "E7EAF1"},
+        "fonts": {"both": {"display": "Arial Black", "body": "Arial", "numeral": "Arial Black"},
+                  "mac": {"display": "Arial Black", "body": "Helvetica Neue", "numeral": "Arial Black"}},
+        "ea": {"display": "sans", "body": "sans"}, "ea_heavy": True, "grain": 0, "frames": ["rect"],
+        "forbids": (), "cover": "low-left", "skeleton": "split"},
 }
 
 # Each language's GROUNDS: its own light paper, and ONE contrast ground (user's decision, 2026-10-04). All four
@@ -178,13 +186,19 @@ VARIANTS = {
         "green": {"label": "title green", "label_zh": "期刊绿版", "grain": 0,
                   "palette": {"ground": "163A2E", "ink": "F1EEE4", "mute": "BFC8BF", "panel": "1E4A3B",
                               "accents": ["D9C27A"], "text_accents": ["D9C27A"]}}},
+    "tally": {
+        "light": {"label": "white grid", "label_zh": "白网格版", "grain": 0, "palette": LANGS["tally"]["palette"]},
+        "night": {"label": "night ledger", "label_zh": "夜间账本版", "grain": 0,
+                  "palette": {"ground": "0F1222", "ink": "F2F4FA", "mute": "A5ACC4", "panel": "1A1F38",
+                              "accents": ["7C89FF", "C6F432"], "text_accents": ["7C89FF"],
+                              "lime": "C6F432", "chip_ink": "0E0E10", "grid_ink": "8090D0", "track": "2A3150"}}},
 }
-NATIVE = ("ink", "poster", "cutpaper", "drafting", "starlit", "broadsheet", "journal")          # drawn, no pictures needed (vl_native.py)
+NATIVE = ("ink", "poster", "cutpaper", "drafting", "starlit", "broadsheet", "journal", "tally")          # drawn, no pictures needed (vl_native.py)
 IMAGE_LED = ("editorial", "soft", "collage", "storybook")    # built around the caller's pictures
 # words only the CALLER can give — never invented by the kit; absent means nothing is drawn
-NATIVE_EXTRAS = {"ink": ("seal",), "poster": ("highlight",), "cutpaper": ("icons",), "drafting": ("project",), "broadsheet": ('masthead', 'edition', 'inside', 'tags'), "journal": ('running', 'authors', 'abstract', 'margin')}
+NATIVE_EXTRAS = {"ink": ("seal",), "poster": ("highlight",), "cutpaper": ("icons",), "drafting": ("project",), "broadsheet": ('masthead', 'edition', 'inside', 'tags'), "journal": ('running', 'authors', 'abstract', 'margin'), "tally": ('tags', 'total')}
 # the pages that DRAW each extra; on any other page it is refused, never silently dropped (non-Claude run, 2026-10-05)
-EXTRA_PAGES = {"highlight": ("cover", "section", "quote", "closing"), "icons": ("points",), "inside": ('cover',), "tags": ('points',), "authors": ('cover',), "abstract": ('cover',), "margin": ('points',)}
+EXTRA_PAGES = {"highlight": ("cover", "section", "quote", "closing"), "icons": ("points",), "inside": ('cover',), "tags": ('points',), "authors": ('cover',), "abstract": ('cover',), "margin": ('points',), "total": ('data',)}
 _ACTIVE = {}    # language -> the ground key use() set; rs.ground()/rs.card() (no kit) follow it
 _PAL_OVERRIDE = {}   # language -> the palette of the CURRENT page, for a language whose palette changes per page (poster)
 _MEMO = {}   # language -> the last composed page's remembered extras, for ordinary pages (rs.ground has no kit)
@@ -450,6 +464,11 @@ def _ground_journal(slide, role, index):
     return (0.07 * W, y + 0.1, 0.86 * W, H - y - 0.7)
 
 
+def _ground_tally(slide, role, index):
+    W, H = rs._canvas(slide)
+    return (0.55, 0.55, W - 1.1, H - 1.1)          # the grid is the page's background (new_slide paints it)
+
+
 def _card_for(name):
     """The language's card: its panel colour; soft is rounded, the others square."""
     def card(slide, x, y, w, h, label=None):
@@ -473,6 +492,7 @@ _card_ink, _card_poster, _card_cutpaper, _card_drafting = (_card_for(n) for n in
 _card_starlit = _card_for("starlit")
 _card_broadsheet = _card_for("broadsheet")
 _card_journal = _card_for("journal")
+_card_tally = _card_for("tally")
 
 
 for _n in LANGS:
@@ -577,6 +597,14 @@ TYPE = {
                 "margin": (12, "body", False, "mute", True, 9), "margin_h": (10, "meta", True, "accent", False, 8),
                 "running": (10, "body", False, "mute", True, 8), "fig_label": (13, "meta", True, "accent", False, 9),
                 "sec_no": (40, "numeral", True, "accent", False, 20)},
+    "tally": {"kicker": (12, "body", True, "ink", False, 9), "title": (60, "display", False, "ink", False, 28),
+              "subtitle": (20, "body", False, "mute", False, 12), "body": (17, "body", False, "ink", False, 11),
+              "mark": (90, "display", False, "accent", False, 36), "quote": (38, "display", False, "ink", False, 18),
+              "attribution": (12, "body", True, "ink", False, 9), "number": (200, "numeral", False, "accent", False, 60),
+              "label": (26, "body", True, "ink", False, 14), "note": (15, "body", False, "mute", False, 10),
+              "caption": (12, "body", False, "mute", False, 9), "line": (20, "body", False, "mute", False, 12),
+              "item_head": (26, "body", True, "ink", False, 13), "item_line": (17, "body", False, "mute", False, 10),
+              "item_no": (50, "display", False, "accent", False, 24), "tag": (12, "body", True, "ink", False, 9)},
 }
 
 # page -> its fields in column order (the caller's keyword names)
@@ -1438,6 +1466,15 @@ _SAMPLE_COPY_NATIVE = {
                                 margin="Every figure in this deck is labelled with its source.")),
                 ("data", dict(number="8×", label="acceleration we aim to support",
                               note="A target for the study, stated before any result."))],
+    "tally": [("cover", dict(kicker="Q3 review", title="The lending library, quarter three",
+                             subtitle="Members, loans and repairs across the network")),
+              ("points", dict(title="Three lines on the ledger", tags=["Members", "Loans", "Repairs"],
+                              items=[("New members joined", "Mostly through word of mouth"),
+                                     ("Tools went out on loan", "Drills and ladders led the list"),
+                                     ("Items came back repaired", "Fixed at the monthly evening")])),
+              ("quote", dict(quote="Count what people borrow, not what we own.", attribution="Library principle")),
+              ("data", dict(number="12", label="of 40 neighbourhoods now have a shelf", note="A target of 20 by next year.",
+                            total="40"))],
 }
 
 
@@ -1527,6 +1564,8 @@ _DISPLAY_NAMES["broadsheet"] = "Broadsheet front page"
 _RATIONALE["broadsheet"] = "drawn, no pictures: a masthead strip, a headline and standfirst, newspaper columns, a pull quote between rules"
 _DISPLAY_NAMES["journal"] = "Journal article"
 _RATIONALE["journal"] = "drawn around your figures: a running head, an abstract, numbered figures with captions, margin notes"
+_DISPLAY_NAMES["tally"] = "Data tally"
+_RATIONALE["tally"] = "drawn, no pictures: a fine grid, heavy type, pill tags, one giant number with its share bar"
 
 
 def direction(name, *, fonts="both", ground="light", W=13.333, H=7.5):
