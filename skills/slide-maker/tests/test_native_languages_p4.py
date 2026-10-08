@@ -254,6 +254,131 @@ _g, _why = vl._auto_ground("ink", dk.blank_deck(8.27, 11.69))
 check(_g == "light" and "dark" not in _why, "ink on an A4 print board: the plain light-ground note ({})".format(_why))
 
 
+# ── broadsheet 报纸头版 ──
+EXTRAS["broadsheet"] = lambda lang, n: {
+    "cover": {"masthead": {"en": "The Weekly", "zh": "街坊周报", "ja": "週刊まちなか", "ko": "동네 주간"}[lang],
+              "edition": {"en": "No. 12", "zh": "第 12 期", "ja": "第12号", "ko": "제12호"}[lang],
+              "inside": [COPY[lang]["items"][i][0] for i in range(min(n, 3))]},
+    "points": {"tags": [COPY[lang]["kicker"][:6] or "A"] * n}}
+check("broadsheet" in vl.NATIVE and set(vl.VARIANTS["broadsheet"]) == {"light", "salmon"}, "broadsheet: two grounds")
+assert_palettes("broadsheet")
+assert_matrix("broadsheet")
+def strip_texts(s):
+    """The words of the masthead strip: every text box drawn before the strip's second rule (its hairline) — the
+    strip is drawn first on every broadsheet page."""
+    out, rules = [], 0
+    for sh in s.shapes:
+        if sh._element.tag.endswith("}cxnSp"):
+            rules += 1
+            if rules == 2:
+                break
+        elif getattr(sh, "has_text_frame", False) and sh.text_frame.text.strip() and sh.top >= 0:
+            out.append(sh.text_frame.text)
+    return out
+# the masthead: masthead= is remembered; else the cover's kicker names the paper; else no name — never invented
+prs, k = use("broadsheet")
+s1 = k.new_slide(); k.cover(s1, kicker="The Corner Paper", title="Every street needs a night for fixing things")
+s2 = k.new_slide(); k.quote(s2, quote="The visitor holds the screwdriver.", attribution="Volunteer handbook")
+check("The Corner Paper" in strip_texts(s1) and "The Corner Paper" in strip_texts(s2),
+      "broadsheet: with no masthead=, the cover's kicker names the paper on every page ({})".format(strip_texts(s2)))
+check("THE CORNER PAPER" not in [sh.text_frame.text for sh in texts(s1)],
+      "broadsheet: ...and is not repeated above the headline")
+s3 = k.new_slide(); k.section(s3, number="2", title="The evening", masthead="Repair Weekly", edition="No. 3")
+s4 = k.new_slide(); k.data(s4, number="3", label="evenings a month")
+check("Repair Weekly" in strip_texts(s4) and "NO. 3" in strip_texts(s4), "broadsheet: masthead= and edition= hold for later pages")
+check(any(t == "PAGE 4" for t in strip_texts(s4)), "broadsheet: the page number is the slide's own ({})".format(strip_texts(s4)))
+prs, k = use("broadsheet")
+s = k.new_slide(); k.cover(s, title="Every street needs a night for fixing things")
+check(strip_texts(s) == ["PAGE 1"], "broadsheet: no masthead, no kicker → no name, no date, only the page ({})".format(strip_texts(s)))
+prs, k = use("broadsheet")
+s = k.new_slide(); k.cover(s, title="每条街，都需要一个修东西的夜晚", masthead="街坊修理周报")
+check("第 1 版" in strip_texts(s), "broadsheet: a Chinese paper numbers its pages 第 n 版 ({})".format(strip_texts(s)))
+# a long CJK masthead on 4:3 and square fits or is refused — never runs into the headline (Review Focus 1)
+for W, H in ((10.0, 7.5), (7.5, 7.5)):
+    prs, k = use("broadsheet", W, H)
+    s = k.new_slide()
+    try:
+        k.cover(s, title="每条街，都需要一个修东西的夜晚", masthead="社区修理网络与街坊工具图书馆联合出版的每周通讯")
+    except vl.VLTextOverflow:
+        check(True, "broadsheet {}x{}: an unfittable masthead is refused".format(W, H)); continue
+    with contextlib.redirect_stdout(io.StringIO()):
+        crit = [f_ for f_ in dk.lint_layout(prs, verbose=False) if f_[1] == "CRITICAL"]
+    check(not crit, "broadsheet {}x{}: a long CJK masthead never runs into the headline: {}".format(W, H, crit[:2]))
+# columns: a raised initial opens a Latin body, none on CJK; rules between columns never cross words
+for W, H in ((13.333, 7.5), (10.0, 7.5), (7.5, 13.333)):
+    prs, k = use("broadsheet", W, H)
+    s = k.new_slide()
+    k.points(s, title="How a repair evening works", tags=["The idea", "The evening", "Next"],
+             items=[("Bring it broken", "Anything that switches on is welcome."), ("Fix it together", "A volunteer sits beside you."),
+                    ("Take it home", "What could not be fixed goes on a list.")])
+    firsts = [sh.text_frame.paragraphs[0].runs[0] for sh in texts(s) if sh.text_frame.text.startswith(("Anything", "A volunteer", "What"))]
+    check(len(firsts) == 3 and all(len(r.text) == 1 and r.font.size.pt > 30 for r in firsts),
+          "broadsheet {}x{}: each Latin column opens on a raised initial".format(W, H))
+    hit = [g for g in segs_of(s) for sh in texts(s) if crosses(g, rect_of(sh))]
+    check(not hit, "broadsheet {}x{}: no column rule crosses words".format(W, H))
+prs, k = use("broadsheet")
+s = k.new_slide()
+k.points(s, title="修理之夜怎么进行", items=[("带着坏东西来", "能开机的都欢迎。"), ("一起动手修", "动手的是你。")])
+check(all(len(sh.text_frame.paragraphs[0].runs) >= 1 and sh.text_frame.paragraphs[0].runs[0].font.size.pt < 30
+          for sh in texts(s) if sh.text_frame.text.startswith(("能开机", "动手"))), "broadsheet: no raised initial on CJK")
+for bad_kw in (dict(tags=["a"]), dict(inside=["x"])):
+    prs, k = use("broadsheet")
+    try:
+        k.points(k.new_slide(), title="x", items=["a", "b"], **bad_kw)
+        check(False, "broadsheet.points({}) is refused".format(bad_kw))
+    except (ValueError, TypeError):
+        check(True, "broadsheet.points({}) is refused (wrong count / a cover-only extra)".format(bad_kw))
+# lint measures a DECLARED raised initial as it renders: the first line at the initial's size, every other line at the
+# body's (its conservative every-line-at-the-largest-run model read a 3-line column with a 41pt initial as 8 lines)
+prs = dk.blank_deck(13.333, 7.5); s = dk.add_slide(prs)
+BODY = "Anything that switches on, unzips or wobbles is welcome; nobody is turned away at the door."
+plain_tb = dk.text(s, 1.0, 0.5, 2.6, 2.0, [[(BODY, 18, dk.DEEP, False, False, "Georgia")]])
+plain_h = dk._ink_rect(plain_tb, (1.0, 0.5, 2.6, 2.0))[0][3]
+init_tb = dk.text(s, 5.0, 0.5, 2.6, 2.0, [[(BODY, 18, dk.DEEP, False, False, "Georgia")]])
+v2.raise_initial(init_tb, face="Times New Roman")
+bb = (init_tb.left / EMU, init_tb.top / EMU, init_tb.width / EMU, init_tb.height / EMU)
+init_h = dk._ink_rect(init_tb, bb)[0][3]
+check("+initial" in init_tb.name or init_tb.name.startswith("deckkit-initial"), "raise_initial declares the initial ({})".format(init_tb.name))
+check(init_h <= plain_h + (2.3 - 1.0) * 18 * 1.25 / 72 + 18 * 1.25 / 72 + 0.05,       # + at most the one line its width pushes
+      "lint reads a declared initial as one taller line ({:.2f} vs plain {:.2f})".format(init_h, plain_h))
+undecl = dk.text(s, 9.0, 0.5, 2.6, 2.0, [[("A", 41.4, dk.DEEP, True, False, "Times New Roman"), (BODY[1:], 18, dk.DEEP, False, False, "Georgia")]])
+und_h = dk._ink_rect(undecl, (9.0, 0.5, 2.6, 2.0))[0][3]
+check(und_h > 1.6 * init_h, "an UNDECLARED mixed-size paragraph keeps lint's conservative measure ({:.2f})".format(und_h))
+# long column bodies on a 4:3 page: the raised initial never makes lint read the column past the page (lint sizes every
+# line of a paragraph at its largest run — the generality corpus found three OFF_CANVAS on 4:3); the words always set
+LONGB = [("Share the tools", "One drawer of screwdrivers feeds three tables."),     # the generality corpus's copy
+         ("Open the door", "No booking, no fee, no questions about the object."),
+         ("Keep it walkable", "Ten minutes on foot is the limit we keep."),
+         ("Write every repair down", "A notebook per bench becomes next year's manual.")]
+for W, H in ((10.0, 7.5), (10.0, 5.625), (7.5, 7.5)):
+    prs, k = use("broadsheet", W, H)
+    k.points(k.new_slide(), title="Why every street deserves a place to fix what it owns", items=LONGB)
+    with contextlib.redirect_stdout(io.StringIO()):
+        crit = [f_ for f_ in dk.lint_layout(prs, verbose=False) if f_[1] == "CRITICAL"]
+    check(not crit, "broadsheet {}x{}: long columns stay on the page under lint's measure: {}".format(W, H, [(c[2], c[3][:50]) for c in crit[:2]]))
+# the front-page headline size is the cover's: an inside page's title is a section head (sample render: 80pt on points)
+prs, k = use("broadsheet")
+for page, kw in (("points", dict(title="How a repair evening works", items=["a", "b"])),
+                 ("image_text", dict(title="The hall on a Tuesday", body="Benches and tools.", image=PHOTO))):
+    s = k.new_slide(); getattr(k, page)(s, **kw)
+    t = [sh for sh in texts(s) if sh.text_frame.text == kw["title"]][0]
+    check(t.text_frame.paragraphs[0].runs[0].font.size.pt <= 48, "broadsheet {}: the title is a section head, not the cover's headline ({}pt)".format(
+        page, t.text_frame.paragraphs[0].runs[0].font.size.pt))
+# the closing ends on the ■ end mark, in the accent
+prs, k = use("broadsheet")
+s = k.new_slide(); k.closing(s, title="See you next week", line="Bring a neighbour.")
+last = texts(s)[-1].text_frame.paragraphs[-1].runs[-1]
+check(last.text == "■" and str(last.font.color.rgb) == vl.VARIANTS["broadsheet"]["light"]["palette"]["text_accents"][0],
+      "broadsheet: the closing ends on ■ in the accent")
+# an ordinary page (Review Focus 2) carries the strip; its content rect starts under it
+import register_surface as rs
+prs, k = use("broadsheet")
+k.cover(k.new_slide(), title="Every street", masthead="Repair Weekly")
+s = k.new_slide()
+x, y, w, h = rs.ground(s, k.name, role="content", index=2)
+check("Repair Weekly" in strip_texts(s) and y >= max(sh.top / EMU + sh.height / EMU for sh in texts(s)),
+      "broadsheet: an ordinary page carries the masthead strip and its content starts under it ({:.2f})".format(y))
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

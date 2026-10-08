@@ -101,6 +101,13 @@ LANGS = {
                   "mac": {"display": "Georgia", "body": "Georgia", "numeral": "Times New Roman"}},
         "ea": {"display": "serif", "body": "serif"}, "grain": 0, "frames": ["ellipse"],
         "forbids": ("confetti",), "cover": "centred", "skeleton": "statement"},
+    "broadsheet": {
+        "palette": {"ground": "F2EEE5", "ink": "141414", "mute": "4A4744", "panel": "E6E0D3",
+                    "accents": ["A32018"], "text_accents": ["A32018"]},
+        "fonts": {"both": {"display": "Times New Roman", "body": "Georgia", "numeral": "Times New Roman", "meta": "Arial"},
+                  "mac": {"display": "Times New Roman", "body": "Georgia", "numeral": "Times New Roman", "meta": "Arial"}},
+        "ea": {"display": "serif", "body": "serif"}, "grain": 4, "frames": ["rect"],
+        "forbids": ("confetti",), "cover": "full-bleed-type", "skeleton": "split"},
 }
 
 # Each language's GROUNDS: its own light paper, and ONE contrast ground (user's decision, 2026-10-04). All four
@@ -154,13 +161,18 @@ VARIANTS = {
         "dawn": {"label": "dawn", "label_zh": "黎明版", "grain": 0,
                  "palette": {"ground": "22163A", "ink": "F6E9E4", "mute": "C9B7C9", "panel": "2D1F4A",
                              "accents": ["EDB3A0"], "text_accents": ["EDB3A0"], "glow": "F7D2C2"}}},
+    "broadsheet": {
+        "light": {"label": "newsprint", "label_zh": "报纸版", "grain": 4, "palette": LANGS["broadsheet"]["palette"]},
+        "salmon": {"label": "pink paper", "label_zh": "粉报版", "grain": 4,
+                   "palette": {"ground": "FBE8D8", "ink": "1A1714", "mute": "54493F", "panel": "F3DAC6",
+                               "accents": ["0F4C81"], "text_accents": ["0F4C81"]}}},
 }
-NATIVE = ("ink", "poster", "cutpaper", "drafting", "starlit")          # drawn, no pictures needed (vl_native.py)
+NATIVE = ("ink", "poster", "cutpaper", "drafting", "starlit", "broadsheet")          # drawn, no pictures needed (vl_native.py)
 IMAGE_LED = ("editorial", "soft", "collage", "storybook")    # built around the caller's pictures
 # words only the CALLER can give — never invented by the kit; absent means nothing is drawn
-NATIVE_EXTRAS = {"ink": ("seal",), "poster": ("highlight",), "cutpaper": ("icons",), "drafting": ("project",)}
+NATIVE_EXTRAS = {"ink": ("seal",), "poster": ("highlight",), "cutpaper": ("icons",), "drafting": ("project",), "broadsheet": ('masthead', 'edition', 'inside', 'tags')}
 # the pages that DRAW each extra; on any other page it is refused, never silently dropped (non-Claude run, 2026-10-05)
-EXTRA_PAGES = {"highlight": ("cover", "section", "quote", "closing"), "icons": ("points",)}
+EXTRA_PAGES = {"highlight": ("cover", "section", "quote", "closing"), "icons": ("points",), "inside": ('cover',), "tags": ('points',)}
 _ACTIVE = {}    # language -> the ground key use() set; rs.ground()/rs.card() (no kit) follow it
 _PAL_OVERRIDE = {}   # language -> the palette of the CURRENT page, for a language whose palette changes per page (poster)
 _MEMO = {}   # language -> the last composed page's remembered extras, for ordinary pages (rs.ground has no kit)
@@ -406,6 +418,16 @@ def _ground_starlit(slide, role, index):
     return rect
 
 
+def _ground_broadsheet(slide, role, index):
+    """An ordinary broadsheet page: the masthead strip (the deck's remembered masthead and edition, this page's
+    number), and the content rect under it — in REFERENCE inches."""
+    import vl_native2 as v2
+    K = rs._K[0]
+    W, H = rs._canvas(slide)
+    y = v2.bs_strip(v2.kit_for("broadsheet", slide), slide, {}) / K
+    return (0.05 * W, y + 0.15, 0.90 * W, H - y - 0.75)
+
+
 def _card_for(name):
     """The language's card: its panel colour; soft is rounded, the others square."""
     def card(slide, x, y, w, h, label=None):
@@ -427,6 +449,7 @@ def _card_for(name):
 _card_editorial, _card_soft, _card_collage, _card_storybook = (_card_for(n) for n in ("editorial", "soft", "collage", "storybook"))
 _card_ink, _card_poster, _card_cutpaper, _card_drafting = (_card_for(n) for n in ("ink", "poster", "cutpaper", "drafting"))
 _card_starlit = _card_for("starlit")
+_card_broadsheet = _card_for("broadsheet")
 
 
 for _n in LANGS:
@@ -509,6 +532,16 @@ TYPE = {
                 "label": (26, "display", False, "ink", False, 14), "note": (15, "body", False, "mute", True, 10),
                 "caption": (12, "body", False, "mute", True, 9), "line": (20, "body", False, "mute", True, 12),
                 "item_head": (24, "display", False, "ink", False, 13), "item_line": (16, "body", False, "mute", True, 10)},
+    "broadsheet": {"kicker": (12, "meta", True, "accent", False, 9), "title": (80, "display", True, "ink", False, 30),
+                   "subtitle": (24, "body", False, "ink", True, 13), "body": (18, "body", False, "ink", False, 11),
+                   "mark": (100, "display", True, "accent", False, 40), "quote": (38, "body", False, "ink", True, 18),
+                   "attribution": (11, "meta", True, "mute", False, 9), "number": (150, "numeral", True, "ink", False, 44),
+                   "label": (22, "body", True, "ink", False, 12), "note": (14, "body", False, "mute", True, 9),
+                   "caption": (12, "body", False, "mute", True, 9), "line": (20, "body", False, "ink", True, 12),
+                   "item_head": (28, "display", True, "ink", False, 14), "item_line": (18, "body", False, "ink", False, 11),
+                   "masthead": (40, "display", True, "ink", False, 12), "edition": (10, "meta", True, "mute", False, 8),
+                   "inside": (16, "body", False, "ink", False, 10), "inside_h": (11, "meta", True, "accent", False, 9),
+                   "tag": (10, "meta", True, "accent", False, 8)},
 }
 
 # page -> its fields in column order (the caller's keyword names)
@@ -1346,6 +1379,16 @@ _SAMPLE_COPY_NATIVE = {
                                 ("We listened more", "to the people who use it"), ("We kept the team", "through a hard spring")])),
                 ("quote", dict(quote="We measured the year in conversations, not in launches.", attribution="From the founder's letter")),
                 ("data", dict(number="12", label="conversations that changed our plan", note="Each one is written up in the archive."))],
+    "broadsheet": [("cover", dict(title="Every street needs a night for fixing things",
+                                  subtitle="Volunteers, borrowed tools and one long table: how a repair evening works.",
+                                  masthead="The Neighbourhood Repair Weekly", inside=["The idea", "The evening", "The numbers"])),
+                   ("points", dict(title="How a repair evening works", tags=["The idea", "The evening", "The next step"],
+                                   items=[("Bring it broken", "Anything that switches on, unzips or wobbles is welcome."),
+                                          ("Fix it together", "A volunteer sits beside you, but your hands do the work."),
+                                          ("Take it home", "What could not be fixed today goes on a list for next time.")])),
+                   ("quote", dict(quote="The visitor holds the screwdriver; the volunteer only guides.",
+                                  attribution="From the volunteer handbook")),
+                   ("data", dict(number="3", label="evenings a month", note="Short enough to fit around work."))],
 }
 
 
@@ -1431,6 +1474,8 @@ _RATIONALE.update({"ink": "drawn, no pictures: misty ink ridges, vertical CJK, a
                    "drafting": "drawn, no pictures: a drawing sheet with grid, title block, dimensions and leaders"})
 _DISPLAY_NAMES["starlit"] = "Starlit night"
 _RATIONALE["starlit"] = "drawn, no pictures: a night sky and a crescent moon, points as a constellation, the figure in a glow"
+_DISPLAY_NAMES["broadsheet"] = "Broadsheet front page"
+_RATIONALE["broadsheet"] = "drawn, no pictures: a masthead strip, a headline and standfirst, newspaper columns, a pull quote between rules"
 
 
 def direction(name, *, fonts="both", ground="light", W=13.333, H=7.5):

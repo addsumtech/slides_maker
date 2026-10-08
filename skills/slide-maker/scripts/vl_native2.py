@@ -136,6 +136,7 @@ def raise_initial(tb, factor=2.3, face=None):
         first.font.name = face
     added = (factor - 1.0) * size * 1.2 / 72.0
     tb.height = Emu(int(tb.height + added * 914400))
+    dk._compose_tag(tb, flag="+initial")       # lint measures the first line apart (deckkit._ink_rect)
     return added
 
 
@@ -366,4 +367,263 @@ def _st_points(k, slide, f, image):
         na.radial_glow(slide, x, y, 1.0 * s, k.P["glow"])
         dk.decorative(na.disc(slide, x, y, 0.16 * s, k.P["glow"]), "a star of the constellation; its words sit beside it")
     _run_all(draws)
+    return rects
+
+
+# ═══════════════════════════════════ broadsheet 报纸头版 ═══════════════════════════════════
+def bs_strip(k, slide, f, big=False):
+    """The masthead strip every page carries: the paper's name (masthead=, else the cover's kicker, else none), a
+    heavy rule, the caller's edition= at the left and the page number at the right, a hairline. Never invents a name,
+    a date or an issue number. Draws at once and returns the y under it."""
+    W, H, s, o = ctx(k)
+    name = memo(k, f, "masthead", fallback=k.memo.get("_cover_kicker"))
+    edition = memo(k, f, "edition")
+    y = 0.04 * H
+    draws = []
+    if name:
+        nh = (0.80 if big else 0.52) * s
+        r, d = flow(k, slide, "masthead", (0.05 * W, y, 0.90 * W, nh), [("masthead", name)], anchor="middle", align="c",
+                    start={"masthead": (44 if big else 26) * s})
+        draws.append(d)
+        y = max(y + nh, max(v[1] + v[3] for v in r.values())) + 0.04 * s
+    rule_y, meta_y = y, y + 0.10 * s
+    draws.append(lambda: na.seg(slide, 0.05 * W, rule_y, 0.95 * W, rule_y, k.P["ink"], w=2.5))
+    if edition:
+        r, d = flow(k, slide, "edition", (0.05 * W, meta_y, 0.62 * W, 0.30 * s), [("edition", caps(edition))])
+        draws.append(d)
+    pg = caps(label("page", name, edition, text_of(f, "title"), text_of(f, "quote"), k.memo.get("_title")).format(page_no(slide)))
+    sz = vl.TYPE[k.name]["edition"][0] * s
+    draws.append(lambda: dk.text(slide, 0.70 * W, meta_y, 0.25 * W, 0.30 * s,
+                                 [k.runs(pg, sz, k.color("mute"), True, "meta")], align=dk.PP_ALIGN.RIGHT))
+    hair = meta_y + 0.34 * s
+    draws.append(lambda: na.seg(slide, 0.05 * W, hair, 0.95 * W, hair, k.P["ink"], w=0.6))
+    _run_all(draws)
+    return hair + 0.10 * s
+
+
+def _with_initial(k, slide, draw, words):
+    """Run a planned draw, then open the body it set on a raised initial (planned with room for it: max_extra)."""
+    def go():
+        n0 = len(slide.shapes)
+        draw()
+        tb = last_shape(slide, n0, words)
+        if tb is not None:
+            raise_initial(tb, face=k.face("display"))
+    return go
+
+
+@register("broadsheet", "cover", alts=2)
+def _bs_cover(k, slide, f, image):
+    """A front page: the headline across the page, a rule, the standfirst; the caller's inside= lines in a sidebar
+    (under the standfirst in portrait). With no masthead= the cover's kicker names the paper and is not repeated."""
+    W, H, s, o = ctx(k)
+    kick, title = text_of(f, "kicker"), text_of(f, "title")
+    as_name = bool(kick) and not text_of(f, "masthead") and not k.memo.get("masthead")
+    if title:
+        k.memo = dict(k.memo, _title=title)
+    if as_name:
+        k.memo = dict(k.memo, _cover_kicker=kick)
+    top = bs_strip(k, slide, f, big=True) + 0.12 * s
+    lines = inside_lines(f.get("inside"))
+    head = ([("kicker", caps(kick))] if kick and not as_name else []) + ([("title", title)] if title else [])
+    hh = ((0.50 if o == "land" else 0.36) if alt() == 0 else (0.62 if o == "land" else 0.48)) * H
+    r, d = flow(k, slide, "cover", (0.05 * W, top, 0.90 * W, hh), head, anchor="top")
+    rects, draws = dict(r), [d]
+    yr = max((v[1] + v[3] for v in r.values()), default=top) + 0.16 * s
+    art = [lambda: na.seg(slide, 0.05 * W, yr, 0.95 * W, yr, k.P["ink"], w=0.75)]
+    side = bool(lines) and o == "land"
+    sub, sb, foot = text_of(f, "subtitle"), yr, H - 0.6
+    if sub:
+        r, d = flow(k, slide, "cover", (0.05 * W, yr + 0.16 * s, (0.62 if side else 0.90) * W, foot - yr - 0.16 * s),
+                    [("subtitle", sub)], anchor="top")
+        rects.update(r); draws.append(d)
+        sb = max(v[1] + v[3] for v in r.values())
+    if lines:
+        if side:
+            ix, iy, iw = 0.71 * W, yr + 0.16 * s, 0.24 * W
+            art.append(lambda: na.seg(slide, 0.685 * W, yr + 0.16 * s, 0.685 * W, foot, k.P["ink"], w=0.5))
+        else:
+            ix, iy, iw = 0.05 * W, sb + 0.3 * s, 0.90 * W
+        r, d = flow(k, slide, "cover", (ix, iy, iw, foot - iy),
+                    [("inside_h", caps(label("inside", *lines))), ("inside", "\n".join(lines))], anchor="top")
+        draws.append(d)
+    _run_all(art + draws)
+    return rects
+
+
+@register("broadsheet", "section", alts=2)
+def _bs_section(k, slide, f, image):
+    """A section front: the number in a black tab on a heavy rule, the section's title as its headline."""
+    W, H, s, o = ctx(k)
+    top = bs_strip(k, slide, f)
+    num = text_of(f, "number")
+    rects, art, draws = {}, [], []
+    y = top + (0.6 if alt() == 0 else 0.3) * s
+    if num:
+        th = 0.95 * s
+        tw = min(0.6 * W, max(1.1 * s, na.chip_width(num, 44 * s, k.face("numeral")) + 0.2 * s))
+        r, d = flow(k, slide, "section", (0.05 * W + 0.1 * s, y, tw - 0.2 * s, th), [("number", num)], anchor="middle",
+                    align="c", ink=k.P["ground"], accent=k.P["ground"], start={"number": 44 * s})
+        rects.update(r); draws.append(d)
+        art.append(lambda y=y: dk.box(slide, 0.05 * W, y, tw, th, fill=k.P["ink"]))
+        y += th
+    art.append(lambda y=y: na.seg(slide, 0.05 * W, y, 0.95 * W, y, k.P["ink"], w=3.0))
+    r, d = flow(k, slide, "section", (0.05 * W, y + 0.3 * s, 0.90 * W, H - 0.6 - y - 0.3 * s),
+                fields(f, ("kicker", "title"), ("kicker",)), anchor="top")
+    rects.update(r); draws.append(d)
+    _run_all(art + draws)
+    return rects
+
+
+@register("broadsheet", "image_text", alts=2)
+def _bs_image_text(k, slide, f, image):
+    """A news photograph with its caption under a hairline; the story's headline and body beside it (under it in
+    portrait)."""
+    W, H, s, o = ctx(k)
+    top = bs_strip(k, slide, f) + 0.25 * s
+    bottom = H - 0.6
+    cap = text_of(f, "caption")
+    rects, draws, art = {}, [], []
+    if o == "land":
+        img_x, img_w = 0.05 * W, (0.58 if alt() == 0 else 0.50) * W
+        cx0 = img_x + img_w + 0.35 * s
+        col = (cx0, top, 0.95 * W - cx0, bottom - top)
+        img_y1 = bottom
+        if cap:
+            cr_, cd = flow(k, slide, "image_text", (img_x, bottom - 0.9 * s, img_w, 0.9 * s), [("caption", cap)], anchor="bottom")
+            img_y1 = cr_["caption"][1] - 0.22 * s
+    else:
+        img_x, img_w = 0.05 * W, 0.90 * W
+        img_y1 = top + (0.42 if alt() == 0 else 0.34) * H
+        if cap:
+            cr_, cd = flow(k, slide, "image_text", (img_x, img_y1 + 0.22 * s, img_w, 0.6 * s), [("caption", cap)], anchor="top")
+        cy0 = (max(v[1] + v[3] for v in cr_.values()) if cap else img_y1) + 0.3 * s
+        col = (0.05 * W, cy0, 0.90 * W, bottom - cy0)
+    if cap:
+        rects.update(cr_); draws.append(cd)
+        hy = cr_["caption"][1] - 0.11 * s
+        art.append(lambda: na.seg(slide, img_x, hy, img_x + img_w, hy, k.P["ink"], w=0.5))
+    r, d = flow(k, slide, "image_text", col, fields(f, ("kicker", "title", "body"), ("kicker",)), anchor="top",
+                start={"title": 40 * s})
+    rects.update(r); draws.append(d)
+    vl._place_image(k, slide, image, (img_x, top, img_w, img_y1 - top), vl.L_((0, 0, 1, 1), "frame", None), "image_text")
+    _run_all(art + draws)
+    return rects
+
+
+@register("broadsheet", "quote", alts=2)
+def _bs_quote(k, slide, f, image):
+    """A pull quote between a heavy rule and a hairline, the quote mark hung in the margin, the source under it."""
+    W, H, s, o = ctx(k)
+    top = bs_strip(k, slide, f)
+    x0, x1 = (0.12 * W, 0.88 * W) if (o == "land" and alt() == 0) else (0.06 * W, 0.94 * W)
+    mw = 0.9 * s
+    q, a = text_of(f, "quote"), text_of(f, "attribution")
+    rects, draws = {}, []
+    qy0, qy1 = top + 0.85 * s, H - 1.4 * s
+    if q:
+        r, d = flow(k, slide, "quote", (x0 + mw, qy0, x1 - x0 - mw, qy1 - qy0), [("quote", q)], anchor="middle")
+        rects.update(r); draws.append(d)
+        qt, qb = r["quote"][1], r["quote"][1] + r["quote"][3]
+        _m, dm = flow(k, slide, "quote", (x0, qt - 0.12 * s, mw, 1.2 * s), [("mark", "“")], start={"mark": 80 * s})
+        draws.append(dm)
+    else:
+        qt = qb = (qy0 + qy1) / 2.0
+    art = [lambda: na.seg(slide, x0, qt - 0.3 * s, x1, qt - 0.3 * s, k.P["ink"], w=3.0),
+           lambda: na.seg(slide, x0, qb + 0.25 * s, x1, qb + 0.25 * s, k.P["ink"], w=0.6)]
+    if a:
+        r, d = flow(k, slide, "quote", (x0 + mw, qb + 0.40 * s, x1 - x0 - mw, 0.8 * s), [("attribution", caps(a))])
+        rects.update(r); draws.append(d)
+    _run_all(art + draws)
+    return rects
+
+
+@register("broadsheet", "data", alts=2)
+def _bs_data(k, slide, f, image):
+    """By the numbers: the figure, a short rule, its label and note, in a boxed panel under a solid band — a header
+    with no words, because the kit has none to give it."""
+    W, H, s, o = ctx(k)
+    top = bs_strip(k, slide, f)
+    bw = ((0.42 if o == "land" else 0.80) if alt() == 0 else 0.86) * W
+    bx, band, pad = (W - bw) / 2.0, 0.30 * s, 0.30 * s
+    y_in, avail = top + 0.3 * s, (H - 0.6) - (top + 0.3 * s)
+    items = fields(f, ("number", "label", "note"))
+
+    def plan(y):
+        return flow(k, slide, "data", (bx + pad, y + band + pad, bw - 2 * pad, avail - band - 2 * pad), items,
+                    anchor="top", align="c")
+    r, _unused = plan(y_in)
+    bh = band + 2 * pad + (max(v[1] + v[3] for v in r.values()) - (y_in + band + pad)) + 0.1 * s
+    by = y_in + max(0.0, (avail - bh) / 2.0)
+    r, d = plan(by)
+    art = [lambda: dk.box(slide, bx, by, bw, bh, fill=None, line=dk._as_rgb(k.P["ink"]), line_w=1.25),
+           lambda: dk.decorative(dk.box(slide, bx, by, bw, band, fill=k.P["ink"]), "the header band of a numbers box")]
+    if "number" in r and "label" in r:
+        yl = (r["number"][1] + r["number"][3] + r["label"][1]) / 2.0
+        art.append(lambda: na.seg(slide, W / 2 - 0.15 * bw, yl, W / 2 + 0.15 * bw, yl, k.P["ink"], w=0.6))
+    _run_all(art + [d])
+    return r
+
+
+@register("broadsheet", "closing", alts=2)
+def _bs_closing(k, slide, f, image):
+    """The last story's end: its headline, its line, and the ■ end-of-article mark after the last words."""
+    W, H, s, o = ctx(k)
+    top = bs_strip(k, slide, f)
+    t, ln = text_of(f, "title"), text_of(f, "line")
+    items = [("title", t if ln or not t else t + " ■")] if t else []
+    if ln:
+        items.append(("line", ln + " ■"))
+    col = (0.05 * W, top + 0.3 * s, (0.70 if o == "land" and alt() == 0 else 0.90) * W, H - 0.6 - top - 0.3 * s)
+    r, d = flow(k, slide, "closing", col, items, anchor="middle")
+    d()
+    end_mark(list(slide.shapes)[-1], k.P["text_accents"][0])
+    return r
+
+
+@register("broadsheet", "points", alts=2)
+def _bs_points(k, slide, f, image):
+    """Newspaper columns: each point a column — the caller's tag over its head over its body, rules between; a Latin
+    body opens on a raised initial when its column has room for the taller first line (and the one line the initial's
+    width may push down); where it has not, the body is set plain — the words never move for an ornament. Portrait
+    stacks the columns as rows; long copy gives the title more room."""
+    W, H, s, o = ctx(k)
+    top = bs_strip(k, slide, f)
+    pts = points_of(f.get("items"))
+    n = len(pts)
+    tags = tags_of(f, n, "broadsheet")
+    r, d = flow(k, slide, "points", (0.05 * W, top + 0.05 * s, 0.90 * W, (0.20 if alt() == 0 else 0.34) * H),
+                fields(f, ("kicker", "title"), ("kicker",)),
+                start={"title": 42 * s})                  # an inside page's head; the 80pt headline is the cover's
+    rects, draws, art = dict(r), [d], []
+    ctop = max((v[1] + v[3] for v in r.values()), default=top) + 0.30 * s
+    bottom = H - 0.6
+    gap = 0.30 * s
+    if o == "land":                                   # columns across the page
+        cw = (0.90 * W - (n - 1) * gap) / n
+        boxes = [(0.05 * W + i * (cw + gap), ctop, cw, bottom - ctop) for i in range(n)]
+        rules = [(b[0] - gap / 2, ctop, b[0] - gap / 2, bottom) for b in boxes[1:]]
+    elif alt() == 1 and n >= 3:                       # a square or portrait page with long copy: two columns of rows
+        cw, rows = (0.90 * W - gap) / 2, -(-n // 2)
+        rh = (bottom - ctop - (rows - 1) * 0.15 * s) / rows
+        boxes = [(0.05 * W + (i % 2) * (cw + gap), ctop + (i // 2) * (rh + 0.15 * s), cw, rh) for i in range(n)]
+        rules = [(0.05 * W + cw + gap / 2, ctop, 0.05 * W + cw + gap / 2, bottom)] + \
+                [(0.05 * W, ctop + r_ * (rh + 0.15 * s) - 0.08 * s, 0.95 * W, ctop + r_ * (rh + 0.15 * s) - 0.08 * s)
+                 for r_ in range(1, rows)]
+    else:                                             # portrait: the columns stacked as rows
+        slot = (bottom - ctop) / n
+        boxes = [(0.05 * W, ctop + i * slot, 0.90 * W, slot - 0.15 * s) for i in range(n)]
+        rules = [(0.05 * W, b[1] - 0.08 * s, 0.95 * W, b[1] - 0.08 * s) for b in boxes[1:]]
+    for x0, y0, x1, y1 in rules:
+        art.append(lambda x0=x0, y0=y0, x1=x1, y1=y1: na.seg(slide, x0, y0, x1, y1, k.P["ink"], w=0.5))
+    for i, ((hd, ln), (x, y, w, h)) in enumerate(zip(pts, boxes)):
+        items = ([("tag", caps(tags[i]))] if tags else []) + [("item_head", hd)] + ([("item_line", ln)] if ln else [])
+        tr, td_ = flow(k, slide, "points", (x, y, w, h), items, anchor="top")
+        initial = bool(ln) and ln[0].isalpha() and not dk._has_cjk(ln[0]) and "item_line" in tr
+        if initial:                       # room in the column for the taller first line and the one line its width
+            bx, by, bw, bh = tr["item_line"]  # may push down (lint measures a declared initial so: deckkit._ink_rect)
+            pitch = td_.sizes["item_line"] * dk._LINT_LINE_H / 72.0
+            initial = by + bh + 1.3 * pitch + pitch + 0.05 <= y + h
+        draws.append(_with_initial(k, slide, td_, ln) if initial else td_)
+    _run_all(art + draws)
     return rects

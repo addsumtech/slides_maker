@@ -478,6 +478,7 @@ WATERMARK_TAG = "deckkit-watermark"
 OVERLAP_TAG = "deckkit-overlap:"
 DECOR_TAG = "deckkit-decor"      # `decorative()`: pure ornament, exempt from NON-TEXT CONTRAST
 LOWRES_TAG = "deckkit-lowres"    # `low_res_intent()`: the pixels are the point, exempt from LOW_RES_IMAGE
+INITIAL_TAG = "deckkit-initial"  # a raised initial (vl_native2.raise_initial): lint measures its first line apart
 # Prefix for a LENGTH-ENCODED datum: `deckkit-datum:<group>:<value>`. Same idiom as the tags
 # above — the fact travels in the shape name, so it survives the save and a checker can read the
 # author's INTENT (the number) next to the geometry that claims to show it.
@@ -3142,6 +3143,7 @@ def _compose_tag(shape, tier=None, flag=None, reason=None, gen=None, vl=None):
     have_datum = head.startswith(DATUM_TAG.rstrip(":")) or "+datum" in head
     have_decor = head.startswith(DECOR_TAG) or "+decor" in head
     have_lowres = head.startswith(LOWRES_TAG) or "+lowres" in head
+    have_initial = head.startswith(INITIAL_TAG) or "+initial" in head
     m = _GEN_RE.search(head)
     have_gen = m.group(1) if m else None
     mv = _VL_RE.search(head)
@@ -3160,6 +3162,8 @@ def _compose_tag(shape, tier=None, flag=None, reason=None, gen=None, vl=None):
         have_decor = True
     elif flag == "+lowres":
         have_lowres = True
+    elif flag == "+initial":
+        have_initial = True
     if reason is not None:
         why = reason
     if gen:
@@ -3167,7 +3171,7 @@ def _compose_tag(shape, tier=None, flag=None, reason=None, gen=None, vl=None):
     if vl:
         have_vl = vl
     on = (("+bleed", have_bleed), ("+overlap", have_overlap), ("+datum", have_datum),
-          ("+decor", have_decor), ("+lowres", have_lowres))
+          ("+decor", have_decor), ("+lowres", have_lowres), ("+initial", have_initial))
     if have_tier:
         base, flags = have_tier, [f for f, v in on if v]
     elif have_bleed:
@@ -3175,11 +3179,13 @@ def _compose_tag(shape, tier=None, flag=None, reason=None, gen=None, vl=None):
     elif have_overlap:
         base, flags = OVERLAP_TAG.rstrip(":"), [f for f, v in on if v and f != "+overlap"]
     elif have_datum:
-        base, flags = DATUM_TAG.rstrip(":"), [f for f, v in on if v and f in ("+decor", "+lowres")]
+        base, flags = DATUM_TAG.rstrip(":"), [f for f, v in on if v and f in ("+decor", "+lowres", "+initial")]
     elif have_decor:
-        base, flags = DECOR_TAG, (["+lowres"] if have_lowres else [])
+        base, flags = DECOR_TAG, [f for f, v in on if v and f in ("+lowres", "+initial")]
     elif have_lowres:
-        base, flags = LOWRES_TAG, []
+        base, flags = LOWRES_TAG, (["+initial"] if have_initial else [])
+    elif have_initial:
+        base, flags = INITIAL_TAG, []
     else:
         base, flags = "", []
     if have_gen:
@@ -3421,6 +3427,12 @@ def bleed_intent(shape, reason):
 def _declared_bleed(sh):
     n = str(getattr(sh, "name", "") or "")
     return n.startswith(BLEED_TAG) or "+bleed" in n.split(":", 1)[0]
+
+
+def _declared_initial(sh):
+    """A text box whose first paragraph opens on a raised initial (an enlarged first letter in its own line)."""
+    head = str(getattr(sh, "name", "") or "").split(":", 1)[0]
+    return head.startswith(INITIAL_TAG) or "+initial" in head
 
 
 def motif_legend(slide, label, *, x=None, y=None, w=4.4, color=None, ink=None, size=9.5,
@@ -9950,6 +9962,8 @@ def _ink_rect(sh, bb):
     wrap = tf.word_wrap if tf.word_wrap is not None else True
     lines_total, ink_w, max_sz = 0, 0.0, 0.0
     mixed_hint = None
+    _initial_decl = _declared_initial(sh)
+    _first_p = next((p_ for p_ in tf.paragraphs if any((r_.text or "") for r_ in p_.runs)), None)
     ink_h_acc = 0.0
     align = None; subbed = False
     for p in tf.paragraphs:
@@ -9972,6 +9986,32 @@ def _ink_rect(sh, bb):
         if sz <= 0: sz = 18.0
         max_sz = max(max_sz, sz)
         if _font_substituted(fn or FONT): subbed = True
+        # A DECLARED raised initial (vl_native2.raise_initial): the paragraph's first run is ONE enlarged letter. It
+        # renders as one taller first line and body-sized lines after it, so measure it that way — the conservative
+        # every-line-at-the-largest-run model below read a 3-line column with a 41pt initial as 8 lines (2026-10-08).
+        # Still conservative where it can be: the lines wrap in the width LESS the initial's extra width.
+        if (_initial_decl and _first_p is not None and p._p is _first_p._p and len(per_run) >= 2 and len(per_run[0][0]) == 1 and per_run[0][2]
+                and per_run[1][2] and per_run[0][2] > 1.3 * per_run[1][2]):
+            big, rest = per_run[0][2], per_run[1][2]
+            f_big, f_rest = per_run[0][3] or fn, per_run[1][3] or fn
+            extra_w = max(0.0, _natural_width_in([(per_run[0][0], True)], big, f_big)
+                          - _natural_width_in([(per_run[0][0], per_run[0][1])], rest, f_rest))
+            rest_runs = [(per_run[0][0], per_run[0][1])] + [(t_, b_) for t_, b_, _s, _f in per_run[1:]]
+            nat = _natural_width_in(rest_runs, rest, f_rest) + extra_w
+            if wrap:
+                nl = _measure_lines(rest_runs, rest, max(0.1, inner_w - extra_w), font=f_rest)
+                ink_w = max(ink_w, inner_w if nl > 1 else nat)
+            else:
+                nl = 1
+                ink_w = max(ink_w, nat)
+            lines_total += nl
+            try:
+                _ls = p.line_spacing
+            except Exception:
+                _ls = None
+            _lsf = _ls if isinstance(_ls, float) and _ls > 1.0 else 1.0
+            ink_h_acc += ((nl - 1) * rest + big) / 72.0 * _LINT_LINE_H * _lsf
+            continue
         # MIXED-SIZE DIAGNOSIS — measured, but deliberately NOT used to shrink the ink.
         # Summing each run at its own size is the width the runs themselves occupy; it is NOT
         # the width the renderer produces, because PowerPoint and LibreOffice both insert
