@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""vl_native — page compositions of the NATIVE visual languages (ink, poster, cutpaper, drafting).
+"""vl_native — page compositions of the NATIVE visual languages (ink, poster, cutpaper, drafting); the second set —
+starlit, broadsheet, journal, tally, chalkboard — is in vl_native2.py, imported at this module's foot.
 
 Imported by visual_languages only for those languages; the image-led four never load it. Each page PLANS its text
 first (measured: the kit's _flow for horizontal text, vcol for vertical CJK, display for poster-scale type —

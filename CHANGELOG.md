@@ -9,6 +9,19 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+### Five more native visual languages — borrowed from the world
+
+`starlit` (a night sky, points as a constellation, the figure in a glow), `broadsheet` (a masthead strip, a headline
+cover, newspaper columns opening on a raised initial, a pull quote between rules), `journal` (a running head, an
+abstract, numbered whole figures with captions and sources, margin notes), `tally` (a fine grid, heavy type, pill
+tags, a giant number with its share of the caller's total) and `chalkboard` (a framed board, chalk boxes sized to
+their words, arrows only when the points are in order). Every page in both orientations and two grounds. Words the
+kit cannot invent — a masthead, an edition, an Inside list, tags, a running head, authors, an abstract, a margin
+note, a total, a doodle — come only from the caller; page and figure numbers, the end mark and the structural labels
+(in the page's own script: 摘要 / 要旨 / 초록) are derived. A deck with no pictures is offered the one that fits its
+topic. Also: `register_surface.register()` refuses a name another file already registered (it silently replaced
+the kit before), and a replaced slide background drops its old picture.
+
 ### Four native visual languages — no pictures needed
 
 `ink` (misty ink ridges, vertical Chinese and Japanese, a carved seal, an ensō around the figure), `poster` (the

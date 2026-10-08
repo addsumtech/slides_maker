@@ -143,6 +143,9 @@ check("native" not in m, "render_deck: a native language with its reason clears 
 e = cdg_errs({"candidates": plain, "picked": "A", "images": "none"})
 check(any("native" in x for x in e), "codex gate holds the same deck: {}".format(e))
 
+msg = dd.native_fault("none", [{"name": "x"}], None) or ""
+check(all(n in msg for n in vl.NATIVE), "the native-language fault names every native language: {}".format(msg[:120]))
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_direction_vl_rule] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)

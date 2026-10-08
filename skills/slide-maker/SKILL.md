@@ -1683,8 +1683,8 @@ A few rules that matter (see `references/design-principles.md`):
   FETCH (`direction_gate.images: photos | illustrations | none`, whoever made them — both gates hold it and read
   it against `image_sources` / `imagery`, so `none` on a deck that generates its pictures is refused;
   `references/interview-protocol.md`).
-  A deck with NO pictures offers one of the four NATIVE visual languages (`ink` · `poster` · `cutpaper` ·
-  `drafting`, drawn, no pictures needed) — the one that fits the topic — and records why in
+  A deck with NO pictures offers one of the NATIVE visual languages (`ink` · `poster` · `cutpaper` ·
+  `drafting` · `starlit` · `broadsheet` · `journal` · `tally` · `chalkboard`, drawn, no pictures needed) — the one that fits the topic — and records why in
   `direction_gate.native_fit` (both gates hold it; `references/visual-languages.md`).
   Build with `ground="auto"` (light paper, or the language's contrast ground when your last decks already
   sit on light paper) and record what it printed with `visual_languages.py --gates NAME --ground G`.

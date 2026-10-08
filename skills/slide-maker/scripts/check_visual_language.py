@@ -94,7 +94,7 @@ def _check(pptx, rec, findings, facts):
         findings.append(("block", "LANGUAGE NOT APPLIED", "{} records the {!r} language but {} of {} slide(s) were "
                          "built in it{} — build the cover with the kit's cover() and at least half the pages "
                          "with visual_languages.use({!r}, prs): its page functions (cover, section, image_text, "
-                         "quote, data, closing; points on the native four), or ordinary pages started with k.new_slide()"
+                         "quote, data, closing; points on the native languages), or ordinary pages started with k.new_slide()"
                          .format(Path(str(pptx)).name, name, len(tagged), len(slides),
                                  "" if cover_built else " and the cover was not built with cover()", name)))
     if not (faces & want):

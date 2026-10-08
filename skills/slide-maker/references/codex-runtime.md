@@ -412,8 +412,8 @@ interview answer at all — each reads the built file itself):
    `imagery` is `series`) is refused as a contradiction. With pictures, at least ONE candidate is a visual language
    (`visual_languages.direction("<name>")`: photos → editorial / soft / collage, illustrations → storybook),
    or the gate holds the deck; the set's named `waived` is the escape.
-   With `images: none`, at least ONE candidate is a native language (`visual_languages.direction("ink" | "poster"
-   | "cutpaper" | "drafting")`) and the record carries `native_fit` BESIDE `images`; `codex_delivery_gate.py`
+   With `images: none`, at least ONE candidate is a native language (`visual_languages.direction("<a native language>")` — `ink`, `poster`,
+   `cutpaper`, `drafting`, `starlit`, `broadsheet`, `journal`, `tally` or `chalkboard`) and the record carries `native_fit` BESIDE `images`; `codex_delivery_gate.py`
    holds a set without it:
 
    ```json

@@ -257,8 +257,11 @@ four template choices:
          contradiction. The user's own figures (`provided`) do not count — a paper's plots are not a photo deck.
        - **A native visual language when the deck has no pictures.** When `direction_gate.images` is `none`, at
          least one offered direction is a NATIVE language — `ink` (culture, history, craft), `poster` (launch,
-         manifesto, brand, opinion), `cutpaper` (children, teaching, workshop, community) or `drafting` (research,
-         engineering, technical) — and the record states the pick and its reason:
+         manifesto, opinion), `cutpaper` (children, storytelling, community), `drafting` (engineering, architecture,
+         systems design), `starlit` (year in review, letter, thanks, commemoration), `broadsheet` (newsletter,
+         periodic report, community update), `journal` (research talk, lab meeting, paper, defence), `tally`
+         (metrics, quarterly review, operations, growth) or `chalkboard` (lesson, class, training, explainer) — and
+         the record states the pick and its reason:
          `direction_gate.native_fit: {"language": "<name>", "why": "<topic reason>"}`. The guidance is an offer,
          not a rule; the record is the rule. Both runtimes hold it; a named `waived` is the escape.
        - **An image-led direction (only when an image tool is available).** One of the offered

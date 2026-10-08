@@ -94,7 +94,7 @@ k.closing(k.new_slide(), title="Bring one broken thing.", line="And bring a neig
 ## Native languages — drawn, no pictures needed
 
 `ink` (水墨), `poster` (海报大字), `cutpaper` (剪纸层叠) and `drafting` (蓝图技术线稿 — named `drafting` because
-`blueprint` is a preset) draw their own surface with native, editable shapes (`scripts/native_art.py`), so they
+`blueprint` is a preset), and the second set below, draw their own surface with native, editable shapes (`scripts/native_art.py`), so they
 make a finished deck for a talk with no pictures and no image tool. Everything they draw stays on the page, and
 every value they write is one PowerPoint opens without repair (`scripts/ooxml_safety.py`, which `lint_deck` runs).
 
@@ -136,8 +136,86 @@ every value they write is one PowerPoint opens without repair (`scripts/ooxml_sa
   "direction_gate": {"candidates": "directions.json", "picked": "<the one chosen>", "images": "none",
                      "native_fit": {"language": "ink", "why": "a talk on tea craft: culture and ritual"}}
   ```
-  `native_fit.language` is one of the native languages among the candidates (not necessarily the one picked). Guidance, not a rule: culture, history, craft → `ink`; launch, manifesto, brand, opinion →
-  `poster`; children, teaching, workshop, community → `cutpaper`; research, engineering, technical → `drafting`.
+  `native_fit.language` is one of the native languages among the candidates (not necessarily the one picked). Guidance, not a rule: culture, history, craft → `ink`; launch, manifesto, opinion → `poster`; children,
+  storytelling, community → `cutpaper`; engineering, architecture, systems design → `drafting`; year in review,
+  letter, thanks, commemoration → `starlit`; newsletter, periodic report, community update → `broadsheet`;
+  research talk, lab meeting, paper, defence → `journal`; metrics, quarterly review, operations, growth → `tally`;
+  lesson, class, training, explainer → `chalkboard`.
+
+### The second set — `starlit` · `broadsheet` · `journal` · `tally` · `chalkboard`
+
+Five more drawn languages, each borrowed from a convention people already read at a glance. Same contract as the
+first four: no pictures needed, everything on the page, nothing PowerPoint repairs, and no word invented.
+
+| language | 中文 | borrowed from | for |
+|---|---|---|---|
+| `starlit` | 星夜 | the night sky and the year-end letter | year in review, letters, thanks, commemoration |
+| `broadsheet` | 报纸头版 | the newspaper front page | newsletters, periodic reports, community updates |
+| `journal` | 学术期刊 | the journal article | research talks, lab meetings, papers, defences |
+| `tally` | 数据账本 | data dashboards and finance reports | metrics, quarterly reviews, operations, growth |
+| `chalkboard` | 黑板报 | the classroom blackboard | lessons, classes, training, explainers |
+
+- **Words only you can give.** A word given on a page that does not draw it is refused, naming the pages that do;
+  when it is absent, nothing is drawn.
+  - `masthead="…"` (`broadsheet`, any page, remembered for the deck): the paper's name in the masthead strip.
+    Without it, the cover's `kicker` names the paper and is not repeated above the headline; without either, the
+    strip has rules and the page number only.
+  - `edition="…"` (`broadsheet`, any page, remembered): the strip's left words, such as your date or issue.
+  - `inside=[…]` (`broadsheet` cover): 1–4 short lines for the "Inside" sidebar.
+  - `tags=[…]` (`broadsheet` and `tally` `points`): one short label per point, used as the column's label or the
+    row's pill. The count must match; a tag too long for its pill is refused by name.
+  - `running="…"` (`journal`, any page, remembered): the running head. Without it, the cover title runs there when
+    it fits one line, else the page number stands alone. An explicit `running=` that cannot fit is refused.
+  - `authors="…"`, `abstract="…"` (`journal` cover): the author line and the abstract block. A subtitle is never
+    labelled "Abstract".
+  - `margin="…"` (`journal` `points`): a margin note under a "Note" label.
+  - `total="…"` (`tally` `data`): draws a share bar, the number's share of the total, with both numbers at its ends.
+    The rules:
+    - both are plain numbers (`12`, `1,250`, `98.6%`);
+    - both are percentages or neither is;
+    - the number is no larger than the total.
+
+    Anything else is refused, never guessed.
+  - `doodle="lucide:sun"` (`chalkboard` cover and closing): one icon spec, drawn in yellow chalk.
+  - `ordered=True` (`chalkboard` `points`): chalk arrows between the boxes, only when the points really happen in
+    order. The numbers already read as a list.
+- **Derived, never typed in.**
+  - page numbers;
+  - `journal` figure numbers: "Figure n" over the deck's `image_text` pages, with `kicker=` to override;
+  - the `broadsheet` ■ end mark;
+  - the structural labels Abstract, Inside, Figure, Page and Note, in the script of the page's own words:
+    摘要 / 要旨 / 초록; 图 1 / 図 1 / 그림 1; 第 2 版 / 2 面 / 2면.
+- **Pages.** All seven pages come in both orientations.
+  - `journal`'s `image_text` is its figure page: the title above, your figure WHOLE (never cropped), its label,
+    caption (`body=`) and source line (`caption=`).
+  - `broadsheet` opens a Latin column body on a raised initial: an enlarged first letter in its own line, because
+    pptx has no drop cap. CJK bodies are not enlarged.
+  - `starlit`'s points are a constellation (one star per point), `tally`'s are ledger rows, and `chalkboard`'s are
+    chalk boxes sized to their words.
+- **Ordinary pages** (`s = k.new_slide()`, then `rs.ground(s, k.name, …)`):
+  - `starlit` paints its sky clear of the returned rect;
+  - `broadsheet` draws the masthead strip, and `journal` the running head, with the deck's remembered words, and
+    return the rect under it;
+  - `tally` is on its grid;
+  - `chalkboard` is a framed board.
+- **No light ground.** `starlit` and `chalkboard` are dark by default: their `light` key IS their default ground.
+  A printed board in either prints a dark page, and `ground="auto"` says so.
+- **No spaces between Chinese and Latin words** ("心脏MRI的", not "心脏 MRI 的"). The renderers add their own gap,
+  and a typed space doubles it; this was measured on the look-dev.
+
+```python
+import deckkit as dk, visual_languages as vl
+prs = dk.blank_deck(13.333, 7.5)
+k = vl.use("broadsheet", prs)
+k.cover(k.new_slide(), title="Every street needs a night for fixing things",
+        subtitle="How a repair evening works, and why it spreads.", masthead="The Repair Weekly", edition="No. 12",
+        inside=["The idea", "The evening", "The numbers"])
+k.points(k.new_slide(), title="How it works", tags=["Idea", "Evening", "Next"],
+         items=[("Bring it broken", "Anything that switches on is welcome."), ("Fix it together", "Your hands do the work."),
+                ("Take it home", "What is not fixed goes on the list.")])
+k.closing(k.new_slide(), title="See you next week", line="Bring a neighbour.")
+prs.save("weekly.pptx")
+```
 
 ## Grounds
 

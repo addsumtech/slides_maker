@@ -325,7 +325,7 @@ EXAMPLES = {
                '            align=dk.PP_ALIGN.CENTER, anchor=dk.MSO_ANCHOR.MIDDLE)\n'
                'dk.overlap_intent(n, "the count sits on its badge")   # declared on the TEXT',
     "use": 'import visual_languages as vl\n'
-           'k = vl.use("drafting", prs, ground="auto")       # ink · poster · cutpaper · drafting: no pictures needed\n'
+           'k = vl.use("drafting", prs, ground="auto")       # 9 native languages: ink poster cutpaper drafting starlit broadsheet journal tally chalkboard\n'
            'k.cover(k.new_slide(), kicker="Schematic 01", title="A modular bike shelter", project="Bike shelter, phase 1")\n'
            'k.section(k.new_slide(), number="01", title="The frame")\n'
            'k.points(k.new_slide(), title="Three parts", items=[("Base", "One cast plate."), ("Posts", "Bolted, not welded."), ("Roof", "A single sheet.")])\n'
@@ -343,13 +343,56 @@ EXAMPLES = {
            'dk.text(s, body.left.inches + 0.4, top, body.width.inches - 0.8, rows_h, [k.runs(r, size) for r in rows],\n'
            '        space_after=8)                            # k.runs: the language\'s own face and ink',
     "points": 'import visual_languages as vl\n'
-              'k = vl.use("ink", prs)                         # or "poster" / "cutpaper" / "drafting" — no pictures needed\n'
+              'k = vl.use("ink", prs)                         # or any native language — no pictures needed\n'
               'k.points(k.new_slide(), title="三道工序",\n'
               '         items=[("洗盏", "器净，心先静"), ("候汤", "水沸，如蟹眼"), ("分茶", "浅斟，留七分")], seal="序")',
     "ink_ridges": 'import native_art as na\n'
                   'na.ink_ridges(s, color="1D1C1A", layers=na.INK_LAYERS["land"], keep_clear=[(7.0, 0.5, 1.0, 3.0)])',
     "clipped_block": 'import native_art as na\n'
                      'na.clipped_block(s, 7.0, 3.0, 4.0, 4.0, -9, fill="D7FF3B")   # a rotated block, cut to the page',
+    "starfield_png": 'import native_art as na\n'
+                     'na.starfield_png(s, base="0B1430", ink="F3EBD8", glow="F1D9A6", seed=3,\n'
+                     '                 keep_clear=[(1.0, 1.0, 6.0, 1.6)])     # the sky as background; none where words go\n'
+                     'dk.text(s, 1.0, 1.0, 6.0, 1.6, [[("A year in review", 36, dk.RGBColor(0xF3, 0xEB, 0xD8), False, False)]])',
+    "radial_glow": 'import native_art as na\n'
+                   'na.radial_glow(s, 5.0, 2.8, 3.0, "F1D9A6")         # a rim-free glow behind a figure',
+    "horizon_glow": 'import native_art as na\n'
+                    'na.horizon_glow(s, 4.6, "F1D9A6", "D9B36C")        # clear at its top, warm at the page foot',
+    "crescent": 'import native_art as na\n'
+                'na.crescent(s, 8.6, 1.0, 0.8, "D9B36C", "0B1430")     # moved onto the page if asked off it',
+    "ring": 'import native_art as na\n'
+            'na.ring(s, 2.5, 2.8, 3.2, "D9B36C", w=1.25)                # the rim of a round picture window',
+    "polyline": 'import native_art as na\n'
+                'na.polyline(s, [(1, 4.5), (4, 3.8), (7, 4.4)], "1E3A5F", w=1.5)   # open; clamped onto the page',
+    "chalk_path": 'import native_art as na\n'
+                  'na.chalk_path(s, [(1, 4.0), (5, 4.1)], "F3F1EA", seed=2)   # dragged twice; deterministic for a seed',
+    "chalk_box": 'import native_art as na\n'
+                 'na.chalk_box(s, 1.0, 1.0, 3.6, 1.8, "F2D16B", seed=4)\n'
+                 'dk.text(s, 1.3, 1.3, 3.0, 1.2, [[("Catch the light", 22, dk.RGBColor(0xF3, 0xF1, 0xEA), True, False)]])',
+    "chalk_ellipse": 'import native_art as na\n'
+                     'na.chalk_ellipse(s, 3.0, 2.8, 1.4, 1.1, "F2A9B8", seed=9)   # circle a figure in chalk',
+    "chalk_underline": 'import native_art as na\n'
+                       'na.chalk_underline(s, 1.0, 1.6, 4.0, "F2D16B", seed=5)   # a double chalk underline',
+    "chalk_arrow": 'import native_art as na\n'
+                   'na.chalk_arrow(s, 4.2, 2.8, 5.4, 2.8, "F3F1EA", seed=40)   # only between steps that ARE in order',
+    "board_frame": 'import native_art as na\n'
+                   'x, y, w, h = na.board_frame(s, "7A4F2A", "E8E2D2")   # a framed board; content goes in x, y, w, h',
+    "chip": 'import native_art as na\n'
+            'na.chip(s, 0.8, 0.6, "Q3 REVIEW", size=12, fill="C6F432", ink="0E0E10", face="Arial")   # one line, measured',
+    "chip_width": 'import native_art as na\n'
+                  'w = na.chip_width("会员资格", 12, "Arial")               # an em per CJK character, plus the padding\n'
+                  'na.chip(s, 9.0 - w, 0.6, "会员资格", size=12, fill="C6F432", ink="0E0E10", face="Arial",\n'
+                  '        ea_face="Hiragino Sans GB")',
+    "share_bar": 'import native_art as na\n'
+                 'na.share_bar(s, 0.8, 4.6, 8.4, 12 / 40, track="E7EAF1", fill="2438F0")   # 12 of 40: YOUR numbers',
+    "vl_extras": 'import visual_languages as vl\n'
+                 'k = vl.use("broadsheet", prs)        # words only YOU give: masthead=, edition=, inside=, tags=\n'
+                 'k.cover(k.new_slide(), title="Every street needs a night for fixing things", masthead="The Repair Weekly",\n'
+                 '        edition="No. 12", inside=["The idea", "The evening"])\n'
+                 'k.points(k.new_slide(), title="How it works", tags=["Idea", "Evening"],\n'
+                 '         items=[("Bring it broken", "Anything that switches on."), ("Fix it together", "Your hands do the work.")])\n'
+                 'k = vl.use("tally", prs)             # total= draws a share bar: plain numbers, number <= total\n'
+                 'k.data(k.new_slide(), number="12", label="of 40 neighbourhoods have a shelf", total="40")',
     "slot_picture": 'import image_series as ims\n'
                     'plan = ims.load("series.json")                 # validated by: image_series.py check\n'
                     'ims.slot_picture(s, plan, "hero", 0.6, 0.6, 3.2, 4.2, image_dir=".")   # arch + alt + +gen tag',
@@ -431,7 +474,8 @@ def load():
 _EXTRA_GUARANTEES = {
     "points": "2 to 4 points, measured; a roomier layout is tried before anything is refused, never truncated; "
               "vertical only for CJK text (ink), one iso layer per point (drafting), one icon per point when icons= "
-              "is given (cutpaper)",
+              "is given (cutpaper); one star per point (starlit), one ledger row per point (tally), chalk boxes sized "
+              "to their words with arrows only when ordered=True (chalkboard)",
     "ink_ridges": "ridges fade into mist and never pass the page; over every keep_clear rect the crest stays "
                   "below the text, falling away on a shoulder rather than a cliff",
     "clipped_block": "drawn as its polygon cut to the page, so PowerPoint's editing view shows nothing past "

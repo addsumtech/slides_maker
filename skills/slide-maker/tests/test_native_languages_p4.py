@@ -627,6 +627,20 @@ frame = [rect_of(sh) for sh in s.shapes if not getattr(sh, "has_text_frame", Fal
 check(len(frame) >= 5 and x > 0.14 and x + w < 13.333 - 0.14 and y + h < 7.5 - 0.14,
       "chalkboard: an ordinary page is a framed board; content inside the frame")
 
+# ── what an agent reading only the docs needs (Task 9) ──
+ref = (ROOT / "references" / "visual-languages.md").read_text(encoding="utf-8")
+for n in ("starlit", "broadsheet", "journal", "tally", "chalkboard"):
+    check("`{}`".format(n) in ref and "→ `{}`".format(n) in ref, "the reference documents {} and when to offer it".format(n))
+for ex in ("masthead=", "edition=", "inside=", "tags=", "running=", "authors=", "abstract=", "margin=", "total=", "doodle=",
+           "ordered="):
+    check(ex in ref, "the reference documents {}".format(ex))
+import sigs
+for fn in ("starfield_png", "radial_glow", "horizon_glow", "crescent", "ring", "polyline", "chalk_path", "chalk_box",
+           "chalk_ellipse", "chalk_underline", "chalk_arrow", "board_frame", "chip", "chip_width", "share_bar", "vl_extras"):
+    check(fn in sigs.EXAMPLES, "sigs.py --example {} has a runnable scaffold".format(fn))
+skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+check(all(n in skill for n in ("starlit", "broadsheet", "journal", "tally", "chalkboard")), "SKILL.md names the nine native languages")
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

@@ -191,9 +191,9 @@ cp -r slides_maker-site/templates/decks/zh/nvidia-overview ~/.codex/slide-templa
 python3 skills/slide-maker/scripts/visual_languages.py --sample out/
 ```
 
-## 设计语言：四套原生绘制的风格，不需要图片
+## 设计语言：九套原生绘制的风格，不需要图片
 
-另外四套设计语言用 PowerPoint 原生形状画出自己的画面，每个元素都能编辑。所以没有图片、也没有生图工具的 deck，同样能有完整的风格。每套都有浅色底和对比色底，还多一种 `points` 要点页，放两到四个要点。印章上的字、高亮的词、图标、项目名这类内容只来自你，不会被编造。
+另外九套设计语言用 PowerPoint 原生形状画出自己的画面，每个元素都能编辑。所以没有图片、也没有生图工具的 deck，同样能有完整的风格。每套都有两种底色（星夜和黑板报两种都是深色），还多一种 `points` 要点页，放两到四个要点。印章上的字、高亮的词、图标、项目名、报头、页眉、标签、总数这类内容只来自你，不会被编造。
 
 <table>
   <tr>
@@ -220,9 +220,40 @@ python3 skills/slide-maker/scripts/visual_languages.py --sample out/
 晒图蓝版本：<a href="skills/slide-maker/assets/vl/samples/drafting-cyanotype.jpg">cyanotype</a></sub>
     </td>
   </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="skills/slide-maker/assets/vl/samples/starlit.jpg" alt="starlit 设计语言示例页"><br/>
+      <sub><strong>starlit（星夜）</strong> · 星空与新月，要点连成星座，数字托在光晕里<br/>
+黎明版本：<a href="skills/slide-maker/assets/vl/samples/starlit-dawn.jpg">dawn</a></sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="skills/slide-maker/assets/vl/samples/broadsheet.jpg" alt="broadsheet 设计语言示例页"><br/>
+      <sub><strong>broadsheet（报纸头版）</strong> · 报头、大标题加导语、报纸分栏、两条线夹住的引语<br/>
+粉报版本：<a href="skills/slide-maker/assets/vl/samples/broadsheet-salmon.jpg">salmon</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="skills/slide-maker/assets/vl/samples/journal.jpg" alt="journal 设计语言示例页"><br/>
+      <sub><strong>journal（学术期刊）</strong> · 页眉、摘要、带编号和图注的完整插图、页边批注<br/>
+期刊绿版本：<a href="skills/slide-maker/assets/vl/samples/journal-green.jpg">green</a></sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="skills/slide-maker/assets/vl/samples/tally.jpg" alt="tally 设计语言示例页"><br/>
+      <sub><strong>tally（数据账本）</strong> · 细网格、粗体大字、药丸标签、一个巨大的数字和它的占比条<br/>
+深色底版本：<a href="skills/slide-maker/assets/vl/samples/tally-night.jpg">night</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="skills/slide-maker/assets/vl/samples/chalkboard.jpg" alt="chalkboard 设计语言示例页"><br/>
+      <sub><strong>chalkboard（黑板报）</strong> · 木框黑板、彩色粉笔线、按步骤的粉笔框、圈起来的数字<br/>
+石板版本：<a href="skills/slide-maker/assets/vl/samples/chalkboard-slate.jpg">slate</a></sub>
+    </td>
+  </tr>
 </table>
 
-**什么时候会用到。** 原生绘制，不需要图片——deck 没有图片时会推荐。候选风格里会有一套最贴合主题的（文化、器物 → 水墨；发布会、宣言 → 海报大字；教学、儿童 → 剪纸层叠；科研、工程 → 蓝图技术线稿），选择理由会一并记录。
+**什么时候会用到。** 原生绘制，不需要图片——deck 没有图片时会推荐。候选风格里会有一套最贴合主题的（文化、器物 → 水墨；发布会、宣言 → 海报大字；教学、儿童 → 剪纸层叠；科研、工程 → 蓝图技术线稿；年度回顾 → 星夜；通讯、周报 → 报纸头版；论文、组会 → 学术期刊；数据复盘 → 数据账本；课堂讲解 → 黑板报），选择理由会一并记录。
 
 ---
 

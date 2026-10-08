@@ -191,9 +191,9 @@ contrast ground: <a href="skills/slide-maker/assets/vl/samples/storybook-meadow.
 python3 skills/slide-maker/scripts/visual_languages.py --sample out/
 ```
 
-## Visual languages: four drawn looks, no pictures needed
+## Visual languages: nine drawn looks, no pictures needed
 
-Four more languages draw their own surface with native, editable shapes, so a deck with no pictures (and no image tool) still gets a finished look. Each has a light and a contrast ground and a `points` page for two to four ideas; words the kit cannot invent (a seal's characters, a highlighted word, icons, a project name) come only from you.
+Nine more languages draw their own surface with native, editable shapes, so a deck with no pictures (and no image tool) still gets a finished look. Each has two grounds (starlit and chalkboard are dark on both) and a `points` page for two to four ideas; words the kit cannot invent (a seal's characters, a highlighted word, icons, a project name, a masthead, a running head, tags, a total) come only from you.
 
 <table>
   <tr>
@@ -220,9 +220,40 @@ contrast ground: <a href="skills/slide-maker/assets/vl/samples/cutpaper-night.jp
 contrast ground: <a href="skills/slide-maker/assets/vl/samples/drafting-cyanotype.jpg">cyanotype</a></sub>
     </td>
   </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="skills/slide-maker/assets/vl/samples/starlit.jpg" alt="starlit visual language sample pages"><br/>
+      <sub><strong>starlit</strong> · a night sky and a crescent moon, points as a constellation, the figure in a glow<br/>
+contrast ground: <a href="skills/slide-maker/assets/vl/samples/starlit-dawn.jpg">dawn</a></sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="skills/slide-maker/assets/vl/samples/broadsheet.jpg" alt="broadsheet visual language sample pages"><br/>
+      <sub><strong>broadsheet</strong> · a masthead strip, a headline and standfirst, newspaper columns, a pull quote between rules<br/>
+contrast ground: <a href="skills/slide-maker/assets/vl/samples/broadsheet-salmon.jpg">salmon</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="skills/slide-maker/assets/vl/samples/journal.jpg" alt="journal visual language sample pages"><br/>
+      <sub><strong>journal</strong> · a running head, an abstract, numbered figures with captions, margin notes<br/>
+contrast ground: <a href="skills/slide-maker/assets/vl/samples/journal-green.jpg">green</a></sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="skills/slide-maker/assets/vl/samples/tally.jpg" alt="tally visual language sample pages"><br/>
+      <sub><strong>tally</strong> · a fine grid, heavy type, pill tags, one giant number with its share bar<br/>
+contrast ground: <a href="skills/slide-maker/assets/vl/samples/tally-night.jpg">night</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="skills/slide-maker/assets/vl/samples/chalkboard.jpg" alt="chalkboard visual language sample pages"><br/>
+      <sub><strong>chalkboard</strong> · a framed board, coloured chalk strokes, boxed steps, a circled figure<br/>
+contrast ground: <a href="skills/slide-maker/assets/vl/samples/chalkboard-slate.jpg">slate</a></sub>
+    </td>
+  </tr>
 </table>
 
-**How one gets picked.** Drawn, no pictures needed — offered when your deck has none: the one that fits the topic is among the candidate looks (culture and craft → ink, launch or manifesto → poster, teaching and children → cutpaper, research and engineering → drafting), and the reason is recorded with the choice.
+**How one gets picked.** Drawn, no pictures needed — offered when your deck has none: the one that fits the topic is among the candidate looks (culture and craft → ink, launch or manifesto → poster, teaching and children → cutpaper, research and engineering → drafting, a year in review → starlit, a newsletter → broadsheet, a paper or lab meeting → journal, a metrics review → tally, a lesson → chalkboard), and the reason is recorded with the choice.
 
 ---
 

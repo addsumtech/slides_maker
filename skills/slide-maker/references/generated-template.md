@@ -601,7 +601,8 @@ pick (palette, energy, brand colours) before generating. Each entry gives the *p
   *Type:* humanist serif + sans. (Studio credentials, architecture/interior, craft brands.)
 - **Chalkboard / blackboard** — the teaching register. *Palette:* deep slate/green board + chalk
   white + one pastel chalk accent. *Motifs:* hand-chalked rules/arrows/diagrams, dust texture.
-  *Type:* chalk hand + clean sans. (Lectures, workshops, explainers.)
+  *Type:* chalk hand + clean sans. (Lectures, workshops, explainers.) → with no image tool, the native
+  `chalkboard` language draws this register with editable chalk strokes (`references/visual-languages.md`).
 - **Maximalist pattern-clash** — loud, dense, fashion-editorial. *Palette:* many saturated hues,
   clashing on purpose. *Motifs:* layered patterns, oversized type over imagery, stickers/badges.
   *Type:* mixed display weights. (Use with discipline — legibility guardrails below apply doubly.)
