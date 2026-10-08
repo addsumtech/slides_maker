@@ -24,25 +24,59 @@ import vl_native as _vn
 HEADROOM = 0.97      # words are measured in 97% of a column and drawn at its full width (see flow)
 
 
-_CLAUSE_FIELDS = ("item_line", "item_head", "body", "note", "caption", "abstract", "margin", "inside", "authors")
+_CLAUSE_FIELDS = ("title", "subtitle", "quote", "label", "line", "note", "body", "caption", "item_head", "item_line",
+                  "abstract", "margin", "authors")
+
+
+def _cjk_width(k, f_, t, sz):
+    base, role, bold = vl.TYPE[k.name][f_][:3]
+    return dk._natural_width_in([(t, bool(bold))], sz, k.ea_face(role, t) or k.face(role))
 
 
 def _clause_break(k, f_, t, w, start):
-    """A Chinese/Japanese body that will wrap breaks at the clause mark nearest its middle ("根吸水，/ 叶子吸二氧化碳"),
-    never leaving a character alone on its last line ("…二氧化 / 碳", sample render 2026-10-08). The display fields
-    (title, quote, label, line, subtitle) already break this way in vl._flow; these are the body fields it leaves."""
+    """Chinese or Japanese that will wrap is packed CLAUSE by clause — each line as many whole clauses as fit — so it
+    breaks only at its clause marks: "来访者握着螺丝刀，/ 志愿者只在旁边指导，/ 这就是…" (a square board's quote read
+    "…只在旁边指 / 导，…") and never leaves one character alone ("…二氧化 / 碳", sample render 2026-10-08) — at the
+    largest size, down to the field's floor, at which every clause fits a line (clean breaks beat a bigger size). Returns
+    (text, size or None); a clause too long even then, or text with no clause mark, is left for the flow to wrap."""
     if f_ not in _CLAUSE_FIELDS or not t or "\n" in t or not dk._has_cjk(t):
-        return t
-    base, role, bold = vl.TYPE[k.name][f_][:3]
+        return t, None
+    clauses = _vn._clauses(t)
+    if len(clauses) < 2:
+        return t, None
+    base, _role, _b, _c, _i, floor = vl.TYPE[k.name][f_]
     sz = (start or {}).get(f_, base * ctx(k)[2])
-    face = k.ea_face(role, t) or k.face(role)
-    if dk.measure_text([(t, bool(bold))], w, sz, font=face) <= dk.measure_text([(t, bool(bold))], 1000.0, sz, font=face) + 1e-6:
-        return t                                   # one line: nothing to break
-    marks = [i for i, ch in enumerate(t[:-1]) if ch in _vn._CLAUSE_MARKS]
-    if not marks:
-        return t
-    i = min(marks, key=lambda m: abs(m + 1 - len(t) / 2.0))
-    return t[:i + 1] + "\n" + t[i + 1:]
+    room = w - dk.TEXT_INSET_LR
+    if _cjk_width(k, f_, t, sz) <= room:
+        return t, None                             # one line: nothing to break
+    widest = max(_cjk_width(k, f_, c, sz) for c in clauses)
+    z = sz if widest <= room else sz * room / widest * 0.98
+    if z < floor * ctx(k)[2]:
+        return t, None
+    lines = [""]
+    for c in clauses:
+        if lines[-1] and _cjk_width(k, f_, lines[-1] + c, z) > room:
+            lines.append(c)
+        else:
+            lines[-1] += c
+    return ("\n".join(lines), (z if z < sz else None)) if len(lines) > 1 else (t, None)
+
+
+def _one_line_size(k, f_, t, w, start):
+    """A short Chinese/Japanese head (no clause mark) a little too wide for its line is set a little smaller, on ONE
+    line — wrapped, it left one character alone ("记下每次修 / 理"). None when it fits, or would need below 75% of its size
+    or its floor (then it wraps, and a layout that cares refuses — chalkboard's row gives way to its grid)."""
+    if f_ != "item_head" or not t or "\n" in t or not dk._has_cjk(t) or len(t) > 12:
+        return None
+    base, _role, _b, _c, _i, floor = vl.TYPE[k.name][f_]
+    s_ = ctx(k)[2]
+    sz = (start or {}).get(f_, base * s_)
+    room = w - dk.TEXT_INSET_LR
+    nat = _cjk_width(k, f_, t, sz)
+    if nat <= room:
+        return None
+    fit = sz * room / nat * 0.98
+    return fit if fit >= max(0.75 * sz, floor * s_) else None
 
 
 def flow(k, slide, page, col, items, **kw):
@@ -54,7 +88,17 @@ def flow(k, slide, page, col, items, **kw):
     align = kw.get("align", "l")
     wm = w * HEADROOM
     dw = w - wm
-    items = [(f_, _clause_break(k, f_, t, wm, kw.get("start"))) for f_, t in items]
+    packed = []
+    for f_, t in items:
+        t2, z = _clause_break(k, f_, t, wm, kw.get("start"))
+        packed.append((f_, t2))
+        if z:
+            kw = dict(kw, start=dict(kw.get("start") or {}, **{f_: z}))
+    items = packed
+    for f_, t in items:
+        z = _one_line_size(k, f_, t, wm, kw.get("start"))
+        if z:
+            kw = dict(kw, start=dict(kw.get("start") or {}, **{f_: z}))
     rects, draw = _vn.flow(k, slide, page, (x + dw / 2.0 if align == "c" else x, y, wm, h), items, **kw)
     out = {f_: ((r[0] - dw / 2.0, r[1], r[2] + dw, r[3]) if align == "c" else (r[0], r[1], r[2] + dw, r[3]))
            for f_, r in rects.items()}
@@ -550,14 +594,14 @@ def _bs_section(k, slide, f, image):
 @register("broadsheet", "image_text", alts=2)
 def _bs_image_text(k, slide, f, image):
     """A news photograph with its caption under a hairline; the story's headline and body beside it (under it in
-    portrait)."""
+    portrait). Long copy: the words get more of the page — on a square board the story moves beside the photo."""
     W, H, s, o = ctx(k)
     top = bs_strip(k, slide, f) + 0.25 * s
     bottom = H - 0.6
     cap = text_of(f, "caption")
     rects, draws, art = {}, [], []
-    if o == "land":
-        img_x, img_w = 0.05 * W, (0.58 if alt() == 0 else 0.50) * W
+    if o == "land" or (alt() == 1 and W >= 0.8 * H):
+        img_x, img_w = 0.05 * W, (0.58 if alt() == 0 else 0.46) * W
         cx0 = img_x + img_w + 0.35 * s
         col = (cx0, top, 0.95 * W - cx0, bottom - top)
         img_y1 = bottom
@@ -1332,6 +1376,25 @@ def _cb_points(k, slide, f, image):
     bw = (0.84 * W - (ncol - 1) * gap) / ncol
     above = ncol == n and n > 1                       # one row: the number sits above the words, else beside them
 
+    head_start = {}
+    if ncol == n and n > 1:
+        # a row of narrow boxes only when every head still reads as a head — a Chinese one on one line, a Latin one in
+        # at most two — at one shared size no smaller than 75% of the field's; else the grid takes over (stress render:
+        # "共享工 / 具", "Write / every / repair / down")
+        base_h, role_h, bold_h = vl.TYPE[k.name]["item_head"][:3]
+        tw_ = (bw - 2 * pad) * HEADROOM - dk.TEXT_INSET_LR
+
+        def head_lines(hd, z_):
+            face_ = k.ea_face(role_h, hd) or k.face(role_h)
+            return dk._measure_lines([(hd, bool(bold_h))], z_, tw_, font=face_)
+        z_ = base_h * s
+        while any(head_lines(hd, z_) > (1 if dk._has_cjk(hd) else 2) for hd, _ln in pts):
+            z_ *= 0.95
+            if z_ < 0.75 * base_h * s:
+                raise vl.VLTextOverflow("chalkboard.points(): {} boxes in a row are too narrow for their heads — the "
+                                        "grid takes over".format(n))
+        head_start = {"item_head": z_}
+
     def plan_box(i, y, h):
         hd, ln = pts[i]
         x = 0.08 * W + (i % ncol) * (bw + gap)
@@ -1339,7 +1402,8 @@ def _cb_points(k, slide, f, image):
             tcol = (x + pad, y + pad + numd + 0.15 * s, bw - 2 * pad, h - (2 * pad + numd + 0.15 * s))
         else:
             tcol = (x + pad + numd + 0.25 * s, y + pad, bw - 2 * pad - numd - 0.25 * s, h - 2 * pad)
-        return flow(k, slide, "points", tcol, [(x_, t) for x_, t in (("item_head", hd), ("item_line", ln)) if t], anchor="top")
+        return flow(k, slide, "points", tcol, [(x_, t) for x_, t in (("item_head", hd), ("item_line", ln)) if t], anchor="top",
+                    start=head_start or None)
     # pass 1: each row's height from its boxes' own words; pass 2: the rows centred in the room under the title. A
     # grid's narrow boxes try the number beside the words first, then above them (a square board, 2026-10-08)
     slot = (bottom - top - (nrow - 1) * gap) / nrow

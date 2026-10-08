@@ -627,6 +627,49 @@ frame = [rect_of(sh) for sh in s.shapes if not getattr(sh, "has_text_frame", Fal
 check(len(frame) >= 5 and x > 0.14 and x + w < 13.333 - 0.14 and y + h < 7.5 - 0.14,
       "chalkboard: an ordinary page is a framed board; content inside the frame")
 
+# image pages with realistic long copy build on every canvas (the corpus covers the six text pages; the stress render
+# found broadsheet's image page refused on a square board)
+LONGIT = {"en": dict(kicker="Annual review of the repair network", title="Why every street deserves a place to fix what it already owns",
+                     body="Screwdrivers, a soldering iron and thread, shared on every bench.", caption="The hall on a Tuesday"),
+          "zh": dict(kicker="社区修理网络 · 年度回顾", title="为什么每条街道都值得拥有一个修理自己物品的地方",
+                     body="工作台上有螺丝刀、烙铁和针线，大家共用。", caption="周二晚上的会场")}
+for name in ("starlit", "broadsheet", "journal", "tally", "chalkboard"):
+    for W, H in ((10.0, 5.625), (10.0, 7.5), (7.5, 7.5), (8.27, 11.69)):
+        for lang, T in LONGIT.items():
+            prs, k = use(name, W, H)
+            try:
+                ex = ({"masthead": "街坊修理周报" if lang == "zh" else "The Repair Weekly", "edition": "No. 12"} if name == "broadsheet"
+                      else {"running": "社区修理网络年度回顾" if lang == "zh" else "Repair network review"} if name == "journal" else {})
+                k.image_text(k.new_slide(), image=PHOTO, **T, **ex)
+                with contextlib.redirect_stdout(io.StringIO()):
+                    crit = [f_ for f_ in dk.lint_layout(prs, verbose=False) if f_[1] == "CRITICAL"]
+                check(not crit, "{} {}x{} {}: a long image page has no critical fault: {}".format(name, W, H, lang, crit[:1]))
+            except vl.VLTextOverflow as e:
+                check(False, "{} {}x{} {}: a long image page was refused: {}".format(name, W, H, lang, str(e)[:100]))
+
+# Chinese with clause marks breaks only at them (stress render: a square board's quote read "…只在旁边指 / 导，…"); a short
+# Chinese head stays on one line rather than leaving one character alone ("记下每次修 / 理"); four chalk boxes too narrow
+# for their heads give way to the grid
+prs, k = use("chalkboard", 7.5, 7.5)
+s = k.new_slide()
+k.quote(s, quote="来访者握着螺丝刀，志愿者只在旁边指导，这就是整个夜晚的意义所在。", attribution="志愿者手册")
+qp = [tuple(p_.text for p_ in sh.text_frame.paragraphs) for sh in texts(s) if "螺丝刀" in sh.text_frame.text][0]
+check(len(qp) > 1 and all(p_.endswith(("，", "。")) for p_ in qp), "a Chinese quote that wraps breaks only at its clause marks: {}".format(qp))
+for name in ("broadsheet", "starlit"):
+    prs, k = use(name, 10.0, 7.5)
+    s = k.new_slide()
+    k.points(s, title="修理之夜", items=[("共享工具", "一抽屉螺丝刀。"), ("敞开大门", "不用预约。"), ("步行可达", "十分钟。"), ("记下每次修理", "每张桌一本笔记。")])
+    hd = [sh for sh in texts(s) if sh.text_frame.text == "记下每次修理"][0]
+    sz = hd.text_frame.paragraphs[0].runs[0].font.size.pt
+    check(hd.height / EMU <= sz / 72.0 * 1.6 + 0.08, "{}: a short Chinese head stays on one line ({:.2f}in at {}pt)".format(name, hd.height / EMU, sz))
+prs, k = use("chalkboard", 10.0, 7.5)
+s = k.new_slide()
+k.points(s, title="修理之夜", items=[("共享工具", "一抽屉螺丝刀可以供三张桌子同时使用。"), ("敞开大门", "不用预约，不收费。"),
+                                     ("步行可达", "步行十分钟是我们坚持的距离。"), ("记下每次修理", "每张桌一本笔记。")])
+heads = [sh for sh in texts(s) if sh.text_frame.text in ("共享工具", "敞开大门", "步行可达", "记下每次修理")]
+check(all(h_.height / EMU <= h_.text_frame.paragraphs[0].runs[0].font.size.pt / 72.0 * 1.6 + 0.08 for h_ in heads),
+      "chalkboard 4:3: no head wraps in a too-narrow box (the grid takes over)")
+
 # ── what an agent reading only the docs needs (Task 9) ──
 ref = (ROOT / "references" / "visual-languages.md").read_text(encoding="utf-8")
 for n in ("starlit", "broadsheet", "journal", "tally", "chalkboard"):
