@@ -29,7 +29,7 @@ def vl_native_fields():
 
 
 td = Path(tempfile.mkdtemp())
-check(vl.NATIVE == ("ink", "poster", "cutpaper", "drafting"), "the four native languages are named")
+check(vl.NATIVE[:4] == ("ink", "poster", "cutpaper", "drafting"), "the first four native languages are named, in order")
 check(set(vl.NATIVE) | set(vl.IMAGE_LED) == set(vl.LANGS), "every language is native or image-led")
 check(vl.PAGE_FIELDS.get("points") == ("kicker", "title", "items"), "the points page exists")
 for n in vl.NATIVE:

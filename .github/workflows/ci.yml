@@ -1018,6 +1018,13 @@ jobs:
           grep -qE "(^[0-9]+ passed, 0 failed|\\] ok$)" /tmp/nativegen.log || {
             echo "::error::test_native_generality did not run to completion"; exit 1; }
 
+      - name: Native visual languages, second set (starlit, broadsheet, journal, tally, chalkboard)
+        run: |
+          set -o pipefail
+          python tests/test_native_languages_p4.py | tee /tmp/nativep4.log
+          grep -qE "(^[0-9]+ passed, 0 failed|\\] ok$)" /tmp/nativep4.log || {
+            echo "::error::test_native_languages_p4 did not run to completion"; exit 1; }
+
       - name: Review integrity (a consent must name a reviewed artifact)
         run: |
           set -o pipefail

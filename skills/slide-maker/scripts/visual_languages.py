@@ -150,6 +150,7 @@ NATIVE_EXTRAS = {"ink": ("seal",), "poster": ("highlight",), "cutpaper": ("icons
 EXTRA_PAGES = {"highlight": ("cover", "section", "quote", "closing"), "icons": ("points",)}
 _ACTIVE = {}    # language -> the ground key use() set; rs.ground()/rs.card() (no kit) follow it
 _PAL_OVERRIDE = {}   # language -> the palette of the CURRENT page, for a language whose palette changes per page (poster)
+_MEMO = {}   # language -> the last composed page's remembered extras, for ordinary pages (rs.ground has no kit)
 
 
 def _pal(name):
@@ -171,6 +172,10 @@ def _auto_ground(name, prs, taste=None):
     except Exception:
         fmt = None
     if fmt is not None and getattr(fmt, "chrome", "") == "print":
+        if _lum(VARIANTS[name]["light"]["palette"]["ground"]) < 0.2:
+            return "light", ("a printed board ({}) takes a light ground, and {} has none — its default ground is "
+                             "dark and prints as a dark page; for print, pick a language with a light ground"
+                             .format(fmt.label, name))
         return "light", "a printed board ({}) takes a light ground".format(fmt.label)
     if taste is None:
         try:
@@ -225,6 +230,7 @@ class Kit:
         self.L, self.platform = LANGS[name], _platform(platform)
         self.ground = ground
         self.project, self.field = None, None            # drafting's title-block words; poster's current field
+        self.memo = {}        # P4: the deck's remembered extras (masthead, edition, running) — REASSIGN, never mutate
         self.P = dict(VARIANTS[name][ground]["palette"])  # a COPY of the ground's palette (poster swaps it per page)
         self.grain = VARIANTS[name][ground]["grain"]
         self._fonts = dict(self.L["fonts"]["both"])
@@ -306,6 +312,7 @@ def use(name, prs, *, fonts="both", plan=None, image_dir=None, platform=None, gr
     k = Kit(name, prs, fonts, plan, image_dir, platform, ground)
     _ACTIVE[name] = ground
     _PAL_OVERRIDE.clear()      # a new deck starts clean: no language keeps the last deck's per-page palette
+    _MEMO.clear()              # ...nor the last deck's remembered masthead / running head
     if fonts == "mac":
         missing = [f for f in set(k._fonts.values()) if dk._font_substituted(f)]
         if missing:
@@ -876,6 +883,7 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=Non
             else:
                 rr = k.runs(t, sz, color, bold, role, italic)
             dk.text(slide, fx, fy, fw, fh, [rr], align=al)
+    draw.sizes = {f: sz for f, _t, sz, _r in plan}      # what each field was planned at (P4 sizes its art by it)
     return rects, draw
 
 

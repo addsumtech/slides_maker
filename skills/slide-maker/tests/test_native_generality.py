@@ -62,7 +62,7 @@ for name in vl.NATIVE:
                      ("closing", dict(title=T["title"], line=T["line"]))]
             built = 0
             for page, fields in pages:
-                ex = dict(EXTRA[name])
+                ex = dict(EXTRA.get(name, {}))
                 if name == "ink" and lang == "en":
                     ex = {}
                 try:

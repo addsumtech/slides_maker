@@ -339,6 +339,8 @@ def compose(k, slide, page, fields, image):
         raise last
     for sh in list(slide.shapes)[n0:]:
         dk._compose_tag(sh, vl=k.name)
+    if getattr(k, "memo", None):
+        vl._MEMO[k.name] = dict(k.memo)        # ordinary pages (rs.ground) read the deck's remembered extras
     return {"rects": rects, "image": None, "free": None}
 
 
@@ -1402,3 +1404,7 @@ def _bp_points(k, slide, f, image):
         draws.append(td_)
     _run_all(draws)
     return rects
+
+
+# ── the second set (P4) registers its compositions on import: every importer of vl_native gets them ──
+import vl_native2  # noqa: E402,F401

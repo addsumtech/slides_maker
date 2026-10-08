@@ -686,6 +686,9 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   lone character), draws the art with the text kept clear, then sets the text; the points page; vertical CJK for
   `ink`; poster's colour field (with the deck's inks and card following it) and drafting's drawing sheet on every
   `new_slide()`.
+- `vl_native2.py` — page compositions of the second set of native visual languages (`starlit`, `broadsheet`,
+  `journal`, `tally`, `chalkboard`); imported from the foot of `vl_native.py`. Shared helpers: remembered extras
+  (`memo`), script-aware structural labels, `stack`, the raised initial and the ■ end mark.
 - `collage.py` — `collage(slide, region, items, seed=, keep_clear=)`: 1-4 images as tilted, white-bordered,
   taped prints; geometry decided first — a print never enters `keep_clear` and never covers more than
   25% of its neighbour; deterministic for a seed; slot items keep the image-series tag.
