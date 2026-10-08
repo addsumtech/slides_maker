@@ -123,6 +123,14 @@ LANGS = {
                   "mac": {"display": "Arial Black", "body": "Helvetica Neue", "numeral": "Arial Black"}},
         "ea": {"display": "sans", "body": "sans"}, "ea_heavy": True, "grain": 0, "frames": ["rect"],
         "forbids": (), "cover": "low-left", "skeleton": "split"},
+    "chalkboard": {
+        "palette": {"ground": "22392B", "ink": "F3F1EA", "mute": "C9D3C9", "panel": "2B4436",
+                    "accents": ["F2D16B", "F2A9B8", "A4CDE6"], "text_accents": ["F2D16B", "F2A9B8"],
+                    "wood": "7A4F2A", "chalk": "E8E2D2"},
+        "fonts": {"both": {"display": "Trebuchet MS", "body": "Trebuchet MS", "numeral": "Trebuchet MS"},
+                  "mac": {"display": "Chalkboard SE", "body": "Chalkboard SE", "numeral": "Chalkboard SE"}},
+        "ea": {"display": "sans", "body": "sans"}, "grain": 7, "frames": ["rect"],
+        "forbids": (), "cover": "low-left", "skeleton": "island"},
 }
 
 # Each language's GROUNDS: its own light paper, and ONE contrast ground (user's decision, 2026-10-04). All four
@@ -192,13 +200,19 @@ VARIANTS = {
                   "palette": {"ground": "0F1222", "ink": "F2F4FA", "mute": "A5ACC4", "panel": "1A1F38",
                               "accents": ["7C89FF", "C6F432"], "text_accents": ["7C89FF"],
                               "lime": "C6F432", "chip_ink": "0E0E10", "grid_ink": "8090D0", "track": "2A3150"}}},
+    "chalkboard": {
+        "light": {"label": "green board", "label_zh": "绿黑板版", "grain": 7, "palette": LANGS["chalkboard"]["palette"]},
+        "slate": {"label": "slate", "label_zh": "石板版", "grain": 7,
+                  "palette": {"ground": "25282C", "ink": "F2F1EC", "mute": "C7C9CC", "panel": "30343A",
+                              "accents": ["F2D16B", "F2A9B8", "A4CDE6"], "text_accents": ["F2D16B", "F2A9B8"],
+                              "wood": "5B4632", "chalk": "E8E2D2"}}},
 }
-NATIVE = ("ink", "poster", "cutpaper", "drafting", "starlit", "broadsheet", "journal", "tally")          # drawn, no pictures needed (vl_native.py)
+NATIVE = ("ink", "poster", "cutpaper", "drafting", "starlit", "broadsheet", "journal", "tally", "chalkboard")          # drawn, no pictures needed (vl_native.py)
 IMAGE_LED = ("editorial", "soft", "collage", "storybook")    # built around the caller's pictures
 # words only the CALLER can give — never invented by the kit; absent means nothing is drawn
-NATIVE_EXTRAS = {"ink": ("seal",), "poster": ("highlight",), "cutpaper": ("icons",), "drafting": ("project",), "broadsheet": ('masthead', 'edition', 'inside', 'tags'), "journal": ('running', 'authors', 'abstract', 'margin'), "tally": ('tags', 'total')}
+NATIVE_EXTRAS = {"ink": ("seal",), "poster": ("highlight",), "cutpaper": ("icons",), "drafting": ("project",), "broadsheet": ('masthead', 'edition', 'inside', 'tags'), "journal": ('running', 'authors', 'abstract', 'margin'), "tally": ('tags', 'total'), "chalkboard": ('doodle', 'ordered')}
 # the pages that DRAW each extra; on any other page it is refused, never silently dropped (non-Claude run, 2026-10-05)
-EXTRA_PAGES = {"highlight": ("cover", "section", "quote", "closing"), "icons": ("points",), "inside": ('cover',), "tags": ('points',), "authors": ('cover',), "abstract": ('cover',), "margin": ('points',), "total": ('data',)}
+EXTRA_PAGES = {"highlight": ("cover", "section", "quote", "closing"), "icons": ("points",), "inside": ('cover',), "tags": ('points',), "authors": ('cover',), "abstract": ('cover',), "margin": ('points',), "total": ('data',), "doodle": ('cover', 'closing'), "ordered": ('points',)}
 _ACTIVE = {}    # language -> the ground key use() set; rs.ground()/rs.card() (no kit) follow it
 _PAL_OVERRIDE = {}   # language -> the palette of the CURRENT page, for a language whose palette changes per page (poster)
 _MEMO = {}   # language -> the last composed page's remembered extras, for ordinary pages (rs.ground has no kit)
@@ -469,6 +483,11 @@ def _ground_tally(slide, role, index):
     return (0.55, 0.55, W - 1.1, H - 1.1)          # the grid is the page's background (new_slide paints it)
 
 
+def _ground_chalkboard(slide, role, index):
+    W, H = rs._canvas(slide)
+    return (0.7, 0.6, W - 1.4, H - 1.3)             # inside the wooden frame new_slide drew
+
+
 def _card_for(name):
     """The language's card: its panel colour; soft is rounded, the others square."""
     def card(slide, x, y, w, h, label=None):
@@ -493,6 +512,7 @@ _card_starlit = _card_for("starlit")
 _card_broadsheet = _card_for("broadsheet")
 _card_journal = _card_for("journal")
 _card_tally = _card_for("tally")
+_card_chalkboard = _card_for("chalkboard")
 
 
 for _n in LANGS:
@@ -605,6 +625,14 @@ TYPE = {
               "caption": (12, "body", False, "mute", False, 9), "line": (20, "body", False, "mute", False, 12),
               "item_head": (26, "body", True, "ink", False, 13), "item_line": (17, "body", False, "mute", False, 10),
               "item_no": (50, "display", False, "accent", False, 24), "tag": (12, "body", True, "ink", False, 9)},
+    "chalkboard": {"kicker": (16, "body", True, "accent", False, 10), "title": (58, "display", True, "ink", False, 22),
+                   "subtitle": (22, "body", False, "mute", False, 12), "body": (19, "body", False, "ink", False, 12),
+                   "mark": (130, "display", True, "accent", False, 48), "quote": (44, "display", True, "ink", False, 20),
+                   "attribution": (20, "body", False, "accent", False, 11), "number": (150, "numeral", True, "accent", False, 48),
+                   "label": (28, "display", True, "ink", False, 14), "note": (18, "body", False, "mute", False, 11),
+                   "caption": (14, "body", False, "mute", False, 10), "line": (22, "body", False, "mute", False, 12),
+                   "item_head": (24, "display", True, "ink", False, 14), "item_line": (19, "body", False, "mute", False, 11),
+                   "item_no": (24, "display", True, "accent", False, 14)},
 }
 
 # page -> its fields in column order (the caller's keyword names)
@@ -1475,6 +1503,12 @@ _SAMPLE_COPY_NATIVE = {
               ("quote", dict(quote="Count what people borrow, not what we own.", attribution="Library principle")),
               ("data", dict(number="12", label="of 40 neighbourhoods now have a shelf", note="A target of 20 by next year.",
                             total="40"))],
+    "chalkboard": [("cover", dict(kicker="科学课 · 第 3 讲", title="光合作用是怎么回事", subtitle="一片叶子，就是一座小工厂")),
+                   ("points", dict(title="叶子做的三件事", ordered=True,
+                                   items=[("吸收阳光", "叶绿素抓住光的能量"), ("吸进水和二氧化碳", "根吸水，叶子吸二氧化碳"),
+                                          ("做出糖和氧气", "糖留给植物，氧气放出来")])),
+                   ("quote", dict(quote="一片叶子就是一座小工厂。", attribution="科学课笔记")),
+                   ("data", dict(number="6", label="个二氧化碳分子", note="和 6 个水分子一起，做出一个葡萄糖分子。"))],
 }
 
 
@@ -1566,6 +1600,8 @@ _DISPLAY_NAMES["journal"] = "Journal article"
 _RATIONALE["journal"] = "drawn around your figures: a running head, an abstract, numbered figures with captions, margin notes"
 _DISPLAY_NAMES["tally"] = "Data tally"
 _RATIONALE["tally"] = "drawn, no pictures: a fine grid, heavy type, pill tags, one giant number with its share bar"
+_DISPLAY_NAMES["chalkboard"] = "Chalkboard"
+_RATIONALE["chalkboard"] = "drawn, no pictures: a framed board, coloured chalk strokes, boxed steps, a circled figure"
 
 
 def direction(name, *, fonts="both", ground="light", W=13.333, H=7.5):

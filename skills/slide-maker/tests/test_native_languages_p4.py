@@ -551,6 +551,82 @@ _r, _d = _v2h.flow(k, k.new_slide(), "cover", (1.0, 1.0, 8.0, 3.0), [("title", "
 check(abs(_r["title"][0] - 1.0) < 1e-6 and abs(_r["title"][2] - 8.0) < 0.01 and hasattr(_d, "sizes"),
       "P4 flow: rects report the full column while the words were measured in 97% of it ({})".format(_r["title"]))
 
+# ── chalkboard 黑板报 ──
+EXTRAS["chalkboard"] = lambda lang, n: {"points": {"ordered": True}}
+check("chalkboard" in vl.NATIVE and set(vl.VARIANTS["chalkboard"]) == {"light", "slate"}, "chalkboard: two grounds")
+assert_palettes("chalkboard")
+assert_matrix("chalkboard")
+def arrows(s):
+    """Chalk arrow heads: a one-pass three-point chalk path (a box is five points, an underline eleven)."""
+    return [sh for sh in s.shapes if sh._element.xpath(".//a:custGeom") and len(sh._element.xpath(".//a:lnTo")) == 2]
+STEPS = [("Catch the light", "Chlorophyll traps its energy"), ("Take in water and CO₂", "Roots drink, leaves breathe in"),
+         ("Make sugar and oxygen", "Sugar stays, oxygen goes out")]
+for W, H in ((13.333, 7.5), (10.0, 7.5), (7.5, 13.333), (7.5, 7.5)):
+    for ordered in (False, True):
+        prs, k = use("chalkboard", W, H)
+        s = k.new_slide()
+        k.points(s, title="Three things a leaf does", items=STEPS, ordered=ordered)
+        check(len(arrows(s)) == (2 if ordered else 0),
+              "chalkboard {}x{} ordered={}: arrows only when the caller says the points are in order ({})".format(
+                  W, H, ordered, len(arrows(s))))
+        # every point's words sit inside its own chalk box (a box is a 5-point path: its bbox is the box)
+        boxes = [rect_of(sh) for sh in s.shapes if sh._element.xpath(".//a:custGeom") and len(sh._element.xpath(".//a:lnTo")) == 4]
+        heads = [rect_of(sh) for sh in texts(s) if sh.text_frame.text in [h for h, _l in STEPS]]
+        inside = [any(b[0] - 0.05 <= t[0] and t[0] + t[2] <= b[0] + b[2] + 0.05 and b[1] - 0.05 <= t[1] and
+                      t[1] + t[3] <= b[1] + b[3] + 0.05 for b in boxes) for t in heads]
+        check(len(heads) == 3 and all(inside), "chalkboard {}x{}: each head sits inside its chalk box ({})".format(W, H, inside))
+try:
+    prs, k = use("chalkboard")
+    k.points(k.new_slide(), title="x", items=["a", "b"], ordered="yes")
+    check(False, "chalkboard: ordered= that is not a bool is refused")
+except TypeError:
+    check(True, "chalkboard: ordered= that is not a bool is refused")
+# no doodle without doodle=; with it, one picture, clear of every word
+prs, k = use("chalkboard")
+s = k.new_slide(); k.cover(s, kicker="Science · lesson 3", title="How photosynthesis works", subtitle="A leaf is a tiny factory")
+check(not [sh for sh in s.shapes if sh.shape_type == 13], "chalkboard: no doodle= → no drawing on the cover")
+s = k.new_slide(); k.cover(s, kicker="Science · lesson 3", title="How photosynthesis works", doodle="lucide:sun")
+pics = [rect_of(sh) for sh in s.shapes if sh.shape_type == 13]
+check(len(pics) == 1 and not any(v2.meet(pics[0], rect_of(t)) for t in texts(s)), "chalkboard: the doodle is drawn, clear of the words")
+# the kicker's chalk box hugs its words (one line: measured), and the eraser smudges keep clear of every word
+for W, H in ((13.333, 7.5), (7.5, 7.5)):
+    prs, k = use("chalkboard", W, H)
+    s = k.new_slide(); k.cover(s, kicker="科学课 · 第 3 讲", title="光合作用是怎么回事", subtitle="一片叶子，就是一座小工厂")
+    kb = [rect_of(sh) for sh in s.shapes if sh._element.xpath(".//a:custGeom") and len(sh._element.xpath(".//a:lnTo")) == 4]
+    check(kb and kb[0][2] < 0.5 * W, "chalkboard {}x{}: the kicker box hugs its words ({:.2f}in)".format(W, H, kb[0][2] if kb else -1))
+    for page, kw in (("quote", dict(quote="一片叶子就是一座小工厂。", attribution="科学课笔记")),
+                     ("data", dict(number="6", label="个二氧化碳分子", note="和 6 个水分子一起，做出一个葡萄糖分子。"))):
+        s = k.new_slide(); getattr(k, page)(s, **kw)
+        smudges = [rect_of(sh) for sh in s.shapes if sh._element.xpath(".//a:prstGeom[@prst='ellipse']") and sh._element.xpath(".//a:gradFill")]
+        check(not any(v2.meet(a, rect_of(t)) for a in smudges for t in texts(s)),
+              "chalkboard {}x{} {}: eraser smudges keep clear of the words".format(W, H, page))
+# the kicker's chalk box holds its words: a CJK kicker with spaces and a middle dot rendered wider than the Latin-face
+# measure (sample render: "科学课 · 第 3 讲" ran past its box) — every CJK character an em, every other at least 0.55 em
+prs, k = use("chalkboard")
+s = k.new_slide(); k.cover(s, kicker="科学课 · 第 3 讲", title="光合作用是怎么回事")
+kt = [sh for sh in texts(s) if sh.text_frame.text == "科学课 · 第 3 讲"][0]
+ksz = kt.text_frame.paragraphs[0].runs[0].font.size.pt
+floor_w = sum(1.0 if dk._has_cjk(ch) else 0.55 for ch in "科学课 · 第 3 讲") * ksz / 72.0
+kb = [rect_of(sh) for sh in s.shapes if sh._element.xpath(".//a:custGeom") and len(sh._element.xpath(".//a:lnTo")) == 4][0]
+check(kb[2] >= floor_w + 0.1, "chalkboard: the kicker box holds a CJK kicker ({:.2f}in for {:.2f}in of words)".format(kb[2], floor_w))
+# a Chinese body that wraps breaks at its clause mark, never leaving one character on the last line (sample render:
+# "根吸水，叶子吸二氧化 / 碳")
+prs, k = use("chalkboard")
+s = k.new_slide()
+k.points(s, title="叶子做的三件事", items=[("吸收阳光", "叶绿素抓住光的能量"), ("吸进水和二氧化碳", "根吸水，叶子吸二氧化碳"),
+                                         ("做出糖和氧气", "糖留给植物，氧气放出来")])
+paras = {tuple(p_.text for p_ in sh.text_frame.paragraphs) for sh in texts(s)}
+check(("根吸水，", "叶子吸二氧化碳") in paras and ("糖留给植物，", "氧气放出来") in paras,
+      "chalkboard: a wrapping Chinese body breaks at its clause ({})".format(sorted(paras)[:6]))
+# an ordinary page is a framed board; its content rect sits inside the frame
+import register_surface as rs
+prs, k = use("chalkboard")
+s = k.new_slide()
+x, y, w, h = rs.ground(s, k.name, role="content", index=2)
+frame = [rect_of(sh) for sh in s.shapes if not getattr(sh, "has_text_frame", False) or not sh.text_frame.text.strip()]
+check(len(frame) >= 5 and x > 0.14 and x + w < 13.333 - 0.14 and y + h < 7.5 - 0.14,
+      "chalkboard: an ordinary page is a framed board; content inside the frame")
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

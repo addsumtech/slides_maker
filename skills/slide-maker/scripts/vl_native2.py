@@ -24,6 +24,27 @@ import vl_native as _vn
 HEADROOM = 0.97      # words are measured in 97% of a column and drawn at its full width (see flow)
 
 
+_CLAUSE_FIELDS = ("item_line", "item_head", "body", "note", "caption", "abstract", "margin", "inside", "authors")
+
+
+def _clause_break(k, f_, t, w, start):
+    """A Chinese/Japanese body that will wrap breaks at the clause mark nearest its middle ("根吸水，/ 叶子吸二氧化碳"),
+    never leaving a character alone on its last line ("…二氧化 / 碳", sample render 2026-10-08). The display fields
+    (title, quote, label, line, subtitle) already break this way in vl._flow; these are the body fields it leaves."""
+    if f_ not in _CLAUSE_FIELDS or not t or "\n" in t or not dk._has_cjk(t):
+        return t
+    base, role, bold = vl.TYPE[k.name][f_][:3]
+    sz = (start or {}).get(f_, base * ctx(k)[2])
+    face = k.ea_face(role, t) or k.face(role)
+    if dk.measure_text([(t, bool(bold))], w, sz, font=face) <= dk.measure_text([(t, bool(bold))], 1000.0, sz, font=face) + 1e-6:
+        return t                                   # one line: nothing to break
+    marks = [i for i, ch in enumerate(t[:-1]) if ch in _vn._CLAUSE_MARKS]
+    if not marks:
+        return t
+    i = min(marks, key=lambda m: abs(m + 1 - len(t) / 2.0))
+    return t[:i + 1] + "\n" + t[i + 1:]
+
+
 def flow(k, slide, page, col, items, **kw):
     """vl_native.flow with headroom: the words are MEASURED in 97% of the column and the boxes DRAWN at its full width.
     A renderer can set a line a hair wider than the measure — LibreOffice set "Three lines on the ledger" (11.39in of
@@ -33,6 +54,7 @@ def flow(k, slide, page, col, items, **kw):
     align = kw.get("align", "l")
     wm = w * HEADROOM
     dw = w - wm
+    items = [(f_, _clause_break(k, f_, t, wm, kw.get("start"))) for f_, t in items]
     rects, draw = _vn.flow(k, slide, page, (x + dw / 2.0 if align == "c" else x, y, wm, h), items, **kw)
     out = {f_: ((r[0] - dw / 2.0, r[1], r[2] + dw, r[3]) if align == "c" else (r[0], r[1], r[2] + dw, r[3]))
            for f_, r in rects.items()}
@@ -85,6 +107,13 @@ def stack(k, slide, page, x, w, y0, y1, groups, *, anchor="middle", align="l", *
     [y0, y1], the whole stack anchored top or middle. Two passes: measured at the top, then placed. The gaps give an
     underline or a rule its own room (flow's own gaps are for type). Returns (rects, draws)."""
     groups = [(items, gap) for items, gap in groups if items]
+    if len(groups) > 1:
+        # size every group TOGETHER first (in the room left after the gaps), then start each group at that size: planned
+        # one by one, a long first group kept its full size and left the next none (a square board's closing, 2026-10-08)
+        gaps = sum(g for _i, g in groups[:-1])
+        _r0, d0 = flow(k, slide, page, (x, y0, w, max(0.1, y1 - y0 - gaps)), [it for items, _g in groups for it in items],
+                       anchor="top", align=align, **flow_kw)
+        flow_kw = dict(flow_kw, start=dict(flow_kw.get("start") or {}, **getattr(d0, "sizes", {})))
 
     def plan(top):
         rects, draws, y = {}, [], top
@@ -1120,4 +1149,326 @@ def _tl_closing(k, slide, f, image):
     r, d = flow(k, slide, "closing", col, fields(f, ("title", "line")), anchor="middle")
     yb = max(v[1] + v[3] for v in r.values()) + 0.35 * s
     _run_all([d, lambda: dk.box(slide, x, yb, 2.4 * s, 0.09 * s, fill=k.P["text_accents"][0], round=True, r=0.045 * s)])
+    return r
+
+
+# ═══════════════════════════════════ chalkboard 黑板报 ═══════════════════════════════════
+def _cb_ground(k, slide):
+    na.board_frame(slide, k.P["wood"], k.P["chalk"])      # the frame inside the page, the ledge, a stick of chalk
+
+
+GROUNDS["chalkboard"] = _cb_ground
+
+
+def ink_w(k, field, text, size):
+    """The width (in) one line of `text` takes at `size` in the field's face. Text with CJK in it is set in the
+    East-Asian face, whose spaces and marks ("·") run wider than the Latin face measures — the sample's
+    "科学课 · 第 3 讲" ran past its box — so it counts every CJK character an em and every other at least 0.6 em."""
+    _b, role, bold, *_r = vl.TYPE[k.name][field]
+    w = na.chip_width(text, size, k.face(role), bold=bool(bold)) - 1.2 * size / 72.0
+    if dk._has_cjk(text):
+        w = max(w, sum(1.0 if dk._has_cjk(ch) else 0.6 for ch in text) * size / 72.0)
+    return w
+
+
+def _one_line(rect, size):
+    return rect[3] <= size * 1.2 / 72.0 * 1.5 + 0.06
+
+
+def _cb_smudges(k, slide, keep, seed):
+    """Up to three faint eraser smudges (rim-free radial fades) where no words are; fewer when the board is full."""
+    import random as _random
+    W, H, s, o = ctx(k)
+    rnd = _random.Random(seed)
+    placed = 0
+    for _ in range(40):
+        if placed == 3:
+            break
+        w = rnd.uniform(3.0, 4.5) * s
+        x, y = rnd.uniform(0.3 * s, max(0.3 * s, W - w - 0.3 * s)), rnd.uniform(0.4 * s, H - 1.2 * s)
+        r = (x, y, w, w * 0.22)
+        if x + w > W - 0.2 * s or any(meet(r, c, 0.1 * s) for c in keep):
+            continue
+        e = dk.box(slide, x, y, w, w * 0.22, fill=k.P["ink"])
+        e._element.spPr.find(dk.qn("a:prstGeom")).set("prst", "ellipse")
+        na._radial(e, k.P["ink"], 0.06)
+        dk.decorative(e, "an eraser smudge on the board; nothing reads from it")
+        placed += 1
+
+
+def _cb_doodle(k, slide, spec, cx, cy, size):
+    """The caller's icon (doodle=, an icons.py spec) drawn in yellow chalk. Fetched while PLANNING, so an unknown
+    icon raises (naming what it tried) before anything is drawn."""
+    import icons as _ic
+    import tempfile as _tf
+    png = Path(_tf.gettempdir()) / "slide-maker-native-art" / "doodle_{}_{}.png".format(
+        re.sub(r"[^A-Za-z0-9]+", "_", spec), k.P["text_accents"][0])
+    png.parent.mkdir(parents=True, exist_ok=True)
+    _ic.icon_png(spec, str(png), color=k.P["text_accents"][0], px=320)
+
+    def draw():
+        pic = dk.icon(slide, str(png), cx - size / 2.0, cy - size / 2.0, size, alt=spec.split(":")[-1].replace("-", " "))
+        dk.decorative(pic, "a chalk doodle beside the title; the title carries the meaning")
+    return draw
+
+
+@register("chalkboard", "cover", alts=2)
+def _cb_cover(k, slide, f, image):
+    """A lesson's first board: the kicker in a pink chalk box, the title with a double chalk underline, the subtitle;
+    the caller's doodle= drawn in yellow chalk beside them — nothing drawn without it."""
+    W, H, s, o = ctx(k)
+    dd = text_of(f, "doodle")
+    x, w = 0.08 * W, (0.60 if dd and o == "land" else 0.84) * W
+    y0, y1 = (0.12 if alt() == 0 else 0.07) * H, (0.66 if dd and o != "land" else 0.86) * H
+    r, ds = stack(k, slide, "cover", x, w, y0, y1,
+                  [(fields(f, ("kicker", "title")), 0.40 * s), (fields(f, ("subtitle",)), 0.0)],
+                  accent=k.P["text_accents"][1])
+    art = []
+    if "kicker" in r:
+        kr = r["kicker"]
+        sz = ds[0].sizes["kicker"]
+        kw = min(kr[2], ink_w(k, "kicker", text_of(f, "kicker"), sz)) if _one_line(kr, sz) else kr[2]
+        art.append(lambda: na.chalk_box(slide, kr[0] - 0.12 * s, kr[1] - 0.06 * s, kw + 0.24 * s, kr[3] + 0.12 * s,
+                                        k.P["text_accents"][1], seed=3))
+    if "title" in r:
+        tr = r["title"]
+        art.append(lambda: na.chalk_underline(slide, tr[0], tr[1] + tr[3] + 0.08 * s, min(tr[2], 0.55 * W),
+                                              k.P["text_accents"][0], seed=5))
+    if dd:
+        size = 1.6 * s
+        if o == "land":
+            cx_, cy_ = 0.80 * W, 0.62 * H
+        else:
+            foot = max(v[1] + v[3] for v in r.values())
+            cx_, cy_ = 0.70 * W, min(foot + 0.4 * s + size / 2, H - 0.9 * s - size / 2)
+        art.append(_cb_doodle(k, slide, dd, cx_, cy_, size))
+    _cb_smudges(k, slide, list(r.values()), seed=1)
+    _run_all(art + ds)
+    return r
+
+
+@register("chalkboard", "section", alts=2)
+def _cb_section(k, slide, f, image):
+    W, H, s, o = ctx(k)
+    num = text_of(f, "number")
+    rects, draws, art = {}, [], []
+    if o == "land" and alt() == 0:
+        cx, cy, R = 0.24 * W, 0.50 * H, min(0.30 * H, 0.17 * W)
+        col = (0.44 * W, 0.16 * H, 0.48 * W, 0.68 * H)
+    else:
+        cx, cy = 0.50 * W, 0.24 * H
+        R = min(0.16 * H, 0.30 * W) * (1.0 if alt() == 0 else 0.75)
+        col = (0.08 * W, cy + R + 0.4 * s, 0.84 * W, H - 0.7 * s - (cy + R + 0.4 * s))
+    R = fit_circle(k, cx, cy, 2 * R) / 2.0
+    if num:
+        r, d = flow(k, slide, "section", (cx - R * 0.75, cy - R * 0.55, 1.5 * R, 1.1 * R), [("number", num)],
+                    anchor="middle", align="c", start={"number": 110 * s})
+        rects.update(r); draws.append(d)
+        art.append(lambda: na.chalk_ellipse(slide, cx, cy, R, R * 0.85, k.P["text_accents"][1], seed=9))
+    r, ds = stack(k, slide, "section", col[0], col[2], col[1], col[1] + col[3], [(fields(f, ("kicker", "title")), 0.0)],
+                  accent=k.P["text_accents"][1])
+    rects.update(r); draws += ds
+    if "title" in r:
+        tr = r["title"]
+        art.append(lambda: na.chalk_underline(slide, tr[0], tr[1] + tr[3] + 0.08 * s, min(tr[2], 0.4 * W),
+                                              k.P["text_accents"][0], seed=11))
+    _cb_smudges(k, slide, list(rects.values()) + [(cx - R, cy - R, 2 * R, 2 * R)], seed=2)
+    _run_all(art + draws)
+    return rects
+
+
+@register("chalkboard", "image_text", alts=2)
+def _cb_image_text(k, slide, f, image):
+    """The caller's picture pinned to the board by four chalk corner marks, the words beside it (under it in
+    portrait)."""
+    W, H, s, o = ctx(k)
+    if o == "land":
+        img = (0.08 * W, 0.14 * H, (0.46 if alt() == 0 else 0.40) * W, 0.70 * H)
+        cx0 = img[0] + img[2] + 0.6 * s
+        col = (cx0, 0.12 * H, 0.92 * W - cx0, 0.76 * H)
+    else:
+        img = (0.10 * W, 0.08 * H, 0.80 * W, (0.40 if alt() == 0 else 0.32) * H)
+        cy0 = img[1] + img[3] + 0.5 * s
+        col = (0.08 * W, cy0, 0.84 * W, H - 0.7 * s - cy0)
+    r, ds = stack(k, slide, "image_text", col[0], col[2], col[1], col[1] + col[3],
+                  [(fields(f, ("kicker", "title", "body", "caption")), 0.0)], anchor="middle" if o == "land" else "top",
+                  accent=k.P["text_accents"][1])
+    vl._place_image(k, slide, image, img, vl.L_((0, 0, 1, 1), "frame", None), "image_text")
+    L = 0.35 * s
+    x0, y0, x1, y1 = img[0] - 0.08 * s, img[1] - 0.08 * s, img[0] + img[2] + 0.08 * s, img[1] + img[3] + 0.08 * s
+    for i, (ax, ay, dx, dy) in enumerate(((x0, y0, 1, 1), (x1, y0, -1, 1), (x1, y1, -1, -1), (x0, y1, 1, -1))):
+        na.chalk_path(slide, [(ax + dx * L, ay), (ax, ay), (ax, ay + dy * L)], k.P["ink"], w=2.2, seed=20 + i, passes=1)
+    _run_all(ds)
+    return r
+
+
+@register("chalkboard", "points", alts=3)
+def _cb_points(k, slide, f, image):
+    """Chalk boxes, one per point, each sized to its measured words, a circled number at its corner; arrows between
+    them only when the caller says the points happen in order (ordered=True) — numbers alone read as a list. Across
+    a landscape page the boxes form a row; otherwise they stack; long copy gets a 2x2 grid, then a roomier title."""
+    W, H, s, o = ctx(k)
+    pts = points_of(f.get("items"))
+    n = len(pts)
+    ordered = f.get("ordered", False)
+    if not isinstance(ordered, bool):
+        raise TypeError("chalkboard.points(): ordered= is True or False, got {!r}".format(ordered))
+    r, d = flow(k, slide, "points", (0.08 * W, 0.08 * H, 0.84 * W, (0.26 if alt() == 2 else 0.18) * H),
+                fields(f, ("kicker", "title")), accent=k.P["text_accents"][1])
+    rects, draws, art = dict(r), [d], []
+    if "title" in r:
+        tr = r["title"]
+        art.append(lambda: na.chalk_underline(slide, tr[0], tr[1] + tr[3] + 0.08 * s, min(tr[2], 0.36 * W),
+                                              k.P["text_accents"][0], seed=2))
+    top = max((v[1] + v[3] for v in r.values()), default=0.08 * H) + 0.50 * s
+    bottom = H - 0.75 * s
+    cols = [k.P["text_accents"][0], k.P["text_accents"][1], k.P["accents"][2], k.P["ink"]]
+    # the designed layout: a row across a landscape page, a stack in portrait; long copy: a 2x2 grid, then the
+    # grid under a roomier title (a roomier title alone only lets it stay large and squeeze the boxes)
+    ncol = (n if o == "land" else 1) if alt() == 0 else (2 if n >= 3 else 1)
+    nrow = -(-n // ncol)
+    gap, pad, numd = ((0.55, 0.30, 0.64) if alt() == 0 else (0.35, 0.20, 0.50))
+    gap, pad, numd = gap * s, pad * s, numd * s
+    bw = (0.84 * W - (ncol - 1) * gap) / ncol
+    above = ncol == n and n > 1                       # one row: the number sits above the words, else beside them
+
+    def plan_box(i, y, h):
+        hd, ln = pts[i]
+        x = 0.08 * W + (i % ncol) * (bw + gap)
+        if above:
+            tcol = (x + pad, y + pad + numd + 0.15 * s, bw - 2 * pad, h - (2 * pad + numd + 0.15 * s))
+        else:
+            tcol = (x + pad + numd + 0.25 * s, y + pad, bw - 2 * pad - numd - 0.25 * s, h - 2 * pad)
+        return flow(k, slide, "points", tcol, [(x_, t) for x_, t in (("item_head", hd), ("item_line", ln)) if t], anchor="top")
+    # pass 1: each row's height from its boxes' own words; pass 2: the rows centred in the room under the title. A
+    # grid's narrow boxes try the number beside the words first, then above them (a square board, 2026-10-08)
+    slot = (bottom - top - (nrow - 1) * gap) / nrow
+    opts = [above] if (ncol == 1 or above) else [False, True]
+    for j, above in enumerate(opts):
+        try:
+            row_h = []
+            for rw in range(nrow):
+                hs = [max(v[1] + v[3] for v in plan_box(i, top, slot)[0].values()) - top + pad
+                      for i in range(rw * ncol, min(n, (rw + 1) * ncol))]
+                row_h.append(max(max(hs), numd + 2 * pad))
+            break
+        except vl.VLTextOverflow:
+            if j == len(opts) - 1:
+                raise
+    y = top + max(0.0, (bottom - top - sum(row_h) - (nrow - 1) * gap) / 2.0)
+    boxes = []
+    for rw in range(nrow):
+        for i in range(rw * ncol, min(n, (rw + 1) * ncol)):
+            boxes.append((0.08 * W + (i % ncol) * (bw + gap), y, bw, row_h[rw]))
+        y += row_h[rw] + gap
+    for i, (x, y, w, h_) in enumerate(boxes):
+        c = cols[i % len(cols)]
+        _tr, td_ = plan_box(i, y, h_ + 0.01)
+        art.append(lambda x=x, y=y, w=w, h_=h_, c=c, i=i: na.chalk_box(slide, x, y, w, h_, c, seed=20 + i))
+        ncx, ncy = x + pad + numd / 2.0, y + pad + numd / 2.0
+        art.append(lambda ncx=ncx, ncy=ncy, c=c, i=i: na.chalk_ellipse(slide, ncx, ncy, numd / 2.0, numd / 2.0, c, seed=30 + i))
+        _nr, nd = flow(k, slide, "points", (ncx - numd / 2.0, ncy - numd / 2.0, numd, numd), [("item_no", str(i + 1))],
+                       anchor="middle", align="c", ink=c, accent=c)
+        draws += [nd, td_]
+        if ordered and i < n - 1:
+            nx, ny, nw_, nh = boxes[i + 1]
+            if ny == y:                               # the next box is beside this one: across the gap
+                ay = y + min(h_, nh) / 2.0
+                art.append(lambda x=x, w=w, ay=ay, i=i: na.chalk_arrow(slide, x + w + 0.10 * s, ay, x + w + gap - 0.10 * s, ay,
+                                                                     k.P["ink"], seed=40 + i))
+            elif ncol == 1:                           # stacked: straight down the gap
+                ax = x + w / 2.0
+                art.append(lambda ax=ax, y=y, h_=h_, i=i: na.chalk_arrow(slide, ax, y + h_ + 0.06 * s, ax, y + h_ + gap - 0.06 * s,
+                                                                       k.P["ink"], seed=40 + i))
+            else:                                     # the grid's next row: through the central gap, corner to corner
+                art.append(lambda x=x, y=y, h_=h_, nx=nx, nw_=nw_, ny=ny, i=i: na.chalk_arrow(
+                    slide, x - 0.05 * s, y + h_ + 0.06 * s, nx + nw_ + 0.05 * s, ny - 0.06 * s, k.P["ink"], seed=40 + i))
+    _cb_smudges(k, slide, list(rects.values()) + boxes, seed=3)
+    _run_all(art + draws)
+    return rects
+
+
+@register("chalkboard", "quote", alts=2)
+def _cb_quote(k, slide, f, image):
+    W, H, s, o = ctx(k)
+    x = max(0.17 * W, 1.6 * s) if alt() == 0 else max(0.10 * W, 1.45 * s)
+    a = text_of(f, "attribution")
+    r, ds = stack(k, slide, "quote", x, 0.90 * W - x, 0.16 * H, H - 0.75 * s,
+                  [(fields(f, ("quote",)), 0.45 * s), ([("attribution", "— " + a)] if a else [], 0.0)],
+                  accent=k.P["text_accents"][1])
+    art = []
+    if "quote" in r:
+        qr = r["quote"]
+        _m, md = flow(k, slide, "quote", (x - 1.35 * s, qr[1] - 0.25 * s, 1.2 * s, 1.4 * s), [("mark", "“")],
+                      start={"mark": 110 * s})
+        ds.append(md)
+        art.append(lambda: na.chalk_underline(slide, qr[0], qr[1] + qr[3] + 0.08 * s, min(qr[2], 0.22 * W),
+                                              k.P["text_accents"][0], seed=8))
+    _cb_smudges(k, slide, list(r.values()) + [(x - 1.35 * s, 0.0, 1.2 * s, H)], seed=4)
+    _run_all(art + ds)
+    return r
+
+
+@register("chalkboard", "data", alts=2)
+def _cb_data(k, slide, f, image):
+    """The number circled in pink chalk, a chalk arrow from it to its label and note."""
+    W, H, s, o = ctx(k)
+    num = text_of(f, "number")
+    rects, draws, art = {}, [], []
+    if o == "land" and alt() == 0:
+        cx, cy, R = 0.28 * W, 0.48 * H, min(0.30 * H, 0.18 * W)
+        col = (0.56 * W, 0.22 * H, 0.36 * W, 0.56 * H)
+    else:
+        cx, cy = 0.5 * W, 0.26 * H
+        R = min(0.17 * H, 0.32 * W) * (1.0 if alt() == 0 else 0.8)
+        col = (0.10 * W, cy + R + 0.7 * s, 0.80 * W, H - 0.75 * s - (cy + R + 0.7 * s))
+    R = fit_circle(k, cx, cy, 2 * R) / 2.0
+    side = o == "land" and alt() == 0
+    if num:
+        # beside the words the figure keeps to its circle; centred above them it may be as wide as the page allows,
+        # and the chalk ring widens to hold it ("1,250,000" was refused on a square board)
+        nrect = (cx - 1.05 * R, cy - 0.7 * R, 2.1 * R, 1.4 * R) if side else (0.08 * W, cy - 0.7 * R, 0.84 * W, 1.4 * R)
+        r, d = flow(k, slide, "data", nrect, [("number", num)], anchor="middle", align="c")
+        rects.update(r); draws.append(d)
+        rx = 1.15 * R
+        if not side:
+            rx = min(0.48 * W, max(rx, ink_w(k, "number", num, d.sizes.get("number", 48)) / 2.0 + 0.35 * s))
+        art.append(lambda rx=rx: na.chalk_ellipse(slide, cx, cy, rx, 0.92 * R, k.P["text_accents"][1], seed=9, turns=1.12))
+    r, ds = stack(k, slide, "data", col[0], col[2], col[1], col[1] + col[3], [(fields(f, ("label", "note")), 0.0)],
+                  anchor="middle" if o == "land" else "top")
+    rects.update(r); draws += ds
+    if num and r:
+        ty = min(v[1] for v in r.values())
+        if o == "land" and alt() == 0:
+            art.append(lambda: na.chalk_arrow(slide, cx + 1.2 * R, cy - 0.1 * R, col[0] - 0.2 * s, ty + 0.25 * s,
+                                              k.P["ink"], seed=60))
+        else:
+            art.append(lambda: na.chalk_arrow(slide, cx, cy + 0.98 * R, cx, ty - 0.12 * s, k.P["ink"], seed=60))
+    _cb_smudges(k, slide, list(rects.values()) + [(cx - 1.2 * R, cy - R, 2.4 * R, 2 * R)], seed=5)
+    _run_all(art + draws)
+    return rects
+
+
+@register("chalkboard", "closing", alts=2)
+def _cb_closing(k, slide, f, image):
+    W, H, s, o = ctx(k)
+    dd = text_of(f, "doodle")
+    w = (0.62 if dd and o == "land" else 0.84) * W
+    r, ds = stack(k, slide, "closing", 0.08 * W, w, (0.14 if alt() == 0 else 0.07) * H, (0.68 if dd and o != "land" else 0.86) * H,
+                  [(fields(f, ("title",)), 0.45 * s), (fields(f, ("line",)), 0.0)])
+    art = []
+    if "title" in r:
+        tr = r["title"]
+        art.append(lambda: na.chalk_underline(slide, tr[0], tr[1] + tr[3] + 0.08 * s, min(tr[2], 0.5 * W),
+                                              k.P["text_accents"][0], seed=12))
+    if dd:
+        size = 1.6 * s
+        if o == "land":
+            cx_, cy_ = 0.82 * W, 0.50 * H
+        else:
+            foot = max(v[1] + v[3] for v in r.values())
+            cx_, cy_ = 0.70 * W, min(foot + 0.4 * s + size / 2, H - 0.9 * s - size / 2)
+        art.append(_cb_doodle(k, slide, dd, cx_, cy_, size))
+    _cb_smudges(k, slide, list(r.values()), seed=6)
+    _run_all(art + ds)
     return r

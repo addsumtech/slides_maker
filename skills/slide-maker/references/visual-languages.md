@@ -156,6 +156,7 @@ Each language has its own light paper and ONE contrast ground; every text ink pa
 | starlit | midnight (dark — no light ground) | `dawn` — deep violet, rose gold |
 | journal | paper | `green` — title green, gold accent |
 | broadsheet | newsprint | `salmon` — pink paper, navy accent |
+| chalkboard | green board (dark — no light ground) | `slate` — grey slate |
 | tally | white grid | `night` — navy grid, periwinkle and lime |
 
 `use(name, prs, ground=…)`: `"light"` (the default — the same deck on every machine), the contrast key, or
