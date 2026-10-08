@@ -241,7 +241,7 @@ def images_fault(images, directions, *, image_sources=None, imagery=None):
 
 
 
-NATIVE_LANGS = ("ink", "poster", "cutpaper", "drafting")      # mirrors visual_languages.NATIVE (a test pins it)
+NATIVE_LANGS = ("ink", "poster", "cutpaper", "drafting", "starlit")      # mirrors visual_languages.NATIVE (a test pins it)
 
 
 def native_fault(images, directions, fit=None):
@@ -255,8 +255,9 @@ def native_fault(images, directions, fit=None):
     if not offered:
         return ("the deck has no pictures and no direction is a native visual language — offer the one that fits the "
                 "topic with visual_languages.direction('<name>'): ink (culture, history, craft), poster (launch, "
-                "manifesto, brand, opinion), cutpaper (children, teaching, workshop, community) or drafting "
-                "(research, engineering, technical) — references/visual-languages.md")
+                "manifesto, brand, opinion), cutpaper (children, teaching, workshop, community), drafting "
+                "(research, engineering, technical) or starlit (year in review, letter, thanks, commemoration) — "
+                "references/visual-languages.md")
     if not isinstance(fit, dict) or fit.get("language") not in offered or len(str(fit.get("why") or "").strip()) < 8:
         return ('record direction_gate.native_fit: {"language": "<the native language offered>", "why": "<why it '
                 'fits this topic>"} — offered: ' + ", ".join(offered))

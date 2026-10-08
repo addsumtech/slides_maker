@@ -28,7 +28,8 @@ EMU = 914400.0
 def rect_of(sh):
     return (sh.left / EMU, sh.top / EMU, sh.width / EMU, sh.height / EMU)
 def texts(s):
-    return [sh for sh in s.shapes if getattr(sh, "has_text_frame", False) and sh.text_frame.text.strip()]
+    """The page's visible text boxes (not the off-page title kept for screen readers)."""
+    return [sh for sh in s.shapes if getattr(sh, "has_text_frame", False) and sh.text_frame.text.strip() and sh.top >= 0]
 def use(name, W=13.333, H=7.5, ground="light"):
     prs = dk.blank_deck(W, H)
     with contextlib.redirect_stdout(io.StringIO()):
@@ -174,6 +175,83 @@ probe = subprocess.run([sys.executable, "-c",
 check(probe.stdout.strip() == "[]", "an image-led deck imports no native module: {!r}".format(probe.stdout.strip()))
 
 # ── per language (Tasks 4–8 append their sections below this line) ──
+
+# ── starlit 星夜 ──
+EXTRAS["starlit"] = lambda lang, n: {}
+check("starlit" in vl.NATIVE and set(vl.VARIANTS["starlit"]) == {"light", "dawn"}, "starlit is native, two grounds")
+assert_palettes("starlit")
+assert_matrix("starlit")
+POINTS4 = [("We shipped slower", "and broke less"), ("We listened more", "to the people who use it"),
+           ("We kept the team", "through a hard spring"), ("We wrote it all down", None)]
+def segs_of(s):
+    return [sh for sh in s.shapes if sh._element.tag.endswith("}cxnSp")]
+def crosses(seg, rect, n=24):
+    x0, y0, x1, y1 = seg.begin_x / EMU, seg.begin_y / EMU, seg.end_x / EMU, seg.end_y / EMU
+    return any(rect[0] + 0.02 < x0 + (x1 - x0) * t / n < rect[0] + rect[2] - 0.02 and
+               rect[1] + 0.02 < y0 + (y1 - y0) * t / n < rect[1] + rect[3] - 0.02 for t in range(n + 1))
+for W, H in ((13.333, 7.5), (10.0, 7.5), (7.5, 7.5), (7.5, 13.333), (10.0, 5.625)):
+    prs, k = use("starlit", W, H)
+    s = k.new_slide()
+    k.points(s, kicker="Year in review", title="Four things we learned", items=POINTS4)
+    stars = [sh for sh in s.shapes if sh._element.xpath(".//a:prstGeom[@prst='ellipse']")
+             and not sh._element.xpath(".//a:gradFill") and sh.width / EMU < 0.3]
+    check(len(stars) == 4, "starlit {}x{}: one star per point ({})".format(W, H, len(stars)))
+    check(len(segs_of(s)) == 3, "starlit {}x{}: one line joins the stars in order ({})".format(W, H, len(segs_of(s))))
+    hit = [(sh.text_frame.text[:20]) for g in segs_of(s) for sh in texts(s) if crosses(g, rect_of(sh))]
+    check(not hit, "starlit {}x{}: no constellation line crosses words (Review Focus 4): {}".format(W, H, hit[:3]))
+# the constellation sits in the room under the title, not crowded against it (sample render, 2026-10-08: the lower
+# half of the page was empty)
+for W, H in ((13.333, 7.5), (10.0, 7.5)):
+    prs, k = use("starlit", W, H)
+    s = k.new_slide()
+    k.points(s, title="Three things we learned", items=POINTS4[:3])
+    tb = [sh for sh in texts(s) if sh.text_frame.text == "Three things we learned"][0]
+    star_ys = [sh.top / EMU + sh.height / EMU / 2 for sh in s.shapes if sh._element.xpath(".//a:prstGeom[@prst='ellipse']")
+               and not sh._element.xpath(".//a:gradFill") and sh.width / EMU < 0.3]
+    lab = [sh.top / EMU + sh.height / EMU for sh in texts(s) if sh.text_frame.text != "Three things we learned"]
+    above, below = min(star_ys) - (tb.top + tb.height) / EMU, (H - 0.6) - max(lab)
+    check(abs(above - below) < 0.8, "starlit {}x{}: the constellation is centred under the title (above {:.2f}, below {:.2f})".format(
+        W, H, above, below))
+# the quote mark sits close over its quote (sample render: a 110pt mark's line box left ~1in of air between them)
+prs, k = use("starlit")
+s = k.new_slide(); k.quote(s, quote="We measured the year in conversations, not in launches.", attribution="The letter")
+mk = [sh for sh in texts(s) if sh.text_frame.text == "“"][0]
+qt = [sh for sh in texts(s) if sh.text_frame.text.startswith("We measured")][0]
+check((qt.top - mk.top) / EMU <= 1.45, "starlit: the quote mark sits close over the quote ({:.2f}in)".format((qt.top - mk.top) / EMU))
+# the moon never sits on words; the sky is ONE picture per page (the new_slide sky is replaced, not orphaned)
+for W, H in ((13.333, 7.5), (7.5, 7.5), (7.5, 13.333)):
+    prs, k = use("starlit", W, H)
+    for page, kw in (("cover", dict(kicker="Year in review", title="What this year taught us about building slowly and well",
+                                    subtitle="A letter to the team")),
+                     ("closing", dict(title="Thank you for this year", line="See you in the spring"))):
+        s = k.new_slide()
+        getattr(k, page)(s, **kw)
+        moon = [rect_of(sh) for sh in s.shapes if sh._element.xpath(".//a:prstGeom[@prst='ellipse']")
+                and not sh._element.xpath(".//a:gradFill") and sh.width / EMU > 0.5]
+        words = [rect_of(sh) for sh in texts(s)]
+        check(not any(v2.meet(a, b) for a in moon for b in words), "starlit {}x{} {}: the moon is clear of words".format(W, H, page))
+        imgs = [r for r in s.part.rels.values() if r.reltype.endswith("/image")]
+        check(len(imgs) == 1, "starlit {}x{} {}: one sky picture on the page, no orphan ({})".format(W, H, page, len(imgs)))
+# the number is set in the lining numeral face, never Georgia
+prs, k = use("starlit")
+s = k.new_slide()
+k.data(s, number="2026", label="the year we slowed down")
+big = max(texts(s), key=lambda sh: sh.text_frame.paragraphs[0].runs[0].font.size.pt)
+check(big.text_frame.paragraphs[0].runs[0].font.name == "Times New Roman", "starlit: the figure is in Times New Roman")
+# an ordinary page (Review Focus 2): new_slide paints the sky, rs.ground keeps its content rect clear of stars
+import register_surface as rs
+prs, k = use("starlit")
+s = k.new_slide()
+x, y, w, h = rs.ground(s, k.name, role="content", index=4)
+check(s._element.find(".//{http://schemas.openxmlformats.org/drawingml/2006/main}blip") is not None and w > 5 and h > 3,
+      "starlit: an ordinary page gets the sky and a content rect ({:.1f}x{:.1f})".format(w, h))
+check(len([r for r in s.part.rels.values() if r.reltype.endswith("/image")]) == 1, "starlit: the ordinary page has one sky")
+# a printed board in a language with no light ground: auto keeps the default and SAYS it prints dark (Task 3 ruling)
+_g, _why = vl._auto_ground("starlit", dk.blank_deck(8.27, 11.69))
+check(_g == "light" and "has none" in _why and "dark" in _why,
+      "starlit on an A4 print board: auto keeps the default ground and says it prints dark ({})".format(_why))
+_g, _why = vl._auto_ground("ink", dk.blank_deck(8.27, 11.69))
+check(_g == "light" and "dark" not in _why, "ink on an A4 print board: the plain light-ground note ({})".format(_why))
 
 
 for line in ok:

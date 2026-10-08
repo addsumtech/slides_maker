@@ -172,3 +172,198 @@ def last_shape(slide, n0, text):
         if getattr(sh, "has_text_frame", False) and sh.text_frame.text.replace("\n", "").startswith(text[:12]):
             return sh
     return None
+
+
+# ═══════════════════════════════════ starlit 星夜 ═══════════════════════════════════
+def _st_sky(k, slide, keep, seed):
+    na.starfield_png(slide, base=k.P["ground"], ink=k.P["ink"], glow=k.P["glow"], seed=seed, keep_clear=list(keep))
+
+
+def _st_ground(k, slide):
+    _st_sky(k, slide, (), seed=len(k.prs.slides))       # an ordinary page: the sky; its words are not known yet
+
+
+GROUNDS["starlit"] = _st_ground
+
+
+def _st_rule(k, slide, rects, a, b):
+    """A short gold rule in the gap between field `a` and field `b` (stack() leaves that gap)."""
+    if a not in rects or b not in rects:
+        return lambda: None
+    W, H, s, o = ctx(k)
+    y = (rects[a][1] + rects[a][3] + rects[b][1]) / 2.0
+    return lambda: na.seg(slide, W / 2 - 0.55 * s, y, W / 2 + 0.55 * s, y, k.P["text_accents"][0], w=1.0)
+
+
+def _st_moon(k, slide, clear):
+    """The crescent at the first corner clear of the words — top right, top left, bottom right; none when no corner
+    is clear (it is the sky's, not the page's)."""
+    W, H, s, o = ctx(k)
+    d = 0.9 * s
+    for cx, cy in ((0.86 * W, 0.16 * H), (0.14 * W, 0.16 * H), (0.86 * W, 0.80 * H)):
+        r = (cx - 0.5 * d, cy - 0.6 * d, 1.21 * d, 1.1 * d)
+        if not any(meet(r, c, 0.2 * s) for c in clear):
+            na.crescent(slide, cx, cy, d, k.P["text_accents"][0], k.P["ground"])
+            return
+
+
+@register("starlit", "cover", alts=2)
+def _st_cover(k, slide, f, image):
+    W, H, s, o = ctx(k)
+    x, w = (0.12 * W, 0.76 * W) if o == "land" else (0.08 * W, 0.84 * W)
+    y0, y1 = (0.20 * H, 0.80 * H) if alt() == 0 else (0.07 * H, 0.92 * H)
+    r, ds = stack(k, slide, "cover", x, w, y0, y1,
+                  [(fields(f, ("kicker", "title"), ("kicker",)), 0.40 * s), (fields(f, ("subtitle",)), 0.0)], align="c")
+    _st_sky(k, slide, r.values(), seed=1)
+    _st_moon(k, slide, list(r.values()))
+    _run_all([_st_rule(k, slide, r, "title", "subtitle")] + ds)
+    return r
+
+
+@register("starlit", "section", alts=2)
+def _st_section(k, slide, f, image):
+    W, H, s, o = ctx(k)
+    num = text_of(f, "number")
+    cx, cy = 0.5 * W, (0.32 if o == "land" else 0.26) * H
+    d0 = fit_circle(k, cx, cy, (min(0.46 * H, 0.40 * W) if o == "land" else 0.62 * W) * (1.0 if alt() == 0 else 0.72))
+    rects, draws = {}, []
+    if num:
+        r, d = flow(k, slide, "section", (cx - d0 * 0.42, cy - d0 * 0.3, d0 * 0.84, d0 * 0.6), [("number", num)],
+                    anchor="middle", align="c", start={"number": 96 * s})
+        rects.update(r); draws.append(d)
+    top = cy + d0 / 2 + 0.1 * s if num else 0.12 * H
+    r, d = flow(k, slide, "section", (0.10 * W, top, 0.80 * W, 0.92 * H - top),
+                fields(f, ("kicker", "title"), ("kicker",)), anchor="top" if num else "middle", align="c")
+    rects.update(r); draws.append(d)
+    _st_sky(k, slide, rects.values(), seed=2)
+    if num:
+        na.radial_glow(slide, cx, cy, d0, k.P["glow"])
+    _run_all(draws)
+    return rects
+
+
+@register("starlit", "image_text", alts=2)
+def _st_image_text(k, slide, f, image):
+    """The caller's picture in a round window with a gold rim, the words beside it (under it in portrait)."""
+    W, H, s, o = ctx(k)
+    if o == "land":
+        d = min(0.70 * H, 0.40 * W) * (1.0 if alt() == 0 else 0.8)
+        cx, cy = 0.07 * W + 0.09 * s + d / 2, 0.5 * H
+        x0 = cx + d / 2 + 0.6 * s
+        col = (x0, 0.10 * H, 0.93 * W - x0, 0.80 * H)
+    else:
+        d = min(0.80 * W, 0.40 * H) * (1.0 if alt() == 0 else 0.75)
+        cx, cy = 0.5 * W, 0.06 * H + 0.09 * s + d / 2
+        y0 = cy + d / 2 + 0.4 * s
+        col = (0.08 * W, y0, 0.84 * W, 0.92 * H - y0)
+    r, dr = flow(k, slide, "image_text", col, fields(f, ("kicker", "title", "body", "caption"), ("kicker",)),
+                 anchor="middle" if o == "land" else "top")
+    rim = d + 0.18 * s
+    _st_sky(k, slide, list(r.values()) + [(cx - rim / 2, cy - rim / 2, rim, rim)], seed=3)
+    vl._place_image(k, slide, image, (cx - d / 2, cy - d / 2, d, d),
+                    vl.L_((0, 0, 1, 1), "frame", None, frame="ellipse"), "image_text")
+    na.ring(slide, cx, cy, rim, k.P["text_accents"][0], w=1.25)
+    dr()
+    return r
+
+
+@register("starlit", "quote", alts=2)
+def _st_quote(k, slide, f, image):
+    W, H, s, o = ctx(k)
+    x, w = (0.20 * W, 0.60 * W) if (o == "land" and alt() == 0) else (0.08 * W, 0.84 * W)
+    r, ds = stack(k, slide, "quote", x, w, 0.10 * H, 0.90 * H,
+                  [([("mark", "“")] + fields(f, ("quote",)), 0.40 * s), (fields(f, ("attribution",), ("attribution",)), 0.0)],
+                  align="c")
+    _st_sky(k, slide, r.values(), seed=4)
+    _run_all([_st_rule(k, slide, r, "quote", "attribution")] + ds)
+    return r
+
+
+@register("starlit", "data", alts=2)
+def _st_data(k, slide, f, image):
+    W, H, s, o = ctx(k)
+    num = text_of(f, "number")
+    cx, cy = 0.5 * W, (0.36 if o == "land" else 0.28) * H
+    d0 = fit_circle(k, cx, cy, (min(0.60 * H, 0.46 * W) if o == "land" else 0.80 * W) * (1.0 if alt() == 0 else 0.75))
+    rects, draws = {}, []
+    if num:
+        r, d = flow(k, slide, "data", (0.06 * W, cy - d0 * 0.32, 0.88 * W, d0 * 0.64), [("number", num)],
+                    anchor="middle", align="c")
+        rects.update(r); draws.append(d)
+    top = cy + d0 / 2 + 0.05 * s if num else 0.30 * H
+    r, d = flow(k, slide, "data", (0.10 * W, top, 0.80 * W, 0.90 * H - top), fields(f, ("label", "note")),
+                anchor="top", align="c")
+    rects.update(r); draws.append(d)
+    _st_sky(k, slide, rects.values(), seed=5)
+    if num:
+        na.radial_glow(slide, cx, cy, d0, k.P["glow"])
+    na.horizon_glow(slide, 0.86 * H, k.P["glow"], k.P["text_accents"][0])
+    _run_all(draws)
+    return rects
+
+
+@register("starlit", "closing", alts=2)
+def _st_closing(k, slide, f, image):
+    W, H, s, o = ctx(k)
+    x, w = (0.12 * W, 0.76 * W) if alt() == 0 else (0.07 * W, 0.86 * W)
+    r, ds = stack(k, slide, "closing", x, w, (0.22 if alt() == 0 else 0.08) * H, 0.80 * H,
+                  [(fields(f, ("title",)), 0.40 * s), (fields(f, ("line",)), 0.0)], align="c")
+    _st_sky(k, slide, r.values(), seed=6)
+    _st_moon(k, slide, list(r.values()))
+    na.horizon_glow(slide, 0.86 * H, k.P["glow"], k.P["text_accents"][0])
+    _run_all([_st_rule(k, slide, r, "title", "line")] + ds)
+    return r
+
+
+@register("starlit", "points", alts=2)
+def _st_points(k, slide, f, image):
+    """A constellation: one star per point, joined in order by one gold line. Across a landscape page the stars step
+    high, low, high with their words under them; in portrait (and for long copy) they climb a zig-zag at the left
+    with their words beside them. The line never reaches the words: from a high star it drops 0.75s over a whole
+    column span, so at the column's edge it is still above y + 0.375s, and the words start at y + 0.42s."""
+    W, H, s, o = ctx(k)
+    pts = points_of(f.get("items"))
+    n = len(pts)
+    hh = ((0.20 if o == "land" else 0.16) if alt() == 0 else 0.32) * H      # long copy: the title gets more room
+    r, d = flow(k, slide, "points", (0.07 * W, 0.07 * H, 0.86 * W, hh), fields(f, ("kicker", "title"), ("kicker",)))
+    rects, draws, clear = dict(r), [d], list(r.values())
+    top = max((v[1] + v[3] for v in r.values()), default=0.07 * H) + 0.3 * s
+    bottom = H - 0.6
+
+    def layout(t0):
+        stars, cols = [], []
+        if o == "land" and alt() == 0:
+            span = 0.86 * W / n
+            for i in range(n):
+                x, y = 0.07 * W + span * (i + 0.5), t0 + (0.45 if i % 2 == 0 else 1.20) * s
+                stars.append((x, y))
+                cols.append((x - span / 2 + 0.12 * s, y + 0.42 * s, span - 0.24 * s, 0.92 * H - (y + 0.42 * s)))
+            align = "c"
+        else:
+            slot = (0.92 * H - t0) / n
+            lx = 0.30 * W
+            for i in range(n):
+                y = t0 + slot * (i + 0.5)
+                stars.append(((0.13 if i % 2 == 0 else 0.22) * W, y))
+                cols.append((lx, y - min(0.30 * s, slot / 2), 0.92 * W - lx, slot - 0.06 * s))
+            align = "l"
+        planned = [flow(k, slide, "points", col, [(x_, t) for x_, t in (("item_head", hd), ("item_line", ln)) if t],
+                        anchor="top", align=align) for (hd, ln), col in zip(pts, cols)]
+        return stars, planned
+    stars, planned = layout(top)
+    if o == "land" and alt() == 0:          # the constellation and its words sit in the middle of the room under the title
+        foot = max(v[1] + v[3] for tr, _d in planned for v in tr.values())
+        shift = max(0.0, (bottom - foot) / 2.0)
+        if shift > 0.05:
+            stars, planned = layout(top + shift)
+    for tr, td_ in planned:
+        clear += list(tr.values())
+        draws.append(td_)
+    _st_sky(k, slide, clear + [(x - 0.35 * s, y - 0.35 * s, 0.7 * s, 0.7 * s) for x, y in stars], seed=7)
+    for a, b in zip(stars, stars[1:]):
+        na.seg(slide, a[0], a[1], b[0], b[1], k.P["text_accents"][0], w=0.9, alpha=0.55)
+    for x, y in stars:
+        na.radial_glow(slide, x, y, 1.0 * s, k.P["glow"])
+        dk.decorative(na.disc(slide, x, y, 0.16 * s, k.P["glow"]), "a star of the constellation; its words sit beside it")
+    _run_all(draws)
+    return rects

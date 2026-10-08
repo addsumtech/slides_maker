@@ -93,6 +93,14 @@ LANGS = {
                   "mac": {"display": "Georgia", "body": "Georgia", "numeral": "Times New Roman", "mono": "Courier New"}},
         "ea": {"display": "serif", "body": "sans"}, "grain": 0, "frames": ["rect"],
         "forbids": ("confetti",), "cover": "low-left", "skeleton": "split"},
+    # ── NATIVE, second set (P4): compositions in vl_native2.py ──
+    "starlit": {
+        "palette": {"ground": "0B1430", "ink": "F3EBD8", "mute": "AEB6CC", "panel": "16204A",
+                    "accents": ["D9B36C"], "text_accents": ["D9B36C"], "glow": "F1D9A6"},
+        "fonts": {"both": {"display": "Georgia", "body": "Georgia", "numeral": "Times New Roman"},
+                  "mac": {"display": "Georgia", "body": "Georgia", "numeral": "Times New Roman"}},
+        "ea": {"display": "serif", "body": "serif"}, "grain": 0, "frames": ["ellipse"],
+        "forbids": ("confetti",), "cover": "centred", "skeleton": "statement"},
 }
 
 # Each language's GROUNDS: its own light paper, and ONE contrast ground (user's decision, 2026-10-04). All four
@@ -141,8 +149,13 @@ VARIANTS = {
         "cyanotype": {"label": "cyanotype", "label_zh": "晒图蓝版", "grain": 0,
                       "palette": {"ground": "123254", "ink": "E4ECF5", "mute": "B7C5D6", "panel": "123254",
                                   "accents": ["F27D4E"], "text_accents": ["F59A72"]}}},
+    "starlit": {
+        "light": {"label": "midnight", "label_zh": "午夜版", "grain": 0, "palette": LANGS["starlit"]["palette"]},
+        "dawn": {"label": "dawn", "label_zh": "黎明版", "grain": 0,
+                 "palette": {"ground": "22163A", "ink": "F6E9E4", "mute": "C9B7C9", "panel": "2D1F4A",
+                             "accents": ["EDB3A0"], "text_accents": ["EDB3A0"], "glow": "F7D2C2"}}},
 }
-NATIVE = ("ink", "poster", "cutpaper", "drafting")          # drawn, no pictures needed (vl_native.py)
+NATIVE = ("ink", "poster", "cutpaper", "drafting", "starlit")          # drawn, no pictures needed (vl_native.py)
 IMAGE_LED = ("editorial", "soft", "collage", "storybook")    # built around the caller's pictures
 # words only the CALLER can give — never invented by the kit; absent means nothing is drawn
 NATIVE_EXTRAS = {"ink": ("seal",), "poster": ("highlight",), "cutpaper": ("icons",), "drafting": ("project",)}
@@ -380,6 +393,19 @@ def _ground_drafting(slide, role, index):
     return (0.9 * s, 0.78 * s, W - 1.8 * s, H - 2.6 * s)      # above the title block
 
 
+def _ground_starlit(slide, role, index):
+    """An ordinary starlit page: the sky, kept clear of the content rect it returns (painted in REAL inches —
+    register_surface scales the reference canvas by _K)."""
+    import native_art as na
+    W, H = rs._canvas(slide)
+    K = rs._K[0]
+    rect = (0.6, 0.55, W - 1.2, H - 1.1)
+    p = _pal("starlit")
+    na.starfield_png(slide, base=p["ground"], ink=p["ink"], glow=p["glow"], seed=int(index),
+                     keep_clear=[tuple(v * K for v in rect)])
+    return rect
+
+
 def _card_for(name):
     """The language's card: its panel colour; soft is rounded, the others square."""
     def card(slide, x, y, w, h, label=None):
@@ -400,6 +426,7 @@ def _card_for(name):
 
 _card_editorial, _card_soft, _card_collage, _card_storybook = (_card_for(n) for n in ("editorial", "soft", "collage", "storybook"))
 _card_ink, _card_poster, _card_cutpaper, _card_drafting = (_card_for(n) for n in ("ink", "poster", "cutpaper", "drafting"))
+_card_starlit = _card_for("starlit")
 
 
 for _n in LANGS:
@@ -475,6 +502,13 @@ TYPE = {
                   "label": (46, "display", False, "ink", False, 20), "note": (16, "display", False, "mute", True, 10),
                   "caption": (10, "mono", True, "mute", False, 8), "line": (20, "display", False, "ink", True, 12),
                   "item_head": (11, "mono", True, "ink", False, 9), "item_line": (15, "display", False, "mute", False, 10)},
+    "starlit": {"kicker": (13, "body", False, "accent", False, 10), "title": (54, "display", False, "ink", False, 26),
+                "subtitle": (18, "body", False, "mute", True, 11), "body": (17, "body", False, "ink", False, 11),
+                "mark": (60, "display", False, "accent", False, 36), "quote": (34, "display", False, "ink", True, 18),
+                "attribution": (13, "body", False, "accent", False, 10), "number": (170, "numeral", False, "accent", False, 44),
+                "label": (26, "display", False, "ink", False, 14), "note": (15, "body", False, "mute", True, 10),
+                "caption": (12, "body", False, "mute", True, 9), "line": (20, "body", False, "mute", True, 12),
+                "item_head": (24, "display", False, "ink", False, 13), "item_line": (16, "body", False, "mute", True, 10)},
 }
 
 # page -> its fields in column order (the caller's keyword names)
@@ -1307,6 +1341,11 @@ _SAMPLE_COPY_NATIVE = {
                                                                          ("Roof", "A single span, no columns.")])),
                   ("quote", dict(quote="“Draw the quiet first, then the walls.”", attribution="Design principle")),
                   ("data", dict(number="3", label="layers, one structure.", note="Each layer can be built, moved and reused on its own."))],
+    "starlit": [("cover", dict(kicker="Year in review", title="What this year taught us", subtitle="A letter to the team")),
+                ("points", dict(title="Three things we learned", items=[("We shipped slower", "and broke less"),
+                                ("We listened more", "to the people who use it"), ("We kept the team", "through a hard spring")])),
+                ("quote", dict(quote="We measured the year in conversations, not in launches.", attribution="From the founder's letter")),
+                ("data", dict(number="12", label="conversations that changed our plan", note="Each one is written up in the archive."))],
 }
 
 
@@ -1390,6 +1429,8 @@ _RATIONALE.update({"ink": "drawn, no pictures: misty ink ridges, vertical CJK, a
                    "poster": "drawn, no pictures: the headline is the picture, one saturated field per page",
                    "cutpaper": "drawn, no pictures: a layered paper diorama with soft paper shadows",
                    "drafting": "drawn, no pictures: a drawing sheet with grid, title block, dimensions and leaders"})
+_DISPLAY_NAMES["starlit"] = "Starlit night"
+_RATIONALE["starlit"] = "drawn, no pictures: a night sky and a crescent moon, points as a constellation, the figure in a glow"
 
 
 def direction(name, *, fonts="both", ground="light", W=13.333, H=7.5):

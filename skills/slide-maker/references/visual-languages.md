@@ -153,6 +153,7 @@ Each language has its own light paper and ONE contrast ground; every text ink pa
 | poster | colour fields (cobalt, lime, black, signal orange, one per page) | `paper` — off-white and black fields, cobalt accents |
 | cutpaper | day | `night` — navy sky, a paper moon, dark hills |
 | drafting | vellum | `cyanotype` — blueprint navy, pale linework |
+| starlit | midnight (dark — no light ground) | `dawn` — deep violet, rose gold |
 
 `use(name, prs, ground=…)`: `"light"` (the default — the same deck on every machine), the contrast key, or
 `"auto"` (this machine's look history, across every deck built here — pass the ground yourself when the topic
