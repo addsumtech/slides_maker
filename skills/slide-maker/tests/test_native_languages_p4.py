@@ -379,6 +379,83 @@ x, y, w, h = rs.ground(s, k.name, role="content", index=2)
 check("Repair Weekly" in strip_texts(s) and y >= max(sh.top / EMU + sh.height / EMU for sh in texts(s)),
       "broadsheet: an ordinary page carries the masthead strip and its content starts under it ({:.2f})".format(y))
 
+# ── journal 学术期刊 ──
+EXTRAS["journal"] = lambda lang, n: {
+    "cover": {"authors": {"en": "A. One · B. Two", "zh": "作者一 · 作者二", "ja": "著者一 · 著者二", "ko": "저자 1 · 저자 2"}[lang],
+              "abstract": COPY[lang]["subtitle"] + " " + COPY[lang]["body"]},
+    "points": {"margin": COPY[lang]["note"]}}
+check("journal" in vl.NATIVE and set(vl.VARIANTS["journal"]) == {"light", "green"}, "journal: two grounds")
+assert_palettes("journal")
+assert_matrix("journal")
+def head_texts(s):
+    """The running head's words: text boxes above the first rule of the page."""
+    rule = min((sh.top / EMU for sh in s.shapes if sh._element.tag.endswith("}cxnSp")), default=0)
+    return [sh.text_frame.text for sh in texts(s) if sh.top / EMU < rule]
+# the running head: running= remembered; else the cover title on one line; else the page number alone
+prs, k = use("journal")
+k.cover(k.new_slide(), title="Learning to reconstruct undersampled cardiac MRI")
+s = k.new_slide(); k.closing(s, title="Questions")
+check(head_texts(s) == ["Learning to reconstruct undersampled cardiac MRI", "2"],
+      "journal: the cover title runs at the head of later pages, with the page number ({})".format(head_texts(s)))
+s = k.new_slide(); k.closing(s, title="Questions", running="Lab meeting · reconstruction")
+s2 = k.new_slide(); k.quote(s2, quote="Measure twice.", attribution="A reviewer")
+check(head_texts(s2)[0] == "Lab meeting · reconstruction", "journal: running= holds for later pages")
+LONG = "A very long article title about learning to reconstruct undersampled cardiac magnetic resonance imaging " * 3
+prs, k = use("journal", 7.5, 7.5)
+k.cover(k.new_slide(), title="Short")
+k.memo = dict(k.memo, _title=LONG)
+s = k.new_slide(); k.closing(s, title="Thank you")
+check(head_texts(s) == ["2"], "journal: a remembered title too long for one line leaves the page number alone ({})".format(head_texts(s)))
+try:
+    k.closing(k.new_slide(), title="Thank you", running=LONG)
+    check(False, "journal: an explicit running= that cannot fit is refused")
+except vl.VLTextOverflow:
+    check(True, "journal: an explicit running= that cannot fit is refused (Review Focus 1)")
+# the abstract label appears only with abstract=, in the words' own script (Review Focus 3)
+for abstract, want in (("We ask whether a learned reconstruction keeps fine edges.", "ABSTRACT"),
+                       ("我们想知道学习重建能否保住细小的边缘。", "摘要"), ("학습 재구성이 가는 경계를 지키는지 묻는다.", "초록"),
+                       ("学習再構成が細い縁を保てるかを問う。", "要旨")):
+    prs, k = use("journal")
+    s = k.new_slide(); k.cover(s, title="A title", abstract=abstract)
+    check(want in [sh.text_frame.text for sh in texts(s)], "journal: abstract= is labelled {!r}".format(want))
+prs, k = use("journal")
+s = k.new_slide(); k.cover(s, title="A title", subtitle="A talk for the lab")
+check(not any(t in ("ABSTRACT", "摘要") for t in (sh.text_frame.text for sh in texts(s))),
+      "journal: a subtitle is never labelled Abstract")
+# figures are numbered over the deck's figure pages; kicker= overrides; the figure is whole (contain)
+prs, k = use("journal")
+labels_ = []
+for kw in (dict(title="Error across acceleration"), dict(title="Edges at 8×", kicker="Figure S2"), dict(title="Third")):
+    s = k.new_slide(); k.image_text(s, image=PHOTO, body="A caption.", **kw)
+    labels_.append([sh.text_frame.text for sh in texts(s) if sh.text_frame.text.upper().startswith("FIGURE")][0])
+check(labels_ == ["FIGURE 1", "FIGURE S2", "FIGURE 3"], "journal: figures number themselves; kicker= overrides ({})".format(labels_))
+pic = [sh for sh in s.shapes if sh.shape_type == 13][0]
+check(pic.crop_left == 0 and pic.crop_right == 0 and pic.crop_top == 0 and pic.crop_bottom == 0,
+      "journal: the figure is placed whole, never cropped")
+prs, k = use("journal")
+s = k.new_slide(); k.image_text(s, image=PHOTO, title="一服のお茶", body="図の説明。")
+check(any(sh.text_frame.text == "図 1" for sh in texts(s)), "journal: a Japanese figure reads 図 1")
+# section: § only before a numeral or roman numeral
+for num, want in (("2", "§ 2"), ("IV", "§ IV"), ("Part two", "Part two")):
+    prs, k = use("journal")
+    s = k.new_slide(); k.section(s, number=num, title="Method")
+    check(want in [sh.text_frame.text for sh in texts(s)], "journal: section number {!r} → {!r}".format(num, want))
+# margin= sits beside the list (under it in portrait), under its Note label
+for W, H in ((13.333, 7.5), (7.5, 13.333)):
+    prs, k = use("journal", W, H)
+    s = k.new_slide()
+    k.points(s, title="What we set out to test", items=[("The question", "Edges at high acceleration?"), ("The check", None)],
+             margin="Every figure is labelled with its source.")
+    tt = [sh.text_frame.text for sh in texts(s)]
+    check("NOTE" in tt and "Every figure is labelled with its source." in tt, "journal {}x{}: the margin note and its label".format(W, H))
+# an ordinary page (Review Focus 2) carries the running head; its content rect starts under it
+import register_surface as rs
+prs, k = use("journal")
+k.cover(k.new_slide(), title="Learning to reconstruct")
+s = k.new_slide()
+x, y, w, h = rs.ground(s, k.name, role="content", index=2)
+check(head_texts(s)[:1] == ["Learning to reconstruct"] and y > 0.6, "journal: an ordinary page carries the running head")
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

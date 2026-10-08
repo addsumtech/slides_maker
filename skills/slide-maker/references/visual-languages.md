@@ -154,6 +154,7 @@ Each language has its own light paper and ONE contrast ground; every text ink pa
 | cutpaper | day | `night` — navy sky, a paper moon, dark hills |
 | drafting | vellum | `cyanotype` — blueprint navy, pale linework |
 | starlit | midnight (dark — no light ground) | `dawn` — deep violet, rose gold |
+| journal | paper | `green` — title green, gold accent |
 | broadsheet | newsprint | `salmon` — pink paper, navy accent |
 
 `use(name, prs, ground=…)`: `"light"` (the default — the same deck on every machine), the contrast key, or

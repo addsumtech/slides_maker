@@ -108,6 +108,13 @@ LANGS = {
                   "mac": {"display": "Times New Roman", "body": "Georgia", "numeral": "Times New Roman", "meta": "Arial"}},
         "ea": {"display": "serif", "body": "serif"}, "grain": 4, "frames": ["rect"],
         "forbids": ("confetti",), "cover": "full-bleed-type", "skeleton": "split"},
+    "journal": {
+        "palette": {"ground": "FBFAF6", "ink": "1B1B1B", "mute": "5A5A55", "panel": "F1EFE7",
+                    "accents": ["1F5C46"], "text_accents": ["1F5C46"]},
+        "fonts": {"both": {"display": "Georgia", "body": "Georgia", "numeral": "Times New Roman", "meta": "Arial"},
+                  "mac": {"display": "Georgia", "body": "Georgia", "numeral": "Times New Roman", "meta": "Arial"}},
+        "ea": {"display": "serif", "body": "serif"}, "grain": 0, "frames": ["rect"],
+        "forbids": ("confetti",), "cover": "low-left", "skeleton": "rail"},
 }
 
 # Each language's GROUNDS: its own light paper, and ONE contrast ground (user's decision, 2026-10-04). All four
@@ -166,13 +173,18 @@ VARIANTS = {
         "salmon": {"label": "pink paper", "label_zh": "粉报版", "grain": 4,
                    "palette": {"ground": "FBE8D8", "ink": "1A1714", "mute": "54493F", "panel": "F3DAC6",
                                "accents": ["0F4C81"], "text_accents": ["0F4C81"]}}},
+    "journal": {
+        "light": {"label": "paper", "label_zh": "论文白版", "grain": 0, "palette": LANGS["journal"]["palette"]},
+        "green": {"label": "title green", "label_zh": "期刊绿版", "grain": 0,
+                  "palette": {"ground": "163A2E", "ink": "F1EEE4", "mute": "BFC8BF", "panel": "1E4A3B",
+                              "accents": ["D9C27A"], "text_accents": ["D9C27A"]}}},
 }
-NATIVE = ("ink", "poster", "cutpaper", "drafting", "starlit", "broadsheet")          # drawn, no pictures needed (vl_native.py)
+NATIVE = ("ink", "poster", "cutpaper", "drafting", "starlit", "broadsheet", "journal")          # drawn, no pictures needed (vl_native.py)
 IMAGE_LED = ("editorial", "soft", "collage", "storybook")    # built around the caller's pictures
 # words only the CALLER can give — never invented by the kit; absent means nothing is drawn
-NATIVE_EXTRAS = {"ink": ("seal",), "poster": ("highlight",), "cutpaper": ("icons",), "drafting": ("project",), "broadsheet": ('masthead', 'edition', 'inside', 'tags')}
+NATIVE_EXTRAS = {"ink": ("seal",), "poster": ("highlight",), "cutpaper": ("icons",), "drafting": ("project",), "broadsheet": ('masthead', 'edition', 'inside', 'tags'), "journal": ('running', 'authors', 'abstract', 'margin')}
 # the pages that DRAW each extra; on any other page it is refused, never silently dropped (non-Claude run, 2026-10-05)
-EXTRA_PAGES = {"highlight": ("cover", "section", "quote", "closing"), "icons": ("points",), "inside": ('cover',), "tags": ('points',)}
+EXTRA_PAGES = {"highlight": ("cover", "section", "quote", "closing"), "icons": ("points",), "inside": ('cover',), "tags": ('points',), "authors": ('cover',), "abstract": ('cover',), "margin": ('points',)}
 _ACTIVE = {}    # language -> the ground key use() set; rs.ground()/rs.card() (no kit) follow it
 _PAL_OVERRIDE = {}   # language -> the palette of the CURRENT page, for a language whose palette changes per page (poster)
 _MEMO = {}   # language -> the last composed page's remembered extras, for ordinary pages (rs.ground has no kit)
@@ -428,6 +440,16 @@ def _ground_broadsheet(slide, role, index):
     return (0.05 * W, y + 0.15, 0.90 * W, H - y - 0.75)
 
 
+def _ground_journal(slide, role, index):
+    """An ordinary journal page: the running head (the deck's remembered words, this page's number) and the
+    content rect under it — in REFERENCE inches."""
+    import vl_native2 as v2
+    K = rs._K[0]
+    W, H = rs._canvas(slide)
+    y = v2.jn_running(v2.kit_for("journal", slide), slide, {}) / K
+    return (0.07 * W, y + 0.1, 0.86 * W, H - y - 0.7)
+
+
 def _card_for(name):
     """The language's card: its panel colour; soft is rounded, the others square."""
     def card(slide, x, y, w, h, label=None):
@@ -450,6 +472,7 @@ _card_editorial, _card_soft, _card_collage, _card_storybook = (_card_for(n) for 
 _card_ink, _card_poster, _card_cutpaper, _card_drafting = (_card_for(n) for n in ("ink", "poster", "cutpaper", "drafting"))
 _card_starlit = _card_for("starlit")
 _card_broadsheet = _card_for("broadsheet")
+_card_journal = _card_for("journal")
 
 
 for _n in LANGS:
@@ -542,6 +565,18 @@ TYPE = {
                    "masthead": (40, "display", True, "ink", False, 12), "edition": (10, "meta", True, "mute", False, 8),
                    "inside": (16, "body", False, "ink", False, 10), "inside_h": (11, "meta", True, "accent", False, 9),
                    "tag": (10, "meta", True, "accent", False, 8)},
+    "journal": {"kicker": (12, "meta", True, "accent", False, 9), "title": (46, "display", False, "ink", False, 24),
+                "subtitle": (20, "body", False, "mute", True, 12), "body": (16, "body", False, "ink", False, 10),
+                "mark": (80, "display", False, "accent", False, 32), "quote": (30, "body", False, "ink", True, 16),
+                "attribution": (13, "meta", True, "mute", False, 9), "number": (140, "numeral", False, "accent", False, 40),
+                "label": (24, "body", False, "ink", False, 13), "note": (15, "body", False, "mute", False, 10),
+                "caption": (11, "body", False, "mute", True, 8), "line": (20, "body", False, "mute", True, 12),
+                "item_head": (21, "body", True, "ink", False, 12), "item_line": (15, "body", False, "mute", False, 10),
+                "item_no": (30, "numeral", True, "accent", False, 14), "authors": (17, "body", False, "ink", False, 11),
+                "abstract": (16, "body", False, "ink", False, 10), "abstract_h": (11, "meta", True, "accent", False, 8),
+                "margin": (12, "body", False, "mute", True, 9), "margin_h": (10, "meta", True, "accent", False, 8),
+                "running": (10, "body", False, "mute", True, 8), "fig_label": (13, "meta", True, "accent", False, 9),
+                "sec_no": (40, "numeral", True, "accent", False, 20)},
 }
 
 # page -> its fields in column order (the caller's keyword names)
@@ -1389,6 +1424,20 @@ _SAMPLE_COPY_NATIVE = {
                    ("quote", dict(quote="The visitor holds the screwdriver; the volunteer only guides.",
                                   attribution="From the volunteer handbook")),
                    ("data", dict(number="3", label="evenings a month", note="Short enough to fit around work."))],
+    "journal": [("cover", dict(kicker="Lab meeting", title="Learning to reconstruct undersampled cardiac MRI",
+                               authors="Author One · Author Two · Author Three",
+                               abstract="We ask whether a learned reconstruction keeps fine edges when far fewer measurements "
+                                        "are taken, and how we would know.")),
+                ("image_text", dict(title="Reconstruction error across acceleration",
+                                    body="Error as acceleration grows. Illustrative curves for this style sample, not results.",
+                                    caption="Style sample — not data.", image=str(ASSETS / "figure" / "illustrative-curves.jpg"))),
+                ("points", dict(title="What we set out to test",
+                                items=[("The question", "Does the method keep edges at high acceleration?"),
+                                       ("The method", "Retrospective undersampling of fully sampled scans."),
+                                       ("The check", "Compare against the fully sampled reference, slice by slice.")],
+                                margin="Every figure in this deck is labelled with its source.")),
+                ("data", dict(number="8×", label="acceleration we aim to support",
+                              note="A target for the study, stated before any result."))],
 }
 
 
@@ -1476,6 +1525,8 @@ _DISPLAY_NAMES["starlit"] = "Starlit night"
 _RATIONALE["starlit"] = "drawn, no pictures: a night sky and a crescent moon, points as a constellation, the figure in a glow"
 _DISPLAY_NAMES["broadsheet"] = "Broadsheet front page"
 _RATIONALE["broadsheet"] = "drawn, no pictures: a masthead strip, a headline and standfirst, newspaper columns, a pull quote between rules"
+_DISPLAY_NAMES["journal"] = "Journal article"
+_RATIONALE["journal"] = "drawn around your figures: a running head, an abstract, numbered figures with captions, margin notes"
 
 
 def direction(name, *, fonts="both", ground="light", W=13.333, H=7.5):

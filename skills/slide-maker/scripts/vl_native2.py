@@ -20,13 +20,14 @@ import native_art as na
 import visual_languages as vl
 from vl_native import GROUNDS, _run_all, alt, ctx, display, fit_circle, flow, points_of, register, text_of  # noqa: F401
 
-# Japanese and Korean entries are confirmed against a native-reading source in Task 6, not written from memory.
+# Japanese and Korean entries: 要旨 / 초록, 図 n, n面 / n면 confirmed against university thesis guides and newspaper
+# pages (2026-10-08); 今号 / 이번 호 could not be confirmed, so the plain 目次 / 목차 (contents) and 주석 (annotation) stand.
 LABELS = {
     "abstract": {"en": "Abstract", "zh": "摘要", "ja": "要旨", "ko": "초록"},
-    "inside": {"en": "Inside", "zh": "本期", "ja": "今号", "ko": "이번 호"},
+    "inside": {"en": "Inside", "zh": "本期", "ja": "目次", "ko": "목차"},
     "figure": {"en": "Figure {}", "zh": "图 {}", "ja": "図 {}", "ko": "그림 {}"},
     "page": {"en": "Page {}", "zh": "第 {} 版", "ja": "{} 面", "ko": "{}면"},
-    "note": {"en": "Note", "zh": "注", "ja": "注", "ko": "주"},
+    "note": {"en": "Note", "zh": "注", "ja": "注", "ko": "주석"},
 }
 
 
@@ -627,3 +628,218 @@ def _bs_points(k, slide, f, image):
         draws.append(_with_initial(k, slide, td_, ln) if initial else td_)
     _run_all(art + draws)
     return rects
+
+
+# ═══════════════════════════════════ journal 学术期刊 ═══════════════════════════════════
+def jn_running(k, slide, f):
+    """The running head: the caller's running= (remembered for the deck), else the cover title when it fits one
+    line at its floor, else no words — the page number at the right either way, a hairline under both. An explicit
+    running= that does not fit is refused. Draws at once and returns the y under it."""
+    W, H, s, o = ctx(k)
+    explicit = text_of(f, "running")
+    words = memo(k, f, "running", fallback=k.memo.get("_title"))
+    y, h = 0.035 * H, 0.32 * s
+    if words:
+        try:
+            _r, d = flow(k, slide, "running", (0.07 * W, y, 0.66 * W, h), [("running", words)])
+            d()
+        except vl.VLTextOverflow:
+            if explicit:
+                raise
+    sz = vl.TYPE["journal"]["running"][0] * s
+    dk.text(slide, 0.75 * W, y, 0.18 * W, h, [k.runs(str(page_no(slide)), sz, k.color("mute"), False, "numeral")],
+            align=dk.PP_ALIGN.RIGHT)
+    yl = y + h + 0.06 * s
+    na.seg(slide, 0.07 * W, yl, 0.93 * W, yl, k.P["ink"], w=0.5)
+    return yl + 0.25 * s
+
+
+@register("journal", "cover", alts=2)
+def _jn_cover(k, slide, f, image):
+    """An article's first page: an accent bar at the left edge; kicker, title, subtitle and the caller's authors=;
+    then a rule and the caller's abstract= under its label (in the abstract's own script). The block sits on the
+    page's optical centre; never a running head on the cover."""
+    W, H, s, o = ctx(k)
+    t, ab = text_of(f, "title"), text_of(f, "abstract")
+    if t:
+        k.memo = dict(k.memo, _title=t)
+    x, w = 0.10 * W, (0.78 if o == "land" else 0.82) * W
+    lab_w = 0.15 * W if o == "land" else 0.0
+    head = fields(f, ("kicker", "title", "subtitle", "authors"), ("kicker",))
+
+    def plan(y0):
+        out, ry = [], None
+        r, d = flow(k, slide, "cover", (x, y0, w, H - 0.6 - y0), head, anchor="top")
+        out.append((r, d))
+        foot = max((v[1] + v[3] for v in r.values()), default=y0)
+        if ab:
+            ry = foot + 0.30 * s
+            lab = caps(label("abstract", ab))
+            if o == "land":
+                lr, ld = flow(k, slide, "cover", (x, ry + 0.22 * s, lab_w - 0.2 * s, 0.5 * s), [("abstract_h", lab)])
+                ar, ad = flow(k, slide, "cover", (x + lab_w, ry + 0.18 * s, w - lab_w, H - 0.6 - ry - 0.18 * s),
+                              [("abstract", ab)], anchor="top")
+            else:
+                lr, ld = flow(k, slide, "cover", (x, ry + 0.2 * s, w, 0.4 * s), [("abstract_h", lab)])
+                ay = max(v[1] + v[3] for v in lr.values()) + 0.1 * s
+                ar, ad = flow(k, slide, "cover", (x, ay, w, H - 0.6 - ay), [("abstract", ab)], anchor="top")
+            out += [(lr, ld), (ar, ad)]
+            foot = max(v[1] + v[3] for v in ar.values())
+        return out, foot, ry
+    _o, foot, _ry = plan(0.08 * H)
+    y0 = max(0.08 * H, (H - (foot - 0.08 * H)) / 2.0 - 0.1 * s) if alt() == 0 else 0.06 * H
+    out, foot, ry = plan(y0)
+    art = [lambda: dk.decorative(dk.box(slide, 0, 0, 0.035 * W, H, fill=k.P["accents"][0]), "the journal's edge bar")]
+    if ry is not None:
+        art.append(lambda: na.seg(slide, x, ry, x + w, ry, k.P["ink"], w=0.5))
+    rects = {}
+    for r, _d in out:
+        rects.update(r)
+    _run_all(art + [d for _r, d in out])
+    return rects
+
+
+@register("journal", "section", alts=2)
+def _jn_section(k, slide, f, image):
+    """A section heading: § and the caller's number (a numeral or roman numeral; other words are set as given) in the
+    accent, then kicker and title, a rule under them."""
+    W, H, s, o = ctx(k)
+    top = jn_running(k, slide, f)
+    num = text_of(f, "number")
+    lab = ("§ " + num) if num and re.fullmatch(r"[0-9]+(\.[0-9]+)*|[IVXLCivxlc]+", num) else num
+    items = ([("sec_no", lab)] if lab else []) + fields(f, ("kicker", "title"), ("kicker",))
+    r, d = flow(k, slide, "section", (0.10 * W, top, 0.80 * W, H - 0.6 - top - (0.4 if alt() == 0 else 0.2) * s), items,
+                anchor="middle")
+    yb = max(v[1] + v[3] for v in r.values()) + 0.25 * s
+    _run_all([lambda: na.seg(slide, 0.10 * W, yb, 0.90 * W, yb, k.P["ink"], w=0.6), d])
+    return r
+
+
+@register("journal", "image_text", alts=2)
+def _jn_figure(k, slide, f, image):
+    """The figure page: its title above; the caller's figure WHOLE (contain, never cropped); beside it the figure's
+    label (kicker=, else Figure n counted over the deck's figure pages, in the page's own script), its caption (body=)
+    and, under a hairline, the source line (caption=)."""
+    W, H, s, o = ctx(k)
+    top = jn_running(k, slide, f)
+    n = k.memo.get("_fig", 0) + 1
+    k.memo = dict(k.memo, _fig=n)
+    lab = text_of(f, "kicker") or label("figure", text_of(f, "title"), text_of(f, "body")).format(n)
+    r, d = flow(k, slide, "image_text", (0.07 * W, top, 0.86 * W, (0.16 if alt() == 0 else 0.28) * H), fields(f, ("title",)),
+                anchor="top")
+    rects, draws, art = dict(r), [d], []
+    ty = max((v[1] + v[3] for v in r.values()), default=top) + 0.25 * s
+    bottom = H - 0.6
+    if o == "land":
+        img = (0.07 * W, ty, (0.52 if alt() == 0 else 0.46) * W, bottom - ty)
+        cx0 = img[0] + img[2] + 0.45 * s
+        col = (cx0, ty, 0.93 * W - cx0, bottom - ty)
+    else:
+        img = (0.07 * W, ty, 0.86 * W, (bottom - ty) * (0.56 if alt() == 0 else 0.48))
+        cy0 = img[1] + img[3] + 0.3 * s
+        col = (0.07 * W, cy0, 0.86 * W, bottom - cy0)
+    src = text_of(f, "caption")
+    src_h = 0.9 * s if src else 0.0
+    main = [("fig_label", caps(lab))] + fields(f, ("body",))
+    r, d = flow(k, slide, "image_text", (col[0], col[1], col[2], col[3] - src_h), main, anchor="top")
+    rects.update(r); draws.append(d)
+    if src:
+        yl = col[1] + col[3] - src_h
+        sr, sd = flow(k, slide, "image_text", (col[0], yl + 0.15 * s, col[2], src_h - 0.15 * s), [("caption", src)])
+        rects.update(sr); draws.append(sd)
+        art.append(lambda: na.seg(slide, col[0], yl, col[0] + col[2], yl, k.P["ink"], w=0.4))
+    path, alt_txt, slot = vl._resolve(k, image[0] if isinstance(image, (list, tuple)) else image)
+    pic = dk.picture(slide, path, *img, fit="contain", alt=alt_txt)
+    if slot:
+        dk._compose_tag(pic, gen=slot)
+    _run_all(art + draws)
+    return rects
+
+
+@register("journal", "points", alts=2)
+def _jn_points(k, slide, f, image):
+    """Numbered findings (1, 2, 3 in the accent), each a bold head over its line; the caller's margin= beside them
+    past an accent rule under its Note label (under the list in portrait or for long copy)."""
+    W, H, s, o = ctx(k)
+    top = jn_running(k, slide, f)
+    pts = points_of(f.get("items"))
+    n = len(pts)
+    mg = text_of(f, "margin")
+    r, d = flow(k, slide, "points", (0.07 * W, top, 0.86 * W, (0.18 if alt() == 0 else 0.32) * H),
+                fields(f, ("kicker", "title"), ("kicker",)))   # long copy: the title gets more room
+    rects, draws, art = dict(r), [d], []
+    ty = max((v[1] + v[3] for v in r.values()), default=top) + 0.35 * s
+    bottom, list_bottom = H - 0.6, H - 0.6
+    side = bool(mg) and o == "land" and alt() == 0
+    lw = (0.62 if side else 0.86) * W
+    if mg:
+        if side:
+            mx = 0.07 * W + lw + 0.5 * s
+            mcol = (mx + 0.2 * s, ty, 0.93 * W - mx - 0.2 * s, bottom - ty)
+            art.append(lambda: na.seg(slide, mx, ty, mx, bottom, k.P["text_accents"][0], w=0.75))
+        else:
+            mh = 1.3 * s
+            mcol = (0.07 * W + 0.2 * s, bottom - mh, 0.86 * W - 0.2 * s, mh)
+            art.append(lambda: na.seg(slide, 0.07 * W, bottom - mh, 0.07 * W, bottom, k.P["text_accents"][0], w=0.75))
+            list_bottom = bottom - mh - 0.3 * s
+        _mr, md = flow(k, slide, "points", mcol, [("margin_h", caps(label("note", mg))), ("margin", mg)], anchor="top")
+        draws.append(md)
+    slot = (list_bottom - ty) / n
+    nw = 0.07 * W
+    for i, (hd, ln) in enumerate(pts):
+        y = ty + i * slot
+        _nr, nd = flow(k, slide, "points", (0.07 * W, y, nw, slot), [("item_no", str(i + 1))], anchor="top")
+        _tr, td_ = flow(k, slide, "points", (0.07 * W + nw, y, lw - nw, slot - 0.1 * s),
+                        [(x_, t) for x_, t in (("item_head", hd), ("item_line", ln)) if t], anchor="top")
+        draws += [nd, td_]
+    _run_all(art + draws)
+    return rects
+
+
+@register("journal", "quote", alts=2)
+def _jn_quote(k, slide, f, image):
+    """A block quotation, indented behind an accent rule, its source after an em dash."""
+    W, H, s, o = ctx(k)
+    top = jn_running(k, slide, f)
+    a = text_of(f, "attribution")
+    x = (0.16 if (o == "land" and alt() == 0) else 0.10) * W
+    items = fields(f, ("quote",)) + ([("attribution", "— " + a)] if a else [])
+    r, d = flow(k, slide, "quote", (x + 0.35 * s, top + 0.3 * s, 0.92 * W - x - 0.35 * s, H - 0.6 - top - 0.3 * s), items,
+                anchor="middle")
+    y0, y1 = min(v[1] for v in r.values()), max(v[1] + v[3] for v in r.values())
+    _run_all([lambda: na.seg(slide, x, y0, x, y1, k.P["text_accents"][0], w=2.0), d])
+    return r
+
+
+@register("journal", "data", alts=2)
+def _jn_data(k, slide, f, image):
+    """The one number in a tinted panel, its label and note beside it (under it in portrait)."""
+    W, H, s, o = ctx(k)
+    top = jn_running(k, slide, f)
+    num = text_of(f, "number")
+    avail = H - 0.6 - (top + 0.3 * s)
+    ph = min(avail, 0.62 * H)
+    px, py, pw = 0.07 * W, top + 0.3 * s + (avail - ph) / 2.0, 0.86 * W
+    rects, draws = {}, []
+    if o == "land" and alt() == 0:
+        nrect, col, anchor = (px + 0.4 * s, py, pw * 0.42, ph), (px + pw * 0.48, py + 0.3 * s, pw * 0.48, ph - 0.6 * s), "middle"
+    else:
+        nrect = (px + 0.3 * s, py + 0.2 * s, pw - 0.6 * s, ph * 0.45)
+        col, anchor = (px + 0.3 * s, py + ph * 0.5, pw - 0.6 * s, ph * 0.46), "top"
+    if num:
+        r, d = flow(k, slide, "data", nrect, [("number", num)], anchor="middle", align="c")
+        rects.update(r); draws.append(d)
+    r, d = flow(k, slide, "data", col, fields(f, ("label", "note")), anchor=anchor)
+    rects.update(r); draws.append(d)
+    _run_all([lambda: dk.box(slide, px, py, pw, ph, fill=k.P["panel"])] + draws)
+    return rects
+
+
+@register("journal", "closing", alts=2)
+def _jn_closing(k, slide, f, image):
+    W, H, s, o = ctx(k)
+    top = jn_running(k, slide, f)
+    r, d = flow(k, slide, "closing", (0.10 * W, top, (0.70 if o == "land" and alt() == 0 else 0.80) * W, H - 0.6 - top),
+                fields(f, ("title", "line")), anchor="middle")
+    d()
+    return r
