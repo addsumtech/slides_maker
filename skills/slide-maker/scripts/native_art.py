@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""native_art — the drawn surfaces of the four NATIVE visual languages (ink, poster, cutpaper, blueprint):
+"""native_art — the drawn surfaces of the NATIVE visual languages (ink, poster, cutpaper, drafting,
+starlit, broadsheet, journal, tally, chalkboard):
 native, editable shapes, deterministic for a seed, and ON THE PAGE by construction.
 
 Two rules every function keeps, both found on the 2026-10-05 look-dev deck, which LibreOffice rendered and
@@ -192,11 +193,21 @@ def vertical(tb):
 
 
 def _bg(slide, fill_xml):
+    """Set the slide background. A picture the OLD background held is dropped with it, unless the new one uses the
+    same relationship: a starlit page is painted at new_slide and again once its words are known, and the first sky
+    would otherwise ride along as an orphan picture."""
+    import re as _re
     csld = slide._element.find(qn("p:cSld"))
+    keep = set(_re.findall(r'r:embed="([^"]+)"', fill_xml))
+    stale = set()
     for old in csld.findall(qn("p:bg")):
+        stale |= {b.get(qn("r:embed")) for b in old.iter(qn("a:blip"))} - keep - {None}
         csld.remove(old)
     csld.insert(0, etree.fromstring('<p:bg xmlns:p="{p}" xmlns:a="{a}" xmlns:r="{r}"><p:bgPr>{f}<a:effectLst/>'
                                     '</p:bgPr></p:bg>'.format(p=P_NS, a=A_NS, r=R_NS, f=fill_xml)))
+    for rid in stale:
+        if not slide._element.xpath('.//*[@r:embed="{}"]'.format(rid)):
+            slide.part.drop_rel(rid)
 
 
 def solid_background(slide, color):
@@ -462,3 +473,228 @@ def clipped_block(slide, x, y, w, h, deg, *, fill):
     if sh is not None:
         dk.decorative(sh, "a poster colour block: the language's ground")
     return sh
+
+
+# ═══════════════════ P4: starlit · broadsheet · journal · tally · chalkboard ═══════════════════
+def _rgb3(h):
+    h = hexstr(h)
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def starfield_png(slide, *, base, ink, glow, seed=0, keep_clear=(), density=1.0, dpi=200):
+    """A night sky as the slide BACKGROUND: small stars and six four-point sparkles, deterministic for `seed`, none
+    within 0.12in of a `keep_clear` rect (inches). One picture, cached by its inputs, never ~150 shapes: the deck's
+    size and every lint pass grow with the shape count. Returns the PNG's path."""
+    import hashlib
+    from PIL import Image, ImageDraw
+    W, H = page_size(slide)
+    sig = repr((hexstr(base), hexstr(ink), hexstr(glow), seed, round(W, 3), round(H, 3),
+                [tuple(round(float(v), 2) for v in r) for r in keep_clear], round(float(density), 3), dpi))
+    path = Path(tempfile.gettempdir()) / "slide-maker-native-art" / "sky_{}.png".format(
+        hashlib.sha1(sig.encode("utf-8")).hexdigest()[:16])
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        rnd = random.Random(seed)
+        b, kc, gc = _rgb3(base), _rgb3(ink), _rgb3(glow)
+        mix = lambda c, a: tuple(int(round(b[i] * (1 - a) + c[i] * a)) for i in range(3))   # noqa: E731
+        im = Image.new("RGB", (int(W * dpi), int(H * dpi)), b)
+        dr = ImageDraw.Draw(im)
+
+        def clear(x, y, m=0.0):
+            return not any(kx - 0.12 - m <= x <= kx + kw + 0.12 + m and ky - 0.12 - m <= y <= ky + kh + 0.12 + m
+                           for kx, ky, kw, kh in keep_clear)
+        for _ in range(int(140 * float(density) * (W * H) / (13.333 * 7.5))):
+            x, y = rnd.uniform(0.05, W - 0.05), rnd.uniform(0.05, H - 0.05)      # every draw consumed: the sky
+            d = rnd.choice((0.018, 0.022, 0.026, 0.03, 0.04)) if rnd.random() < 0.85 else rnd.uniform(0.05, 0.07)
+            c = mix(kc if rnd.random() < 0.8 else gc, rnd.uniform(0.35, 0.95))   # is the same whatever is kept clear
+            if clear(x, y):
+                r = d * dpi / 2.0
+                dr.ellipse([x * dpi - r, y * dpi - r, x * dpi + r, y * dpi + r], fill=c)
+        lw = max(1, int(round(dpi / 120.0)))
+        for _ in range(6):
+            x, y, L = rnd.uniform(0.3, W - 0.3), rnd.uniform(0.3, H * 0.6), rnd.uniform(0.12, 0.2)
+            if clear(x, y, L):
+                c = mix(gc, 0.8)
+                dr.line([((x - L) * dpi, y * dpi), ((x + L) * dpi, y * dpi)], fill=c, width=lw)
+                dr.line([(x * dpi, (y - L) * dpi), (x * dpi, (y + L) * dpi)], fill=c, width=lw)
+                r = 0.03 * dpi
+                dr.ellipse([x * dpi - r, y * dpi - r, x * dpi + r, y * dpi + r], fill=mix(gc, 0.9))
+        im.save(str(path), optimize=True)
+    _part, rid = slide.part.get_or_add_image_part(str(path))
+    _bg(slide, '<a:blipFill dpi="0" rotWithShape="1"><a:blip r:embed="{}"/><a:srcRect/><a:stretch><a:fillRect/>'
+               '</a:stretch></a:blipFill>'.format(rid))
+    return str(path)
+
+
+def _radial(shape, color, alpha):
+    """Swap a solid fill for a radial fade: `alpha` at the centre, clear by 68% of the path. path="circle" puts the
+    100% stop at the bounding box's CORNER, not the disc's edge — a fade ending at 100% left a rim at ~71%
+    (look-dev render, 2026-10-08)."""
+    sp = shape._element.spPr
+    sf = sp.find(qn("a:solidFill"))
+    sf.addprevious(etree.fromstring(
+        '<a:gradFill xmlns:a="{a}" rotWithShape="1"><a:gsLst>'
+        '<a:gs pos="0"><a:srgbClr val="{c}"><a:alpha val="{a0}"/></a:srgbClr></a:gs>'
+        '<a:gs pos="34000"><a:srgbClr val="{c}"><a:alpha val="{a1}"/></a:srgbClr></a:gs>'
+        '<a:gs pos="68000"><a:srgbClr val="{c}"><a:alpha val="0"/></a:srgbClr></a:gs>'
+        '<a:gs pos="100000"><a:srgbClr val="{c}"><a:alpha val="0"/></a:srgbClr></a:gs></a:gsLst>'
+        '<a:path path="circle"><a:fillToRect l="50000" t="50000" r="50000" b="50000"/></a:path></a:gradFill>'.format(
+            a=A_NS, c=hexstr(color), a0=_pct(alpha), a1=_pct(alpha * 0.45))))
+    sp.remove(sf)
+    return shape
+
+
+def radial_glow(slide, cx, cy, d, color, *, alpha=0.42):
+    """A soft glow behind a figure or a star, shrunk until it is whole on the page."""
+    W, H = page_size(slide)
+    d = max(0.05, min(d, 2 * cx, 2 * (W - cx), 2 * cy, 2 * (H - cy)))
+    sh = _radial(disc(slide, cx, cy, d, color), color, alpha)
+    dk.decorative(sh, "a soft glow behind a figure; the words beside it carry the meaning")
+    return sh
+
+
+def horizon_glow(slide, top, color, deep, *, alpha=0.45):
+    """A warm horizon at the foot of the page: clear at `top`, `alpha` of `deep` at the page's bottom edge."""
+    W, H = page_size(slide)
+    top = min(max(float(top), 0.0), H - 0.05)
+    b = dk.box(slide, 0, top, W, H - top, fill=hexstr(color))
+    sp = b._element.spPr
+    sf = sp.find(qn("a:solidFill"))
+    sf.addprevious(etree.fromstring(
+        '<a:gradFill xmlns:a="{a}" rotWithShape="1"><a:gsLst>'
+        '<a:gs pos="0"><a:srgbClr val="{c}"><a:alpha val="0"/></a:srgbClr></a:gs>'
+        '<a:gs pos="100000"><a:srgbClr val="{d}"><a:alpha val="{al}"/></a:srgbClr></a:gs></a:gsLst>'
+        '<a:lin ang="5400000" scaled="0"/></a:gradFill>'.format(a=A_NS, c=hexstr(color), d=hexstr(deep), al=_pct(alpha))))
+    sp.remove(sf)
+    dk.decorative(b, "the warm horizon at the foot of a night page")
+    return b
+
+
+def crescent(slide, cx, cy, d, color, ground):
+    """A crescent moon: a disc of `color` cut by a disc of the ground, offset up and right — moved so both discs are
+    whole on the page."""
+    W, H = page_size(slide)
+    cx = min(max(cx, 0.5 * d + 0.05), W - 0.71 * d - 0.05)
+    cy = min(max(cy, 0.60 * d + 0.05), H - 0.5 * d - 0.05)
+    a = disc(slide, cx, cy, d, color)
+    b = disc(slide, cx + 0.24 * d, cy - 0.13 * d, 0.94 * d, ground)
+    for sh in (a, b):
+        dk.decorative(sh, "the crescent moon of the night sky; nothing reads from it")
+    return a, b
+
+
+def ring(slide, cx, cy, d, color, *, w=1.0):
+    """A thin circle outline (a round window's rim)."""
+    b = dk.box(slide, cx - d / 2.0, cy - d / 2.0, d, d, fill=None, line=dk._as_rgb(hexstr(color)), line_w=w)
+    b._element.spPr.find(qn("a:prstGeom")).set("prst", "ellipse")
+    dk.decorative(b, "the rim of a round picture window")
+    return b
+
+
+def polyline(slide, pts, color, *, w=1.0, alpha=None):
+    """An OPEN polyline as one editable shape, every point clamped onto the page."""
+    W, H = page_size(slide)
+    pts = [(min(max(float(x), 0.0), W), min(max(float(y), 0.0), H)) for x, y in pts]
+    xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+    x0, y0 = min(xs), min(ys)
+    bw, bh = max(max(xs) - x0, 0.01), max(max(ys) - y0, 0.01)
+    u = [((px - x0) / bw * U, (py - y0) / bh * U) for px, py in pts]
+    d = "<a:moveTo>{}</a:moveTo>".format(orn._pt(*u[0])) + "".join("<a:lnTo>{}</a:lnTo>".format(orn._pt(*q)) for q in u[1:])
+    sh = _custom(slide, x0, y0, bw, bh, '<a:path w="{u}" h="{u}" fill="none">{d}</a:path>'.format(u=U, d=d),
+                 line=hexstr(color), line_w=w)
+    if alpha is not None:
+        clr = sh._element.spPr.find(qn("a:ln")).find(qn("a:solidFill"))[0]
+        clr.append(clr.makeelement(qn("a:alpha"), {"val": str(_pct(alpha))}))
+    return sh
+
+
+def chalk_path(slide, pts, color, *, w=2.2, seed=0, passes=2):
+    """A chalk stroke: `passes` jittered copies of the polyline, the second thinner and fainter (chalk dragged twice)."""
+    rnd = random.Random(seed)
+    out = []
+    for k in range(passes):
+        j = [(x + rnd.uniform(-0.012, 0.012), y + rnd.uniform(-0.012, 0.012)) for x, y in pts]
+        sh = polyline(slide, j, color, w=w * (1.0 if k == 0 else 0.6), alpha=0.85 if k == 0 else 0.45)
+        dk.decorative(sh, "a chalk stroke; the words it frames carry the meaning")
+        out.append(sh)
+    return out
+
+
+def chalk_box(slide, x, y, w, h, color, *, seed=0):
+    rnd = random.Random(seed)
+    o = lambda: rnd.uniform(-0.04, 0.04)   # noqa: E731
+    pts = [(x + o(), y + o()), (x + w + o(), y + o()), (x + w + o(), y + h + o()), (x + o(), y + h + o()), (x + 0.05, y + o())]
+    return chalk_path(slide, pts, color, w=2.0, seed=seed)
+
+
+def chalk_ellipse(slide, cx, cy, rx, ry, color, *, seed=0, turns=1.08):
+    rnd = random.Random(seed)
+    pts = [(cx + rx * (1 + rnd.uniform(-0.03, 0.03)) * math.cos(a), cy + ry * (1 + rnd.uniform(-0.03, 0.03)) * math.sin(a))
+           for a in [2 * math.pi * turns * t / 60 - 2.2 for t in range(61)]]
+    return chalk_path(slide, pts, color, w=2.4, seed=seed)
+
+
+def chalk_underline(slide, x, y, w, color, *, seed=0):
+    a = chalk_path(slide, [(x + w * t / 10.0, y + 0.03 * math.sin(t * 1.7 + seed)) for t in range(11)], color, w=2.6, seed=seed)
+    b = chalk_path(slide, [(x + 0.1 + (w - 0.2) * t / 10.0, y + 0.11 + 0.03 * math.sin(t * 1.3 + seed)) for t in range(11)],
+                   color, w=1.8, seed=seed + 1)
+    return a + b
+
+
+def chalk_arrow(slide, x0, y0, x1, y1, color, *, seed=0):
+    ang = math.atan2(y1 - y0, x1 - x0)
+    L = 0.16
+    head = [(x1 + L * math.cos(ang + 2.6), y1 + L * math.sin(ang + 2.6)), (x1, y1),
+            (x1 + L * math.cos(ang - 2.6), y1 + L * math.sin(ang - 2.6))]
+    return chalk_path(slide, [(x0, y0), (x1, y1)], color, w=2.2, seed=seed) + \
+        chalk_path(slide, head, color, w=2.2, seed=seed + 1, passes=1)
+
+
+def board_frame(slide, wood, chalk):
+    """A blackboard's wooden frame drawn INSIDE the page, and a stick of chalk on the ledge. Returns the inner rect."""
+    W, H = page_size(slide)
+    t = 0.14 * min(W, H) / 7.5
+    for x, y, w, h in ((0, 0, W, t), (0, H - t, W, t), (0, 0, t, H), (W - t, 0, t, H)):
+        dk.decorative(dk.box(slide, x, y, w, h, fill=hexstr(wood)), "the blackboard's wooden frame")
+    stick = dk.box(slide, 0.32 * W, H - t - 0.06, 1.2 * min(W, H) / 7.5, 0.06, fill=hexstr(chalk))
+    dk.decorative(stick, "a stick of chalk on the board's ledge")
+    return (t, t, W - 2 * t, H - 2 * t)
+
+
+def chip_width(text, size, face, *, bold=True):
+    """The width (in) of a one-line pill holding `text` at `size`: every CJK character an em, each Latin run measured
+    in `face` (0.62 em a character when the face is not installed here), plus the pill's padding."""
+    import display_type as _dt
+    em = size / 72.0
+
+    def run_w(r):
+        if not r:
+            return 0.0
+        g = _dt._glyph_width(r, size, face, bold)
+        return g if g is not None else 0.62 * em * len(r)
+    w, run = 0.0, ""
+    for ch in text:
+        if dk._has_cjk(ch):
+            w, run = w + run_w(run) + em, ""
+        else:
+            run += ch
+    return w + run_w(run) + 1.2 * em
+
+
+def chip(slide, x, y, text, *, size, fill, ink, face, ea_face=None, bold=True):
+    """A pill label: rounded, one line that never wraps, as wide as its measured words. Returns (x, y, w, h)."""
+    w, h = chip_width(text, size, face, bold=bold), size / 72.0 * 1.9
+    dk.box(slide, x, y, w, h, fill=hexstr(fill), round=True, r=h / 2.0)
+    run = (text, size, dk._as_rgb(hexstr(ink)), bold, False, face) + ((ea_face,) if ea_face else ())
+    tb = dk.text(slide, x, y, w, h, [[run]], align=dk.PP_ALIGN.CENTER, anchor=dk.MSO_ANCHOR.MIDDLE)
+    tb.text_frame.word_wrap = False
+    dk.overlap_intent(tb, "the label sits on its own pill")
+    return (x, y, w, h)
+
+
+def share_bar(slide, x, y, w, frac, *, track, fill, h=0.16):
+    """A rounded share bar: the whole track, and `frac` (clamped to 0..1) of it filled from the left."""
+    frac = min(max(float(frac), 0.0), 1.0)
+    dk.box(slide, x, y, w, h, fill=hexstr(track), round=True, r=h / 2.0)
+    if frac > 0:
+        dk.box(slide, x, y, max(h, w * frac), h, fill=hexstr(fill), round=True, r=h / 2.0)
