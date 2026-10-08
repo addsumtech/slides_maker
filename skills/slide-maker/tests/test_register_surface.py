@@ -413,6 +413,21 @@ try:
 finally:
     _restore(snap)
 
+# a name another FILE registered is refused, not silently replaced (spec P4 §Naming: `ledger` is a bespoke kit, and
+# registering a language under it would have overwritten the kit for every deck)
+import bespoke_kits as _bk2                                          # noqa: E402
+_src = rs.BESPOKE["ledger"]["source"]
+try:
+    rs.register("ledger", ground=lambda sl, r, i: (1, 1, 2, 2), source="/somewhere/else.py")
+    bad.append("a kit registered from another file replaced the bespoke `ledger` kit")
+except ValueError as exc:
+    check("ledger" in str(exc) and "already" in str(exc),
+          "registering a name another file already registered is REFUSED, naming it: {}".format(str(exc)[:90]))
+check(rs.BESPOKE["ledger"]["source"] == _src, "...and the original kit is untouched")
+_g = rs.GROUNDS["ledger"]
+rs.register("ledger", ground=_g, card=rs.CARDS["ledger"], forbids=rs.BESPOKE["ledger"]["forbids"], source=_src)
+check(rs.GROUNDS["ledger"] is _g, "re-registering from the SAME file still works (a reload, load_kits)")
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

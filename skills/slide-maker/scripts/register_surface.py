@@ -919,6 +919,12 @@ def register(name, *, ground=None, card=None, forbids=(), source=None):
             "{!r} is a PRESET — registering a kit under a preset's name would silently replace the "
             "gallery's look with yours, and every later deck asking for {!r} would get something "
             "else. Invent a name from the subject's own world.".format(name, name))
+    prior = BESPOKE.get(key)
+    if prior is not None and str(prior.get("source") or "") != str(source or ""):
+        raise ValueError(
+            "{!r} is already registered by {} — registering it again from {} would silently replace that kit for "
+            "every deck that asks for it. Pick another name.".format(
+                name, prior.get("source") or "an unnamed source", source or "an unnamed source"))
     if ground is None or not callable(ground):
         raise TypeError("register({!r}) needs a callable ground(slide, role, index)".format(name))
     if card is not None and not callable(card):
