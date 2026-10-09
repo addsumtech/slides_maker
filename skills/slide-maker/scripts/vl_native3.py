@@ -427,7 +427,7 @@ def _ui_quote(k, slide, f, image):
     bub = (bub[0], qt - pad, bub[2], qb - qt + 2 * pad)
     na.ui_bubble(slide, *bub, fill=k.P["panel"], line=k.P["line"], r=0.32 * s)
     if ini:
-        dk.disc(slide, x, bub[1], av, fill=_hex(k.P["states"]["primary"]))
+        dk.disc(slide, x, bub[1], av, fill=_hex(k.P["primary_fill"]))   # white on 5B8CFF (dark) was 3.16:1
         r0, d0 = flow(k, slide, "quote", (x, bub[1], av, av), [("initials", ini)], anchor="middle", align="c", ink="FFFFFF")
         d0()
     d()
@@ -455,14 +455,18 @@ def _ui_data(k, slide, f, image):
         card = (0.07 * W, 0.07 * H, 0.86 * W, (0.52 if alt() == 0 else 0.46) * H)
         ncol = (0.07 * W, card[1] + card[3] + 0.4 * s, 0.86 * W, None)
     col = _window(k, slide, card, f, "data", bar=False)
-    barh = 0.45 * s if frac is not None else 0.0
+    barh = 0.9 * s if frac is not None else 0.0
     r, ds = stack(k, slide, "data", col[0], col[2], col[1], col[1] + col[3] - barh,
                   [(fields(f, ("label",)), 0.15 * s), ([("number", num)] if num else [], 0.0)], anchor="middle")
     _run_all(ds)
     if frac is not None:
         foot = max(v[1] + v[3] for v in r.values())
-        na.share_bar(slide, col[0], foot + 0.25 * s, col[2], frac, track=k.P["line"], fill=k.P["states"]["primary"],
-                     h=0.16 * s)
+        trk, _fill = na.share_bar(slide, col[0], foot + 0.25 * s, col[2], frac, track=k.P["line"],
+                                  fill=k.P["states"]["primary"], h=0.16 * s)
+        dk.decorative(trk, "the bar's full extent is printed as the total at its end")
+        tsz = vl.TYPE["interface"]["tag"][0] * s
+        dk.text(slide, col[0] + col[2] / 2.0, foot + 0.5 * s, col[2] / 2.0, 0.35 * s, [k.runs(total, tsz, k.color("mute"), True)],
+                align=dk.PP_ALIGN.RIGHT)
     rects = dict(r)
     if note:
         dd, pad = 0.42 * s, 0.32 * s
@@ -512,8 +516,9 @@ LABELS3 = {"way_out": {"en": "Way out", "zh": "出口", "ja": "出口", "ko": "�
 
 
 def ink_on(k, fill):
-    """The page's ink or white on a coloured fill — whichever reads better (a yellow roundel takes the dark ink)."""
-    return "FFFFFF" if vl._contrast("FFFFFF", fill) >= vl._contrast(k.P["ink"], fill) else k.P["ink"]
+    """White, the page's ink or the dark casing on a coloured fill — whichever reads best (a yellow roundel takes a
+    dark ink; on the night ground the page ink is light too, and white on the night green was 2.64:1)."""
+    return max(("FFFFFF", k.P["ink"], k.P["casing"]), key=lambda c: vl._contrast(c, fill))
 
 
 def line_colour(k, n):
@@ -591,10 +596,15 @@ def _wf_cover(k, slide, f, image):
     sh = 0.0
     if sub:
         sh = 0.95 * s
-    r, ds = stack(k, slide, "cover", col[0], col[2], col[1], col[1] + col[3] - (sh + 0.4 * s if sub else 0.0),
+    rd = 0.62 * s if (lc and not sub) else 0.0      # no subtitle sign to carry the line code: it heads the words
+    r, ds = stack(k, slide, "cover", col[0], col[2], col[1] + (rd + 0.25 * s if rd else 0.0),
+                  col[1] + col[3] - (sh + 0.4 * s if sub else 0.0),
                   [(fields(f, ("kicker",), capsed=("kicker",)), 0.12 * s), (fields(f, ("title",)), 0.0)], anchor="middle")
     _run_all(ds)
     rects = dict(r)
+    if rd:
+        top = min((v[1] for v in r.values()), default=col[1] + rd + 0.25 * s)
+        _roundel(k, slide, col[0] + rd / 2.0, top - 0.25 * s - rd / 2.0, rd, lc[0], lc[1])
     if sub:
         foot = max((v[1] + v[3] for v in r.values()), default=col[1]) + 0.4 * s
         inner = na.sign_panel(slide, col[0], foot, col[2], sh, fill=k.P["sign"])
@@ -722,8 +732,11 @@ def _wf_points(k, slide, f, image):
     # the strip map: the title on a sign band, the route under it
     r, ds = stack(k, slide, "points", x0 + 0.3 * s, w0 - 0.6 * s, 0.07 * H + 0.2 * s, 0.07 * H + 1.6 * s,
                   [(fields(f, ("title",)), 0.0)], anchor="top", ink=k.P["sign_ink"])
-    tb = max(v[1] + v[3] for v in r.values()) + 0.2 * s
-    na.sign_panel(slide, x0, 0.07 * H, w0, tb - 0.07 * H, fill=k.P["sign"])
+    if r:
+        tb = max(v[1] + v[3] for v in r.values()) + 0.2 * s
+        na.sign_panel(slide, x0, 0.07 * H, w0, tb - 0.07 * H, fill=k.P["sign"])
+    else:                                            # no title: no sign band, the route takes the page
+        tb = 0.07 * H
     _run_all(ds)
     rects = dict(r)
     lw = 0.2 * s
@@ -731,16 +744,22 @@ def _wf_points(k, slide, f, image):
     if o == "land":
         y = tb + (H - tb) * 0.50
         xs = [x0 + 0.5 * s + i * (w0 - 1.0 * s) / (n - 1) for i in range(n)]
-        cw = min(2.8 * s, (w0 - 0.5 * s) / max(2, n) * 1.6)
-        specs = []
+        gap = (w0 - 1.0 * s) / (n - 1)
+        # a label set flush right reaches back toward its same-side neighbour, so it is never wider than one gap
+        cw = min(2.8 * s, (w0 - 0.5 * s) / max(2, n) * 1.6, gap + 0.1 * s)
+        specs, flush = [], set()
         for i, (h, l) in enumerate(pts):
             up = i % 2 == 0
             ry = (tb + 0.3 * s) if up else (y + sd / 2.0 + 0.35 * s)
             rh = (y - sd / 2.0 - 0.35 * s - ry) if up else (H - 0.4 * s - ry)
-            cx = min(max(xs[i] - 0.2 * s, x0), x0 + w0 - cw)
+            cx = max(xs[i] - 0.2 * s, x0)
+            if cx + cw > x0 + w0:                    # the terminus side: end at the station instead of sliding left
+                cx = max(x0, xs[i] + 0.2 * s - cw)  # of it (on 4:3 the last label sat 2.3in away, under a neighbour)
+                flush.add(i)
             specs.append(((cx, ry, cw, rh), [("item_head", h)] + ([("item_line", l)] if l else []),
                           {"anchor": "bottom" if up else "top"}))
         planned = plan_together(k, slide, "points", specs)
+        planned = [(rr, _flush_right(slide, dd)) if i in flush else (rr, dd) for i, (rr, dd) in enumerate(planned)]
         na.route(slide, [(0.0, y), (W, y)], colour, w=lw)
         for i, x in enumerate(xs):
             if i in ixs:
@@ -795,6 +814,18 @@ def _wf_quote(k, slide, f, image):
         d2()
         rects.update(r2)
     return rects
+
+
+def _flush_right(slide, draw):
+    """A planned draw whose paragraphs are turned flush right as they are drawn (planned left in the same box)."""
+    def go():
+        n0 = len(slide.shapes)
+        draw()
+        for sh in list(slide.shapes)[n0:]:
+            if getattr(sh, "has_text_frame", False):
+                for p_ in sh.text_frame.paragraphs:
+                    p_.alignment = dk.PP_ALIGN.RIGHT
+    return go
 
 
 def _flow_right(k, slide, page, col, items, **kw):

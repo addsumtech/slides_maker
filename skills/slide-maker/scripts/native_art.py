@@ -735,11 +735,14 @@ def chip(slide, x, y, text, *, size, fill, ink, face, ea_face=None, bold=True):
 
 
 def share_bar(slide, x, y, w, frac, *, track, fill, h=0.16):
-    """A rounded share bar: the whole track, and `frac` (clamped to 0..1) of it filled from the left."""
+    """A rounded share bar: the whole track, and `frac` (clamped to 0..1) of it filled from the left. Returns
+    (track, filled) — filled is None at 0 — so a caller that prints both numbers can declare the track decorative."""
     frac = min(max(float(frac), 0.0), 1.0)
-    dk.box(slide, x, y, w, h, fill=hexstr(track), round=True, r=h / 2.0)
+    trk = dk.box(slide, x, y, w, h, fill=hexstr(track), round=True, r=h / 2.0)
+    filled = None
     if frac > 0:
-        dk.box(slide, x, y, max(h, w * frac), h, fill=hexstr(fill), round=True, r=h / 2.0)
+        filled = dk.box(slide, x, y, max(h, w * frac), h, fill=hexstr(fill), round=True, r=h / 2.0)
+    return trk, filled
 
 
 # ═══════════════════ P5: wayfinding (metro map + signage) and interface (app UI) ═══════════════════
@@ -840,6 +843,7 @@ def ui_cursor(slide, x, y, *, fill, edge, size=0.34):
     sh.line.width = Pt(1.5)
     dk.adopt(sh)
     dk.decorative(sh, "a pointer resting on the primary button")
+    dk.overlap_intent(sh, "the pointer's tip rests on the button it points at")   # its tilted box crossed the button
     return sh
 
 

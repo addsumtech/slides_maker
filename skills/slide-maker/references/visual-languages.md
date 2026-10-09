@@ -396,7 +396,13 @@ first four: no pictures needed, everything on the page, nothing PowerPoint repai
     Japanese, else `1 2 3`; `1 2 3` on `cutpaper`, `journal` and `chalkboard` (circled there); `starlit` numbers none;
   - `journal` figure numbers over the deck's `image_text` pages, with `kicker=` to override;
   - the `broadsheet` ■ end mark on the closing page; the opening `“` on quote pages (not on `ink` or `tally`); the
-    `— ` before an attribution on `journal` and `chalkboard`;
+    `— ` before an attribution on `journal`, `chalkboard` and `wayfinding`;
+  - `interface`: `1 2 3` badges on `points`; the avatar's initials on `quote` (from a name only — "Mara Jensen, Ops
+    lead" gives `MJ`; a description or a CJK name gives no avatar); the `i` beside a data `note=`; with `total=`, the
+    total printed at the end of the progress bar;
+  - `wayfinding`: numbered roundels `1 2 3` on the directory sign and on the departure board's rows (each in its line
+    colour); the way-out label on the closing sign (`WAY OUT` / `出口` / `出口` / `출구`, in the script of the page's
+    words);
   - the structural labels, stored in CAPITALS in English (`ABSTRACT`, `INSIDE`, `FIGURE 1`, `PAGE 2`, `NOTE`) and
     in the script of the page's own words otherwise:
 
@@ -409,7 +415,7 @@ first four: no pictures needed, everything on the page, nothing PowerPoint repai
     | NOTE | 注 | 注 | 주석 |
 
   Some of your own words are re-cased: `poster` (above), the kicker and attribution on `starlit` and
-  `broadsheet`, and the kicker on `journal`.
+  `broadsheet`, and the kicker on `journal` and on the `wayfinding` cover.
 - **Pages.** All seven pages come in both orientations.
   - `journal`'s `image_text` is its figure page: the title above, your figure WHOLE (never cropped), its label,
     caption (`body=`) and source line (`caption=`).
@@ -471,15 +477,15 @@ prs.save("weekly.pptx")
 
   | Language | Extra | Pages | Meaning / fallback |
   |---|---|---|---|
-  | interface | `crumb=` | any; remembered | the window's breadcrumb (e.g. "Launch › Overview"). Absent: an empty top bar. |
+  | interface | `crumb=` | any; remembered | the window's breadcrumb (e.g. "Launch › Overview"), drawn in the top bar of the windows that have one — cover, section, points (image_text, quote, data and closing draw no bar). Absent: an empty top bar. |
   | interface | `status=` | any; remembered | the top-bar status chip text, optionally `(text, state)` with state in on / pending / error / primary. Absent: no chip. |
   | interface | `actions=` | cover, closing | 1–2 button labels (primary, secondary). Absent: no buttons, no pointer. |
   | interface | `toggles=` | cover | 1–4 `(label, on)` rows for a settings panel beside the window. Absent: the window takes the width. |
   | interface | `tags=` | points | one chip per point, text or `(text, state)`; count must match. |
-  | interface | `total=` | data | progress bar, tally's rules (plain numbers, same kind, ≤ total). |
-  | wayfinding | `line=` | any; remembered | a 1–3 character line code for the cover/section roundels, optionally `(code, colour name)`. Absent: section roundels show the section number; the cover draws no roundel. |
+  | interface | `total=` | data | progress bar, tally's rules (plain numbers, same kind, ≤ total); the total is printed at the bar's end. |
+  | wayfinding | `line=` | any; remembered | a 1–3 character line code for the cover/section roundels, optionally `(code, colour name)`. On the cover it sits on the subtitle sign, or above the kicker when there is no subtitle; on a section it REPLACES the section number in the roundel. Absent: section roundels show the section number; the cover draws no roundel. |
   | wayfinding | `ordered=` | points | `True` draws the strip map; default draws the directory sign. |
-  | wayfinding | `interchange=` | points | indexes of points drawn as interchanges (strip map only; refused without `ordered=True`). |
+  | wayfinding | `interchange=` | points | 0-based indexes of points drawn as interchanges (`[2]` = the third stop; strip map only; refused without `ordered=True`). |
   | wayfinding | `board=` | data | 1–4 extra `(label, value)` rows under the page's own row. |
 
 ```python

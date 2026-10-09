@@ -447,6 +447,139 @@ for title in ("Four stops", "Four stops to a paying customer, one at a time"):
         check(abs(gap_top - gap_bot) <= 0.08,
               "strip map title is balanced in its sign (top gap {:.2f}in, bottom {:.2f}in) for {!r}".format(gap_top, gap_bot, title))
 
+# ── the docs-only run (2026-10-10): what an agent with only SKILL.md + references hit ──
+import lint_deck as _ld
+
+
+def _hard(prs_):
+    with tempfile.TemporaryDirectory() as td_:
+        pth = Path(td_) / "d.pptx"
+        prs_.save(str(pth))
+        buf_ = io.StringIO()
+        with contextlib.redirect_stdout(buf_), contextlib.redirect_stderr(io.StringIO()):
+            n_ = _ld.lint(str(pth), static_ok=True)
+    lines_ = buf_.getvalue().splitlines()
+    return n_, [l_.strip()[:120] for l_ in lines_ if re.match(r"\s+slide \d+: [A-Z]", l_) and "[warn]" not in l_
+                and "[stats]" not in l_], [l_.strip()[:120] for l_ in lines_ if "[warn] NON-TEXT CONTRAST" in l_]
+
+
+E_ = 914400.0
+# an ordered strip map with no title is drawn (it raised "max() iterable argument is empty")
+for cw, chh in ((13.333, 7.5), (7.5, 10.0)):
+    dkx = dk.blank_deck(cw, chh)
+    kx = vl.use("wayfinding", dkx)
+    try:
+        kx.points(kx.new_slide(), ordered=True, items=["Sign up", "First project", "Invite a teammate", "Upgrade"])
+        err = None
+    except Exception as e:
+        err = "{}: {}".format(type(e).__name__, e)
+    check(err is None, "wayfinding {}x{}: an ordered strip map with no title is drawn ({})".format(cw, chh, err))
+
+# every roundel's number reads on its own line colour, on both grounds (white on the night green was 2.64:1)
+for g in ("light", "night"):
+    dkx = dk.blank_deck(13.333, 7.5)
+    kx = vl.use("wayfinding", dkx, ground=g)
+    kx.points(kx.new_slide(), title="Where to ask", items=["IT desk", "People team", "Mentor", "Facilities"])
+    kx.data(kx.new_slide(), number="92%", label="first week done", board=[("Eng", "95%"), ("Design", "88%"), ("Ops", "90%"), ("Sales", "86%")])
+    for si, sl_ in enumerate(dkx.slides):
+        discs = [sh for sh in sl_.shapes if sh.shape_type == 1 and sh.auto_shape_type == 9]
+        for sh in sl_.shapes:
+            if not (sh.top >= 0 and sh.has_text_frame and sh.text_frame.text.strip().isdigit()):
+                continue
+            cx_, cy_ = sh.left + sh.width / 2.0, sh.top + sh.height / 2.0
+            under = [d for d in discs if d.left <= cx_ <= d.left + d.width and d.top <= cy_ <= d.top + d.height]
+            if not under:
+                continue
+            run_ = sh.text_frame.paragraphs[0].runs[0]
+            ink = str(run_.font.color.rgb)
+            fill = str(under[-1].fill.fore_color.rgb)
+            large = bool(run_.font.bold) and run_.font.size is not None and run_.font.size.pt >= 14   # WCAG large text
+            need = 3.0 if large else 4.5
+            check(vl._contrast(ink, fill) >= need, "wayfinding {} page {}: roundel {} reads (#{} on #{} = {:.2f}:1, {}pt{})".format(
+                g, si + 1, sh.text_frame.text.strip(), ink, fill, vl._contrast(ink, fill),
+                run_.font.size.pt if run_.font.size else "?", " bold" if run_.font.bold else ""))
+    n_, why_, _nt = _hard(dkx)
+    check(n_ == 0, "wayfinding {}: a four-row directory and a five-row board have no hard lint finding ({})".format(g, why_[:2]))
+
+# the interface pointer rests on its button by design: no hard OVERLAP on any canvas (4:3 had 0.27x0.13in)
+for cw, chh in ((10.0, 7.5), (13.333, 7.5), (7.5, 10.0)):
+    dkx = dk.blank_deck(cw, chh)
+    kx = vl.use("interface", dkx)
+    kx.cover(kx.new_slide(), kicker="Product tour", title="Relay — one inbox for every team request",
+             crumb="Launch › Overview", status=("Beta", "pending"), actions=["Join the beta", "See the demo"],
+             toggles=[("Auto-assign", True), ("Public link", False), ("Weekly digest", True)])
+    kx.closing(kx.new_slide(), title="Start with one team", line="Free during the beta.", actions=["Join the beta"])
+    n_, why_, _nt = _hard(dkx)
+    check(n_ == 0, "interface {}x{}: cover and closing with buttons have no hard lint finding ({})".format(cw, chh, why_[:2]))
+
+# line= on a cover with no subtitle is still drawn (the code went missing with the subtitle sign)
+for sub in (None, "Four stops to launch"):
+    dkx = dk.blank_deck(13.333, 7.5)
+    kx = vl.use("wayfinding", dkx)
+    kw_ = dict(kicker="Onboarding", title="Your first week", line="A")
+    if sub:
+        kw_["subtitle"] = sub
+    kx.cover(kx.new_slide(), **kw_)
+    texts = [sh.text_frame.text.strip() for sh in dkx.slides[0].shapes if sh.top >= 0 and sh.has_text_frame]
+    check("A" in texts, "wayfinding cover (subtitle {!r}): the caller's line code is drawn ({})".format(sub, texts))
+
+# a landscape strip map keeps every stop's label at its own station (the last one slid under its neighbour on 4:3)
+for cw, chh in ((10.0, 7.5), (13.333, 7.5), (10.0, 5.625)):
+    for its in (["Get a laptop", "Open accounts", "Meet a mentor", "First task"],
+                ["Sign up", "First project", "Upgrade"]):
+        dkx = dk.blank_deck(cw, chh)
+        kx = vl.use("wayfinding", dkx)
+        slx = kx.new_slide()
+        kx.points(slx, title="The route", ordered=True, interchange=[len(its) - 2], items=its)
+        sc = min(cw, chh) / 7.5
+        heads = {sh.text_frame.text.strip(): sh for sh in slx.shapes if sh.top >= 0 and sh.has_text_frame
+                 and sh.text_frame.text.strip() in its}
+        marks = sorted([sh for sh in slx.shapes if sh.shape_type == 1 and sh.auto_shape_type in (9, 5)
+                        and 0.3 * sc < sh.height / E_ < 0.9 * sc and sh.width / E_ < 1.0 * sc],
+                       key=lambda m: m.left)
+        ok_ = len(heads) == len(its) and len(marks) == len(its)
+        far = []
+        for i, h_ in enumerate(its):
+            if not ok_:
+                break
+            hb, m = heads[h_], marks[i]
+            mx = (m.left + m.width / 2.0) / E_
+            right = hb.text_frame.paragraphs[0].alignment == dk.PP_ALIGN.RIGHT
+            edge = (hb.left + hb.width) / E_ if right else hb.left / E_
+            if abs(edge - mx) > 0.45 * sc:
+                far.append((h_, round(edge - mx, 2)))
+        check(ok_ and not far, "wayfinding strip map {}x{} ({} stops): every label starts at its station ({})".format(
+            cw, chh, len(its), far if ok_ else "found {} labels, {} stations".format(len(heads), len(marks))))
+
+# the interface avatar's initials read on their disc on both grounds (dark mode was 3.16:1)
+for g in ("light", "dark"):
+    dkx = dk.blank_deck(13.333, 7.5)
+    kx = vl.use("interface", dkx, ground=g)
+    slx = kx.new_slide()
+    kx.quote(slx, quote="We stopped losing requests in chat.", attribution="Mara Jensen, Ops lead")
+    ini = [sh for sh in slx.shapes if sh.top >= 0 and sh.has_text_frame and sh.text_frame.text.strip() == "MJ"]
+    discs = [sh for sh in slx.shapes if sh.shape_type == 1 and sh.auto_shape_type == 9]
+    c_ = 0.0
+    if ini and discs:
+        cx_, cy_ = ini[0].left + ini[0].width / 2.0, ini[0].top + ini[0].height / 2.0
+        under = [d for d in discs if d.left <= cx_ <= d.left + d.width and d.top <= cy_ <= d.top + d.height]
+        if under:
+            c_ = vl._contrast(str(ini[0].text_frame.paragraphs[0].runs[0].font.color.rgb), str(under[-1].fill.fore_color.rgb))
+    check(c_ >= 4.5, "interface {}: the avatar's initials read on their disc ({:.2f}:1)".format(g, c_))
+
+# total= is printed like tally's (the bar alone left "of 40" undecodable), and the hand-off lint does not hold the bar
+for g in ("light", "dark"):
+    for cw, chh in ((13.333, 7.5), (7.5, 10.0)):
+        dkx = dk.blank_deck(cw, chh)
+        kx = vl.use("interface", dkx, ground=g)
+        slx = kx.new_slide()
+        kx.data(slx, number="18", label="teams moved in the beta", note="Since March.", total="40")
+        texts = [sh.text_frame.text.strip() for sh in slx.shapes if sh.top >= 0 and sh.has_text_frame]
+        check("40" in texts, "interface {} {}x{}: the total is printed ({})".format(g, cw, chh, texts))
+        n_, why_, nt_ = _hard(dkx)
+        check(n_ == 0 and not nt_, "interface {} {}x{}: the progress bar passes the hand-off lint ({} {})".format(
+            g, cw, chh, why_[:1], nt_[:1]))
+
 # the docs carry both languages: guidance, extras, examples, the drawn-language lists
 ref = (ROOT / "references" / "visual-languages.md").read_text(encoding="utf-8")
 for n in ("interface", "wayfinding"):
