@@ -233,8 +233,17 @@ def _ui_cover(k, slide, f, image):
     W, H, s, o = ctx(k)
     acts, tog = _actions(f, "cover"), _toggles(f)
     side = bool(tog) and o == "land"
+    tw, th = 0.62 * s, 0.34 * s
+    # the side panel is as wide as its widest word needs (0.25W, up to 0.40W): a fixed 0.25W left a 0.84in label
+    # column on 4:3, too narrow for "Notifications" here and for "Auto-sync" under Linux's wider faces
+    pw = 0.25 * W
+    if side:
+        tsz = vl.TYPE["interface"]["toggle"][0] * s
+        need = max(na.chip_width(wd, tsz, k.face("body")) for lab, _on in tog for wd in lab.split())
+        pw = min(max(pw, need + 0.84 * s + tw + 0.2 * s), 0.40 * W)
     if o == "land":
-        win = (0.06 * W, (0.15 if alt() == 0 else 0.08) * H, (0.60 if side else 0.88) * W, (0.74 if alt() == 0 else 0.84) * H)
+        win = (0.06 * W, (0.15 if alt() == 0 else 0.08) * H, (0.85 * W - pw) if side else 0.88 * W,
+               (0.74 if alt() == 0 else 0.84) * H)
     else:
         win = (0.07 * W, 0.06 * H, 0.86 * W, (0.56 if tog else 0.84) * H)
     col = _window(k, slide, win, f, "cover")
@@ -248,11 +257,10 @@ def _ui_cover(k, slide, f, image):
         _buttons(k, slide, col[0], foot + 0.35 * s, acts, col[2])
     if tog:
         if side:
-            px, py, pw = 0.69 * W, win[1], 0.25 * W
+            px, py = 0.94 * W - pw, win[1]
         else:
             px, py, pw = 0.07 * W, win[1] + win[3] + 0.25 * s, 0.86 * W
         rows = [(lab, on) for lab, on in tog]
-        tw, th = 0.62 * s, 0.34 * s
         specs = [((0, 0, pw - 0.84 * s - tw - 0.2 * s, 10.0), [("toggle", lab)], {}) for lab, _on in rows]
         planned = plan_together(k, slide, "cover", specs)
         hs = [max(v[3] for v in rr.values()) for rr, _d in planned]

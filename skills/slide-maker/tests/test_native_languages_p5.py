@@ -353,6 +353,33 @@ for W, H in list(CANVASES.values()) + [(7.5, 7.5), (10.0, 5.625)]:
     check(not hit, "wayfinding cover {}x{}: no route crosses the words {}".format(W, H, hit[:2]))
 
 
+# the cover's settings panel is as wide as its words need: ordinary toggle words fit on every landscape canvas, and
+# no label runs into its switch (a fixed 0.25W panel left a 0.84in label column on 4:3 — "Auto-sync" refused
+# under Linux's wider faces, "Notifications" even here)
+for cw, chh in ((10.0, 7.5), (13.333, 7.5), (10.0, 5.625), (7.5, 10.0)):
+    for labels in (["Auto-sync", "Public link"], ["Notifications", "Auto-archive", "Two-factor sign-in"]):
+        dkt = dk.blank_deck(cw, chh)
+        kt = vl.use("interface", dkt)
+        slt = kt.new_slide()
+        try:
+            kt.cover(slt, kicker="Product tour", title="One board for every request", subtitle="A ten-minute tour",
+                     actions=["Get started"], toggles=[(lab, i % 2 == 0) for i, lab in enumerate(labels)])
+            err = None
+        except vl.VLTextOverflow as e:
+            err = str(e)
+        check(err is None, "interface cover {}x{}: toggles {} fit ({})".format(cw, chh, labels, err))
+        if err is None:
+            E = 914400.0
+            labs = [sh for sh in slt.shapes if sh.top >= 0 and sh.has_text_frame
+                    and " ".join(sh.text_frame.text.split()) in labels]
+            tracks = [sh for sh in slt.shapes if sh.shape_type == 1 and abs(sh.height / E - 0.34 * min(cw, chh) / 7.5) < 0.2
+                      and abs(sh.width / E - 0.62 * min(cw, chh) / 7.5) < 0.2]
+            clash = [(l.text_frame.text, round((l.left + l.width - t.left) / E, 2)) for l in labs for t in tracks
+                     if l.left + l.width > t.left and l.left < t.left + t.width
+                     and l.top < t.top + t.height and l.top + l.height > t.top]
+            check(len(labs) == len(labels) and not clash,
+                  "interface cover {}x{}: every toggle label clears its switch ({} labels, clashes {})".format(cw, chh, len(labs), clash))
+
 # the data note's info glyph is readable on its own disc (an accent-keyed role ignores an ink= override)
 for g in ("light", "dark"):
     for cw, chh in ((13.333, 7.5), (10.0, 7.5), (7.5, 10.0)):
