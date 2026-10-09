@@ -63,12 +63,22 @@ def points_of(items):
         raise ValueError("points(): items= takes 2 to 4 points, got {!r}".format(items))
     out = []
     for it in items:
+        # a point is its head and its line: a third member or another key was dropped without a word, and a dict keyed
+        # title/text was refused as "an empty one" (robustness audit, 2026-10-09)
         if isinstance(it, dict):
+            other = sorted(set(it) - {"head", "line"})
+            if other:
+                raise ValueError("points(): a point is {{'head': ..., 'line': ...}} — {!r} also has {}".format(it, other))
             head, line = it.get("head"), it.get("line")
         elif isinstance(it, (list, tuple)):
+            if len(it) > 2:
+                raise ValueError("points(): a point is (head, line) — {!r} has {} parts".format(tuple(it), len(it)))
             head, line = (list(it) + [None, None])[:2]
         else:
             head, line = it, None
+        for v in (head, line):
+            if v is not None and not isinstance(v, (str, int)) or isinstance(v, bool):
+                raise ValueError("points(): a point's head and line are text — got {!r} in {!r}".format(v, it))
         head = str(head or "").strip()
         if not head:
             raise ValueError("points(): every point needs its words — an empty one in {!r}".format(items))
@@ -799,11 +809,14 @@ def _poster_section(k, slide, f, image):
     return rects
 
 
-@register("poster", "image_text")
+@register("poster", "image_text", alts=3)
 def _poster_image_text(k, slide, f, image):
+    """The picture beside (or over) the headline; for long copy (alt 1) the picture gives the words room — a 14-word
+    title with a body and a caption was refused on 4:3, square and A4 (the long-copy corpus, 2026-10-09)."""
     W, H, s, o = ctx(k)
-    img = (0.52 * W, 0.12 * H, 0.44 * W, 0.76 * H) if o == "land" else (0.06 * W, 0.08 * H, 0.88 * W, 0.42 * H)
-    col = (0.05 * W, 0.14 * H, 0.42 * W, 0.72 * H) if o == "land" else (0.06 * W, 0.54 * H, 0.88 * W, 0.38 * H)
+    g = (0.0, 0.10, 0.18)[alt()]           # the picture gives the words room, a little then more
+    img = (0.52 * W + g * W, 0.12 * H, (0.44 - g) * W, 0.76 * H) if o == "land" else (0.06 * W, 0.08 * H, 0.88 * W, (0.42 - g) * H)
+    col = (0.05 * W, 0.14 * H, (0.42 + g) * W, 0.72 * H) if o == "land" else (0.06 * W, (0.54 - g) * H, 0.88 * W, (0.38 + g) * H)
     items = [(x_, text_of(f, x_)) for x_ in ("title", "body", "caption") if text_of(f, x_)]
     r, d = flow(k, slide, "image_text", col, items, anchor="middle" if o == "land" else "top")
     place_image(k, slide, image, img, "image_text")
@@ -968,6 +981,12 @@ def _back_hills(k, slide, o, seed=1):
     na.paper_hill(slide, na.hill_points(W, base[1] * H, 0.15 * H if o == "land" else 0.07 * H, seed + 3, 1.7), H, fill=A["hills"][1])
 
 
+def _front_crest(k, o):
+    """The highest point (smallest y) the front hills can reach: base minus amplitude (native_art.hill_points)."""
+    W, H, s, _o = ctx(k)
+    return (0.82 if o == "land" else 0.86) * H - 0.08 * H
+
+
 def _front_hills(k, slide, o, seed=7, low=False):
     W, H, s, _o = ctx(k)
     A = CUT_ART[k.ground]
@@ -1039,6 +1058,10 @@ def _cut_section(k, slide, f, image):
     if alt():
         col = (0.46 * W, 0.12 * H, 0.48 * W, 0.70 * H) if o == "land" else (0.08 * W, cy + d0 / 2 + 0.3 * s, 0.84 * W,
                                                                              0.86 * H - (cy + d0 / 2 + 0.3 * s))
+    # the words end above the front hills' highest crest: on 3:4 a long title's last line sat on the green hill (the
+    # column ran to 0.86H, the crest rises to 0.78H — audit sweep, 2026-10-09)
+    crest = _front_crest(k, o) - 0.15 * s
+    col = (col[0], col[1], col[2], max(0.5 * s, min(col[3], crest - col[1])))
     items = [(x_, t) for x_, t in (("kicker", kicker), ("title", title)) if t]
     r, d = flow(k, slide, "section", col, items, anchor="middle" if o == "land" else "top")
     rects.update(r); draws.append(d)
@@ -1048,11 +1071,14 @@ def _cut_section(k, slide, f, image):
     return rects
 
 
-@register("cutpaper", "image_text")
+@register("cutpaper", "image_text", alts=3)
 def _cut_image_text(k, slide, f, image):
+    """The picture on its paper frame and the words on a card beside it; for long copy (alt 1) the frame gives the card
+    room (a 14-word title was refused on the 10in 16:9, the long-copy corpus, 2026-10-09)."""
     W, H, s, o = ctx(k)
-    frame = (0.06 * W, 0.10 * H, 0.46 * W, 0.76 * H) if o == "land" else (0.08 * W, 0.05 * H, 0.84 * W, 0.44 * H)
-    card = (0.57 * W, 0.18 * H, 0.37 * W, 0.62 * H) if o == "land" else (0.08 * W, 0.53 * H, 0.84 * W, 0.36 * H)
+    g = (0.0, 0.10, 0.18)[alt()]           # the picture gives the words room, a little then more
+    frame = (0.06 * W, 0.10 * H, (0.46 - g) * W, 0.76 * H) if o == "land" else (0.08 * W, 0.05 * H, 0.84 * W, (0.44 - g) * H)
+    card = ((0.57 - g) * W, 0.18 * H, (0.37 + g) * W, 0.62 * H) if o == "land" else (0.08 * W, (0.53 - g) * H, 0.84 * W, (0.36 + g) * H)
     pad = 0.35 * s
     items = [(x_, text_of(f, x_)) for x_ in ("kicker", "title", "body", "caption") if text_of(f, x_)]
     r, d = _card_flow(k, slide, "image_text", (card[0] + pad, card[1] + pad, card[2] - 2 * pad, card[3] - 2 * pad), items,
@@ -1272,13 +1298,17 @@ def _bp_section(k, slide, f, image):
     return rects
 
 
-@register("drafting", "image_text")
+@register("drafting", "image_text", alts=3)
 def _bp_image_text(k, slide, f, image):
+    """The dimensioned figure beside (or over) its words; for long copy the figure gives the words room (alt 1, 2) —
+    a 14-word title with a body and a caption was refused on the square sheet (the long-copy corpus, 2026-10-09)."""
     W, H, s, o = ctx(k)
     (cx, cy, cw, ch), _b = _bp_area(k)
     _bp_project(k, slide, f)
-    img = (cx, cy, cw * 0.56, ch) if o == "land" else (cx, cy, cw, ch * 0.50)
-    col = (cx + cw * 0.62, cy + 0.1 * ch, cw * 0.38, ch * 0.8) if o == "land" else (cx, cy + ch * 0.56, cw, ch * 0.44)
+    g = (0.0, 0.10, 0.18)[alt()]
+    img = (cx, cy, cw * (0.56 - g), ch) if o == "land" else (cx, cy, cw, ch * (0.50 - g))
+    col = ((cx + cw * (0.62 - g), cy + 0.1 * ch, cw * (0.38 + g), ch * 0.8) if o == "land"
+           else (cx, cy + ch * (0.56 - g), cw, ch * (0.44 + g)))
     items = [(x_, text_of(f, x_)) for x_ in ("kicker", "title", "body", "caption") if text_of(f, x_)]
     r, d = flow(k, slide, "image_text", col, items, anchor="middle" if o == "land" else "top")
     place_image(k, slide, image, img, "image_text")

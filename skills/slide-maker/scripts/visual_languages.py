@@ -1410,7 +1410,32 @@ def _deco_after(k, slide, page, lay, rects):
                            waves=5, line_w=2.5)
 
 
+def _yield_to_words(lay, f):
+    """The layout with its picture shrunk to `f` of its size along the line it shares with the text column — the
+    column takes the room — or None when the two are not side by side or stacked (a bleed, an overlap)."""
+    I, C = lay.get("image"), lay.get("col")
+    if not I or not C or lay["treat"] == "bleed":
+        return None
+    ix, iy, iw, ih = I
+    cx, cy, cw, ch = C
+    if cx + cw <= ix + 0.01:                       # words left of the picture
+        I2, C2 = (ix + iw * (1 - f), iy, iw * f, ih), (cx, cy, cw + iw * (1 - f), ch)
+    elif cx >= ix + iw - 0.01:                     # words right of it
+        I2, C2 = (ix, iy, iw * f, ih), (cx - iw * (1 - f), cy, cw + iw * (1 - f), ch)
+    elif cy >= iy + ih - 0.01:                     # words under it
+        I2, C2 = (ix, iy, iw, ih * f), (cx, cy - ih * (1 - f), cw, ch + ih * (1 - f))
+    elif cy + ch <= iy + 0.01:                     # words over it
+        I2, C2 = (ix, iy + ih * (1 - f), iw, ih * f), (cx, cy, cw, ch + ih * (1 - f))
+    else:
+        return None
+    return dict(lay, image=I2, col=C2)
+
+
 def _compose(k, slide, page, fields, image):
+    """Compose an image-led page; when its words do not fit beside the picture, the picture gives up room (80%, then
+    65% of its size) before the page refuses — a storybook cover refused an ordinary 14-word title on the 10in 16:9,
+    and every image-led cover a 30-character Chinese one on the square (the long-copy corpus, 2026-10-09)."""
+    import vl_native
     W, H = _canvas(k)
     orient = "land" if W >= H * 1.2 else "port"
     lay = LAYOUTS[k.name][page][orient]
@@ -1423,6 +1448,22 @@ def _compose(k, slide, page, fields, image):
                 lay = LAYOUTS[k.name][page][orient + "_tall"]
         except Exception:
             pass                                   # an unresolvable image is refused where it is placed, as before
+    variants = [lay] + ([v for v in (_yield_to_words(lay, 0.8), _yield_to_words(lay, 0.65)) if v]
+                        if image is not None else [])
+    n0, state, last = len(slide.shapes), dict(k.__dict__), None
+    for v in variants:
+        try:
+            return _compose_one(k, slide, page, fields, image, v)
+        except VLTextOverflow as e:
+            last = e
+            vl_native._unbuild(slide, n0)
+            k.__dict__.clear(); k.__dict__.update(state)
+    raise last
+
+
+def _compose_one(k, slide, page, fields, image, lay):
+    W, H = _canvas(k)
+    orient = "land" if W >= H * 1.2 else "port"
     n0 = len(slide.shapes)
     index = len(k.prs.slides)
     items = [(f, str(fields[f]).strip()) for f in PAGE_FIELDS[page]
@@ -1501,6 +1542,18 @@ def _compose(k, slide, page, fields, image):
 
 def _page(page):
     def fn(self, slide, *, image=None, **fields):
+        # words are words: a list was str()'d onto the slide as "['Bring it', 'broken']" and a float as
+        # 0.30000000000000004 (robustness audit, 2026-10-09) — a whole number is shown as written, anything else refused
+        fields = dict(fields)
+        for f_, v in list(fields.items()):
+            if f_ not in PAGE_FIELDS[page] or f_ == "items" or v is None or isinstance(v, str):
+                continue
+            if f_ == "number" and isinstance(v, int) and not isinstance(v, bool):
+                fields[f_] = str(v)
+                continue
+            raise ValueError("{}.{}(): {}= takes text, got {} {!r} — pass the words exactly as they should read{}".format(
+                self.name, page, f_, type(v).__name__, v,
+                " (a number as written, e.g. '0.3' or '98.6%')" if isinstance(v, float) else ""))
         extras = {e for e in NATIVE_EXTRAS.get(self.name, ()) if page in EXTRA_PAGES.get(e, (page,))}
         bad = set(fields) - set(PAGE_FIELDS[page]) - ({"line"} if page == "closing" else set()) - extras
         if bad:
@@ -1598,7 +1651,7 @@ def _points_led(k, slide, fields, image):
     P = k.P
     m = (0.07 if land else 0.08) * W
     top, bottom = 0.08 * H, H - max(0.55 * s, 0.07 * H)
-    def attempt(frac):
+    def attempt(frac, hfrac):
         img_rect = None
         if image is not None:
             lay = dict(LAYOUTS[k.name]["image_text"]["land" if land else "port"], deco=())
@@ -1612,7 +1665,7 @@ def _points_led(k, slide, fields, image):
         else:
             x0, w0, head_top = m, W - 2 * m, top
         head = v2.fields(fields, ("kicker", "title"), ())
-        hh = (0.30 if land else 0.24) * H
+        hh = hfrac * H
         hr, hd = v2.flow(k, slide, "points", (x0, head_top, w0, hh), head, anchor="top") if head else ({}, (lambda: None))
         y0 = (max(v[1] + v[3] for v in hr.values()) if hr else head_top) + 0.35 * s
         area = (x0, y0, w0, bottom - y0)
@@ -1627,23 +1680,41 @@ def _points_led(k, slide, fields, image):
             cw = (area[2] - gap * (cols - 1)) / cols
             return [(area[0] + (i % cols) * (cw + gap), y + (i // cols) * (ch + gap), cw, ch) for i in range(n)]
 
-        def plan_at(grid):
-            specs = []
+        def plan_at(grid, inline=False, tight=False):
+            """[(rects, draw)] per point. inline: the number in a gutter beside the head instead of a line above it — one
+            line less per point, which four two-line points on a square page needed (the long-copy corpus)."""
+            specs, nums = [], []
+            pd = pad * (0.6 if tight else 1.0)           # last resort: a narrower margin inside each note or panel
             for i, ((hd_, ln_), c) in enumerate(zip(pts, grid)):
-                inner = (c[0] + pad, c[1] + pad + lift, c[2] - 2 * pad, c[3] - 2 * pad - lift)
-                its = ([] if k.name == "storybook" else [("item_no", "{:02d}".format(i + 1))]) + [("item_head", hd_)] + (
-                    [("item_line", ln_)] if ln_ else [])
+                inner = (c[0] + pd, c[1] + pd + lift, c[2] - 2 * pd, c[3] - 2 * pd - lift)
+                no = [] if k.name == "storybook" else [("item_no", "{:02d}".format(i + 1))]
+                if inline and no:
+                    gw = 0.62 * s
+                    nums.append(((inner[0], inner[1], gw, inner[3]), no, dict(anchor="top", start=dict(big))))
+                    inner, no = (inner[0] + gw, inner[1], inner[2] - gw, inner[3]), []
+                its = no + [("item_head", hd_)] + ([("item_line", ln_)] if ln_ else [])
                 if k.name == "storybook":
                     inner = (inner[0] + 0.42 * s, inner[1], inner[2] - 0.42 * s, inner[3])
                 specs.append((inner, its, dict(anchor="top", start=dict(big))))
-            return v2.plan_together(k, slide, "points", specs)
+            words = v2.plan_together(k, slide, "points", specs)
+            if not nums:
+                return words
+            out = []
+            for (nr, nd), (wr, wd) in zip(v2.plan_together(k, slide, "points", nums), words):
+                def both(nd=nd, wd=wd):
+                    nd(); wd()
+                both.sizes = getattr(wd, "sizes", {})
+                out.append((dict(nr, **wr), both))
+            return out
         orders = ([n, 2, 1] if land and image is None else [1, 2]) if n > 2 else ([2, 1] if land and image is None else [1, 2])
         last, fits = None, []
-        for rank, cols in enumerate(dict.fromkeys(orders)):
+        tries = ([(c_, False, False) for c_ in dict.fromkeys(orders)] + [(c_, True, False) for c_ in dict.fromkeys(orders)]
+                 + ([(c_, True, True) for c_ in dict.fromkeys(orders)] if pad else []))
+        for rank, (cols, inline, tight) in enumerate(tries):
             rows = -(-n // cols)
             grid = cells(cols, area[1], (area[3] - gap * (rows - 1)) / rows)
             try:
-                planned = plan_at(grid)
+                planned = plan_at(grid, inline, tight)
             except VLTextOverflow as e:
                 last = e
                 continue
@@ -1652,7 +1723,7 @@ def _points_led(k, slide, fields, image):
             block = rows * need + (rows - 1) * gap
             grid = cells(cols, area[1] + max(0.0, area[3] - block) * 0.4, need)
             try:
-                planned = plan_at(grid)
+                planned = plan_at(grid, inline, tight)
             except VLTextOverflow as e:
                 last = e
                 continue
@@ -1667,15 +1738,19 @@ def _points_led(k, slide, fields, image):
 
     # the caller's picture is never dropped for room: on a portrait page it gives up height first (28% → 21% → 15%),
     # a landscape one width (36% → 30%) — three points beside a photo on 3:4 were refused at the first size (2026-10-09)
-    last_ = None
+    last_, done = None, None
     for frac in ((0.36, 0.30) if land else (0.28, 0.21, 0.15)) if image is not None else (None,):
-        try:
-            img_rect, lay, hr, hd, grid, planned = attempt(frac)
+        for hfrac in ((0.30, 0.40) if land else (0.24, 0.34)):     # a long title gets more room (as the drawn ones)
+            try:
+                done = attempt(frac, hfrac)
+                break
+            except VLTextOverflow as e:
+                last_ = e
+        if done:
             break
-        except VLTextOverflow as e:
-            last_ = e
-    else:
+    if not done:
         raise last_
+    img_rect, lay, hr, hd, grid, planned = done
     art = []
     if img_rect is not None:
         _place_image(k, slide, image, img_rect, lay, "points")

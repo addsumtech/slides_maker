@@ -988,8 +988,10 @@ def _jn_points(k, slide, f, image):
     pts = points_of(f.get("items"))
     n = len(pts)
     mg = text_of(f, "margin")
-    r, d = flow(k, slide, "points", (0.07 * W, top, 0.86 * W, (0.18 if alt() == 0 else 0.32) * H),
-                fields(f, ("kicker", "title"), ("kicker",)))   # long copy: the title gets more room
+    # long copy: the title gets more room. 0.18H refused a kicker over a one-line Japanese title by 0.03in, and the
+    # fallbacks (margin under the list) then had no room for three points (the non-Claude agent run, 2026-10-09)
+    r, d = flow(k, slide, "points", (0.07 * W, top, 0.86 * W, (0.22 if alt() == 0 else 0.32) * H),
+                fields(f, ("kicker", "title"), ("kicker",)))
     rects, draws, art = dict(r), [d], []
     ty = max((v[1] + v[3] for v in r.values()), default=top) + 0.35 * s
     bottom, list_bottom = H - 0.6, H - 0.6
@@ -1000,9 +1002,12 @@ def _jn_points(k, slide, f, image):
             mx = 0.07 * W + lw + 0.5 * s
             mcol = (mx + 0.2 * s, ty, 0.93 * W - mx - 0.2 * s, bottom - ty)
             art.append(lambda: na.seg(slide, mx, ty, mx, bottom, k.P["text_accents"][0], w=0.75))
-        else:
-            mh = 1.3 * s
-            mcol = (0.07 * W + 0.2 * s, bottom - mh, 0.86 * W - 0.2 * s, mh)
+        else:                          # under the list: as tall as the note needs, up to 1.3in — not always 1.3in
+            mw = 0.86 * W - 0.2 * s
+            _m0, _d0 = flow(k, slide, "points", (0.07 * W + 0.2 * s, 0.0, mw, 1.3 * s),
+                            [("margin_h", caps(label("note", mg, k=k, f=f))), ("margin", mg)], anchor="top")
+            mh = min(1.3 * s, max(v[1] + v[3] for v in _m0.values()) + 0.05 * s)
+            mcol = (0.07 * W + 0.2 * s, bottom - mh, mw, mh)
             art.append(lambda: na.seg(slide, 0.07 * W, bottom - mh, 0.07 * W, bottom, k.P["text_accents"][0], w=0.75))
             list_bottom = bottom - mh - 0.3 * s
         _mr, md = flow(k, slide, "points", mcol, [("margin_h", caps(label("note", mg, k=k, f=f))), ("margin", mg)], anchor="top")

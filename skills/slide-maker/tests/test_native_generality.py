@@ -45,8 +45,13 @@ COPY = {
 }
 EXTRA = {"ink": {"seal": "茶"}, "poster": {}, "cutpaper": {}, "drafting": {"project": "Repair network, phase 1"}}
 
-for name in vl.NATIVE:
+# every language — the four image-led ones too, with their pictures: they were only ever tested with a 7-word title and
+# a storybook cover refused ordinary Chinese on the 10in 16:9 (audit, 2026-10-09)
+PIC = str(vl.ASSETS / "photo" / "hall-repair.jpg")
+PAINT = str(vl.ASSETS / "watercolour" / "rooftop-garden.jpg")
+for name in vl.LANGS:
     grounds = list(vl.VARIANTS[name])
+    img = PAINT if name == "storybook" else PIC
     for ci, (cname, (W, H)) in enumerate(CANVASES.items()):
         for lang, T in COPY.items():
             g = grounds[(ci + len(lang)) % len(grounds)]            # every ground meets every canvas somewhere
@@ -54,12 +59,14 @@ for name in vl.NATIVE:
             prs = dk.blank_deck(W, H)
             with contextlib.redirect_stdout(io.StringIO()):
                 k = vl.use(name, prs, ground=g)
-            pages = [("cover", dict(kicker=T["kicker"], title=T["title"], subtitle=T["subtitle"])),
+            led = dict(image=img) if name in vl.IMAGE_LED else {}
+            pages = [("cover", dict(kicker=T["kicker"], title=T["title"], subtitle=T["subtitle"], **led)),
                      ("section", dict(number="02", kicker=T["kicker"], title=T["title"])),
+                     ("image_text", dict(kicker=T["kicker"], title=T["title"], body=T["subtitle"], caption=T["note"], image=img)),
                      ("points", dict(kicker=T["kicker"], title=T["title"], items=T["items"])),
                      ("quote", dict(quote=T["quote"], attribution=T["attribution"])),
                      ("data", dict(number=T["number"], label=T["label"], note=T["note"])),
-                     ("closing", dict(title=T["title"], line=T["line"]))]
+                     ("closing", dict(title=T["title"], line=T["line"], **led))]
             built = 0
             for page, fields in pages:
                 ex = dict(EXTRA.get(name, {}))

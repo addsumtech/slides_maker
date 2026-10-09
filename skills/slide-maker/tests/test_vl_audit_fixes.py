@@ -423,6 +423,68 @@ for name in vl.IMAGE_LED:
                     if im:
                         check(any(sh.shape_type == 13 for sh in s.shapes), "{}: the picture is placed".format(tag))
 
+# ── C4: what a caller passes is either used as given or refused by name — never str()'d or half-dropped ──
+# title=["Bring it", "broken"] shipped the literal "['Bring it', 'broken']"; number=0.1+0.2 shipped 0.30000000000000004;
+# a point given as a 3-tuple or a dict with a third key silently lost it; a dict keyed title/text was refused as "an
+# empty one" (robustness audit, 2026-10-09)
+for name in vl.LANGS:
+    prs, k = use(name)
+    for page, kw, field in (("cover", dict(title=["Bring it", "broken"]), "title"), ("data", dict(number=0.1 + 0.2, label="l"), "number"),
+                            ("quote", dict(quote="Q", attribution=("A", "B")), "attribution")):
+        try:
+            getattr(k, page)(k.new_slide(), **kw)
+            check(False, "{} {}: a non-text {}= is refused".format(name, page, field))
+        except (ValueError, TypeError) as e:
+            check(field in str(e), "{} {}: a non-text {}= is refused by name ({})".format(name, page, field, str(e)[:70]))
+    s = k.new_slide(); k.data(s, number=12, label="evenings a month")
+    check(any(sh.text_frame.text.strip() == "12" for sh in texts(s)) or (name == "collage" and any(sh.shape_type == 13 for sh in s.shapes)),
+          "{} data: a whole number is shown as written".format(name))
+    for items, why in (([("Bring it", "Anything.", "extra"), ("Fix it", "Together.")], "a 3-tuple"),
+                       ([{"title": "Bring it", "text": "Anything."}, {"head": "Fix it"}], "a dict with other keys")):
+        kw = dict(title="How", items=items)
+        if name in ("tally", "broadsheet"):
+            kw["tags"] = ["A", "B"]
+        try:
+            k.points(k.new_slide(), **kw)
+            check(False, "{} points: {} is refused".format(name, why))
+        except ValueError as e:
+            check("head" in str(e) and "line" in str(e), "{} points: {} is refused naming head and line ({})".format(name, why, str(e)[:80]))
+# journal: a margin note on 4:3 with three Japanese points (refused "shorten the copy", which did not help: the margin took
+# the room, not the words — the non-Claude agent run)
+JA = [("同じデータ", "三つの手法に同じ撮像データを与える。"), ("同じ指標", "誤差は一つの指標で測り、変えない。"), ("同じ条件", "加速率は四段階で揃える。")]
+for W, H in ((10.0, 7.5), (7.5, 7.5), (10.0, 5.625)):
+    prs, k = use("journal", W, H)
+    try:
+        k.points(k.new_slide(), kicker="実験の設計", title="三つの手法を、同じ条件で比べる", items=JA, margin="指標の具体的な定義は、次回までに決める。")
+        check(True, "journal {}x{}: three points and a margin note fit".format(W, H))
+    except vl.VLTextOverflow as e:
+        check(False, "journal {}x{}: three points and a margin note fit ({})".format(W, H, str(e)[:100]))
+
+# ── C3: cutpaper's words stay above its front hills ──
+# on 3:4 a long section title's last line sat on the green hill (audit sweep, 2026-10-09): the column ran to 0.86H, the
+# crest rises to 0.78H
+LONGT = {"en": "Why every street deserves a place to fix what it already owns, not throw away",
+         "zh": "为什么每条街道都值得拥有一个修理自己物品的地方，而不是随手扔掉"}
+for W, H in ((7.5, 10.0), (5.625, 10.0), (10.0, 5.625), (13.333, 7.5), (7.5, 7.5)):
+    for lang in ("en", "zh"):
+        for page in ("section", "closing"):
+            prs, k = use("cutpaper", W, H)
+            s = k.new_slide()
+            kw = dict(number="02", kicker="Annual review", title=LONGT[lang]) if page == "section" else dict(title=LONGT[lang], line="Bring a neighbour.")
+            getattr(k, page)(s, **kw)
+            hills, shs = [], list(s.shapes)
+            cards = [i for i, sh in enumerate(shs) if "paper card" in (sh.name or "")]
+            for i, sh in enumerate(shs):      # only the hills IN FRONT: back hills sit behind the card the words are on
+                if "hill" in (sh.name or "") and (not cards or i > max(cards)):
+                    hills += _ld._cust_polys(sh, sh.left / EMU, sh.top / EMU, sh.width / EMU, sh.height / EMU) or []
+            hit = []
+            for sh in texts(s):
+                x, y, w, h = sh.left / EMU, sh.top / EMU, sh.width / EMU, sh.height / EMU
+                for px in (x + 0.1, x + w / 2, x + w - 0.1):
+                    if hills and _ld._in_polys(hills, px, y + h - 0.02):
+                        hit.append(sh.text_frame.text[:16])
+            check(hills and not hit, "cutpaper {} {}x{} {}: the words stay above the hills ({})".format(page, W, H, lang, hit[:2]))
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:
