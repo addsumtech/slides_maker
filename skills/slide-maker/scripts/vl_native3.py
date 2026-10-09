@@ -752,9 +752,15 @@ def _wf_points(k, slide, f, image):
             rects.update(rr)
         return rects
     x = x0 + 0.3 * s
-    ys = [tb + 0.6 * s + i * (H - 0.8 * s - tb - 0.6 * s) / (n - 1) for i in range(n)]
-    specs = [((x + 0.6 * s, yy - 0.5 * s, w0 - 0.9 * s, 1.0 * s), [("item_head", h)] + ([("item_line", l)] if l else []),
-              {"anchor": "middle"}) for yy, (h, l) in zip(ys, pts)]
+    ys = [tb + 0.6 * s + i * (H - 1.4 * s - tb - 0.6 * s) / (n - 1) for i in range(n)]   # the last label needs room too
+    # each label starts level with its station and may use the track down to the next one (a fixed 1.0in box shrank
+    # short heads to 14pt beside 3in of empty track); the last one may run to the page foot
+    specs = []
+    for i, (yy, (h, l)) in enumerate(zip(ys, pts)):
+        top = yy - 0.18 * s
+        foot = (ys[i + 1] - sd / 2.0 - 0.12 * s) if i + 1 < n else H - 0.3 * s
+        specs.append(((x + 0.6 * s, top, w0 - 0.9 * s, foot - top), [("item_head", h)] + ([("item_line", l)] if l else []),
+                      {"anchor": "top"}))
     planned = plan_together(k, slide, "points", specs)
     na.route(slide, [(x, tb + 0.2 * s), (x, H)], colour, w=lw)
     for i, yy in enumerate(ys):

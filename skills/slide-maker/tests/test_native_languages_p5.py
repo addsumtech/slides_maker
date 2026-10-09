@@ -406,6 +406,29 @@ for g in ("light", "dark"):
             why = "no info glyph found"
         check(ok_pair, "interface {} {}x{}: the data note's info glyph reads on its disc ({})".format(g, cw, chh, why))
 
+# a portrait strip map gives each stop the track down to the next one: short stop labels keep their own size (a fixed
+# 1.0in box per stop shrank "Share the tools" to 14pt beside 3in of empty track), each label starts at its station,
+# and none reaches into the title sign or past the next station
+for cw, chh in ((7.5, 10.0), (7.5, 7.5)):
+    for its in ([("Share the tools", "One bench, many hands"), ("Open the door", "Walk in"), ("Keep it local", "Walk")],
+                [("Sign up", "Two minutes"), ("First project", "From a template"), ("Invite a teammate", "Or two"),
+                 ("Upgrade", "When it pays")]):
+        dkp = dk.blank_deck(cw, chh)
+        kp = vl.use("wayfinding", dkp)
+        slp = kp.new_slide()
+        kp.points(slp, title="The route", ordered=True, items=its)
+        E = 914400.0
+        heads = [sh for sh in slp.shapes if sh.top >= 0 and sh.has_text_frame and sh.text_frame.text.strip() in [h for h, _l in its]]
+        sizes = [sh.text_frame.paragraphs[0].runs[0].font.size.pt for sh in heads]
+        want = vl.TYPE["wayfinding"]["item_head"][0] * min(cw, chh) / 7.5 * 0.9
+        check(len(heads) == len(its) and min(sizes) >= want,
+              "wayfinding portrait strip map {}x{}: stop heads keep their size ({} >= {:.1f}pt)".format(cw, chh, sizes, want))
+        band = [sh for sh in slp.shapes if sh.shape_type == 1 and abs(sh.top / E - 0.07 * chh) < 0.02 and sh.width / E > 0.5 * cw]
+        check(bool(band), "wayfinding portrait strip map {}x{}: found the title sign".format(cw, chh))
+        if band and heads:
+            check(min(h.top for h in heads) >= band[0].top + band[0].height,
+                  "wayfinding portrait strip map {}x{}: no stop label reaches into the title sign".format(cw, chh))
+
 # the strip map's title sits balanced in its sign band (the band hugs it), not floated low in the box it was planned in
 for title in ("Four stops", "Four stops to a paying customer, one at a time"):
     dkw = dk.blank_deck()
