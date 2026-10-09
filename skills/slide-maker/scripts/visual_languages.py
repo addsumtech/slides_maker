@@ -1052,9 +1052,9 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=Non
     # copy that cannot fit even at the floor sizes is refused at once, with the same numbers — the shrink loop below
     # measured an overlong title up to 200 times first (a refusal took ~20s a page, the audit's test, 2026-10-09)
     _start = dict(sizes)
-    sizes.update(floors)
-    _at_floor = total()
-    sizes.update(_start)
+    sizes.update({f_: min(sizes[f_], floors[f_]) for f_ in sizes})   # the smallest the loop can reach: a field that
+    _at_floor = total()                                                # STARTS under its floor (cutpaper's disc
+    sizes.update(_start)                                               # numbers) is never grown to it
     if _at_floor > h + 0.02:
         worst = max(items, key=lambda it: _field_height(k, it[0], it[1], floors[it[0]], w))
         raise VLTextOverflow("{}.{}(): all fields together need {:.2f}in at their floor sizes but the column is "
