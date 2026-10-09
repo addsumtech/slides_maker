@@ -1060,9 +1060,11 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=Non
     def total():
         return sum(fheight(f, t, sizes[f], widths[f]) + gaps[f] for f, t in items)
     for f, t in items:
-        while sizes[f] > floors[f] and not _widest_word_fits(k, f, t, sizes[f], w):
+        # ONE word is never re-wrapped, so it is held to the full column; the headroom is for where lines break
+        # ("1,250,000" at its floor was refused on a square board under Linux's wider faces, 2026-10-09)
+        while sizes[f] > floors[f] and not _widest_word_fits(k, f, t, sizes[f], w_col):
             sizes[f] = max(floors[f], sizes[f] * 0.94)
-        bad = _unbreakable_overwide(k, f, t, sizes[f], w) if not (f == "number" and _outlinable(k, t)) else None
+        bad = _unbreakable_overwide(k, f, t, sizes[f], w_col) if not (f == "number" and _outlinable(k, t)) else None
         if bad:                           # it would break mid-word and run into the next field (final review)
             raise VLTextOverflow("{}.{}(): the {}'s word {!r} is wider than the {:.2f}in column even at the floor size "
                                  "{:.0f}pt — shorten it, or break it with a space".format(k.name, page, f, bad, w_col, sizes[f]))

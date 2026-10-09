@@ -834,12 +834,12 @@ def _poster_section(k, slide, f, image):
     return rects
 
 
-@register("poster", "image_text", alts=3)
+@register("poster", "image_text", alts=4)
 def _poster_image_text(k, slide, f, image):
     """The picture beside (or over) the headline; for long copy (alt 1) the picture gives the words room — a 14-word
     title with a body and a caption was refused on 4:3, square and A4 (the long-copy corpus, 2026-10-09)."""
     W, H, s, o = ctx(k)
-    g = (0.0, 0.10, 0.18)[alt()]           # the picture gives the words room, a little then more
+    g = (0.0, 0.10, 0.18, 0.26)[alt()]     # the picture gives the words room, a little then more
     img = (0.52 * W + g * W, 0.12 * H, (0.44 - g) * W, 0.76 * H) if o == "land" else (0.06 * W, 0.08 * H, 0.88 * W, (0.42 - g) * H)
     col = (0.05 * W, 0.14 * H, (0.42 + g) * W, 0.72 * H) if o == "land" else (0.06 * W, (0.54 - g) * H, 0.88 * W, (0.38 + g) * H)
     items = [(x_, text_of(f, x_)) for x_ in ("title", "body", "caption") if text_of(f, x_)]

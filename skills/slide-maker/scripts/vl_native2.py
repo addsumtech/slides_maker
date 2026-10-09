@@ -683,7 +683,7 @@ def _bs_section(k, slide, f, image):
     return rects
 
 
-@register("broadsheet", "image_text", alts=2)
+@register("broadsheet", "image_text", alts=3)
 def _bs_image_text(k, slide, f, image):
     """A news photograph with its caption under a hairline; the story's headline and body beside it (under it in
     portrait). Long copy: the words get more of the page — on a square board the story moves beside the photo."""
@@ -692,8 +692,8 @@ def _bs_image_text(k, slide, f, image):
     bottom = H - 0.6
     cap = text_of(f, "caption")
     rects, draws, art = {}, [], []
-    if o == "land" or (alt() == 1 and W >= 0.8 * H):
-        img_x, img_w = 0.05 * W, (0.58 if alt() == 0 else 0.46) * W
+    if o == "land" or (alt() >= 1 and W >= 0.8 * H):
+        img_x, img_w = 0.05 * W, (0.58, 0.46, 0.36)[alt()] * W
         cx0 = img_x + img_w + 0.35 * s
         col = (cx0, top, 0.95 * W - cx0, bottom - top)
         img_y1 = bottom
@@ -702,7 +702,7 @@ def _bs_image_text(k, slide, f, image):
             img_y1 = cr_["caption"][1] - 0.22 * s
     else:
         img_x, img_w = 0.05 * W, 0.90 * W
-        img_y1 = top + (0.42 if alt() == 0 else 0.34) * H
+        img_y1 = top + (0.42, 0.34, 0.26)[alt()] * H
         if cap:
             cr_, cd = flow(k, slide, "image_text", (img_x, img_y1 + 0.22 * s, img_w, 0.6 * s), [("caption", cap)], anchor="top")
         cy0 = (max(v[1] + v[3] for v in cr_.values()) if cap else img_y1) + 0.3 * s
