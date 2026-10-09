@@ -267,6 +267,79 @@ for name in ("ink", "storybook"):
         lum = (0.299 * core[..., 0] + 0.587 * core[..., 1] + 0.114 * core[..., 2]).mean()
         check(lum >= 0.55 * src_mean, "{} {}: the photo keeps its light ({:.0f} of the source's {:.0f})".format(name, ground, lum, src_mean))
 
+# ── B4: the palette --gates prints is one the register-pixels gate can find on the pages ──
+# it declared the TEXT accents (a kicker's red, a hairline's gold): broadsheet, soft dusk, ink night and cutpaper night
+# failed DECLARED HUES ABSENT on the bundled samples themselves (docs audit, 2026-10-09). The hues a language really
+# paints are measured on its rendered sample pages (assets/vl/samples/hues.json, written by --sample-sheet).
+import json as _json
+import check_register_pixels as crp
+HF = vl.ASSETS / "samples" / "hues.json"
+hues = _json.loads(HF.read_text(encoding="utf-8")) if HF.exists() else {}
+for name in vl.LANGS:
+    for g in vl.VARIANTS[name]:
+        stem = vl._sample_stem(name, g)
+        P = vl.VARIANTS[name][g]["palette"]
+        mine = {c.upper() for c in list(P["accents"]) + list(P["text_accents"]) + [P["ground"], P["ink"]]}
+        rec = hues.get(stem)
+        check(isinstance(rec, list) and all(h.lstrip("#").upper() in mine for h in rec),
+              "{}: its painted hues are recorded from its sample pages, each one of its palette ({})".format(stem, rec))
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            vl._print_gates(name, str(td / "gates_{}".format(stem)), "a topic", "both", ground=g)
+        line = [l_ for l_ in buf.getvalue().splitlines() if "design_plan.palette" in l_]
+        got = {h.upper() for h in re.findall(r"#([0-9A-Fa-f]{6})", line[0])} if line else set()
+        want = {P["ground"].upper(), P["ink"].upper()} | {h.lstrip("#").upper() for h in (rec or [])}
+        check(got == want, "{}: --gates declares the ground, the ink and the hues it paints ({} vs {})".format(stem, sorted(got), sorted(want)))
+
+# ── B1: the screen readers' title, parked off the page, is not text in a platform's safe zone ──
+# every visual-language page on 小红书 3:4 / 9:16 failed SAFE ZONE "text sits -1.00in from the top" — the a11y title
+# (non-Claude agent run, 2026-10-09)
+import check_surface as csf
+for name in vl.LANGS:
+    for fmtname, (W, H) in (("red", (7.5, 10.0)), ("story", (5.625, 10.0))):
+        prs, k = use(name, W, H)
+        k.cover(k.new_slide(), kicker="A repair café", title="Bring it broken, take it home working", subtitle="How it works",
+                image=img_for(name) if name in vl.IMAGE_LED else None)
+        k.closing(k.new_slide(), title="See you next week", line="Bring a neighbour.",
+                  image=img_for(name) if name in vl.IMAGE_LED else None)
+        path = td / "safe_{}_{}.pptx".format(name, fmtname)
+        prs.save(str(path))
+        with contextlib.redirect_stdout(io.StringIO()):
+            res = csf.check(str(path), fmtname)
+        found = res[0] if isinstance(res, tuple) else res
+        off = [x for x in found if x[0] == "SAFE ZONE" and "-1.00in" in x[1]]
+        check(not off, "{} {}: the off-page a11y title is not SAFE ZONE text ({})".format(name, fmtname, [x[1][:60] for x in off[:1]]))
+
+# ── B2: a deck of a language's own pages is clean under the delivery lint (lint_deck) ──
+# the kit's own furniture failed it: soft's blob behind the photo, ink's sun over a ridge, cutpaper's cards tucked into
+# the hills, chalkboard's doodle (OVERLAP), ink's figure inside its ensō (INVISIBLE TEXT: the ring's bounding box read as
+# the figure's backing) — an agent told "fix every finding" could not (both audits, 2026-10-09)
+import lint_deck as _ld
+DX = {"tally": {"points": {"tags": ["A", "B", "C"]}, "data": {"total": "20"}}, "broadsheet": {"points": {"tags": ["A", "B", "C"]}},
+      "chalkboard": {"cover": {"doodle": "lucide:wrench"}, "closing": {"doodle": "lucide:wrench"}, "points": {"ordered": True}},
+      "ink": {"cover": {"seal": "修"}}}
+for name in vl.LANGS:
+    for W, H in ((13.333, 7.5), (7.5, 10.0)):
+        for ground in vl.VARIANTS[name]:
+            prs, k = use(name, W, H, ground)
+            for page, kw in FULL:
+                if page == "points" and name in vl.IMAGE_LED and not getattr(vl, "IMAGE_LED_POINTS", False):
+                    continue
+                kw = dict(kw, **DX.get(name, {}).get(page, {}))
+                if page in ("points",) and name in ("tally", "broadsheet"):
+                    kw["items"] = kw["items"][:3] + [("Take it home", "Or put it on the list.")][:max(0, len(kw["tags"]) - len(kw["items"]))]
+                if page == "image_text" or (name in vl.IMAGE_LED and page in ("cover", "closing")):
+                    kw["image"] = img_for(name)
+                getattr(k, page)(k.new_slide(), **kw)
+            path = td / "lint_{}_{}_{}.pptx".format(name, ground, int(W))
+            prs.save(str(path))
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(io.StringIO()):
+                hard = _ld.lint(str(path), static_ok=True)
+            why = [l_.strip()[:110] for l_ in buf.getvalue().splitlines()
+                   if re.match(r"\s+slide \d+: [A-Z]", l_) and "[warn]" not in l_ and "[stats]" not in l_]
+            check(hard == 0, "{} {} {}x{}: a deck of its own pages has no hard lint finding ({})".format(name, ground, W, H, why[:2]))
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

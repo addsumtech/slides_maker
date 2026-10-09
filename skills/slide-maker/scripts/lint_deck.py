@@ -452,6 +452,7 @@ def _boxes(slide, sw, sh, slide_no=None, record=True):
         except Exception:
             tph = False
         out.append({"l": l, "t": t, "w": w, "h": h, "zi": zi,
+                    "cpoly": _cust_polys(s, l, t, w, h) if not _rot else None,
                     "r": l + w if _pr is None else _pr, "b": t + h if _pb is None else _pb,
                     "rot": _rot, "fl": _fl, "ft": _ft, "fw": _fw, "fh": _fh, "poly": poly,
                     "runs": run_colors, "run_hl": run_hl, "run_fmt": run_fmt, "fill": fill_rgb, "unk": fill_unk, "pic": is_pic, "grad": is_grad,
@@ -1454,6 +1455,55 @@ def _chrome_under(chrome, t):
     return best
 
 
+def _cust_polys(sh, l, t, w, h):
+    """The filled outline(s) of a custom-geometry shape in slide inches — [[(x, y), ...], ...] — or None for any other
+    shape. Bezier control points stand in for their curve; good enough to tell a ring's hole from its paint."""
+    try:
+        el = sh._element
+        A = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
+        paths = el.findall(".//" + A + "custGeom/" + A + "pathLst/" + A + "path")
+        if not paths or not w or not h:
+            return None
+        polys = []
+        for path in paths:
+            pw, ph = float(path.get("w") or 0), float(path.get("h") or 0)
+            if pw <= 0 or ph <= 0:
+                return None
+            cur = []
+            for cmd in path:
+                tag = cmd.tag.split("}")[-1]
+                pts = [(l + float(p_.get("x")) / pw * w, t + float(p_.get("y")) / ph * h) for p_ in cmd.findall(A + "pt")]
+                if tag == "moveTo":
+                    if len(cur) > 2:
+                        polys.append(cur)
+                    cur = list(pts)
+                elif tag in ("lnTo", "cubicBezTo", "quadBezTo"):
+                    cur += pts
+                elif tag == "close":
+                    if len(cur) > 2:
+                        polys.append(cur)
+                    cur = []
+                elif tag == "arcTo":
+                    return None                        # not modelled here: keep the bounding-box reading
+            if len(cur) > 2:
+                polys.append(cur)
+        return polys or None
+    except Exception:
+        return None
+
+
+def _in_polys(polys, x, y):
+    """Even-odd: is (x, y) inside the painted area of these outlines (a ring's hole is outside)."""
+    inside = False
+    for poly in polys:
+        n = len(poly)
+        for i in range(n):
+            (x1, y1), (x2, y2) = poly[i], poly[(i + 1) % n]
+            if (y1 > y) != (y2 > y) and x < (x2 - x1) * (y - y1) / (y2 - y1 + 1e-12) + x1:
+                inside = not inside
+    return inside
+
+
 def _backing_fill(bx, ti, own=True, chrome=()):
     """The topmost solid fill under text shape bx[ti]: the shape's OWN fill if solid, else the
     highest lower-z shape whose box covers the text (center inside + >=50% overlap). A picture,
@@ -1480,6 +1530,8 @@ def _backing_fill(bx, ti, own=True, chrome=()):
         ix, iy = _inter(s, t)
         if ix * iy < 0.5 * ta:
             continue
+        if s.get("cpoly") and not _in_polys(s["cpoly"], cx, cy):
+            continue                                     # the text sits in the shape's hole (ink's ensō), not on its paint
         if s["pic"] or s.get("unk"):
             best, best_is_bg = "UNKNOWN", bool(s.get("bg"))
         elif s["fill"]:

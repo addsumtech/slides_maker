@@ -328,6 +328,9 @@ def paper_hill(slide, pts, bottom_y, *, fill, shadow=True):
     if shadow:
         soft_shadow(sh, blur=0.14, dist=0.05, alpha=0.22, direction=270.0)
     dk.decorative(sh, "a cut-paper hill: the language's ground")
+    # a diorama IS layered paper: hills over hills, over the sun, tucking the cards — the delivery lint's OVERLAP read
+    # every cutpaper cover, quote and closing as a collision the author could not clear (audits, 2026-10-09)
+    dk.overlap_intent(sh, "cut-paper hills layer over each other, the sun and the cards: the diorama is the overlap")
     return sh
 
 
@@ -335,6 +338,7 @@ def paper_card(slide, x, y, w, h, *, fill="FFFFFF", r=0.22, rotation=0.0):
     c = dk.box(slide, x, y, w, h, fill=hexstr(fill), round=True, r=r)
     if rotation:
         c.rotation = float(rotation)
+    dk.overlap_intent(c, "a paper card tucked among the paper hills, or stacked on its twin: layered by design")
     return soft_shadow(c, blur=0.16, dist=0.06, alpha=0.24)
 
 
@@ -351,6 +355,7 @@ def cloud(slide, cx, cy, w, *, fill="FFFFFF"):
     sh = _custom(slide, x0, y0, ww, hh, '<a:path w="{u}" h="{u}">{d}</a:path>'.format(u=U, d=d), fill=hexstr(fill))
     soft_shadow(sh, blur=0.08, dist=0.04, alpha=0.18)
     dk.decorative(sh, "a paper cloud: the cut-paper ground")
+    dk.overlap_intent(sh, "a paper cloud drifts over the hills and the sun: part of the layered diorama")
     return sh
 
 
@@ -359,6 +364,7 @@ def paper_sun(slide, cx, cy, diameters, colors):
     for d, col in zip(diameters, colors):
         sh = disc(slide, cx, cy, d, col, shadow=True)
         dk.decorative(sh, "a layered paper sun")
+        dk.overlap_intent(sh, "a layered paper sun: its discs stack and the hills pass in front of it")
         out.append(sh)
     return out
 

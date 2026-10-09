@@ -1405,7 +1405,7 @@ def _cb_cover(k, slide, f, image):
             foot = max(v[1] + v[3] for v in r.values())
             cx_, cy_ = 0.70 * W, min(foot + 0.4 * s + size / 2, H - 0.9 * s - size / 2)
         art.append(_cb_doodle(k, slide, dd, cx_, cy_, size))
-    _cb_smudges(k, slide, list(r.values()), seed=1)
+    _cb_smudges(k, slide, list(r.values()) + ([(cx_ - size / 2, cy_ - size / 2, size, size)] if dd else []), seed=1)
     _run_all(art + ds)
     return r
 
@@ -1659,6 +1659,6 @@ def _cb_closing(k, slide, f, image):
             foot = max(v[1] + v[3] for v in r.values())
             cx_, cy_ = 0.70 * W, min(foot + 0.4 * s + size / 2, H - 0.9 * s - size / 2)
         art.append(_cb_doodle(k, slide, dd, cx_, cy_, size))
-    _cb_smudges(k, slide, list(r.values()), seed=6)
+    _cb_smudges(k, slide, list(r.values()) + ([(cx_ - size / 2, cy_ - size / 2, size, size)] if dd else []), seed=6)
     _run_all(art + ds)
     return r

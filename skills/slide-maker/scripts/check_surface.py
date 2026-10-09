@@ -192,6 +192,9 @@ def check(pptx, format_name=None, waive_sections=None, extra_terms=None, renders
                 hei = (sh.height or 0) / EMU
             except TypeError:
                 top = left = wid = hei = 0.0
+            if wid > 0.02 and hei > 0.02 and (top + hei <= 0 or left + wid <= 0 or top >= H or left >= W):
+                continue        # wholly OFF the page — the screen readers' title (dk.a11y_title) parks there; nobody
+                #                 sees it, so it is not text in a safe zone (every VL page on 3:4 and 9:16, 2026-10-09)
             if wid > 0.02 and hei > 0.02 and not _is_ground(sh, W, H):
                 rects.append((left, top, wid, hei))
                 body = (sh.text_frame.text or "").strip() if getattr(sh, "has_text_frame", False) else ""

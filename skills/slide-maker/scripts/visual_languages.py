@@ -1376,8 +1376,9 @@ def _deco_before(k, slide, page, lay, img_rect, col, index):
     p = k.P
     if "blob" in lay["deco"] and img_rect and col is None:
         x, y, w, h = img_rect
-        _oval(slide, x - w * 0.10, y + h * 0.18, w * 0.62, w * 0.62, p["accents"][index % len(p["accents"])],
-              "a soft colour blob behind the picture; carries no information")
+        blob = _oval(slide, x - w * 0.10, y + h * 0.18, w * 0.62, w * 0.62, p["accents"][index % len(p["accents"])],
+                     "a soft colour blob behind the picture; carries no information")
+        dk.overlap_intent(blob, "a soft colour blob tucked behind the picture's frame: the overlap is the composition")
     if "card" in lay["deco"] and col and img_rect is None:
         cx, cy, cw, ch, _rot = _card_geom(lay, col)
         dk.box(slide, cx, cy, cw, ch, fill=_hex(p["panel"]), round=True, r=0.28)
@@ -1722,7 +1723,40 @@ def sample_sheet(render_dir, out_jpg, *, width=1400):
         rec = json.loads(man.read_text(encoding="utf-8")) if man.exists() else {}
         rec[stem] = sample_fingerprint(deck)
         man.write_text(json.dumps(dict(sorted(rec.items())), indent=1) + "\n", encoding="utf-8")
+    _record_hues(render_dir, Path(out_jpg).parent, stem)
     return out_jpg
+
+
+def _record_hues(render_dir, folder, stem):
+    """Measure which of the language's chromatic colours its rendered sample pages really PAINT (as the register-pixels
+    gate measures: the largest share on any one page) into <folder>/hues.json. --gates declares exactly these — the text
+    accents it declared before (a kicker's red, a hairline's gold) never reached the gate's floor, and broadsheet,
+    soft dusk, ink night and cutpaper night failed DECLARED HUES ABSENT on their own samples (docs audit, 2026-10-09)."""
+    import json
+    import check_register_pixels as crp
+    hit = [(n_, g_) for n_ in LANGS for g_ in VARIANTS[n_] if _sample_stem(n_, g_) == stem]
+    if not hit:
+        return None
+    P = VARIANTS[hit[0][0]][hit[0][1]]["palette"]
+    cands = [c.upper() for c in dict.fromkeys(list(P["accents"]) + list(P["text_accents"])) if crp._chromatic(_rgb(c))]
+    pngs = sorted(str(q) for q in Path(render_dir).glob("slide*.png"))
+    seen = crp.presence(pngs, [_rgb(c) for c in cands]) if pngs else {}
+    got = ["#" + c for c in cands if seen.get(_rgb(c), 0) >= crp.PRESENT]
+    hf = Path(folder) / "hues.json"
+    rec = json.loads(hf.read_text(encoding="utf-8")) if hf.exists() else {}
+    rec[stem] = got
+    hf.write_text(json.dumps(dict(sorted(rec.items())), indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    return got
+
+
+def painted_hues(name, ground):
+    """The hues `name` paints on `ground`, as measured on its sample pages (hues.json), or None when not recorded."""
+    import json
+    hf = ASSETS / "samples" / "hues.json"
+    try:
+        return json.loads(hf.read_text(encoding="utf-8")).get(_sample_stem(name, ground))
+    except Exception:
+        return None
 
 
 _DISPLAY_NAMES = {"editorial": "Editorial magazine", "soft": "Soft organic", "collage": "Collage scrapbook",
@@ -1803,7 +1837,12 @@ def _print_gates(name, deck, topic, fonts, ground="light"):
               file=sys.stderr)
         return 2
     p = VARIANTS[name][ground]["palette"]
-    pal = "ground #{} ink #{} accents {}".format(p["ground"], p["ink"], " ".join("#" + h for h in p["text_accents"]))
+    hues = painted_hues(name, ground)
+    if hues is None:                       # not measured here: the fill accents, never the text ones (see _record_hues)
+        hues = ["#" + h for h in p["accents"]]
+    pal = "ground #{} ink #{}".format(p["ground"], p["ink"]) + (
+        " accents {}".format(" ".join(hues)) if hues else
+        " — a neutral register: its accent colour is a type colour, too small to carry a page")
     pick = "bespoke {}".format(name) + (" for {}".format(topic) if topic else "")
     d = shlex.quote(str(Path(str(deck)).resolve()))
     # the script's ABSOLUTE path: the commands run as printed from any folder (`python3 scripts/deck_gates.py` ran only

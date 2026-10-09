@@ -398,7 +398,9 @@ def _ink_sun(k, slide, cx, cy, d, clear=()):
         on_page = r[0] >= 0.1 and r[1] >= 0.1 and r[0] + d <= W - 0.1 and r[1] + d <= H - 0.1
         if on_page and not any(r[0] < c[0] + c[2] + pad and c[0] < r[0] + d + pad and r[1] < c[1] + c[3] + pad
                                and c[1] < r[1] + d + pad for c in clear):
-            dk.decorative(na.disc(slide, x, y, d, k.P["sun"]), "the ink language's sun (a moon on the night ground)")
+            sun_ = dk.decorative(na.disc(slide, x, y, d, k.P["sun"]), "the ink language's sun (a moon on the night ground)")
+            dk.overlap_intent(sun_ if sun_ is not None else slide.shapes[-1],
+                              "the sun sets behind the ink ridges: the ridge in front of it is the picture")
             return
 
 
