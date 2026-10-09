@@ -1673,10 +1673,10 @@ build to your **style brief** of it *per the chosen mimic mode* (`references/sty
 borrowed components + signature motif, but keep the topic-fit palette/type already locked in the
 Step-2 design plan — do NOT carry the example's colours.
 A few rules that matter (see `references/design-principles.md`):
-- **Visual languages (`editorial` · `soft` · `collage` · `storybook`):** when the picked direction is a
+- **Visual languages (`editorial` · `soft` · `collage` · `storybook`, and the nine drawn ones below):** when the picked direction is a
   visual language (`"vl"` in `directions.json`), READ `references/visual-languages.md` before the build
   script: `visual_languages.use(name, prs)` gives the palette, system fonts (both platforms by default,
-  per script for CJK) and ground, and its six page functions lay out your own copy and images — never
+  per script for CJK) and ground, and its six page functions (seven on the drawn ones: `points`) lay out your own copy and images — never
   hand-roll those pages. Record `design_plan.visual_language`; the delivery gate checks it was applied.
   A deck that will carry photos or illustrations OFFERS at least one visual language among its directions —
   the user's pictures, or ones you will GENERATE (an image tool is available and the plan uses imagery) or

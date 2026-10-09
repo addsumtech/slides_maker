@@ -1,10 +1,10 @@
-# Visual languages — eight complete looks: four image-led, four drawn
+# Visual languages — thirteen complete looks: four image-led, nine drawn
 
 **When to read this:** the picked direction is a visual language (its entry in `directions.json` carries
 `"vl": "<name>"`), or the user asks for one of these looks by name. Read it before writing the build script.
 
 A visual language is a whole look, not a palette: a type voice from system fonts, a surface, image
-treatments and six page compositions. Picking one gives a finished deck from your own words and images —
+treatments and six page compositions (seven on the drawn languages, which add `points`). Picking one gives a finished deck from your own words and images —
 the page functions never invent a word, a number or a name.
 
 | language | images | voice | surface | frames |
@@ -17,6 +17,11 @@ the page functions never invent a word, a number or a name.
 | `poster` | none needed (a cut-out object is optional) | Impact display — the headline is the picture | one saturated colour field per page | page-clipped colour blocks |
 | `cutpaper` | none needed (icons from the built-in library) | rounded friendly sans | a layered paper diorama, soft paper shadows | the title card tucked between hills |
 | `drafting` | none needed | Georgia titles, Courier New labels, Times New Roman figures | drafting grid, drawing sheet, title block | an iso stack, numbered leaders, a dimension line |
+| `starlit` | none needed (a photo in a round window is optional) | Georgia serif, gold kicker | midnight sky, stars, a crescent moon | points as a constellation; the figure in a glow |
+| `broadsheet` | none needed (a news photo is optional) | Times New Roman headlines, Georgia body | newsprint grain, a masthead strip | newspaper columns, a raised initial, a pull quote between rules |
+| `journal` | your own figures (placed whole, never cropped) | Georgia, small-caps labels | plain paper, a running head | numbered figures with captions, an abstract, margin notes |
+| `tally` | none needed (a photo is optional) | Arial Black display, Arial body | a fine grid | ledger rows, pill tags, a giant number with its share bar |
+| `chalkboard` | none needed (a chalk doodle icon is optional) | Trebuchet MS (Chalkboard SE on mac) | a framed board with grain | chalk boxes, circled numbers, arrows only when ordered |
 
 ## Build
 
@@ -156,15 +161,16 @@ first four: no pictures needed, everything on the page, nothing PowerPoint repai
 | `chalkboard` | 黑板报 | the classroom blackboard | lessons, classes, training, explainers |
 
 - **Words only you can give.** A word given on a page that does not draw it is refused, naming the pages that do;
-  when it is absent, nothing is drawn.
+  when it is absent, nothing is drawn. `sigs.py Kit.cover` (any page) lists them all; they arrive as `**extras`.
   - `masthead="…"` (`broadsheet`, any page, remembered for the deck): the paper's name in the masthead strip.
     Without it, the cover's `kicker` names the paper and is not repeated above the headline; without either, the
     strip has rules and the page number only.
   - `edition="…"` (`broadsheet`, any page, remembered): the strip's left words, such as your date or issue.
   - `inside=[…]` (`broadsheet` cover): 1–4 short lines for the "Inside" sidebar.
-  - `tags=[…]` (`broadsheet` and `tally` `points`): one short label per point, used as the column's label or the
-    row's pill. The count must match; a tag too long for its pill is refused by name.
-  - `running="…"` (`journal`, any page, remembered): the running head. Without it, the cover title runs there when
+  - `tags=[…]` (`broadsheet` and `tally` `points`): one short label per point — a broadsheet column's label (it
+    wraps like any label) or a tally row's pill (beside the words, or under them when the pills are wide). The count
+    must match; a tally tag too long even for a pill under its row's words is refused by name.
+  - `running="…"` (`journal`, any page — the cover too, though it draws none — remembered): the running head. Without it, the cover title runs there when
     it fits one line, else the page number stands alone. An explicit `running=` that cannot fit is refused.
   - `authors="…"`, `abstract="…"` (`journal` cover): the author line and the abstract block. A subtitle is never
     labelled "Abstract".
@@ -176,7 +182,9 @@ first four: no pictures needed, everything on the page, nothing PowerPoint repai
     - the number is no larger than the total.
 
     Anything else is refused, never guessed.
-  - `doodle="lucide:sun"` (`chalkboard` cover and closing): one icon spec, drawn in yellow chalk.
+  - `doodle="lucide:sun"` (`chalkboard` cover and closing): one icon spec, drawn in yellow chalk. It is fetched from
+    the icon library on first use (network) and cached; an unknown name raises, naming the URL it tried, and the page
+    is not built — check the name on lucide.dev/icons or tabler.io/icons.
   - `ordered=True` (`chalkboard` `points`): chalk arrows between the boxes, only when the points really happen in
     order. The numbers already read as a list.
 - **Derived, never typed in.**
@@ -260,6 +268,11 @@ viewer opens. `fonts="mac"` unlocks Mac-only faces and refuses one that is not i
 | poster | Impact | Arial / Helvetica Neue (meta: Courier New) | Impact |
 | cutpaper | Trebuchet MS / Avenir Next | Trebuchet MS / Avenir Next | Trebuchet MS |
 | drafting | Georgia | Georgia (labels and title block: Courier New) | Times New Roman (lining) |
+| starlit | Georgia | Georgia | Times New Roman (lining) |
+| broadsheet | Times New Roman | Georgia (meta lines: Arial) | Times New Roman |
+| journal | Georgia | Georgia (labels: Arial) | Times New Roman (lining) |
+| tally | Arial Black | Arial / Helvetica Neue | Arial Black |
+| chalkboard | Trebuchet MS / Chalkboard SE | Trebuchet MS / Chalkboard SE | Trebuchet MS / Chalkboard SE |
 
 East-Asian faces follow the SCRIPT of each run — a Chinese face has no Hangul:
 

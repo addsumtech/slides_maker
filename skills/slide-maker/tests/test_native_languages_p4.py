@@ -30,6 +30,10 @@ def rect_of(sh):
 def texts(s):
     """The page's visible text boxes (not the off-page title kept for screen readers)."""
     return [sh for sh in s.shapes if getattr(sh, "has_text_frame", False) and sh.text_frame.text.strip() and sh.top >= 0]
+def txt_of(sh):
+    """A text box's words as one string: display text is set one paragraph per measured line, so join them back."""
+    ps = [p_.text for p_ in sh.text_frame.paragraphs]
+    return ("" if dk._has_cjk("".join(ps)) else " ").join(ps)
 def use(name, W=13.333, H=7.5, ground="light"):
     prs = dk.blank_deck(W, H)
     with contextlib.redirect_stdout(io.StringIO()):
@@ -197,7 +201,7 @@ for W, H in ((13.333, 7.5), (10.0, 7.5), (7.5, 7.5), (7.5, 13.333), (10.0, 5.625
              and not sh._element.xpath(".//a:gradFill") and sh.width / EMU < 0.3]
     check(len(stars) == 4, "starlit {}x{}: one star per point ({})".format(W, H, len(stars)))
     check(len(segs_of(s)) == 3, "starlit {}x{}: one line joins the stars in order ({})".format(W, H, len(segs_of(s))))
-    hit = [(sh.text_frame.text[:20]) for g in segs_of(s) for sh in texts(s) if crosses(g, rect_of(sh))]
+    hit = [(txt_of(sh)[:20]) for g in segs_of(s) for sh in texts(s) if crosses(g, rect_of(sh))]
     check(not hit, "starlit {}x{}: no constellation line crosses words (Review Focus 4): {}".format(W, H, hit[:3]))
 # long Chinese copy on a short page falls to the 2x2 ring: still one star per point, no line through words
 LONGZH = [("共享工具", "一抽屉螺丝刀可以供三张桌子同时使用。"), ("敞开大门", "不用预约，不收费，不问是什么东西。"),
@@ -211,7 +215,7 @@ for W, H in ((10.0, 5.625), (7.5, 7.5), (13.333, 7.5)):
         _vn.COMPOSERS["starlit"]["points"](k, s, dict(title="长文案", items=LONGZH), None)
     finally:
         _vn._ALT[0] = 0
-    hit = [sh.text_frame.text[:12] for g in segs_of(s) for sh in texts(s) if crosses(g, rect_of(sh))]
+    hit = [txt_of(sh)[:12] for g in segs_of(s) for sh in texts(s) if crosses(g, rect_of(sh))]
     check(len(segs_of(s)) == 3 and not hit, "starlit {}x{}: the ring layout's lines never cross words: {}".format(W, H, hit[:3]))
 # the constellation sits in the room under the title, not crowded against it (sample render, 2026-10-08: the lower
 # half of the page was empty)
@@ -219,18 +223,18 @@ for W, H in ((13.333, 7.5), (10.0, 7.5)):
     prs, k = use("starlit", W, H)
     s = k.new_slide()
     k.points(s, title="Three things we learned", items=POINTS4[:3])
-    tb = [sh for sh in texts(s) if sh.text_frame.text == "Three things we learned"][0]
+    tb = [sh for sh in texts(s) if txt_of(sh) == "Three things we learned"][0]
     star_ys = [sh.top / EMU + sh.height / EMU / 2 for sh in s.shapes if sh._element.xpath(".//a:prstGeom[@prst='ellipse']")
                and not sh._element.xpath(".//a:gradFill") and sh.width / EMU < 0.3]
-    lab = [sh.top / EMU + sh.height / EMU for sh in texts(s) if sh.text_frame.text != "Three things we learned"]
+    lab = [sh.top / EMU + sh.height / EMU for sh in texts(s) if txt_of(sh) != "Three things we learned"]
     above, below = min(star_ys) - (tb.top + tb.height) / EMU, (H - 0.6) - max(lab)
     check(abs(above - below) < 0.8, "starlit {}x{}: the constellation is centred under the title (above {:.2f}, below {:.2f})".format(
         W, H, above, below))
 # the quote mark sits close over its quote (sample render: a 110pt mark's line box left ~1in of air between them)
 prs, k = use("starlit")
 s = k.new_slide(); k.quote(s, quote="We measured the year in conversations, not in launches.", attribution="The letter")
-mk = [sh for sh in texts(s) if sh.text_frame.text == "“"][0]
-qt = [sh for sh in texts(s) if sh.text_frame.text.startswith("We measured")][0]
+mk = [sh for sh in texts(s) if txt_of(sh) == "“"][0]
+qt = [sh for sh in texts(s) if txt_of(sh).startswith("We measured")][0]
 check((qt.top - mk.top) / EMU <= 1.45, "starlit: the quote mark sits close over the quote ({:.2f}in)".format((qt.top - mk.top) / EMU))
 # the moon never sits on words; the sky is ONE picture per page (the new_slide sky is replaced, not orphaned)
 for W, H in ((13.333, 7.5), (7.5, 7.5), (7.5, 13.333)):
@@ -286,8 +290,8 @@ def strip_texts(s):
             rules += 1
             if rules == 2:
                 break
-        elif getattr(sh, "has_text_frame", False) and sh.text_frame.text.strip() and sh.top >= 0:
-            out.append(sh.text_frame.text)
+        elif getattr(sh, "has_text_frame", False) and txt_of(sh).strip() and sh.top >= 0:
+            out.append(txt_of(sh))
     return out
 # the masthead: masthead= is remembered; else the cover's kicker names the paper; else no name — never invented
 prs, k = use("broadsheet")
@@ -295,7 +299,7 @@ s1 = k.new_slide(); k.cover(s1, kicker="The Corner Paper", title="Every street n
 s2 = k.new_slide(); k.quote(s2, quote="The visitor holds the screwdriver.", attribution="Volunteer handbook")
 check("The Corner Paper" in strip_texts(s1) and "The Corner Paper" in strip_texts(s2),
       "broadsheet: with no masthead=, the cover's kicker names the paper on every page ({})".format(strip_texts(s2)))
-check("THE CORNER PAPER" not in [sh.text_frame.text for sh in texts(s1)],
+check("THE CORNER PAPER" not in [txt_of(sh) for sh in texts(s1)],
       "broadsheet: ...and is not repeated above the headline")
 s3 = k.new_slide(); k.section(s3, number="2", title="The evening", masthead="Repair Weekly", edition="No. 3")
 s4 = k.new_slide(); k.data(s4, number="3", label="evenings a month")
@@ -325,7 +329,7 @@ for W, H in ((13.333, 7.5), (10.0, 7.5), (7.5, 13.333)):
     k.points(s, title="How a repair evening works", tags=["The idea", "The evening", "Next"],
              items=[("Bring it broken", "Anything that switches on is welcome."), ("Fix it together", "A volunteer sits beside you."),
                     ("Take it home", "What could not be fixed goes on a list.")])
-    firsts = [sh.text_frame.paragraphs[0].runs[0] for sh in texts(s) if sh.text_frame.text.startswith(("Anything", "A volunteer", "What"))]
+    firsts = [sh.text_frame.paragraphs[0].runs[0] for sh in texts(s) if txt_of(sh).startswith(("Anything", "A volunteer", "What"))]
     check(len(firsts) == 3 and all(len(r.text) == 1 and r.font.size.pt > 30 for r in firsts),
           "broadsheet {}x{}: each Latin column opens on a raised initial".format(W, H))
     hit = [g for g in segs_of(s) for sh in texts(s) if crosses(g, rect_of(sh))]
@@ -334,7 +338,7 @@ prs, k = use("broadsheet")
 s = k.new_slide()
 k.points(s, title="修理之夜怎么进行", items=[("带着坏东西来", "能开机的都欢迎。"), ("一起动手修", "动手的是你。")])
 check(all(len(sh.text_frame.paragraphs[0].runs) >= 1 and sh.text_frame.paragraphs[0].runs[0].font.size.pt < 30
-          for sh in texts(s) if sh.text_frame.text.startswith(("能开机", "动手"))), "broadsheet: no raised initial on CJK")
+          for sh in texts(s) if txt_of(sh).startswith(("能开机", "动手"))), "broadsheet: no raised initial on CJK")
 for bad_kw in (dict(tags=["a"]), dict(inside=["x"])):
     prs, k = use("broadsheet")
     try:
@@ -375,7 +379,7 @@ prs, k = use("broadsheet")
 for page, kw in (("points", dict(title="How a repair evening works", items=["a", "b"])),
                  ("image_text", dict(title="The hall on a Tuesday", body="Benches and tools.", image=PHOTO))):
     s = k.new_slide(); getattr(k, page)(s, **kw)
-    t = [sh for sh in texts(s) if sh.text_frame.text == kw["title"]][0]
+    t = [sh for sh in texts(s) if txt_of(sh) == kw["title"]][0]
     check(t.text_frame.paragraphs[0].runs[0].font.size.pt <= 48, "broadsheet {}: the title is a section head, not the cover's headline ({}pt)".format(
         page, t.text_frame.paragraphs[0].runs[0].font.size.pt))
 # the closing ends on the ■ end mark, in the accent
@@ -404,7 +408,7 @@ assert_matrix("journal")
 def head_texts(s):
     """The running head's words: text boxes above the first rule of the page."""
     rule = min((sh.top / EMU for sh in s.shapes if sh._element.tag.endswith("}cxnSp")), default=0)
-    return [sh.text_frame.text for sh in texts(s) if sh.top / EMU < rule]
+    return [txt_of(sh) for sh in texts(s) if sh.top / EMU < rule]
 # the running head: running= remembered; else the cover title on one line; else the page number alone
 prs, k = use("journal")
 k.cover(k.new_slide(), title="Learning to reconstruct undersampled cardiac MRI")
@@ -431,36 +435,36 @@ for abstract, want in (("We ask whether a learned reconstruction keeps fine edge
                        ("学習再構成が細い縁を保てるかを問う。", "要旨")):
     prs, k = use("journal")
     s = k.new_slide(); k.cover(s, title="A title", abstract=abstract)
-    check(want in [sh.text_frame.text for sh in texts(s)], "journal: abstract= is labelled {!r}".format(want))
+    check(want in [txt_of(sh) for sh in texts(s)], "journal: abstract= is labelled {!r}".format(want))
 prs, k = use("journal")
 s = k.new_slide(); k.cover(s, title="A title", subtitle="A talk for the lab")
-check(not any(t in ("ABSTRACT", "摘要") for t in (sh.text_frame.text for sh in texts(s))),
+check(not any(t in ("ABSTRACT", "摘要") for t in (txt_of(sh) for sh in texts(s))),
       "journal: a subtitle is never labelled Abstract")
 # figures are numbered over the deck's figure pages; kicker= overrides; the figure is whole (contain)
 prs, k = use("journal")
 labels_ = []
 for kw in (dict(title="Error across acceleration"), dict(title="Edges at 8×", kicker="Figure S2"), dict(title="Third")):
     s = k.new_slide(); k.image_text(s, image=PHOTO, body="A caption.", **kw)
-    labels_.append([sh.text_frame.text for sh in texts(s) if sh.text_frame.text.upper().startswith("FIGURE")][0])
+    labels_.append([txt_of(sh) for sh in texts(s) if txt_of(sh).upper().startswith("FIGURE")][0])
 check(labels_ == ["FIGURE 1", "FIGURE S2", "FIGURE 3"], "journal: figures number themselves; kicker= overrides ({})".format(labels_))
 pic = [sh for sh in s.shapes if sh.shape_type == 13][0]
 check(pic.crop_left == 0 and pic.crop_right == 0 and pic.crop_top == 0 and pic.crop_bottom == 0,
       "journal: the figure is placed whole, never cropped")
 prs, k = use("journal")
 s = k.new_slide(); k.image_text(s, image=PHOTO, title="一服のお茶", body="図の説明。")
-check(any(sh.text_frame.text == "図 1" for sh in texts(s)), "journal: a Japanese figure reads 図 1")
+check(any(txt_of(sh) == "図 1" for sh in texts(s)), "journal: a Japanese figure reads 図 1")
 # section: § only before a numeral or roman numeral
 for num, want in (("2", "§ 2"), ("IV", "§ IV"), ("Part two", "Part two")):
     prs, k = use("journal")
     s = k.new_slide(); k.section(s, number=num, title="Method")
-    check(want in [sh.text_frame.text for sh in texts(s)], "journal: section number {!r} → {!r}".format(num, want))
+    check(want in [txt_of(sh) for sh in texts(s)], "journal: section number {!r} → {!r}".format(num, want))
 # margin= sits beside the list (under it in portrait), under its Note label
 for W, H in ((13.333, 7.5), (7.5, 13.333)):
     prs, k = use("journal", W, H)
     s = k.new_slide()
     k.points(s, title="What we set out to test", items=[("The question", "Edges at high acceleration?"), ("The check", None)],
              margin="Every figure is labelled with its source.")
-    tt = [sh.text_frame.text for sh in texts(s)]
+    tt = [txt_of(sh) for sh in texts(s)]
     check("NOTE" in tt and "Every figure is labelled with its source." in tt, "journal {}x{}: the margin note and its label".format(W, H))
 # an ordinary page (Review Focus 2) carries the running head; its content rect starts under it
 import register_surface as rs
@@ -491,7 +495,7 @@ for num, total, frac in (("12", "40", 0.30), ("1,250", "5,000", 0.25), ("98.6%",
                    and sh.height / EMU < 0.3 and sh.width / EMU > 0.3), reverse=True)
     check(len(bars) == 2 and abs(bars[1] / bars[0] - frac) < 0.01,
           "tally: {} of {} fills {:.0%} of the bar ({})".format(num, total, frac, [round(b, 2) for b in bars]))
-    tt = [sh.text_frame.text for sh in texts(s)]
+    tt = [txt_of(sh) for sh in texts(s)]
     check(num in tt and total in tt, "tally: both numbers stand at the bar's ends")
 for num, total in (("$4.2M", "10"), ("50", "40"), ("12", "0"), ("12%", "40")):
     prs, k = use("tally")
@@ -511,7 +515,7 @@ for W, H in ((13.333, 7.5), (10.0, 7.5), (7.5, 13.333), (7.5, 7.5)):
              items=[("New members joined", "Mostly through word of mouth"), ("Tools went out on loan", "Drills and ladders"),
                     ("Items came back repaired", None)])
     check(len(segs_of(s)) == 4, "tally {}x{}: three rows, four rules ({})".format(W, H, len(segs_of(s))))
-    pills = [sh for sh in texts(s) if sh.text_frame.text in ("MEMBERS", "LOANS", "REPAIRS", "Q3 review")]
+    pills = [sh for sh in texts(s) if txt_of(sh) in ("MEMBERS", "LOANS", "REPAIRS", "Q3 review")]
     check(len(pills) == 4 and all(p.text_frame.word_wrap is False for p in pills), "tally {}x{}: tags and kicker in pills".format(W, H))
     hit = [g for g in segs_of(s) for sh in texts(s) if crosses(g, rect_of(sh))]
     check(not hit, "tally {}x{}: no ledger rule crosses words".format(W, H))
@@ -520,7 +524,7 @@ prs, k = use("tally")
 s = k.new_slide()
 LONGK = "A quarterly review of the neighbourhood lending library network and all its volunteers across the city"
 k.cover(s, kicker=LONGK, title="The lending library")
-check(any(sh.text_frame.text == LONGK for sh in texts(s)), "tally: a long kicker is kept as plain words")
+check(any(txt_of(sh) == LONGK for sh in texts(s)), "tally: a long kicker is kept as plain words")
 try:
     k.points(k.new_slide(), title="x", items=["a", "b"], tags=["x" * 400, "y"])   # wider than the page at the floor
     check(False, "tally: a tag too long for its pill is refused")
@@ -541,8 +545,8 @@ s = k.new_slide()
 k.points(s, kicker="Q3 review", title="Three lines on the ledger", tags=["Members", "Loans", "Repairs"],
          items=[("New members joined", "Mostly through word of mouth"), ("Tools went out on loan", "Drills and ladders"),
                 ("Items came back repaired", "Fixed at the monthly evening")])
-tt = [sh for sh in texts(s) if sh.text_frame.text == "Three lines on the ledger"][0]
-row = [sh for sh in texts(s) if sh.text_frame.text == "New members joined"][0]
+tt = [sh for sh in texts(s) if txt_of(sh) == "Three lines on the ledger"][0]
+row = [sh for sh in texts(s) if txt_of(sh) == "New members joined"][0]
 sz = tt.text_frame.paragraphs[0].runs[0].font.size.pt
 check(dk.measure_text([("Three lines on the ledger", False)], tt.width / EMU * 0.97, sz, font="Arial Black") <= tt.height / EMU + 0.02
       and row.top >= tt.top + tt.height, "tally: the title holds its words with headroom and the first row starts under it")
@@ -571,7 +575,7 @@ for W, H in ((13.333, 7.5), (10.0, 7.5), (7.5, 13.333), (7.5, 7.5)):
                   W, H, ordered, len(arrows(s))))
         # every point's words sit inside its own chalk box (a box is a 5-point path: its bbox is the box)
         boxes = [rect_of(sh) for sh in s.shapes if sh._element.xpath(".//a:custGeom") and len(sh._element.xpath(".//a:lnTo")) == 4]
-        heads = [rect_of(sh) for sh in texts(s) if sh.text_frame.text in [h for h, _l in STEPS]]
+        heads = [rect_of(sh) for sh in texts(s) if txt_of(sh) in [h for h, _l in STEPS]]
         inside = [any(b[0] - 0.05 <= t[0] and t[0] + t[2] <= b[0] + b[2] + 0.05 and b[1] - 0.05 <= t[1] and
                       t[1] + t[3] <= b[1] + b[3] + 0.05 for b in boxes) for t in heads]
         check(len(heads) == 3 and all(inside), "chalkboard {}x{}: each head sits inside its chalk box ({})".format(W, H, inside))
@@ -604,7 +608,7 @@ for W, H in ((13.333, 7.5), (7.5, 7.5)):
 # measure (sample render: "科学课 · 第 3 讲" ran past its box) — every CJK character an em, every other at least 0.55 em
 prs, k = use("chalkboard")
 s = k.new_slide(); k.cover(s, kicker="科学课 · 第 3 讲", title="光合作用是怎么回事")
-kt = [sh for sh in texts(s) if sh.text_frame.text == "科学课 · 第 3 讲"][0]
+kt = [sh for sh in texts(s) if txt_of(sh) == "科学课 · 第 3 讲"][0]
 ksz = kt.text_frame.paragraphs[0].runs[0].font.size.pt
 floor_w = sum(1.0 if dk._has_cjk(ch) else 0.55 for ch in "科学课 · 第 3 讲") * ksz / 72.0
 kb = [rect_of(sh) for sh in s.shapes if sh._element.xpath(".//a:custGeom") and len(sh._element.xpath(".//a:lnTo")) == 4][0]
@@ -653,22 +657,99 @@ for name in ("starlit", "broadsheet", "journal", "tally", "chalkboard"):
 prs, k = use("chalkboard", 7.5, 7.5)
 s = k.new_slide()
 k.quote(s, quote="来访者握着螺丝刀，志愿者只在旁边指导，这就是整个夜晚的意义所在。", attribution="志愿者手册")
-qp = [tuple(p_.text for p_ in sh.text_frame.paragraphs) for sh in texts(s) if "螺丝刀" in sh.text_frame.text][0]
+qp = [tuple(p_.text for p_ in sh.text_frame.paragraphs) for sh in texts(s) if "螺丝刀" in txt_of(sh)][0]
 check(len(qp) > 1 and all(p_.endswith(("，", "。")) for p_ in qp), "a Chinese quote that wraps breaks only at its clause marks: {}".format(qp))
 for name in ("broadsheet", "starlit"):
     prs, k = use(name, 10.0, 7.5)
     s = k.new_slide()
     k.points(s, title="修理之夜", items=[("共享工具", "一抽屉螺丝刀。"), ("敞开大门", "不用预约。"), ("步行可达", "十分钟。"), ("记下每次修理", "每张桌一本笔记。")])
-    hd = [sh for sh in texts(s) if sh.text_frame.text == "记下每次修理"][0]
+    hd = [sh for sh in texts(s) if txt_of(sh) == "记下每次修理"][0]
     sz = hd.text_frame.paragraphs[0].runs[0].font.size.pt
     check(hd.height / EMU <= sz / 72.0 * 1.6 + 0.08, "{}: a short Chinese head stays on one line ({:.2f}in at {}pt)".format(name, hd.height / EMU, sz))
 prs, k = use("chalkboard", 10.0, 7.5)
 s = k.new_slide()
 k.points(s, title="修理之夜", items=[("共享工具", "一抽屉螺丝刀可以供三张桌子同时使用。"), ("敞开大门", "不用预约，不收费。"),
                                      ("步行可达", "步行十分钟是我们坚持的距离。"), ("记下每次修理", "每张桌一本笔记。")])
-heads = [sh for sh in texts(s) if sh.text_frame.text in ("共享工具", "敞开大门", "步行可达", "记下每次修理")]
+heads = [sh for sh in texts(s) if txt_of(sh) in ("共享工具", "敞开大门", "步行可达", "记下每次修理")]
 check(all(h_.height / EMU <= h_.text_frame.paragraphs[0].runs[0].font.size.pt / 72.0 * 1.6 + 0.08 for h_ in heads),
       "chalkboard 4:3: no head wraps in a too-narrow box (the grid takes over)")
+
+# ── found by the docs-only (non-Claude-style) run, 2026-10-09 ──
+# running= given on the journal COVER is remembered (it was dropped: the cover draws no running head)
+prs, k = use("journal")
+k.cover(k.new_slide(), title="A long article title about learning to reconstruct", running="Repair review")
+s = k.new_slide(); k.closing(s, title="Questions")
+check(head_texts(s)[:1] == ["Repair review"], "journal: running= given on the cover holds for later pages ({})".format(head_texts(s)))
+# an extra on a page that does not draw it is refused NAMING the pages that do
+prs, k = use("broadsheet")
+try:
+    k.points(k.new_slide(), title="x", items=["a", "b"], inside=["The idea"])
+    check(False, "broadsheet.points(inside=…) is refused")
+except TypeError as e:
+    check("cover" in str(e), "an extra on the wrong page names where it belongs: {}".format(str(e)[:160]))
+# a total that is 0, or a negative number, is refused with its own reason
+for num, total, why in (("0", "0", "greater than 0"), ("-5", "40", "non-negative")):
+    prs, k = use("tally")
+    try:
+        k.data(k.new_slide(), number=num, label="x", total=total)
+        check(False, "tally: number={} total={} is refused".format(num, total))
+    except ValueError as e:
+        check(why in str(e), "tally: number={} total={} is refused saying {!r}: {}".format(num, total, why, str(e)[:120]))
+# the page functions document the second set's words (sigs prints the docstring and signature)
+import inspect as _insp
+doc = vl.Kit.cover.__doc__ or ""
+check(all(w in doc for w in ("masthead=", "running=", "total=", "doodle=", "ordered=")),
+      "Kit page docstrings name the second set's words")
+check("**extras" in str(_insp.signature(vl.Kit.cover)), "Kit page signatures show that extras are accepted")
+# the kit's own furniture does not overlap itself (the board frame's bars met at the corners; two smudges overlapped)
+prs, k = use("chalkboard")
+s = k.new_slide(); k.quote(s, quote="A leaf is a tiny factory.", attribution="Science notes")
+fr = [rect_of(sh) for sh in s.shapes if "wooden frame" in (sh.name or "")]
+check(len(fr) >= 4 and not any(v2.meet(a, b, -0.001) for i, a in enumerate(fr) for b in fr[i + 1:]),
+      "chalkboard: the frame's bars do not overlap each other ({})".format(len(fr)))
+sm = [rect_of(sh) for sh in s.shapes if sh._element.xpath(".//a:prstGeom[@prst='ellipse']") and sh._element.xpath(".//a:gradFill")]
+check(not any(v2.meet(a, b) for i, a in enumerate(sm) for b in sm[i + 1:]), "chalkboard: eraser smudges do not overlap each other")
+# a figure sits at the top-left of its area, not floating in the middle (a portrait photo left dead space on both sides)
+prs, k = use("journal")
+s = k.new_slide(); k.image_text(s, image=PHOTO, title="Figure test", body="A caption.")
+pic = [sh for sh in s.shapes if sh.shape_type == 13][0]
+check(abs(pic.left / EMU - 0.07 * 13.333) < 0.02, "journal: the figure aligns to its area's left edge ({:.2f})".format(pic.left / EMU))
+# the points of one page share one size (a Chinese chalk box's body was set smaller than its neighbours')
+prs, k = use("chalkboard")
+s = k.new_slide()
+k.points(s, title="修理一盏台灯", items=[("拔掉插头", "先断电。"), ("拆下灯罩", "取下灯罩和灯头外壳。"), ("换上新线", "旧线剪掉。"),
+                                        ("装回去试", "装好以后，最后一步才插电。")])
+szs = {sh.text_frame.paragraphs[0].runs[0].font.size.pt for sh in texts(s) if txt_of(sh).startswith(("先断电", "取下灯罩", "旧线", "装好以后"))}
+check(len(szs) == 1, "chalkboard: every box's body is set at one size ({})".format(sorted(szs)))
+# display text keeps the breaks it was measured with, so the wider (headroom) box cannot re-wrap it into a lone word
+prs, k = use("broadsheet")
+s = k.new_slide(); k.image_text(s, image=PHOTO, title="Mending a lamp, one volunteer at a time", body="Volunteers sit beside you.")
+tp = [tuple(p_.text for p_ in sh.text_frame.paragraphs) for sh in texts(s) if txt_of(sh).replace("\n", " ").startswith("Mending")][0]
+check(len(tp) >= 2 and len(tp[-1].split()) > 1, "broadsheet: a wrapping title is set in its measured lines, no lone last word ({})".format(tp))
+
+# a short Chinese label stays on one line rather than leaving a bracketed tail alone ("…的订单 / （单）", the docs-only run)
+prs, k = use("tally")
+s = k.new_slide(); k.data(s, number="1,240", label="本季按时送达的订单（单）", note="按签收记录统计。")
+lp = [tuple(p_.text for p_ in sh.text_frame.paragraphs) for sh in texts(s) if "送达" in txt_of(sh)][0]
+lb = [sh for sh in texts(s) if "送达" in txt_of(sh)][0]
+check(lb.height / EMU <= lb.text_frame.paragraphs[0].runs[0].font.size.pt / 72.0 * 1.7 + 0.08,
+      "tally: a short Chinese label stays on one line ({}, {:.2f}in)".format(lp, lb.height / EMU))
+# a chalk circle is round: enough points that no facet shows on a large ring (it read as a polygon with a notch)
+prs, k = use("chalkboard")
+s = k.new_slide(); k.data(s, number="4", label="steps")
+rings = [sh for sh in s.shapes if sh._element.xpath(".//a:custGeom") and len(sh._element.xpath(".//a:lnTo")) > 20]
+check(rings and min(len(sh._element.xpath(".//a:lnTo")) for sh in rings) >= 100, "chalkboard: a large chalk ring has ≥100 points")
+
+# a fresh deck in each language is clean under the delivery lint (lint_deck): the kit's own furniture — the moon's
+# two discs, chalk corner marks on a photo, a smudge on a chalk stroke, a number tight in its tab — is declared or
+# spaced, never left for the author to explain (the docs-only run found chalkboard decks with 30 findings)
+import lint_deck as _ld
+for name in ("starlit", "broadsheet", "journal", "tally", "chalkboard"):
+    for cname, lang in (("16:9", "en"), ("4:3", "zh")):
+        p_, _prs = build_matrix(name, list(vl.VARIANTS[name])[0], cname, lang)
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            hard = _ld.lint(str(p_), static_ok=True)
+        check(hard == 0, "{} {} {}: a fresh deck has no hard lint finding ({})".format(name, cname, lang, hard))
 
 # ── what an agent reading only the docs needs (Task 9) ──
 ref = (ROOT / "references" / "visual-languages.md").read_text(encoding="utf-8")

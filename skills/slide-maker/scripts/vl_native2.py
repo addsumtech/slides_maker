@@ -66,7 +66,7 @@ def _one_line_size(k, f_, t, w, start):
     """A short Chinese/Japanese head (no clause mark) a little too wide for its line is set a little smaller, on ONE
     line — wrapped, it left one character alone ("记下每次修 / 理"). None when it fits, or would need below 75% of its size
     or its floor (then it wraps, and a layout that cares refuses — chalkboard's row gives way to its grid)."""
-    if f_ != "item_head" or not t or "\n" in t or not dk._has_cjk(t) or len(t) > 12:
+    if f_ not in ("item_head", "label") or not t or "\n" in t or not dk._has_cjk(t) or len(t) > 14:
         return None
     base, _role, _b, _c, _i, floor = vl.TYPE[k.name][f_]
     s_ = ctx(k)[2]
@@ -103,16 +103,37 @@ def flow(k, slide, page, col, items, **kw):
     out = {f_: ((r[0] - dw / 2.0, r[1], r[2] + dw, r[3]) if align == "c" else (r[0], r[1], r[2] + dw, r[3]))
            for f_, r in rects.items()}
 
+    texts_ = {t: f_ for f_, t in items}
+
     def go():
         from pptx.util import Emu
         n0 = len(slide.shapes)
         draw()
         for sh in list(slide.shapes)[n0:]:
             if getattr(sh, "has_text_frame", False) and sh.text_frame.text.strip():
+                # display text keeps the lines it was MEASURED in: drawn wider (the headroom below), a renderer re-wrapped
+                # "Mending a lamp, / one volunteer at a / time" into a lone last word (the docs-only run, 2026-10-09)
+                f_ = texts_.get(sh.text_frame.text)
+                ex = getattr(draw, "exact", {}).get(f_)
+                if ex:                       # set at the decided size rounded DOWN, never up into one more line
+                    import math as _m
+                    from pptx.util import Pt as _Pt
+                    down = _m.floor(ex * 10) / 10.0
+                    for p_ in sh.text_frame.paragraphs:
+                        for r_ in p_.runs:
+                            if r_.font.size is not None and r_.font.size.pt > down + 1e-6 and abs(r_.font.size.pt - round(ex, 1)) < 0.06:
+                                r_.font.size = _Pt(down)
+                if f_ in _DISPLAY_FIELDS and len(sh.text_frame.paragraphs) == 1 and sh.text_frame.paragraphs[0].runs:
+                    z = sh.text_frame.paragraphs[0].runs[0].font.size
+                    if z is not None:
+                        ls = vl._break_lines(k, f_, sh.text_frame.text, z.pt, sh.width / 914400.0)   # as measured (not yet widened)
+                        if len(ls) > 1:
+                            _split_paragraph(sh.text_frame, ls)
                 if align == "c":
                     sh.left = Emu(int(sh.left - dw / 2.0 * 914400))
                 sh.width = Emu(int(sh.width + dw * 914400))
     go.sizes = getattr(draw, "sizes", {})
+    go.exact = getattr(draw, "exact", {})
     return out, go
 
 # Japanese and Korean entries: 要旨 / 초록, 図 n, n面 / n면 confirmed against university thesis guides and newspaper
@@ -144,6 +165,59 @@ def caps(t):
 def fields(f, names, capsed=()):
     """[(field, words)] for the fields of `names` the caller gave, in order; those in `capsed` set in capitals."""
     return [(n, caps(text_of(f, n)) if n in capsed else text_of(f, n)) for n in names if text_of(f, n)]
+
+
+def plan_together(k, slide, page, specs):
+    """Plan a page's like items — specs = [(rect, items, flow_kw)] — at ONE size per field: each alone first, then all
+    again at the smallest size any of them needed. Planned alone, a Chinese chalk box whose body wrapped was set at
+    14.8pt beside neighbours at 19pt (the docs-only run, 2026-10-09). Returns [(rects, draw)] in order."""
+    first = [flow(k, slide, page, rect, items, **kw) for rect, items, kw in specs]
+    shared = {}
+    for _r, d in first:
+        for f_, z in getattr(d, "sizes", {}).items():
+            shared[f_] = min(shared.get(f_, z), z)
+    out = []
+    for rect, items, kw in specs:
+        st = dict(kw.get("start") or {}, **{f_: shared[f_] for f_, _t in items if f_ in shared})
+        out.append(flow(k, slide, page, rect, items, **dict(kw, start=st)))
+    return out
+
+
+_DISPLAY_FIELDS = ("title", "subtitle", "quote", "label", "line")
+
+
+def _split_paragraph(tf, lines):
+    """Rewrite a one-paragraph text frame as one paragraph per line in `lines` (its own words, in order), keeping each
+    run's formatting. Returns False — frame untouched — when the lines do not tile the text."""
+    from pptx.oxml.ns import qn as _qn
+    p0 = tf.paragraphs[0]._p
+    full = "".join(r.text for r in tf.paragraphs[0].runs)
+    pos, spans = 0, []
+    for ln in lines:
+        ln = ln.strip()
+        i = full.find(ln, pos) if ln else -1
+        if i < 0 or full[pos:i].strip():
+            return False
+        spans.append((i, i + len(ln)))
+        pos = i + len(ln)
+    if full[pos:].strip():
+        return False
+    for a, b in spans:
+        q = copy.deepcopy(p0)
+        off = 0
+        for r in list(q.iter(_qn("a:r"))):
+            t = r.find(_qn("a:t"))
+            txt = (t.text or "") if t is not None else ""
+            ra, rb = off, off + len(txt)
+            off = rb
+            lo, hi = max(a, ra), min(b, rb)
+            if lo >= hi:
+                r.getparent().remove(r)
+            else:
+                t.text = txt[lo - ra:hi - ra]
+        p0.addprevious(q)
+    p0.getparent().remove(p0)
+    return True
 
 
 def stack(k, slide, page, x, w, y0, y1, groups, *, anchor="middle", align="l", **flow_kw):
@@ -464,8 +538,8 @@ def _st_points(k, slide, f, image):
                 stars.append(((0.13 if i % 2 == 0 else 0.22) * W, y))
                 cols.append((lx, y - min(0.30 * s, slot / 2), 0.92 * W - lx, slot - 0.06 * s))
             align = "l"
-        planned = [flow(k, slide, "points", col, [(x_, t) for x_, t in (("item_head", hd), ("item_line", ln)) if t],
-                        anchor="top", align=align) for (hd, ln), col in zip(pts, cols)]
+        planned = plan_together(k, slide, "points", [(col, [(x_, t) for x_, t in (("item_head", hd), ("item_line", ln)) if t],
+                                                      {"anchor": "top", "align": align}) for (hd, ln), col in zip(pts, cols)])
         return stars, planned
     stars, planned = layout(top)
     if o == "land" and alt() == 0:          # the constellation and its words sit in the middle of the room under the title
@@ -576,10 +650,10 @@ def _bs_section(k, slide, f, image):
     rects, art, draws = {}, [], []
     y = top + (0.6 if alt() == 0 else 0.3) * s
     if num:
-        th = 0.95 * s
+        th = 1.10 * s
         tw = min(0.6 * W, max(1.1 * s, na.chip_width(num, 44 * s, k.face("numeral")) + 0.2 * s))
-        r, d = flow(k, slide, "section", (0.05 * W + 0.1 * s, y, tw - 0.2 * s, th), [("number", num)], anchor="middle",
-                    align="c", ink=k.P["ground"], accent=k.P["ground"], start={"number": 44 * s})
+        r, d = flow(k, slide, "section", (0.05 * W + 0.1 * s, y + 0.10 * s, tw - 0.2 * s, th - 0.20 * s), [("number", num)],
+                    anchor="middle", align="c", ink=k.P["ground"], accent=k.P["ground"], start={"number": 40 * s})
         rects.update(r); draws.append(d)
         art.append(lambda y=y: dk.box(slide, 0.05 * W, y, tw, th, fill=k.P["ink"]))
         y += th
@@ -732,9 +806,9 @@ def _bs_points(k, slide, f, image):
         rules = [(0.05 * W, b[1] - 0.08 * s, 0.95 * W, b[1] - 0.08 * s) for b in boxes[1:]]
     for x0, y0, x1, y1 in rules:
         art.append(lambda x0=x0, y0=y0, x1=x1, y1=y1: na.seg(slide, x0, y0, x1, y1, k.P["ink"], w=0.5))
-    for i, ((hd, ln), (x, y, w, h)) in enumerate(zip(pts, boxes)):
-        items = ([("tag", caps(tags[i]))] if tags else []) + [("item_head", hd)] + ([("item_line", ln)] if ln else [])
-        tr, td_ = flow(k, slide, "points", (x, y, w, h), items, anchor="top")
+    specs = [((x, y, w, h), ([("tag", caps(tags[i]))] if tags else []) + [("item_head", hd)] + ([("item_line", ln)] if ln else []),
+              {"anchor": "top"}) for i, ((hd, ln), (x, y, w, h)) in enumerate(zip(pts, boxes))]
+    for (hd, ln), (x, y, w, h), (tr, td_) in zip(pts, boxes, plan_together(k, slide, "points", specs)):
         initial = bool(ln) and ln[0].isalpha() and not dk._has_cjk(ln[0]) and "item_line" in tr
         if initial:                       # room in the column for the taller first line and the one line its width
             bx, by, bw, bh = tr["item_line"]  # may push down (lint measures a declared initial so: deckkit._ink_rect)
@@ -778,6 +852,7 @@ def _jn_cover(k, slide, f, image):
     t, ab = text_of(f, "title"), text_of(f, "abstract")
     if t:
         k.memo = dict(k.memo, _title=t)
+    memo(k, f, "running")              # the cover draws no running head, but its running= holds for every later page
     x, w = 0.10 * W, (0.78 if o == "land" else 0.82) * W
     lab_w = 0.15 * W if o == "land" else 0.0
     head = fields(f, ("kicker", "title", "subtitle", "authors"), ("kicker",))
@@ -864,6 +939,13 @@ def _jn_figure(k, slide, f, image):
         rects.update(sr); draws.append(sd)
         art.append(lambda: na.seg(slide, col[0], yl, col[0] + col[2], yl, k.P["ink"], w=0.4))
     path, alt_txt, slot = vl._resolve(k, image[0] if isinstance(image, (list, tuple)) else image)
+    try:                                   # whole, and set at the top-left of its area like a printed figure — contained
+        from PIL import Image as _Im       # and centred, a portrait photo floated with dead space on both sides
+        iw, ih = _Im.open(path).size
+        sc = min(img[2] / iw, img[3] / ih)
+        img = (img[0], img[1], iw * sc, ih * sc)
+    except Exception:
+        pass
     pic = dk.picture(slide, path, *img, fit="contain", alt=alt_txt)
     if slot:
         dk._compose_tag(pic, gen=slot)
@@ -905,11 +987,13 @@ def _jn_points(k, slide, f, image):
     rows = -(-n // ncol)
     slot = (list_bottom - ty) / rows
     nw = min(0.07 * W, 0.6 * s) if ncol == 2 else 0.07 * W
-    for i, (hd, ln) in enumerate(pts):
-        x, y = 0.07 * W + (i % ncol) * (cw + gap), ty + (i // ncol) * slot
-        _nr, nd = flow(k, slide, "points", (x, y, nw, slot), [("item_no", str(i + 1))], anchor="top")
-        _tr, td_ = flow(k, slide, "points", (x + nw, y, cw - nw, slot - 0.1 * s),
-                        [(x_, t) for x_, t in (("item_head", hd), ("item_line", ln)) if t], anchor="top")
+    cells = [(0.07 * W + (i % ncol) * (cw + gap), ty + (i // ncol) * slot) for i in range(n)]
+    nums = plan_together(k, slide, "points", [((x, y, nw, slot), [("item_no", str(i + 1))], {"anchor": "top"})
+                                              for i, (x, y) in enumerate(cells)])
+    words = plan_together(k, slide, "points", [((x + nw, y, cw - nw, slot - 0.1 * s),
+                                                [(x_, t) for x_, t in (("item_head", hd), ("item_line", ln)) if t], {"anchor": "top"})
+                                               for (hd, ln), (x, y) in zip(pts, cells)])
+    for (_nr, nd), (_tr, td_) in zip(nums, words):
         draws += [nd, td_]
     _run_all(art + draws)
     return rects
@@ -1093,16 +1177,20 @@ def _tl_points(k, slide, f, image):
     tw = (max(na.chip_width(t, tag_sz, k.face("body")) for t in tags) + 0.3 * s) if tags else 0.0
     beside = bool(tags) and tw <= 0.30 * w
     nw = (1.7 if alt() == 0 else 1.1) * s
+    rows_ = []
     for i, (hd, ln) in enumerate(pts):
         x, ry = x0 + (i % ncol) * (w + gap), top + (i // ncol) * pitch
-        art.append(lambda x=x, ry=ry: na.seg(slide, x, ry - 0.12 * s, x + w, ry - 0.12 * s, k.P["ink"], w=0.6, alpha=0.5))
-        _nr, nd = flow(k, slide, "points", (x, ry, nw, pitch - 0.24 * s), [("item_no", "{:02d}".format(i + 1))],
-                       anchor="middle", start={"item_no": (50 if alt() == 0 else 34) * s})
         tcol = (x + nw + 0.2 * s, ry, w - nw - 0.2 * s - (tw if beside else 0.0), pitch - 0.24 * s)
         if tags and not beside:
             tcol = (tcol[0], tcol[1], tcol[2], tcol[3] - 0.45 * s)
-        _tr, td_ = flow(k, slide, "points", tcol, [(x_, t) for x_, t in (("item_head", hd), ("item_line", ln)) if t],
-                        anchor="middle")
+        rows_.append((x, ry, tcol))
+    nums = plan_together(k, slide, "points", [((x, ry, nw, pitch - 0.24 * s), [("item_no", "{:02d}".format(i + 1))],
+                                               {"anchor": "middle", "start": {"item_no": (50 if alt() == 0 else 34) * s}})
+                                              for i, (x, ry, _t) in enumerate(rows_)])
+    words = plan_together(k, slide, "points", [(tcol, [(x_, t) for x_, t in (("item_head", hd), ("item_line", ln)) if t],
+                                                {"anchor": "middle"}) for (hd, ln), (_x, _y, tcol) in zip(pts, rows_)])
+    for i, ((x, ry, tcol), (_nr, nd), (_tr, td_)) in enumerate(zip(rows_, nums, words)):
+        art.append(lambda x=x, ry=ry: na.seg(slide, x, ry - 0.12 * s, x + w, ry - 0.12 * s, k.P["ink"], w=0.6, alpha=0.5))
         draws += [nd, td_]
         if tags:
             mw = (tw - 0.3 * s) if beside else tcol[2]
@@ -1152,9 +1240,12 @@ def _tl_data(k, slide, f, image):
     frac = None
     if total is not None:
         v, t = num_value(num), num_value(total)
-        if v is None or t is None or t <= 0:
-            raise ValueError("tally.data(): total= draws a share bar, so number= and total= must both be plain numbers "
-                             "(12, 1,250, 98.6%) — got number={!r}, total={!r}".format(num, total))
+        if v is None or t is None:
+            raise ValueError("tally.data(): total= draws a share bar, so number= and total= must both be plain, non-negative "
+                             "numbers (12, 1,250, 98.6%) — got number={!r}, total={!r}".format(num, total))
+        if t <= 0:
+            raise ValueError("tally.data(): total= must be greater than 0 — a share of nothing has no bar (got total={!r})"
+                             .format(total))
         if ("%" in (num or "")) != ("%" in total):
             raise ValueError("tally.data(): number= and total= must both be percentages or neither — got {!r} and "
                              "total={!r}".format(num, total))
@@ -1225,6 +1316,7 @@ def _cb_smudges(k, slide, keep, seed):
     W, H, s, o = ctx(k)
     rnd = _random.Random(seed)
     placed = 0
+    keep = [(x_, y_, w_, h_ + 0.35 * s) for x_, y_, w_, h_ in keep]   # and clear of a chalk underline under the words
     for _ in range(40):
         if placed == 3:
             break
@@ -1233,6 +1325,7 @@ def _cb_smudges(k, slide, keep, seed):
         r = (x, y, w, w * 0.22)
         if x + w > W - 0.2 * s or any(meet(r, c, 0.1 * s) for c in keep):
             continue
+        keep = list(keep) + [r]                      # nor on each other
         e = dk.box(slide, x, y, w, w * 0.22, fill=k.P["ink"])
         e._element.spPr.find(dk.qn("a:prstGeom")).set("prst", "ellipse")
         na._radial(e, k.P["ink"], 0.06)
@@ -1341,7 +1434,8 @@ def _cb_image_text(k, slide, f, image):
     L = 0.35 * s
     x0, y0, x1, y1 = img[0] - 0.08 * s, img[1] - 0.08 * s, img[0] + img[2] + 0.08 * s, img[1] + img[3] + 0.08 * s
     for i, (ax, ay, dx, dy) in enumerate(((x0, y0, 1, 1), (x1, y0, -1, 1), (x1, y1, -1, -1), (x0, y1, 1, -1))):
-        na.chalk_path(slide, [(ax + dx * L, ay), (ax, ay), (ax, ay + dy * L)], k.P["ink"], w=2.2, seed=20 + i, passes=1)
+        for sh_ in na.chalk_path(slide, [(ax + dx * L, ay), (ax, ay), (ax, ay + dy * L)], k.P["ink"], w=2.2, seed=20 + i, passes=1):
+            dk.overlap_intent(sh_, "a chalk corner mark holds the picture to the board: it sits on the picture's corner")
     _run_all(ds)
     return r
 
@@ -1395,7 +1489,7 @@ def _cb_points(k, slide, f, image):
                                         "grid takes over".format(n))
         head_start = {"item_head": z_}
 
-    def plan_box(i, y, h):
+    def plan_box(i, y, h, start=None):
         hd, ln = pts[i]
         x = 0.08 * W + (i % ncol) * (bw + gap)
         if above:
@@ -1403,16 +1497,22 @@ def _cb_points(k, slide, f, image):
         else:
             tcol = (x + pad + numd + 0.25 * s, y + pad, bw - 2 * pad - numd - 0.25 * s, h - 2 * pad)
         return flow(k, slide, "points", tcol, [(x_, t) for x_, t in (("item_head", hd), ("item_line", ln)) if t], anchor="top",
-                    start=head_start or None)
+                    start=dict(head_start, **(start or {})) or None)
     # pass 1: each row's height from its boxes' own words; pass 2: the rows centred in the room under the title. A
     # grid's narrow boxes try the number beside the words first, then above them (a square board, 2026-10-08)
     slot = (bottom - top - (nrow - 1) * gap) / nrow
     opts = [above] if (ncol == 1 or above) else [False, True]
     for j, above in enumerate(opts):
         try:
+            # every box at ONE size per field — the smallest any box needed alone (a Chinese box's body was smaller
+            # than its neighbours', 2026-10-09) — then each row as tall as its tallest box at that size
+            shared = {}
+            for i in range(n):
+                for f_, z in getattr(plan_box(i, top, slot)[1], "sizes", {}).items():
+                    shared[f_] = min(shared.get(f_, z), z)
             row_h = []
             for rw in range(nrow):
-                hs = [max(v[1] + v[3] for v in plan_box(i, top, slot)[0].values()) - top + pad
+                hs = [max(v[1] + v[3] for v in plan_box(i, top, slot, shared)[0].values()) - top + pad
                       for i in range(rw * ncol, min(n, (rw + 1) * ncol))]
                 row_h.append(max(max(hs), numd + 2 * pad))
             break
@@ -1427,7 +1527,7 @@ def _cb_points(k, slide, f, image):
         y += row_h[rw] + gap
     for i, (x, y, w, h_) in enumerate(boxes):
         c = cols[i % len(cols)]
-        _tr, td_ = plan_box(i, y, h_ + 0.01)
+        _tr, td_ = plan_box(i, y, h_ + 0.01, shared)
         art.append(lambda x=x, y=y, w=w, h_=h_, c=c, i=i: na.chalk_box(slide, x, y, w, h_, c, seed=20 + i))
         ncx, ncy = x + pad + numd / 2.0, y + pad + numd / 2.0
         art.append(lambda ncx=ncx, ncy=ncy, c=c, i=i: na.chalk_ellipse(slide, ncx, ncy, numd / 2.0, numd / 2.0, c, seed=30 + i))

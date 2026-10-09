@@ -353,9 +353,11 @@ class Kit:
 
 
 def use(name, prs, *, fonts="both", plan=None, image_dir=None, platform=None, ground="light"):
-    """Start a deck in a curated VISUAL LANGUAGE ("editorial", "soft", "collage", "storybook"): sets the
-    palette, fonts and ground, and returns a Kit whose page functions — cover, section, image_text, quote,
-    data, closing — lay out your own words and images in that language. fonts="both" uses only faces on
+    """Start a deck in a curated VISUAL LANGUAGE — image-led "editorial", "soft", "collage", "storybook"; drawn (no
+    pictures needed) "ink", "poster", "cutpaper", "drafting", "starlit", "broadsheet", "journal", "tally",
+    "chalkboard": sets the palette, fonts and ground, and returns a Kit whose page functions — cover, section,
+    image_text, quote, data, closing, and points on the drawn languages — lay out your own words and images in that
+    language. fonts="both" uses only faces on
     macOS AND Windows; fonts="mac" unlocks Mac-only faces. plan/image_dir let image= take P1 series slot
     ids. ground="light" (default), the language's contrast ground (VARIANTS[name]), or "auto": the light ground
     unless your last decks already sit on it (the look history) — then the contrast one; printed boards stay
@@ -1042,6 +1044,8 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=Non
                 rr = k.runs(t, sz, color, bold, role, italic)
             dk.text(slide, fx, fy, fw, fh, [rr], align=al)
     draw.sizes = {f: sz for f, _t, sz, _r in plan}      # what each field was planned at (P4 sizes its art by it)
+    draw.exact = {f: sizes[f] for f, _t in items}       # …before the 0.1pt rounding: a size decided at 32.58pt (one
+    # line) was drawn at 32.6 (two, "一盏茶的时 / 间"); vl_native2 draws at the exact size rounded DOWN
     return rects, draw
 
 
@@ -1379,9 +1383,12 @@ def _page(page):
         extras = {e for e in NATIVE_EXTRAS.get(self.name, ()) if page in EXTRA_PAGES.get(e, (page,))}
         bad = set(fields) - set(PAGE_FIELDS[page]) - ({"line"} if page == "closing" else set()) - extras
         if bad:
-            raise TypeError("{}.{}(): unknown field(s) {} — this page takes {}{}".format(
+            elsewhere = ["{}= is drawn on {}".format(e, ", ".join(EXTRA_PAGES[e])) for e in sorted(bad)
+                         if e in NATIVE_EXTRAS.get(self.name, ()) and e in EXTRA_PAGES]
+            raise TypeError("{}.{}(): unknown field(s) {} — this page takes {}{}{}".format(
                 self.name, page, sorted(bad), list(PAGE_FIELDS[page]) + ["image"],
-                " and {}".format(sorted(extras)) if extras else ""))
+                " and {}".format(sorted(extras)) if extras else "",
+                " ({})".format("; ".join(elsewhere)) if elsewhere else ""))
         if self.name in NATIVE:
             import vl_native
             out = vl_native.compose(self, slide, page, fields, image)
@@ -1404,14 +1411,17 @@ def _page(page):
                   "cover/closing take a list of up to 4). Returns {{'rects': {{field: (x, y, w, h)}}, ...}}; refuses "
                   "with VLTextOverflow when even the floor sizes overflow, ValueError when there is nothing to place. "
                   "The native languages also take the words only you can give: seal= (ink), highlight= (poster), "
-                  "icons= (cutpaper points), project= (drafting) — never invented, nothing drawn without them."
+                  "icons= (cutpaper points), project= (drafting); masthead=, edition=, inside= (cover), tags= (points) "
+                  "(broadsheet); running=, authors= and abstract= (cover), margin= (points) (journal); tags= (points), "
+                  "total= (data) (tally); doodle= (cover, closing), ordered= (points) (chalkboard) — never invented, "
+                  "nothing drawn without them; on a page that does not draw one it is refused, naming the pages that do."
                   .format(page, PAGE_FIELDS[page]))
     import inspect as _insp                      # a real signature, so sigs.py prints the fields by name
     _P = _insp.Parameter
     fn.__signature__ = _insp.Signature(
         [_P("self", _P.POSITIONAL_OR_KEYWORD), _P("slide", _P.POSITIONAL_OR_KEYWORD)]
         + [_P(f, _P.KEYWORD_ONLY, default=None) for f in PAGE_FIELDS[page] if not (page == "quote" and f == "mark")]
-        + [_P("image", _P.KEYWORD_ONLY, default=None)])
+        + [_P("image", _P.KEYWORD_ONLY, default=None), _P("extras", _P.VAR_KEYWORD)])
     return fn
 
 

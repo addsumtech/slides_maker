@@ -580,6 +580,7 @@ def crescent(slide, cx, cy, d, color, ground):
     b = disc(slide, cx + 0.24 * d, cy - 0.13 * d, 0.94 * d, ground)
     for sh in (a, b):
         dk.decorative(sh, "the crescent moon of the night sky; nothing reads from it")
+        dk.overlap_intent(sh, "the crescent is one disc cut by another: they overlap by construction")
     return a, b
 
 
@@ -628,9 +629,16 @@ def chalk_box(slide, x, y, w, h, color, *, seed=0):
 
 
 def chalk_ellipse(slide, cx, cy, rx, ry, color, *, seed=0, turns=1.08):
+    """A hand-drawn ring: enough points for its size that no facet shows (60 read as a polygon on a large ring), the
+    wobble eased along the stroke rather than jumping point to point, and a short overshoot where the chalk lifts."""
     rnd = random.Random(seed)
-    pts = [(cx + rx * (1 + rnd.uniform(-0.03, 0.03)) * math.cos(a), cy + ry * (1 + rnd.uniform(-0.03, 0.03)) * math.sin(a))
-           for a in [2 * math.pi * turns * t / 60 - 2.2 for t in range(61)]]
+    n = max(60, int(2 * math.pi * max(rx, ry) * 24))
+    k1, k2, ph1, ph2 = rnd.uniform(0.012, 0.025), rnd.uniform(0.008, 0.015), rnd.uniform(0, 6.3), rnd.uniform(0, 6.3)
+    pts = []
+    for t in range(n + 1):
+        a = 2 * math.pi * turns * t / n - 2.2
+        wob = 1 + k1 * math.sin(3 * a + ph1) + k2 * math.sin(7 * a + ph2)
+        pts.append((cx + rx * wob * math.cos(a), cy + ry * wob * math.sin(a)))
     return chalk_path(slide, pts, color, w=2.4, seed=seed)
 
 
@@ -654,7 +662,7 @@ def board_frame(slide, wood, chalk):
     """A blackboard's wooden frame drawn INSIDE the page, and a stick of chalk on the ledge. Returns the inner rect."""
     W, H = page_size(slide)
     t = 0.14 * min(W, H) / 7.5
-    for x, y, w, h in ((0, 0, W, t), (0, H - t, W, t), (0, 0, t, H), (W - t, 0, t, H)):
+    for x, y, w, h in ((0, 0, W, t), (0, H - t, W, t), (0, t, t, H - 2 * t), (W - t, t, t, H - 2 * t)):   # bars meet, never overlap
         dk.decorative(dk.box(slide, x, y, w, h, fill=hexstr(wood)), "the blackboard's wooden frame")
     stick = dk.box(slide, 0.32 * W, H - t - 0.06, 1.2 * min(W, H) / 7.5, 0.06, fill=hexstr(chalk))
     dk.decorative(stick, "a stick of chalk on the board's ledge")
