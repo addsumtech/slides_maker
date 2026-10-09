@@ -740,3 +740,129 @@ def share_bar(slide, x, y, w, frac, *, track, fill, h=0.16):
     dk.box(slide, x, y, w, h, fill=hexstr(track), round=True, r=h / 2.0)
     if frac > 0:
         dk.box(slide, x, y, max(h, w * frac), h, fill=hexstr(fill), round=True, r=h / 2.0)
+
+
+# ═══════════════════ P5: wayfinding (metro map + signage) and interface (app UI) ═══════════════════
+def route(slide, pts, color, *, w=0.16):
+    """A transit route through `pts` [(x, y), …] — horizontal, vertical or 45° legs — as round-capped strokes `w` in
+    wide. Clipped to the page by seg(); a cap may overhang the edge, which beyond_page() does not count (it reads
+    the connector's box)."""
+    out = []
+    for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+        c = seg(slide, x0, y0, x1, y1, color, w=w * 72.0)
+        c._element.spPr.find(qn("a:ln")).set("cap", "rnd")
+        out.append(c)
+    return out
+
+
+def station(slide, cx, cy, d, *, ring, fill="FFFFFF", w=2.25):
+    """A station: a white disc with a dark ring, centred on (cx, cy)."""
+    return dk.disc(slide, cx - d / 2.0, cy - d / 2.0, d, fill=hexstr(fill), line=dk._as_rgb(hexstr(ring)), line_w=w)
+
+
+def interchange(slide, cx, cy, w, h, *, ring, fill="FFFFFF", lw=3.0):
+    """An interchange: a white rounded rectangle with a heavy dark ring, centred on (cx, cy)."""
+    return dk.box(slide, cx - w / 2.0, cy - h / 2.0, w, h, fill=hexstr(fill), line=dk._as_rgb(hexstr(ring)),
+                  line_w=lw, round=True, r=min(w, h) / 2.0)
+
+
+def roundel(slide, cx, cy, d, text, *, fill, ink, size, face, ea_face=None):
+    """A line roundel: a filled disc with one short unwrapped label. Returns (x, y, d, d)."""
+    x, y = cx - d / 2.0, cy - d / 2.0
+    dk.disc(slide, x, y, d, fill=hexstr(fill))
+    run = (text, size, dk._as_rgb(hexstr(ink)), True, False, face) + ((ea_face,) if ea_face else ())
+    tb = dk.text(slide, x, y, d, d, [[run]], align=dk.PP_ALIGN.CENTER, anchor=dk.MSO_ANCHOR.MIDDLE, space_after=0)
+    tb.text_frame.word_wrap = False
+    dk.overlap_intent(tb, "the label sits on its own roundel")
+    return (x, y, d, d)
+
+
+def sign_panel(slide, x, y, w, h, *, fill, keyline="FFFFFF", r=0.12):
+    """An enamel sign: a rounded panel with a white keyline inset by 0.07in. Returns the rect inside the keyline."""
+    dk.box(slide, x, y, w, h, fill=hexstr(fill), round=True, r=r)
+    k = dk.box(slide, x + 0.07, y + 0.07, w - 0.14, h - 0.14, fill=None, line=dk._as_rgb(hexstr(keyline)), line_w=1.5,
+               round=True, r=max(0.02, r - 0.04))
+    dk.decorative(k, "the sign's keyline")
+    return (x + 0.07, y + 0.07, w - 0.14, h - 0.14)
+
+
+def ui_window(slide, x, y, w, h, *, fill, line, drop, r=0.22, bar=None):
+    """An app window: a flat drop offset under a rounded panel with a hairline, and an optional top bar separated by
+    a hairline. Returns the content rect (below the bar)."""
+    d = dk.box(slide, x + 0.04, y + 0.08, w, h, fill=hexstr(drop), round=True, r=r)
+    dk.decorative(d, "the window's drop edge")
+    dk.box(slide, x, y, w, h, fill=hexstr(fill), line=dk._as_rgb(hexstr(line)), line_w=0.75, round=True, r=r)
+    if bar:
+        hl = dk.box(slide, x, y + bar, w, 0.012, fill=hexstr(line))
+        dk.decorative(hl, "the top bar's hairline")
+        return (x, y + bar, w, h - bar)
+    return (x, y, w, h)
+
+
+def ui_toggle(slide, x, y, on, *, on_fill, off_line, knob="FFFFFF", w=0.62, h=0.34):
+    """A switch: an on track filled with the primary, an off track outlined; the knob at the matching end."""
+    if on:
+        dk.box(slide, x, y, w, h, fill=hexstr(on_fill), round=True, r=h / 2.0)
+    else:
+        dk.box(slide, x, y, w, h, fill=None, line=dk._as_rgb(hexstr(off_line)), line_w=1.25, round=True, r=h / 2.0)
+    d = h - 0.08
+    dk.disc(slide, x + (w - d - 0.04 if on else 0.04), y + 0.04, d,
+            fill=hexstr(knob if on else off_line))
+
+
+def ui_button_width(text, size, face):
+    """A button as wide as its words plus 1.6 em of padding (chip_width carries 1.2 em; a button breathes more)."""
+    return chip_width(text, size, face) + 0.4 * size / 72.0 + 0.3
+
+
+def ui_button(slide, x, y, text, *, size, fill, ink, face, ea_face=None, line=None, h=None):
+    """A pill button, one line that never wraps, its width measured. Returns (x, y, w, h)."""
+    w = ui_button_width(text, size, face)
+    h = h or size / 72.0 * 2.6
+    dk.box(slide, x, y, w, h, fill=hexstr(fill) if fill else None, line=dk._as_rgb(hexstr(line)) if line else None,
+           line_w=1.0, round=True, r=h / 2.0)
+    run = (text, size, dk._as_rgb(hexstr(ink)), True, False, face) + ((ea_face,) if ea_face else ())
+    tb = dk.text(slide, x, y, w, h, [[run]], align=dk.PP_ALIGN.CENTER, anchor=dk.MSO_ANCHOR.MIDDLE, space_after=0)
+    tb.text_frame.word_wrap = False
+    dk.overlap_intent(tb, "the label sits on its own button")
+    return (x, y, w, h)
+
+
+def ui_cursor(slide, x, y, *, fill, edge, size=0.34):
+    """A pointer arrow resting at (x, y) — its tip — drawn as a tilted triangle with a light edge."""
+    from pptx.enum.shapes import MSO_SHAPE
+    from pptx.util import Inches, Pt
+    sh = slide.shapes.add_shape(MSO_SHAPE.ISOSCELES_TRIANGLE, Inches(x), Inches(y), Inches(size * 0.76), Inches(size))
+    sh.rotation = 332.0
+    sh.fill.solid()
+    sh.fill.fore_color.rgb = dk._as_rgb(hexstr(fill))
+    sh.line.color.rgb = dk._as_rgb(hexstr(edge))
+    sh.line.width = Pt(1.5)
+    dk.adopt(sh)
+    dk.decorative(sh, "a pointer resting on the primary button")
+    return sh
+
+
+def ui_device(slide, x, y, w, h, kind, *, frame, screen):
+    """A device frame around a picture: "browser" (a window with a slim bar and three dots) or "phone" (a rounded
+    bezel). Returns the screen rect the picture goes in."""
+    if kind == "browser":
+        dk.box(slide, x, y, w, h, fill=hexstr(frame), line=dk._as_rgb(hexstr(screen)), line_w=0.75, round=True, r=0.14)
+        bar = min(0.36, 0.09 * h)
+        for i in range(3):
+            dot = dk.disc(slide, x + 0.16 + i * 0.16, y + bar / 2.0 - 0.045, 0.09, fill=hexstr(screen))
+            dk.decorative(dot, "browser window chrome")
+        return (x + 0.06, y + bar, w - 0.12, h - bar - 0.06)
+    if kind == "phone":
+        dk.box(slide, x, y, w, h, fill=hexstr(frame), round=True, r=min(w, h) * 0.16)
+        m = max(0.06, 0.045 * w)
+        return (x + m, y + m * 1.6, w - 2 * m, h - m * 3.2)
+    raise ValueError("ui_device(): kind must be 'browser' or 'phone', got {!r}".format(kind))
+
+
+def ui_bubble(slide, x, y, w, h, *, fill, line, r=0.32):
+    """A chat bubble: a rounded panel whose top-left corner is square (the tail side). Returns its rect."""
+    dk.box(slide, x, y, w, h, fill=hexstr(fill), line=dk._as_rgb(hexstr(line)), line_w=0.75, round=True, r=r)
+    sq = dk.box(slide, x, y, r, r, fill=hexstr(fill))
+    dk.decorative(sq, "the bubble's tail corner")
+    return (x, y, w, h)
