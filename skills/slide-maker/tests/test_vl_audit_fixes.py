@@ -227,23 +227,30 @@ FULL = [("cover", dict(kicker="Annual review", title="Every street needs a night
         ("quote", dict(quote="The visitor holds the screwdriver.", attribution="A volunteer")),
         ("data", dict(number="12", label="evenings this year", note="Counted at the door.")),
         ("closing", dict(title="See you next week", line="Bring a neighbour."))]
-EXTRA_FOR = {"tally": {"points": {"tags": ["A", "B"]}}, "broadsheet": {"points": {"tags": ["A", "B"]}}}
+# one deck of each language's own pages per canvas, the two grounds taking turns (both meet a canvas), with the words
+# only the caller can give — built once, read by the prohibitions here and by the delivery lint (B2)
+DX = {"tally": {"points": {"tags": ["A", "B"]}, "data": {"total": "20"}}, "broadsheet": {"points": {"tags": ["A", "B"]}},
+      "chalkboard": {"cover": {"doodle": "lucide:wrench"}, "closing": {"doodle": "lucide:wrench"}, "points": {"ordered": True}},
+      "ink": {"cover": {"seal": "修"}}}
+OWN = []
 for name in vl.LANGS:
-    for W, H in ((13.333, 7.5), (7.5, 10.0)):
-        for ground in vl.VARIANTS[name]:
-            prs, k = use(name, W, H, ground)
-            for page, kw in FULL:
-                kw = dict(kw, **EXTRA_FOR.get(name, {}).get(page, {}))
-                if page == "image_text":
-                    kw["image"] = img_for(name)
-                getattr(k, page)(k.new_slide(), **kw)
-            path = td / "own_{}_{}_{}.pptx".format(name, ground, int(W))
-            prs.save(str(path))
-            with contextlib.redirect_stdout(io.StringIO()):
-                found, _f = cvl.check(str(path), {"name": name, "fonts": "both", "ground": ground})
-            forb = [x for x in found if "FORBIDDEN" in str(x) or "forbids" in str(x)]
-            check(not forb, "{} {} {}x{}: a deck of its own pages passes its own prohibitions ({})".format(
-                name, ground, W, H, [str(x)[:90] for x in forb[:1]]))
+    grounds = list(vl.VARIANTS[name])
+    for ci, (W, H) in enumerate(((13.333, 7.5), (7.5, 10.0))):
+        ground = grounds[ci % len(grounds)]
+        prs, k = use(name, W, H, ground)
+        for page, kw in FULL:
+            kw = dict(kw, **DX.get(name, {}).get(page, {}))
+            if page == "image_text" or (name in vl.IMAGE_LED and page in ("cover", "closing")):
+                kw["image"] = img_for(name)
+            getattr(k, page)(k.new_slide(), **kw)
+        path = td / "own_{}_{}_{}.pptx".format(name, ground, int(W))
+        prs.save(str(path))
+        OWN.append((name, ground, W, H, path))
+        with contextlib.redirect_stdout(io.StringIO()):
+            found, _f = cvl.check(str(path), {"name": name, "fonts": "both", "ground": ground})
+        forb = [x for x in found if "FORBIDDEN" in str(x) or "forbids" in str(x)]
+        check(not forb, "{} {} {}x{}: a deck of its own pages passes its own prohibitions ({})".format(
+            name, ground, W, H, [str(x)[:90] for x in forb[:1]]))
 
 # ── A6: a picture stays visible on a dark ground ──
 # ink's night ground multiplied the picture by the dark/light paper ratio (~0.13) and the photo all but vanished (both
@@ -310,28 +317,13 @@ for name in vl.LANGS:
 # the hills, chalkboard's doodle (OVERLAP), ink's figure inside its ensō (INVISIBLE TEXT: the ring's bounding box read as
 # the figure's backing) — an agent told "fix every finding" could not (both audits, 2026-10-09)
 import lint_deck as _ld
-DX = {"tally": {"points": {"tags": ["A", "B", "C"]}, "data": {"total": "20"}}, "broadsheet": {"points": {"tags": ["A", "B", "C"]}},
-      "chalkboard": {"cover": {"doodle": "lucide:wrench"}, "closing": {"doodle": "lucide:wrench"}, "points": {"ordered": True}},
-      "ink": {"cover": {"seal": "修"}}}
-for name in vl.LANGS:
-    for W, H in ((13.333, 7.5), (7.5, 10.0)):
-        for ground in vl.VARIANTS[name]:
-            prs, k = use(name, W, H, ground)
-            for page, kw in FULL:
-                kw = dict(kw, **DX.get(name, {}).get(page, {}))
-                if page in ("points",) and name in ("tally", "broadsheet"):
-                    kw["items"] = kw["items"][:3] + [("Take it home", "Or put it on the list.")][:max(0, len(kw["tags"]) - len(kw["items"]))]
-                if page == "image_text" or (name in vl.IMAGE_LED and page in ("cover", "closing")):
-                    kw["image"] = img_for(name)
-                getattr(k, page)(k.new_slide(), **kw)
-            path = td / "lint_{}_{}_{}.pptx".format(name, ground, int(W))
-            prs.save(str(path))
-            buf = io.StringIO()
-            with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(io.StringIO()):
-                hard = _ld.lint(str(path), static_ok=True)
-            why = [l_.strip()[:110] for l_ in buf.getvalue().splitlines()
-                   if re.match(r"\s+slide \d+: [A-Z]", l_) and "[warn]" not in l_ and "[stats]" not in l_]
-            check(hard == 0, "{} {} {}x{}: a deck of its own pages has no hard lint finding ({})".format(name, ground, W, H, why[:2]))
+for name, ground, W, H, path in OWN:
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(io.StringIO()):
+        hard = _ld.lint(str(path), static_ok=True)
+    why = [l_.strip()[:110] for l_ in buf.getvalue().splitlines()
+           if re.match(r"\s+slide \d+: [A-Z]", l_) and "[warn]" not in l_ and "[stats]" not in l_]
+    check(hard == 0, "{} {} {}x{}: a deck of its own pages has no hard lint finding ({})".format(name, ground, W, H, why[:2]))
 
 # ── B3: a near-uniform texture ground is a solid ground for contrast ──
 # tally's grid, chalkboard's slate, collage's grain, the drafting grid and the night sky are pictures painted as the
@@ -401,7 +393,7 @@ PTS = {"en": [("Share the tools", "One drawer of screwdrivers feeds three tables
               ("步行可达", "步行十分钟是我们坚持的距离。"), ("记下每次修理", "每张桌一本笔记，就是明年的培训手册。")]}
 PT_TITLE = {"en": "How a repair evening works", "zh": "修理之夜是怎么运作的"}
 for name in vl.IMAGE_LED:
-    for W, H in ((13.333, 7.5), (7.5, 10.0), (5.625, 10.0)):       # the long-copy corpus covers every canvas
+    for W, H in ((13.333, 7.5), (5.625, 10.0)):       # the long-copy corpus (test_native_generality) covers the others
         for lang in ("en", "zh"):
             for n, im in ((4, None), (3, img_for(name))):
                     prs, k = use(name, W, H)

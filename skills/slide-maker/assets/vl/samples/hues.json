@@ -1,0 +1,84 @@
+{
+ "broadsheet": [],
+ "broadsheet-salmon": [],
+ "chalkboard": [
+  "#F2D16B"
+ ],
+ "chalkboard-slate": [
+  "#F2D16B"
+ ],
+ "collage": [
+  "#F2C230",
+  "#7A5A00"
+ ],
+ "collage-slate": [
+  "#F2C230"
+ ],
+ "cutpaper": [
+  "#EE8A6B",
+  "#5B3F6E",
+  "#5AA38A",
+  "#2F6F62"
+ ],
+ "cutpaper-night": [
+  "#EE8A6B",
+  "#5B3F6E",
+  "#467E7A"
+ ],
+ "drafting": [],
+ "drafting-cyanotype": [],
+ "editorial": [
+  "#9E2F20"
+ ],
+ "editorial-ink": [
+  "#EE7A62"
+ ],
+ "ink": [
+  "#B0362A",
+  "#A3322A"
+ ],
+ "ink-night": [
+  "#B23A2C"
+ ],
+ "journal": [
+  "#1F5C46"
+ ],
+ "journal-green": [
+  "#D9C27A"
+ ],
+ "poster": [
+  "#D7FF3B",
+  "#FF4B1F"
+ ],
+ "poster-paper": [
+  "#1F3BFF"
+ ],
+ "soft": [
+  "#E8A88F",
+  "#8E4430"
+ ],
+ "soft-dusk": [
+  "#E8A88F"
+ ],
+ "starlit": [
+  "#D9B36C"
+ ],
+ "starlit-dawn": [
+  "#EDB3A0"
+ ],
+ "storybook": [
+  "#9A3F1E",
+  "#46612F"
+ ],
+ "storybook-meadow": [
+  "#772C11"
+ ],
+ "tally": [
+  "#2438F0",
+  "#C6F432"
+ ],
+ "tally-night": [
+  "#7C89FF",
+  "#C6F432"
+ ]
+}

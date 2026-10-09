@@ -1049,6 +1049,18 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=Non
         if bad:                           # it would break mid-word and run into the next field (final review)
             raise VLTextOverflow("{}.{}(): the {}'s word {!r} is wider than the {:.2f}in column even at the floor size "
                                  "{:.0f}pt — shorten it, or break it with a space".format(k.name, page, f, bad, w_col, sizes[f]))
+    # copy that cannot fit even at the floor sizes is refused at once, with the same numbers — the shrink loop below
+    # measured an overlong title up to 200 times first (a refusal took ~20s a page, the audit's test, 2026-10-09)
+    _start = dict(sizes)
+    sizes.update(floors)
+    _at_floor = total()
+    sizes.update(_start)
+    if _at_floor > h + 0.02:
+        worst = max(items, key=lambda it: _field_height(k, it[0], it[1], floors[it[0]], w))
+        raise VLTextOverflow("{}.{}(): all fields together need {:.2f}in at their floor sizes but the column is "
+                             "{:.2f}in — shorten the copy; the longest is the {} ({:.2f}in at {:.0f}pt)".format(
+                                 k.name, page, _at_floor, h, worst[0],
+                                 _field_height(k, worst[0], worst[1], floors[worst[0]], w), floors[worst[0]]))
     guard = 0
     while total() > h and guard < 200:
         guard += 1
