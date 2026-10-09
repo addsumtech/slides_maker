@@ -377,6 +377,27 @@ for name in vl.LANGS:
     if lums[best] < 0.2:
         check("dark" in why, "{}: a printed board says the page prints dark ({})".format(name, why[:80]))
 
+# ── C2: a refused page leaves its slide as it found it ──
+# collage left three furniture shapes and storybook its picture on a slide whose cover was refused; an agent that caught
+# the refusal and retried shorter copy on the same slide got the art twice (audit sweep, 2026-10-09)
+LONG = "Why every street deserves a place to fix what it already owns, " * 30
+for name in vl.LANGS:
+    prs, k = use(name, 5.625, 10.0)
+    s = k.new_slide()
+    n0, rels0 = len(s.shapes), len(s.part.rels)
+    for kw in (dict(title=LONG, subtitle=LONG, image=img_for(name)), dict(title="Fine", image=str(NOTIMG))):
+        if name in vl.NATIVE:
+            kw.pop("image")
+            if "subtitle" not in kw:
+                continue
+        try:
+            k.cover(s, **kw)
+            check(False, "{}: an overlong cover is refused on 9:16".format(name))
+        except (ValueError, FileNotFoundError):
+            check(len(s.shapes) == n0 and len(s.part.rels) == rels0,
+                  "{} cover: a refusal leaves the slide as it was ({} -> {} shapes, {} -> {} rels)".format(
+                      name, n0, len(s.shapes), rels0, len(s.part.rels)))
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

@@ -1532,10 +1532,18 @@ def _page(page):
                              "role='content', index=n); then rs.card / dk.text".format(
                                  self.name, ", ".join(NATIVE), self.name, self.name))
         else:
+            import vl_native
+            n0, state = len(slide.shapes), dict(self.__dict__)
             try:
                 out = _compose(self, slide, page, fields, image)
-            except VLImageError as e:
-                raise VLImageError("{}.{}(): {}".format(self.name, page, e)) from None
+            except Exception as e:
+                # a refused page leaves its slide as it found it: collage left its furniture and storybook its picture,
+                # and a retry with shorter copy on the same slide drew them twice (audit sweep, 2026-10-09)
+                vl_native._unbuild(slide, n0)
+                self.__dict__.clear(); self.__dict__.update(state)
+                if isinstance(e, VLImageError):
+                    raise VLImageError("{}.{}(): {}".format(self.name, page, e)) from None
+                raise
         # the page's title for screen readers: the kicker is set above it, or the title sits low, so neither lint
         # reading (a TITLE placeholder, or large text in the top 28%) found it — READING ORDER held the hand-off
         ttl = (" ".join(str(fields.get(f) or "") for f in ("number", "label")) if page == "data"

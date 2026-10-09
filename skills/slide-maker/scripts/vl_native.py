@@ -334,6 +334,11 @@ def compose(k, slide, page, fields, image):
             _unbuild(slide, n0)
             k.__dict__.clear()
             k.__dict__.update(state)
+        except Exception:                         # any other refusal leaves the slide as it found it, too
+            _unbuild(slide, n0)
+            k.__dict__.clear()
+            k.__dict__.update(state)
+            raise
         finally:
             _ALT[0] = 0
     else:
