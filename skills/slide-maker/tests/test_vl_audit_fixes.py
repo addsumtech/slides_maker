@@ -126,6 +126,96 @@ for name in vl.LANGS:
                 and not (name == "collage" and vl._outlinable(k, v))]      # collage draws a short figure as an outline
         check(not lost, "{} {} {}: every given word is on the page (lost {})".format(name, page, sorted(kw), lost))
 
+# ── A3: a drawn language never drops a picture silently ──
+# image= on a drawn language's cover/section/quote/data/closing/points built with no picture and no error — even a path
+# to no file (robustness + docs audits, 2026-10-09). It is refused there, naming the pages that do draw one.
+F = dict(cover=dict(title="T"), section=dict(title="T"), points=dict(title="T", items=[("a", "b"), ("c", "d")]),
+         quote=dict(quote="Q"), data=dict(number="3", label="l"), closing=dict(title="T"))
+check(set(getattr(vl, "NATIVE_IMAGE_PAGES", {})) == set(vl.NATIVE), "vl.NATIVE_IMAGE_PAGES names the picture pages of every drawn language")
+for name in vl.NATIVE:
+    pages = getattr(vl, "NATIVE_IMAGE_PAGES", {}).get(name, ("image_text",))
+    for page, kw in F.items():
+        kw = dict(kw)
+        if page == "points" and name in ("tally", "broadsheet"):
+            kw["tags"] = ["a", "b"]
+        for im in (PHOTO, "/no/such/photo.jpg"):
+            prs, k = use(name)
+            s = k.new_slide()
+            try:
+                getattr(k, page)(s, image=im, **kw)
+                drew = any(sh.shape_type == 13 for sh in s.shapes)
+                check(page in pages and drew, "{} {}: image={} is drawn or refused (built, picture drawn: {})".format(
+                    name, page, Path(im).name, drew))
+            except (ValueError, FileNotFoundError) as e:
+                check(page not in pages or im != PHOTO, "{} {}: a picture it draws is accepted ({})".format(name, page, str(e)[:60]))
+                if page not in pages:
+                    check("image_text" in str(e), "{} {}: the refusal names the pages that draw a picture ({})".format(
+                        name, page, str(e)[:90]))
+    for im in ([], [PHOTO, PHOTO]):                      # one picture per page: an empty or long list is refused by name
+        prs, k = use(name)
+        try:
+            k.image_text(k.new_slide(), title="T", body="B", image=im)
+            check(False, "{} image_text: image={} is refused".format(name, "[]" if not im else "two pictures"))
+        except ValueError as e:
+            check("image" in str(e), "{} image_text: image={} is refused by name ({})".format(name, len(im), str(e)[:60]))
+        except Exception as e:
+            check(False, "{} image_text: image={} raises a plain error, not {}".format(name, len(im), type(e).__name__))
+    prs, k = use(name)
+    s = k.new_slide(); k.image_text(s, title="T", body="B", image=[PHOTO])
+    check(any(sh.shape_type == 13 for sh in s.shapes), "{} image_text: a one-picture list is drawn".format(name))
+
+# ── A4 + A7: every picture arrives upright, readable and in a format PowerPoint embeds ──
+from PIL import Image
+import numpy as np
+src = Image.open(PHOTO).convert("RGB")
+portrait = src.crop((0, 0, int(src.height * 0.66), src.height))            # an upright portrait photo …
+stored = portrait.rotate(90, expand=True)                                    # … stored on its side, as phones do
+ex = Image.Exif(); ex[0x0112] = 6
+EXIF6 = td / "phone.jpg"; stored.save(EXIF6, exif=ex.tobytes())
+G16 = td / "figure16.png"
+Image.fromarray((np.linspace(0, 65535, 500 * 400).reshape(400, 500)).astype(np.uint16)).save(G16)
+WEBP = td / "photo.webp"; src.save(WEBP)
+TRUNC = td / "cut.jpg"; TRUNC.write_bytes(Path(PHOTO).read_bytes()[:4000])
+NOTIMG = td / "notes.jpg"; NOTIMG.write_text("not a picture")
+
+
+def placed(s, before):
+    """The pictures a page added (blob decoded), the ground's own picture(s) left out."""
+    out = []
+    for sh in s.shapes:
+        if sh.shape_type == 13 and sh.image.sha1 not in before:
+            out.append(Image.open(io.BytesIO(sh.image.blob)))
+    return out
+
+
+for name in vl.LANGS:
+    prs, k = use(name)
+    s0 = k.new_slide(); k.image_text(s0, title="Before", body="B", image=PHOTO)
+    ground = {sh.image.sha1 for sh in s0.shapes if sh.shape_type == 13 and Image.open(io.BytesIO(sh.image.blob)).size != src.size}
+    s = k.new_slide(); k.image_text(s, title="A photo from a phone", body="Taken upright.", image=str(EXIF6))
+    pics = [im for im in placed(s, ground) if im.size[0] > 50]
+    up = [im for im in pics if im.size[1] > im.size[0] and int(im.getexif().get(274, 1) or 1) == 1]
+    check(bool(up), "{}: a phone photo (EXIF orientation 6) is placed upright ({})".format(name, [im.size for im in pics]))
+    s = k.new_slide(); k.image_text(s, title="A 16-bit figure", body="From the scanner.", image=str(G16))
+    flat = [np.asarray(im.convert("L")).std() for im in placed(s, ground) if im.size[0] > 50]
+    check(flat and max(flat) > 30, "{}: a 16-bit PNG keeps its tones (std {})".format(name, [round(x) for x in flat]))
+    s = k.new_slide()
+    try:
+        k.image_text(s, title="A WebP", body="From the web.", image=str(WEBP))
+        check(any(sh.shape_type == 13 for sh in s.shapes), "{}: a WebP photo is placed".format(name))
+    except Exception as e:
+        check(False, "{}: a WebP photo is placed, not refused ({}: {})".format(name, type(e).__name__, str(e)[:60]))
+    for bad_, why in ((TRUNC, "truncated"), (NOTIMG, "not an image")):
+        try:
+            k.image_text(k.new_slide(), title="Bad", body="B", image=str(bad_))
+            check(False, "{}: a {} file is refused".format(name, why))
+        except ValueError as e:
+            check("image_text" in str(e) and bad_.name in str(e), "{}: a {} file is refused naming the page and file ({})".format(
+                name, why, str(e)[:90]))
+        except Exception as e:
+            check(False, "{}: a {} file raises a plain refusal, not {} ({})".format(name, why, type(e).__name__, str(e)[:60]))
+check(int(Image.open(EXIF6).getexif().get(274, 1)) == 6, "the caller's own file is never rewritten")
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

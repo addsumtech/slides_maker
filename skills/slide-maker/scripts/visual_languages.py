@@ -208,6 +208,9 @@ VARIANTS = {
                               "wood": "5B4632", "chalk": "E8E2D2"}}},
 }
 NATIVE = ("ink", "poster", "cutpaper", "drafting", "starlit", "broadsheet", "journal", "tally", "chalkboard")          # drawn, no pictures needed (vl_native.py)
+# the pages on which a drawn language draws the caller's picture; image= anywhere else is refused, naming these — it
+# was dropped without a word, even a path to no file (robustness + docs audits, 2026-10-09)
+NATIVE_IMAGE_PAGES = {n: ("image_text", "quote") if n == "drafting" else ("image_text",) for n in NATIVE}
 IMAGE_LED = ("editorial", "soft", "collage", "storybook")    # built around the caller's pictures
 # words only the CALLER can give — never invented by the kit; absent means nothing is drawn
 NATIVE_EXTRAS = {"ink": ("seal",), "poster": ("highlight",), "cutpaper": ("icons",), "drafting": ("project",), "broadsheet": ('masthead', 'edition', 'inside', 'tags'), "journal": ('running', 'authors', 'abstract', 'margin'), "tally": ('tags', 'total'), "chalkboard": ('doodle', 'ordered')}
@@ -534,6 +537,10 @@ for _n in LANGS:
 
 class VLTextOverflow(ValueError):
     """A page's text cannot fit its column even at the language's floor sizes."""
+
+
+class VLImageError(ValueError):
+    """A picture the page was given cannot be used (unreadable, truncated, not an image); the page names itself."""
 
 
 # field: (size_pt at a 7.5in short side, role, bold, colour key, italic, floor_pt)
@@ -1173,7 +1180,7 @@ def _resolve(k, image):
         path = base.with_name(base.stem + ".cut.png") if sl.get("cutout") else base
         if not path.exists():
             raise FileNotFoundError("{}: no image for slot {!r} at {}".format(k.name, image, path))
-        return str(path), sl["alt"], sl["id"]
+        return _usable(path), sl["alt"], sl["id"]
     p = Path(str(image))
     if not p.is_file():
         hint = ""
@@ -1185,7 +1192,51 @@ def _resolve(k, image):
                 hint = (" — if {!r} is an image-series slot id, pass plan= and image_dir= to visual_languages.use() "
                         "so it resolves to that slot's image".format(str(image)))
         raise FileNotFoundError("{}: no image at {}{}".format(k.name, p, hint))
-    return str(p), p.stem.replace("-", " ").replace("_", " "), None
+    return _usable(p), p.stem.replace("-", " ").replace("_", " "), None
+
+
+_EMBEDS = ("JPEG", "PNG", "GIF", "BMP", "TIFF")     # what python-pptx embeds
+
+
+def _usable(p):
+    """The path of `p` as every language can place it — the caller's own file is never rewritten. A picture that only
+    LOOKS right in a viewer is made right in a copy (robustness audit, 2026-10-09): a phone photo's EXIF orientation is
+    baked into its pixels (pptx ignores the flag — the photo landed on its side in all 13 languages); a 16-bit PNG is
+    scaled to 8 bits (the feather step clipped it to a white plate); WebP and other formats pptx cannot embed are
+    re-saved as PNG. A file that cannot be decoded at all — truncated, or not an image — is refused by name."""
+    import hashlib, tempfile
+    from PIL import Image, ImageOps
+    try:
+        im = Image.open(p)
+        im.load()
+    except Exception as e:
+        why = "it is cut short" if "truncated" in str(e).lower() else "it is not a picture this machine can read"
+        raise VLImageError("the image {} cannot be used: {} ({}) — re-export it as a JPEG or PNG".format(
+            Path(p).name, why, type(e).__name__))
+    fmt = (im.format or "").upper()
+    try:
+        orient = int(im.getexif().get(274, 1) or 1)
+    except Exception:
+        orient = 1
+    deep = im.mode in ("I;16", "I;16B", "I;16L", "I;16N", "I", "F")
+    if fmt in _EMBEDS and orient in (0, 1) and not deep:
+        return str(p)
+    st = Path(p).stat()
+    key = hashlib.sha1("{}|{}|{}".format(Path(p).resolve(), st.st_size, st.st_mtime_ns).encode()).hexdigest()[:20]
+    out = Path(tempfile.gettempdir()) / "slide-maker-images" / (key + ".png")
+    if not out.exists():
+        out.parent.mkdir(parents=True, exist_ok=True)
+        if orient not in (0, 1):
+            im = ImageOps.exif_transpose(im)
+        if deep:
+            import numpy as _np
+            a = _np.asarray(im, dtype=_np.float64)
+            top = 65535.0 if im.mode.startswith("I;16") or (im.mode == "I" and a.max() > 255) else (a.max() or 1.0)
+            im = Image.fromarray(_np.clip(a / top * 255.0, 0, 255).astype(_np.uint8), "L")
+        elif im.mode not in ("RGB", "RGBA", "L", "LA", "P"):
+            im = im.convert("RGBA" if "A" in im.mode else "RGB")
+        im.save(out)
+    return str(out)
 
 
 def _place_image(k, slide, image, rect, lay, page, keep_clear=None):
@@ -1456,14 +1507,30 @@ def _page(page):
                 " ({})".format("; ".join(elsewhere)) if elsewhere else ""))
         if self.name in NATIVE:
             import vl_native
-            out = vl_native.compose(self, slide, page, fields, image)
+            if image is not None:
+                pics = NATIVE_IMAGE_PAGES[self.name]
+                if page not in pics:
+                    raise ValueError("{}.{}(): this page draws no picture — {} draws the caller's picture on {}; pass "
+                                     "image= there, or leave it out".format(self.name, page, self.name, " and ".join(pics)))
+                if isinstance(image, (list, tuple)):
+                    if len(image) != 1:
+                        raise ValueError("{}.{}(): image= takes ONE picture (a file path or a slot id), got a list of "
+                                         "{}".format(self.name, page, len(image)))
+                    image = image[0]
+            try:
+                out = vl_native.compose(self, slide, page, fields, image)
+            except VLImageError as e:
+                raise VLImageError("{}.{}(): {}".format(self.name, page, e)) from None
         elif page == "points":
             raise ValueError("{}.points(): the points page belongs to the native languages ({}) — on {} build the "
                              "list on an ordinary page: s = k.new_slide(); x, y, w, h = rs.ground(s, {!r}, "
                              "role='content', index=n); then rs.card / dk.text".format(
                                  self.name, ", ".join(NATIVE), self.name, self.name))
         else:
-            out = _compose(self, slide, page, fields, image)
+            try:
+                out = _compose(self, slide, page, fields, image)
+            except VLImageError as e:
+                raise VLImageError("{}.{}(): {}".format(self.name, page, e)) from None
         # the page's title for screen readers: the kicker is set above it, or the title sits low, so neither lint
         # reading (a TITLE placeholder, or large text in the top 28%) found it — READING ORDER held the hand-off
         ttl = (" ".join(str(fields.get(f) or "") for f in ("number", "label")) if page == "data"
