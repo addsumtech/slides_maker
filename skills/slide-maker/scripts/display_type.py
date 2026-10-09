@@ -33,20 +33,35 @@ def _italic_file(face, bold):
         return None
 
 
+_GW_FONTS = {}     # (file, px) -> a loaded font: loading it was half the cost of every visual-language build
+_GW_WIDTHS = {}    # (text, size, face, bold, italic) -> width; the same words are measured again and again while a
+#                    layout shrinks and tries its alternatives (profiled 2026-10-09: 245k font loads in 217s)
+
+
 def _glyph_width(text, size, face, bold, italic=False):
     """The rendered width of `text` (inches) from the font file's own advances. dk.measure_text breaks
     only at spaces, so it calls a too-wide single word "one line" — LibreOffice breaks it mid-word
     (measured: "BROKEN" at 199.6pt = 8.68in in a 4.94in box, rendered "BRO / KEN"). An italic run is
-    measured with the face's real italic file when one is installed."""
+    measured with the face's real italic file when one is installed. Memoised: a pure function of its arguments."""
+    key = (text, size, face, bool(bold), bool(italic))
+    if key in _GW_WIDTHS:
+        return _GW_WIDTHS[key]
     from PIL import ImageFont
     f = dk._font_file(face, bold=bold) if face else None
     if f is None:
         return None
     itf = _italic_file(face, bold) if italic else None
-    fnt = ImageFont.truetype(str(itf or f), max(8, int(size * 10)))
+    fk = (str(itf or f), max(8, int(size * 10)))
+    fnt = _GW_FONTS.get(fk)
+    if fnt is None:
+        fnt = _GW_FONTS[fk] = ImageFont.truetype(fk[0], fk[1])
     # Synthetic bold / slant does NOT change advance widths in the renderer (measured 2026-10-03: Impact
     # 72pt regular vs bold = 913px both; Hiragino Sans GB +0.4%), so no allowance is added for them.
-    return fnt.getlength(text) / 10.0 / 72.0
+    w = fnt.getlength(text) / 10.0 / 72.0
+    if len(_GW_WIDTHS) > 400000:
+        _GW_WIDTHS.clear()
+    _GW_WIDTHS[key] = w
+    return w
 
 
 def _one_line_size(text, w, face, bold, lo, hi):
