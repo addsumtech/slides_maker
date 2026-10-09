@@ -210,6 +210,12 @@ def _gate_step():
         pass
 
 
+def _here_cmd(script):
+    """`python3 <absolute path of a sibling script>` — a printed re-run line that works from any folder
+    (`python3 scripts/check_register_pixels.py …` ran only from the skill folder; non-Claude audit, 2026-10-09)."""
+    return "python3 " + shlex.quote(str(Path(__file__).resolve().parent / script))
+
+
 def die(msg, code=1):
     if _COLLECTED is not None:
         _COLLECTED.append((_SECTION, msg, code))
@@ -2003,7 +2009,7 @@ def _register_guard_gate(pptx, gates):
         + "\n    - ".join("{}: {}".format(c.upper(), m) for c, m in violations)
         + "\n    These are the register's OWN prohibitions (presets.PRESETS[…]['guard']), and only "
           "the ones a machine can settle — the rest stay prose."
-        + "\n    Re-run alone: python3 scripts/check_register_guard.py {}".format(pptx))
+        + "\n    Re-run alone: {} {}".format(_here_cmd("check_register_guard.py"), shlex.quote(os.path.abspath(pptx))))
 
 
 def _register_pixels_gate(pptx):
@@ -2057,7 +2063,7 @@ def _register_pixels_gate(pptx):
         return
     die("the register this deck DECLARES did not reach its PIXELS:\n    - "
         + "\n    - ".join("{}: {}".format(c, m) for c, m in probs)
-        + "\n    Re-run alone: python3 scripts/check_register_pixels.py {}".format(deck_dir))
+        + "\n    Re-run alone: {} {}".format(_here_cmd("check_register_pixels.py"), shlex.quote(os.path.abspath(deck_dir))))
 
 
 def _fonts_gate(pptx, gates):
@@ -2419,7 +2425,7 @@ def _surface_gate(pptx, gates):
     if probs:
         die("this deck breaks the contract of the canvas it is built on:\n    - "
             + "\n    - ".join("{}: {}".format(c, m) for c, m in probs)
-            + "\n    Re-run alone: python3 scripts/check_surface.py {}".format(pptx))
+            + "\n    Re-run alone: {} {}".format(_here_cmd("check_surface.py"), shlex.quote(os.path.abspath(pptx))))
 
 
 def print_coverage_ledger():
