@@ -664,7 +664,8 @@ for name in ("editorial", "soft", "collage", "storybook", "ink", "poster", "cutp
                 continue                    # set in its lines: nothing to re-wrap
             sz = sh[0].text_frame.paragraphs[0].runs[0].font.size.pt
             full = vl._break_lines(k, "title", sh[0].text_frame.text, sz, sh[0].width / EMU)   # the words as drawn (poster: capitals)
-            check(len(full) < 2 or len(full[-1].split()) > 1,
+            stack = name == "poster" and len(full) >= 2 and len(full[-2].split()) == 1   # poster's word stack, by design
+            check(len(full) < 2 or len(full[-1].split()) > 1 or stack,
                   "{} {}x{}: {!r} has no lone last word at the width it is drawn ({})".format(name, W, H, t[:30], full[-2:]))
 
 for line in ok:

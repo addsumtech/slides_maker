@@ -786,7 +786,10 @@ def _line_width(k, field, text, size):
     for ch in text + "\0":
         c = dk._has_cjk(ch) if ch != "\0" else None
         if seg and (ch == "\0" or c != seg_cjk):
-            total += dt._glyph_width(seg, size, ea if seg_cjk else lat, bold) or 0
+            gw = dt._glyph_width(seg, size, ea if seg_cjk else lat, bold) or 0
+            # a CJK character is at least an em, as the lint counts it: on a machine without the East-Asian face its
+            # stand-in has no CJK glyphs and measured ~0.6em, under the render (the Linux font simulation, 2026-10-09)
+            total += max(gw, len(seg) * size / 72.0) if seg_cjk else gw
             seg = ""
         if ch != "\0":
             seg, seg_cjk = seg + ch, c
