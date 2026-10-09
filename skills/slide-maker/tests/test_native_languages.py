@@ -51,14 +51,14 @@ for n in vl.NATIVE:
         with contextlib.redirect_stdout(io.StringIO()):
             k = vl.use(n, dk.blank_deck(13.333, 7.5), ground=g)
         check(k.ground == g and k.P["ground"] == p["ground"] or n == "poster", "{}/{} use() sets the ground".format(n, g))
-# points belongs to the native languages only
+# points is a page of every language now — the image-led four have their own (audit, 2026-10-09; its tests:
+# tests/test_vl_audit_fixes.py C1)
 with contextlib.redirect_stdout(io.StringIO()):
     k = vl.use("collage", dk.blank_deck(13.333, 7.5))
-try:
-    k.points(k.new_slide(), title="x", items=["a", "b"])
-    check(False, "points() on an image-led language is refused")
-except ValueError as e:
-    check("native" in str(e), "points() on an image-led language names the native languages: {}".format(e))
+s_ = k.new_slide()
+k.points(s_, title="x", items=["a", "b"])
+check(any(getattr(sh, "has_text_frame", False) and sh.text_frame.text.strip() == "a" for sh in s_.shapes),
+      "points() on an image-led language sets its points")
 # extras are per language
 with contextlib.redirect_stdout(io.StringIO()):
     k = vl.use("ink", dk.blank_deck(13.333, 7.5))
