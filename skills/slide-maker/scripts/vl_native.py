@@ -259,8 +259,16 @@ def display(k, slide, rect, text, field, *, highlight=None, caps=True, ink=None,
             if gw is not None and gw > w - dk.TEXT_INSET_LR:
                 return False
         return True
+    # measured in HEADROOM of the box and drawn at its full width, as every other field (vl.HEADROOM): on the CI's
+    # Linux faces a poster title measured to fit exactly took one more line than its box held (2026-10-09)
+    wm = w * vl.HEADROOM
+
+    def need_at(sz_):
+        # the lint's line model AND the glyph breaks the render follows — the larger: on Linux's stand-in faces the
+        # glyph breaks took a line more than the lint model, and the title left its box (CI, 2026-10-09)
+        return max(measure(None, sz_, wm), measure(vl._break_lines(k, field, t, sz_, wm), sz_, wm))
     while True:
-        need = measure(None, sz, w)
+        need = need_at(sz)
         if (need <= h and words_fit(sz)) or sz <= fl + 1e-6:
             break
         sz = max(fl, sz * 0.93)
@@ -274,21 +282,26 @@ def display(k, slide, rect, text, field, *, highlight=None, caps=True, ink=None,
         ls = vl._break_lines(k, field, t, sz_, w_)
         return dk._has_cjk(t) or len(ls) < 2 or len(ls[-2].split()) > 1
 
-    lines, bw = None, w
+    lines, bw = None, wm                           # bw: the MEASURE; the box is drawn (w - wm) wider
     if field in vl._NO_WIDOW:
         sz2, tries = sz, 0
-        while widowed(sz2, w) and sz2 * 0.95 >= fl and tries < 10:
+        while widowed(sz2, wm) and sz2 * 0.95 >= fl and tries < 10:
             sz2, tries = sz2 * 0.95, tries + 1
-        fit = vl._phrase_lines(k, field, t, sz, w, max(fl, min(0.7 * sz, sz2)))
+        fit = vl._phrase_lines(k, field, t, sz, wm, max(fl, min(0.7 * sz, sz2)))
         if fit is not None and (hi is None or any(hi.upper() in l_.upper() for l_ in fit[1])):
             sz2, lines = fit                       # a highlight is never split across a clause break
-        elif widowed(sz2, w):
+        elif widowed(sz2, wm):
             sz2 = sz
-            bw = vl._balanced_width(k, field, t, sz, w) or w
+            bw = vl._balanced_width(k, field, t, sz, wm) or wm
         if measure(lines, sz2, bw) <= h + 1e-6:
             sz, need = sz2, measure(lines, sz2, bw)
         else:                                      # a guard, not a path: the plain fit stands
-            lines, bw = None, w
+            lines, bw = None, wm
+    if lines is None:                              # a wrapping title is SET in its measured lines (vl._set_lines)
+        ls = vl._set_lines(k, field, t, sz, bw)
+        if ls and measure(ls, sz, bw) <= h + 1e-6:
+            lines, need = ls, measure(ls, sz, bw)
+    bw = min(w, bw + (w - wm))
     if align == "r":
         x = x + w - bw
     elif align == "c":
