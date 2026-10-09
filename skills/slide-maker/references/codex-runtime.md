@@ -257,7 +257,7 @@ be reconstructed post-hoc at the delivery gate.
    was not applied, or an unknown ground.
    `python3 "$SKILL/scripts/sigs.py" --example vl_cover vl_drawn rs.ground` prints whole pages the smoke suite runs
    (an image-led cover on a bundled photo, a drawn deck, an ordinary page); `vl_tally`, `vl_broadsheet`,
-   `vl_journal` and `vl_chalkboard` show each language's extras. The full order, canvas to `--gate-check`, with
+   `vl_journal`, `vl_chalkboard`, `vl_interface` and `vl_wayfinding` show each language's extras. The full order, canvas to `--gate-check`, with
    every command run end to end: `references/visual-languages.md` → "Build a visual-language deck, in order".
 
 2v. 🔴 **An invented register gets a KIT, not hand-built style code.** `register_surface.register(name, ground=…, card=…, forbids=…)` — then `ground()`/`card()` work for it as for a preset, and `check_register_guard` enforces the prohibitions it declares. `python3 scripts/register_surface.py --new "<name>"` scaffolds one with the contracts wired; `python3 scripts/bespoke_kits.py --sample <out.pptx>` renders the four library registers (`current` · `transit-signage` · `ledger` · `k-space`) to adapt from. `save_register.py` records the kit file at hand-off. 🔴 **Write the kit into the DECK FOLDER** (`--out <deck-dir>/surface_<name>.py`): `check_register_guard` loads `surface_*.py` from beside the deck, which is the only reason a bespoke register's prohibitions are enforceable at gate time — the gate runs in a fresh process and a kit that was never imported there does not exist. The gate also tells you whether an invented register has a kit at all.
@@ -422,7 +422,7 @@ interview answer at all — each reads the built file itself):
    (`visual_languages.direction("<name>")`: photos → editorial / soft / collage, illustrations → storybook),
    or the gate holds the deck; the set's named `waived` is the escape.
    With `images: none`, at least ONE candidate is a native language (`visual_languages.direction("<a native language>")` — `ink`, `poster`,
-   `cutpaper`, `drafting`, `starlit`, `broadsheet`, `journal`, `tally` or `chalkboard`) and the record carries `native_fit` BESIDE `images`; `codex_delivery_gate.py`
+   `cutpaper`, `drafting`, `starlit`, `broadsheet`, `journal`, `tally`, `chalkboard`, `interface` or `wayfinding`) and the record carries `native_fit` BESIDE `images`; `codex_delivery_gate.py`
    holds a set without it:
 
    ```json

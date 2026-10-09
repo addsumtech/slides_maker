@@ -1,4 +1,4 @@
-# Visual languages — thirteen complete looks: four image-led, nine drawn
+# Visual languages — fifteen complete looks: four image-led, eleven drawn
 
 **When to read this:** the picked direction is a visual language (its entry in `directions.json` carries
 `"vl": "<name>"`), or the user asks for one of these looks by name. Read it before writing the build script.
@@ -107,7 +107,7 @@ the shared runtime's `$DECK/.deck-gates.json`; on the Codex runtime the same val
    ```
    The `tally` test deck was the same shape, with `formats.blank_deck("wide13")`, an ordinary agenda page (see
    **Ordinary pages** below), `points` with `tags=` and `data` with `total=`. More scaffolds:
-   `python3 "$SKILL/scripts/sigs.py" --example vl_drawn vl_tally vl_broadsheet vl_journal vl_chalkboard rs.ground`.
+   `python3 "$SKILL/scripts/sigs.py" --example vl_drawn vl_tally vl_broadsheet vl_journal vl_chalkboard vl_interface vl_wayfinding rs.ground`.
 4. **Build:** `python3 "$DECK/build_deck.py"`. With `ground="auto"` it prints the ground it chose and a
    `--gates` line with two `<…>` blanks. That line is a template: fill both blanks, because it will not run as printed.
 5. **Record the language.** Pass the ground the build printed (on the test machine `ink`, because its last decks
@@ -162,7 +162,7 @@ test decks passed `visual language` ("5 of 5 slide(s) built with it"), `register
   The rows marked `NOT CHECKED` (template profile, purpose, talk time, Q&A backup, citations, image series, and a
   direction with no `directions.json`) checked nothing and block nothing.
 
-## The thirteen languages
+## The fifteen languages
 
 A visual language is a whole look, not a palette: a type voice from system fonts, a surface, image
 treatments and seven page compositions (cover, section, image_text, points, quote, data, closing). Picking one gives a finished deck from your own words and images —
@@ -183,6 +183,8 @@ the page functions never invent a word, a number or a name.
 | `journal` | your own figures (placed whole, never cropped) | Georgia, small-caps labels | plain paper, a running head | numbered figures with captions, an abstract, margin notes |
 | `tally` | none needed (a photo is optional) | Arial Black display, Arial body | a fine grid | ledger rows, pill tags, a giant number with its share bar |
 | `chalkboard` | none needed (a chalk doodle icon is optional) | Trebuchet MS (Chalkboard SE on mac) | a framed board with grain | chalk boxes, circled numbers, arrows only when ordered |
+| `interface` | none needed (a screenshot in a device frame is optional) | Arial (Helvetica Neue on mac), bold | the app canvas, windows with a status bar | a settings list, a dashboard card, a chat bubble, a dialog |
+| `wayfinding` | none needed (a poster photo is optional) | Arial (Helvetica Neue on mac); the board in Courier New / Menlo | enamel ground, navy station signs | lines and roundels, a strip map when ordered, a departure board |
 
 ## Build
 
@@ -340,7 +342,7 @@ every value they write is one PowerPoint opens without repair (`scripts/ooxml_sa
   storytelling, community → `cutpaper`; engineering, architecture, systems design → `drafting`; year in review,
   letter, thanks, commemoration → `starlit`; newsletter, periodic report, community update → `broadsheet`;
   research talk, lab meeting, paper, defence → `journal`; metrics, quarterly review, operations, growth → `tally`;
-  lesson, class, training, explainer → `chalkboard`.
+  lesson, class, training, explainer → `chalkboard`; product launch, app, SaaS, feature tour, internal tool → `interface`; roadmap, process, onboarding, journey, strategy route, transport/city → `wayfinding`.
 
 ### The second set — `starlit` · `broadsheet` · `journal` · `tally` · `chalkboard`
 
@@ -444,6 +446,58 @@ k.closing(k.new_slide(), title="See you next week", line="Bring a neighbour.")
 prs.save("weekly.pptx")
 ```
 
+### The third set — `interface` · `wayfinding`
+
+| Language | 中文 | Borrowed from | Purpose |
+|---|---|---|---|
+| `interface` | 产品界面 | the product UI: windows, status chips, toggles, dialogs, dashboards | product launches, app / SaaS pitches, feature tours, internal-tool demos |
+| `wayfinding` | 导视线路 | metro maps and station signage: lines, roundels, station signs, departure boards | roadmaps, processes, onboarding, journeys, strategy routes, transport / city |
+
+- **interface** — every page is an app screen. The cover is a window (crumb and status in its bar, title, subtitle,
+  your actions as buttons with a pointer on the first) with an optional settings panel beside it; `points` is a
+  settings list (numbered badges, head + line, an optional chip per point); `quote` is a chat message (initials
+  only when the attribution is a name); `data` a dashboard card with a progress bar when `total=` is given (tally's
+  rules) and the note beside it; `closing` a dialog whose buttons are your `actions=`; `image_text` puts your
+  picture in a phone frame when it is taller than wide, a browser frame otherwise. Grounds: `light` (app light) ·
+  `dark` (dark mode).
+- **wayfinding** — the deck is a network. The cover is lines converging on an interchange, your title the
+  destination and your subtitle on a station sign; `section` a station-name sign (its roundel shows the section
+  number, coloured by it: 1 red, 2 blue, 3 green, 4 yellow, 5 purple); `points` is a strip map ONLY with
+  `ordered=True` — a route claims an order — and otherwise a directory sign (one row per point with its numbered
+  roundel); `data` a departure board (your label and number first, `board=` rows under them); `closing` the way-out
+  sign (Way out / 出口 / 出口 / 출구, in the page's script) with the route ending at a terminus. Grounds: `light`
+  (enamel) · `night` (navy).
+- **Extras** (from you only; absent → nothing drawn; on a page that does not draw one it is refused by name):
+
+  | Language | Extra | Pages | Meaning / fallback |
+  |---|---|---|---|
+  | interface | `crumb=` | any; remembered | the window's breadcrumb (e.g. "Launch › Overview"). Absent: an empty top bar. |
+  | interface | `status=` | any; remembered | the top-bar status chip text, optionally `(text, state)` with state in on / pending / error / primary. Absent: no chip. |
+  | interface | `actions=` | cover, closing | 1–2 button labels (primary, secondary). Absent: no buttons, no pointer. |
+  | interface | `toggles=` | cover | 1–4 `(label, on)` rows for a settings panel beside the window. Absent: the window takes the width. |
+  | interface | `tags=` | points | one chip per point, text or `(text, state)`; count must match. |
+  | interface | `total=` | data | progress bar, tally's rules (plain numbers, same kind, ≤ total). |
+  | wayfinding | `line=` | any; remembered | a 1–3 character line code for the cover/section roundels, optionally `(code, colour name)`. Absent: section roundels show the section number; the cover draws no roundel. |
+  | wayfinding | `ordered=` | points | `True` draws the strip map; default draws the directory sign. |
+  | wayfinding | `interchange=` | points | indexes of points drawn as interchanges (strip map only; refused without `ordered=True`). |
+  | wayfinding | `board=` | data | 1–4 extra `(label, value)` rows under the page's own row. |
+
+```python
+import visual_languages as vl, deckkit as dk
+prs = dk.blank_deck()
+k = vl.use("interface", prs)
+k.cover(k.new_slide(), kicker="Product tour", title="One board for every request", crumb="Launch › Overview",
+        status=("Live", "on"), actions=["Get started"], toggles=[("Auto-sync", True), ("Public link", False)])
+k.points(k.new_slide(), title="Three settings", items=["Approvals first", "One source of truth", "A weekly digest"],
+         tags=[("Required", "pending"), "On", "New"])
+k.data(k.new_slide(), number="12", label="of 40 teams switched", note="Since the beta opened.", total="40")
+k.closing(k.new_slide(), title="Start with one team", line="Free for the first month.", actions=["Start free"])
+w = vl.use("wayfinding", dk.blank_deck())
+w.points(w.new_slide(), title="Four stops to a paying customer", ordered=True, interchange=[2],
+         items=["Sign up", "First project", "Invite a teammate", "Upgrade"])
+w.data(w.new_slide(), number="96.4%", label="Harbour line on time", board=[("North loop", "93.1%")])
+```
+
 ## Grounds
 
 Each language has its own light paper and ONE contrast ground; every text ink passes 4.5:1 on both:
@@ -463,6 +517,8 @@ Each language has its own light paper and ONE contrast ground; every text ink pa
 | broadsheet | newsprint | `salmon` — pink paper, navy accent |
 | chalkboard | green board (dark — no light ground) | `slate` — grey slate |
 | tally | white grid | `night` — navy grid, periwinkle and lime |
+| interface | app light | `dark` — dark mode, deep windows |
+| wayfinding | enamel | `night` — navy, darker signs |
 
 `use(name, prs, ground=…)`: `"light"` (the default — the same deck on every machine), the contrast key, or
 `"auto"` (this machine's look history, across every deck built here — pass the ground yourself when the topic
@@ -493,6 +549,8 @@ viewer opens. `fonts="mac"` unlocks Mac-only faces and refuses one that is not i
 | journal | Georgia | Georgia (labels: Arial) | Times New Roman (lining) |
 | tally | Arial Black | Arial / Helvetica Neue | Arial Black |
 | chalkboard | Trebuchet MS / Chalkboard SE | Trebuchet MS / Chalkboard SE | Trebuchet MS / Chalkboard SE |
+| interface | Arial / Helvetica Neue | Arial / Helvetica Neue | Arial / Helvetica Neue |
+| wayfinding | Arial / Helvetica Neue | Arial / Helvetica Neue (the board: Courier New / Menlo) | Courier New / Menlo on the board |
 
 The numerals column is the face of the `data` page's figure (collage draws a short one as an outlined shape).
 Digits inside Georgia text — body or display — are set in Times New Roman, a lining face, and so are the digits
@@ -576,6 +634,6 @@ the ground, its grain, its card and its inks are one look, and the variants are 
 style sample (the preview shows it, labelled "style sample — not your content"). It counts as a STYLED
 direction, never as the topic-invented bespoke direction the gate also requires. Image-led languages pair
 with the P1 image series (`references/image-generation.md`, the SERIES exception) when the deck's images
-are generated; with the user's own or fetched photos they need no generation at all. The nine native
+are generated; with the user's own or fetched photos they need no generation at all. The eleven native
 languages need no pictures: a deck without any offers the one that fits its topic and records why in
 `direction_gate.native_fit` (see Native languages above).

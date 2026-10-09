@@ -325,7 +325,7 @@ EXAMPLES = {
                '            align=dk.PP_ALIGN.CENTER, anchor=dk.MSO_ANCHOR.MIDDLE)\n'
                'dk.overlap_intent(n, "the count sits on its badge")   # declared on the TEXT',
     "use": 'import visual_languages as vl\n'
-           'k = vl.use("drafting", prs, ground="auto")       # 9 native languages: ink poster cutpaper drafting starlit broadsheet journal tally chalkboard\n'
+           'k = vl.use("drafting", prs, ground="auto")       # 11 native languages: ink poster cutpaper drafting starlit broadsheet journal tally chalkboard interface wayfinding\n'
            'k.cover(k.new_slide(), kicker="Schematic 01", title="A modular bike shelter", project="Bike shelter, phase 1")\n'
            'k.section(k.new_slide(), number="01", title="The frame")\n'
            'k.points(k.new_slide(), title="Three parts", items=[("Base", "One cast plate."), ("Posts", "Bolted, not welded."), ("Roof", "A single sheet.")])\n'
@@ -377,6 +377,20 @@ EXAMPLES = {
                    'na.chalk_arrow(s, 4.2, 2.8, 5.4, 2.8, "F3F1EA", seed=40)   # only between steps that ARE in order',
     "board_frame": 'import native_art as na\n'
                    'x, y, w, h = na.board_frame(s, "7A4F2A", "E8E2D2")   # a framed board; content goes in x, y, w, h',
+    "route": 'import native_art as na\n'
+             'na.route(s, [(1.0, 4.0), (5.0, 4.0), (6.2, 2.8)], "E3242B")   # a line: draw it ONLY through points in order',
+    "roundel": 'import native_art as na\n'
+               'na.roundel(s, 2.0, 2.0, 0.8, "1", fill="E3242B", ink="FFFFFF", size=24, face="Arial")   # a 1-3 char code',
+    "sign_panel": 'import native_art as na\n'
+                  'x, y, w, h = na.sign_panel(s, 1.0, 1.0, 6.0, 1.2, fill="1B2A41")   # an enamel sign; text inside x, y, w, h',
+    "ui_window": 'import native_art as na\n'
+                 'x, y, w, h = na.ui_window(s, 1.0, 0.8, 7.0, 4.2, fill="FFFFFF", line="D9DCE3", drop="E3E6EC", bar=0.5)\n'
+                 'dk.text(s, x + 0.4, y + 0.4, w - 0.8, 1.0, [[("Settings", 24, dk.DEEP, True, False)]])   # below the bar',
+    "ui_button": 'import native_art as na\n'
+                 'na.ui_button(s, 1.0, 5.6, "Get started", size=16, fill="2563EB", ink="FFFFFF", face="Arial")   # width measured',
+    "ui_device": 'import native_art as na\n'
+                 'x, y, w, h = na.ui_device(s, 7.6, 0.8, 2.6, 5.0, "phone", frame="111318", screen="2A2E36")\n'
+                 '# the screen rect: put the screenshot there at ITS aspect (a tall picture → "phone", a wide one → "browser")',
     "chip": 'import native_art as na\n'
             'na.chip(s, 0.8, 0.6, "Q3 REVIEW", size=12, fill="C6F432", ink="0E0E10", face="Arial")   # one line, measured',
     "chip_width": 'import native_art as na\n'
@@ -471,6 +485,26 @@ EXAMPLES = {
                      '         items=[("Light in", "Leaves catch sunlight."), ("Water up", "Roots pull water."),\n'
                      '                ("Sugar out", "The leaf makes food.")])\n'
                      'k.closing(k.new_slide(), title="Questions?", line="Next week: the water cycle.")',
+    "vl_interface": 'import visual_languages as vl\n'
+                    'k = vl.use("interface", prs)   # extras: crumb= status= (any page, remembered), actions= toggles= (cover),\n'
+                    '                               # tags= (points), total= (data), actions= (closing)\n'
+                    'k.cover(k.new_slide(), kicker="Product tour", title="One board for every request",\n'
+                    '        crumb="Launch › Overview", status=("Live", "on"), actions=["Get started", "Watch demo"],\n'
+                    '        toggles=[("Auto-sync", True), ("Public link", False)])\n'
+                    'k.points(k.new_slide(), title="Three settings", items=["Approvals first", "One source of truth",\n'
+                    '         "A weekly digest"], tags=[("Required", "pending"), "On", "New"])   # state colours the chip dot\n'
+                    'k.data(k.new_slide(), number="12", label="of 40 teams switched", total="40")   # a progress bar 12/40\n'
+                    'k.closing(k.new_slide(), title="Start with one team", line="Free for the first month.",\n'
+                    '          actions=["Start free"])',
+    "vl_wayfinding": 'import visual_languages as vl\n'
+                     'k = vl.use("wayfinding", prs)   # extras: line= (any page, remembered), ordered= interchange= (points),\n'
+                     '                                # board= (data)\n'
+                     'k.cover(k.new_slide(), kicker="Roadmap 2027", title="Four stops to launch", line="A")\n'
+                     'k.points(k.new_slide(), title="Four stops", ordered=True, interchange=[2],   # a route ONLY when ordered\n'
+                     '         items=["Sign up", "First project", "Invite a teammate", "Upgrade"])\n'
+                     'k.points(k.new_slide(), title="What we offer", items=["Support", "Training", "Hosting"])   # a directory sign\n'
+                     'k.data(k.new_slide(), number="96.4%", label="Harbour line on time", board=[("North loop", "93.1%")])\n'
+                     'k.closing(k.new_slide(), title="Questions?", line="Thank you.")',
     # An ORDINARY page (agenda, list, chart) in a language's look: `rs.ground` paints the furniture and returns the
     # content rect, `rs.card` gives the language's card. Also printed for `--example rs.ground` / `rs.card`.
     "ground": 'import visual_languages as vl, register_surface as rs\n'

@@ -78,6 +78,8 @@ file beside the register when the deck ships.
 - **Generates:** background = a faint route-line field · markers = numbered roundels for steps · page =
   the route-map slide whose geometry IS the network. It supplied that deck's **signature move for free**
   because the motif was load-bearing (each route is real content), not decorative.
+- For a deck that only needs the look, the native visual language `wayfinding` builds all seven pages
+  (`references/visual-languages.md`).
 - **Build note:** `connect_boxes`/`loop_between` for edge-docked lines, `palette(n)` for one hue per
   route, `big_numeral`/roundel for stops. Fits **any subject that is a set of distinct PATHS to an
   outcome** (onboarding funnels, migration/eligibility routes, decision trees) — swap "transit" for the

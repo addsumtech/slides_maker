@@ -155,7 +155,7 @@ The layouts match; only the copy language differs.
 
 ## Visual languages
 
-Beside the template gallery, slide-maker ships thirteen complete **visual languages**: whole looks, each with a type voice from system fonts, its own surface and page layouts for cover, section, image + text, points (two to four ideas), quote, data and closing. Four are built around pictures and carry your photos or an illustration series. Nine draw their own surface with native, editable shapes, so a deck with no pictures (and no image tool) still gets a finished look. All of them lay out *your* words and pictures and never invent a word, a number or a name: a seal's characters, a highlighted word, icons, a project name, a masthead, a running head, tags and a total come only from you.
+Beside the template gallery, slide-maker ships fifteen complete **visual languages**: whole looks, each with a type voice from system fonts, its own surface and page layouts for cover, section, image + text, points (two to four ideas), quote, data and closing. Four are built around pictures and carry your photos or an illustration series. Eleven draw their own surface with native, editable shapes, so a deck with no pictures (and no image tool) still gets a finished look. All of them lay out *your* words and pictures and never invent a word, a number or a name: a seal's characters, a highlighted word, icons, a project name, a masthead, a running head, tags, a total, a breadcrumb, a status, button words and a line code come only from you.
 
 <table>
   <tr>
@@ -232,12 +232,22 @@ Beside the template gallery, slide-maker ships thirteen complete **visual langua
       <sub><strong>chalkboard</strong> · drawn, no pictures needed<br/>a framed board, coloured chalk strokes, boxed steps, a circled figure<br/>
       contrast ground: <a href="skills/slide-maker/assets/vl/samples/chalkboard-slate.jpg">slate</a></sub>
     </td>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/interface.jpg"><img src="skills/slide-maker/assets/vl/samples/interface.jpg" alt="interface visual language sample pages"></a><br/>
+      <sub><strong>interface</strong> · drawn, no pictures needed<br/>app windows, a status chip, toggles, a dashboard card, a dialog<br/>
+      contrast ground: <a href="skills/slide-maker/assets/vl/samples/interface-dark.jpg">dark</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/wayfinding.jpg"><img src="skills/slide-maker/assets/vl/samples/wayfinding.jpg" alt="wayfinding visual language sample pages"></a><br/>
+      <sub><strong>wayfinding</strong> · drawn, no pictures needed<br/>transit lines and roundels, enamel station signs, a departure board<br/>
+      contrast ground: <a href="skills/slide-maker/assets/vl/samples/wayfinding-night.jpg">night</a></sub>
+    </td>
   </tr>
 </table>
 
 <p align="center"><sub>Style samples on sample content, not your deck. Click a sample for the full-size sheet; the link under it opens the language's second ground, taken automatically when your recent decks already sit on its first. Starlit and chalkboard are dark on both.</sub></p>
 
-**How one gets picked.** When your deck will carry photos or illustrations (your own, or ones slide-maker generates or fetches for you), at least one of the candidate looks it shows you is a picture language: photos lead to editorial, soft or collage by tone, illustrations to storybook. When it has none, a drawn language that fits the topic is among the candidates, and the reason it fits is recorded with the choice. The fit is guidance, not a lookup: culture, history or craft → ink; a launch, manifesto or opinion → poster; children, storytelling or community → cutpaper; engineering, architecture or systems design → drafting; a year in review, a letter, thanks or a commemoration → starlit; a newsletter, periodic report or community update → broadsheet; a research talk, lab meeting, paper or defence → journal; metrics, a quarterly review, operations or growth → tally; a lesson, class, training or explainer → chalkboard. Or ask for one by name ("use the collage look"). To open the samples as editable decks, build them locally (it prints the commands that render each one into `out/`):
+**How one gets picked.** When your deck will carry photos or illustrations (your own, or ones slide-maker generates or fetches for you), at least one of the candidate looks it shows you is a picture language: photos lead to editorial, soft or collage by tone, illustrations to storybook. When it has none, a drawn language that fits the topic is among the candidates, and the reason it fits is recorded with the choice. The fit is guidance, not a lookup: culture, history or craft → ink; a launch, manifesto or opinion → poster; children, storytelling or community → cutpaper; engineering, architecture or systems design → drafting; a year in review, a letter, thanks or a commemoration → starlit; a newsletter, periodic report or community update → broadsheet; a research talk, lab meeting, paper or defence → journal; metrics, a quarterly review, operations or growth → tally; a lesson, class, training or explainer → chalkboard; a product launch, app, SaaS, feature tour or internal tool → interface; a roadmap, process, onboarding, journey, strategy route or transport/city → wayfinding. Or ask for one by name ("use the collage look"). To open the samples as editable decks, build them locally (it prints the commands that render each one into `out/`):
 
 ```bash
 python3 skills/slide-maker/scripts/visual_languages.py --sample out/

@@ -679,9 +679,9 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   near-duplicates, a possible-watermark heuristic, and EXIF rotation (`--fix` bakes it in). Its
   `--contact-sheet` is ONE labelled PNG of every candidate plus a sha256 — the artifact that makes
   looking cheap, and that a critic's consent can name.
-- `visual_languages.py` — thirteen complete looks: four image-led (editorial, soft, collage, storybook) and nine
-  drawn (ink, poster, cutpaper, drafting, starlit, broadsheet, journal, tally, chalkboard; their pages live in
-  `vl_native.py` / `vl_native2.py`): palette with
+- `visual_languages.py` — fifteen complete looks: four image-led (editorial, soft, collage, storybook) and eleven
+  drawn (ink, poster, cutpaper, drafting, starlit, broadsheet, journal, tally, chalkboard, interface, wayfinding;
+  their pages live in `vl_native.py` / `vl_native2.py` / `vl_native3.py`): palette with
   text-safe inks, system fonts per platform (`fonts="both"` default) and per SCRIPT (Han / kana / Hangul),
   a surface, image treatments and the page compositions; registered with register_surface for
   ground/card. Never imported by deckkit/presets/register_surface. Its CLI: `--list`, `--gates` (the record
@@ -694,6 +694,11 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
 - `vl_native2.py` — page compositions of the second set of native visual languages (`starlit`, `broadsheet`,
   `journal`, `tally`, `chalkboard`); imported from the foot of `vl_native.py`. Shared helpers: remembered extras
   (`memo`), script-aware structural labels, `stack`, the raised initial and the ■ end mark.
+- `vl_native3.py` — page compositions of the third set of native visual languages (`interface`, `wayfinding`);
+  imported from the foot of `vl_native.py`. Interface: app windows with a crumb/status bar, measured buttons and
+  dot chips, a device frame fitted to the picture's aspect, initials only from a name. Wayfinding: line colours
+  from the section number, station signs, the strip map only when `ordered=True`, the departure board, the
+  script-aware way-out label.
 - `collage.py` — `collage(slide, region, items, seed=, keep_clear=)`: 1-4 images as tilted, white-bordered,
   taped prints; geometry decided first — a print never enters `keep_clear` and never covers more than
   25% of its neighbour; deterministic for a seed; slot items keep the image-series tag.

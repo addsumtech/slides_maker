@@ -155,7 +155,7 @@ cp -r slides_maker-site/templates/decks/zh/nvidia-overview ~/.codex/slide-templa
 
 ## 设计语言
 
-除了模板库，slide-maker 还内置十三套完整的**设计语言**：每套都有自己的字体气质（只用系统字体）、画面质感，以及封面、章节、图文、要点（两到四个）、引言、数据、结尾这几种页面版式。其中四套以图为主，排你的照片或一组插画；另外九套用 PowerPoint 原生形状画出自己的画面，每个元素都能编辑，所以没有图片、也没有生图工具的 deck 同样能有完整的风格。所有设计语言都只排你自己的文字和图片，不会编造任何词、数字或名字：印章上的字、高亮的词、图标、项目名、报头、页眉、标签、总数这类内容只来自你。
+除了模板库，slide-maker 还内置十五套完整的**设计语言**：每套都有自己的字体气质（只用系统字体）、画面质感，以及封面、章节、图文、要点（两到四个）、引言、数据、结尾这几种页面版式。其中四套以图为主，排你的照片或一组插画；另外十一套用 PowerPoint 原生形状画出自己的画面，每个元素都能编辑，所以没有图片、也没有生图工具的 deck 同样能有完整的风格。所有设计语言都只排你自己的文字和图片，不会编造任何词、数字或名字：印章上的字、高亮的词、图标、项目名、报头、页眉、标签、总数、面包屑、状态、按钮文字、线路编号这类内容只来自你。
 
 <table>
   <tr>
@@ -232,12 +232,22 @@ cp -r slides_maker-site/templates/decks/zh/nvidia-overview ~/.codex/slide-templa
       <sub><strong>chalkboard（黑板报）</strong> · 原生绘制，无需图片<br/>木框黑板、彩色粉笔线、按步骤的粉笔框、圈起来的数字<br/>
       石板版本： <a href="skills/slide-maker/assets/vl/samples/chalkboard-slate.jpg">slate</a></sub>
     </td>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/interface.jpg"><img src="skills/slide-maker/assets/vl/samples/interface.jpg" alt="interface 设计语言示例页"></a><br/>
+      <sub><strong>interface（产品界面）</strong> · 原生绘制，无需图片<br/>应用窗口、状态标签、开关、数据看板卡片、对话框<br/>
+      深色底版本： <a href="skills/slide-maker/assets/vl/samples/interface-dark.jpg">dark</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/wayfinding.jpg"><img src="skills/slide-maker/assets/vl/samples/wayfinding.jpg" alt="wayfinding 设计语言示例页"></a><br/>
+      <sub><strong>wayfinding（导视线路）</strong> · 原生绘制，无需图片<br/>地铁线路与圆标、搪瓷站牌、发车信息屏<br/>
+      深色底版本： <a href="skills/slide-maker/assets/vl/samples/wayfinding-night.jpg">night</a></sub>
+    </td>
   </tr>
 </table>
 
 <p align="center"><sub>以上是风格示例（示例内容，不是你的 deck）。点图看大图；图下的链接是这套语言的另一种底色，你最近的 deck 都已经用第一种底色时会自动换用。星夜和黑板报两种底色都是深色。</sub></p>
 
-**什么时候会用到。** 只要你的 deck 会带照片或插画（你自己的，或 slide-maker 帮你生成、抓取的），它给你看的候选风格里至少有一个是以图为主的设计语言：照片按气质对应 editorial、soft 或 collage，插画对应 storybook。deck 没有图片时，候选风格里会有一套贴合主题的原生绘制语言，贴合的理由会和选择一起记录。对应关系是参考，不是查表：文化、历史、器物 → 水墨；发布会、宣言、观点 → 海报大字；儿童、讲故事、社区 → 剪纸层叠；工程、建筑、系统设计 → 蓝图技术线稿；年度回顾、书信、致谢、纪念 → 星夜；通讯、定期报告、社区动态 → 报纸头版；学术报告、组会、论文、答辩 → 学术期刊；指标、季度复盘、运营、增长 → 数据账本；课程、课堂、培训、讲解 → 黑板报。也可以直接点名，比如"用 collage 风格"。想打开可编辑的示例 deck，在本地生成（它会打印把每套示例渲染到 `out/` 里的命令）：
+**什么时候会用到。** 只要你的 deck 会带照片或插画（你自己的，或 slide-maker 帮你生成、抓取的），它给你看的候选风格里至少有一个是以图为主的设计语言：照片按气质对应 editorial、soft 或 collage，插画对应 storybook。deck 没有图片时，候选风格里会有一套贴合主题的原生绘制语言，贴合的理由会和选择一起记录。对应关系是参考，不是查表：文化、历史、器物 → 水墨；发布会、宣言、观点 → 海报大字；儿童、讲故事、社区 → 剪纸层叠；工程、建筑、系统设计 → 蓝图技术线稿；年度回顾、书信、致谢、纪念 → 星夜；通讯、定期报告、社区动态 → 报纸头版；学术报告、组会、论文、答辩 → 学术期刊；指标、季度复盘、运营、增长 → 数据账本；课程、课堂、培训、讲解 → 黑板报；产品发布、应用、SaaS、功能导览、内部工具 → 产品界面；路线图、流程、新人上手、用户旅程、战略路径、交通与城市 → 导视线路。也可以直接点名，比如"用 collage 风格"。想打开可编辑的示例 deck，在本地生成（它会打印把每套示例渲染到 `out/` 里的命令）：
 
 ```bash
 python3 skills/slide-maker/scripts/visual_languages.py --sample out/

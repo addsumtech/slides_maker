@@ -241,7 +241,8 @@ def images_fault(images, directions, *, image_sources=None, imagery=None):
 
 
 
-NATIVE_LANGS = ("ink", "poster", "cutpaper", "drafting", "starlit", "broadsheet", "journal", "tally", "chalkboard")      # mirrors visual_languages.NATIVE (a test pins it)
+NATIVE_LANGS = ("ink", "poster", "cutpaper", "drafting", "starlit", "broadsheet", "journal", "tally", "chalkboard",
+                "interface", "wayfinding")      # mirrors visual_languages.NATIVE (a test pins it)
 
 
 def native_fault(images, directions, fit=None):
@@ -258,8 +259,10 @@ def native_fault(images, directions, fit=None):
                 "manifesto, opinion), cutpaper (children, storytelling, community), drafting (engineering, "
                 "architecture, systems design), starlit (year in review, letter, thanks, commemoration), broadsheet "
                 "(newsletter, periodic report, community update), journal (research talk, lab meeting, paper, defence), "
-                "tally (metrics, quarterly review, operations, growth) or chalkboard (lesson, class, training, "
-                "explainer) — references/visual-languages.md")
+                "tally (metrics, quarterly review, operations, growth), chalkboard (lesson, class, training, "
+                "explainer), interface (product launch, app, SaaS, feature tour, internal tool) or wayfinding "
+                "(roadmap, process, onboarding, journey, strategy route, transport/city) — "
+                "references/visual-languages.md")
     if not isinstance(fit, dict) or fit.get("language") not in offered or len(str(fit.get("why") or "").strip()) < 8:
         return ('record direction_gate.native_fit: {"language": "<the native language offered>", "why": "<why it '
                 'fits this topic>"} — offered: ' + ", ".join(offered))

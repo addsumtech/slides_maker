@@ -40,6 +40,12 @@
  "ink-night": [
   "#B23A2C"
  ],
+ "interface": [
+  "#2563EB"
+ ],
+ "interface-dark": [
+  "#5B8CFF"
+ ],
  "journal": [
   "#1F5C46"
  ],
@@ -80,5 +86,15 @@
  "tally-night": [
   "#7C89FF",
   "#C6F432"
+ ],
+ "wayfinding": [
+  "#D7262E",
+  "#0071BC",
+  "#00954C"
+ ],
+ "wayfinding-night": [
+  "#E8454C",
+  "#3D9BE0",
+  "#1DB66A"
  ]
 }

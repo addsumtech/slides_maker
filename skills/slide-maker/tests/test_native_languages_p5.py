@@ -352,6 +352,43 @@ for W, H in list(CANVASES.values()) + [(7.5, 7.5), (10.0, 5.625)]:
     hit = [txt_of(t)[:20] for c in conns for t in texts(s) if v2.meet(rect_of(c), rect_of(t))]
     check(not hit, "wayfinding cover {}x{}: no route crosses the words {}".format(W, H, hit[:2]))
 
+
+# the strip map's title sits balanced in its sign band (the band hugs it), not floated low in the box it was planned in
+for title in ("Four stops", "Four stops to a paying customer, one at a time"):
+    dkw = dk.blank_deck()
+    kw = vl.use("wayfinding", dkw)
+    sl = kw.new_slide()
+    kw.points(sl, title=title, ordered=True, items=["Sign up", "First project", "Invite a teammate", "Upgrade"])
+    E, PW, PH = 914400.0, dkw.slide_width / 914400.0, dkw.slide_height / 914400.0
+    tbox = [sh for sh in sl.shapes if sh.top >= 0 and sh.has_text_frame
+            and " ".join(sh.text_frame.text.split()) == title]
+    signs = [sh for sh in sl.shapes if sh.shape_type == 1 and abs(sh.top / E - 0.07 * PH) < 0.02 and sh.width / E > 0.5 * PW]
+    check(len(tbox) == 1 and signs, "strip map: found the title and its sign band ({!r})".format(title))
+    if tbox and signs:
+        band = signs[0]
+        gap_top = tbox[0].top / E - band.top / E
+        gap_bot = (band.top + band.height) / E - (tbox[0].top + tbox[0].height) / E
+        check(abs(gap_top - gap_bot) <= 0.08,
+              "strip map title is balanced in its sign (top gap {:.2f}in, bottom {:.2f}in) for {!r}".format(gap_top, gap_bot, title))
+
+# the docs carry both languages: guidance, extras, examples, the drawn-language lists
+ref = (ROOT / "references" / "visual-languages.md").read_text(encoding="utf-8")
+for n in ("interface", "wayfinding"):
+    check("`{}`".format(n) in ref and "→ `{}`".format(n) in ref, "the reference documents {} and when to offer it".format(n))
+for ex in ("crumb=", "status=", "actions=", "toggles=", "line=", "interchange=", "board="):
+    check(ex in ref, "the reference documents {}".format(ex))
+check("### The third set" in ref and "fifteen" in ref.splitlines()[0], "the reference has the third set and counts fifteen")
+import sigs
+for fn in ("route", "roundel", "sign_panel", "ui_window", "ui_button", "ui_device", "vl_interface", "vl_wayfinding"):
+    check(fn in sigs.EXAMPLES, "sigs.py --example {} has a runnable scaffold".format(fn))
+skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+check("`interface`" in skill and "`wayfinding`" in skill and "eleven drawn" in skill, "SKILL.md names the eleven drawn languages")
+import directions_diversity as ddv
+check({"interface", "wayfinding"} <= set(ddv.NATIVE_LANGS), "directions_diversity offers interface and wayfinding as native languages")
+for doc in ("interview-protocol.md", "codex-runtime.md", "file-inventory.md"):
+    t = (ROOT / "references" / doc).read_text(encoding="utf-8")
+    check("interface" in t and "wayfinding" in t, "references/{} names interface and wayfinding".format(doc))
+
 for line in ok:
     print("  ok   " + line)
 if skipped:

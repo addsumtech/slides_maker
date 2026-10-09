@@ -711,7 +711,7 @@ def _wf_points(k, slide, f, image):
         return rects
     # the strip map: the title on a sign band, the route under it
     r, ds = stack(k, slide, "points", x0 + 0.3 * s, w0 - 0.6 * s, 0.07 * H + 0.2 * s, 0.07 * H + 1.6 * s,
-                  [(fields(f, ("title",)), 0.0)], anchor="middle", ink=k.P["sign_ink"])
+                  [(fields(f, ("title",)), 0.0)], anchor="top", ink=k.P["sign_ink"])
     tb = max(v[1] + v[3] for v in r.values()) + 0.2 * s
     na.sign_panel(slide, x0, 0.07 * H, w0, tb - 0.07 * H, fill=k.P["sign"])
     _run_all(ds)
