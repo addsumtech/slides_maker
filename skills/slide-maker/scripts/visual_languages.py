@@ -1711,6 +1711,10 @@ def _points_led(k, slide, fields, image):
         tries = ([(c_, False, False) for c_ in dict.fromkeys(orders)] + [(c_, True, False) for c_ in dict.fromkeys(orders)]
                  + ([(c_, True, True) for c_ in dict.fromkeys(orders)] if pad else []))
         for rank, (cols, inline, tight) in enumerate(tries):
+            if tight and fits:
+                break                                    # the narrower margin is only a last resort
+            if fits and fits[-1][0] >= big["item_head"] - 0.05:
+                break                                    # a layout already sets the points at full size: none can beat it
             rows = -(-n // cols)
             grid = cells(cols, area[1], (area[3] - gap * (rows - 1)) / rows)
             try:
