@@ -169,6 +169,107 @@ prs.save(str(p))
 check(ox.xml_findings(str(p)) == [] and ox.beyond_page(prs) == [], "native art: PowerPoint-safe and on the page: {} {}".format(
     ox.xml_findings(str(p))[:2], ox.beyond_page(prs)[:2]))
 
+# ── interface 产品界面 ──
+EXTRAS["interface"] = lambda lang, n: {
+    "cover": {"crumb": "Launch › Overview", "status": ("Live", "on"), "actions": ["Get started", "Watch demo"],
+              "toggles": [("Auto-sync", True), ("Public link", False)]},
+    "points": {"tags": [("Required", "pending")] + ["New"] * (n - 1)},
+    "data": {"total": "12"},
+    "closing": {"actions": ["Start free"]}}
+check("interface" in vl.NATIVE and set(vl.VARIANTS["interface"]) == {"light", "dark"}, "interface: two grounds")
+assert_palettes("interface")
+for g, V in vl.VARIANTS["interface"].items():
+    p = V["palette"]
+    check(cr("FFFFFF", p["primary_fill"]) >= 4.5, "interface/{}: white on the primary button".format(g))
+    for st, c in p["states"].items():
+        check(cr(c, p["panel"]) >= 3.0, "interface/{}: the {} dot reads on a window (3:1)".format(g, st))
+    check(cr(p["off_line"], p["panel"]) >= 3.0, "interface/{}: an off switch's outline reads (3:1)".format(g))
+assert_matrix("interface")
+import vl_native3 as v3
+check(v3.initials("Maya Kowalski, Operations lead") == "MK" and v3.initials("Ada") == "A"
+      and v3.initials("茶室题记") is None and v3.initials("") is None, "interface: initials derived from Latin names only")
+check(v3.ui_state("Live", "cover", "status") == ("Live", "primary") and v3.ui_state(("Beta", "pending"), "cover", "status")
+      == ("Beta", "pending"), "interface: a state is the caller's, else primary")
+try:
+    v3.ui_state(("Beta", "green"), "cover", "status")
+    check(False, "interface: an unknown state is refused")
+except ValueError as e:
+    check("status=" in str(e) and "pending" in str(e), "interface: an unknown state is refused by name")
+# Review Focus 5: the frame follows the picture's aspect
+from PIL import Image as _I
+tall, wide = td / "tall.png", td / "wide.png"
+_I.new("RGB", (390, 844), "white").save(tall); _I.new("RGB", (1600, 1000), "white").save(wide)
+check(v3.device_for(str(tall)) == "phone" and v3.device_for(str(wide)) == "browser", "interface: phone for tall, browser for wide")
+for W, H in CANVASES.values():
+    for pic in (tall, wide):
+        prs, k = use("interface", W, H)
+        s = k.new_slide(); k.image_text(s, kicker="Tour", title="The new board", body="Everything in one place.", image=str(pic))
+        pics = [sh for sh in s.shapes if sh.shape_type == 13]
+        r_ = pics[0].width / pics[0].height
+        a_ = _I.open(pic).size[0] / _I.open(pic).size[1]
+        check(abs(r_ - a_) / a_ < 0.03, "interface {}x{}: the {} picture keeps its aspect".format(W, H, pic.stem))
+# Review Focus 4: total= follows tally's rules from one function
+import vl_native2 as v2
+check(v2.share_of("interface", "12", "40") == 0.3 and v2.share_of("interface", "98.6%", "100%") == 0.986
+      and v2.share_of("interface", "$4.2M", None) is None, "share_of: plain and percent numbers")
+for num, total in (("$4.2M", "10"), ("50", "40"), ("12", "0"), ("12%", "40")):
+    prs, k = use("interface")
+    try:
+        k.data(k.new_slide(), number=num, label="x", total=total)
+        check(False, "interface: number={!r} total={!r} is refused".format(num, total))
+    except ValueError as e:
+        check("total" in str(e), "interface: number={!r} total={!r} is refused by name".format(num, total))
+# Review Focus 1: a long CJK crumb and status stay on one line or are refused; never over the title
+for W, H in ((7.5, 7.5), (7.5, 13.333)):
+    prs, k = use("interface", W, H)
+    s = k.new_slide()
+    try:
+        k.cover(s, title="产品发布", crumb="发布会 › 产品概览 › 新工作台", status=("内测中", "pending"))
+        tb = {txt_of(sh): sh for sh in texts(s)}
+        ttl = [sh for t_, sh in tb.items() if t_.startswith("产品")][0]
+        bar = [sh for t_, sh in tb.items() if "发布会" in t_]
+        check(bar and bar[0].text_frame.word_wrap is False or len(bar[0].text_frame.paragraphs) == 1,
+              "interface {}x{}: the crumb is one line".format(W, H))
+        check(not v2.meet(rect_of(bar[0]), rect_of(ttl)), "interface {}x{}: the crumb clears the title".format(W, H))
+    except vl.VLTextOverflow as e:
+        check("crumb" in str(e) or "status" in str(e), "interface {}x{}: refused by name: {}".format(W, H, e))
+# the words are the caller's: no crumb/status/actions/toggles given → none drawn
+prs, k = use("interface")
+s = k.new_slide(); k.cover(s, title="Ship the feature", subtitle="A tour")
+check(sorted(txt_of(sh) for sh in texts(s)) == sorted(["Ship the feature", "A tour"]), "interface: no extras → no invented words")
+check(not [sh for sh in s.shapes if sh.rotation and abs(sh.rotation - 332.0) < 0.5], "interface: no action → no pointer")
+# the remembered crumb reaches an ORDINARY page's window
+import register_surface as rs
+prs, k = use("interface")
+k.cover(k.new_slide(), title="Ship it", crumb="Launch › Overview")
+s = k.new_slide()
+rect = rs.ground(s, k.name, role="content", index=2)
+check(any(txt_of(sh) == "Launch › Overview" for sh in texts(s)) and rect[2] > 5, "interface: an ordinary page is a window")
+# points: one chip per tag, coloured by the caller's state (pending → the pending dot)
+prs, k = use("interface")
+s = k.new_slide()
+k.points(s, title="Three settings", items=["Approvals", "One source", "Weekly digest"], tags=[("Required", "pending"), "On", "New"])
+dots = [sh for sh in s.shapes if sh._element.xpath(".//a:prstGeom[@prst='ellipse']") and sh.width / EMU < 0.15]
+fills = {str(sh.fill.fore_color.rgb) for sh in dots}
+check(vl.VARIANTS["interface"]["light"]["palette"]["states"]["pending"] in fills, "interface: a pending tag carries the pending dot")
+
+
+# render review (Task 2): a chip's dot never sits on its words; initials only from a name; the data page uses its width
+prs, k = use("interface")
+s = k.new_slide()
+k.cover(s, title="Ship it", status=("Live", "on"))
+dots = [sh for sh in s.shapes if sh._element.xpath(".//a:prstGeom[@prst='ellipse']") and sh.width / EMU < 0.15]
+lab = [sh for sh in texts(s) if txt_of(sh) == "Live"][0]
+check(dots and all(not v2.meet(rect_of(d), (lab.left / EMU + 0.04, lab.top / EMU, lab.width / EMU - 0.08, lab.height / EMU))
+                   for d in dots), "interface: the status dot sits beside its words, not on them")
+check(v3.initials("How every repair begins") is None and v3.initials("Library principle") is None
+      and v3.initials("Style sample") is None, "interface: no avatar from an attribution that is not a name")
+prs, k = use("interface")
+s = k.new_slide()
+k.data(s, number="3", label="evenings a month", note="Short enough to fit around work.")
+xs = [rect_of(sh)[0] + rect_of(sh)[2] for sh in s.shapes if sh.top >= 0 and sh.width < 12 * EMU]
+check(max(xs) > 0.80 * 13.333, "interface: the data page spans the width (note beside the card)")
+
 for line in ok:
     print("  ok   " + line)
 if skipped:

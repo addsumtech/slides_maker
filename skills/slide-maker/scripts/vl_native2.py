@@ -1128,6 +1128,27 @@ def num_value(t):
     return float((m.group(1) + (m.group(2) or "")).replace(",", "")) if m else None
 
 
+def share_of(lang, num, total):
+    """total= as a share: num/total for two plain or percent numbers of the same kind, num <= total; None when total
+    is None. Anything else is refused by name — the bar must never show a fraction it cannot read (tally, interface)."""
+    if total is None:
+        return None
+    v, t = num_value(num), num_value(total)
+    if v is None or t is None:
+        raise ValueError("{}.data(): total= draws a share bar, so number= and total= must both be plain, non-negative "
+                         "numbers (12, 1,250, 98.6%) — got number={!r}, total={!r}".format(lang, num, total))
+    if t <= 0:
+        raise ValueError("{}.data(): total= must be greater than 0 — a share of nothing has no bar (got total={!r})"
+                         .format(lang, total))
+    if ("%" in (num or "")) != ("%" in total):
+        raise ValueError("{}.data(): number= and total= must both be percentages or neither — got {!r} and "
+                         "total={!r}".format(lang, num, total))
+    if v > t:
+        raise ValueError("{}.data(): the number {!r} is larger than total={!r} — a share cannot exceed its whole"
+                         .format(lang, num, total))
+    return v / t
+
+
 @register("tally", "cover", alts=2)
 def _tl_cover(k, slide, f, image):
     W, H, s, o = ctx(k)
@@ -1268,22 +1289,7 @@ def _tl_data(k, slide, f, image):
     the total with both numbers at its ends. A total the number cannot be read against is refused, never guessed."""
     W, H, s, o = ctx(k)
     num, total = text_of(f, "number"), text_of(f, "total")
-    frac = None
-    if total is not None:
-        v, t = num_value(num), num_value(total)
-        if v is None or t is None:
-            raise ValueError("tally.data(): total= draws a share bar, so number= and total= must both be plain, non-negative "
-                             "numbers (12, 1,250, 98.6%) — got number={!r}, total={!r}".format(num, total))
-        if t <= 0:
-            raise ValueError("tally.data(): total= must be greater than 0 — a share of nothing has no bar (got total={!r})"
-                             .format(total))
-        if ("%" in (num or "")) != ("%" in total):
-            raise ValueError("tally.data(): number= and total= must both be percentages or neither — got {!r} and "
-                             "total={!r}".format(num, total))
-        if v > t:
-            raise ValueError("tally.data(): the number {!r} is larger than total={!r} — a share cannot exceed its whole"
-                             .format(num, total))
-        frac = v / t
+    frac = share_of("tally", num, total)
     x, w = 0.07 * W, 0.86 * W
     bottom = H - 0.6 - (1.0 * s if frac is not None else 0.0)
     rects, draws, art = {}, [], []

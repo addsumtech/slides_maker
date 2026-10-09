@@ -131,6 +131,16 @@ LANGS = {
                   "mac": {"display": "Chalkboard SE", "body": "Chalkboard SE", "numeral": "Chalkboard SE"}},
         "ea": {"display": "sans", "body": "sans"}, "grain": 7, "frames": ["rect"],
         "forbids": (), "cover": "low-left", "skeleton": "island"},
+    "interface": {
+        "palette": {"ground": "F3F4F7", "ink": "0F1115", "mute": "5B6170", "panel": "FFFFFF",
+                    "accents": ["2563EB", "16A34A", "D97706", "DC2626"], "text_accents": ["1F55E0"],
+                    "line": "E2E5EB", "soft": "F6F7FA", "drop": "DDE1E8", "primary_fill": "2563EB",
+                    "off_line": "8A91A0",
+                    "states": {"primary": "2563EB", "on": "16A34A", "pending": "D97706", "error": "DC2626"}},
+        "fonts": {"both": {"display": "Arial", "body": "Arial", "numeral": "Arial"},
+                  "mac": {"display": "Helvetica Neue", "body": "Helvetica Neue", "numeral": "Helvetica Neue"}},
+        "ea": {"display": "sans", "body": "sans"}, "grain": 0, "frames": ["rect"],
+        "forbids": ("confetti",), "cover": "low-left", "skeleton": "island"},
 }
 
 # Each language's GROUNDS: its own light paper, and ONE contrast ground (user's decision, 2026-10-04). All four
@@ -206,16 +216,24 @@ VARIANTS = {
                   "palette": {"ground": "25282C", "ink": "F2F1EC", "mute": "C7C9CC", "panel": "30343A",
                               "accents": ["F2D16B", "F2A9B8", "A4CDE6"], "text_accents": ["F2D16B", "F2A9B8"],
                               "wood": "5B4632", "chalk": "E8E2D2"}}},
+    "interface": {
+        "light": {"label": "app light", "label_zh": "浅色界面版", "grain": 0, "palette": LANGS["interface"]["palette"]},
+        "dark": {"label": "dark mode", "label_zh": "深色模式版", "grain": 0,
+                 "palette": {"ground": "0E1014", "ink": "F2F4F8", "mute": "A3AAB8", "panel": "171A21",
+                             "accents": ["5B8CFF", "2DBE6C", "F5B83D", "FF6B70"], "text_accents": ["8FB0FF"],
+                             "line": "2A2F3A", "soft": "1E222B", "drop": "07080B", "primary_fill": "2563EB",
+                             "off_line": "7A8294",
+                             "states": {"primary": "5B8CFF", "on": "2DBE6C", "pending": "F5B83D", "error": "FF6B70"}}}},
 }
-NATIVE = ("ink", "poster", "cutpaper", "drafting", "starlit", "broadsheet", "journal", "tally", "chalkboard")          # drawn, no pictures needed (vl_native.py)
+NATIVE = ("ink", "poster", "cutpaper", "drafting", "starlit", "broadsheet", "journal", "tally", "chalkboard", "interface")          # drawn, no pictures needed (vl_native.py)
 # the pages on which a drawn language draws the caller's picture; image= anywhere else is refused, naming these — it
 # was dropped without a word, even a path to no file (robustness + docs audits, 2026-10-09)
 NATIVE_IMAGE_PAGES = {n: ("image_text", "quote") if n == "drafting" else ("image_text",) for n in NATIVE}
 IMAGE_LED = ("editorial", "soft", "collage", "storybook")    # built around the caller's pictures
 # words only the CALLER can give — never invented by the kit; absent means nothing is drawn
-NATIVE_EXTRAS = {"ink": ("seal",), "poster": ("highlight",), "cutpaper": ("icons",), "drafting": ("project",), "broadsheet": ('masthead', 'edition', 'inside', 'tags'), "journal": ('running', 'authors', 'abstract', 'margin'), "tally": ('tags', 'total'), "chalkboard": ('doodle', 'ordered')}
+NATIVE_EXTRAS = {"ink": ("seal",), "poster": ("highlight",), "cutpaper": ("icons",), "drafting": ("project",), "broadsheet": ('masthead', 'edition', 'inside', 'tags'), "journal": ('running', 'authors', 'abstract', 'margin'), "tally": ('tags', 'total'), "chalkboard": ('doodle', 'ordered'), "interface": ("crumb", "status", "actions", "toggles", "tags", "total")}
 # the pages that DRAW each extra; on any other page it is refused, never silently dropped (non-Claude run, 2026-10-05)
-EXTRA_PAGES = {"highlight": ("cover", "section", "quote", "closing"), "icons": ("points",), "inside": ('cover',), "tags": ('points',), "authors": ('cover',), "abstract": ('cover',), "margin": ('points',), "total": ('data',), "doodle": ('cover', 'closing'), "ordered": ('points',)}
+EXTRA_PAGES = {"highlight": ("cover", "section", "quote", "closing"), "icons": ("points",), "inside": ('cover',), "tags": ('points',), "authors": ('cover',), "abstract": ('cover',), "margin": ('points',), "total": ('data',), "doodle": ('cover', 'closing'), "ordered": ('points',), "actions": ("cover", "closing"), "toggles": ("cover",)}
 _ACTIVE = {}    # language -> the ground key use() set; rs.ground()/rs.card() (no kit) follow it
 _PAL_OVERRIDE = {}   # language -> the palette of the CURRENT page, for a language whose palette changes per page (poster)
 _MEMO = {}   # language -> the last composed page's remembered extras, for ordinary pages (rs.ground has no kit)
@@ -497,6 +515,11 @@ def _ground_chalkboard(slide, role, index):
     return (0.7, 0.6, W - 1.4, H - 1.3)             # inside the wooden frame new_slide drew
 
 
+def _ground_interface(slide, role, index):
+    """An ordinary page in the interface language is a window: the content rect is inside it, below its bar."""
+    import vl_native3
+    return vl_native3.ordinary_window(slide)
+
 def _card_for(name):
     """The language's card: its panel colour; soft is rounded, the others square."""
     def card(slide, x, y, w, h, label=None):
@@ -522,6 +545,7 @@ _card_broadsheet = _card_for("broadsheet")
 _card_journal = _card_for("journal")
 _card_tally = _card_for("tally")
 _card_chalkboard = _card_for("chalkboard")
+_card_interface = _card_for("interface")
 
 
 for _n in LANGS:
@@ -646,6 +670,17 @@ TYPE = {
                    "caption": (14, "body", False, "mute", False, 10), "line": (22, "body", False, "mute", False, 12),
                    "item_head": (24, "display", True, "ink", False, 14), "item_line": (19, "body", False, "mute", False, 11),
                    "item_no": (24, "display", True, "accent", False, 14)},
+    "interface": {"kicker": (13, "body", True, "mute", False, 9), "title": (54, "display", True, "ink", False, 26),
+                  "subtitle": (20, "body", False, "mute", False, 12), "body": (17, "body", False, "ink", False, 11),
+                  "quote": (34, "display", True, "ink", False, 18), "attribution": (14, "body", False, "mute", False, 10),
+                  "number": (150, "numeral", True, "ink", False, 54), "label": (22, "body", True, "mute", False, 13),
+                  "note": (15, "body", False, "ink", False, 10), "caption": (12, "body", False, "mute", False, 9),
+                  "line": (20, "body", False, "mute", False, 12), "item_head": (22, "body", True, "ink", False, 13),
+                  "item_line": (16, "body", False, "mute", False, 10), "item_no": (20, "display", True, "accent", False, 13),
+                  "tag": (13, "body", True, "ink", False, 9), "crumb": (13, "body", False, "mute", False, 9),
+                  "status": (12, "body", True, "ink", False, 9), "action": (16, "body", True, "ink", False, 11),
+                  "toggle": (16, "body", True, "ink", False, 11), "initials": (24, "display", True, "ink", False, 14),
+                  "mark": (60, "display", True, "accent", False, 30)},
 }
 
 # page -> its fields in column order (the caller's keyword names)
@@ -1949,6 +1984,19 @@ _SAMPLE_COPY_NATIVE = {
                                           ("做出糖和氧气", "糖留给植物，氧气放出来")])),
                    ("quote", dict(quote="一片叶子就是一座小工厂。", attribution="科学课笔记")),
                    ("data", dict(number="6", label="个二氧化碳分子", note="和 6 个水分子一起，做出一个葡萄糖分子。"))],
+    "interface": [("cover", dict(kicker="Product tour", title="One board for every request",
+                                 subtitle="A ten-minute tour of the new workspace", crumb="Launch › Overview",
+                                 status=("Live", "on"), actions=["Get started", "Watch demo"],
+                                 toggles=[("Auto-sync", True), ("Share with team", True), ("Public link", False)])),
+                  ("points", dict(title="Three settings change how a team works",
+                                  items=[("Approvals before anything is sent", "Drafts wait until a lead signs off"),
+                                         ("One shared source of truth", "Every edit syncs to the same page"),
+                                         ("A weekly digest instead of pings", "Notifications batch into one summary")],
+                                  tags=[("Required", "pending"), ("On", "on"), "New"])),
+                  ("quote", dict(quote="We stopped chasing status updates. The board just tells us.",
+                                 attribution="Style sample")),
+                  ("data", dict(number="12", label="of 40 teams switched", note="Style sample — your numbers go here.",
+                                total="40"))],
 }
 
 
@@ -2075,6 +2123,8 @@ _DISPLAY_NAMES["tally"] = "Data tally"
 _RATIONALE["tally"] = "drawn, no pictures: a fine grid, heavy type, pill tags, one giant number with its share bar"
 _DISPLAY_NAMES["chalkboard"] = "Chalkboard"
 _RATIONALE["chalkboard"] = "drawn, no pictures: a framed board, coloured chalk strokes, boxed steps, a circled figure"
+_DISPLAY_NAMES["interface"] = "Product interface"
+_RATIONALE["interface"] = "drawn, no pictures: every page an app screen — windows, status chips, a settings list, a dashboard card, a dialog"
 
 
 def direction(name, *, fonts="both", ground="light", W=13.333, H=7.5):

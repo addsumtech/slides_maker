@@ -1489,3 +1489,4 @@ def _bp_points(k, slide, f, image):
 
 # ── the second set (P4) registers its compositions on import: every importer of vl_native gets them ──
 import vl_native2  # noqa: E402,F401
+import vl_native3  # noqa: E402,F401
