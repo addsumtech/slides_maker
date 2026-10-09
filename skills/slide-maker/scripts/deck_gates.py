@@ -36,10 +36,15 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shlex
 import sys
 from pathlib import Path
 
 GATES = ".deck-gates.json"
+# printed next steps carry this script's ABSOLUTE path: a bare `deck_gates.py check <dir>` (or
+# `python3 scripts/deck_gates.py …`) ran only from the skill folder (non-Claude audit, 2026-10-09)
+_SELF = "python3 " + shlex.quote(str(Path(__file__).resolve()))
+_RENDER = "python3 " + shlex.quote(str(Path(__file__).resolve().parent / "render_deck.py"))
 
 # ONE module owns the carve vocabulary — see material_probe.py for why a per-gate copy is exactly
 # the drift `anchor_proof.py` was created to stop.
@@ -418,7 +423,7 @@ def _path(deck_dir):
 def _load(deck_dir):
     p = _path(deck_dir)
     if not p.exists():
-        print("no {} at {} — run `deck_gates.py init {}` first".format(GATES, p.parent, deck_dir),
+        print("no {} at {} — run `{} init {}` first".format(GATES, p.parent, _SELF, shlex.quote(str(deck_dir))),
               file=sys.stderr)
         raise SystemExit(2)
     try:
@@ -438,14 +443,14 @@ def _save(deck_dir, g):
 def _cmd_init(a):
     p = _path(a.deck_dir)
     if p.exists() and not a.force:
-        print("{} already exists — pass --force to overwrite (this DISCARDS what is recorded)"
-              .format(p), file=sys.stderr)
+        print("{} already exists — pass --force to overwrite (this DISCARDS what is recorded), or keep it and "
+              "go on with `{} set …`".format(p, _SELF), file=sys.stderr)
         return 2
     g = template(a.slides, a.delivery)
     _save(a.deck_dir, g)
     print("wrote {}".format(p))
-    print("every value is a placeholder; `deck_gates.py check {}` lists what is still unfilled."
-          .format(a.deck_dir))
+    print("every value is a placeholder; `{} check {}` lists what is still unfilled."
+          .format(_SELF, shlex.quote(str(a.deck_dir))))
     return 0
 
 
@@ -473,7 +478,7 @@ def _cmd_check(a):
     if not probs:
         print("shape clean — {} carries every field the design gate reads, in the right shape."
               .format(GATES))
-        print("🔴 NOT the gate: run `render_deck.py <deck>.pptx --gate-check` for the checks that "
+        print("🔴 NOT the gate: run `" + _RENDER + " <deck>.pptx --gate-check` for the checks that "
               "need the built deck (anchors render, register applied, credits on a slide, "
               "sameness, density).")
         return 0
@@ -497,7 +502,7 @@ def _cmd_check(a):
         print("🔴 This record does not look like it came from `deck_gates.py init` — several keys\n"
               "   the template always writes are absent. A hand-typed record gets the field NAMES\n"
               "   wrong (measured: `name` for `label`), which costs a round-trip per key. Either\n"
-              "   run `python3 scripts/deck_gates.py init <deck-dir> --slides N` into a scratch\n"
+              "   run `" + _SELF + " init <scratch-dir> --slides N` into a scratch\n"
               "   path and copy the shapes across, or check each block against it.\n")
     for i, m in enumerate(probs, 1):
         print("  [{}/{}] {}\n".format(i, n, m))
@@ -701,9 +706,9 @@ def _cmd_interview(a):
         for i, (axis, q) in enumerate(INTERVIEW_QUESTIONS.get(lang, INTERVIEW_QUESTIONS["en"]), 1):
             mark = " " if axis in missing else "✓"
             print("  {} {}. {}".format(mark, i, q))
-        print("\nThen record them:\n  python3 scripts/deck_gates.py interview {} \\\n"
+        print("\nThen record them:\n  {} interview {} \\\n"
               "      --set language=… --set density=… --set length=… --set goal=…"
-              .format(a.deck_dir))
+              .format(_SELF, shlex.quote(str(a.deck_dir))))
     if missing:
         print("\nstill unanswered: {}".format(", ".join(missing)))
         return 1

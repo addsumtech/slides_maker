@@ -418,10 +418,74 @@ EXAMPLES = {
     "collage": 'import collage\n'
                'collage.collage(s, (5.0, 0.4, 4.6, 4.8), ["skyline.png", "gt_c1.png", "ours_c1.png"],\n'
                '                seed=3, keep_clear=(0.4, 0.6, 4.2, 2.4))   # tilted prints + tape',
+    # The visual-language scaffolds are whole pages that run AS PRINTED after the --example preamble: they use the
+    # pictures bundled with the skill (vl.ASSETS), never a file the reader does not have. vl_cover once used
+    # "skyline.png" and no `prs`, and failed when a non-Claude agent ran it (audit 2026-10-09).
     "vl_cover": 'import visual_languages as vl\n'
-                'k = vl.use("editorial", prs)               # fonts="both": faces on macOS AND Windows\n'
-                'pg = k.new_slide()\n'
-                'k.cover(pg, title="Bring it broken, take it home working", kicker="A repair café", image="skyline.png")',
+                'k = vl.use("editorial", prs)               # image-led; fonts="both": faces on macOS AND Windows\n'
+                'photo = str(vl.ASSETS / "photo" / "hall-repair.jpg")   # a BUNDLED sample photo: put YOUR picture\'s path here\n'
+                'k.cover(k.new_slide(), kicker="A repair café", title="Bring it broken, take it home working", image=photo)\n'
+                'k.image_text(k.new_slide(), kicker="What you find", title="Tools on every bench",   # image= is required here\n'
+                '             body="Volunteers bring the tools; you bring the broken thing.",\n'
+                '             image=str(vl.ASSETS / "photo" / "tools-tray.jpg"))',
+    "vl_drawn": 'import visual_languages as vl\n'
+                'k = vl.use("starlit", prs)                 # a DRAWN language: every page without a picture\n'
+                'k.cover(k.new_slide(), kicker="2026 in review", title="A year of small repairs", subtitle="For everyone who came")\n'
+                'k.section(k.new_slide(), number="01", title="What we fixed")\n'
+                'k.points(k.new_slide(), title="Three things we learned",   # 2 to 4 points\n'
+                '         items=[("Start small", "One table, one evening."), ("Teach, do not fix", "Your hands do the work."),\n'
+                '                ("Keep a list", "What is not fixed comes back.")])\n'
+                'k.quote(k.new_slide(), quote="Nothing here is too broken to try.", attribution="A volunteer")\n'
+                'k.data(k.new_slide(), number="212", label="things mended this year")\n'
+                'k.closing(k.new_slide(), title="Thank you", line="See you in the new year.")\n'
+                '# image_text needs a picture on every language: image=str(vl.ASSETS / "photo" / "tools-tray.jpg")',
+    "vl_tally": 'import visual_languages as vl\n'
+                'k = vl.use("tally", prs)                   # extras, YOUR words: tags= (points), total= (data)\n'
+                'k.points(k.new_slide(), title="Where the quarter went", tags=["Grew", "Flat", "Fell"],   # one tag per point\n'
+                '         items=[("Visits", "Up on every weekday."), ("Repairs", "About the same as spring."),\n'
+                '                ("Waiting list", "Down by half.")])\n'
+                'k.data(k.new_slide(), number="12", label="of 40 neighbourhoods run a repair night",\n'
+                '       total="40")                         # a share bar: plain numbers, number <= total',
+    "vl_broadsheet": 'import visual_languages as vl\n'
+                     'k = vl.use("broadsheet", prs)         # extras: masthead=/edition= (any page, remembered), inside= (cover), tags= (points)\n'
+                     'k.cover(k.new_slide(), title="Every street needs a night for fixing things",\n'
+                     '        subtitle="How a repair evening works, and why it spreads.",\n'
+                     '        masthead="The Repair Weekly", edition="No. 12", inside=["The idea", "The evening", "The numbers"])\n'
+                     'k.points(k.new_slide(), title="How it works", tags=["Idea", "Evening"],\n'
+                     '         items=[("Bring it broken", "Anything that switches on."), ("Fix it together", "Your hands do the work.")])',
+    "vl_journal": 'import visual_languages as vl\n'
+                  'k = vl.use("journal", prs)               # extras: running= (any page, remembered), authors=/abstract= (cover), margin= (points)\n'
+                  'k.cover(k.new_slide(), title="Faster scans, same answers", subtitle="A lab-meeting update",\n'
+                  '        authors="A. Author, B. Author", running="Lab meeting: reconstruction",\n'
+                  '        abstract="We compare three reconstructions at four accelerations.")\n'
+                  'k.points(k.new_slide(), title="What we compared", margin="All runs on one scanner.",\n'
+                  '         items=[("Three methods", "Same data, same metric."), ("Four accelerations", "From 2x to 8x.")])\n'
+                  'k.image_text(k.new_slide(), title="Error grows with acceleration",   # the FIGURE page: numbered for you\n'
+                  '             body="Error against acceleration for three methods.", caption="Source: an illustrative figure",\n'
+                  '             image=str(vl.ASSETS / "figure" / "illustrative-curves.jpg"))   # YOUR figure, placed whole',
+    "vl_chalkboard": 'import visual_languages as vl\n'
+                     'k = vl.use("chalkboard", prs)         # extras: doodle= (cover, closing), ordered=True (points)\n'
+                     'k.cover(k.new_slide(), kicker="Science: lesson 3", title="How photosynthesis works",\n'
+                     '        doodle="lucide:sun")              # one icon, fetched once from the icon library (network), then cached\n'
+                     'k.points(k.new_slide(), title="Three steps", ordered=True,   # arrows only when the points happen IN ORDER\n'
+                     '         items=[("Light in", "Leaves catch sunlight."), ("Water up", "Roots pull water."),\n'
+                     '                ("Sugar out", "The leaf makes food.")])\n'
+                     'k.closing(k.new_slide(), title="Questions?", line="Next week: the water cycle.")',
+    # An ORDINARY page (agenda, list, chart) in a language's look: `rs.ground` paints the furniture and returns the
+    # content rect, `rs.card` gives the language's card. Also printed for `--example rs.ground` / `rs.card`.
+    "ground": 'import visual_languages as vl, register_surface as rs\n'
+              'k = vl.use("journal", prs)\n'
+              's = k.new_slide()                           # an ORDINARY page: k.new_slide(), never dk.add_slide\n'
+              'x, y, w, h = rs.ground(s, k.name, role="content", index=2)   # furniture; the content rect in inches\n'
+              'rows = ["1.  Why a repair café", "2.  How an evening runs", "3.  What to bring"]\n'
+              'size = 24 * min(prs.slide_width.inches, prs.slide_height.inches) / 7.5   # scaled with the canvas\n'
+              'rows_h = sum(dk.measure_text([(r, False)], w - 0.8, size, font=k.face("body")) + 0.18 for r in rows)\n'
+              'card_h = rows_h + 1.1                       # the card fits its words, with room for the label band\n'
+              'body, header = rs.card(s, k.name, x, y + max(0.0, (h - card_h) / 2), w, card_h, label="Agenda")\n'
+              'top = header.top.inches + header.height.inches + 0.2 if header else body.top.inches + 0.45   # below the label\n'
+              'dk.text(s, body.left.inches + 0.4, top, body.width.inches - 0.8, rows_h, [k.runs(r, size) for r in rows],\n'
+              '        space_after=8)\n'
+              'dk.a11y_title(s, "Agenda")                  # an ordinary page names its own title for screen readers',
     "sticker_outline": 'import image_fx\n'
                        'st = image_fx.sticker_outline("cutout.png")      # needs a transparent cut-out\n'
                        'dk.picture(s, st, 6.6, 0.6, 2.6, 3.4, fit="contain", alt="a cut-out subject")',
@@ -438,6 +502,53 @@ EXAMPLES = {
             '                 alt="a city skyline under an open sky")   # a pinned print\n'
             'orn.tape(s, 4.1, 0.98, 1.4, 0.4, "F2D16B", holds=pic)   # holding it to the page',
 }
+EXAMPLES["card"] = EXAMPLES["ground"]      # rs.card is shown on the same ordinary page
+
+# Printed once above the scaffolds: the names they assume, as the first lines of a build script that runs from any
+# folder. A scaffold run without them failed on `prs` (audit 2026-10-09).
+PREAMBLE = """\
+# ── every scaffold below assumes a build script that starts like this (it runs from any folder) ──
+import sys; sys.path.insert(0, {scripts!r})
+import deckkit as dk, designed_charts as dc
+prs = dk.blank_deck(13.333, 7.5)        # the canvas (formats.blank_deck("<name>") for another)
+s = dk.add_slide(prs)                   # the page most scaffolds draw on (a visual-language deck starts EVERY
+                                        # page with k.new_slide() instead, so leave this line out there)
+# A file name such as "skyline.png" stands for YOUR file; the vl_* and ground scaffolds use pictures bundled
+# with the skill. End the script with prs.save("<deck folder>/<deck>.pptx").
+"""
+
+# A module prefix as a build script writes it — `vl.use`, `rs.ground`, `k.cover`. A non-Claude agent looked up exactly
+# these and was told "no helper named" (audit 2026-10-09).
+_PREFIX = {"dk": "deckkit", "dc": "designed_charts", "rs": "register_surface", "vl": "visual_languages",
+           "na": "native_art", "orn": "ornaments", "ims": "image_series", "dt": "display_type",
+           "k": "Kit", "kit": "Kit", "Kit": "Kit"}
+_PREFIX.update({m: m for m in MODULES})
+
+
+def _canon(name, reg):
+    """The registry key for a name as a build script writes it: `vl.use` -> `use`, `rs.ground` -> `ground`,
+    `k.cover` / `vl.cover` -> `Kit.cover`. A helper an earlier module shadows is registered as `<module>.<name>`."""
+    if name in reg or "." not in name:
+        return name
+    pre, _, base = name.partition(".")
+    mod = _PREFIX.get(pre)
+    if mod is None or not base:
+        return name
+    if mod in ("Kit", "visual_languages") and "Kit." + base in reg and not (base in reg and reg[base][0] == mod):
+        return "Kit." + base
+    if mod == "Kit":
+        return name
+    hit = reg.get(base)
+    if hit and hit[0] == mod:
+        return base
+    try:
+        fn = getattr(__import__(mod), base)
+    except Exception:
+        return name
+    if inspect.isfunction(fn):
+        reg[mod + "." + base] = (mod, fn)
+        return mod + "." + base
+    return name
 
 
 def load():
@@ -549,7 +660,7 @@ def show(name, mod, fn, full=False):
         sig = sig.replace("(self, ", "(", 1).replace("(self)", "()", 1)
         print(f"\n{'─' * 78}\n{name}{sig}    # k = visual_languages.use(\"<language>\", prs); k.{name[4:]}(...)")
     else:
-        print(f"\n{'─' * 78}\n{mod}.{name}{sig}")
+        print(f"\n{'─' * 78}\n{name if name.startswith(mod + '.') else mod + '.' + name}{sig}")
     doc = inspect.getdoc(fn) or "(no docstring)"
     if full:
         print("\n" + doc)
@@ -607,8 +718,11 @@ def main(argv=None):
 
     if a.example:
         # a page name (`section`) is the kit's page function, as on the plain lookup path
+        a.names = [_canon(n, reg) for n in a.names]
         a.names = [n if (n in EXAMPLES or n in reg or "Kit." + n not in reg) else "Kit." + n for n in a.names]
         miss = [n for n in a.names if n not in EXAMPLES]
+        if len(miss) < len(a.names):
+            print(PREAMBLE.format(scripts=HERE))
         for n in a.names:
             if n in EXAMPLES:
                 g = _guarantee(n)
@@ -645,8 +759,9 @@ def main(argv=None):
         return 1 if any(n not in reg for n in miss) else 0
 
     missing = []
+    a.names = [_canon(n, reg) for n in a.names]
     for n in a.names:
-        kit = "Kit." + n if not n.startswith("Kit.") else None
+        kit = "Kit." + n if not n.startswith("Kit.") and "." not in n else None
         if n in reg:
             m, f = reg[n]
             show(n, m, f, a.full)

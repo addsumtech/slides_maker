@@ -374,8 +374,10 @@ def use(name, prs, *, fonts="both", plan=None, image_dir=None, platform=None, gr
     if ground == "auto":
         ground, why = _auto_ground(name, prs)
         import shlex as _shq
-        print("[visual_languages] {}: ground {!r} ({}) — {}. Record it (DECK_DIR = the folder the deck is saved in, "
-              "TOPIC = what it is for): python3 {} --gates {} --ground {} --deck DECK_DIR --for TOPIC".format(
+        # a TEMPLATE, not a command: `--deck DECK_DIR` ran verbatim and recorded into ./DECK_DIR (audit 2026-10-09);
+        # an unquoted <…> cannot run as-is (the shell reads `<` as a redirect), so it must be filled in first
+        print("[visual_languages] {}: ground {!r} ({}) — {}. Record it — replace both <…> first: python3 {} --gates "
+              "{} --ground {} --deck <the deck folder> --for <what the deck is for, in quotes>".format(
                   name, ground, VARIANTS[name][ground]["label_zh"], why, _shq.quote(str(Path(__file__).resolve())),
                   name, ground))
     if ground not in VARIANTS[name]:
@@ -2084,6 +2086,8 @@ def main(argv=None):
     import shlex
     ap = argparse.ArgumentParser(description="visual languages: build the bundled samples")
     ap.add_argument("--sample", metavar="OUT_DIR", help="build sample-<name>.pptx for every language")
+    ap.add_argument("--refresh-bundled", action="store_true", help="maintainers, with --sample: the printed then: "
+                    "lines overwrite the BUNDLED previews in assets/vl/samples (and their manifest.json)")
     ap.add_argument("--sample-sheet", nargs=2, metavar=("RENDER_DIR", "OUT_JPG"),
                     help="contact a rendered sample's four pages into one JPEG")
     ap.add_argument("--list", action="store_true", help="list the languages")
@@ -2099,7 +2103,14 @@ def main(argv=None):
             print("visual_languages: --gates needs --deck <the deck folder>, so every printed command runs as "
                   "printed", file=sys.stderr)
             return 2
+        if a.deck.strip() in ("DECK_DIR", "<deck>") or "<" in a.deck or ">" in a.deck:   # a template, run verbatim
+            print("visual_languages: --deck {!r} is a placeholder — pass the folder the deck is saved in".format(a.deck),
+                  file=sys.stderr)
+            return 2
         return _print_gates(a.gates, a.deck, a.topic, a.fonts, a.ground)
+    if a.refresh_bundled and not a.sample:
+        print("visual_languages: --refresh-bundled goes with --sample <OUT_DIR>", file=sys.stderr)
+        return 2
     if a.list or not (a.sample or a.sample_sheet):
         for n, L in LANGS.items():
             print("{:10s} fonts both: {}  mac: {}  grounds: {}".format(n, L["fonts"]["both"], L["fonts"]["mac"], ", ".join(
@@ -2111,11 +2122,15 @@ def main(argv=None):
     for n in LANGS:
         for g in VARIANTS[n]:
             out = build_sample(n, a.sample, ground=g)
-            rd = Path(a.sample) / ("render-" + _sample_stem(n, g))
+            rd = Path(a.sample).resolve() / ("render-" + _sample_stem(n, g))
+            # absolute script paths (they ran only from the skill folder), and the sheet lands in OUT_DIR: a then:
+            # line run verbatim used to overwrite the bundled preview (audit 2026-10-09) — that is --refresh-bundled
+            sheet = (ASSETS / "samples" if a.refresh_bundled else Path(a.sample).resolve()) / (_sample_stem(n, g) + ".jpg")
             print("built", out)
-            print("NEXT: python3 scripts/render_deck.py {} {}".format(shlex.quote(str(out)), shlex.quote(str(rd))))
-            print("then: python3 scripts/visual_languages.py --sample-sheet {} {}".format(
-                shlex.quote(str(rd)), shlex.quote(str(ASSETS / "samples" / (_sample_stem(n, g) + ".jpg")))))
+            print("NEXT: python3 {} {} {}".format(shlex.quote(str(HERE / "render_deck.py")), shlex.quote(str(Path(out).resolve())),
+                                                  shlex.quote(str(rd))))
+            print("then: python3 {} --sample-sheet {} {}".format(shlex.quote(str(HERE / "visual_languages.py")),
+                                                                 shlex.quote(str(rd)), shlex.quote(str(sheet))))
     return 0
 
 

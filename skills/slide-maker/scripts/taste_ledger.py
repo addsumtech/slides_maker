@@ -186,9 +186,12 @@ def faults(design_plan, entries) -> list[str]:
     return out
 
 
+# the command carries this file's ABSOLUTE path (braces doubled for .format): `python3 scripts/taste_ledger.py`, printed by
+# `deck_gates.py check`, ran only from the skill folder (non-Claude audit, 2026-10-09)
+_SELF_CMD = ("python3 " + __import__("shlex").quote(str(Path(__file__).resolve()))).replace("{", "{{").replace("}", "}}")
 MISSING = ("`design_plan.taste_applied` is missing, and the taste ledger has {n} active entry(ies) "
            "— things this user has already corrected by hand. Read them "
-           "(`python3 scripts/taste_ledger.py list --binds-at design --format prompt`) and record "
+           "(`" + _SELF_CMD + " list --binds-at design --format prompt`) and record "
            "one row each:\n"
            '    "taste_applied": [{{"id": "<entry id>", "applied": true}},\n'
            '                      {{"id": "<entry id>", "applied": false, '

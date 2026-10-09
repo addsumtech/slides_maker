@@ -603,7 +603,8 @@ else:
                 p_ = vl.build_sample(n_, str(_ftd), ground=g_)
             check(_rec.get(stem) == vl.sample_fingerprint(p_),
                   "sample {}.jpg is current with the code that builds it — else rebuild: python3 scripts/"
-                  "visual_languages.py --sample <dir>, then the NEXT/then lines it prints".format(stem))
+                  "visual_languages.py --sample <dir> --refresh-bundled, then the NEXT/then lines it prints "
+                  "(assets/vl/README.md)".format(stem))
 
 # ── Task 11: the reference names what the code does ──
 _ref = (ROOT / "references" / "visual-languages.md")

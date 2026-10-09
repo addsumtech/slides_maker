@@ -3,6 +3,167 @@
 **When to read this:** the picked direction is a visual language (its entry in `directions.json` carries
 `"vl": "<name>"`), or the user asks for one of these looks by name. Read it before writing the build script.
 
+**The skill folder, named once.** `SKILL` is the folder that holds `SKILL.md` (the path this skill was loaded
+from, e.g. `~/.claude/skills/slide-maker`). Every command in this file is written `python3 "$SKILL/scripts/…"` and
+runs from any working directory once you set it; a build script reads the same variable:
+
+```bash
+export SKILL="/absolute/path/to/slide-maker"         # the folder with SKILL.md in it
+python3 "$SKILL/scripts/visual_languages.py" --list   # check: one line per language
+```
+
+## Build a visual-language deck, in order
+
+Every command below was run, in this order, from a fresh folder outside the skill, on two decks: `editorial` with
+the bundled photos and `tally` drawn (2026-10-09). `DECK` is the deck's folder, as an absolute path. The record is
+the shared runtime's `$DECK/.deck-gates.json`; on the Codex runtime the same values go into
+`.codex-deck-evidence.json` under `design` (`references/codex-runtime.md`).
+
+1. **Pick the canvas.** `python3 "$SKILL/scripts/formats.py"` prints every canvas. In the build script,
+   `formats.blank_deck("<name or alias>")` makes the deck; `formats.get()` resolves these names (any case):
+
+   | name | aliases | size (in) |
+   |---|---|---|
+   | `wide` | `16:9` `16x9` `ppt` `landscape` `widescreen` `default` | 10 × 5.625 |
+   | `wide13` | `13.33x7.5` `13.333x7.5` `powerpoint` `16:9-13` `widescreen-13` | 13.333 × 7.5 |
+   | `classic` | `4:3` `4x3` `standard` | 10 × 7.5 |
+   | `square` | `1:1` `1x1` `instagram` `ins` `facebook` `post` | 7.5 × 7.5 |
+   | `red` | `3:4` `3x4` `xiaohongshu` `小红书` `rednote` `portrait` | 7.5 × 10 |
+   | `story` | `9:16` `9x16` `vertical` `reels` `shorts` `douyin` `抖音` `tiktok` | 5.625 × 10 |
+   | `a4` | `print` `a4-portrait` `handout` `onepager` `one-pager` | 8.27 × 11.69 |
+   | `poster_a0` | `a0` `poster` `a0-portrait` `conference-poster` `海报` | 33.11 × 46.81 |
+   | `poster_a1` | `a1` `a1-portrait` `poster-a1` | 23.39 × 33.11 |
+   | `poster_a0_land` | `a0-landscape` `a0l` `poster-a0-landscape` `横版海报` | 46.81 × 33.11 |
+   | `poster_a1_land` | `a1-landscape` `a1l` `poster-a1-landscape` | 33.11 × 23.39 |
+
+   `"16:9"` resolves to `wide`, the **10 in** canvas. The examples in this file use 13.333 × 7.5, which is
+   `wide13` (`dk.blank_deck(13.333, 7.5)` is the same canvas). `"portrait"` is the 3:4 `red` canvas.
+   A4 and the posters are printed boards.
+2. **Interview, then make the record.** Ask the questions of SKILL.md Step 0 (on Codex, `references/codex-runtime.md`
+   step 1). Then:
+   ```bash
+   python3 "$SKILL/scripts/deck_gates.py" init "$DECK" --slides 5
+   python3 "$SKILL/scripts/deck_gates.py" interview "$DECK" --set language=en --set density=balanced --set length="5 slides" --set goal="invite neighbours to a repair evening"
+   ```
+   - `init` writes `$DECK/.deck-gates.json`, every value a placeholder; `--slides` is the planned slide count.
+   - If the record already exists, `init` exits 2 and changes nothing. Keep it and go on with `set`; `--force`
+     overwrites it and discards what is recorded.
+   - Run `init` before `interview --set`. On a folder with no record, `interview --set` writes one holding only
+     the interview, and `init` then refuses.
+   - Give `length` in words (`"5 slides"`): a one-character answer such as `5` is refused at hand-off.
+3. **Write the build script** `$DECK/build_deck.py` with `vl.use` and one page function per slide, each in its own
+   `def slide_NN(prs, k):` (the Codex gate reads the calls inside each `def`). The `editorial` test deck:
+   ```python
+   import os
+   import sys
+   from pathlib import Path
+
+   SKILL = os.environ["SKILL"]                     # the folder that holds SKILL.md
+   sys.path.insert(0, os.path.join(SKILL, "scripts"))
+   import deckkit as dk
+   import formats
+   import visual_languages as vl
+
+   HERE = Path(__file__).resolve().parent
+   PHOTO = Path(SKILL) / "assets" / "vl" / "photo"  # bundled sample photos; a real deck uses the user's own
+
+
+   def slide_01(prs, k):
+       k.cover(k.new_slide(), kicker="A repair café", title="Bring it broken, take it home working",
+               subtitle="Once a month, in the church hall", image=str(PHOTO / "hall-repair.jpg"))
+
+
+   def slide_02(prs, k):
+       k.section(k.new_slide(), number="01", kicker="How it works", title="We fix it with you")
+
+
+   def slide_03(prs, k):
+       k.image_text(k.new_slide(), kicker="What you find", title="Tools on every bench",
+                    body="Volunteers bring the tools; you bring the broken thing and stay while it is fixed.",
+                    image=str(PHOTO / "tools-tray.jpg"))
+
+
+   def slide_04(prs, k):
+       k.quote(k.new_slide(), quote="I came with a dead toaster and left knowing how it works.",
+               attribution="A visitor")
+
+
+   def slide_05(prs, k):
+       k.closing(k.new_slide(), title="Bring one broken thing.", line="And bring a neighbour.",
+                 image=str(PHOTO / "table-mended.jpg"))
+
+
+   def main():
+       prs = formats.blank_deck("16:9")             # "16:9" is the 10 x 5.625 in canvas
+       k = vl.use("editorial", prs, ground="auto")
+       for build in (slide_01, slide_02, slide_03, slide_04, slide_05):
+           build(prs, k)
+       prs.save(str(HERE / "repair-cafe.pptx"))
+       print("saved", HERE / "repair-cafe.pptx")
+
+
+   if __name__ == "__main__":
+       main()
+   ```
+   The `tally` test deck was the same shape, with `formats.blank_deck("wide13")`, an ordinary agenda page (see
+   **Ordinary pages** below), `points` with `tags=` and `data` with `total=`. More scaffolds:
+   `python3 "$SKILL/scripts/sigs.py" --example vl_drawn vl_tally vl_broadsheet vl_journal vl_chalkboard rs.ground`.
+4. **Build:** `python3 "$DECK/build_deck.py"`. With `ground="auto"` it prints the ground it chose and a
+   `--gates` line with two `<…>` blanks. That line is a template: fill both blanks, because it will not run as printed.
+5. **Record the language.** Pass the ground the build printed (on the test machine `ink`, because its last decks
+   sat on light paper; yours may print `light`), or `auto`, which reads the one `.pptx` in `$DECK`:
+   ```bash
+   python3 "$SKILL/scripts/visual_languages.py" --gates editorial --ground ink --deck "$DECK" --for "a neighbourhood repair café" | tee "$DECK/gates.txt"
+   sh "$DECK/gates.txt"
+   ```
+   It prints six `deck_gates.py set` commands with absolute paths, plus an `init` line when there is no record yet.
+   Its `#` lines are comments, so the saved output runs as a shell script. Run it as printed.
+6. **Record the plan and the two checkpoints.** While `content.slides` has 4 or more rows (the placeholder rows
+   `init` writes count) and `design_plan.checkpoint.mode` is not `approved` or `auto`, a full render refuses with
+   `STEP 2 NOT DONE`. `--gate-check` reads both checkpoints (its "checkpoint ledger" line). Write one row per slide
+   with its real takeaway, and use `"mode": "auto"` when the user delegated the call:
+   ```bash
+   python3 "$SKILL/scripts/deck_gates.py" set "$DECK" content.slides '[{"slide": 1, "role": "cover", "takeaway": "A repair café fixes your broken things with you, once a month.", "evidence": ["the user brief"], "units": 2}, {"slide": 2, "role": "section", "takeaway": "The evening is hands-on: you fix it with a volunteer.", "evidence": ["the user brief"], "units": 1}, {"slide": 3, "role": "evidence", "takeaway": "Every bench has the tools; you bring only the broken thing.", "evidence": ["the user brief"], "units": 2}, {"slide": 4, "role": "quote", "takeaway": "Visitors leave knowing how their thing works.", "evidence": ["a visitor, quoted in the brief"], "units": 1}, {"slide": 5, "role": "close", "takeaway": "Bring one broken thing, and a neighbour.", "evidence": ["the user brief"], "units": 1}]'
+   python3 "$SKILL/scripts/deck_gates.py" set "$DECK" content.checkpoint '{"mode": "approved", "record": "the slide table was shown in chat and the user said go"}'
+   python3 "$SKILL/scripts/deck_gates.py" set "$DECK" design_plan.checkpoint '{"mode": "approved", "record": "the user named the look; the direction and the per-slide pages were shown and approved"}'
+   ```
+7. **Render, then look at every PNG:** `python3 "$SKILL/scripts/render_deck.py" "$DECK/repair-cafe.pptx"`. The PNGs
+   land in `$DECK/render/`.
+8. **Lint:** `python3 "$SKILL/scripts/lint_deck.py" "$DECK/repair-cafe.pptx"`. It reads the renders beside the deck.
+   Both test decks came back with 0 hard findings and only advisory `[stats]` warnings.
+9. **Hand-off gates:** `python3 "$SKILL/scripts/render_deck.py" "$DECK/repair-cafe.pptx" --gate-check`. It lists
+   every gate still owed, numbered, and exits 1 until all of them pass. `python3 "$SKILL/scripts/deck_gates.py"
+   check "$DECK"` lists every record field that is still a placeholder, all at once.
+
+**Which hand-off gates a user-named visual-language look still owes.** After steps 1–8, `--gate-check` on the
+test decks passed `visual language` ("5 of 5 slide(s) built with it"), `register pixels`, `a11y`, `fonts`,
+`surface`, `density` and `interview`. It listed the rest, 8 gates on each deck, each with the record it wants:
+
+- **What the look itself changes.**
+  - There was no competition, so record `design_plan.direction_gate` as `"n/a - user supplied the look"`. On Codex,
+    also record `design.direction` as `{"branch": "user-named", …}` (step 2u there).
+  - `visual_language`, `vl_fonts`, `vl_ground`, `style_pick`, `look_source` and `palette` come from step 5.
+  - A GROUND REPEAT is answered by rebuilding on the other ground, or by a written
+    `design_plan.register_pixels_waived` (see **Record and gates**).
+- **Everything else applies as on any deck.**
+  - `critic`: `{"verdict": "consent" | "revise"}` from the review. A waiver is `{"waived": "<reason>",
+    "waived_category": "<category>"}`, and the gate prints the five categories, `user-waived` among them.
+  - `design_plan`: the rest of the Step 2 plan — `boldness`, `concept`, `signature_move`, `form_ledger`,
+    `icon_family`, `build_shape`, `material_probe`, `signature_proof`, `composition`. `deck_gates.py check` lists
+    the missing ones.
+  - `taste` (when this machine's taste ledger has entries): one `design_plan.taste_applied` row per active entry.
+    The command the gate prints lists them.
+  - `content.arc`: the 2–3 candidate arcs themselves.
+  - `content.audience_brief`: 3 or more decisions.
+  - `render_selfcheck`: a verdict for every slide, written after looking at it.
+  - `blind_read`: answers from a reader who was not shown the record (`blind_read.py`).
+  - `provenance`: a verdict on every claim.
+
+  The rows marked `NOT CHECKED` (template profile, purpose, talk time, Q&A backup, citations, image series, and a
+  direction with no `directions.json`) checked nothing and block nothing.
+
+## The thirteen languages
+
 A visual language is a whole look, not a palette: a type voice from system fonts, a surface, image
 treatments and six page compositions (seven on the drawn languages, which add `points`). Picking one gives a finished deck from your own words and images —
 the page functions never invent a word, a number or a name.
@@ -26,22 +187,25 @@ the page functions never invent a word, a number or a name.
 ## Build
 
 ```python
-import sys
-sys.path.insert(0, "<skill>/scripts")
+import os, sys
+sys.path.insert(0, os.path.join(os.environ["SKILL"], "scripts"))   # or the skill folder's absolute path
 import deckkit as dk
 import register_surface as rs
 import visual_languages as vl
 
+P = vl.ASSETS / "photo"                          # the bundled sample photos; put the user's own pictures here
 prs = dk.blank_deck(13.333, 7.5)
 k = vl.use("collage", prs, ground="auto")       # fonts="both" (default): faces on macOS AND Windows;
                                                  # ground="auto": light, or the contrast ground after cream decks
 k.cover(k.new_slide(), kicker="A repair café", title="Bring it broken", subtitle="Once a month",
-        image=["<deck>/a.jpg", "<deck>/b.jpg", "<deck>/c.jpg"])     # collage cover: up to 4 images
+        image=[str(P / "hall-repair.jpg"), str(P / "bench-toaster.jpg"), str(P / "jacket-mend.jpg")])   # collage cover: up to 4
 k.section(k.new_slide(), number="02", kicker="How it works", title="We fix it with you")
-k.image_text(k.new_slide(), kicker="What you find", title="Tools on every bench", body="…", image="<deck>/tools.jpg")
-k.quote(k.new_slide(), quote="…", attribution="…")
-k.data(k.new_slide(), number="1", label="evening a month", note="…")
-k.closing(k.new_slide(), title="Bring one broken thing.", line="And bring a neighbour.", image="<deck>/table.jpg")
+k.image_text(k.new_slide(), kicker="What you find", title="Tools on every bench",
+             body="Volunteers bring the tools.", image=str(P / "tools-tray.jpg"))
+k.quote(k.new_slide(), quote="I left knowing how it works.", attribution="A visitor")
+k.data(k.new_slide(), number="1", label="evening a month", note="Always the first Friday.")
+k.closing(k.new_slide(), title="Bring one broken thing.", line="And bring a neighbour.", image=str(P / "table-mended.jpg"))
+prs.save("collage.pptx")
 ```
 
 - **Pages:** `cover`, `section`, `image_text`, `quote`, `data`, `closing` — keyword fields only; `image=`
@@ -57,7 +221,8 @@ k.closing(k.new_slide(), title="Bring one broken thing.", line="And bring a neig
   refused the same way, naming the word; a long Korean compound breaks between syllables instead. Titles never end in a lone word or one or two CJK characters (shrunk a little, or set in
   a balanced measure). A title, quote, label or line with clause punctuation INSIDE it breaks after its
   clauses when they fit ("带着坏东西来，/ 带着好东西走", "Bring it broken. / Take it home working.") —
-  at down to 0.7x its size, never with more lines, set as one paragraph per line.
+  at down to 0.7x its size, never with more lines, set as one paragraph per line. Which marks count, and how to
+  punctuate Chinese, Japanese and Korean copy: **CJK and Hangul copy** below.
 - **Ordinary pages in the same look** (agenda, bullets, charts) — every page starts with `k.new_slide()`,
   which paints the language's ground (and its grain) and marks the slide as built in the language, so the
   delivery gate counts it; a plain `dk.add_slide()` page is NOT in the language. Then:
@@ -86,12 +251,15 @@ k.closing(k.new_slide(), title="Bring one broken thing.", line="And bring a neig
   run is `k.run(…)`): it picks the language's face and, for Chinese, Japanese or Korean text, that script's
   East-Asian face — never type a font name — and sets digits in a LINING face where the language's face has
   old-style figures (Georgia), so "Repair café 2026" never bobs.
-- **Any canvas:** every page has a landscape and a portrait layout (portrait when W < 1.2 H). A storybook page given a
-  PORTRAIT illustration (width/height < 0.85) takes its tall frame — beside the text on a landscape slide, taller on a
-  portrait one — so the picture is not shrunk into a frame drawn for a landscape one.
-- **A data page with no picture** sets the figure big — about 60% of the column's height on a landscape slide, with
-  the label and note beside it; stacked below it on a portrait one — never wider than half the column, so a long
-  number shrinks rather than crowding the label.
+- **Any canvas:** every page has a landscape and a portrait layout (portrait when W < 1.2 H). Given a PORTRAIT
+  illustration (width/height < 0.85), storybook's cover, quote and closing switch to a tall frame beside the text on
+  a landscape slide (its section, image_text and data frames are tall already); on a portrait slide every page
+  switches to a narrower, taller frame. Either way the picture is not shrunk into a frame drawn for a landscape one.
+- **A data page with no picture** (the four image-led languages) sets a short figure as big as its column allows.
+  Measured on "42" in editorial and storybook: on a 13.333 × 7.5 slide its line is about 60% of the slide's height
+  (editorial 274pt), with the label and note beside it; on a 7.5 × 10 portrait slide about 37%, with the label and
+  note stacked below. A long number shrinks rather than crowding the label ("1,250,000": 72pt on the same landscape
+  editorial page). Collage draws a short figure as an outlined shape. The drawn languages size their own figure.
 - **Screen readers:** every page declares its title with `deckkit.a11y_title` (the quote page: the quote; the data
   page: number + label) — first in reading order, above the canvas, nothing drawn — so a kicker set above the title
   never trips READING ORDER. Ordinary `k.new_slide()` pages need their own title (or `dk.a11y_title`).
@@ -122,7 +290,9 @@ every value they write is one PowerPoint opens without repair (`scripts/ooxml_sa
   is set horizontally in the same composition. A vertical field shrinks toward its floor and is refused past
   its columns, like any other field.
 - **Display type** (`poster`) breaks like the rest of the kit: at a clause mark first, never a lone CJK
-  character or word on the last line; Latin is set in capitals; a figure (`1,250,000`) stays on one line.
+  character or word on the last line; a figure (`1,250,000`) stays on one line. Latin kickers, the cover, section,
+  points and closing titles, the quote and the data label are set in capitals; the `image_text` title, the body
+  copy, point heads and lines, notes and attributions stay as you typed them.
 - **Vertical columns break at the clause** (`ink`): "宋代点茶： / 一盏茶里的审美", never mid-word; a quote couplet
   is two equal columns at one size.
 - **Long copy gets a roomier layout before it is refused.** Each native page tries its designed layout first,
@@ -161,20 +331,20 @@ first four: no pictures needed, everything on the page, nothing PowerPoint repai
 | `chalkboard` | 黑板报 | the classroom blackboard | lessons, classes, training, explainers |
 
 - **Words only you can give.** A word given on a page that does not draw it is refused, naming the pages that do;
-  when it is absent, nothing is drawn. `sigs.py Kit.cover` (any page) lists them all; they arrive as `**extras`.
+  when it is absent, nothing is drawn. `python3 "$SKILL/scripts/sigs.py" Kit.cover` (any page) lists them all; they arrive as `**extras`.
   - `masthead="…"` (`broadsheet`, any page, remembered for the deck): the paper's name in the masthead strip.
     Without it, the cover's `kicker` names the paper and is not repeated above the headline; without either, the
     strip has rules and the page number only.
   - `edition="…"` (`broadsheet`, any page, remembered): the strip's left words, such as your date or issue.
-  - `inside=[…]` (`broadsheet` cover): 1–4 short lines for the "Inside" sidebar.
+  - `inside=[…]` (`broadsheet` cover): 1–4 short lines for the "INSIDE" sidebar.
   - `tags=[…]` (`broadsheet` and `tally` `points`): one short label per point — a broadsheet column's label (it
     wraps like any label) or a tally row's pill (beside the words, or under them when the pills are wide). The count
     must match; a tally tag too long even for a pill under its row's words is refused by name.
   - `running="…"` (`journal`, any page — the cover too, though it draws none — remembered): the running head. Without it, the cover title runs there when
     it fits one line, else the page number stands alone. An explicit `running=` that cannot fit is refused.
   - `authors="…"`, `abstract="…"` (`journal` cover): the author line and the abstract block. A subtitle is never
-    labelled "Abstract".
-  - `margin="…"` (`journal` `points`): a margin note under a "Note" label.
+    labelled "ABSTRACT".
+  - `margin="…"` (`journal` `points`): a margin note under a "NOTE" label.
   - `total="…"` (`tally` `data`): draws a share bar, the number's share of the total, with both numbers at its ends.
     The rules:
     - both are plain numbers (`12`, `1,250`, `98.6%`);
@@ -187,12 +357,32 @@ first four: no pictures needed, everything on the page, nothing PowerPoint repai
     is not built — check the name on lucide.dev/icons or tabler.io/icons.
   - `ordered=True` (`chalkboard` `points`): chalk arrows between the boxes, only when the points really happen in
     order. The numbers already read as a list.
-- **Derived, never typed in.**
-  - page numbers;
-  - `journal` figure numbers: "Figure n" over the deck's `image_text` pages, with `kicker=` to override;
-  - the `broadsheet` ■ end mark;
-  - the structural labels Abstract, Inside, Figure, Page and Note, in the script of the page's own words:
-    摘要 / 要旨 / 초록; 图 1 / 図 1 / 그림 1; 第 2 版 / 2 面 / 2면.
+- **Derived, never typed in** — what the drawn languages write by themselves (checked by building every page,
+  2026-10-09); everything else on a page is your own words:
+  - page numbers: `PAGE n` on every `broadsheet` page, the cover too; a two-digit number (`01`, `02` …) on every
+    `poster` page; a plain number on every `journal` page except the cover. The four image-led languages, `ink`,
+    `cutpaper`, `starlit`, `tally` and `chalkboard` number no pages;
+  - `drafting`'s sheet border (`1`–`6`, `A`–`D`) and its title-block labels `SHEET` (with the sheet's two-digit
+    number) and `PROJECT`, in English whatever the deck's language;
+  - `journal`'s `§` before a section's `number=` (`§ 02`; no `number=`, no `§`);
+  - point numbers: `01 02 03` on `tally` and `poster` `points`; `一 二 三` on `ink` when the title is Chinese or
+    Japanese, else `1 2 3`; `1 2 3` on `cutpaper`, `journal` and `chalkboard` (circled there); `starlit` numbers none;
+  - `journal` figure numbers over the deck's `image_text` pages, with `kicker=` to override;
+  - the `broadsheet` ■ end mark on the closing page; the opening `“` on quote pages (not on `ink` or `tally`); the
+    `— ` before an attribution on `journal` and `chalkboard`;
+  - the structural labels, stored in CAPITALS in English (`ABSTRACT`, `INSIDE`, `FIGURE 1`, `PAGE 2`, `NOTE`) and
+    in the script of the page's own words otherwise:
+
+    | label | 中文 | 日本語 | 한국어 |
+    |---|---|---|---|
+    | ABSTRACT | 摘要 | 要旨 | 초록 |
+    | INSIDE | 本期 | 目次 | 목차 |
+    | FIGURE n | 图 1 | 図 1 | 그림 1 |
+    | PAGE n | 第 2 版 | 2 面 | 2면 |
+    | NOTE | 注 | 注 | 주석 |
+
+  Some of your own words are re-cased: `poster` (above), the kicker and attribution on `starlit` and
+  `broadsheet`, and the kicker on `journal`.
 - **Pages.** All seven pages come in both orientations.
   - `journal`'s `image_text` is its figure page: the title above, your figure WHOLE (never cropped), its label,
     caption (`body=`) and source line (`caption=`).
@@ -206,12 +396,16 @@ first four: no pictures needed, everything on the page, nothing PowerPoint repai
     return the rect under it;
   - `tally` is on its grid;
   - `chalkboard` is a framed board.
-- **No light ground.** `starlit` and `chalkboard` are dark by default: their `light` key IS their default ground.
-  A printed board in either prints a dark page, and `ground="auto"` says so.
+- **No light ground.** `starlit` and `chalkboard` have no light ground: both their grounds are dark, and their
+  `light` key IS their dark default. `poster`'s default is saturated colour fields, which print dark too. On a printed
+  board `ground="auto"` keeps the default for all three and says it prints as a dark page. For a lighter printed
+  poster pass `ground="paper"` yourself (off-white fields, with a black and a cobalt one in every four pages).
 - **No spaces between Chinese and Latin words** ("心脏MRI的", not "心脏 MRI 的"). The renderers add their own gap,
   and a typed space doubles it; this was measured on the look-dev.
 
 ```python
+import os, sys
+sys.path.insert(0, os.path.join(os.environ["SKILL"], "scripts"))
 import deckkit as dk, visual_languages as vl
 prs = dk.blank_deck(13.333, 7.5)
 k = vl.use("broadsheet", prs)
@@ -231,12 +425,12 @@ Each language has its own light paper and ONE contrast ground; every text ink pa
 
 | language | `light` | contrast ground |
 |---|---|---|
-| editorial | warm paper | `ink` — warm black, paper-white type, the same red |
+| editorial | warm paper | `ink` — warm black, paper-white type, a lighter red and blue |
 | soft | cream | `dusk` — deep plum-indigo, the pastel blobs kept |
 | collage | kraft | `slate` — dark grey paper, white prints, dark note cards |
 | storybook | paper | `meadow` — green paper; the watercolours are tinted onto it, as if painted there |
 | ink | xuan paper | `night` — ink-black paper, pale ridges, a moon for the sun |
-| poster | colour fields (cobalt, lime, black, signal orange, one per page) | `paper` — off-white and black fields, cobalt accents |
+| poster | colour fields (cobalt, lime, black, signal orange, one per page) | `paper` — off-white fields, with a black and a cobalt one in every four pages |
 | cutpaper | day | `night` — navy sky, a paper moon, dark hills |
 | drafting | vellum | `cyanotype` — blueprint navy, pale linework |
 | starlit | midnight (dark — no light ground) | `dawn` — deep violet, rose gold |
@@ -250,29 +444,34 @@ Each language has its own light paper and ONE contrast ground; every text ink pa
 asks for one, e.g. a children's lesson on light paper) — the light ground unless the last three decks in your look history already sit on it (the
 register-pixels GROUND REPEAT distance), then the contrast one; a printed board (A4, the A0/A1 posters) always
 stays light, and no history means light. `auto` prints what it chose and the `--gates … --ground …` command that
-records it (fill in its `DECK_DIR` and `TOPIC`). `vl.direction(name, ground="auto", W=…, H=…)` — the deck's canvas in
-inches, 13.333 x 7.5 by default — shows the sample of that same ground, so the picked preview and the built deck agree. `python3 scripts/visual_languages.py --list` lists every language's grounds.
+records it, as a template with two `<…>` blanks (the deck folder and what the deck is for): fill both in, because
+it will not run as printed. `vl.direction(name, ground="auto", W=…, H=…)` — the deck's canvas in
+inches, 13.333 x 7.5 by default — shows the sample of that same ground, so the picked preview and the built deck agree. `python3 "$SKILL/scripts/visual_languages.py" --list` lists every language's grounds.
 
 ## Fonts
 
 `fonts="both"` (default) uses only faces present on macOS AND Windows, so the render matches what the
 viewer opens. `fonts="mac"` unlocks Mac-only faces and refuses one that is not installed.
 
-| language | display (both / mac) | body (both / mac) | numerals |
+| language | display (both / mac) | body (both / mac) | numerals (both / mac) |
 |---|---|---|---|
-| editorial | Georgia / Didot | Arial / Helvetica Neue | Arial Black (lining) |
-| soft | Trebuchet MS / Arial Rounded MT Bold | Trebuchet MS / Avenir Next | Trebuchet MS |
+| editorial | Georgia / Didot | Arial / Helvetica Neue | Arial Black (lining) / Helvetica Neue |
+| soft | Trebuchet MS / Arial Rounded MT Bold | Trebuchet MS / Avenir Next | Trebuchet MS / Arial Rounded MT Bold |
 | collage | Impact / Impact (+ Bradley Hand accents on mac) | Arial / Avenir Next | Impact |
 | storybook | Georgia / Baskerville | Georgia | Times New Roman (lining) |
 | ink | Georgia / Baskerville | Georgia | Times New Roman (lining) |
 | poster | Impact | Arial / Helvetica Neue (meta: Courier New) | Impact |
-| cutpaper | Trebuchet MS / Avenir Next | Trebuchet MS / Avenir Next | Trebuchet MS |
+| cutpaper | Trebuchet MS / Avenir Next | Trebuchet MS / Avenir Next | Trebuchet MS / Avenir Next |
 | drafting | Georgia | Georgia (labels and title block: Courier New) | Times New Roman (lining) |
 | starlit | Georgia | Georgia | Times New Roman (lining) |
 | broadsheet | Times New Roman | Georgia (meta lines: Arial) | Times New Roman |
 | journal | Georgia | Georgia (labels: Arial) | Times New Roman (lining) |
 | tally | Arial Black | Arial / Helvetica Neue | Arial Black |
 | chalkboard | Trebuchet MS / Chalkboard SE | Trebuchet MS / Chalkboard SE | Trebuchet MS / Chalkboard SE |
+
+The numerals column is the face of the `data` page's figure (collage draws a short one as an outlined shape).
+Digits inside Georgia text — body or display — are set in Times New Roman, a lining face, and so are the digits
+in editorial's Didot display under `fonts="mac"` (`k.runs` does this for you).
 
 East-Asian faces follow the SCRIPT of each run — a Chinese face has no Hangul:
 
@@ -286,23 +485,52 @@ The Windows faces come from Microsoft's documented defaults and are **unverified
 has no Windows renderer). On-demand macOS CJK faces (Kaiti SC, Yuanti SC, Hannotate SC, PingFang SC, …) are
 never chosen. CJK runs are never italic; a collage CJK headline is bold (Impact has no CJK).
 
+## CJK and Hangul copy
+
+Checked by building pages and rendering them with `render_deck.py` (LibreOffice, 2026-10-09). PowerPoint was not
+available to check.
+
+- **Clause marks.** The full-width marks `，。、；：！？` are clause breaks anywhere in a field. ASCII `. , ; : ! ?`
+  and the dashes `— –` are clause breaks only before a space: "宋代点茶: 一盏茶里…" breaks after the colon, but
+  "宋代点茶:一盏茶里…" does not, and neither does "3.5". `ink`'s vertical columns break at full-width marks only.
+- **Use full-width marks in Chinese and Japanese.** An ASCII mark inside CJK text renders with a gap on each side
+  ("宋代点茶 : 一盏茶"). The kit does not measure that gap, so the line can grow past its box. Measured:
+  "宋代点茶:一盏茶里的审美与日常生活" was planned as 2 lines and rendered as 3, with a lone "活" under the box.
+- **No Latin letter straight before a full-width mark.** "心脏MRI：重建…" renders as "心脏 MRI ：", with a gap
+  before the colon. End the clause on a CJK character ("心脏磁共振：…") or reword it. Never put full-width marks in
+  Latin text: "broken：take" renders "broken ： take", and a title measured as one line rendered as two.
+- **Korean: leave ASCII punctuation off titles and labels.** After Hangul, LibreOffice draws a gap before an ASCII
+  mark ("고쳤습니다 .", "다 ,", "다 :"). PowerPoint may not. The gap widens the line past what the kit measured:
+  "수리 카페의 저녁, 함께해요" was planned as one line and rendered as two, and the same title with no mark stayed
+  on one. Full-width marks only partly help: "。" renders tight but is not Korean usage, and "，" and "：" still
+  look spaced off. Prefer no mark at all.
+- **A number and its counter can split across lines.** "修好了 12 / 个水壶", "コートを 12 / 着直しました",
+  "외투 128 / 벌을" all rendered that way. Where it matters, break the line yourself: a typed `\n` before the number
+  is kept as your own break.
+
 ## Record and gates
 
-`python3 scripts/visual_languages.py --gates collage --ground slate --deck <deck> --for "a neighbourhood repair café"`
+`python3 "$SKILL/scripts/visual_languages.py" --gates collage --ground slate --deck "$DECK" --for "a neighbourhood repair café"`
 (`--ground` = the ground the deck was built on; the commands carry `deck_gates.py`'s full path, so they run as
 printed from any folder; `auto` reads the canvas of the one built `.pptx` in `--deck` and
-resolves as `use()` did — with no built deck it refuses, so pass the ground `use()` printed) prints the exact commands,
+resolves as `use()` did — with no built deck it refuses, so pass the ground `use()` printed; a `--deck` with `<` or
+`>` in it is refused as an unfilled template) prints the exact commands,
 with that ground's own hex codes in the palette (the register-pixels gate holds a palette that never reached a
-pixel, so never type them yourself):
+pixel, so never type them yourself). For a deck folder with no record yet it prints this, `init` first, because
+`set` refuses a record that was never made:
 
 ```bash
-python3 scripts/deck_gates.py set <deck> design_plan.visual_language collage
-python3 scripts/deck_gates.py set <deck> design_plan.vl_fonts both
-python3 scripts/deck_gates.py set <deck> design_plan.vl_ground slate
-python3 scripts/deck_gates.py set <deck> design_plan.style_pick "bespoke collage for a neighbourhood repair café"
-python3 scripts/deck_gates.py set <deck> design_plan.look_source bespoke
-python3 scripts/deck_gates.py set <deck> design_plan.palette "ground #… ink #… accents #… #…"   # from --gates
+python3 "$SKILL/scripts/deck_gates.py" init "$DECK"
+python3 "$SKILL/scripts/deck_gates.py" set "$DECK" design_plan.visual_language collage
+python3 "$SKILL/scripts/deck_gates.py" set "$DECK" design_plan.vl_fonts both
+python3 "$SKILL/scripts/deck_gates.py" set "$DECK" design_plan.vl_ground slate
+python3 "$SKILL/scripts/deck_gates.py" set "$DECK" design_plan.style_pick 'bespoke collage for a neighbourhood repair café'
+python3 "$SKILL/scripts/deck_gates.py" set "$DECK" design_plan.look_source bespoke
+python3 "$SKILL/scripts/deck_gates.py" set "$DECK" design_plan.palette 'ground #2B2A27 ink #F4EEE2 accents #F2C230 #F08A64 #7CC3E3'
 ```
+
+`init` runs once per deck: on a folder that already has a record it exits 2 and changes nothing (`--force`
+overwrites it and discards what was recorded).
 
 (Codex evidence: the same six values under `design` — `--gates` names them. An unknown `vl_ground` blocks.) The delivery gate on both runtimes then
 checks that the cover was built with `cover()` and at least half the pages are in the language (its page
@@ -323,6 +551,6 @@ the ground, its grain, its card and its inks are one look, and the variants are 
 style sample (the preview shows it, labelled "style sample — not your content"). It counts as a STYLED
 direction, never as the topic-invented bespoke direction the gate also requires. Image-led languages pair
 with the P1 image series (`references/image-generation.md`, the SERIES exception) when the deck's images
-are generated; with the user's own or fetched photos they need no generation at all. The four native
+are generated; with the user's own or fetched photos they need no generation at all. The nine native
 languages need no pictures: a deck without any offers the one that fits its topic and records why in
 `direction_gate.native_fit` (see Native languages above).

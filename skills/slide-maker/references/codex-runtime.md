@@ -10,6 +10,11 @@ adapter closes the gap where an execution-capable OpenAI runtime can compress se
 into one build pass and then mistake a clean hard-lint for a good deck. A GPT Store sandbox without the
 bridge may prepare these artifacts, but cannot claim the final gate passed.
 
+**The skill folder.** `SKILL` names the folder that holds `SKILL.md` (the path this skill was loaded from); set it
+once per shell with `export SKILL="/absolute/path/to/slide-maker"`. A command written `python3 "$SKILL/scripts/…"`
+runs from any working directory. A command written `python3 scripts/…` means the same file under `$SKILL`: it
+runs as written only from inside that folder, so prefix it with `"$SKILL/"` when you are in the deck folder.
+
 The adapter has two kinds of rules:
 
 - **Universal floors made explicit in Codex:** rendered proof, a readable type floor, pixel checks,
@@ -242,14 +247,18 @@ be reconstructed post-hoc at the delivery gate.
    `def slide_NN(prs, k):` (the gate maps every `design.slides[].function` to a `def` in the build script and
    reads the calls inside it, so module-level calls read as "function absent") — with ordinary pages
    ALSO started with `k.new_slide()` and built on `register_surface.card(slide, "<name>", …)` and
-   `k.run(text, size)` runs. `python3 scripts/sigs.py cover section quote` prints the kit's page functions
+   `k.run(text, size)` runs. `python3 "$SKILL/scripts/sigs.py" cover section quote` prints the kit's page functions
    as `Kit.<name>` (a bare `cover` also exists in deckkit — a different call). Record it with the command
-   `python3 scripts/visual_languages.py --gates <name> --ground <ground> --deck <deck> --for "<what the deck is for>"`
+   `python3 "$SKILL/scripts/visual_languages.py" --gates <name> --ground <ground> --deck "<deck folder>" --for "<what the deck is for>"`
    prints: six values, that ground's own palette hexes included (Codex evidence: the same six under
    `design`). Build with `use(name, prs, ground="auto")` — it prints the ground it chose (the contrast one
-   after a run of cream decks; printed boards stay light). The delivery gate blocks a recorded language that
+   after a run of cream decks; printed boards stay light) and the `--gates` line as a template with two `<…>`
+   blanks to fill; it does not run as printed. The delivery gate blocks a recorded language that
    was not applied, or an unknown ground.
-   `python3 scripts/sigs.py --example vl_cover` prints a call the smoke suite runs.
+   `python3 "$SKILL/scripts/sigs.py" --example vl_cover vl_drawn rs.ground` prints whole pages the smoke suite runs
+   (an image-led cover on a bundled photo, a drawn deck, an ordinary page); `vl_tally`, `vl_broadsheet`,
+   `vl_journal` and `vl_chalkboard` show each language's extras. The full order, canvas to `--gate-check`, with
+   every command run end to end: `references/visual-languages.md` → "Build a visual-language deck, in order".
 
 2v. 🔴 **An invented register gets a KIT, not hand-built style code.** `register_surface.register(name, ground=…, card=…, forbids=…)` — then `ground()`/`card()` work for it as for a preset, and `check_register_guard` enforces the prohibitions it declares. `python3 scripts/register_surface.py --new "<name>"` scaffolds one with the contracts wired; `python3 scripts/bespoke_kits.py --sample <out.pptx>` renders the four library registers (`current` · `transit-signage` · `ledger` · `k-space`) to adapt from. `save_register.py` records the kit file at hand-off. 🔴 **Write the kit into the DECK FOLDER** (`--out <deck-dir>/surface_<name>.py`): `check_register_guard` loads `surface_*.py` from beside the deck, which is the only reason a bespoke register's prohibitions are enforceable at gate time — the gate runs in a fresh process and a kit that was never imported there does not exist. The gate also tells you whether an invented register has a kit at all.
 
@@ -421,7 +430,7 @@ interview answer at all — each reads the built file itself):
                       "native_fit": {"language": "ink", "why": "a talk on tea craft: culture and ritual"}}
    ```
 
-   `codex_delivery_gate.py` runs `scripts/directions_diversity.py` over the candidates ITSELF, so
+   `codex_delivery_gate.py` runs `"$SKILL/scripts/directions_diversity.py"` over the candidates ITSELF, so
    a verdict you type is not evidence the check ran. It scores two things a preset list quietly
    fails: a PAIR that is one idea in two colourways, and a set with no invented register at all.
    Measured on a real build — the author caught the first by eye and never noticed the second: the
