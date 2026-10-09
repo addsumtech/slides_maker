@@ -233,15 +233,10 @@ for name in vl.LANGS:
         for ground in vl.VARIANTS[name]:
             prs, k = use(name, W, H, ground)
             for page, kw in FULL:
-                if page == "points" and name in vl.IMAGE_LED and not hasattr(k, "_has_points"):
-                    pass
                 kw = dict(kw, **EXTRA_FOR.get(name, {}).get(page, {}))
                 if page == "image_text":
                     kw["image"] = img_for(name)
-                try:
-                    getattr(k, page)(k.new_slide(), **kw)
-                except ValueError:
-                    pass                                   # (image-led points: C1)
+                getattr(k, page)(k.new_slide(), **kw)
             path = td / "own_{}_{}_{}.pptx".format(name, ground, int(W))
             prs.save(str(path))
             with contextlib.redirect_stdout(io.StringIO()):
@@ -323,8 +318,6 @@ for name in vl.LANGS:
         for ground in vl.VARIANTS[name]:
             prs, k = use(name, W, H, ground)
             for page, kw in FULL:
-                if page == "points" and name in vl.IMAGE_LED and not getattr(vl, "IMAGE_LED_POINTS", False):
-                    continue
                 kw = dict(kw, **DX.get(name, {}).get(page, {}))
                 if page in ("points",) and name in ("tally", "broadsheet"):
                     kw["items"] = kw["items"][:3] + [("Take it home", "Or put it on the list.")][:max(0, len(kw["tags"]) - len(kw["items"]))]
@@ -397,6 +390,38 @@ for name in vl.LANGS:
             check(len(s.shapes) == n0 and len(s.part.rels) == rels0,
                   "{} cover: a refusal leaves the slide as it was ({} -> {} shapes, {} -> {} rels)".format(
                       name, n0, len(s.shapes), rels0, len(s.part.rels)))
+
+# ── C1: the image-led languages have a points page too ──
+# "three practical tips" on a photo deck had nowhere to go — the points page belonged to the drawn languages only and an
+# agent hand-rolled one from rs.ground + rs.card with a tiny label and no real title (non-Claude agent run, 2026-10-09)
+import ooxml_safety as ox
+PTS = {"en": [("Share the tools", "One drawer of screwdrivers feeds three tables."), ("Open the door", "No booking, no fee, no questions."),
+              ("Keep it walkable", "Ten minutes on foot is the limit we keep."), ("Write every repair down", "A notebook per bench becomes next year's manual.")],
+       "zh": [("共享工具", "一抽屉螺丝刀可以供三张桌子同时使用。"), ("敞开大门", "不用预约，不收费，不问是什么东西。"),
+              ("步行可达", "步行十分钟是我们坚持的距离。"), ("记下每次修理", "每张桌一本笔记，就是明年的培训手册。")]}
+PT_TITLE = {"en": "How a repair evening works", "zh": "修理之夜是怎么运作的"}
+for name in vl.IMAGE_LED:
+    for W, H in ((13.333, 7.5), (7.5, 10.0), (5.625, 10.0)):       # the long-copy corpus covers every canvas
+        for lang in ("en", "zh"):
+            for n, im in ((4, None), (3, img_for(name))):
+                    prs, k = use(name, W, H)
+                    s = k.new_slide()
+                    tag = "{} {}x{} {} n={}{}".format(name, W, H, lang, n, " +image" if im else "")
+                    try:
+                        k.points(s, kicker="Practical tips" if lang == "en" else "实用建议", title=PT_TITLE[lang],
+                                 items=PTS[lang][:n], image=im)
+                    except Exception as e:
+                        check(False, "{}: an ordinary points page builds ({}: {})".format(tag, type(e).__name__, str(e)[:90]))
+                        continue
+                    on = re.sub(r"\s+", "", " ".join(sh.text_frame.text for sh in texts(s)))
+                    lost = [w_ for hl in PTS[lang][:n] for w_ in hl if re.sub(r"\s+", "", w_) not in on]
+                    check(not lost, "{}: every point's words are on the page ({})".format(tag, lost[:2]))
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        crit = [f_ for f_ in dk.lint_layout(prs, verbose=False) if f_[1] == "CRITICAL"]
+                    check(not crit, "{}: no critical layout fault ({})".format(tag, [(c[2], c[3][:60]) for c in crit[:2]]))
+                    check(ox.beyond_page(prs) == [], "{}: nothing past the page".format(tag))
+                    if im:
+                        check(any(sh.shape_type == 13 for sh in s.shapes), "{}: the picture is placed".format(tag))
 
 for line in ok:
     print("  ok   " + line)

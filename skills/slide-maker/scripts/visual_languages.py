@@ -1526,16 +1526,12 @@ def _page(page):
                 out = vl_native.compose(self, slide, page, fields, image)
             except VLImageError as e:
                 raise VLImageError("{}.{}(): {}".format(self.name, page, e)) from None
-        elif page == "points":
-            raise ValueError("{}.points(): the points page belongs to the native languages ({}) — on {} build the "
-                             "list on an ordinary page: s = k.new_slide(); x, y, w, h = rs.ground(s, {!r}, "
-                             "role='content', index=n); then rs.card / dk.text".format(
-                                 self.name, ", ".join(NATIVE), self.name, self.name))
         else:
             import vl_native
             n0, state = len(slide.shapes), dict(self.__dict__)
             try:
-                out = _compose(self, slide, page, fields, image)
+                out = (_points_led(self, slide, fields, image) if page == "points"
+                       else _compose(self, slide, page, fields, image))
             except Exception as e:
                 # a refused page leaves its slide as it found it: collage left its furniture and storybook its picture,
                 # and a retry with shorter copy on the same slide drew them twice (audit sweep, 2026-10-09)
@@ -1572,6 +1568,141 @@ def _page(page):
 
 for _pg in PAGE_FIELDS:
     setattr(Kit, _pg, _page(_pg))
+
+# the points page of the image-led languages (audit, 2026-10-09): a number, a head and a line per point, in each
+# language's own voice — sizes scale with the canvas like every other field
+for _n, (_no, _hd, _ln) in {
+        "editorial": ((26, "numeral", True, "accent", False, 16), (22, "display", False, "ink", False, 13), (15, "body", False, "ink", False, 10)),
+        "soft": ((24, "numeral", False, "accent", False, 15), (20, "display", False, "ink", False, 13), (15, "body", False, "ink", False, 10)),
+        "collage": ((26, "numeral", True, "accent", False, 16), (22, "display", True, "ink", False, 13), (15, "body", False, "ink", False, 10)),
+        "storybook": ((24, "numeral", False, "accent", False, 15), (21, "display", False, "ink", False, 13), (15, "body", False, "ink", False, 10)),
+}.items():
+    TYPE[_n].setdefault("item_no", _no)
+    TYPE[_n].setdefault("item_head", _hd)
+    TYPE[_n].setdefault("item_line", _ln)
+
+
+def _points_led(k, slide, fields, image):
+    """The points page of an image-led language: kicker and title, then 2-4 points — a number, a head and a line —
+    in the language's own furniture (editorial: a hairline over each; soft: a rounded panel; collage: a taped note;
+    storybook: a painted dot), with the caller's picture beside them (landscape) or above them (portrait) when given.
+    Points sit in a row, else a 2x2 grid, else a stack — the first layout their words fit — at one size per field."""
+    import vl_native as vn
+    import vl_native2 as v2
+    import ornaments
+    W, H = _canvas(k)
+    s = min(W, H) / 7.5
+    land = W >= H * 1.05
+    pts = vn.points_of(fields.get("items"))
+    n = len(pts)
+    P = k.P
+    m = (0.07 if land else 0.08) * W
+    top, bottom = 0.08 * H, H - max(0.55 * s, 0.07 * H)
+    def attempt(frac):
+        img_rect = None
+        if image is not None:
+            lay = dict(LAYOUTS[k.name]["image_text"]["land" if land else "port"], deco=())
+            if land:
+                img_rect = (m, top, frac * W, bottom - top)
+                x0, w0 = m + frac * W + 0.04 * W, W - (m + (frac + 0.04) * W) - m
+            else:
+                img_rect = (m, top, W - 2 * m, frac * H)
+                x0, w0 = m, W - 2 * m
+            head_top = top if land else top + frac * H + 0.3 * s
+        else:
+            x0, w0, head_top = m, W - 2 * m, top
+        head = v2.fields(fields, ("kicker", "title"), ())
+        hh = (0.30 if land else 0.24) * H
+        hr, hd = v2.flow(k, slide, "points", (x0, head_top, w0, hh), head, anchor="top") if head else ({}, (lambda: None))
+        y0 = (max(v[1] + v[3] for v in hr.values()) if hr else head_top) + 0.35 * s
+        area = (x0, y0, w0, bottom - y0)
+        pad = 0.0 if k.name in ("editorial", "storybook") else 0.20 * s
+        gap = 0.28 * s
+
+        lift = 0.16 * s if k.name == "editorial" else 0.0            # editorial's hairline sits above the number
+        big = {f_: TYPE[k.name][f_][0] * s * 1.25 for f_ in ("item_no", "item_head", "item_line")}   # room to read from the back
+
+        def cells(cols, y, ch):
+            rows = -(-n // cols)
+            cw = (area[2] - gap * (cols - 1)) / cols
+            return [(area[0] + (i % cols) * (cw + gap), y + (i // cols) * (ch + gap), cw, ch) for i in range(n)]
+
+        def plan_at(grid):
+            specs = []
+            for i, ((hd_, ln_), c) in enumerate(zip(pts, grid)):
+                inner = (c[0] + pad, c[1] + pad + lift, c[2] - 2 * pad, c[3] - 2 * pad - lift)
+                its = ([] if k.name == "storybook" else [("item_no", "{:02d}".format(i + 1))]) + [("item_head", hd_)] + (
+                    [("item_line", ln_)] if ln_ else [])
+                if k.name == "storybook":
+                    inner = (inner[0] + 0.42 * s, inner[1], inner[2] - 0.42 * s, inner[3])
+                specs.append((inner, its, dict(anchor="top", start=dict(big))))
+            return v2.plan_together(k, slide, "points", specs)
+        orders = ([n, 2, 1] if land and image is None else [1, 2]) if n > 2 else ([2, 1] if land and image is None else [1, 2])
+        last, fits = None, []
+        for rank, cols in enumerate(dict.fromkeys(orders)):
+            rows = -(-n // cols)
+            grid = cells(cols, area[1], (area[3] - gap * (rows - 1)) / rows)
+            try:
+                planned = plan_at(grid)
+            except VLTextOverflow as e:
+                last = e
+                continue
+            # each cell as tall as the tallest point's words; the block sits a little above the middle of the room
+            need = max(max(v[1] + v[3] for v in r.values()) - c[1] for (r, _d), c in zip(planned, grid)) + pad
+            block = rows * need + (rows - 1) * gap
+            grid = cells(cols, area[1] + max(0.0, area[3] - block) * 0.4, need)
+            try:
+                planned = plan_at(grid)
+            except VLTextOverflow as e:
+                last = e
+                continue
+            fits.append((planned[0][1].sizes.get("item_head", 0.0), rank, grid, planned))
+        if not fits:
+            raise last or VLTextOverflow("{}.points(): the points do not fit".format(k.name))
+        # the layout that sets the points LARGEST (four points stacked on a portrait page were set at the floor while a
+        # 2x2 grid held them at full size); within 5%, the preferred order (row, grid, stack) decides
+        top_ = max(f_[0] for f_ in fits)
+        _z, _rank, grid, planned = min((f_ for f_ in fits if f_[0] >= 0.95 * top_), key=lambda f_: f_[1])
+        return img_rect, (lay if image is not None else None), hr, hd, grid, planned
+
+    # the caller's picture is never dropped for room: on a portrait page it gives up height first (28% → 21% → 15%),
+    # a landscape one width (36% → 30%) — three points beside a photo on 3:4 were refused at the first size (2026-10-09)
+    last_ = None
+    for frac in ((0.36, 0.30) if land else (0.28, 0.21, 0.15)) if image is not None else (None,):
+        try:
+            img_rect, lay, hr, hd, grid, planned = attempt(frac)
+            break
+        except VLTextOverflow as e:
+            last_ = e
+    else:
+        raise last_
+    art = []
+    if img_rect is not None:
+        _place_image(k, slide, image, img_rect, lay, "points")
+    hd()
+    rects = dict(hr)
+    for i, ((r, d), c) in enumerate(zip(planned, grid)):
+        x, y, w, h = c
+        if k.name == "soft":
+            dk.decorative(dk.box(slide, x, y, w, h, fill=_hex(P["panel"]), round=True, r=0.22),
+                          "a soft panel behind one point")
+        elif k.name == "collage":
+            # the language's own note colour for this ground (white on kraft, slate on slate): a hard-coded white note
+            # put slate's yellow numbers on white at 1.68:1 (the lint, 2026-10-09)
+            dk.decorative(dk.box(slide, x, y, w, h, fill=_hex(P["panel"])), "a paper note holding one point")
+            tp = ornaments.tape(slide, x + w * 0.38, y - 0.14 * s, w * 0.24, 0.26 * s, "EDE3C8", rotation=2.0)
+            dk.decorative(tp, "washi tape holding the note; ornament")
+            dk.overlap_intent(tp, "washi tape across the note's top edge holds it to the page: the overlap is the tape")
+        elif k.name == "editorial":
+            dk.decorative(dk.box(slide, x, y, w, max(0.012, 0.012 * s), fill=_hex(P["ink"])), "a hairline over one point")
+        elif k.name == "storybook":
+            dd = 0.24 * s
+            dk.decorative(dk.box(slide, x, y + 0.08 * s, dd, dd, fill=_hex(P["accents"][i % len(P["accents"])]), round=True, r=dd / 2),
+                          "a painted dot marking one point")
+        d()
+        for f_, v in r.items():
+            rects["{}_{}".format(f_, i + 1)] = v
+    return {"rects": rects, "image": img_rect, "free": None}
 
 
 # ════════════════════════════════════════════════════════════════════════════════════════════════
