@@ -580,6 +580,18 @@ for g in ("light", "dark"):
         check(n_ == 0 and not nt_, "interface {} {}x{}: the progress bar passes the hand-off lint ({} {})".format(
             g, cw, chh, why_[:1], nt_[:1]))
 
+# the chat bubble's square tail corner keeps the outline: the hairline runs along its top and left edges (the corner
+# patch covered the rounded outline and read as a darker notch on the dark ground — docs-only run)
+dkb = dk.blank_deck(13.333, 7.5)
+slb = dk.add_slide(dkb)
+na.ui_bubble(slb, 1.0, 1.0, 6.0, 2.0, fill="171A21", line="2A2F3A")
+thin = [sh for sh in slb.shapes if sh.shape_type == 1 and str(getattr(sh.fill.fore_color, "rgb", "")) == "2A2F3A"
+        if sh.fill.type == 1]
+top_ = [t for t in thin if abs(t.top / E_ - 1.0) < 0.02 and t.height / E_ < 0.03 and t.left / E_ <= 1.01 and t.width / E_ >= 0.3]
+left_ = [t for t in thin if abs(t.left / E_ - 1.0) < 0.02 and t.width / E_ < 0.03 and t.top / E_ <= 1.01 and t.height / E_ >= 0.3]
+check(top_ and left_, "ui_bubble: the tail corner carries the hairline on its top and left edges ({} top, {} left)".format(
+    len(top_), len(left_)))
+
 # the docs carry both languages: guidance, extras, examples, the drawn-language lists
 ref = (ROOT / "references" / "visual-languages.md").read_text(encoding="utf-8")
 for n in ("interface", "wayfinding"):

@@ -869,4 +869,8 @@ def ui_bubble(slide, x, y, w, h, *, fill, line, r=0.32):
     dk.box(slide, x, y, w, h, fill=hexstr(fill), line=dk._as_rgb(hexstr(line)), line_w=0.75, round=True, r=r)
     sq = dk.box(slide, x, y, r, r, fill=hexstr(fill))
     dk.decorative(sq, "the bubble's tail corner")
+    # the patch covers the rounded outline there, so the hairline is carried along its two outer edges (without it
+    # the corner read as a darker notch on the dark ground — docs-only run, 2026-10-10)
+    for hx, hy, hw, hh in ((x, y, r + 0.02, 0.0104), (x, y, 0.0104, r + 0.02)):
+        dk.decorative(dk.box(slide, hx, hy, hw, hh, fill=hexstr(line)), "the bubble's outline along its tail corner")
     return (x, y, w, h)
