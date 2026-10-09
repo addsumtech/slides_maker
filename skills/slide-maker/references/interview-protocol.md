@@ -1,5 +1,9 @@
 # Interview protocol
 
+**The skill folder.** `SKILL` names the folder that holds `SKILL.md` (the path the skill was loaded from); set it
+once per shell with `export SKILL="/absolute/path/to/slide-maker"`. Every command here is written
+`python3 "$SKILL/scripts/…"` and runs from any working directory.
+
 ## Step 0 — personalization, Q1 (template), Q2 (purpose/venue), Q3 (source material)
 
 🔴 **Five questions, a four-slot widget, and the axis that disappears.** A choice UI (Claude Code's
@@ -18,7 +22,7 @@ domain — and roll past work up into ONE option, drilling in only on pick (Q1's
 pattern), so personalization never crowds out the general choices.** Any *suggestions* you pre-fill into a question — candidate topics, example
 subjects, registered templates — must come from what this user has actually given you:
 materials they provided (now or in a past session) or their saved registry / profile /
-memory. 🔴 **Resolve the registry root by RUNNING `python3 scripts/registry.py`, not from
+memory. 🔴 **Resolve the registry root by RUNNING `python3 "$SKILL/scripts/registry.py"`, not from
 memory** — one call prints every existing root, the templates registered across them, and the
 write target. `~/.claude/slide-templates/` and `~/.codex/slide-templates/` keep priority;
 anything else (Kimi · Gemini · Cursor · Coze · an API caller) falls back to the host-neutral
@@ -99,7 +103,7 @@ image-backed styles), then **skip the direction gate** (the look is already deci
 four template choices:
 
 1. **Template / brand.** First **check this user's registered templates** — run
-   `python3 scripts/registry.py`, which prints the count and the names across every root that
+   `python3 "$SKILL/scripts/registry.py"`, which prints the count and the names across every root that
    exists on THIS runtime (Claude/Codex roots first, host-neutral `~/.slide-maker/slide-templates/`
    otherwise). Each subfolder is one template they've used before, with a `profile.md`. Reading
    the number off the tool rather than guessing it is what makes option (a)'s "N registered"
@@ -242,8 +246,9 @@ four template choices:
        - **This gate also fires on the lighter case-(b) offer** (unsure-on-style / brand-defining,
          2–3 directions) because it is the same machinery — which is the right default, since those
          are exactly the decks where an invented register pays most.
-       - **A curated visual language.** A direction may be one of the four visual languages —
-         `visual_languages.direction("editorial" | "soft" | "collage" | "storybook")` returns its entry for
+       - **A curated visual language.** A direction may be one of the thirteen visual languages — four
+         image-led (`editorial`, `soft`, `collage`, `storybook`) and nine drawn (below) —
+         `visual_languages.direction("<name>")` returns its entry for
          `directions.json`, previewed by its bundled sample ("style sample — not your content"). It counts
          as a STYLED direction, never as the topic-invented bespoke one. Picking it records
          `design_plan.visual_language` (`references/visual-languages.md`). 🔴 **When the deck will carry pictures —
@@ -285,7 +290,7 @@ four template choices:
          corporate look", a Q4 mimic), that axis LEAVES the divergence set and the ≥2 rule re-applies
          to the ones that remain. A constraint relocates variance; it never licenses convergence.
        - 🔴 **Run the mechanical check before you post the link:**
-         `python3 scripts/directions_diversity.py directions.json`. It scores four axes — **palette
+         `python3 "$SKILL/scripts/directions_diversity.py" directions.json`. It scores four axes — **palette
          mood** (a light/dark flip counts as a palette divergence, so mode is folded in) · **type
          pairing** · **density** · **composition** — and flags any pair matching on ≥3 of the 4. It ALSO
          fails a set with no bespoke direction (above). **Exit 2 is not an auto-kill, and it now

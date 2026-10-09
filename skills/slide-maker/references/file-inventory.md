@@ -679,10 +679,13 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   near-duplicates, a possible-watermark heuristic, and EXIF rotation (`--fix` bakes it in). Its
   `--contact-sheet` is ONE labelled PNG of every candidate plus a sha256 — the artifact that makes
   looking cheap, and that a critic's consent can name.
-- `visual_languages.py` — four complete image-led looks (editorial, soft, collage, storybook): palette with
+- `visual_languages.py` — thirteen complete looks: four image-led (editorial, soft, collage, storybook) and nine
+  drawn (ink, poster, cutpaper, drafting, starlit, broadsheet, journal, tally, chalkboard; their pages live in
+  `vl_native.py` / `vl_native2.py`): palette with
   text-safe inks, system fonts per platform (`fonts="both"` default) and per SCRIPT (Han / kana / Hangul),
-  a surface, image treatments and six page compositions; registered with register_surface for
-  ground/card. Never imported by deckkit/presets/register_surface. See references/visual-languages.md.
+  a surface, image treatments and the page compositions; registered with register_surface for
+  ground/card. Never imported by deckkit/presets/register_surface. Its CLI: `--list`, `--gates` (the record
+  commands), `--sample` (sample decks; `--refresh-bundled` for maintainers). See references/visual-languages.md.
 - `vl_native.py` — page compositions of the native visual languages (`ink`, `poster`, `cutpaper`, `drafting`):
   plans the text first (measured, refused past each field's floor; display type breaks at clause marks, never a
   lone character), draws the art with the text kept clear, then sets the text; the points page; vertical CJK for

@@ -245,6 +245,12 @@ every **🔴 CHECKPOINT** is a hard stop.
 **Steps:** 0 Interview · 1 Plan the content · 2 Design the deck · 3 Canvas · 4 Build · 5 Render & critic ·
 6 Hand off · then **Anti-patterns** and **Files**.
 
+**Where commands run.** `SKILL` names the folder that holds this `SKILL.md` (the path the skill was loaded from);
+set it once per shell: `export SKILL="/absolute/path/to/slide-maker"`. A command written
+`python3 "$SKILL/scripts/…"` runs from any working directory. A command written `python3 scripts/…` means the same
+file under `$SKILL`, and runs as written only from inside that folder: from the deck folder, prefix the path with
+`"$SKILL/"`.
+
 **Rule-strength vocabulary** (how to read the rules below):
 
 | Marker | Means |
@@ -1687,7 +1693,10 @@ A few rules that matter (see `references/design-principles.md`):
   `drafting` · `starlit` · `broadsheet` · `journal` · `tally` · `chalkboard`, drawn, no pictures needed) — the one that fits the topic — and records why in
   `direction_gate.native_fit` (both gates hold it; `references/visual-languages.md`).
   Build with `ground="auto"` (light paper, or the language's contrast ground when your last decks already
-  sit on light paper) and record what it printed with `visual_languages.py --gates NAME --ground G`.
+  sit on light paper) and record what it printed with
+  `python3 "$SKILL/scripts/visual_languages.py" --gates NAME --ground G --deck "<deck folder>" --for "<what it is for>"`,
+  then run the commands it prints (`--deck` is required). The whole order, canvas to `--gate-check`, every command
+  run end to end: `references/visual-languages.md` → "Build a visual-language deck, in order".
 - **Use the source's own figures, WHOLE — integral is the default.** For *any* deck
   (research, work, exec, teaching): if the source — paper, report, doc, existing slide, or a
   chart already produced from the code/data — has a figure (architecture, results, a plot),
