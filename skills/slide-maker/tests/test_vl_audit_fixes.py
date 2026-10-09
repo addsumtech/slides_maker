@@ -358,9 +358,10 @@ for name in vl.LANGS:
     g, why = vl._auto_ground(name, prs)
     lums = {k_: vl._lum(vl.VARIANTS[name][k_]["palette"]["ground"]) for k_ in vl.VARIANTS[name]}
     best = max(lums, key=lums.get)
-    check(g == best, "{}: a printed board takes its lightest ground ({} picked, {} is lightest)".format(name, g, best))
-    if lums[best] < 0.2:
-        check("dark" in why, "{}: a printed board says the page prints dark ({})".format(name, why[:80]))
+    if lums[best] < 0.2:                  # dark on both (starlit, chalkboard): the designed default, and it says so
+        check(g == "light" and "dark" in why, "{}: a printed board keeps its default and says it prints dark ({}, {})".format(name, g, why[:60]))
+    else:
+        check(g == best, "{}: a printed board takes its lightest ground ({} picked, {} is lightest)".format(name, g, best))
 
 # ── C2: a refused page leaves its slide as it found it ──
 # collage left three furniture shapes and storybook its picture on a slide whose cover was refused; an agent that caught
