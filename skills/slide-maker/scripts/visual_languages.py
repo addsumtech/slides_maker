@@ -1285,6 +1285,8 @@ def _paper_tint(k):
     every illustration sat as a pale patch on the meadow ground (looked at, 2026-10-04)."""
     if k.ground == "light":
         return None
+    if _lum(k.P["ground"]) < 0.2:          # a DARK ground: multiplying by dark/light (~0.13 on ink's night) all but
+        return None                        # erased the picture (audits, 2026-10-09) — it is feathered onto the dark as is
     a, b = _rgb(LANGS[k.name]["palette"]["ground"]), _rgb(k.P["ground"])
     return tuple(round(b[i] / float(max(1, a[i])), 4) for i in range(3))
 

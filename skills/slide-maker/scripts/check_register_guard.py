@@ -250,8 +250,11 @@ def check(pptx, register=None, gates=None):
         shapes = list(_iter(slide))
         facts_by_shape = [(sh, _shape_facts(sh, canvas)) for sh in shapes]
         on_page = [f["rect"] for _sh, f in facts_by_shape if f["rect"]]
-        for sh, f in facts_by_shape:
-            if f["big_primitive"] and not _is_backing(f["rect"], on_page):
+        own_decor = "vl." + str(register)          # a visual language's own declared atmosphere (starlit's glow and
+        for sh, f in facts_by_shape:               # horizon) is not a hero shape: its own guard blocked every
+            nm = getattr(sh, "name", "") or ""     # landscape starlit deck (docs audit, 2026-10-09)
+            mine = ("deckkit-decor" in nm or "+decor" in nm) and own_decor in nm
+            if f["big_primitive"] and not _is_backing(f["rect"], on_page) and not mine:
                 bigs += 1
             for rule in rules:
                 if rule == "confetti" or rule == "proportional-face":

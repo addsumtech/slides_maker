@@ -216,6 +216,57 @@ for name in vl.LANGS:
             check(False, "{}: a {} file raises a plain refusal, not {} ({})".format(name, why, type(e).__name__, str(e)[:60]))
 check(int(Image.open(EXIF6).getexif().get(274, 1)) == 6, "the caller's own file is never rewritten")
 
+# ── A5: a deck built from a language's own pages passes that language's own prohibitions ──
+# starlit's data page drew two oversized primitives (the glow behind the figure, the horizon) and its own CONFETTI guard
+# blocked every landscape starlit deck at hand-off (docs audit, 2026-10-09) — its declared atmosphere is not a hero shape
+import check_visual_language as cvl
+FULL = [("cover", dict(kicker="Annual review", title="Every street needs a night for fixing things", subtitle="How it works")),
+        ("section", dict(number="02", title="The evening")),
+        ("image_text", dict(title="Tools on every bench", body="Volunteers sit beside you.", caption="The hall")),
+        ("points", dict(title="How it works", items=[("Bring it", "Anything that switches on."), ("Fix it", "Your hands do the work.")])),
+        ("quote", dict(quote="The visitor holds the screwdriver.", attribution="A volunteer")),
+        ("data", dict(number="12", label="evenings this year", note="Counted at the door.")),
+        ("closing", dict(title="See you next week", line="Bring a neighbour."))]
+EXTRA_FOR = {"tally": {"points": {"tags": ["A", "B"]}}, "broadsheet": {"points": {"tags": ["A", "B"]}}}
+for name in vl.LANGS:
+    for W, H in ((13.333, 7.5), (7.5, 10.0)):
+        for ground in vl.VARIANTS[name]:
+            prs, k = use(name, W, H, ground)
+            for page, kw in FULL:
+                if page == "points" and name in vl.IMAGE_LED and not hasattr(k, "_has_points"):
+                    pass
+                kw = dict(kw, **EXTRA_FOR.get(name, {}).get(page, {}))
+                if page == "image_text":
+                    kw["image"] = img_for(name)
+                try:
+                    getattr(k, page)(k.new_slide(), **kw)
+                except ValueError:
+                    pass                                   # (image-led points: C1)
+            path = td / "own_{}_{}_{}.pptx".format(name, ground, int(W))
+            prs.save(str(path))
+            with contextlib.redirect_stdout(io.StringIO()):
+                found, _f = cvl.check(str(path), {"name": name, "fonts": "both", "ground": ground})
+            forb = [x for x in found if "FORBIDDEN" in str(x) or "forbids" in str(x)]
+            check(not forb, "{} {} {}x{}: a deck of its own pages passes its own prohibitions ({})".format(
+                name, ground, W, H, [str(x)[:90] for x in forb[:1]]))
+
+# ── A6: a picture stays visible on a dark ground ──
+# ink's night ground multiplied the picture by the dark/light paper ratio (~0.13) and the photo all but vanished (both
+# audits, 2026-10-09); the paper tint is for moving a watercolour's paper to a LIGHT or mid ground (storybook meadow)
+src_mean = np.asarray(Image.open(PHOTO).convert("L")).mean()
+for name in ("ink", "storybook"):
+    for ground in vl.VARIANTS[name]:
+        prs, k = use(name, ground=ground)
+        s = k.new_slide(); k.image_text(s, title="A photo", body="B", image=PHOTO)
+        pics = [Image.open(io.BytesIO(sh.image.blob)).convert("RGBA") for sh in s.shapes if sh.shape_type == 13]
+        pics = [im for im in pics if im.size[0] > 200]
+        if not pics:
+            check(False, "{} {}: the photo is placed".format(name, ground)); continue
+        a = np.asarray(pics[0]).astype(float)
+        core = a[a.shape[0] // 4: 3 * a.shape[0] // 4, a.shape[1] // 4: 3 * a.shape[1] // 4]
+        lum = (0.299 * core[..., 0] + 0.587 * core[..., 1] + 0.114 * core[..., 2]).mean()
+        check(lum >= 0.55 * src_mean, "{} {}: the photo keeps its light ({:.0f} of the source's {:.0f})".format(name, ground, lum, src_mean))
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:
