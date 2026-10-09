@@ -1372,7 +1372,10 @@ def _cb_doodle(k, slide, spec, cx, cy, size):
     png = Path(_tf.gettempdir()) / "slide-maker-native-art" / "doodle_{}_{}.png".format(
         re.sub(r"[^A-Za-z0-9]+", "_", spec), k.P["text_accents"][0])
     png.parent.mkdir(parents=True, exist_ok=True)
-    _ic.icon_png(spec, str(png), color=k.P["text_accents"][0], px=320)
+    import os as _os
+    tmp = str(png) + ".{}.tmp.png".format(_os.getpid())     # written whole, then renamed: two builds never read half
+    _ic.icon_png(spec, tmp, color=k.P["text_accents"][0], px=320)
+    _os.replace(tmp, str(png))
 
     def draw():
         pic = dk.icon(slide, str(png), cx - size / 2.0, cy - size / 2.0, size, alt=spec.split(":")[-1].replace("-", " "))

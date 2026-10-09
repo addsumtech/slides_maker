@@ -1239,8 +1239,11 @@ def _usable(p):
         return str(p)
     st = Path(p).stat()
     key = hashlib.sha1("{}|{}|{}".format(Path(p).resolve(), st.st_size, st.st_mtime_ns).encode()).hexdigest()[:20]
-    out = Path(tempfile.gettempdir()) / "slide-maker-images" / (key + ".png")
-    if not out.exists():
+    # a photo stays a JPEG (a phone JPEG re-saved as PNG grew 1.2MB -> 7.5MB, final review 2026-10-09); PNG for alpha,
+    # deep or palette pictures
+    as_jpeg = fmt in ("JPEG", "MPO") and not deep and "A" not in im.mode
+    out = Path(tempfile.gettempdir()) / "slide-maker-images" / (key + (".jpg" if as_jpeg else ".png"))
+    if not _cached_ok(out):
         out.parent.mkdir(parents=True, exist_ok=True)
         if orient not in (0, 1):
             im = ImageOps.exif_transpose(im)
@@ -1249,10 +1252,41 @@ def _usable(p):
             a = _np.asarray(im, dtype=_np.float64)
             top = 65535.0 if im.mode.startswith("I;16") or (im.mode == "I" and a.max() > 255) else (a.max() or 1.0)
             im = Image.fromarray(_np.clip(a / top * 255.0, 0, 255).astype(_np.uint8), "L")
+        elif as_jpeg:
+            im = im.convert("RGB")
         elif im.mode not in ("RGB", "RGBA", "L", "LA", "P"):
             im = im.convert("RGBA" if "A" in im.mode else "RGB")
-        im.save(out)
+        _atomic_save(im, out, **({"format": "JPEG", "quality": 92} if as_jpeg else {"format": "PNG"}))
     return str(out)
+
+
+def _cached_ok(path):
+    """A cache file that exists AND decodes: a build killed mid-write left a truncated copy under a stable key, and every
+    later build embedded it as a black rectangle (final review, 2026-10-09)."""
+    try:
+        from PIL import Image
+        if not Path(path).exists():
+            return False
+        with Image.open(path) as im:
+            im.load()
+        return True
+    except Exception:
+        return False
+
+
+def _atomic_save(im, path, **kw):
+    """Save a PIL image to `path` through a temporary name and an atomic rename, so a reader never sees half a file."""
+    import os
+    import tempfile
+    path = Path(path)
+    fd, tmp = tempfile.mkstemp(dir=str(path.parent), suffix=path.suffix)
+    os.close(fd)
+    try:
+        im.save(tmp, **kw)
+        os.replace(tmp, str(path))
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
 
 
 def _place_image(k, slide, image, rect, lay, page, keep_clear=None):
@@ -1319,7 +1353,8 @@ def _feathered(path, tint=None):
     d = Path(tempfile.gettempdir()) / "slide-maker-feather"
     d.mkdir(parents=True, exist_ok=True)
     out = d / "feather-{}.png".format(key)
-    if not out.exists():
+    if not _cached_ok(out):
+        import os
         src = str(path)
         if tint:
             from PIL import Image
@@ -1327,8 +1362,10 @@ def _feathered(path, tint=None):
             r, g, b, a = im.split()
             r, g, b = (ch.point(lambda v, f=f: min(255, int(round(v * f)))) for ch, f in zip((r, g, b), tint))
             src = str(d / "tinted-{}.png".format(key))
-            Image.merge("RGBA", (r, g, b, a)).save(src)
-        image_fx.feather(src, out=str(out))
+            _atomic_save(Image.merge("RGBA", (r, g, b, a)), src, format="PNG")
+        tmp = str(out) + ".{}.tmp.png".format(os.getpid())             # written whole, then renamed (see _cached_ok)
+        image_fx.feather(src, out=tmp)
+        os.replace(tmp, str(out))
     return str(out)
 
 

@@ -25,6 +25,34 @@ from pptx.oxml.ns import qn
 import deckkit as dk
 import ornaments as orn
 
+
+def _cached_ok(path):
+    """A cached picture that exists AND decodes — a build killed mid-write (or two builds at once) left a truncated file
+    under a stable name that every later build reused (final review, 2026-10-09)."""
+    try:
+        from PIL import Image
+        if not Path(path).exists():
+            return False
+        with Image.open(path) as im:
+            im.load()
+        return True
+    except Exception:
+        return False
+
+
+def _atomic_save(im, path, **kw):
+    """Save through a temporary name and an atomic rename, so no reader ever sees half a picture."""
+    import os
+    path = Path(path)
+    fd, tmp = tempfile.mkstemp(dir=str(path.parent), suffix=path.suffix)
+    os.close(fd)
+    try:
+        im.save(tmp, **kw)
+        os.replace(tmp, str(path))
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+
 A_NS = "http://schemas.openxmlformats.org/drawingml/2006/main"
 P_NS = "http://schemas.openxmlformats.org/presentationml/2006/main"
 R_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
@@ -220,7 +248,7 @@ def grid_background(slide, *, base, ink, step=0.25, major=4, dpi=150):
     W, H = page_size(slide)
     path = Path(tempfile.gettempdir()) / "slide-maker-native-art" / "grid_{}_{}_{:.3f}x{:.3f}.png".format(
         hexstr(base), hexstr(ink), W, H)
-    if not path.exists():
+    if not _cached_ok(path):
         path.parent.mkdir(parents=True, exist_ok=True)
         pw, ph = int(W * dpi), int(H * dpi)
         b = tuple(int(hexstr(base)[i:i + 2], 16) for i in (0, 2, 4))
@@ -233,7 +261,7 @@ def grid_background(slide, *, base, ink, step=0.25, major=4, dpi=150):
             dr.line([(int(i * px), 0), (int(i * px), ph)], fill=mix(0.13 if i % major == 0 else 0.055), width=1)
         for j in range(int(ph / px) + 1):
             dr.line([(0, int(j * px)), (pw, int(j * px))], fill=mix(0.13 if j % major == 0 else 0.055), width=1)
-        im.save(str(path))
+        _atomic_save(im, path)
     _part, rid = slide.part.get_or_add_image_part(str(path))
     _bg(slide, '<a:blipFill dpi="0" rotWithShape="1"><a:blip r:embed="{}"/><a:srcRect/><a:stretch><a:fillRect/>'
                '</a:stretch></a:blipFill>'.format(rid))
@@ -498,7 +526,7 @@ def starfield_png(slide, *, base, ink, glow, seed=0, keep_clear=(), density=1.0,
                 [tuple(round(float(v), 2) for v in r) for r in keep_clear], round(float(density), 3), dpi))
     path = Path(tempfile.gettempdir()) / "slide-maker-native-art" / "sky_{}.png".format(
         hashlib.sha1(sig.encode("utf-8")).hexdigest()[:16])
-    if not path.exists():
+    if not _cached_ok(path):
         path.parent.mkdir(parents=True, exist_ok=True)
         rnd = random.Random(seed)
         b, kc, gc = _rgb3(base), _rgb3(ink), _rgb3(glow)
@@ -525,7 +553,7 @@ def starfield_png(slide, *, base, ink, glow, seed=0, keep_clear=(), density=1.0,
                 dr.line([(x * dpi, (y - L) * dpi), (x * dpi, (y + L) * dpi)], fill=c, width=lw)
                 r = 0.03 * dpi
                 dr.ellipse([x * dpi - r, y * dpi - r, x * dpi + r, y * dpi + r], fill=mix(gc, 0.9))
-        im.save(str(path), optimize=True)
+        _atomic_save(im, path, optimize=True)
     _part, rid = slide.part.get_or_add_image_part(str(path))
     _bg(slide, '<a:blipFill dpi="0" rotWithShape="1"><a:blip r:embed="{}"/><a:srcRect/><a:stretch><a:fillRect/>'
                '</a:stretch></a:blipFill>'.format(rid))

@@ -478,6 +478,120 @@ for W, H in ((7.5, 10.0), (5.625, 10.0), (10.0, 5.625), (13.333, 7.5), (7.5, 7.5
                         hit.append(sh.text_frame.text[:16])
             check(hills and not hit, "cutpaper {} {}x{} {}: the words stay above the hills ({})".format(page, W, H, lang, hit[:2]))
 
+# ── final review: the lint changes hold on ORDINARY decks too ──
+# reading a custom shape's painted outline must never silence a real backing: a filled path plus an outline-only path,
+# two overlapping filled paths, a flipped shape (dark text on the dark card was INVISIBLE TEXT on main, nothing on the
+# branch); a background picture is a solid colour only where the text actually sits on that colour, and never when
+# PowerPoint washes it (alphaModFix / lum) — final review, 2026-10-09
+from pptx import Presentation as _P2
+from pptx.util import Inches as _In, Pt as _Pt2
+from pptx.dml.color import RGBColor as _RGB
+from pptx.oxml.ns import qn as _qn
+from lxml import etree as _et
+from pptx.enum.shapes import MSO_SHAPE as _MS
+_A = "http://schemas.openxmlformats.org/drawingml/2006/main"
+
+
+def _deck():
+    prs = _P2(); prs.slide_width, prs.slide_height = _In(13.333), _In(7.5)
+    return prs, prs.slides.add_slide(prs.slide_layouts[6])
+
+
+def _tb(sl, x, y, w, h, txt, ink, size=24):
+    tb = sl.shapes.add_textbox(_In(x), _In(y), _In(w), _In(h)); tb.text_frame.word_wrap = True
+    r = tb.text_frame.paragraphs[0].add_run(); r.text = txt; r.font.size = _Pt2(size); r.font.color.rgb = _RGB.from_string(ink)
+
+
+def _cust(sl, x, y, w, h, paths, flipH=False):
+    sh = sl.shapes.add_shape(_MS.RECTANGLE, _In(x), _In(y), _In(w), _In(h))
+    sh.fill.solid(); sh.fill.fore_color.rgb = _RGB.from_string("1F2A44"); sh.line.fill.background()
+    spPr = sh._element.spPr; prst = spPr.find(_qn("a:prstGeom"))
+    prst.addprevious(_et.fromstring('<a:custGeom xmlns:a="%s"><a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/><a:rect l="0" t="0" '
+                                    'r="r" b="b"/><a:pathLst>%s</a:pathLst></a:custGeom>' % (_A, paths)))
+    spPr.remove(prst)
+    if flipH:
+        spPr.find(_qn("a:xfrm")).set("flipH", "1")
+
+
+def _lint_text(prs, tag):
+    path = td / ("rv_" + tag + ".pptx"); prs.save(str(path))
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(io.StringIO()):
+        _ld.lint(str(path), static_ok=True)
+    return buf.getvalue()
+
+
+_R = ('<a:moveTo><a:pt x="0" y="0"/></a:moveTo><a:lnTo><a:pt x="1000" y="0"/></a:lnTo><a:lnTo><a:pt x="1000" y="1000"/>'
+      '</a:lnTo><a:lnTo><a:pt x="0" y="1000"/></a:lnTo><a:close/>')
+_P1 = _R.replace('x="1000"', 'x="700"')
+_P2b = _R.replace('x="0"', 'x="300"')
+_TRI = ('<a:moveTo><a:pt x="0" y="0"/></a:moveTo><a:lnTo><a:pt x="0" y="1000"/></a:lnTo><a:lnTo><a:pt x="1000" y="1000"/>'
+        '</a:lnTo><a:close/>')
+for tag, paths, flip, tx in (("fill_plus_outline", '<a:path w="1000" h="1000">%s</a:path><a:path w="1000" h="1000" fill="none">%s</a:path>' % (_R, _R), False, (3, 3)),
+                             ("two_overlapping", '<a:path w="1000" h="1000">%s</a:path><a:path w="1000" h="1000">%s</a:path>' % (_P1, _P2b), False, (3, 3)),
+                             ("one_path", '<a:path w="1000" h="1000">%s</a:path>' % _R, False, (3, 3)),
+                             ("flipped_wedge", '<a:path w="1000" h="1000">%s</a:path>' % _TRI, True, (8.2, 4.6))):
+    prs, sl = _deck()
+    sl.background.fill.solid(); sl.background.fill.fore_color.rgb = _RGB.from_string("FFFFFF")
+    if tag == "flipped_wedge":
+        _cust(sl, 1, 1, 11, 6, paths, flip)
+    else:
+        _cust(sl, 2, 2, 6, 3, paths, flip)
+    _tb(sl, tx[0], tx[1], 3.2, 0.8, "Dark words on the dark card", "2B2B2B")
+    check("INVISIBLE TEXT" in _lint_text(prs, tag), "lint: dark text on a dark custom shape ({}) is still INVISIBLE TEXT".format(tag))
+from PIL import ImageDraw as _ID
+
+
+def _bgpic(sl, im, extra=""):
+    buf = io.BytesIO(); im.save(buf, "PNG")
+    _ip, rid = sl.part.get_or_add_image_part(io.BytesIO(buf.getvalue()))
+    c = sl._element.find(_qn("p:cSld"))
+    c.insert(0, _et.fromstring('<p:bg xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="%s" '
+                               'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><p:bgPr><a:blipFill '
+                               'dpi="0" rotWithShape="1"><a:blip r:embed="%s">%s</a:blip><a:srcRect/><a:stretch><a:fillRect/>'
+                               '</a:stretch></a:blipFill><a:effectLst/></p:bgPr></p:bg>' % (_A, rid, extra)))
+
+
+for frac in (0.035, 0.08):                          # a white template picture with a navy brand strip, a white label on it
+    prs, sl = _deck()
+    im = Image.new("RGB", (1333, 750), (255, 255, 255)); _ID.Draw(im).rectangle([0, 0, 1333, int(750 * frac)], fill=(16, 42, 92))
+    _bgpic(sl, im)
+    _tb(sl, 0.4, 0.02, 9, 7.5 * frac - 0.04, "Clinical update", "FFFFFF", 14)
+    out = _lint_text(prs, "band_{}".format(frac))
+    check("INVISIBLE TEXT: 'Clinical" not in out, "lint: a white label on a {:.1%} brand strip of a background picture is not INVISIBLE".format(frac))
+prs, sl = _deck()                                   # a dark patch on light paper, a white caption on the patch
+im = Image.new("RGB", (1333, 750), (240, 236, 228)); _ID.Draw(im).rectangle([60, 600, 580, 690], fill=(30, 30, 30))
+_bgpic(sl, im); _tb(sl, 0.6, 6.0, 5.2, 0.9, "A caption on the dark patch", "FFFFFF", 20)
+check("INVISIBLE TEXT: 'A caption" not in _lint_text(prs, "patch"), "lint: a white caption on a dark patch of a light background picture is not INVISIBLE")
+for extra, tag in (('<a:alphaModFix amt="15000"/>', "alpha"), ('<a:lum bright="70000" contrast="-70000"/>', "washout")):
+    prs, sl = _deck()
+    _bgpic(sl, Image.new("RGB", (400, 225), (22, 30, 58)), extra)
+    rec = _ld._slide_bg_box(sl, 13.333, 7.5)
+    check(rec is not None and not rec.get("fill"), "lint: a background picture PowerPoint washes ({}) is not read as its pixels' colour ({})".format(
+        tag, rec and rec.get("fill")))
+
+# ── final review: the upright copy stays a JPEG and a broken cache entry is never reused ──
+# every rewritten picture became a PNG (a 1.2MB phone JPEG grew to 7.5MB); a build killed mid-write left a truncated
+# copy under a stable key, embedded by every later build as a black rectangle
+up = vl._usable(EXIF6)
+check(Image.open(up).format == "JPEG" and Path(up).stat().st_size <= 2.5 * EXIF6.stat().st_size,
+      "an upright copy of a phone JPEG is a JPEG of similar size ({} {} vs {} bytes)".format(
+          Image.open(up).format, Path(up).stat().st_size, EXIF6.stat().st_size))
+Path(up).write_bytes(Path(up).read_bytes()[:2000])                      # a write that was cut short
+up2 = vl._usable(EXIF6)
+try:
+    Image.open(up2).load(); _ok = True
+except Exception:
+    _ok = False
+check(_ok, "a truncated upright copy in the cache is made again, not reused")
+fe = vl._feathered(PHOTO)
+Path(fe).write_bytes(Path(fe).read_bytes()[:2000])
+try:
+    Image.open(vl._feathered(PHOTO)).load(); _ok = True
+except Exception:
+    _ok = False
+check(_ok, "a truncated feathered copy in the cache is made again, not reused")
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:
