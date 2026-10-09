@@ -640,6 +640,33 @@ for W, H in ((7.5, 7.5), (10.0, 7.5)):
     check(_blocks(s2) == before and k.project == kept, "drafting {}x{}: a refused page with a new project leaves the sheet and the kit as they were ({} -> {}, {})".format(
         W, H, before, _blocks(s2), k.project))
 
+# ── final review: headroom never brings a widow back ──
+# words measured and widow-checked at 97% of the column were drawn in a box at 100%, and LibreOffice re-wrapped
+# "…what you already / own" (soft), "…more than ever / before" (collage, ink): a wrapping display field is now SET in
+# its measured lines, so the box width cannot re-wrap it
+WT = ["Why small repair cafés matter more than ever before", "The quiet economics of fixing what you already own",
+      "How to run a repair night with five volunteers", "A year of evenings spent fixing other people's toasters",
+      "Mending as a habit, not a hobby, for everyone", "Our first hundred repairs and what went wrong"]
+for name in ("editorial", "soft", "collage", "storybook", "ink", "poster", "cutpaper", "drafting"):
+    for W, H in ((13.333, 7.5), (7.5, 7.5)):
+        prs, k = use(name, W, H)
+        for t in WT:
+            s = k.new_slide()
+            try:
+                if name in vl.IMAGE_LED:
+                    k.cover(s, title=t, image=img_for(name))
+                else:
+                    k.section(s, number="02", title=t)
+            except vl.VLTextOverflow:
+                continue
+            sh = [x for x in texts(s) if " ".join(p_.text for p_ in x.text_frame.paragraphs).strip().lower() == t.lower()]
+            if not sh or len(sh[0].text_frame.paragraphs) > 1:
+                continue                    # set in its lines: nothing to re-wrap
+            sz = sh[0].text_frame.paragraphs[0].runs[0].font.size.pt
+            full = vl._break_lines(k, "title", sh[0].text_frame.text, sz, sh[0].width / EMU)   # the words as drawn (poster: capitals)
+            check(len(full) < 2 or len(full[-1].split()) > 1,
+                  "{} {}x{}: {!r} has no lone last word at the width it is drawn ({})".format(name, W, H, t[:30], full[-2:]))
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

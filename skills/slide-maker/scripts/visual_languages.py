@@ -903,6 +903,20 @@ def _break_lines(k, field, text, size, w):
     return lines + [cur]
 
 
+def _set_lines(k, field, text, size, w):
+    """The lines a wrapping DISPLAY field (title, subtitle, quote, label, line) is set in — its measured breaks at width
+    `w` — or None: one line, a field that is not display type, or Chinese/Japanese/Korean whose East-Asian face is a
+    stand-in here (a Linux box without SimSun: lines imposed from stand-in metrics read as overflow to the lint)."""
+    if field not in _NO_WIDOW:
+        return None
+    if dk._has_cjk(text):
+        role = TYPE[k.name][field][1]
+        if dk._font_substituted(k.ea_face(role, text) or k.face(role)):
+            return None
+    ls = _break_lines(k, field, text, size, w)
+    return ls if len(ls) > 1 and "".join(ls).replace(" ", "") == text.replace(" ", "") else None
+
+
 def _widowed(k, field, text, size, w):
     """True when the last line is a lone short word (Latin) or one or two characters (CJK)."""
     ls = _break_lines(k, field, text, size, w)
@@ -1122,6 +1136,11 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=Non
             if f in phrased:
                 dk.text(slide, fx, fy, fw, fh, [k.runs(l_, sz, color, bold, role, italic) for l_ in phrased[f]],
                         align=al, space_after=0)
+                continue
+            lines = _set_lines(k, f, t, sz, fw - dw)
+            if lines:                      # a wrapping display field is SET in its measured lines: drawn dw wider than it
+                dk.text(slide, fx, fy, fw, fh, [k.runs(l_, sz, color, bold, role, italic) for l_ in lines],   # was measured,
+                        align=al, space_after=0)    # the renderer re-wrapped "…more than ever / before" (final review)
                 continue
             if f == "kicker" and k.name == "collage":
                 hl = _hex(k.P["accents"][0])         # highlighter: the text reads on the HIGHLIGHT, not the ground
