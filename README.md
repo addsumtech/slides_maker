@@ -155,7 +155,7 @@ The layouts match; only the copy language differs.
 
 ## Visual languages
 
-Beside the template gallery, slide-maker ships thirteen complete **visual languages**: whole looks, each with a type voice from system fonts, its own surface and page layouts for cover, section, image + text, quote, data and closing. Four are built around pictures and carry your photos or an illustration series. Nine draw their own surface with native, editable shapes, so a deck with no pictures (and no image tool) still gets a finished look; those nine also have a `points` page for two to four ideas. All of them lay out *your* words and pictures and never invent a word, a number or a name: a seal's characters, a highlighted word, icons, a project name, a masthead, a running head, tags and a total come only from you.
+Beside the template gallery, slide-maker ships thirteen complete **visual languages**: whole looks, each with a type voice from system fonts, its own surface and page layouts for cover, section, image + text, points (two to four ideas), quote, data and closing. Four are built around pictures and carry your photos or an illustration series. Nine draw their own surface with native, editable shapes, so a deck with no pictures (and no image tool) still gets a finished look. All of them lay out *your* words and pictures and never invent a word, a number or a name: a seal's characters, a highlighted word, icons, a project name, a masthead, a running head, tags and a total come only from you.
 
 <table>
   <tr>

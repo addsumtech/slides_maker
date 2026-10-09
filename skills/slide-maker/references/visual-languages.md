@@ -165,7 +165,7 @@ test decks passed `visual language` ("5 of 5 slide(s) built with it"), `register
 ## The thirteen languages
 
 A visual language is a whole look, not a palette: a type voice from system fonts, a surface, image
-treatments and six page compositions (seven on the drawn languages, which add `points`). Picking one gives a finished deck from your own words and images —
+treatments and seven page compositions (cover, section, image_text, points, quote, data, closing). Picking one gives a finished deck from your own words and images —
 the page functions never invent a word, a number or a name.
 
 | language | images | voice | surface | frames |
@@ -208,13 +208,28 @@ k.closing(k.new_slide(), title="Bring one broken thing.", line="And bring a neig
 prs.save("collage.pptx")
 ```
 
-- **Pages:** `cover`, `section`, `image_text`, `quote`, `data`, `closing` — keyword fields only; `image=`
+- **Pages:** `cover`, `section`, `image_text`, `points`, `quote`, `data`, `closing` — keyword fields only; `image=`
   is optional everywhere except `image_text` (which refuses without one). A list of images is for the
   collage cover and closing only (1 to 4); anywhere else, or empty, or longer, it is refused rather than
   silently cut. A page with no text and no image is refused. Each returns `{"rects": {field: (x, y, w, h)}, …}`.
+  On the nine DRAWN languages a picture is drawn on `image_text` only (`drafting` also on `quote`;
+  `vl.NATIVE_IMAGE_PAGES`): `image=` on any other page of theirs is refused, naming those pages — never dropped.
+- **Fields are text.** Pass every field as a string, exactly as it should read; `number=` also takes a whole
+  number (`12`, shown as written). A list, a tuple or a float is refused by field name (`number=0.1 + 0.2` would
+  print 0.30000000000000004 — pass `"0.3"`). A point is `(head, line)`, `"head"` or `{"head": …, "line": …}`;
+  a third member or another key is refused, never dropped.
+- **A refused page leaves its slide as it found it** (no half-drawn picture or furniture), so catching
+  `VLTextOverflow` and retrying shorter copy on the same slide is safe.
 - **Images:** a file path (the user's photo, a fetched public-domain image), or — with
   `vl.use(name, prs, plan=plan, image_dir=…)` — a P1 image-series slot id (placed with `slot_picture`,
-  so the series gate still sees it). A missing image raises `FileNotFoundError`.
+  so the series gate still sees it). A missing image raises `FileNotFoundError`. Every picture is placed from
+  an upright, embeddable copy (the caller's file is never rewritten): a phone photo's EXIF orientation is
+  baked in (PowerPoint ignores the flag and placed it on its side), a 16-bit PNG is scaled to 8 bits, WebP
+  and other formats PowerPoint cannot embed are re-saved as PNG. A file that cannot be read — truncated, or not
+  a picture — is refused naming the page and the file (`vl.VLImageError`, a `ValueError`).
+- **The picture gives the words room.** When a page's words do not fit beside its picture, the picture shrinks
+  (to 80%, then 65% on the image-led pages; by a tenth, then a fifth on the drawn languages' `image_text`)
+  before the page refuses.
 - **Text that cannot fit** shrinks toward each field's floor size; if even the floors overflow, the page
   raises `vl.VLTextOverflow` naming the page, the field and the inches — shorten the copy, never
   truncate it. A single token wider than the column even at the floor (a code identifier, a URL) is
@@ -240,8 +255,16 @@ prs.save("collage.pptx")
   ```
   (Run as written in every language: the card is sized to its words and sits in the content rect; a fixed
   full-height card under 14pt rows read as an empty page in two test decks. A list of 2–4 items is better as
-  `k.points(...)` on ink, poster and cutpaper; on drafting, `points` draws one plate per item, so keep an agenda
+  `k.points(...)`, on every language; on drafting, `points` draws one plate per item, so keep an agenda
   there as this ordinary page.)
+- **The kit's own pages are clean.** A deck made only of a language's page functions has no hard `lint_deck`
+  finding and passes its own prohibitions — `tests/test_vl_audit_fixes.py` builds every language on 16:9 and 3:4,
+  both grounds. Furniture that overlaps by design (paper hills over cards, a sun behind a ridge, a blob behind a
+  photo, tape across a note) is declared with `dk.overlap_intent`; a texture ground (grid, slate, grain, a night
+  sky) reads as its solid colour for contrast; the screen readers' title parked above the page is not counted
+  as text in a safe zone. A HARD finding on one of the kit's own pages is therefore a kit defect: report it with
+  the language, page and canvas, do not move the kit's shapes. Advisory `[warn]` lines can still appear on your
+  own pictures (TEXT-ON-IMAGE CONTRAST over a busy photo) — they ask you to look, not to rebuild.
   Pass `k.name` — the page's OWN language; another language's name on it is refused. `rs.ground` returns the
   content rect `(x, y, w, h)` in inches; `rs.card` returns `(body, header)` —
   python-pptx shapes (`header` is None for a card with no band), so read `body.left.inches` and friends.
@@ -272,8 +295,10 @@ make a finished deck for a talk with no pictures and no image tool. Everything t
 every value they write is one PowerPoint opens without repair (`scripts/ooxml_safety.py`, which `lint_deck` runs).
 
 - **`points`** — `k.points(s, kicker=…, title=…, items=[("Head", "line"), …])`: 2 to 4 points, each a string, a
-  `(head, line)` pair or a `{"head": …, "line": …}` dict. Native languages only; on the image-led four, build
-  the list on an ordinary `k.new_slide()` page (`rs.ground` + `rs.card`).
+  `(head, line)` pair or a `{"head": …, "line": …}` dict — on every language. The image-led four set each point
+  as a number, a head and a line in their own furniture (editorial: a hairline over each; soft: a rounded panel;
+  collage: a taped note; storybook: a painted dot instead of a number), in a row, a 2x2 grid or a stack —
+  whichever sets them largest — and take an optional `image=` beside them (landscape) or above them (portrait).
 - **Words only you can give** — the kit never invents them, and draws nothing when they are absent:
   - `seal="茶事"` on any `ink` page: one or two characters
     of your own text, carved into a red seal;

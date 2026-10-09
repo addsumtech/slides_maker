@@ -361,7 +361,7 @@ def use(name, prs, *, fonts="both", plan=None, image_dir=None, platform=None, gr
     """Start a deck in a curated VISUAL LANGUAGE — image-led "editorial", "soft", "collage", "storybook"; drawn (no
     pictures needed) "ink", "poster", "cutpaper", "drafting", "starlit", "broadsheet", "journal", "tally",
     "chalkboard": sets the palette, fonts and ground, and returns a Kit whose page functions — cover, section,
-    image_text, quote, data, closing, and points on the drawn languages — lay out your own words and images in that
+    image_text, points, quote, data and closing — lay out your own words and images in that
     language. fonts="both" uses only faces on
     macOS AND Windows; fonts="mac" unlocks Mac-only faces. plan/image_dir let image= take P1 series slot
     ids. ground="light" (default), the language's contrast ground (VARIANTS[name]), or "auto": the light ground
