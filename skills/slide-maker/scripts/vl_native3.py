@@ -466,9 +466,11 @@ def _ui_data(k, slide, f, image):
         ny = card[1] + (card[3] - nh) / 2.0 if o == "land" else ncol[1]
         r2, d2 = flow(k, slide, "data", (tx, ny + pad, tw, nh - 2 * pad), [("note", note)], anchor="middle")
         na.ui_window(slide, ncol[0], ny, ncol[2], nh, fill=k.P["panel"], line=k.P["line"], drop=k.P["drop"], r=0.22 * s)
-        dk.disc(slide, ncol[0] + pad, ny + (nh - dd) / 2.0, dd, fill=_hex(k.P["states"]["primary"]))
+        # the button fill, not the state hue (5B8CFF on dark is too light for white); item_no is accent-keyed, so the
+        # white goes to accent= — an ink= override alone left the glyph in accent blue on the blue disc
+        dk.disc(slide, ncol[0] + pad, ny + (nh - dd) / 2.0, dd, fill=_hex(k.P["primary_fill"]))
         r1, d1 = flow(k, slide, "data", (ncol[0] + pad, ny + (nh - dd) / 2.0, dd, dd), [("item_no", "i")],
-                      anchor="middle", align="c", ink="FFFFFF")
+                      anchor="middle", align="c", ink="FFFFFF", accent="FFFFFF")
         d1()
         d2()
         rects.update(r2)

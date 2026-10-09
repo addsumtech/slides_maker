@@ -353,6 +353,32 @@ for W, H in list(CANVASES.values()) + [(7.5, 7.5), (10.0, 5.625)]:
     check(not hit, "wayfinding cover {}x{}: no route crosses the words {}".format(W, H, hit[:2]))
 
 
+# the data note's info glyph is readable on its own disc (an accent-keyed role ignores an ink= override)
+for g in ("light", "dark"):
+    for cw, chh in ((13.333, 7.5), (10.0, 7.5), (7.5, 10.0)):
+        dki = dk.blank_deck(cw, chh)
+        ki = vl.use("interface", dki, ground=g)
+        sli = ki.new_slide()
+        ki.data(sli, number="18", label="teams moved in the beta", note="Since March.", total="40")
+        E = 914400.0
+        glyph = [sh for sh in sli.shapes if sh.top >= 0 and sh.has_text_frame and sh.text_frame.text.strip() == "i"]
+        discs = [sh for sh in sli.shapes if sh.shape_type == 1 and sh.auto_shape_type == 9]  # MSO_SHAPE.OVAL
+        ok_pair = False
+        if glyph:
+            gx = (glyph[0].left + glyph[0].width / 2.0); gy = (glyph[0].top + glyph[0].height / 2.0)
+            under = [d for d in discs if d.left <= gx <= d.left + d.width and d.top <= gy <= d.top + d.height]
+            run = glyph[0].text_frame.paragraphs[0].runs[0]
+            if under:
+                ink = str(run.font.color.rgb); fill = str(under[-1].fill.fore_color.rgb)
+                c = vl._contrast(ink, fill)
+                ok_pair = c >= 4.5
+                why = "#{} on #{} = {:.2f}:1".format(ink, fill, c)
+            else:
+                why = "no disc under the glyph"
+        else:
+            why = "no info glyph found"
+        check(ok_pair, "interface {} {}x{}: the data note's info glyph reads on its disc ({})".format(g, cw, chh, why))
+
 # the strip map's title sits balanced in its sign band (the band hugs it), not floated low in the box it was planned in
 for title in ("Four stops", "Four stops to a paying customer, one at a time"):
     dkw = dk.blank_deck()
