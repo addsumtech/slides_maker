@@ -21,7 +21,7 @@ import visual_languages as vl
 from vl_native import GROUNDS, _run_all, alt, ctx, display, fit_circle, points_of, register, text_of  # noqa: F401
 import vl_native as _vn
 
-HEADROOM = 0.97      # words are measured in 97% of a column and drawn at its full width (see flow)
+HEADROOM = vl.HEADROOM   # words are measured in 97% of a column and drawn at its full width (visual_languages._flow)
 
 
 _CLAUSE_FIELDS = ("title", "subtitle", "quote", "label", "line", "note", "body", "caption", "item_head", "item_line",
@@ -86,8 +86,7 @@ def flow(k, slide, page, col, items, **kw):
     measure, saw nothing. The rects report the drawn boxes; no box grows past its column."""
     x, y, w, h = col
     align = kw.get("align", "l")
-    wm = w * HEADROOM
-    dw = w - wm
+    wm = w * HEADROOM                      # what the core measures in; it draws the boxes at w itself
     packed = []
     for f_, t in items:
         t2, z = _clause_break(k, f_, t, wm, kw.get("start"))
@@ -99,9 +98,9 @@ def flow(k, slide, page, col, items, **kw):
         z = _one_line_size(k, f_, t, wm, kw.get("start"))
         if z:
             kw = dict(kw, start=dict(kw.get("start") or {}, **{f_: z}))
-    rects, draw = _vn.flow(k, slide, page, (x + dw / 2.0 if align == "c" else x, y, wm, h), items, **kw)
-    out = {f_: ((r[0] - dw / 2.0, r[1], r[2] + dw, r[3]) if align == "c" else (r[0], r[1], r[2] + dw, r[3]))
-           for f_, r in rects.items()}
+    rects, draw = _vn.flow(k, slide, page, col, items, **kw)
+    out = dict(rects)
+    dw = getattr(draw, "headroom", 0.0)
 
     texts_ = {t: f_ for f_, t in items}
 
@@ -131,12 +130,9 @@ def flow(k, slide, page, col, items, **kw):
                         and not (dk._has_cjk(sh.text_frame.text) and dk._font_substituted(face_))):
                     z = sh.text_frame.paragraphs[0].runs[0].font.size
                     if z is not None:
-                        ls = vl._break_lines(k, f_, sh.text_frame.text, z.pt, sh.width / 914400.0)   # as measured (not yet widened)
+                        ls = vl._break_lines(k, f_, sh.text_frame.text, z.pt, sh.width / 914400.0 - dw)   # as measured
                         if len(ls) > 1:
                             _split_paragraph(sh.text_frame, ls)
-                if align == "c":
-                    sh.left = Emu(int(sh.left - dw / 2.0 * 914400))
-                sh.width = Emu(int(sh.width + dw * 914400))
     go.sizes = getattr(draw, "sizes", {})
     go.exact = getattr(draw, "exact", {})
     return out, go

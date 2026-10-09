@@ -730,17 +730,69 @@ def _canvas(k):
     return k.prs.slide_width / 914400.0, k.prs.slide_height / 914400.0
 
 
+HEADROOM = 0.97      # every language MEASURES its words in 97% of a column and draws the box at the full width: a line
+# measured to fit exactly was set one line longer by LibreOffice — collage on 9:16 measured "fix what it already owns"
+# at 4.894in in a 4.894in box and rendered "owns" on a fourth line, over the subtitle (audit sweep, 2026-10-09)
+_LATIN_RUN = re.compile(r"[^\s]+")
+
+
+def _tokens(text):
+    """(separator, unit) pairs a line may break between. A Latin word — letters, digits and their own punctuation, a
+    run of non-CJK characters — is ONE unit, even inside Chinese ("…进展report v2" never breaks "re / port", the
+    robustness audit 2026-10-09); a Chinese or Japanese character is one unit; a space is a separator. Korean breaks
+    at spaces only, like Latin."""
+    if any(dk._is_hangul(ord(c)) for c in text) or not dk._has_cjk(text):
+        return [(" " if i_ else "", u) for i_, u in enumerate(text.split(" "))]
+    out, cur, sep = [], "", ""
+    for ch in text:
+        if ch == " ":
+            if cur:
+                out.append((sep, cur)); cur = ""
+            sep = " "
+        elif dk._has_cjk(ch):
+            if cur:
+                out.append((sep, cur)); cur, sep = "", ""
+            out.append((sep, ch)); sep = ""
+        else:
+            cur += ch
+    if cur:
+        out.append((sep, cur))
+    return out
+
+
+def _line_width(k, field, text, size):
+    """The width (in) one line of `text` takes: CJK characters in the script's East-Asian face, every other character
+    in the field's Latin face — as it RENDERS (a run's <a:latin> and <a:ea> faces) — or, when wider, as the lint
+    measures it (the whole run in the East-Asian face). A line has to fit both: a chalkboard title split by the render
+    width alone was read by lint as one line more, under its own chalk underline (2026-10-09)."""
+    import display_type as dt
+    role, bold, italic = TYPE[k.name][field][1], _weight(k, field, text), TYPE[k.name][field][4]
+    if not dk._has_cjk(text):
+        return dt._glyph_width(text, size, k.face(role), bold, italic) or 0
+    ea = k.ea_face(role, text) or k.face(role)
+    lat = k.face(role)
+    total, seg, seg_cjk = 0.0, "", None
+    for ch in text + "\0":
+        c = dk._has_cjk(ch) if ch != "\0" else None
+        if seg and (ch == "\0" or c != seg_cjk):
+            total += dt._glyph_width(seg, size, ea if seg_cjk else lat, bold) or 0
+            seg = ""
+        if ch != "\0":
+            seg, seg_cjk = seg + ch, c
+    return max(total, dk._natural_width_in([(text, bool(bold))], size, ea))
+
+
 def _unbreakable_overwide(k, field, text, size, w):
     """The first word the renderer cannot keep whole AND will not break sensibly: a Latin token (identifier,
     URL, compound) wider than the column. A Korean word that is too wide breaks between syllables and is
     measured that way; Chinese/Japanese break between characters. None when every such word fits."""
     import display_type as dt
-    if dk._has_cjk(text) and not any(dk._is_hangul(ord(c)) for c in text):
-        return None
     role, bold = TYPE[k.name][field][1], _weight(k, field, text)
-    for word in text.split():
-        if dk._has_cjk(word):
-            continue
+    if dk._has_cjk(text) and not any(dk._is_hangul(ord(c)) for c in text):
+        words = [u for _sep, u in _tokens(text) if not dk._has_cjk(u)]   # the Latin words inside Chinese/Japanese
+    else:
+        words = [w_ for w_ in text.split() if not dk._has_cjk(w_)]
+    for word in words:
         if (dt._glyph_width(word, size, k.face(role), bold) or 0) > w - _INSET:
             return word
     return None
@@ -782,7 +834,8 @@ def _widest_word_fits(k, field, text, size, w):
     role, bold = TYPE[k.name][field][1], _weight(k, field, text)
     korean = any(dk._is_hangul(ord(c)) for c in text)
     if dk._has_cjk(text) and not korean:
-        return True                       # Chinese/Japanese break between characters; Korean words do not
+        return all((dt._glyph_width(u, size, k.face(role), bold) or 0) <= (w - _INSET)     # …but not inside a
+                   for _sep, u in _tokens(text) if not dk._has_cjk(u))                          # Latin word among them
     face = k.ea_face(role, text) if korean else k.face(role)
     return all((dt._glyph_width(word, size, face, bold) or 0) <= (w - _INSET) for word in text.split())
 
@@ -799,19 +852,18 @@ def _break_lines(k, field, text, size, w):
     face = k.ea_face(role, text) if cjk else k.face(role)
     italic = italic and not cjk
     korean = any(dk._is_hangul(ord(c)) for c in text)     # wraps at spaces, like Latin (LibreOffice probe)
-    units, joiner = (list(text), "") if cjk and not korean else (text.split(" "), " ")
+    pairs = _tokens(text)                                  # CJK characters and whole Latin words (see _tokens)
     limit = w - _INSET
     may_hang = (dk.HANG_PUNCT and cjk and not korean and not any(c.isascii() and c.isalnum() for c in text)
                 and limit >= 2 * size / 72.0)
     cjk = cjk and not korean                               # below: per-character CJK rules only
 
     def width(s_):
-        return dt._glyph_width(s_, size, face, bold, italic) or 0
+        return (_line_width(k, field, s_, size) if cjk else dt._glyph_width(s_, size, face, bold, italic)) or 0
     # (separator, unit) pairs; a Korean word wider than the whole line goes in as syllables — the renderer
     # breaks it between them ("인공지능기반의 / 료영상재구성", final review 2026-10-04)
     toks = []
-    for i_, u in enumerate(units):
-        sep = joiner if i_ else ""
+    for sep, u in pairs:
         if korean and len(u) > 1 and width(u) > limit:
             toks += [(sep if j_ == 0 else "", c_) for j_, c_ in enumerate(u)]
         else:
@@ -950,10 +1002,13 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=Non
     "工具其实很 / 少", "先种下第 / 一株", 2026-10-03). Nothing is drawn until draw() is called, so a
     card can be sized to the text it backs."""
     from pptx.enum.text import PP_ALIGN
-    x, y, w, h = col
+    import math as _math
+    x, y, w_col, h = col
     W, H = _canvas(k)
     h = min(h, H - _FOOT - y)
     s = min(W, H) / 7.5
+    w = w_col * HEADROOM                   # MEASURED in HEADROOM of the column; every box is DRAWN dw wider (see HEADROOM)
+    dw = w_col - w
     sizes, floors, widths = {}, {}, {}
     for f, _t in items:
         base, *_rest, floor = TYPE[k.name][f]
@@ -982,7 +1037,7 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=Non
         bad = _unbreakable_overwide(k, f, t, sizes[f], w) if not (f == "number" and _outlinable(k, t)) else None
         if bad:                           # it would break mid-word and run into the next field (final review)
             raise VLTextOverflow("{}.{}(): the {}'s word {!r} is wider than the {:.2f}in column even at the floor size "
-                                 "{:.0f}pt — shorten it, or break it with a space".format(k.name, page, f, bad, w, sizes[f]))
+                                 "{:.0f}pt — shorten it, or break it with a space".format(k.name, page, f, bad, w_col, sizes[f]))
     guard = 0
     while total() > h and guard < 200:
         guard += 1
@@ -1020,10 +1075,11 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=Non
     cy = y if anchor == "top" else (y + h - t_all if anchor == "bottom" else y + (h - t_all) / 2.0)
     rects, plan = {}, []
     for f, t in items:
-        sz = round(sizes[f], 1)
-        fw = widths[f]
-        fx = x + (w - fw) / 2.0 if align == "c" else x
+        sz = _math.floor(sizes[f] * 10 + 1e-9) / 10.0   # rounded DOWN: 32.58pt (one line) drawn at 32.6 set two lines
+        fw = widths[f]                                   # the measure …
         fh = fheight(f, t, sz, fw)
+        fw = fw + dw                                     # … and the box, drawn with the headroom
+        fx = x + (w_col - fw) / 2.0 if align == "c" else x
         rects[f] = (fx, cy, fw, fh)
         plan.append((f, t, sz, (fx, cy, fw, fh)))
         cy += fh + gaps[f]
@@ -1052,6 +1108,7 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=Non
                 rr = k.runs(t, sz, color, bold, role, italic)
             dk.text(slide, fx, fy, fw, fh, [rr], align=al)
     draw.sizes = {f: sz for f, _t, sz, _r in plan}      # what each field was planned at (P4 sizes its art by it)
+    draw.headroom = dw                                   # how much wider each box is drawn than its words were measured
     draw.exact = {f: sizes[f] for f, _t in items}       # …before the 0.1pt rounding: a size decided at 32.58pt (one
     # line) was drawn at 32.6 (two, "一盏茶的时 / 间"); vl_native2 draws at the exact size rounded DOWN
     return rects, draw

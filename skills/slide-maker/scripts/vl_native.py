@@ -815,13 +815,14 @@ def _poster_quote(k, slide, f, image):
     qrect = (0.20 * W, 0.20 * H, 0.74 * W, 0.56 * H) if o == "land" else (0.06 * W, 0.26 * H, 0.88 * W, 0.52 * H)
     r, _z, d = display(k, slide, mrect, "“", "mark", caps=False, ink=fld["accent"], floor=36)
     draws.append(d)
-    if q:
+    ya = qrect[1]                      # a secondary field is drawn whether or not its primary is given — the caller's
+    if q:                              # words are never dropped for a missing sibling (robustness audit, 2026-10-09)
         r1, _z, d1 = display(k, slide, qrect, q, "quote", highlight=hl, hl=fld["hl"], hl_ink=fld["hl_ink"])
         rects["quote"] = r1; draws.append(d1)
-        if attr:
-            ar, ad = flow(k, slide, "quote", (qrect[0], r1[1] + r1[3] + 0.25 * s, qrect[2], 0.6 * s),
-                          [("attribution", attr)], accent=fld["accent"])
-            rects.update(ar); draws.append(ad)
+        ya = r1[1] + r1[3] + 0.25 * s
+    if attr:
+        ar, ad = flow(k, slide, "quote", (qrect[0], ya, qrect[2], 0.6 * s), [("attribution", attr)], accent=fld["accent"])
+        rects.update(ar); draws.append(ad)
     _poster_meta(k, slide, None)
     _run_all(draws)
     return rects
@@ -837,12 +838,14 @@ def _poster_data(k, slide, f, image):
     if num:
         r, _z, d = display(k, slide, nrect, num, "number", caps=False, anchor="b", floor=48)   # 1,250,000 fits one line
         rects["number"] = r; draws.append(d)
+    yn = lrect[1]                      # the note stands without a label (see _poster_quote)
     if label:
         r1, _z, d1 = display(k, slide, lrect, label, "label")
         rects["label"] = r1; draws.append(d1)
-        if note:
-            nr, nd = flow(k, slide, "data", (lrect[0], r1[1] + r1[3] + 0.2 * s, lrect[2], 1.2 * s), [("note", note)])
-            rects.update(nr); draws.append(nd)
+        yn = r1[1] + r1[3] + 0.2 * s
+    if note:
+        nr, nd = flow(k, slide, "data", (lrect[0], yn, lrect[2], 1.2 * s), [("note", note)])
+        rects.update(nr); draws.append(nd)
     _poster_meta(k, slide, text_of(f, "kicker"))
     _run_all(draws)
     return rects
@@ -855,13 +858,15 @@ def _poster_closing(k, slide, f, image):
     title, line, hl = text_of(f, "title"), text_of(f, "line"), text_of(f, "highlight")
     trect = (0.05 * W, 0.14 * H, 0.70 * W, 0.58 * H) if o == "land" else (0.06 * W, 0.12 * H, 0.88 * W, 0.50 * H)
     rects, draws = {}, []
+    yl = trect[1]                      # the line stands without a title (see _poster_quote)
     if title:
         r, _z, d = display(k, slide, trect, title, "title", highlight=hl, hl=fld["hl"], hl_ink=fld["hl_ink"],
                            floor=vl.TYPE[k.name]["label"][5])
         rects["title"] = r; draws.append(d)
-        if line:
-            lr, ld = flow(k, slide, "closing", (trect[0], r[1] + r[3] + 0.3 * s, trect[2], 1.0 * s), [("line", line)])
-            rects.update(lr); draws.append(ld)
+        yl = r[1] + r[3] + 0.3 * s
+    if line:
+        lr, ld = flow(k, slide, "closing", (trect[0], yl, trect[2], 1.0 * s), [("line", line)])
+        rects.update(lr); draws.append(ld)
     blocks = ((0.80 * W, 0.62 * H, 0.30 * W, 0.30 * W, 12.0),) if o == "land" else ((0.62 * W, 0.80 * H, 0.50 * W, 0.24 * H, 12.0),)
     _blocks(k, slide, blocks)
     _poster_meta(k, slide, None)
