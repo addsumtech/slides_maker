@@ -240,11 +240,13 @@ def _auto_ground(name, prs, taste=None):
     except Exception:
         fmt = None
     if fmt is not None and getattr(fmt, "chrome", "") == "print":
-        if _lum(VARIANTS[name]["light"]["palette"]["ground"]) < 0.2:
-            return "light", ("a printed board ({}) takes a light ground, and {} has none — its default ground is "
-                             "dark and prints as a dark page; for print, pick a language with a light ground"
-                             .format(fmt.label, name))
-        return "light", "a printed board ({}) takes a light ground".format(fmt.label)
+        # the LIGHTEST ground, whichever key it has: poster's default is a saturated blue and its paper ground is light
+        # (it was reported as having none, 2026-10-09)
+        best = max(VARIANTS[name], key=lambda k_: _lum(VARIANTS[name][k_]["palette"]["ground"]))
+        if _lum(VARIANTS[name][best]["palette"]["ground"]) < 0.2:
+            return best, ("a printed board ({}) takes a light ground, and {} has none — both its grounds are dark and "
+                          "print as a dark page; for print, pick a language with a light ground".format(fmt.label, name))
+        return best, "a printed board ({}) takes {}'s lightest ground".format(fmt.label, name)
     if taste is None:
         try:
             import registry

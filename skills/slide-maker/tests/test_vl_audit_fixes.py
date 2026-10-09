@@ -340,6 +340,43 @@ for name in vl.LANGS:
                    if re.match(r"\s+slide \d+: [A-Z]", l_) and "[warn]" not in l_ and "[stats]" not in l_]
             check(hard == 0, "{} {} {}x{}: a deck of its own pages has no hard lint finding ({})".format(name, ground, W, H, why[:2]))
 
+# ── B3: a near-uniform texture ground is a solid ground for contrast ──
+# tally's grid, chalkboard's slate, collage's grain, the drafting grid and the night sky are pictures painted as the
+# slide background; lint called their colour unknowable and estimated it from the render, where the glyphs' own
+# antialiasing scored white-on-navy at 2.8:1 — a TEXT-ON-IMAGE warning on every page (audits, 2026-10-09). The picture
+# is measured instead: 99%+ of its pixels sit on one colour, which is the backing (a photo stays unknowable).
+from pptx import Presentation as _Prs
+for name, ground in (("tally", "night"), ("chalkboard", "light"), ("collage", "slate"), ("drafting", "cyanotype"), ("starlit", "light")):
+    prs, k = use(name, ground=ground)
+    k.cover(k.new_slide(), title="A title on the ground", subtitle="And a line")
+    path = td / "bg_{}.pptx".format(name)
+    prs.save(str(path))
+    p2 = _Prs(str(path))
+    rec = _ld._slide_bg_box(p2.slides[0], 13.333, 7.5)
+    want = vl.VARIANTS[name][ground]["palette"]["ground"].upper()
+    got = (rec or {}).get("fill")
+    check(rec is not None and not rec.get("unk") and bool(got) and _ld._contrast(got, want) < 1.15,
+          "{} {}: its texture ground reads as the solid {} (got {})".format(name, ground, want, got))
+prs = dk.blank_deck(13.333, 7.5)
+s = dk.add_slide(prs)
+import native_art as _na
+_part, _rid = s.part.get_or_add_image_part(PHOTO)
+_na._bg(s, '<a:blipFill><a:blip r:embed="{}"/><a:stretch><a:fillRect/></a:stretch></a:blipFill>'.format(_rid))
+path = td / "bg_photo.pptx"; prs.save(str(path))
+rec = _ld._slide_bg_box(_Prs(str(path)).slides[0], 13.333, 7.5)
+check(rec is not None and rec.get("unk") and not rec.get("fill"), "a photo background stays unknowable ({})".format(rec and rec.get("fill")))
+
+# ── a printed board takes a language's LIGHTEST ground: poster's default is a saturated blue, its paper ground is light
+# (it said poster "has none" — docs agent, 2026-10-09); starlit and chalkboard are dark on both and say so
+for name in vl.LANGS:
+    prs = dk.blank_deck(8.27, 11.69)
+    g, why = vl._auto_ground(name, prs)
+    lums = {k_: vl._lum(vl.VARIANTS[name][k_]["palette"]["ground"]) for k_ in vl.VARIANTS[name]}
+    best = max(lums, key=lums.get)
+    check(g == best, "{}: a printed board takes its lightest ground ({} picked, {} is lightest)".format(name, g, best))
+    if lums[best] < 0.2:
+        check("dark" in why, "{}: a printed board says the page prints dark ({})".format(name, why[:80]))
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

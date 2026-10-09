@@ -205,14 +205,14 @@ def _slide_bg_box(slide, sw, sh):
         # told to skip on None, skipped. Contrast checking was silently off for the entire
         # template branch of this skill, which is half of what it builds. Measured: dark text on
         # a master-level dark canvas produced zero findings.
-        bg, inherited = _bg_of(slide), False
+        bg, inherited, owner = _bg_of(slide), False, slide
         if bg is None:
             inherited = True
             try:
                 layout = slide.slide_layout
-                bg = _bg_of(layout)
+                bg, owner = _bg_of(layout), layout
                 if bg is None:
-                    bg = _bg_of(layout.slide_master)
+                    bg, owner = _bg_of(layout.slide_master), layout.slide_master
             except Exception:
                 bg = None
         if bg is None:
@@ -237,6 +237,8 @@ def _slide_bg_box(slide, sw, sh):
                     fill = _theme_resolver(slide.slide_layout.slide_master)(sch.get("val"))
                 except Exception:
                     fill = None
+        if fill is None:
+            fill = _uniform_picture_fill(bg, owner)
         if inherited and fill is None:
             # An INHERITED background we cannot resolve teaches nothing, and claiming one is not
             # free. python-pptx's own default master carries `<p:bgRef idx="1001"><a:schemeClr/>`
@@ -280,6 +282,34 @@ def _slide_bg_box(slide, sw, sh):
             "text": False, "descr": None, "mathfont": None,
             "title_ph": False, "bg": True, "grp": None,
             "declared": False, "hollow": False, "motif": False, "bled": False}
+
+
+def _uniform_picture_fill(bg, owner):
+    """The colour of a background PICTURE that is a texture over one colour — a grid, grain, slate or a night sky, 95%+
+    of its pixels within a hair of their median — as hex; None for anything else (a photo). Such a picture is the solid
+    ground it looks like: called unknowable, its colour was estimated from the render instead, where the glyphs' own
+    antialiasing scored white on navy at 2.8:1 on every visual-language page with a texture (audits, 2026-10-09).
+    Measured: the kit's textures put 98.7-100% of pixels within 20 (redmean) of the median, photos 2-3%."""
+    try:
+        import io as _io
+        from PIL import Image
+        blip = bg.find(".//" + qn("a:blip"))
+        if blip is None or bg.find(".//" + qn("a:blipFill")) is None:
+            return None
+        blob = owner.part.related_part(blip.get(qn("r:embed"))).blob
+        im = Image.open(_io.BytesIO(blob)).convert("RGB")
+        im.thumbnail((160, 160))
+        px = list(im.getdata())
+        med = tuple(sorted(c[i] for c in px)[len(px) // 2] for i in range(3))
+        near = 0
+        for c in px:
+            rm = (c[0] + med[0]) / 2.0
+            dr, dg, db = c[0] - med[0], c[1] - med[1], c[2] - med[2]
+            if (2 + rm / 256.0) * dr * dr + 4 * dg * dg + (2 + (255 - rm) / 256.0) * db * db <= 400.0:
+                near += 1
+        return "{:02X}{:02X}{:02X}".format(*med) if near >= 0.95 * len(px) else None
+    except Exception:
+        return None
 
 
 _A11Y_TITLE_TAG = "deckkit-a11ytitle"
