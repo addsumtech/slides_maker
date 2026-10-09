@@ -592,6 +592,54 @@ except Exception:
     _ok = False
 check(_ok, "a truncated feathered copy in the cache is made again, not reused")
 
+# ── final review: undoing a refused page never breaks what was already on the slide ──
+# a refused image_text whose picture the caller had already placed on the slide dropped the SHARED relationship (the
+# reopened file failed KeyError rId3); drafting's project= deleted the ground's old title block during an attempt that
+# was then undone, leaving two stacked blocks or a sheet showing the new project the kit never kept
+HUGE = " ".join(["Why every street deserves a place to fix what it already owns"] * 6)
+for name in ("editorial", "ink", "poster"):
+    prs, k = use(name)
+    s = k.new_slide()
+    mine = dk.picture(s, PHOTO, 9.5, 5.2, 3.0, 2.0, fit="cover", alt="my own thumbnail")
+    rid = mine._element.find(".//" + _qn("a:blip")).get(_qn("r:embed"))
+    try:
+        k.image_text(s, image=PHOTO, title=HUGE, body=HUGE, caption=HUGE)
+    except vl.VLTextOverflow:
+        pass
+    path = td / "shared_{}.pptx".format(name); prs.save(str(path))
+    try:
+        for sh in _P2(str(path)).slides[0].shapes:
+            if sh.shape_type == 13:
+                sh.image.blob
+        reopened = True
+    except Exception:
+        reopened = False
+    check(rid in s.part.rels and reopened, "{}: a refused page keeps the caller's picture that shares its file".format(name))
+
+
+def _blocks(sl):
+    return [[p_.text for p_ in sh.text_frame.paragraphs][:2] for sh in sl.shapes
+            if getattr(sh, "has_text_frame", False) and sh.text_frame.paragraphs and sh.text_frame.paragraphs[0].text == "PROJECT"]
+
+
+LONGDR = dict(kicker="Annual review of the repair network", title="Why every street deserves a place to fix what it already owns, not throw away",
+              body="What twelve months of evenings, benches and borrowed tools taught us", caption="Weighed at the door, item by item.")
+for W, H in ((7.5, 7.5), (10.0, 7.5)):
+    prs, k = use("drafting", W, H)
+    k.cover(k.new_slide(), title="Repair network", project="Alpha phase")
+    s = k.new_slide()
+    k.image_text(s, image=PHOTO, project="Beta phase", **LONGDR)
+    b = _blocks(s)
+    check(len(b) == 1 and b[0][1] == "Beta phase", "drafting {}x{}: a new project on a fallback layout leaves one title block ({})".format(W, H, b))
+    s2 = k.new_slide(); before = _blocks(s2); kept = k.project
+    try:
+        k.image_text(s2, image=PHOTO, project="Gamma phase", kicker=LONGDR["kicker"], title=" ".join([LONGDR["title"]] * 4),
+                     body=LONGDR["body"] * 3, caption=LONGDR["caption"])
+    except vl.VLTextOverflow:
+        pass
+    check(_blocks(s2) == before and k.project == kept, "drafting {}x{}: a refused page with a new project leaves the sheet and the kit as they were ({} -> {}, {})".format(
+        W, H, before, _blocks(s2), k.project))
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

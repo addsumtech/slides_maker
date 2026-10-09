@@ -333,6 +333,7 @@ def compose(k, slide, page, fields, image):
         raise ValueError("{}.{}(): nothing to place — pass the words".format(k.name, page))
     n0 = len(slide.shapes)
     state = dict(k.__dict__)
+    mark = len(_REMOVED)
     last = None
     for a in range(ALTS.get((k.name, page), 1)):
         _ALT[0] = a
@@ -341,11 +342,11 @@ def compose(k, slide, page, fields, image):
             break
         except vl.VLTextOverflow as e:            # the copy does not fit THIS layout: undo it, try the next
             last = e
-            _unbuild(slide, n0)
+            undo(slide, n0, mark)
             k.__dict__.clear()
             k.__dict__.update(state)
         except Exception:                         # any other refusal leaves the slide as it found it, too
-            _unbuild(slide, n0)
+            undo(slide, n0, mark)
             k.__dict__.clear()
             k.__dict__.update(state)
             raise
@@ -353,6 +354,7 @@ def compose(k, slide, page, fields, image):
             _ALT[0] = 0
     else:
         raise last
+    del _REMOVED[mark:]                           # the attempt stands: what it took off stays off
     for sh in list(slide.shapes)[n0:]:
         dk._compose_tag(sh, vl=k.name)
     if getattr(k, "memo", None):
@@ -360,15 +362,38 @@ def compose(k, slide, page, fields, image):
     return {"rects": rects, "image": None, "free": None}
 
 
+_REMOVED = []        # (parent, index, element) an attempt took off the slide — put back if the attempt is undone
+
+
+def remove_tracked(el):
+    """Take `el` off the slide so that an undone attempt can put it back (drafting's old project block)."""
+    parent = el.getparent()
+    _REMOVED.append((parent, parent.index(el), el))
+    parent.remove(el)
+
+
+def undo(slide, n0, mark):
+    """Undo an attempt: put back what it took off (first, so the shape indices are the ones n0 was counted in), then
+    remove what it drew after the first n0 shapes. `mark` is len(_REMOVED) when the attempt began."""
+    while len(_REMOVED) > mark:
+        parent, idx, el = _REMOVED.pop()
+        parent.insert(idx, el)
+    _unbuild(slide, n0)
+
+
 def _unbuild(slide, n0):
     """Remove everything an attempt drew after the first n0 shapes (and the picture links it added), so the next
-    layout starts from the bare ground. Declarations live in shape names, so nothing else needs undoing."""
+    layout starts from the bare ground. Declarations live in shape names, so nothing else needs undoing. A picture
+    link is dropped only when nothing on the slide still uses it: the caller's own picture of the same file shares it
+    (dropping it left a dangling r:embed — the reopened deck failed, final review 2026-10-09)."""
     from pptx.oxml.ns import qn
     for sh in list(slide.shapes)[n0:]:
         el = sh._element
         rids = {b.get(qn("r:embed")) for b in el.iter(qn("a:blip")) if b.get(qn("r:embed"))}
         el.getparent().remove(el)
         for rid in rids:
+            if slide._element.xpath('.//*[@r:embed="{}"]'.format(rid)):
+                continue
             try:
                 slide.part.drop_rel(rid)
             except Exception:
@@ -1254,8 +1279,8 @@ def _bp_project(k, slide, f, fallback=None):
                 old = sh
                 break
     if na.title_block_project(slide, block, words, ink=k.P["ink"], mute=k.P["mute"], face=k.face("mono")):
-        if old is not None:                   # …and remove them only once the new ones are in (validate, then mutate)
-            old._element.getparent().remove(old._element)
+        if old is not None:                   # …and remove them only once the new ones are in (validate, then mutate),
+            remove_tracked(old._element)      # put back if this page's attempt is undone
         k.project = words
         k._sheet = (content, block, words)
     elif explicit:
