@@ -270,6 +270,88 @@ k.data(s, number="3", label="evenings a month", note="Short enough to fit around
 xs = [rect_of(sh)[0] + rect_of(sh)[2] for sh in s.shapes if sh.top >= 0 and sh.width < 12 * EMU]
 check(max(xs) > 0.80 * 13.333, "interface: the data page spans the width (note beside the card)")
 
+# ── wayfinding 导视线路 ──
+EXTRAS["wayfinding"] = lambda lang, n: {"cover": {"line": "1"}, "points": {"ordered": True, "interchange": [1]},
+                                        "data": {"board": [("Route B", "93.1%"), ("Route C", "91.8%")]}}
+check("wayfinding" in vl.NATIVE and set(vl.VARIANTS["wayfinding"]) == {"light", "night"}, "wayfinding: two grounds")
+assert_palettes("wayfinding")
+for g, V in vl.VARIANTS["wayfinding"].items():
+    p = V["palette"]
+    check(cr(p["sign_ink"], p["sign"]) >= 4.5 and cr(p["sign_mute"], p["sign"]) >= 4.5, "wayfinding/{}: words on a sign".format(g))
+    check(cr(p["led"], p["board"]) >= 4.5 and cr(p["board_mute"], p["board"]) >= 4.5, "wayfinding/{}: the board's LED".format(g))
+    check(cr(p["exit_ink"], p["exit"]) >= 4.5, "wayfinding/{}: words on the way-out sign".format(g))
+assert_matrix("wayfinding")
+import vl_native3 as v3
+# Review Focus 3: the digit on a yellow roundel is dark
+prs, k = use("wayfinding")
+check(v3.ink_on(k, "F2B705") == k.P["ink"] and v3.ink_on(k, "0071BC") == "FFFFFF", "wayfinding: roundel ink picked by contrast")
+check([v3.line_colour(k, n) for n in (1, 2, 6)] == [k.P["lines"][0], k.P["lines"][1], k.P["lines"][0]],
+      "wayfinding: a section's line colour follows its number")
+# Review Focus 2: unordered points → a directory sign, no route; interchange= without ordered= refused
+for W, H in CANVASES.values():
+    prs, k = use("wayfinding", W, H)
+    s = k.new_slide()
+    k.points(s, title="Four pillars", items=["Speed", "Care", "Craft", "Reach"])
+    conns = [sh for sh in s.shapes if sh.shape_type == 9 or sh._element.tag.endswith("cxnSp")]
+    check(not conns, "wayfinding {}x{}: unordered points draw no route".format(W, H))
+    rnd = [sh for sh in texts(s) if txt_of(sh) in ("1", "2", "3", "4")]
+    check(len(rnd) == 4, "wayfinding {}x{}: four directory rows with numbered roundels".format(W, H))
+    s2 = k.new_slide()
+    k.points(s2, title="Four stops", items=["Sign up", "First project", "Invite", "Upgrade"], ordered=True, interchange=[2])
+    conns = [sh for sh in s2.shapes if sh._element.tag.endswith("cxnSp")]
+    check(conns, "wayfinding {}x{}: ordered points draw the route".format(W, H))
+    hit = [c for c in conns for sh in texts(s2) if v2.meet(rect_of(c), rect_of(sh))]
+    check(not hit, "wayfinding {}x{}: the route crosses no words".format(W, H))
+try:
+    prs, k = use("wayfinding")
+    k.points(k.new_slide(), title="x", items=["a", "b"], interchange=[0])
+    check(False, "wayfinding: interchange= without ordered= is refused")
+except ValueError as e:
+    check("interchange=" in str(e) and "ordered" in str(e), "wayfinding: interchange= without ordered= is refused by name")
+for bad_ix in ([5], ["a"], 1):
+    try:
+        prs, k = use("wayfinding")
+        k.points(k.new_slide(), title="x", items=["a", "b"], ordered=True, interchange=bad_ix)
+        check(False, "wayfinding: interchange={!r} is refused".format(bad_ix))
+    except ValueError as e:
+        check("interchange=" in str(e), "wayfinding: interchange={!r} refused by name".format(bad_ix))
+# the board: the page's own row first, then the caller's rows; refused beyond four extra rows
+prs, k = use("wayfinding")
+s = k.new_slide()
+k.data(s, number="96.4%", label="Harbour line on time", board=[("North loop", "93.1%")])
+tt = [txt_of(sh) for sh in texts(s)]
+check("96.4%" in tt and "Harbour line on time" in tt and "North loop" in tt and "93.1%" in tt, "wayfinding: board rows drawn")
+try:
+    k.data(k.new_slide(), number="1", label="x", board=[("a", "1")] * 5)
+    check(False, "wayfinding: board= beyond 4 rows is refused")
+except ValueError as e:
+    check("board=" in str(e), "wayfinding: board= beyond 4 rows refused by name")
+# the way-out label follows the deck's language
+for lang, want in (("en", "Way out"), ("zh", "出口"), ("ja", "出口"), ("ko", "출구")):
+    prs, k = use("wayfinding")
+    s = k.new_slide(); k.closing(s, title=COPY[lang]["title"], line=COPY[lang]["line"])
+    check(any(txt_of(sh).upper() == want.upper() for sh in texts(s)), "wayfinding/{}: way-out label {!r}".format(lang, want))
+# no invented words on the cover; line= draws the roundel
+prs, k = use("wayfinding")
+s = k.new_slide(); k.cover(s, title="Our plan", subtitle="Strategy 2027")
+check(sorted(txt_of(sh) for sh in texts(s)) == sorted(["Our plan", "Strategy 2027"]), "wayfinding: cover invents nothing")
+import register_surface as rs
+prs, k = use("wayfinding")
+s = k.new_slide()
+rect = rs.ground(s, k.name, role="content", index=2)
+check(rect[1] > 0.4 and rect[2] > 5, "wayfinding: an ordinary page carries the sign strip above its content rect")
+
+
+# render review (Task 3): no route on the cover crosses the words, on any canvas
+for W, H in list(CANVASES.values()) + [(7.5, 7.5), (10.0, 5.625)]:
+    prs, k = use("wayfinding", W, H)
+    s = k.new_slide()
+    k.cover(s, kicker="A guide for the room", title="Bring it broken, take it home working",
+            subtitle="Once a month, on the corner", line="1")
+    conns = [sh for sh in s.shapes if sh._element.tag.endswith("cxnSp")]
+    hit = [txt_of(t)[:20] for c in conns for t in texts(s) if v2.meet(rect_of(c), rect_of(t))]
+    check(not hit, "wayfinding cover {}x{}: no route crosses the words {}".format(W, H, hit[:2]))
+
 for line in ok:
     print("  ok   " + line)
 if skipped:

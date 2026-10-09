@@ -141,6 +141,18 @@ LANGS = {
                   "mac": {"display": "Helvetica Neue", "body": "Helvetica Neue", "numeral": "Helvetica Neue"}},
         "ea": {"display": "sans", "body": "sans"}, "grain": 0, "frames": ["rect"],
         "forbids": ("confetti",), "cover": "low-left", "skeleton": "island"},
+    "wayfinding": {
+        "palette": {"ground": "F6F5F1", "ink": "16191E", "mute": "5A6070", "panel": "ECEAE3",
+                    "accents": ["D7262E", "0071BC", "00954C", "F2B705", "8E4FA1"], "text_accents": ["1B2A41"],
+                    "lines": ["D7262E", "0071BC", "00954C", "F2B705", "8E4FA1"],
+                    "sign": "1B2A41", "sign_ink": "FFFFFF", "sign_mute": "B9C3D4", "edge": "F2B705",
+                    "board": "0B0D10", "led": "FFB020", "board_mute": "9AA0AA",
+                    "exit": "007A3D", "exit_ink": "FFFFFF", "casing": "16191E"},
+        "fonts": {"both": {"display": "Arial", "body": "Arial", "numeral": "Arial", "board": "Courier New"},
+                  "mac": {"display": "Helvetica Neue", "body": "Helvetica Neue", "numeral": "Helvetica Neue",
+                          "board": "Menlo"}},
+        "ea": {"display": "sans", "body": "sans"}, "ea_heavy": True, "grain": 0, "frames": ["rect"],
+        "forbids": ("confetti",), "cover": "split-vertical", "skeleton": "band"},
 }
 
 # Each language's GROUNDS: its own light paper, and ONE contrast ground (user's decision, 2026-10-04). All four
@@ -224,16 +236,25 @@ VARIANTS = {
                              "line": "2A2F3A", "soft": "1E222B", "drop": "07080B", "primary_fill": "2563EB",
                              "off_line": "7A8294",
                              "states": {"primary": "5B8CFF", "on": "2DBE6C", "pending": "F5B83D", "error": "FF6B70"}}}},
+    "wayfinding": {
+        "light": {"label": "enamel", "label_zh": "珐琅白版", "grain": 0, "palette": LANGS["wayfinding"]["palette"]},
+        "night": {"label": "navy", "label_zh": "藏青夜间版", "grain": 0,
+                  "palette": {"ground": "1B2A41", "ink": "F2F4F8", "mute": "B9C3D4", "panel": "22344F",
+                              "accents": ["E8454C", "3D9BE0", "1DB66A", "F2B705", "B07CC6"], "text_accents": ["F2B705"],
+                              "lines": ["E8454C", "3D9BE0", "1DB66A", "F2B705", "B07CC6"],
+                              "sign": "0F1A2C", "sign_ink": "FFFFFF", "sign_mute": "B9C3D4", "edge": "F2B705",
+                              "board": "0B0D10", "led": "FFB020", "board_mute": "9AA0AA",
+                              "exit": "007A3D", "exit_ink": "FFFFFF", "casing": "0F1A2C"}}},
 }
-NATIVE = ("ink", "poster", "cutpaper", "drafting", "starlit", "broadsheet", "journal", "tally", "chalkboard", "interface")          # drawn, no pictures needed (vl_native.py)
+NATIVE = ("ink", "poster", "cutpaper", "drafting", "starlit", "broadsheet", "journal", "tally", "chalkboard", "interface", "wayfinding")          # drawn, no pictures needed (vl_native.py)
 # the pages on which a drawn language draws the caller's picture; image= anywhere else is refused, naming these — it
 # was dropped without a word, even a path to no file (robustness + docs audits, 2026-10-09)
 NATIVE_IMAGE_PAGES = {n: ("image_text", "quote") if n == "drafting" else ("image_text",) for n in NATIVE}
 IMAGE_LED = ("editorial", "soft", "collage", "storybook")    # built around the caller's pictures
 # words only the CALLER can give — never invented by the kit; absent means nothing is drawn
-NATIVE_EXTRAS = {"ink": ("seal",), "poster": ("highlight",), "cutpaper": ("icons",), "drafting": ("project",), "broadsheet": ('masthead', 'edition', 'inside', 'tags'), "journal": ('running', 'authors', 'abstract', 'margin'), "tally": ('tags', 'total'), "chalkboard": ('doodle', 'ordered'), "interface": ("crumb", "status", "actions", "toggles", "tags", "total")}
+NATIVE_EXTRAS = {"ink": ("seal",), "poster": ("highlight",), "cutpaper": ("icons",), "drafting": ("project",), "broadsheet": ('masthead', 'edition', 'inside', 'tags'), "journal": ('running', 'authors', 'abstract', 'margin'), "tally": ('tags', 'total'), "chalkboard": ('doodle', 'ordered'), "interface": ("crumb", "status", "actions", "toggles", "tags", "total"), "wayfinding": ("line", "ordered", "interchange", "board")}
 # the pages that DRAW each extra; on any other page it is refused, never silently dropped (non-Claude run, 2026-10-05)
-EXTRA_PAGES = {"highlight": ("cover", "section", "quote", "closing"), "icons": ("points",), "inside": ('cover',), "tags": ('points',), "authors": ('cover',), "abstract": ('cover',), "margin": ('points',), "total": ('data',), "doodle": ('cover', 'closing'), "ordered": ('points',), "actions": ("cover", "closing"), "toggles": ("cover",)}
+EXTRA_PAGES = {"highlight": ("cover", "section", "quote", "closing"), "icons": ("points",), "inside": ('cover',), "tags": ('points',), "authors": ('cover',), "abstract": ('cover',), "margin": ('points',), "total": ('data',), "doodle": ('cover', 'closing'), "ordered": ('points',), "actions": ("cover", "closing"), "toggles": ("cover",), "interchange": ("points",), "board": ("data",)}
 _ACTIVE = {}    # language -> the ground key use() set; rs.ground()/rs.card() (no kit) follow it
 _PAL_OVERRIDE = {}   # language -> the palette of the CURRENT page, for a language whose palette changes per page (poster)
 _MEMO = {}   # language -> the last composed page's remembered extras, for ordinary pages (rs.ground has no kit)
@@ -520,6 +541,11 @@ def _ground_interface(slide, role, index):
     import vl_native3
     return vl_native3.ordinary_window(slide)
 
+def _ground_wayfinding(slide, role, index):
+    """An ordinary page carries the sign strip; the content rect starts below it."""
+    import vl_native3
+    return vl_native3.ordinary_sign(slide)
+
 def _card_for(name):
     """The language's card: its panel colour; soft is rounded, the others square."""
     def card(slide, x, y, w, h, label=None):
@@ -546,6 +572,7 @@ _card_journal = _card_for("journal")
 _card_tally = _card_for("tally")
 _card_chalkboard = _card_for("chalkboard")
 _card_interface = _card_for("interface")
+_card_wayfinding = _card_for("wayfinding")
 
 
 for _n in LANGS:
@@ -681,6 +708,15 @@ TYPE = {
                   "status": (12, "body", True, "ink", False, 9), "action": (16, "body", True, "ink", False, 11),
                   "toggle": (16, "body", True, "ink", False, 11), "initials": (24, "display", True, "ink", False, 14),
                   "mark": (60, "display", True, "accent", False, 30)},
+    "wayfinding": {"kicker": (14, "body", True, "mute", False, 10), "title": (52, "display", True, "ink", False, 26),
+                   "subtitle": (20, "body", True, "ink", False, 12), "body": (17, "body", False, "ink", False, 11),
+                   "quote": (34, "display", True, "ink", False, 18), "attribution": (14, "body", True, "mute", False, 10),
+                   "number": (96, "board", True, "ink", False, 40), "label": (24, "board", False, "ink", False, 13),
+                   "note": (15, "body", False, "mute", False, 10), "caption": (12, "body", False, "mute", False, 9),
+                   "line": (20, "body", False, "ink", False, 12), "item_head": (22, "body", True, "ink", False, 13),
+                   "item_line": (15, "body", False, "mute", False, 10), "item_no": (18, "display", True, "ink", False, 12),
+                   "roundel": (18, "display", True, "ink", False, 11), "exit": (14, "body", True, "ink", False, 10),
+                   "row": (20, "board", False, "ink", False, 11), "mark": (60, "display", True, "accent", False, 30)},
 }
 
 # page -> its fields in column order (the caller's keyword names)
@@ -1997,6 +2033,15 @@ _SAMPLE_COPY_NATIVE = {
                                  attribution="Style sample")),
                   ("data", dict(number="12", label="of 40 teams switched", note="Style sample — your numbers go here.",
                                 total="40"))],
+    "wayfinding": [("cover", dict(kicker="Next stop", title="Our plan to reach one million riders",
+                                  subtitle="Strategy 2027", line="1")),
+                   ("points", dict(title="Four stops between sign-up and a paying customer", ordered=True,
+                                   items=[("Sign up", "Under two minutes, no card"), ("First project", "A template does the setup"),
+                                          ("Invite a teammate", "Work stops being solo"), ("Upgrade", "Billing when the team is in")],
+                                   interchange=[2])),
+                   ("quote", dict(quote="If a stranger can find the platform, anyone can.", attribution="Style sample")),
+                   ("data", dict(number="96.4%", label="Harbour line on time", note="Style sample — your numbers go here.",
+                                 board=[("North loop", "93.1%"), ("Riverside", "91.8%")]))],
 }
 
 
@@ -2125,6 +2170,8 @@ _DISPLAY_NAMES["chalkboard"] = "Chalkboard"
 _RATIONALE["chalkboard"] = "drawn, no pictures: a framed board, coloured chalk strokes, boxed steps, a circled figure"
 _DISPLAY_NAMES["interface"] = "Product interface"
 _RATIONALE["interface"] = "drawn, no pictures: every page an app screen — windows, status chips, a settings list, a dashboard card, a dialog"
+_DISPLAY_NAMES["wayfinding"] = "Wayfinding"
+_RATIONALE["wayfinding"] = "drawn, no pictures: metro lines converging on an interchange, station signs, a strip map for ordered steps, a departure board"
 
 
 def direction(name, *, fonts="both", ground="light", W=13.333, H=7.5):
