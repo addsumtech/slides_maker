@@ -34,6 +34,7 @@
 <p align="center">
   <a href="https://slides.addsum.top/cn/"><strong>视频介绍</strong></a> ·
   <a href="#模板库"><strong>模板库</strong></a> ·
+  <a href="#设计语言"><strong>设计语言</strong></a> ·
   <a href="#slide-maker-不一样在哪"><strong>不一样在哪</strong></a> ·
   <a href="#它是怎么干活的"><strong>工作流程</strong></a> ·
   <a href="#快速开始"><strong>快速开始</strong></a> ·
@@ -152,108 +153,95 @@ cp -r slides_maker-site/templates/decks/zh/nvidia-overview ~/.codex/slide-templa
 两套的版式一致，文案语言不同。
 
 
-## 设计语言：四套以图为主的整体风格
+## 设计语言
 
-除了模板库，slide-maker 还内置四套完整的**设计语言**：专为带图片的 deck 准备的整体风格，每套都有自己的字体气质（只用系统字体）、纸面质感、配图处理方式和六种页面版式（封面、章节、图文、引言、数据、结尾）。它们只排你自己的文字和图片，不会编造任何词、数字或名字。
+除了模板库，slide-maker 还内置十三套完整的**设计语言**：每套都有自己的字体气质（只用系统字体）、画面质感，以及封面、章节、图文、引言、数据、结尾这几种页面版式。其中四套以图为主，排你的照片或一组插画；另外九套用 PowerPoint 原生形状画出自己的画面，每个元素都能编辑，所以没有图片、也没有生图工具的 deck 同样能有完整的风格，这九套还多一种 `points` 要点页，放两到四个要点。所有设计语言都只排你自己的文字和图片，不会编造任何词、数字或名字：印章上的字、高亮的词、图标、项目名、报头、页眉、标签、总数这类内容只来自你。
 
 <table>
   <tr>
-    <td align="center" width="50%">
-      <img src="skills/slide-maker/assets/vl/samples/editorial.jpg" alt="editorial 设计语言示例页"><br/>
-      <sub><strong>editorial（杂志）</strong> · 安静的照片、大号衬线标题、引文、暖色纸面<br/>
-深色底版本：<a href="skills/slide-maker/assets/vl/samples/editorial-ink.jpg">ink</a></sub>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/editorial.jpg"><img src="skills/slide-maker/assets/vl/samples/editorial.jpg" alt="editorial 设计语言示例页"></a><br/>
+      <sub><strong>editorial（杂志）</strong> · 配你的照片<br/>安静的照片、大号衬线标题、引文、暖色纸面<br/>
+      深色底版本： <a href="skills/slide-maker/assets/vl/samples/editorial-ink.jpg">ink</a></sub>
     </td>
-    <td align="center" width="50%">
-      <img src="skills/slide-maker/assets/vl/samples/soft.jpg" alt="soft 设计语言示例页"><br/>
-      <sub><strong>soft（柔和）</strong> · 温暖的照片、圆润无衬线字、大留白、奶油底配粉彩形状<br/>
-深色底版本：<a href="skills/slide-maker/assets/vl/samples/soft-dusk.jpg">dusk</a></sub>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/soft.jpg"><img src="skills/slide-maker/assets/vl/samples/soft.jpg" alt="soft 设计语言示例页"></a><br/>
+      <sub><strong>soft（柔和）</strong> · 配你的照片<br/>温暖的照片、圆润无衬线字、大留白、奶油底配粉彩形状<br/>
+      深色底版本： <a href="skills/slide-maker/assets/vl/samples/soft-dusk.jpg">dusk</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/collage.jpg"><img src="skills/slide-maker/assets/vl/samples/collage.jpg" alt="collage 设计语言示例页"></a><br/>
+      <sub><strong>collage（拼贴）</strong> · 配你的照片<br/>胶带贴住的照片、粗重标题、荧光笔标签、牛皮纸纹理<br/>
+      深色底版本： <a href="skills/slide-maker/assets/vl/samples/collage-slate.jpg">slate</a></sub>
     </td>
   </tr>
   <tr>
-    <td align="center" width="50%">
-      <img src="skills/slide-maker/assets/vl/samples/collage.jpg" alt="collage 设计语言示例页"><br/>
-      <sub><strong>collage（拼贴）</strong> · 胶带贴住的照片、粗重标题、荧光笔标签、牛皮纸纹理<br/>
-深色底版本：<a href="skills/slide-maker/assets/vl/samples/collage-slate.jpg">slate</a></sub>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/storybook.jpg"><img src="skills/slide-maker/assets/vl/samples/storybook.jpg" alt="storybook 设计语言示例页"></a><br/>
+      <sub><strong>storybook（绘本）</strong> · 配一组插画<br/>一组晕染进纸面的水彩插画、衬线字<br/>
+      彩色底版本： <a href="skills/slide-maker/assets/vl/samples/storybook-meadow.jpg">meadow</a></sub>
     </td>
-    <td align="center" width="50%">
-      <img src="skills/slide-maker/assets/vl/samples/storybook.jpg" alt="storybook 设计语言示例页"><br/>
-      <sub><strong>storybook（绘本）</strong> · 一组晕染进纸面的水彩插画、衬线字<br/>
-彩色底版本：<a href="skills/slide-maker/assets/vl/samples/storybook-meadow.jpg">meadow</a></sub>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/ink.jpg"><img src="skills/slide-maker/assets/vl/samples/ink.jpg" alt="ink 设计语言示例页"></a><br/>
+      <sub><strong>ink（水墨）</strong> · 原生绘制，无需图片<br/>雾中远山、中日文竖排、手刻印章、墨圈托住数字<br/>
+      深色底版本： <a href="skills/slide-maker/assets/vl/samples/ink-night.jpg">night</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/poster.jpg"><img src="skills/slide-maker/assets/vl/samples/poster.jpg" alt="poster 设计语言示例页"></a><br/>
+      <sub><strong>poster（海报大字）</strong> · 原生绘制，无需图片<br/>字就是画面，每页一种饱和色场<br/>
+      浅色底版本： <a href="skills/slide-maker/assets/vl/samples/poster-paper.jpg">paper</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/cutpaper.jpg"><img src="skills/slide-maker/assets/vl/samples/cutpaper.jpg" alt="cutpaper 设计语言示例页"></a><br/>
+      <sub><strong>cutpaper（剪纸层叠）</strong> · 原生绘制，无需图片<br/>层层彩纸剪出的小景，标题卡插在山丘之间<br/>
+      深色底版本： <a href="skills/slide-maker/assets/vl/samples/cutpaper-night.jpg">night</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/drafting.jpg"><img src="skills/slide-maker/assets/vl/samples/drafting.jpg" alt="drafting 设计语言示例页"></a><br/>
+      <sub><strong>drafting（蓝图技术线稿）</strong> · 原生绘制，无需图片<br/>带编号的图纸、每个要点一层等轴测板、带尺寸线的数字<br/>
+      晒图蓝版本： <a href="skills/slide-maker/assets/vl/samples/drafting-cyanotype.jpg">cyanotype</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/starlit.jpg"><img src="skills/slide-maker/assets/vl/samples/starlit.jpg" alt="starlit 设计语言示例页"></a><br/>
+      <sub><strong>starlit（星夜）</strong> · 原生绘制，无需图片<br/>星空与新月，要点连成星座，数字托在光晕里<br/>
+      黎明版本： <a href="skills/slide-maker/assets/vl/samples/starlit-dawn.jpg">dawn</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/broadsheet.jpg"><img src="skills/slide-maker/assets/vl/samples/broadsheet.jpg" alt="broadsheet 设计语言示例页"></a><br/>
+      <sub><strong>broadsheet（报纸头版）</strong> · 原生绘制，无需图片<br/>报头、大标题加导语、报纸分栏、两条线夹住的引语<br/>
+      粉报版本： <a href="skills/slide-maker/assets/vl/samples/broadsheet-salmon.jpg">salmon</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/journal.jpg"><img src="skills/slide-maker/assets/vl/samples/journal.jpg" alt="journal 设计语言示例页"></a><br/>
+      <sub><strong>journal（学术期刊）</strong> · 原生绘制，无需图片<br/>页眉、摘要、带编号和图注的完整插图、页边批注<br/>
+      期刊绿版本： <a href="skills/slide-maker/assets/vl/samples/journal-green.jpg">green</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/tally.jpg"><img src="skills/slide-maker/assets/vl/samples/tally.jpg" alt="tally 设计语言示例页"></a><br/>
+      <sub><strong>tally（数据账本）</strong> · 原生绘制，无需图片<br/>细网格、粗体大字、药丸标签、一个巨大的数字和它的占比条<br/>
+      深色底版本： <a href="skills/slide-maker/assets/vl/samples/tally-night.jpg">night</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/chalkboard.jpg"><img src="skills/slide-maker/assets/vl/samples/chalkboard.jpg" alt="chalkboard 设计语言示例页"></a><br/>
+      <sub><strong>chalkboard（黑板报）</strong> · 原生绘制，无需图片<br/>木框黑板、彩色粉笔线、按步骤的粉笔框、圈起来的数字<br/>
+      石板版本： <a href="skills/slide-maker/assets/vl/samples/chalkboard-slate.jpg">slate</a></sub>
     </td>
   </tr>
 </table>
 
-<p align="center"><sub>以上是风格示例（示例内容，不是你的 deck）。每套还各有一个对比色底，你最近的 deck 都是浅色纸面时会自动换用。</sub></p>
+<p align="center"><sub>以上是风格示例（示例内容，不是你的 deck）。点图看大图；图下的链接是这套语言的另一种底色，你最近的 deck 都已经用第一种底色时会自动换用。星夜和黑板报两种底色都是深色。</sub></p>
 
-**什么时候会用到。** 只要你的 deck 会带照片或插画（你自己的，或 slide-maker 帮你生成、抓取的），它给你看的候选风格里至少有一个是设计语言：照片按气质对应 editorial、soft 或 collage，插画对应 storybook。也可以直接点名，比如"用 collage 风格"。想打开可编辑的示例 deck，在本地生成：
+**什么时候会用到。** 只要你的 deck 会带照片或插画（你自己的，或 slide-maker 帮你生成、抓取的），它给你看的候选风格里至少有一个是以图为主的设计语言：照片按气质对应 editorial、soft 或 collage，插画对应 storybook。deck 没有图片时，候选风格里会有一套最贴合主题的原生绘制语言（文化、器物 → 水墨；发布会、宣言 → 海报大字；教学、儿童 → 剪纸层叠；科研、工程 → 蓝图技术线稿；年度回顾 → 星夜；通讯、周报 → 报纸头版；论文、组会 → 学术期刊；数据复盘 → 数据账本；课堂讲解 → 黑板报），选择理由会一并记录。也可以直接点名，比如"用 collage 风格"。想打开可编辑的示例 deck，在本地生成：
 
 ```bash
 python3 skills/slide-maker/scripts/visual_languages.py --sample out/
 ```
-
-## 设计语言：九套原生绘制的风格，不需要图片
-
-另外九套设计语言用 PowerPoint 原生形状画出自己的画面，每个元素都能编辑。所以没有图片、也没有生图工具的 deck，同样能有完整的风格。每套都有两种底色（星夜和黑板报两种都是深色），还多一种 `points` 要点页，放两到四个要点。印章上的字、高亮的词、图标、项目名、报头、页眉、标签、总数这类内容只来自你，不会被编造。
-
-<table>
-  <tr>
-    <td align="center" width="50%">
-      <img src="skills/slide-maker/assets/vl/samples/ink.jpg" alt="ink 设计语言示例页"><br/>
-      <sub><strong>ink（水墨）</strong> · 雾中远山、中日文竖排、手刻印章、墨圈托住数字<br/>
-深色底版本：<a href="skills/slide-maker/assets/vl/samples/ink-night.jpg">night</a></sub>
-    </td>
-    <td align="center" width="50%">
-      <img src="skills/slide-maker/assets/vl/samples/poster.jpg" alt="poster 设计语言示例页"><br/>
-      <sub><strong>poster（海报大字）</strong> · 字就是画面，每页一种饱和色场<br/>
-浅色底版本：<a href="skills/slide-maker/assets/vl/samples/poster-paper.jpg">paper</a></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <img src="skills/slide-maker/assets/vl/samples/cutpaper.jpg" alt="cutpaper 设计语言示例页"><br/>
-      <sub><strong>cutpaper（剪纸层叠）</strong> · 层层彩纸剪出的小景，标题卡插在山丘之间<br/>
-深色底版本：<a href="skills/slide-maker/assets/vl/samples/cutpaper-night.jpg">night</a></sub>
-    </td>
-    <td align="center" width="50%">
-      <img src="skills/slide-maker/assets/vl/samples/drafting.jpg" alt="drafting 设计语言示例页"><br/>
-      <sub><strong>drafting（蓝图技术线稿）</strong> · 带编号的图纸、每个要点一层等轴测板、带尺寸线的数字<br/>
-晒图蓝版本：<a href="skills/slide-maker/assets/vl/samples/drafting-cyanotype.jpg">cyanotype</a></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <img src="skills/slide-maker/assets/vl/samples/starlit.jpg" alt="starlit 设计语言示例页"><br/>
-      <sub><strong>starlit（星夜）</strong> · 星空与新月，要点连成星座，数字托在光晕里<br/>
-黎明版本：<a href="skills/slide-maker/assets/vl/samples/starlit-dawn.jpg">dawn</a></sub>
-    </td>
-    <td align="center" width="50%">
-      <img src="skills/slide-maker/assets/vl/samples/broadsheet.jpg" alt="broadsheet 设计语言示例页"><br/>
-      <sub><strong>broadsheet（报纸头版）</strong> · 报头、大标题加导语、报纸分栏、两条线夹住的引语<br/>
-粉报版本：<a href="skills/slide-maker/assets/vl/samples/broadsheet-salmon.jpg">salmon</a></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <img src="skills/slide-maker/assets/vl/samples/journal.jpg" alt="journal 设计语言示例页"><br/>
-      <sub><strong>journal（学术期刊）</strong> · 页眉、摘要、带编号和图注的完整插图、页边批注<br/>
-期刊绿版本：<a href="skills/slide-maker/assets/vl/samples/journal-green.jpg">green</a></sub>
-    </td>
-    <td align="center" width="50%">
-      <img src="skills/slide-maker/assets/vl/samples/tally.jpg" alt="tally 设计语言示例页"><br/>
-      <sub><strong>tally（数据账本）</strong> · 细网格、粗体大字、药丸标签、一个巨大的数字和它的占比条<br/>
-深色底版本：<a href="skills/slide-maker/assets/vl/samples/tally-night.jpg">night</a></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <img src="skills/slide-maker/assets/vl/samples/chalkboard.jpg" alt="chalkboard 设计语言示例页"><br/>
-      <sub><strong>chalkboard（黑板报）</strong> · 木框黑板、彩色粉笔线、按步骤的粉笔框、圈起来的数字<br/>
-石板版本：<a href="skills/slide-maker/assets/vl/samples/chalkboard-slate.jpg">slate</a></sub>
-    </td>
-  </tr>
-</table>
-
-**什么时候会用到。** 原生绘制，不需要图片——deck 没有图片时会推荐。候选风格里会有一套最贴合主题的（文化、器物 → 水墨；发布会、宣言 → 海报大字；教学、儿童 → 剪纸层叠；科研、工程 → 蓝图技术线稿；年度回顾 → 星夜；通讯、周报 → 报纸头版；论文、组会 → 学术期刊；数据复盘 → 数据账本；课堂讲解 → 黑板报），选择理由会一并记录。
 
 ---
 

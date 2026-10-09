@@ -34,6 +34,7 @@ Native-editable PPTX is now table stakes; several tools do it. Rarer is a deck t
 <p align="center">
   <a href="https://slides.addsum.top/"><strong>Intro video</strong></a> ·
   <a href="#template-gallery"><strong>Templates</strong></a> ·
+  <a href="#visual-languages"><strong>Visual languages</strong></a> ·
   <a href="#what-makes-slide-maker-different"><strong>What's different</strong></a> ·
   <a href="#how-it-works"><strong>How it works</strong></a> ·
   <a href="#quick-start"><strong>Quick start</strong></a> ·
@@ -152,108 +153,95 @@ cp -r slides_maker-site/templates/decks/en/nvidia-overview ~/.codex/slide-templa
 The layouts match; only the copy language differs.
 
 
-## Visual languages: four image-led looks
+## Visual languages
 
-Beside the template gallery, slide-maker ships four complete **visual languages**: whole looks for decks that carry pictures, each with a type voice from system fonts, a paper surface, its own image treatment and six page layouts (cover, section, image + text, quote, data, closing). They lay out *your* words and pictures and never invent a word, a number or a name.
+Beside the template gallery, slide-maker ships thirteen complete **visual languages**: whole looks, each with a type voice from system fonts, its own surface and page layouts for cover, section, image + text, quote, data and closing. Four are built around pictures and carry your photos or an illustration series. Nine draw their own surface with native, editable shapes, so a deck with no pictures (and no image tool) still gets a finished look; those nine also have a `points` page for two to four ideas. All of them lay out *your* words and pictures and never invent a word, a number or a name: a seal's characters, a highlighted word, icons, a project name, a masthead, a running head, tags and a total come only from you.
 
 <table>
   <tr>
-    <td align="center" width="50%">
-      <img src="skills/slide-maker/assets/vl/samples/editorial.jpg" alt="editorial visual language sample pages"><br/>
-      <sub><strong>editorial</strong> · quiet photographs, large serif display, pull quotes, warm paper<br/>
-contrast ground: <a href="skills/slide-maker/assets/vl/samples/editorial-ink.jpg">ink</a></sub>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/editorial.jpg"><img src="skills/slide-maker/assets/vl/samples/editorial.jpg" alt="editorial visual language sample pages"></a><br/>
+      <sub><strong>editorial</strong> · with your photos<br/>quiet photographs, large serif display, pull quotes, warm paper<br/>
+      contrast ground: <a href="skills/slide-maker/assets/vl/samples/editorial-ink.jpg">ink</a></sub>
     </td>
-    <td align="center" width="50%">
-      <img src="skills/slide-maker/assets/vl/samples/soft.jpg" alt="soft visual language sample pages"><br/>
-      <sub><strong>soft</strong> · warm photographs, rounded sans, generous space, cream with pastel shapes<br/>
-contrast ground: <a href="skills/slide-maker/assets/vl/samples/soft-dusk.jpg">dusk</a></sub>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/soft.jpg"><img src="skills/slide-maker/assets/vl/samples/soft.jpg" alt="soft visual language sample pages"></a><br/>
+      <sub><strong>soft</strong> · with your photos<br/>warm photographs, rounded sans, generous space, cream with pastel shapes<br/>
+      contrast ground: <a href="skills/slide-maker/assets/vl/samples/soft-dusk.jpg">dusk</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/collage.jpg"><img src="skills/slide-maker/assets/vl/samples/collage.jpg" alt="collage visual language sample pages"></a><br/>
+      <sub><strong>collage</strong> · with your photos<br/>loud photographs as taped prints, heavy headlines, highlighter kickers, kraft grain<br/>
+      contrast ground: <a href="skills/slide-maker/assets/vl/samples/collage-slate.jpg">slate</a></sub>
     </td>
   </tr>
   <tr>
-    <td align="center" width="50%">
-      <img src="skills/slide-maker/assets/vl/samples/collage.jpg" alt="collage visual language sample pages"><br/>
-      <sub><strong>collage</strong> · loud photographs as taped prints, heavy headlines, highlighter kickers, kraft grain<br/>
-contrast ground: <a href="skills/slide-maker/assets/vl/samples/collage-slate.jpg">slate</a></sub>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/storybook.jpg"><img src="skills/slide-maker/assets/vl/samples/storybook.jpg" alt="storybook visual language sample pages"></a><br/>
+      <sub><strong>storybook</strong> · with an illustration series<br/>a watercolour illustration series melting into the paper, serif type<br/>
+      contrast ground: <a href="skills/slide-maker/assets/vl/samples/storybook-meadow.jpg">meadow</a></sub>
     </td>
-    <td align="center" width="50%">
-      <img src="skills/slide-maker/assets/vl/samples/storybook.jpg" alt="storybook visual language sample pages"><br/>
-      <sub><strong>storybook</strong> · a watercolour illustration series melting into the paper, serif type<br/>
-contrast ground: <a href="skills/slide-maker/assets/vl/samples/storybook-meadow.jpg">meadow</a></sub>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/ink.jpg"><img src="skills/slide-maker/assets/vl/samples/ink.jpg" alt="ink visual language sample pages"></a><br/>
+      <sub><strong>ink</strong> · drawn, no pictures needed<br/>misty ink ridges, vertical Chinese and Japanese, a carved seal, an ensō around the figure<br/>
+      contrast ground: <a href="skills/slide-maker/assets/vl/samples/ink-night.jpg">night</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/poster.jpg"><img src="skills/slide-maker/assets/vl/samples/poster.jpg" alt="poster visual language sample pages"></a><br/>
+      <sub><strong>poster</strong> · drawn, no pictures needed<br/>the headline is the picture, one saturated colour field per page<br/>
+      contrast ground: <a href="skills/slide-maker/assets/vl/samples/poster-paper.jpg">paper</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/cutpaper.jpg"><img src="skills/slide-maker/assets/vl/samples/cutpaper.jpg" alt="cutpaper visual language sample pages"></a><br/>
+      <sub><strong>cutpaper</strong> · drawn, no pictures needed<br/>a layered paper diorama, the title card tucked between the hills<br/>
+      contrast ground: <a href="skills/slide-maker/assets/vl/samples/cutpaper-night.jpg">night</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/drafting.jpg"><img src="skills/slide-maker/assets/vl/samples/drafting.jpg" alt="drafting visual language sample pages"></a><br/>
+      <sub><strong>drafting</strong> · drawn, no pictures needed<br/>a numbered drawing sheet, one iso layer per point, a dimensioned figure<br/>
+      contrast ground: <a href="skills/slide-maker/assets/vl/samples/drafting-cyanotype.jpg">cyanotype</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/starlit.jpg"><img src="skills/slide-maker/assets/vl/samples/starlit.jpg" alt="starlit visual language sample pages"></a><br/>
+      <sub><strong>starlit</strong> · drawn, no pictures needed<br/>a night sky and a crescent moon, points as a constellation, the figure in a glow<br/>
+      contrast ground: <a href="skills/slide-maker/assets/vl/samples/starlit-dawn.jpg">dawn</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/broadsheet.jpg"><img src="skills/slide-maker/assets/vl/samples/broadsheet.jpg" alt="broadsheet visual language sample pages"></a><br/>
+      <sub><strong>broadsheet</strong> · drawn, no pictures needed<br/>a masthead strip, a headline and standfirst, newspaper columns, a pull quote between rules<br/>
+      contrast ground: <a href="skills/slide-maker/assets/vl/samples/broadsheet-salmon.jpg">salmon</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/journal.jpg"><img src="skills/slide-maker/assets/vl/samples/journal.jpg" alt="journal visual language sample pages"></a><br/>
+      <sub><strong>journal</strong> · drawn, no pictures needed<br/>a running head, an abstract, numbered figures with captions, margin notes<br/>
+      contrast ground: <a href="skills/slide-maker/assets/vl/samples/journal-green.jpg">green</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/tally.jpg"><img src="skills/slide-maker/assets/vl/samples/tally.jpg" alt="tally visual language sample pages"></a><br/>
+      <sub><strong>tally</strong> · drawn, no pictures needed<br/>a fine grid, heavy type, pill tags, one giant number with its share bar<br/>
+      contrast ground: <a href="skills/slide-maker/assets/vl/samples/tally-night.jpg">night</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/chalkboard.jpg"><img src="skills/slide-maker/assets/vl/samples/chalkboard.jpg" alt="chalkboard visual language sample pages"></a><br/>
+      <sub><strong>chalkboard</strong> · drawn, no pictures needed<br/>a framed board, coloured chalk strokes, boxed steps, a circled figure<br/>
+      contrast ground: <a href="skills/slide-maker/assets/vl/samples/chalkboard-slate.jpg">slate</a></sub>
     </td>
   </tr>
 </table>
 
-<p align="center"><sub>Style samples on sample content, not your deck. Each language also has one contrast ground, taken automatically when your recent decks already sit on light paper.</sub></p>
+<p align="center"><sub>Style samples on sample content, not your deck. Click a sample for the full-size sheet; the link under it opens the language's second ground, taken automatically when your recent decks already sit on its first. Starlit and chalkboard are dark on both.</sub></p>
 
-**How one gets picked.** When your deck will carry photos or illustrations (your own, or ones slide-maker generates or fetches for you), at least one of the candidate looks it shows you is a visual language: photos lead to editorial, soft or collage by tone, illustrations to storybook. Or ask for one by name ("use the collage look"). To open the samples as editable decks, build them locally:
+**How one gets picked.** When your deck will carry photos or illustrations (your own, or ones slide-maker generates or fetches for you), at least one of the candidate looks it shows you is a picture language: photos lead to editorial, soft or collage by tone, illustrations to storybook. When it has none, the drawn language that fits the topic is among the candidates (culture and craft → ink, launch or manifesto → poster, teaching and children → cutpaper, research and engineering → drafting, a year in review → starlit, a newsletter → broadsheet, a paper or lab meeting → journal, a metrics review → tally, a lesson → chalkboard), and the reason is recorded with the choice. Or ask for one by name ("use the collage look"). To open the samples as editable decks, build them locally:
 
 ```bash
 python3 skills/slide-maker/scripts/visual_languages.py --sample out/
 ```
-
-## Visual languages: nine drawn looks, no pictures needed
-
-Nine more languages draw their own surface with native, editable shapes, so a deck with no pictures (and no image tool) still gets a finished look. Each has two grounds (starlit and chalkboard are dark on both) and a `points` page for two to four ideas; words the kit cannot invent (a seal's characters, a highlighted word, icons, a project name, a masthead, a running head, tags, a total) come only from you.
-
-<table>
-  <tr>
-    <td align="center" width="50%">
-      <img src="skills/slide-maker/assets/vl/samples/ink.jpg" alt="ink visual language sample pages"><br/>
-      <sub><strong>ink</strong> · misty ink ridges, vertical Chinese and Japanese, a carved seal, an ensō around the figure<br/>
-contrast ground: <a href="skills/slide-maker/assets/vl/samples/ink-night.jpg">night</a></sub>
-    </td>
-    <td align="center" width="50%">
-      <img src="skills/slide-maker/assets/vl/samples/poster.jpg" alt="poster visual language sample pages"><br/>
-      <sub><strong>poster</strong> · the headline is the picture, one saturated colour field per page<br/>
-contrast ground: <a href="skills/slide-maker/assets/vl/samples/poster-paper.jpg">paper</a></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <img src="skills/slide-maker/assets/vl/samples/cutpaper.jpg" alt="cutpaper visual language sample pages"><br/>
-      <sub><strong>cutpaper</strong> · a layered paper diorama, the title card tucked between the hills<br/>
-contrast ground: <a href="skills/slide-maker/assets/vl/samples/cutpaper-night.jpg">night</a></sub>
-    </td>
-    <td align="center" width="50%">
-      <img src="skills/slide-maker/assets/vl/samples/drafting.jpg" alt="drafting visual language sample pages"><br/>
-      <sub><strong>drafting</strong> · a numbered drawing sheet, one iso layer per point, a dimensioned figure<br/>
-contrast ground: <a href="skills/slide-maker/assets/vl/samples/drafting-cyanotype.jpg">cyanotype</a></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <img src="skills/slide-maker/assets/vl/samples/starlit.jpg" alt="starlit visual language sample pages"><br/>
-      <sub><strong>starlit</strong> · a night sky and a crescent moon, points as a constellation, the figure in a glow<br/>
-contrast ground: <a href="skills/slide-maker/assets/vl/samples/starlit-dawn.jpg">dawn</a></sub>
-    </td>
-    <td align="center" width="50%">
-      <img src="skills/slide-maker/assets/vl/samples/broadsheet.jpg" alt="broadsheet visual language sample pages"><br/>
-      <sub><strong>broadsheet</strong> · a masthead strip, a headline and standfirst, newspaper columns, a pull quote between rules<br/>
-contrast ground: <a href="skills/slide-maker/assets/vl/samples/broadsheet-salmon.jpg">salmon</a></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <img src="skills/slide-maker/assets/vl/samples/journal.jpg" alt="journal visual language sample pages"><br/>
-      <sub><strong>journal</strong> · a running head, an abstract, numbered figures with captions, margin notes<br/>
-contrast ground: <a href="skills/slide-maker/assets/vl/samples/journal-green.jpg">green</a></sub>
-    </td>
-    <td align="center" width="50%">
-      <img src="skills/slide-maker/assets/vl/samples/tally.jpg" alt="tally visual language sample pages"><br/>
-      <sub><strong>tally</strong> · a fine grid, heavy type, pill tags, one giant number with its share bar<br/>
-contrast ground: <a href="skills/slide-maker/assets/vl/samples/tally-night.jpg">night</a></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <img src="skills/slide-maker/assets/vl/samples/chalkboard.jpg" alt="chalkboard visual language sample pages"><br/>
-      <sub><strong>chalkboard</strong> · a framed board, coloured chalk strokes, boxed steps, a circled figure<br/>
-contrast ground: <a href="skills/slide-maker/assets/vl/samples/chalkboard-slate.jpg">slate</a></sub>
-    </td>
-  </tr>
-</table>
-
-**How one gets picked.** Drawn, no pictures needed — offered when your deck has none: the one that fits the topic is among the candidate looks (culture and craft → ink, launch or manifesto → poster, teaching and children → cutpaper, research and engineering → drafting, a year in review → starlit, a newsletter → broadsheet, a paper or lab meeting → journal, a metrics review → tally, a lesson → chalkboard), and the reason is recorded with the choice.
 
 ---
 
