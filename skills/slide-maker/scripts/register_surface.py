@@ -920,7 +920,10 @@ def register(name, *, ground=None, card=None, forbids=(), source=None):
             "gallery's look with yours, and every later deck asking for {!r} would get something "
             "else. Invent a name from the subject's own world.".format(name, name))
     prior = BESPOKE.get(key)
-    if prior is not None and str(prior.get("source") or "") != str(source or ""):
+    def _same_file(a, b):           # one file under two spellings (a symlinked skill folder) is not a rival
+        return (str(a or "") == str(b or "")
+                or bool(a and b) and os.path.realpath(os.path.abspath(str(a))) == os.path.realpath(os.path.abspath(str(b))))
+    if prior is not None and not _same_file(prior.get("source"), source):
         raise ValueError(
             "{!r} is already registered by {} — registering it again from {} would silently replace that kit for "
             "every deck that asks for it. Pick another name.".format(

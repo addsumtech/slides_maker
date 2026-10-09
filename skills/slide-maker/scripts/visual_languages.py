@@ -737,7 +737,7 @@ def _unbreakable_overwide(k, field, text, size, w):
     import display_type as dt
     if dk._has_cjk(text) and not any(dk._is_hangul(ord(c)) for c in text):
         return None
-    role, bold = TYPE[k.name][field][1], TYPE[k.name][field][2]
+    role, bold = TYPE[k.name][field][1], _weight(k, field, text)
     for word in text.split():
         if dk._has_cjk(word):
             continue
@@ -754,8 +754,16 @@ def _outlinable(k, text):
     return k.name == "collage" and len(text) <= 6 and dt.covers(k.face("numeral"), text)
 
 
+def _weight(k, field, text):
+    """The weight a field's run RENDERS in, which every measure must use: Kit.run sets CJK display type bold where
+    the Latin face has no CJK (ea_heavy: collage, poster, tally), and bold is wider — measured at the table's
+    light weight, "用 GPT-5 做 3 件事" planned one line and the lint (and the render) set two (2026-10-09)."""
+    role, bold = TYPE[k.name][field][1], TYPE[k.name][field][2]
+    return bool(bold) or (dk._has_cjk(text) and role in ("display", "numeral") and bool(k.L.get("ea_heavy")))
+
+
 def _field_height(k, field, text, size, w):
-    _sz, role, bold = size, TYPE[k.name][field][1], TYPE[k.name][field][2]
+    _sz, role, bold = size, TYPE[k.name][field][1], _weight(k, field, text)
     if field == "number" and _outlinable(k, text):
         return size / 72.0 * 1.0                                   # an outlined picture, one line
     runs = [(text, bold)]
@@ -771,7 +779,7 @@ def _field_height(k, field, text, size, w):
 
 def _widest_word_fits(k, field, text, size, w):
     import display_type as dt
-    role, bold = TYPE[k.name][field][1], TYPE[k.name][field][2]
+    role, bold = TYPE[k.name][field][1], _weight(k, field, text)
     korean = any(dk._is_hangul(ord(c)) for c in text)
     if dk._has_cjk(text) and not korean:
         return True                       # Chinese/Japanese break between characters; Korean words do not
@@ -786,7 +794,7 @@ def _break_lines(k, field, text, size, w):
     the measure — in pure CJK text only, as measure_text; a closing bracket, or a second mark, takes the hung
     mark and the ideograph before it down; an opening bracket never ends a line."""
     import display_type as dt
-    role, bold, italic = TYPE[k.name][field][1], TYPE[k.name][field][2], TYPE[k.name][field][4]
+    role, bold, italic = TYPE[k.name][field][1], _weight(k, field, text), TYPE[k.name][field][4]
     cjk = dk._has_cjk(text)
     face = k.ea_face(role, text) if cjk else k.face(role)
     italic = italic and not cjk
@@ -870,7 +878,7 @@ def _clause_cuts(text):
 def _one_line(k, f, seg, size, w):
     """The segment sits on ONE line by both models (the glyph break and measure_text, which lint reads), with
     3% to spare for a renderer a little wider than either."""
-    role, bold = TYPE[k.name][f][1], TYPE[k.name][f][2]
+    role, bold = TYPE[k.name][f][1], _weight(k, f, seg)
     face = k.ea_face(role, seg) if dk._has_cjk(seg) else k.face(role)
     ww = w * 0.97
     return (len(_break_lines(k, f, seg, size, ww)) == 1
@@ -921,7 +929,7 @@ def _balanced_width(k, f, t, sz, w):
     n = len(_break_lines(k, f, t, sz, w))
     if n < 2:
         return None
-    role, bold = TYPE[k.name][f][1], TYPE[k.name][f][2]
+    role, bold = TYPE[k.name][f][1], _weight(k, f, t)
     face = k.ea_face(role, t) if dk._has_cjk(t) else k.face(role)
     full = dt._glyph_width(t, sz, face, bold) or 0
     wb = full / n + _INSET

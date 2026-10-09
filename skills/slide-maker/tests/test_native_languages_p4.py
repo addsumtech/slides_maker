@@ -14,6 +14,17 @@ import ooxml_safety as ox
 ok, bad = [], []
 def check(cond, why):
     (ok if cond else bad).append(why)
+# Face-precise checks (as test_visual_languages): a Chinese line count is only measurable with the CJK faces the kit
+# names. The ubuntu CI runner has none of them — SimSun / Microsoft YaHei resolve to a DejaVu stand-in with no CJK
+# glyphs — so those checks record a SKIP there, printed at the end, instead of failing on the stand-in's widths.
+FACES_HERE = sys.platform == "darwin" and not any(dk._font_substituted(f) for f in (
+    "Songti SC", "Hiragino Sans GB", "Georgia", "Times New Roman", "Arial", "Arial Black", "Trebuchet MS"))
+skipped = []
+def check_mac(cond, why):
+    if FACES_HERE:
+        check(cond, why)
+    else:
+        skipped.append(why)
 
 def lum(h):
     c = [int(h[i:i + 2], 16) / 255 for i in (0, 2, 4)]
@@ -620,7 +631,7 @@ s = k.new_slide()
 k.points(s, title="叶子做的三件事", items=[("吸收阳光", "叶绿素抓住光的能量"), ("吸进水和二氧化碳", "根吸水，叶子吸二氧化碳"),
                                          ("做出糖和氧气", "糖留给植物，氧气放出来")])
 paras = {tuple(p_.text for p_ in sh.text_frame.paragraphs) for sh in texts(s)}
-check(("根吸水，", "叶子吸二氧化碳") in paras and ("糖留给植物，", "氧气放出来") in paras,
+check_mac(("根吸水，", "叶子吸二氧化碳") in paras and ("糖留给植物，", "氧气放出来") in paras,
       "chalkboard: a wrapping Chinese body breaks at its clause ({})".format(sorted(paras)[:6]))
 # an ordinary page is a framed board; its content rect sits inside the frame
 import register_surface as rs
@@ -665,7 +676,7 @@ for name in ("broadsheet", "starlit"):
     k.points(s, title="修理之夜", items=[("共享工具", "一抽屉螺丝刀。"), ("敞开大门", "不用预约。"), ("步行可达", "十分钟。"), ("记下每次修理", "每张桌一本笔记。")])
     hd = [sh for sh in texts(s) if txt_of(sh) == "记下每次修理"][0]
     sz = hd.text_frame.paragraphs[0].runs[0].font.size.pt
-    check(hd.height / EMU <= sz / 72.0 * 1.6 + 0.08, "{}: a short Chinese head stays on one line ({:.2f}in at {}pt)".format(name, hd.height / EMU, sz))
+    check_mac(hd.height / EMU <= sz / 72.0 * 1.6 + 0.08, "{}: a short Chinese head stays on one line ({:.2f}in at {}pt)".format(name, hd.height / EMU, sz))
 prs, k = use("chalkboard", 10.0, 7.5)
 s = k.new_slide()
 k.points(s, title="修理之夜", items=[("共享工具", "一抽屉螺丝刀可以供三张桌子同时使用。"), ("敞开大门", "不用预约，不收费。"),
@@ -727,12 +738,70 @@ s = k.new_slide(); k.image_text(s, image=PHOTO, title="Mending a lamp, one volun
 tp = [tuple(p_.text for p_ in sh.text_frame.paragraphs) for sh in texts(s) if txt_of(sh).replace("\n", " ").startswith("Mending")][0]
 check(len(tp) >= 2 and len(tp[-1].split()) > 1, "broadsheet: a wrapping title is set in its measured lines, no lone last word ({})".format(tp))
 
+# the kit measures the WEIGHT that renders: Kit.run sets CJK display type bold where the Latin face has no CJK (tally's
+# Arial Black, ea_heavy), and bold is wider — measured light, "用 GPT-5 做 3 件事" planned one line, the lint (and the
+# render) set two and it ran into the line under it (the font simulation, 2026-10-09)
+prs, k = use("tally")
+for t in ("用 GPT-5 做 3 件事", "预算 budget", "本季 Q3 收入"):
+    face = k.ea_face("display", t)
+    lh = 60 / 72.0 * dk._LINT_LINE_H * dk.CJK_LS
+    worst = [(w / 100.0, dk._measure_lines([(t, True)], 60, w / 100.0 - vl._INSET, font=face))
+             for w in range(300, 900, 7)]
+    short = [(w, n) for w, n in worst if vl._field_height(k, "title", t, 60, w) + 1e-6 < n * lh + 0.06]
+    check(not short, "tally: a CJK title is measured at the bold weight it renders in ({!r}: short at {})".format(t, short[:2]))
+# a display field set in its measured lines is ONE block: no paragraph spacing between its lines, which nothing
+# measured — dk.text's default 6pt space-after, copied to each line, grew a 5-line title 0.33in past its box and put
+# chalk underlines and rules through its last words (final review, 2026-10-09)
+LONGQ = "We came for the tools and stayed for the people who keep showing up, week after week, to fix what we had made in the spring."
+for name in ("starlit", "broadsheet", "journal", "tally", "chalkboard"):
+    prs, k = use(name)
+    for page, kw in (("quote", dict(quote=LONGQ, attribution="A volunteer")),
+                     ("closing", dict(title="Every street needs a night for fixing the things we had made in the spring together", line="Bring a neighbour."))):
+        s = k.new_slide(); getattr(k, page)(s, **kw)
+        multi = [sh for sh in texts(s) if len(sh.text_frame.paragraphs) > 1]
+        spaced = [(txt_of(sh)[:24], p_.space_before, p_.space_after) for sh in multi for p_ in sh.text_frame.paragraphs
+                  if (p_.space_after or 0) or (p_.space_before or 0)]
+        check(not spaced, "{} {}: a display field's lines carry no paragraph spacing ({})".format(name, page, spaced[:2]))
+# a running= given on the cover is the caller's words for every page: one that cannot fit is refused ON THE COVER,
+# never dropped silently from the pages after it (final review, 2026-10-09: later pages drew the page number alone)
+LONGRUN = "基于深度学习的欠采样心脏磁共振电影成像重建方法及其在临床多中心数据上的系统性评估与比较研究"
+for W, H in ((10.0, 7.5), (7.5, 7.5)):
+    prs, k = use("journal", W, H)
+    try:
+        k.cover(k.new_slide(), title="心脏电影重建", running=LONGRUN)
+        refused = False
+    except vl.VLTextOverflow:
+        refused = True
+    if W < 10:                          # 0.66 of 7.5in cannot hold it even at the floor; 10in holds it at 10pt
+        check(refused, "journal {}x{}: a running= on the cover that cannot fit is refused on the cover".format(W, H))
+    if not refused:
+        try:
+            k.points(k.new_slide(), title="方法", items=[("数据", "多中心。"), ("模型", "展开网络。")])
+            later = "drawn" if any(LONGRUN[:6] in txt_of(sh) for sh in texts(k.prs.slides[-1])) else "dropped"
+        except vl.VLTextOverflow:
+            later = "refused"
+        check(later == "drawn", "journal {}x{}: a remembered running= that fit the cover is drawn on later pages ({})".format(W, H, later))
+# kanji alone is Chinese OR Japanese: a structural label whose own words are kanji-only takes the deck's language
+# when the deck's words carry kana (final review, 2026-10-09: a Japanese cover's sidebar read 本期, a figure 图 1)
+prs, k = use("broadsheet")
+s = k.new_slide(); k.cover(s, title="修理の夜の作り方", subtitle="道具を持って集まる夜", inside=["概要", "当日", "数字"])
+check(any(txt_of(sh) == "目次" for sh in texts(s)), "broadsheet: a Japanese cover's Inside sidebar is 目次 ({})".format(
+    [txt_of(sh) for sh in texts(s) if len(txt_of(sh)) <= 3]))
+prs, k = use("journal")
+k.cover(k.new_slide(), title="心臓シネMRIの再構成", running="再構成の研究")
+s = k.new_slide(); k.image_text(s, image=PHOTO, title="再構成誤差")
+check(any(txt_of(sh).startswith("図") for sh in texts(s)) and not any(txt_of(sh).startswith("图") for sh in texts(s)),
+      "journal: a Japanese deck's kanji-only figure page is labelled 図 ({})".format([txt_of(sh) for sh in texts(s)][:6]))
+prs, k = use("journal")
+k.cover(k.new_slide(), title="心脏电影重建")
+s = k.new_slide(); k.image_text(s, image=PHOTO, title="重建误差")
+check(any(txt_of(sh).startswith("图 1") for sh in texts(s)), "journal: a Chinese deck's figure stays 图 1")
 # a short Chinese label stays on one line rather than leaving a bracketed tail alone ("…的订单 / （单）", the docs-only run)
 prs, k = use("tally")
 s = k.new_slide(); k.data(s, number="1,240", label="本季按时送达的订单（单）", note="按签收记录统计。")
 lp = [tuple(p_.text for p_ in sh.text_frame.paragraphs) for sh in texts(s) if "送达" in txt_of(sh)][0]
 lb = [sh for sh in texts(s) if "送达" in txt_of(sh)][0]
-check(lb.height / EMU <= lb.text_frame.paragraphs[0].runs[0].font.size.pt / 72.0 * 1.7 + 0.08,
+check_mac(lb.height / EMU <= lb.text_frame.paragraphs[0].runs[0].font.size.pt / 72.0 * 1.7 + 0.08,
       "tally: a short Chinese label stays on one line ({}, {:.2f}in)".format(lp, lb.height / EMU))
 # a chalk circle is round: enough points that no facet shows on a large ring (it read as a polygon with a notch)
 prs, k = use("chalkboard")
@@ -749,7 +818,7 @@ for name in ("starlit", "broadsheet", "journal", "tally", "chalkboard"):
         p_, _prs = build_matrix(name, list(vl.VARIANTS[name])[0], cname, lang)
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
             hard = _ld.lint(str(p_), static_ok=True)
-        check(hard == 0, "{} {} {}: a fresh deck has no hard lint finding ({})".format(name, cname, lang, hard))
+        (check if lang == "en" else check_mac)(hard == 0, "{} {} {}: a fresh deck has no hard lint finding ({})".format(name, cname, lang, hard))
 
 # ── what an agent reading only the docs needs (Task 9) ──
 ref = (ROOT / "references" / "visual-languages.md").read_text(encoding="utf-8")
@@ -767,6 +836,9 @@ check(all(n in skill for n in ("starlit", "broadsheet", "journal", "tally", "cha
 
 for line in ok:
     print("  ok   " + line)
+if skipped:
+    print("  skip {} face-precise check(s): this machine lacks the faces they were measured with (e.g. {!r})".format(
+        len(skipped), skipped[0][:80]))
 for line in bad:
     print("  FAIL " + line)
 print("\n{} passed, {} failed".format(len(ok), len(bad)))

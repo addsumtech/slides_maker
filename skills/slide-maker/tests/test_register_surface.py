@@ -427,6 +427,19 @@ check(rs.BESPOKE["ledger"]["source"] == _src, "...and the original kit is untouc
 _g = rs.GROUNDS["ledger"]
 rs.register("ledger", ground=_g, card=rs.CARDS["ledger"], forbids=rs.BESPOKE["ledger"]["forbids"], source=_src)
 check(rs.GROUNDS["ledger"] is _g, "re-registering from the SAME file still works (a reload, load_kits)")
+# ...and the SAME file reached by another spelling (a symlinked skill folder — ~/.claude/skills/slide-maker is one —
+# and the resolved path vl_native re-imports through) is the same file, not a rival (final review, 2026-10-09: the
+# sample build crashed "already registered by …/linkroot/…")
+import os as _os, tempfile as _tf                                     # noqa: E402
+_link = Path(_tf.mkdtemp()) / "linked"
+_os.symlink(Path(_src).resolve().parent, _link)
+try:
+    rs.register("ledger", ground=_g, card=rs.CARDS["ledger"], forbids=rs.BESPOKE["ledger"]["forbids"],
+                source=str(_link / Path(_src).name))
+    check(True, "the same file through a symlinked folder re-registers")
+except ValueError as exc:
+    check(False, "the same file through a symlinked folder re-registers: {}".format(str(exc)[:90]))
+rs.register("ledger", ground=_g, card=rs.CARDS["ledger"], forbids=rs.BESPOKE["ledger"]["forbids"], source=_src)
 
 for line in ok:
     print("  ok   " + line)

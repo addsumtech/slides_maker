@@ -29,8 +29,8 @@ _CLAUSE_FIELDS = ("title", "subtitle", "quote", "label", "line", "note", "body",
 
 
 def _cjk_width(k, f_, t, sz):
-    base, role, bold = vl.TYPE[k.name][f_][:3]
-    return dk._natural_width_in([(t, bool(bold))], sz, k.ea_face(role, t) or k.face(role))
+    role = vl.TYPE[k.name][f_][1]
+    return dk._natural_width_in([(t, vl._weight(k, f_, t))], sz, k.ea_face(role, t) or k.face(role))
 
 
 def _clause_break(k, f_, t, w, start):
@@ -123,7 +123,12 @@ def flow(k, slide, page, col, items, **kw):
                         for r_ in p_.runs:
                             if r_.font.size is not None and r_.font.size.pt > down + 1e-6 and abs(r_.font.size.pt - round(ex, 1)) < 0.06:
                                 r_.font.size = _Pt(down)
-                if f_ in _DISPLAY_FIELDS and len(sh.text_frame.paragraphs) == 1 and sh.text_frame.paragraphs[0].runs:
+                role_ = vl.TYPE[k.name][f_][1] if f_ in vl.TYPE[k.name] else "body"
+                face_ = (k.ea_face(role_, sh.text_frame.text) if dk._has_cjk(sh.text_frame.text) else None) or k.face(role_)
+                # Chinese only with its real face: under a stand-in with no CJK glyphs (a Linux box without SimSun) the
+                # imposed lines disagree with the lint's line model and read as overflow (the font simulation, 2026-10-09)
+                if (f_ in _DISPLAY_FIELDS and len(sh.text_frame.paragraphs) == 1 and sh.text_frame.paragraphs[0].runs
+                        and not (dk._has_cjk(sh.text_frame.text) and dk._font_substituted(face_))):
                     z = sh.text_frame.paragraphs[0].runs[0].font.size
                     if z is not None:
                         ls = vl._break_lines(k, f_, sh.text_frame.text, z.pt, sh.width / 914400.0)   # as measured (not yet widened)
@@ -147,14 +152,25 @@ LABELS = {
 }
 
 
-def lang_of(*texts):
-    """The language a structural label is set in: the script of the page's own words (Hangul, kana, Han), else en."""
+def lang_of(*texts, k=None, f=None):
+    """The language a structural label is set in: the script of the label's own words (Hangul, kana, Han), else en.
+    Kanji alone is Chinese OR Japanese, so a Han verdict asks the rest of the page (`f`) and the deck (`k`: its
+    remembered words and every slide's text): kana or Hangul there wins (final review, 2026-10-09: a Japanese
+    cover's sidebar read 本期, a figure 图 1)."""
     scr = dk.script_of("".join(t for t in texts if t))
+    if scr == "han" and (k is not None or f):
+        more = [v for v in (f or {}).values() if isinstance(v, str)]
+        if k is not None:
+            more += [v for v in k.memo.values() if isinstance(v, str)]
+            more += [sh.text_frame.text for sl in k.prs.slides for sh in sl.shapes if getattr(sh, "has_text_frame", False)]
+        wider = dk.script_of("".join(more))
+        if wider in ("kana", "hangul"):
+            scr = wider
     return {"han": "zh", "kana": "ja", "hangul": "ko"}.get(scr, "en")
 
 
-def label(kind, *texts):
-    return LABELS[kind][lang_of(*texts)]
+def label(kind, *texts, k=None, f=None):
+    return LABELS[kind][lang_of(*texts, k=k, f=f)]
 
 
 def caps(t):
@@ -188,8 +204,12 @@ _DISPLAY_FIELDS = ("title", "subtitle", "quote", "label", "line")
 
 def _split_paragraph(tf, lines):
     """Rewrite a one-paragraph text frame as one paragraph per line in `lines` (its own words, in order), keeping each
-    run's formatting. Returns False — frame untouched — when the lines do not tile the text."""
+    run's formatting and the line spacing. The lines are ONE block, so no paragraph spacing between them: dk.text's
+    6pt space-after, copied to every line, grew a 5-line title 0.33in past its measured box (final review,
+    2026-10-09). Returns False — frame untouched — when the lines do not tile the text."""
     from pptx.oxml.ns import qn as _qn
+    from pptx.text.text import _Paragraph
+    from pptx.util import Pt as _Pt
     p0 = tf.paragraphs[0]._p
     full = "".join(r.text for r in tf.paragraphs[0].runs)
     pos, spans = 0, []
@@ -216,6 +236,8 @@ def _split_paragraph(tf, lines):
             else:
                 t.text = txt[lo - ra:hi - ra]
         p0.addprevious(q)
+        para = _Paragraph(q, tf)
+        para.space_before, para.space_after = _Pt(0), _Pt(0)
     p0.getparent().remove(p0)
     return True
 
@@ -581,7 +603,7 @@ def bs_strip(k, slide, f, big=False):
     if edition:
         r, d = flow(k, slide, "edition", (0.05 * W, meta_y, 0.62 * W, 0.30 * s), [("edition", caps(edition))])
         draws.append(d)
-    pg = caps(label("page", name, edition, text_of(f, "title"), text_of(f, "quote"), k.memo.get("_title")).format(page_no(slide)))
+    pg = caps(label("page", name, edition, text_of(f, "title"), text_of(f, "quote"), k.memo.get("_title"), k=k, f=f).format(page_no(slide)))
     sz = vl.TYPE[k.name]["edition"][0] * s
     draws.append(lambda: dk.text(slide, 0.70 * W, meta_y, 0.25 * W, 0.30 * s,
                                  [k.runs(pg, sz, k.color("mute"), True, "meta")], align=dk.PP_ALIGN.RIGHT))
@@ -635,7 +657,7 @@ def _bs_cover(k, slide, f, image):
         else:
             ix, iy, iw = 0.05 * W, sb + 0.3 * s, 0.90 * W
         r, d = flow(k, slide, "cover", (ix, iy, iw, foot - iy),
-                    [("inside_h", caps(label("inside", *lines))), ("inside", "\n".join(lines))], anchor="top")
+                    [("inside_h", caps(label("inside", *lines, k=k, f=f))), ("inside", "\n".join(lines))], anchor="top")
         draws.append(d)
     _run_all(art + draws)
     return rects
@@ -820,17 +842,23 @@ def _bs_points(k, slide, f, image):
 
 
 # ═══════════════════════════════════ journal 学术期刊 ═══════════════════════════════════
+def jn_running_rect(k):
+    W, H, s, o = ctx(k)
+    return (0.07 * W, 0.035 * H, 0.66 * W, 0.32 * s)
+
+
 def jn_running(k, slide, f):
     """The running head: the caller's running= (remembered for the deck), else the cover title when it fits one
     line at its floor, else no words — the page number at the right either way, a hairline under both. An explicit
     running= that does not fit is refused. Draws at once and returns the y under it."""
     W, H, s, o = ctx(k)
-    explicit = text_of(f, "running")
+    # the caller's words, given here or remembered from an earlier page: refused when they cannot fit, never dropped
+    explicit = text_of(f, "running") or k.memo.get("running")
     words = memo(k, f, "running", fallback=k.memo.get("_title"))
     y, h = 0.035 * H, 0.32 * s
     if words:
         try:
-            _r, d = flow(k, slide, "running", (0.07 * W, y, 0.66 * W, h), [("running", words)])
+            _r, d = flow(k, slide, "running", jn_running_rect(k), [("running", words)])
             d()
         except vl.VLTextOverflow:
             if explicit:
@@ -852,7 +880,9 @@ def _jn_cover(k, slide, f, image):
     t, ab = text_of(f, "title"), text_of(f, "abstract")
     if t:
         k.memo = dict(k.memo, _title=t)
-    memo(k, f, "running")              # the cover draws no running head, but its running= holds for every later page
+    if text_of(f, "running"):          # the cover draws no running head, but its running= holds for every later page:
+        flow(k, slide, "running", jn_running_rect(k), [("running", text_of(f, "running"))])   # planned, so a refusal lands HERE
+    memo(k, f, "running")
     x, w = 0.10 * W, (0.78 if o == "land" else 0.82) * W
     lab_w = 0.15 * W if o == "land" else 0.0
     head = fields(f, ("kicker", "title", "subtitle", "authors"), ("kicker",))
@@ -864,7 +894,7 @@ def _jn_cover(k, slide, f, image):
         foot = max((v[1] + v[3] for v in r.values()), default=y0)
         if ab:
             ry = foot + 0.30 * s
-            lab = caps(label("abstract", ab))
+            lab = caps(label("abstract", ab, k=k, f=f))
             if o == "land":
                 lr, ld = flow(k, slide, "cover", (x, ry + 0.22 * s, lab_w - 0.2 * s, 0.5 * s), [("abstract_h", lab)])
                 ar, ad = flow(k, slide, "cover", (x + lab_w, ry + 0.18 * s, w - lab_w, H - 0.6 - ry - 0.18 * s),
@@ -914,7 +944,7 @@ def _jn_figure(k, slide, f, image):
     top = jn_running(k, slide, f)
     n = k.memo.get("_fig", 0) + 1
     k.memo = dict(k.memo, _fig=n)
-    lab = text_of(f, "kicker") or label("figure", text_of(f, "title"), text_of(f, "body")).format(n)
+    lab = text_of(f, "kicker") or label("figure", text_of(f, "title"), text_of(f, "body"), k=k, f=f).format(n)
     r, d = flow(k, slide, "image_text", (0.07 * W, top, 0.86 * W, (0.16 if alt() == 0 else 0.28) * H), fields(f, ("title",)),
                 anchor="top")
     rects, draws, art = dict(r), [d], []
@@ -979,7 +1009,7 @@ def _jn_points(k, slide, f, image):
             mcol = (0.07 * W + 0.2 * s, bottom - mh, 0.86 * W - 0.2 * s, mh)
             art.append(lambda: na.seg(slide, 0.07 * W, bottom - mh, 0.07 * W, bottom, k.P["text_accents"][0], w=0.75))
             list_bottom = bottom - mh - 0.3 * s
-        _mr, md = flow(k, slide, "points", mcol, [("margin_h", caps(label("note", mg))), ("margin", mg)], anchor="top")
+        _mr, md = flow(k, slide, "points", mcol, [("margin_h", caps(label("note", mg, k=k, f=f))), ("margin", mg)], anchor="top")
         draws.append(md)
     ncol = 2 if (alt() == 2 and n >= 3) else 1        # long copy, last resort: the findings in two columns
     gap = 0.4 * s
