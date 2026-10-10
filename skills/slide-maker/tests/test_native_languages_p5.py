@@ -592,6 +592,124 @@ left_ = [t for t in thin if abs(t.left / E_ - 1.0) < 0.02 and t.width / E_ < 0.0
 check(top_ and left_, "ui_bubble: the tail corner carries the hairline on its top and left edges ({} top, {} left)".format(
     len(top_), len(left_)))
 
+# ── final review (2026-10-10) ──
+def _page_texts(sl_):
+    return [" ".join(sh.text_frame.text.split()) for sh in sl_.shapes if sh.top >= 0 and sh.has_text_frame]
+
+
+# I1: an explicit crumb=/status= is drawn or refused by name — never dropped by a bar-less fallback layout
+LONG4 = [("Approvals before anything is sent to a customer", "Drafts wait until a lead signs off, and every edit is tracked by the whole team"),
+         ("One shared source of truth across every department", "Every edit syncs to the same page, so nobody works from a stale copy of the plan"),
+         ("A weekly digest instead of constant interruptions", "Notifications batch into one summary that arrives on Monday morning at nine"),
+         ("Roles that match how the team actually works day to day", "Admins, editors and viewers each see only the controls that belong to them")]
+for cw, chh in ((13.333, 7.5), (10.0, 7.5), (7.5, 10.0), (7.5, 7.5)):
+    dkx = dk.blank_deck(cw, chh)
+    kx = vl.use("interface", dkx)
+    slx = kx.new_slide()
+    try:
+        kx.points(slx, title="Four settings change how a team works together", items=LONG4, crumb="Launch › Overview",
+                  status=("Live", "on"))
+        tt = _page_texts(slx)
+        verdict = "drawn" if ("Launch › Overview" in tt and "Live" in tt) else "DROPPED"
+    except vl.VLTextOverflow as e:
+        verdict = "refused: " + str(e)[:60]
+    check(verdict != "DROPPED", "interface points {}x{}: an explicit crumb and status are drawn or refused ({})".format(cw, chh, verdict))
+# … and remembered from any page, even one that draws no bar
+for page, kw_ in (("quote", dict(quote="We stopped losing requests.", attribution="Mara Jensen, Ops lead")),
+                  ("data", dict(number="18", label="teams moved")),
+                  ("closing", dict(title="Start with one team", line="Free during the beta."))):
+    dkx = dk.blank_deck(13.333, 7.5)
+    kx = vl.use("interface", dkx)
+    getattr(kx, page)(kx.new_slide(), crumb="Launch › Overview", status=("Beta", "pending"), **kw_)
+    slx = kx.new_slide()
+    kx.cover(slx, kicker="Product tour", title="One board for every request")
+    tt = _page_texts(slx)
+    check("Launch › Overview" in tt and "Beta" in tt,
+          "interface: crumb and status given on a {} page are remembered for the next cover ({})".format(page, tt[:4]))
+
+# I2: every route reads against its ground — a light line (yellow on enamel, 1.67:1) is drawn on its dark casing
+for g in ("light", "night"):
+    for cname in ("red", "blue", "green", "yellow", "purple"):
+        dkx = dk.blank_deck(13.333, 7.5)
+        kx = vl.use("wayfinding", dkx, ground=g)
+        slx = kx.new_slide()
+        kx.points(slx, title="The route", ordered=True, line=("A", cname), items=["Sign up", "First project", "Upgrade"])
+        ground_ = kx.P["ground"]
+        segs = [sh for sh in slx.shapes if sh.shape_type == 9]
+        cols = {}
+        for sg in segs:
+            try:
+                c_ = str(sg.line.color.rgb)
+            except Exception:
+                continue
+            cols.setdefault(c_, []).append(sg.line.width or 0)
+        weak = [c_ for c_ in cols if vl._contrast(c_, ground_) < 3.0]
+        cased = [c_ for c_ in cols if vl._contrast(c_, ground_) >= 3.0
+                 and max(cols[c_]) > max(max(cols[w_]) for w_ in weak)] if weak else ["n/a"]
+        check(not weak or cased, "wayfinding {} strip map, {} line: the route reads against the ground ({})".format(
+            g, cname, {c_: round(vl._contrast(c_, ground_), 2) for c_ in cols}))
+
+# I3: a roundel's label is measured — it fits its disc, or is refused naming line= / number=
+for page, kw_ in (("section", dict(number="1", title="第一周", line="一号线")),
+                  ("section", dict(number="Chapter 3", title="The route")),
+                  ("section", dict(number="2026", title="The year")),
+                  ("cover", dict(kicker="入职指南", title="新人入职四站路", subtitle="慢慢来", line="一号线")),
+                  ("cover", dict(kicker="Onboarding", title="Your first week", line="M10"))):
+    for cw, chh in ((13.333, 7.5), (7.5, 10.0)):
+        dkx = dk.blank_deck(cw, chh)
+        kx = vl.use("wayfinding", dkx)
+        slx = kx.new_slide()
+        try:
+            getattr(kx, page)(slx, **kw_)
+            err = None
+        except vl.VLTextOverflow as e:
+            err = str(e)
+        if err is not None:
+            check("line=" in err or "number=" in err, "wayfinding {} {}x{} {}: a refused roundel names line=/number= ({})".format(
+                page, cw, chh, kw_.get("line") or kw_.get("number"), err[:80]))
+            continue
+        discs = [sh for sh in slx.shapes if sh.shape_type == 1 and sh.auto_shape_type == 9]
+        over = []
+        for sh in slx.shapes:
+            if not (sh.top >= 0 and sh.has_text_frame and sh.text_frame.text.strip()):
+                continue
+            cx_, cy_ = sh.left + sh.width / 2.0, sh.top + sh.height / 2.0
+            under = [d for d in discs if d.left <= cx_ <= d.left + d.width and d.top <= cy_ <= d.top + d.height
+                     and d.width / E_ < 2.0]
+            if not under:
+                continue
+            run_ = sh.text_frame.paragraphs[0].runs[0]
+            tw = na.chip_width(sh.text_frame.text.strip(), run_.font.size.pt, run_.font.name) - 1.2 * run_.font.size.pt / 72.0
+            if tw > under[-1].width / E_ * 0.92:
+                over.append((sh.text_frame.text.strip(), round(tw, 2), round(under[-1].width / E_, 2)))
+        check(not over, "wayfinding {} {}x{} {}: roundel labels fit their discs ({})".format(
+            page, cw, chh, kw_.get("line") or kw_.get("number"), over))
+
+# M2: a quote page with no quote is refused by name, never a bare "min() iterable argument is empty"
+for L in ("interface", "wayfinding"):
+    dkx = dk.blank_deck(13.333, 7.5)
+    kx = vl.use(L, dkx)
+    try:
+        kx.quote(kx.new_slide(), attribution="Mara Jensen, Ops lead")
+        msg = "drawn"
+    except Exception as e:
+        msg = "{}: {}".format(type(e).__name__, e)
+    check(msg == "drawn" or "quote=" in msg, "{}: a quote page with no quote is drawn or refused by name ({})".format(L, msg[:90]))
+
+# M5: the strip map's stations are not held by the hand-off NON-TEXT CONTRAST floor (their dark ring carries it)
+for g in ("light", "night"):
+    dkx = dk.blank_deck(13.333, 7.5)
+    kx = vl.use("wayfinding", dkx, ground=g)
+    kx.points(kx.new_slide(), title="The route", ordered=True, interchange=[1], items=["Sign up", "First project", "Upgrade"])
+    n_, why_, nt_ = _hard(dkx)
+    check(n_ == 0 and not nt_, "wayfinding {} strip map: no hard finding and no NON-TEXT CONTRAST hold ({} {})".format(g, why_[:1], nt_[:1]))
+
+# M6: initials skip an honorific ("Dr. Ada Lovelace" is AL, not DA)
+for att, want in (("Dr. Ada Lovelace, CTO", "AL"), ("Prof. Jane Doe", "JD"), ("Mr. Smith", "S"), ("Ms Ada Lee, Ops", "AL"),
+                  ("Mara Jensen, Ops lead", "MJ"), ("A visitor", None), ("李娜，人事经理", None)):
+    got = v3.initials(att)
+    check(got == want, "initials({!r}) == {!r} (got {!r})".format(att, want, got))
+
 # the docs carry both languages: guidance, extras, examples, the drawn-language lists
 ref = (ROOT / "references" / "visual-languages.md").read_text(encoding="utf-8")
 for n in ("interface", "wayfinding"):

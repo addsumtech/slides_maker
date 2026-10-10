@@ -214,7 +214,7 @@ prs.save("collage.pptx")
   is optional everywhere except `image_text` (which refuses without one). A list of images is for the
   collage cover and closing only (1 to 4); anywhere else, or empty, or longer, it is refused rather than
   silently cut. A page with no text and no image is refused. Each returns `{"rects": {field: (x, y, w, h)}, …}`.
-  On the nine DRAWN languages a picture is drawn on `image_text` only (`drafting` also on `quote`;
+  On the eleven DRAWN languages a picture is drawn on `image_text` only (`drafting` also on `quote`;
   `vl.NATIVE_IMAGE_PAGES`): `image=` on any other page of theirs is refused, naming those pages — never dropped.
 - **Fields are text.** Pass every field as a string, exactly as it should read; `number=` also takes a whole
   number (`12`, shown as written). A list, a tuple or a float is refused by field name (`number=0.1 + 0.2` would
@@ -415,7 +415,7 @@ first four: no pictures needed, everything on the page, nothing PowerPoint repai
     | NOTE | 注 | 注 | 주석 |
 
   Some of your own words are re-cased: `poster` (above), the kicker and attribution on `starlit` and
-  `broadsheet`, and the kicker on `journal` and on the `wayfinding` cover.
+  `broadsheet`, and the kicker on `journal` and on `wayfinding` (cover, section, image_text, directory sign).
 - **Pages.** All seven pages come in both orientations.
   - `journal`'s `image_text` is its figure page: the title above, your figure WHOLE (never cropped), its label,
     caption (`body=`) and source line (`caption=`).
@@ -471,19 +471,19 @@ prs.save("weekly.pptx")
   number, coloured by it: 1 red, 2 blue, 3 green, 4 yellow, 5 purple); `points` is a strip map ONLY with
   `ordered=True` — a route claims an order — and otherwise a directory sign (one row per point with its numbered
   roundel); `data` a departure board (your label and number first, `board=` rows under them); `closing` the way-out
-  sign (Way out / 出口 / 出口 / 출구, in the page's script) with the route ending at a terminus. Grounds: `light`
-  (enamel) · `night` (navy).
+  sign (Way out / 出口 / 出口 / 출구, in the page's script) with the route ending at a terminus. A line too light for
+  its ground (yellow on the enamel) runs on its dark casing. Grounds: `light` (enamel) · `night` (navy).
 - **Extras** (from you only; absent → nothing drawn; on a page that does not draw one it is refused by name):
 
   | Language | Extra | Pages | Meaning / fallback |
   |---|---|---|---|
-  | interface | `crumb=` | any; remembered | the window's breadcrumb (e.g. "Launch › Overview"), drawn in the top bar of the windows that have one — cover, section, points (image_text, quote, data and closing draw no bar). Absent: an empty top bar. |
+  | interface | `crumb=` | any; remembered | the window's breadcrumb (e.g. "Launch › Overview"), drawn in the top bar of the windows that have one — cover, section, points (image_text, quote, data and closing draw no bar, but remember it). Given on a points page that only fits without its bar, the page is refused rather than the crumb dropped. Absent: an empty top bar. |
   | interface | `status=` | any; remembered | the top-bar status chip text, optionally `(text, state)` with state in on / pending / error / primary. Absent: no chip. |
   | interface | `actions=` | cover, closing | 1–2 button labels (primary, secondary). Absent: no buttons, no pointer. |
   | interface | `toggles=` | cover | 1–4 `(label, on)` rows for a settings panel beside the window. Absent: the window takes the width. |
   | interface | `tags=` | points | one chip per point, text or `(text, state)`; count must match. |
   | interface | `total=` | data | progress bar, tally's rules (plain numbers, same kind, ≤ total); the total is printed at the bar's end. |
-  | wayfinding | `line=` | any; remembered | a 1–3 character line code for the cover/section roundels, optionally `(code, colour name)`. On the cover it sits on the subtitle sign, or above the kicker when there is no subtitle; on a section it REPLACES the section number in the roundel. Absent: section roundels show the section number; the cover draws no roundel. |
+  | wayfinding | `line=` | any but closing; remembered | a 1–3 character line code for the cover/section roundels, optionally `(code, colour name)`. On the cover it sits on the subtitle sign, or above the kicker when there is no subtitle; on a section it REPLACES the section number in the roundel. A longer code (`M10`, `一号线`) is set smaller, or in a pill as wide as its words; one too long even for a pill is refused naming `line=` (a long `number=` likewise). On `closing`, `line=` is the closing's own line of text. Absent: section roundels show the section number; the cover draws no roundel. |
   | wayfinding | `ordered=` | points | `True` draws the strip map; default draws the directory sign. |
   | wayfinding | `interchange=` | points | 0-based indexes of points drawn as interchanges (`[2]` = the third stop; strip map only; refused without `ordered=True`). |
   | wayfinding | `board=` | data | 1–4 extra `(label, value)` rows under the page's own row. |

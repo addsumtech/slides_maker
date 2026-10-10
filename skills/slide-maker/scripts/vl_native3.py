@@ -50,6 +50,9 @@ def ui_state(v, page, name):
                      .format(page, name, list(STATES), v))
 
 
+HONORIFICS = {"dr", "mr", "mrs", "ms", "mx", "miss", "prof", "sir", "dame", "rev", "hon", "dr.", "mr.", "mrs."}
+
+
 def initials(attribution):
     """Avatar initials from an attribution that is a NAME: before any comma, 1-3 words each starting with a capital
     letter ("Maya Kowalski, Operations lead" -> MK). Anything else — a phrase ("How every repair begins"), CJK, empty —
@@ -58,6 +61,8 @@ def initials(attribution):
     if not t or dk._has_cjk(t):
         return None
     words = t.split()
+    while words and words[0].rstrip(".").lower() in HONORIFICS:      # "Dr. Ada Lovelace" is AL, not DA
+        words = words[1:]
     if not 1 <= len(words) <= 3 or not all(w[:1].isalpha() and w[:1].isupper() for w in words):
         return None
     return "".join(w[0] for w in words[:2])
@@ -179,6 +184,20 @@ def _top_bar(k, slide, win, f, page):
         tb = dk.text(slide, x + 0.32 * s, y, cw, bh, [k.runs(crumb, sz, k.color("mute"))], anchor=dk.MSO_ANCHOR.MIDDLE,
                      space_after=0)
         tb.text_frame.word_wrap = False
+
+
+def _remember_bar(k, f, page):
+    """crumb= and status= hold for the deck from whatever page gives them, bar or no bar (a quote page took them and
+    forgot them: final review). A malformed status is refused here, not on a later page."""
+    memo(k, f, "crumb")
+    if f.get("status") is not None:
+        ui_state(f.get("status"), page, "status")
+        k.memo = dict(k.memo, status=f.get("status"))
+
+
+def _given_bar_words(f):
+    """The caller gave crumb= or status= on THIS page — a layout may not drop them silently."""
+    return bool(text_of(f, "crumb")) or f.get("status") is not None
 
 
 def _window(k, slide, rect, f, page, *, bar=True):
@@ -317,6 +336,7 @@ def _ui_section(k, slide, f, image):
 def _ui_image_text(k, slide, f, image):
     """The caller's picture in a device frame chosen by its aspect; kicker, title, body, caption beside it."""
     W, H, s, o = ctx(k)
+    _remember_bar(k, f, "image_text")
     path, _alt, _slot = vl._resolve(k, image if not isinstance(image, (list, tuple)) else image[0])
     kind = device_for(path)
     from PIL import Image
@@ -349,6 +369,7 @@ def _ui_points(k, slide, f, image):
     Long copy on a small canvas falls back to a window without its bar and tighter rows (alt 1), then — on a landscape
     page — two columns of rows (alt 2); the generality corpus refused four long points on a 10in canvas otherwise."""
     W, H, s, o = ctx(k)
+    _remember_bar(k, f, "points")
     pts = points_of(f.get("items"))
     n = len(pts)
     raw = f.get("tags")
@@ -361,7 +382,9 @@ def _ui_points(k, slide, f, image):
                   [(fields(f, ("kicker",)), 0.1 * s), (fields(f, ("title",)), 0.0)], anchor="top")
     _run_all(ds)
     top = max((v[1] + v[3] for v in r.values()), default=0.06 * H) + (0.3 if a == 0 else 0.2) * s
-    col = _window(k, slide, (x0, top, w0, H - 0.3 * s - top), f, "points", bar=(a == 0))
+    # the tighter alts drop the bar for room — but not when the caller gave crumb=/status= on this page: those are
+    # drawn, or the page is refused by name (they vanished silently on 16:9 and 4:3: final review)
+    col = _window(k, slide, (x0, top, w0, H - 0.3 * s - top), f, "points", bar=(a == 0 or _given_bar_words(f)))
     if a > 0:
         col = (col[0] - 0.1 * s, col[1] - 0.1 * s, col[2] + 0.2 * s, col[3] + 0.15 * s)
     ncols = 2 if (a == 2 and o == "land" and n >= 3) else 1
@@ -411,6 +434,7 @@ def _ui_points(k, slide, f, image):
 def _ui_quote(k, slide, f, image):
     """A chat message: the avatar's initials (from a Latin attribution), the quote in a bubble, the source under it."""
     W, H, s, o = ctx(k)
+    _remember_bar(k, f, "quote")
     a = text_of(f, "attribution")
     ini = initials(a)
     av = 1.0 * s
@@ -422,6 +446,9 @@ def _ui_quote(k, slide, f, image):
     pad = 0.5 * s
     r, d = flow(k, slide, "quote", (bub[0] + pad, bub[1] + pad, bub[2] - 2 * pad, bub[3] - 2 * pad), fields(f, ("quote",)),
                 anchor="middle")
+    if not r:
+        raise ValueError("{}.quote(): quote= is empty — a quote page sets your quote; give the words, or use another "
+                         "page for a name alone".format(k.name))
     qt = min(v[1] for v in r.values())
     qb = max(v[1] + v[3] for v in r.values())
     bub = (bub[0], qt - pad, bub[2], qb - qt + 2 * pad)
@@ -445,6 +472,7 @@ def _ui_data(k, slide, f, image):
     """A dashboard card: label, the number, a progress bar when total= is given (tally's rules); the note as a notice
     BESIDE the card on a landscape page (under it on a portrait one), sized to its words."""
     W, H, s, o = ctx(k)
+    _remember_bar(k, f, "data")
     num, total = text_of(f, "number"), text_of(f, "total")
     frac = share_of("interface", num, total)
     note = text_of(f, "note")
@@ -493,6 +521,7 @@ def _ui_data(k, slide, f, image):
 def _ui_closing(k, slide, f, image):
     """A dialog: title and line in a centred window, the caller's actions as its buttons."""
     W, H, s, o = ctx(k)
+    _remember_bar(k, f, "closing")
     acts = _actions(f, "closing")
     ww = (0.62 if alt() == 0 else 0.80) * W if o == "land" else 0.86 * W
     wh = (0.62 if o == "land" else 0.50) * H
@@ -513,6 +542,16 @@ def _ui_closing(k, slide, f, image):
 # "나가는 곳" was the planned Korean wording; a search (2026-10-10) found no source naming it the standard
 # sign text, so the dictionary word stands.
 LABELS3 = {"way_out": {"en": "Way out", "zh": "出口", "ja": "出口", "ko": "출구"}}
+
+
+# a strip-map stop's white face is under 3:1 on the enamel; its dark ring is what reads, and its label names it
+STOP_WHY = "the stop's dark ring carries its contrast; its label names the stop"
+
+
+def _route(k, slide, pts, colour, *, w):
+    """A route on this page's ground: a line under 3:1 against it (yellow on enamel) is drawn on the dark casing."""
+    weak = vl._contrast(_hex(colour), k.P["ground"]) < 3.0
+    return na.route(slide, pts, colour, w=w, casing=k.P["casing"] if weak else None)
 
 
 def ink_on(k, fill):
@@ -545,11 +584,34 @@ def _line_code(k, f, page):
     return code.strip(), k.P["lines"][names[colour]] if colour else k.P["lines"][0]
 
 
-def _roundel(k, slide, cx, cy, d, text, fill):
+def _roundel_fit(k, d, text, field):
+    """(size, width) of a roundel's label, MEASURED: a disc while the words fit it at no less than half their natural
+    size (or the floor), else a pill as wide as the words; past 0.42W even as a pill, refused naming `field`
+    (the label was set unmeasured — 一号线 stacked down the sign, "Chapter 3" ran out of its disc: final review)."""
     W, H, s, o = ctx(k)
-    sz = min(vl.TYPE["wayfinding"]["roundel"][0] * s * d / (0.5 * s), d * 72 * 0.5)
-    return na.roundel(slide, cx, cy, d, text, fill=fill, ink=ink_on(k, fill), size=sz, face=k.face("display"),
-                      ea_face=k.ea_face("display", text))
+    spec = vl.TYPE["wayfinding"]["roundel"]
+    nat = min(spec[0] * s * d / (0.5 * s), d * 72 * 0.5)
+    lo = max(spec[5], 0.5 * nat)
+    face = k.face("display")
+
+    def tw(z):
+        return na.chip_width(text, z, face) - 1.2 * z / 72.0
+    z = nat
+    while z > lo and tw(z) > 0.82 * d:
+        z = max(lo, z * 0.94)
+    w = d if tw(z) <= 0.82 * d else tw(z) + 0.45 * d
+    if w > 0.42 * W:
+        raise vl.VLTextOverflow("wayfinding: {}{!r} is too long for a roundel even as a pill ({:.2f}in at {:.0f}pt) — "
+                                "a roundel holds a short code".format(field, text, w, z))
+    return z, w
+
+
+def _roundel(k, slide, x, cy, d, text, fill, field="line="):
+    """A roundel whose LEFT edge is x, centred on cy; returns its width (a pill for a longer code)."""
+    z, w = _roundel_fit(k, d, text, field)
+    na.roundel(slide, x + w / 2.0, cy, d, text, fill=fill, ink=ink_on(k, fill), size=z, face=k.face("display"),
+               ea_face=k.ea_face("display", text), w=w)
+    return w
 
 
 def ordinary_sign(slide):
@@ -578,16 +640,16 @@ def _wf_cover(k, slide, f, image):
         col = (0.07 * W, iy + 0.9 * s, 0.86 * W, H - iy - 0.9 * s - 0.5 * s)
     L = k.P["lines"]
     ya = iy - 0.23 * H if o == "land" else iy - 0.18 * H
-    na.route(slide, [(0, ya), (ix - (iy - ya), ya), (ix, iy)], L[0], w=lw)
-    na.route(slide, [(0, iy), (ix, iy)], L[1], w=lw)
+    _route(k, slide, [(0, ya), (ix - (iy - ya), ya), (ix, iy)], L[0], w=lw)
+    _route(k, slide, [(0, iy), (ix, iy)], L[1], w=lw)
     if o == "land":
         xc = ix - 0.6 * (H - iy)
-        na.route(slide, [(xc, H), (xc, iy + (ix - xc)), (ix, iy)], L[2], w=lw)
+        _route(k, slide, [(xc, H), (xc, iy + (ix - xc)), (ix, iy)], L[2], w=lw)
     else:
         # on a portrait or square page the words sit UNDER the interchange, so the third line comes in from the top
         # edge and stays above it (from the bottom it ran through the kicker and the title — render review)
         xc = min(max(0.18 * W, ix - iy + 0.2 * s), ix - 0.3 * s)
-        na.route(slide, [(xc, 0.0), (xc, max(0.0, iy - (ix - xc))), (ix, iy)], L[2], w=lw)
+        _route(k, slide, [(xc, 0.0), (xc, max(0.0, iy - (ix - xc))), (ix, iy)], L[2], w=lw)
     for x_, y_ in ((0.12 * W, ya), (0.27 * W, ya), (0.12 * W, iy)):
         if x_ < ix - (iy - ya) - 0.3 * s:
             dk.decorative(na.station(slide, x_, y_, 0.26 * s, ring=k.P["casing"]), "a station on the network")
@@ -604,15 +666,15 @@ def _wf_cover(k, slide, f, image):
     rects = dict(r)
     if rd:
         top = min((v[1] for v in r.values()), default=col[1] + rd + 0.25 * s)
-        _roundel(k, slide, col[0] + rd / 2.0, top - 0.25 * s - rd / 2.0, rd, lc[0], lc[1])
+        _roundel(k, slide, col[0], top - 0.25 * s - rd / 2.0, rd, lc[0], lc[1])
     if sub:
         foot = max((v[1] + v[3] for v in r.values()), default=col[1]) + 0.4 * s
         inner = na.sign_panel(slide, col[0], foot, col[2], sh, fill=k.P["sign"])
         tx = inner[0] + 0.2 * s
         if lc:
             d = 0.52 * s
-            _roundel(k, slide, inner[0] + 0.15 * s + d / 2.0, inner[1] + inner[3] / 2.0, d, lc[0], lc[1])
-            tx = inner[0] + 0.3 * s + d
+            rw = _roundel(k, slide, inner[0] + 0.15 * s, inner[1] + inner[3] / 2.0, d, lc[0], lc[1])
+            tx = inner[0] + 0.3 * s + rw
         aw = 0.5 * s
         r2, d2 = flow(k, slide, "cover", (tx, inner[1], inner[0] + inner[2] - tx - aw - 0.35 * s, inner[3]),
                       [("subtitle", sub)], anchor="middle", ink=k.P["sign_ink"])
@@ -639,8 +701,7 @@ def _wf_section(k, slide, f, image):
     label = lc[0] if lc else num
     if label:
         fill = lc[1] if lc else line_colour(k, num)
-        _roundel(k, slide, x + d / 2.0, band[1] + band[3] / 2.0, d, label, fill)
-        x += d + 0.5 * s
+        x += _roundel(k, slide, x, band[1] + band[3] / 2.0, d, label, fill, "line=" if lc else "number=") + 0.5 * s
     r, ds = stack(k, slide, "section", x, 0.93 * W - x - 1.0 * s, band[1] + 0.25 * s, band[1] + band[3] - 0.2 * s,
                   [(fields(f, ("kicker",), capsed=("kicker",)), 0.1 * s), (fields(f, ("title",)), 0.0)], anchor="middle",
                   ink=k.P["sign_ink"], mute=k.P["sign_mute"])
@@ -718,7 +779,7 @@ def _wf_points(k, slide, f, image):
         rects = dict(r)
         for i, (rr, dd) in enumerate(planned):
             cy = inner[1] + 0.2 * s + i * (rowh + gap) + rowh / 2.0
-            _roundel(k, slide, inner[0] + 0.35 * s + d / 2.0, cy, d, str(i + 1), k.P["lines"][i % len(k.P["lines"])])
+            _roundel(k, slide, inner[0] + 0.35 * s, cy, d, str(i + 1), k.P["lines"][i % len(k.P["lines"])])
             dd()
             ar = dk.arrow(slide, inner[0] + inner[2] - 0.75 * s, cy - 0.2 * s, 0.5 * s, 0.4 * s,
                           color=dk._as_rgb(_hex(k.P["sign_ink"])))
@@ -760,12 +821,12 @@ def _wf_points(k, slide, f, image):
                           {"anchor": "bottom" if up else "top"}))
         planned = plan_together(k, slide, "points", specs)
         planned = [(rr, _flush_right(slide, dd)) if i in flush else (rr, dd) for i, (rr, dd) in enumerate(planned)]
-        na.route(slide, [(0.0, y), (W, y)], colour, w=lw)
+        _route(k, slide, [(0.0, y), (W, y)], colour, w=lw)
         for i, x in enumerate(xs):
             if i in ixs:
-                na.interchange(slide, x, y, 0.8 * s, 0.56 * s, ring=k.P["casing"])
+                dk.decorative(na.interchange(slide, x, y, 0.8 * s, 0.56 * s, ring=k.P["casing"]), STOP_WHY)
             else:
-                na.station(slide, x, y, sd, ring=k.P["casing"])
+                dk.decorative(na.station(slide, x, y, sd, ring=k.P["casing"]), STOP_WHY)
         for rr, dd in planned:
             dd()
             rects.update(rr)
@@ -781,12 +842,12 @@ def _wf_points(k, slide, f, image):
         specs.append(((x + 0.6 * s, top, w0 - 0.9 * s, foot - top), [("item_head", h)] + ([("item_line", l)] if l else []),
                       {"anchor": "top"}))
     planned = plan_together(k, slide, "points", specs)
-    na.route(slide, [(x, tb + 0.2 * s), (x, H)], colour, w=lw)
+    _route(k, slide, [(x, tb + 0.2 * s), (x, H)], colour, w=lw)
     for i, yy in enumerate(ys):
         if i in ixs:
-            na.interchange(slide, x, yy, 0.56 * s, 0.8 * s, ring=k.P["casing"])
+            dk.decorative(na.interchange(slide, x, yy, 0.56 * s, 0.8 * s, ring=k.P["casing"]), STOP_WHY)
         else:
-            na.station(slide, x, yy, sd, ring=k.P["casing"])
+            dk.decorative(na.station(slide, x, yy, sd, ring=k.P["casing"]), STOP_WHY)
     for rr, dd in planned:
         dd()
         rects.update(rr)
@@ -804,6 +865,9 @@ def _wf_quote(k, slide, f, image):
     pad = 0.55 * s
     r, d = flow(k, slide, "quote", (x + pad, 0.14 * H + pad, w - 2 * pad, H - 0.14 * H - 0.45 * s - ah - 2 * pad),
                 fields(f, ("quote",)), anchor="middle", ink=k.P["sign_ink"])
+    if not r:
+        raise ValueError("{}.quote(): quote= is empty — a quote page sets your quote; give the words, or use another "
+                         "page for a name alone".format(k.name))
     qt = min(v[1] for v in r.values())
     qb = max(v[1] + v[3] for v in r.values())
     na.sign_panel(slide, x, qt - pad, w, qb - qt + 2 * pad, fill=k.P["sign"])
@@ -874,7 +938,7 @@ def _wf_data(k, slide, f, image):
     rects = {}
     lx = inner[0] + rd + 0.4 * s
     if o == "land" and alt() == 0:
-        _roundel(k, slide, inner[0] + rd / 2.0, inner[1] + head_h / 2.0, rd, "1", k.P["lines"][0])
+        _roundel(k, slide, inner[0], inner[1] + head_h / 2.0, rd, "1", k.P["lines"][0])
         nw = inner[2] * 0.42
         r1, d1 = _flow_right(k, slide, "data", (inner[0] + inner[2] - nw, inner[1], nw, head_h),
                              [("number", num)] if num else [], anchor="middle", ink=k.P["led"])
@@ -884,7 +948,7 @@ def _wf_data(k, slide, f, image):
         # stacked: the label beside its roundel, the number under it across the board's whole width ('1,250,000' did
         # not fit beside a label on a square or A4 page — the generality corpus)
         lh = head_h * 0.38
-        _roundel(k, slide, inner[0] + rd / 2.0, inner[1] + lh / 2.0, rd, "1", k.P["lines"][0])
+        _roundel(k, slide, inner[0], inner[1] + lh / 2.0, rd, "1", k.P["lines"][0])
         r2, d2 = flow(k, slide, "data", (lx, inner[1], inner[0] + inner[2] - lx, lh), [("label", lab)] if lab else [],
                       anchor="middle", ink=k.P["led"])
         r1, d1 = _flow_right(k, slide, "data", (inner[0], inner[1] + lh, inner[2], head_h - lh),
@@ -898,7 +962,7 @@ def _wf_data(k, slide, f, image):
             ry = inner[1] + head_h + i * rh
             hl = dk.box(slide, inner[0], ry, inner[2], 0.01, fill=_hex(k.P["board_mute"]))
             dk.decorative(hl, "a rule between board rows")
-            _roundel(k, slide, inner[0] + rd * 0.8 / 2.0, ry + rh / 2.0, rd * 0.8, str(i + 2),
+            _roundel(k, slide, inner[0], ry + rh / 2.0, rd * 0.8, str(i + 2),
                      k.P["lines"][(i + 1) % len(k.P["lines"])])
             ra, da = flow(k, slide, "data", (lx, ry, inner[2] * 0.55, rh), [("row", a)], anchor="middle", ink=k.P["led"])
             rb, db = _flow_right(k, slide, "data", (inner[0] + inner[2] - nw, ry, nw, rh), [("row", b)],
@@ -929,7 +993,7 @@ def _wf_closing(k, slide, f, image):
     na.sign_panel(slide, x, top, w, foot - top, fill=k.P["exit"])
     _run_all(ds)
     tx = min(0.62 * W, x + w * 0.85)
-    na.route(slide, [(0.0, ry), (tx, ry)], k.P["lines"][0], w=0.16 * s)
+    _route(k, slide, [(0.0, ry), (tx, ry)], k.P["lines"][0], w=0.16 * s)
     for i in range(3):
         sx = 0.1 * W + i * (tx - 0.1 * W - 0.6 * s) / 3.0
         dk.decorative(na.station(slide, sx, ry, 0.28 * s, ring=k.P["casing"]), "a station before the terminus")

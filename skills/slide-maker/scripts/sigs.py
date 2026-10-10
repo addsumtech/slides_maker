@@ -486,7 +486,7 @@ EXAMPLES = {
                      '                ("Sugar out", "The leaf makes food.")])\n'
                      'k.closing(k.new_slide(), title="Questions?", line="Next week: the water cycle.")',
     "vl_interface": 'import visual_languages as vl\n'
-                    'k = vl.use("interface", prs)   # extras: crumb= status= (any page, remembered), actions= toggles= (cover),\n'
+                    'k = vl.use("interface", prs)   # extras: crumb= status= (remembered; drawn in the bar of cover/section/points), actions= toggles= (cover),\n'
                     '                               # tags= (points), total= (data), actions= (closing)\n'
                     'k.cover(k.new_slide(), kicker="Product tour", title="One board for every request",\n'
                     '        crumb="Launch › Overview", status=("Live", "on"), actions=["Get started", "Watch demo"],\n'

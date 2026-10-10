@@ -746,10 +746,13 @@ def share_bar(slide, x, y, w, frac, *, track, fill, h=0.16):
 
 
 # ═══════════════════ P5: wayfinding (metro map + signage) and interface (app UI) ═══════════════════
-def route(slide, pts, color, *, w=0.16):
+def route(slide, pts, color, *, w=0.16, casing=None):
     """A transit route through `pts` [(x, y), …] — horizontal, vertical or 45° legs — as round-capped strokes `w` in
     wide. Clipped to the page by seg(); a cap may overhang the edge, which beyond_page() does not count (it reads
-    the connector's box)."""
+    the connector's box). `casing` (a colour) first draws the same path 0.06in wider in it — a light line (yellow on
+    the enamel ground, 1.67:1) reads on its dark casing, as on a printed metro map."""
+    if casing:
+        route(slide, pts, casing, w=w + 0.06)
     out = []
     for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
         c = seg(slide, x0, y0, x1, y1, color, w=w * 72.0)
@@ -769,15 +772,20 @@ def interchange(slide, cx, cy, w, h, *, ring, fill="FFFFFF", lw=3.0):
                   line_w=lw, round=True, r=min(w, h) / 2.0)
 
 
-def roundel(slide, cx, cy, d, text, *, fill, ink, size, face, ea_face=None):
-    """A line roundel: a filled disc with one short unwrapped label. Returns (x, y, d, d)."""
-    x, y = cx - d / 2.0, cy - d / 2.0
-    dk.disc(slide, x, y, d, fill=hexstr(fill))
+def roundel(slide, cx, cy, d, text, *, fill, ink, size, face, ea_face=None, w=None):
+    """A line roundel: a filled disc with one short unwrapped label — or, given `w` wider than `d`, a pill that wide
+    (a longer code, as transit signs set "M10" or 一号线). Centred on (cx, cy). Returns (x, y, w, d)."""
+    w = max(d, w or d)
+    x, y = cx - w / 2.0, cy - d / 2.0
+    if w > d:
+        dk.box(slide, x, y, w, d, fill=hexstr(fill), round=True, r=d / 2.0)
+    else:
+        dk.disc(slide, x, y, d, fill=hexstr(fill))
     run = (text, size, dk._as_rgb(hexstr(ink)), True, False, face) + ((ea_face,) if ea_face else ())
-    tb = dk.text(slide, x, y, d, d, [[run]], align=dk.PP_ALIGN.CENTER, anchor=dk.MSO_ANCHOR.MIDDLE, space_after=0)
+    tb = dk.text(slide, x, y, w, d, [[run]], align=dk.PP_ALIGN.CENTER, anchor=dk.MSO_ANCHOR.MIDDLE, space_after=0)
     tb.text_frame.word_wrap = False
     dk.overlap_intent(tb, "the label sits on its own roundel")
-    return (x, y, d, d)
+    return (x, y, w, d)
 
 
 def sign_panel(slide, x, y, w, h, *, fill, keyline="FFFFFF", r=0.12):
