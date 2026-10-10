@@ -9,6 +9,53 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+## [5.8.0] — 2026-10-10
+
+**The release about decks with no pictures.** Eleven drawn visual languages (`ink`, `poster`, `cutpaper`,
+`drafting`, `starlit`, `broadsheet`, `journal`, `tally`, `chalkboard`, `interface` and `wayfinding`) draw their
+whole surface with native, editable shapes, so a deck with no photos and no image tool still gets a finished look;
+with the four image-led languages of 5.7.0 that makes fifteen. Each lays out only the caller's words: a masthead, a
+breadcrumb, a line code or a total comes from you, and the few words a language derives (page and point numbers,
+structural labels in the page's own script, a way-out sign) are listed in the docs. A deck with no pictures is
+offered the language that fits its topic and records why. An audit of every language then made all of them measure
+by script with headroom, refuse rather than drop what they cannot draw, leave a refused page as they found it, and
+build pages their own lint passes; `lint_deck` also learned the values PowerPoint repairs that LibreOffice renders.
+
+### Two more native visual languages — a product screen and a metro map
+
+`interface` makes every page an app screen: a window with the caller's breadcrumb and status chip in its bar, the
+caller's actions as measured buttons with a pointer resting on the first, a settings panel of toggles as wide as its
+words, a settings list with a state chip per point, a chat bubble for a quote (an initials avatar only when the
+attribution is a name, honorifics skipped), a dashboard card whose progress bar prints its total, a dialog to close,
+and a screenshot in a phone or browser frame chosen by the picture's own aspect and never cropped. `wayfinding`
+makes the deck a network: lines converging on an interchange for the cover, a station-name sign for each section, a
+departure board for a figure, a way-out sign to close, and a strip map for the points only when the caller says they
+happen in order — otherwise a directory sign, because a route claims an order. Every stop label sits at its own
+station, a line too light for its ground runs on a dark casing, a roundel's number takes whichever ink reads on its
+colour, and a longer line code is set smaller or in a pill (one too long even for a pill is refused, naming
+`line=`). Both have a light and a dark ground and are offered for their topics: a product launch, an app, a SaaS or
+feature tour for `interface`; a roadmap, a process, onboarding, a journey or a city for `wayfinding`. An explicit
+breadcrumb or status is drawn or the page is refused by name, never dropped by a tighter layout. New drawing
+primitives in `native_art` (routes with an optional casing, stations, interchanges, roundels, enamel signs, app
+windows, toggles, measured buttons, device frames, chat bubbles) each have a runnable `sigs.py --example`.
+
+### Every visual language, audited
+
+All thirteen languages of the time were run against generated long copy on landscape, square and portrait
+canvases, with their pictures, and by an agent working from the docs alone. Every language now measures by
+script and with headroom: a Latin word inside Chinese is one unit and is never split, a CJK character counts at
+least an em (as the lint counts it), a single word is held to the full column, and a wrapping display field is set
+in exactly the lines it was measured in, so a renderer cannot re-wrap a title into a lone last word. The image-led
+languages gain a `points` page, so every language has the same seven page functions. A drawn language refuses
+`image=` on a page that draws no picture, naming the pages that do; every picture is placed upright (EXIF) and
+converted to 8-bit in a format a pptx embeds, and an unreadable file is refused naming the page and the file. A
+refused page leaves its slide as it found it. The kits' own pages pass the delivery lint: composed overlaps are
+declared, the lint reads only a custom shape's filled paths, and a background picture that is a texture over one
+colour counts as that colour for contrast where the text sits. `--gates` prints the hues measured on the bundled
+samples, so the palette it records passes the register-pixels gate; printed next steps run from any folder and
+never overwrite a shipped file; `sigs.py --example` scaffolds run as printed. Glyph widths and loaded fonts are
+memoised, which makes every visual-language build faster with byte-identical output.
+
 ### Five more native visual languages — borrowed from the world
 
 `starlit` (a night sky, points as a constellation, the figure in a glow), `broadsheet` (a masthead strip, a headline
@@ -18,7 +65,8 @@ tags, a giant number with its share of the caller's total) and `chalkboard` (a f
 their words, arrows only when the points are in order). Every page in both orientations and two grounds. Words the
 kit cannot invent — a masthead, an edition, an Inside list, tags, a running head, authors, an abstract, a margin
 note, a total, a doodle — come only from the caller; page and figure numbers, the end mark and the structural labels
-(in the page's own script: 摘要 / 要旨 / 초록) are derived. A deck with no pictures is offered the one that fits its
+(in the page's own script: the Chinese, Japanese or Korean word for Abstract, Inside, Figure, Page and
+Note) are derived. A deck with no pictures is offered the one that fits its
 topic. Also: `register_surface.register()` refuses a name another file already registered (it silently replaced
 the kit before), and a replaced slide background drops its old picture.
 
