@@ -216,6 +216,16 @@ check(bool(err) and "needs a content rect" in err and "in wide" in err,
       "a too-narrow rect raises with the width it needs ({})".format(err))
 dk.set_theme(None)
 
+# §5.6: no example leaves an empty page, run as printed (the plain preamble's `s` included)
+for name in ("agenda", "card"):
+    out = subprocess.run([sys.executable, str(ROOT / "scripts" / "sigs.py"), "--example", name],
+                         capture_output=True, text=True).stdout
+    p = WORK / "printed_{}.pptx".format(name)
+    r = subprocess.run([sys.executable, "-c", out + "\nprs.save({!r})\n".format(str(p))], capture_output=True, text=True,
+                       cwd=str(WORK))
+    check(r.returncode == 0 and not [f for f in _hard_file(p) if "EMPTY" in f],
+          "`sigs.py --example {}` as printed leaves no empty page ({})".format(name, [f for f in _hard_file(p) if "EMPTY" in f][:1]))
+
 # ── no literal colour in a Tier-1 component body (spec §5.2) ──
 import check_component_theme as cct
 DK = str(ROOT / "scripts" / "deckkit.py")

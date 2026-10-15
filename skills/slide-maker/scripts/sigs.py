@@ -881,7 +881,9 @@ def main(argv=None):
         a.names = [n if (n in EXAMPLES or n in reg or "Kit." + n not in reg) else "Kit." + n for n in a.names]
         miss = [n for n in a.names if n not in EXAMPLES]
         if len(miss) < len(a.names):
-            print(PREAMBLE_VL.format(scripts=HERE) if a.lang else PREAMBLE.format(scripts=HERE))
+            # a language deck starts every page with k.new_slide(): the ordinary `s` would stay an empty page
+            only_vl = all("vl.use(" in EXAMPLES[n] for n in a.names if n in EXAMPLES)
+            print(PREAMBLE_VL.format(scripts=HERE) if (a.lang or only_vl) else PREAMBLE.format(scripts=HERE))
         for n in a.names:
             if n in EXAMPLES:
                 g = _guarantee(n)
