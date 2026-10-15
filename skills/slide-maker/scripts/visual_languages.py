@@ -810,6 +810,35 @@ def _balanced_width(k, f, t, sz, w):
 QUOTE_GROW = 1.5
 
 
+TUCK_MARK = ("soft",)     # the languages whose quote mark sits on a card (a void in it shows): it is tucked to the quote
+MARK_PAD = 0.07           # in: between the tucked mark's ink and the line box of the quote under it
+_MARK_INK = {}
+
+
+def _mark_ink_bottom(k):
+    """Where the opening quote mark's ink ends, in ems from the top of its box: the glyph drawn in the language's mark
+    face (PIL) plus 0.10em for what a renderer adds above the glyph (its box inset and line leading — measured in
+    LibreOffice: the soft mark's ink ended 0.60em down, PIL said 0.52em)."""
+    face, bold = k.face(TYPE[k.name]["mark"][1]), bool(TYPE[k.name]["mark"][2])
+    if (face, bold) not in _MARK_INK:
+        try:
+            from PIL import Image, ImageDraw
+            f = dk._pil_font(face, 90, bold)
+            px = 90 * dk._MEAS_PREC
+            im = Image.new("L", (int(px * 2), int(px * 2)), 0)
+            ImageDraw.Draw(im).text((int(px * 0.1), 0), "\u201c", font=f, fill=255)
+            bb = im.getbbox()
+            _MARK_INK[(face, bold)] = (bb[3] / float(px)) if bb else 0.52
+        except Exception:
+            _MARK_INK[(face, bold)] = 0.52
+    return _MARK_INK[(face, bold)] + 0.10
+
+
+def _mark_tuck(k, size, box_h):
+    """The gap after a tucked mark: negative — the next field starts MARK_PAD under the mark's ink."""
+    return min(0.0, _mark_ink_bottom(k) * size / 72.0 + MARK_PAD - box_h)
+
+
 def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=None):
     """PLAN the fields of one page in its column by measured height; returns (rects, draw).
 
@@ -848,8 +877,18 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=Non
             return sum(_field_height(k, f, l_, sz, fw) - 0.06 for l_ in phrased[f]) + 0.06
         return _field_height(k, f, t, sz, fw)
 
-    def total():
-        return sum(fheight(f, t, sizes[f], widths[f]) + gaps[f] for f, t in items)
+    tucks = k.name in TUCK_MARK and "mark" in order[:-1]
+
+    def gap_of(f, size, box_h, tucked=False):
+        # a quote mark on a card is TUCKED to the quote: the next field starts where the mark's ink ends, not under its
+        # whole line box (0.8in of blank at 90pt); the mark's box then runs under the quote's first line. Only where the
+        # block is PLACED: the sizes are decided on the untucked heights as before — a tucked page that kept more of the
+        # quote's size set a long quote one size past what the lint's line model holds in its box
+        return _mark_tuck(k, size, box_h) if tucked and tucks and f == "mark" else gaps[f]
+
+    def total(tucked=False):
+        return sum(fheight(f, t, sizes[f], widths[f]) + gap_of(f, sizes[f], fheight(f, t, sizes[f], widths[f]), tucked)
+                   for f, t in items)
     for f, t in items:
         # ONE word is never re-wrapped, so it is held to the full column; the headroom is for where lines break
         # ("1,250,000" at its floor was refused on a square board under Linux's wider faces, 2026-10-09)
@@ -907,7 +946,7 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=Non
         sizes[f] = sz
     if total() > h + 0.02:                 # balancing never adds lines; this is a guard, not a path
         widths = {f: w for f in widths}
-    t_all = total()
+    t_all = total(True)
     cy = y if anchor == "top" else (y + h - t_all if anchor == "bottom" else y + (h - t_all) / 2.0)
     rects, plan = {}, []
     for f, t in items:
@@ -918,16 +957,26 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=Non
         fx = x + (w_col - fw) / 2.0 if align == "c" else x
         rects[f] = (fx, cy, fw, fh)
         plan.append((f, t, sz, (fx, cy, fw, fh)))
-        cy += fh + gaps[f]
+        cy += fh + gap_of(f, sz, fh, True)
 
     def draw():
         al = {"l": PP_ALIGN.LEFT, "c": PP_ALIGN.CENTER}[align]
         for f, t, sz, (fx, fy, fw, fh) in plan:
             _base, role, bold, ckey, italic, _floor = TYPE[k.name][f]
+            al_f = al
             if underlay and f in underlay:
                 _dx = underlay[f]((fx, fy, fw, fh), t, sz) or 0.0
-                fx, fw = fx + _dx, fw - max(0.0, _dx)          # the figure moves to the shape's centre
+                _box = getattr(underlay[f], "box", None)
+                if getattr(underlay[f], "ink", None) and _box:
+                    # a figure in the ground's own ink sits ON the shape: its text box IS the shape, centred — the lint
+                    # reads what is behind a text box by how much of the box a shape covers, and a box wider than the
+                    # disc is read as sitting on the ground (dark ink on a dark ground: INVISIBLE TEXT)
+                    fx, fw, al_f, fy = _box[0], _box[1], PP_ALIGN.CENTER, fy - _box[2]
+                else:
+                    fx, fw = fx + _dx, fw - max(0.0, _dx)      # the figure moves to the shape's centre
             color = (k.color("text_accents") if ckey == "accent" else k.color("mute") if ckey == "mute" else k.color("ink"))
+            if f == "number" and getattr(underlay and underlay.get("number"), "ink", None):
+                color = dk.RGBColor.from_string(_hex(underlay["number"].ink))     # the figure on its disc: the ink the disc asks for
             if f == "number" and _outlinable(k, t):
                 import display_type as dt
                 dt.outlined(slide, fx, fy, fw, fh, t, color=_hex(k.P["text_accents"][0]), face=k.face("numeral"))
@@ -947,7 +996,7 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=Non
                 rr = [dk.mark(x, hl) for x in k.runs(t, sz, dk.RGBColor.from_string(_hex(ink)), bold, role, italic)]
             else:
                 rr = k.runs(t, sz, color, bold, role, italic)
-            dk.text(slide, fx, fy, fw, fh, [rr], align=al)
+            dk.text(slide, fx, fy, fw, fh, [rr], align=al_f)
     draw.sizes = {f: sz for f, _t, sz, _r in plan}      # what each field was planned at (P4 sizes its art by it)
     draw.headroom = dw                                   # how much wider each box is drawn than its words were measured
     draw.exact = {f: sizes[f] for f, _t in items}       # …before the 0.1pt rounding: a size decided at 32.58pt (one
@@ -1240,6 +1289,17 @@ def _readable_under(fill, ink, ground, floor=3.0):
     return _hex(ground)
 
 
+def _disc_colors(P, fill):
+    """(disc fill, the figure's ink or None for the language's own ink) for a figure on a decorative disc. The disc keeps
+    its true colour when the ground's page ink or the ground itself reads on it at 4.5:1 — soft dusk's sage disc
+    9DB8A0 takes the ground's dark 2E2940 (6.5:1). It was blended toward the ground until the OFF-WHITE ink reached 3:1
+    (7C8D83, a muddy grey-green, the figure at 3.05:1), and that blend is now only the last resort."""
+    best = max((P["ink"], P["ground"]), key=lambda c: _contrast(c, fill))
+    if _contrast(best, fill) >= 4.5:
+        return _hex(fill), (None if best == P["ink"] else _hex(best))
+    return _readable_under(fill, P["ink"], P["ground"]), None
+
+
 def frame_is_custom(frame):
     """A frame the plan's own slot frame may not match (the page asks for it explicitly)."""
     return frame not in (None, "rect")
@@ -1408,8 +1468,9 @@ def _compose_one(k, slide, page, fields, image, lay):
     underlay = {}
     if "circle" in lay["deco"]:
         acc = k.P["accents"]
+        _fill, _ink = _disc_colors(k.P, acc[1 % len(acc)])
 
-        def _disc(r, t, sz, _c=_readable_under(acc[1 % len(acc)], k.P["ink"], k.P["ground"])):
+        def _disc(r, t, sz, _c=_fill):
             # The shape HOLDS the number, centred on it: it was one line-height across from the box's left edge, so a
             # "1" sat left of centre and the "2" of "02" stood outside it (the user, 2026-10-04). One figure: a
             # circle; wider: a pill of the same height (the flow's line does not change). Returns how far to move
@@ -1426,9 +1487,21 @@ def _compose_one(k, slide, page, fields, image, lay):
             else:
                 sx = x - h * 0.10
                 dx = (sx + sw / 2.0) - (x + dk.TEXT_INSET_LR / 2.0 + adv / 2.0)
-            _oval(slide, sx, y, sw, h, _c, "a soft colour disc behind the figure; carries no information",
+            g = dy = 0.0
+            if _ink:
+                # a figure in the ground's own ink sits ON its disc, and the lint reads it against the disc only when
+                # the disc HOLDS the text box with the padding it asks of a card (0.10in under the text's rendered
+                # extent: its 0.04in top inset + one line at 1.25) — the disc grows to give it, never off the page, and
+                # the text box rises by what the page's edge leaves short (a figure as wide as the page: ~1% of the disc)
+                need = 0.04 + 1.25 * sz / 72.0 + 0.10
+                cw_ = _canvas(k)[0]
+                g = max(0.0, min(need - h, sx - 0.05, cw_ - 0.05 - (sx + sw)))
+                dy = max(0.0, need - (h + g))
+            _oval(slide, sx - g, y - g, sw + 2 * g, h + 2 * g, _c, "a soft colour disc behind the figure; carries no information",
                   pill=sw > h + 1e-6)
+            _disc.box = (sx - g, sw + 2 * g, dy)
             return dx
+        _disc.ink = _ink
         underlay["number"] = _disc
     if page == "data" and img_rect is None and items:
         rects, draw = _data_hero(k, slide, page, col, items, lay, underlay, orient)

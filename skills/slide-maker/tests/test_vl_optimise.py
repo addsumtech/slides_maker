@@ -201,6 +201,124 @@ for pg in ("cover", "closing"):
                       "{:.1%} cut, bottom {:.1%})".format(pg, tag, g, sy0, 1 - sy1))
 dk.set_theme(None)
 
+# ── Task 5 (A): soft: a quote card is sized to its content and the mark sits next to the quote ──
+# The mark's 90pt line box (1.56in) is mostly blank under a glyph 0.38in tall, and the quote started under all of it:
+# 1.16in of blank card between the mark and the first line, the top 58% of the card holding only the mark. Measured
+# on the RENDER (the glyph's ink is not in the file): the longest run of blank rows inside the card, between its ink.
+import subprocess
+import render_deck as _rd
+
+
+def _render_slides(prs, tag, dpi=60):
+    """The slides of `prs` as PIL images, rendered by LibreOffice; None when it is not installed (the caller fails
+    loudly — a render check that did not run must not read as one that passed)."""
+    soffice = _rd.find_soffice()
+    if not soffice:
+        return None
+    import fitz
+    from PIL import Image
+    d = WORK / ("r_" + tag); d.mkdir(exist_ok=True)
+    f = d / (tag + ".pptx"); prs.save(str(f))
+    for _try in range(3):                       # LibreOffice sometimes exits without a PDF when another instance is closing
+        subprocess.run([soffice, "--headless", "--convert-to", "pdf", "--outdir", str(d), str(f)], capture_output=True,
+                       timeout=180)
+        if (d / (tag + ".pdf")).exists():
+            break
+    if not (d / (tag + ".pdf")).exists():
+        return None
+    out = []
+    for pg in fitz.open(str(d / (tag + ".pdf"))):
+        pix = pg.get_pixmap(dpi=dpi)
+        out.append(Image.frombytes("RGB", (pix.width, pix.height), pix.samples))
+    return out
+
+
+def _blank_runs(im, rect_in, dpi, bg, tol=60):
+    """(first ink row, last ink row, longest blank run between them) in inches, for the ink inside `rect_in` — pixels
+    further than `tol` (summed channel difference) from the colour `bg`."""
+    x, y, w, h = (int(round(v * dpi)) for v in rect_in)
+    rows = []
+    for yy in range(y, y + h):
+        rows.append(any(sum(abs(a - b) for a, b in zip(im.getpixel((xx, yy)), bg)) > tol for xx in range(x, x + w, 2)))
+    inked = [i for i, v in enumerate(rows) if v]
+    if not inked:
+        return None
+    gap = best = 0
+    for v in rows[inked[0]:inked[-1] + 1]:
+        gap = 0 if v else gap + 1
+        best = max(best, gap)
+    return (y + inked[0]) / dpi, (y + inked[-1] + 1) / dpi, best / dpi
+
+
+for g in vl.VARIANTS["soft"]:
+    prs, k = _deck_at("soft", g, 13.333, 7.5)
+    sl = k.new_slide()
+    with contextlib.redirect_stdout(io.StringIO()):
+        k.quote(sl, quote="The visitor holds the screwdriver; the volunteer only guides.", attribution="How every repair begins",
+                image=str(vl.ASSETS / "photo/hall-repair.jpg"))
+    card = max((sh for sh in sl.shapes if sh.shape_type == 1), key=lambda sh: sh.width * sh.height)
+    cx, cy, cw, ch = (v / 914400.0 for v in (card.left, card.top, card.width, card.height))
+    ims = _render_slides(prs, "softq_" + g)
+    if ims is None:
+        check(False, "soft/{} quote card: LibreOffice not found — the render half of this check did not run".format(g)); continue
+    bg = ims[0].getpixel((int((cx + 0.12) * 60), int((cy + 0.05) * 60)))      # the card's own colour, near its top-left corner
+    first, last, blank = _blank_runs(ims[0], (cx + 0.2, cy + 0.12, cw - 0.4, ch - 0.24), 60, bg)
+    check(blank <= 0.35, "soft/{} quote card: no blank band inside the card is taller than 0.35in — the mark sits next to the "
+          "quote (longest blank run {:.2f}in)".format(g, blank))
+    check(ch <= (last - first) + 1.0, "soft/{} quote card stays sized to its content: {:.2f}in of card for {:.2f}in of "
+          "ink (<= 1.0in of padding in all)".format(g, ch, last - first))
+dk.set_theme(None)
+
+# ── Task 5 (A): soft: the figure's disc keeps its true colour and the digit takes the ground's ink (dusk) ──
+# On dusk the sage disc was blended toward the ground (9DB8A0 -> 7C8D83) so the off-white digit read at 3.05:1 on it
+# (the disc itself 3.98:1 on the ground). The disc stays the language's sage and the digit is set in the ground's
+# dark ink — 6.5:1 — on the data page and on the section pill alike.
+from pptx.enum.shapes import MSO_SHAPE as _MS
+
+
+def _hexc(c):
+    return str(c).upper()
+
+
+for g in vl.VARIANTS["soft"]:
+    acc_sage = vl.VARIANTS["soft"][g]["palette"]["accents"][1]
+    for page, kw in (("data", dict(number="1", label="evening a month", note="Short enough to fit around work.")),
+                     ("data", dict(number="87%", label="of repairs end well")),
+                     ("section", dict(number="02", kicker="Repair café", title="Everything you need is on the table"))):
+        for pic in (str(vl.ASSETS / "photo/jacket-mend.jpg"), None):
+            for (W, H) in ((13.333, 7.5), (7.5, 10.0)):
+                prs, k = _deck_at("soft", g, W, H)
+                sl = k.new_slide()
+                try:
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        getattr(k, page)(sl, image=pic, **kw)
+                except Exception as e:
+                    check(False, "soft/{} {} builds ({}: {})".format(g, page, type(e).__name__, str(e)[:70])); continue
+                num = next((sh for sh in _text_shapes(sl) if sh.text_frame.text.strip() == kw["number"]), None)
+                if num is None:
+                    check(False, "soft/{} {}: the figure {!r} is on the page".format(g, page, kw["number"])); continue
+                # the disc is drawn on the figure's own line: it spans the figure's box from top to bottom (to 0.3in) and meets it across
+                held = [sh for sh in sl.shapes if sh.shape_type == 1 and sh.auto_shape_type in (_MS.OVAL, _MS.ROUNDED_RECTANGLE)
+                        and sh.top <= num.top + 0.3 * 914400 and sh.top + sh.height >= num.top + num.height - 0.3 * 914400
+                        and sh.left < num.left + num.width and sh.left + sh.width > num.left]
+                if not held:
+                    check(False, "soft/{} {} '{}': a disc holds the figure".format(g, page, kw["number"])); continue
+                disc = min(held, key=lambda sh: sh.width * sh.height)
+                fill = _hexc(disc.fill.fore_color.rgb)
+                ink = _hexc(_run_of(num).font.color.rgb)
+                cr = vl._contrast(fill, ink)
+                ground = vl.VARIANTS["soft"][g]["palette"]["ground"]
+                check(fill == acc_sage and cr >= 4.5 and (g != "dusk" or ink == _hexc(ground)),
+                      "soft/{} {} '{}' {}{}: the disc is the true sage {} (is {}) and its figure reads {:.2f}:1 ({} on it)".format(
+                          g, page, kw["number"], "landscape" if W > H else "portrait", "" if pic else " (no picture)", acc_sage, fill, cr, ink))
+                if g == "dusk":
+                    # the lint reads dark ink against what is behind its text box: the disc must hold the box (it read the
+                    # ground — '1' ink #2E2940 on fill #2E2940, INVISIBLE TEXT — until the box was the disc's)
+                    mine = [f for f in _hard(prs, "sd_{}_{}_{}".format(page, int(W), int(bool(pic)))) if "'{}'".format(kw["number"]) in f]
+                    check(not mine, "soft/dusk {} '{}' {}{}: the figure on its disc raises no lint finding ({})".format(
+                        page, kw["number"], "landscape" if W > H else "portrait", "" if pic else " (no picture)", mine[:1]))
+dk.set_theme(None)
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:
