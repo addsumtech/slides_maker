@@ -146,7 +146,7 @@ EXAMPLES = {
              '    dk.box(s, bx, by, bw, bh, fill=dk.DEEP if i == 0 else dk.TINT)\n'
              '    dk.text(s, bx + 0.2, by + 0.15, bw - 0.4, bh - 0.3,\n'
              '            [[("tile %d" % i, 16 if i else 22,\n'
-             '               dk.WHITE if i == 0 else dk.DEEP, i == 0, False)]])',
+             '               dk.on(dk.DEEP if i == 0 else dk.TINT), i == 0, False)]])   # ink picked for its fill',
     # qr_panel needs a PRE-RENDERED png unless segno/qrcode is installed; `size` is held to the
     # 10:1 scan rule and the caption/URL are sized from the CANVAS, not from the code.
     "qr_panel": 'dk.qr_panel(s, 0.7, 2.4, 1.8, "https://example.org/preprint",\n'
@@ -197,8 +197,8 @@ EXAMPLES = {
     "tier_stack": 'dk.tier_stack(s, 1.0, 1.0, 6.0, 3.4,\n'
                   '              ["Visitors", "Trials", "Paid"], values=[12000, 3000, 410],\n'
                   '              mode="funnel")',
-    "leaderboard": 'dk.leaderboard(s, 0.6, 1.0, 5.0,\n'
-                   '               [(dk.ACCENTS[0], "alpha", 42), (dk.ACCENTS[1], "beta", "18", "sub")])',
+    "leaderboard": 'c1, c2 = dk.palette(2)   # two distinct category colours on ANY palette (one-accent languages too)\ndk.leaderboard(s, 0.6, 1.0, 5.0,\n'
+                   '               [(c1, "alpha", 42), (c2, "beta", "18", "sub")])',
     "scorecard": 'dk.scorecard(s, 0.6, 1.0, 2.5, 1.8, "Users", 1234, delta="3.2pp")',
     "meter_bar": 'dk.meter_bar(s, 0.6, 2.0, 4.7, 0.62, value="62%")',
     "dot_strip": 'dk.dot_strip(s, 0.6, 2.0, 8.0, [("A", 70), ("B", 100), ("C", 180)], 0, 200)',

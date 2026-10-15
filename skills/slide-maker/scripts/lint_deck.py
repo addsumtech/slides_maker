@@ -3838,7 +3838,9 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
                              "(build content as native shapes; images are plates/figures, not the whole slide)")
         # 5) orphan / blank slide — text hidden inside GROUPS counts as content (some generators
         #    group everything); that gets an editability [warn], not a false EMPTY finding
-        if not [s for s in bx if not s["bg"] and (s["text"] or s["solid"])]:
+        # a native CHART or TABLE (a graphic frame: no text frame, no solid fill) is content too — a slide holding only
+        # a native chart read as EMPTY (component matrix, 2026-10-15)
+        if not [s for s in bx if not s["bg"] and (s["text"] or s["solid"] or s["st"] in ("CHART", "TABLE"))]:
             grouped_text = any(r.text.strip() for r in _walk_runs(slide.shapes))
             if grouped_text:
                 warns.append("GROUPED-ONLY content: every text/object on this slide lives inside "
@@ -4012,7 +4014,22 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
         for _top, row in rows.items():
             if len(row) >= 2 and (max(r["w"] for r in row) - min(r["w"] for r in row)) < 0.4:  # a row of similar-width siblings
                 hs = [r["h"] for r in row]
-                if max(hs) - min(hs) > 0.12:
+                tall = max(row, key=lambda r: r["h"])
+
+                def _completes(c, depth=0):
+                    """c is continued downward by cards stacked under it to the tall card's bottom: a MOSAIC (a
+                    two-row bento tile beside stacked one-row tiles), not uneven siblings (component matrix,
+                    2026-10-15: dk.bento's own example was flagged)."""
+                    bottom, want = c["t"] + c["h"], tall["t"] + tall["h"]
+                    if abs(bottom - want) <= 0.06:
+                        return True
+                    if depth > 4 or bottom > want:
+                        return False
+                    below = [o for o in cset if o is not c and 0 <= o["t"] - bottom <= 0.4
+                             and min(o["l"] + o["w"], c["l"] + c["w"]) - max(o["l"], c["l"]) > 0.3]
+                    return any(_completes(o, depth + 1) for o in below)
+                mosaic = all(_completes(r) for r in row if r is not tall)
+                if max(hs) - min(hs) > 0.12 and not mosaic:
                     finds.append(f"UNEVEN CARD HEIGHTS: a row of {len(row)} cards has heights "
                                  f"{sorted(round(h,2) for h in hs)} — sibling cards in a row must share ONE "
                                  f"height (size the row to the tallest card's content)")

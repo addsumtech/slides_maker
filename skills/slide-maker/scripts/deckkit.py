@@ -2522,7 +2522,7 @@ def agenda(slide, x, y, w, items, *, active=None, targets=None, numeral_style="p
     accent = _as_rgb(accent) if accent is not None else MAGENTA
     ink = _as_rgb(ink) if ink is not None else DEEP
     page = GROUND if GROUND is not None else WHITE      # GROUND is None until set_ground()
-    muted = _as_rgb(muted) if muted is not None else _blend(ink, page, 0.45)
+    muted = _as_rgb(muted) if muted is not None else _on_surface(_blend(ink, page, 0.45), page)   # dimmed, still read
     face = font or FONT
     chrome_face = chrome or MONO
     if targets is not None and len(targets) != len(items):
@@ -11813,7 +11813,8 @@ def sankey(slide, x, y, w, h, links, *, node_w=0.26, gap=0.14, accents=None, ink
         cx = (bx - ax) * curve
         top = _bez((ax, a0), (ax + cx, a0), (bx - cx, b0), (bx, b0))
         bot = _bez((ax, a0 + vh), (ax + cx, a0 + vh), (bx - cx, b0 + vh), (bx, b0 + vh))
-        _iso_poly(slide, top + bot[::-1], colour.get(b) or colour.get(a) or acc[0])
+        rib = _iso_poly(slide, top + bot[::-1], colour.get(b) or colour.get(a) or acc[0])
+        overlap_intent(rib, "a ribbon's end tucks under its node bar so no hairline seam shows")
 
     # ---- nodes + labels --------------------------------------------------------------------
     for nd in order:
