@@ -612,6 +612,24 @@ _ANCHOR = {"iso_prism": {"ox": "x + w / 2", "oy": "y + h - 0.6"}}
 _TOP_OVERHANG = {"eval_matrix": 0.34}
 
 
+def _lang_head(lang, ground=None):
+    """The lines that open a page of visual language `lang` and name its content rect (x, y, w, h)."""
+    return ("import visual_languages as vl, register_surface as rs\n"
+            "k = vl.use({!r}, prs{})\n".format(lang, ", ground={!r}".format(ground) if ground else "") +
+            "s = k.new_slide()                           # every page of a language deck starts here\n"
+            "x, y, w, h = rs.ground(s, k.name, role=\"content\", index=1)   # the language's content rect (inches)\n")
+
+
+def unplaced_example(name, lang, ground=None):
+    """An example `placed_example` cannot place, still runnable as printed in language `lang`: the language's page and
+    rect first, then the example as written (its own coordinates — move them into x, y, w, h)."""
+    src = EXAMPLES[name]
+    if "vl.use(" in src:
+        return src                                     # already a visual-language scaffold
+    return (_lang_head(lang, ground) + "# not placed automatically: move its coordinates into the rect x, y, w, h\n" +
+            src.replace("dk.add_slide(prs)", "k.new_slide()"))
+
+
 def placed_example(name, lang, ground=None):
     """`EXAMPLES[name]` placed in visual language `lang`'s content rect — the code an agent runs as printed after
     `prs = dk.blank_deck(...)`. The example's ONE drawing call with literal geometry gets the rect's x, y, w (and h
@@ -664,10 +682,7 @@ def placed_example(name, lang, ground=None):
     for (a, b), rep in sorted(edits, reverse=True):
         out = out[:a] + rep + out[b:]
     out = out.replace("dk.add_slide(prs)", "k.new_slide()")
-    head = ("import visual_languages as vl, register_surface as rs\n"
-            "k = vl.use({!r}, prs{})\n".format(lang, ", ground={!r}".format(ground) if ground else "") +
-            "s = k.new_slide()                           # every page of a language deck starts here\n"
-            "x, y, w, h = rs.ground(s, k.name, role=\"content\", index=1)   # the language's content rect (inches)\n")
+    head = _lang_head(lang, ground)
     if name in PLACE_MIN_W:
         head += ("if w < {0}:\n    raise ValueError(\"{1} needs a content rect at least {0} in wide; this one is %.2f in "
                  "— use a wider canvas or split the content\" % w)\n").format(PLACE_MIN_W[name], name)
@@ -892,7 +907,8 @@ def main(argv=None):
                     try:
                         body = placed_example(n, a.lang, a.ground)
                     except ValueError as e:
-                        print("sigs: {} — printing it unplaced; place it in the rect rs.ground() returns".format(e),
+                        body = unplaced_example(n, a.lang, a.ground)
+                        print("sigs: {} — printed with the language's page and rect; it runs as printed".format(e),
                               file=sys.stderr)
                 print(f"\n# {n}" + (f" — {g}" if g else "") + f"\n{body}")
         # A real helper with no scaffold is NOT a licence to hand-roll it — that is the exact

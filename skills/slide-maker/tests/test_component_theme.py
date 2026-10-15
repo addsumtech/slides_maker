@@ -200,6 +200,15 @@ for name, L in (("timeline", "chalkboard"), ("native_chart", "ink"), ("org_tree"
     check(r.returncode == 0 and pf.exists() and not _hard_file(pf),
           "`sigs.py --example {} --in {}` runs as printed with no hard lint finding ({})".format(
               name, L, (r.stderr or "")[-160:] or (_hard_file(pf)[:1] if pf.exists() else "no deck")))
+# `--in` on an example it cannot place still prints something that RUNS (it printed a body with no `s`: NameError)
+for name, L in (("chip", "ink"), ("back_link", "ink"), ("vl_ink", "ink")):
+    out = subprocess.run([sys.executable, str(ROOT / "scripts" / "sigs.py"), "--example", name, "--in", L],
+                         capture_output=True, text=True).stdout
+    pf = WORK / "printed_unplaced_{}.pptx".format(name)
+    r = subprocess.run([sys.executable, "-c", out + "\nprs.save({!r})\n".format(str(pf))], capture_output=True,
+                       text=True, cwd=str(WORK))
+    check(r.returncode == 0 and pf.exists(), "`sigs.py --example {} --in {}` (not placeable) still runs as printed ({})".format(
+        name, L, (r.stderr or "")[-140:]))
 # a component given a rect narrower than it needs fails loudly, with the width it needs (Review Focus 3)
 saved = dict(sigs.PLACE_MIN_W)
 try:
