@@ -66,28 +66,44 @@ presets.apply("swiss"); dk.set_theme(None)
 dk._state_restore(_SNAP); dk.set_theme(None)
 
 # ── the ordinary-deck guard: every example, no visual language, byte-identical to the baseline ──
+# The baseline was taken from the code BEFORE Phase 2a (76d0cfe), each example from deckkit's pristine state. An example
+# that opens a visual language (vl.use) is a language scaffold, not an ordinary deck — and it left its palette behind
+# for every later example (`points` did: the first baseline hashed 35 examples in ink's palette).
 BASE = json.loads((ROOT / "tests" / "fixtures" / "component_xml_baseline.json").read_text())
-CHANGED_ON_PURPOSE = {           # name -> the listed fix that changed it, each with its reason
-    "sankey": "Task 6: each ribbon declares overlap_intent (its end tucks under the node bar on purpose) — names only",
+CHANGED_ON_PURPOSE = {           # name -> the listed fix that changed it, and the exact hash it draws now
+    "sankey": ("Task 6: each ribbon declares overlap_intent (its end tucks under the node bar on purpose) — names only",
+               "a580101c1d4dc22f451c31e0f5bb9eaed53294e63cd00f7ff5da83385ad0aec8"),
 }
-dk.set_theme(None) if hasattr(dk, "set_theme") else None
+dk.set_theme(None)
 # the hashes were taken with macOS faces: text measured with another platform's faces lays out differently, so the
 # guard runs where its baseline was taken (the pre-push local CI) and records a skip elsewhere (ubuntu CI, the sim)
 GUARD_HERE = sys.platform == BASE.get("_platform") and not dk._font_substituted("Calibri")
 if not GUARD_HERE:
     print("  skip the ordinary-deck guard: baseline taken on {}, this is {} — run it on macOS".format(
         BASE.get("_platform"), sys.platform))
+_PRISTINE = dk._state_snapshot()
+guarded = 0
 for name, want in sorted(BASE.items()):
     if name.startswith("_") or str(want).startswith("BUILD") or not GUARD_HERE:
         continue
+    dk._state_restore(_PRISTINE); dk.set_theme(None)
     prs = dk.blank_deck(13.333, 7.5); s = dk.add_slide(prs)
     try:
         _build(name, prs, s); got = _hash(prs, "base_" + name)
     except Exception as e:
         got = "BUILD {}".format(type(e).__name__)
-    check(got == want or name in CHANGED_ON_PURPOSE,
-          "{}: an ordinary deck draws exactly what it drew before{}".format(
-              name, "" if got == want else " (changed — not a listed fix)"))
+    guarded += 1
+    if name in CHANGED_ON_PURPOSE:
+        why, now = CHANGED_ON_PURPOSE[name]
+        check(got != want and (now is None or got == now),
+              "{}: changed only by its listed fix — {} ({})".format(name, why, got[:12]))
+    else:
+        check(got == want, "{}: an ordinary deck draws exactly what it drew before Phase 2a{}".format(
+            name, "" if got == want else " (changed — not a listed fix)"))
+dk._state_restore(_PRISTINE); dk.set_theme(None)
+if GUARD_HERE:
+    want_n = sum(1 for k, v in BASE.items() if not k.startswith("_") and not str(v).startswith("BUILD"))
+    check(guarded == want_n, "the ordinary-deck guard ran {}/{} examples".format(guarded, want_n))
 
 # ── Task 6: the examples and the pre-existing component faults ──
 # a slide holding only a native chart is content, not an EMPTY page (the lint missed graphic frames)
@@ -131,15 +147,18 @@ for L in vl.LANGS:
             k = vl.use(L, prs, ground=g)
         owner, first = [], {}
         for name in TIER1:
-            with contextlib.redirect_stdout(io.StringIO()):
-                k = vl.use(L, prs, ground=g)          # each component starts from its language
-            n0 = len(prs.slides); s = k.new_slide()
-            try:
-                _build(name, prs, s)
-            except Exception as e:
-                check(False, "{}/{} {}: builds ({}: {})".format(L, g, name, type(e).__name__, str(e)[:80]))
-            first[n0] = name                        # the component's OWN slide (an example may add link targets)
-            owner += [name] * (len(prs.slides) - n0)
+            for field in (range(4) if L == "poster" else (None,)):
+                with contextlib.redirect_stdout(io.StringIO()):
+                    k = vl.use(L, prs, ground=g)          # each component starts from its language
+                    while field is not None and len(prs.slides) % 4 != field:
+                        k.new_slide()                     # poster: page N takes field N mod 4 — judge every field
+                n0 = len(prs.slides); s = k.new_slide()
+                try:
+                    _build(name, prs, s)
+                except Exception as e:
+                    check(False, "{}/{} {}: builds ({}: {})".format(L, g, name, type(e).__name__, str(e)[:80]))
+                first[n0] = name                        # the component's OWN slide (an example may add link targets)
+                owner += [name] * (len(prs.slides) - n0)
         found = _hard(prs, "m_{}_{}".format(L, g))
         by = {}
         for f in found:
@@ -148,24 +167,34 @@ for L in vl.LANGS:
                 by.setdefault(first[i], []).append(f)
         for name in TIER1:
             if (L, name) in PLACEMENT_2B and by.get(name) and all("FOOTER" in f for f in by[name]):
-                check(True, "{}/{} {}: placement tracked for Phase 2b — {}".format(L, g, name, PLACEMENT_2B[(L, name)]))
+                print("  2b   {}/{} {}: placement tracked for Phase 2b — {}".format(L, g, name, PLACEMENT_2B[(L, name)]))
                 continue
             check(not by.get(name), "{}/{} {}: readable, no hard lint finding ({})".format(L, g, name, by.get(name, [])[:1]))
 
 # ── no literal colour in a Tier-1 component body (spec §5.2) ──
 import check_component_theme as cct
-fns = [f for f in TIER1 if hasattr(dk, f)] + ["tint", "native_chart", "draw_axis"]
-left = [x for x in cct.scan(str(ROOT / "scripts" / "deckkit.py"), fns) if (x[0], x[2]) not in cct.ALLOW]
-check(left == [], "no Tier-1 component draws a literal colour outside _th / the allowlist ({})".format(left[:4]))
-src = "def leaky(s):\n    box(s, 0, 0, 1, 1, fill=RGBColor(0x12, 0x34, 0x56))\n    text(s, 0, 0, 1, 1, [[('x', 10, '9AA0AE', False, False)]])\n"
+DK = str(ROOT / "scripts" / "deckkit.py")
+check(cct.unknown(DK, cct.TIER1) == [], "every name the checker lists is a top-level deckkit function ({})".format(
+    cct.unknown(DK, cct.TIER1)))
+check(not [f for f in TIER1 if not hasattr(dk, f) and not hasattr(dc, f)],
+      "every matrix component exists in deckkit or designed_charts")
+left = [x for x in cct.scan(DK, cct.with_helpers(DK, cct.TIER1)) if (x[0], x[2]) not in cct.ALLOW]
+check(left == [], "no Tier-1 component or helper it calls draws a literal colour outside _th / the allowlist ({})".format(left[:4]))
+src = ("def leaky(s):\n    box(s, 0, 0, 1, 1, fill=RGBColor(0x12, 0x34, 0x56))\n    text(s, 0, 0, 1, 1, [[('x', 10, '9AA0AE', False, False)]])\n"
+       "def comp(s):\n    _helper(s)\n"
+       "def _helper(s):\n    box(s, 0, 0, 1, 1, fill=RGBColor(0x65, 0x43, 0x21))\n"
+       "def outer(s):\n    def inner():\n        pass\n")
 p_ = WORK / "leaky.py"; p_.write_text(src)
 check(len(cct.scan(str(p_), ["leaky"])) == 2, "the checker catches an RGBColor and a hex literal")
+check(len(cct.scan(str(p_), cct.with_helpers(str(p_), ["comp"]))) == 1, "the checker follows a component into its helpers")
+check(cct.unknown(str(p_), ["outer", "inner", "gone"]) == ["gone", "inner"],
+      "the checker names a listed function it cannot scan (nested or missing)")
 
 # ── matplotlib charts take the language's series, ground and font (explicit arguments still win) ──
 with contextlib.redirect_stdout(io.StringIO()):
     vl.use("tally", dk.blank_deck(13.333, 7.5), ground="night")
-check(dc.THEME_DEFAULTS.get("dark") is True and dc.THEME_DEFAULTS.get("palette", [None])[0] == "#" + dk.THEME["series"][0],
-      "designed_charts defaults follow the active language ({})".format(dc.THEME_DEFAULTS))
+check(dc.theme_defaults().get("dark") is True and dc.theme_defaults().get("palette", [None])[0] == "#" + dk.THEME["series"][0],
+      "designed_charts defaults follow the active language ({})".format(dc.theme_defaults()))
 import matplotlib
 seen = {}
 _orig_save = dc._save
@@ -193,7 +222,92 @@ for nm in ("bland_altman", "forest_plot", "km_curve", "roc_curve", "waterfall", 
         err = "{}: {}".format(type(e).__name__, e)
     check(err is None, "{} builds on a one-series language ({})".format(nm, err))
 dk.set_theme(None)
-check(dc.THEME_DEFAULTS == {}, "clearing the theme clears the chart defaults")
+check(dc.theme_defaults() == {}, "clearing the theme clears the chart defaults")
+
+# ── final-review fixes: every language ground, not one example per language ──
+def _on(L, g):
+    prs = dk.blank_deck(13.333, 7.5)
+    with contextlib.redirect_stdout(io.StringIO()):
+        k = vl.use(L, prs, ground=g)
+    return prs, k
+
+
+GROUNDS = [(L, g) for L in vl.LANGS for g in vl.VARIANTS[L]]
+for L, g in GROUNDS:
+    prs, k = _on(L, g)
+    ground = dk.THEME["ground"]
+    # a chart's series stay tellable apart on a one- or two-colour language (they were cycled: one hue for all)
+    pal, _dark, face = dc._theme(None, None, None)
+    four = [c.lstrip("#") for c in pal[:4]]
+    designed = {c.upper() for c in dk.THEME["series"]}     # the language's own pairs are its design (Phase 2b redesigns them)
+    close = [(a, b) for i, a in enumerate(four) for b in four[i + 1:]
+             if dk._rgb_dist(a, b) < 60 and not (a in designed and b in designed)]
+    faint = [c for c in four if dk.contrast_ratio(c, ground) < 3.0]
+    grey = [c for c in four if c not in designed and max(dk._as_rgb(c)) - min(dk._as_rgb(c)) < 30]
+    check(len(four) == 4 and not close and not faint and not grey,
+          "{}/{}: a chart's first four series are distinct, 3:1 on the ground and not grey ({} close {} faint {} grey {})".format(
+              L, g, four, close, faint, grey))
+    # chart figures are lining, whatever face the language sets its words in (Georgia's digits bob)
+    check(face is None or not dk.has_oldstyle_figures(face),
+          "{}/{}: the chart default face has lining figures ({})".format(L, g, face))
+    # chart text (ticks, labels, notes) in the language's ink and muted ink, readable on its ground (spec §5.2)
+    _plt, c_ink, _grid, c_mute = dc._mpl(_dark)
+    check(min(dk.contrast_ratio(c_ink.lstrip("#"), ground), dk.contrast_ratio(c_mute.lstrip("#"), ground)) >= 4.5,
+          "{}/{}: chart ink {} and muted {} read on the ground".format(L, g, c_ink, c_mute))
+    # native_chart takes the language's series, not its text accents, and keeps three series apart
+    s = k.new_slide()
+    ch = dk.native_chart(s, 0.6, 1.0, 6.0, 3.2, ["Q1", "Q2", "Q3"], [("a", [3, 5, 4]), ("b", [2, 4, 5]), ("c", [1, 2, 3])],
+                         kind="column")
+    got = [str(ser.format.fill.fore_color.rgb) for ser in ch.series]
+    own = [c.upper() for c in dk.THEME["series"][:3]]
+    check(got[:len(own)] == own and len(set(got)) == 3,
+          "{}/{}: native_chart's series are the language's own, three apart ({} vs {})".format(L, g, got, own))
+    # a regressed dumbbell row (risk red) and the ✓/✕/◐ marks read on every ground
+    s = k.new_slide()
+    dk.dumbbell_board(s, 0.6, 1.4, 8.8, [("Latency", "p95", 120, 48, 0, 140, "ms"), ("Cost", "per run", 61, 90, 0, 100, "$")],
+                      regress=[1])
+    s = k.new_slide()
+    dk.eval_matrix(s, 0.8, 1.6, 8.4, ["A", "B"], ["speed", "cost", "risk"],
+                   [["yes", "no"], ["partial", "yes"], ["no", "maybe"]], mark="mark", recommend=1)
+    found = _hard(prs, "fix_{}_{}".format(L, g))
+    check(not [f for f in found if f.startswith("slide 2:")],
+          "{}/{}: a regressed dumbbell row reads ({})".format(L, g, [f for f in found if f.startswith("slide 2:")][:1]))
+    check(not [f for f in found if f.startswith("slide 3:")],
+          "{}/{}: eval_matrix's marks read ({})".format(L, g, [f for f in found if f.startswith("slide 3:")][:1]))
+# poster changes its field every page: step_list's active step reads on all four, in both orientations
+for g in vl.VARIANTS["poster"]:
+    for orient in ("vertical", "horizontal"):
+        prs, k = _on("poster", g)
+        for i in range(4):
+            dk.step_list(k.new_slide(), 0.8, 1.0, 8.0, [("Collect", "gather"), ("Train", "fit"), ("Ship", "go")],
+                         active_idx=1, orientation=orient)
+        found = _hard(prs, "poster_steps_{}_{}".format(g, orient))
+        check(not found, "poster/{} step_list ({}) with an active step reads on every field ({})".format(g, orient, found[:1]))
+# opening a template starts a deck: the last deck's language does not follow it
+prs, k = _on("starlit", "light"); k.new_slide(); prs.save(str(WORK / "tpl.pptx"))
+dk.open_template(str(WORK / "tpl.pptx"))
+check(dk.THEME == {} and dc._theme(None, None, None) == (None, False, None),
+      "open_template starts with no theme ({})".format(sorted(dk.THEME)))
+# a state restore (smoke runs examples between snapshots) leaves the chart defaults agreeing with deckkit
+snap = dk._state_snapshot()
+_on("tally", "night")
+dk._state_restore(snap)
+check(dc._theme(None, None, None) == (None, False, None),
+      "after a state restore the chart defaults follow deckkit's restored theme ({})".format(dc._theme(None, None, None)))
+# an explicit palette/dark wins while a dark theme is active (Review Focus 4) — measured on the drawn figure
+_on("tally", "night")
+seen = {}
+dc._save = lambda fig, out: seen.update(
+    lines=[l.get_color() for l in fig.findobj(matplotlib.lines.Line2D)],
+    texts=[t.get_color() for t in fig.findobj(matplotlib.text.Text) if t.get_text().strip()]) or _orig_save(fig, out)
+try:
+    dc.radar(str(WORK / "r3.png"), ["a", "b", "c"], [("s", [1, 2, 3])], palette=["#123456"], dark=False)
+finally:
+    dc._save = _orig_save
+check("#123456" in [str(c).lower() for c in seen.get("lines", [])] and "#e8ecf5" not in [str(c).lower() for c in seen.get("texts", [])],
+      "an explicit palette and dark=False win over a dark theme (lines {} texts {})".format(
+          sorted(set(map(str, seen.get("lines", []))))[:4], sorted(set(map(str, seen.get("texts", []))))[:3]))
+dk.set_theme(None)
 
 for line in ok:
     print("  ok   " + line)

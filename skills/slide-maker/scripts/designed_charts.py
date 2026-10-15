@@ -58,28 +58,31 @@ _CJK_CANDIDATES = [
 ]
 _cjk_cache = None
 
-# The active visual language's chart defaults (deckkit.set_theme pushes them): used ONLY when a chart's own palette= /
-# dark= / font= is None, so an explicit argument always wins and an ordinary deck (no theme) draws as before.
-THEME_DEFAULTS = {}
+# The active visual language's chart defaults, read from deckkit's THEME when a chart is drawn (never a copy that a
+# state restore or a new deck could leave stale). Used ONLY when a chart's own palette= / dark= / font= is None, so an
+# explicit argument always wins and an ordinary deck (no theme) draws as before.
+def theme_defaults():
+    dk = sys.modules.get("deckkit")
+    th = getattr(dk, "THEME", None) if dk is not None else None
+    if not th:
+        return {}
+    # charts index fixed slots (points, mean line, limits …): six series, padded APART when the language designs
+    # fewer (deckkit.theme_series); the face keeps the language's register but never its old-style figures
+    return {"palette": ["#" + c for c in dk.theme_series(max(6, len(th.get("series") or [])))],
+            "dark": bool(th.get("dark", False)), "font": dk.numeral_face(dk.FONT),
+            "ink": "#" + str(th["ink"]).lstrip("#"), "rule": "#" + str(th["rule"]).lstrip("#"),
+            "mute": "#" + str(th["mute"]).lstrip("#")}
 
 
 def _theme(palette, dark, font):
-    if palette is None and THEME_DEFAULTS.get("palette"):
-        pal = list(THEME_DEFAULTS["palette"])
-        # charts index fixed slots (points, mean line, limits …): a language with fewer series colours than that is
-        # padded with its OWN colours, cycled — readable on its ground, never a crash (Phase 2b designs four or more)
-        palette = (pal * 6)[:max(6, len(pal))]
+    d = theme_defaults()
+    if palette is None and d.get("palette"):
+        palette = list(d["palette"])
     if dark is None:
-        dark = bool(THEME_DEFAULTS.get("dark", False))
+        dark = bool(d.get("dark", False))
     if font is None:
-        font = THEME_DEFAULTS.get("font")
+        font = d.get("font")
     return palette, dark, font
-
-
-_dk = sys.modules.get("deckkit")          # deckkit imported first and a language already active: start from its theme
-if _dk is not None and getattr(_dk, "THEME", None):
-    THEME_DEFAULTS = {"palette": ["#" + c for c in _dk.THEME.get("series", [])], "dark": _dk.THEME.get("dark", False),
-                      "font": _dk.FONT}
 
 
 def _available_cjk():
@@ -105,6 +108,9 @@ def _mpl(dark, font=None):
     ink = "#E8ECF5" if dark else "#1A1A22"
     grid = "#2A3050" if dark else "#E7E9F0"
     muted = "#8A93A6" if dark else "#9AA0AE"
+    d = theme_defaults()
+    if d and d["dark"] == bool(dark):        # drawn for the language's own ground: its ink, rules and muted text
+        ink, grid, muted = d["ink"], d["rule"], d["mute"]
     return plt, ink, grid, muted
 
 

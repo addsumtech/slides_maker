@@ -751,8 +751,10 @@ def _poster_ground(k, slide):
     vl._PAL_OVERRIDE["poster"] = k.P
     na.solid_background(slide, fld["bg"])
     dk.set_ground(fld["bg"])
+    # every accent constant vl.use() sets follows the field (text_accents [accent, ink] → magenta, blue, teal): a
+    # deck-wide BLUE left step_list's numerals cream on the lime field, 1.0:1
     dk.set_palette(deep=fld["ink"], slate=fld["ink"], mute=fld["ink"], tint=card, magenta=fld["accent"],
-                   accents=[fld["accent"], fld["ink"]])
+                   blue=fld["ink"], teal=fld["accent"], accents=[fld["accent"], fld["ink"]])
     # the components' theme follows the field too (their cards, rules and inks), not only the palette constants
     dark = vl._lum(fld["ink"]) > vl._lum(fld["bg"])
     rule = _away(fld["bg"], fld["ink"])

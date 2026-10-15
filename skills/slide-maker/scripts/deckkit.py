@@ -324,6 +324,51 @@ def palette(n, accents=None):
     return fills
 
 
+_SERIES_TURNS = (1 / 2, 1 / 3, 2 / 3, 1 / 6, 5 / 6, 1 / 12, 7 / 12, 5 / 12, 11 / 12, 1 / 4, 3 / 4)
+
+
+def theme_series(n):
+    """``n`` series colours (hex 'RRGGBB') for a chart or a categorical set inside the active visual language.
+
+    The language's own series come first. When it designs fewer than ``n`` (ink, drafting, starlit … carry ONE), the
+    rest are its own hues turned round the colour wheel — each at least 3:1 on the ground, none grey, every pair
+    apart by palette()'s own bar (_rgb_dist >= 60, relaxed only when the wheel runs out). Cycling the language's
+    colours instead drew every series of a chart on a one-colour language in the same hue. No language active: the
+    deck's ACCENTS, cycled, as before."""
+    if not THEME or not THEME.get("series"):
+        pool = [str(_as_rgbc(c)) for c in ACCENTS]
+        return [pool[i % len(pool)] for i in range(n)]
+    import colorsys
+    ground = THEME.get("ground")
+    base = [str(_as_rgbc(c)) for c in THEME["series"]]
+    out = base[:n]
+    if len(out) >= n:
+        return out
+    cands = []
+    for b in base:
+        r, g, bl = _as_rgb(b)
+        h, l, s = colorsys.rgb_to_hls(r / 255, g / 255, bl / 255)
+        s = max(s, 0.45)                                   # a near-grey series still turns into real hues
+        for turn in _SERIES_TURNS:
+            rr, gg, bb = colorsys.hls_to_rgb((h + turn) % 1.0, l, s)
+            c = "%02X%02X%02X" % (round(rr * 255), round(gg * 255), round(bb * 255))
+            if ground and contrast_ratio(c, ground) < 3.0:
+                c = str(_ink_reaching(c, ground, 3.0))
+            cands.append(c)
+    for floor in (60, 40, 25):
+        for c in cands:
+            if len(out) >= n:
+                break
+            rgb = _as_rgb(c)
+            if max(rgb) - min(rgb) >= 30 and all(_rgb_dist(c, o) >= floor for o in out):
+                out.append(c)
+        if len(out) >= n:
+            break
+    while len(out) < n:                                    # more categories than the wheel keeps apart
+        out.append(out[len(out) % len(base)])
+    return out
+
+
 def palette_from_image(path, n=5, *, keep_neutrals=False):
     """Extract ``n`` representative ACCENT colours from a generated template image, as
     ``RGBColor``, most-frequent first.
@@ -511,6 +556,7 @@ RADIUS_SCALE = 1.0        # 0 = every corner square (brutalist · swiss · ink_w
 RULE_W_SCALE = 1.0        # multiplies rule / divider / border weights. brutalist "THICK black
                           # rules"; blueprint + swiss + editorial + luxury "hairline"
 GROUND = None             # the deck's background colour; add_slide() paints it. None = paint
+                          # nothing (unchanged behaviour). Set via set_ground()/presets.apply().
 
 # The active visual language's colour ROLES, read at call time by every component (spec §5.1). Empty for an ordinary
 # deck: _th() then returns the call site's old literal, so an ordinary deck draws byte-for-byte what it drew before.
@@ -526,12 +572,7 @@ def set_theme(theme):
     unknown = set(theme) - _THEME_KEYS
     if unknown:
         raise ValueError("set_theme(): unknown role(s) {} — known: {}".format(sorted(unknown), sorted(_THEME_KEYS)))
-    THEME = theme
-    import sys as _s
-    dc = _s.modules.get("designed_charts")     # matplotlib charts read their defaults from here (imported lazily)
-    if dc is not None:
-        dc.THEME_DEFAULTS = ({"palette": ["#" + c for c in THEME.get("series", [])], "dark": THEME.get("dark", False),
-                              "font": FONT} if THEME else {})
+    THEME = theme          # designed_charts reads it when a chart is drawn (designed_charts.theme_defaults)
 
 
 def _on_surface(color, fill, target=4.5):
@@ -548,7 +589,6 @@ def _th(role, legacy):
     """The theme's colour for `role` when a visual language set one, else this call site's `legacy` colour."""
     v = THEME.get(role)
     return _as_rgbc(v if v else legacy)
-                          # nothing (unchanged behaviour). Set via set_ground()/presets.apply().
 
 
 def set_geometry(*, radius=None, rule_w=None):
@@ -6029,7 +6069,7 @@ def native_chart(slide, x, y, w, h, categories, series, *, kind="line_markers",
             pass
     # single-highlight for a ONE-series bar/column chart: colour points per-category so one bar pops
     if emphasize is not None and kind in ("column", "bar") and len(series) == 1:
-        pal = [_as_rgb(c) for c in (palette or ACCENTS)]
+        pal = [_as_rgb(c) for c in (palette or (theme_series(1) if THEME else ACCENTS))]
         muted = _th("axis", RGBColor(0x8A, 0x93, 0xA6) if dark else RGBColor(0xB8, 0xBE, 0xCC))
         try:
             pts = ch.series[0].points
@@ -6047,7 +6087,8 @@ def _theme_chart(ch, series, *, palette, dark, font, highlight, legend, value_fm
     ink = _th("ink", RGBColor(0xEA, 0xF2, 0xFF) if dark else RGBColor(0x22, 0x2A, 0x37))
     grid = _th("rule", RGBColor(0x2A, 0x35, 0x55) if dark else RGBColor(0xE7, 0xE9, 0xF0))
     muted = _th("axis", RGBColor(0x8A, 0x93, 0xA6) if dark else RGBColor(0xB8, 0xBE, 0xCC))
-    pal = [_as_rgb(c) for c in (palette or ACCENTS)]
+    # a visual language's series (padded apart when it designs fewer than the chart has), not its text accents
+    pal = [_as_rgb(c) for c in (palette or (theme_series(max(1, len(series))) if THEME else ACCENTS))]
     fname = font or EAFONT or FONT          # the deck's script font → non-Latin labels render (no tofu)
     # Lining figures inside the chart. lint_deck's OLDSTYLE_FIGURES warn is structurally blind here
     # (a chart is a GraphicFrame — has_text_frame is False), so this is the "prevented at the source"
@@ -6746,6 +6787,7 @@ def open_template(path):
     relationships also prunes the old slides' heavy media (e.g. GIFs) on save.
 
     Accepts a .potx as well as a .pptx — see :func:`open_presentation`."""
+    set_theme(None)   # a template starts a new deck: the last deck's visual language must not follow it
     prs = open_presentation(path)
     sldIdLst = prs.slides._sldIdLst
     for sldId in list(sldIdLst):
@@ -8716,7 +8758,7 @@ def step_list(slide, x, y, w, items, *, orientation="vertical", accent=None, ink
             d = 0.5
             box(slide, cx + cw / 2 - d / 2, y, d, d, fill=acc if on else _th("card", WHITE),
                 line=None if on else acc, line_w=1.4, round=True, r=d / 2)
-            tc = (_legible_ink(acc)) if on else acc
+            tc = (_legible_ink(acc)) if on else _on_surface(acc, _th("card", WHITE))
             text(slide, cx + cw / 2 - d / 2, y, d, d, [[(numr(i), 15, tc, True, False)]],
                  align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
             if i: connector(slide, (cx - g + 0.02, y + d / 2), (cx - 0.02, y + d / 2), color=_blend(acc, _th("card", WHITE), 0.4))
@@ -8732,7 +8774,7 @@ def step_list(slide, x, y, w, items, *, orientation="vertical", accent=None, ink
         solid = on or active_idx is None      # inactive discs mirror the horizontal branch: outlined, not solid
         box(slide, x, cy, d, d, fill=acc if solid else _th("card", WHITE),
             line=None if solid else acc, line_w=1.4, round=True, r=d / 2)
-        tc = _legible_ink(acc) if solid else acc
+        tc = _legible_ink(acc) if solid else _on_surface(acc, _th("card", WHITE))
         text(slide, x, cy, d, d, [[(numr(i), 14, tc, True, False)]], align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
         text(slide, x + d + 0.18, cy - 0.02, w - d - 0.18, 0.32, [[(title, 14.5, ic, True, False)]], space_after=0)
         bh = 0.3
@@ -9199,8 +9241,9 @@ def dumbbell_board(slide, x, y, w, rows, *, row_h=0.52, label_w=None, accent=Non
                 text(slide, xk + 0.06, ry + 0.20, 0.7, 0.22,
                      [[(str(threshold[2]), sub_size, mc, False, False, font)]], space_after=0)
         is_reg = i in reg                              # a regressed row: risk red + ▾, never the accent
-        row_acc = _BAD_D if is_reg else acc            # dot + connector (bright graphic)
-        val_acc = _BAD_D if is_reg else acc_text       # value TEXT (legible on white)
+        # the risk red on a language's ground: 3:1 for the dot and connector, 4.5:1 for the value (unchanged on white)
+        row_acc = _on_surface(_BAD_D, _th("ground", WHITE), 3.0) if is_reg else acc
+        val_acc = _on_surface(_BAD_D, _th("ground", WHITE)) if is_reg else acc_text
         connector(slide, (x0, ry + 0.15), (x1, ry + 0.15), color=row_acc, width=2.2, arrow=True)
         box(slide, x0 - 0.05, ry + 0.10, 0.10, 0.10, fill=bc, round=True, r=0.05)
         box(slide, x1 - 0.06, ry + 0.09, 0.12, 0.12, fill=row_acc, round=True, r=0.06)
@@ -12254,9 +12297,12 @@ _EVAL_MARKS = {"yes": ("✓", RGBColor(0x1F, 0x9D, 0x55)), "y": ("✓", RGBColor
                "false": ("✕", RGBColor(0xC6, 0x3A, 0x33)),
                "partial": ("◐", RGBColor(0xD9, 0x8A, 0x1E)), "maybe": ("◐", RGBColor(0xD9, 0x8A, 0x1E))}
 
-def _eval_mark(slide, cx, cy, val, *, font=None, size=15):
-    """Draw a semantic check/cross/partial glyph (✓ green · ✕ red · ◐ amber) centred at (cx, cy)."""
-    glyph, col = _EVAL_MARKS.get(str(val).strip().lower(), ("◐", RGBColor(0xD9, 0x8A, 0x1E)))
+def _eval_mark(slide, cx, cy, val, *, font=None, size=15, surface=None):
+    """Draw a semantic check/cross/partial glyph (✓ green · ✕ red · ◐ amber) centred at (cx, cy). On a visual
+    language's `surface` the glyph keeps its hue and moves just far enough to read there (an ordinary deck: unchanged)."""
+    glyph, col = _EVAL_MARKS.get(str(val).strip().lower(), _EVAL_MARKS["partial"])
+    if surface is not None:
+        col = _on_surface(col, surface)
     text(slide, cx - 0.3, cy - 0.18, 0.6, 0.36, [[(glyph, size, col, True, False, font)]],
          align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
 
@@ -12280,9 +12326,12 @@ def eval_matrix(slide, x, y, w, options, criteria, cells, *, mark="ball", recomm
     col_w = (w - crit_w) / nopt
     head_h = 0.5
     acc = _as_rgbc(accents[0]) if accents else BLUE
+    rec_fill = tint(acc, 0.10)
+    # a ✓/✕/◐ mark is TEXT: the recommend tint keeps text padding below the last row (a harvey ball is a shape)
+    tail = 0.1 if mark != "ball" else 0.0
     if recommend is not None and 0 <= recommend < nopt:
         rx = x + crit_w + recommend * col_w
-        box(slide, rx, y + head_h, col_w, ncrit * row_h, fill=tint(acc, 0.10), round=True, r=0.06)
+        box(slide, rx, y + head_h, col_w, ncrit * row_h + tail, fill=rec_fill, round=True, r=0.06)
         corner_tab(slide, rx, y, col_w, recommend_label, fill=acc, w=min(1.7, col_w + 0.3))
     for c, opt in enumerate(options):
         ox = x + crit_w + c * col_w
@@ -12304,11 +12353,12 @@ def eval_matrix(slide, x, y, w, options, criteria, cells, *, mark="ball", recomm
             if mark == "ball":
                 harvey_ball(slide, ccx, ccy, val, d=min(row_h * 0.55, col_w * 0.42), accent=acc)
             else:
-                _eval_mark(slide, ccx, ccy, val, font=font)
+                _eval_mark(slide, ccx, ccy, val, font=font,
+                           surface=rec_fill if c == recommend else _th("ground", WHITE))
         if r < ncrit - 1:
             connector(slide, (x, ry + row_h), (x + w, ry + row_h),
                       color=_th("rule", RGBColor(0xEE, 0xF0, 0xF3)), width=0.8, arrow=False)
-    bottom = y + head_h + ncrit * row_h
+    bottom = y + head_h + ncrit * row_h + tail
     if legend and mark == "ball":
         ly = bottom + 0.2
         lx = x + crit_w

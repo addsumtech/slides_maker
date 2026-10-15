@@ -16,6 +16,11 @@ ALLOW = {
     ("heat_matrix", "2E8B57"): "risk ramp, low — semantic",
     ("heat_matrix", "E0A32E"): "risk ramp, mid — semantic",
     ("scorecard", "CFD7E6"): "the opt-in glass_tint path: a caption on the glass card's own dark tint, not on the page",
+    ("_heat_color", "2C6FBB"): "heat_matrix's diverging map, cold end — semantic (its helper)",
+    ("_heat_color", "C63A33"): "heat_matrix's diverging map, hot end and risk high — semantic (its helper)",
+    ("_heat_color", "2E8B57"): "heat_matrix's risk ramp, low — semantic (its helper)",
+    ("_heat_color", "E0A32E"): "heat_matrix's risk ramp, mid — semantic (its helper)",
+    ("glass_card", "FFFFFF"): "scorecard's opt-in glass sheen: a white highlight gradient ON the glass, not a page colour",
 }
 
 
@@ -28,6 +33,27 @@ def _literal(node):
     if isinstance(node, ast.Constant) and isinstance(node.value, str) and _HEX.match(node.value):
         return node.value.lstrip("#").upper()
     return None
+
+
+def unknown(path, functions):
+    """Listed names that are not top-level functions of `path` — a nested or renamed one would be skipped in silence."""
+    tree = ast.parse(Path(path).read_text(encoding="utf-8"))
+    top = {fn.name for fn in tree.body if isinstance(fn, ast.FunctionDef)}
+    return sorted(set(functions) - top)
+
+
+def with_helpers(path, functions):
+    """`functions` plus every top-level function they call, transitively: a colour drawn by a helper (_eval_mark, the
+    heat map's _heat_color) lands on the component's slide all the same."""
+    tree = ast.parse(Path(path).read_text(encoding="utf-8"))
+    top = {fn.name: fn for fn in tree.body if isinstance(fn, ast.FunctionDef)}
+    seen, todo = set(f for f in functions if f in top), [f for f in functions if f in top]
+    while todo:
+        for node in ast.walk(top[todo.pop()]):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in top \
+                    and node.func.id not in seen:
+                seen.add(node.func.id); todo.append(node.func.id)
+    return sorted(seen)
 
 
 def scan(path, functions):
@@ -63,16 +89,21 @@ def _drop_th_legacy(tree, found, functions):
 
 TIER1 = ("agenda bento consort_flow dot_strip dumbbell_board eval_matrix funnel gantt heat_matrix iso_bars iso_prism "
          "iso_stack leaderboard meter_bar native_chart org_tree position_map pyramid sankey scorecard segmented_bar "
-         "small_multiples stat_row step_list table tier_stack timeline unit_grid venn source_note tint draw_axis").split()
+         "small_multiples stat_row step_list table tier_stack timeline unit_grid venn source_note tint axis_scale").split()
 
 
 def main():
     deckkit = Path(__file__).resolve().parent / "deckkit.py"
-    found = [x for x in scan(str(deckkit), TIER1) if (x[0], x[2]) not in ALLOW]
+    missing = unknown(str(deckkit), TIER1)
+    for name in missing:
+        print("  FAIL {}: listed but not a top-level function of deckkit.py — it would never be scanned".format(name))
+    names = with_helpers(str(deckkit), TIER1)
+    found = [x for x in scan(str(deckkit), names) if (x[0], x[2]) not in ALLOW]
     for fn, line, lit in found:
         print("  FAIL deckkit.py:{} {}(): literal colour {} — use _th(role, legacy) or a palette constant".format(line, fn, lit))
-    print("[component-theme] {} literal colour(s) outside the theme".format(len(found)))
-    return 1 if found else 0
+    print("[component-theme] {} literal colour(s) outside the theme across {} functions (the components and the helpers "
+          "they call); {} unknown name(s)".format(len(found), len(names), len(missing)))
+    return 1 if found or missing else 0
 
 
 if __name__ == "__main__":
