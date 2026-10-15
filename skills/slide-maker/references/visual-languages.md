@@ -575,7 +575,7 @@ Each language has its own light paper and ONE contrast ground; every text ink pa
 |---|---|---|
 | editorial | warm paper | `ink` — warm black, paper-white type, a lighter red and blue |
 | soft | cream | `dusk` — deep plum-indigo, the pastel blobs kept |
-| collage | kraft | `slate` — dark grey paper, white prints, dark note cards |
+| collage | kraft | `slate` — dark grey paper, cream prints and note cards (the light ground's dark inks on them) |
 | storybook | paper | `meadow` — green paper; the watercolours are tinted onto it, as if painted there |
 | ink | xuan paper | `night` — ink-black paper, pale ridges, a moon for the sun |
 | poster | colour fields (cobalt, lime, black, signal orange, one per page) | `paper` — off-white fields, with a black and a cobalt one in every four pages |

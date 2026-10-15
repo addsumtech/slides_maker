@@ -493,9 +493,14 @@ LAYOUTS = {
                   "port": L_((.30, .03, .40, .20), "feather", (.08, .27, .84, .64), col_noimg=(.08, .18, .84, .70), align="c"),
                   "land_tall": L_((.08, .08, .32, .84), "feather", (.44, .16, .48, .68), align="c"),
                   "port_tall": L_((.25, .03, .50, .36), "feather", (.08, .42, .84, .50), align="c")},
+        # *_wide / *_tall: the slot follows the picture's shape — a 16:9 watercolour in the 5.07x6.3in square-ish slot filled
+        # 10.9% of the page, a portrait one 19.7% (the group-A verification, 2026-10-15); picked by _compose
         "data": {"land": L_((.58, .08, .38, .84), "feather", (.08, .14, .48, .72), col_noimg=(.12, .14, .76, .72)),
                  "port": L_((.06, .03, .88, .36), "feather", (.08, .42, .84, .50), col_noimg=(.08, .20, .84, .66)),
-                 "port_tall": L_((.20, .03, .60, .44), "feather", (.08, .50, .84, .44))},
+                 "land_wide": L_((.44, .10, .54, .80), "feather", (.06, .14, .34, .72), col_noimg=(.12, .14, .76, .72)),
+                 "land_tall": L_((.54, .06, .42, .88), "feather", (.07, .14, .42, .72), col_noimg=(.12, .14, .76, .72)),
+                 "port_wide": L_((.04, .03, .92, .41), "feather", (.08, .47, .84, .45), col_noimg=(.08, .20, .84, .66)),
+                 "port_tall": L_((.14, .03, .72, .56), "feather", (.08, .62, .84, .32))},
         "closing": {"land": L_((.15, .03, .70, .62), "feather", (.12, .68, .76, .25), col_noimg=(.12, .30, .76, .40), anchor="top", align="c"),
                     "port": L_((.04, .03, .92, .52), "feather", (.08, .58, .84, .34), col_noimg=(.08, .30, .84, .40), anchor="top", align="c"),
                     "land_tall": L_((.05, .05, .44, .90), "feather", (.53, .22, .40, .56), align="c"),
@@ -810,6 +815,35 @@ def _balanced_width(k, f, t, sz, w):
 QUOTE_GROW = 1.5
 
 
+TUCK_MARK = ("soft",)     # the languages whose quote mark sits on a card (a void in it shows): it is tucked to the quote
+MARK_PAD = 0.07           # in: between the tucked mark's ink and the line box of the quote under it
+_MARK_INK = {}
+
+
+def _mark_ink_bottom(k):
+    """Where the opening quote mark's ink ends, in ems from the top of its box: the glyph drawn in the language's mark
+    face (PIL) plus 0.10em for what a renderer adds above the glyph (its box inset and line leading — measured in
+    LibreOffice: the soft mark's ink ended 0.60em down, PIL said 0.52em)."""
+    face, bold = k.face(TYPE[k.name]["mark"][1]), bool(TYPE[k.name]["mark"][2])
+    if (face, bold) not in _MARK_INK:
+        try:
+            from PIL import Image, ImageDraw
+            f = dk._pil_font(face, 90, bold)
+            px = 90 * dk._MEAS_PREC
+            im = Image.new("L", (int(px * 2), int(px * 2)), 0)
+            ImageDraw.Draw(im).text((int(px * 0.1), 0), "\u201c", font=f, fill=255)
+            bb = im.getbbox()
+            _MARK_INK[(face, bold)] = (bb[3] / float(px)) if bb else 0.52
+        except Exception:
+            _MARK_INK[(face, bold)] = 0.52
+    return _MARK_INK[(face, bold)] + 0.10
+
+
+def _mark_tuck(k, size, box_h):
+    """The gap after a tucked mark: negative — the next field starts MARK_PAD under the mark's ink."""
+    return min(0.0, _mark_ink_bottom(k) * size / 72.0 + MARK_PAD - box_h)
+
+
 def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=None):
     """PLAN the fields of one page in its column by measured height; returns (rects, draw).
 
@@ -848,8 +882,18 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=Non
             return sum(_field_height(k, f, l_, sz, fw) - 0.06 for l_ in phrased[f]) + 0.06
         return _field_height(k, f, t, sz, fw)
 
-    def total():
-        return sum(fheight(f, t, sizes[f], widths[f]) + gaps[f] for f, t in items)
+    tucks = k.name in TUCK_MARK and "mark" in order[:-1]
+
+    def gap_of(f, size, box_h, tucked=False):
+        # a quote mark on a card is TUCKED to the quote: the next field starts where the mark's ink ends, not under its
+        # whole line box (0.8in of blank at 90pt); the mark's box then runs under the quote's first line. Only where the
+        # block is PLACED: the sizes are decided on the untucked heights as before — a tucked page that kept more of the
+        # quote's size set a long quote one size past what the lint's line model holds in its box
+        return _mark_tuck(k, size, box_h) if tucked and tucks and f == "mark" else gaps[f]
+
+    def total(tucked=False):
+        return sum(fheight(f, t, sizes[f], widths[f]) + gap_of(f, sizes[f], fheight(f, t, sizes[f], widths[f]), tucked)
+                   for f, t in items)
     for f, t in items:
         # ONE word is never re-wrapped, so it is held to the full column; the headroom is for where lines break
         # ("1,250,000" at its floor was refused on a square board under Linux's wider faces, 2026-10-09)
@@ -907,7 +951,7 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=Non
         sizes[f] = sz
     if total() > h + 0.02:                 # balancing never adds lines; this is a guard, not a path
         widths = {f: w for f in widths}
-    t_all = total()
+    t_all = total(True)
     cy = y if anchor == "top" else (y + h - t_all if anchor == "bottom" else y + (h - t_all) / 2.0)
     rects, plan = {}, []
     for f, t in items:
@@ -918,16 +962,26 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=Non
         fx = x + (w_col - fw) / 2.0 if align == "c" else x
         rects[f] = (fx, cy, fw, fh)
         plan.append((f, t, sz, (fx, cy, fw, fh)))
-        cy += fh + gaps[f]
+        cy += fh + gap_of(f, sz, fh, True)
 
     def draw():
         al = {"l": PP_ALIGN.LEFT, "c": PP_ALIGN.CENTER}[align]
         for f, t, sz, (fx, fy, fw, fh) in plan:
             _base, role, bold, ckey, italic, _floor = TYPE[k.name][f]
+            al_f = al
             if underlay and f in underlay:
                 _dx = underlay[f]((fx, fy, fw, fh), t, sz) or 0.0
-                fx, fw = fx + _dx, fw - max(0.0, _dx)          # the figure moves to the shape's centre
+                _box = getattr(underlay[f], "box", None)
+                if getattr(underlay[f], "ink", None) and _box:
+                    # a figure in the ground's own ink sits ON the shape: its text box IS the shape, centred — the lint
+                    # reads what is behind a text box by how much of the box a shape covers, and a box wider than the
+                    # disc is read as sitting on the ground (dark ink on a dark ground: INVISIBLE TEXT)
+                    fx, fw, al_f, fy = _box[0], _box[1], PP_ALIGN.CENTER, fy - _box[2]
+                else:
+                    fx, fw = fx + _dx, fw - max(0.0, _dx)      # the figure moves to the shape's centre
             color = (k.color("text_accents") if ckey == "accent" else k.color("mute") if ckey == "mute" else k.color("ink"))
+            if f == "number" and getattr(underlay and underlay.get("number"), "ink", None):
+                color = dk.RGBColor.from_string(_hex(underlay["number"].ink))     # the figure on its disc: the ink the disc asks for
             if f == "number" and _outlinable(k, t):
                 import display_type as dt
                 dt.outlined(slide, fx, fy, fw, fh, t, color=_hex(k.P["text_accents"][0]), face=k.face("numeral"))
@@ -947,7 +1001,7 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=Non
                 rr = [dk.mark(x, hl) for x in k.runs(t, sz, dk.RGBColor.from_string(_hex(ink)), bold, role, italic)]
             else:
                 rr = k.runs(t, sz, color, bold, role, italic)
-            dk.text(slide, fx, fy, fw, fh, [rr], align=al)
+            dk.text(slide, fx, fy, fw, fh, [rr], align=al_f)
     draw.sizes = {f: sz for f, _t, sz, _r in plan}      # what each field was planned at (P4 sizes its art by it)
     draw.headroom = dw                                   # how much wider each box is drawn than its words were measured
     draw.exact = {f: sizes[f] for f, _t in items}       # …before the 0.1pt rounding: a size decided at 32.58pt (one
@@ -1122,13 +1176,16 @@ def _place_image(k, slide, image, rect, lay, page, keep_clear=None):
         for im in imgs[:4] if treat == "collage" else imgs[:1]:
             path, alt, slot_id = _resolve(k, im)
             items.append({"slot": slot_id, "plan": k.plan, "image_dir": k.image_dir} if slot_id else {"path": path, "alt": alt})
-        cl.collage(slide, (x, y, w, h), items, seed=len(slide.shapes) + 7, keep_clear=keep_clear, max_tilt=5.0)
+        pp = _paper(k)
+        cl.collage(slide, (x, y, w, h), items, seed=len(slide.shapes) + 7, keep_clear=keep_clear, max_tilt=5.0,
+                   **({"paper": pp[0], "tape_color": pp[1]} if pp else {}))
         return None
     first = image[0] if isinstance(image, (list, tuple)) else image
     path, alt, slot_id = _resolve(k, first)
     if treat == "bleed":
         n0 = len(slide.shapes)
         bx, by, bw, bh, _ink = dk.photo_backdrop(slide, path, alt=alt, panel="quiet", fill=_hex(k.P["panel"]))
+        _crop_to_visible(slide, n0, path)
         if slot_id:
             for sh in list(slide.shapes)[n0:]:
                 if sh.shape_type == 13:
@@ -1145,6 +1202,46 @@ def _place_image(k, slide, image, rect, lay, page, keep_clear=None):
     if slot_id:
         dk._compose_tag(pic, gen=slot_id)
     return None
+
+
+BLEED_FOCUS = (0.5, 0.10)    # which part of a picture the cover crop keeps: centred across, near the top down
+
+
+def _crop_to_visible(slide, n0, path, focus=BLEED_FOCUS):
+    """photo_backdrop() cover-fits its picture to the WHOLE page and then lays an opaque panel over one side of it, so
+    the crop was made for a window the viewer never sees: a 853x1280 portrait kept 37% of its height in the 7.2in
+    strip left of the panel, centred, and the heads sat on the top edge (the group-A verification, 2026-10-15). The
+    picture is re-fitted, in place, to the part the panel leaves visible — cover-fitted to THAT rect, biased to the
+    top — and meets the panel on its edge, to the EMU (a picture under the panel by any width is an OVERLAP finding;
+    one apart by any is a sliver). Needs the panel to be the opaque box right after the picture; anything else leaves
+    the page as photo_backdrop drew it."""
+    shapes = list(slide.shapes)[n0:]
+    pic = next((sh for sh in shapes if sh.shape_type == 13), None)
+    panel = next((sh for sh in shapes[shapes.index(pic) + 1:] if sh.shape_type == 1), None) if pic is not None else None
+    if pic is None or panel is None:
+        return
+    prs = slide.part.package.presentation_part.presentation
+    W, H = prs.slide_width, prs.slide_height                       # EMU throughout
+    pl, pt_, pw, ph = panel.left, panel.top, panel.width, panel.height
+    if pw < 0.9 * W:                                               # a side band: the picture is the rest of the width
+        vx, vy, vw, vh = (pl + pw, 0, W - (pl + pw), H) if pl < 9144 else (0, 0, pl, H)
+    else:                                                          # a band across: the picture is the rest of the height
+        vx, vy, vw, vh = (0, pt_ + ph, W, H - (pt_ + ph)) if pt_ < 9144 else (0, 0, W, pt_)
+    if vw < 457200 or vh < 457200:                                 # under half an inch: not a picture area
+        return
+    from PIL import Image
+    with Image.open(path) as im:
+        iw, ih = im.size
+    fx, fy = focus
+    pic.left, pic.top, pic.width, pic.height = int(vx), int(vy), int(vw), int(vh)
+    pic.crop_left = pic.crop_right = pic.crop_top = pic.crop_bottom = 0.0
+    ar_i, ar_f = iw / float(ih), vw / float(vh)
+    if ar_i > ar_f:
+        c = 1.0 - ar_f / ar_i
+        pic.crop_left, pic.crop_right = c * fx, c * (1.0 - fx)
+    elif ar_i < ar_f:
+        c = 1.0 - ar_i / ar_f
+        pic.crop_top, pic.crop_bottom = c * fy, c * (1.0 - fy)
 
 
 def _paper_tint(k):
@@ -1187,6 +1284,29 @@ def _feathered(path, tint=None):
     return str(out)
 
 
+# A language's PAPER on a dark ground — the border of a print and the card of a note: (paper, the washi tape that holds it).
+# Collage's white prints and its ground-coloured notes were the brightest and the darkest things on slate; both are cream
+# paper with the LIGHT ground's inks on it. Kraft has no entry: its paper is its panel, white, as always.
+PAPER_ON_DARK = {"collage": ("E8DFC9", "CDBE95")}
+
+
+def _paper(k):
+    """(paper, tape) for the paper things on this deck's ground, or None when they are the ground's panel and EDE3C8."""
+    return PAPER_ON_DARK.get(k.name) if REGISTRY[k.name]["grounds"][k.ground]["dark"] else None
+
+
+def _paper_kit(k):
+    """The kit to set words ON this ground's paper: the language's light-ground inks when its paper is cream on a dark
+    ground, else the kit itself."""
+    if not _paper(k):
+        return k
+    import copy
+    kk = copy.copy(k)
+    light = LANGS[k.name]["palette"]
+    kk.P = dict(k.P, ink=light["ink"], mute=light["mute"], text_accents=list(light["text_accents"]))
+    return kk
+
+
 def _readable_under(fill, ink, ground, floor=3.0):
     """`fill` blended toward `ground` until `ink` reads on it at `floor`:1 (large text) — a decorative disc under
     a figure must not drown it: soft dusk's light "1" sat on the pale sage disc at 1.87:1 (2026-10-04)."""
@@ -1197,6 +1317,17 @@ def _readable_under(fill, ink, ground, floor=3.0):
         if _contrast(ink, hx) >= floor:
             return hx
     return _hex(ground)
+
+
+def _disc_colors(P, fill):
+    """(disc fill, the figure's ink or None for the language's own ink) for a figure on a decorative disc. The disc keeps
+    its true colour when the ground's page ink or the ground itself reads on it at 4.5:1 — soft dusk's sage disc
+    9DB8A0 takes the ground's dark 2E2940 (6.5:1). It was blended toward the ground until the OFF-WHITE ink reached 3:1
+    (7C8D83, a muddy grey-green, the figure at 3.05:1), and that blend is now only the last resort."""
+    best = max((P["ink"], P["ground"]), key=lambda c: _contrast(c, fill))
+    if _contrast(best, fill) >= 4.5:
+        return _hex(fill), (None if best == P["ink"] else _hex(best))
+    return _readable_under(fill, P["ink"], P["ground"]), None
 
 
 def frame_is_custom(frame):
@@ -1256,10 +1387,11 @@ def _deco_before(k, slide, page, lay, img_rect, col, index):
     if "note" in lay["deco"] and col and img_rect is None:
         x, y, w, h = col
         cx, cy, cw, ch, rot = _card_geom(lay, col)
-        card = dk.box(slide, cx, cy, cw, ch, fill=_hex(p["panel"]))    # the ground's own paper (white on kraft)
+        pp = _paper(k)
+        card = dk.box(slide, cx, cy, cw, ch, fill=pp[0] if pp else _hex(p["panel"]))    # the ground's own paper (white on kraft)
         card.rotation = rot
         import ornaments
-        dk.decorative(ornaments.tape(slide, x + w * 0.38, y - 0.36, w * 0.24, 0.30, "EDE3C8", rotation=2.0,
+        dk.decorative(ornaments.tape(slide, x + w * 0.38, y - 0.36, w * 0.24, 0.30, pp[1] if pp else "EDE3C8", rotation=2.0,
                                      seed=index, holds=card),
                       "washi tape holding the note card; ornament, nothing rides on seeing it")
     # "circle" is drawn by _flow under the number itself (an underlay), never across the column
@@ -1309,12 +1441,14 @@ def _compose(k, slide, page, fields, image):
     orient = "land" if W >= H * 1.2 else "port"
     lay = LAYOUTS[k.name][page][orient]
     if lay["treat"] == "feather" and image is not None and not isinstance(image, (list, tuple)) \
-            and LAYOUTS[k.name][page].get(orient + "_tall"):
-        try:                                       # a portrait picture takes the frame drawn for one
+            and (LAYOUTS[k.name][page].get(orient + "_tall") or LAYOUTS[k.name][page].get(orient + "_wide")):
+        try:                                       # a portrait picture takes the frame drawn for one, a 16:9 one its wide frame
             from PIL import Image as _PI
             _iw, _ih = _PI.open(_resolve(k, image)[0]).size
-            if _iw / float(_ih) < 0.85:
-                lay = LAYOUTS[k.name][page][orient + "_tall"]
+            _ar = _iw / float(_ih)
+            _key = "_tall" if _ar < 0.85 else "_wide" if _ar > 1.4 else None
+            if _key and LAYOUTS[k.name][page].get(orient + _key):
+                lay = LAYOUTS[k.name][page][orient + _key]
         except Exception:
             pass                                   # an unresolvable image is refused where it is placed, as before
     variants = [lay] + ([v for v in (_yield_to_words(lay, 0.8), _yield_to_words(lay, 0.65)) if v]
@@ -1367,8 +1501,9 @@ def _compose_one(k, slide, page, fields, image, lay):
     underlay = {}
     if "circle" in lay["deco"]:
         acc = k.P["accents"]
+        _fill, _ink = _disc_colors(k.P, acc[1 % len(acc)])
 
-        def _disc(r, t, sz, _c=_readable_under(acc[1 % len(acc)], k.P["ink"], k.P["ground"])):
+        def _disc(r, t, sz, _c=_fill):
             # The shape HOLDS the number, centred on it: it was one line-height across from the box's left edge, so a
             # "1" sat left of centre and the "2" of "02" stood outside it (the user, 2026-10-04). One figure: a
             # circle; wider: a pill of the same height (the flow's line does not change). Returns how far to move
@@ -1385,15 +1520,28 @@ def _compose_one(k, slide, page, fields, image, lay):
             else:
                 sx = x - h * 0.10
                 dx = (sx + sw / 2.0) - (x + dk.TEXT_INSET_LR / 2.0 + adv / 2.0)
-            _oval(slide, sx, y, sw, h, _c, "a soft colour disc behind the figure; carries no information",
+            g = dy = 0.0
+            if _ink:
+                # a figure in the ground's own ink sits ON its disc, and the lint reads it against the disc only when
+                # the disc HOLDS the text box with the padding it asks of a card (0.10in under the text's rendered
+                # extent: its 0.04in top inset + one line at 1.25) — the disc grows to give it, never off the page, and
+                # the text box rises by what the page's edge leaves short (a figure as wide as the page: ~1% of the disc)
+                need = 0.04 + 1.25 * sz / 72.0 + 0.10
+                cw_ = _canvas(k)[0]
+                g = max(0.0, min(need - h, sx - 0.05, cw_ - 0.05 - (sx + sw)))
+                dy = max(0.0, need - (h + g))
+            _oval(slide, sx - g, y - g, sw + 2 * g, h + 2 * g, _c, "a soft colour disc behind the figure; carries no information",
                   pill=sw > h + 1e-6)
+            _disc.box = (sx - g, sw + 2 * g, dy)
             return dx
+        _disc.ink = _ink
         underlay["number"] = _disc
     if page == "data" and img_rect is None and items:
         rects, draw = _data_hero(k, slide, page, col, items, lay, underlay, orient)
     else:
-        rects, draw = _flow(k, slide, page, col, items, anchor=lay["anchor"], align=lay["align"],
-                            underlay=underlay) if items else ({}, None)
+        # the words of a note are set on its paper: on a dark ground that is cream, with the light ground's inks
+        rects, draw = _flow(_paper_kit(k) if "note" in lay["deco"] else k, slide, page, col, items, anchor=lay["anchor"],
+                            align=lay["align"], underlay=underlay) if items else ({}, None)
     if rects:
         xs = [r[0] for r in rects.values()] + [r[0] + r[2] for r in rects.values()]
         ys = [r[1] for r in rects.values()] + [r[1] + r[3] for r in rects.values()]
@@ -1504,6 +1652,22 @@ for _n, (_no, _hd, _ln) in {
     TYPE[_n].setdefault("item_line", _ln)
 
 
+NUMBER_SLACK = 1.10      # a point's number box holds its digits with at least this much to spare
+
+
+def _number_gutter(k, labels, size, floor):
+    """The width (in) of the gutter that holds a points page's item numbers: the widest of `labels` at `size` in the
+    language's numeral face, by BOTH widths the kit uses (the glyph widths the flow measures, the font's advance the
+    lint reads), plus NUMBER_SLACK and the text box's own insets — never under `floor`. A fixed 0.62in gutter held
+    editorial's "01" (Arial Black 30.5pt, 0.5651in in LibreOffice) in an inner width of 0.5644in, and the renderer set
+    "0" over "1" (the group-A verification, 2026-10-15)."""
+    import display_type as dt
+    face, bold = k.face("numeral"), bool(TYPE[k.name]["item_no"][2])
+    need = max(max(dk._natural_width_in([(t, bold)], size, face), dt._glyph_width(t, size, face, bold) or 0.0)
+               for t in labels)
+    return max(floor, NUMBER_SLACK * need + dk.TEXT_INSET_LR)
+
+
 def _points_led(k, slide, fields, image):
     """The points page of an image-led language: kicker and title, then 2-4 points — a number, a head and a line —
     in the language's own furniture (editorial: a hairline over each; soft: a rounded panel; collage: a taped note;
@@ -1558,18 +1722,18 @@ def _points_led(k, slide, fields, image):
                 inner = (c[0] + pd, c[1] + pd + lift, c[2] - 2 * pd, c[3] - 2 * pd - lift)
                 no = [] if k.name == "storybook" else [("item_no", "{:02d}".format(i + 1))]
                 if inline and no:
-                    gw = 0.62 * s
+                    gw = _number_gutter(k, ["{:02d}".format(j + 1) for j in range(n)], big["item_no"], 0.62 * s)
                     nums.append(((inner[0], inner[1], gw, inner[3]), no, dict(anchor="top", start=dict(big))))
                     inner, no = (inner[0] + gw, inner[1], inner[2] - gw, inner[3]), []
                 its = no + [("item_head", hd_)] + ([("item_line", ln_)] if ln_ else [])
                 if k.name == "storybook":
                     inner = (inner[0] + 0.42 * s, inner[1], inner[2] - 0.42 * s, inner[3])
                 specs.append((inner, its, dict(anchor="top", start=dict(big))))
-            words = v2.plan_together(k, slide, "points", specs)
+            words = v2.plan_together(_paper_kit(k), slide, "points", specs)         # the words sit on the notes' paper
             if not nums:
                 return words
             out = []
-            for (nr, nd), (wr, wd) in zip(v2.plan_together(k, slide, "points", nums), words):
+            for (nr, nd), (wr, wd) in zip(v2.plan_together(_paper_kit(k), slide, "points", nums), words):
                 def both(nd=nd, wd=wd):
                     nd(); wd()
                 both.sizes = getattr(wd, "sizes", {})
@@ -1635,17 +1799,21 @@ def _points_led(k, slide, fields, image):
             dk.decorative(dk.box(slide, x, y, w, h, fill=_hex(P["panel"]), round=True, r=0.22),
                           "a soft panel behind one point")
         elif k.name == "collage":
-            # the language's own note colour for this ground (white on kraft, slate on slate): a hard-coded white note
-            # put slate's yellow numbers on white at 1.68:1 (the lint, 2026-10-09)
-            dk.decorative(dk.box(slide, x, y, w, h, fill=_hex(P["panel"])), "a paper note holding one point")
-            tp = ornaments.tape(slide, x + w * 0.38, y - 0.14 * s, w * 0.24, 0.26 * s, "EDE3C8", rotation=2.0)
+            # the language's own note paper for this ground (white on kraft, cream on slate, with the light ground's inks):
+            # a hard-coded white note put slate's yellow numbers on white at 1.68:1 (the lint, 2026-10-09)
+            pp = _paper(k)
+            dk.decorative(dk.box(slide, x, y, w, h, fill=pp[0] if pp else _hex(P["panel"])), "a paper note holding one point")
+            tp = ornaments.tape(slide, x + w * 0.38, y - 0.14 * s, w * 0.24, 0.26 * s, pp[1] if pp else "EDE3C8", rotation=2.0)
             dk.decorative(tp, "washi tape holding the note; ornament")
             dk.overlap_intent(tp, "washi tape across the note's top edge holds it to the page: the overlap is the tape")
         elif k.name == "editorial":
             dk.decorative(dk.box(slide, x, y, w, max(0.012, 0.012 * s), fill=_hex(P["ink"])), "a hairline over one point")
         elif k.name == "storybook":
             dd = 0.24 * s
-            dk.decorative(dk.box(slide, x, y + 0.08 * s, dd, dd, fill=_hex(P["accents"][i % len(P["accents"])]), round=True, r=dd / 2),
+            # ONE colour — the accent ink, which reads on either ground (>= 3:1). The dots cycled the three FILL accents
+            # (orange, green, yellow; the fourth repeating the first): the order meant nothing, and the yellow was 1.05:1
+            # on meadow (the group-A verification, 2026-10-15)
+            dk.decorative(dk.box(slide, x, y + 0.08 * s, dd, dd, fill=_hex(P["text_accents"][0]), round=True, r=dd / 2),
                           "a painted dot marking one point")
         d()
         for f_, v in r.items():
