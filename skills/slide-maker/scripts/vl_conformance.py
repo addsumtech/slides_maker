@@ -4,7 +4,6 @@ Spec: docs/superpowers/specs/2026-10-15-visual-language-system-design.md §4.3."
 import contextlib
 import io
 import re
-import tempfile
 from pathlib import Path
 
 import deckkit as dk
@@ -14,11 +13,42 @@ from vl_contract import PAGES
 
 SKILL = Path(__file__).resolve().parent.parent
 REPO = SKILL.parent.parent     # the repo root holds the READMEs; an installed copy of the skill has none
-_CJK = re.compile(r"[぀-ヿ㐀-鿿豈-﫿가-힯]")
-_WORD = re.compile(r"[A-Za-z][A-Za-z'’\-]*")
-# numerals a page may number itself with (page / point / section / sheet / figure numbers): 1-2 digits, CJK numerals
-# one to ten, circled one to twenty — a longer number must be the caller's
-_NUMERAL = re.compile(r"^(?:\d{1,2}|[一二三四五六七八九十]|[①-⑳])$")
+_CJK = re.compile(r"[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff\uac00-\ud7af]")
+# one token per Latin word, digit run (with its separators) and circled numeral; CJK is checked per character
+_TOKEN = re.compile(r"[A-Za-z][A-Za-z'’\-]*|\d[\d.,%]*|[\u2460-\u2473]")
+# what a page may number itself with (page / point / section / sheet / figure numbers): 1-2 digits, CJK numerals one
+# to ten, circled one to twenty — any longer number must be the caller's (final review: digits were never examined)
+_NUMERAL = re.compile(r"^(?:\d{1,2}|[一二三四五六七八九十]|[\u2460-\u2473])$")
+_HONORIFIC = {"DR", "MR", "MRS", "MS", "MX", "MISS", "PROF", "SIR", "DAME", "REV", "HON"}
+
+# the check's OWN words: every page is built from these, so anything else on the page was invented. Ordinary length
+# (the long-copy corpus is test_native_generality's job); one Latin and one CJK pass.
+COPY = {
+    "en": dict(kicker="Annual review", title="Why every street needs a repair night",
+               subtitle="What a year of evenings taught us", number="02",
+               items=[("Share the tools", "One drawer feeds three tables"), ("Open the door", "No booking and no fee"),
+                      ("Keep it close", "Ten minutes on foot")],
+               quote="The visitor holds the screwdriver; the volunteer only guides.",
+               attribution="Mara Jensen, volunteer lead", figure="1,250", label="repairs this year",
+               note="Counted at the door.", line="Bring a neighbour.", body="Screwdrivers and a soldering iron on every bench.",
+               caption="Photo: the hall on a Tuesday"),
+    "zh": dict(kicker="年度回顾", title="为什么每条街都需要一个修理之夜", subtitle="一年的夜晚教会我们的事", number="02",
+               items=[("共享工具", "一抽屉螺丝刀供三张桌子"), ("敞开大门", "不用预约也不收费"), ("就近步行", "步行十分钟可达")],
+               quote="来访者握着螺丝刀，志愿者只在旁边指导。", attribution="志愿者手册", figure="98%",
+               label="的物品当晚修好", note="按门口登记统计。", line="带上邻居。", body="每张桌上都有螺丝刀和电烙铁。",
+               caption="摄于周二的大厅"),
+}
+
+
+def _pages(spec, T, pic):
+    img = lambda page: dict(image=pic) if page in spec["image_pages"] else {}
+    return [("cover", dict(kicker=T["kicker"], title=T["title"], subtitle=T["subtitle"], **img("cover"))),
+            ("section", dict(number=T["number"], kicker=T["kicker"], title=T["title"], **img("section"))),
+            ("image_text", dict(kicker=T["kicker"], title=T["title"], body=T["body"], caption=T["caption"], image=pic)),
+            ("points", dict(kicker=T["kicker"], title=T["title"], items=T["items"], **img("points"))),
+            ("quote", dict(quote=T["quote"], attribution=T["attribution"], **img("quote"))),
+            ("data", dict(number=T["figure"], label=T["label"], note=T["note"], **img("data"))),
+            ("closing", dict(title=T["title"], line=T["line"], **img("closing")))]
 
 
 def pages_missing(name, registry=None):
@@ -42,54 +72,73 @@ def _strings(o):
             yield from _strings(v)
 
 
+def _initials(texts):
+    """What the kit may derive as avatar initials from the caller's own words: the first letters of 1-3 capitalised
+    words before a comma, honorifics skipped (vl_native3.initials)."""
+    out = set()
+    for t in texts:
+        words = [w for w in t.split(",")[0].split() if w[:1].isalpha()]
+        while words and words[0].rstrip(".").upper() in _HONORIFIC:
+            words = words[1:]
+        if 1 <= len(words) <= 3 and all(w[:1].isupper() for w in words):
+            out.add("".join(w[0] for w in words[:2]).upper())
+    return out
+
+
 def allowed_tokens(name, caller_texts):
-    """Upper-cased Latin words and single CJK characters the caller gave, plus the language's declared derived words."""
+    """Upper-cased tokens (words, digit runs) and single CJK characters the caller gave, plus the language's declared
+    derived words (and initials when it declares them)."""
     tok = set()
     for t in caller_texts:
-        tok |= {w.upper() for w in _WORD.findall(t)}
+        tok |= {w.upper() for w in _TOKEN.findall(t)}
         tok |= set(_CJK.findall(t))
-    for d in vl.REGISTRY[name]["derived"]:
+    spec = vl.REGISTRY[name]
+    for d in spec["derived"]:
         for words in d["words"].values():
             for w in words:
-                tok |= {x.upper() for x in _WORD.findall(w)}
+                tok |= {x.upper() for x in _TOKEN.findall(w)}
                 tok |= set(_CJK.findall(w))
+    if any(d["id"] == "initials" for d in spec["derived"]):
+        tok |= _initials(caller_texts)
     return tok
 
 
-def _sample_deck(name):
-    """Build the language's sample deck (both grounds) and return (pptx paths, the caller's strings)."""
-    td = Path(tempfile.mkdtemp(prefix="vlconf_"))
-    paths = []
-    for g in vl.VARIANTS[name]:
-        with contextlib.redirect_stdout(io.StringIO()):
-            paths.append(vl.build_sample(name, td, W=10.0, H=5.625, ground=g))
-    if name in vl.NATIVE:
-        texts = list(_strings(vl._SAMPLE_COPY_NATIVE[name]))
-    else:
-        texts = list(_strings(vl._SAMPLE_COPY["watercolour" if name == "storybook" else "photo"]))
-    return paths, texts
+def _page_tokens(slide):
+    for sh in slide.shapes:
+        if not sh.has_text_frame or str(getattr(sh, "name", "")).startswith(dk.A11Y_TITLE_TAG):
+            continue                         # the screen readers' off-page title repeats a field
+        t = sh.text_frame.text
+        yield from _TOKEN.findall(t)
+        yield from _CJK.findall(t)
 
 
 def invented_words(name):
-    from pptx import Presentation
-    try:
-        paths, texts = _sample_deck(name)
-    except NotImplementedError as e:           # a language still being authored: report it, never a traceback
-        return ["{}: its sample deck cannot be built yet — {}".format(name, e)]
-    tok = allowed_tokens(name, texts)
+    """Build all seven pages on every ground from the check's own words (COPY: an English and a Chinese pass); any
+    token on a page that is neither those words nor a declared derived word was invented. Inspected in memory."""
+    spec = vl.REGISTRY[name]
+    pic = str(vl.ASSETS / ("watercolour/rooftop-garden.jpg" if spec["samples"].get("kind") == "watercolour"
+                           else "photo/hall-repair.jpg"))
     probs = []
-    for p in paths:
-        prs = Presentation(str(p))
-        for i, s in enumerate(prs.slides, 1):
-            for sh in s.shapes:
-                if not sh.has_text_frame or sh.top is None or sh.top < 0:      # the off-page a11y title repeats a field
-                    continue
-                for w in _WORD.findall(sh.text_frame.text):
-                    if w.upper() not in tok and not _NUMERAL.match(w):
-                        probs.append("{} slide {}: {!r} is not the caller's and not declared derived".format(p.name, i, w))
-                for c in _CJK.findall(sh.text_frame.text):
-                    if c not in tok and not _NUMERAL.match(c):
-                        probs.append("{} slide {}: {!r} is not the caller's and not declared derived".format(p.name, i, c))
+    for script, T in COPY.items():
+        texts = list(_strings(T))
+        tok = allowed_tokens(name, texts)
+        for g in vl.VARIANTS[name]:
+            prs = dk.blank_deck(10.0, 5.625)
+            with contextlib.redirect_stdout(io.StringIO()):
+                k = vl.use(name, prs, ground=g)
+            for page, fields in _pages(spec, T, pic):
+                s = k.new_slide()
+                try:
+                    getattr(k, page)(s, **fields)
+                except NotImplementedError as e:          # a language still being authored: report, never a traceback
+                    return ["{}: its pages cannot be built yet — {}".format(name, e)]
+                except vl.VLTextOverflow:
+                    continue                               # refused by name: not this check's business
+                for t in _page_tokens(s):
+                    u = t if _CJK.match(t) else t.upper()
+                    if u not in tok and not _NUMERAL.match(t):
+                        probs.append("{} {}/{} {}: {!r} is neither the caller's nor declared derived".format(
+                            name, g, script, page, t))
     return sorted(set(probs))
 
 
@@ -126,7 +175,7 @@ def assets_missing(name):
     for st in stems:
         if not (SKILL / "assets" / "vl" / "samples" / (st + ".jpg")).exists():
             probs.append("{}: no bundled sample {}.jpg".format(name, st))
-        if st not in json.dumps(man):
+        if st not in man:                       # the stem is a KEY ('tally' is a substring of 'tally-night')
             probs.append("{}: sample {} has no fingerprint in manifest.json".format(name, st))
     if not any(('"{}"'.format(name) in src) or ("'{}'".format(name) in src)
                for k, src in sigs.EXAMPLES.items() if k.startswith("vl_")):

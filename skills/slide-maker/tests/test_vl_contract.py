@@ -214,20 +214,72 @@ check({"社", "区", "年"} <= tok, "Chinese caller characters are allowed token
 check("ABSTRACT" in tok and "摘" in tok, "a declared derived label is an allowed token")
 check("REVOLUTION" not in tok, "a word the caller never gave is not allowed")
 
+# ── final review, group B: the checks see everything and are proven to bite ──
+import vl_native as _vn
+# I1 + I2: a composition that invents a word or a number on ANY page, in either script, is caught with page and token
+_orig_closing = _vn.COMPOSERS["tally"]["closing"]
+def _inventing_closing(k, slide, f, image):
+    r = _orig_closing(k, slide, f, image)
+    import deckkit as _dk
+    _dk.text(slide, 0.5, 0.5, 4.0, 0.5, [[("Revolution 98765 ⑲ 革命", 14, _dk.DEEP, False, False)]])
+    return r
+_vn.COMPOSERS["tally"]["closing"] = _inventing_closing
+try:
+    inv = vcf.invented_words("tally")
+finally:
+    _vn.COMPOSERS["tally"]["closing"] = _orig_closing
+for tok in ("Revolution", "98765", "革", "命"):
+    check(any("'{}'".format(tok) in x and "closing" in x for x in inv),
+          "an invented {!r} on the closing page is caught, naming page and token ({})".format(tok, inv[:3]))
+check(any("zh" in x for x in inv) and any("en" in x for x in inv), "both the English and the Chinese pass see the page")
+check(not any("'1'" in x or "'02'" in x for x in inv), "page and section numbers (1-2 digits) are not inventions")
+# initials are derived only where the manifest declares them, and only from the caller's own name
+check(vcf.invented_words("interface") == [], "interface's initials from the caller's name are declared, not invented")
+# I3: each conformance check is proven to bite (committed, not a manual note)
+_ep = vl.EXTRA_PAGES["tags"]
+vl.EXTRA_PAGES["tags"] = _ep + ("cover",)
+try:
+    nr = vcf.extras_not_refused("tally")
+finally:
+    vl.EXTRA_PAGES["tags"] = _ep
+check(any("tags" in x and "accepted" in x for x in nr), "an extra accepted off its pages is caught ({})".format(nr[:1]))
+vl.VARIANTS["tally"]["ghost"] = vl.VARIANTS["tally"]["night"]
+try:
+    am = vcf.assets_missing("tally")
+finally:
+    del vl.VARIANTS["tally"]["ghost"]
+check(any("tally-ghost" in x and "sample" in x for x in am) and any("fingerprint" in x for x in am),
+      "a ground with no bundled sample or fingerprint is caught ({})".format(am[:2]))
+_sk = vcf.SKILL
+fake = Path(tempfile.mkdtemp(prefix="fakeskill_"))
+try:
+    (fake / "tests").mkdir()
+    (fake / "tests" / "test_native_generality.py").write_text("for name in ('ink',):\n    pass\n")
+    (fake / "tests" / "test_vl_audit_fixes.py").write_text("OWN = []\n")
+    vcf.SKILL = fake
+    nd = vcf.suites_not_registry_driven()
+finally:
+    vcf.SKILL = _sk
+    shutil.rmtree(fake, ignore_errors=True)
+check(len(nd) == 2, "suites that stop iterating the registry are caught ({})".format(nd))
+# M4: the checks leave nothing behind in the system temp folder
+import glob as _glob
+_before = set(_glob.glob(os.path.join(tempfile.gettempdir(), "vlconf_*")))
+vcf.invented_words("poster")
+check(set(_glob.glob(os.path.join(tempfile.gettempdir(), "vlconf_*"))) <= _before, "invented_words leaves no temp folder behind")
+
 # a language still being authored (no compositions yet) is reported, never a traceback (author's dry run, Task 5)
 import check_vl_contract as cvc
-_bs, _use = vl.build_sample, vl.use
-def _no_comp(*a, **k):
-    raise NotImplementedError("tally.cover(): no composition is registered for this page")
-vl.build_sample = _no_comp
+import vl_native as _vn0
+_cov = _vn0.COMPOSERS["tally"].pop("cover")          # a language still being authored: no cover composition yet
 try:
     try:
         r = vcf.invented_words("tally"); err = None
     except Exception as e:
         r, err = None, "{}: {}".format(type(e).__name__, e)
-    check(err is None and r and "composition" in r[0], "invented_words reports an unbuildable sample deck instead of raising ({} {})".format(err, r))
+    check(err is None and r and "composition" in r[0], "invented_words reports an unbuildable language instead of raising ({} {})".format(err, r))
 finally:
-    vl.build_sample = _bs
+    _vn0.COMPOSERS["tally"]["cover"] = _cov
 _pages = vcf.pages_missing
 vcf.pages_missing = lambda n, registry=None: ["{}: no composition for page 'cover'".format(n)]
 _calls = []
