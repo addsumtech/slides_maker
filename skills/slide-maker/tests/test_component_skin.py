@@ -223,6 +223,40 @@ finally:
     _reg["series"] = _saved
     dk.set_theme(None)
 
+# ...and where a component SHRINKS text to fit (tier_stack bands, venn zones, segmented_bar, org_tree's children) or
+# is handed a small size, it still stops at the floor (the final review found 9pt on chalkboard's 10pt floor)
+SHRINK = [
+    ("pyramid", lambda s: dk.pyramid(s, 1.0, 1.0, 5.0, 3.0, ["A rather long tier label about strategy and execution",
+                                                             "Short", "Another long label for the foundation tier here"])),
+    ("funnel", lambda s: dk.funnel(s, 1.0, 1.0, 5.0, 3.0, ["Every visitor who reached the landing page", "Trials",
+                                                            "Paid"], values=[12000, 3000, 410])),
+    ("org_tree", lambda s: dk.org_tree(s, 0.8, 1.2, 8.0, 3.0, ("CEO", [("Eng", []), ("Ops", [])]), label_size=9)),
+    ("venn", lambda s: dk.venn(s, 1.0, 1.0, 5.0, 4.0, ["Fast", "Cheap", "Good"],
+                               zones={"12": "both", "123": "pick two"})),
+    ("segmented_bar", lambda s: dk.segmented_bar(s, 0.8, 2.0, 6.0, 0.5, [46, 31, 23],
+                                                     labels=["Cloud computing", "On-premise", "Hybrid"])),
+]
+for L in vl.LANGS:
+    prs, k = _use(L)
+    low = []
+    for name, fn in SHRINK:
+        with contextlib.redirect_stdout(io.StringIO()):
+            k = vl.use(L, prs)
+        s = k.new_slide()
+        try:
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                fn(s)
+        except TypeError as e:
+            low.append((name, "signature", str(e)[:60])); continue
+        except ValueError:
+            continue                                    # refused loudly (a label that cannot fit) is not a quiet 8pt
+        for sh in s.shapes:
+            if sh.has_text_frame:
+                low += [(name, r.font.size.pt, r.text[:10]) for p in sh.text_frame.paragraphs for r in p.runs
+                        if r.font.size and r.text.strip() and r.font.size.pt < dk.THEME["floor"] - 1e-6]
+    check(not low, "{}: shrink-to-fit and small sizes stop at the floor {} ({})".format(L, dk.THEME["floor"], low[:3]))
+dk.set_theme(None)
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

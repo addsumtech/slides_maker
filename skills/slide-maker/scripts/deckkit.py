@@ -3148,14 +3148,14 @@ def venn(slide, x, y, w, h, sets, *, zones=None, accents=None, ink=None, mute=No
         # no floors here: a floor would let the box exceed the region again, which is the whole bug
         zw = min(ew, r * 1.7)
         zh = min(eh, 1.05)
-        sz = fit_text_size([(str(lab), len(key) > 1)], zw, zh, zone_size, font=fnt, min_size=7.5)
+        sz = fit_text_size([(str(lab), len(key) > 1)], zw, zh, zone_size, font=fnt, min_size=_fl(7.5))
         # fit_text_size returns the FLOOR when nothing fits, so re-measure AT the size actually used
         _lh = max(_LINT_LINE_H, 1.2 * CJK_LS) if _has_cjk(str(lab)) else _LINT_LINE_H
         need = _measure_lines([(str(lab), len(key) > 1)], sz, zw - TEXT_INSET_LR, font=fnt) * (sz / 72.0 * _lh)
         if need > zh + 0.004:
             raise ValueError(
                 f"venn(): zone {kk!r} label {str(lab)[:24]!r} cannot fit its region "
-                f"({zw:.2f}x{zh:.2f}in available) even at 7.5pt. A Venn region is a lens, not a "
+                f"({zw:.2f}x{zh:.2f}in available) even at {_fl(7.5):g}pt. A Venn region is a lens, not a "
                 f"card — shorten it to a word or two, lower `overlap` to widen the lenses, or move "
                 f"the explanation to a takeaway_rail beside the diagram.")
         text(slide, ax_ - zw / 2, ay_ - zh / 2, zw, zh,
@@ -7368,7 +7368,7 @@ def org_tree(slide, x, y, w, h, root, *, accent=None, node_h=0.42, gap_y=0.42,
         else:
             lab_c = _as_rgb(_on_surface(DEEP, surf))
         text(slide, nx, ny, node_w, node_h,
-             [[(label, label_size if depth == 0 else label_size - 1, lab_c, depth == 0, False, font or FONT)]],
+             [[(label, _fl(label_size if depth == 0 else label_size - 1), lab_c, depth == 0, False, font or FONT)]],
              align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
         if kids:
             busy = ny + node_h + gap_y / 2
@@ -9798,7 +9798,7 @@ def segmented_bar(slide, x, y, w, h, parts, *, labels=None, accents=None, show_p
         if show_pct and seg > 0.5:
             tc = _legible_ink(cols[i])
             lab = (name + " " if name else "") + pct
-            lsz = fit_text_size([(lab, True)], seg - 0.1, h - 0.04, 10.5, min_size=7)   # shrink to fit
+            lsz = fit_text_size([(lab, True)], seg - 0.1, h - 0.04, 10.5, min_size=_fl(7))   # shrink to fit
             text(slide, cx, y, seg, h, [[(lab, lsz, tc, True, False)]], align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
         elif show_pct:
             dropped.append((cols[i], name if name else pct, pct if name else ""))
@@ -12333,10 +12333,10 @@ def tier_stack(slide, x, y, w, h, tiers, *, mode="pyramid", direction=None, acce
             tc = _legible_ink(cols[i]) if _skin("card") == "filled" else (
                 _legible_ink(surf) if surf == _as_rgbc(cols[i]) else _on_surface(_th("ink", DEEP), surf))
             lsize = fit_text_size([(str(lab), True)], max(0.4, band_w - 0.24), band_h - 0.06, 14,
-                                  font=font, min_size=8)
+                                  font=font, min_size=_fl(8))
             runs = [[(str(lab), lsize, tc, True, False, font)]]
             if val_str:
-                runs.append([(val_str, max(8.0, lsize - 2), tc, False, False, font)])
+                runs.append([(val_str, _fl(max(8.0, lsize - 2)), tc, False, False, font)])
             text(slide, bx, cy, band_w, band_h, runs, align=PP_ALIGN.CENTER,
                  anchor=MSO_ANCHOR.MIDDLE, space_after=0, line_spacing=0.98)
         elif too_thin:
