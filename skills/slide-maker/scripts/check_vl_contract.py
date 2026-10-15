@@ -22,8 +22,12 @@ def main(argv=None):
         return 2
     probs = [p for p in vc.validate_all(vl.REGISTRY) if any(n in p for n in names)]
     for n in names:
-        for fn in (vcf.pages_missing, vcf.invented_words, vcf.extras_not_refused, vcf.assets_missing):
-            probs += fn(n)
+        missing = vcf.pages_missing(n)
+        probs += missing + vcf.assets_missing(n)
+        if missing:                            # the build checks need every page composed: say so, do not crash
+            print("  skipped for {}: never-invent and extras checks (they build pages; compose all seven first)".format(n))
+            continue
+        probs += vcf.invented_words(n) + vcf.extras_not_refused(n)
     for p in probs:
         print("  FAIL " + p)
     print("[vl-contract] {} language(s), {} problem(s)".format(len(names), len(probs)))

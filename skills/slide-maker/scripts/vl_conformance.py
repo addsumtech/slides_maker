@@ -71,7 +71,10 @@ def _sample_deck(name):
 
 def invented_words(name):
     from pptx import Presentation
-    paths, texts = _sample_deck(name)
+    try:
+        paths, texts = _sample_deck(name)
+    except NotImplementedError as e:           # a language still being authored: report it, never a traceback
+        return ["{}: its sample deck cannot be built yet — {}".format(name, e)]
     tok = allowed_tokens(name, texts)
     probs = []
     for p in paths:
@@ -105,6 +108,8 @@ def extras_not_refused(name):
         try:
             getattr(k, off)(k.new_slide(), **fields, **{x: "value"})
             probs.append("{}: {}= on {} was accepted (it draws only on {})".format(name, x, off, d["pages"]))
+        except NotImplementedError as e:
+            probs.append("{}: {}= could not be tried on {} — {}".format(name, x, off, e))
         except (ValueError, TypeError) as e:
             if x not in str(e):
                 probs.append("{}: {}= on {} was refused without naming it: {}".format(name, x, off, str(e)[:100]))

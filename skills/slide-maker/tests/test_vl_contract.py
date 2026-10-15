@@ -121,6 +121,35 @@ check({"社", "区", "年"} <= tok, "Chinese caller characters are allowed token
 check("ABSTRACT" in tok and "摘" in tok, "a declared derived label is an allowed token")
 check("REVOLUTION" not in tok, "a word the caller never gave is not allowed")
 
+# a language still being authored (no compositions yet) is reported, never a traceback (author's dry run, Task 5)
+import check_vl_contract as cvc
+_bs, _use = vl.build_sample, vl.use
+def _no_comp(*a, **k):
+    raise NotImplementedError("tally.cover(): no composition is registered for this page")
+vl.build_sample = _no_comp
+try:
+    try:
+        r = vcf.invented_words("tally"); err = None
+    except Exception as e:
+        r, err = None, "{}: {}".format(type(e).__name__, e)
+    check(err is None and r and "composition" in r[0], "invented_words reports an unbuildable sample deck instead of raising ({} {})".format(err, r))
+finally:
+    vl.build_sample = _bs
+_pages = vcf.pages_missing
+vcf.pages_missing = lambda n, registry=None: ["{}: no composition for page 'cover'".format(n)]
+_calls = []
+_iw, _ex = vcf.invented_words, vcf.extras_not_refused
+vcf.invented_words = lambda n: _calls.append(n) or []
+vcf.extras_not_refused = lambda n: _calls.append(n) or []
+try:
+    import contextlib, io
+    with contextlib.redirect_stdout(io.StringIO()) as out:
+        rc = cvc.main(["tally"])
+    check(rc == 1 and not _calls and "skipped" in out.getvalue(),
+          "check_vl_contract skips the build checks while pages are missing, and says so ({} {})".format(rc, _calls))
+finally:
+    vcf.pages_missing, vcf.invented_words, vcf.extras_not_refused = _pages, _iw, _ex
+
 # ── part 3: docs blocks follow the registry ──
 import vl_docs
 check(vl_docs.render("count-all") == "fifteen" and vl_docs.render("count-drawn") == "eleven"
