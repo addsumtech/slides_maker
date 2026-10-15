@@ -200,3 +200,110 @@ def suites_not_registry_driven():
     if "vl.LANGS" not in aud:
         probs.append("tests/test_vl_audit_fixes.py no longer iterates vl.LANGS — a new language would skip the own-pages lint")
     return probs
+
+
+# ── Phase 3 (spec §6.2): the recurring design defects, as checks a new language cannot slip past ──────────────────
+def _built(name, ground, T, canvas=(13.333, 7.5)):
+    """Every page of `name` on `ground` from the words T, in memory: [(page, slide)] (a refused page is skipped)."""
+    spec = vl.REGISTRY[name]
+    pic = str(vl.ASSETS / ("watercolour/rooftop-garden.jpg" if spec["samples"].get("kind") == "watercolour"
+                           else "photo/hall-repair.jpg"))
+    prs = dk.blank_deck(*canvas)
+    with contextlib.redirect_stdout(io.StringIO()):
+        k = vl.use(name, prs, ground=ground)
+    out = []
+    for page, fields in _pages(spec, T, pic):
+        s = k.new_slide()
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                getattr(k, page)(s, **fields)
+        except (vl.VLTextOverflow, NotImplementedError):
+            continue
+        out.append((page, s))
+    return out, prs
+
+
+def _lum(hexs):
+    r, g, b = (int(hexs[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
+    f = lambda c: c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+    return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
+
+
+def _solid_fill(sh):
+    try:
+        if sh.fill.type == 1:                       # MSO_FILL.SOLID
+            return str(sh.fill.fore_color.rgb)
+    except Exception:
+        return None
+    return None
+
+
+def bright_slabs(name, area=0.08, lum=0.85):
+    """On a DARK ground, a drawn fill brighter than `lum` covering more than `area` of the page reads as a light-mode
+    leftover (cutpaper-night's white cards, interface-dark's white bezel — Phase 3 verification). Pictures are the
+    caller's content; declared ornament (dk.decorative) is exempt."""
+    probs = []
+    for g, G in vl.REGISTRY[name]["grounds"].items():
+        if not G["dark"]:
+            continue
+        built, prs = _built(name, g, COPY["en"])
+        W, H = prs.slide_width / 914400.0, prs.slide_height / 914400.0
+        for page, s in built:
+            for sh in s.shapes:
+                if sh.shape_type == 13:             # a picture
+                    continue
+                nm = str(sh.name)
+                if nm.startswith("deckkit-decor") or "+decor" in nm.split(":", 1)[0]:
+                    continue
+                c = _solid_fill(sh)
+                if not c or _lum(c) <= lum:
+                    continue
+                a = (sh.width / 914400.0) * (sh.height / 914400.0) / (W * H)
+                if a > area:
+                    probs.append("{} {} {}: a #{} fill covers {:.0%} of the page on a dark ground".format(
+                        name, g, page, c, a))
+    return sorted(set(probs))
+
+
+def _ink_box(sh):
+    bb = dk._bbox_in(sh)
+    if bb is None:
+        return None
+    r = dk._ink_rect(sh, bb) if getattr(sh, "has_text_frame", False) and sh.text_frame.text.strip() else None
+    return r[0] if r else None
+
+
+def rules_past_content(name, run_on=0.4):
+    """A vertical rule (a column line, a margin line, a list spine) ends within `run_on` of the lowest text it serves —
+    the text beside it, in its band. Built with SHORT copy (two points) and long, on the first ground: broadsheet's
+    and ink's column rules ran 2.2in under two-line columns (Phase 3 verification)."""
+    probs = []
+    g = list(vl.VARIANTS[name])[0]
+    runs = [(tag + "-" + sc, dict(COPY[sc], items=COPY[sc]["items"][:2]) if tag == "short" else COPY[sc])
+            for sc in ("en", "zh") for tag in ("short", "long")]          # CJK too: ink's vertical columns
+    for tag, T in runs:
+        built, prs = _built(name, g, T)
+        for page, s in built:
+            if page not in ("points", "cover"):
+                continue
+            # the words a rule can serve: a grid letter or a folio (one or two glyphs) is furniture, not a column —
+            # drafting's leader lines sit beside its border's zone letters (A, B, C)
+            texts = [b for b in (_ink_box(sh) for sh in s.shapes
+                                 if getattr(sh, "has_text_frame", False) and len(sh.text_frame.text.strip()) > 2) if b]
+            for sh in s.shapes:
+                if getattr(sh, "has_text_frame", False) and sh.text_frame.text.strip():
+                    continue
+                try:                                 # a connector has zero width: read the raw extents
+                    x, y, w, h = (v / 914400.0 for v in (sh.left, sh.top, sh.width, sh.height))
+                except Exception:
+                    continue
+                if not (w <= 0.06 and h >= 1.5):     # a thin vertical line
+                    continue
+                beside = [t for t in texts if t[1] < y + h and t[1] + t[3] > y and abs((t[0] + t[2] / 2) - x) < 3.2]
+                if not beside:
+                    continue
+                low = max(t[1] + t[3] for t in beside)
+                if y + h - low > run_on:
+                    probs.append("{} {} {} ({} copy): a rule at x={:.2f} runs {:.2f}in past its text".format(
+                        name, g, page, tag, x, y + h - low))
+    return sorted(set(probs))

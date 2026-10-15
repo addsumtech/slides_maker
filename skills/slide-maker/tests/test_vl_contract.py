@@ -203,6 +203,11 @@ for n in REG:
     check(nr == [], "{}: every extra is refused by name off its pages ({})".format(n, nr[:2]))
     am = vcf.assets_missing(n)
     check(am == [], "{}: samples, sigs scaffold and docs rows exist ({})".format(n, am[:3]))
+    # Phase 3 (spec §6.2): the recurring design defects, held for every language — a new one included
+    bs = vcf.bright_slabs(n)
+    check(bs == [], "{}: no light-mode slab on a dark ground ({})".format(n, bs[:2]))
+    rp = vcf.rules_past_content(n)
+    check(rp == [], "{}: every column / margin rule ends at its text ({})".format(n, rp[:2]))
 check(vcf.suites_not_registry_driven() == [], "the build-matrix and own-pages suites iterate the registry ({})".format(
     vcf.suites_not_registry_driven()))
 # Review Focus 3: a manifest with no compositions names every missing page, no crash

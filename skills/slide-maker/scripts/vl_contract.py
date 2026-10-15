@@ -17,6 +17,12 @@ TOP_KEYS = ("name", "order", "kind", "display", "rationale", "offer", "look", "g
 _HEX = re.compile(r"^[0-9A-Fa-f]{6}$")
 SERIES_MIN = 4          # spec §4.1 ruling: four designed colours per ground (Phase 2b, approved on its sheet 2026-10-15)
 SERIES_DE = 20.0        # two series colours closer than this (CIE76) read as one
+TYPE_FLOOR_CORE, TYPE_FLOOR_PRIVATE = 12, 10      # the smallest tier on a 13.333in page (spec §6.2)
+# two languages whose grounds are this close (ΔE ground + ΔE first accent, +10 for a different display face) are one
+# look in two names (spec §6.2 distinctiveness; editorial/light and ink/light measured 4.2 — Phase 3, 2026-10-15)
+DISTINCT_MIN = 15.0
+# a pair the user chose to keep alike, with the reason (spec §6 Task 7) — {(lang/ground, lang/ground): reason}
+DISTINCT_WAIVERS = {}
 
 
 def _rgb(h):
@@ -175,6 +181,14 @@ def validate(spec):
                 probs.append("{}: skin {} {!r} is not in the vocabulary {} — pick one, or add the value to "
                              "component_tiers.SKIN_VOCAB and implement it in deckkit".format(
                                  name, role, v, list(_ct.SKIN_VOCAB[role])))
+    # the smallest tier (spec §6.2, calibrated 2026-10-15 on the fifteen languages): a core role is read by the
+    # audience — >= 12pt; a language's private furniture (running heads, tags, editions) >= 10pt
+    for r, v in t.items():
+        if isinstance(v, tuple) and len(v) == 6 and isinstance(v[0], (int, float)):
+            need = TYPE_FLOOR_CORE if r in CORE_TYPE else TYPE_FLOOR_PRIVATE
+            if v[0] < need:
+                probs.append("{}: type role {!r} is {}pt — the smallest tier is {}pt for {} roles".format(
+                    name, r, v[0], need, "core" if r in CORE_TYPE else "private"))
     for p in spec["image_pages"]:
         if p not in PAGES:
             probs.append("{}: image page {!r} is not one of {}".format(name, p, PAGES))
@@ -228,4 +242,32 @@ def validate_all(specs):
         if len(m) > 1:
             probs.append("extra {!r} means different things: {}".format(
                 x, "; ".join("{} in {}".format(k, ns) for k, ns in m.items())))
+    probs += distinct_pairs(specs)
+    return probs
+
+
+def distinctiveness(a, b):
+    """How far apart two grounds look: ΔE of the grounds + ΔE of the first accents, +10 when the display faces differ."""
+    (sa, ga), (sb, gb) = a, b
+    pa, pb = sa["grounds"][ga]["palette"], sb["grounds"][gb]["palette"]
+    fa = sa["look"]["fonts"]["both"]["display"]
+    fb = sb["look"]["fonts"]["both"]["display"]
+    return delta_e(pa["ground"], pb["ground"]) + delta_e(pa["accents"][0], pb["accents"][0]) + (0.0 if fa == fb else 10.0)
+
+
+def distinct_pairs(specs):
+    rows = [(n, g, s) for n, s in specs.items() if isinstance(s.get("grounds"), dict) for g in s["grounds"]]
+    probs = []
+    for i, (na, ga, sa) in enumerate(rows):
+        for nb, gb, sb in rows[i + 1:]:
+            if na == nb:
+                continue
+            try:
+                d = distinctiveness((sa, ga), (sb, gb))
+            except (KeyError, TypeError, IndexError):
+                continue                               # a malformed manifest is reported by validate()
+            key = tuple(sorted(("{}/{}".format(na, ga), "{}/{}".format(nb, gb))))
+            if d < DISTINCT_MIN and key not in DISTINCT_WAIVERS:
+                probs.append("{} and {} look alike (distance {:.1f} < {}): change one's ground, accent or display face, "
+                             "or record the choice in DISTINCT_WAIVERS".format(key[0], key[1], d, DISTINCT_MIN))
     return probs

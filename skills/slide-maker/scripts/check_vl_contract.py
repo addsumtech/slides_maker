@@ -44,7 +44,7 @@ def main(argv=None):
         if missing:                        # the build checks need every page composed: say so, do not crash
             print("  skipped for {}: never-invent and extras checks (they build pages; compose all seven first)".format(n))
             continue
-        probs += vcf.invented_words(n) + vcf.extras_not_refused(n)
+        probs += vcf.invented_words(n) + vcf.extras_not_refused(n) + vcf.bright_slabs(n) + vcf.rules_past_content(n)
     for p in probs:
         print("  FAIL " + p)
     print("[vl-contract] {} language(s), {} problem(s)".format(len(names), len(probs)))
