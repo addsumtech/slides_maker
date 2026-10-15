@@ -706,6 +706,11 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   `order`); `visual_languages.py` builds its tables from them: `editorial.py`, `soft.py`, `collage.py`, `storybook.py`,
   `ink.py`, `poster.py`, `cutpaper.py`, `drafting.py`, `starlit.py`, `broadsheet.py`, `journal.py`, `tally.py`,
   `chalkboard.py`, `interface.py`, `wayfinding.py`.
+- `vl_conformance.py` — build-time checks of the contract over any registered language: all seven pages composed,
+  no word on a sample page that is neither the caller's nor declared derived, every extra refused by name off its
+  pages, samples / sigs scaffold / docs rows present, and the build-matrix suites still iterating the registry.
+- `check_vl_contract.py` — `check_vl_contract.py [name …]`: the manifest and the conformance checks for the named
+  languages (all by default), with a NEXT line.
 - `collage.py` — `collage(slide, region, items, seed=, keep_clear=)`: 1-4 images as tilted, white-bordered,
   taped prints; geometry decided first — a print never enters `keep_clear` and never covers more than
   25% of its neighbour; deterministic for a seed; slot items keep the image-series tag.

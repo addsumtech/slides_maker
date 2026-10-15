@@ -98,6 +98,29 @@ for n, s in REG.items():
     for g, gd in s["grounds"].items():
         check(gd["palette"] == vl.VARIANTS[n][g]["palette"], "{}/{}: VARIANTS is built from the manifest".format(n, g))
 
+# ── part 2: conformance over every registered language ──
+import vl_conformance as vcf
+for n in REG:
+    check(vcf.pages_missing(n) == [], "{}: all seven pages have a composition ({})".format(n, vcf.pages_missing(n)))
+    inv = vcf.invented_words(n)
+    check(inv == [], "{}: every word on its sample pages is the caller's or declared derived ({})".format(n, inv[:3]))
+    nr = vcf.extras_not_refused(n)
+    check(nr == [], "{}: every extra is refused by name off its pages ({})".format(n, nr[:2]))
+    am = vcf.assets_missing(n)
+    check(am == [], "{}: samples, sigs scaffold and docs rows exist ({})".format(n, am[:3]))
+check(vcf.suites_not_registry_driven() == [], "the build-matrix and own-pages suites iterate the registry ({})".format(
+    vcf.suites_not_registry_driven()))
+# Review Focus 3: a manifest with no compositions names every missing page, no crash
+fx = good_spec()
+miss = vcf.pages_missing("fixture", registry={"fixture": fx})
+check(len(miss) == 7 and all("fixture" in m for m in miss), "a language with no compositions names its 7 missing pages ({})".format(miss[:1]))
+# Review Focus 4: re-cased and clause-broken caller words are the caller's; a new word is not
+tok = vcf.allowed_tokens("journal", ["Why every street deserves a place, not a bin", "社区修理网络，年度回顾"])
+check({"WHY", "STREET", "DESERVES"} <= tok, "re-cased caller words are allowed tokens")
+check({"社", "区", "年"} <= tok, "Chinese caller characters are allowed tokens")
+check("ABSTRACT" in tok and "摘" in tok, "a declared derived label is an allowed token")
+check("REVOLUTION" not in tok, "a word the caller never gave is not allowed")
+
 # ── part 2 (Task 3) and part 3 (Task 4) are appended above this line ──
 
 for line in ok:

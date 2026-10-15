@@ -538,6 +538,44 @@ EXAMPLES = {
 }
 EXAMPLES["card"] = EXAMPLES["ground"]      # rs.card is shown on the same ordinary page
 
+
+def _vl_scaffolds():
+    """A runnable `vl_<name>` scaffold for every registered visual language that has no hand-written one, generated
+    from its manifest (scripts/vl_specs/<name>.py) — so a new language is shown the moment it is registered, and the
+    smoke suite runs it. Drawn languages replay their sample copy; image-led ones use a bundled picture of their kind."""
+    try:
+        import vl_specs
+        reg = vl_specs.load()
+    except Exception:                      # the manifests are plain data; if they cannot load, show nothing extra
+        return {}
+    out = {}
+    for n, sp in reg.items():
+        key = "vl_" + n
+        if key in EXAMPLES:
+            continue
+        head = ['import visual_languages as vl',
+                'k = vl.use("{}", prs)   # {} ({}) — generated from scripts/vl_specs/{}.py'.format(
+                    n, sp["display"]["en"], sp["display"]["zh"], n)]
+        if sp["kind"] == "drawn":
+            body = ["k.{}(k.new_slide(), {})".format(page, ", ".join("{}={!r}".format(f, v) for f, v in fields.items()))
+                    for page, fields in sp["samples"]["copy"]]
+        else:
+            water = sp["samples"]["kind"] == "watercolour"
+            pic = "watercolour/rooftop-garden.jpg" if water else "photo/hall-repair.jpg"
+            words = (("A small city garden", "A balcony can grow a season of vegetables", "Half an hour of watering a day is enough.",
+                      "A balcony gardener") if water else
+                     ("A repair café", "Bring it broken, take it home working",
+                      "The visitor holds the screwdriver; the volunteer only guides.", "How every repair begins"))
+            body = ['pic = str(vl.ASSETS / {!r})   # a BUNDLED sample picture: put YOUR picture\'s path here'.format(pic),
+                    'k.cover(k.new_slide(), kicker={!r}, title={!r}, image=pic)'.format(words[0], words[1]),
+                    'k.quote(k.new_slide(), quote={!r}, attribution={!r}, image=pic)'.format(words[2], words[3]),
+                    'k.closing(k.new_slide(), title="Questions", line="Thank you.", image=pic)']
+        out[key] = "\n".join(head + body)
+    return out
+
+
+EXAMPLES.update(_vl_scaffolds())
+
 # Printed once above the scaffolds: the names they assume, as the first lines of a build script that runs from any
 # folder. A scaffold run without them failed on `prs` (audit 2026-10-09).
 PREAMBLE = """\
