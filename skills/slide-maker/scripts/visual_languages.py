@@ -804,10 +804,67 @@ def _balanced_width(k, f, t, sz, w):
     full = dt._glyph_width(t, sz, face, bold) or 0
     wb = full / n + _INSET
     while wb < w:
-        if len(_break_lines(k, f, t, sz, wb)) == n and not _widowed(k, f, t, sz, wb):
+        # the lint's line model must hold the same lines too: collage's 4.23in measure was four lines by the glyphs and
+        # five by the measure lint reads, the height guard threw it away, and the widow came back (sheet review 2026-10-16)
+        if (len(_break_lines(k, f, t, sz, wb)) == n and not _widowed(k, f, t, sz, wb)
+                and dk._measure_lines([(t, bold)], sz, max(0.2, wb - _INSET), font=face) <= n):
             return wb
         wb *= 1.04
     return None
+
+
+def _even_lines(k, f, t, sz, w):
+    """The same number of lines as the plain break, ending on two words or more, every line on one line by both
+    models, the lines as even as they go — or None. A narrower measure cannot do this when the line that must take
+    the lone word is already the widest ("a repair / night" in collage's narrow column, sheet review 2026-10-16), so
+    the breaks are chosen, not wrapped, and set as explicit paragraphs. Space-separated words only (Latin, Korean);
+    a Chinese or Japanese widow is balanced by the narrower measure."""
+    import display_type as dt
+    words = t.split()
+    korean = any(dk._is_hangul(ord(c)) for c in t)
+    if (dk._has_cjk(t) and not korean) or len(words) < 3 or len(words) > 24:
+        return None
+    n = len(_break_lines(k, f, t, sz, w))
+    if n < 2 or n > len(words) - 1:
+        return None
+    role, bold = TYPE[k.name][f][1], _weight(k, f, t)
+    face = k.ea_face(role, t) if dk._has_cjk(t) else k.face(role)
+    seg, fits = {}, {}
+
+    def fit(i, j):
+        if (i, j) not in fits:
+            s = " ".join(words[i:j])
+            fits[(i, j)] = _one_line(k, f, s, sz, w)
+            seg[(i, j)] = dt._glyph_width(s, sz, face, bold) or 0
+        return fits[(i, j)]
+    best = {}                                          # (start, lines left) -> (cost, breaks)
+
+    def solve(i, left):
+        if (i, left) in best:
+            return best[(i, left)]
+        out = None
+        if left == 1:
+            if len(words) - i >= 2 and fit(i, len(words)):
+                out = (0.0, [len(words)])
+        else:
+            for j in range(i + 1, len(words) - 1):    # leave the last line at least two words
+                if not fit(i, j):
+                    break
+                rest = solve(j, left - 1)
+                if rest is not None:
+                    c = (w - seg[(i, j)]) ** 2 + rest[0]
+                    if out is None or c < out[0]:
+                        out = (c, [j] + rest[1])
+        best[(i, left)] = out
+        return out
+    got = solve(0, n)
+    if got is None:
+        return None
+    lines, start = [], 0
+    for j in got[1]:
+        lines.append(" ".join(words[start:j]))
+        start = j
+    return lines
 
 
 # A quote STARTS this much larger than the language's quote size and shrinks to its column like every field: a
@@ -945,9 +1002,19 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=Non
         if wb is not None:
             widths[f] = wb
             continue
-        sz, tries = sizes[f], 0
+        sz, tries, steps = sizes[f], 0, [sizes[f]]
         while _widowed(k, f, t, sz, w) and sz * 0.95 >= max(floors[f], 0.85 * sizes[f]) and tries < 10:
             sz, tries = sz * 0.95, tries + 1
+            steps.append(sz)
+        if _widowed(k, f, t, sz, w):
+            # the last resort, largest size first: breaks CHOSEN at the same line count (collage's "a repair / night" —
+            # the widest line had to take the word, and 15% smaller still left it alone; sheet review 2026-10-16). Not
+            # before the shrink: editorial's 3 even lines at 90% read better than 4 ragged ones at full size
+            for s_ in steps:
+                ev = _even_lines(k, f, t, s_, w)
+                if ev is not None:
+                    sz, phrased[f] = s_, ev
+                    break
         sizes[f] = sz
     if total() > h + 0.02:                 # balancing never adds lines; this is a guard, not a path
         widths = {f: w for f in widths}

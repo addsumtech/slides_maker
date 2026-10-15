@@ -91,6 +91,50 @@ for L in vl.LANGS:
         check(z >= need * base - 1e-6 or L == "poster" or (L == "ink" and tag == "cjk"), "{} cover title ({}) holds >= {:.0%} of {}pt ({:.1f}pt)".format(L, tag, need, base, z))
 dk.set_theme(None)
 
+
+def _drawn_lines(k, field, sh):
+    """The lines text shape `sh` draws: each paragraph, wrapped at the shape's measure the way the renderer wraps it."""
+    paras = ["".join(r.text for r in p.runs).strip() for p in sh.text_frame.paragraphs]
+    paras = [p for p in paras if p]
+    size = max(r.font.size.pt for p in sh.text_frame.paragraphs for r in p.runs if r.font.size)
+    box = sh.width / 914400.0
+    return [l_.strip() for p in paras for l_ in vl._break_lines(k, field, p, size, box * vl.HEADROOM)]
+
+
+# ── Task 2 (F2, sheet review 2026-10-16): a cover title that wraps never leaves its last word alone when the SAME line
+# count can end on two — collage's "a repair / night" stood alone because the widest line was the one that had to take it,
+# and a narrower measure cannot move a word INTO the widest line ──
+for L in vl.LANGS:
+    for t in ("Why every street needs a repair night", "Bring it broken, take it home working, and bring a neighbour"):
+        prs, k = _deck(L)
+        sl = k.new_slide()
+        pic = str(vl.ASSETS / "photo/hall-repair.jpg") if L in vl.IMAGE_LED else None
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                k.cover(sl, title=t, kicker="Repair café", **({"image": pic} if pic else {}))
+        except Exception as e:
+            check(False, "{} cover ({!r}) builds ({}: {})".format(L, t[:12], type(e).__name__, str(e)[:70])); continue
+        head = " ".join(t.split()[:2]).lower()
+        sh = max((x for x in sl.shapes if getattr(x, "has_text_frame", False)
+                  and head in x.text_frame.text.replace("\n", " ").lower()),
+                 key=lambda x: max((r.font.size.pt for p in x.text_frame.paragraphs for r in p.runs if r.font.size), default=0))
+        ls = _drawn_lines(k, "title", sh)
+        # poster stacks a headline one word a line on purpose ("THREE / MOVES."), which is a stack, not a widow
+        lone = len(ls) > 1 and len(ls[-1].split()) == 1 and not (L == "poster" and len(ls[-2].split()) == 1)
+        check(not lone, "{} cover title {!r} does not end on a lone word ({})".format(L, t[:12], " / ".join(ls)))
+dk.set_theme(None)
+# …and a balanced measure is one the lint's line model also holds in the same lines: collage's 4.23in measure broke
+# in four lines by the glyphs and five by the measure lint reads, so the height guard threw it away and the widow came back
+prs, k = _deck("collage")
+_t = "Why every street needs a repair night"
+_n = len(vl._break_lines(k, "title", _t, 62.0, 4.785))
+_wb = vl._balanced_width(k, "title", _t, 62.0, 4.785)
+_face, _bold = k.face(vl.TYPE["collage"]["title"][1]), vl._weight(k, "title", _t)
+check(_wb is None or dk._measure_lines([(_t, _bold)], 62.0, max(0.2, _wb - vl._INSET), font=_face) <= _n,
+      "a balanced measure keeps the line count by the lint's model too ({} at {})".format(
+          None if _wb is None else dk._measure_lines([(_t, _bold)], 62.0, max(0.2, _wb - vl._INSET), font=_face), _wb))
+dk.set_theme(None)
+
 # ── Task 5 (D): chalkboard: the quote's chalk underline runs the whole LAST line, to its measured ink width ──
 def _quote_shape(slide, words):
     """The quote's own text shape (the largest-set one holding `words`)."""
