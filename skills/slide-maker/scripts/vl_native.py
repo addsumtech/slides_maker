@@ -217,12 +217,14 @@ def vcol(k, slide, right, top, h_max, text, field, *, color=None, spacing=0.12, 
 
 
 def display(k, slide, rect, text, field, *, highlight=None, caps=True, ink=None, hl=None, hl_ink=None,
-            align="l", anchor="t", floor=None):
+            align="l", anchor="t", floor=None, sit="top"):
     """PLAN poster-scale type in `rect`: measured, shrinking to the field's floor, refused past it; Latin set in
     capitals; `highlight` (words of the caller's own text) set on a highlighter. Lines break as the rest of the kit
     breaks them (_flow's order): at a clause mark first, else a little smaller, else a balanced narrower measure —
     never a lone CJK character or a lone word on the last line ("一盏茶的时 / 间", seen on the first render).
-    Returns (rect, size, draw)."""
+    `sit="bottom"` sets the words against the BOTTOM of the planned box (the box is reserved at the lint's 1.2 em a
+    line but drawn at 0.86, so top-set words leave ~0.5in of reserve below them: the ink then ends 0.05in + 0.17 em above
+    the box's foot — measured on the render, 2026-10-15). Returns (rect, size, draw)."""
     base, role, bold, ckey, _italic, field_floor = vl.TYPE[k.name][field]
     floor = field_floor if floor is None else floor    # a page may let display type shrink further than its field
     s = ctx(k)[2]
@@ -325,7 +327,7 @@ def display(k, slide, rect, text, field, *, highlight=None, caps=True, ink=None,
     def draw():
         al = {"l": dk.PP_ALIGN.LEFT, "c": dk.PP_ALIGN.CENTER, "r": dk.PP_ALIGN.RIGHT}[align]
         dk.text(slide, x, ty, bw, need, [runs_for(l_) for l_ in (lines or [t])], align=al, space_after=0,
-                line_spacing=0.86)
+                line_spacing=0.86, anchor=dk.MSO_ANCHOR.BOTTOM if sit == "bottom" else dk.MSO_ANCHOR.TOP)
     return (x, ty, bw, need), sz, draw
 
 
@@ -459,6 +461,13 @@ def _ink_sun(k, slide, cx, cy, d, clear=()):
 
 def _ink_hairline(k, slide, x, y0, y1, alpha=0.45):
     return lambda: na.seg(slide, x, y0, x, y1, k.P["ink"], w=0.5, alpha=alpha)
+
+
+def _vink_bottom(r, sz, spacing=0.12):
+    """Where the LAST CHARACTER of a vertical column (vcol's planned rect `r` at `sz`pt) ends: the rect carries 0.12in
+    of slack and the tracking after the final glyph below it — measured on the render, the ink ends 0.12-0.17in above
+    the rect's foot (2026-10-15)."""
+    return r[1] + r[3] - 0.12 - sz * spacing / 72.0
 
 
 def _run_all(draws):
@@ -654,8 +663,9 @@ def _ink_points(k, slide, f, image):
     rects, draws, clear = {}, [], []
     if vertical_ok:                                    # columns read right to left, as a book is
         right = 0.93 * W
+        tail = 0.2 * s                                 # a column rule runs this far past the last of its words
         if title:
-            r0, _z, d0 = vcol(k, slide, right, 0.10 * H, 0.60 * H, title, "title")
+            r0, z0, d0 = vcol(k, slide, right, 0.10 * H, 0.60 * H, title, "title")
             rects["title"] = r0; draws.append(d0); clear.append(r0)
             right = r0[0] - 0.55 * s
         n = len(pts)
@@ -664,15 +674,17 @@ def _ink_points(k, slide, f, image):
             cr_ = right - i * step
             nr, nd = flow(k, slide, "points", (cr_ - step * 0.75, 0.10 * H, step * 0.6, 0.09 * H), [("mark", _NUM_ZH[i])],
                           align="c", start={"mark": 30 * s})
-            rh, _z1, dh = vcol(k, slide, cr_ - step * 0.12, 0.23 * H, 0.42 * H, head, "item_head")
+            rh, zh, dh = vcol(k, slide, cr_ - step * 0.12, 0.23 * H, 0.42 * H, head, "item_head")
             draws += [nd, dh]; clear += list(nr.values()) + [rh]
+            foot = _vink_bottom(rh, zh)
             if line:
-                rl, _z2, dl = vcol(k, slide, rh[0] - 0.18 * s, 0.25 * H, 0.50 * H, line, "item_line")
+                rl, zl, dl = vcol(k, slide, rh[0] - 0.18 * s, 0.25 * H, 0.50 * H, line, "item_line")
                 draws.append(dl); clear.append(rl)
-            if i < n - 1:
-                draws.append(_ink_hairline(k, slide, cr_ - step * 0.96, 0.12 * H, 0.76 * H, 0.3))
+                foot = max(foot, _vink_bottom(rl, zl))
+            if i < n - 1:                              # the rule at this column's left edge stops at ITS words (it ran to
+                draws.append(_ink_hairline(k, slide, cr_ - step * 0.96, 0.12 * H, foot + tail, 0.3))   # a fixed 0.76H)
         if title:
-            draws.append(_ink_hairline(k, slide, rects["title"][0] - 0.28 * s, 0.12 * H, 0.76 * H, 0.45))
+            draws.append(_ink_hairline(k, slide, rects["title"][0] - 0.28 * s, 0.12 * H, _vink_bottom(r0, z0) + tail, 0.45))
         seal_at = ((rects["title"][0] + rects["title"][2] / 2.0) if title else right,
                    (rects["title"][1] + rects["title"][3] + 0.2 * s) if title else 0.82 * H)
     else:
@@ -694,7 +706,10 @@ def _ink_points(k, slide, f, image):
                            [(x_, t) for x_, t in (("item_head", head), ("item_line", line)) if t], anchor="top")
             draws += [nd, td_]; clear += list(nr.values()) + list(tr.values())
             if i // cols < rows - 1:
-                yy = y + row_h - 0.06 * s
+                # the rule hangs 0.2in under THIS row's words (it sat at the row's far edge: 1.1in below two short rows),
+                # or half-way to the next row when the copy is long and the rows are close
+                low = max([v[1] + v[3] for v in tr.values()] + [y])
+                yy = low + min(0.2 * s, max(0.02, (y + row_h - low) / 2.0))
                 draws.append(lambda x=x, yy=yy: na.seg(slide, x, yy, x + colw - 0.25 * s, yy, k.P["ink"], w=0.5, alpha=0.25))
         seal_at = (0.86 * W, 0.12 * H)
     na.ink_ridges(slide, color=k.P["ink"], layers=na.INK_LAYERS["faint"], seed=6, peak_span=(0.0, 1.0), keep_clear=clear)
@@ -887,9 +902,13 @@ def _poster_quote(k, slide, f, image):
     draws.append(d)
     ya = qrect[1]                      # a secondary field is drawn whether or not its primary is given — the caller's
     if q:                              # words are never dropped for a missing sibling (robustness audit, 2026-10-09)
-        r1, _z, d1 = display(k, slide, qrect, q, "quote", highlight=hl, hl=fld["hl"], hl_ink=fld["hl_ink"])
+        # the words sit on the BOTTOM of their box, so the attribution can ride just under it: set from the top, they
+        # left 0.5-0.8in of reserve (1.2 em a line reserved, 0.86 drawn) between the last line and the credit
+        r1, z1, d1 = display(k, slide, qrect, q, "quote", highlight=hl, hl=fld["hl"], hl_ink=fld["hl_ink"], sit="bottom")
         rects["quote"] = r1; draws.append(d1)
-        ya = r1[1] + r1[3] + 0.25 * s
+        # the credit's ink starts 0.4in under the quote's last ink: that is 0.05in + 0.17 em under the box's foot, plus
+        # the credit's own 0.14in of top room; never above the box (the lint reads the box's foot as the text's)
+        ya = max(r1[1] + r1[3] - 0.05 * s, r1[1] + r1[3] + (0.26 - 0.17 * z1 / 72.0) * s)
     if attr:
         ar, ad = flow(k, slide, "quote", (qrect[0], ya, qrect[2], 0.6 * s), [("attribution", attr)], accent=fld["accent"])
         rects.update(ar); draws.append(ad)
@@ -944,19 +963,32 @@ def _poster_closing(k, slide, f, image):
     return rects
 
 
-@register("poster", "points", alts=2)
-def _poster_points(k, slide, f, image):
-    """Points as a rising staircase of panels beside the title; when the steps are too narrow for their words (a
-    small canvas, long lines), the second layout puts the title across the top and the steps underneath as full-width
-    bars that step in, one per point."""
+def _poster_stairs(k, slide, lay, title, kicker, pts):
+    """Plan, then draw, the rising staircase of panels (layout `lay`): "wide" climbs across the whole page from its
+    bottom-left corner, the title in the free corner above the first step (landscape only); "side" puts the steps
+    beside the title (and under it on a portrait page). Nothing is drawn until every text has fitted, so a refusal
+    leaves the slide as it was and the caller can try the other layout. Returns (rects, draws)."""
     W, H, s, o = ctx(k)
     fld = k.field
-    title, kicker = text_of(f, "title"), text_of(f, "kicker")
-    pts = points_of(f.get("items"))
-    n = len(pts)
+    n, gap = len(pts), 0.15 * s
     rects, draws = {}, []
-    gap = 0.15 * s
-    if alt() == 0:
+    if lay == "wide":
+        yb = 0.93 * H
+        pw = (0.92 * W - (n - 1) * gap) / n
+        # the title is as wide as the first step, so only that step has to stay clear of it; the others climb past
+        trect = _below_meta(k, (0.04 * W, 0.11 * H, pw, 0.42 * H), kicker)
+        tb = trect[1]
+        if title:
+            r, _z, d = display(k, slide, trect, title, "title", floor=vl.TYPE[k.name]["label"][5])
+            rects["title"] = r; draws.append(d)
+            tb = r[1] + r[3]
+        hN = yb - 0.15 * H                                 # the last step: up to the credit line
+        h1 = min(yb - (tb + 0.25 * s), 0.62 * hN)          # the first: under the title, and never nearly as tall as the last
+        if h1 < 0.30 * hN:
+            raise vl.VLTextOverflow("poster.points: the title leaves no room for the first step")
+        hs = [h1 + (hN - h1) * i / float(max(n - 1, 1)) for i in range(n)]
+        geo = [(0.04 * W + i * (pw + gap), yb - hs[i], pw, hs[i]) for i in range(n)]
+    else:
         if o == "land":
             trect, (rx, ry, rw, rh) = (0.04 * W, 0.11 * H, 0.42 * W, 0.42 * H), (0.50 * W, 0.30 * H, 0.46 * W, 0.63 * H)
         else:
@@ -968,17 +1000,49 @@ def _poster_points(k, slide, f, image):
             r, _z, d = display(k, slide, trect, title, "title", floor=vl.TYPE[k.name]["label"][5])
             rects["title"] = r; draws.append(d)
         pw = (rw - (n - 1) * gap) / n
-        for i, (head, line) in enumerate(pts):
+        geo = []
+        for i in range(n):
             ph = rh * (0.64 + 0.36 * (i / float(max(n - 1, 1))))
-            px, py = rx + i * (pw + gap), ry + rh - ph
-            dk.box(slide, px, py, pw, ph, fill=fld["panel"])
-            mh = min(1.4 * s, ph * 0.4)
-            _nr, _z, nd = display(k, slide, (px + 0.12 * s, py + 0.10 * s, pw - 0.24 * s, mh), "{:02d}".format(i + 1),
-                                  "mark", caps=False, ink=fld["panel_accent"], floor=12)   # the numeral fits its panel
-            tr, td_ = flow(k, slide, "points", (px + 0.14 * s, py + ph * 0.45, pw - 0.28 * s, ph * 0.52),
-                           [(x_, t) for x_, t in (("item_head", head), ("item_line", line)) if t], anchor="bottom",
-                           ink=fld["panel_ink"], mute=fld["panel_ink"])
-            draws += [nd, td_]
+            geo.append((rx + i * (pw + gap), ry + rh - ph, pw, ph))
+    for i, ((head, line), (px, py, pw_, ph)) in enumerate(zip(pts, geo)):
+        mh = min(1.4 * s, ph * 0.4)
+        _nr, _z, nd = display(k, slide, (px + 0.12 * s, py + 0.10 * s, pw_ - 0.24 * s, mh), "{:02d}".format(i + 1),
+                              "mark", caps=False, ink=fld["panel_accent"], floor=12)   # the numeral fits its panel
+        # the words end 0.2in above the panel's foot (the lint wants >= 0.09in of padding under them)
+        tr, td_ = flow(k, slide, "points", (px + 0.14 * s, py + ph * 0.45, pw_ - 0.28 * s, ph * 0.55 - 0.2 * s),
+                       [(x_, t) for x_, t in (("item_head", head), ("item_line", line)) if t], anchor="bottom",
+                       ink=fld["panel_ink"], mute=fld["panel_ink"])
+        draws += [nd, td_]
+    for px, py, pw_, ph in geo:
+        dk.box(slide, px, py, pw_, ph, fill=fld["panel"])
+    return rects, draws
+
+
+@register("poster", "points", alts=2)
+def _poster_points(k, slide, f, image):
+    """Points as a rising staircase of panels; on a landscape page it climbs across the whole page from the bottom-left
+    corner with the title above its low end (the half under the title was empty), and when the title is too long for
+    that corner it stands beside the steps as it always did. When the steps are too narrow for their words (a small
+    canvas, long lines), the second layout puts the title across the top and the steps underneath as full-width bars
+    that step in, one per point."""
+    W, H, s, o = ctx(k)
+    fld = k.field
+    title, kicker = text_of(f, "title"), text_of(f, "kicker")
+    pts = points_of(f.get("items"))
+    n = len(pts)
+    rects, draws = {}, []
+    gap = 0.15 * s
+    if alt() == 0:
+        lays = ("wide", "side") if o == "land" else ("side",)
+        for lay in lays:
+            n0 = len(slide.shapes)
+            try:
+                rects, draws = _poster_stairs(k, slide, lay, title, kicker, pts)
+                break
+            except vl.VLTextOverflow:
+                if lay == lays[-1]:
+                    raise
+                _unbuild(slide, n0)
     else:
         # a shorter band than the designed layout's: display type fills the rect it gets, and the steps need the room
         trect = (0.04 * W, 0.09 * H, 0.92 * W, 0.17 * H) if o == "land" else (0.06 * W, 0.07 * H, 0.88 * W, 0.21 * H)
@@ -1017,6 +1081,13 @@ CUT_ART = {
               "rings": ("39466A", "D9CDA6", "F1E7C8", "C9B98A"), "cloud": "C9D3E3", "sheets": ("F1E7C8", "EE8A6B"),
               "discs": ("C2553A", "2E6DA4", "5B3F6E", "2F7F69")},
 }
+
+
+def _paper(k):
+    """The sheet the language's cards are cut from: white on the day ground, the cream of the back sheet on the night one
+    (a pure-white card was a slab of the brightest thing on the navy page). `panel` is the ORDINARY page's card and
+    carries the light default inks, so it stays the night's navy."""
+    return k.P.get("paper", "FFFFFF")
 
 
 def _card_flow(k, slide, page, col, items, **kw):
@@ -1078,8 +1149,12 @@ def _cut_cover(k, slide, f, image):
         if z is not None and z < 0.85 * vl.TYPE[k.name]["title"][0] * s:
             raise vl.VLTextOverflow("cutpaper.cover: the title sets at {:.0f}pt in the narrow card".format(z))
     text_bottom = max((v[1] + v[3] for v in r.values()), default=card[1])
-    if o != "land":                  # a free-standing card fits its words (landscape keeps its height for the tuck)
+    if o != "land":                  # a free-standing card fits its words
         card = (card[0], card[1], card[2], text_bottom + pad - card[1])
+    else:                            # so does this one: its words + padding + the 0.3in the near hill tucks it under
+        # (a fixed 0.47H left 1.3in of bare card under a short title; the wide card's 0.66H let the hill cut into a
+        # long one — Phase 3 verification, 2026-10-15)
+        card = (card[0], card[1], card[2], text_bottom + pad + 0.30 * s - card[1])
     if o != "land":                  # under the card (fitted to its words), never buried beneath it
         foot = card[1] + card[3]
         sun = (sun[0], max(sun[1], foot + sun[2] * 0.55 + 0.1 * s), sun[2])
@@ -1088,7 +1163,7 @@ def _cut_cover(k, slide, f, image):
     for cx, cy, cw in clouds:
         na.cloud(slide, cx, cy, cw, fill=A["cloud"])
     _back_hills(k, slide, o)
-    na.paper_card(slide, *card)
+    na.paper_card(slide, *card, fill=_paper(k))
     if o == "land":                  # the near hill tucks the card's foot into the scene — never above its words
         foot = card[1] + card[3]
         tuck = max(text_bottom + 0.15 * s, foot - 0.30 * s)
@@ -1147,10 +1222,10 @@ def _cut_image_text(k, slide, f, image):
     items = [(x_, text_of(f, x_)) for x_ in ("kicker", "title", "body", "caption") if text_of(f, x_)]
     r, d = _card_flow(k, slide, "image_text", (card[0] + pad, card[1] + pad, card[2] - 2 * pad, card[3] - 2 * pad), items,
                       anchor="middle")
-    na.paper_card(slide, *frame)
+    na.paper_card(slide, *frame, fill=_paper(k))
     inset = 0.14 * s
     place_image(k, slide, image, (frame[0] + inset, frame[1] + inset, frame[2] - 2 * inset, frame[3] - 2 * inset), "image_text")
-    na.paper_card(slide, *card)
+    na.paper_card(slide, *card, fill=_paper(k))
     d()
     return r
 
@@ -1164,7 +1239,7 @@ def _cut_quote(k, slide, f, image):
     # (the plan's smaller sheets sat wholly behind it — measured 2026-10-05, nothing but a rotated corner showed)
     for (dx, dy, rot), col in zip(((0.42, 0.40, 2.5), (0.22, 0.20, -1.5)), A["sheets"]):
         na.paper_card(slide, card[0] + dx * s, card[1] + dy * s, card[2], card[3], fill=col, rotation=rot)
-    na.paper_card(slide, *card)
+    na.paper_card(slide, *card, fill=_paper(k))
     pad = 0.6 * s
     items = [(x_, text_of(f, x_)) for x_ in ("quote", "attribution") if text_of(f, x_)]
     items = [("mark", "“")] + items
@@ -1211,7 +1286,7 @@ def _cut_closing(k, slide, f, image):
                       anchor="middle", align="c")
     na.paper_sun(slide, 0.85 * W, (0.14 if o == "land" else 0.50) * H, (0.16 * min(W, H), 0.11 * min(W, H)), A["sun"])
     _back_hills(k, slide, o, seed=21)
-    na.paper_card(slide, *card)
+    na.paper_card(slide, *card, fill=_paper(k))
     _front_hills(k, slide, o, seed=23)
     d()
     return r
@@ -1247,12 +1322,40 @@ def _cut_points(k, slide, f, image):
         ch = ((0.88 * H - top) - (rows - 1) * gap) / rows
         cwid = (0.84 * W - (cols - 1) * gap) / cols
         cards = [(0.08 * W + (i % cols) * (cwid + gap), top + (i // cols) * (ch + gap), cwid, ch) for i in range(n)]
+    compact = alt() > 0 and o != "land"
+    dds = [min(0.75 * s, chh * 0.30, cw * 0.24) if compact else min(1.1 * s, chh * 0.38, cw * 0.38)
+           for _cx, _cy, cw, chh in cards]                     # the discs keep the slots' size
+
+    def geom(cx, cy, cw, chh, dd):
+        """The disc's centre and the words' column for a card at (cx, cy, cw, chh)."""
+        if compact:
+            return (cx + 0.25 * s + dd / 2, cy + 0.25 * s + dd / 2), (cx + 0.45 * s + dd, cy + 0.2 * s, cw - dd - 0.65 * s, chh - 0.4 * s)
+        c = (cx + 0.3 * s + dd / 2, cy + 0.3 * s + dd / 2)
+        if o == "land":
+            return c, (cx + 0.3 * s, cy + 0.45 * s + dd, cw - 0.6 * s, chh - dd - 0.7 * s)
+        return c, (cx + 0.6 * s + dd, cy + 0.25 * s, cw - dd - 0.9 * s, chh - 0.5 * s)
+
+    def words(head, line, tcol):
+        return _card_flow(k, slide, "points", tcol, [(x_, t) for x_, t in (("item_head", head), ("item_line", line)) if t],
+                          anchor="top")
+    # PLAN every card's words in its slot first: the cards are then cut to what the tallest of them holds — one shared
+    # height — instead of filling the slot (22-30% of each was bare card, Phase 3 verification 2026-10-15)
+    need = 0.0
+    for (cx, cy, cw, chh), dd, (head, line) in zip(cards, dds, pts):
+        (dx, dy), tcol = geom(cx, cy, cw, chh, dd)
+        tr, _td = words(head, line, tcol)
+        need = max(need, max([v[1] + v[3] for v in tr.values()] + [dy + dd / 2]) - cy + 0.3 * s)   # words/disc + 0.3in
+    slot_h = cards[0][3]
+    row_h = min(max(need, 1.0 * s), slot_h)
+    per_row = n if o == "land" else (1 if (alt() == 0 or n < 3) else 2)
+    rows_n = -(-n // per_row)
+    # the block of cards sits centred where the slots' block sat
+    y0 = top + (rows_n * (slot_h - row_h)) / 2.0
+    cards = [(cx, y0 + (i // per_row) * (row_h + gap), cw, row_h) for i, (cx, _cy, cw, _ch) in enumerate(cards)]
     _front_hills(k, slide, o, seed=31, low=True)
-    for i, ((cx, cy, cw, chh), (head, line)) in enumerate(zip(cards, pts)):
-        na.paper_card(slide, cx, cy, cw, chh)
-        compact = alt() > 0 and o != "land"
-        dd = min(0.75 * s, chh * 0.30, cw * 0.24) if compact else min(1.1 * s, chh * 0.38, cw * 0.38)
-        dx, dy = (cx + 0.25 * s + dd / 2, cy + 0.25 * s + dd / 2) if compact else (cx + 0.3 * s + dd / 2, cy + 0.3 * s + dd / 2)
+    for i, ((cx, cy, cw, chh), dd, (head, line)) in enumerate(zip(cards, dds, pts)):
+        na.paper_card(slide, cx, cy, cw, chh, fill=_paper(k))
+        (dx, dy), tcol = geom(cx, cy, cw, chh, dd)
         na.disc(slide, dx, dy, dd, A["discs"][i % len(A["discs"])], shadow=True)
         if icons_:
             png = str(Path(_tf.gettempdir()) / "slide-maker-native-art" / "icon_{}.png".format(str(icons_[i]).replace(":", "_")))
@@ -1263,14 +1366,7 @@ def _cut_points(k, slide, f, image):
             nr, nd = flow(k, slide, "points", (dx - dd / 2, dy - dd / 2, dd, dd), [("mark", str(i + 1))], align="c",
                           anchor="middle", ink="FFFFFF", accent="FFFFFF", start={"mark": dd * 72 * 0.5})
             draws.append(nd)
-        if compact:
-            tcol = (cx + 0.45 * s + dd, cy + 0.2 * s, cw - dd - 0.65 * s, chh - 0.4 * s)
-        elif o == "land":
-            tcol = (cx + 0.3 * s, cy + 0.45 * s + dd, cw - 0.6 * s, chh - dd - 0.7 * s)
-        else:
-            tcol = (cx + 0.6 * s + dd, cy + 0.25 * s, cw - dd - 0.9 * s, chh - 0.5 * s)
-        tr, td_ = _card_flow(k, slide, "points", tcol, [(x_, t) for x_, t in (("item_head", head), ("item_line", line)) if t],
-                             anchor="top")
+        tr, td_ = words(head, line, tcol)
         draws.append(td_)
     _run_all(draws)
     return rects
@@ -1330,6 +1426,27 @@ def _bp_project(k, slide, f, fallback=None):
         k._sheet = (content, block, None)
 
 
+def _bp_ghost(k, slide, kind, avoid):
+    """The sheet's own faint drawing in the free corner the words leave: right of every word box on a landscape sheet,
+    below them on a portrait one — a ghost iso box ("iso") or section detail ("detail") in the line colour at low
+    strength, declared decorative, never within 0.35in of a word, left out when the free corner is under 2.2in.
+    Returns True when it drew."""
+    W, H, s, o = ctx(k)
+    (cx, cy, cw, ch), _b = _bp_area(k)
+    if o == "land":
+        left = max([a[0] + a[2] for a in avoid] + [cx]) + 0.35 * s
+        reg = (left, cy + 0.04 * ch, cx + cw - left - 0.1 * s, 0.92 * ch)
+    else:
+        top = max([a[1] + a[3] for a in avoid] + [cy]) + 0.35 * s
+        reg = (cx + 0.05 * cw, top, 0.90 * cw, cy + ch - top - 0.1 * s)
+    if reg[2] < 2.2 * s or reg[3] < 2.2 * s:
+        return False
+    draw = na.ghost_iso if kind == "iso" else na.ghost_detail
+    for sh in draw(slide, *reg, ink=k.P["ink"]):
+        dk.decorative(sh, "the sheet's own faint drawing: nothing a reader needs rides on seeing it")
+    return True
+
+
 @register("drafting", "cover")
 def _bp_cover(k, slide, f, image):
     W, H, s, o = ctx(k)
@@ -1338,6 +1455,7 @@ def _bp_cover(k, slide, f, image):
     col = (cx, cy + 0.10 * ch, cw * (0.62 if o == "land" else 1.0), ch * 0.80)
     items = [(x_, text_of(f, x_)) for x_ in ("kicker", "title", "subtitle") if text_of(f, x_)]
     r, d = flow(k, slide, "cover", col, items, anchor="middle", start={"title": 70 * s})
+    _bp_ghost(k, slide, "iso", list(r.values()))
     d()
     return r
 
@@ -1386,9 +1504,19 @@ def _bp_quote(k, slide, f, image):
     (cx, cy, cw, ch), _b = _bp_area(k)
     _bp_project(k, slide, f)
     has_img = image is not None
-    col = (cx, cy + 0.12 * ch, cw * (0.58 if has_img and o == "land" else 0.85), ch * 0.72)
     items = [(x_, text_of(f, x_)) for x_ in ("quote", "attribution") if text_of(f, x_)]
-    r, d = flow(k, slide, "quote", col, items, anchor="middle")
+    ghost = o == "land" and not has_img
+    if ghost:      # a narrower column leaves the free corner its drawing; a quote that will not fit it keeps the wide one
+        col = (cx, cy + 0.12 * ch, cw * 0.56, ch * 0.72)
+        try:
+            r, d = flow(k, slide, "quote", col, items, anchor="middle")
+        except vl.VLTextOverflow:
+            ghost = False
+    if not ghost:
+        col = (cx, cy + 0.12 * ch, cw * (0.58 if has_img and o == "land" else 0.85), ch * 0.72)
+        r, d = flow(k, slide, "quote", col, items, anchor="middle")
+    if not has_img:
+        _bp_ghost(k, slide, "detail", list(r.values()))
     if has_img:
         place_image(k, slide, image, (cx + cw * 0.64, cy, cw * 0.36, ch) if o == "land" else (cx, cy + ch * 0.6, cw, ch * 0.4),
                     "quote")
