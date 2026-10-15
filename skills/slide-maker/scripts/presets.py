@@ -423,6 +423,7 @@ def apply(name):
     because `apply()` runs before any slide does, so it cannot call `slide_background()` itself.
     """
     import deckkit as dk
+    dk.set_theme(None)   # an ordinary register is not a visual language: no theme roles leak from a previous use()
 
     # 🔴 A preset's FACE is a name, and a name that is not installed is measured in a substitute —
     # which is worst precisely where the register is typographic. Measured: `terminal` declares

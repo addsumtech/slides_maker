@@ -38,6 +38,29 @@ def _hard(prs, tag):
             if re.match(r"\s+slide \d+: [A-Z]", l) and "[warn]" not in l and "[stats]" not in l]
 
 
+# ── theme plumbing ──
+_SNAP = dk._state_snapshot()      # the plumbing checks switch palettes; the guard below needs the pristine state
+check(hasattr(dk, "THEME") and dk.THEME == {}, "an ordinary deck has an empty THEME")
+check(dk._th("card", "FFFFFF") == dk.RGBColor(0xFF, 0xFF, 0xFF), "_th returns the call site's legacy colour when no theme is set")
+with contextlib.redirect_stdout(io.StringIO()):
+    vl.use("chalkboard", dk.blank_deck(13.333, 7.5))
+roles = vl.REGISTRY["chalkboard"]["grounds"]["light"]["roles"]
+check(dk.THEME.get("dark") is True and str(dk._th("card", "FFFFFF")) == roles["card"],
+      "vl.use fills THEME from the manifest: chalkboard's default ground is dark and its card is the manifest's")
+check(set(dk.THEME) >= {"ground", "ink", "mute", "card", "card_ink", "rule", "axis", "track", "on_accent", "highlight",
+                        "series", "dark"}, "THEME carries every role ({})".format(sorted(dk.THEME)))
+import presets
+presets.apply("swiss")
+check(dk.THEME == {}, "an ordinary register after a visual language clears THEME (Review Focus 2)")
+with contextlib.redirect_stdout(io.StringIO()):
+    vl.use("chalkboard", dk.blank_deck(13.333, 7.5))
+want_blue = vl.REGISTRY["chalkboard"]["grounds"]["light"]["palette"]["text_accents"][1]
+check(str(dk.scorecard.__kwdefaults__["accent"]) == want_blue,
+      "after a 1-accent preset, vl.use keeps each colour role its own value (Review Focus 3): {} vs {}".format(
+          dk.scorecard.__kwdefaults__["accent"], want_blue))
+presets.apply("swiss"); dk.set_theme(None)
+dk._state_restore(_SNAP); dk.set_theme(None)
+
 # ── the ordinary-deck guard: every example, no visual language, byte-identical to the baseline ──
 BASE = json.loads((ROOT / "tests" / "fixtures" / "component_xml_baseline.json").read_text())
 CHANGED_ON_PURPOSE = {}          # name -> the listed fix that changed it (Task 6 fills this, each with its reason)

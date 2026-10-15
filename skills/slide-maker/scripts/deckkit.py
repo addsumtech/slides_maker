@@ -511,6 +511,28 @@ RADIUS_SCALE = 1.0        # 0 = every corner square (brutalist · swiss · ink_w
 RULE_W_SCALE = 1.0        # multiplies rule / divider / border weights. brutalist "THICK black
                           # rules"; blueprint + swiss + editorial + luxury "hairline"
 GROUND = None             # the deck's background colour; add_slide() paints it. None = paint
+
+# The active visual language's colour ROLES, read at call time by every component (spec §5.1). Empty for an ordinary
+# deck: _th() then returns the call site's old literal, so an ordinary deck draws byte-for-byte what it drew before.
+THEME = {}
+_THEME_KEYS = {"ground", "ink", "mute", "card", "card_ink", "rule", "axis", "track", "on_accent", "highlight",
+               "series", "dark"}
+
+
+def set_theme(theme):
+    """Replace the active theme (None or {} clears it). Only the known role keys are accepted."""
+    global THEME
+    theme = dict(theme or {})
+    unknown = set(theme) - _THEME_KEYS
+    if unknown:
+        raise ValueError("set_theme(): unknown role(s) {} — known: {}".format(sorted(unknown), sorted(_THEME_KEYS)))
+    THEME = theme
+
+
+def _th(role, legacy):
+    """The theme's colour for `role` when a visual language set one, else this call site's `legacy` colour."""
+    v = THEME.get(role)
+    return _as_rgbc(v if v else legacy)
                           # nothing (unchanged behaviour). Set via set_ground()/presets.apply().
 
 
@@ -563,9 +585,9 @@ def set_palette(*, deep=None, blue=None, teal=None, magenta=None, slate=None, mu
     def _c(old, new):
         if new is None:
             return old
-        nv = _as_rgbc(new)
-        if nv is not old:
-            remap[id(old)] = nv
+        c = _as_rgbc(new)
+        nv = RGBColor(c[0], c[1], c[2])     # a FRESH object per role: a preset that passed one accent to three
+        remap[id(old)] = nv                 # roles made them one object, and the next remap collapsed them
         return nv
     DEEP = _c(DEEP, deep); BLUE = _c(BLUE, blue); TEAL = _c(TEAL, teal)
     MAGENTA = _c(MAGENTA, magenta); SLATE = _c(SLATE, slate); MUTE = _c(MUTE, mute)

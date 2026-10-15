@@ -242,6 +242,11 @@ def use(name, prs, *, fonts="both", plan=None, image_dir=None, platform=None, gr
                    eafont=EA_FACES["han"][k.L["ea"]["body"]][k.platform],
                    eadisplay=EA_FACES["han"][k.L["ea"]["display"]][k.platform])
     dk.set_ground(_hex(p["ground"]))
+    r = REGISTRY[name]["grounds"][ground]["roles"]
+    dk.set_theme({"ground": p["ground"], "ink": p["ink"], "mute": p["mute"], "card": r["card"], "card_ink": r["card_ink"],
+                  "rule": r["rule"], "axis": p["mute"], "track": r["rule"], "on_accent": r["on_accent"],
+                  "highlight": r["highlight"], "series": list(r["series"]),
+                  "dark": REGISTRY[name]["grounds"][ground]["dark"]})
     dk.HANG_PUNCT = dk.deck_hangs_punct(prs)     # CJK line ends follow what THIS deck declares
     return k
 
