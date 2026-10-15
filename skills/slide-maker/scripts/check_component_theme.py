@@ -87,9 +87,11 @@ def _drop_th_legacy(tree, found, functions):
     return keep
 
 
-TIER1 = ("agenda bento consort_flow dot_strip dumbbell_board eval_matrix funnel gantt heat_matrix iso_bars iso_prism "
-         "iso_stack leaderboard meter_bar native_chart org_tree position_map pyramid sankey scorecard segmented_bar "
-         "small_multiples stat_row step_list table tier_stack timeline unit_grid venn source_note tint axis_scale").split()
+import component_tiers as _ct                                     # noqa: E402  plain data
+# the Tier-1 components deckkit draws (the designed_charts recipes are matplotlib: designed_charts._theme colours them),
+# plus the shared tint and axis helpers they draw through
+TIER1 = tuple(n for n in _ct.TIER1 if n not in ("distribution", "forest_plot", "km_curve", "marimekko", "radar",
+                                                "roc_curve", "waterfall", "bland_altman")) + ("tint", "axis_scale")
 
 
 def main():

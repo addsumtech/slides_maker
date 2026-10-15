@@ -166,10 +166,10 @@ EXAMPLES = {
                     '])',
     # NAVIGATION. A long deck is answered from its appendix, and a backup slide you cannot reach
     # live is one you did not prepare. `targets=` wires the contents page to the slides it names.
-    "agenda": 'a1, a2, a3 = (dk.add_slide(prs) for _ in range(3))\n'
-              'dk.agenda(s, 0.7, 1.6, 6.6,\n'
+    "agenda": 'dk.agenda(s, 0.7, 1.6, 6.6,\n'
               '          ["Where we were", "What changed", "What is left"],\n'
-              '          active=1, targets=[a1, a2, a3])   # active= is also the progress page',
+              '          active=1)                         # active= is also the progress page\n'
+              '# targets=[page_a, page_b, page_c] links each row to its page (one per row) — pass the deck\'s real pages',
     "back_link": 'home = dk.add_slide(prs)\n'
                  'dk.back_link(s, home, label="Back to agenda")   # width is measured from the label',
     "link": 'q = dk.box(s, 0.7, 3.4, 3.2, 0.5, fill=None, line=dk.DEEP)\n'
@@ -594,6 +594,85 @@ s = dk.add_slide(prs)                   # the page most scaffolds draw on (a vis
 # with the skill. End the script with prs.save("<deck folder>/<deck>.pptx").
 """
 
+# The same preamble for a visual-language deck: its pages start with k.new_slide(), so the ordinary `s` (an empty
+# page when nothing draws on it — spec §5.6) is left out.
+PREAMBLE_VL = "\n".join(l for l in PREAMBLE.splitlines()
+                         if not l.startswith("s = dk.add_slide(prs)") and "page with k.new_slide() instead" not in l) + "\n"
+
+# minimum content-rect width a component needs to lay out (inches) — the placed scaffold raises below it instead of
+# letting labels collide; measured on the 3:4 matrix (Task 6) and recorded here with the reason in a comment
+PLACE_MIN_W = {}
+# a component the example leaves to place itself at the foot: its keyword x/y/w and the note's height
+_FOOT = {"source_note": 0.3}
+# a component placed by an ANCHOR, not a rect: its w/d/h are the object's own size (iso_prism's h is its extrusion),
+# so only the anchor moves into the content rect
+_ANCHOR = {"iso_prism": {"ox": "x + w / 2", "oy": "y + h - 0.6"}}
+# a component that draws ABOVE its y: the placed y leaves that headroom inside the rect (eval_matrix's recommend tab
+# rises 0.32in above the grid — on wayfinding it landed on the sign strip's edge)
+_TOP_OVERHANG = {"eval_matrix": 0.34}
+
+
+def placed_example(name, lang, ground=None):
+    """`EXAMPLES[name]` placed in visual language `lang`'s content rect — the code an agent runs as printed after
+    `prs = dk.blank_deck(...)`. The example's ONE drawing call with literal geometry gets the rect's x, y, w (and h
+    when the component takes one); `dk.add_slide(prs)` becomes `k.new_slide()`; comments are kept."""
+    import ast
+    import inspect
+    import deckkit as dk
+    import designed_charts as dc
+    src = EXAMPLES[name]
+    if "vl.use(" in src:
+        raise ValueError("{}: a visual-language scaffold already — print it with --example {}".format(name, name))
+    tree = ast.parse(src)
+    hits = []
+    for c in ast.walk(tree):
+        if (isinstance(c, ast.Call) and isinstance(c.func, ast.Attribute) and getattr(c.func.value, "id", "") in ("dk", "dc")
+                and c.args and getattr(c.args[0], "id", "") == "s"):
+            fn = getattr(dk if c.func.value.id == "dk" else dc, c.func.attr)
+            params = list(inspect.signature(fn).parameters)
+            lit = lambda a: isinstance(a, ast.Constant) and isinstance(a.value, (int, float))
+            if c.func.attr in _ANCHOR:
+                anchor = _ANCHOR[c.func.attr]
+                geo = [(anchor[params[i]], a) for i, a in enumerate(c.args) if i < len(params) and params[i] in anchor
+                       and lit(a)]
+            elif "x" in params and "y" in params:     # a placement rect — w/h elsewhere may be an object's own size
+                geo = [(params[i], a) for i, a in enumerate(c.args) if i < len(params)
+                       and params[i] in ("x", "y", "w", "h") and lit(a)]
+            else:
+                geo = []
+            if geo:
+                hits.append((c, geo, params))
+    lines = src.splitlines(keepends=True)
+    def _span(node):
+        return (sum(len(l) for l in lines[:node.lineno - 1]) + node.col_offset,
+                sum(len(l) for l in lines[:node.end_lineno - 1]) + node.end_col_offset)
+    edits = []
+    if len(hits) > 1:
+        raise ValueError("{}: {} drawing calls with literal geometry — no single placement; place it by hand in the "
+                         "rect rs.ground() returns".format(name, len(hits)))
+    if hits:
+        c, geo, params = hits[0]
+        up = _TOP_OVERHANG.get(name)
+        edits += [(_span(a), ("y + {}".format(up) if (p == "y" and up) else p)) for p, a in geo]
+    elif name in _FOOT:
+        call = next(c for c in ast.walk(tree) if isinstance(c, ast.Call) and getattr(c.func, "attr", "") == name)
+        end = _span(call)[1] - 1
+        edits.append(((end, end), ", x=x, y=y + h - {}, w=w".format(_FOOT[name])))
+    else:
+        raise ValueError("{}: no drawing call with literal geometry to place".format(name))
+    out = src
+    for (a, b), rep in sorted(edits, reverse=True):
+        out = out[:a] + rep + out[b:]
+    out = out.replace("dk.add_slide(prs)", "k.new_slide()")
+    head = ("import visual_languages as vl, register_surface as rs\n"
+            "k = vl.use({!r}, prs{})\n".format(lang, ", ground={!r}".format(ground) if ground else "") +
+            "s = k.new_slide()                           # every page of a language deck starts here\n"
+            "x, y, w, h = rs.ground(s, k.name, role=\"content\", index=1)   # the language's content rect (inches)\n")
+    if name in PLACE_MIN_W:
+        head += ("if w < {0}:\n    raise ValueError(\"{1} needs a content rect at least {0} in wide; this one is %.2f in "
+                 "— use a wider canvas or split the content\" % w)\n").format(PLACE_MIN_W[name], name)
+    return head + out
+
 # A module prefix as a build script writes it — `vl.use`, `rs.ground`, `k.cover`. A non-Claude agent looked up exactly
 # these and was told "no helper named" (audit 2026-10-09).
 _PREFIX = {"dk": "deckkit", "dc": "designed_charts", "rs": "register_surface", "vl": "visual_languages",
@@ -760,6 +839,9 @@ def main(argv=None):
     ap.add_argument("--list", action="store_true", help="list every helper name")
     ap.add_argument("--example", action="store_true",
                     help="print a RUNNABLE call for each named form component")
+    ap.add_argument("--in", dest="lang", metavar="LANGUAGE",
+                    help="with --example: place each component in this visual language's content rect")
+    ap.add_argument("--ground", metavar="GROUND", help="with --in: the language's ground (default: its first)")
     a = ap.parse_args(argv)
     reg = load()
     if not reg:
@@ -799,11 +881,18 @@ def main(argv=None):
         a.names = [n if (n in EXAMPLES or n in reg or "Kit." + n not in reg) else "Kit." + n for n in a.names]
         miss = [n for n in a.names if n not in EXAMPLES]
         if len(miss) < len(a.names):
-            print(PREAMBLE.format(scripts=HERE))
+            print(PREAMBLE_VL.format(scripts=HERE) if a.lang else PREAMBLE.format(scripts=HERE))
         for n in a.names:
             if n in EXAMPLES:
                 g = _guarantee(n)
-                print(f"\n# {n}" + (f" — {g}" if g else "") + f"\n{EXAMPLES[n]}")
+                body = EXAMPLES[n]
+                if a.lang:
+                    try:
+                        body = placed_example(n, a.lang, a.ground)
+                    except ValueError as e:
+                        print("sigs: {} — printing it unplaced; place it in the rect rs.ground() returns".format(e),
+                              file=sys.stderr)
+                print(f"\n# {n}" + (f" — {g}" if g else "") + f"\n{body}")
         # A real helper with no scaffold is NOT a licence to hand-roll it — that is the exact
         # failure this tool exists to prevent, and SKILL.md's 🔴 component rule forbids it by name.
         # Only a name that resolves to no helper at all is "you supply the geometry".
@@ -829,8 +918,10 @@ def main(argv=None):
         # contracts this block exists to state, withheld by the flag whose whole purpose is
         # saving the round-trip that error then costs. A scaffold shows the SHAPE of one call;
         # the contracts are what stop the call being wrong in a way no lint can see.
-        print("\n" + "─" * 78)
-        print(CONTRACTS)
+        # …as COMMENTS here, so the whole output still runs as printed (a non-Claude agent pastes all of it; the
+        # contracts as bare prose made line 17 a SyntaxError — the 2b placement test, 2026-10-15)
+        print("\n# " + "─" * 76)
+        print("\n".join(("# " + l) if l.strip() else "#" for l in CONTRACTS.rstrip("\n").splitlines()))
         # 1 only for a name that resolves to NO helper: a helper whose signature printed is an answer, and a
         # non-zero exit after printing it read as total failure (non-Claude run, 2026-10-05)
         return 1 if any(n not in reg for n in miss) else 0

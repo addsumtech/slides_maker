@@ -10,10 +10,7 @@ ok, bad = [], []
 def check(cond, why):
     (ok if cond else bad).append(why)
 
-TIER1 = ("agenda bento consort_flow distribution dot_strip dumbbell_board eval_matrix forest_plot funnel gantt "
-         "heat_matrix iso_bars iso_prism iso_stack km_curve leaderboard marimekko meter_bar native_chart org_tree "
-         "position_map pyramid radar roc_curve sankey scorecard segmented_bar small_multiples stat_row step_list table "
-         "tier_stack timeline unit_grid venn waterfall bland_altman source_note").split()
+from component_tiers import TIER1                      # the 38 (one source: docs, checker, tests)
 WORK = Path(tempfile.mkdtemp(prefix="ctheme_")); os.chdir(WORK)
 
 
@@ -29,13 +26,17 @@ def _hash(prs, tag):
     return hashlib.sha256(b"".join(z.read(n) for n in parts)).hexdigest()
 
 
-def _hard(prs, tag):
-    p = WORK / (tag + ".pptx"); prs.save(str(p))
+def _hard_file(p):
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(io.StringIO()):
         lint_deck.lint(str(p), static_ok=True)
     return [l.strip()[:150] for l in buf.getvalue().splitlines()
             if re.match(r"\s+slide \d+: [A-Z]", l) and "[warn]" not in l and "[stats]" not in l]
+
+
+def _hard(prs, tag):
+    p = WORK / (tag + ".pptx"); prs.save(str(p))
+    return _hard_file(p)
 
 
 # ── theme plumbing ──
@@ -71,6 +72,8 @@ dk._state_restore(_SNAP); dk.set_theme(None)
 # for every later example (`points` did: the first baseline hashed 35 examples in ink's palette).
 BASE = json.loads((ROOT / "tests" / "fixtures" / "component_xml_baseline.json").read_text())
 CHANGED_ON_PURPOSE = {           # name -> the listed fix that changed it, and the exact hash it draws now
+    "agenda": ("2b: the example no longer adds three blank link-target pages (spec §5.6; on poster each one switched "
+               "the page field before the agenda was drawn)", "df52779038053f2e1bf355cfde458f37c8ac3c589b6f97a58bc778eb7e2f5f75"),
     "sankey": ("Task 6: each ribbon declares overlap_intent (its end tucks under the node bar on purpose) — names only",
                "a580101c1d4dc22f451c31e0f5bb9eaed53294e63cd00f7ff5da83385ad0aec8"),
 }
@@ -135,41 +138,83 @@ dk.box(s_u, 1.0, 1.0, 3.0, 1.2, fill=dk.TINT); dk.box(s_u, 4.3, 1.0, 3.0, 2.6, f
 check(any("UNEVEN" in f for f in _hard(prs_u, "uneven_row")), "two side-by-side cards of different heights are still flagged")
 dk.set_theme(None)
 
-# ── the matrix: every Tier-1 component on every ground of every language, no hard lint finding ──
-# placement, not readability: the example writes the note into the page foot, where these languages draw their frame —
-# Phase 2b's content-rect scaffolds (spec §5.4) place it inside; shown, not failed, until then
-PLACEMENT_2B = {("drafting", "source_note"): "the sheet border runs along the foot",
-                ("chalkboard", "source_note"): "the board frame runs along the foot"}
-for L in vl.LANGS:
-    for g in vl.VARIANTS[L]:
-        prs = dk.blank_deck(13.333, 7.5)
+# ── every language's content rect (what rs.ground returns, what a placed scaffold fills) lies on the canvas ──
+import register_surface as rs
+for W, H in ((13.333, 7.5), (7.5, 10.0), (10.0, 5.625)):
+    for L in vl.LANGS:
+        prs = dk.blank_deck(W, H)
         with contextlib.redirect_stdout(io.StringIO()):
-            k = vl.use(L, prs, ground=g)
-        owner, first = [], {}
-        for name in TIER1:
-            for field in (range(4) if L == "poster" else (None,)):
-                with contextlib.redirect_stdout(io.StringIO()):
-                    k = vl.use(L, prs, ground=g)          # each component starts from its language
-                    while field is not None and len(prs.slides) % 4 != field:
-                        k.new_slide()                     # poster: page N takes field N mod 4 — judge every field
-                n0 = len(prs.slides); s = k.new_slide()
-                try:
-                    _build(name, prs, s)
-                except Exception as e:
-                    check(False, "{}/{} {}: builds ({}: {})".format(L, g, name, type(e).__name__, str(e)[:80]))
-                first[n0] = name                        # the component's OWN slide (an example may add link targets)
-                owner += [name] * (len(prs.slides) - n0)
-        found = _hard(prs, "m_{}_{}".format(L, g))
-        by = {}
-        for f in found:
-            i = int(re.match(r"slide (\d+)", f).group(1)) - 1
-            if i in first:                              # judged on its own slide only
-                by.setdefault(first[i], []).append(f)
-        for name in TIER1:
-            if (L, name) in PLACEMENT_2B and by.get(name) and all("FOOTER" in f for f in by[name]):
-                print("  2b   {}/{} {}: placement tracked for Phase 2b — {}".format(L, g, name, PLACEMENT_2B[(L, name)]))
-                continue
-            check(not by.get(name), "{}/{} {}: readable, no hard lint finding ({})".format(L, g, name, by.get(name, [])[:1]))
+            k = vl.use(L, prs)
+        x, y, w, h = rs.ground(k.new_slide(), k.name, role="content", index=1)
+        check(x >= 0 and y >= 0 and x + w <= W + 1e-6 and y + h <= H + 1e-6 and w > 1 and h > 1,
+              "{}x{} {}: rs.ground's content rect is on the canvas ({})".format(
+                  W, H, L, tuple(round(v, 2) for v in (x, y, w, h))))
+dk.set_theme(None)
+
+# ── the matrix: every Tier-1 component, PLACED in the content rect of every ground of every language, on 16:9 and
+# 3:4, no hard lint finding — built from `sigs.placed_example`, the scaffold `sigs.py --example X --in L` prints ──
+for W, H in ((13.333, 7.5), (7.5, 10.0)):
+    for L in vl.LANGS:
+        for g in vl.VARIANTS[L]:
+            prs = dk.blank_deck(W, H)
+            first = {}
+            for name in TIER1:
+                for field in (range(4) if L == "poster" else (None,)):
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        k0 = vl.use(L, prs, ground=g)
+                        while field is not None and len(prs.slides) % 4 != field:
+                            k0.new_slide()                # poster: page N takes field N mod 4 — judge every field
+                    n0 = len(prs.slides)
+                    try:
+                        code = sigs.placed_example(name, L, g)
+                        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                            exec(compile(code, name, "exec"), {"dk": dk, "dc": dc, "prs": prs})
+                    except ValueError as e:
+                        if "needs a content rect" in str(e):           # a declared minimum, raised loudly (Focus 3)
+                            print("  min  {}x{} {}/{} {}: {}".format(W, H, L, g, name, e))
+                            continue
+                        check(False, "{}x{} {}/{} {}: builds ({})".format(W, H, L, g, name, e))
+                        continue
+                    except Exception as e:
+                        check(False, "{}x{} {}/{} {}: builds ({}: {})".format(W, H, L, g, name, type(e).__name__,
+                                                                              str(e)[:80]))
+                        continue
+                    first[n0] = name                    # the component's OWN slide (an example may add link targets)
+            found = _hard(prs, "m_{}_{}_{}".format(L, g, int(W)))
+            by = {}
+            for f in found:
+                i = int(re.match(r"slide (\d+)", f).group(1)) - 1
+                if i in first:                          # judged on its own slide only
+                    by.setdefault(first[i], []).append(f)
+            for name in TIER1:
+                check(not by.get(name), "{}x{} {}/{} {}: placed, readable, no hard lint finding ({})".format(
+                    W, H, L, g, name, by.get(name, [])[:1]))
+# the scaffold runs AS PRINTED, in a fresh process — how a non-Claude agent uses it (Review Focus 5)
+import subprocess
+for name, L in (("timeline", "chalkboard"), ("native_chart", "ink"), ("org_tree", "wayfinding")):
+    out = subprocess.run([sys.executable, str(ROOT / "scripts" / "sigs.py"), "--example", name, "--in", L],
+                         capture_output=True, text=True).stdout
+    pf = WORK / "printed_{}_{}.pptx".format(name, L)
+    r = subprocess.run([sys.executable, "-c", out + "\nprs.save({!r})\n".format(str(pf))], capture_output=True,
+                       text=True, cwd=str(WORK))
+    check(r.returncode == 0 and pf.exists() and not _hard_file(pf),
+          "`sigs.py --example {} --in {}` runs as printed with no hard lint finding ({})".format(
+              name, L, (r.stderr or "")[-160:] or (_hard_file(pf)[:1] if pf.exists() else "no deck")))
+# a component given a rect narrower than it needs fails loudly, with the width it needs (Review Focus 3)
+saved = dict(sigs.PLACE_MIN_W)
+try:
+    sigs.PLACE_MIN_W["dumbbell_board"] = sigs.PLACE_MIN_W.get("dumbbell_board", 8.0)
+    code = sigs.placed_example("dumbbell_board", "ink").replace(
+        'x, y, w, h = rs.ground(s, k.name, role="content", index=1)', "x, y, w, h = 0.5, 1.0, 3.0, 4.0")
+    exec(compile(code, "narrow", "exec"), {"dk": dk, "dc": dc, "prs": dk.blank_deck(13.333, 7.5)})
+    err = None
+except ValueError as e:
+    err = str(e)
+finally:
+    sigs.PLACE_MIN_W.clear(); sigs.PLACE_MIN_W.update(saved)
+check(bool(err) and "needs a content rect" in err and "in wide" in err,
+      "a too-narrow rect raises with the width it needs ({})".format(err))
+dk.set_theme(None)
 
 # ── no literal colour in a Tier-1 component body (spec §5.2) ──
 import check_component_theme as cct

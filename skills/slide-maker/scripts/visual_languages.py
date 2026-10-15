@@ -349,12 +349,21 @@ def _ground_chalkboard(slide, role, index):
 def _ground_interface(slide, role, index):
     """An ordinary page in the interface language is a window: the content rect is inside it, below its bar."""
     import vl_native3
-    return vl_native3.ordinary_window(slide)
+    return _as_reference(vl_native3.ordinary_window(slide))
+
 
 def _ground_wayfinding(slide, role, index):
     """An ordinary page carries the sign strip; the content rect starts below it."""
     import vl_native3
-    return vl_native3.ordinary_sign(slide)
+    return _as_reference(vl_native3.ordinary_sign(slide))
+
+
+def _as_reference(rect):
+    """vl_native3 lays an ordinary page out in REAL inches (its kit's ctx); rs.ground multiplies a painter's rect by
+    the canvas scale (painters compose in reference inches), so a real-inch rect came back 1.33x on 16:9 — wider than
+    the page (found by the 2026-10-15 placement matrix)."""
+    k = rs._K[0]
+    return tuple(v / k for v in rect)
 
 def _card_for(name):
     """The language's card: its panel colour; soft is rounded, the others square."""
