@@ -690,7 +690,16 @@ def _set_lines(k, field, text, size, w):
         if dk._font_substituted(k.ea_face(role, text) or k.face(role)):
             return None
     ls = _break_lines(k, field, text, size, w)
-    return ls if len(ls) > 1 and "".join(ls).replace(" ", "") == text.replace(" ", "") else None
+    if len(ls) < 2 or "".join(ls).replace(" ", "") != text.replace(" ", ""):
+        return None
+    # every imposed line must sit on ONE line by the measure lint reads too — else the renderer wraps it again and
+    # the field grows a line its box never had (a grown Korean quote at 42.7pt, Phase 3, 2026-10-15); the field then
+    # wraps naturally, inside the height measured by the larger of the two models
+    role, bold = TYPE[k.name][field][1], _weight(k, field, text)
+    face = k.ea_face(role, text) if dk._has_cjk(text) else k.face(role)
+    if any(dk._measure_lines([(l_, bold)], size, max(0.2, w - _INSET), font=face) > 1 for l_ in ls):
+        return None
+    return ls
 
 
 def _widowed(k, field, text, size, w):
@@ -750,6 +759,9 @@ def _phrase_lines(k, f, t, sz, w, min_size):
     base = _break_lines(k, f, t, sz, w)
     if len(base) < 2 or all(_at_clause(l_) for l_ in base[:-1]):
         return None
+    # a phrase per line is worth at most 15% of the size: past that the title WRAPS at full size instead (the comma
+    # title "take it home working" shrank a 54pt cover to 37.8pt to keep its phrase whole — Phase 3, 2026-10-15)
+    min_size = max(min_size, 0.85 * sz)
     steps, s = [], sz
     while s > min_size + 1e-6:
         steps.append(s)
@@ -793,6 +805,11 @@ def _balanced_width(k, f, t, sz, w):
     return None
 
 
+# A quote STARTS this much larger than the language's quote size and shrinks to its column like every field: a
+# three-word quote was set at the same 30pt as a paragraph, covering 0.3% of its page (Phase 3 verification, 2026-10-15).
+QUOTE_GROW = 1.5
+
+
 def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=None):
     """PLAN the fields of one page in its column by measured height; returns (rects, draw).
 
@@ -813,7 +830,8 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=Non
     sizes, floors, widths = {}, {}, {}
     for f, _t in items:
         base, *_rest, floor = TYPE[k.name][f]
-        sizes[f], floors[f], widths[f] = (start or {}).get(f, base * s), max(9.0, floor * s), w
+        grow = QUOTE_GROW if f == "quote" else 1.0
+        sizes[f], floors[f], widths[f] = (start or {}).get(f, base * s * grow), max(9.0, floor * s), w
     gap = GAP * s
     order = [f for f, _ in items]
     head = max(order, key=lambda f: TYPE[k.name][f][0])          # the display field, by design
@@ -870,20 +888,23 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=Non
     for f, t in items:
         if f not in _NO_WIDOW or f in phrased:            # the author's own breaks are kept as given
             continue
-        sz, tries = sizes[f], 0
-        while _widowed(k, f, t, sz, w) and sz * 0.95 >= floors[f] and tries < 10:
-            sz, tries = sz * 0.95, tries + 1
-        # clause breaks first: down to 0.7x (a display line still), or to what the widow fix shrinks to anyway
-        fit = _phrase_lines(k, f, t, sizes[f], w, max(floors[f], min(0.7 * sizes[f], sz)))
+        # the SIZE is kept first (Phase 3, 2026-10-15: a widow fix that shrank before it balanced took covers 30% under
+        # their size): clause breaks within 15% of the size, then a balanced (narrower) measure at full size, and only
+        # then a smaller size — never below 85% of it; a lone last word at 85% is kept rather than a third smaller title
+        fit = _phrase_lines(k, f, t, sizes[f], w, max(floors[f], 0.85 * sizes[f]))
         if fit is not None:
             sizes[f], phrased[f] = fit
             continue
-        if not _widowed(k, f, t, sz, w):
-            sizes[f] = sz
+        if not _widowed(k, f, t, sizes[f], w):
             continue
         wb = _balanced_width(k, f, t, sizes[f], w)
         if wb is not None:
             widths[f] = wb
+            continue
+        sz, tries = sizes[f], 0
+        while _widowed(k, f, t, sz, w) and sz * 0.95 >= max(floors[f], 0.85 * sizes[f]) and tries < 10:
+            sz, tries = sz * 0.95, tries + 1
+        sizes[f] = sz
     if total() > h + 0.02:                 # balancing never adds lines; this is a guard, not a path
         widths = {f: w for f in widths}
     t_all = total()

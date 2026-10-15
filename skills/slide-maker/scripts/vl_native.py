@@ -1063,6 +1063,20 @@ def _cut_cover(k, slide, f, image):
     items = [(x_, text_of(f, x_)) for x_ in ("kicker", "title", "subtitle") if text_of(f, x_)]
     r, d = _card_flow(k, slide, "cover", (card[0] + pad, card[1] + pad, card[2] - 2 * pad, card[3] - 2 * pad), items,
                       start={"title": 76 * s})
+    if alt() == 0 and "title" in r:
+        # the narrow card keeps a title only at >= 85% of the language's title size; a longer one takes the wide card
+        # (alt 1) instead of shrinking to 37pt in this one (Phase 3 verification, 2026-10-15) — measured on a scratch
+        # draw of the planned text, which compose() undoes with everything else when this layout is declined
+        n0_ = len(slide.shapes)
+        d()
+        t_ = text_of(f, "title")
+        z = max((rn.font.size.pt for sh in list(slide.shapes)[n0_:] if getattr(sh, "has_text_frame", False)
+                 and t_[:6] in sh.text_frame.text for p_ in sh.text_frame.paragraphs for rn in p_.runs if rn.font.size),
+                default=None)
+        for sh in list(slide.shapes)[n0_:]:
+            sh._element.getparent().remove(sh._element)
+        if z is not None and z < 0.85 * vl.TYPE[k.name]["title"][0] * s:
+            raise vl.VLTextOverflow("cutpaper.cover: the title sets at {:.0f}pt in the narrow card".format(z))
     text_bottom = max((v[1] + v[3] for v in r.values()), default=card[1])
     if o != "land":                  # a free-standing card fits its words (landscape keeps its height for the tuck)
         card = (card[0], card[1], card[2], text_bottom + pad - card[1])

@@ -1052,6 +1052,12 @@ jobs:
           python tests/test_component_skin.py | tee /tmp/cskin.log
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/cskin.log || {
             echo "::error::test_component_skin did not run to completion"; exit 1; }
+      - name: "Visual languages optimised (quote scale, title fit, rules at content, dark grounds, smallest tier)"
+        run: |
+          set -o pipefail
+          python tests/test_vl_optimise.py | tee /tmp/vlopt.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/vlopt.log || {
+            echo "::error::test_vl_optimise did not run to completion"; exit 1; }
       - name: "Components take colours from the theme (no literal colour in a component)"
         run: python scripts/check_component_theme.py
       - name: "Visual languages after the audit (measured with headroom, nothing dropped, upright pictures, clean own pages)"
