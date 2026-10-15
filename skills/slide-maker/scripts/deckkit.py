@@ -1984,7 +1984,7 @@ def leaderboard(slide, x, y, w, rows, *, row_h=0.5, gap=0.1, ink=DEEP):
         if sub:                                              # name + sub both stay INSIDE this row
             text(slide, x + 0.28, cy + 0.02, w - 2.0, row_h * 0.58, [[(name, 13, ink, True, False)]],
                  anchor=MSO_ANCHOR.BOTTOM, space_after=0)
-            text(slide, x + 0.28, cy + row_h * 0.56, w - 2.0, row_h * 0.42, [[(sub, 9, MUTE, False, False)]], space_after=0)
+            text(slide, x + 0.28, cy + row_h * 0.56, w - 2.0, row_h * 0.42, [[(sub, _fl(9), MUTE, False, False)]], space_after=0)
         else:
             text(slide, x + 0.28, cy, w - 2.0, row_h, [[(name, 13, ink, True, False)]],
                  anchor=MSO_ANCHOR.MIDDLE, space_after=0)
@@ -2931,6 +2931,7 @@ def source_note(slide, sources, *, as_of=None, label="Source", x=None, y=None, w
 
     Set `label=""` for a bare line, or `label="来源"` on a Chinese deck.
     """
+    size = _fl(size)                                # never below the active language's type floor
     sw, sh = _slide_size(slide)
     fnt = font or FONT
     ink_c = ink if ink is not None else MUTE
@@ -7483,12 +7484,12 @@ def position_map(slide, x, y, w, h, points, *, x_labels=("low", "high"), y_label
     aw, ah = w - 0.1, h - 0.55
     box(slide, ax0, ay0, aw, 0.016, fill=MUTE)
     box(slide, ax0, ay0 - ah, 0.016, ah, fill=MUTE)
-    text(slide, ax0, ay0 + 0.06, 1.8, 0.2, [[(str(x_labels[0]), 9, _as_rgb(MUTE), False, False, font or FONT)]], space_after=0)
+    text(slide, ax0, ay0 + 0.06, 1.8, 0.2, [[(str(x_labels[0]), _fl(9), _as_rgb(MUTE), False, False, font or FONT)]], space_after=0)
     text(slide, ax0 + aw - 1.8, ay0 + 0.06, 1.8, 0.2,
-         [[(str(x_labels[1]), 9, _as_rgb(MUTE), False, False, font or FONT)]],
+         [[(str(x_labels[1]), _fl(9), _as_rgb(MUTE), False, False, font or FONT)]],
          align=PP_ALIGN.RIGHT, space_after=0)
-    text(slide, ax0 + 0.06, ay0 - 0.24, 1.8, 0.2, [[(str(y_labels[0]), 9, _as_rgb(MUTE), False, False, font or FONT)]], space_after=0)
-    text(slide, ax0 + 0.06, ay0 - ah, 1.8, 0.2, [[(str(y_labels[1]), 9, _as_rgb(MUTE), False, False, font or FONT)]], space_after=0)
+    text(slide, ax0 + 0.06, ay0 - 0.24, 1.8, 0.2, [[(str(y_labels[0]), _fl(9), _as_rgb(MUTE), False, False, font or FONT)]], space_after=0)
+    text(slide, ax0 + 0.06, ay0 - ah, 1.8, 0.2, [[(str(y_labels[1]), _fl(9), _as_rgb(MUTE), False, False, font or FONT)]], space_after=0)
     placed = []                                          # label rects for greedy collision nudge
     lab_w, lab_h = 1.35, 0.21
     # the HERO's label claims its spot first — greedy order otherwise lets a neighbour push the
@@ -9085,7 +9086,7 @@ def consort_flow(slide, x, y, w, h, stages, *, accent=None, ink=None, mute=None,
             ey = ay + gap / 2 - eh / 2
             box(slide, ex_x, ey, ex_w, eh, fill=ex, line=None, round=True)
             rc = _ink_reaching(mc, ex, _text_floor(label_size - 0.5, False))   # the reasons are small text too
-            paras = [[rows[0]]] + [[("  %s  (%s)" % (r, f"{k:,}"), label_size - 0.5, rc, False,
+            paras = [[rows[0]]] + [[("  %s  (%s)" % (r, f"{k:,}"), _fl(label_size - 0.5), rc, False,
                                      False, font or FONT)] for r, k in excl]
             text(slide, ex_x + 0.14, ey, ex_w - 0.28, eh, paras, space_after=0, line_spacing=1.04)
             connector(slide, (x + bw / 2, ay + gap / 2), (ex_x, ey + eh / 2), color=mc)
@@ -9594,7 +9595,7 @@ def corner_tab(slide, card_x, card_y, card_w, label, *, fill=None, tcolor=None, 
     bx = card_x + card_w / 2 - w / 2
     ty = card_y - h            # bottom edge meets the card top — attached, not overlapping
     box(slide, bx, ty, w, h, fill=f, round=True, r=h / 2)
-    text(slide, bx, ty, w, h, [[(label.upper(), 9.5, tc, True, False)]],
+    text(slide, bx, ty, w, h, [[(label.upper(), _fl(9.5), tc, True, False)]],
          align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
 
 
@@ -12104,7 +12105,7 @@ def sankey(slide, x, y, w, h, links, *, node_w=0.26, gap=0.14, accents=None, ink
     if col_labels:
         for c, cl in enumerate(col_labels[:ncol]):
             text(slide, fx + c * step - 0.5, y, node_w + 1.0, 0.28,
-                 [[(str(cl), 9.5, mute_c, True, False, fnt)]], align=PP_ALIGN.CENTER)
+                 [[(str(cl), _fl(9.5), mute_c, True, False, fnt)]], align=PP_ALIGN.CENTER)
     return {"nodes": rects, "scale": upi, "columns": columns}
 
 
@@ -12231,7 +12232,7 @@ def iso_stack(slide, x, y, w, h, layers, *, base=None, accents=None, slab=0.14, 
              space_after=0, wrap=False)
         if sub:
             text(slide, lx, band_mid + 0.20, w - (lx - x) - 0.15, 0.28,
-                 [[(sub, label_size - 2.5, _as_rgb(MUTE), False, False, font or FONT)]],
+                 [[(sub, _fl(label_size - 2.5), _as_rgb(MUTE), False, False, font or FONT)]],
                  space_after=0, wrap=False)
     return y + h
 
@@ -12477,7 +12478,7 @@ def gantt(slide, x, y, w, tasks, *, axis_min=None, axis_max=None, ticks=None, ti
     bottom = chart_bottom
     if today is not None:
         text(slide, X(today) - 0.6, chart_bottom + 0.04, 1.2, 0.24,
-             [[(str(today_label), 8, MAGENTA, True, False, font)]],
+             [[(str(today_label), _fl(8), MAGENTA, True, False, font)]],
              align=PP_ALIGN.CENTER, space_after=0)
         bottom = chart_bottom + 0.3
     return bottom
@@ -12594,12 +12595,12 @@ def eval_matrix(slide, x, y, w, options, criteria, cells, *, mark="ball", recomm
     if legend and mark == "ball":
         ly = bottom + 0.2
         lx = x + crit_w
-        text(slide, x, ly, crit_w - 0.12, 0.24, [[(scale_label, 9, MUTE, True, False, font)]],
+        text(slide, x, ly, crit_w - 0.12, 0.24, [[(scale_label, _fl(9), MUTE, True, False, font)]],
              anchor=MSO_ANCHOR.MIDDLE, space_after=0)
         for k in range(5):
             hx = lx + k * 0.92
             harvey_ball(slide, hx + 0.11, ly + 0.11, k, d=0.2, accent=acc)
-            text(slide, hx + 0.26, ly, 0.62, 0.24, [[(f"{k * 25}%", 9, MUTE, False, False, font)]],
+            text(slide, hx + 0.26, ly, 0.62, 0.24, [[(f"{k * 25}%", _fl(9), MUTE, False, False, font)]],
                  anchor=MSO_ANCHOR.MIDDLE, space_after=0)
         bottom = ly + 0.32
     return bottom
@@ -12683,9 +12684,9 @@ def heat_matrix(slide, x, y, w, h, values, row_labels, col_labels, *, scale="seq
             vv = lo + (i / (nseg - 1)) * (hi - lo)
             box(slide, gx + i * bar_w / nseg, lgy, bar_w / nseg + 0.006, 0.14,
                 fill=_heat_color(vv, lo, hi, scale, accent, div_zero=div_zero))
-        text(slide, gx, lgy + 0.16, 1.2, 0.2, [[(_numlabel(lo), 9, MUTE, False, False, _skin_number_face(_numlabel(lo), font))]],
+        text(slide, gx, lgy + 0.16, 1.2, 0.2, [[(_numlabel(lo), _fl(9), MUTE, False, False, _skin_number_face(_numlabel(lo), font))]],
              align=PP_ALIGN.LEFT, space_after=0)
-        text(slide, gx + bar_w - 1.2, lgy + 0.16, 1.2, 0.2, [[(_numlabel(hi), 9, MUTE, False, False, _skin_number_face(_numlabel(hi), font))]],
+        text(slide, gx + bar_w - 1.2, lgy + 0.16, 1.2, 0.2, [[(_numlabel(hi), _fl(9), MUTE, False, False, _skin_number_face(_numlabel(hi), font))]],
              align=PP_ALIGN.RIGHT, space_after=0)
         bottom = lgy + 0.38
     return bottom

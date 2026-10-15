@@ -151,6 +151,24 @@ check('prstDash val="dash"' in x_tbl, "drafting's dashed rule reaches the table 
 check('prstDash val="dash"' in x_cht, "drafting's dashed rule reaches the chart gridlines")
 dk.set_theme(None)
 
+# no component draws text below its language's floor (spec §5.2) — on every language
+import component_tiers as _ct2
+for L in vl.LANGS:
+    prs, k = _use(L)
+    low = []
+    for name in _ct2.TIER1:
+        with contextlib.redirect_stdout(io.StringIO()):
+            k = vl.use(L, prs)
+        s = k.new_slide()
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            exec(compile(sigs.EXAMPLES[name], name, "exec"), {"dk": dk, "dc": dc, "s": s, "prs": prs})
+        for sh in s.shapes:
+            if sh.has_text_frame:
+                low += [(name, r.font.size.pt, r.text[:10]) for p in sh.text_frame.paragraphs for r in p.runs
+                        if r.font.size and r.text.strip() and r.font.size.pt < dk.THEME["floor"] - 1e-6]
+    check(not low, "{}: no component text under the floor {} ({})".format(L, dk.THEME["floor"], low[:3]))
+dk.set_theme(None)
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:
