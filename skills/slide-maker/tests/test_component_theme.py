@@ -71,8 +71,14 @@ CHANGED_ON_PURPOSE = {           # name -> the listed fix that changed it, each 
     "sankey": "Task 6: each ribbon declares overlap_intent (its end tucks under the node bar on purpose) — names only",
 }
 dk.set_theme(None) if hasattr(dk, "set_theme") else None
+# the hashes were taken with macOS faces: text measured with another platform's faces lays out differently, so the
+# guard runs where its baseline was taken (the pre-push local CI) and records a skip elsewhere (ubuntu CI, the sim)
+GUARD_HERE = sys.platform == BASE.get("_platform") and not dk._font_substituted("Calibri")
+if not GUARD_HERE:
+    print("  skip the ordinary-deck guard: baseline taken on {}, this is {} — run it on macOS".format(
+        BASE.get("_platform"), sys.platform))
 for name, want in sorted(BASE.items()):
-    if str(want).startswith("BUILD"):
+    if name.startswith("_") or str(want).startswith("BUILD") or not GUARD_HERE:
         continue
     prs = dk.blank_deck(13.333, 7.5); s = dk.add_slide(prs)
     try:
