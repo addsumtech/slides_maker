@@ -272,6 +272,58 @@ prs.save("collage.pptx")
   `dark=` / `font=`. The test holds those 38 on every ground of every language. **Outside that list** —
   `ui_window`, `skeleton`, `brush_stroke`, `grain_background`, `two_tone`, callouts, pills, chips, glass cards — a
   component is not yet held to every ground: lint the page on the language's dark ground before you rely on it.
+- **Tier 1 — held to every ground** (colours, readability, placement, the language's type floor):
+  <!-- vl:tier-one-list -->`agenda` · `bento` · `consort_flow` · `distribution` · `dot_strip` · `dumbbell_board` · `eval_matrix` · `forest_plot` · `funnel` · `gantt` · `heat_matrix` · `iso_bars` · `iso_prism` · `iso_stack` · `km_curve` · `leaderboard` · `marimekko` · `meter_bar` · `native_chart` · `org_tree` · `position_map` · `pyramid` · `radar` · `roc_curve` · `sankey` · `scorecard` · `segmented_bar` · `small_multiples` · `stat_row` · `step_list` · `table` · `tier_stack` · `timeline` · `unit_grid` · `venn` · `waterfall` · `bland_altman` · `source_note`<!-- /vl -->.
+  `python3 scripts/sigs.py --example <component> --in <language>` prints one placed in that language's content rect
+  (`rs.ground()`); it runs as printed, on 16:9 and 3:4. A component that needs a wider rect than a canvas gives raises
+  with the width it needs.
+- **Tier 2 — also draws in the language's skin** (spec §5.3): each language picks one value per role from
+  `scripts/component_tiers.py` `SKIN_VOCAB`; the component draws that role the language's way and picks its text ink
+  against what the skin leaves under it. `dk.skin_card(s, x, y, w, h, fill=…)` gives your own containers (the cells
+  `dk.bento()` returns) the same card.
+
+<!-- vl:tier-two-table -->
+| component | draws in the skin |
+|---|---|
+| `bento` | card |
+| `step_list` | marker, rule, number |
+| `timeline` | rule, marker, number |
+| `agenda` | rule, number |
+| `stat_row` | rule, number |
+| `org_tree` | card, rule |
+| `tier_stack` | card, rule |
+| `funnel` | card, rule |
+| `pyramid` | card, rule |
+| `venn` | rule |
+| `meter_bar` | rule, number |
+| `gantt` | rule, number |
+| `table` | rule, number |
+| `native_chart` | rule, number |
+| `heat_matrix` | number |
+<!-- /vl -->
+
+<!-- vl:skin-table -->
+| language | card | rule | marker | number |
+|---|---|---|---|---|
+| `editorial` | hairline | hairline | dot | display |
+| `soft` | filled | solid | disc-number | body |
+| `collage` | paper | solid | badge | display |
+| `storybook` | paper | hairline | circled | display |
+| `ink` | hairline | hairline | circled | display |
+| `poster` | filled | solid | disc-number | display |
+| `cutpaper` | paper | solid | disc-number | display |
+| `drafting` | outlined | dashed | circled | mono |
+| `starlit` | outlined | hairline | dot | display |
+| `broadsheet` | hairline | hairline | dot | display |
+| `journal` | hairline | hairline | dot | body |
+| `tally` | filled | solid | badge | mono |
+| `chalkboard` | chalk | chalk | circled | display |
+| `interface` | window | hairline | badge | body |
+| `wayfinding` | sign | solid | roundel | body |
+<!-- /vl -->
+
+  A new language picks from the vocabulary; it adds a value only when none fits, implemented once in deckkit's
+  `_skin_*` helper for that role.
 - **The kit's own pages are clean.** A deck made only of a language's page functions has no hard `lint_deck`
   finding and passes its own prohibitions — `tests/test_vl_audit_fixes.py` builds every language on 16:9 and 3:4,
   both grounds. Furniture that overlaps by design (paper hills over cards, a sun behind a ridge, a blob behind a

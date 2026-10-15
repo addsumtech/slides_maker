@@ -13,6 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import vl_specs                      # noqa: E402  plain-data manifests: no deckkit import, so gates can use it
+import component_tiers as ct         # noqa: E402  plain data too: the component tiers and the skin vocabulary
 
 SKILL = Path(__file__).resolve().parent.parent
 REPO = SKILL.parent.parent
@@ -20,7 +21,8 @@ REF = SKILL / "references"
 # every doc, and the blocks it must carry (a doc that lost one by hand-editing is caught, not silently stale)
 REQUIRED = {
     SKILL / "SKILL.md": {"count-drawn", "list-drawn", "list-image"},
-    REF / "visual-languages.md": {"count-all", "count-image", "count-drawn", "offer-arrow"},
+    REF / "visual-languages.md": {"count-all", "count-image", "count-drawn", "offer-arrow", "tier-one-list", "tier-two-table",
+                                  "skin-table"},
     REF / "interview-protocol.md": {"count-all", "count-image", "count-drawn", "list-image-comma", "offer-paren"},
     REF / "codex-runtime.md": {"list-drawn"},
     REF / "file-inventory.md": {"count-all", "count-image", "count-drawn", "list-image-plain", "list-drawn-plain"},
@@ -63,6 +65,12 @@ def _render(block, reg):
         "offer-paren": lambda: (lambda parts: parts[0] if len(parts) == 1 else ", ".join(parts[:-1]) + " or " + parts[-1])(
             ["`{}` ({})".format(s["name"], ", ".join(s["offer"]["en"])) for s in drawn]),
         "offer-zh": lambda: "；".join("{} → {}".format("、".join(s["offer"]["zh"]), s["display"]["zh"]) for s in drawn) + "。",
+        "tier-one-list": lambda: " · ".join("`{}`".format(n) for n in ct.TIER1),
+        "tier-two-table": lambda: "\n" + "\n".join(["| component | draws in the skin |", "|---|---|"] +
+                                         ["| `{}` | {} |".format(n, ", ".join(r)) for n, r in ct.TIER2_SKIN.items()]) + "\n",
+        "skin-table": lambda: "\n" + "\n".join(["| language | card | rule | marker | number |", "|---|---|---|---|---|"] +
+                                        ["| `{}` | {} | {} | {} | {} |".format(s["name"], *(s["skin"][r] for r in
+                                         ("card", "rule", "marker", "number"))) for s in reg.values()]) + "\n",
     }
     if block not in table:
         raise KeyError(block)
@@ -152,7 +160,7 @@ def _known(reg):
     known = set()
     for b in ("count-all", "count-drawn", "count-image", "count-image-cap", "count-all-zh", "count-drawn-zh",
               "count-image-zh", "list-drawn", "list-image", "list-image-comma", "list-drawn-plain", "list-image-plain",
-              "offer-arrow", "offer-paren", "offer-zh"):
+              "offer-arrow", "offer-paren", "offer-zh", "tier-one-list", "tier-two-table", "skin-table"):
         known.add(b)
     return known
 
