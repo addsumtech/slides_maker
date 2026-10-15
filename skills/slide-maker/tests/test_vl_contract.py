@@ -98,6 +98,99 @@ for n, s in REG.items():
     for g, gd in s["grounds"].items():
         check(gd["palette"] == vl.VARIANTS[n][g]["palette"], "{}/{}: VARIANTS is built from the manifest".format(n, g))
 
+# ── final review, group A: manifests that cannot brick the skill ──
+import os, json, tempfile, shutil, contextlib, io
+def _strings(o):
+    if isinstance(o, str): yield o
+    elif isinstance(o, dict):
+        for v in o.values(): yield from _strings(v)
+    elif isinstance(o, (list, tuple)):
+        for v in o: yield from _strings(v)
+absolute = [(n, x) for n, sp in REG.items() for x in _strings(sp) if os.path.isabs(x) or x.startswith("~")]
+check(absolute == [], "no manifest string is an absolute path — a machine path breaks every other checkout (C1): {}".format(absolute[:2]))
+missing_img = [(n, f.get("image")) for n in vl.NATIVE for _p, f in vl._SAMPLE_COPY_NATIVE[n]
+               if isinstance(f, dict) and f.get("image") and not Path(f["image"]).is_file()]
+check(missing_img == [], "every sample image resolves to a file ({})".format(missing_img))
+# I4: load() refuses what would silently brick or shadow a language, naming the file
+def _load_dir(files):
+    d = Path(tempfile.mkdtemp(prefix="vlspec_"))
+    shutil.copy(ROOT / "scripts" / "vl_specs" / "__init__.py", d / "__init__.py")
+    for name, text in files.items():
+        (d / (name + ".py")).write_text(text, encoding="utf-8")
+    try:
+        vl_specs.load(directory=d); return None
+    except ValueError as e:
+        return str(e)
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+tally_src = (ROOT / "scripts" / "vl_specs" / "tally.py").read_text(encoding="utf-8")
+err = _load_dir({"tally": tally_src, "tallytwo": tally_src.replace("'order': 12", "'order': 16", 1)})
+check(err and "tallytwo" in err and "name" in err, "a copied manifest that keeps the old name is refused, naming the file ({})".format(err))
+err = _load_dir({"tally": tally_src.replace("'look':", "'look_missing':", 1)})
+check(err and "tally" in err and "look" in err, "a manifest missing a top-level key is refused at load, naming file and key ({})".format(err))
+import check_vl_contract as cvc
+d = Path(tempfile.mkdtemp(prefix="vlspec_"))
+try:
+    for f in (ROOT / "scripts" / "vl_specs").glob("*.py"):
+        shutil.copy(f, d / f.name)
+    (d / "tally.py").write_text(tally_src.replace("'look':", "'look_missing':", 1), encoding="utf-8")
+    os.environ["VL_SPECS_DIR"] = str(d)
+    with contextlib.redirect_stdout(io.StringIO()) as out:
+        try:
+            rc = cvc.main(["tally"]); crash = None
+        except Exception as e:
+            rc, crash = None, "{}: {}".format(type(e).__name__, e)
+    check(crash is None and rc == 1 and "look" in out.getvalue(),
+          "check_vl_contract names a broken manifest instead of crashing ({} {})".format(rc, crash))
+finally:
+    os.environ.pop("VL_SPECS_DIR", None)
+    shutil.rmtree(d, ignore_errors=True)
+# I5: one palette, and the tables are copies (code that edits a table cannot rewrite a manifest)
+s = good_spec(); s["look"] = dict(s["look"], palette=dict(s["look"]["palette"], ink="000000"))
+check(any("look" in p and "palette" in p for p in vc.validate(s)), "look.palette that differs from grounds.light.palette is refused")
+s = good_spec(); s["look"] = {}
+check(any("look" in p for p in vc.validate(s)), "an empty look is refused")
+check(all(vl.VARIANTS[n]["light"]["palette"] is vl.LANGS[n]["palette"] for n in REG), "the light palette is ONE object, as before the migration")
+check(all(vl.TYPE[n] is not REG[n]["type"] and vl.LANGS[n] is not REG[n]["look"] for n in REG),
+      "the tables are copies of the manifests, not aliases into them")
+# I8: wrong-typed nested values are named, never a traceback
+bad_inputs = [("display", None), ("offer", None), ("samples", None), ("painters", None), ("extras", {"tags": "points"}),
+              ("grounds", {"light": None, "night": None})]
+for key, val in bad_inputs:
+    s = good_spec(); s[key] = val
+    try:
+        probs = vc.validate(s); crash = None
+    except Exception as e:
+        probs, crash = [], "{}: {}".format(type(e).__name__, e)
+    check(crash is None and probs, "validate names a wrong-typed {} instead of raising ({})".format(key, crash))
+for mut in ("palette_none", "series_str"):
+    s = good_spec()
+    if mut == "palette_none": s["grounds"]["light"]["palette"] = None
+    else: s["grounds"]["light"]["roles"]["series"] = "D7262E"
+    try:
+        probs = vc.validate(s); crash = None
+    except Exception as e:
+        probs, crash = [], "{}: {}".format(type(e).__name__, e)
+    check(crash is None and probs, "validate names {} instead of raising ({})".format(mut, crash))
+a2, b2 = good_spec(), good_spec(); b2["name"], b2["order"] = "fixture2", 100; b2["extras"]["tags"]["pages"] = ["points"]
+try:
+    probs = vc.validate_all({"fixture": a2, "fixture2": b2}); crash = None
+except Exception as e:
+    probs, crash = [], "{}: {}".format(type(e).__name__, e)
+check(crash is None and any("tags" in p for p in probs), "validate_all names a list-typed extra pages instead of raising ({})".format(crash))
+# M6 (re-graded): the installed copy has no repo README — the checks skip it, never crash
+import vl_conformance as _vcf0
+_repo = _vcf0.REPO
+_vcf0.REPO = Path(tempfile.mkdtemp(prefix="norepo_"))
+try:
+    try:
+        r = _vcf0.assets_missing("tally"); crash = None
+    except Exception as e:
+        r, crash = None, "{}: {}".format(type(e).__name__, e)
+    check(crash is None and not any("README" in x for x in (r or [])), "assets_missing skips the README rows when there is no repo README ({} {})".format(crash, r))
+finally:
+    shutil.rmtree(_vcf0.REPO, ignore_errors=True); _vcf0.REPO = _repo
+
 # ── part 2: conformance over every registered language ──
 import vl_conformance as vcf
 for n in REG:

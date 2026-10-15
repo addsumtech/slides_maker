@@ -1,30 +1,47 @@
 #!/usr/bin/env python3
 """Check visual languages against the contract: the manifest (scripts/vl_contract.py) and the build-time conformance
-(scripts/vl_conformance.py). usage: check_vl_contract.py [name …]   (default: every registered language)"""
+(scripts/vl_conformance.py). usage: check_vl_contract.py [name …]   (default: every registered language)
+
+The manifests are loaded and validated FIRST, as plain data: a broken manifest is named here before anything imports
+visual_languages (which reads every manifest at import and would die on it)."""
 import argparse
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import vl_contract as vc            # noqa: E402
-import vl_conformance as vcf        # noqa: E402
-import visual_languages as vl       # noqa: E402
+import vl_specs                     # noqa: E402
 
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("names", nargs="*", help="languages to check (default: all)")
     a = ap.parse_args(argv)
-    names = a.names or list(vl.REGISTRY)
-    unknown = [n for n in names if n not in vl.REGISTRY]
+    try:
+        specs = vl_specs.load()
+    except ValueError as e:
+        print("  FAIL " + str(e))
+        print("[vl-contract] the manifests cannot be loaded — fix the file named above")
+        return 1
+    names = a.names or list(specs)
+    unknown = [n for n in names if n not in specs]
     if unknown:
-        print("unknown language(s) {} — registered: {}".format(unknown, ", ".join(vl.REGISTRY)))
+        print("unknown language(s) {} — registered: {}".format(unknown, ", ".join(specs)))
         return 2
-    probs = [p for p in vc.validate_all(vl.REGISTRY) if any(n in p for n in names)]
+    own = {n: vc.validate(specs[n]) for n in names}
+    every_own = {p for s in specs.values() for p in vc.validate(s)}
+    cross = [p for p in vc.validate_all(specs) if p not in every_own]
+    probs = [p for n in names for p in own[n]] + [p for p in cross if any("'{}'".format(n) in p for n in names)]
+    if probs:                              # the manifest itself is wrong: building pages from it would only crash
+        for p in probs:
+            print("  FAIL " + p)
+        print("[vl-contract] {} language(s), {} manifest problem(s) — fix these first".format(len(names), len(probs)))
+        return 1
+    import vl_conformance as vcf           # imports visual_languages: only once every manifest is sound
     for n in names:
         missing = vcf.pages_missing(n)
         probs += missing + vcf.assets_missing(n)
-        if missing:                            # the build checks need every page composed: say so, do not crash
+        if missing:                        # the build checks need every page composed: say so, do not crash
             print("  skipped for {}: never-invent and extras checks (they build pages; compose all seven first)".format(n))
             continue
         probs += vcf.invented_words(n) + vcf.extras_not_refused(n)

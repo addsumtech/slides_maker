@@ -115,7 +115,7 @@ SPEC = {'name': 'journal',
                         'body': 'Error as acceleration grows. Illustrative curves for this style sample, not '
                                 'results.',
                         'caption': 'Style sample — not data.',
-                        'image': '/Users/donghanglyu/code_project/slides_maker/skills/slide-maker/assets/vl/figure/illustrative-curves.jpg'}),
+                        'image': 'figure/illustrative-curves.jpg'}),
                       ('points',
                        {'title': 'What we set out to test',
                         'items': [('The question', 'Does the method keep edges at high acceleration?'),

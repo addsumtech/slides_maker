@@ -13,6 +13,7 @@ import vl_native as vn
 from vl_contract import PAGES
 
 SKILL = Path(__file__).resolve().parent.parent
+REPO = SKILL.parent.parent     # the repo root holds the READMEs; an installed copy of the skill has none
 _CJK = re.compile(r"[぀-ヿ㐀-鿿豈-﫿가-힯]")
 _WORD = re.compile(r"[A-Za-z][A-Za-z'’\-]*")
 # numerals a page may number itself with (page / point / section / sheet / figure numbers): 1-2 digits, CJK numerals
@@ -134,7 +135,9 @@ def assets_missing(name):
     if "| `{}` |".format(name) not in ref:
         probs.append("{}: references/visual-languages.md has no table row for it".format(name))
     for readme in ("README.md", "README_CN.md"):
-        if "samples/{}.jpg".format(name) not in (SKILL.parent.parent / readme).read_text(encoding="utf-8"):
+        if not (REPO / readme).is_file():       # an installed copy of the skill: no repo README to check
+            continue
+        if "samples/{}.jpg".format(name) not in (REPO / readme).read_text(encoding="utf-8"):
             probs.append("{}: {} gallery has no cell for it".format(name, readme))
     return probs
 

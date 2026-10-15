@@ -59,6 +59,9 @@ def _hexes(where, d, keys, probs):
     for k in keys:
         v = d.get(k)
         vals = v if isinstance(v, list) else [v]
+        if k == "series" and not isinstance(v, list):
+            probs.append("{}: series must be a list of colours, got {!r}".format(where, v))
+            return False
         if not vals or any(not isinstance(x, str) or not _HEX.match(x) for x in vals):
             probs.append("{}: {} must be 6-digit hex colour(s), got {!r}".format(where, k, v))
             return False
@@ -71,6 +74,14 @@ def validate(spec):
     for k in TOP_KEYS:
         if k not in spec:
             probs.append("{}: the manifest has no {!r}".format(name, k))
+    if probs:
+        return probs
+    # every nested value is type-checked before it is read: a half-filled skeleton must get named problems, never a
+    # traceback (final review)
+    for k, typ in (("display", dict), ("offer", dict), ("look", dict), ("grounds", dict), ("type", dict),
+                   ("image_pages", tuple), ("extras", dict), ("derived", list), ("samples", dict), ("painters", dict)):
+        if not isinstance(spec[k], typ):
+            probs.append("{}: {} must be a {}, got {!r}".format(name, k, typ.__name__, type(spec[k]).__name__))
     if probs:
         return probs
     if not isinstance(name, str) or not re.match(r"^[a-z][a-z0-9_]*$", name):
@@ -90,12 +101,25 @@ def validate(spec):
             probs.append("{}: offer needs at least two topics in 'en' and in 'zh'".format(name))
     elif off.get("pictures") not in ("photos", "illustrations"):
         probs.append("{}: an image-led language's offer names its pictures: 'photos' or 'illustrations'".format(name))
+    look = spec["look"]
+    missing_look = [k for k in ("palette", "fonts", "ea", "grain", "frames", "forbids", "cover", "skeleton") if k not in look]
+    if missing_look:
+        probs.append("{}: look has no {}".format(name, missing_look))
     gr = spec["grounds"]
+    if not all(isinstance(gd, dict) for gd in gr.values()):
+        probs.append("{}: every ground must be a dict, got {}".format(
+            name, {g: type(gd).__name__ for g, gd in gr.items() if not isinstance(gd, dict)}))
+        return probs
+    if isinstance(gr.get("light"), dict) and "palette" in look and look["palette"] != gr["light"].get("palette"):
+        probs.append("{}: look.palette differs from grounds.light.palette — the light ground has ONE palette".format(name))
     if "light" not in gr or len(gr) < 2:
         probs.append("{}: grounds need 'light' (the default key callers pass) and a contrast ground".format(name))
     for g, gd in gr.items():
         where = "{}/{}".format(name, g)
-        pal, roles = gd.get("palette", {}), gd.get("roles", {})
+        pal, roles = gd.get("palette"), gd.get("roles", {})
+        if not isinstance(pal, dict) or not isinstance(roles, dict):
+            probs.append("{}: palette and roles must be dicts".format(where))
+            continue
         if not _hexes(where, pal, ("ground", "ink", "mute", "panel", "accents", "text_accents"), probs):
             continue
         if not isinstance(gd.get("dark"), bool):
@@ -117,6 +141,9 @@ def validate(spec):
             if c < floor:
                 probs.append("{}: {} is {:.2f}:1 (floor {}:1) — {} on {}".format(where, what, c, floor, a, b))
         ser = roles["series"]
+        if not isinstance(ser, list):
+            probs.append("{}: series must be a list of colours".format(where))
+            continue
         if len(ser) < SERIES_MIN:
             probs.append("{}: series needs at least {} colour(s)".format(where, SERIES_MIN))
         for c in ser:
@@ -142,6 +169,9 @@ def validate(spec):
         if p not in PAGES:
             probs.append("{}: image page {!r} is not one of {}".format(name, p, PAGES))
     for x, d in spec["extras"].items():
+        if not isinstance(d, dict):
+            probs.append("{}: extra {!r} must be a dict of pages/remembered/takes/absent, got {!r}".format(name, x, d))
+            continue
         pages = d.get("pages")
         if pages != "any" and (not isinstance(pages, tuple) or any(p not in PAGES for p in pages)):
             probs.append("{}: extra {!r} pages must be 'any' or a tuple of {}, got {!r}".format(name, x, PAGES, pages))
@@ -179,7 +209,10 @@ def validate_all(specs):
     meaning = {}
     for n, s in specs.items():
         for x, d in s.get("extras", {}).items():
-            key = (d.get("pages"), d.get("remembered"))
+            if not isinstance(d, dict):
+                continue
+            pg = d.get("pages")
+            key = (tuple(pg) if isinstance(pg, list) else pg, d.get("remembered"))
             meaning.setdefault(x, {}).setdefault(key, []).append(n)
     for x, m in meaning.items():
         if len(m) > 1:

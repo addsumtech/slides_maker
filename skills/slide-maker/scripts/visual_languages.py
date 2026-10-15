@@ -34,6 +34,7 @@ from pptx.enum.shapes import MSO_SHAPE  # noqa: E402
 
 EA_FACES = dk.EA_FACES   # one table, in deckkit; the "win" faces: Microsoft's documented defaults — unverified here
 
+import copy as _copy
 import vl_specs as _vl_specs
 # Every language is ONE manifest, scripts/vl_specs/<name>.py, checked by scripts/vl_contract.py; the tables below are
 # built from them and keep their old names for every importer. Each language's GROUNDS: its own light paper, and ONE
@@ -42,8 +43,11 @@ import vl_specs as _vl_specs
 # passes 4.5:1 on its ground AND panel (the contract checks it). The storybook contrast is a meadow-green PAPER, not a
 # dark ground: its light watercolours would halo on dark.
 REGISTRY = _vl_specs.load()
-LANGS = {n: s["look"] for n, s in REGISTRY.items()}
-VARIANTS = {n: {g: {k: v for k, v in gd.items() if k not in ("dark", "roles")} for g, gd in s["grounds"].items()}
+# the tables are COPIES (code that edits a table must not rewrite a manifest in memory), and a language's light palette
+# is ONE object shared by LANGS and VARIANTS, as before the manifests (final review)
+LANGS = {n: _copy.deepcopy(s["look"]) for n, s in REGISTRY.items()}
+VARIANTS = {n: {g: {k: (LANGS[n]["palette"] if (k == "palette" and g == "light") else _copy.deepcopy(v))
+                    for k, v in gd.items() if k not in ("dark", "roles")} for g, gd in s["grounds"].items()}
             for n, s in REGISTRY.items()}
 NATIVE = tuple(n for n, s in REGISTRY.items() if s["kind"] == "drawn")          # drawn, no pictures needed (vl_native.py)
 # the pages on which a drawn language draws the caller's picture; image= anywhere else is refused, naming these — it
@@ -399,7 +403,7 @@ class VLImageError(ValueError):
 
 
 # field: (size_pt at a 7.5in short side, role, bold, colour key, italic, floor_pt)
-TYPE = {n: s["type"] for n, s in REGISTRY.items()}
+TYPE = {n: _copy.deepcopy(s["type"]) for n, s in REGISTRY.items()}
 
 # page -> its fields in column order (the caller's keyword names)
 PAGE_FIELDS = {"cover": ("kicker", "title", "subtitle"), "section": ("number", "kicker", "title"),
@@ -1635,7 +1639,19 @@ _SAMPLE_COPY = {
 }
 
 # the native languages need no pictures: their samples are words only (still a STYLE sample, not your content)
-_SAMPLE_COPY_NATIVE = {n: REGISTRY[n]["samples"]["copy"] for n in NATIVE}
+def _resolved_copy(pages):
+    """A manifest's sample copy with each picture path resolved under assets/vl (a manifest stores it relative: an
+    absolute path baked in by the migration broke every other checkout — final review)."""
+    out = []
+    for page, fields in pages:
+        f = dict(fields)
+        if isinstance(f.get("image"), str) and not Path(f["image"]).is_absolute():
+            f["image"] = str(ASSETS / f["image"])
+        out.append((page, f))
+    return out
+
+
+_SAMPLE_COPY_NATIVE = {n: _resolved_copy(REGISTRY[n]["samples"]["copy"]) for n in NATIVE}
 
 
 def _sample_stem(name, ground):

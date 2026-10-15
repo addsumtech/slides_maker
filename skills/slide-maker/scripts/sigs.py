@@ -557,7 +557,11 @@ def _vl_scaffolds():
                 'k = vl.use("{}", prs)   # {} ({}) — generated from scripts/vl_specs/{}.py'.format(
                     n, sp["display"]["en"], sp["display"]["zh"], n)]
         if sp["kind"] == "drawn":
-            body = ["k.{}(k.new_slide(), {})".format(page, ", ".join("{}={!r}".format(f, v) for f, v in fields.items()))
+            def _arg(f, v):
+                if f == "image" and isinstance(v, str) and not v.startswith("/"):
+                    return "image=str(vl.ASSETS / {!r})".format(v)       # a bundled picture, from any folder
+                return "{}={!r}".format(f, v)
+            body = ["k.{}(k.new_slide(), {})".format(page, ", ".join(_arg(f, v) for f, v in fields.items()))
                     for page, fields in sp["samples"]["copy"]]
         else:
             water = sp["samples"]["kind"] == "watercolour"
