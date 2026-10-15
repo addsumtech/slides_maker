@@ -1038,6 +1038,8 @@ jobs:
           python tests/test_vl_contract.py | tee /tmp/vlcontract.log
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/vlcontract.log || {
             echo "::error::test_vl_contract did not run to completion"; exit 1; }
+      - name: "Visual-language docs blocks match the registry"
+        run: python scripts/vl_docs.py --check
       - name: "Visual languages after the audit (measured with headroom, nothing dropped, upright pictures, clean own pages)"
         run: |
           set -o pipefail

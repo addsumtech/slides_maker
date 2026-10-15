@@ -1,4 +1,4 @@
-# Visual languages — fifteen complete looks: four image-led, eleven drawn
+# Visual languages — <!-- vl:count-all -->fifteen<!-- /vl --> complete looks: <!-- vl:count-image -->four<!-- /vl --> image-led, <!-- vl:count-drawn -->eleven<!-- /vl --> drawn
 
 **When to read this:** the picked direction is a visual language (its entry in `directions.json` carries
 `"vl": "<name>"`), or the user asks for one of these looks by name. Read it before writing the build script.
@@ -162,7 +162,7 @@ test decks passed `visual language` ("5 of 5 slide(s) built with it"), `register
   The rows marked `NOT CHECKED` (template profile, purpose, talk time, Q&A backup, citations, image series, and a
   direction with no `directions.json`) checked nothing and block nothing.
 
-## The fifteen languages
+## The <!-- vl:count-all -->fifteen<!-- /vl --> languages
 
 A visual language is a whole look, not a palette: a type voice from system fonts, a surface, image
 treatments and seven page compositions (cover, section, image_text, points, quote, data, closing). Picking one gives a finished deck from your own words and images —
@@ -214,7 +214,7 @@ prs.save("collage.pptx")
   is optional everywhere except `image_text` (which refuses without one). A list of images is for the
   collage cover and closing only (1 to 4); anywhere else, or empty, or longer, it is refused rather than
   silently cut. A page with no text and no image is refused. Each returns `{"rects": {field: (x, y, w, h)}, …}`.
-  On the eleven DRAWN languages a picture is drawn on `image_text` only (`drafting` also on `quote`;
+  On the <!-- vl:count-drawn -->eleven<!-- /vl --> DRAWN languages a picture is drawn on `image_text` only (`drafting` also on `quote`;
   `vl.NATIVE_IMAGE_PAGES`): `image=` on any other page of theirs is refused, naming those pages — never dropped.
 - **Fields are text.** Pass every field as a string, exactly as it should read; `number=` also takes a whole
   number (`12`, shown as written). A list, a tuple or a float is refused by field name (`number=0.1 + 0.2` would
@@ -338,11 +338,7 @@ every value they write is one PowerPoint opens without repair (`scripts/ooxml_sa
   "direction_gate": {"candidates": "directions.json", "picked": "<the one chosen>", "images": "none",
                      "native_fit": {"language": "ink", "why": "a talk on tea craft: culture and ritual"}}
   ```
-  `native_fit.language` is one of the native languages among the candidates (not necessarily the one picked). Guidance, not a rule: culture, history, craft → `ink`; launch, manifesto, opinion → `poster`; children,
-  storytelling, community → `cutpaper`; engineering, architecture, systems design → `drafting`; year in review,
-  letter, thanks, commemoration → `starlit`; newsletter, periodic report, community update → `broadsheet`;
-  research talk, lab meeting, paper, defence → `journal`; metrics, quarterly review, operations, growth → `tally`;
-  lesson, class, training, explainer → `chalkboard`; product launch, app, SaaS, feature tour, internal tool → `interface`; roadmap, process, onboarding, journey, strategy route, transport/city → `wayfinding`.
+  `native_fit.language` is one of the native languages among the candidates (not necessarily the one picked). Guidance, not a rule: <!-- vl:offer-arrow -->culture, history, craft → `ink`; launch, manifesto, opinion → `poster`; children, storytelling, community → `cutpaper`; engineering, architecture, systems design → `drafting`; year in review, letter, thanks, commemoration → `starlit`; newsletter, periodic report, community update → `broadsheet`; research talk, lab meeting, paper, defence → `journal`; metrics, quarterly review, operations, growth → `tally`; lesson, class, training, explainer → `chalkboard`; product launch, app, SaaS, feature tour, internal tool → `interface`; roadmap, process, onboarding, journey, strategy route, transport/city → `wayfinding`.<!-- /vl -->
 
 ### The second set — `starlit` · `broadsheet` · `journal` · `tally` · `chalkboard`
 
@@ -640,6 +636,6 @@ the ground, its grain, its card and its inks are one look, and the variants are 
 style sample (the preview shows it, labelled "style sample — not your content"). It counts as a STYLED
 direction, never as the topic-invented bespoke direction the gate also requires. Image-led languages pair
 with the P1 image series (`references/image-generation.md`, the SERIES exception) when the deck's images
-are generated; with the user's own or fetched photos they need no generation at all. The eleven native
+are generated; with the user's own or fetched photos they need no generation at all. The <!-- vl:count-drawn -->eleven<!-- /vl --> native
 languages need no pictures: a deck without any offers the one that fits its topic and records why in
 `direction_gate.native_fit` (see Native languages above).

@@ -246,8 +246,8 @@ four template choices:
        - **This gate also fires on the lighter case-(b) offer** (unsure-on-style / brand-defining,
          2–3 directions) because it is the same machinery — which is the right default, since those
          are exactly the decks where an invented register pays most.
-       - **A curated visual language.** A direction may be one of the fifteen visual languages — four
-         image-led (`editorial`, `soft`, `collage`, `storybook`) and eleven drawn (below) —
+       - **A curated visual language.** A direction may be one of the <!-- vl:count-all -->fifteen<!-- /vl --> visual languages — four
+         image-led (`editorial`, `soft`, `collage`, `storybook`) and <!-- vl:count-drawn -->eleven<!-- /vl --> drawn (below) —
          `visual_languages.direction("<name>")` returns its entry for
          `directions.json`, previewed by its bundled sample ("style sample — not your content"). It counts
          as a STYLED direction, never as the topic-invented bespoke one. Picking it records
@@ -261,13 +261,7 @@ four template choices:
          `image_sources` say `generated`/`sourced` (or whose `imagery` is `series`) is refused as a
          contradiction. The user's own figures (`provided`) do not count — a paper's plots are not a photo deck.
        - **A native visual language when the deck has no pictures.** When `direction_gate.images` is `none`, at
-         least one offered direction is a NATIVE language — `ink` (culture, history, craft), `poster` (launch,
-         manifesto, opinion), `cutpaper` (children, storytelling, community), `drafting` (engineering, architecture,
-         systems design), `starlit` (year in review, letter, thanks, commemoration), `broadsheet` (newsletter,
-         periodic report, community update), `journal` (research talk, lab meeting, paper, defence), `tally`
-         (metrics, quarterly review, operations, growth), `chalkboard` (lesson, class, training, explainer), `interface`
-         (product launch, app, SaaS, feature tour, internal tool) or `wayfinding` (roadmap, process, onboarding,
-         journey, strategy route, transport/city) — and
+         least one offered direction is a NATIVE language — <!-- vl:offer-paren -->`ink` (culture, history, craft), `poster` (launch, manifesto, opinion), `cutpaper` (children, storytelling, community), `drafting` (engineering, architecture, systems design), `starlit` (year in review, letter, thanks, commemoration), `broadsheet` (newsletter, periodic report, community update), `journal` (research talk, lab meeting, paper, defence), `tally` (metrics, quarterly review, operations, growth), `chalkboard` (lesson, class, training, explainer), `interface` (product launch, app, SaaS, feature tour, internal tool) or `wayfinding` (roadmap, process, onboarding, journey, strategy route, transport/city)<!-- /vl --> — and
          the record states the pick and its reason:
          `direction_gate.native_fit: {"language": "<name>", "why": "<topic reason>"}`. The guidance is an offer,
          not a rule; the record is the rule. Both runtimes hold it; a named `waived` is the escape.

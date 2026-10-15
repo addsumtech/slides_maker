@@ -1679,7 +1679,7 @@ build to your **style brief** of it *per the chosen mimic mode* (`references/sty
 borrowed components + signature motif, but keep the topic-fit palette/type already locked in the
 Step-2 design plan — do NOT carry the example's colours.
 A few rules that matter (see `references/design-principles.md`):
-- **Visual languages (`editorial` · `soft` · `collage` · `storybook`, and the eleven drawn ones below):** when the picked direction is a
+- **Visual languages (`editorial` · `soft` · `collage` · `storybook`, and the <!-- vl:count-drawn -->eleven<!-- /vl --> drawn ones below):** when the picked direction is a
   visual language (`"vl"` in `directions.json`), READ `references/visual-languages.md` before the build
   script: `visual_languages.use(name, prs)` gives the palette, system fonts (both platforms by default,
   per script for CJK) and ground, and its seven page functions (cover, section, image_text, points, quote, data, closing) lay out your own copy and images — never
@@ -1689,8 +1689,7 @@ A few rules that matter (see `references/design-principles.md`):
   FETCH (`direction_gate.images: photos | illustrations | none`, whoever made them — both gates hold it and read
   it against `image_sources` / `imagery`, so `none` on a deck that generates its pictures is refused;
   `references/interview-protocol.md`).
-  A deck with NO pictures offers one of the NATIVE visual languages (`ink` · `poster` · `cutpaper` ·
-  `drafting` · `starlit` · `broadsheet` · `journal` · `tally` · `chalkboard` · `interface` · `wayfinding`, drawn, no
+  A deck with NO pictures offers one of the NATIVE visual languages (<!-- vl:list-drawn -->`ink` · `poster` · `cutpaper` · `drafting` · `starlit` · `broadsheet` · `journal` · `tally` · `chalkboard` · `interface` · `wayfinding`<!-- /vl -->, drawn, no
   pictures needed) — the one that fits the topic — and records why in
   `direction_gate.native_fit` (both gates hold it; `references/visual-languages.md`).
   Build with `ground="auto"` (light paper, or the language's contrast ground when your last decks already

@@ -38,6 +38,7 @@ import itertools
 import json
 import re
 import sys
+from pathlib import Path
 
 PALETTE_T = 90.0        # combined bg+accent distance under which two palettes read "one family"
 
@@ -241,8 +242,21 @@ def images_fault(images, directions, *, image_sources=None, imagery=None):
 
 
 
-NATIVE_LANGS = ("ink", "poster", "cutpaper", "drafting", "starlit", "broadsheet", "journal", "tally", "chalkboard",
-                "interface", "wayfinding")      # mirrors visual_languages.NATIVE (a test pins it)
+def _offer_paren():
+    """`ink (culture, history, craft), … or wayfinding (…)` — the offer guidance from the manifests (vl_docs)."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import vl_docs
+    return vl_docs.render("offer-paren").replace("`", "")
+
+
+def _native_langs():
+    """The drawn visual languages, from their manifests (scripts/vl_specs/ — plain data, no deckkit import)."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import vl_specs
+    return tuple(n for n, s in vl_specs.load().items() if s["kind"] == "drawn")
+
+
+NATIVE_LANGS = _native_langs()      # = visual_languages.NATIVE: both come from the registry (a test pins it)
 
 
 def native_fault(images, directions, fit=None):
@@ -255,13 +269,7 @@ def native_fault(images, directions, fit=None):
     offered = [d.get("vl") for d in (directions or []) if isinstance(d, dict) and d.get("vl") in NATIVE_LANGS]
     if not offered:
         return ("the deck has no pictures and no direction is a native visual language — offer the one that fits the "
-                "topic with visual_languages.direction('<name>'): ink (culture, history, craft), poster (launch, "
-                "manifesto, opinion), cutpaper (children, storytelling, community), drafting (engineering, "
-                "architecture, systems design), starlit (year in review, letter, thanks, commemoration), broadsheet "
-                "(newsletter, periodic report, community update), journal (research talk, lab meeting, paper, defence), "
-                "tally (metrics, quarterly review, operations, growth), chalkboard (lesson, class, training, "
-                "explainer), interface (product launch, app, SaaS, feature tour, internal tool) or wayfinding "
-                "(roadmap, process, onboarding, journey, strategy route, transport/city) — "
+                "topic with visual_languages.direction('<name>'): " + _offer_paren() + " — "
                 "references/visual-languages.md")
     if not isinstance(fit, dict) or fit.get("language") not in offered or len(str(fit.get("why") or "").strip()) < 8:
         return ('record direction_gate.native_fit: {"language": "<the native language offered>", "why": "<why it '

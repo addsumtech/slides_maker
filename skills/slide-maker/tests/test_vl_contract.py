@@ -121,6 +121,32 @@ check({"社", "区", "年"} <= tok, "Chinese caller characters are allowed token
 check("ABSTRACT" in tok and "摘" in tok, "a declared derived label is an allowed token")
 check("REVOLUTION" not in tok, "a word the caller never gave is not allowed")
 
+# ── part 3: docs blocks follow the registry ──
+import vl_docs
+check(vl_docs.render("count-all") == "fifteen" and vl_docs.render("count-drawn") == "eleven"
+      and vl_docs.render("count-image") == "four", "the count blocks read fifteen / eleven / four")
+check(vl_docs.render("count-all-zh") == "十五" and vl_docs.render("count-drawn-zh") == "十一", "the Chinese counts read 十五 / 十一")
+check(vl_docs.render("list-drawn").startswith("`ink` · `poster`") and vl_docs.render("list-drawn").endswith("`wayfinding`"),
+      "the drawn list runs ink … wayfinding")
+check("culture, history, craft → `ink`" in vl_docs.render("offer-arrow"), "the arrow guidance names ink's topics")
+check("`ink` (culture, history, craft)" in vl_docs.render("offer-paren"), "the parenthesised guidance names ink's topics")
+check("文化、历史、器物 → 水墨" in vl_docs.render("offer-zh"), "the Chinese guidance names 水墨's topics")
+check(vl_docs.check() == [], "every docs block is current ({})".format(vl_docs.check()[:2]))
+# Review Focus 5: a hand edit inside a block is caught, and --write restores it
+import shutil, tempfile
+tmp = Path(tempfile.mkdtemp())
+src = ROOT / "references" / "visual-languages.md"
+shutil.copy(src, tmp / "vl.md")
+try:
+    src.write_text(src.read_text(encoding="utf-8").replace("<!-- vl:count-all -->fifteen", "<!-- vl:count-all -->nine", 1),
+                   encoding="utf-8")
+    probs = vl_docs.check()
+    check(any("visual-languages.md" in p and "count-all" in p for p in probs), "a hand-edited block is named ({})".format(probs[:1]))
+    vl_docs.write()
+    check(vl_docs.check() == [], "--write restores the block")
+finally:
+    shutil.copy(tmp / "vl.md", src)
+
 # ── part 2 (Task 3) and part 3 (Task 4) are appended above this line ──
 
 for line in ok:

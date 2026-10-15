@@ -711,6 +711,8 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   pages, samples / sigs scaffold / docs rows present, and the build-matrix suites still iterating the registry.
 - `check_vl_contract.py` — `check_vl_contract.py [name …]`: the manifest and the conformance checks for the named
   languages (all by default), with a NEXT line.
+- `vl_docs.py` — `--write` / `--check` the `<!-- vl:NAME -->…<!-- /vl -->` blocks (counts, the drawn list, the offer
+  guidance in three wordings) in SKILL.md, the references and both READMEs, from the registry; CI runs `--check`.
 - `collage.py` — `collage(slide, region, items, seed=, keep_clear=)`: 1-4 images as tilted, white-bordered,
   taped prints; geometry decided first — a print never enters `keep_clear` and never covers more than
   25% of its neighbour; deterministic for a seed; slot items keep the image-series tag.
