@@ -203,6 +203,26 @@ for v in ct.SKIN_VOCAB["rule"]:
     check(with_head != without and ("tailEnd" in with_head or "headEnd" in with_head or v == "chalk"),
           "rule {}: an arrow keeps its head".format(v))
 
+# poster's per-page field keeps its own accent and ink first, then the ground's DESIGNED series colours that read on
+# that field (it set [accent, ink] only, so designed colours never reached a poster chart)
+_reg = vl.REGISTRY["poster"]["grounds"]["light"]["roles"]
+_saved = list(_reg["series"])
+_reg["series"] = _saved + ["FFB3D1", "7FF0D0"]
+try:
+    prs, k = _use("poster", "light")
+    seen = []
+    for _ in range(4):
+        k.new_slide()
+        bg = dk.THEME["ground"]
+        ser = [c.upper() for c in dk.THEME["series"]]
+        seen.append((bg, ser))
+    ok_fields = all(c in ser for bg, ser in seen for c in ("FFB3D1", "7FF0D0") if dk.contrast_ratio(c, bg) >= 3.0)
+    none_faint = all(dk.contrast_ratio(c, bg) >= 3.0 for bg, ser in seen for c in ser[2:])
+    check(ok_fields and none_faint, "poster's fields carry the designed series colours that read on them ({})".format(seen))
+finally:
+    _reg["series"] = _saved
+    dk.set_theme(None)
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

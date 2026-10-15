@@ -758,9 +758,13 @@ def _poster_ground(k, slide):
     # the components' theme follows the field too (their cards, rules and inks), not only the palette constants
     dark = vl._lum(fld["ink"]) > vl._lum(fld["bg"])
     rule = _away(fld["bg"], fld["ink"])
+    # the field's own accent and ink first, then the ground's DESIGNED series colours that read on this field
+    own = [fld["accent"], fld["ink"]]
+    designed = [c for c in vl.REGISTRY["poster"]["grounds"][k.ground]["roles"]["series"]
+                if c.upper() not in [o.upper() for o in own] and dk.contrast_ratio(c, fld["bg"]) >= 3.0]
     dk.set_theme(dict(dk.THEME, ground=fld["bg"], ink=fld["ink"], mute=fld["ink"], card=card, card_ink=fld["ink"],
                       rule=rule, axis=fld["ink"], track=rule, highlight=fld["accent"],
-                      series=[fld["accent"], fld["ink"]], dark=dark))
+                      series=own + designed, dark=dark))
 
 
 GROUNDS["poster"] = _poster_ground
