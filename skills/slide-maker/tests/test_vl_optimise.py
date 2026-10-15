@@ -90,6 +90,54 @@ for L in vl.LANGS:
         check(z >= need * base - 1e-6 or L == "poster" or (L == "ink" and tag == "cjk"), "{} cover title ({}) holds >= {:.0%} of {}pt ({:.1f}pt)".format(L, tag, need, base, z))
 dk.set_theme(None)
 
+# ── Task 5 (D): chalkboard: the quote's chalk underline runs the whole LAST line, to its measured ink width ──
+def _quote_shape(slide, words):
+    """The quote's own text shape (the largest-set one holding `words`)."""
+    cand = [sh for sh in slide.shapes if getattr(sh, "has_text_frame", False)
+            and words.lower() in sh.text_frame.text.replace("\n", " ").lower()]
+    return max(cand, key=lambda sh: max((r.font.size.pt for p in sh.text_frame.paragraphs for r in p.runs
+                                         if r.font.size), default=0))
+
+
+def _last_line_ink(k, field, sh):
+    """(left edge, ink width) in inches of the last line drawn in text shape `sh`: its last paragraph, wrapped at the
+    shape's width when it is a paragraph the renderer wraps."""
+    paras = [p for p in sh.text_frame.paragraphs if "".join(r.text for r in p.runs).strip()]
+    size = max(r.font.size.pt for p in paras for r in p.runs if r.font.size)
+    box = sh.width / 914400.0
+    text = "".join(r.text for r in paras[-1].runs).strip()
+    last = vl._break_lines(k, field, text, size, box * vl.HEADROOM)[-1].strip()
+    return sh.left / 914400.0 + 0.028, vl._line_width(k, field, last, size)
+
+
+def _underline_span(slide, below):
+    """(left, right) in inches of the chalk strokes (freeforms) drawn below y=`below`."""
+    xs = [(sh.left / 914400.0, (sh.left + sh.width) / 914400.0) for sh in slide.shapes
+          if sh.shape_type == 5 and sh.top / 914400.0 >= below]
+    return (min(a for a, _ in xs), max(b for _, b in xs)) if xs else None
+
+
+CB_QUOTES = [("short", "Less, but better."),
+             ("mid", "Nature does not hurry, yet everything is accomplished."),
+             ("long", " ".join(["Every repair we made that evening was a small argument for keeping things, and the "
+                                "room kept making it until the last lamp came on."] * 2))]
+for g in ("light", "slate"):
+    for tag, qt in CB_QUOTES:
+        prs, k = _deck("chalkboard", g)
+        sl = k.new_slide()
+        with contextlib.redirect_stdout(io.StringIO()):
+            k.quote(sl, quote=qt, attribution="Lao Tzu")
+        sh = _quote_shape(sl, qt.split()[0])
+        left, ink = _last_line_ink(k, "quote", sh)
+        span = _underline_span(sl, (sh.top + sh.height) / 914400.0 - 0.12)
+        check(span is not None, "chalkboard/{} {} quote: a chalk underline is drawn".format(g, tag))
+        if span:
+            cover = (span[1] - span[0]) / ink
+            check(0.97 <= cover <= 1.04 and abs(span[0] - left) <= 0.06,
+                  "chalkboard/{} {} quote: the underline runs the last line's ink width ({:.2f}in of {:.2f}in = {:.0%}, "
+                  "starting {:+.2f}in from the line)".format(g, tag, span[1] - span[0], ink, cover, span[0] - left))
+dk.set_theme(None)
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

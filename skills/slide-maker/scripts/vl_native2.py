@@ -1592,6 +1592,23 @@ def _cb_points(k, slide, f, image):
     return rects
 
 
+def _last_line_of(k, field, slide, rect):
+    """(left, ink width) in inches of the LAST line of the text drawn in `rect` (the field's own text shape): its last
+    paragraph — the lines the flow imposed are one paragraph each — wrapped at the box's measure when that paragraph is
+    one the renderer wraps, measured in the face it renders in. None when no text shape sits in `rect`."""
+    sh = next((s_ for s_ in slide.shapes if getattr(s_, "has_text_frame", False) and s_.text_frame.text.strip()
+               and abs(s_.left / 914400.0 - rect[0]) < 0.01 and abs(s_.top / 914400.0 - rect[1]) < 0.01), None)
+    if sh is None:
+        return None
+    paras = [p for p in sh.text_frame.paragraphs if "".join(r.text for r in p.runs).strip()]
+    size = max(r.font.size.pt for p in paras for r in p.runs if r.font.size)
+    text = "".join(r.text for r in paras[-1].runs).strip()
+    box = sh.width / 914400.0
+    last = vl._break_lines(k, field, text, size, box * HEADROOM)[-1].strip()
+    ink = min(vl._line_width(k, field, last, size), box - dk.TEXT_INSET_LR)
+    return rect[0] + dk.TEXT_INSET_LR / 2.0, max(0.4, ink)
+
+
 @register("chalkboard", "quote", alts=2)
 def _cb_quote(k, slide, f, image):
     W, H, s, o = ctx(k)
@@ -1606,10 +1623,16 @@ def _cb_quote(k, slide, f, image):
         _m, md = flow(k, slide, "quote", (x - 1.35 * s, qr[1] - 0.25 * s, 1.2 * s, 1.4 * s), [("mark", "“")],
                       start={"mark": 110 * s})
         ds.append(md)
-        art.append(lambda: na.chalk_underline(slide, qr[0], qr[1] + qr[3] + 0.08 * s, min(qr[2], 0.22 * W),
-                                              k.P["text_accents"][0], seed=8))
+
+        def underline():
+            # the chalk runs under the WHOLE last line, to where its ink ends: capped at 22% of the page it stopped
+            # mid-phrase ("is accom|plished.") — drawn after the words, which fix where the last line begins and ends
+            ln = _last_line_of(k, "quote", slide, qr)
+            if ln is not None:
+                na.chalk_underline(slide, ln[0], qr[1] + qr[3] + 0.08 * s, ln[1], k.P["text_accents"][0], seed=8)
+        art.append(underline)
     _cb_smudges(k, slide, list(r.values()) + [(x - 1.35 * s, 0.0, 1.2 * s, H)], seed=4)
-    _run_all(art + ds)
+    _run_all(ds + art)
     return r
 
 
