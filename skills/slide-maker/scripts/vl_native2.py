@@ -1188,14 +1188,18 @@ def chip_size(k, text, max_w, field):
     return sz if na.chip_width(text, sz, face) <= max_w else None
 
 
-def tl_chip(k, slide, x, y, text, max_w, *, field="tag", fill=None):
-    """A lime pill (or `fill`) for the caller's words, the darker or lighter ink by contrast. None when it cannot fit."""
-    sz = chip_size(k, text, max_w, field)
+def tl_chip(k, slide, x, y, text, max_w, *, field="tag", fill=None, size=None, right=None):
+    """A lime pill (or `fill`) for the caller's words, the darker or lighter ink by contrast. None when it cannot fit.
+    `size` sets the pill at that size (a page's pills share one; it must fit `max_w`); `right` sets its RIGHT edge at
+    that x instead of its left at `x`."""
+    sz = chip_size(k, text, max_w, field) if size is None else size
     if sz is None:
         return None
     fill = fill or k.P["lime"]
     ink = k.P["chip_ink"] if vl._contrast(k.P["chip_ink"], fill) >= vl._contrast("FFFFFF", fill) else "FFFFFF"
     role = vl.TYPE[k.name][field][1]
+    if right is not None:
+        x = right - na.chip_width(text, sz, k.face(role))
     return na.chip(slide, x, y, text, size=sz, fill=fill, ink=ink, face=k.face(role), ea_face=k.ea_face(role, text))
 
 
@@ -1317,7 +1321,8 @@ def _tl_points(k, slide, f, image):
     rows = -(-n // ncol)
     pitch = (bottom - top) / rows
     tag_sz = vl.TYPE["tally"]["tag"][0] * s
-    tw = (max(na.chip_width(t, tag_sz, k.face("body")) for t in tags) + 0.3 * s) if tags else 0.0
+    pill_w = max(na.chip_width(t, tag_sz, k.face("body")) for t in tags) if tags else 0.0       # the widest pill, whole
+    tw = pill_w + 0.3 * s if tags else 0.0
     beside = bool(tags) and tw <= 0.30 * w
     nw = (1.7 if alt() == 0 else 1.1) * s
     rows_ = []
@@ -1332,17 +1337,27 @@ def _tl_points(k, slide, f, image):
                                               for i, (x, ry, _t) in enumerate(rows_)])
     words = plan_together(k, slide, "points", [(tcol, [(x_, t) for x_, t in (("item_head", hd), ("item_line", ln)) if t],
                                                 {"anchor": "middle"}) for (hd, ln), (_x, _y, tcol) in zip(pts, rows_)])
+    # ONE pill size for the page — the smallest any tag needs to fit its pill — and, beside the words, every pill's right
+    # edge on the column's margin (each shrank to fit alone: 11 / 12 / 12pt, and a right edge 0.12in either side of ragged)
+    mws = [((pill_w + 1e-6) if beside else tcol[2]) for (_x, _y, tcol) in rows_]   # (+1e-6: the widest tag is exactly pill_w)
+    pill_sz = None
+    if tags:
+        fits = [chip_size(k, t, mw, "tag") for t, mw in zip(tags, mws)]
+        for t, z in zip(tags, fits):
+            if z is None:
+                raise vl.VLTextOverflow("tally.points(): the tag {!r} does not fit its pill even at the floor size — "
+                                        "shorten it".format(t[:40]))
+        pill_sz = min(fits)
     for i, ((x, ry, tcol), (_nr, nd), (_tr, td_)) in enumerate(zip(rows_, nums, words)):
         art.append(lambda x=x, ry=ry: na.seg(slide, x, ry - 0.12 * s, x + w, ry - 0.12 * s, k.P["ink"], w=0.6, alpha=0.5))
         draws += [nd, td_]
         if tags:
-            mw = (tw - 0.3 * s) if beside else tcol[2]
-            if chip_size(k, tags[i], mw, "tag") is None:
-                raise vl.VLTextOverflow("tally.points(): the tag {!r} does not fit its pill even at the floor size — "
-                                        "shorten it".format(tags[i][:40]))
-            ch = tag_sz / 72.0 * 1.9
-            cx_, cy_ = (x + w - tw + 0.3 * s, ry + (pitch - 0.24 * s - ch) / 2.0) if beside else (tcol[0], tcol[1] + tcol[3] + 0.1 * s)
-            draws.append(lambda t=tags[i], cx_=cx_, cy_=cy_, mw=mw: tl_chip(k, slide, cx_, cy_, t, mw))
+            ch = pill_sz / 72.0 * (2.4 if dk._has_cjk(tags[i]) else 2.1)               # the pill's own height (na.chip)
+            if beside:
+                cx_, cy_, rt = x + w, ry + (pitch - 0.24 * s - ch) / 2.0, x + w
+            else:
+                cx_, cy_, rt = tcol[0], tcol[1] + tcol[3] + 0.1 * s, None
+            draws.append(lambda t=tags[i], cx_=cx_, cy_=cy_, mw=mws[i], rt=rt: tl_chip(k, slide, cx_, cy_, t, mw, size=pill_sz, right=rt))
     yl = top + rows * pitch - 0.12 * s
     for c in range(ncol):
         xc = x0 + c * (w + gap)

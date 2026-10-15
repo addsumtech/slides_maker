@@ -355,6 +355,47 @@ for _g in ("light", "green"):
         check(not _mats and _whole, "journal/light figure: unchanged — no mat, the whole picture ({} mats)".format(len(_mats)))
 dk.set_theme(None)
 
+# ── Task 5 (C): tally: the pills share one size per page and stand on the column's right margin ──
+def _pills(slide, k):
+    """[(text, size_pt, right_edge_in)] of the page's pills: the lime rounded boxes and the words set on them."""
+    lime = vl._hex(k.P["lime"]).upper()
+    out = []
+    for sh in slide.shapes:
+        if sh.shape_type == _MST.AUTO_SHAPE and sh.fill.type == 1 and str(sh.fill.fore_color.rgb).upper() == lime:
+            x, y, w, h = _rect(sh)
+            for t in slide.shapes:
+                if getattr(t, "has_text_frame", False) and t.text_frame.text.strip() and abs(_rect(t)[0] - x) < 0.005 \
+                        and abs(_rect(t)[1] - y) < 0.005:
+                    out.append((t.text_frame.text, t.text_frame.paragraphs[0].runs[0].font.size.pt, x + w))
+    return out
+
+
+_TL_PTS = [("New members joined", "Mostly through word of mouth"), ("Tools went out on loan", "Drills and ladders led the list"),
+           ("Items came back repaired", "Fixed at the monthly evening")]
+_TL_LONG = "A tag that is much too long for its pill and has to shrink to fit its column"
+for _g in ("light", "night"):
+    for _tag, _tags, _cv in (("3 tags", ["Members", "Loans", "Repairs"], (13.333, 7.5)),
+                             ("CJK tags", ["成员", "借出", "修复"], (13.333, 7.5)),
+                             ("a long tag on a square page", ["Short", _TL_LONG, "Mid tag"], (7.5, 7.5)),
+                             ("a long tag on a portrait page", ["Short", _TL_LONG, "Mid tag"], (7.5, 13.333))):
+        _prs = dk.blank_deck(*_cv)
+        with contextlib.redirect_stdout(io.StringIO()):
+            _k = vl.use("tally", _prs, ground=_g)
+            _k.points(_k.new_slide(), title="Where the quarter went", tags=_tags, items=_TL_PTS)
+        _pl = _pills(_prs.slides[0], _k)
+        _sizes = sorted({round(z_, 2) for _t, z_, _r in _pl})
+        _rights = [r_ for _t, _z, r_ in _pl]
+        check(len(_pl) == 3 and len(_sizes) == 1,
+              "tally/{} points ({}): the pills share one size ({}; was 11.0/12.0 beside the words, 9–12 for a long tag)".format(
+                  _g, _tag, "/".join("{:g}pt".format(z_) for z_ in _sizes)))
+        if "long tag" not in _tag:                   # (under their words, a long tag's pills hang left, flush to the words)
+            _edge = 0.93 * _cv[0]
+            check(len(_pl) == 3 and all(abs(r_ - _edge) <= 0.005 for r_ in _rights),
+                  "tally/{} points ({}): every pill's right edge is the margin at {:.2f}in ({}; was ragged by up to 0.16in)".format(
+                      _g, _tag, _edge, ", ".join("{:.3f}".format(r_) for r_ in _rights)))
+        check(not _hard(_prs, "tlp_{}_{}".format(_g, _tag.replace(" ", "_"))), "tally/{} points ({}): lint-clean".format(_g, _tag))
+dk.set_theme(None)
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:
