@@ -1171,7 +1171,9 @@ def _place_image(k, slide, image, rect, lay, page, keep_clear=None):
         for im in imgs[:4] if treat == "collage" else imgs[:1]:
             path, alt, slot_id = _resolve(k, im)
             items.append({"slot": slot_id, "plan": k.plan, "image_dir": k.image_dir} if slot_id else {"path": path, "alt": alt})
-        cl.collage(slide, (x, y, w, h), items, seed=len(slide.shapes) + 7, keep_clear=keep_clear, max_tilt=5.0)
+        pp = _paper(k)
+        cl.collage(slide, (x, y, w, h), items, seed=len(slide.shapes) + 7, keep_clear=keep_clear, max_tilt=5.0,
+                   **({"paper": pp[0], "tape_color": pp[1]} if pp else {}))
         return None
     first = image[0] if isinstance(image, (list, tuple)) else image
     path, alt, slot_id = _resolve(k, first)
@@ -1277,6 +1279,29 @@ def _feathered(path, tint=None):
     return str(out)
 
 
+# A language's PAPER on a dark ground — the border of a print and the card of a note: (paper, the washi tape that holds it).
+# Collage's white prints and its ground-coloured notes were the brightest and the darkest things on slate; both are cream
+# paper with the LIGHT ground's inks on it. Kraft has no entry: its paper is its panel, white, as always.
+PAPER_ON_DARK = {"collage": ("E8DFC9", "CDBE95")}
+
+
+def _paper(k):
+    """(paper, tape) for the paper things on this deck's ground, or None when they are the ground's panel and EDE3C8."""
+    return PAPER_ON_DARK.get(k.name) if REGISTRY[k.name]["grounds"][k.ground]["dark"] else None
+
+
+def _paper_kit(k):
+    """The kit to set words ON this ground's paper: the language's light-ground inks when its paper is cream on a dark
+    ground, else the kit itself."""
+    if not _paper(k):
+        return k
+    import copy
+    kk = copy.copy(k)
+    light = LANGS[k.name]["palette"]
+    kk.P = dict(k.P, ink=light["ink"], mute=light["mute"], text_accents=list(light["text_accents"]))
+    return kk
+
+
 def _readable_under(fill, ink, ground, floor=3.0):
     """`fill` blended toward `ground` until `ink` reads on it at `floor`:1 (large text) — a decorative disc under
     a figure must not drown it: soft dusk's light "1" sat on the pale sage disc at 1.87:1 (2026-10-04)."""
@@ -1357,10 +1382,11 @@ def _deco_before(k, slide, page, lay, img_rect, col, index):
     if "note" in lay["deco"] and col and img_rect is None:
         x, y, w, h = col
         cx, cy, cw, ch, rot = _card_geom(lay, col)
-        card = dk.box(slide, cx, cy, cw, ch, fill=_hex(p["panel"]))    # the ground's own paper (white on kraft)
+        pp = _paper(k)
+        card = dk.box(slide, cx, cy, cw, ch, fill=pp[0] if pp else _hex(p["panel"]))    # the ground's own paper (white on kraft)
         card.rotation = rot
         import ornaments
-        dk.decorative(ornaments.tape(slide, x + w * 0.38, y - 0.36, w * 0.24, 0.30, "EDE3C8", rotation=2.0,
+        dk.decorative(ornaments.tape(slide, x + w * 0.38, y - 0.36, w * 0.24, 0.30, pp[1] if pp else "EDE3C8", rotation=2.0,
                                      seed=index, holds=card),
                       "washi tape holding the note card; ornament, nothing rides on seeing it")
     # "circle" is drawn by _flow under the number itself (an underlay), never across the column
@@ -1506,8 +1532,9 @@ def _compose_one(k, slide, page, fields, image, lay):
     if page == "data" and img_rect is None and items:
         rects, draw = _data_hero(k, slide, page, col, items, lay, underlay, orient)
     else:
-        rects, draw = _flow(k, slide, page, col, items, anchor=lay["anchor"], align=lay["align"],
-                            underlay=underlay) if items else ({}, None)
+        # the words of a note are set on its paper: on a dark ground that is cream, with the light ground's inks
+        rects, draw = _flow(_paper_kit(k) if "note" in lay["deco"] else k, slide, page, col, items, anchor=lay["anchor"],
+                            align=lay["align"], underlay=underlay) if items else ({}, None)
     if rects:
         xs = [r[0] for r in rects.values()] + [r[0] + r[2] for r in rects.values()]
         ys = [r[1] for r in rects.values()] + [r[1] + r[3] for r in rects.values()]
@@ -1695,11 +1722,11 @@ def _points_led(k, slide, fields, image):
                 if k.name == "storybook":
                     inner = (inner[0] + 0.42 * s, inner[1], inner[2] - 0.42 * s, inner[3])
                 specs.append((inner, its, dict(anchor="top", start=dict(big))))
-            words = v2.plan_together(k, slide, "points", specs)
+            words = v2.plan_together(_paper_kit(k), slide, "points", specs)         # the words sit on the notes' paper
             if not nums:
                 return words
             out = []
-            for (nr, nd), (wr, wd) in zip(v2.plan_together(k, slide, "points", nums), words):
+            for (nr, nd), (wr, wd) in zip(v2.plan_together(_paper_kit(k), slide, "points", nums), words):
                 def both(nd=nd, wd=wd):
                     nd(); wd()
                 both.sizes = getattr(wd, "sizes", {})
@@ -1765,10 +1792,11 @@ def _points_led(k, slide, fields, image):
             dk.decorative(dk.box(slide, x, y, w, h, fill=_hex(P["panel"]), round=True, r=0.22),
                           "a soft panel behind one point")
         elif k.name == "collage":
-            # the language's own note colour for this ground (white on kraft, slate on slate): a hard-coded white note
-            # put slate's yellow numbers on white at 1.68:1 (the lint, 2026-10-09)
-            dk.decorative(dk.box(slide, x, y, w, h, fill=_hex(P["panel"])), "a paper note holding one point")
-            tp = ornaments.tape(slide, x + w * 0.38, y - 0.14 * s, w * 0.24, 0.26 * s, "EDE3C8", rotation=2.0)
+            # the language's own note paper for this ground (white on kraft, cream on slate, with the light ground's inks):
+            # a hard-coded white note put slate's yellow numbers on white at 1.68:1 (the lint, 2026-10-09)
+            pp = _paper(k)
+            dk.decorative(dk.box(slide, x, y, w, h, fill=pp[0] if pp else _hex(P["panel"])), "a paper note holding one point")
+            tp = ornaments.tape(slide, x + w * 0.38, y - 0.14 * s, w * 0.24, 0.26 * s, pp[1] if pp else "EDE3C8", rotation=2.0)
             dk.decorative(tp, "washi tape holding the note; ornament")
             dk.overlap_intent(tp, "washi tape across the note's top edge holds it to the page: the overlap is the tape")
         elif k.name == "editorial":

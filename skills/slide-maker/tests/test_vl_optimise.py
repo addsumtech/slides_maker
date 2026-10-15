@@ -319,6 +319,79 @@ for g in vl.VARIANTS["soft"]:
                         page, kw["number"], "landscape" if W > H else "portrait", "" if pic else " (no picture)", mine[:1]))
 dk.set_theme(None)
 
+# ── Task 5 (A): collage: on slate the prints and notes are cream paper with dark ink; kraft stays exactly as it is ──
+# Every print on slate kept its FFFFFF border (14.4:1 on the ground — the brightest thing on a dark page) and the quote
+# note was the ground's own dark panel 3B3934 (1.24:1 on the ground, a dark slab with tape the only paper cue). Both are
+# cream now (E8DFC9), the note's words in the light ground's dark inks; kraft's white borders, white notes and ink are as before.
+def _lumh(c):
+    return vl._lum(c)
+
+
+def _frames(slide):
+    """(frame fill, picture) for each print on `slide`: the filled box drawn right under the picture."""
+    sh = list(slide.shapes)
+    return [(_hexc(sh[i - 1].fill.fore_color.rgb), s_) for i, s_ in enumerate(sh)
+            if s_.shape_type == 13 and i and sh[i - 1].shape_type == 1 and sh[i - 1].fill.type == 1]
+
+
+def _notes_text(slide):
+    """[(card fill, run colour, text)] for every run of text that sits on a filled card (the smallest one holding the
+    text box's centre), excluding the page's own ground."""
+    out = []
+    cards = [sh for sh in slide.shapes if sh.shape_type == 1 and sh.fill.type == 1
+             and sh.width * sh.height < 0.5 * 13.333 * 7.5 * 914400 ** 2 and sh.height > 0.5 * 914400]
+    for t in _text_shapes(slide):
+        cx, cy = t.left + t.width / 2, t.top + t.height / 2
+        held = [c for c in cards if c.left - 0.2 * 914400 <= cx <= c.left + c.width + 0.2 * 914400
+                and c.top - 0.2 * 914400 <= cy <= c.top + c.height + 0.2 * 914400]
+        if not held:
+            continue
+        card = min(held, key=lambda c: c.width * c.height)
+        for p in t.text_frame.paragraphs:
+            for r in p.runs:
+                if r.text.strip() and r.font.color and r.font.color.type is not None:
+                    out.append((_hexc(card.fill.fore_color.rgb), _hexc(r.font.color.rgb), r.text.strip()))
+    return out
+
+
+_CPTS = [("Your broken thing", "Any size that fits through the door."), ("An hour", "Most repairs take less."),
+         ("Curiosity", "Volunteers explain every step.")]
+for g in vl.VARIANTS["collage"]:
+    ground = vl.VARIANTS["collage"][g]["palette"]["ground"]
+    prs, k = _deck_at("collage", g, 13.333, 7.5)
+    pic = str(vl.ASSETS / "photo/hall-repair.jpg")
+    slides = {}
+    with contextlib.redirect_stdout(io.StringIO()):
+        slides["quote"] = k.new_slide(); k.quote(slides["quote"], quote="The visitor holds the screwdriver; the volunteer only guides.",
+                                                 attribution="How every repair begins", image=pic)
+        slides["points"] = k.new_slide(); k.points(slides["points"], kicker="A repair café", title="Three things to bring", items=_CPTS,
+                                                   image=str(vl.ASSETS / "photo/tools-tray.jpg"))
+        slides["data"] = k.new_slide(); k.data(slides["data"], number="1", label="evening a month", note="Short enough.",
+                                               image=str(vl.ASSETS / "photo/jacket-mend.jpg"))
+        slides["cover"] = k.new_slide(); k.cover(slides["cover"], kicker="Repair café", title="Bring it broken",
+                                                 image=[str(vl.ASSETS / x) for x in vl.SAMPLE_IMAGES["photo"][:3]])
+    fr = [f for sl in slides.values() for f in _frames(sl)]
+    if g == "light":
+        check(fr and all(f == "FFFFFF" for f, _p in fr), "collage/kraft: every print keeps its white border exactly ({} prints)".format(len(fr)))
+        nt = _notes_text(slides["quote"]) + _notes_text(slides["points"])
+        check(nt and all(c == "FFFFFF" and i != "FFFFFF" and vl._contrast(c, i) >= 4.5 for c, i, _t in nt),
+              "collage/kraft: notes stay white with the language's own ink ({} runs)".format(len(nt)))
+        tapes = [_hexc(sh.fill.fore_color.rgb) for sl in slides.values() for sh in sl.shapes
+                 if sh.shape_type == 5 and sh.fill.type == 1]
+        check(tapes and set(tapes) == {"EDE3C8"}, "collage/kraft: the tape stays washi EDE3C8 ({} strips: {})".format(len(tapes), sorted(set(tapes))))
+    else:
+        check(fr and all(0.55 <= _lumh(f) <= 0.80 and vl._contrast(f, ground) >= 4.5 for f, _p in fr),
+              "collage/slate: every print has a cream border, not white: {} prints, luminance {} (white is 1.0), {:.1f}:1 on the ground".format(
+                  len(fr), sorted({round(_lumh(f), 2) for f, _p in fr}), min([vl._contrast(f, ground) for f, _p in fr] or [0])))
+        for pg in ("quote", "points"):
+            nt = _notes_text(slides[pg])
+            worst = min([vl._contrast(c, i) for c, i, _t in nt] or [0])
+            check(nt and all(_lumh(c) >= 0.55 and _lumh(i) <= 0.2 and vl._contrast(c, i) >= 4.5 for c, i, _t in nt),
+                  "collage/slate {}: every note is cream paper with dark ink on it — {} runs, card luminance {}, ink luminance <= {:.2f}, "
+                  "worst {:.1f}:1".format(pg, len(nt), sorted({round(_lumh(c), 2) for c, _i, _t in nt}),
+                                          max([_lumh(i) for _c, i, _t in nt] or [0]), worst))
+dk.set_theme(None)
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

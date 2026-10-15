@@ -53,8 +53,10 @@ for name, var in CONTRAST.items():
     if name == "collage":
         qs = prs.slides[4]
         fills = [str(sh.fill.fore_color.rgb) for sh in qs.shapes if sh.shape_type == 1 and sh.fill.type == 1]
-        check("FFFFFF" in fills and vl.VARIANTS["collage"]["slate"]["palette"]["panel"] in fills,
-              "collage slate: prints stay white, the note card takes the variant panel: {}".format(fills))
+        # Phase 3 (2026-10-15): the prints' borders and the note card are CREAM paper on slate — white prints were the
+        # brightest thing on a dark page and the note, the ground's own panel, a dark slab; kraft keeps white
+        check("FFFFFF" not in fills and fills.count("E8DFC9") >= 2,
+              "collage slate: the prints and the note card are cream paper, neither white nor the dark panel: {}".format(fills))
         hl = [(r_.font.color.rgb, r_._r.find(".//" + dk.qn("a:highlight"))) for sh in prs.slides[1].shapes                 # slide 0 is the rs.card page; the cover is next
               if getattr(sh, "has_text_frame", False) for p_ in sh.text_frame.paragraphs for r_ in p_.runs
               if r_._r.find(".//" + dk.qn("a:highlight")) is not None]

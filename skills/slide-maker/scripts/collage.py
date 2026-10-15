@@ -72,10 +72,12 @@ def _geometry(region, n, rnd, keep_clear, max_tilt):
                      .format(n, tuple(round(v, 2) for v in region), MAX_COVER, keep_clear))
 
 
-def collage(slide, region, items, *, seed=0, keep_clear=None, tape=True, border=0.07, max_tilt=6.0):
+def collage(slide, region, items, *, seed=0, keep_clear=None, tape=True, border=0.07, max_tilt=6.0,
+            paper="FFFFFF", tape_color="EDE3C8"):
     """Place 1-4 images as prints in `region` (x, y, w, h). Each item is a path, or a dict with "path"
     and "alt", or a dict with "slot", "plan" and "image_dir" (placed through image_series.slot_picture,
-    so the image-series tag is kept). Returns the picture shapes."""
+    so the image-series tag is kept). `paper` is the print's border colour and `tape_color` the washi strip
+    that holds it (white and EDE3C8 unless a dark page asks for a cream print). Returns the picture shapes."""
     import ornaments
     if not (1 <= len(items) <= 4):
         raise ValueError("collage(): 1-4 items, got {}".format(len(items)))
@@ -84,7 +86,7 @@ def collage(slide, region, items, *, seed=0, keep_clear=None, tape=True, border=
     out = []
     for i, (it, (px, py, pw, ph), rot) in enumerate(zip(items, boxes, rots)):
         it = {"path": it} if isinstance(it, str) else dict(it)
-        frame = dk.box(slide, px, py, pw, ph, fill="FFFFFF")
+        frame = dk.box(slide, px, py, pw, ph, fill=paper)
         frame.rotation = rot
         dk.overlap_intent(frame, "a print's white border under its own photo")
         b = border * min(pw, ph)
@@ -99,7 +101,7 @@ def collage(slide, region, items, *, seed=0, keep_clear=None, tape=True, border=
         dk.overlap_intent(pic, "a collage print overlapping its neighbour by design")
         if tape and i % 2 == 0:                     # a strip across the print's top edge, held by the print
             tw, th = pw * 0.34, min(0.32, ph * 0.16)
-            t_ = ornaments.tape(slide, px + (pw - tw) / 2.0, py - th * 0.45, tw, th, "EDE3C8",
+            t_ = ornaments.tape(slide, px + (pw - tw) / 2.0, py - th * 0.45, tw, th, tape_color,
                                 rotation=rot - 3.0, seed=seed + i, holds=frame)
             # a pale washi strip on the white border is 1.28:1 — NON-TEXT CONTRAST, which holds the hand-off;
             # it carries nothing, so say so (the print it holds is the content)
