@@ -5,6 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 import deckkit as dk, visual_languages as vl, lint_deck
+import vl_native2 as vls
 
 ok, bad = [], []
 def check(cond, why):
@@ -180,10 +181,10 @@ def _lines_of(slide, vertical):
 
 
 def _text_eq(slide, text):
-    for sh in slide.shapes:
-        if getattr(sh, "has_text_frame", False) and not sh.is_placeholder and sh.text_frame.text.strip() == text:
-            return sh
-    return None
+    """The lowest drawn text box whose words are exactly `text` (a numeral "1" is also the running head's page number)."""
+    hits = [sh for sh in slide.shapes if getattr(sh, "has_text_frame", False) and not sh.is_placeholder
+            and sh.text_frame.text.strip() == text]
+    return max(hits, key=lambda sh: sh.top) if hits else None
 
 
 _BS_PT = [("Bring it broken", "Anything that switches on, unzips or wobbles is welcome."),
@@ -251,6 +252,107 @@ for _W, _H in ((13.333, 7.5), (7.5, 7.5), (7.5, 13.333), (10.0, 7.5)):
                                   ("98.6%", "of repairs held after a month", ""), ("三成", "的物品得到修复", "每一件都记录在档案里。")):
             _kk.data(_kk.new_slide(), number=_num, label=_lab, masthead="The Repair Weekly", **({"note": _note} if _note else {}))
     check(not _hard(_prs, "bsd_{}x{}".format(int(_W), int(_H))), "broadsheet data {}x{}: the three figures are lint-clean".format(_W, _H))
+dk.set_theme(None)
+
+# ── Task 5 (C): journal: the margin note's rule ends at its words, numerals stand on their heads' baseline, the green figure sits on a mat ──
+_JN_ITEMS = [("Three methods", "Same data, same metric."), ("Four accelerations", "From 2x to 8x."),
+             ("Five metrics", "Scored the same way.")]
+for _tag, _note in (("two-line note", "All runs on one scanner."),
+                    ("long note", "All runs on one scanner, with the same coil, the same protocol and the same reader. " * 9)):
+    for _g in ("light", "green"):
+        _prs, _k, _sl = _page("journal", _g, "points", title="What we compared", items=_JN_ITEMS, margin=_note)
+        _accent = vl._hex(_k.P["text_accents"][0]).upper()
+        _rule = [sh for sh in _sl.shapes if sh.shape_type == _MST.LINE and _rect(sh)[2] < 0.01 and _rect(sh)[3] > 0.3
+                 and str(sh.line.color.rgb).upper() == _accent]
+        _nt = _text_shape(_sl, _note[:12])
+        _lst = _text_shape(_sl, "Scored the same way")
+        _foot_n, _foot_l = _rect(_nt)[1] + _rect(_nt)[3], _rect(_lst)[1] + _rect(_lst)[3]
+        _end = _rect(_rule[0])[1] + _rect(_rule[0])[3] if _rule else -1
+        check(len(_rule) == 1 and abs(_end - max(_foot_n, _foot_l)) <= 0.06,
+              "journal/{} margin ({}): the note's rule ends at the lower of the note and the list ({:.2f}in; note {:.2f}, list {:.2f}; "
+              "was 6.90in)".format(_g, _tag, _end, _foot_n, _foot_l))
+        check(_end <= 6.90 + 0.01 and (_tag != "two-line note" or _end <= 6.9 - 0.5),
+              "journal/{} margin ({}): the rule is not the page's height ({:.2f}in of 6.90)".format(_g, _tag, _end))
+        check(not _hard(_prs, "jnm_{}_{}".format(_g, _tag.split("-")[0].split()[0])), "journal/{} margin ({}): lint-clean".format(_g, _tag))
+
+
+def _ink_bottom(img, rect, dpi, bg):
+    """The lowest row (in) of ink inside `rect` (in) of a rendered page: pixels that differ from the ground."""
+    from PIL import Image, ImageChops
+    x, y, w, h = [int(round(v * dpi)) for v in rect]
+    crop = img.crop((x, y, x + w, y + h)).convert("RGB")
+    d = ImageChops.difference(crop, Image.new("RGB", crop.size, bg)).convert("L").point(lambda v: 255 if v > 40 else 0)
+    box = d.getbbox()
+    return None if box is None else (y + box[3]) / dpi
+
+
+def _render_png(prs, tag, dpi=200):
+    """The first page of `prs` rendered by LibreOffice + pdftoppm (None when either is missing)."""
+    import shutil, subprocess
+    from PIL import Image
+    if not (shutil.which("soffice") and shutil.which("pdftoppm")):
+        return None
+    f = WORK / (tag + ".pptx")
+    prs.save(str(f))
+    prof = (WORK / "lo_profile").as_uri()
+    subprocess.run(["soffice", "-env:UserInstallation=" + prof, "--headless", "--convert-to", "pdf", "--outdir", str(WORK), str(f)],
+                   capture_output=True, timeout=240)
+    pdf = WORK / (tag + ".pdf")
+    if not pdf.exists():
+        return None
+    subprocess.run(["pdftoppm", "-r", str(dpi), "-f", "1", "-l", "1", "-png", str(pdf), str(WORK / tag)], capture_output=True, timeout=120)
+    png = sorted(WORK.glob(tag + "-*.png"))
+    return Image.open(png[0]).convert("RGB") if png else None
+
+
+# the numerals and the heads: baselines from the face metrics, then — where the faces and a renderer exist — measured on a render
+for _g in ("light", "green"):
+    _prs, _k, _sl = _page("journal", _g, "points", title="What we compared", items=_JN_ITEMS, margin="All runs on one scanner.")
+    _gaps = []
+    for _i, (_hd, _ln) in enumerate(_JN_ITEMS):
+        _nb, _hb = _text_eq(_sl, str(_i + 1)), _text_shape(_sl, _hd)
+        _zn = max(r.font.size.pt for p_ in _nb.text_frame.paragraphs for r in p_.runs)
+        _zh = max(r.font.size.pt for p_ in _hb.text_frame.paragraphs for r in p_.runs)
+        _gaps.append((_rect(_nb)[1] + vls.first_baseline(_k, "item_no", str(_i + 1), _zn)) - (_rect(_hb)[1] + vls.first_baseline(_k, "item_head", _hd, _zh)))
+    check(max(abs(g_) for g_ in _gaps) <= 0.01, "journal/{} points: each numeral's first baseline is its head's, by the faces' metrics "
+          "(max gap {:.3f}in; was 0.12in)".format(_g, max(abs(g_) for g_ in _gaps)))
+    if dk._font_substituted("Georgia") or dk._font_substituted("Times New Roman"):
+        continue                                       # no real faces here: the metrics above are all there is to measure
+    _img = _render_png(_prs, "jn_base_" + _g)
+    if _img is None:
+        continue
+    _bg = tuple(int(vl._hex(_k.P["ground"])[i:i + 2], 16) for i in (0, 2, 4))
+    _rows = []
+    for _i, (_hd, _ln) in enumerate(_JN_ITEMS):
+        _nb, _hb = _text_eq(_sl, str(_i + 1)), _text_shape(_sl, _hd)
+        _a, _b = _ink_bottom(_img, _rect(_nb), 200, _bg), _ink_bottom(_img, _rect(_hb), 200, _bg)
+        _rows.append(None if _a is None or _b is None else _a - _b)
+    check(all(r_ is not None for r_ in _rows) and max(abs(r_) for r_ in _rows) <= 0.025,
+          "journal/{} points: on a render, the numeral's ink stands on its head's baseline (bottoms differ by {} in; was ~0.12in)".format(
+              _g, ", ".join("{:+.3f}".format(r_) for r_ in _rows if r_ is not None)))
+
+_FIG = str(vl.ASSETS / "figure" / "illustrative-curves.jpg")
+for _g in ("light", "green"):
+    _prs, _k, _sl = _page("journal", _g, "image_text", title="Error grows with acceleration", body="Error against acceleration.",
+                          caption="Source: an illustrative figure", image=_FIG)
+    _pic = [sh for sh in _sl.shapes if sh.shape_type == _MST.PICTURE][0]
+    _pr = _rect(_pic)
+    _mats = [sh for sh in _sl.shapes if sh.shape_type == _MST.AUTO_SHAPE and sh.fill.type == 1
+             and str(sh.fill.fore_color.rgb).upper() == vl._hex(_k.P["ink"]).upper()
+             and _rect(sh)[0] <= _pr[0] and _rect(sh)[1] <= _pr[1]
+             and _rect(sh)[0] + _rect(sh)[2] >= _pr[0] + _pr[2] and _rect(sh)[1] + _rect(sh)[3] >= _pr[1] + _pr[3]]
+    from PIL import Image as _Im2
+    _iw, _ih = _Im2.open(_FIG).size
+    _whole = abs((_pr[2] / _pr[3]) - (_iw / _ih)) < 0.01 and not (_pic.crop_left or _pic.crop_right or _pic.crop_top or _pic.crop_bottom)
+    if _g == "green":
+        _m = _rect(_mats[0]) if _mats else None
+        _edges = [] if not _m else [_pr[0] - _m[0], _pr[1] - _m[1], _m[0] + _m[2] - _pr[0] - _pr[2], _m[1] + _m[3] - _pr[1] - _pr[3]]
+        check(len(_mats) == 1 and all(abs(e_ - 0.15) <= 0.01 for e_ in _edges) and _whole,
+              "journal/green figure: the whole picture sits on a 0.15in cream mat ({})".format(", ".join("{:.3f}".format(e_) for e_ in _edges)))
+        check(_m is not None and _m[0] >= 0.05 and _m[1] + _m[3] <= 7.5 - 0.55, "journal/green figure: the mat stays on the page, above the footer band")
+        check(not _hard(_prs, "jnfig_green"), "journal/green figure: lint-clean")
+    else:
+        check(not _mats and _whole, "journal/light figure: unchanged — no mat, the whole picture ({} mats)".format(len(_mats)))
 dk.set_theme(None)
 
 for line in ok:

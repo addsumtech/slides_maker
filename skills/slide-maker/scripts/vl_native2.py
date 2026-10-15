@@ -894,6 +894,21 @@ def _bs_points(k, slide, f, image):
 
 
 # ═══════════════════════════════════ journal 学术期刊 ═══════════════════════════════════
+def first_baseline(k, field, text, size):
+    """Inches from the top of a text box (dk.text: a 2pt inset, single spacing, CJK_LS for Chinese or Japanese) to the
+    baseline of its FIRST line, from the face's own metrics — its ascent plus the line gap a renderer puts above the
+    line (Times New Roman has one, Georgia none: a 30pt numeral and a 21pt head set at the same top sat 0.12in apart
+    on the baseline, measured on a render). Used to set two fields of different faces and sizes on one baseline."""
+    role = vl.TYPE[k.name][field][1]
+    cjk = dk._has_cjk(text)
+    face = (k.ea_face(role, text) if cjk else None) or dk.numeral_run_face(text, k.face(role))
+    fnt = dk._pil_font(face, size, vl._weight(k, field, text))
+    asc, desc = fnt.getmetrics()
+    line = getattr(fnt.font, "height", asc + desc)             # ascent + descent + the face's line gap
+    ls = dk.CJK_LS if cjk else 1.0
+    return (2.0 + ls * line / dk._MEAS_PREC - desc / dk._MEAS_PREC) / 72.0
+
+
 def jn_running_rect(k):
     W, H, s, o = ctx(k)
     return (0.07 * W, 0.035 * H, 0.66 * W, 0.32 * s)
@@ -1021,13 +1036,20 @@ def _jn_figure(k, slide, f, image):
         rects.update(sr); draws.append(sd)
         art.append(lambda: na.seg(slide, col[0], yl, col[0] + col[2], yl, k.P["ink"], w=0.4))
     path, alt_txt, slot = vl._resolve(k, image[0] if isinstance(image, (list, tuple)) else image)
+    # on a dark ground the figure (the caller's, usually a white-paper chart: the brightest object on the page, 12.5:1
+    # over the green) sits on a 0.15in mat in the page's paper tone, inside the area it had
+    mat = 0.15 * s if vl._lum(k.P["ground"]) < 0.2 else 0.0
+    area = (img[0] + mat, img[1] + mat, img[2] - 2 * mat, img[3] - 2 * mat)
     try:                                   # whole, and set at the top-left of its area like a printed figure — contained
         from PIL import Image as _Im       # and centred, a portrait photo floated with dead space on both sides
         iw, ih = _Im.open(path).size
-        sc = min(img[2] / iw, img[3] / ih)
-        img = (img[0], img[1], iw * sc, ih * sc)
+        sc = min(area[2] / iw, area[3] / ih)
+        img = (area[0], area[1], iw * sc, ih * sc)
     except Exception:
-        pass
+        img = area
+    if mat:
+        dk.decorative(dk.box(slide, img[0] - mat, img[1] - mat, img[2] + 2 * mat, img[3] + 2 * mat, fill=k.P["ink"]),
+                      "the paper mat the figure sits on")
     pic = dk.picture(slide, path, *img, fit="contain", alt=alt_txt)
     if slot:
         dk._compose_tag(pic, gen=slot)
@@ -1053,11 +1075,11 @@ def _jn_points(k, slide, f, image):
     bottom, list_bottom = H - 0.6, H - 0.6
     side = bool(mg) and o == "land" and alt() == 0
     lw = (0.62 if side else 0.86) * W
+    note_foot = None
     if mg:
         if side:
             mx = 0.07 * W + lw + 0.5 * s
-            mcol = (mx + 0.2 * s, ty, 0.93 * W - mx - 0.2 * s, bottom - ty)
-            art.append(lambda: na.seg(slide, mx, ty, mx, bottom, k.P["text_accents"][0], w=0.75))
+            mcol = (mx + 0.2 * s, ty, 0.93 * W - mx - 0.2 * s, bottom - ty)      # its rule is drawn once the words are placed
         else:                          # under the list: as tall as the note needs, up to 1.3in — not always 1.3in
             mw = 0.86 * W - 0.2 * s
             _m0, _d0 = flow(k, slide, "points", (0.07 * W + 0.2 * s, 0.0, mw, 1.3 * s),
@@ -1068,6 +1090,7 @@ def _jn_points(k, slide, f, image):
             list_bottom = bottom - mh - 0.3 * s
         _mr, md = flow(k, slide, "points", mcol, [("margin_h", caps(label("note", mg, k=k, f=f))), ("margin", mg)], anchor="top")
         draws.append(md)
+        note_foot = max(v[1] + v[3] for v in _mr.values())
     ncol = 2 if (alt() == 2 and n >= 3) else 1        # long copy, last resort: the findings in two columns
     gap = 0.4 * s
     cw = (lw - (ncol - 1) * gap) / ncol
@@ -1075,13 +1098,25 @@ def _jn_points(k, slide, f, image):
     slot = (list_bottom - ty) / rows
     nw = min(0.07 * W, 0.6 * s) if ncol == 2 else 0.07 * W
     cells = [(0.07 * W + (i % ncol) * (cw + gap), ty + (i // ncol) * slot) for i in range(n)]
-    nums = plan_together(k, slide, "points", [((x, y, nw, slot), [("item_no", str(i + 1))], {"anchor": "top"})
-                                              for i, (x, y) in enumerate(cells)])
     words = plan_together(k, slide, "points", [((x + nw, y, cw - nw, slot - 0.1 * s),
                                                 [(x_, t) for x_, t in (("item_head", hd), ("item_line", ln)) if t], {"anchor": "top"})
                                                for (hd, ln), (x, y) in zip(pts, cells)])
+
+    def numerals(dys):
+        return plan_together(k, slide, "points", [((x, y + dy, nw, slot), [("item_no", str(i + 1))], {"anchor": "top"})
+                                                  for i, ((x, y), dy) in enumerate(zip(cells, dys))])
+    nums = numerals([0.0] * n)
+    # each numeral stands on its head's baseline: the 30pt Times figure and the 21pt Georgia head, both set from the same
+    # top, differed by 0.12in (the numeral's box moves up by that; the head and the list do not move)
+    dys = [first_baseline(k, "item_head", hd, wd.sizes["item_head"]) - first_baseline(k, "item_no", str(i + 1), nd.sizes["item_no"])
+           if "item_head" in wd.sizes else 0.0
+           for i, ((hd, _ln), (_nr, nd), (_wr, wd)) in enumerate(zip(pts, nums, words))]
+    nums = numerals(dys)
     for (_nr, nd), (_tr, td_) in zip(nums, words):
         draws += [nd, td_]
+    if side:                           # the note's rule spans the note and the list — the lower of the two feet
+        foot = max([note_foot] + [v[1] + v[3] for tr, _d in words for v in tr.values()])
+        art.append(lambda: na.seg(slide, mx, ty, mx, min(bottom, max(foot, ty + 0.2)), k.P["text_accents"][0], w=0.75))
     _run_all(art + draws)
     return rects
 
