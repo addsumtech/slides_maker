@@ -527,6 +527,11 @@ def set_theme(theme):
     if unknown:
         raise ValueError("set_theme(): unknown role(s) {} — known: {}".format(sorted(unknown), sorted(_THEME_KEYS)))
     THEME = theme
+    import sys as _s
+    dc = _s.modules.get("designed_charts")     # matplotlib charts read their defaults from here (imported lazily)
+    if dc is not None:
+        dc.THEME_DEFAULTS = ({"palette": ["#" + c for c in THEME.get("series", [])], "dark": THEME.get("dark", False),
+                              "font": FONT} if THEME else {})
 
 
 def _on_surface(color, fill, target=4.5):

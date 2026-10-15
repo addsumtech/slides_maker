@@ -43,6 +43,7 @@ on the hue alone: the recipes pair it with a sign/label. ``scenario=None`` (the 
 pre-IBCS output unchanged. See references/data-viz.md → "IBCS notation".
 """
 import os
+import sys
 
 # CJK-capable font candidates, broad across OSes/name-variants (PingFang SC/HK/TC, Heiti SC/TC, …),
 # so chart labels in any language render a real glyph instead of tofu (□). matplotlib only USES a font
@@ -56,6 +57,30 @@ _CJK_CANDIDATES = [
     "Arial Unicode MS", "Sarasa Gothic SC", "WenQuanYi Zen Hei",
 ]
 _cjk_cache = None
+
+# The active visual language's chart defaults (deckkit.set_theme pushes them): used ONLY when a chart's own palette= /
+# dark= / font= is None, so an explicit argument always wins and an ordinary deck (no theme) draws as before.
+THEME_DEFAULTS = {}
+
+
+def _theme(palette, dark, font):
+    if palette is None and THEME_DEFAULTS.get("palette"):
+        pal = list(THEME_DEFAULTS["palette"])
+        # charts index fixed slots (points, mean line, limits …): a language with fewer series colours than that is
+        # padded with its OWN colours, cycled — readable on its ground, never a crash (Phase 2b designs four or more)
+        palette = (pal * 6)[:max(6, len(pal))]
+    if dark is None:
+        dark = bool(THEME_DEFAULTS.get("dark", False))
+    if font is None:
+        font = THEME_DEFAULTS.get("font")
+    return palette, dark, font
+
+
+_dk = sys.modules.get("deckkit")          # deckkit imported first and a language already active: start from its theme
+if _dk is not None and getattr(_dk, "THEME", None):
+    THEME_DEFAULTS = {"palette": ["#" + c for c in _dk.THEME.get("series", [])], "dark": _dk.THEME.get("dark", False),
+                      "font": _dk.FONT}
+
 
 def _available_cjk():
     global _cjk_cache
@@ -165,8 +190,9 @@ def _per_bar_scenarios(scenario, n, recipe):
     return [scenario] * n
 
 
-def donut_kpi(out, segments, center_value, center_label, *, palette=None, dark=False, font=None, figsize=(5.2, 4.0)):
+def donut_kpi(out, segments, center_value, center_label, *, palette=None, dark=None, font=None, figsize=(5.2, 4.0)):
     """Part-to-whole donut with a headline KPI in the hole. segments = [(label, value), ...]."""
+    palette, dark, font = _theme(palette, dark, font)   # the active visual language, unless passed
     if not segments:
         raise ValueError("donut_kpi needs at least one segment")
     plt, ink, grid, muted = _mpl(dark, font)
@@ -186,13 +212,14 @@ def donut_kpi(out, segments, center_value, center_label, *, palette=None, dark=F
     return _save(fig, out)
 
 
-def dumbbell(out, rows, *, palette=None, dark=False, font=None, highlight=None, a_label="before", b_label="after",
+def dumbbell(out, rows, *, palette=None, dark=None, font=None, highlight=None, a_label="before", b_label="after",
              favorable_color=None, unfavorable_color=None, figsize=(6.6, 4.0)):
     """Gap between two values per category. rows = [(label, value_a, value_b), ...].
     Variance semantics (IBCS): pass ``favorable_color``/``unfavorable_color`` to colour each row's
     connector + "after" dot by direction of change — favorable when value_b >= value_a (pass the
     colours swapped when *down* is good, e.g. cost). Passing either turns variance mode on (the
     other defaults to the standard green/red pair); both ``None`` (default) keeps the accent look."""
+    palette, dark, font = _theme(palette, dark, font)   # the active visual language, unless passed
     plt, ink, grid, muted = _mpl(dark, font)
     pal = list(palette) if palette else ["#5B4BE0", "#00A6A6", "#F2A03D"]
     acc, acc2, neutral = pal[0], (pal[1] if len(pal) > 1 else pal[0]), "#9AA0AE"
@@ -228,7 +255,7 @@ def dumbbell(out, rows, *, palette=None, dark=False, font=None, highlight=None, 
     return _save(fig, out)
 
 
-def distribution(out, groups, *, palette=None, dark=False, font=None, highlight=None,
+def distribution(out, groups, *, palette=None, dark=None, font=None, highlight=None,
                  kind="auto", err="sd", value_label="", show_n=True, jitter=True,
                  ref=None, ref_label="", figsize=(6.6, 4.0), seed=0):
     """SAMPLE DATA — the spread, not just the average. groups = [(label, [v, v, ...]), ...].
@@ -254,6 +281,7 @@ def distribution(out, groups, *, palette=None, dark=False, font=None, highlight=
     `show_n` puts n under each group label. `ref`/`ref_label` draw a baseline (a prior SOTA, a
     clinical threshold). `highlight` = index of the one group in the accent, the rest neutral.
     """
+    palette, dark, font = _theme(palette, dark, font)   # the active visual language, unless passed
     import numpy as np
     plt, ink, grid, muted = _mpl(dark, font)
     pal = list(palette) if palette else ["#5B4BE0", "#00A6A6", "#F2A03D"]
@@ -365,7 +393,7 @@ def distribution(out, groups, *, palette=None, dark=False, font=None, highlight=
     return _save(fig, out)
 
 
-def marimekko(out, columns, categories, *, palette=None, dark=False, font=None, highlight=None,
+def marimekko(out, columns, categories, *, palette=None, dark=None, font=None, highlight=None,
               width_label="", gap=0.006, min_pct_label=6.0, show_width=True, figsize=(7.0, 4.2)):
     """TWO dimensions at once: column WIDTH = how big the segment is, HEIGHT = how it splits.
 
@@ -383,6 +411,7 @@ def marimekko(out, columns, categories, *, palette=None, dark=False, font=None, 
     proportions survive it. `width_label` (e.g. "$B") annotates the size axis; `show_width` prints
     each segment's size under its label. `highlight` = index of the ONE category to keep in accent.
     """
+    palette, dark, font = _theme(palette, dark, font)   # the active visual language, unless passed
     plt, ink, grid, muted = _mpl(dark, font)
     pal = list(palette) if palette else ["#5B4BE0", "#00A6A6", "#F2A03D", "#D9463B", "#8A93A6"]
     neutral = "#C2C6D2"
@@ -462,7 +491,7 @@ def marimekko(out, columns, categories, *, palette=None, dark=False, font=None, 
     return _save(fig, out)
 
 
-def radar(out, axes_labels, series, *, palette=None, dark=False, font=None, highlight=None,
+def radar(out, axes_labels, series, *, palette=None, dark=None, font=None, highlight=None,
           axis_range=None, value_fmt="{:g}", fill_alpha=0.13, figsize=(5.0, 4.6)):
     """A MULTIVARIATE PROFILE across 3-8 axes -- the SHAPE of a trade-off, for <=3 things.
 
@@ -484,6 +513,7 @@ def radar(out, axes_labels, series, *, palette=None, dark=False, font=None, high
     are the only honest option. Reach for radar when the SHAPE of a profile -- balanced vs spiky --
     is itself the message.
     """
+    palette, dark, font = _theme(palette, dark, font)   # the active visual language, unless passed
     import numpy as np
     plt, ink, grid, muted = _mpl(dark, font)
     pal = list(palette) if palette else ["#5B4BE0", "#00A6A6", "#F2A03D"]
@@ -557,8 +587,9 @@ def radar(out, axes_labels, series, *, palette=None, dark=False, font=None, high
     return _save(fig, out)
 
 
-def slope(out, series, *, palette=None, dark=False, font=None, highlight=None, t0="", t1="", figsize=(5.4, 4.2)):
+def slope(out, series, *, palette=None, dark=None, font=None, highlight=None, t0="", t1="", figsize=(5.4, 4.2)):
     """Rank/level change between TWO points in time. series = [(label, start, end), ...]."""
+    palette, dark, font = _theme(palette, dark, font)   # the active visual language, unless passed
     plt, ink, grid, muted = _mpl(dark, font)
     cols = _palette(palette, len(series), highlight, "#C2C6D2")
     fig, ax = plt.subplots(figsize=figsize)
@@ -575,9 +606,10 @@ def slope(out, series, *, palette=None, dark=False, font=None, highlight=None, t
     return _save(fig, out)
 
 
-def dual_axis(out, x, left, right, *, left_label="", right_label="", palette=None, dark=False, font=None,
+def dual_axis(out, x, left, right, *, left_label="", right_label="", palette=None, dark=None, font=None,
               left_fmt="{:g}", right_fmt="{:g}", figsize=(6.8, 4.0)):
     """Two trends on different scales — the classic 'A rises while B falls' tradeoff."""
+    palette, dark, font = _theme(palette, dark, font)   # the active visual language, unless passed
     if not x or not left or not right:
         raise ValueError("dual_axis needs non-empty x, left, right")
     plt, ink, grid, muted = _mpl(dark, font)
@@ -600,8 +632,9 @@ def dual_axis(out, x, left, right, *, left_label="", right_label="", palette=Non
     return _save(fig, out)
 
 
-def bubble_trend(out, points, *, palette=None, dark=False, font=None, trend=True, xlabel="", ylabel="", figsize=(6.6, 4.2)):
+def bubble_trend(out, points, *, palette=None, dark=None, font=None, trend=True, xlabel="", ylabel="", figsize=(6.6, 4.2)):
     """x vs y with a size dimension + an optional fair-value trend line. points = [(x,y,size,label)]."""
+    palette, dark, font = _theme(palette, dark, font)   # the active visual language, unless passed
     plt, ink, grid, muted = _mpl(dark, font)
     pal = list(palette) if palette else ["#5B4BE0"]
     acc = pal[0]
@@ -625,11 +658,12 @@ def bubble_trend(out, points, *, palette=None, dark=False, font=None, trend=True
     return _save(fig, out)
 
 
-def pareto(out, items, *, palette=None, dark=False, font=None, figsize=(6.8, 4.0), scenario=None):
+def pareto(out, items, *, palette=None, dark=None, font=None, figsize=(6.8, 4.0), scenario=None):
     """Ranked bars + cumulative % line — the 'vital few' that drive the total. items=[(label,value)].
     ``scenario`` (IBCS): "actual"/"prior"/"plan"/"forecast" for the whole chart, or a per-item
     sequence (kept aligned through the ranking sort) — bars then take the scenario fill (solid
     ink / light grey / hollow / hatched) instead of the accent. ``None`` = the accent as before."""
+    palette, dark, font = _theme(palette, dark, font)   # the active visual language, unless passed
     plt, ink, grid, muted = _mpl(dark, font)
     pal = list(palette) if palette else ["#5B4BE0"]; acc = pal[0]
     scen = _per_bar_scenarios(scenario, len(items), "pareto")
@@ -655,7 +689,7 @@ def pareto(out, items, *, palette=None, dark=False, font=None, figsize=(6.8, 4.0
     return _save(fig, out)
 
 
-def waterfall(out, items, *, palette=None, dark=False, font=None, total_label="Total", figsize=(6.8, 4.0),
+def waterfall(out, items, *, palette=None, dark=None, font=None, total_label="Total", figsize=(6.8, 4.0),
               scenario=None, favorable_color="#1F9D55", unfavorable_color="#D9463B"):
     """Running total built from signed steps — the 'how did we get from A to B' bridge that
     python-pptx has NO native form for. ``items = [(label, delta), ...]`` where a ``delta`` of ``None``
@@ -669,6 +703,7 @@ def waterfall(out, items, *, palette=None, dark=False, font=None, total_label="T
     readable without the hue. ``scenario`` (IBCS): "actual"/"prior"/"plan"/"forecast" for the whole
     chart, or a per-item sequence (e.g. a bridge whose last steps are forecast) — the treatment keeps
     each bar's semantic colour as its ink, so an FC variance bar renders as a green/red ``//`` hatch."""
+    palette, dark, font = _theme(palette, dark, font)   # the active visual language, unless passed
     if not items:
         raise ValueError("waterfall needs at least one item")
     plt, ink, grid, muted = _mpl(dark, font)
@@ -757,7 +792,7 @@ def _as_floats(seq, what):
 
 
 def forest_plot(out, rows, *, null=1.0, log=None, summary=None, xlabel=None, xlim=None,
-                palette=None, dark=False, font=None, figsize=(7.2, None),
+                palette=None, dark=None, font=None, figsize=(7.2, None),
                 value_fmt="{:.2f}"):
     """A FOREST PLOT — one effect estimate with its confidence interval per row, on a shared axis
     against a null reference line. The general form for "the same comparison, measured several
@@ -774,6 +809,7 @@ def forest_plot(out, rows, *, null=1.0, log=None, summary=None, xlabel=None, xli
     ``log=False`` deliberately for a difference scale (``null=0``). Non-positive bounds on a log
     axis RAISE rather than silently disappearing.
     """
+    palette, dark, font = _theme(palette, dark, font)   # the active visual language, unless passed
     if not rows:
         raise ValueError("forest_plot needs at least one row")
     if log is None:
@@ -896,7 +932,7 @@ def _km_steps(times, events):
 
 
 def km_curve(out, groups, *, xlabel="Time", ylabel="Survival probability", risk_table=True,
-             palette=None, dark=False, font=None, figsize=(6.8, 4.4), censor_marks=True,
+             palette=None, dark=None, font=None, figsize=(6.8, 4.4), censor_marks=True,
              percent=False, xlim=None):
     """A KAPLAN–MEIER survival curve — the step-down estimator, computed here from RAW data so the
     caller never has to hand-roll it.
@@ -911,6 +947,7 @@ def km_curve(out, groups, *, xlabel="Time", ylabel="Survival probability", risk_
     happened", and the NUMBERS AT RISK table under the axis is the part reviewers ask for first —
     a curve whose right tail rests on two patients looks identical to one resting on two hundred.
     """
+    palette, dark, font = _theme(palette, dark, font)   # the active visual language, unless passed
     if not groups:
         raise ValueError("km_curve needs at least one group")
     plt, ink, grid, muted = _mpl(dark, font)
@@ -1021,7 +1058,7 @@ def km_curve(out, groups, *, xlabel="Time", ylabel="Survival probability", risk_
 
 
 def bland_altman(out, method_a, method_b, *, names=("A", "B"), xlabel=None, ylabel=None,
-                 palette=None, dark=False, font=None, figsize=(6.4, 4.2), percent=False):
+                 palette=None, dark=None, font=None, figsize=(6.4, 4.2), percent=False):
     """A BLAND–ALTMAN agreement plot — the difference between two measurement methods against
     their mean, with the bias and the 95% limits of agreement drawn and LABELLED.
 
@@ -1034,6 +1071,7 @@ def bland_altman(out, method_a, method_b, *, names=("A", "B"), xlabel=None, ylab
     ``percent=True`` plots the difference as a percentage of the mean — the right choice when the
     disagreement grows with magnitude (a funnel in the raw plot is the tell).
     """
+    palette, dark, font = _theme(palette, dark, font)   # the active visual language, unless passed
     a, b = _as_floats(method_a, "method_a"), _as_floats(method_b, "method_b")
     if len(a) != len(b):
         raise ValueError(f"bland_altman: {len(a)} values for {names[0]!r} and {len(b)} for "
@@ -1084,7 +1122,7 @@ def bland_altman(out, method_a, method_b, *, names=("A", "B"), xlabel=None, ylab
     return _save(fig, out)
 
 
-def roc_curve(out, curves, *, palette=None, dark=False, font=None, figsize=(4.8, 4.8),
+def roc_curve(out, curves, *, palette=None, dark=None, font=None, figsize=(4.8, 4.8),
               chance_line=True, xlabel="False positive rate", ylabel="True positive rate"):
     """An ROC CURVE — one or more classifiers against the chance diagonal, on a SQUARE canvas.
 
@@ -1097,6 +1135,7 @@ def roc_curve(out, curves, *, palette=None, dark=False, font=None, figsize=(4.8,
     for "no better than guessing". AUC is printed in the legend because the curve alone does not
     let a reader rank two models that cross.
     """
+    palette, dark, font = _theme(palette, dark, font)   # the active visual language, unless passed
     if not curves:
         raise ValueError("roc_curve needs at least one curve")
     plt, ink, grid, muted = _mpl(dark, font)

@@ -114,6 +114,40 @@ src = "def leaky(s):\n    box(s, 0, 0, 1, 1, fill=RGBColor(0x12, 0x34, 0x56))\n 
 p_ = WORK / "leaky.py"; p_.write_text(src)
 check(len(cct.scan(str(p_), ["leaky"])) == 2, "the checker catches an RGBColor and a hex literal")
 
+# ── matplotlib charts take the language's series, ground and font (explicit arguments still win) ──
+with contextlib.redirect_stdout(io.StringIO()):
+    vl.use("tally", dk.blank_deck(13.333, 7.5), ground="night")
+check(dc.THEME_DEFAULTS.get("dark") is True and dc.THEME_DEFAULTS.get("palette", [None])[0] == "#" + dk.THEME["series"][0],
+      "designed_charts defaults follow the active language ({})".format(dc.THEME_DEFAULTS))
+import matplotlib
+seen = {}
+_orig_save = dc._save
+dc._save = lambda fig, out: seen.setdefault("faces", [t.get_color() for t in fig.findobj(matplotlib.text.Text)][:3]) or _orig_save(fig, out)
+try:
+    dc.radar(str(WORK / "r.png"), ["a", "b", "c"], [("s", [1, 2, 3])])
+finally:
+    dc._save = _orig_save
+check(seen.get("faces") and all(c.lower() not in ("#1a1a22",) for c in seen["faces"]),
+      "a chart on a dark language ground does not draw the light-ground ink ({})".format(seen.get("faces")))
+dc.radar(str(WORK / "r2.png"), ["a", "b", "c"], [("s", [1, 2, 3])], palette=["#123456"], dark=False)
+check(True, "an explicit palette/dark is accepted while a theme is active (Review Focus 4)")
+# a language with ONE series colour must not crash a chart that indexes three (bland_altman, forest_plot): the theme
+# palette is padded with the language's own colours (Phase 2b designs four real ones)
+with contextlib.redirect_stdout(io.StringIO()):
+    vl.use("ink", dk.blank_deck(13.333, 7.5))
+for nm in ("bland_altman", "forest_plot", "km_curve", "roc_curve", "waterfall", "marimekko", "distribution", "radar"):
+    prs_ = dk.blank_deck(13.333, 7.5)
+    with contextlib.redirect_stdout(io.StringIO()):
+        k_ = vl.use("ink", prs_)
+    s_ = k_.new_slide()
+    try:
+        _build(nm, prs_, s_); err = None
+    except Exception as e:
+        err = "{}: {}".format(type(e).__name__, e)
+    check(err is None, "{} builds on a one-series language ({})".format(nm, err))
+dk.set_theme(None)
+check(dc.THEME_DEFAULTS == {}, "clearing the theme clears the chart defaults")
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:
