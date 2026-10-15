@@ -29,10 +29,10 @@ def good_spec():
         "grounds": {
             "light": {"label": "paper", "label_zh": "纸面版", "grain": 0, "palette": pal_l, "dark": False,
                       "roles": {"card": "FFFFFF", "card_ink": "16191E", "rule": "C9C7C0", "on_accent": "FFFFFF",
-                                "series": ["D7262E", "0071BC"], "highlight": "1B2A41"}},
+                                "series": ["D7262E", "0071BC", "00954C", "8E4FA1"], "highlight": "1B2A41"}},
             "night": {"label": "navy", "label_zh": "夜间版", "grain": 0, "palette": pal_d, "dark": True,
                       "roles": {"card": "22344F", "card_ink": "F2F4F8", "rule": "3B4E6B", "on_accent": "0F1A2C",
-                                "series": ["F2B705", "E8454C"], "highlight": "F2B705"}}},
+                                "series": ["F2B705", "E8454C", "3D9BE0", "1DB66A"], "highlight": "F2B705"}}},
         "type": t, "image_pages": ("image_text",),
         "extras": {"tags": {"pages": ("points",), "remembered": False, "takes": "one label per point",
                             "absent": "no chips"}},
@@ -353,6 +353,11 @@ check(_csl.normalize("and the <!-- vl:count-drawn -->eleven<!-- /vl --> drawn on
       "the lossless gate ignores what is inside a vl block")
 
 # ── part 2 (Task 3) and part 3 (Task 4) are appended above this line ──
+
+# Phase 2b: four designed series colours per ground (spec §4.1 ruling; approved on the 2b sheet, 2026-10-15)
+check(vc.SERIES_MIN == 4, "the series floor is four designed colours per ground")
+check(all(len(G["roles"]["series"]) >= 4 for s_ in vl_specs.load().values() for G in s_["grounds"].values()),
+      "every ground carries at least four series colours")
 
 for line in ok:
     print("  ok   " + line)

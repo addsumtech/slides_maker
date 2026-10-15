@@ -15,7 +15,7 @@ ROLE_KEYS = ("card", "card_ink", "rule", "on_accent", "series", "highlight")
 TOP_KEYS = ("name", "order", "kind", "display", "rationale", "offer", "look", "grounds", "type", "image_pages",
             "extras", "derived", "samples", "painters", "skin")
 _HEX = re.compile(r"^[0-9A-Fa-f]{6}$")
-SERIES_MIN = 1          # Phase 1 (spec ruling 2026-10-15): the colours each ground already has; Phase 2 raises it to 4
+SERIES_MIN = 4          # spec §4.1 ruling: four designed colours per ground (Phase 2b, approved on its sheet 2026-10-15)
 SERIES_DE = 20.0        # two series colours closer than this (CIE76) read as one
 
 

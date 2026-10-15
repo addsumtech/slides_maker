@@ -294,7 +294,9 @@ for L, g in GROUNDS:
     # a chart's series stay tellable apart on a one- or two-colour language (they were cycled: one hue for all)
     pal, _dark, face = dc._theme(None, None, None)
     four = [c.lstrip("#") for c in pal[:4]]
-    designed = {c.upper() for c in dk.THEME["series"]}     # the language's own pairs are its design (Phase 2b redesigns them)
+    # the language's own (designed, approved 2026-10-15) colours are held by the contract — ΔE >= 20, 3:1 on ground and
+    # card; this RGB-distance / not-grey bar is for the colours theme_series INVENTS beyond them
+    designed = {c.upper() for c in dk.THEME["series"]}
     close = [(a, b) for i, a in enumerate(four) for b in four[i + 1:]
              if dk._rgb_dist(a, b) < 60 and not (a in designed and b in designed)]
     faint = [c for c in four if dk.contrast_ratio(c, ground) < 3.0]
