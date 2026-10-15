@@ -93,6 +93,9 @@ folder overwrites `render/`; `sigs.py --example` preamble builds a 13.333in canv
   computes and enforces: ink/ground and card_ink/card ≥ 4.5:1, mute ≥ 4.5:1 on ground, on_accent/accent ≥ 4.5:1
   (≥ 3:1 when only large text sits there), every series colour ≥ 3:1 against ground and card and
   pairwise distinguishable.
+  **Ruling (planning, 2026-10-15):** with today's colours only 5 of 30 grounds have four series colours that
+  pass; designing the rest is visual work that belongs with the charts that show it, so Phase 1 records the series
+  each ground already has (≥ 1) and Phase 2 raises the floor to 4 with designed colours the user sees on sheets.
 - **type roles** — the shared core every page and component may ask for (`kicker`, `title`, `subtitle`, `body`,
   `quote`, `attribution`, `number`, `label`, `note`, `caption`, `line`, `item_head`, `item_line`, `item_no`) with
   size / role / weight / colour role / italic / floor; private roles allowed; fonts per platform.
