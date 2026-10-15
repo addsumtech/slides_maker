@@ -243,6 +243,7 @@ def stack(k, slide, page, x, w, y0, y1, groups, *, anchor="middle", align="l", *
     [y0, y1], the whole stack anchored top or middle. Two passes: measured at the top, then placed. The gaps give an
     underline or a rule its own room (flow's own gaps are for type). Returns (rects, draws)."""
     groups = [(items, gap) for items, gap in groups if items]
+    reserve = [0.0] * len(groups)
     if len(groups) > 1:
         # size every group TOGETHER first (in the room left after the gaps), then start each group at that size: planned
         # one by one, a long first group kept its full size and left the next none (a square board's closing, 2026-10-08)
@@ -250,11 +251,20 @@ def stack(k, slide, page, x, w, y0, y1, groups, *, anchor="middle", align="l", *
         _r0, d0 = flow(k, slide, page, (x, y0, w, max(0.1, y1 - y0 - gaps)), [it for items, _g in groups for it in items],
                        anchor="top", align=align, **flow_kw)
         flow_kw = dict(flow_kw, start=dict(flow_kw.get("start") or {}, **getattr(d0, "sizes", {})))
+        # each group is planned in what the LATER groups leave it (their heights in the joint plan, and the gaps before
+        # them): planned alone, a grown quote re-decided its lines a little taller and left its attribution a negative
+        # column on a square board (Phase 3, 2026-10-15)
+        hs = []
+        for items, _g in groups:
+            rs = [_r0[f_] for f_, _t in items if f_ in _r0]
+            hs.append((max(v[1] + v[3] for v in rs) - min(v[1] for v in rs)) if rs else 0.0)
+        reserve = [sum(hs[j] + groups[j - 1][1] for j in range(i + 1, len(groups))) for i in range(len(groups))]
 
     def plan(top):
         rects, draws, y = {}, [], top
         for i, (items, gap) in enumerate(groups):
-            r, d = flow(k, slide, page, (x, y, w, y1 - y), items, anchor="top", align=align, **flow_kw)
+            r, d = flow(k, slide, page, (x, y, w, max(0.1, y1 - y - reserve[i])), items, anchor="top", align=align,
+                        **flow_kw)
             rects.update(r)
             draws.append(d)
             y = max((v[1] + v[3] for v in r.values()), default=y) + (gap if i < len(groups) - 1 else 0.0)

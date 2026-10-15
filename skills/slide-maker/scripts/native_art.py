@@ -817,8 +817,11 @@ def chip_width(text, size, face, *, bold=True):
 
 def chip(slide, x, y, text, *, size, fill, ink, face, ea_face=None, bold=True):
     """A pill label: rounded, one line that never wraps, as wide as its measured words. Returns (x, y, w, h)."""
-    # ~half an em above and below its line; a CJK line is set taller (its line height), so its pill is too
-    w, h = chip_width(text, size, face, bold=bold), size / 72.0 * (2.4 if dk._has_cjk(text) else 2.1)
+    # a small pill keeps its 1.9em height (ordinary decks unchanged); one big enough to read as a card (> 0.35in) gets
+    # half an em above and below its line — a CJK line is set taller, so its pill is too (16pt attribution, Phase 3)
+    w, h = chip_width(text, size, face, bold=bold), size / 72.0 * 1.9
+    if h > 0.35:
+        h = size / 72.0 * (2.4 if dk._has_cjk(text) else 2.1)
     dk.box(slide, x, y, w, h, fill=hexstr(fill), round=True, r=h / 2.0)
     run = (text, size, dk._as_rgb(hexstr(ink)), bold, False, face) + ((ea_face,) if ea_face else ())
     tb = dk.text(slide, x, y, w, h, [[run]], align=dk.PP_ALIGN.CENTER, anchor=dk.MSO_ANCHOR.MIDDLE)
