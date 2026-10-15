@@ -161,6 +161,98 @@ for _g in ("light", "dawn"):
                   _g, _pg, vl._contrast(_c, vl._hex(_k.P["ground"])) if _c else 0))
 dk.set_theme(None)
 
+# ── Task 5 (C): broadsheet: column rules end at the words, the Inside rule at its list, the figure is set at the measure ──
+from pptx.enum.shapes import MSO_SHAPE_TYPE as _MST        # noqa: E402
+
+
+def _lines_of(slide, vertical):
+    """[(x, y0, y1)] of the page's vertical rules (or [(y, x0, x1)] of its horizontal ones), in inches."""
+    out = []
+    for sh in slide.shapes:
+        if sh.shape_type != _MST.LINE:
+            continue
+        x, y, w, h = _rect(sh)
+        if vertical and w < 0.01 and h > 0.3:
+            out.append((x, y, y + h))
+        if not vertical and h < 0.01 and w > 0.3:
+            out.append((y, x, x + w))
+    return out
+
+
+def _text_eq(slide, text):
+    for sh in slide.shapes:
+        if getattr(sh, "has_text_frame", False) and not sh.is_placeholder and sh.text_frame.text.strip() == text:
+            return sh
+    return None
+
+
+_BS_PT = [("Bring it broken", "Anything that switches on, unzips or wobbles is welcome."),
+          ("Fix it together", "A volunteer sits beside you, but your hands do the work."),
+          ("Take it home", "What could not be fixed today goes on a list for next time.")]
+_BS_MORE = " Then there is more to say about it, because it is the part people remember best." * 3
+for _tag, _its in (("short copy", _BS_PT), ("long copy", [(a, b + _BS_MORE) for a, b in _BS_PT]),
+                   ("very long copy", [(a, b + _BS_MORE * 2) for a, b in _BS_PT])):
+    _prs, _k, _sl = _page("broadsheet", "light", "points", title="How it works", tags=["Idea", "Evening", "Hands"], items=_its)
+    _rules = _lines_of(_sl, True)
+    _top = min(r[1] for r in _rules)
+    _foot = max((sh.top + sh.height) / 914400.0 for sh in _sl.shapes
+                if getattr(sh, "has_text_frame", False) and not sh.is_placeholder and sh.top / 914400.0 >= _top - 0.01)
+    _end = max(r[2] for r in _rules)
+    check(len(_rules) == 2 and all(abs(r[2] - _end) < 0.01 for r in _rules),
+          "broadsheet points ({}): two column rules, level".format(_tag))
+    if _tag == "short copy":
+        check(0.15 <= _end - _foot <= 0.30, "broadsheet points (short copy): the rules end 0.2in under the words ({:.2f}in under; "
+              "was {:.2f}in, to the page's bottom)".format(_end - _foot, 6.90 - _foot))
+    if _tag != "short copy":
+        check(min(_foot + 0.15, 6.90) <= _end <= 6.91,
+              "broadsheet points ({}): the rules still reach the words and stop at the page's bottom (rule to {:.2f}, "
+              "words to {:.2f}, bottom 6.90)".format(_tag, _end, _foot))
+    if _tag != "very long copy":         # (the very long one trips lint's ORPHANED PUNCTUATION in the unchanged column text too)
+        check(not _hard(_prs, "bsp_" + _tag.replace(" ", "_")), "broadsheet points ({}): lint-clean".format(_tag))
+
+_prs, _k, _sl = _page("broadsheet", "light", "cover", title="Every street needs a night for fixing things",
+                      subtitle="How a repair evening works, and why it spreads.", masthead="The Repair Weekly", edition="No. 12",
+                      inside=["The idea", "The evening", "The numbers"])
+_vr = [r for r in _lines_of(_sl, True) if r[0] > 0.5 * W13]
+_lst = _text_eq(_sl, "The idea\nThe evening\nThe numbers")
+_lb = (_lst.top + _lst.height) / 914400.0
+check(len(_vr) == 1 and abs(_vr[0][2] - _lb) <= 0.06,
+      "broadsheet cover: the Inside rule ends at its list ({:.2f}in vs the list's {:.2f}in; was 6.90in, 0.75in past it)".format(
+          _vr[0][2] if _vr else -1, _lb))
+
+for _g in ("light", "salmon"):
+    for _num, _lab, _note in (("3", "conversations that changed our plan", "Each one is written up in the archive."),
+                              ("1,250,000", "visitors since the first night", ""), ("三成", "的物品得到修复", "每一件都记录在档案里。")):
+        _fl = dict(number=_num, label=_lab, **({"note": _note} if _note else {}))
+        _prs, _k, _sl = _page("broadsheet", _g, "data", **_fl)
+        _nsh = _text_eq(_sl, _num)
+        _z = _size_of(_sl, _num) if _nsh is not None else 0
+        _ink = vl._hex(_k.P["ink"]).upper()
+        _solid = [sh for sh in _sl.shapes if sh.shape_type == _MST.AUTO_SHAPE and sh.fill.type == 1
+                  and str(sh.fill.fore_color.rgb).upper() == _ink]
+        _hr = _lines_of(_sl, False)
+        _span = max((r[2] - r[1] for r in _hr if r[0] > 1.2), default=0)
+        _need = 180 if len(_num) > 6 else 200            # a nine-character figure is bounded by the measure itself (191pt)
+        check(_nsh is not None and _z >= _need - 1e-6 and not _solid and _span >= 0.88 * W13 - 0.01,
+              "broadsheet/{} data {!r}: the figure is >= {}pt ({:.0f}pt; was 150pt), no black cap ({} solid ink boxes), and the "
+              "block's rules run the measure ({:.1f}in = {:.0%})".format(_g, _num, _need, _z, len(_solid), _span, _span / W13))
+    _prs, _k, _sl = _page("broadsheet", _g, "data", number="3", label="conversations that changed our plan", note="Each one is archived.")
+    _ns, _ls = _text_eq(_sl, "3"), _text_shape(_sl, "conversations")
+    _cr = [r for r in _lines_of(_sl, True) if r[0] > 1.0]
+    _ln = _rect(_ls)
+    check(len(_cr) == 1 and _rect(_ns)[0] + _rect(_ns)[2] <= _cr[0][0] + 1e-6 <= _ln[0] + 1e-6 and _cr[0][1] <= _ln[1] and _cr[0][2] >= _ln[1] + _ln[3],
+          "broadsheet/{} data: the label and note stand in a column ruled off from the figure (rule x={:.2f}in between the figure "
+          "and the words, spanning them)".format(_g, _cr[0][0] if _cr else -1))
+for _W, _H in ((13.333, 7.5), (7.5, 7.5), (7.5, 13.333), (10.0, 7.5)):
+    _prs = dk.blank_deck(_W, _H)
+    with contextlib.redirect_stdout(io.StringIO()):
+        _kk = vl.use("broadsheet", _prs, ground="light")
+        for _num, _lab, _note in (("3", "conversations that changed our plan", "Each one is written up in the archive."),
+                                  ("98.6%", "of repairs held after a month", ""), ("三成", "的物品得到修复", "每一件都记录在档案里。")):
+            _kk.data(_kk.new_slide(), number=_num, label=_lab, masthead="The Repair Weekly", **({"note": _note} if _note else {}))
+    check(not _hard(_prs, "bsd_{}x{}".format(int(_W), int(_H))), "broadsheet data {}x{}: the three figures are lint-clean".format(_W, _H))
+dk.set_theme(None)
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

@@ -667,11 +667,13 @@ def _bs_cover(k, slide, f, image):
     if lines:
         if side:
             ix, iy, iw = 0.71 * W, yr + 0.16 * s, 0.24 * W
-            art.append(lambda: na.seg(slide, 0.685 * W, yr + 0.16 * s, 0.685 * W, foot, k.P["ink"], w=0.5))
         else:
             ix, iy, iw = 0.05 * W, sb + 0.3 * s, 0.90 * W
         r, d = flow(k, slide, "cover", (ix, iy, iw, foot - iy),
                     [("inside_h", caps(label("inside", *lines, k=k, f=f))), ("inside", "\n".join(lines))], anchor="top")
+        if side:                          # the sidebar's rule ends where its list does (it ran 0.75in past it, to the foot)
+            lb = max(v[1] + v[3] for v in r.values())
+            art.append(lambda: na.seg(slide, 0.685 * W, yr + 0.16 * s, 0.685 * W, lb, k.P["ink"], w=0.5))
         draws.append(d)
     _run_all(art + draws)
     return rects
@@ -766,29 +768,58 @@ def _bs_quote(k, slide, f, image):
 
 @register("broadsheet", "data", alts=2)
 def _bs_data(k, slide, f, image):
-    """By the numbers: the figure, a short rule, its label and note, in a boxed panel under a solid band — a header
-    with no words, because the kit has none to give it."""
+    """By the numbers, set as a newspaper sets a figure: a heavy rule over the block and a hairline under it, the number
+    at the full measure, and the label and note in a column of their own, ruled off from it — no box, and no black cap
+    (a header with no words, which the kit has none to give; the figure had been a boxed 150pt "3" in 42% of the page).
+    Across a landscape page the number takes the left column (as wide as it needs, 24-58% of the measure) and the words
+    the right, set larger than a caption (34pt label, 20pt note, shrinking to their column); a figure too wide for that column, a portrait page, and the second alternative stack them, the number
+    on the whole measure over a hairline and the words."""
     W, H, s, o = ctx(k)
     top = bs_strip(k, slide, f)
-    bw = ((0.42 if o == "land" else 0.80) if alt() == 0 else 0.86) * W
-    bx, band, pad = (W - bw) / 2.0, 0.30 * s, 0.30 * s
-    y_in, avail = top + 0.3 * s, (H - 0.6) - (top + 0.3 * s)
-    items = fields(f, ("number", "label", "note"))
+    num = text_of(f, "number")
+    items = fields(f, ("label", "note"))
+    bx, bw, pad, gap = 0.05 * W, 0.90 * W, 0.30 * s, 0.45 * s
+    y_in = top + 0.3 * s
+    avail = (H - 0.6) - y_in
+    big = {"number": 230 * s}                         # the figure fills the measure; the flow shrinks it to its column
+    side = bool(num) and bool(items) and o == "land" and alt() == 0
+    nw = 0.0
+    if side:
+        nat = _cjk_width(k, "number", num, big["number"]) + dk.TEXT_INSET_LR
+        side = nat <= 0.58 * bw - 0.5 * s
+        nw = min(0.58 * bw, max(0.24 * bw, nat + 0.5 * s))
+        big_words = {"label": 34 * s, "note": 20 * s}
+    else:
+        big_words = {"label": 30 * s, "note": 18 * s}
+    big.update({f_: z for f_, z in big_words.items() if f_ in dict(items)})
+    rx, rw = bx + nw + gap, bw - nw - gap
 
-    def plan(y):
-        return flow(k, slide, "data", (bx + pad, y + band + pad, bw - 2 * pad, avail - band - 2 * pad), items,
-                    anchor="top", align="c")
-    r, _unused = plan(y_in)
-    bh = band + 2 * pad + (max(v[1] + v[3] for v in r.values()) - (y_in + band + pad)) + 0.1 * s
+    def plan(y, h, anchor):
+        """The columns inside [y, y + h]: (number rects, number draw, words rects, words draw)."""
+        if side:
+            nr, nd = flow(k, slide, "data", (bx, y, nw, h), [("number", num)], anchor=anchor, start=big)
+            wr, wd = flow(k, slide, "data", (rx, y, rw, h), items, anchor=anchor, start=big)
+            return nr, nd, wr, wd
+        r, d = flow(k, slide, "data", (bx, y, bw, h), ([("number", num)] if num else []) + items, anchor=anchor,
+                    start=big)
+        return r, d, {}, None
+    r0, _d0, w0, _wd0 = plan(y_in + pad, avail - 2 * pad, "top")
+    used = max([v[1] + v[3] for v in list(r0.values()) + list(w0.values())], default=y_in + pad) - (y_in + pad)
+    bh = used + 2 * pad
     by = y_in + max(0.0, (avail - bh) / 2.0)
-    r, d = plan(by)
-    art = [lambda: dk.box(slide, bx, by, bw, bh, fill=None, line=dk._as_rgb(k.P["ink"]), line_w=1.25),
-           lambda: dk.decorative(dk.box(slide, bx, by, bw, band, fill=k.P["ink"]), "the header band of a numbers box")]
-    if "number" in r and "label" in r:
-        yl = (r["number"][1] + r["number"][3] + r["label"][1]) / 2.0
-        art.append(lambda: na.seg(slide, W / 2 - 0.15 * bw, yl, W / 2 + 0.15 * bw, yl, k.P["ink"], w=0.6))
-    _run_all(art + [d])
-    return r
+    r1, d1, w1, wd1 = plan(by + pad, bh - 2 * pad, "middle" if side else "top")
+    rects = dict(r1)
+    rects.update(w1)
+    art = [lambda: na.seg(slide, bx, by, bx + bw, by, k.P["ink"], w=3.0),
+           lambda: na.seg(slide, bx, by + bh, bx + bw, by + bh, k.P["ink"], w=0.6)]
+    if side:
+        art.append(lambda: na.seg(slide, bx + nw + gap / 2.0, by + 0.5 * pad, bx + nw + gap / 2.0, by + bh - 0.5 * pad,
+                                  k.P["ink"], w=0.6))
+    elif "number" in rects and "label" in rects:
+        yl = (rects["number"][1] + rects["number"][3] + rects["label"][1]) / 2.0
+        art.append(lambda: na.seg(slide, bx, yl, bx + bw, yl, k.P["ink"], w=0.6))
+    _run_all(art + [d1] + ([wd1] if wd1 else []))
+    return rects
 
 
 @register("broadsheet", "closing", alts=2)
@@ -840,10 +871,9 @@ def _bs_points(k, slide, f, image):
         slot = (bottom - ctop) / n
         boxes = [(0.05 * W, ctop + i * slot, 0.90 * W, slot - 0.15 * s) for i in range(n)]
         rules = [(0.05 * W, b[1] - 0.08 * s, 0.95 * W, b[1] - 0.08 * s) for b in boxes[1:]]
-    for x0, y0, x1, y1 in rules:
-        art.append(lambda x0=x0, y0=y0, x1=x1, y1=y1: na.seg(slide, x0, y0, x1, y1, k.P["ink"], w=0.5))
     specs = [((x, y, w, h), ([("tag", caps(tags[i]))] if tags else []) + [("item_head", hd)] + ([("item_line", ln)] if ln else []),
               {"anchor": "top"}) for i, ((hd, ln), (x, y, w, h)) in enumerate(zip(pts, boxes))]
+    foot = ctop                           # the lowest word of any column (a raised initial's taller first line included)
     for (hd, ln), (x, y, w, h), (tr, td_) in zip(pts, boxes, plan_together(k, slide, "points", specs)):
         initial = bool(ln) and ln[0].isalpha() and not dk._has_cjk(ln[0]) and "item_line" in tr
         if initial:                       # room in the column for the taller first line and the one line its width
@@ -851,6 +881,14 @@ def _bs_points(k, slide, f, image):
             pitch = td_.sizes["item_line"] * dk._LINT_LINE_H / 72.0
             initial = by + bh + 1.3 * pitch + pitch + 0.05 <= y + h
         draws.append(_with_initial(k, slide, td_, ln) if initial else td_)
+        foot = max([foot] + [v[1] + v[3] + (max_extra(td_.sizes["item_line"] / s, s) if initial and f_ == "item_line" else 0.0)
+                             for f_, v in tr.items()])
+    # a column rule ends 0.2in under the lowest words, reaching long copy and not dangling 2.5in under short copy
+    # (the page's own bottom is the limit); a rule between rows runs the page's width and stays where it is
+    for x0, y0, x1, y1 in rules:
+        if x0 == x1:
+            y1 = max(y0 + 0.2, min(y1, foot + 0.2 * s))
+        art.append(lambda x0=x0, y0=y0, x1=x1, y1=y1: na.seg(slide, x0, y0, x1, y1, k.P["ink"], w=0.5))
     _run_all(art + draws)
     return rects
 
