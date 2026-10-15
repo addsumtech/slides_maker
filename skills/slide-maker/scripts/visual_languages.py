@@ -493,9 +493,14 @@ LAYOUTS = {
                   "port": L_((.30, .03, .40, .20), "feather", (.08, .27, .84, .64), col_noimg=(.08, .18, .84, .70), align="c"),
                   "land_tall": L_((.08, .08, .32, .84), "feather", (.44, .16, .48, .68), align="c"),
                   "port_tall": L_((.25, .03, .50, .36), "feather", (.08, .42, .84, .50), align="c")},
+        # *_wide / *_tall: the slot follows the picture's shape — a 16:9 watercolour in the 5.07x6.3in square-ish slot filled
+        # 10.9% of the page, a portrait one 19.7% (the group-A verification, 2026-10-15); picked by _compose
         "data": {"land": L_((.58, .08, .38, .84), "feather", (.08, .14, .48, .72), col_noimg=(.12, .14, .76, .72)),
                  "port": L_((.06, .03, .88, .36), "feather", (.08, .42, .84, .50), col_noimg=(.08, .20, .84, .66)),
-                 "port_tall": L_((.20, .03, .60, .44), "feather", (.08, .50, .84, .44))},
+                 "land_wide": L_((.44, .10, .54, .80), "feather", (.06, .14, .34, .72), col_noimg=(.12, .14, .76, .72)),
+                 "land_tall": L_((.54, .06, .42, .88), "feather", (.07, .14, .42, .72), col_noimg=(.12, .14, .76, .72)),
+                 "port_wide": L_((.04, .03, .92, .41), "feather", (.08, .47, .84, .45), col_noimg=(.08, .20, .84, .66)),
+                 "port_tall": L_((.14, .03, .72, .56), "feather", (.08, .62, .84, .32))},
         "closing": {"land": L_((.15, .03, .70, .62), "feather", (.12, .68, .76, .25), col_noimg=(.12, .30, .76, .40), anchor="top", align="c"),
                     "port": L_((.04, .03, .92, .52), "feather", (.08, .58, .84, .34), col_noimg=(.08, .30, .84, .40), anchor="top", align="c"),
                     "land_tall": L_((.05, .05, .44, .90), "feather", (.53, .22, .40, .56), align="c"),
@@ -1436,12 +1441,14 @@ def _compose(k, slide, page, fields, image):
     orient = "land" if W >= H * 1.2 else "port"
     lay = LAYOUTS[k.name][page][orient]
     if lay["treat"] == "feather" and image is not None and not isinstance(image, (list, tuple)) \
-            and LAYOUTS[k.name][page].get(orient + "_tall"):
-        try:                                       # a portrait picture takes the frame drawn for one
+            and (LAYOUTS[k.name][page].get(orient + "_tall") or LAYOUTS[k.name][page].get(orient + "_wide")):
+        try:                                       # a portrait picture takes the frame drawn for one, a 16:9 one its wide frame
             from PIL import Image as _PI
             _iw, _ih = _PI.open(_resolve(k, image)[0]).size
-            if _iw / float(_ih) < 0.85:
-                lay = LAYOUTS[k.name][page][orient + "_tall"]
+            _ar = _iw / float(_ih)
+            _key = "_tall" if _ar < 0.85 else "_wide" if _ar > 1.4 else None
+            if _key and LAYOUTS[k.name][page].get(orient + _key):
+                lay = LAYOUTS[k.name][page][orient + _key]
         except Exception:
             pass                                   # an unresolvable image is refused where it is placed, as before
     variants = [lay] + ([v for v in (_yield_to_words(lay, 0.8), _yield_to_words(lay, 0.65)) if v]
@@ -1803,7 +1810,10 @@ def _points_led(k, slide, fields, image):
             dk.decorative(dk.box(slide, x, y, w, max(0.012, 0.012 * s), fill=_hex(P["ink"])), "a hairline over one point")
         elif k.name == "storybook":
             dd = 0.24 * s
-            dk.decorative(dk.box(slide, x, y + 0.08 * s, dd, dd, fill=_hex(P["accents"][i % len(P["accents"])]), round=True, r=dd / 2),
+            # ONE colour — the accent ink, which reads on either ground (>= 3:1). The dots cycled the three FILL accents
+            # (orange, green, yellow; the fourth repeating the first): the order meant nothing, and the yellow was 1.05:1
+            # on meadow (the group-A verification, 2026-10-15)
+            dk.decorative(dk.box(slide, x, y + 0.08 * s, dd, dd, fill=_hex(P["text_accents"][0]), round=True, r=dd / 2),
                           "a painted dot marking one point")
         d()
         for f_, v in r.items():

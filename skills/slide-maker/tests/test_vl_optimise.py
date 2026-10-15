@@ -392,6 +392,83 @@ for g in vl.VARIANTS["collage"]:
                                           max([_lumh(i) for _c, i, _t in nt] or [0]), worst))
 dk.set_theme(None)
 
+# ── Task 5 (A): storybook: the data page's watercolour is a real share of the page, and its figure is not a hairline ──
+# The harvest-basket watercolour sat in a 5.07x2.85in slot on the data page: 10.9% of the page was picture where the other
+# image-led languages gave 22-26%, and the figure beside it was Times New Roman 150pt regular — a stem 12% of its height.
+# The figure is bold now (21%), and the slot follows the picture's shape (a wide picture gets a wide slot).
+import numpy as np
+from PIL import Image as _PILI
+
+
+def _art_share(slide, W, H):
+    """Share of the page that is picture ink: for each picture, the fraction of its pixels at alpha >= 128 times the area
+    it is drawn at — a feathered watercolour fades to the paper, and the faded edge is not picture."""
+    tot = 0.0
+    for sh in slide.shapes:
+        if sh.shape_type == 13:
+            a = np.asarray(_PILI.open(io.BytesIO(sh.image.blob)).convert("RGBA"))[..., 3]
+            tot += float((a >= 128).mean()) * (sh.width / 914400.0) * (sh.height / 914400.0) / (W * H)
+    return tot
+
+
+def _stem_share(face, bold, size=150):
+    """Stem width / ink height of a "1" in `face`, from the glyph itself (PIL): the widest ink run across the middle row."""
+    from PIL import ImageDraw
+    f = dk._pil_font(face, size, bool(bold))
+    px = size * dk._MEAS_PREC
+    im = _PILI.new("L", (int(px * 1.5), int(px * 1.6)), 0)
+    ImageDraw.Draw(im).text((int(px * 0.2), int(px * 0.1)), "1", font=f, fill=255)
+    bb = im.getbbox()
+    mid, best, run = (bb[1] + bb[3]) // 2, 0, 0
+    for x in range(im.width):
+        run = run + 1 if im.getpixel((x, mid)) > 128 else 0
+        best = max(best, run)
+    return best / float(bb[3] - bb[1])
+
+
+WC = {n: str(vl.ASSETS / "watercolour" / n) for n in ("harvest-basket.jpg", "rooftop-garden.jpg", "garden-tools.jpg", "balcony-watering.jpg")}
+for g in vl.VARIANTS["storybook"]:
+    for (W, H, tag) in ((13.333, 7.5, "landscape"), (7.5, 10.0, "portrait")):
+        for n_, path in WC.items():
+            prs, k = _deck_at("storybook", g, W, H)
+            sl = k.new_slide()
+            with contextlib.redirect_stdout(io.StringIO()):
+                k.data(sl, number="1", label="pot is enough to begin", note="A window sill will do.", image=path)
+            share = _art_share(sl, W, H)
+            check(share >= 0.20, "storybook/{} data {} {}: the watercolour is {:.1%} of the page (>= 20%)".format(g, tag, n_, share))
+    prs, k = _deck_at("storybook", g, 13.333, 7.5)
+    sl = k.new_slide()
+    with contextlib.redirect_stdout(io.StringIO()):
+        k.data(sl, number="1", label="pot is enough to begin", note="A window sill will do.", image=WC["harvest-basket.jpg"])
+    num = next(sh for sh in _text_shapes(sl) if sh.text_frame.text.strip() == "1")
+    r = _run_of(num)
+    stem = _stem_share(r.font.name, r.font.bold)
+    ground = vl.VARIANTS["storybook"][g]["palette"]["ground"]
+    check(stem >= 0.15 and vl._contrast(_hexc(r.font.color.rgb), ground) >= 4.5,
+          "storybook/{} data: the figure's stem is >= 15% of its height ({:.1%}, {} {}) and it reads {:.2f}:1 on the ground".format(
+              g, stem, r.font.name, "bold" if r.font.bold else "regular", vl._contrast(_hexc(r.font.color.rgb), ground)))
+dk.set_theme(None)
+
+# ── Task 5 (A): storybook: the point dots are one colour that reads on the ground ──
+# The dots cycled orange / green / yellow (the fourth repeating the first): colour carried no meaning, and the yellow dot
+# was 1.05:1 on meadow. They are one colour — the language's accent ink — at >= 3:1 on either ground.
+for g in vl.VARIANTS["storybook"]:
+    ground = vl.VARIANTS["storybook"][g]["palette"]["ground"]
+    for n in (2, 3, 4):
+        for pic in (str(vl.ASSETS / "watercolour/garden-tools.jpg"), None):
+            prs, k = _deck_at("storybook", g, 13.333, 7.5)
+            sl = k.new_slide()
+            with contextlib.redirect_stdout(io.StringIO()):
+                k.points(sl, kicker="A small city garden", title="Things to bring", items=_PTS[:n], image=pic)
+            dots = [sh for sh in sl.shapes if sh.shape_type == 1 and sh.fill.type == 1 and sh.width < 0.4 * 914400
+                    and abs(sh.width - sh.height) < 2000]            # a painted dot: a small filled shape as wide as it is tall
+            fills = [_hexc(sh.fill.fore_color.rgb) for sh in dots]
+            worst = min([vl._contrast(f, ground) for f in fills] or [0])
+            check(len(dots) == n and len(set(fills)) == 1 and worst >= 3.0,
+                  "storybook/{} points x{}{}: {} dots, {} colour(s) {}, the faintest {:.2f}:1 on the ground (>= 3)".format(
+                      g, n, "" if pic else " (no picture)", len(dots), len(set(fills)), sorted(set(fills)), worst))
+dk.set_theme(None)
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:
