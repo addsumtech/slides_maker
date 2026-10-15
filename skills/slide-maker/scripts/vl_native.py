@@ -217,12 +217,14 @@ def vcol(k, slide, right, top, h_max, text, field, *, color=None, spacing=0.12, 
 
 
 def display(k, slide, rect, text, field, *, highlight=None, caps=True, ink=None, hl=None, hl_ink=None,
-            align="l", anchor="t", floor=None):
+            align="l", anchor="t", floor=None, sit="top"):
     """PLAN poster-scale type in `rect`: measured, shrinking to the field's floor, refused past it; Latin set in
     capitals; `highlight` (words of the caller's own text) set on a highlighter. Lines break as the rest of the kit
     breaks them (_flow's order): at a clause mark first, else a little smaller, else a balanced narrower measure —
     never a lone CJK character or a lone word on the last line ("一盏茶的时 / 间", seen on the first render).
-    Returns (rect, size, draw)."""
+    `sit="bottom"` sets the words against the BOTTOM of the planned box (the box is reserved at the lint's 1.2 em a
+    line but drawn at 0.86, so top-set words leave ~0.5in of reserve below them: the ink then ends 0.05in + 0.17 em above
+    the box's foot — measured on the render, 2026-10-15). Returns (rect, size, draw)."""
     base, role, bold, ckey, _italic, field_floor = vl.TYPE[k.name][field]
     floor = field_floor if floor is None else floor    # a page may let display type shrink further than its field
     s = ctx(k)[2]
@@ -325,7 +327,7 @@ def display(k, slide, rect, text, field, *, highlight=None, caps=True, ink=None,
     def draw():
         al = {"l": dk.PP_ALIGN.LEFT, "c": dk.PP_ALIGN.CENTER, "r": dk.PP_ALIGN.RIGHT}[align]
         dk.text(slide, x, ty, bw, need, [runs_for(l_) for l_ in (lines or [t])], align=al, space_after=0,
-                line_spacing=0.86)
+                line_spacing=0.86, anchor=dk.MSO_ANCHOR.BOTTOM if sit == "bottom" else dk.MSO_ANCHOR.TOP)
     return (x, ty, bw, need), sz, draw
 
 
@@ -900,9 +902,13 @@ def _poster_quote(k, slide, f, image):
     draws.append(d)
     ya = qrect[1]                      # a secondary field is drawn whether or not its primary is given — the caller's
     if q:                              # words are never dropped for a missing sibling (robustness audit, 2026-10-09)
-        r1, _z, d1 = display(k, slide, qrect, q, "quote", highlight=hl, hl=fld["hl"], hl_ink=fld["hl_ink"])
+        # the words sit on the BOTTOM of their box, so the attribution can ride just under it: set from the top, they
+        # left 0.5-0.8in of reserve (1.2 em a line reserved, 0.86 drawn) between the last line and the credit
+        r1, z1, d1 = display(k, slide, qrect, q, "quote", highlight=hl, hl=fld["hl"], hl_ink=fld["hl_ink"], sit="bottom")
         rects["quote"] = r1; draws.append(d1)
-        ya = r1[1] + r1[3] + 0.25 * s
+        # the credit's ink starts 0.4in under the quote's last ink: that is 0.05in + 0.17 em under the box's foot, plus
+        # the credit's own 0.14in of top room; never above the box (the lint reads the box's foot as the text's)
+        ya = max(r1[1] + r1[3] - 0.05 * s, r1[1] + r1[3] + (0.26 - 0.17 * z1 / 72.0) * s)
     if attr:
         ar, ad = flow(k, slide, "quote", (qrect[0], ya, qrect[2], 0.6 * s), [("attribution", attr)], accent=fld["accent"])
         rects.update(ar); draws.append(ad)
@@ -957,19 +963,32 @@ def _poster_closing(k, slide, f, image):
     return rects
 
 
-@register("poster", "points", alts=2)
-def _poster_points(k, slide, f, image):
-    """Points as a rising staircase of panels beside the title; when the steps are too narrow for their words (a
-    small canvas, long lines), the second layout puts the title across the top and the steps underneath as full-width
-    bars that step in, one per point."""
+def _poster_stairs(k, slide, lay, title, kicker, pts):
+    """Plan, then draw, the rising staircase of panels (layout `lay`): "wide" climbs across the whole page from its
+    bottom-left corner, the title in the free corner above the first step (landscape only); "side" puts the steps
+    beside the title (and under it on a portrait page). Nothing is drawn until every text has fitted, so a refusal
+    leaves the slide as it was and the caller can try the other layout. Returns (rects, draws)."""
     W, H, s, o = ctx(k)
     fld = k.field
-    title, kicker = text_of(f, "title"), text_of(f, "kicker")
-    pts = points_of(f.get("items"))
-    n = len(pts)
+    n, gap = len(pts), 0.15 * s
     rects, draws = {}, []
-    gap = 0.15 * s
-    if alt() == 0:
+    if lay == "wide":
+        yb = 0.93 * H
+        pw = (0.92 * W - (n - 1) * gap) / n
+        # the title is as wide as the first step, so only that step has to stay clear of it; the others climb past
+        trect = _below_meta(k, (0.04 * W, 0.11 * H, pw, 0.42 * H), kicker)
+        tb = trect[1]
+        if title:
+            r, _z, d = display(k, slide, trect, title, "title", floor=vl.TYPE[k.name]["label"][5])
+            rects["title"] = r; draws.append(d)
+            tb = r[1] + r[3]
+        hN = yb - 0.15 * H                                 # the last step: up to the credit line
+        h1 = min(yb - (tb + 0.25 * s), 0.62 * hN)          # the first: under the title, and never nearly as tall as the last
+        if h1 < 0.30 * hN:
+            raise vl.VLTextOverflow("poster.points: the title leaves no room for the first step")
+        hs = [h1 + (hN - h1) * i / float(max(n - 1, 1)) for i in range(n)]
+        geo = [(0.04 * W + i * (pw + gap), yb - hs[i], pw, hs[i]) for i in range(n)]
+    else:
         if o == "land":
             trect, (rx, ry, rw, rh) = (0.04 * W, 0.11 * H, 0.42 * W, 0.42 * H), (0.50 * W, 0.30 * H, 0.46 * W, 0.63 * H)
         else:
@@ -981,17 +1000,49 @@ def _poster_points(k, slide, f, image):
             r, _z, d = display(k, slide, trect, title, "title", floor=vl.TYPE[k.name]["label"][5])
             rects["title"] = r; draws.append(d)
         pw = (rw - (n - 1) * gap) / n
-        for i, (head, line) in enumerate(pts):
+        geo = []
+        for i in range(n):
             ph = rh * (0.64 + 0.36 * (i / float(max(n - 1, 1))))
-            px, py = rx + i * (pw + gap), ry + rh - ph
-            dk.box(slide, px, py, pw, ph, fill=fld["panel"])
-            mh = min(1.4 * s, ph * 0.4)
-            _nr, _z, nd = display(k, slide, (px + 0.12 * s, py + 0.10 * s, pw - 0.24 * s, mh), "{:02d}".format(i + 1),
-                                  "mark", caps=False, ink=fld["panel_accent"], floor=12)   # the numeral fits its panel
-            tr, td_ = flow(k, slide, "points", (px + 0.14 * s, py + ph * 0.45, pw - 0.28 * s, ph * 0.52),
-                           [(x_, t) for x_, t in (("item_head", head), ("item_line", line)) if t], anchor="bottom",
-                           ink=fld["panel_ink"], mute=fld["panel_ink"])
-            draws += [nd, td_]
+            geo.append((rx + i * (pw + gap), ry + rh - ph, pw, ph))
+    for i, ((head, line), (px, py, pw_, ph)) in enumerate(zip(pts, geo)):
+        mh = min(1.4 * s, ph * 0.4)
+        _nr, _z, nd = display(k, slide, (px + 0.12 * s, py + 0.10 * s, pw_ - 0.24 * s, mh), "{:02d}".format(i + 1),
+                              "mark", caps=False, ink=fld["panel_accent"], floor=12)   # the numeral fits its panel
+        # the words end 0.2in above the panel's foot (the lint wants >= 0.09in of padding under them)
+        tr, td_ = flow(k, slide, "points", (px + 0.14 * s, py + ph * 0.45, pw_ - 0.28 * s, ph * 0.55 - 0.2 * s),
+                       [(x_, t) for x_, t in (("item_head", head), ("item_line", line)) if t], anchor="bottom",
+                       ink=fld["panel_ink"], mute=fld["panel_ink"])
+        draws += [nd, td_]
+    for px, py, pw_, ph in geo:
+        dk.box(slide, px, py, pw_, ph, fill=fld["panel"])
+    return rects, draws
+
+
+@register("poster", "points", alts=2)
+def _poster_points(k, slide, f, image):
+    """Points as a rising staircase of panels; on a landscape page it climbs across the whole page from the bottom-left
+    corner with the title above its low end (the half under the title was empty), and when the title is too long for
+    that corner it stands beside the steps as it always did. When the steps are too narrow for their words (a small
+    canvas, long lines), the second layout puts the title across the top and the steps underneath as full-width bars
+    that step in, one per point."""
+    W, H, s, o = ctx(k)
+    fld = k.field
+    title, kicker = text_of(f, "title"), text_of(f, "kicker")
+    pts = points_of(f.get("items"))
+    n = len(pts)
+    rects, draws = {}, []
+    gap = 0.15 * s
+    if alt() == 0:
+        lays = ("wide", "side") if o == "land" else ("side",)
+        for lay in lays:
+            n0 = len(slide.shapes)
+            try:
+                rects, draws = _poster_stairs(k, slide, lay, title, kicker, pts)
+                break
+            except vl.VLTextOverflow:
+                if lay == lays[-1]:
+                    raise
+                _unbuild(slide, n0)
     else:
         # a shorter band than the designed layout's: display type fills the rect it gets, and the steps need the room
         trect = (0.04 * W, 0.09 * H, 0.92 * W, 0.17 * H) if o == "land" else (0.06 * W, 0.07 * H, 0.88 * W, 0.21 * H)

@@ -210,6 +210,88 @@ for L_, g_ in (("ink", "light"), ("ink", "night")):
                     g_, tag, j, r_[1] - low))
 dk.set_theme(None)
 
+
+def _ink_runs(img, box, dpi=100, gap=0.10, thr=70):
+    """The horizontal bands of ink in `box`: [(y0, y1)] in inches, bands closer than `gap` merged."""
+    a = np.asarray(img).astype(int)
+    x0, y0, x1, y1 = [max(0, int(round(v * dpi))) for v in box]
+    r = a[y0:y1, x0:x1]
+    hit = (np.abs(r - np.median(r.reshape(-1, 3), axis=0)).sum(axis=2) > thr).any(axis=1)
+    out, start, last = [], None, None
+    for i, h in enumerate(hit):
+        if h:
+            if start is None:
+                start = i
+            elif i - last > gap * dpi:
+                out.append((start, last)); start = i
+            last = i
+    if start is not None:
+        out.append((start, last))
+    return [((a_ + y0) / dpi, (b_ + 1 + y0) / dpi) for a_, b_ in out]
+
+
+# ── Task 5 (B): poster: the quote's attribution sits ~0.4in under the quote's last line (it sat 1.12in under) ──
+PQ = {"one line": "Make it.", "three lines": "A room is a promise you can walk into.",
+      "five lines": "A room is a promise you can walk into, and a street is a long hallway of rooms that nobody locked, so "
+                    "we keep the doors open and the benches warm for whoever is next in line to mend something."}
+for g_ in ("light", "paper"):
+    prs, k = _deck("poster", g_)
+    for tag, q_ in PQ.items():
+        with contextlib.redirect_stdout(io.StringIO()):
+            k.quote(k.new_slide(), quote=q_, attribution="From the manifesto")
+    imgs = _render(prs, "pq_" + g_)
+    for (tag, q_), s_, pg in zip(PQ.items(), prs.slides, range(3)):
+        wd = _words(s_)
+        qb = next(w_ for w_ in wd if w_[0].upper().startswith(q_[:8].upper()))
+        ab = next(w_ for w_ in wd if w_[0].startswith("From the"))
+        if imgs:
+            runs = _ink_runs(imgs[pg], (qb[1], qb[2], qb[3], ab[4] + 0.05))
+            gap = runs[-1][0] - runs[-2][1] if len(runs) >= 2 else None
+            check(gap is not None and 0.30 <= gap <= 0.55,
+                  "poster/{} quote ({}): the attribution's ink starts {} under the quote's last line (want 0.30-0.55in)".format(
+                      g_, tag, "{:.2f}in".format(gap) if gap is not None else "?"))
+        else:                                        # no renderer: the planned boxes — the attribution right under the quote's
+            check(-0.1 <= ab[2] - qb[4] <= 0.3, "poster/{} quote ({}): the attribution's box starts {:.2f}in from the quote's".format(
+                g_, tag, ab[2] - qb[4]))
+        check(not [f for f in _hard(prs, "pqh_" + g_ + tag.replace(" ", "")) if f.startswith("slide {}:".format(pg + 1))],
+              "poster/{} quote ({}): the page stays lint-clean".format(g_, tag))
+dk.set_theme(None)
+
+
+# ── Task 5 (B): poster: the points staircase fills the page (the bottom-left 28% was empty) and still climbs with the order ──
+PP = {"3 points": ("Three moves.", ["Share the tools", "Open the door", "Keep it local"]),
+      "2 points": ("Two moves.", ["Share the tools", "Open the door"]),
+      "4 points": ("Four moves for a street", ["Share the tools", "Open the door", "Keep it local", "Mend it together"]),
+      "one-line title": ("Moves", ["Share the tools", "Open the door", "Keep it local"])}
+for g_ in ("light", "paper"):
+    prs, k = _deck("poster", g_)
+    for tag, (t_, its) in PP.items():
+        with contextlib.redirect_stdout(io.StringIO()):
+            k.points(k.new_slide(), title=t_, items=its)
+    for pg, ((tag, (t_, its)), s_) in enumerate(zip(PP.items(), prs.slides)):
+        bars = sorted([(_inch(sh.left), _inch(sh.top), _inch(sh.width), _inch(sh.height)) for sh in s_.shapes
+                       if sh.shape_type == MSO_SHAPE_TYPE.AUTO_SHAPE and _inch(sh.width) > 1.0], key=lambda b_: b_[0])
+        check(len(bars) == len(its), "poster/{} points ({}): one bar a point ({} bars)".format(g_, tag, len(bars)))
+        if len(bars) != len(its):
+            continue
+        # the staircase still encodes order: each step is taller than the one before and stands to its right
+        check(all(b2[3] > b1[3] + 0.2 and b2[0] > b1[0] + b1[2] - 1e-6 and abs((b2[1] + b2[3]) - (b1[1] + b1[3])) < 0.01
+                  for b1, b2 in zip(bars, bars[1:])),
+              "poster/{} points ({}): the steps rise left to right on one baseline ({})".format(
+                  g_, tag, ["{:.2f}".format(b_[3]) for b_ in bars]))
+        # the bottom-left quarter of the page, under the title: how much of it carries ink (bars)
+        tw = [w_ for w_ in _words(s_) if w_[0].upper().startswith(t_.split()[0].upper())][0]
+        reg = (0.0, tw[4], 6.667, 7.5)              # below the title's box, left half
+        area = (reg[2] - reg[0]) * (reg[3] - reg[1])
+        cover = sum(max(0.0, min(b_[0] + b_[2], reg[2]) - max(b_[0], reg[0])) * max(0.0, min(b_[1] + b_[3], reg[3]) - max(b_[1], reg[1]))
+                    for b_ in bars)
+        check(cover / area >= 0.35, "poster/{} points ({}): the bottom-left under the title is {:.0%} filled (want >= 35%)".format(
+            g_, tag, cover / area))
+        check(not [f for f in _hard(prs, "ppt_" + g_ + str(pg)) if f.startswith("slide {}:".format(pg + 1))],
+              "poster/{} points ({}): the page stays lint-clean".format(g_, tag))
+dk.set_theme(None)
+
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:
