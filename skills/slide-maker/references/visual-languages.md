@@ -259,13 +259,19 @@ prs.save("collage.pptx")
   full-height card under 14pt rows read as an empty page in two test decks. A list of 2–4 items is better as
   `k.points(...)`, on every language; on drafting, `points` draws one plate per item, so keep an agenda
   there as this ordinary page.)
-- **General components wear the language.** Charts, timelines, steps, tables, KPI rows, org charts and the other
-  deckkit components take the language's surfaces, rules, axes, tracks and series from the active theme (`dk.THEME`,
-  set by `vl.use()`; `dk.blank_deck()` starts every deck without one): call them with no colour arguments, inside the
-  rect `rs.ground()` returns, and they read on every ground — dark ones included. Text a component draws on its own
-  card keeps its colour where it reads and moves the least distance where it would not. matplotlib charts
-  (`designed_charts`) take the series, ground and font the same way unless you pass `palette=` / `dark=` / `font=`.
-  `tests/test_component_theme.py` holds every component on every ground of every language.
+- **General components wear the language — the 38 in the matrix.** Charts (native and matplotlib), timelines, steps,
+  tables, KPI rows, org charts, scorecards, evaluation grids, flows and the rest of the list in
+  `tests/test_component_theme.py` (`TIER1`) take the language's surfaces, rules, axes, tracks and series from the active
+  theme (`dk.THEME`, set by `vl.use()`; `dk.blank_deck()` and `dk.open_template()` start every deck without one): call
+  them with no colour arguments, inside the rect `rs.ground()` returns, and they read on every ground — dark ones and
+  each of poster's four page fields included. Text a component draws on its own card keeps its colour where it reads
+  and moves the least distance where it would not; a semantic colour (a regression's red, a ✓/✕/◐ mark) keeps its hue
+  the same way. A chart with more series than the language designs gets the language's own colours first and then
+  its hues turned apart (`dk.theme_series(n)` — use it for any categorical set you draw yourself). matplotlib charts
+  (`designed_charts`) take series, ground, ink and a lining-figure face the same way unless you pass `palette=` /
+  `dark=` / `font=`. The test holds those 38 on every ground of every language. **Outside that list** —
+  `ui_window`, `skeleton`, `brush_stroke`, `grain_background`, `two_tone`, callouts, pills, chips, glass cards — a
+  component is not yet held to every ground: lint the page on the language's dark ground before you rely on it.
 - **The kit's own pages are clean.** A deck made only of a language's page functions has no hard `lint_deck`
   finding and passes its own prohibitions — `tests/test_vl_audit_fixes.py` builds every language on 16:9 and 3:4,
   both grounds. Furniture that overlaps by design (paper hills over cards, a sun behind a ridge, a blob behind a
