@@ -1046,6 +1046,12 @@ jobs:
           python tests/test_component_theme.py | tee /tmp/ctheme.log
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/ctheme.log || {
             echo "::error::test_component_theme did not run to completion"; exit 1; }
+      - name: "Component skins (Tier-2 components draw cards, rules, markers and numerals the language's way)"
+        run: |
+          set -o pipefail
+          python tests/test_component_skin.py | tee /tmp/cskin.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/cskin.log || {
+            echo "::error::test_component_skin did not run to completion"; exit 1; }
       - name: "Components take colours from the theme (no literal colour in a component)"
         run: python scripts/check_component_theme.py
       - name: "Visual languages after the audit (measured with headroom, nothing dropped, upright pictures, clean own pages)"

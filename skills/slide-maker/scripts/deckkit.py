@@ -562,7 +562,7 @@ GROUND = None             # the deck's background colour; add_slide() paints it.
 # deck: _th() then returns the call site's old literal, so an ordinary deck draws byte-for-byte what it drew before.
 THEME = {}
 _THEME_KEYS = {"ground", "ink", "mute", "card", "card_ink", "rule", "axis", "track", "on_accent", "highlight",
-               "series", "dark"}
+               "series", "dark", "skin", "floor"}
 
 
 def set_theme(theme):
@@ -572,6 +572,12 @@ def set_theme(theme):
     unknown = set(theme) - _THEME_KEYS
     if unknown:
         raise ValueError("set_theme(): unknown role(s) {} — known: {}".format(sorted(unknown), sorted(_THEME_KEYS)))
+    sk = theme.get("skin")
+    if sk is not None:
+        import component_tiers as _ct
+        bad_v = {r: v for r, v in sk.items() if r not in _ct.SKIN_VOCAB or v not in _ct.SKIN_VOCAB[r]}
+        if bad_v:
+            raise ValueError("set_theme(): skin value(s) outside the vocabulary: {}".format(bad_v))
     THEME = theme          # designed_charts reads it when a chart is drawn (designed_charts.theme_defaults)
 
 
@@ -589,6 +595,151 @@ def _th(role, legacy):
     """The theme's colour for `role` when a visual language set one, else this call site's `legacy` colour."""
     v = THEME.get(role)
     return _as_rgbc(v if v else legacy)
+
+
+SKIN_TAG = "deckkit-skin:"   # names the shapes a skin value drew: `deckkit-skin:<role>:<value>` (tests and lint read it)
+
+
+def _skin(role):
+    """The active language's skin value for `role` ('card' | 'rule' | 'marker' | 'number'); the default without one."""
+    import component_tiers as _ct
+    return (THEME.get("skin") or {}).get(role) or _ct.SKIN_DEFAULT[role]
+
+
+def _tag_new(slide, n0, role, value):
+    """Name every shape added since `n0` by the skin. A primitive's own deckkit-* name (an overlap declaration, a
+    decoration tag) keeps its prefix — the lint reads the tag before the first colon — and gains the skin record at
+    the end."""
+    tag = "{}{}:{}".format(SKIN_TAG, role, value)
+    for sh in list(slide.shapes)[n0:]:
+        nm = str(sh.name)
+        sh.name = (nm + " " + tag) if nm.startswith("deckkit-") else tag
+
+
+def _fl(pt):
+    """A component's type size, never below the active language's floor (spec §5.2). An ordinary deck: unchanged."""
+    f = THEME.get("floor")
+    return max(pt, f) if f else pt
+
+
+def _skin_card(slide, x, y, w, h, *, fill, legacy, emphasis=False):
+    """A component's container in the language's CARD skin. `legacy()` draws the call site's own box: an ordinary
+    deck and a 'filled' language get exactly that. Returns the colour text inside sits on, so the caller picks its
+    ink against what the skin really left there (an outlined card leaves the ground, not the fill). `emphasis` marks a
+    container whose fill IS the message (an org chart's root, a funnel band): line-only skins draw it in that colour."""
+    import native_art as na
+    v = _skin("card")
+    ground = _th("ground", WHITE)
+    fill_c = _as_rgbc(fill) if fill is not None else None
+    if v == "filled":
+        legacy()
+        return fill_c if fill_c is not None else ground
+    n0 = len(slide.shapes)
+    card = _th("card", WHITE)
+    rule = _th("rule", RGBColor(0xD9, 0xDD, 0xE4))
+    accent = fill_c if (emphasis and fill_c is not None) else None
+    if v == "outlined":
+        box(slide, x, y, w, h, fill=None, line=accent or _on_surface(rule, ground, 3.0),
+            line_w=(1.8 if accent else 1.2) * RULE_W_SCALE, round=True, r=0.06)
+        surf = ground
+    elif v == "hairline":
+        c = accent or _on_surface(rule, ground, 3.0)
+        connector(slide, (x, y), (x + w, y), color=c, width=(1.6 if accent else 0.75), arrow=False)
+        connector(slide, (x, y + h), (x + w, y + h), color=c, width=0.75, arrow=False)
+        surf = ground
+    elif v == "window":
+        f = accent or card
+        na.ui_window(slide, x, y, w, h, fill=str(f), line=str(_on_surface(rule, ground, 1.5)),
+                     drop=str(_blend(ground, _th("ink", DEEP), 0.10)), r=0.12)
+        surf = f
+    elif v == "sign":
+        f = accent or card
+        na.sign_panel(slide, x, y, w, h, fill=str(f), keyline=str(_on_surface(rule, f, 3.0)), r=0.10)
+        surf = f
+    elif v == "chalk":
+        na.chalk_box(slide, x, y, w, h, str(accent or _th("ink", WHITE)), seed=int(x * 7 + y * 13) % 97)
+        surf = ground
+    else:                                                   # paper
+        f = accent or card
+        na.paper_card(slide, x, y, w, h, fill=str(f), r=0.10)
+        surf = f
+    _tag_new(slide, n0, "card", v)
+    return surf
+
+
+def skin_card(slide, x, y, w, h, *, fill=None, emphasis=False):
+    """A card in the active visual language's skin (paper, chalk, sign, window, hairline …) — for the cells
+    `bento()` returns and any container you draw yourself. An ordinary deck draws `box(..., fill=fill)`. Returns the
+    colour the card leaves under its text: pick ink with `dk.on(surface)`."""
+    return _skin_card(slide, x, y, w, h, fill=fill, emphasis=emphasis,
+                      legacy=lambda: box(slide, x, y, w, h, fill=fill))
+
+
+def _skin_rule(slide, p0, p1, *, color, width, legacy):
+    """A component's rule / connector / divider in the language's RULE skin. `legacy()` draws the call site's own
+    line (a thin box, a connector, an hrule): an ordinary deck and a 'solid' language get exactly that."""
+    import native_art as na
+    v = _skin("rule")
+    if v == "solid":
+        legacy()
+        return
+    n0 = len(slide.shapes)
+    if v == "hairline":
+        connector(slide, p0, p1, color=color, width=max(0.5, width * 0.5), arrow=False)
+    elif v == "dashed":
+        connector(slide, p0, p1, color=color, width=max(0.75, width), arrow=False, style="dashed")
+    else:                                                   # chalk
+        na.chalk_path(slide, [p0, p1], str(_as_rgbc(color)), w=max(1.4, width * 1.4),
+                      seed=int(p0[0] * 11 + p0[1] * 5) % 97)
+    _tag_new(slide, n0, "rule", v)
+
+
+def _skin_marker(slide, cx, cy, d, label, *, fill, ink, size, face=None, legacy):
+    """A component's marker (a step's numbered disc, an event dot) in the language's MARKER skin. `legacy()` draws
+    the call site's own disc. `label` None = a bare marker. The label's ink is chosen against what it sits on."""
+    import native_art as na
+    v = _skin("marker")
+    if v == "disc-number":
+        legacy()
+        return
+    n0 = len(slide.shapes)
+    ground = _th("ground", WHITE)
+    f = _as_rgbc(fill)
+    if v == "dot":
+        if label is None:
+            box(slide, cx - d * 0.3, cy - d * 0.3, d * 0.6, d * 0.6, fill=f, round=True, r=d * 0.3)
+        else:
+            text(slide, cx - d, cy - d / 2, d * 2, d, [[(str(label), size, _on_surface(f, ground), True, False, face)]],
+                 align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
+    elif v == "roundel":
+        na.roundel(slide, cx, cy, d, str(label) if label is not None else "", fill=str(f),
+                   ink=str(_legible_ink(f)), size=size, face=face or FONT)
+    elif v == "circled":
+        box(slide, cx - d / 2, cy - d / 2, d, d, fill=None, line=_on_surface(f, ground, 3.0), line_w=1.4,
+            round=True, r=d / 2)
+        if label is not None:
+            text(slide, cx - d / 2, cy - d / 2, d, d, [[(str(label), size, _on_surface(f, ground), True, False, face)]],
+                 align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
+    else:                                                   # badge
+        bw = d if label is None else max(d, _natural_width_in([(str(label), True)], size, face) + 0.18)
+        box(slide, cx - bw / 2, cy - d * 0.4, bw, d * 0.8, fill=f, round=True, r=0.06)
+        if label is not None:
+            text(slide, cx - bw / 2, cy - d * 0.4, bw, d * 0.8, [[(str(label), size, _legible_ink(f), True, False, face)]],
+                 align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
+    _tag_new(slide, n0, "marker", v)
+
+
+def _skin_number_face(value, face):
+    """The face for a numeral in the language's NUMBER skin: 'body' keeps the caller's `face`; 'display' / 'mono' take
+    the deck's display / mono face, always with lining figures. A run that is not digits (一二三, 'Q3 plan') keeps
+    `face` — a Latin numeral face has no CJK glyphs."""
+    v = _skin("number")
+    if v == "body":
+        return face
+    pref = DISPLAY if v == "display" else MONO
+    if _digit_share(str(value)) < _OLDSTYLE_NUMERAL_SHARE:
+        return face
+    return numeral_face(pref, fallback=face)
 
 
 def set_geometry(*, radius=None, rule_w=None):

@@ -10,7 +10,7 @@ from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
 TOP_KEYS = ("name", "order", "kind", "display", "rationale", "offer", "look", "grounds", "type", "image_pages",
-            "extras", "derived", "samples", "painters")      # = vl_contract.TOP_KEYS (kept here: this file imports nothing)
+            "extras", "derived", "samples", "painters", "skin")      # = vl_contract.TOP_KEYS (kept here: this file imports nothing)
 
 
 def load(directory=None):

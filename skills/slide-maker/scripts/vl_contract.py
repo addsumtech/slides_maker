@@ -13,7 +13,7 @@ CORE_TYPE = ("kicker", "title", "subtitle", "body", "quote", "attribution", "num
              "line", "item_head", "item_line")
 ROLE_KEYS = ("card", "card_ink", "rule", "on_accent", "series", "highlight")
 TOP_KEYS = ("name", "order", "kind", "display", "rationale", "offer", "look", "grounds", "type", "image_pages",
-            "extras", "derived", "samples", "painters")
+            "extras", "derived", "samples", "painters", "skin")
 _HEX = re.compile(r"^[0-9A-Fa-f]{6}$")
 SERIES_MIN = 1          # Phase 1 (spec ruling 2026-10-15): the colours each ground already has; Phase 2 raises it to 4
 SERIES_DE = 20.0        # two series colours closer than this (CIE76) read as one
@@ -165,6 +165,16 @@ def validate(spec):
                 and v[5] <= v[0]):
             probs.append("{}: type role {!r} must be (size, role, bold, colour, italic, floor<=size), got {!r}".format(
                 name, r, v))
+    import component_tiers as _ct
+    sk = spec.get("skin")
+    if not isinstance(sk, dict) or set(sk) != set(_ct.SKIN_VOCAB):
+        probs.append("{}: skin must name one value per role {} (got {!r})".format(name, sorted(_ct.SKIN_VOCAB), sk))
+    else:
+        for role, v in sk.items():
+            if v not in _ct.SKIN_VOCAB[role]:
+                probs.append("{}: skin {} {!r} is not in the vocabulary {} — pick one, or add the value to "
+                             "component_tiers.SKIN_VOCAB and implement it in deckkit".format(
+                                 name, role, v, list(_ct.SKIN_VOCAB[role])))
     for p in spec["image_pages"]:
         if p not in PAGES:
             probs.append("{}: image page {!r} is not one of {}".format(name, p, PAGES))

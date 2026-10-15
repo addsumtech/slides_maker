@@ -246,7 +246,9 @@ def use(name, prs, *, fonts="both", plan=None, image_dir=None, platform=None, gr
     dk.set_theme({"ground": p["ground"], "ink": p["ink"], "mute": p["mute"], "card": r["card"], "card_ink": r["card_ink"],
                   "rule": r["rule"], "axis": p["mute"], "track": r["rule"], "on_accent": r["on_accent"],
                   "highlight": r["highlight"], "series": list(r["series"]),
-                  "dark": REGISTRY[name]["grounds"][ground]["dark"]})
+                  "dark": REGISTRY[name]["grounds"][ground]["dark"],
+                  "skin": dict(REGISTRY[name]["skin"]),
+                  "floor": min(t[5] for t in REGISTRY[name]["type"].values() if isinstance(t, tuple))})
     dk.HANG_PUNCT = dk.deck_hangs_punct(prs)     # CJK line ends follow what THIS deck declares
     return k
 

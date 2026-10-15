@@ -39,13 +39,14 @@ def good_spec():
         "derived": [{"id": "point_numbers", "what": "1 2 3 on points", "words": {}}],
         "samples": {"copy": [("cover", {"title": "A fixture"})]},
         "painters": {"ground": "_ground_fixture", "card": "_card_fixture"},
+        "skin": {"card": "filled", "rule": "solid", "marker": "disc-number", "number": "body"},
     }
 
 
 # ── part 1: the validator ──
 check(vc.validate(good_spec()) == [], "a complete manifest validates ({})".format(vc.validate(good_spec())))
 for key in ("name", "order", "kind", "display", "rationale", "offer", "look", "grounds", "type", "image_pages",
-            "extras", "derived", "samples", "painters"):
+            "extras", "derived", "samples", "painters", "skin"):
     s = good_spec(); del s[key]
     probs = vc.validate(s)
     check(any(key in p for p in probs), "a manifest without {!r} is refused naming it ({})".format(key, probs[:1]))
@@ -156,7 +157,7 @@ check(all(vl.TYPE[n] is not REG[n]["type"] and vl.LANGS[n] is not REG[n]["look"]
       "the tables are copies of the manifests, not aliases into them")
 # I8: wrong-typed nested values are named, never a traceback
 bad_inputs = [("display", None), ("offer", None), ("samples", None), ("painters", None), ("extras", {"tags": "points"}),
-              ("grounds", {"light": None, "night": None})]
+              ("grounds", {"light": None, "night": None}), ("skin", "chalk")]
 for key, val in bad_inputs:
     s = good_spec(); s[key] = val
     try:
