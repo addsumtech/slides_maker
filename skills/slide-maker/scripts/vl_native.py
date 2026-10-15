@@ -1083,6 +1083,13 @@ CUT_ART = {
 }
 
 
+def _paper(k):
+    """The sheet the language's cards are cut from: white on the day ground, the cream of the back sheet on the night one
+    (a pure-white card was a slab of the brightest thing on the navy page). `panel` is the ORDINARY page's card and
+    carries the light default inks, so it stays the night's navy."""
+    return k.P.get("paper", "FFFFFF")
+
+
 def _card_flow(k, slide, page, col, items, **kw):
     return flow(k, slide, page, col, items, ink=k.P["card_ink"], mute=k.P["card_mute"], accent=k.P["card_accent"], **kw)
 
@@ -1142,8 +1149,12 @@ def _cut_cover(k, slide, f, image):
         if z is not None and z < 0.85 * vl.TYPE[k.name]["title"][0] * s:
             raise vl.VLTextOverflow("cutpaper.cover: the title sets at {:.0f}pt in the narrow card".format(z))
     text_bottom = max((v[1] + v[3] for v in r.values()), default=card[1])
-    if o != "land":                  # a free-standing card fits its words (landscape keeps its height for the tuck)
+    if o != "land":                  # a free-standing card fits its words
         card = (card[0], card[1], card[2], text_bottom + pad - card[1])
+    else:                            # so does this one: its words + padding + the 0.3in the near hill tucks it under
+        # (a fixed 0.47H left 1.3in of bare card under a short title; the wide card's 0.66H let the hill cut into a
+        # long one — Phase 3 verification, 2026-10-15)
+        card = (card[0], card[1], card[2], text_bottom + pad + 0.30 * s - card[1])
     if o != "land":                  # under the card (fitted to its words), never buried beneath it
         foot = card[1] + card[3]
         sun = (sun[0], max(sun[1], foot + sun[2] * 0.55 + 0.1 * s), sun[2])
@@ -1152,7 +1163,7 @@ def _cut_cover(k, slide, f, image):
     for cx, cy, cw in clouds:
         na.cloud(slide, cx, cy, cw, fill=A["cloud"])
     _back_hills(k, slide, o)
-    na.paper_card(slide, *card)
+    na.paper_card(slide, *card, fill=_paper(k))
     if o == "land":                  # the near hill tucks the card's foot into the scene — never above its words
         foot = card[1] + card[3]
         tuck = max(text_bottom + 0.15 * s, foot - 0.30 * s)
@@ -1211,10 +1222,10 @@ def _cut_image_text(k, slide, f, image):
     items = [(x_, text_of(f, x_)) for x_ in ("kicker", "title", "body", "caption") if text_of(f, x_)]
     r, d = _card_flow(k, slide, "image_text", (card[0] + pad, card[1] + pad, card[2] - 2 * pad, card[3] - 2 * pad), items,
                       anchor="middle")
-    na.paper_card(slide, *frame)
+    na.paper_card(slide, *frame, fill=_paper(k))
     inset = 0.14 * s
     place_image(k, slide, image, (frame[0] + inset, frame[1] + inset, frame[2] - 2 * inset, frame[3] - 2 * inset), "image_text")
-    na.paper_card(slide, *card)
+    na.paper_card(slide, *card, fill=_paper(k))
     d()
     return r
 
@@ -1228,7 +1239,7 @@ def _cut_quote(k, slide, f, image):
     # (the plan's smaller sheets sat wholly behind it — measured 2026-10-05, nothing but a rotated corner showed)
     for (dx, dy, rot), col in zip(((0.42, 0.40, 2.5), (0.22, 0.20, -1.5)), A["sheets"]):
         na.paper_card(slide, card[0] + dx * s, card[1] + dy * s, card[2], card[3], fill=col, rotation=rot)
-    na.paper_card(slide, *card)
+    na.paper_card(slide, *card, fill=_paper(k))
     pad = 0.6 * s
     items = [(x_, text_of(f, x_)) for x_ in ("quote", "attribution") if text_of(f, x_)]
     items = [("mark", "“")] + items
@@ -1275,7 +1286,7 @@ def _cut_closing(k, slide, f, image):
                       anchor="middle", align="c")
     na.paper_sun(slide, 0.85 * W, (0.14 if o == "land" else 0.50) * H, (0.16 * min(W, H), 0.11 * min(W, H)), A["sun"])
     _back_hills(k, slide, o, seed=21)
-    na.paper_card(slide, *card)
+    na.paper_card(slide, *card, fill=_paper(k))
     _front_hills(k, slide, o, seed=23)
     d()
     return r
@@ -1311,12 +1322,40 @@ def _cut_points(k, slide, f, image):
         ch = ((0.88 * H - top) - (rows - 1) * gap) / rows
         cwid = (0.84 * W - (cols - 1) * gap) / cols
         cards = [(0.08 * W + (i % cols) * (cwid + gap), top + (i // cols) * (ch + gap), cwid, ch) for i in range(n)]
+    compact = alt() > 0 and o != "land"
+    dds = [min(0.75 * s, chh * 0.30, cw * 0.24) if compact else min(1.1 * s, chh * 0.38, cw * 0.38)
+           for _cx, _cy, cw, chh in cards]                     # the discs keep the slots' size
+
+    def geom(cx, cy, cw, chh, dd):
+        """The disc's centre and the words' column for a card at (cx, cy, cw, chh)."""
+        if compact:
+            return (cx + 0.25 * s + dd / 2, cy + 0.25 * s + dd / 2), (cx + 0.45 * s + dd, cy + 0.2 * s, cw - dd - 0.65 * s, chh - 0.4 * s)
+        c = (cx + 0.3 * s + dd / 2, cy + 0.3 * s + dd / 2)
+        if o == "land":
+            return c, (cx + 0.3 * s, cy + 0.45 * s + dd, cw - 0.6 * s, chh - dd - 0.7 * s)
+        return c, (cx + 0.6 * s + dd, cy + 0.25 * s, cw - dd - 0.9 * s, chh - 0.5 * s)
+
+    def words(head, line, tcol):
+        return _card_flow(k, slide, "points", tcol, [(x_, t) for x_, t in (("item_head", head), ("item_line", line)) if t],
+                          anchor="top")
+    # PLAN every card's words in its slot first: the cards are then cut to what the tallest of them holds — one shared
+    # height — instead of filling the slot (22-30% of each was bare card, Phase 3 verification 2026-10-15)
+    need = 0.0
+    for (cx, cy, cw, chh), dd, (head, line) in zip(cards, dds, pts):
+        (dx, dy), tcol = geom(cx, cy, cw, chh, dd)
+        tr, _td = words(head, line, tcol)
+        need = max(need, max([v[1] + v[3] for v in tr.values()] + [dy + dd / 2]) - cy + 0.3 * s)   # words/disc + 0.3in
+    slot_h = cards[0][3]
+    row_h = min(max(need, 1.0 * s), slot_h)
+    per_row = n if o == "land" else (1 if (alt() == 0 or n < 3) else 2)
+    rows_n = -(-n // per_row)
+    # the block of cards sits centred where the slots' block sat
+    y0 = top + (rows_n * (slot_h - row_h)) / 2.0
+    cards = [(cx, y0 + (i // per_row) * (row_h + gap), cw, row_h) for i, (cx, _cy, cw, _ch) in enumerate(cards)]
     _front_hills(k, slide, o, seed=31, low=True)
-    for i, ((cx, cy, cw, chh), (head, line)) in enumerate(zip(cards, pts)):
-        na.paper_card(slide, cx, cy, cw, chh)
-        compact = alt() > 0 and o != "land"
-        dd = min(0.75 * s, chh * 0.30, cw * 0.24) if compact else min(1.1 * s, chh * 0.38, cw * 0.38)
-        dx, dy = (cx + 0.25 * s + dd / 2, cy + 0.25 * s + dd / 2) if compact else (cx + 0.3 * s + dd / 2, cy + 0.3 * s + dd / 2)
+    for i, ((cx, cy, cw, chh), dd, (head, line)) in enumerate(zip(cards, dds, pts)):
+        na.paper_card(slide, cx, cy, cw, chh, fill=_paper(k))
+        (dx, dy), tcol = geom(cx, cy, cw, chh, dd)
         na.disc(slide, dx, dy, dd, A["discs"][i % len(A["discs"])], shadow=True)
         if icons_:
             png = str(Path(_tf.gettempdir()) / "slide-maker-native-art" / "icon_{}.png".format(str(icons_[i]).replace(":", "_")))
@@ -1327,14 +1366,7 @@ def _cut_points(k, slide, f, image):
             nr, nd = flow(k, slide, "points", (dx - dd / 2, dy - dd / 2, dd, dd), [("mark", str(i + 1))], align="c",
                           anchor="middle", ink="FFFFFF", accent="FFFFFF", start={"mark": dd * 72 * 0.5})
             draws.append(nd)
-        if compact:
-            tcol = (cx + 0.45 * s + dd, cy + 0.2 * s, cw - dd - 0.65 * s, chh - 0.4 * s)
-        elif o == "land":
-            tcol = (cx + 0.3 * s, cy + 0.45 * s + dd, cw - 0.6 * s, chh - dd - 0.7 * s)
-        else:
-            tcol = (cx + 0.6 * s + dd, cy + 0.25 * s, cw - dd - 0.9 * s, chh - 0.5 * s)
-        tr, td_ = _card_flow(k, slide, "points", tcol, [(x_, t) for x_, t in (("item_head", head), ("item_line", line)) if t],
-                             anchor="top")
+        tr, td_ = words(head, line, tcol)
         draws.append(td_)
     _run_all(draws)
     return rects

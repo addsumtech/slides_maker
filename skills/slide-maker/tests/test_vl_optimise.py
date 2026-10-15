@@ -292,6 +292,152 @@ for g_ in ("light", "paper"):
 dk.set_theme(None)
 
 
+from pptx.enum.shapes import MSO_SHAPE
+
+
+def _fill_of(sh):
+    try:
+        return str(sh.fill.fore_color.rgb) if sh.fill.type == 1 else None
+    except Exception:
+        return None
+
+
+def _cards(slide, min_w=1.5):
+    """The paper cards of a cutpaper page: rounded rectangles >= min_w wide -> [(x, y, w, h, fill, rotation)]."""
+    return [(_inch(sh.left), _inch(sh.top), _inch(sh.width), _inch(sh.height), _fill_of(sh), sh.rotation)
+            for sh in slide.shapes if sh.shape_type == MSO_SHAPE_TYPE.AUTO_SHAPE
+            and sh.auto_shape_type == MSO_SHAPE.ROUNDED_RECTANGLE and _inch(sh.width) >= min_w]
+
+
+# ── Task 5 (B): cutpaper: the cover's card is as tall as its words + padding + the hill tuck (it was a fixed 0.47H) ──
+CCV = {"one word": dict(kicker="A paper-cut science story", title="Seeds"),
+       "sample": dict(kicker="A paper-cut science story", title="How seeds travel"),
+       "long": dict(kicker="A paper-cut science story", title="Why every forest on this hillside began as one small seed",
+                    subtitle="Wings, water and fur carry them further than you would think."),
+       "cjk": dict(kicker="剪纸科学故事", title="种子如何旅行")}
+for g_ in ("light", "night"):
+    prs, k = _deck("cutpaper", g_)
+    for tag, kw in CCV.items():
+        with contextlib.redirect_stdout(io.StringIO()):
+            k.cover(k.new_slide(), **kw)
+    imgs = _render(prs, "ccv_" + g_)
+    for pg, ((tag, kw), s_) in enumerate(zip(CCV.items(), prs.slides)):
+        cards = sorted(_cards(s_), key=lambda c_: -c_[2] * c_[3])
+        check(bool(cards), "cutpaper/{} cover ({}): the title card is drawn".format(g_, tag))
+        if not cards:
+            continue
+        cx_, cy_, cw_, ch_ = cards[0][:4]
+        inside = [w_ for w_ in _words(s_) if w_[1] >= cx_ - 0.01 and w_[3] <= cx_ + cw_ + 0.01 and w_[2] >= cy_ - 0.01
+                  and w_[4] <= cy_ + ch_ + 0.01]
+        low = max(w_[4] for w_ in inside)
+        # the card runs 0.4in of padding + the 0.3in the near hill tucks it under past its words, and no further
+        check(0.55 <= cy_ + ch_ - low <= 0.80, "cutpaper/{} cover ({}): the card ends {:.2f}in under its words "
+              "(want 0.55-0.80: padding + tuck)".format(g_, tag, cy_ + ch_ - low))
+        if imgs:                                     # the picture: the card as it SHOWS, above the near hill's crest
+            im = imgs[pg]
+            px_ = lambda x, y: im.getpixel((int(round(x * 100)), int(round(y * 100))))        # noqa: E731
+            col = px_(cx_ + cw_ - 0.25, cy_ + 0.2)
+            shown = 99.0
+            for i_ in range(12):                      # per column, from below the card up to its own colour: the crest
+                x = cx_ + 0.3 + (cw_ - 0.6) * i_ / 11.0
+                y = min(cy_ + ch_, im.size[1] / 100.0 - 0.05)
+                while y > cy_ + 0.3 and sum(abs(a_ - b_) for a_, b_ in zip(px_(x, y), col)) >= 40:
+                    y -= 0.01
+                shown = min(shown, y)
+            ib = _ink(im, (cx_ + 0.3, cy_ + 0.05, cx_ + cw_ - 0.3, shown - 0.02))
+            blank = shown - ib[3] if ib else None
+            check(blank is not None and 0.20 <= blank <= 0.75, "cutpaper/{} cover ({}): {} of bare card shows under the last "
+                  "ink (want 0.20-0.75in)".format(g_, tag, "{:.2f}in".format(blank) if blank is not None else "?"))
+        check(not [f for f in _hard(prs, "ccvh_" + g_ + str(pg)) if f.startswith("slide {}:".format(pg + 1))],
+              "cutpaper/{} cover ({}): the page stays lint-clean".format(g_, tag))
+dk.set_theme(None)
+
+
+# ── Task 5 (B): cutpaper: the points cards are as tall as their content + padding, all one height (22-30% was empty) ──
+CPT = {"3 short": ("Three ways a seed gets around", [("Wind", "Wings and parachutes drift far."),
+                                                      ("Water", "Some seeds float to a new shore."),
+                                                      ("Animals", "Hooks hitch a ride on fur.")], None),
+       "2 short": ("Two ways", [("Wind", "Drift far."), ("Water", "Float to a shore.")], None),
+       "icons": ("Three ways a seed gets around", [("Wind", "Wings and parachutes drift far."),
+                                                   ("Water", "Some seeds float to a new shore."),
+                                                   ("Animals", "Hooks hitch a ride on fur.")],
+                 ["lucide:wind", "lucide:droplets", "lucide:paw-print"]),
+       "4 long": ("Four ways a seed gets around the hillside", [
+           ("Wind carries the light ones", "Wings and parachutes let a seed drift for a whole afternoon before it lands."),
+           ("Water floats the heavy ones", "Some seeds are buoyant enough to ride a stream down to a brand new shore."),
+           ("Animals hitch a ride", "Hooks and burrs catch on fur and stay there until they are scratched loose."),
+           ("People carry them too", "Every pocket and boot sole on the path is a small seed vehicle.")], None),
+       "cjk": ("种子旅行的三种方式", [("风", "种子随风飘得很远。"), ("水", "种子漂到新的岸边。"),
+                                     ("动物", "种子挂在毛上搭车。")], None)}
+for g_ in ("light", "night"):
+    prs, k = _deck("cutpaper", g_)
+    for tag, (t_, its, ic_) in CPT.items():
+        with contextlib.redirect_stdout(io.StringIO()):
+            k.points(k.new_slide(), title=t_, items=its, **({"icons": ic_} if ic_ else {}))
+    for pg, ((tag, (t_, its, ic_)), s_) in enumerate(zip(CPT.items(), prs.slides)):
+        cards = [c_ for c_ in _cards(s_) if c_[3] >= 1.0]
+        check(len(cards) == len(its), "cutpaper/{} points ({}): one card a point ({})".format(g_, tag, len(cards)))
+        if not cards:
+            continue
+        hs = [c_[3] for c_ in cards]
+        check(max(hs) - min(hs) < 0.01, "cutpaper/{} points ({}): the cards share one height ({})".format(
+            g_, tag, ["{:.2f}".format(h_) for h_ in hs]))
+        wd = _words(s_)
+        discs = [(_inch(sh.left), _inch(sh.top), _inch(sh.left + sh.width), _inch(sh.top + sh.height)) for sh in s_.shapes
+                 if sh.shape_type == MSO_SHAPE_TYPE.AUTO_SHAPE and sh.auto_shape_type == MSO_SHAPE.OVAL and _inch(sh.width) < 1.5]
+        blanks = []
+        for ci, (cx_, cy_, cw_, ch_, _f, _r) in enumerate(cards):
+            inside = [w_[4] for w_ in wd if w_[1] >= cx_ - 0.01 and w_[3] <= cx_ + cw_ + 0.01 and w_[2] >= cy_ - 0.01
+                      and w_[4] <= cy_ + ch_ + 0.05]
+            inside += [d_[3] for d_ in discs if d_[0] >= cx_ - 0.01 and d_[2] <= cx_ + cw_ + 0.01 and d_[1] >= cy_ - 0.01]
+            blanks.append((cy_ + ch_ - max(inside)) / ch_)
+        # one shared height means the card with the fewest words keeps a line's worth more paper than the fullest one
+        check(0.04 <= min(blanks) and min(blanks) <= 0.15 and max(blanks) <= 0.22,
+              "cutpaper/{} points ({}): the cards are {} empty under their content (fullest 4-15%, emptiest <= 22%)".format(
+                  g_, tag, "/".join("{:.0%}".format(b_) for b_ in blanks)))
+        check(not [f for f in _hard(prs, "cptl_" + g_ + str(pg)) if f.startswith("slide {}:".format(pg + 1))],
+              "cutpaper/{} points ({}): the page stays lint-clean (no UNEVEN CARD HEIGHTS)".format(g_, tag))
+dk.set_theme(None)
+
+
+# ── Task 5 (B): cutpaper night: the cards are the cream paper of the back sheet, not pure white on navy ──
+CREAM = "F1E7C8"
+for g_, want in (("light", "FFFFFF"), ("night", CREAM)):
+    prs, k = _deck("cutpaper", g_)
+    with contextlib.redirect_stdout(io.StringIO()):
+        k.cover(k.new_slide(), kicker="A paper-cut science story", title="How seeds travel")
+        k.points(k.new_slide(), title="Three ways a seed gets around", items=[("Wind", "Drift far."), ("Water", "Float."),
+                                                                          ("Animals", "Hitch a ride.")])
+        k.quote(k.new_slide(), quote="Every forest began as one small seed.", attribution="A paper-cut science story")
+        k.closing(k.new_slide(), title="Plant one", line="and watch it travel")
+    for pg, (page, s_) in enumerate(zip(("cover", "points", "quote", "closing"), prs.slides)):
+        cards = [c_ for c_ in _cards(s_) if abs(c_[5]) < 0.01]                  # the page's own cards (the back sheets tilt)
+        check(bool(cards), "cutpaper/{} {}: the cards are drawn".format(g_, page))
+        check(all(c_[4] == want for c_ in cards), "cutpaper/{} {}: every card is {} ({})".format(
+            g_, page, want, sorted({c_[4] for c_ in cards})))
+        wd = [sh for sh in s_.shapes if getattr(sh, "has_text_frame", False) and sh.text_frame.text.strip() and sh.top >= 0]
+        for c_ in cards:
+            for sh in wd:
+                x_, y_ = _inch(sh.left), _inch(sh.top)
+                if not (c_[0] - 0.01 <= x_ and x_ + _inch(sh.width) <= c_[0] + c_[2] + 0.01 and c_[1] - 0.01 <= y_ <= c_[1] + c_[3]):
+                    continue
+                for p_ in sh.text_frame.paragraphs:
+                    for r_ in p_.runs:
+                        if r_.text.strip() and r_.font.color and r_.font.color.type and str(r_.font.color.rgb) != "FFFFFF":
+                            cr_ = dk.contrast_ratio(str(r_.font.color.rgb), want)
+                            check(cr_ >= 4.5, "cutpaper/{} {}: {!r} ({}) reads on its card at {:.2f}:1 (want >= 4.5)".format(
+                                g_, page, r_.text[:14], r_.font.color.rgb, cr_))
+dk.set_theme(None)
+pal_n = vl.REGISTRY["cutpaper"]["grounds"]["night"]["palette"]
+check(pal_n["paper"].upper() == CREAM and dk.contrast_ratio(pal_n["paper"], pal_n["ground"]) < 14.0,
+      "cutpaper night: the cards' paper is the cream of the back sheet ({})".format(pal_n.get("paper")))
+check(all(dk.contrast_ratio(pal_n[key], pal_n["paper"]) >= 4.5 for key in ("card_ink", "card_mute", "card_accent")),
+      "cutpaper night: card_ink, card_mute and card_accent read on the paper at >= 4.5:1 ({})".format(
+          ["{:.2f}".format(dk.contrast_ratio(pal_n[key], pal_n["paper"])) for key in ("card_ink", "card_mute", "card_accent")]))
+check(vl.REGISTRY["cutpaper"]["grounds"]["light"]["palette"]["paper"].upper() == "FFFFFF", "cutpaper day: the paper stays white")
+# `panel` is the ordinary page's card (it carries the light default inks): the night keeps it navy
+check(dk.contrast_ratio(pal_n["ink"], pal_n["panel"]) >= 4.5, "cutpaper night: the ordinary page's panel still carries the default ink")
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:
