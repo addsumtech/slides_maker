@@ -12,6 +12,7 @@ import deckkit as dk
 import native_art as na
 import visual_languages as vl
 from vl_native import _run_all, alt, ctx, points_of, register, text_of
+import vl_native as _vn
 import vl_native2 as _v2
 
 # vl_native2 imports vl_native, whose foot imports this module: when vl_native2 is imported FIRST it is only partly
@@ -200,9 +201,16 @@ def _given_bar_words(f):
     return bool(text_of(f, "crumb")) or f.get("status") is not None
 
 
+def _bar_has_words(k, f):
+    """The window's header strip has something to say: a crumb= or status=, given on this page or remembered."""
+    return bool(text_of(f, "crumb") or k.memo.get("crumb") or f.get("status") is not None or k.memo.get("status") is not None)
+
+
 def _window(k, slide, rect, f, page, *, bar=True):
-    """Draw a window with its bar; returns the content rect inside it (padded)."""
+    """Draw a window with its bar; returns the content rect inside it (padded). The bar is drawn only when it holds
+    the deck's crumb or status — an empty header strip is furniture (the window itself stays)."""
     W, H, s, o = ctx(k)
+    bar = bar and _bar_has_words(k, f)
     inner = na.ui_window(slide, *rect, fill=k.P["panel"], line=k.P["line"], drop=k.P["drop"], r=0.22 * s,
                          bar=_bar_h(k) if bar else None)
     if bar:
@@ -352,7 +360,12 @@ def _ui_image_text(k, slide, f, image):
         col = (0.07 * W, cy0, 0.86 * W, H - 0.5 * s - cy0)
     fx, fy, fw, fh = fit_device(kind, box, ar)
     if kind == "phone":
-        scr = na.ui_device(slide, fx, fy, fw, fh, "phone", frame=k.P["ink"], screen=k.P["panel"])
+        if vl._lum(k.P["ground"]) < vl._lum(k.P["ink"]):
+            # on a dark ground the ink is near-white, and a near-white bezel was the brightest object on the page (24% of
+            # it): the bezel is the dark line colour, with a hairline so its edge reads against the ground
+            scr = na.ui_device(slide, fx, fy, fw, fh, "phone", frame=k.P["line"], screen=k.P["panel"], edge=k.P["off_line"])
+        else:
+            scr = na.ui_device(slide, fx, fy, fw, fh, "phone", frame=k.P["ink"], screen=k.P["panel"])
     else:
         scr = na.ui_device(slide, fx, fy, fw, fh, "browser", frame=k.P["panel"], screen=k.P["line"])
     vl._place_image(k, slide, image, scr, vl.L_((0, 0, 1, 1), "frame", None), "image_text")
@@ -410,6 +423,12 @@ def _ui_points(k, slide, f, image):
               [("item_head", h)] + ([("item_line", l)] if l else []), {"anchor": "middle"})
              for (cx, ry), (h, l) in zip(cells, pts)]
     planned = plan_together(k, slide, "points", specs)
+    # a head is never set smaller than the numeral in the badge beside it (4 rows squeezed the heads to 15pt beside 20pt
+    # badges: the hierarchy turned over): this layout refuses, and the roomier one — two columns — is tried
+    hz = min(getattr(d_, "sizes", {}).get("item_head", 1e9) for _r, d_ in planned)
+    if a < _vn.ALTS[("interface", "points")] - 1 and hz < vl.TYPE["interface"]["item_no"][0] * s - 0.05:
+        raise vl.VLTextOverflow("interface.points(): the heads would be set at {:.1f}pt, under their {:.0f}pt badges — "
+                                "trying a roomier layout".format(hz, vl.TYPE["interface"]["item_no"][0] * s))
     rects = dict(r)
     for i, ((rr, d), (cx, ry)) in enumerate(zip(planned, cells)):
         cy = ry + rowh / 2.0
@@ -428,6 +447,19 @@ def _ui_points(k, slide, f, image):
             dk.decorative(hl, "a hairline between settings rows")
         rects.update(rr)
     return rects
+
+
+def _bubble_edge(k):
+    """The bubble's outline: the palette's hairline, drawn toward its off-state line only as far as it takes to read at
+    >= 1.6:1 against BOTH the card and the ground — the card is 1.1:1 against the ground, so the outline (and the tail
+    made of it) is what separates a message from the page."""
+    a, b = k.P["line"], k.P["off_line"]
+    for i in range(21):
+        c = "".join("{:02X}".format(round(int(a[j:j + 2], 16) + (int(b[j:j + 2], 16) - int(a[j:j + 2], 16)) * i / 20.0))
+                    for j in (0, 2, 4))
+        if min(vl._contrast(c, k.P["panel"]), vl._contrast(c, k.P["ground"])) >= 1.6:
+            return c
+    return b
 
 
 @register("interface", "quote", alts=2)
@@ -452,7 +484,7 @@ def _ui_quote(k, slide, f, image):
     qt = min(v[1] for v in r.values())
     qb = max(v[1] + v[3] for v in r.values())
     bub = (bub[0], qt - pad, bub[2], qb - qt + 2 * pad)
-    na.ui_bubble(slide, *bub, fill=k.P["panel"], line=k.P["line"], r=0.32 * s)
+    na.ui_bubble(slide, *bub, fill=k.P["panel"], line=_bubble_edge(k), r=0.32 * s)
     if ini:
         dk.disc(slide, x, bub[1], av, fill=_hex(k.P["primary_fill"]))   # white on 5B8CFF (dark) was 3.16:1
         r0, d0 = flow(k, slide, "quote", (x, bub[1], av, av), [("initials", ini)], anchor="middle", align="c", ink="FFFFFF")
@@ -483,18 +515,30 @@ def _ui_data(k, slide, f, image):
         card = (0.07 * W, 0.07 * H, 0.86 * W, (0.52 if alt() == 0 else 0.46) * H)
         ncol = (0.07 * W, card[1] + card[3] + 0.4 * s, 0.86 * W, None)
     col = _window(k, slide, card, f, "data", bar=False)
-    barh = 0.9 * s if frac is not None else 0.0
+    tsz = max(vl.TYPE["interface"]["tag"][0], 16.0) * s          # the bar's two end labels
+    tw = {t_: na.chip_width(t_, tsz, k.face("body")) - 1.2 * tsz / 72.0 for t_ in (num, total) if t_}
+    # the share bar's labels sit on one row under it — or, when the fill ends within a label's width of the bar's right
+    # end (a share near 100%), on two, so the two numbers never print over each other
+    stagger = frac is not None and col[2] * (1.0 - frac) < tw[total] + 0.2 * s
+    barh = (1.3 if stagger else 0.9) * s if frac is not None else 0.0
+    # the figure first, its label UNDER it: "of 40 teams switched" above the 12 read backwards
     r, ds = stack(k, slide, "data", col[0], col[2], col[1], col[1] + col[3] - barh,
-                  [(fields(f, ("label",)), 0.15 * s), ([("number", num)] if num else [], 0.0)], anchor="middle")
+                  [([("number", num)] if num else [], 0.15 * s), (fields(f, ("label",)), 0.0)], anchor="middle")
     _run_all(ds)
     if frac is not None:
         foot = max(v[1] + v[3] for v in r.values())
         trk, _fill = na.share_bar(slide, col[0], foot + 0.25 * s, col[2], frac, track=k.P["line"],
                                   fill=k.P["states"]["primary"], h=0.16 * s)
-        dk.decorative(trk, "the bar's full extent is printed as the total at its end")
-        tsz = vl.TYPE["interface"]["tag"][0] * s
-        dk.text(slide, col[0] + col[2] / 2.0, foot + 0.5 * s, col[2] / 2.0, 0.35 * s, [k.runs(total, tsz, k.color("mute"), True)],
-                align=dk.PP_ALIGN.RIGHT)
+        dk.decorative(trk, "the bar's ends are printed under it: the number at the fill's end, the total at the right end")
+        bw = lambda t_: tw[t_] + 0.12                        # a label's box: its ink and the text() insets   # noqa: E731
+        fill_end = col[0] + max(0.16 * s, col[2] * frac)
+        for words, edge, row in ((num, fill_end, 1 if stagger else 0), (total, col[0] + col[2], 0)):
+            ly = foot + (0.5 + 0.38 * row) * s
+            if edge - bw(words) < col[0]:                    # a sliver of a fill: the label starts at the bar instead
+                dk.text(slide, col[0], ly, bw(words), 0.35 * s, [k.runs(words, tsz, k.color("mute"), True)], align=dk.PP_ALIGN.LEFT)
+            else:
+                dk.text(slide, edge - bw(words) + 0.028, ly, bw(words), 0.35 * s, [k.runs(words, tsz, k.color("mute"), True)],
+                        align=dk.PP_ALIGN.RIGHT)
     rects = dict(r)
     if note:
         dd, pad = 0.42 * s, 0.32 * s

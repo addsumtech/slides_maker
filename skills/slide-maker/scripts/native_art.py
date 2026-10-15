@@ -856,9 +856,9 @@ def ui_cursor(slide, x, y, *, fill, edge, size=0.34):
     return sh
 
 
-def ui_device(slide, x, y, w, h, kind, *, frame, screen):
+def ui_device(slide, x, y, w, h, kind, *, frame, screen, edge=None):
     """A device frame around a picture: "browser" (a window with a slim bar and three dots) or "phone" (a rounded
-    bezel). Returns the screen rect the picture goes in."""
+    bezel, with a hairline in `edge` when given). Returns the screen rect the picture goes in."""
     if kind == "browser":
         dk.box(slide, x, y, w, h, fill=hexstr(frame), line=dk._as_rgb(hexstr(screen)), line_w=0.75, round=True, r=0.14)
         bar = min(0.36, 0.09 * h)
@@ -867,19 +867,26 @@ def ui_device(slide, x, y, w, h, kind, *, frame, screen):
             dk.decorative(dot, "browser window chrome")
         return (x + 0.06, y + bar, w - 0.12, h - bar - 0.06)
     if kind == "phone":
-        dk.box(slide, x, y, w, h, fill=hexstr(frame), round=True, r=min(w, h) * 0.16)
+        dk.box(slide, x, y, w, h, fill=hexstr(frame), round=True, r=min(w, h) * 0.16,
+               **({"line": dk._as_rgb(hexstr(edge)), "line_w": 0.75} if edge else {}))
         m = max(0.06, 0.045 * w)
         return (x + m, y + m * 1.6, w - 2 * m, h - m * 3.2)
     raise ValueError("ui_device(): kind must be 'browser' or 'phone', got {!r}".format(kind))
 
 
-def ui_bubble(slide, x, y, w, h, *, fill, line, r=0.32):
-    """A chat bubble: a rounded panel whose top-left corner is square (the tail side). Returns its rect."""
+def ui_bubble(slide, x, y, w, h, *, fill, line, r=0.32, tail=True):
+    """A chat bubble: a rounded panel with a real TAIL — a triangle on its left edge, just below the corner, pointing
+    out toward the avatar. The body and the tail share one outline colour `line`: the tail's two outer edges are an
+    open stroke and its base is a fill-only patch over the body's outline, so the outline runs unbroken into it.
+    (The old tail was a square patch on the corner in the faint hairline colour, 1.3:1 against the card.)
+    Returns its rect."""
     dk.box(slide, x, y, w, h, fill=hexstr(fill), line=dk._as_rgb(hexstr(line)), line_w=0.75, round=True, r=r)
-    sq = dk.box(slide, x, y, r, r, fill=hexstr(fill))
-    dk.decorative(sq, "the bubble's tail corner")
-    # the patch covers the rounded outline there, so the hairline is carried along its two outer edges (without it
-    # the corner read as a darker notch on the dark ground — docs-only run, 2026-10-10)
-    for hx, hy, hw, hh in ((x, y, r + 0.02, 0.0104), (x, y, 0.0104, r + 0.02)):
-        dk.decorative(dk.box(slide, hx, hy, hw, hh, fill=hexstr(line)), "the bubble's outline along its tail corner")
+    if tail:
+        ln = 0.95 * r                                         # how far the tail reaches, and how long its base is
+        y0 = y + r                                            # the base starts where the left edge turns straight
+        pts = [(x, y0), (x - ln, y0 + 0.6 * ln), (x, y0 + ln)]
+        patch = poly(slide, [(x + 0.012, y0 + 0.004), (x - ln, y0 + 0.6 * ln), (x + 0.012, y0 + ln - 0.004)], fill=fill)
+        dk.decorative(patch, "the bubble's tail, filled like the bubble")
+        edge = polyline(slide, pts, line, w=0.75)
+        dk.decorative(edge, "the bubble's tail outline")
     return (x, y, w, h)

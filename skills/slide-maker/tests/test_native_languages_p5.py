@@ -580,17 +580,18 @@ for g in ("light", "dark"):
         check(n_ == 0 and not nt_, "interface {} {}x{}: the progress bar passes the hand-off lint ({} {})".format(
             g, cw, chh, why_[:1], nt_[:1]))
 
-# the chat bubble's square tail corner keeps the outline: the hairline runs along its top and left edges (the corner
-# patch covered the rounded outline and read as a darker notch on the dark ground — docs-only run)
+# the chat bubble's tail is a real triangle drawn in the bubble's outline colour: its two outer edges are a stroke in
+# `line`, so they read against both the card and the ground (the old square corner patch read as a darker notch on the
+# dark ground — docs-only run — and, in the faint hairline colour, was invisible on the light one; Phase 3 Task 5 D)
 dkb = dk.blank_deck(13.333, 7.5)
 slb = dk.add_slide(dkb)
 na.ui_bubble(slb, 1.0, 1.0, 6.0, 2.0, fill="171A21", line="2A2F3A")
-thin = [sh for sh in slb.shapes if sh.shape_type == 1 and str(getattr(sh.fill.fore_color, "rgb", "")) == "2A2F3A"
-        if sh.fill.type == 1]
-top_ = [t for t in thin if abs(t.top / E_ - 1.0) < 0.02 and t.height / E_ < 0.03 and t.left / E_ <= 1.01 and t.width / E_ >= 0.3]
-left_ = [t for t in thin if abs(t.left / E_ - 1.0) < 0.02 and t.width / E_ < 0.03 and t.top / E_ <= 1.01 and t.height / E_ >= 0.3]
-check(top_ and left_, "ui_bubble: the tail corner carries the hairline on its top and left edges ({} top, {} left)".format(
-    len(top_), len(left_)))
+tail_ = [sh for sh in slb.shapes if sh.shape_type == 5 and str(getattr(sh.line.color, "rgb", "")) == "2A2F3A"]
+check(tail_ and all(t.left / E_ < 0.85 and t.left / E_ + t.width / E_ <= 1.02 and t.height / E_ >= 0.2 for t in tail_),
+      "ui_bubble: the tail is a triangle in the outline colour reaching out past the bubble's left edge ({} strokes)".format(
+          len(tail_)))
+body_ = [sh for sh in slb.shapes if sh.shape_type == 1 and str(getattr(sh.line.color, "rgb", "")) == "2A2F3A"]
+check(len(body_) == 1, "ui_bubble: the body's outline is the same colour as the tail's ({} bodies)".format(len(body_)))
 
 # ── final review (2026-10-10) ──
 def _page_texts(sl_):
