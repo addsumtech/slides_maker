@@ -2077,7 +2077,7 @@ def stat_row(slide, x, y, w, items, *, ink=DEEP, accent=MAGENTA, serif=None, div
         cx = x + i * (cw + gap)
         fsz = fig_size
         mruns = [(str(fig), True)] + ([(" " + str(unit), True)] if unit else [])
-        _nface = numeral_run_face(fig, serif, fallback=FONT)   # only when the figure IS a number
+        _nface = numeral_run_face(fig, _skin_number_face(fig, serif) or serif, fallback=FONT)   # only when the figure IS a number
         nat = _natural_width_in(mruns, fsz, _nface)
         if nat > cw:                              # the "-0.9 million" mid-number split bug
             fsz = max(15.0, fig_size * cw / nat * 0.98)
@@ -2101,8 +2101,10 @@ def stat_row(slide, x, y, w, items, *, ink=DEEP, accent=MAGENTA, serif=None, div
         text(slide, cx, y + cap_y, cw, cap_h, [[(str(label), 12, label_c, False, False)]], space_after=0)
         bottom = max(bottom, y + cap_y + cap_h + 0.04)
         if dividers and i > 0:
-            box(slide, cx - gap / 2, y + 0.06, 0.014, max(0.9, cap_y + 0.24),
-                fill=divider_c if divider_c is not None else _th("rule", RGBColor(0xDD, 0xDD, 0xDD)))
+            dcol = divider_c if divider_c is not None else _th("rule", RGBColor(0xDD, 0xDD, 0xDD))
+            _skin_rule(slide, (cx - gap / 2, y + 0.06), (cx - gap / 2, y + 0.06 + max(0.9, cap_y + 0.24)), color=dcol,
+                       width=1.0, legacy=lambda cx=cx, cap_y=cap_y, dcol=dcol: box(
+                           slide, cx - gap / 2, y + 0.06, 0.014, max(0.9, cap_y + 0.24), fill=dcol))
     return bottom
 def _set_baseline(run, pct):
     """Raise (or lower, if negative) a run by `pct` percent of its font size via the OOXML baseline
@@ -2397,36 +2399,42 @@ def timeline(slide, x, y, w, events, *, orientation="h", highlight=None, accent=
                        "or lower label_w." if polarity == "below" else
                        "Widen w, cut events, lower label_w, or switch to dot_strip() — its label "
                        "engine nudges labels with leader ticks and cannot collide."))
-        box(slide, ax0, ay - 0.012, axw, 0.024, fill=axis_c)
+        _skin_rule(slide, (ax0, ay), (ax0 + axw, ay), color=axis_c, width=1.7,
+                   legacy=lambda: box(slide, ax0, ay - 0.012, axw, 0.024, fill=axis_c))
         for i, ev in enumerate(events):
             ex = centers[i] if n > 1 else (x + w / 2)
             when, title = ev[0], ev[1]; cap = ev[2] if len(ev) > 2 else ""
             em = (highlight is None or i == highlight)
             dc = accent if em else axis_c            # DOT/graphic colour — may de-emphasise to grey
             tc = accent if em else MUTE              # DATE TEXT colour — floors at MUTE (6:1) so a
-            box(slide, ex - 0.09, ay - 0.09, 0.18, 0.18, fill=dc, round=True, r=0.09)  # dimmed date stays legible
+            _skin_marker(slide, ex, ay, 0.18, None, fill=dc, ink=dc, size=10,         # dimmed date stays legible
+                         legacy=lambda ex=ex, dc=dc: box(slide, ex - 0.09, ay - 0.09, 0.18, 0.18, fill=dc, round=True, r=0.09))
+            wf = _skin_number_face(when, None); wrun = (str(when), 13, tc, True, False) + ((wf,) if wf else ())
             above = (polarity == "alternate" and i % 2 == 1)
             if above:                                     # mirrored stack: when nearest the dot
-                text(slide, _lx(ex, label_w), ay - 0.48, label_w, 0.3, [[(str(when), 13, tc, True, False)]], align=PP_ALIGN.CENTER, space_after=0)
+                text(slide, _lx(ex, label_w), ay - 0.48, label_w, 0.3, [[wrun]], align=PP_ALIGN.CENTER, space_after=0)
                 text(slide, _lx(ex, label_w), ay - 0.80, label_w, 0.3, [[(title, 12, ink, True, False)]], align=PP_ALIGN.CENTER, space_after=0)
                 if cap:
                     text(slide, _lx(ex, label_w + 0.2), ay - 1.30, label_w + 0.2, 0.5, [[(cap, 10.5, MUTE, False, False)]], align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.BOTTOM, space_after=0)
             else:
-                text(slide, _lx(ex, label_w), ay + 0.18, label_w, 0.3, [[(str(when), 13, tc, True, False)]], align=PP_ALIGN.CENTER, space_after=0)
+                text(slide, _lx(ex, label_w), ay + 0.18, label_w, 0.3, [[wrun]], align=PP_ALIGN.CENTER, space_after=0)
                 text(slide, _lx(ex, label_w), ay + 0.5, label_w, 0.3, [[(title, 12, ink, True, False)]], align=PP_ALIGN.CENTER, space_after=0)
                 if cap:
                     text(slide, _lx(ex, label_w + 0.2), ay + 0.78, label_w + 0.2, 0.5, [[(cap, 10.5, MUTE, False, False)]], align=PP_ALIGN.CENTER, space_after=0)
     else:
         ax = x + 0.12
-        box(slide, ax - 0.012, y, 0.024, h, fill=axis_c)
+        _skin_rule(slide, (ax, y), (ax, y + h), color=axis_c, width=1.7,
+                   legacy=lambda: box(slide, ax - 0.012, y, 0.024, h, fill=axis_c))
         step = h / max(1, n)
         for i, ev in enumerate(events):
             ey = y + i * step + 0.1
             when, title = ev[0], ev[1]; cap = ev[2] if len(ev) > 2 else ""
             em = (highlight is None or i == highlight)
             dc = accent if em else axis_c; tc = accent if em else MUTE   # dot may grey; date text floors at MUTE
-            box(slide, ax - 0.09, ey - 0.09, 0.18, 0.18, fill=dc, round=True, r=0.09)
-            text(slide, ax + 0.35, ey - 0.16, w - 0.5, 0.3, [[(str(when) + "  ", 13, tc, True, False), (title, 13, ink, True, False)]], space_after=0)
+            _skin_marker(slide, ax, ey, 0.18, None, fill=dc, ink=dc, size=10,
+                         legacy=lambda ey=ey, dc=dc: box(slide, ax - 0.09, ey - 0.09, 0.18, 0.18, fill=dc, round=True, r=0.09))
+            wf = _skin_number_face(when, None)
+            text(slide, ax + 0.35, ey - 0.16, w - 0.5, 0.3, [[(str(when) + "  ", 13, tc, True, False) + ((wf,) if wf else ()), (title, 13, ink, True, False)]], space_after=0)
             if cap:
                 text(slide, ax + 0.35, ey + 0.16, w - 0.5, 0.4, [[(cap, 10.5, MUTE, False, False)]], space_after=0)
     if orientation == "h" and polarity == "alternate":
@@ -2727,11 +2735,12 @@ def agenda(slide, x, y, w, items, *, active=None, targets=None, numeral_style="p
             cjk_numeral(i + 1) if numeral_style == "cjk" else str(i + 1))
         row = box(slide, x, cur, w, row_h, fill=None, line=None)
         text(slide, x, cur + 0.04, 0.6, row_h - 0.08,
-             [[(num, 11, accent if on else muted, True, False, chrome_face)]], space_after=0)
+             [[(num, 11, accent if on else muted, True, False, _skin_number_face(num, chrome_face))]], space_after=0)
         text(slide, x + 0.72, cur + 0.02, w - 0.82, row_h - 0.04,
              [[(str(item), 16 if on else 15, ink if on else muted, on, False, face)]], space_after=0)
         if on and rule:
-            hrule(slide, x, cur + row_h - 0.02, min(w, 1.2), color=accent, weight=0.022)
+            _skin_rule(slide, (x, cur + row_h - 0.01), (x + min(w, 1.2), cur + row_h - 0.01), color=accent, width=1.6,
+                       legacy=lambda cur=cur: hrule(slide, x, cur + row_h - 0.02, min(w, 1.2), color=accent, weight=0.022))
         if targets is not None:
             link(row, targets[i])
         cur += row_h + gap
@@ -8901,18 +8910,29 @@ def step_list(slide, x, y, w, items, *, orientation="vertical", accent=None, ink
         if numeral_style == "cjk": return cjk_numeral(i + 1)
         if numeral_style == "pad2": return f"{i + 1:02d}"
         return str(i + 1)
+    def nrun(i, size, tc):                     # the numeral run; a number skin adds its face, else the run is unchanged
+        f = _skin_number_face(numr(i), None)
+        return (numr(i), size, tc, True, False) + ((f,) if f else ())
     if orientation == "horizontal":
         n = len(items); g = gap if gap is not None else 0.3
         cw = (w - g * (n - 1)) / n
         for i, (title, body) in enumerate(items):
             cx = x + i * (cw + g); on = (active_idx == i)
             d = 0.5
-            box(slide, cx + cw / 2 - d / 2, y, d, d, fill=acc if on else _th("card", WHITE),
-                line=None if on else acc, line_w=1.4, round=True, r=d / 2)
-            tc = (_legible_ink(acc)) if on else _on_surface(acc, _th("card", WHITE))
-            text(slide, cx + cw / 2 - d / 2, y, d, d, [[(numr(i), 15, tc, True, False)]],
-                 align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
-            if i: connector(slide, (cx - g + 0.02, y + d / 2), (cx - 0.02, y + d / 2), color=_blend(acc, _th("card", WHITE), 0.4))
+            def _disc(cx=cx, on=on, i=i):
+                box(slide, cx + cw / 2 - d / 2, y, d, d, fill=acc if on else _th("card", WHITE),
+                    line=None if on else acc, line_w=1.4, round=True, r=d / 2)
+                tc = (_legible_ink(acc)) if on else _on_surface(acc, _th("card", WHITE))
+                text(slide, cx + cw / 2 - d / 2, y, d, d, [[nrun(i, 15, tc)]],
+                     align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
+            _skin_marker(slide, cx + cw / 2, y + d / 2, d, numr(i),
+                         fill=acc if (on or active_idx is None) else _th("axis", MUTE), ink=_legible_ink(acc),
+                         size=15, face=_skin_number_face(numr(i), None), legacy=_disc)
+            if i:
+                p0, p1 = (cx - g + 0.02, y + d / 2), (cx - 0.02, y + d / 2)
+                lc = _blend(acc, _th("card", WHITE), 0.4)
+                _skin_rule(slide, p0, p1, color=lc, width=1.0,
+                           legacy=lambda p0=p0, p1=p1, lc=lc: connector(slide, p0, p1, color=lc))
             text(slide, cx, y + d + 0.12, cw, 0.34, [[(title, 13, ic, True, False)]], align=PP_ALIGN.CENTER, space_after=0)
             if body:
                 text(slide, cx, y + d + 0.46, cw, 0.5, [[(body, 11, bc, False, False)]], align=PP_ALIGN.CENTER, space_after=0)
@@ -8923,10 +8943,13 @@ def step_list(slide, x, y, w, items, *, orientation="vertical", accent=None, ink
     for i, (title, body) in enumerate(items):
         d = 0.42; on = (active_idx == i)
         solid = on or active_idx is None      # inactive discs mirror the horizontal branch: outlined, not solid
-        box(slide, x, cy, d, d, fill=acc if solid else _th("card", WHITE),
-            line=None if solid else acc, line_w=1.4, round=True, r=d / 2)
-        tc = _legible_ink(acc) if solid else _on_surface(acc, _th("card", WHITE))
-        text(slide, x, cy, d, d, [[(numr(i), 14, tc, True, False)]], align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
+        def _disc(cy=cy, solid=solid, i=i):
+            box(slide, x, cy, d, d, fill=acc if solid else _th("card", WHITE),
+                line=None if solid else acc, line_w=1.4, round=True, r=d / 2)
+            tc = _legible_ink(acc) if solid else _on_surface(acc, _th("card", WHITE))
+            text(slide, x, cy, d, d, [[nrun(i, 14, tc)]], align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
+        _skin_marker(slide, x + d / 2, cy + d / 2, d, numr(i), fill=acc if solid else _th("axis", MUTE),
+                     ink=_legible_ink(acc), size=14, face=_skin_number_face(numr(i), None), legacy=_disc)
         text(slide, x + d + 0.18, cy - 0.02, w - d - 0.18, 0.32, [[(title, 14.5, ic, True, False)]], space_after=0)
         bh = 0.3
         if body:

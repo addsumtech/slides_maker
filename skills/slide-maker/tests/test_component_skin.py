@@ -73,6 +73,52 @@ check(f is not None and not dk.has_oldstyle_figures(f), "a display number skin g
 check(dk._skin_number_face("三", "PingFang SC") == "PingFang SC", "a CJK numeral keeps the caller's face (Review Focus 2)")
 dk.set_theme(None)
 
+# ── the skin reaches the drawing: a Tier-2 component under its language's skin draws differently from the same call
+# under the default skin, whenever the language picks a non-default value for a role the component draws ──
+import sigs, designed_charts as dc
+from lxml import etree
+# where the example does not draw every role the component routes, a call that does (the example's step_list is
+# vertical; only the horizontal form draws connectors)
+EXERCISE = {"step_list": 'dk.step_list(s, 0.8, 3.6, 8.0, [("Collect", "gather"), ("Train", "fit"), ("Ship", "go")], '
+                         'orientation="horizontal", active_idx=1)'}
+def _xml_of(L, name, skin):
+    prs, k = _use(L)
+    dk.set_theme(dict(dk.THEME, skin=skin))
+    s = k.new_slide()
+    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+        exec(compile(sigs.EXAMPLES[name] + "\n" + EXERCISE.get(name, ""), name, "exec"),
+             {"dk": dk, "dc": dc, "s": s, "prs": prs})
+    return etree.tostring(s._element).decode()
+def _number_face(L, v):
+    _use(L)
+    return dk.numeral_face(dk.DISPLAY if v == "display" else dk.MONO)
+# each role a language sets differently from the default must change what the component draws — unless it is a
+# number face the component already sets its numerals in (cutpaper's display face IS its body face; agenda's
+# numerals are mono already), which is checked, not assumed
+DONE = ("step_list", "timeline", "agenda", "stat_row")           # grows as Tasks 3-4 route the rest
+for name in DONE:
+    for L in vl.LANGS:
+        sk = S[L]["skin"]
+        for r in [r for r in ct.TIER2_SKIN[name] if sk[r] != ct.SKIN_DEFAULT[r]]:
+            x_def = _xml_of(L, name, dict(ct.SKIN_DEFAULT))
+            x_one = _xml_of(L, name, dict(ct.SKIN_DEFAULT, **{r: sk[r]}))
+            same_face = r == "number" and 'typeface="{}"'.format(_number_face(L, sk[r])) in x_def
+            check(x_one != x_def or same_face, "{} wears {}'s {} skin ({}){}".format(
+                name, L, r, sk[r], " — already that face" if same_face and x_one == x_def else ""))
+# CJK step numerals under a display number skin keep the face they had (Review Focus 2) — a Latin numeral face has
+# no 壹/贰; compared with the same call under the default skin, not with "is the font installed"
+def _cjk_faces(skin):
+    prs, k = _use("ink")
+    dk.set_theme(dict(dk.THEME, skin=skin))
+    s = k.new_slide()
+    dk.step_list(s, 0.8, 1.0, 8.0, [("採茶", "春分"), ("製茶", "穀雨")], numeral_style="cjk")
+    nums = (dk.cjk_numeral(1), dk.cjk_numeral(2))
+    return [r.font.name for sh in s.shapes if sh.has_text_frame for p in sh.text_frame.paragraphs for r in p.runs
+            if r.text.strip() in nums]
+got, base = _cjk_faces(S["ink"]["skin"]), _cjk_faces(dict(ct.SKIN_DEFAULT))
+check(len(got) == 2 and got == base, "step_list's CJK numerals keep their face under a display number skin ({} vs {})".format(got, base))
+dk.set_theme(None)
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:
