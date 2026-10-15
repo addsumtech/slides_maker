@@ -169,6 +169,40 @@ for L in vl.LANGS:
     check(not low, "{}: no component text under the floor {} ({})".format(L, dk.THEME["floor"], low[:3]))
 dk.set_theme(None)
 
+import re
+# a skin restyles a mark, it never drops what the mark said: the ACTIVE step stays distinct (the legacy disc is solid
+# for active, a ring for the rest — the first sheets showed dot/circled flattening it), and a rule that was an ARROW
+# keeps its head (step_list's connectors are the process direction)
+_TH = {"ground": "F4EFE6", "ink": "1B1B1B", "mute": "5A5A55", "card": "EAE3D6", "card_ink": "1B1B1B", "rule": "C9C0AE",
+       "axis": "5A5A55", "track": "C9C0AE", "on_accent": "FFFFFF", "highlight": "B23A28", "series": ["B23A28"],
+       "dark": False, "floor": 9}
+def _one(role, value, draw):
+    prs = dk.blank_deck(13.333, 7.5); s = dk.add_slide(prs)
+    dk.set_theme(dict(_TH, skin=dict(ct.SKIN_DEFAULT, **{role: value})))
+    draw(s)
+    x = etree.tostring(s._element).decode()
+    dk.set_theme(None)
+    return re.sub(r' (id|name)="[^"]*"', "", x)
+for v in ct.SKIN_VOCAB["marker"]:
+    if v == ct.SKIN_DEFAULT["marker"]:
+        continue
+    for label in ("3", None):
+        mk = lambda act: (lambda s: dk._skin_marker(s, 2, 2, 0.42, label, fill=dk.RGBColor(0xB2, 0x3A, 0x28) if act else
+                                                    dk.RGBColor(0x5A, 0x5A, 0x55), ink=dk.RGBColor(0xFF, 0xFF, 0xFF),
+                                                    size=14, active=act, legacy=lambda: None))
+        on, off = _one("marker", v, mk(True)), _one("marker", v, mk(False))
+        same_shape = re.sub(r'val="[0-9A-F]{6}"', "", on) == re.sub(r'val="[0-9A-F]{6}"', "", off)
+        check(not same_shape, "marker {} ({}): the active mark differs in FORM from the rest, not only in hue".format(
+            v, "numbered" if label else "bare"))
+for v in ct.SKIN_VOCAB["rule"]:
+    if v == ct.SKIN_DEFAULT["rule"]:
+        continue
+    ln = lambda arrow: (lambda s: dk._skin_rule(s, (1, 2), (3, 2), color=dk.RGBColor(0x5A, 0x5A, 0x55), width=1.0,
+                                                 arrow=arrow, legacy=lambda: None))
+    with_head, without = _one("rule", v, ln(True)), _one("rule", v, ln(False))
+    check(with_head != without and ("tailEnd" in with_head or "headEnd" in with_head or v == "chalk"),
+          "rule {}: an arrow keeps its head".format(v))
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

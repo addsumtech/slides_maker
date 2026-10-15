@@ -639,8 +639,9 @@ def _skin_card(slide, x, y, w, h, *, fill, legacy, emphasis=False):
     rule = _th("rule", RGBColor(0xD9, 0xDD, 0xE4))
     accent = fill_c if (emphasis and fill_c is not None) else None
     # a data-coloured container (a funnel band, an org root) keeps a light tint of its colour under the line work: its
-    # AREA is the data, and line-only it shrank to two hairlines (measured on ink's funnel, 2026-10-15)
-    wash = _blend(accent, ground, 0.82) if accent is not None else None
+    # AREA is the data, and line-only it shrank to two hairlines (measured on ink's funnel, 2026-10-15); at an 82%
+    # wash a thin band all but vanished on the approval sheet, so 62%
+    wash = _blend(accent, ground, 0.62) if accent is not None else None
     if v == "outlined":
         box(slide, x, y, w, h, fill=wash, line=accent or _on_surface(rule, ground, 3.0),
             line_w=(1.8 if accent else 1.2) * RULE_W_SCALE, round=True, r=0.06)
@@ -686,9 +687,10 @@ def skin_card(slide, x, y, w, h, *, fill=None, emphasis=False):
                       legacy=lambda: box(slide, x, y, w, h, fill=fill))
 
 
-def _skin_rule(slide, p0, p1, *, color, width, legacy):
+def _skin_rule(slide, p0, p1, *, color, width, legacy, arrow=False):
     """A component's rule / connector / divider in the language's RULE skin. `legacy()` draws the call site's own
-    line (a thin box, a connector, an hrule): an ordinary deck and a 'solid' language get exactly that."""
+    line (a thin box, a connector, an hrule): an ordinary deck and a 'solid' language get exactly that. `arrow` keeps
+    a directional line directional (step_list's connectors are the process order)."""
     import native_art as na
     v = _skin("rule")
     if v == "solid":
@@ -696,18 +698,22 @@ def _skin_rule(slide, p0, p1, *, color, width, legacy):
         return
     n0 = len(slide.shapes)
     if v == "hairline":
-        connector(slide, p0, p1, color=color, width=max(0.5, width * 0.5), arrow=False)
+        connector(slide, p0, p1, color=color, width=max(0.5, width * 0.5), arrow=arrow)
     elif v == "dashed":
-        connector(slide, p0, p1, color=color, width=max(0.75, width), arrow=False, style="dashed")
+        connector(slide, p0, p1, color=color, width=max(0.75, width), arrow=arrow, style="dashed")
+    elif arrow:                                             # chalk, with its head
+        na.chalk_arrow(slide, p0[0], p0[1], p1[0], p1[1], str(_as_rgbc(color)), seed=int(p0[0] * 11 + p0[1] * 5) % 97)
     else:                                                   # chalk
         na.chalk_path(slide, [p0, p1], str(_as_rgbc(color)), w=max(1.4, width * 1.4),
                       seed=int(p0[0] * 11 + p0[1] * 5) % 97)
     _tag_new(slide, n0, "rule", v)
 
 
-def _skin_marker(slide, cx, cy, d, label, *, fill, ink, size, face=None, legacy):
+def _skin_marker(slide, cx, cy, d, label, *, fill, ink, size, face=None, legacy, active=True):
     """A component's marker (a step's numbered disc, an event dot) in the language's MARKER skin. `legacy()` draws
-    the call site's own disc. `label` None = a bare marker. The label's ink is chosen against what it sits on."""
+    the call site's own disc. `label` None = a bare marker. `active` = the emphasised step / event: every value draws
+    it in a different FORM from the rest, not only another hue (the legacy disc is solid for it, a ring for the rest).
+    The label's ink is chosen against what it sits on."""
     import native_art as na
     v = _skin("marker")
     if v == "disc-number":
@@ -716,27 +722,35 @@ def _skin_marker(slide, cx, cy, d, label, *, fill, ink, size, face=None, legacy)
     n0 = len(slide.shapes)
     ground = _th("ground", WHITE)
     f = _as_rgbc(fill)
+    ring_c = _on_surface(f, ground, 3.0)
+    def _label(x, y, w, h, color, sz=size):
+        text(slide, x, y, w, h, [[(str(label), sz, color, True, False, face)]],
+             align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
     if v == "dot":
-        if label is None:
-            box(slide, cx - d * 0.3, cy - d * 0.3, d * 0.6, d * 0.6, fill=f, round=True, r=d * 0.3)
-        else:
-            text(slide, cx - d, cy - d / 2, d * 2, d, [[(str(label), size, _on_surface(f, ground), True, False, face)]],
-                 align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
+        if label is None:                                   # active: a full dot; the rest: a small one
+            r = d * (0.42 if active else 0.24)
+            box(slide, cx - r, cy - r, 2 * r, 2 * r, fill=f, round=True, r=r)
+        else:                                               # the numeral itself, larger; the active one underlined
+            _label(cx - d, cy - d / 2, d * 2, d, _on_surface(f, ground), sz=size * 1.3)
+            if active:
+                box(slide, cx - d * 0.35, cy + d * 0.52, d * 0.7, 0.035, fill=ring_c)
+    elif v in ("circled", "roundel") and not active:        # the rest: a ring, the numeral in its colour
+        box(slide, cx - d / 2, cy - d / 2, d, d, fill=None, line=ring_c, line_w=1.4, round=True, r=d / 2)
+        if label is not None:
+            _label(cx - d / 2, cy - d / 2, d, d, _on_surface(f, ground))
     elif v == "roundel":
         na.roundel(slide, cx, cy, d, str(label) if label is not None else "", fill=str(f),
                    ink=str(_legible_ink(f)), size=size, face=face or FONT)
-    elif v == "circled":
-        box(slide, cx - d / 2, cy - d / 2, d, d, fill=None, line=_on_surface(f, ground, 3.0), line_w=1.4,
-            round=True, r=d / 2)
+    elif v == "circled":                                    # active: the filled disc
+        box(slide, cx - d / 2, cy - d / 2, d, d, fill=f, round=True, r=d / 2)
         if label is not None:
-            text(slide, cx - d / 2, cy - d / 2, d, d, [[(str(label), size, _on_surface(f, ground), True, False, face)]],
-                 align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
-    else:                                                   # badge
+            _label(cx - d / 2, cy - d / 2, d, d, _legible_ink(f))
+    else:                                                   # badge: filled when active, outlined otherwise
         bw = d if label is None else max(d, _natural_width_in([(str(label), True)], size, face) + 0.18)
-        box(slide, cx - bw / 2, cy - d * 0.4, bw, d * 0.8, fill=f, round=True, r=0.06)
+        box(slide, cx - bw / 2, cy - d * 0.4, bw, d * 0.8, fill=f if active else None,
+            line=None if active else ring_c, line_w=1.4, round=True, r=0.06)
         if label is not None:
-            text(slide, cx - bw / 2, cy - d * 0.4, bw, d * 0.8, [[(str(label), size, _legible_ink(f), True, False, face)]],
-                 align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
+            _label(cx - bw / 2, cy - d * 0.4, bw, d * 0.8, _legible_ink(f) if active else _on_surface(f, ground))
     _tag_new(slide, n0, "marker", v)
 
 
@@ -2418,7 +2432,7 @@ def timeline(slide, x, y, w, events, *, orientation="h", highlight=None, accent=
             em = (highlight is None or i == highlight)
             dc = accent if em else axis_c            # DOT/graphic colour — may de-emphasise to grey
             tc = accent if em else MUTE              # DATE TEXT colour — floors at MUTE (6:1) so a
-            _skin_marker(slide, ex, ay, 0.18, None, fill=dc, ink=dc, size=10,         # dimmed date stays legible
+            _skin_marker(slide, ex, ay, 0.18, None, fill=dc, ink=dc, size=10, active=em,   # dimmed date stays legible
                          legacy=lambda ex=ex, dc=dc: box(slide, ex - 0.09, ay - 0.09, 0.18, 0.18, fill=dc, round=True, r=0.09))
             wf = _skin_number_face(when, None); wrun = (str(when), 13, tc, True, False) + ((wf,) if wf else ())
             above = (polarity == "alternate" and i % 2 == 1)
@@ -2442,7 +2456,7 @@ def timeline(slide, x, y, w, events, *, orientation="h", highlight=None, accent=
             when, title = ev[0], ev[1]; cap = ev[2] if len(ev) > 2 else ""
             em = (highlight is None or i == highlight)
             dc = accent if em else axis_c; tc = accent if em else MUTE   # dot may grey; date text floors at MUTE
-            _skin_marker(slide, ax, ey, 0.18, None, fill=dc, ink=dc, size=10,
+            _skin_marker(slide, ax, ey, 0.18, None, fill=dc, ink=dc, size=10, active=em,
                          legacy=lambda ey=ey, dc=dc: box(slide, ax - 0.09, ey - 0.09, 0.18, 0.18, fill=dc, round=True, r=0.09))
             wf = _skin_number_face(when, None)
             text(slide, ax + 0.35, ey - 0.16, w - 0.5, 0.3, [[(str(when) + "  ", 13, tc, True, False) + ((wf,) if wf else ()), (title, 13, ink, True, False)]], space_after=0)
@@ -8974,11 +8988,11 @@ def step_list(slide, x, y, w, items, *, orientation="vertical", accent=None, ink
                      align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
             _skin_marker(slide, cx + cw / 2, y + d / 2, d, numr(i),
                          fill=acc if (on or active_idx is None) else _th("axis", MUTE), ink=_legible_ink(acc),
-                         size=15, face=_skin_number_face(numr(i), None), legacy=_disc)
+                         size=15, face=_skin_number_face(numr(i), None), legacy=_disc, active=(on or active_idx is None))
             if i:
                 p0, p1 = (cx - g + 0.02, y + d / 2), (cx - 0.02, y + d / 2)
                 lc = _blend(acc, _th("card", WHITE), 0.4)
-                _skin_rule(slide, p0, p1, color=lc, width=1.0,
+                _skin_rule(slide, p0, p1, color=lc, width=1.0, arrow=True,
                            legacy=lambda p0=p0, p1=p1, lc=lc: connector(slide, p0, p1, color=lc))
             text(slide, cx, y + d + 0.12, cw, 0.34, [[(title, 13, ic, True, False)]], align=PP_ALIGN.CENTER, space_after=0)
             if body:
@@ -8996,7 +9010,7 @@ def step_list(slide, x, y, w, items, *, orientation="vertical", accent=None, ink
             tc = _legible_ink(acc) if solid else _on_surface(acc, _th("card", WHITE))
             text(slide, x, cy, d, d, [[nrun(i, 14, tc)]], align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
         _skin_marker(slide, x + d / 2, cy + d / 2, d, numr(i), fill=acc if solid else _th("axis", MUTE),
-                     ink=_legible_ink(acc), size=14, face=_skin_number_face(numr(i), None), legacy=_disc)
+                     ink=_legible_ink(acc), size=14, face=_skin_number_face(numr(i), None), legacy=_disc, active=solid)
         text(slide, x + d + 0.18, cy - 0.02, w - d - 0.18, 0.32, [[(title, 14.5, ic, True, False)]], space_after=0)
         bh = 0.3
         if body:
