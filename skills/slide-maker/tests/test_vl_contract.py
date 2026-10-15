@@ -90,7 +90,8 @@ import vl_specs
 import visual_languages as vl
 REG = vl_specs.load()
 check(list(REG) == list(vl.LANGS), "the registry and LANGS list the same languages in the same order")
-check(len(REG) == 15, "fifteen languages are registered ({})".format(len(REG)))
+check(len(REG) == len([f for f in (ROOT / "scripts" / "vl_specs").glob("*.py") if not f.name.startswith("_")]),
+      "every manifest file is registered ({})".format(len(REG)))
 probs = vc.validate_all(REG)
 check(probs == [], "every manifest satisfies the contract: {}".format(probs[:4]))
 check(vl.REGISTRY is not None and set(vl.REGISTRY) == set(REG), "visual_languages exposes REGISTRY")
@@ -297,29 +298,58 @@ finally:
 
 # ── part 3: docs blocks follow the registry ──
 import vl_docs
-check(vl_docs.render("count-all") == "fifteen" and vl_docs.render("count-drawn") == "eleven"
-      and vl_docs.render("count-image") == "four", "the count blocks read fifteen / eleven / four")
-check(vl_docs.render("count-all-zh") == "十五" and vl_docs.render("count-drawn-zh") == "十一", "the Chinese counts read 十五 / 十一")
-check(vl_docs.render("list-drawn").startswith("`ink` · `poster`") and vl_docs.render("list-drawn").endswith("`wayfinding`"),
-      "the drawn list runs ink … wayfinding")
+_n = len(REG); _nd = len([s_ for s_ in REG.values() if s_["kind"] == "drawn"]); _ni = _n - _nd
+check(vl_docs.render("count-all") == vl_docs._EN[_n] and vl_docs.render("count-drawn") == vl_docs._EN[_nd]
+      and vl_docs.render("count-image") == vl_docs._EN[_ni], "the count blocks read the registry's counts")
+check(vl_docs.render("count-image-cap") == vl_docs._EN[_ni].capitalize(), "a sentence-initial count is capitalised")
+check(vl_docs.render("count-all-zh") == vl_docs._zh(_n) and vl_docs.render("count-image-zh") == vl_docs._zh(_ni),
+      "the Chinese counts read the registry's counts")
+drawn_names = [s_["name"] for s_ in REG.values() if s_["kind"] == "drawn"]
+image_names = [s_["name"] for s_ in REG.values() if s_["kind"] == "image-led"]
+check(vl_docs.render("list-drawn") == " · ".join("`{}`".format(n_) for n_ in drawn_names), "the drawn list follows the registry")
+check(vl_docs.render("list-image") == " · ".join("`{}`".format(n_) for n_ in image_names), "the image-led list follows the registry")
+check(vl_docs.render("list-image-comma") == ", ".join("`{}`".format(n_) for n_ in image_names), "the comma image-led list")
+check(vl_docs.render("list-drawn-plain") == ", ".join(drawn_names), "the plain drawn list (file inventory)")
 check("culture, history, craft → `ink`" in vl_docs.render("offer-arrow"), "the arrow guidance names ink's topics")
 check("`ink` (culture, history, craft)" in vl_docs.render("offer-paren"), "the parenthesised guidance names ink's topics")
 check("文化、历史、器物 → 水墨" in vl_docs.render("offer-zh"), "the Chinese guidance names 水墨's topics")
-check(vl_docs.check() == [], "every docs block is current ({})".format(vl_docs.check()[:2]))
-# Review Focus 5: a hand edit inside a block is caught, and --write restores it
-import shutil, tempfile
-tmp = Path(tempfile.mkdtemp())
-src = ROOT / "references" / "visual-languages.md"
-shutil.copy(src, tmp / "vl.md")
+check(vl_docs.check() == [], "every docs block is current and every required block is present ({})".format(vl_docs.check()[:2]))
+# I6 + M1: marker integrity, on TEMP copies (a killed test must not leave a tracked doc edited)
+tmpd = Path(tempfile.mkdtemp(prefix="vldocs_"))
 try:
-    src.write_text(src.read_text(encoding="utf-8").replace("<!-- vl:count-all -->fifteen", "<!-- vl:count-all -->nine", 1),
-                   encoding="utf-8")
-    probs = vl_docs.check()
-    check(any("visual-languages.md" in p and "count-all" in p for p in probs), "a hand-edited block is named ({})".format(probs[:1]))
-    vl_docs.write()
-    check(vl_docs.check() == [], "--write restores the block")
+    t = tmpd / "visual-languages.md"
+    shutil.copy(ROOT / "references" / "visual-languages.md", t)
+    docs = {t: vl_docs.REQUIRED[ROOT / "references" / "visual-languages.md"]}
+    t.write_text(t.read_text(encoding="utf-8").replace("<!-- vl:count-all -->fifteen", "<!-- vl:count-all -->nine", 1), encoding="utf-8")
+    probs = vl_docs.check(docs=docs)
+    check(any("visual-languages.md" in p_ and "count-all" in p_ for p_ in probs), "a hand-edited block is named ({})".format(probs[:1]))
+    vl_docs.write(docs=docs)
+    check(vl_docs.check(docs=docs) == [], "--write restores a hand-edited block")
+    before = t.read_text(encoding="utf-8")
+    broken = before.replace("<!-- /vl -->", "", 1)                 # one closing marker lost
+    t.write_text(broken, encoding="utf-8")
+    probs = vl_docs.check(docs=docs)
+    check(any("unbalanced" in p_ for p_ in probs), "an unbalanced marker is named ({})".format(probs[:1]))
+    res = vl_docs.write(docs=docs)
+    check(t.read_text(encoding="utf-8") == broken and res and "unbalanced" in str(res),
+          "--write refuses an unbalanced doc and changes nothing (it swallowed prose before)")
+    t.write_text(before.replace("<!-- vl:count-all -->", "<!-- vl:count-everything -->", 1), encoding="utf-8")
+    try:
+        probs = vl_docs.check(docs=docs); crash = None
+    except Exception as e:
+        probs, crash = [], "{}: {}".format(type(e).__name__, e)
+    check(crash is None and any("count-everything" in p_ and "visual-languages.md" in p_ for p_ in probs),
+          "an unknown block is named with its file ({} {})".format(crash, probs[:1]))
+    t.write_text(_BLOCKLESS := __import__("re").sub(r"<!-- /?vl[^>]*-->", "", before), encoding="utf-8")
+    probs = vl_docs.check(docs=docs)
+    check(any("count-all" in p_ and "missing" in p_ for p_ in probs), "a doc whose required blocks were removed is caught ({})".format(probs[:1]))
 finally:
-    shutil.copy(tmp / "vl.md", src)
+    shutil.rmtree(tmpd, ignore_errors=True)
+# I7: the SKILL.md lossless gate reads a vl block as one thing, so a new language does not need waivers
+import check_skill_lossless as _csl
+check(_csl.normalize("and the <!-- vl:count-drawn -->eleven<!-- /vl --> drawn ones below")
+      == _csl.normalize("and the <!-- vl:count-drawn -->twelve<!-- /vl --> drawn ones below"),
+      "the lossless gate ignores what is inside a vl block")
 
 # ── part 2 (Task 3) and part 3 (Task 4) are appended above this line ──
 

@@ -246,8 +246,7 @@ four template choices:
        - **This gate also fires on the lighter case-(b) offer** (unsure-on-style / brand-defining,
          2–3 directions) because it is the same machinery — which is the right default, since those
          are exactly the decks where an invented register pays most.
-       - **A curated visual language.** A direction may be one of the <!-- vl:count-all -->fifteen<!-- /vl --> visual languages — four
-         image-led (`editorial`, `soft`, `collage`, `storybook`) and <!-- vl:count-drawn -->eleven<!-- /vl --> drawn (below) —
+       - **A curated visual language.** A direction may be one of the <!-- vl:count-all -->fifteen<!-- /vl --> visual languages — <!-- vl:count-image -->four<!-- /vl --> image-led (<!-- vl:list-image-comma -->`editorial`, `soft`, `collage`, `storybook`<!-- /vl -->) and <!-- vl:count-drawn -->eleven<!-- /vl --> drawn (below) —
          `visual_languages.direction("<name>")` returns its entry for
          `directions.json`, previewed by its bundled sample ("style sample — not your content"). It counts
          as a STYLED direction, never as the topic-invented bespoke one. Picking it records

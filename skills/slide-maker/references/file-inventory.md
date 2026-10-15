@@ -679,8 +679,7 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   near-duplicates, a possible-watermark heuristic, and EXIF rotation (`--fix` bakes it in). Its
   `--contact-sheet` is ONE labelled PNG of every candidate plus a sha256 — the artifact that makes
   looking cheap, and that a critic's consent can name.
-- `visual_languages.py` — fifteen complete looks: four image-led (editorial, soft, collage, storybook) and eleven
-  drawn (ink, poster, cutpaper, drafting, starlit, broadsheet, journal, tally, chalkboard, interface, wayfinding;
+- `visual_languages.py` — <!-- vl:count-all -->fifteen<!-- /vl --> complete looks: <!-- vl:count-image -->four<!-- /vl --> image-led (<!-- vl:list-image-plain -->editorial, soft, collage, storybook<!-- /vl -->) and <!-- vl:count-drawn -->eleven<!-- /vl --> drawn (<!-- vl:list-drawn-plain -->ink, poster, cutpaper, drafting, starlit, broadsheet, journal, tally, chalkboard, interface, wayfinding<!-- /vl -->;
   their pages live in `vl_native.py` / `vl_native2.py` / `vl_native3.py`): palette with
   text-safe inks, system fonts per platform (`fonts="both"` default) and per SCRIPT (Han / kana / Hangul),
   a surface, image treatments and the page compositions; registered with register_surface for
@@ -711,7 +710,7 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   pages, samples / sigs scaffold / docs rows present, and the build-matrix suites still iterating the registry.
 - `check_vl_contract.py` — `check_vl_contract.py [name …]`: the manifest and the conformance checks for the named
   languages (all by default), with a NEXT line.
-- `vl_docs.py` — `--write` / `--check` the `<!-- vl:NAME -->…<!-- /vl -->` blocks (counts, the drawn list, the offer
+- `vl_docs.py` — `--write` / `--check` the `vl:NAME` marker blocks (counts, the drawn list, the offer
   guidance in three wordings) in SKILL.md, the references and both READMEs, from the registry; CI runs `--check`.
 - `collage.py` — `collage(slide, region, items, seed=, keep_clear=)`: 1-4 images as tilted, white-bordered,
   taped prints; geometry decided first — a print never enters `keep_clear` and never covers more than

@@ -75,8 +75,14 @@ _DROP = re.compile(
 )
 
 
+# a generated block (scripts/vl_docs.py) is compared as its NAME, not its words: adding a visual language rewrites
+# its counts and lists, and that must not read as SKILL.md content lost (final review, 2026-10-15)
+_VL_BLOCK = re.compile(r"<!-- vl:([a-z\-]+) -->.*?<!-- /vl -->", re.S)
+
+
 def normalize(text: str) -> str:
     """Fold away formatting so only word content is compared."""
+    text = _VL_BLOCK.sub(lambda m: " vlblock " + m.group(1) + " ", text)
     text = unicodedata.normalize("NFKC", text)
     text = text.translate(_DASHES).translate(_QUOTES)
     text = text.lower()

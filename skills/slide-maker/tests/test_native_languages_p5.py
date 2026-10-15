@@ -716,7 +716,7 @@ for n in ("interface", "wayfinding"):
     check("`{}`".format(n) in ref and "→ `{}`".format(n) in ref, "the reference documents {} and when to offer it".format(n))
 for ex in ("crumb=", "status=", "actions=", "toggles=", "line=", "interchange=", "board="):
     check(ex in ref, "the reference documents {}".format(ex))
-check("### The third set" in ref and "fifteen" in ref.splitlines()[0], "the reference has the third set and counts fifteen")
+check("### The third set" in ref and "<!-- vl:count-all -->" in ref.splitlines()[0], "the reference has the third set and its count is a vl block")
 import sigs
 for fn in ("route", "roundel", "sign_panel", "ui_window", "ui_button", "ui_device", "vl_interface", "vl_wayfinding"):
     check(fn in sigs.EXAMPLES, "sigs.py --example {} has a runnable scaffold".format(fn))

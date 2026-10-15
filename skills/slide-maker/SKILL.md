@@ -1679,7 +1679,7 @@ build to your **style brief** of it *per the chosen mimic mode* (`references/sty
 borrowed components + signature motif, but keep the topic-fit palette/type already locked in the
 Step-2 design plan — do NOT carry the example's colours.
 A few rules that matter (see `references/design-principles.md`):
-- **Visual languages (`editorial` · `soft` · `collage` · `storybook`, and the <!-- vl:count-drawn -->eleven<!-- /vl --> drawn ones below):** when the picked direction is a
+- **Visual languages (<!-- vl:list-image -->`editorial` · `soft` · `collage` · `storybook`<!-- /vl -->, and the <!-- vl:count-drawn -->eleven<!-- /vl --> drawn ones below):** when the picked direction is a
   visual language (`"vl"` in `directions.json`), READ `references/visual-languages.md` before the build
   script: `visual_languages.use(name, prs)` gives the palette, system fonts (both platforms by default,
   per script for CJK) and ground, and its seven page functions (cover, section, image_text, points, quote, data, closing) lay out your own copy and images — never
