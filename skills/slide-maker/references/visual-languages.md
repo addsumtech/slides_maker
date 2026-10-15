@@ -259,6 +259,13 @@ prs.save("collage.pptx")
   full-height card under 14pt rows read as an empty page in two test decks. A list of 2–4 items is better as
   `k.points(...)`, on every language; on drafting, `points` draws one plate per item, so keep an agenda
   there as this ordinary page.)
+- **General components wear the language.** Charts, timelines, steps, tables, KPI rows, org charts and the other
+  deckkit components take the language's surfaces, rules, axes, tracks and series from the active theme (`dk.THEME`,
+  set by `vl.use()`; `dk.blank_deck()` starts every deck without one): call them with no colour arguments, inside the
+  rect `rs.ground()` returns, and they read on every ground — dark ones included. Text a component draws on its own
+  card keeps its colour where it reads and moves the least distance where it would not. matplotlib charts
+  (`designed_charts`) take the series, ground and font the same way unless you pass `palette=` / `dark=` / `font=`.
+  `tests/test_component_theme.py` holds every component on every ground of every language.
 - **The kit's own pages are clean.** A deck made only of a language's page functions has no hard `lint_deck`
   finding and passes its own prohibitions — `tests/test_vl_audit_fixes.py` builds every language on 16:9 and 3:4,
   both grounds. Furniture that overlaps by design (paper hills over cards, a sun behind a ridge, a blob behind a
