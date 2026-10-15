@@ -82,7 +82,9 @@ from lxml import etree
 EXERCISE = {"step_list": 'dk.step_list(s, 0.8, 3.6, 8.0, [("Collect", "gather"), ("Train", "fit"), ("Ship", "go")], '
                          'orientation="horizontal", active_idx=1)',
             "pyramid": 'dk.pyramid(s, 7.4, 1.0, 5.0, 3.0, ["Vision", "Strategy", "Execution"], labels="side")',
-            "gantt": 'dk.gantt(s, 0.6, 4.6, 8.8, [("Plan", 0, 4)], axis_min=0, axis_max=10, ticks=[0, 5, 10])'}
+            "gantt": 'dk.gantt(s, 0.6, 4.6, 8.8, [("Plan", 0, 4)], axis_min=0, axis_max=10, ticks=[0, 5, 10])',
+            "heat_matrix": 'dk.heat_matrix(s, 7.6, 1.4, 5.0, 2.4, [[1, 2], [3, 4]], ["a", "b"], ["c", "d"], '
+                           'cell_labels=True)'}
 def _xml_of(L, name, skin):
     prs, k = _use(L)
     dk.set_theme(dict(dk.THEME, skin=skin))
@@ -90,7 +92,8 @@ def _xml_of(L, name, skin):
     with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
         exec(compile(sigs.EXAMPLES[name] + "\n" + EXERCISE.get(name, ""), name, "exec"),
              {"dk": dk, "dc": dc, "s": s, "prs": prs})
-    return etree.tostring(s._element).decode()
+    charts = [etree.tostring(sh.chart._chartSpace).decode() for sh in s.shapes if getattr(sh, "has_chart", False)]
+    return etree.tostring(s._element).decode() + "".join(charts)       # a chart lives in its own part
 def _number_face(L, v):
     _use(L)
     return dk.numeral_face(dk.DISPLAY if v == "display" else dk.MONO)
@@ -98,7 +101,7 @@ def _number_face(L, v):
 # number face the component already sets its numerals in (cutpaper's display face IS its body face; agenda's
 # numerals are mono already), which is checked, not assumed
 DONE = ("step_list", "timeline", "agenda", "stat_row", "org_tree", "tier_stack", "funnel", "pyramid", "venn",
-        "meter_bar", "gantt", "bento")                          # grows as Task 4 routes the rest
+        "meter_bar", "gantt", "bento", "table", "native_chart", "heat_matrix")
 for name in DONE:
     for L in vl.LANGS:
         sk = S[L]["skin"]
@@ -133,6 +136,19 @@ with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(io.StringIO()):
     lint_deck.lint(str(WORK / "org_ink.pptx"), static_ok=True)
 hard = [l for l in buf.getvalue().splitlines() if re.match(r"\s+slide \d+: (LOW CONTRAST|INVISIBLE)", l)]
 check(not hard, "org_tree with an explicit accent reads under a hairline card skin ({})".format(hard[:1]))
+dk.set_theme(None)
+
+# a dashed rule skin reaches the table's XML borders and the chart's gridlines
+prs, k = _use("drafting")
+s = k.new_slide()
+dk.table(s, 0.8, 1.2, 8.0, [["Part", "Qty"], ["Bolt", "12"], ["Nut", "40"]], numeric_cols=[1])
+s2 = k.new_slide()
+dk.native_chart(s2, 0.6, 1.0, 6.0, 3.2, ["Q1", "Q2"], [("a", [3, 5])], kind="column")
+from lxml import etree
+x_tbl = etree.tostring(s._element).decode()
+x_cht = etree.tostring(s2.shapes[-1].chart._chartSpace).decode()
+check('prstDash val="dash"' in x_tbl, "drafting's dashed rule reaches the table borders")
+check('prstDash val="dash"' in x_cht, "drafting's dashed rule reaches the chart gridlines")
 dk.set_theme(None)
 
 for line in ok:

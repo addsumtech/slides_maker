@@ -6280,7 +6280,7 @@ def _theme_chart(ch, series, *, palette, dark, font, highlight, legend, value_fm
     # slots SEPARATELY: the value axis and the data labels are always numbers, the category axis only
     # sometimes (years/quarters yes, month names no), and the legend/series names never. A deck on a
     # serif display face therefore keeps its register on the words and stops bobbing on the digits.
-    nfname = numeral_face(font, fallback=fname)
+    nfname = numeral_face(_skin_number_face("0", font) or font, fallback=fname)
     cfname = numeral_run_face("".join(str(c) for c in (categories or [])), font, fallback=fname)
     try:
         ch.font.name = fname; ch.font.size = Pt(11); ch.font.color.rgb = ink
@@ -6306,7 +6306,11 @@ def _theme_chart(ch, series, *, palette, dark, font, highlight, legend, value_fm
         pass
     try:
         ch.value_axis.major_gridlines.format.line.color.rgb = grid
-        ch.value_axis.major_gridlines.format.line.width = Pt(0.5)
+        _rv = _skin("rule")                       # the language's rule skin: a hairline (chalk cannot be drawn in
+        ch.value_axis.major_gridlines.format.line.width = Pt(0.25 if _rv in ("hairline", "chalk") else 0.5)
+        if _rv == "dashed":                       # chart XML) or a dash
+            from pptx.enum.dml import MSO_LINE_DASH_STYLE
+            ch.value_axis.major_gridlines.format.line.dash_style = MSO_LINE_DASH_STYLE.DASH
         ch.category_axis.has_major_gridlines = False
     except Exception:
         pass
@@ -6563,9 +6567,10 @@ def _clear_table_style(tbl):
 _FILLISH = {qn('a:noFill'), qn('a:solidFill'), qn('a:gradFill'), qn('a:blipFill'),
             qn('a:pattFill'), qn('a:grpFill'), qn('a:cell3D'), qn('a:headers')}
 
-def _cell_rules(cell, top=None, bottom=None):
+def _cell_rules(cell, top=None, bottom=None, dash=None):
     """Add booktabs horizontal rules to a table cell. top/bottom = (color, weight_pt) or
-    None. Inserts <a:lnT>/<a:lnB> in the correct schema position (before the fill)."""
+    None. Inserts <a:lnT>/<a:lnB> in the correct schema position (before the fill). `dash` = a preset
+    dash ('dash') for a visual language whose rule skin is dashed."""
     tcPr = cell._tc.get_or_add_tcPr()
     for tag in ('a:lnL', 'a:lnR', 'a:lnT', 'a:lnB'):
         for old in tcPr.findall(qn(tag)):
@@ -6578,6 +6583,8 @@ def _cell_rules(cell, top=None, bottom=None):
         sf = ln.makeelement(qn('a:solidFill'), {})
         sf.append(ln.makeelement(qn('a:srgbClr'), {'val': _hex(color)}))
         ln.append(sf)
+        if dash:                                               # after the fill: the schema's order
+            ln.append(ln.makeelement(qn('a:prstDash'), {'val': dash}))
         return ln
     for tag, spec in (('a:lnT', top), ('a:lnB', bottom)):   # lnT before lnB (schema order)
         if spec is None:
@@ -6655,7 +6662,7 @@ def table(slide, x, y, w, rows, col_w=None, header=True, highlight=None,
             # into a table (has_text_frame is False on a GraphicFrame), so the guard has to be here.
             # Per CELL, not per table: "0.9153" gets a lining face while the "method" column keeps
             # the deck's own font, so a serif deck stays a serif deck and only the numbers stop bobbing.
-            cfont = numeral_run_face(raw, font, fallback=font or FONT)
+            cfont = numeral_run_face(raw, _skin_number_face(raw, font) or font, fallback=font or FONT)
             for r in p.runs:
                 set_font(r, size, col, bold=is_head or is_hi, font=cfont)
     # booktabs rules: \toprule, \midrule (under header), \bottomrule — nothing else
@@ -6665,8 +6672,12 @@ def table(slide, x, y, w, rows, col_w=None, header=True, highlight=None,
         if header and nrow > 1:
             spec.setdefault((0, j), {})['bottom'] = (rule_c, 0.8)
         spec.setdefault((nrow - 1, j), {})['bottom'] = (head_c, 1.4)
+    rv = _skin("rule")
+    wk = 0.5 if rv in ("hairline", "chalk") else 1.0       # chalk cannot be drawn in a table border: a hairline
+    dash = "dash" if rv == "dashed" else None
+    _wk = lambda t: (t[0], t[1] * wk) if t else t
     for (i, j), s in spec.items():
-        _cell_rules(tbl.cell(i, j), top=s.get('top'), bottom=s.get('bottom'))
+        _cell_rules(tbl.cell(i, j), top=_wk(s.get('top')), bottom=_wk(s.get('bottom')), dash=dash)
     return y + h
 
 
@@ -12661,7 +12672,7 @@ def heat_matrix(slide, x, y, w, h, values, row_labels, col_labels, *, scale="seq
                 lbl = str(cell_labels[r][c])
             if lbl is not None:
                 tc = _legible_ink(col)
-                text(slide, gx + c * cw, gy + r * ch, cw, ch, [[(lbl, 10.5, tc, True, False, font)]],
+                text(slide, gx + c * cw, gy + r * ch, cw, ch, [[(lbl, 10.5, tc, True, False, _skin_number_face(lbl, font))]],
                      align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
     bottom = gy + grid_h
     if legend:
@@ -12672,9 +12683,9 @@ def heat_matrix(slide, x, y, w, h, values, row_labels, col_labels, *, scale="seq
             vv = lo + (i / (nseg - 1)) * (hi - lo)
             box(slide, gx + i * bar_w / nseg, lgy, bar_w / nseg + 0.006, 0.14,
                 fill=_heat_color(vv, lo, hi, scale, accent, div_zero=div_zero))
-        text(slide, gx, lgy + 0.16, 1.2, 0.2, [[(_numlabel(lo), 9, MUTE, False, False, font)]],
+        text(slide, gx, lgy + 0.16, 1.2, 0.2, [[(_numlabel(lo), 9, MUTE, False, False, _skin_number_face(_numlabel(lo), font))]],
              align=PP_ALIGN.LEFT, space_after=0)
-        text(slide, gx + bar_w - 1.2, lgy + 0.16, 1.2, 0.2, [[(_numlabel(hi), 9, MUTE, False, False, font)]],
+        text(slide, gx + bar_w - 1.2, lgy + 0.16, 1.2, 0.2, [[(_numlabel(hi), 9, MUTE, False, False, _skin_number_face(_numlabel(hi), font))]],
              align=PP_ALIGN.RIGHT, space_after=0)
         bottom = lgy + 0.38
     return bottom
