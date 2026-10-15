@@ -529,6 +529,16 @@ def set_theme(theme):
     THEME = theme
 
 
+def _on_surface(color, fill, target=4.5):
+    """Text colour on a surface a component drew. An ordinary deck: unchanged. With a visual language: kept when it
+    reads on that surface, else moved the least distance that does (hue kept) — a dark card never carries dark text,
+    a green delta stays green (the 2026-10-15 language matrix: card inks on cards were the readable-text failures)."""
+    if not THEME:
+        return color
+    c = _as_rgbc(color)
+    return c if contrast_ratio(c, fill) >= target else _ink_reaching(c, fill, target)
+
+
 def _th(role, legacy):
     """The theme's colour for `role` when a visual language set one, else this call site's `legacy` colour."""
     v = THEME.get(role)
@@ -1704,10 +1714,13 @@ def scorecard(slide, x, y, w, h, label, value, *, delta=None, caption=None, good
         glass_card(slide, x, y, w, h, glass_tint); lab_c, val_c, cap_c = WHITE, WHITE, RGBColor(0xCF, 0xD7, 0xE6)
         good_c, bad_c = _GOOD, _BAD                                        # bright reads on the dark tint
     else:
-        box(slide, x, y, w, h, fill=WHITE, line=RGBColor(0xE3, 0xE8, 0xEE), line_w=1.0, round=True, r=0.1)
+        box(slide, x, y, w, h, fill=_th("card", WHITE), line=_th("rule", RGBColor(0xE3, 0xE8, 0xEE)), line_w=1.0, round=True, r=0.1)
         box(slide, x, y, 0.1, h, fill=accent, round=True, r=0.05)          # accent spine
         lab_c, val_c, cap_c = MUTE, ink, MUTE
         good_c, bad_c = _GOOD_D, _BAD_D                                    # darker so it clears 4.5:1 on white
+        if THEME:                                  # a language's card: every text reads on IT, not on white
+            _tile = _th("card", WHITE)
+            lab_c, val_c, cap_c, good_c, bad_c = (_on_surface(c, _tile) for c in (lab_c, val_c, cap_c, good_c, bad_c))
     px = x + 0.28
     text(slide, px, y + 0.22, w - 0.5, 0.3, [[(str(label).upper(), 11, lab_c, True, False)]], space_after=0)
     # value auto-fits: fit_text_size handles multi-word values, and a WIDTH check via _natural_width_in
@@ -1771,7 +1784,7 @@ def leaderboard(slide, x, y, w, rows, *, row_h=0.5, gap=0.1, ink=DEEP):
         text(slide, x + w - 1.9, cy, 1.9, row_h, [[(value, 14, ink, True, False)]],
              align=PP_ALIGN.RIGHT, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
         cy += row_h + gap
-        hrule(slide, x, cy - gap / 2, w, color=RGBColor(0xE6, 0xE9, 0xEE), weight=0.01)
+        hrule(slide, x, cy - gap / 2, w, color=_th("rule", RGBColor(0xE6, 0xE9, 0xEE)), weight=0.01)
     return cy
 
 
@@ -1893,7 +1906,7 @@ def stat_row(slide, x, y, w, items, *, ink=DEEP, accent=MAGENTA, serif=None, div
         bottom = max(bottom, y + cap_y + cap_h + 0.04)
         if dividers and i > 0:
             box(slide, cx - gap / 2, y + 0.06, 0.014, max(0.9, cap_y + 0.24),
-                fill=divider_c if divider_c is not None else RGBColor(0xDD, 0xDD, 0xDD))
+                fill=divider_c if divider_c is not None else _th("rule", RGBColor(0xDD, 0xDD, 0xDD)))
     return bottom
 def _set_baseline(run, pct):
     """Raise (or lower, if negative) a run by `pct` percent of its font size via the OOXML baseline
@@ -2105,7 +2118,7 @@ def axis_scale(x, w, lo, hi):
         return x + (float(v) - lo) / span * w
     def draw_axis(slide, y, *, color=None, weight=0.024):
         box(slide, x, y - weight / 2.0, w, weight,
-            fill=color if color is not None else RGBColor(0x9A, 0xA0, 0xAE))
+            fill=color if color is not None else _th("axis", RGBColor(0x9A, 0xA0, 0xAE)))
     return X, draw_axis
 
 
@@ -2130,7 +2143,7 @@ def span_center(boxes, size):
 
 
 def timeline(slide, x, y, w, events, *, orientation="h", highlight=None, accent=MAGENTA,
-             ink=DEEP, axis_c=RGBColor(0x9A, 0xA0, 0xAE), h=1.4, polarity="below",
+             ink=DEEP, axis_c=None, h=1.4, polarity="below",
              spacing="even", label_w=2.0):
     """Native timeline. events = [(when, title[, caption]), ...]. orientation='h' (axis L→R, 3-6
     evenly-weighted events) or 'v' (top→bottom spine, when each event needs 2+ lines). One node is
@@ -2150,6 +2163,7 @@ def timeline(slide, x, y, w, events, *, orientation="h", highlight=None, accent=
     ``vstack`` errors-at-build-time precedent) — switch to ``polarity='alternate'``, widen
     ``w``, cut events, lower ``label_w``, or use ``dot_strip`` (whose label engine nudges
     with leader ticks and cannot collide)."""
+    axis_c = axis_c if axis_c is not None else _th("axis", RGBColor(0x9A, 0xA0, 0xAE))
     n = len(events)
     if orientation == "h":
         if polarity not in ("below", "alternate"):
@@ -2225,7 +2239,7 @@ def timeline(slide, x, y, w, events, *, orientation="h", highlight=None, accent=
 
 
 def dot_strip(slide, x, y, w, points, lo, hi, *, label_w=None, stagger="auto",
-              accent=MAGENTA, ink=DEEP, axis_c=RGBColor(0x9A, 0xA0, 0xAE),
+              accent=MAGENTA, ink=DEEP, axis_c=None,
               highlight=None, unit="", size=11, dot_r=0.07, font=None):
     """N labelled points on ONE shared value axis — "where everyone sits on one scale"
     (benchmark scores, cost/latency positions, maturity ratings) with **anti-collision labels
@@ -2251,6 +2265,7 @@ def dot_strip(slide, x, y, w, points, lo, hi, *, label_w=None, stagger="auto",
     End labels are CLAMPED on-canvas (the ``spaced_centers`` end-inset guarantee, applied to
     measured widths), and if the labels physically cannot fit on the canvas at all the call
     raises ``ValueError`` — fail loudly, never silent overlap."""
+    axis_c = axis_c if axis_c is not None else _th("axis", RGBColor(0x9A, 0xA0, 0xAE))
     if stagger not in ("auto", "none", "alternate"):
         raise ValueError("dot_strip(): stagger must be 'auto', 'none', or 'alternate'")
     if not points:
@@ -5937,7 +5952,7 @@ def series_from_csv(path, x_col, y_cols, *, delimiter=None, encoding="utf-8"):
 
 
 def native_chart(slide, x, y, w, h, categories, series, *, kind="line_markers",
-                 palette=None, dark=False, font=None, highlight=None, legend=True,
+                 palette=None, dark=None, font=None, highlight=None, legend=True,
                  value_fmt=None, smooth=True, zero_base=True, emphasize=None):
     """An **EDITABLE native PowerPoint chart** (a real chart object: click to edit data/labels in
     PowerPoint, and **any non-Latin labels — CJK · Cyrillic · Greek · …** — render via PowerPoint's own
@@ -5969,6 +5984,7 @@ def native_chart(slide, x, y, w, h, categories, series, *, kind="line_markers",
     **`emphasize=<category index>`** foregrounds ONE bar in a SINGLE-series column/bar chart (that
     bar keeps the accent, the rest drop to grey) — the per-category form of the single-highlight
     rule, since `highlight` selects a whole SERIES and so can't pick one bar on a one-series chart."""
+    dark = THEME.get("dark", False) if dark is None else dark   # the active language decides
     from pptx.chart.data import CategoryChartData
     from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION
     KIND = {"line": XL_CHART_TYPE.LINE, "line_markers": XL_CHART_TYPE.LINE_MARKERS,
@@ -6009,7 +6025,7 @@ def native_chart(slide, x, y, w, h, categories, series, *, kind="line_markers",
     # single-highlight for a ONE-series bar/column chart: colour points per-category so one bar pops
     if emphasize is not None and kind in ("column", "bar") and len(series) == 1:
         pal = [_as_rgb(c) for c in (palette or ACCENTS)]
-        muted = RGBColor(0x8A, 0x93, 0xA6) if dark else RGBColor(0xB8, 0xBE, 0xCC)
+        muted = _th("axis", RGBColor(0x8A, 0x93, 0xA6) if dark else RGBColor(0xB8, 0xBE, 0xCC))
         try:
             pts = ch.series[0].points
             for i, pt in enumerate(pts):
@@ -6023,9 +6039,9 @@ def native_chart(slide, x, y, w, h, categories, series, *, kind="line_markers",
 def _theme_chart(ch, series, *, palette, dark, font, highlight, legend, value_fmt, smooth, kind,
                  categories=None):
     from pptx.enum.chart import XL_LEGEND_POSITION
-    ink = RGBColor(0xEA, 0xF2, 0xFF) if dark else RGBColor(0x22, 0x2A, 0x37)
-    grid = RGBColor(0x2A, 0x35, 0x55) if dark else RGBColor(0xE7, 0xE9, 0xF0)
-    muted = RGBColor(0x8A, 0x93, 0xA6) if dark else RGBColor(0xB8, 0xBE, 0xCC)
+    ink = _th("ink", RGBColor(0xEA, 0xF2, 0xFF) if dark else RGBColor(0x22, 0x2A, 0x37))
+    grid = _th("rule", RGBColor(0x2A, 0x35, 0x55) if dark else RGBColor(0xE7, 0xE9, 0xF0))
+    muted = _th("axis", RGBColor(0x8A, 0x93, 0xA6) if dark else RGBColor(0xB8, 0xBE, 0xCC))
     pal = [_as_rgb(c) for c in (palette or ACCENTS)]
     fname = font or EAFONT or FONT          # the deck's script font → non-Latin labels render (no tofu)
     # Lining figures inside the chart. lint_deck's OLDSTYLE_FIGURES warn is structurally blind here
@@ -6776,6 +6792,7 @@ def blank_deck(w_in=10.0, h_in=5.625):
     """A fresh 16:9 deck when the user has NO template to match. Use add_slide() +
     title_bar()/footer() to give it simple, consistent branding you define from
     their brand colors (set the palette constants above) or a clean default."""
+    set_theme(None)   # a new deck starts with no visual language; vl.use() sets one (an earlier deck's must not leak)
     prs = Presentation()
     prs.slide_width = Inches(w_in); prs.slide_height = Inches(h_in)
     return prs
@@ -7082,11 +7099,11 @@ def org_tree(slide, x, y, w, h, root, *, accent=None, node_h=0.42, gap_y=0.42,
         sx, depth = pos[id(node)]
         nx = x + sx * pitch
         ny = y + depth * (node_h + gap_y)
-        b = box(slide, nx, ny, node_w, node_h, fill=(acc if depth == 0 else WHITE),
+        b = box(slide, nx, ny, node_w, node_h, fill=(acc if depth == 0 else _th("card", WHITE)),
                 line=(None if depth == 0 else acc), line_w=1.1, round=True, r=0.08)
         text(slide, nx, ny, node_w, node_h,
              [[(label, label_size if depth == 0 else label_size - 1,
-                _as_rgb(_legible_ink(_as_rgbc(acc))) if depth == 0 else _as_rgb(DEEP), depth == 0, False,
+                _as_rgb(_legible_ink(_as_rgbc(acc))) if depth == 0 else _as_rgb(_on_surface(DEEP, _th("card", WHITE))), depth == 0, False,
                 font or FONT)]],
              align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
         if kids:
@@ -7229,14 +7246,14 @@ def position_map(slide, x, y, w, h, points, *, x_labels=("low", "high"), y_label
     for i in order:
         p = points[i]
         name, xv, yv = str(p[0]), float(p[1]), float(p[2])
-        hue = _as_rgb(p[3]) if len(p) > 3 else (acc if (highlight is None or i == highlight) else RGBColor(0x9A, 0xA1, 0xAE))
+        hue = _as_rgb(p[3]) if len(p) > 3 else (acc if (highlight is None or i == highlight) else _th("axis", RGBColor(0x9A, 0xA1, 0xAE)))
         fx = 0.08 + 0.84 * (xv - x0v) / xsp
         fy = 0.08 + 0.84 * (yv - y0v) / ysp
         cx = ax0 + fx * aw
         cy = ay0 - fy * ah
         d = _flat(slide.shapes.add_shape(MSO_SHAPE.OVAL, Inches(cx - dot / 2), Inches(cy - dot / 2),
                                          Inches(dot), Inches(dot)))
-        d.fill.solid(); d.fill.fore_color.rgb = hue; d.line.color.rgb = _as_rgb(WHITE); d.line.width = Pt(1.0)
+        d.fill.solid(); d.fill.fore_color.rgb = hue; d.line.color.rgb = _as_rgb(_th("card", WHITE)); d.line.width = Pt(1.0)
         d.shadow.inherit = False
         lx = cx + dot / 2 + 0.05
         al = PP_ALIGN.LEFT
@@ -7468,7 +7485,7 @@ def small_multiples(slide, x, y, w, h, panels, *, categories=None, cols=None, ki
         raise ValueError(f"small_multiples(): {n} panels don't fit {w:.1f}x{h:.1f}in — "
                          f"panel would be {pw:.2f}x{ph:.2f}in (need >=1.2x0.8); enlarge or cut panels")
     acc = _as_rgb(accent) if accent is not None else _as_rgb(MAGENTA)
-    mut = RGBColor(0xB8, 0xBE, 0xCC)
+    mut = _th("axis", RGBColor(0xB8, 0xBE, 0xCC))
     lo = min(float(v) for _, vals in panels for v in vals)
     hi = max(float(v) for _, vals in panels for v in vals)
     lo = min(0.0, lo)                                          # honest magnitude: include zero
@@ -8692,12 +8709,12 @@ def step_list(slide, x, y, w, items, *, orientation="vertical", accent=None, ink
         for i, (title, body) in enumerate(items):
             cx = x + i * (cw + g); on = (active_idx == i)
             d = 0.5
-            box(slide, cx + cw / 2 - d / 2, y, d, d, fill=acc if on else WHITE,
+            box(slide, cx + cw / 2 - d / 2, y, d, d, fill=acc if on else _th("card", WHITE),
                 line=None if on else acc, line_w=1.4, round=True, r=d / 2)
             tc = (_legible_ink(acc)) if on else acc
             text(slide, cx + cw / 2 - d / 2, y, d, d, [[(numr(i), 15, tc, True, False)]],
                  align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
-            if i: connector(slide, (cx - g + 0.02, y + d / 2), (cx - 0.02, y + d / 2), color=_blend(acc, WHITE, 0.4))
+            if i: connector(slide, (cx - g + 0.02, y + d / 2), (cx - 0.02, y + d / 2), color=_blend(acc, _th("card", WHITE), 0.4))
             text(slide, cx, y + d + 0.12, cw, 0.34, [[(title, 13, ic, True, False)]], align=PP_ALIGN.CENTER, space_after=0)
             if body:
                 text(slide, cx, y + d + 0.46, cw, 0.5, [[(body, 11, bc, False, False)]], align=PP_ALIGN.CENTER, space_after=0)
@@ -8708,7 +8725,7 @@ def step_list(slide, x, y, w, items, *, orientation="vertical", accent=None, ink
     for i, (title, body) in enumerate(items):
         d = 0.42; on = (active_idx == i)
         solid = on or active_idx is None      # inactive discs mirror the horizontal branch: outlined, not solid
-        box(slide, x, cy, d, d, fill=acc if solid else WHITE,
+        box(slide, x, cy, d, d, fill=acc if solid else _th("card", WHITE),
             line=None if solid else acc, line_w=1.4, round=True, r=d / 2)
         tc = _legible_ink(acc) if solid else acc
         text(slide, x, cy, d, d, [[(numr(i), 14, tc, True, False)]], align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
@@ -8742,7 +8759,7 @@ def consort_flow(slide, x, y, w, h, stages, *, accent=None, ink=None, mute=None,
     acc = accent if accent is not None else MAGENTA
     ic = ink if ink is not None else DEEP
     mc = mute if mute is not None else MUTE
-    fl = fill if fill is not None else LIGHT
+    fl = fill if fill is not None else _th("card", LIGHT)
     ex = excl_fill if excl_fill is not None else TINT
     if not stages:
         raise ValueError("consort_flow needs at least one stage")
@@ -8785,8 +8802,8 @@ def consort_flow(slide, x, y, w, h, stages, *, accent=None, ink=None, mute=None,
         by = y + i * (bh + gap)
         box(slide, x, by, bw, bh, fill=fl, line=None, round=True)
         text(slide, x + 0.16, by, bw - 0.32, bh,
-             [[(label, size, ic, True, False, font or FONT)],
-              [("n = %s%s" % (f"{n:,}", (" " + unit) if unit else ""), size, ic, False, False,
+             [[(label, size, _on_surface(ic, fl), True, False, font or FONT)],
+              [("n = %s%s" % (f"{n:,}", (" " + unit) if unit else ""), size, _on_surface(ic, fl), False, False,
                 font or FONT)]],
              align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=1)
         if i == nst - 1:
@@ -8889,7 +8906,7 @@ def _as_rgbc(c):
 def tint(color, frac=0.12, base=None):
     """Mix `color` toward `base` (default white) — the pastel TINT behind icon chips, delta
     pills, and conclusion strips (an accent at ~10-16% reads as a soft branded surface)."""
-    b = _as_rgb(base) if base is not None else (0xFF, 0xFF, 0xFF)
+    b = _as_rgb(base) if base is not None else _as_rgb(_th("card", WHITE))   # the language's card, else white
     c = _as_rgb(color)
     return RGBColor(int(c[0] * frac + b[0] * (1 - frac)),
                     int(c[1] * frac + b[1] * (1 - frac)),
@@ -9136,13 +9153,13 @@ def dumbbell_board(slide, x, y, w, rows, *, row_h=0.52, label_w=None, accent=Non
     signal — the number and the ▾ carry it too). `label_w` defaults to the MEASURED widest row
     label (capped), so short metric names don't strand a huge empty gutter — pass it for very long
     names. Budget ~0.52in/row + margins; keep w ≥ ~8 so value labels clear. Returns the bottom y."""
-    acc = accent if accent is not None else RGBColor(0x4C, 0xC3, 0x8A)
+    acc = accent if accent is not None else _th("highlight", RGBColor(0x4C, 0xC3, 0x8A))
     bc = before_c if before_c is not None else MUTE
-    tc = track_c if track_c is not None else RGBColor(0xE3, 0xE6, 0xEC)
+    tc = track_c if track_c is not None else _th("track", RGBColor(0xE3, 0xE6, 0xEC))
     ic_ = ink if ink is not None else DEEP
     mc = mute if mute is not None else MUTE
     reg = set(regress or ())
-    acc_text = _darken_to(acc, WHITE)                  # the accent VALUE label darkened to stay legible
+    acc_text = _darken_to(acc, WHITE) if not THEME else _ink_reaching(acc, _th("card", WHITE))                  # the accent VALUE label darkened to stay legible
     #                                                    on white (the bright dot/connector keep `acc`)
     if label_w is not None:
         lw = label_w
@@ -9172,7 +9189,7 @@ def dumbbell_board(slide, x, y, w, rows, *, row_h=0.52, label_w=None, accent=Non
         x0, x1 = X(v0), X(v1)
         if threshold and threshold[0] == i:
             xk = X(threshold[1])
-            box(slide, xk, ry - 0.10, 0.014, 0.5, fill=RGBColor(0x9A, 0xA5, 0x96))
+            box(slide, xk, ry - 0.10, 0.014, 0.5, fill=_th("axis", RGBColor(0x9A, 0xA5, 0x96)))
             if len(threshold) > 2 and threshold[2]:
                 text(slide, xk + 0.06, ry + 0.20, 0.7, 0.22,
                      [[(str(threshold[2]), sub_size, mc, False, False, font)]], space_after=0)
@@ -9462,7 +9479,7 @@ def unit_grid(slide, x, y, w, h, total, unit_label, *, filled=None, cols=None, g
         ncol, nrow, cell = min(near, key=_rank)
     gap = cell * gap_frac
     fc = fill if fill is not None else ACCENTS[0]
-    ec = empty if empty is not None else "D9D5CE"
+    ec = empty if empty is not None else _th("track", "D9D5CE")
     for k in range(total):
         r, c = divmod(k, ncol)
         on = True if filled is None else (k < filled)
@@ -9642,7 +9659,7 @@ def meter_bar(slide, x, y, w, frac, *, label=None, value=None, value_unit=None,
     it, and if the footprint would leave the canvas the BAR shortens (with a printed note) —
     a fitting call is unchanged; an impossible one raises. Returns the bar's BOTTOM y."""
     acc = accent if accent is not None else BLUE
-    tr = track if track is not None else RGBColor(0xE6, 0xE9, 0xEE)
+    tr = track if track is not None else _th("track", RGBColor(0xE6, 0xE9, 0xEE))
     vink = ink if ink is not None else DEEP
     lc = label_c if label_c is not None else MUTE
     f = max(0.0, min(1.0, frac))
@@ -12135,7 +12152,7 @@ def gantt(slide, x, y, w, tasks, *, axis_min=None, axis_max=None, ticks=None, ti
         for t, lbl in zip(ticks, tls):
             gx = X(t)
             connector(slide, (gx, grid_top), (gx, chart_bottom),
-                      color=RGBColor(0xE4, 0xE7, 0xEC), width=1.0, arrow=False)
+                      color=_th("rule", RGBColor(0xE4, 0xE7, 0xEC)), width=1.0, arrow=False)
             lxp = max(0.05, min(gx - 0.6, sw - 1.25))
             text(slide, lxp, y, 1.2, header_h - 0.02, [[(str(lbl), 10, MUTE, True, False, font)]],
                  align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.BOTTOM, space_after=0)
@@ -12194,13 +12211,13 @@ def harvey_ball(slide, cx, cy, level, *, d=0.24, accent=None, track=None):
     ``accent`` fills the wedge; ``track`` colours the ring — contrast-aware, so the outline stays
     visible on white. Returns the wedge shape (pie/disc), or the ring when empty."""
     acc = _as_rgbc(accent) if accent is not None else DEEP
-    tr = _as_rgbc(track) if track is not None else RGBColor(0xB6, 0xBC, 0xC8)
+    tr = _as_rgbc(track) if track is not None else _th("track", RGBColor(0xB6, 0xBC, 0xC8))
     lvl = max(0, min(4, int(round(level))))
     r = d / 2.0
     x0, y0 = cx - r, cy - r
-    outline = tr if contrast_ratio(tr, WHITE) >= 1.25 else _blend(acc, WHITE, 0.5)
+    outline = tr if contrast_ratio(tr, _th("card", WHITE)) >= 1.25 else _blend(acc, _th("card", WHITE), 0.5)
     ring = _flat(slide.shapes.add_shape(MSO_SHAPE.OVAL, Inches(x0), Inches(y0), Inches(d), Inches(d)))
-    ring.fill.solid(); ring.fill.fore_color.rgb = WHITE
+    ring.fill.solid(); ring.fill.fore_color.rgb = _th("card", WHITE)
     ring.line.color.rgb = outline; ring.line.width = Pt(1.1); ring.shadow.inherit = False
     wedge = None
     if lvl >= 4:
@@ -12264,12 +12281,12 @@ def eval_matrix(slide, x, y, w, options, criteria, cells, *, mark="ball", recomm
     for c, opt in enumerate(options):
         ox = x + crit_w + c * col_w
         emph = (recommend == c)
-        text(slide, ox, y, col_w, head_h, [[(str(opt), 12, acc if emph else ic, True, False, font)]],
+        text(slide, ox, y, col_w, head_h, [[(str(opt), 12, _on_surface(acc, GROUND) if (emph and GROUND is not None) else (acc if emph else ic), True, False, font)]],
              align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
     # separators are CONNECTORS (not filled boxes) so a full-width rule crossing the tinted
     # recommend column is never mis-flagged as a node escaping it
     connector(slide, (x, y + head_h), (x + w, y + head_h),
-              color=RGBColor(0xD9, 0xDD, 0xE4), width=1.2, arrow=False)
+              color=_th("rule", RGBColor(0xD9, 0xDD, 0xE4)), width=1.2, arrow=False)
     for r in range(ncrit):
         ry = y + head_h + r * row_h
         text(slide, x, ry, crit_w - 0.12, row_h, [[(str(criteria[r]), 11.5, ic, False, False, font)]],
@@ -12284,7 +12301,7 @@ def eval_matrix(slide, x, y, w, options, criteria, cells, *, mark="ball", recomm
                 _eval_mark(slide, ccx, ccy, val, font=font)
         if r < ncrit - 1:
             connector(slide, (x, ry + row_h), (x + w, ry + row_h),
-                      color=RGBColor(0xEE, 0xF0, 0xF3), width=0.8, arrow=False)
+                      color=_th("rule", RGBColor(0xEE, 0xF0, 0xF3)), width=0.8, arrow=False)
     bottom = y + head_h + ncrit * row_h
     if legend and mark == "ball":
         ly = bottom + 0.2
@@ -12309,7 +12326,7 @@ def _heat_color(v, vmin, vmax, scale, accent, *, div_zero=False):
     t = max(0.0, min(1.0, (float(v) - vmin) / span))
     acc = _as_rgbc(accent) if accent is not None else BLUE
     if scale == "div":
-        cool, mid, warm = RGBColor(0x2C, 0x6F, 0xBB), RGBColor(0xF2, 0xF3, 0xF5), RGBColor(0xC6, 0x3A, 0x33)
+        cool, mid, warm = RGBColor(0x2C, 0x6F, 0xBB), _th("card", RGBColor(0xF2, 0xF3, 0xF5)), RGBColor(0xC6, 0x3A, 0x33)
         if div_zero:
             # anchor neutral at 0, not the range midpoint — a true 0 must read neutral, positives warm,
             # negatives cool. Two-slope keeps full contrast on each sign for asymmetric ranges.

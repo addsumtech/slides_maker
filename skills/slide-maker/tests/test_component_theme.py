@@ -10,7 +10,7 @@ ok, bad = [], []
 def check(cond, why):
     (ok if cond else bad).append(why)
 
-TIER1 = ("agenda bento card consort_flow distribution dot_strip dumbbell_board eval_matrix forest_plot funnel gantt "
+TIER1 = ("agenda bento consort_flow distribution dot_strip dumbbell_board eval_matrix forest_plot funnel gantt "
          "heat_matrix iso_bars iso_prism iso_stack km_curve leaderboard marimekko meter_bar native_chart org_tree "
          "position_map pyramid radar roc_curve sankey scorecard segmented_bar small_multiples stat_row step_list table "
          "tier_stack timeline unit_grid venn waterfall bland_altman source_note").split()
@@ -58,6 +58,10 @@ want_blue = vl.REGISTRY["chalkboard"]["grounds"]["light"]["palette"]["text_accen
 check(str(dk.scorecard.__kwdefaults__["accent"]) == want_blue,
       "after a 1-accent preset, vl.use keeps each colour role its own value (Review Focus 3): {} vs {}".format(
           dk.scorecard.__kwdefaults__["accent"], want_blue))
+with contextlib.redirect_stdout(io.StringIO()):
+    vl.use("starlit", dk.blank_deck(13.333, 7.5))
+dk.blank_deck(13.333, 7.5)
+check(dk.THEME == {}, "a new deck starts with no theme: an ordinary deck after a visual-language deck does not inherit it")
 presets.apply("swiss"); dk.set_theme(None)
 dk._state_restore(_SNAP); dk.set_theme(None)
 
@@ -85,6 +89,8 @@ for L in vl.LANGS:
             k = vl.use(L, prs, ground=g)
         owner = []
         for name in TIER1:
+            with contextlib.redirect_stdout(io.StringIO()):
+                k = vl.use(L, prs, ground=g)          # each component starts from its language
             n0 = len(prs.slides); s = k.new_slide()
             try:
                 _build(name, prs, s)
