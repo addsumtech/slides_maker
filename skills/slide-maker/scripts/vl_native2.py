@@ -391,6 +391,23 @@ def _st_rule(k, slide, rects, a, b):
     return lambda: na.seg(slide, W / 2 - 0.55 * s, y, W / 2 + 0.55 * s, y, k.P["text_accents"][0], w=1.0)
 
 
+def _st_numeral_glow(k, slide, cx, cy, d):
+    """The glow behind a big numeral, dimmed until the numeral reads on it: at na.radial_glow's own 0.42 the gold figure
+    sat at 3.0:1 over the glow's brightest point (#69635D, dawn 3.04:1). The glow keeps the most of that alpha that holds
+    4.6:1 (4.5 plus a hair for a renderer's rounding) between the numeral's colour and the glow's centre — blended the
+    way a renderer blends it, over the ground."""
+    ground, glow, ink = vl._hex(k.P["ground"]), vl._hex(k.P["glow"]), k.P["text_accents"][0]
+    top = 0.42                                       # native_art.radial_glow's default
+
+    def centre(a):
+        return "".join("{:02X}".format(round((1 - a) * int(ground[i:i + 2], 16) + a * int(glow[i:i + 2], 16)))
+                       for i in (0, 2, 4))
+    a = top
+    while a > 0.02 and vl._contrast(ink, centre(a)) < 4.6:
+        a = round(a - 0.01, 2)
+    return na.radial_glow(slide, cx, cy, d, k.P["glow"], alpha=a)
+
+
 def _st_moon(k, slide, clear):
     """The crescent at the first corner clear of the words — top right, top left, bottom right; none when no corner
     is clear (it is the sky's, not the page's)."""
@@ -433,7 +450,7 @@ def _st_section(k, slide, f, image):
     rects.update(r); draws.append(d)
     _st_sky(k, slide, rects.values(), seed=2)
     if num:
-        na.radial_glow(slide, cx, cy, d0, k.P["glow"])
+        _st_numeral_glow(k, slide, cx, cy, d0)
     _run_all(draws)
     return rects
 
@@ -466,7 +483,8 @@ def _st_image_text(k, slide, f, image):
 @register("starlit", "quote", alts=2)
 def _st_quote(k, slide, f, image):
     W, H, s, o = ctx(k)
-    x, w = (0.20 * W, 0.60 * W) if (o == "land" and alt() == 0) else (0.08 * W, 0.84 * W)
+    # 0.76W like the cover's block: at 0.60W a 34pt line (8.5in) was shrunk to 29pt, and the grown short quote wrapped early
+    x, w = (0.12 * W, 0.76 * W) if (o == "land" and alt() == 0) else (0.08 * W, 0.84 * W)
     r, ds = stack(k, slide, "quote", x, w, 0.10 * H, 0.90 * H,
                   [([("mark", "“")] + fields(f, ("quote",)), 0.40 * s), (fields(f, ("attribution",), ("attribution",)), 0.0)],
                   align="c")
@@ -492,7 +510,7 @@ def _st_data(k, slide, f, image):
     rects.update(r); draws.append(d)
     _st_sky(k, slide, rects.values(), seed=5)
     if num:
-        na.radial_glow(slide, cx, cy, d0, k.P["glow"])
+        _st_numeral_glow(k, slide, cx, cy, d0)
     na.horizon_glow(slide, 0.86 * H, k.P["glow"], k.P["text_accents"][0])
     _run_all(draws)
     return rects

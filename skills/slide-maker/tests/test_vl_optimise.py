@@ -90,6 +90,77 @@ for L in vl.LANGS:
         check(z >= need * base - 1e-6 or L == "poster" or (L == "ink" and tag == "cjk"), "{} cover title ({}) holds >= {:.0%} of {}pt ({:.1f}pt)".format(L, tag, need, base, z))
 dk.set_theme(None)
 
+# ── Task 5 (C): shared helpers for the four language fixes (starlit, broadsheet, journal, tally) ──
+from pptx.util import Emu as _Emu
+W13 = 13.333
+
+
+def _text_shape(slide, words):
+    """The drawn text box holding `words` (not the accessibility title placeholder, which repeats the page's words)."""
+    for sh in slide.shapes:
+        if (getattr(sh, "has_text_frame", False) and not sh.is_placeholder
+                and words.lower() in sh.text_frame.text.replace("\n", " ").lower()):
+            return sh
+    return None
+
+
+def _rect(sh):
+    return (sh.left / 914400.0, sh.top / 914400.0, sh.width / 914400.0, sh.height / 914400.0)
+
+
+def _page(L, g, page, **fields):
+    prs, k = _deck(L, g)
+    sl = k.new_slide()
+    with contextlib.redirect_stdout(io.StringIO()):
+        getattr(k, page)(sl, **fields)
+    return prs, k, sl
+
+
+# ── Task 5 (C): starlit: the quote box is wide enough to hold the quote's size ──
+_SQ = " ".join(("Every repair we made that evening was a small argument for keeping things, and the room kept making it "
+                "until the last lamp came on. We stayed late, and nobody wanted to be the one who turned the lights off "
+                "at last.").split()[:38])
+_prs, _k, _sl = _page("starlit", "light", "quote", quote=_SQ, attribution="Repair café volunteer")
+_qw = _rect(_text_shape(_sl, "“"))[2]          # the quote mark's box is the column itself (the quote's own box narrows to balance its lines)
+check(_qw >= 0.74 * W13, "starlit quote: the quote's column is >= 0.74 of the page wide ({:.2f}in = {:.0%}; was 8.00in = 60%)".format(_qw, _qw / W13))
+_qz = _size_of(_sl, "Every repair")
+check(_qz >= vl.TYPE["starlit"]["quote"][0] - 1e-6, "starlit quote: a 38-word quote holds the language's {}pt in the wider box ({:.1f}pt; "
+      "was 33.0pt)".format(vl.TYPE["starlit"]["quote"][0], _qz))
+_prs, _k, _sl = _page("starlit", "light", "quote", quote="We measured the year in conversations, not in launches.", attribution="x")
+check(_size_of(_sl, "We measured") >= 1.3 * vl.TYPE["starlit"]["quote"][0], "starlit quote: the 55-character sample is still set larger than the base size "
+      "({:.1f}pt)".format(_size_of(_sl, "We measured")))
+
+# ── Task 5 (C): starlit: the numeral reads on its glow (>= 4.5:1 over the glow's centre, both grounds) ──
+import native_art as _na                       # noqa: E402
+
+
+def _glow_centre(slide, ground_hex):
+    """The colour at the centre of the page's radial glow, blended over the ground the way a renderer blends it."""
+    from lxml import etree
+    for sh in slide.shapes:
+        x = etree.tostring(sh._element).decode()
+        m = re.search(r'<a:gs pos="0"><a:srgbClr val="(\w{6})"><a:alpha val="(\d+)"/>', x)
+        if m and '<a:path path="circle">' in x:
+            c, a = m.group(1), int(m.group(2)) / 100000.0
+            return "".join("{:02X}".format(round((1 - a) * int(ground_hex[i:i + 2], 16) + a * int(c[i:i + 2], 16))) for i in (0, 2, 4)), a
+    return None, None
+
+
+for _g in ("light", "dawn"):
+    for _pg, _fl in (("data", dict(number="12", label="conversations that changed our plan", note="Each one is archived.")),
+                     ("section", dict(number="3", title="The numbers", kicker="Part three"))):
+        _prs, _k, _sl = _page("starlit", _g, _pg, **_fl)
+        _num = _text_shape(_sl, _fl["number"])
+        _ink = str(_num.text_frame.paragraphs[0].runs[0].font.color.rgb)
+        _c, _a = _glow_centre(_sl, vl._hex(_k.P["ground"]))
+        check(_c is not None and vl._contrast(_ink, _c) >= 4.5,
+              "starlit/{} {}: the numeral {} is >= 4.5:1 over the glow's centre #{} ({}; was ~3.0:1 at alpha 0.42)".format(
+                  _g, _pg, _ink, _c, "{:.2f}:1 at alpha {:.2f}".format(vl._contrast(_ink, _c), _a) if _c else "no glow"))
+        check(_c is not None and vl._contrast(_c, vl._hex(_k.P["ground"])) >= 1.5,
+              "starlit/{} {}: the glow is still a glow ({:.2f}:1 over the ground at its centre)".format(
+                  _g, _pg, vl._contrast(_c, vl._hex(_k.P["ground"])) if _c else 0))
+dk.set_theme(None)
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:
