@@ -851,24 +851,39 @@ def _wf_points(k, slide, f, image):
     lw = 0.2 * s
     sd = 0.42 * s
     if o == "land":
+        # every label is LEFT-aligned and starts a little before its station; the last stop sits where its own label fits
+        # (it sat at the page's right edge, so its label was turned flush right while the others read left: "Upgrade"
+        # ended at the station, the three before it began there)
+        x_first = x0 + 0.5 * s
+        cw = min(2.8 * s, (w0 - 0.5 * s) / max(2, n) * 1.6)
+        nat = max(_v2.ink_w(k, f_, t_, vl.TYPE["wayfinding"][f_][0] * s) for f_, t_ in
+                  [("item_head", pts[-1][0])] + ([("item_line", pts[-1][1])] if pts[-1][1] else []))
+        need = min(cw, nat + 0.2 * s)
+        x_last = max(min(x0 + w0 - 0.5 * s, x0 + w0 - need + 0.2 * s), x_first + (n - 1) * 1.2 * s)
+        xs = [x_first + i * (x_last - x_first) / (n - 1) for i in range(n)]
+        # a label may reach the next same-side one (two stops on), never further
+        cw = min(cw, 2 * (x_last - x_first) / (n - 1) - 0.3 * s)
+
+        def label_specs(y):
+            out = []
+            for i, (h, l) in enumerate(pts):
+                up = i % 2 == 0
+                ry = (tb + 0.3 * s) if up else (y + sd / 2.0 + 0.35 * s)
+                rh = (y - sd / 2.0 - 0.35 * s - ry) if up else (H - 0.4 * s - ry)
+                cx = max(xs[i] - 0.2 * s, x0)
+                out.append(((cx, ry, min(cw, x0 + w0 - cx), rh), [("item_head", h)] + ([("item_line", l)] if l else []),
+                            {"anchor": "bottom" if up else "top"}))
+            return out
         y = tb + (H - tb) * 0.50
-        xs = [x0 + 0.5 * s + i * (w0 - 1.0 * s) / (n - 1) for i in range(n)]
-        gap = (w0 - 1.0 * s) / (n - 1)
-        # a label set flush right reaches back toward its same-side neighbour, so it is never wider than one gap
-        cw = min(2.8 * s, (w0 - 0.5 * s) / max(2, n) * 1.6, gap + 0.1 * s)
-        specs, flush = [], set()
-        for i, (h, l) in enumerate(pts):
-            up = i % 2 == 0
-            ry = (tb + 0.3 * s) if up else (y + sd / 2.0 + 0.35 * s)
-            rh = (y - sd / 2.0 - 0.35 * s - ry) if up else (H - 0.4 * s - ry)
-            cx = max(xs[i] - 0.2 * s, x0)
-            if cx + cw > x0 + w0:                    # the terminus side: end at the station instead of sliding left
-                cx = max(x0, xs[i] + 0.2 * s - cw)  # of it (on 4:3 the last label sat 2.3in away, under a neighbour)
-                flush.add(i)
-            specs.append(((cx, ry, cw, rh), [("item_head", h)] + ([("item_line", l)] if l else []),
-                          {"anchor": "bottom" if up else "top"}))
-        planned = plan_together(k, slide, "points", specs)
-        planned = [(rr, _flush_right(slide, dd)) if i in flush else (rr, dd) for i, (rr, dd) in enumerate(planned)]
+        planned = plan_together(k, slide, "points", label_specs(y))
+        # the route sits UNDER the sign: pulled up until the tallest label above it is 0.8in from the sign's foot (at
+        # mid-page there were 2in of empty page between the sign and the first label)
+        hu = max((max(v[1] + v[3] for v in rr.values()) - min(v[1] for v in rr.values())
+                  for i, (rr, _dd) in enumerate(planned) if i % 2 == 0 and rr), default=0.0)
+        y_up = tb + 0.8 * s + hu + 0.35 * s + sd / 2.0
+        if y_up < y - 0.05:
+            y = y_up
+            planned = plan_together(k, slide, "points", label_specs(y))
         _route(k, slide, [(0.0, y), (W, y)], colour, w=lw)
         for i, x in enumerate(xs):
             if i in ixs:
@@ -904,9 +919,10 @@ def _wf_points(k, slide, f, image):
 
 @register("wayfinding", "quote", alts=2)
 def _wf_quote(k, slide, f, image):
-    """The quote on an enamel sign; the source under it."""
+    """The quote on an enamel sign; the source under it; line= brings its route and roundel in above the sign."""
     W, H, s, o = ctx(k)
     a = text_of(f, "attribution")
+    lc = _line_code(k, f, "quote")
     x = (0.08 if alt() == 0 else 0.05) * W
     w = W - 2 * x
     ah = 0.7 * s if a else 0.0
@@ -920,24 +936,22 @@ def _wf_quote(k, slide, f, image):
     qb = max(v[1] + v[3] for v in r.values())
     na.sign_panel(slide, x, qt - pad, w, qb - qt + 2 * pad, fill=k.P["sign"])
     d()
+    if lc:
+        # line=: the line comes in from the page's edge and ends in its roundel, sitting just above the sign's top-left
+        # corner (clear of the sign: a roundel straddling the corner overlapped it) — a quote page ignored line=, though
+        # every other wayfinding page shows the line it is on. The room is always there: the sign never starts above 0.14H.
+        rd = 0.52 * s
+        cy = qt - pad - max(0.15 * s, 0.13) - rd / 2.0
+        assert cy - rd / 2.0 > 0.05, "wayfinding.quote(): no room above the sign for the line's roundel"
+        _, rw = _roundel_fit(k, rd, lc[0], "line=")
+        _route(k, slide, [(0.0, cy), (x + rw / 2.0, cy)], lc[1], w=0.16 * s)
+        _roundel(k, slide, x, cy, rd, lc[0], lc[1])
     rects = dict(r)
     if a:
         r2, d2 = flow(k, slide, "quote", (x, qb + pad + 0.25 * s, w, ah), [("attribution", "— " + a)], anchor="top")
         d2()
         rects.update(r2)
     return rects
-
-
-def _flush_right(slide, draw):
-    """A planned draw whose paragraphs are turned flush right as they are drawn (planned left in the same box)."""
-    def go():
-        n0 = len(slide.shapes)
-        draw()
-        for sh in list(slide.shapes)[n0:]:
-            if getattr(sh, "has_text_frame", False):
-                for p_ in sh.text_frame.paragraphs:
-                    p_.alignment = dk.PP_ALIGN.RIGHT
-    return go
 
 
 def _flow_right(k, slide, page, col, items, **kw):

@@ -314,6 +314,101 @@ for g in ("light", "dark"):
               "interface/light image_text: the bezel is the ink colour, unchanged ({})".format(fh))
 dk.set_theme(None)
 
+# ── Task 5 (D): wayfinding: quote takes line=; data board rows; ordered strip map labels and route ──
+WF_PIC = lambda g: _deck("wayfinding", g)      # noqa: E731
+
+
+def _signs(slide):
+    """The enamel sign panels (rounded autoshapes filled with the language's sign colour)."""
+    return [sh for sh in slide.shapes if sh.shape_type == 1 and _fill_hex(sh) is not None]
+
+
+# quote: line= draws the route stub and the line's roundel in that line's colour; without line= nothing is added
+for g in ("light", "night"):
+    for lv, ci in ((("B", "blue"), 1), (("M10", "green"), 2), ("A", 0)):
+        prs, k = WF_PIC(g)
+        sl = k.new_slide()
+        with contextlib.redirect_stdout(io.StringIO()):
+            k.quote(sl, quote="The best signs are the ones you never notice reading.", attribution="A station designer", line=lv)
+        code = lv if isinstance(lv, str) else lv[0]
+        col = k.P["lines"][ci]
+        sign = next(sh for sh in _signs(sl) if _fill_hex(sh) == k.P["sign"])
+        stubs = [sh for sh in sl.shapes if sh.shape_type == 9 and _line_hex(sh) == col]
+        rds = [sh for sh in _by_text(sl, code)]
+        tag = "wayfinding/{} quote line={!r}".format(g, lv)
+        check(bool(stubs) and min(sh.left for sh in stubs) <= 9144 and
+              max(sh.left + sh.width for sh in stubs) >= sign.left - 91440,
+              "{}: a route stub in the line's colour runs from the page edge to the sign".format(tag))
+        check(len(rds) == 1 and any(_fill_hex(sh) == col and _cross(sh, rds[0]) for sh in sl.shapes if sh.shape_type == 1),
+              "{}: the roundel '{}' is drawn on the line's colour".format(tag, code))
+    prs, k = WF_PIC(g)
+    sl = k.new_slide()
+    with contextlib.redirect_stdout(io.StringIO()):
+        k.quote(sl, quote="The best signs are the ones you never notice reading.", attribution="A station designer")
+    check(not [sh for sh in sl.shapes if sh.shape_type == 9], "wayfinding/{} quote without line=: no route is drawn".format(g))
+# …and the page with the line holds on other canvases and with a long code, lint-clean (the first roundel straddled the
+# sign's corner and overlapped it)
+for size in ((13.333, 7.5), (10.0, 7.5), (7.5, 10.0), (7.5, 7.5)):
+    for lv in (("B", "blue"), ("M10", "green"), ("一号线", "red")):
+        prs = dk.blank_deck(*size)
+        with contextlib.redirect_stdout(io.StringIO()):
+            k = vl.use("wayfinding", prs)
+            sl = k.new_slide()
+            k.quote(sl, quote="The best signs are the ones you never notice reading.", attribution="A station designer", line=lv)
+        found = [f for f in _hard(prs, "wfq_{}x{}_{}".format(size[0], size[1], lv[0])) if f.startswith("slide 1:")]
+        stub = [sh for sh in sl.shapes if sh.shape_type == 9 and _line_hex(sh) == k.P["lines"][{"blue": 1, "green": 2, "red": 0}[lv[1]]]]
+        check(not found and stub, "wayfinding quote line={} on {}x{}: lint-clean with its route ({})".format(lv[0], size[0], size[1],
+                                                                                                            found[:1]))
+dk.set_theme(None)
+
+# data: the board's rows under the figure are bold ~26pt Courier, not 20pt regular beside a 96pt figure
+for g in ("light", "night"):
+    prs, k = WF_PIC(g)
+    sl = k.new_slide()
+    rows = [("North loop", "93.1%"), ("South loop", "88.0%"), ("Harbour", "91.7%"), ("Airport", "79.5%")]
+    with contextlib.redirect_stdout(io.StringIO()):
+        k.data(sl, number="96.4%", label="Harbour line on time", board=rows, note="Source: the operator's weekly report")
+    for words in [w for r_ in rows for w in r_]:
+        sh = _by_text(sl, words)[0]
+        runs = [r for p in sh.text_frame.paragraphs for r in p.runs]
+        check(runs[0].font.bold is True and _top_size(sh) >= 25.5 - 1e-6,
+              "wayfinding/{} data board row '{}' is bold at >= 26pt ({} {:.1f}pt)".format(g, words, runs[0].font.bold, _top_size(sh)))
+    found = [f for f in _hard(prs, "wfdata_" + g) if f.startswith("slide 1:")]
+    check(not found, "wayfinding/{} data board with 4 rows and a note is lint-clean ({})".format(g, found[:1]))
+dk.set_theme(None)
+
+# ordered points (the strip map): every label is left-aligned; the last wraps inside its own box on the page; the route
+# sits under the sign (<= 1in from the sign to the first label), not at mid-page
+def _strip_page(g, items):
+    prs, k = WF_PIC(g)
+    sl = k.new_slide()
+    with contextlib.redirect_stdout(io.StringIO()):
+        k.points(sl, title="Stops", ordered=True, items=items)
+    sign = min((sh for sh in _signs(sl) if _fill_hex(sh) == k.P["sign"]), key=lambda sh: sh.top)
+    return prs, sl, sign
+
+
+STRIPS = [("heads 4", ["Sign up", "First project", "Invite a teammate", "Upgrade"]),
+          ("with lines 4", [("Sign up", "Takes a minute."), ("First project", "Pick a template."),
+                            ("Invite a teammate", "By email."), ("Upgrade", "When you need more seats.")]),
+          ("long last 4", ["Sign up", "First project", "Invite a teammate", "Upgrade to the plan with unlimited seats"]),
+          ("3", ["Sign up", "First project", "Upgrade"]), ("2", ["Sign up", "Upgrade"])]
+for g in ("light", "night"):
+    for tag, items in STRIPS:
+        prs, sl, sign = _strip_page(g, items)
+        heads = [h if isinstance(h, str) else h[0] for h in items]
+        labels = [sh for sh in _texts(sl) if sh.text_frame.text.split("\n")[0].strip() in heads]
+        aligns = {p.alignment for sh in labels for p in sh.text_frame.paragraphs}
+        check(len(labels) == len(items) and dk.PP_ALIGN.RIGHT not in aligns,
+              "wayfinding/{} strip map ({}): every label is left-aligned ({} labels)".format(g, tag, len(labels)))
+        check(all(sh.left >= 0 and sh.left + sh.width <= 13.333 * 914400 for sh in labels),
+              "wayfinding/{} strip map ({}): every label's box is on the page".format(g, tag))
+        gap = _in(min(sh.top for sh in labels)) - _in(sign.top + sign.height)
+        check(gap <= 1.0 + 1e-6, "wayfinding/{} strip map ({}): the first label is {:.2f}in under the sign".format(g, tag, gap))
+        found = [f for f in _hard(prs, "wfstrip_{}_{}".format(g, tag.replace(" ", "_"))) if f.startswith("slide 1:")]
+        check(not found, "wayfinding/{} strip map ({}) is lint-clean ({})".format(g, tag, found[:1]))
+dk.set_theme(None)
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:
