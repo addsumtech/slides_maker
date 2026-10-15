@@ -1129,6 +1129,7 @@ def _place_image(k, slide, image, rect, lay, page, keep_clear=None):
     if treat == "bleed":
         n0 = len(slide.shapes)
         bx, by, bw, bh, _ink = dk.photo_backdrop(slide, path, alt=alt, panel="quiet", fill=_hex(k.P["panel"]))
+        _crop_to_visible(slide, n0, path)
         if slot_id:
             for sh in list(slide.shapes)[n0:]:
                 if sh.shape_type == 13:
@@ -1145,6 +1146,46 @@ def _place_image(k, slide, image, rect, lay, page, keep_clear=None):
     if slot_id:
         dk._compose_tag(pic, gen=slot_id)
     return None
+
+
+BLEED_FOCUS = (0.5, 0.10)    # which part of a picture the cover crop keeps: centred across, near the top down
+
+
+def _crop_to_visible(slide, n0, path, focus=BLEED_FOCUS):
+    """photo_backdrop() cover-fits its picture to the WHOLE page and then lays an opaque panel over one side of it, so
+    the crop was made for a window the viewer never sees: a 853x1280 portrait kept 37% of its height in the 7.2in
+    strip left of the panel, centred, and the heads sat on the top edge (the group-A verification, 2026-10-15). The
+    picture is re-fitted, in place, to the part the panel leaves visible — cover-fitted to THAT rect, biased to the
+    top — and meets the panel on its edge, to the EMU (a picture under the panel by any width is an OVERLAP finding;
+    one apart by any is a sliver). Needs the panel to be the opaque box right after the picture; anything else leaves
+    the page as photo_backdrop drew it."""
+    shapes = list(slide.shapes)[n0:]
+    pic = next((sh for sh in shapes if sh.shape_type == 13), None)
+    panel = next((sh for sh in shapes[shapes.index(pic) + 1:] if sh.shape_type == 1), None) if pic is not None else None
+    if pic is None or panel is None:
+        return
+    prs = slide.part.package.presentation_part.presentation
+    W, H = prs.slide_width, prs.slide_height                       # EMU throughout
+    pl, pt_, pw, ph = panel.left, panel.top, panel.width, panel.height
+    if pw < 0.9 * W:                                               # a side band: the picture is the rest of the width
+        vx, vy, vw, vh = (pl + pw, 0, W - (pl + pw), H) if pl < 9144 else (0, 0, pl, H)
+    else:                                                          # a band across: the picture is the rest of the height
+        vx, vy, vw, vh = (0, pt_ + ph, W, H - (pt_ + ph)) if pt_ < 9144 else (0, 0, W, pt_)
+    if vw < 457200 or vh < 457200:                                 # under half an inch: not a picture area
+        return
+    from PIL import Image
+    with Image.open(path) as im:
+        iw, ih = im.size
+    fx, fy = focus
+    pic.left, pic.top, pic.width, pic.height = int(vx), int(vy), int(vw), int(vh)
+    pic.crop_left = pic.crop_right = pic.crop_top = pic.crop_bottom = 0.0
+    ar_i, ar_f = iw / float(ih), vw / float(vh)
+    if ar_i > ar_f:
+        c = 1.0 - ar_f / ar_i
+        pic.crop_left, pic.crop_right = c * fx, c * (1.0 - fx)
+    elif ar_i < ar_f:
+        c = 1.0 - ar_i / ar_f
+        pic.crop_top, pic.crop_bottom = c * fy, c * (1.0 - fy)
 
 
 def _paper_tint(k):
@@ -1504,6 +1545,22 @@ for _n, (_no, _hd, _ln) in {
     TYPE[_n].setdefault("item_line", _ln)
 
 
+NUMBER_SLACK = 1.10      # a point's number box holds its digits with at least this much to spare
+
+
+def _number_gutter(k, labels, size, floor):
+    """The width (in) of the gutter that holds a points page's item numbers: the widest of `labels` at `size` in the
+    language's numeral face, by BOTH widths the kit uses (the glyph widths the flow measures, the font's advance the
+    lint reads), plus NUMBER_SLACK and the text box's own insets — never under `floor`. A fixed 0.62in gutter held
+    editorial's "01" (Arial Black 30.5pt, 0.5651in in LibreOffice) in an inner width of 0.5644in, and the renderer set
+    "0" over "1" (the group-A verification, 2026-10-15)."""
+    import display_type as dt
+    face, bold = k.face("numeral"), bool(TYPE[k.name]["item_no"][2])
+    need = max(max(dk._natural_width_in([(t, bold)], size, face), dt._glyph_width(t, size, face, bold) or 0.0)
+               for t in labels)
+    return max(floor, NUMBER_SLACK * need + dk.TEXT_INSET_LR)
+
+
 def _points_led(k, slide, fields, image):
     """The points page of an image-led language: kicker and title, then 2-4 points — a number, a head and a line —
     in the language's own furniture (editorial: a hairline over each; soft: a rounded panel; collage: a taped note;
@@ -1558,7 +1615,7 @@ def _points_led(k, slide, fields, image):
                 inner = (c[0] + pd, c[1] + pd + lift, c[2] - 2 * pd, c[3] - 2 * pd - lift)
                 no = [] if k.name == "storybook" else [("item_no", "{:02d}".format(i + 1))]
                 if inline and no:
-                    gw = 0.62 * s
+                    gw = _number_gutter(k, ["{:02d}".format(j + 1) for j in range(n)], big["item_no"], 0.62 * s)
                     nums.append(((inner[0], inner[1], gw, inner[3]), no, dict(anchor="top", start=dict(big))))
                     inner, no = (inner[0] + gw, inner[1], inner[2] - gw, inner[3]), []
                 its = no + [("item_head", hd_)] + ([("item_line", ln_)] if ln_ else [])

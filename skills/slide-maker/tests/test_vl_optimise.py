@@ -90,6 +90,117 @@ for L in vl.LANGS:
         check(z >= need * base - 1e-6 or L == "poster" or (L == "ink" and tag == "cjk"), "{} cover title ({}) holds >= {:.0%} of {}pt ({:.1f}pt)".format(L, tag, need, base, z))
 dk.set_theme(None)
 
+# ── shared helpers for the Task 5 (A) checks (image-led languages) ──
+def _deck_at(L, g, W, H):
+    prs = dk.blank_deck(W, H)
+    with contextlib.redirect_stdout(io.StringIO()):
+        k = vl.use(L, prs, ground=g)
+    return prs, k
+
+
+def _text_shapes(slide):
+    return [sh for sh in slide.shapes if getattr(sh, "has_text_frame", False) and sh.text_frame.text.strip()]
+
+
+def _run_of(sh):
+    for p in sh.text_frame.paragraphs:
+        for r in p.runs:
+            if r.font.size and r.text.strip():
+                return r
+    return None
+
+
+# ── Task 5 (A): editorial: a points item number never wraps ──
+# "01" in Arial Black 30.5pt measured 0.5651in in a box whose inner width was 0.5644in, so LibreOffice set "0" over "1".
+# The number's box is now its measured width + >= 10% (measured by both widths the kit uses), at 2, 3 and 4 points.
+import display_type as _dt
+_PTS = [("Your broken thing", "Any size that fits through the door."), ("An hour", "Most repairs take less."),
+        ("Curiosity", "Volunteers explain every step."), ("A cup of tea", "There is always a kettle on.")]
+for L in ("editorial", "soft", "collage"):
+    for g in vl.VARIANTS[L]:
+        for n in (2, 3, 4):
+            for (W, H, pic) in ((13.333, 7.5, str(vl.ASSETS / "photo/tools-tray.jpg")), (13.333, 7.5, None),
+                                (7.5, 10.0, str(vl.ASSETS / "photo/tools-tray.jpg"))):
+                prs, k = _deck_at(L, g, W, H)
+                sl = k.new_slide()
+                try:
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        k.points(sl, kicker="A repair café", title="Things to bring", items=_PTS[:n], image=pic)
+                except Exception as e:
+                    check(False, "{}/{}: points x{} builds ({}: {})".format(L, g, n, type(e).__name__, str(e)[:70])); continue
+                nums = [sh for sh in _text_shapes(sl) if re.fullmatch(r"\d\d", sh.text_frame.text.strip())]
+                worst = 9.0
+                for sh in nums:
+                    r = _run_of(sh)
+                    face, bold = r.font.name, bool(r.font.bold)
+                    need = max(dk._natural_width_in([(r.text, bold)], r.font.size.pt, face),
+                               _dt._glyph_width(r.text, r.font.size.pt, face, bold) or 0.0)
+                    worst = min(worst, (sh.width / 914400.0 - dk.TEXT_INSET_LR) / need)
+                check(len(nums) == n and worst >= 1.10 - 1e-6,
+                      "{}/{} {} points x{}{}: every item number's box holds its digits with >= 10% to spare "
+                      "(tightest {:.3f}x, {} numbers)".format(L, g, "landscape" if W > H else "portrait", n,
+                                                              "" if pic else " (no picture)", worst, len(nums)))
+dk.set_theme(None)
+
+
+# ── Task 5 (A): editorial: the full-bleed cover is cropped for the part of it that is VISIBLE, biased to the top ──
+# The picture was cover-fitted to the whole 13.33in page while the panel covers x >= 7.2in: a 853x1280 portrait kept
+# 37.4% of its height in a 7.2in-wide window, and the crop (centred) cut the heads at the top edge.
+from PIL import Image as _PIL
+
+
+def _visible_source(slide):
+    """(x0, y0, x1, y1) as fractions of the SOURCE picture that the viewer sees on `slide`'s first picture — the
+    picture's frame and crop, minus the opaque panel box that follows it — and the pixel aspect of that window."""
+    W, H = slide.part.package.presentation_part.presentation.slide_width / 914400.0, \
+        slide.part.package.presentation_part.presentation.slide_height / 914400.0
+    shapes = list(slide.shapes)
+    pi = next(i for i, sh in enumerate(shapes) if sh.shape_type == 13)
+    pic = shapes[pi]
+    panel = next(sh for sh in shapes[pi + 1:] if sh.shape_type == 1)
+    px, py, pw, ph = (v / 914400.0 for v in (panel.left, panel.top, panel.width, panel.height))
+    if pw < 0.9 * W:                                    # a side band
+        vis = (px + pw, 0.0, W, H) if px < 0.01 else (0.0, 0.0, px, H)
+    else:                                               # a top or bottom band
+        vis = (0.0, py + ph, W, H) if py < 0.01 else (0.0, 0.0, W, py)
+    fx, fy, fw, fh = (v / 914400.0 for v in (pic.left, pic.top, pic.width, pic.height))
+    cl, cr, ct, cb = pic.crop_left, pic.crop_right, pic.crop_top, pic.crop_bottom
+    x0, x1 = max(vis[0], fx), min(vis[2], fx + fw)
+    y0, y1 = max(vis[1], fy), min(vis[3], fy + fh)
+    sx = lambda x: cl + (1 - cl - cr) * (x - fx) / fw
+    sy = lambda y: ct + (1 - ct - cb) * (y - fy) / fh
+    return (sx(x0), sy(y0), sx(x1), sy(y1)), vis
+
+
+for pg in ("cover", "closing"):
+    for tag, src in (("portrait", "photo/hall-repair.jpg"), ("landscape", "photo/tools-tray.jpg"),
+                     ("square", "photo/bench-toaster.jpg")):
+        path = str(vl.ASSETS / src)
+        iw, ih = _PIL.open(path).size
+        for g in vl.VARIANTS["editorial"]:
+            prs, k = _deck_at("editorial", g, 13.333, 7.5)
+            sl = k.new_slide()
+            with contextlib.redirect_stdout(io.StringIO()):
+                if pg == "cover":
+                    k.cover(sl, title="Bring it broken, take it home working", kicker="Repair café", image=path)
+                else:
+                    k.closing(sl, title="Questions", line="Thank you.", image=path)
+            (sx0, sy0, sx1, sy1), vis = _visible_source(sl)
+            win_ar = ((sx1 - sx0) * iw) / ((sy1 - sy0) * ih)
+            vis_ar = (vis[2] - vis[0]) / (vis[3] - vis[1])
+            # the share of the picture's height a window of the visible rect's shape can show: all of it for a
+            # picture wider than the window, vis_ar-limited (ih/iw * ...) for a taller one
+            max_h = 1.0 if iw / ih >= vis_ar else (iw / ih) / vis_ar
+            check(abs(win_ar - vis_ar) / vis_ar < 0.02,
+                  "editorial {} ({} source, {}): the visible window shows the picture undistorted ({:.3f} vs {:.3f})".format(pg, tag, g, win_ar, vis_ar))
+            check((sy1 - sy0) >= 0.95 * max_h,
+                  "editorial {} ({} source, {}): the crop is made for the visible rect — it keeps {:.1%} of the picture's height "
+                  "(the most that rect can show is {:.1%})".format(pg, tag, g, sy1 - sy0, max_h))
+            if max_h < 0.999:                           # a taller picture is cropped top/bottom: the top is the side kept
+                check(sy0 <= 0.12 and sy0 < (1 - sy1), "editorial {} ({} source, {}): the crop is biased to the top (top edge "
+                      "{:.1%} cut, bottom {:.1%})".format(pg, tag, g, sy0, 1 - sy1))
+dk.set_theme(None)
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:
