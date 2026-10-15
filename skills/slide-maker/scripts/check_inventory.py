@@ -35,7 +35,7 @@ INVENTORY = SKILL / "references" / "file-inventory.md"
 
 # What counts as a documented capability. `tests/` is deliberately absent: `check_tests_wired.py`
 # owns that one, and it checks something stronger (that CI RUNS them, not that a file names them).
-GROUPS = (("scripts", "*.py"), ("agents", "*"), ("references", "*.md"))
+GROUPS = (("scripts", "*.py"), ("scripts/vl_specs", "*.py"), ("agents", "*"), ("references", "*.md"))
 
 # Deliberately unlisted, each with the reason. An empty reason is the thing this script prevents.
 ALLOWLIST: dict[str, str] = {

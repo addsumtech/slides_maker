@@ -85,6 +85,19 @@ check(any("order" in p for p in vc.validate_all({"fixture": good_spec(), "fixtur
 check(abs(vc.contrast("FFFFFF", "000000") - 21.0) < 0.01, "contrast(white, black) is 21")
 check(vc.delta_e("FF0000", "FF0000") == 0.0 and vc.delta_e("FF0000", "0000FF") > 50, "delta_e is a colour distance")
 
+# ── the registry: every language is a manifest, and the manifests are valid ──
+import vl_specs
+import visual_languages as vl
+REG = vl_specs.load()
+check(list(REG) == list(vl.LANGS), "the registry and LANGS list the same languages in the same order")
+check(len(REG) == 15, "fifteen languages are registered ({})".format(len(REG)))
+probs = vc.validate_all(REG)
+check(probs == [], "every manifest satisfies the contract: {}".format(probs[:4]))
+check(vl.REGISTRY is not None and set(vl.REGISTRY) == set(REG), "visual_languages exposes REGISTRY")
+for n, s in REG.items():
+    for g, gd in s["grounds"].items():
+        check(gd["palette"] == vl.VARIANTS[n][g]["palette"], "{}/{}: VARIANTS is built from the manifest".format(n, g))
+
 # ── part 2 (Task 3) and part 3 (Task 4) are appended above this line ──
 
 for line in ok:

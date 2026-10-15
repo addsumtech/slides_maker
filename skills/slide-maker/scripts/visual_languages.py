@@ -34,227 +34,26 @@ from pptx.enum.shapes import MSO_SHAPE  # noqa: E402
 
 EA_FACES = dk.EA_FACES   # one table, in deckkit; the "win" faces: Microsoft's documented defaults — unverified here
 
-LANGS = {
-    "editorial": {
-        "palette": {"ground": "F4EFE6", "ink": "1C1A17", "mute": "6B655C", "panel": "EAE3D6",
-                    "accents": ["B23A28", "1F4E79"], "text_accents": ["9E2F20", "1F4E79"]},
-        "fonts": {"both": {"display": "Georgia", "body": "Arial", "numeral": "Arial Black"},
-                  "mac": {"display": "Didot", "body": "Helvetica Neue", "numeral": "Helvetica Neue"}},
-        "ea": {"display": "serif", "body": "sans"}, "grain": 3, "frames": ["rect", "arch"],
-        "forbids": ("confetti",), "cover": "full-bleed-type", "skeleton": "split"},
-    "soft": {
-        "palette": {"ground": "F7EFE6", "ink": "2E2A27", "mute": "6E625A", "panel": "F0E2D6",
-                    "accents": ["E8A88F", "9DB8A0", "B9A6D3"], "text_accents": ["8E4430", "3F5E45", "5A4780"]},
-        "fonts": {"both": {"display": "Trebuchet MS", "body": "Trebuchet MS", "numeral": "Trebuchet MS"},
-                  "mac": {"display": "Arial Rounded MT Bold", "body": "Avenir Next", "numeral": "Arial Rounded MT Bold"}},
-        "ea": {"display": "sans", "body": "sans"}, "grain": 0, "frames": ["arch", "ellipse", "blob"],
-        "forbids": (), "cover": "split-vertical", "skeleton": "island"},
-    "collage": {
-        "palette": {"ground": "EFE6D2", "ink": "1E1B18", "mute": "5F574C", "panel": "FFFFFF",
-                    "accents": ["F2C230", "E4572E", "2E86AB"], "text_accents": ["7A5A00", "A83A14", "1D5A75"]},
-        "fonts": {"both": {"display": "Impact", "body": "Arial", "numeral": "Impact"},
-                  "mac": {"display": "Impact", "body": "Avenir Next", "numeral": "Impact", "hand": "Bradley Hand"}},
-        "ea": {"display": "sans", "body": "sans"}, "ea_heavy": True, "grain": 6, "frames": ["rect"],
-        "forbids": (), "cover": "low-left", "skeleton": "band"},
-    "storybook": {
-        "palette": {"ground": "F6F1E3", "ink": "2F3A2A", "mute": "5E6352", "panel": "EFE7D2",
-                    "accents": ["E2734B", "7FA35B", "F2C14E"], "text_accents": ["9A3F1E", "46612F", "7A5C0E"]},
-        "fonts": {"both": {"display": "Georgia", "body": "Georgia", "numeral": "Times New Roman"},
-                  "mac": {"display": "Baskerville", "body": "Georgia", "numeral": "Times New Roman"}},
-        "ea": {"display": "serif", "body": "serif"}, "grain": 5, "frames": ["feather"],
-        "forbids": ("confetti",), "cover": "centred", "skeleton": "statement"},
-    # ── NATIVE languages (P3): drawn, no pictures needed; compositions in vl_native.py ──
-    "ink": {
-        "palette": {"ground": "F1ECE1", "ink": "1D1C1A", "mute": "645C51", "panel": "E8E1D2",
-                    "accents": ["B0362A"], "text_accents": ["A3322A"], "sun": "B0362A"},
-        "fonts": {"both": {"display": "Georgia", "body": "Georgia", "numeral": "Times New Roman"},
-                  "mac": {"display": "Baskerville", "body": "Georgia", "numeral": "Times New Roman"}},
-        "ea": {"display": "serif", "body": "serif"}, "grain": 4, "frames": ["feather"],
-        "forbids": ("confetti",), "cover": "split-vertical", "skeleton": "rail"},
-    "poster": {
-        "palette": {"ground": "1F3BFF", "ink": "F3F0E8", "mute": "F3F0E8", "panel": "141414",
-                    "accents": ["D7FF3B", "FF4B1F", "141414"], "text_accents": ["D7FF3B", "F3F0E8"]},
-        "fonts": {"both": {"display": "Impact", "body": "Arial", "numeral": "Impact", "mono": "Courier New"},
-                  "mac": {"display": "Impact", "body": "Helvetica Neue", "numeral": "Impact", "mono": "Courier New"}},
-        "ea": {"display": "sans", "body": "sans"}, "ea_heavy": True, "grain": 0, "frames": ["rect"],
-        "forbids": (), "cover": "full-bleed-type", "skeleton": "statement"},
-    "cutpaper": {
-        "palette": {"ground": "FBF2E3", "ink": "2A2733", "mute": "4A4656", "panel": "FFFFFF",
-                    "accents": ["EE8A6B", "4E8FC7", "5B3F6E", "5AA38A"], "text_accents": ["A8442D", "2F6F62"],
-                    "card_ink": "2A2733", "card_mute": "4A4656", "card_accent": "A8442D"},
-        "fonts": {"both": {"display": "Trebuchet MS", "body": "Trebuchet MS", "numeral": "Trebuchet MS"},
-                  "mac": {"display": "Avenir Next", "body": "Avenir Next", "numeral": "Avenir Next"}},
-        "ea": {"display": "sans", "body": "sans"}, "grain": 3, "frames": ["rect"],
-        "forbids": (), "cover": "low-left", "skeleton": "island"},
-    "drafting": {
-        "palette": {"ground": "F1EFE8", "ink": "1E3A5F", "mute": "3E5674", "panel": "F1EFE8",
-                    "accents": ["E2552C"], "text_accents": ["B8401A"]},
-        "fonts": {"both": {"display": "Georgia", "body": "Georgia", "numeral": "Times New Roman", "mono": "Courier New"},
-                  "mac": {"display": "Georgia", "body": "Georgia", "numeral": "Times New Roman", "mono": "Courier New"}},
-        "ea": {"display": "serif", "body": "sans"}, "grain": 0, "frames": ["rect"],
-        "forbids": ("confetti",), "cover": "low-left", "skeleton": "split"},
-    # ── NATIVE, second set (P4): compositions in vl_native2.py ──
-    "starlit": {
-        "palette": {"ground": "0B1430", "ink": "F3EBD8", "mute": "AEB6CC", "panel": "16204A",
-                    "accents": ["D9B36C"], "text_accents": ["D9B36C"], "glow": "F1D9A6"},
-        "fonts": {"both": {"display": "Georgia", "body": "Georgia", "numeral": "Times New Roman"},
-                  "mac": {"display": "Georgia", "body": "Georgia", "numeral": "Times New Roman"}},
-        "ea": {"display": "serif", "body": "serif"}, "grain": 0, "frames": ["ellipse"],
-        "forbids": ("confetti",), "cover": "centred", "skeleton": "statement"},
-    "broadsheet": {
-        "palette": {"ground": "F2EEE5", "ink": "141414", "mute": "4A4744", "panel": "E6E0D3",
-                    "accents": ["A32018"], "text_accents": ["A32018"]},
-        "fonts": {"both": {"display": "Times New Roman", "body": "Georgia", "numeral": "Times New Roman", "meta": "Arial"},
-                  "mac": {"display": "Times New Roman", "body": "Georgia", "numeral": "Times New Roman", "meta": "Arial"}},
-        "ea": {"display": "serif", "body": "serif"}, "grain": 4, "frames": ["rect"],
-        "forbids": ("confetti",), "cover": "full-bleed-type", "skeleton": "split"},
-    "journal": {
-        "palette": {"ground": "FBFAF6", "ink": "1B1B1B", "mute": "5A5A55", "panel": "F1EFE7",
-                    "accents": ["1F5C46"], "text_accents": ["1F5C46"]},
-        "fonts": {"both": {"display": "Georgia", "body": "Georgia", "numeral": "Times New Roman", "meta": "Arial"},
-                  "mac": {"display": "Georgia", "body": "Georgia", "numeral": "Times New Roman", "meta": "Arial"}},
-        "ea": {"display": "serif", "body": "serif"}, "grain": 0, "frames": ["rect"],
-        "forbids": ("confetti",), "cover": "low-left", "skeleton": "rail"},
-    "tally": {
-        "palette": {"ground": "FFFFFF", "ink": "0E0E10", "mute": "5A5F6B", "panel": "F4F6FA",
-                    "accents": ["2438F0", "C6F432"], "text_accents": ["2438F0"],
-                    "lime": "C6F432", "chip_ink": "0E0E10", "grid_ink": "1E2A60", "track": "E7EAF1"},
-        "fonts": {"both": {"display": "Arial Black", "body": "Arial", "numeral": "Arial Black"},
-                  "mac": {"display": "Arial Black", "body": "Helvetica Neue", "numeral": "Arial Black"}},
-        "ea": {"display": "sans", "body": "sans"}, "ea_heavy": True, "grain": 0, "frames": ["rect"],
-        "forbids": (), "cover": "low-left", "skeleton": "split"},
-    "chalkboard": {
-        "palette": {"ground": "22392B", "ink": "F3F1EA", "mute": "C9D3C9", "panel": "2B4436",
-                    "accents": ["F2D16B", "F2A9B8", "A4CDE6"], "text_accents": ["F2D16B", "F2A9B8"],
-                    "wood": "7A4F2A", "chalk": "E8E2D2"},
-        "fonts": {"both": {"display": "Trebuchet MS", "body": "Trebuchet MS", "numeral": "Trebuchet MS"},
-                  "mac": {"display": "Chalkboard SE", "body": "Chalkboard SE", "numeral": "Chalkboard SE"}},
-        "ea": {"display": "sans", "body": "sans"}, "grain": 7, "frames": ["rect"],
-        "forbids": (), "cover": "low-left", "skeleton": "island"},
-    "interface": {
-        "palette": {"ground": "F3F4F7", "ink": "0F1115", "mute": "5B6170", "panel": "FFFFFF",
-                    "accents": ["2563EB", "16A34A", "D97706", "DC2626"], "text_accents": ["1F55E0"],
-                    "line": "E2E5EB", "soft": "F6F7FA", "drop": "DDE1E8", "primary_fill": "2563EB",
-                    "off_line": "8A91A0",
-                    "states": {"primary": "2563EB", "on": "16A34A", "pending": "D97706", "error": "DC2626"}},
-        "fonts": {"both": {"display": "Arial", "body": "Arial", "numeral": "Arial"},
-                  "mac": {"display": "Helvetica Neue", "body": "Helvetica Neue", "numeral": "Helvetica Neue"}},
-        "ea": {"display": "sans", "body": "sans"}, "grain": 0, "frames": ["rect"],
-        "forbids": ("confetti",), "cover": "low-left", "skeleton": "island"},
-    "wayfinding": {
-        "palette": {"ground": "F6F5F1", "ink": "16191E", "mute": "5A6070", "panel": "ECEAE3",
-                    "accents": ["D7262E", "0071BC", "00954C", "F2B705", "8E4FA1"], "text_accents": ["1B2A41"],
-                    "lines": ["D7262E", "0071BC", "00954C", "F2B705", "8E4FA1"],
-                    "sign": "1B2A41", "sign_ink": "FFFFFF", "sign_mute": "B9C3D4", "edge": "F2B705",
-                    "board": "0B0D10", "led": "FFB020", "board_mute": "9AA0AA",
-                    "exit": "007A3D", "exit_ink": "FFFFFF", "casing": "16191E"},
-        "fonts": {"both": {"display": "Arial", "body": "Arial", "numeral": "Arial", "board": "Courier New"},
-                  "mac": {"display": "Helvetica Neue", "body": "Helvetica Neue", "numeral": "Helvetica Neue",
-                          "board": "Menlo"}},
-        "ea": {"display": "sans", "body": "sans"}, "ea_heavy": True, "grain": 0, "frames": ["rect"],
-        "forbids": ("confetti",), "cover": "split-vertical", "skeleton": "band"},
-}
-
-# Each language's GROUNDS: its own light paper, and ONE contrast ground (user's decision, 2026-10-04). All four
-# light grounds are cream paper, and the register-pixels gate holds a deck whose ground repeats the last decks'
-# — after a run of cream decks it held every language. Every text ink passes 4.5:1 on its ground AND panel.
-# The storybook contrast is a meadow-green PAPER, not a dark ground: its light watercolours would halo on dark.
-VARIANTS = {
-    "editorial": {
-        "light": {"label": "paper", "label_zh": "纸面版", "grain": 3, "palette": LANGS["editorial"]["palette"]},
-        "ink": {"label": "ink", "label_zh": "墨黑版", "grain": 3,
-                "palette": {"ground": "1B1A17", "ink": "F3EEE5", "mute": "B8B0A3", "panel": "27251F",
-                            "accents": ["D9553C", "5C8FC4"], "text_accents": ["EE7A62", "8DB4DD"]}}},
-    "soft": {
-        "light": {"label": "cream", "label_zh": "奶油版", "grain": 0, "palette": LANGS["soft"]["palette"]},
-        "dusk": {"label": "dusk", "label_zh": "暮色版", "grain": 0,
-                 "palette": {"ground": "2E2940", "ink": "F6EEE6", "mute": "CFC5D6", "panel": "3A3450",
-                             "accents": ["E8A88F", "9DB8A0", "B9A6D3"], "text_accents": ["F2B49B", "A8CFB1", "CBB8EA"]}}},
-    "collage": {
-        "light": {"label": "kraft", "label_zh": "牛皮纸版", "grain": 6, "palette": LANGS["collage"]["palette"]},
-        "slate": {"label": "slate", "label_zh": "深灰纸版", "grain": 6,
-                  "palette": {"ground": "2B2A27", "ink": "F4EEE2", "mute": "C2B9AA", "panel": "3B3934",
-                              "accents": ["F2C230", "E4572E", "2E86AB"], "text_accents": ["F2C230", "F08A64", "7CC3E3"]}}},
-    "storybook": {
-        "light": {"label": "paper", "label_zh": "纸面版", "grain": 5, "palette": LANGS["storybook"]["palette"]},
-        "meadow": {"label": "meadow", "label_zh": "草地纸版", "grain": 5,
-                   "palette": {"ground": "C3D1B5", "ink": "222E1F", "mute": "3F4B36", "panel": "D3DECA",
-                               "accents": ["E2734B", "7FA35B", "F2C14E"], "text_accents": ["772C11", "314526", "584108"]}}},
-    "ink": {
-        "light": {"label": "xuan paper", "label_zh": "宣纸版", "grain": 4, "palette": LANGS["ink"]["palette"]},
-        "night": {"label": "ink night", "label_zh": "墨夜版", "grain": 4,
-                  "palette": {"ground": "1C1B19", "ink": "E9E2D2", "mute": "A99F8F", "panel": "262421",
-                              "accents": ["B23A2C"], "text_accents": ["E07A63"], "sun": "E8DEC6"}}},
-    "poster": {
-        "light": {"label": "colour fields", "label_zh": "色场版", "grain": 0, "palette": LANGS["poster"]["palette"]},
-        "paper": {"label": "paper", "label_zh": "白纸版", "grain": 0,
-                  "palette": {"ground": "F3F0E8", "ink": "141414", "mute": "141414", "panel": "E4DFD3",
-                              "accents": ["1F3BFF", "FF4B1F"], "text_accents": ["1F3BFF", "141414"]}}},
-    "cutpaper": {
-        "light": {"label": "day", "label_zh": "白天版", "grain": 3, "palette": LANGS["cutpaper"]["palette"]},
-        "night": {"label": "paper night", "label_zh": "纸夜版", "grain": 3,
-                  "palette": {"ground": "1D2742", "ink": "F2EEE4", "mute": "C6C9D6", "panel": "30406A",
-                              "accents": ["EE8A6B", "4E8FC7", "5B3F6E", "467E7A"], "text_accents": ["F2A285", "A8D5C4"],
-                              "card_ink": "2A2733", "card_mute": "4A4656", "card_accent": "A8442D"}}},
-    "drafting": {
-        "light": {"label": "vellum", "label_zh": "硫酸纸版", "grain": 0, "palette": LANGS["drafting"]["palette"]},
-        "cyanotype": {"label": "cyanotype", "label_zh": "晒图蓝版", "grain": 0,
-                      "palette": {"ground": "123254", "ink": "E4ECF5", "mute": "B7C5D6", "panel": "123254",
-                                  "accents": ["F27D4E"], "text_accents": ["F59A72"]}}},
-    "starlit": {
-        "light": {"label": "midnight", "label_zh": "午夜版", "grain": 0, "palette": LANGS["starlit"]["palette"]},
-        "dawn": {"label": "dawn", "label_zh": "黎明版", "grain": 0,
-                 "palette": {"ground": "22163A", "ink": "F6E9E4", "mute": "C9B7C9", "panel": "2D1F4A",
-                             "accents": ["EDB3A0"], "text_accents": ["EDB3A0"], "glow": "F7D2C2"}}},
-    "broadsheet": {
-        "light": {"label": "newsprint", "label_zh": "报纸版", "grain": 4, "palette": LANGS["broadsheet"]["palette"]},
-        "salmon": {"label": "pink paper", "label_zh": "粉报版", "grain": 4,
-                   "palette": {"ground": "FBE8D8", "ink": "1A1714", "mute": "54493F", "panel": "F3DAC6",
-                               "accents": ["0F4C81"], "text_accents": ["0F4C81"]}}},
-    "journal": {
-        "light": {"label": "paper", "label_zh": "论文白版", "grain": 0, "palette": LANGS["journal"]["palette"]},
-        "green": {"label": "title green", "label_zh": "期刊绿版", "grain": 0,
-                  "palette": {"ground": "163A2E", "ink": "F1EEE4", "mute": "BFC8BF", "panel": "1E4A3B",
-                              "accents": ["D9C27A"], "text_accents": ["D9C27A"]}}},
-    "tally": {
-        "light": {"label": "white grid", "label_zh": "白网格版", "grain": 0, "palette": LANGS["tally"]["palette"]},
-        "night": {"label": "night ledger", "label_zh": "夜间账本版", "grain": 0,
-                  "palette": {"ground": "0F1222", "ink": "F2F4FA", "mute": "A5ACC4", "panel": "1A1F38",
-                              "accents": ["7C89FF", "C6F432"], "text_accents": ["7C89FF"],
-                              "lime": "C6F432", "chip_ink": "0E0E10", "grid_ink": "8090D0", "track": "2A3150"}}},
-    "chalkboard": {
-        "light": {"label": "green board", "label_zh": "绿黑板版", "grain": 7, "palette": LANGS["chalkboard"]["palette"]},
-        "slate": {"label": "slate", "label_zh": "石板版", "grain": 7,
-                  "palette": {"ground": "25282C", "ink": "F2F1EC", "mute": "C7C9CC", "panel": "30343A",
-                              "accents": ["F2D16B", "F2A9B8", "A4CDE6"], "text_accents": ["F2D16B", "F2A9B8"],
-                              "wood": "5B4632", "chalk": "E8E2D2"}}},
-    "interface": {
-        "light": {"label": "app light", "label_zh": "浅色界面版", "grain": 0, "palette": LANGS["interface"]["palette"]},
-        "dark": {"label": "dark mode", "label_zh": "深色模式版", "grain": 0,
-                 "palette": {"ground": "0E1014", "ink": "F2F4F8", "mute": "A3AAB8", "panel": "171A21",
-                             "accents": ["5B8CFF", "2DBE6C", "F5B83D", "FF6B70"], "text_accents": ["8FB0FF"],
-                             "line": "2A2F3A", "soft": "1E222B", "drop": "07080B", "primary_fill": "2563EB",
-                             "off_line": "7A8294",
-                             "states": {"primary": "5B8CFF", "on": "2DBE6C", "pending": "F5B83D", "error": "FF6B70"}}}},
-    "wayfinding": {
-        "light": {"label": "enamel", "label_zh": "珐琅白版", "grain": 0, "palette": LANGS["wayfinding"]["palette"]},
-        "night": {"label": "navy", "label_zh": "藏青夜间版", "grain": 0,
-                  "palette": {"ground": "1B2A41", "ink": "F2F4F8", "mute": "B9C3D4", "panel": "22344F",
-                              "accents": ["E8454C", "3D9BE0", "1DB66A", "F2B705", "B07CC6"], "text_accents": ["F2B705"],
-                              "lines": ["E8454C", "3D9BE0", "1DB66A", "F2B705", "B07CC6"],
-                              "sign": "0F1A2C", "sign_ink": "FFFFFF", "sign_mute": "B9C3D4", "edge": "F2B705",
-                              "board": "0B0D10", "led": "FFB020", "board_mute": "9AA0AA",
-                              "exit": "007A3D", "exit_ink": "FFFFFF", "casing": "0F1A2C"}}},
-}
-NATIVE = ("ink", "poster", "cutpaper", "drafting", "starlit", "broadsheet", "journal", "tally", "chalkboard", "interface", "wayfinding")          # drawn, no pictures needed (vl_native.py)
+import vl_specs as _vl_specs
+# Every language is ONE manifest, scripts/vl_specs/<name>.py, checked by scripts/vl_contract.py; the tables below are
+# built from them and keep their old names for every importer. Each language's GROUNDS: its own light paper, and ONE
+# contrast ground (user's decision, 2026-10-04). All four light grounds are cream paper, and the register-pixels gate
+# holds a deck whose ground repeats the last decks' — after a run of cream decks it held every language. Every text ink
+# passes 4.5:1 on its ground AND panel (the contract checks it). The storybook contrast is a meadow-green PAPER, not a
+# dark ground: its light watercolours would halo on dark.
+REGISTRY = _vl_specs.load()
+LANGS = {n: s["look"] for n, s in REGISTRY.items()}
+VARIANTS = {n: {g: {k: v for k, v in gd.items() if k not in ("dark", "roles")} for g, gd in s["grounds"].items()}
+            for n, s in REGISTRY.items()}
+NATIVE = tuple(n for n, s in REGISTRY.items() if s["kind"] == "drawn")          # drawn, no pictures needed (vl_native.py)
 # the pages on which a drawn language draws the caller's picture; image= anywhere else is refused, naming these — it
 # was dropped without a word, even a path to no file (robustness + docs audits, 2026-10-09)
-NATIVE_IMAGE_PAGES = {n: ("image_text", "quote") if n == "drafting" else ("image_text",) for n in NATIVE}
-IMAGE_LED = ("editorial", "soft", "collage", "storybook")    # built around the caller's pictures
+NATIVE_IMAGE_PAGES = {n: REGISTRY[n]["image_pages"] for n in NATIVE}
+IMAGE_LED = tuple(n for n, s in REGISTRY.items() if s["kind"] == "image-led")    # built around the caller's pictures
 # words only the CALLER can give — never invented by the kit; absent means nothing is drawn
-NATIVE_EXTRAS = {"ink": ("seal",), "poster": ("highlight",), "cutpaper": ("icons",), "drafting": ("project",), "broadsheet": ('masthead', 'edition', 'inside', 'tags'), "journal": ('running', 'authors', 'abstract', 'margin'), "tally": ('tags', 'total'), "chalkboard": ('doodle', 'ordered'), "interface": ("crumb", "status", "actions", "toggles", "tags", "total"), "wayfinding": ("line", "ordered", "interchange", "board")}
+NATIVE_EXTRAS = {n: tuple(REGISTRY[n]["extras"]) for n in NATIVE if REGISTRY[n]["extras"]}
 # the pages that DRAW each extra; on any other page it is refused, never silently dropped (non-Claude run, 2026-10-05)
-EXTRA_PAGES = {"highlight": ("cover", "section", "quote", "closing"), "icons": ("points",), "inside": ('cover',), "tags": ('points',), "authors": ('cover',), "abstract": ('cover',), "margin": ('points',), "total": ('data',), "doodle": ('cover', 'closing'), "ordered": ('points',), "actions": ("cover", "closing"), "toggles": ("cover",), "interchange": ("points",), "board": ("data",)}
+EXTRA_PAGES = {x: d["pages"] for s in REGISTRY.values() for x, d in s["extras"].items() if d["pages"] != "any"}
 _ACTIVE = {}    # language -> the ground key use() set; rs.ground()/rs.card() (no kit) follow it
 _PAL_OVERRIDE = {}   # language -> the palette of the CURRENT page, for a language whose palette changes per page (poster)
 _MEMO = {}   # language -> the last composed page's remembered extras, for ordinary pages (rs.ground has no kit)
@@ -576,7 +375,8 @@ _card_wayfinding = _card_for("wayfinding")
 
 
 for _n in LANGS:
-    rs.register(_n, ground=globals()["_ground_" + _n], card=globals()["_card_" + _n],
+    rs.register(_n, ground=globals()[REGISTRY[_n]["painters"]["ground"]],
+                card=globals()[REGISTRY[_n]["painters"]["card"]],
                 forbids=LANGS[_n]["forbids"], source=__file__)
 
 
@@ -599,125 +399,7 @@ class VLImageError(ValueError):
 
 
 # field: (size_pt at a 7.5in short side, role, bold, colour key, italic, floor_pt)
-TYPE = {
-    "editorial": {"kicker": (14, "body", True, "accent", False, 10), "title": (54, "display", False, "ink", False, 28),
-                  "subtitle": (18, "body", False, "ink", False, 12), "body": (17, "body", False, "ink", False, 11),
-                  "mark": (110, "display", False, "accent", False, 40), "quote": (32, "display", False, "ink", True, 18),
-                  "attribution": (14, "body", True, "accent", False, 10), "number": (150, "numeral", True, "accent", False, 44),
-                  "label": (24, "display", False, "ink", False, 14), "note": (15, "body", False, "ink", False, 10),
-                  "caption": (12, "body", False, "ink", False, 9), "line": (20, "body", False, "ink", False, 12)},
-    "soft": {"kicker": (15, "body", True, "accent", False, 10), "title": (48, "display", True, "ink", False, 26),
-             "subtitle": (18, "body", False, "ink", False, 12), "body": (17, "body", False, "ink", False, 11),
-             "mark": (90, "display", True, "accent", False, 36), "quote": (30, "display", False, "ink", False, 17),
-             "attribution": (14, "body", True, "accent", False, 10), "number": (120, "numeral", True, "ink", False, 40),
-             "label": (24, "display", True, "ink", False, 14), "note": (15, "body", False, "ink", False, 10),
-             "caption": (12, "body", False, "ink", False, 9), "line": (20, "body", False, "ink", False, 12)},
-    "collage": {"kicker": (16, "body", True, "ink", False, 10), "title": (62, "display", False, "ink", False, 30),
-                "subtitle": (18, "body", False, "ink", False, 12), "body": (17, "body", False, "ink", False, 11),
-                "mark": (100, "display", False, "accent", False, 36), "quote": (30, "display", False, "ink", False, 17),
-                "attribution": (15, "body", True, "ink", False, 10), "number": (170, "numeral", False, "accent", False, 48),
-                "label": (26, "display", False, "ink", False, 14), "note": (15, "body", False, "ink", False, 10),
-                "caption": (12, "body", False, "ink", False, 9), "line": (22, "body", True, "ink", False, 12)},
-    "storybook": {"kicker": (15, "body", False, "accent", True, 10), "title": (50, "display", False, "ink", False, 26),
-                  "subtitle": (18, "body", False, "ink", True, 12), "body": (17, "body", False, "ink", False, 11),
-                  "mark": (110, "display", False, "accent", False, 40), "quote": (30, "display", False, "ink", True, 17),
-                  "attribution": (14, "body", False, "accent", True, 10), "number": (150, "numeral", False, "accent", False, 44),
-                  "label": (24, "display", False, "ink", False, 14), "note": (15, "body", False, "ink", False, 10),
-                  "caption": (12, "body", False, "ink", True, 9), "line": (20, "body", False, "ink", True, 12)},
-    "ink": {"kicker": (13, "body", False, "mute", False, 10), "title": (52, "display", False, "ink", False, 26),
-            "subtitle": (19, "body", False, "mute", False, 12), "body": (17, "body", False, "ink", False, 11),
-            "mark": (60, "display", False, "accent", False, 30), "quote": (44, "display", False, "ink", False, 22),
-            "attribution": (15, "body", False, "mute", False, 10), "number": (230, "numeral", False, "ink", False, 40),
-            "label": (34, "display", False, "ink", False, 16), "note": (16, "body", False, "mute", False, 10),
-            "caption": (12, "body", False, "mute", False, 9), "line": (20, "body", False, "ink", False, 12),
-            "item_head": (28, "display", False, "ink", False, 14), "item_line": (17, "body", False, "mute", False, 10)},
-    "poster": {"kicker": (11, "mono", True, "ink", False, 9), "title": (150, "display", False, "ink", False, 44),
-               "subtitle": (20, "body", True, "ink", False, 12), "body": (18, "body", False, "ink", False, 11),
-               "mark": (300, "display", False, "accent", False, 120), "quote": (90, "display", False, "ink", False, 34),
-               "attribution": (12, "mono", True, "accent", False, 10), "number": (380, "numeral", False, "ink", False, 110),
-               "label": (70, "display", False, "ink", False, 26), "note": (19, "body", True, "ink", False, 12),
-               "caption": (12, "body", False, "ink", False, 9), "line": (24, "body", True, "ink", False, 14),
-               "item_head": (18, "body", True, "ink", False, 12), "item_line": (14, "body", False, "ink", False, 10)},
-    "cutpaper": {"kicker": (14, "body", True, "accent", False, 10), "title": (60, "display", True, "ink", False, 28),
-                 "subtitle": (20, "body", False, "mute", False, 12), "body": (18, "body", False, "ink", False, 11),
-                 "mark": (90, "display", True, "accent", False, 40), "quote": (44, "display", True, "ink", False, 20),
-                 "attribution": (13, "body", True, "accent", False, 10), "number": (200, "numeral", True, "ink", False, 36),
-                 "label": (44, "display", True, "ink", False, 20), "note": (19, "body", False, "mute", False, 11),
-                 "caption": (12, "body", False, "mute", False, 9), "line": (22, "body", False, "ink", False, 12),
-                 "item_head": (28, "display", True, "ink", False, 14), "item_line": (17, "body", False, "mute", False, 10)},
-    "drafting": {"kicker": (11, "mono", True, "accent", False, 9), "title": (54, "display", False, "ink", False, 26),
-                  "subtitle": (16, "display", False, "mute", True, 11), "body": (16, "body", False, "ink", False, 10),
-                  "mark": (60, "display", False, "accent", False, 30), "quote": (44, "display", False, "ink", True, 20),
-                  "attribution": (11, "mono", True, "mute", False, 9), "number": (330, "numeral", False, "ink", False, 40),
-                  "label": (46, "display", False, "ink", False, 20), "note": (16, "display", False, "mute", True, 10),
-                  "caption": (10, "mono", True, "mute", False, 8), "line": (20, "display", False, "ink", True, 12),
-                  "item_head": (11, "mono", True, "ink", False, 9), "item_line": (15, "display", False, "mute", False, 10)},
-    "starlit": {"kicker": (13, "body", False, "accent", False, 10), "title": (54, "display", False, "ink", False, 26),
-                "subtitle": (18, "body", False, "mute", True, 11), "body": (17, "body", False, "ink", False, 11),
-                "mark": (60, "display", False, "accent", False, 36), "quote": (34, "display", False, "ink", True, 18),
-                "attribution": (13, "body", False, "accent", False, 10), "number": (170, "numeral", False, "accent", False, 44),
-                "label": (26, "display", False, "ink", False, 14), "note": (15, "body", False, "mute", True, 10),
-                "caption": (12, "body", False, "mute", True, 9), "line": (20, "body", False, "mute", True, 12),
-                "item_head": (24, "display", False, "ink", False, 13), "item_line": (16, "body", False, "mute", True, 10)},
-    "broadsheet": {"kicker": (12, "meta", True, "accent", False, 9), "title": (80, "display", True, "ink", False, 30),
-                   "subtitle": (24, "body", False, "ink", True, 13), "body": (18, "body", False, "ink", False, 11),
-                   "mark": (100, "display", True, "accent", False, 40), "quote": (38, "body", False, "ink", True, 18),
-                   "attribution": (11, "meta", True, "mute", False, 9), "number": (150, "numeral", True, "ink", False, 44),
-                   "label": (22, "body", True, "ink", False, 12), "note": (14, "body", False, "mute", True, 9),
-                   "caption": (12, "body", False, "mute", True, 9), "line": (20, "body", False, "ink", True, 12),
-                   "item_head": (28, "display", True, "ink", False, 14), "item_line": (18, "body", False, "ink", False, 11),
-                   "masthead": (40, "display", True, "ink", False, 12), "edition": (10, "meta", True, "mute", False, 8),
-                   "inside": (16, "body", False, "ink", False, 10), "inside_h": (11, "meta", True, "accent", False, 9),
-                   "tag": (10, "meta", True, "accent", False, 8)},
-    "journal": {"kicker": (12, "meta", True, "accent", False, 9), "title": (46, "display", False, "ink", False, 24),
-                "subtitle": (20, "body", False, "mute", True, 12), "body": (16, "body", False, "ink", False, 10),
-                "mark": (80, "display", False, "accent", False, 32), "quote": (30, "body", False, "ink", True, 16),
-                "attribution": (13, "meta", True, "mute", False, 9), "number": (140, "numeral", False, "accent", False, 40),
-                "label": (24, "body", False, "ink", False, 13), "note": (15, "body", False, "mute", False, 10),
-                "caption": (11, "body", False, "mute", True, 8), "line": (20, "body", False, "mute", True, 12),
-                "item_head": (21, "body", True, "ink", False, 12), "item_line": (15, "body", False, "mute", False, 10),
-                "item_no": (30, "numeral", True, "accent", False, 14), "authors": (17, "body", False, "ink", False, 11),
-                "abstract": (16, "body", False, "ink", False, 10), "abstract_h": (11, "meta", True, "accent", False, 8),
-                "margin": (12, "body", False, "mute", True, 9), "margin_h": (10, "meta", True, "accent", False, 8),
-                "running": (10, "body", False, "mute", True, 8), "fig_label": (13, "meta", True, "accent", False, 9),
-                "sec_no": (40, "numeral", True, "accent", False, 20)},
-    "tally": {"kicker": (12, "body", True, "ink", False, 9), "title": (60, "display", False, "ink", False, 28),
-              "subtitle": (20, "body", False, "mute", False, 12), "body": (17, "body", False, "ink", False, 11),
-              "mark": (90, "display", False, "accent", False, 36), "quote": (38, "display", False, "ink", False, 18),
-              "attribution": (12, "body", True, "ink", False, 9), "number": (200, "numeral", False, "accent", False, 60),
-              "label": (26, "body", True, "ink", False, 14), "note": (15, "body", False, "mute", False, 10),
-              "caption": (12, "body", False, "mute", False, 9), "line": (20, "body", False, "mute", False, 12),
-              "item_head": (26, "body", True, "ink", False, 13), "item_line": (17, "body", False, "mute", False, 10),
-              "item_no": (50, "display", False, "accent", False, 24), "tag": (12, "body", True, "ink", False, 9)},
-    "chalkboard": {"kicker": (16, "body", True, "accent", False, 10), "title": (58, "display", True, "ink", False, 22),
-                   "subtitle": (22, "body", False, "mute", False, 12), "body": (19, "body", False, "ink", False, 12),
-                   "mark": (130, "display", True, "accent", False, 48), "quote": (44, "display", True, "ink", False, 20),
-                   "attribution": (20, "body", False, "accent", False, 11), "number": (150, "numeral", True, "accent", False, 48),
-                   "label": (28, "display", True, "ink", False, 14), "note": (18, "body", False, "mute", False, 11),
-                   "caption": (14, "body", False, "mute", False, 10), "line": (22, "body", False, "mute", False, 12),
-                   "item_head": (24, "display", True, "ink", False, 14), "item_line": (19, "body", False, "mute", False, 11),
-                   "item_no": (24, "display", True, "accent", False, 14)},
-    "interface": {"kicker": (13, "body", True, "mute", False, 9), "title": (54, "display", True, "ink", False, 26),
-                  "subtitle": (20, "body", False, "mute", False, 12), "body": (17, "body", False, "ink", False, 11),
-                  "quote": (34, "display", True, "ink", False, 18), "attribution": (14, "body", False, "mute", False, 10),
-                  "number": (150, "numeral", True, "ink", False, 54), "label": (22, "body", True, "mute", False, 13),
-                  "note": (15, "body", False, "ink", False, 10), "caption": (12, "body", False, "mute", False, 9),
-                  "line": (20, "body", False, "mute", False, 12), "item_head": (22, "body", True, "ink", False, 13),
-                  "item_line": (16, "body", False, "mute", False, 10), "item_no": (20, "display", True, "accent", False, 13),
-                  "tag": (13, "body", True, "ink", False, 9), "crumb": (13, "body", False, "mute", False, 9),
-                  "status": (12, "body", True, "ink", False, 9), "action": (16, "body", True, "ink", False, 11),
-                  "toggle": (16, "body", True, "ink", False, 11), "initials": (24, "display", True, "ink", False, 14),
-                  "mark": (60, "display", True, "accent", False, 30)},
-    "wayfinding": {"kicker": (14, "body", True, "mute", False, 10), "title": (52, "display", True, "ink", False, 26),
-                   "subtitle": (20, "body", True, "ink", False, 12), "body": (17, "body", False, "ink", False, 11),
-                   "quote": (34, "display", True, "ink", False, 18), "attribution": (14, "body", True, "mute", False, 10),
-                   "number": (96, "board", True, "ink", False, 40), "label": (24, "board", False, "ink", False, 13),
-                   "note": (15, "body", False, "mute", False, 10), "caption": (12, "body", False, "mute", False, 9),
-                   "line": (20, "body", False, "ink", False, 12), "item_head": (22, "body", True, "ink", False, 13),
-                   "item_line": (15, "body", False, "mute", False, 10), "item_no": (18, "display", True, "ink", False, 12),
-                   "roundel": (18, "display", True, "ink", False, 11), "exit": (14, "body", True, "ink", False, 10),
-                   "row": (20, "board", False, "ink", False, 11), "mark": (60, "display", True, "accent", False, 30)},
-}
+TYPE = {n: s["type"] for n, s in REGISTRY.items()}
 
 # page -> its fields in column order (the caller's keyword names)
 PAGE_FIELDS = {"cover": ("kicker", "title", "subtitle"), "section": ("number", "kicker", "title"),
@@ -1953,96 +1635,7 @@ _SAMPLE_COPY = {
 }
 
 # the native languages need no pictures: their samples are words only (still a STYLE sample, not your content)
-_SAMPLE_COPY_NATIVE = {
-    "ink": [("cover", dict(kicker="茶事 · 卷一", title="一盏茶的时间", subtitle="慢下来，看见日常", seal="茶事")),
-            ("points", dict(title="三道工序", items=[("洗盏", "器净，心先静"), ("候汤", "水沸，如蟹眼"), ("分茶", "浅斟，留七分")], seal="序")),
-            ("quote", dict(quote="茶有两种姿态，浮与沉", attribution="茶室题记", seal="记")),
-            ("data", dict(number="3", label="泡，滋味最浓", note="头泡醒茶，三泡正好", seal="茶"))],
-    "poster": [("cover", dict(kicker="A manifesto for neighbourhood rooms", title="Make the room smaller.", highlight="room")),
-               ("points", dict(title="Three moves.", items=["Share the tools", "Open the door", "Keep it local"])),
-               ("quote", dict(quote="A room is a promise you can walk into.", attribution="From the manifesto")),
-               ("data", dict(number="01", label="Room on every street.", note="Close enough to walk to, small enough to share."))],
-    "cutpaper": [("cover", dict(kicker="A paper-cut science story", title="How seeds travel")),
-                 ("points", dict(title="Three ways a seed gets around",
-                                 items=[("Wind", "Wings and parachutes drift far."), ("Water", "Some seeds float to a new shore."),
-                                        ("Animals", "Hooks hitch a ride on fur.")],
-                                 icons=["lucide:wind", "lucide:droplets", "lucide:paw-print"])),
-                 ("quote", dict(quote="Every forest began as one small seed.", attribution="A paper-cut science story")),
-                 ("data", dict(number="1", label="seed is all a forest needs", note="Small beginnings, slow growth."))],
-    "drafting": [("cover", dict(kicker="Schematic 01 · a modular reading room", title="A room built layer by layer.",
-                                 subtitle="Floor, walls and roof drawn as one frame, each layer free to move.")),
-                  ("points", dict(title="Three layers, one frame", items=[("Floor", "One continuous plate."),
-                                                                         ("Walls", "Panels that slide on a track."),
-                                                                         ("Roof", "A single span, no columns.")])),
-                  ("quote", dict(quote="“Draw the quiet first, then the walls.”", attribution="Design principle")),
-                  ("data", dict(number="3", label="layers, one structure.", note="Each layer can be built, moved and reused on its own."))],
-    "starlit": [("cover", dict(kicker="Year in review", title="What this year taught us", subtitle="A letter to the team")),
-                ("points", dict(title="Three things we learned", items=[("We shipped slower", "and broke less"),
-                                ("We listened more", "to the people who use it"), ("We kept the team", "through a hard spring")])),
-                ("quote", dict(quote="We measured the year in conversations, not in launches.", attribution="From the founder's letter")),
-                ("data", dict(number="12", label="conversations that changed our plan", note="Each one is written up in the archive."))],
-    "broadsheet": [("cover", dict(title="Every street needs a night for fixing things",
-                                  subtitle="Volunteers, borrowed tools and one long table: how a repair evening works.",
-                                  masthead="The Neighbourhood Repair Weekly", inside=["The idea", "The evening", "The numbers"])),
-                   ("points", dict(title="How a repair evening works", tags=["The idea", "The evening", "The next step"],
-                                   items=[("Bring it broken", "Anything that switches on, unzips or wobbles is welcome."),
-                                          ("Fix it together", "A volunteer sits beside you, but your hands do the work."),
-                                          ("Take it home", "What could not be fixed today goes on a list for next time.")])),
-                   ("quote", dict(quote="The visitor holds the screwdriver; the volunteer only guides.",
-                                  attribution="From the volunteer handbook")),
-                   ("data", dict(number="3", label="evenings a month", note="Short enough to fit around work."))],
-    "journal": [("cover", dict(kicker="Lab meeting", title="Learning to reconstruct undersampled cardiac MRI",
-                               authors="Author One · Author Two · Author Three",
-                               abstract="We ask whether a learned reconstruction keeps fine edges when far fewer measurements "
-                                        "are taken, and how we would know.")),
-                ("image_text", dict(title="Reconstruction error across acceleration",
-                                    body="Error as acceleration grows. Illustrative curves for this style sample, not results.",
-                                    caption="Style sample — not data.", image=str(ASSETS / "figure" / "illustrative-curves.jpg"))),
-                ("points", dict(title="What we set out to test",
-                                items=[("The question", "Does the method keep edges at high acceleration?"),
-                                       ("The method", "Retrospective undersampling of fully sampled scans."),
-                                       ("The check", "Compare against the fully sampled reference, slice by slice.")],
-                                margin="Every figure in this deck is labelled with its source.")),
-                ("data", dict(number="8×", label="acceleration we aim to support",
-                              note="A target for the study, stated before any result."))],
-    "tally": [("cover", dict(kicker="Q3 review", title="The lending library, quarter three",
-                             subtitle="Members, loans and repairs across the network")),
-              ("points", dict(title="Three lines on the ledger", tags=["Members", "Loans", "Repairs"],
-                              items=[("New members joined", "Mostly through word of mouth"),
-                                     ("Tools went out on loan", "Drills and ladders led the list"),
-                                     ("Items came back repaired", "Fixed at the monthly evening")])),
-              ("quote", dict(quote="Count what people borrow, not what we own.", attribution="Library principle")),
-              ("data", dict(number="12", label="of 40 neighbourhoods now have a shelf", note="A target of 20 by next year.",
-                            total="40"))],
-    "chalkboard": [("cover", dict(kicker="科学课 · 第 3 讲", title="光合作用是怎么回事", subtitle="一片叶子，就是一座小工厂")),
-                   ("points", dict(title="叶子做的三件事", ordered=True,
-                                   items=[("吸收阳光", "叶绿素抓住光的能量"), ("吸进水和二氧化碳", "根吸水，叶子吸二氧化碳"),
-                                          ("做出糖和氧气", "糖留给植物，氧气放出来")])),
-                   ("quote", dict(quote="一片叶子就是一座小工厂。", attribution="科学课笔记")),
-                   ("data", dict(number="6", label="个二氧化碳分子", note="和 6 个水分子一起，做出一个葡萄糖分子。"))],
-    "interface": [("cover", dict(kicker="Product tour", title="One board for every request",
-                                 subtitle="A ten-minute tour of the new workspace", crumb="Launch › Overview",
-                                 status=("Live", "on"), actions=["Get started", "Watch demo"],
-                                 toggles=[("Auto-sync", True), ("Share with team", True), ("Public link", False)])),
-                  ("points", dict(title="Three settings change how a team works",
-                                  items=[("Approvals before anything is sent", "Drafts wait until a lead signs off"),
-                                         ("One shared source of truth", "Every edit syncs to the same page"),
-                                         ("A weekly digest instead of pings", "Notifications batch into one summary")],
-                                  tags=[("Required", "pending"), ("On", "on"), "New"])),
-                  ("quote", dict(quote="We stopped chasing status updates. The board just tells us.",
-                                 attribution="Style sample")),
-                  ("data", dict(number="12", label="of 40 teams switched", note="Style sample — your numbers go here.",
-                                total="40"))],
-    "wayfinding": [("cover", dict(kicker="Next stop", title="Our plan to reach one million riders",
-                                  subtitle="Strategy 2027", line="1")),
-                   ("points", dict(title="Four stops between sign-up and a paying customer", ordered=True,
-                                   items=[("Sign up", "Under two minutes, no card"), ("First project", "A template does the setup"),
-                                          ("Invite a teammate", "Work stops being solo"), ("Upgrade", "Billing when the team is in")],
-                                   interchange=[2])),
-                   ("quote", dict(quote="If a stranger can find the platform, anyone can.", attribution="Style sample")),
-                   ("data", dict(number="96.4%", label="Harbour line on time", note="Style sample — your numbers go here.",
-                                 board=[("North loop", "93.1%"), ("Riverside", "91.8%")]))],
-}
+_SAMPLE_COPY_NATIVE = {n: REGISTRY[n]["samples"]["copy"] for n in NATIVE}
 
 
 def _sample_stem(name, ground):
@@ -2147,31 +1740,8 @@ def painted_hues(name, ground):
         return None
 
 
-_DISPLAY_NAMES = {"editorial": "Editorial magazine", "soft": "Soft organic", "collage": "Collage scrapbook",
-                  "storybook": "Watercolour storybook"}
-_RATIONALE = {"editorial": "photo-led and quiet: big bleed photographs, a serif display voice, pull quotes",
-              "soft": "photo-led and warm: arch and blob frames, pastel ground, rounded cards",
-              "collage": "photo-led and loud: tilted taped prints, heavy headlines, highlighter and squiggles",
-              "storybook": "illustration-led: a watercolour series melting into paper, serif type"}
-_DISPLAY_NAMES.update({"ink": "Ink wash", "poster": "Type poster", "cutpaper": "Cut paper", "drafting": "Drafting sheet"})
-_RATIONALE.update({"ink": "drawn, no pictures: misty ink ridges, vertical CJK, a carved seal, an ensō around the figure",
-                   "poster": "drawn, no pictures: the headline is the picture, one saturated field per page",
-                   "cutpaper": "drawn, no pictures: a layered paper diorama with soft paper shadows",
-                   "drafting": "drawn, no pictures: a drawing sheet with grid, title block, dimensions and leaders"})
-_DISPLAY_NAMES["starlit"] = "Starlit night"
-_RATIONALE["starlit"] = "drawn, no pictures: a night sky and a crescent moon, points as a constellation, the figure in a glow"
-_DISPLAY_NAMES["broadsheet"] = "Broadsheet front page"
-_RATIONALE["broadsheet"] = "drawn, no pictures: a masthead strip, a headline and standfirst, newspaper columns, a pull quote between rules"
-_DISPLAY_NAMES["journal"] = "Journal article"
-_RATIONALE["journal"] = "drawn around your figures: a running head, an abstract, numbered figures with captions, margin notes"
-_DISPLAY_NAMES["tally"] = "Data tally"
-_RATIONALE["tally"] = "drawn, no pictures: a fine grid, heavy type, pill tags, one giant number with its share bar"
-_DISPLAY_NAMES["chalkboard"] = "Chalkboard"
-_RATIONALE["chalkboard"] = "drawn, no pictures: a framed board, coloured chalk strokes, boxed steps, a circled figure"
-_DISPLAY_NAMES["interface"] = "Product interface"
-_RATIONALE["interface"] = "drawn, no pictures: every page an app screen — windows, status chips, a settings list, a dashboard card, a dialog"
-_DISPLAY_NAMES["wayfinding"] = "Wayfinding"
-_RATIONALE["wayfinding"] = "drawn, no pictures: metro lines converging on an interchange, station signs, a strip map for ordered steps, a departure board"
+_DISPLAY_NAMES = {n: s["display"]["en"] for n, s in REGISTRY.items()}
+_RATIONALE = {n: s["rationale"] for n, s in REGISTRY.items()}
 
 
 def direction(name, *, fonts="both", ground="light", W=13.333, H=7.5):

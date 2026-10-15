@@ -699,6 +699,13 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   dot chips, a device frame fitted to the picture's aspect, initials only from a name. Wayfinding: line colours
   from the section number, station signs, the strip map only when `ordered=True`, the departure board, the
   script-aware way-out label.
+- `vl_contract.py` — the visual-language contract: `validate(spec)` / `validate_all(specs)` check a manifest (identity,
+  offer topics, grounds with their `dark` flag and palette roles, type roles, pages, extras, derived words, samples,
+  painters); pure, imports nothing from the skill.
+- `vl_specs/` — one manifest per visual language (`SPEC`), loaded by `vl_specs/__init__.py` (`load()`, ordered by
+  `order`); `visual_languages.py` builds its tables from them: `editorial.py`, `soft.py`, `collage.py`, `storybook.py`,
+  `ink.py`, `poster.py`, `cutpaper.py`, `drafting.py`, `starlit.py`, `broadsheet.py`, `journal.py`, `tally.py`,
+  `chalkboard.py`, `interface.py`, `wayfinding.py`.
 - `collage.py` — `collage(slide, region, items, seed=, keep_clear=)`: 1-4 images as tilted, white-bordered,
   taped prints; geometry decided first — a print never enters `keep_clear` and never covers more than
   25% of its neighbour; deterministic for a seed; slot items keep the image-series tag.
