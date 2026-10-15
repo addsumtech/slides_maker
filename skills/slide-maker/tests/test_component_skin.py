@@ -257,6 +257,20 @@ for L in vl.LANGS:
     check(not low, "{}: shrink-to-fit and small sizes stop at the floor {} ({})".format(L, dk.THEME["floor"], low[:3]))
 dk.set_theme(None)
 
+# consort_flow's exclusion box is as tall as its reasons once they wrap (its fixed 0.20in a line ran the text past the
+# box at 5in with macOS faces, and at 6in with Linux's wider ones)
+import lint_deck as _ld
+prs = dk.blank_deck(13.333, 7.5); s = dk.add_slide(prs)
+dk.consort_flow(s, 0.6, 1.0, 4.6, 5.6, [
+    ("Assessed for eligibility", 250, [("Did not meet criteria", 40), ("Declined", 12)]),
+    ("Randomised", 198, [("Lost to follow-up", 9), ("Withdrew consent", 5)]),
+    ("Analysed", 184, [])])
+prs.save(str(WORK / "consort_narrow.pptx")); _b = io.StringIO()
+with contextlib.redirect_stdout(_b), contextlib.redirect_stderr(io.StringIO()):
+    _ld.lint(str(WORK / "consort_narrow.pptx"), static_ok=True)
+_pad = [l.strip()[:120] for l in _b.getvalue().splitlines() if "TEXT PADDING" in l and "[warn]" not in l]
+check(not _pad, "consort_flow's exclusion box holds its wrapped reasons at 4.6in ({})".format(_pad[:1]))
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

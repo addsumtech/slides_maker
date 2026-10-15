@@ -9096,12 +9096,20 @@ def consort_flow(slide, x, y, w, h, stages, *, accent=None, ink=None, mute=None,
             lost = sum(k for _r, k in excl)
             rows = [("Excluded  n = %s" % f"{lost:,}", label_size,
                      _ink_reaching(acc, ex, _text_floor(label_size, True)), True, False, font or FONT)]
-            eh = 0.30 + 0.20 * len(excl)
-            ey = ay + gap / 2 - eh / 2
-            box(slide, ex_x, ey, ex_w, eh, fill=ex, line=None, round=True)
             rc = _ink_reaching(mc, ex, _text_floor(label_size - 0.5, False))   # the reasons are small text too
             paras = [[rows[0]]] + [[("  %s  (%s)" % (r, f"{k:,}"), _fl(label_size - 0.5), rc, False,
                                      False, font or FONT)] for r, k in excl]
+            # as tall as its reasons once they wrap (a fixed 0.20in a line ran them past the box in a narrow rect,
+            # and with wider faces); never shorter than before, so a box whose reasons fit is drawn as it was
+            text_h = sum(measure_text([(run[0], run[3]) for run in para], ex_w - 0.28 - 2 * TEXT_INSET_LR,
+                                      para[0][1], font=font or FONT, line_h_factor=_LINT_LINE_H, line_spacing=1.04)
+                         for para in paras)
+            one_line = sum(para[0][1] / 72.0 * _LINT_LINE_H * 1.04 for para in paras)
+            eh = 0.30 + 0.20 * len(excl)
+            if text_h > one_line + 0.01:                 # a reason wrapped: the frame's margins + a card's padding
+                eh = max(eh, text_h + 0.10 + 0.14)
+            ey = ay + gap / 2 - eh / 2
+            box(slide, ex_x, ey, ex_w, eh, fill=ex, line=None, round=True)
             text(slide, ex_x + 0.14, ey, ex_w - 0.28, eh, paras, space_after=0, line_spacing=1.04)
             connector(slide, (x + bw / 2, ay + gap / 2), (ex_x, ey + eh / 2), color=mc)
     return y + h
