@@ -1426,6 +1426,27 @@ def _bp_project(k, slide, f, fallback=None):
         k._sheet = (content, block, None)
 
 
+def _bp_ghost(k, slide, kind, avoid):
+    """The sheet's own faint drawing in the free corner the words leave: right of every word box on a landscape sheet,
+    below them on a portrait one — a ghost iso box ("iso") or section detail ("detail") in the line colour at low
+    strength, declared decorative, never within 0.35in of a word, left out when the free corner is under 2.2in.
+    Returns True when it drew."""
+    W, H, s, o = ctx(k)
+    (cx, cy, cw, ch), _b = _bp_area(k)
+    if o == "land":
+        left = max([a[0] + a[2] for a in avoid] + [cx]) + 0.35 * s
+        reg = (left, cy + 0.04 * ch, cx + cw - left - 0.1 * s, 0.92 * ch)
+    else:
+        top = max([a[1] + a[3] for a in avoid] + [cy]) + 0.35 * s
+        reg = (cx + 0.05 * cw, top, 0.90 * cw, cy + ch - top - 0.1 * s)
+    if reg[2] < 2.2 * s or reg[3] < 2.2 * s:
+        return False
+    draw = na.ghost_iso if kind == "iso" else na.ghost_detail
+    for sh in draw(slide, *reg, ink=k.P["ink"]):
+        dk.decorative(sh, "the sheet's own faint drawing: nothing a reader needs rides on seeing it")
+    return True
+
+
 @register("drafting", "cover")
 def _bp_cover(k, slide, f, image):
     W, H, s, o = ctx(k)
@@ -1434,6 +1455,7 @@ def _bp_cover(k, slide, f, image):
     col = (cx, cy + 0.10 * ch, cw * (0.62 if o == "land" else 1.0), ch * 0.80)
     items = [(x_, text_of(f, x_)) for x_ in ("kicker", "title", "subtitle") if text_of(f, x_)]
     r, d = flow(k, slide, "cover", col, items, anchor="middle", start={"title": 70 * s})
+    _bp_ghost(k, slide, "iso", list(r.values()))
     d()
     return r
 
@@ -1482,9 +1504,19 @@ def _bp_quote(k, slide, f, image):
     (cx, cy, cw, ch), _b = _bp_area(k)
     _bp_project(k, slide, f)
     has_img = image is not None
-    col = (cx, cy + 0.12 * ch, cw * (0.58 if has_img and o == "land" else 0.85), ch * 0.72)
     items = [(x_, text_of(f, x_)) for x_ in ("quote", "attribution") if text_of(f, x_)]
-    r, d = flow(k, slide, "quote", col, items, anchor="middle")
+    ghost = o == "land" and not has_img
+    if ghost:      # a narrower column leaves the free corner its drawing; a quote that will not fit it keeps the wide one
+        col = (cx, cy + 0.12 * ch, cw * 0.56, ch * 0.72)
+        try:
+            r, d = flow(k, slide, "quote", col, items, anchor="middle")
+        except vl.VLTextOverflow:
+            ghost = False
+    if not ghost:
+        col = (cx, cy + 0.12 * ch, cw * (0.58 if has_img and o == "land" else 0.85), ch * 0.72)
+        r, d = flow(k, slide, "quote", col, items, anchor="middle")
+    if not has_img:
+        _bp_ghost(k, slide, "detail", list(r.values()))
     if has_img:
         place_image(k, slide, image, (cx + cw * 0.64, cy, cw * 0.36, ch) if o == "land" else (cx, cy + ch * 0.6, cw, ch * 0.4),
                     "quote")

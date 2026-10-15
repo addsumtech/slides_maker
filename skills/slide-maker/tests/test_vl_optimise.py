@@ -130,16 +130,24 @@ _PNG = {}
 
 
 def _render(prs, tag, dpi=100):
-    """The deck's pages as PIL images (cached), or None when no renderer is installed."""
+    """The deck's pages as PIL images (cached), or None when no renderer is installed. A renderer that is installed but
+    returns nothing (another soffice holding the profile) is retried on its own profile, then FAILS the run — a measured
+    check must not skip itself without a word."""
     if not CAN_RENDER:
         return None
     if tag not in _PNG:
         pp = WORK / (tag + ".pptx"); prs.save(str(pp))
-        subprocess.run(["soffice", "--headless", "--convert-to", "pdf", "--outdir", str(WORK), str(pp)],
-                       capture_output=True, timeout=240)
-        subprocess.run(["pdftoppm", "-r", str(dpi), "-png", str(WORK / (tag + ".pdf")), str(WORK / (tag + "_pg"))],
-                       capture_output=True, timeout=240)
-        _PNG[tag] = [Image.open(f).convert("RGB") for f in sorted(WORK.glob(tag + "_pg*.png"))]
+        pages = []
+        for attempt in range(3):
+            subprocess.run(["soffice", "-env:UserInstallation=file://" + str(WORK / ("lo_profile%d" % attempt)), "--headless",
+                            "--convert-to", "pdf", "--outdir", str(WORK), str(pp)], capture_output=True, timeout=240)
+            subprocess.run(["pdftoppm", "-r", str(dpi), "-png", str(WORK / (tag + ".pdf")), str(WORK / (tag + "_pg"))],
+                           capture_output=True, timeout=240)
+            pages = [Image.open(f).convert("RGB") for f in sorted(WORK.glob(tag + "_pg*.png"))]
+            if pages:
+                break
+        check(len(pages) == len(prs.slides), "the renderer drew all {} pages of {} (got {})".format(len(prs.slides), tag, len(pages)))
+        _PNG[tag] = pages
     return _PNG[tag] or None
 
 
@@ -437,6 +445,77 @@ check(all(dk.contrast_ratio(pal_n[key], pal_n["paper"]) >= 4.5 for key in ("card
 check(vl.REGISTRY["cutpaper"]["grounds"]["light"]["palette"]["paper"].upper() == "FFFFFF", "cutpaper day: the paper stays white")
 # `panel` is the ordinary page's card (it carries the light default inks): the night keeps it navy
 check(dk.contrast_ratio(pal_n["ink"], pal_n["panel"]) >= 4.5, "cutpaper night: the ordinary page's panel still carries the default ink")
+
+# ── Task 5 (B): drafting points: the leader's head outranks the line under it (it was 11pt Courier under a 15pt line) ──
+DPT = {"3 short": ("Three layers, one frame", [("Floor", "One continuous plate."), ("Walls", "Panels that slide on a track."),
+                                                ("Roof", "A single span, no columns.")]),
+       "2 short": ("Two layers", [("Floor", "One continuous plate."), ("Walls", "Panels that slide.")]),
+       "4 long": ("Four layers, one frame", [
+           ("Floor", "One continuous plate poured in a single day and left to cure for a week."),
+           ("Walls", "Panels that slide on a track and lock at any of the nine positions."),
+           ("Roof", "A single span with no columns, lifted whole by four cranes."),
+           ("Skin", "A rain screen that can be replaced one panel at a time.")])}
+for g_ in ("light", "cyanotype"):
+    prs, k = _deck("drafting", g_)
+    for tag, (t_, its) in DPT.items():
+        with contextlib.redirect_stdout(io.StringIO()):
+            k.points(k.new_slide(), title=t_, items=its)
+    for pg, ((tag, (t_, its)), s_) in enumerate(zip(DPT.items(), prs.slides)):
+        shapes = [sh for sh in s_.shapes if getattr(sh, "has_text_frame", False) and sh.text_frame.text.strip() and sh.top >= 0]
+        for head, line in its:
+            hs = [sh for sh in shapes if sh.text_frame.text.strip() == head]
+            ls = [sh for sh in shapes if sh.text_frame.text.strip().startswith(line[:12])]
+            if not hs or not ls:
+                check(False, "drafting/{} points ({}): {} and its line are drawn".format(g_, tag, head)); continue
+            hr, lr = hs[0].text_frame.paragraphs[0].runs[0], ls[0].text_frame.paragraphs[0].runs[0]
+            # ordinary copy: 16pt+ and clear of the line; copy so long that every field is squeezed toward its floor:
+            # still bold serif and larger than the line under it
+            roomy = tag != "4 long"
+            check(hr.font.size.pt >= (16 if roomy else 11) and hr.font.size.pt >= lr.font.size.pt + (2 if roomy else 0.5)
+                  and bool(hr.font.bold) and hr.font.name != "Courier New",
+                  "drafting/{} points ({}): {!r} is {:.0f}pt {} {} over a {:.0f}pt line (want {}, bold serif, larger than the line)".format(
+                      g_, tag, head, hr.font.size.pt, "bold" if hr.font.bold else "regular", hr.font.name, lr.font.size.pt,
+                      ">= 16pt" if roomy else "squeezed copy still ranks head over line"))
+        check(not [f for f in _hard(prs, "dptl_" + g_ + str(pg)) if f.startswith("slide {}:".format(pg + 1))],
+              "drafting/{} points ({}): the page stays lint-clean".format(g_, tag))
+dk.set_theme(None)
+
+
+# ── Task 5 (B): drafting cover and quote: a ghost drawing fills the blank right of the words, clear of every word ──
+def _ghosts(slide):
+    """The faint drawing: the outline-only freeform shapes declared decorative -> [(x0, y0, x1, y1)]."""
+    return [(_inch(sh.left), _inch(sh.top), _inch(sh.left + sh.width), _inch(sh.top + sh.height)) for sh in slide.shapes
+            if sh.shape_type == MSO_SHAPE_TYPE.FREEFORM and "+decor" in sh.name.split(":")[0] and "drafting" in sh.name]
+
+
+for g_ in ("light", "cyanotype"):
+    prs, k = _deck("drafting", g_)
+    with contextlib.redirect_stdout(io.StringIO()):
+        k.cover(k.new_slide(), kicker="Schematic 01 · a modular reading room", title="A room built layer by layer.",
+                subtitle="Floor, walls and roof drawn as one frame, each layer free to move.")
+        k.quote(k.new_slide(), quote="“Draw the quiet first, then the walls.”", attribution="Design principle")
+        k.quote(k.new_slide(), quote="Draw the quiet first, then the walls, then the roof, then the light that will fall "
+                                     "across the floor at four in the afternoon.", attribution="Design principle")
+    imgs = _render(prs, "dgh_" + g_)
+    for pg, (page, s_) in enumerate(zip(("cover", "quote", "long quote"), prs.slides)):
+        gh = _ghosts(s_)
+        check(len(gh) >= 1, "drafting/{} {}: a ghost drawing is declared decorative ({} shapes)".format(g_, page, len(gh)))
+        if not gh:
+            continue
+        gx0, gy0, gx1, gy1 = min(g[0] for g in gh), min(g[1] for g in gh), max(g[2] for g in gh), max(g[3] for g in gh)
+        wd = _words(s_)
+        over = [w_[0][:18] for w_ in wd if w_[1] < gx1 + 0.02 and gx0 - 0.02 < w_[3] and w_[2] < gy1 + 0.02 and gy0 - 0.02 < w_[4]]
+        check(not over, "drafting/{} {}: the ghost drawing ({:.1f}-{:.1f}in across) touches no word box ({})".format(
+            g_, page, gx0, gx1, over))
+        check(gx1 - gx0 >= 2.2 and gy1 - gy0 >= 2.2 and gx0 > 6.0,
+              "drafting/{} {}: the ghost fills the right of the sheet ({:.1f}x{:.1f}in from x={:.1f})".format(
+                  g_, page, gx1 - gx0, gy1 - gy0, gx0))
+        if imgs:                                   # it SHOWS: a faint line, but there, and nothing else is in that corner
+            ib = _ink(imgs[pg], (gx0 - 0.1, gy0 - 0.1, gx1 + 0.1, gy1 + 0.1), thr=45)
+            check(ib is not None and (ib[2] - ib[0]) >= 0.6 * (gx1 - gx0), "drafting/{} {}: the ghost drawing is visible".format(g_, page))
+        check(not [f for f in _hard(prs, "dghl_" + g_ + str(pg)) if f.startswith("slide {}:".format(pg + 1))],
+              "drafting/{} {}: the page stays lint-clean".format(g_, page))
+dk.set_theme(None)
 
 for line in ok:
     print("  ok   " + line)

@@ -498,6 +498,98 @@ def balloon(slide, x, y, d, label, *, ink, accent, face, fill):
     return [b, tb]
 
 
+def strokes(slide, segs, color, *, w=0.6, dash=False, alpha=None):
+    """Straight pen strokes [((x0, y0), (x1, y1)), ...] (inches) drawn as ONE outline-only shape — a drawing's whole line
+    work is a single object, not a hundred connectors. None when there is nothing to draw."""
+    segs = [((float(a[0]), float(a[1])), (float(b[0]), float(b[1]))) for a, b in segs]
+    if not segs:
+        return None
+    xs = [p[0] for sg in segs for p in sg]
+    ys = [p[1] for sg in segs for p in sg]
+    x0, y0 = min(xs), min(ys)
+    bw, bh = max(max(xs) - x0, 0.01), max(max(ys) - y0, 0.01)
+    u = lambda p: ((p[0] - x0) / bw * U, (p[1] - y0) / bh * U)               # noqa: E731
+    d = "".join("<a:moveTo>{}</a:moveTo><a:lnTo>{}</a:lnTo>".format(orn._pt(*u(a)), orn._pt(*u(b))) for a, b in segs)
+    sh = _custom(slide, x0, y0, bw, bh, '<a:path w="{u}" h="{u}" fill="none">{d}</a:path>'.format(u=U, d=d),
+                 line=dk._as_rgb(hexstr(color)), line_w=w)
+    ln = sh._element.spPr.find(qn("a:ln"))
+    if alpha is not None:
+        clr = ln.find(qn("a:solidFill"))[0]
+        clr.append(clr.makeelement(qn("a:alpha"), {"val": str(_pct(alpha))}))
+    if dash:
+        ln.append(ln.makeelement(qn("a:prstDash"), {"val": "dash"}))
+    return sh
+
+
+def _circle_pts(cx, cy, r, n=40):
+    return [(cx + r * math.cos(2 * math.pi * i / n), cy + r * math.sin(2 * math.pi * i / n)) for i in range(n + 1)]
+
+
+def _dim_h(x0, x1, y, t=0.07):
+    """A horizontal dimension line from x0 to x1 at y: its extension stubs are drawn by the caller; slash ends."""
+    return [((x0, y), (x1, y))] + [((x - t, y + t), (x + t, y - t)) for x in (x0, x1)]
+
+
+def _dim_v(x, y0, y1, t=0.07):
+    return [((x, y0), (x, y1))] + [((x - t, y + t), (x + t, y - t)) for y in (y0, y1)]
+
+
+def _fit(segs_solid, segs_dash, x, y, w, h):
+    """Scale and centre a drawing (two stroke lists in local units) into the rect (x, y, w, h)."""
+    pts = [p for sg in segs_solid + segs_dash for p in sg]
+    x0, x1 = min(p[0] for p in pts), max(p[0] for p in pts)
+    y0, y1 = min(p[1] for p in pts), max(p[1] for p in pts)
+    f = min(w / max(x1 - x0, 1e-6), h / max(y1 - y0, 1e-6))
+    ox, oy = x + (w - (x1 - x0) * f) / 2.0 - x0 * f, y + (h - (y1 - y0) * f) / 2.0 - y0 * f
+    mv = lambda sg: [((ox + a[0] * f, oy + a[1] * f), (ox + b[0] * f, oy + b[1] * f)) for a, b in sg]   # noqa: E731
+    return mv(segs_solid), mv(segs_dash), f
+
+
+def ghost_iso(slide, x, y, w, h, *, ink, alpha=0.30):
+    """A faint isometric box in (x, y, w, h): visible edges solid, hidden ones dashed, a height and a length dimension
+    with slash ends, a dashed centre line. Drawing furniture — no words, no numbers. Returns the shapes."""
+    L, c = 1.0, 0.75                                   # edge, height (local units: scaled to fit below)
+    T = lambda a, b, z=0.0: (_iso(0, 0, a, b)[0], _iso(0, 0, a, b)[1] + z)   # noqa: E731
+    top = [T(0, 0), T(L, 0), T(L, L), T(0, L)]
+    bot = [(p[0], p[1] + c) for p in top]
+    solid = [(top[i], top[(i + 1) % 4]) for i in range(4)]
+    solid += [(top[3], bot[3]), (top[2], bot[2]), (top[1], bot[1]), (bot[3], bot[2]), (bot[2], bot[1])]
+    dash = [(top[0], bot[0]), (bot[0], bot[3]), (bot[0], bot[1])]
+    xr = top[1][0] + 0.30                              # height dimension, right of the box
+    solid += _dim_v(xr, top[1][1], bot[1][1])
+    solid += [((top[1][0] + 0.06, top[1][1]), (xr + 0.1, top[1][1])), ((bot[1][0] + 0.06, bot[1][1]), (xr + 0.1, bot[1][1]))]
+    e, n = (0.866, 0.5), (-0.5, 0.866)                 # length dimension under the front-left edge, offset outward
+    p, q = (bot[3][0] + n[0] * 0.30, bot[3][1] + n[1] * 0.30), (bot[2][0] + n[0] * 0.30, bot[2][1] + n[1] * 0.30)
+    solid += [(p, q)]
+    for m in (p, q):
+        solid.append(((m[0] - 0.05, m[1] - 0.07), (m[0] + 0.05, m[1] + 0.07)))
+    solid += [(bot[3], (p[0] + n[0] * 0.08, p[1] + n[1] * 0.08)), (bot[2], (q[0] + n[0] * 0.08, q[1] + n[1] * 0.08))]
+    dash += [((top[0][0], top[0][1] - 0.18), (top[0][0], bot[2][1] + 0.18))]
+    s_, d_, _f = _fit(solid, dash, x, y, w, h)
+    out = [strokes(slide, s_, ink, w=0.8, alpha=alpha), strokes(slide, d_, ink, w=0.7, dash=True, alpha=alpha)]
+    return [o for o in out if o is not None]
+
+
+def ghost_detail(slide, x, y, w, h, *, ink, alpha=0.30):
+    """A faint section detail in (x, y, w, h): a plate with a bored hole and a smaller ring, dashed centre lines, a leader
+    with a shelf, a length and a height dimension. No words, no numbers. Returns the shapes."""
+    a, b = 1.5, 1.0
+    cx, cy = a / 2.0, b / 2.0
+    solid = [((0, 0), (a, 0)), ((a, 0), (a, b)), ((a, b), (0, b)), ((0, b), (0, 0))]
+    for r in (0.30, 0.17):
+        pts = _circle_pts(cx, cy, r)
+        solid += [(pts[i], pts[i + 1]) for i in range(len(pts) - 1)]
+    dash = [((cx - 0.55, cy), (cx + 0.55, cy)), ((cx, cy - 0.45), (cx, cy + 0.45))]
+    ang = math.radians(-40)
+    lx, ly = cx + 0.30 * math.cos(ang), cy + 0.30 * math.sin(ang)
+    solid += [((lx, ly), (a + 0.25, -0.22)), ((a + 0.25, -0.22), (a + 0.62, -0.22))]
+    solid += _dim_h(0, a, b + 0.30) + [((0, b + 0.04), (0, b + 0.38)), ((a, b + 0.04), (a, b + 0.38))]
+    solid += _dim_v(-0.30, 0, b) + [((-0.04, 0), (-0.38, 0)), ((-0.04, b), (-0.38, b))]
+    s_, d_, _f = _fit(solid, dash, x, y, w, h)
+    out = [strokes(slide, s_, ink, w=0.8, alpha=alpha), strokes(slide, d_, ink, w=0.7, dash=True, alpha=alpha)]
+    return [o for o in out if o is not None]
+
+
 def clipped_block(slide, x, y, w, h, deg, *, fill):
     """A rotated colour block drawn as its polygon cut to the page (a rotated rectangle would hang off it)."""
     cx, cy, a = x + w / 2.0, y + h / 2.0, math.radians(deg)
