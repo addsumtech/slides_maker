@@ -461,6 +461,13 @@ def _ink_hairline(k, slide, x, y0, y1, alpha=0.45):
     return lambda: na.seg(slide, x, y0, x, y1, k.P["ink"], w=0.5, alpha=alpha)
 
 
+def _vink_bottom(r, sz, spacing=0.12):
+    """Where the LAST CHARACTER of a vertical column (vcol's planned rect `r` at `sz`pt) ends: the rect carries 0.12in
+    of slack and the tracking after the final glyph below it — measured on the render, the ink ends 0.12-0.17in above
+    the rect's foot (2026-10-15)."""
+    return r[1] + r[3] - 0.12 - sz * spacing / 72.0
+
+
 def _run_all(draws):
     for d in draws:
         d()
@@ -654,8 +661,9 @@ def _ink_points(k, slide, f, image):
     rects, draws, clear = {}, [], []
     if vertical_ok:                                    # columns read right to left, as a book is
         right = 0.93 * W
+        tail = 0.2 * s                                 # a column rule runs this far past the last of its words
         if title:
-            r0, _z, d0 = vcol(k, slide, right, 0.10 * H, 0.60 * H, title, "title")
+            r0, z0, d0 = vcol(k, slide, right, 0.10 * H, 0.60 * H, title, "title")
             rects["title"] = r0; draws.append(d0); clear.append(r0)
             right = r0[0] - 0.55 * s
         n = len(pts)
@@ -664,15 +672,17 @@ def _ink_points(k, slide, f, image):
             cr_ = right - i * step
             nr, nd = flow(k, slide, "points", (cr_ - step * 0.75, 0.10 * H, step * 0.6, 0.09 * H), [("mark", _NUM_ZH[i])],
                           align="c", start={"mark": 30 * s})
-            rh, _z1, dh = vcol(k, slide, cr_ - step * 0.12, 0.23 * H, 0.42 * H, head, "item_head")
+            rh, zh, dh = vcol(k, slide, cr_ - step * 0.12, 0.23 * H, 0.42 * H, head, "item_head")
             draws += [nd, dh]; clear += list(nr.values()) + [rh]
+            foot = _vink_bottom(rh, zh)
             if line:
-                rl, _z2, dl = vcol(k, slide, rh[0] - 0.18 * s, 0.25 * H, 0.50 * H, line, "item_line")
+                rl, zl, dl = vcol(k, slide, rh[0] - 0.18 * s, 0.25 * H, 0.50 * H, line, "item_line")
                 draws.append(dl); clear.append(rl)
-            if i < n - 1:
-                draws.append(_ink_hairline(k, slide, cr_ - step * 0.96, 0.12 * H, 0.76 * H, 0.3))
+                foot = max(foot, _vink_bottom(rl, zl))
+            if i < n - 1:                              # the rule at this column's left edge stops at ITS words (it ran to
+                draws.append(_ink_hairline(k, slide, cr_ - step * 0.96, 0.12 * H, foot + tail, 0.3))   # a fixed 0.76H)
         if title:
-            draws.append(_ink_hairline(k, slide, rects["title"][0] - 0.28 * s, 0.12 * H, 0.76 * H, 0.45))
+            draws.append(_ink_hairline(k, slide, rects["title"][0] - 0.28 * s, 0.12 * H, _vink_bottom(r0, z0) + tail, 0.45))
         seal_at = ((rects["title"][0] + rects["title"][2] / 2.0) if title else right,
                    (rects["title"][1] + rects["title"][3] + 0.2 * s) if title else 0.82 * H)
     else:
@@ -694,7 +704,10 @@ def _ink_points(k, slide, f, image):
                            [(x_, t) for x_, t in (("item_head", head), ("item_line", line)) if t], anchor="top")
             draws += [nd, td_]; clear += list(nr.values()) + list(tr.values())
             if i // cols < rows - 1:
-                yy = y + row_h - 0.06 * s
+                # the rule hangs 0.2in under THIS row's words (it sat at the row's far edge: 1.1in below two short rows),
+                # or half-way to the next row when the copy is long and the rows are close
+                low = max([v[1] + v[3] for v in tr.values()] + [y])
+                yy = low + min(0.2 * s, max(0.02, (y + row_h - low) / 2.0))
                 draws.append(lambda x=x, yy=yy: na.seg(slide, x, yy, x + colw - 0.25 * s, yy, k.P["ink"], w=0.5, alpha=0.25))
         seal_at = (0.86 * W, 0.12 * H)
     na.ink_ridges(slide, color=k.P["ink"], layers=na.INK_LAYERS["faint"], seed=6, peak_span=(0.0, 1.0), keep_clear=clear)
