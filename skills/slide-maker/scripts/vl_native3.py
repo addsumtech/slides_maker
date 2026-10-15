@@ -623,7 +623,11 @@ def ordinary_sign(slide):
     dk.box(slide, 0, 0, W, h, fill=_hex(k.P["sign"]))
     e = dk.box(slide, 0, h, W, 0.05 * s, fill=_hex(k.P["edge"]))
     dk.decorative(e, "the sign strip's edge")
-    return (0.07 * W, h + 0.35 * s, 0.86 * W, H - h - 0.8 * s)
+    # the rect stops clear of the band deckkit reserves for footers (0.45*s was 0.34in on the 10in canvas: a component's
+    # own bottom labels read as a footer and its marks as intruding on it)
+    bottom = max(0.45 * s, dk.FOOTER_BAND + 0.15)
+    top = h + 0.35 * s
+    return (0.07 * W, top, 0.86 * W, H - top - bottom)
 
 
 @register("wayfinding", "cover", alts=2)

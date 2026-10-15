@@ -601,7 +601,10 @@ PREAMBLE_VL = "\n".join(l for l in PREAMBLE.splitlines()
 
 # minimum content-rect width a component needs to lay out (inches) — the placed scaffold raises below it instead of
 # letting labels collide; measured on the 3:4 matrix (Task 6) and recorded here with the reason in a comment
-PLACE_MIN_W = {}
+PLACE_MIN_W = {
+    "consort_flow": 5.5,    # measured 2026-10-15: at 5.0in an exclusion box's reasons wrap to 4 lines past its card
+    "sankey": 5.0,          # measured 2026-10-15: at 4.75in its node columns stand as uneven cards (6.21 vs 6.36in)
+}
 # a component the example leaves to place itself at the foot: its keyword x/y/w and the note's height
 _FOOT = {"source_note": 0.3}
 # a component placed by an ANCHOR, not a rect: its w/d/h are the object's own size (iso_prism's h is its extrusion),
@@ -609,7 +612,10 @@ _FOOT = {"source_note": 0.3}
 _ANCHOR = {"iso_prism": {"ox": "x + w / 2", "oy": "y + h - 0.6"}}
 # a component that draws ABOVE its y: the placed y leaves that headroom inside the rect (eval_matrix's recommend tab
 # rises 0.32in above the grid — on wayfinding it landed on the sign strip's edge)
-_TOP_OVERHANG = {"eval_matrix": 0.34}
+_TOP_OVERHANG = {"eval_matrix": 0.34, "dumbbell_board": 0.25}     # dumbbell's value labels sit above each row
+# a component that draws beside its x..x+w: inset (left, right) so that ink stays in the rect — meter_bar sets its value
+# to the RIGHT of the bar; timeline centres its end labels on the end dots, half a label outside
+_SIDES = {"meter_bar": (0.0, 0.9), "timeline": (0.35, 0.35)}
 
 
 def _lang_head(lang, ground=None):
@@ -671,7 +677,16 @@ def placed_example(name, lang, ground=None):
     if hits:
         c, geo, params = hits[0]
         up = _TOP_OVERHANG.get(name)
-        edits += [(_span(a), ("y + {}".format(up) if (p == "y" and up) else p)) for p, a in geo]
+        left, right = _SIDES.get(name, (0.0, 0.0))
+        def _expr(p):
+            if p == "y" and up:
+                return "y + {}".format(up)
+            if p == "x" and left:
+                return "x + {}".format(left)
+            if p == "w" and (left or right):
+                return "w - {}".format(round(left + right, 3))
+            return p
+        edits += [(_span(a), _expr(p)) for p, a in geo]
     elif name in _FOOT:
         call = next(c for c in ast.walk(tree) if isinstance(c, ast.Call) and getattr(c.func, "attr", "") == name)
         end = _span(call)[1] - 1

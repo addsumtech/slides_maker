@@ -12579,7 +12579,10 @@ def eval_matrix(slide, x, y, w, options, criteria, cells, *, mark="ball", recomm
     if recommend is not None and 0 <= recommend < nopt:
         rx = x + crit_w + recommend * col_w
         box(slide, rx, y + head_h, col_w, ncrit * row_h + tail, fill=rec_fill, round=True, r=0.06)
-        corner_tab(slide, rx, y, col_w, recommend_label, fill=acc, w=min(1.7, col_w + 0.3))
+        tab_w = min(1.7, col_w + 0.3)
+        if recommend == nopt - 1:                      # the last column's tab stays over the grid, not past its edge
+            tab_w = min(tab_w, col_w)
+        corner_tab(slide, rx, y, col_w, recommend_label, fill=acc, w=tab_w)
     for c, opt in enumerate(options):
         ox = x + crit_w + c * col_w
         emph = (recommend == c)
@@ -12611,10 +12614,11 @@ def eval_matrix(slide, x, y, w, options, criteria, cells, *, mark="ball", recomm
         lx = x + crit_w
         text(slide, x, ly, crit_w - 0.12, 0.24, [[(scale_label, _fl(9), MUTE, True, False, font)]],
              anchor=MSO_ANCHOR.MIDDLE, space_after=0)
+        step = min(0.92, (w - crit_w) / 5.0)          # five keys across the grid's width, never past it
         for k in range(5):
-            hx = lx + k * 0.92
+            hx = lx + k * step
             harvey_ball(slide, hx + 0.11, ly + 0.11, k, d=0.2, accent=acc)
-            text(slide, hx + 0.26, ly, 0.62, 0.24, [[(f"{k * 25}%", _fl(9), MUTE, False, False, font)]],
+            text(slide, hx + 0.26, ly, min(0.62, step - 0.28), 0.24, [[(f"{k * 25}%", _fl(9), MUTE, False, False, font)]],
                  anchor=MSO_ANCHOR.MIDDLE, space_after=0)
         bottom = ly + 0.32
     return bottom

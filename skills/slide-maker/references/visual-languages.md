@@ -275,8 +275,10 @@ prs.save("collage.pptx")
 - **Tier 1 — held to every ground** (colours, readability, placement, the language's type floor):
   <!-- vl:tier-one-list -->`agenda` · `bento` · `consort_flow` · `distribution` · `dot_strip` · `dumbbell_board` · `eval_matrix` · `forest_plot` · `funnel` · `gantt` · `heat_matrix` · `iso_bars` · `iso_prism` · `iso_stack` · `km_curve` · `leaderboard` · `marimekko` · `meter_bar` · `native_chart` · `org_tree` · `position_map` · `pyramid` · `radar` · `roc_curve` · `sankey` · `scorecard` · `segmented_bar` · `small_multiples` · `stat_row` · `step_list` · `table` · `tier_stack` · `timeline` · `unit_grid` · `venn` · `waterfall` · `bland_altman` · `source_note`<!-- /vl -->.
   `python3 scripts/sigs.py --example <component> --in <language>` prints one placed in that language's content rect
-  (`rs.ground()`); it runs as printed, on 16:9 and 3:4. A component that needs a wider rect than a canvas gives raises
-  with the width it needs.
+  (`rs.ground()`); it runs as printed, and the matrix holds every one inside that rect with no hard lint finding on
+  16:9, 3:4, the 10in default and 9:16. A component that needs a wider rect than the canvas gives (consort_flow
+  5.5in, sankey 5.0in — `sigs.PLACE_MIN_W`) raises with the width it needs instead of crowding. An example it cannot
+  place is printed with the language's page and rect above it, still runnable — move its coordinates into the rect.
 - **Tier 2 — also draws in the language's skin** (spec §5.3): each language picks one value per role from
   `scripts/component_tiers.py` `SKIN_VOCAB`; the component draws that role the language's way and picks its text ink
   against what the skin leaves under it. `dk.skin_card(s, x, y, w, h, fill=…)` gives your own containers (the cells

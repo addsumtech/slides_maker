@@ -151,11 +151,45 @@ for W, H in ((13.333, 7.5), (7.5, 10.0), (10.0, 5.625)):
                   W, H, L, tuple(round(v, 2) for v in (x, y, w, h))))
 dk.set_theme(None)
 
-# ── the matrix: every Tier-1 component, PLACED in the content rect of every ground of every language, on 16:9 and
-# 3:4, no hard lint finding — built from `sigs.placed_example`, the scaffold `sigs.py --example X --in L` prints ──
-for W, H in ((13.333, 7.5), (7.5, 10.0)):
+# ── the matrix: every Tier-1 component, PLACED in the content rect of every language, no hard lint finding and
+# nothing it draws outside that rect — built from `sigs.placed_example`, the scaffold `sigs.py --example X --in L`
+# prints. 16:9 and 3:4 on every ground; the format registry's default 10in canvas and 9:16 story on each language's
+# first ground. A component that needs a wider rect than a canvas gives raises with the width (sigs.PLACE_MIN_W). ──
+RG_LINE = 'x, y, w, h = rs.ground(s, k.name, role="content", index=1)'
+
+
+def _escapes(slide, n_furn, rect, tol=0.05):
+    """What the component drew outside the rect: glyph ink for text, bounds for every other shape. Ornament and
+    declared overlaps are furniture, not content."""
+    rx, ry, rw, rh = rect
+    out = []
+    for sh in list(slide.shapes)[n_furn:]:
+        nm = str(sh.name)
+        if "+decor" in nm.split(":", 1)[0] or nm.startswith("deckkit-decor") or dk._declared_overlap(sh):
+            continue
+        bb = dk._bbox_in(sh)
+        if bb is None:
+            continue
+        if sh.shape_type == 17 and not sh.text_frame.text.strip():
+            continue                                    # an empty text box draws nothing (gantt's "" tick label)
+        if getattr(sh, "has_text_frame", False) and sh.text_frame.text.strip():
+            r = dk._ink_rect(sh, bb)
+            if r is None:
+                continue
+            bx, by, bw, bh = r[0]
+        else:
+            bx, by, bw, bh = bb
+        if bx < rx - tol or bx + bw > rx + rw + tol or by < ry - tol or by + bh > ry + rh + tol:
+            out.append("{} '{}' {:.2f}..{:.2f} x {:.2f}..{:.2f} vs rect {:.2f}..{:.2f} x {:.2f}..{:.2f}".format(
+                sh.shape_type, (sh.text_frame.text[:12] if getattr(sh, "has_text_frame", False) else ""),
+                bx, bx + bw, by, by + bh, rx, rx + rw, ry, ry + rh))
+    return out
+
+
+CANVASES = [((13.333, 7.5), None), ((7.5, 10.0), None), ((10.0, 5.625), "first"), ((5.625, 10.0), "first")]
+for (W, H), which in CANVASES:
     for L in vl.LANGS:
-        for g in vl.VARIANTS[L]:
+        for g in (list(vl.VARIANTS[L])[:1] if which == "first" else vl.VARIANTS[L]):
             prs = dk.blank_deck(W, H)
             first = {}
             for name in TIER1:
@@ -167,8 +201,12 @@ for W, H in ((13.333, 7.5), (7.5, 10.0)):
                     n0 = len(prs.slides)
                     try:
                         code = sigs.placed_example(name, L, g)
+                        head, body = code.split(RG_LINE)
+                        ns = {"dk": dk, "dc": dc, "prs": prs}
                         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-                            exec(compile(code, name, "exec"), {"dk": dk, "dc": dc, "prs": prs})
+                            exec(compile(head + RG_LINE, name, "exec"), ns)
+                            n_furn = len(ns["s"].shapes)
+                            exec(compile(body, name, "exec"), ns)
                     except ValueError as e:
                         if "needs a content rect" in str(e):           # a declared minimum, raised loudly (Focus 3)
                             print("  min  {}x{} {}/{} {}: {}".format(W, H, L, g, name, e))
@@ -180,15 +218,18 @@ for W, H in ((13.333, 7.5), (7.5, 10.0)):
                                                                               str(e)[:80]))
                         continue
                     first[n0] = name                    # the component's OWN slide (an example may add link targets)
-            found = _hard(prs, "m_{}_{}_{}".format(L, g, int(W)))
+                    esc = _escapes(ns["s"], n_furn, (ns["x"], ns["y"], ns["w"], ns["h"]))
+                    check(not esc, "{}x{} {}/{} {}: stays inside the content rect ({})".format(W, H, L, g, name, esc[:1]))
+            found = _hard(prs, "m_{}_{}_{}".format(L, g, int(W * 10)))
             by = {}
             for f in found:
                 i = int(re.match(r"slide (\d+)", f).group(1)) - 1
                 if i in first:                          # judged on its own slide only
                     by.setdefault(first[i], []).append(f)
             for name in TIER1:
-                check(not by.get(name), "{}x{} {}/{} {}: placed, readable, no hard lint finding ({})".format(
-                    W, H, L, g, name, by.get(name, [])[:1]))
+                if name in first.values():
+                    check(not by.get(name), "{}x{} {}/{} {}: placed, readable, no hard lint finding ({})".format(
+                        W, H, L, g, name, by.get(name, [])[:1]))
 # the scaffold runs AS PRINTED, in a fresh process — how a non-Claude agent uses it (Review Focus 5)
 import subprocess
 for name, L in (("timeline", "chalkboard"), ("native_chart", "ink"), ("org_tree", "wayfinding")):
