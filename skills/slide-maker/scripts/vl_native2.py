@@ -391,6 +391,23 @@ def _st_rule(k, slide, rects, a, b):
     return lambda: na.seg(slide, W / 2 - 0.55 * s, y, W / 2 + 0.55 * s, y, k.P["text_accents"][0], w=1.0)
 
 
+def _st_numeral_glow(k, slide, cx, cy, d):
+    """The glow behind a big numeral, dimmed until the numeral reads on it: at na.radial_glow's own 0.42 the gold figure
+    sat at 3.0:1 over the glow's brightest point (#69635D, dawn 3.04:1). The glow keeps the most of that alpha that holds
+    4.6:1 (4.5 plus a hair for a renderer's rounding) between the numeral's colour and the glow's centre — blended the
+    way a renderer blends it, over the ground."""
+    ground, glow, ink = vl._hex(k.P["ground"]), vl._hex(k.P["glow"]), k.P["text_accents"][0]
+    top = 0.42                                       # native_art.radial_glow's default
+
+    def centre(a):
+        return "".join("{:02X}".format(round((1 - a) * int(ground[i:i + 2], 16) + a * int(glow[i:i + 2], 16)))
+                       for i in (0, 2, 4))
+    a = top
+    while a > 0.02 and vl._contrast(ink, centre(a)) < 4.6:
+        a = round(a - 0.01, 2)
+    return na.radial_glow(slide, cx, cy, d, k.P["glow"], alpha=a)
+
+
 def _st_moon(k, slide, clear):
     """The crescent at the first corner clear of the words — top right, top left, bottom right; none when no corner
     is clear (it is the sky's, not the page's)."""
@@ -433,7 +450,7 @@ def _st_section(k, slide, f, image):
     rects.update(r); draws.append(d)
     _st_sky(k, slide, rects.values(), seed=2)
     if num:
-        na.radial_glow(slide, cx, cy, d0, k.P["glow"])
+        _st_numeral_glow(k, slide, cx, cy, d0)
     _run_all(draws)
     return rects
 
@@ -466,7 +483,8 @@ def _st_image_text(k, slide, f, image):
 @register("starlit", "quote", alts=2)
 def _st_quote(k, slide, f, image):
     W, H, s, o = ctx(k)
-    x, w = (0.20 * W, 0.60 * W) if (o == "land" and alt() == 0) else (0.08 * W, 0.84 * W)
+    # 0.76W like the cover's block: at 0.60W a 34pt line (8.5in) was shrunk to 29pt, and the grown short quote wrapped early
+    x, w = (0.12 * W, 0.76 * W) if (o == "land" and alt() == 0) else (0.08 * W, 0.84 * W)
     r, ds = stack(k, slide, "quote", x, w, 0.10 * H, 0.90 * H,
                   [([("mark", "“")] + fields(f, ("quote",)), 0.40 * s), (fields(f, ("attribution",), ("attribution",)), 0.0)],
                   align="c")
@@ -492,7 +510,7 @@ def _st_data(k, slide, f, image):
     rects.update(r); draws.append(d)
     _st_sky(k, slide, rects.values(), seed=5)
     if num:
-        na.radial_glow(slide, cx, cy, d0, k.P["glow"])
+        _st_numeral_glow(k, slide, cx, cy, d0)
     na.horizon_glow(slide, 0.86 * H, k.P["glow"], k.P["text_accents"][0])
     _run_all(draws)
     return rects
@@ -649,11 +667,13 @@ def _bs_cover(k, slide, f, image):
     if lines:
         if side:
             ix, iy, iw = 0.71 * W, yr + 0.16 * s, 0.24 * W
-            art.append(lambda: na.seg(slide, 0.685 * W, yr + 0.16 * s, 0.685 * W, foot, k.P["ink"], w=0.5))
         else:
             ix, iy, iw = 0.05 * W, sb + 0.3 * s, 0.90 * W
         r, d = flow(k, slide, "cover", (ix, iy, iw, foot - iy),
                     [("inside_h", caps(label("inside", *lines, k=k, f=f))), ("inside", "\n".join(lines))], anchor="top")
+        if side:                          # the sidebar's rule ends where its list does (it ran 0.75in past it, to the foot)
+            lb = max(v[1] + v[3] for v in r.values())
+            art.append(lambda: na.seg(slide, 0.685 * W, yr + 0.16 * s, 0.685 * W, lb, k.P["ink"], w=0.5))
         draws.append(d)
     _run_all(art + draws)
     return rects
@@ -748,29 +768,58 @@ def _bs_quote(k, slide, f, image):
 
 @register("broadsheet", "data", alts=2)
 def _bs_data(k, slide, f, image):
-    """By the numbers: the figure, a short rule, its label and note, in a boxed panel under a solid band — a header
-    with no words, because the kit has none to give it."""
+    """By the numbers, set as a newspaper sets a figure: a heavy rule over the block and a hairline under it, the number
+    at the full measure, and the label and note in a column of their own, ruled off from it — no box, and no black cap
+    (a header with no words, which the kit has none to give; the figure had been a boxed 150pt "3" in 42% of the page).
+    Across a landscape page the number takes the left column (as wide as it needs, 24-58% of the measure) and the words
+    the right, set larger than a caption (34pt label, 20pt note, shrinking to their column); a figure too wide for that column, a portrait page, and the second alternative stack them, the number
+    on the whole measure over a hairline and the words."""
     W, H, s, o = ctx(k)
     top = bs_strip(k, slide, f)
-    bw = ((0.42 if o == "land" else 0.80) if alt() == 0 else 0.86) * W
-    bx, band, pad = (W - bw) / 2.0, 0.30 * s, 0.30 * s
-    y_in, avail = top + 0.3 * s, (H - 0.6) - (top + 0.3 * s)
-    items = fields(f, ("number", "label", "note"))
+    num = text_of(f, "number")
+    items = fields(f, ("label", "note"))
+    bx, bw, pad, gap = 0.05 * W, 0.90 * W, 0.30 * s, 0.45 * s
+    y_in = top + 0.3 * s
+    avail = (H - 0.6) - y_in
+    big = {"number": 230 * s}                         # the figure fills the measure; the flow shrinks it to its column
+    side = bool(num) and bool(items) and o == "land" and alt() == 0
+    nw = 0.0
+    if side:
+        nat = _cjk_width(k, "number", num, big["number"]) + dk.TEXT_INSET_LR
+        side = nat <= 0.58 * bw - 0.5 * s
+        nw = min(0.58 * bw, max(0.24 * bw, nat + 0.5 * s))
+        big_words = {"label": 34 * s, "note": 20 * s}
+    else:
+        big_words = {"label": 30 * s, "note": 18 * s}
+    big.update({f_: z for f_, z in big_words.items() if f_ in dict(items)})
+    rx, rw = bx + nw + gap, bw - nw - gap
 
-    def plan(y):
-        return flow(k, slide, "data", (bx + pad, y + band + pad, bw - 2 * pad, avail - band - 2 * pad), items,
-                    anchor="top", align="c")
-    r, _unused = plan(y_in)
-    bh = band + 2 * pad + (max(v[1] + v[3] for v in r.values()) - (y_in + band + pad)) + 0.1 * s
+    def plan(y, h, anchor):
+        """The columns inside [y, y + h]: (number rects, number draw, words rects, words draw)."""
+        if side:
+            nr, nd = flow(k, slide, "data", (bx, y, nw, h), [("number", num)], anchor=anchor, start=big)
+            wr, wd = flow(k, slide, "data", (rx, y, rw, h), items, anchor=anchor, start=big)
+            return nr, nd, wr, wd
+        r, d = flow(k, slide, "data", (bx, y, bw, h), ([("number", num)] if num else []) + items, anchor=anchor,
+                    start=big)
+        return r, d, {}, None
+    r0, _d0, w0, _wd0 = plan(y_in + pad, avail - 2 * pad, "top")
+    used = max([v[1] + v[3] for v in list(r0.values()) + list(w0.values())], default=y_in + pad) - (y_in + pad)
+    bh = used + 2 * pad
     by = y_in + max(0.0, (avail - bh) / 2.0)
-    r, d = plan(by)
-    art = [lambda: dk.box(slide, bx, by, bw, bh, fill=None, line=dk._as_rgb(k.P["ink"]), line_w=1.25),
-           lambda: dk.decorative(dk.box(slide, bx, by, bw, band, fill=k.P["ink"]), "the header band of a numbers box")]
-    if "number" in r and "label" in r:
-        yl = (r["number"][1] + r["number"][3] + r["label"][1]) / 2.0
-        art.append(lambda: na.seg(slide, W / 2 - 0.15 * bw, yl, W / 2 + 0.15 * bw, yl, k.P["ink"], w=0.6))
-    _run_all(art + [d])
-    return r
+    r1, d1, w1, wd1 = plan(by + pad, bh - 2 * pad, "middle" if side else "top")
+    rects = dict(r1)
+    rects.update(w1)
+    art = [lambda: na.seg(slide, bx, by, bx + bw, by, k.P["ink"], w=3.0),
+           lambda: na.seg(slide, bx, by + bh, bx + bw, by + bh, k.P["ink"], w=0.6)]
+    if side:
+        art.append(lambda: na.seg(slide, bx + nw + gap / 2.0, by + 0.5 * pad, bx + nw + gap / 2.0, by + bh - 0.5 * pad,
+                                  k.P["ink"], w=0.6))
+    elif "number" in rects and "label" in rects:
+        yl = (rects["number"][1] + rects["number"][3] + rects["label"][1]) / 2.0
+        art.append(lambda: na.seg(slide, bx, yl, bx + bw, yl, k.P["ink"], w=0.6))
+    _run_all(art + [d1] + ([wd1] if wd1 else []))
+    return rects
 
 
 @register("broadsheet", "closing", alts=2)
@@ -822,10 +871,9 @@ def _bs_points(k, slide, f, image):
         slot = (bottom - ctop) / n
         boxes = [(0.05 * W, ctop + i * slot, 0.90 * W, slot - 0.15 * s) for i in range(n)]
         rules = [(0.05 * W, b[1] - 0.08 * s, 0.95 * W, b[1] - 0.08 * s) for b in boxes[1:]]
-    for x0, y0, x1, y1 in rules:
-        art.append(lambda x0=x0, y0=y0, x1=x1, y1=y1: na.seg(slide, x0, y0, x1, y1, k.P["ink"], w=0.5))
     specs = [((x, y, w, h), ([("tag", caps(tags[i]))] if tags else []) + [("item_head", hd)] + ([("item_line", ln)] if ln else []),
               {"anchor": "top"}) for i, ((hd, ln), (x, y, w, h)) in enumerate(zip(pts, boxes))]
+    foot = ctop                           # the lowest word of any column (a raised initial's taller first line included)
     for (hd, ln), (x, y, w, h), (tr, td_) in zip(pts, boxes, plan_together(k, slide, "points", specs)):
         initial = bool(ln) and ln[0].isalpha() and not dk._has_cjk(ln[0]) and "item_line" in tr
         if initial:                       # room in the column for the taller first line and the one line its width
@@ -833,11 +881,34 @@ def _bs_points(k, slide, f, image):
             pitch = td_.sizes["item_line"] * dk._LINT_LINE_H / 72.0
             initial = by + bh + 1.3 * pitch + pitch + 0.05 <= y + h
         draws.append(_with_initial(k, slide, td_, ln) if initial else td_)
+        foot = max([foot] + [v[1] + v[3] + (max_extra(td_.sizes["item_line"] / s, s) if initial and f_ == "item_line" else 0.0)
+                             for f_, v in tr.items()])
+    # a column rule ends 0.2in under the lowest words, reaching long copy and not dangling 2.5in under short copy
+    # (the page's own bottom is the limit); a rule between rows runs the page's width and stays where it is
+    for x0, y0, x1, y1 in rules:
+        if x0 == x1:
+            y1 = max(y0 + 0.2, min(y1, foot + 0.2 * s))
+        art.append(lambda x0=x0, y0=y0, x1=x1, y1=y1: na.seg(slide, x0, y0, x1, y1, k.P["ink"], w=0.5))
     _run_all(art + draws)
     return rects
 
 
 # ═══════════════════════════════════ journal 学术期刊 ═══════════════════════════════════
+def first_baseline(k, field, text, size):
+    """Inches from the top of a text box (dk.text: a 2pt inset, single spacing, CJK_LS for Chinese or Japanese) to the
+    baseline of its FIRST line, from the face's own metrics — its ascent plus the line gap a renderer puts above the
+    line (Times New Roman has one, Georgia none: a 30pt numeral and a 21pt head set at the same top sat 0.12in apart
+    on the baseline, measured on a render). Used to set two fields of different faces and sizes on one baseline."""
+    role = vl.TYPE[k.name][field][1]
+    cjk = dk._has_cjk(text)
+    face = (k.ea_face(role, text) if cjk else None) or dk.numeral_run_face(text, k.face(role))
+    fnt = dk._pil_font(face, size, vl._weight(k, field, text))
+    asc, desc = fnt.getmetrics()
+    line = getattr(fnt.font, "height", asc + desc)             # ascent + descent + the face's line gap
+    ls = dk.CJK_LS if cjk else 1.0
+    return (2.0 + ls * line / dk._MEAS_PREC - desc / dk._MEAS_PREC) / 72.0
+
+
 def jn_running_rect(k):
     W, H, s, o = ctx(k)
     return (0.07 * W, 0.035 * H, 0.66 * W, 0.32 * s)
@@ -965,13 +1036,20 @@ def _jn_figure(k, slide, f, image):
         rects.update(sr); draws.append(sd)
         art.append(lambda: na.seg(slide, col[0], yl, col[0] + col[2], yl, k.P["ink"], w=0.4))
     path, alt_txt, slot = vl._resolve(k, image[0] if isinstance(image, (list, tuple)) else image)
+    # on a dark ground the figure (the caller's, usually a white-paper chart: the brightest object on the page, 12.5:1
+    # over the green) sits on a 0.15in mat in the page's paper tone, inside the area it had
+    mat = 0.15 * s if vl._lum(k.P["ground"]) < 0.2 else 0.0
+    area = (img[0] + mat, img[1] + mat, img[2] - 2 * mat, img[3] - 2 * mat)
     try:                                   # whole, and set at the top-left of its area like a printed figure — contained
         from PIL import Image as _Im       # and centred, a portrait photo floated with dead space on both sides
         iw, ih = _Im.open(path).size
-        sc = min(img[2] / iw, img[3] / ih)
-        img = (img[0], img[1], iw * sc, ih * sc)
+        sc = min(area[2] / iw, area[3] / ih)
+        img = (area[0], area[1], iw * sc, ih * sc)
     except Exception:
-        pass
+        img = area
+    if mat:
+        dk.decorative(dk.box(slide, img[0] - mat, img[1] - mat, img[2] + 2 * mat, img[3] + 2 * mat, fill=k.P["ink"]),
+                      "the paper mat the figure sits on")
     pic = dk.picture(slide, path, *img, fit="contain", alt=alt_txt)
     if slot:
         dk._compose_tag(pic, gen=slot)
@@ -997,11 +1075,11 @@ def _jn_points(k, slide, f, image):
     bottom, list_bottom = H - 0.6, H - 0.6
     side = bool(mg) and o == "land" and alt() == 0
     lw = (0.62 if side else 0.86) * W
+    note_foot = None
     if mg:
         if side:
             mx = 0.07 * W + lw + 0.5 * s
-            mcol = (mx + 0.2 * s, ty, 0.93 * W - mx - 0.2 * s, bottom - ty)
-            art.append(lambda: na.seg(slide, mx, ty, mx, bottom, k.P["text_accents"][0], w=0.75))
+            mcol = (mx + 0.2 * s, ty, 0.93 * W - mx - 0.2 * s, bottom - ty)      # its rule is drawn once the words are placed
         else:                          # under the list: as tall as the note needs, up to 1.3in — not always 1.3in
             mw = 0.86 * W - 0.2 * s
             _m0, _d0 = flow(k, slide, "points", (0.07 * W + 0.2 * s, 0.0, mw, 1.3 * s),
@@ -1012,6 +1090,7 @@ def _jn_points(k, slide, f, image):
             list_bottom = bottom - mh - 0.3 * s
         _mr, md = flow(k, slide, "points", mcol, [("margin_h", caps(label("note", mg, k=k, f=f))), ("margin", mg)], anchor="top")
         draws.append(md)
+        note_foot = max(v[1] + v[3] for v in _mr.values())
     ncol = 2 if (alt() == 2 and n >= 3) else 1        # long copy, last resort: the findings in two columns
     gap = 0.4 * s
     cw = (lw - (ncol - 1) * gap) / ncol
@@ -1019,13 +1098,25 @@ def _jn_points(k, slide, f, image):
     slot = (list_bottom - ty) / rows
     nw = min(0.07 * W, 0.6 * s) if ncol == 2 else 0.07 * W
     cells = [(0.07 * W + (i % ncol) * (cw + gap), ty + (i // ncol) * slot) for i in range(n)]
-    nums = plan_together(k, slide, "points", [((x, y, nw, slot), [("item_no", str(i + 1))], {"anchor": "top"})
-                                              for i, (x, y) in enumerate(cells)])
     words = plan_together(k, slide, "points", [((x + nw, y, cw - nw, slot - 0.1 * s),
                                                 [(x_, t) for x_, t in (("item_head", hd), ("item_line", ln)) if t], {"anchor": "top"})
                                                for (hd, ln), (x, y) in zip(pts, cells)])
+
+    def numerals(dys):
+        return plan_together(k, slide, "points", [((x, y + dy, nw, slot), [("item_no", str(i + 1))], {"anchor": "top"})
+                                                  for i, ((x, y), dy) in enumerate(zip(cells, dys))])
+    nums = numerals([0.0] * n)
+    # each numeral stands on its head's baseline: the 30pt Times figure and the 21pt Georgia head, both set from the same
+    # top, differed by 0.12in (the numeral's box moves up by that; the head and the list do not move)
+    dys = [first_baseline(k, "item_head", hd, wd.sizes["item_head"]) - first_baseline(k, "item_no", str(i + 1), nd.sizes["item_no"])
+           if "item_head" in wd.sizes else 0.0
+           for i, ((hd, _ln), (_nr, nd), (_wr, wd)) in enumerate(zip(pts, nums, words))]
+    nums = numerals(dys)
     for (_nr, nd), (_tr, td_) in zip(nums, words):
         draws += [nd, td_]
+    if side:                           # the note's rule spans the note and the list — the lower of the two feet
+        foot = max([note_foot] + [v[1] + v[3] for tr, _d in words for v in tr.values()])
+        art.append(lambda: na.seg(slide, mx, ty, mx, min(bottom, max(foot, ty + 0.2)), k.P["text_accents"][0], w=0.75))
     _run_all(art + draws)
     return rects
 
@@ -1097,14 +1188,18 @@ def chip_size(k, text, max_w, field):
     return sz if na.chip_width(text, sz, face) <= max_w else None
 
 
-def tl_chip(k, slide, x, y, text, max_w, *, field="tag", fill=None):
-    """A lime pill (or `fill`) for the caller's words, the darker or lighter ink by contrast. None when it cannot fit."""
-    sz = chip_size(k, text, max_w, field)
+def tl_chip(k, slide, x, y, text, max_w, *, field="tag", fill=None, size=None, right=None):
+    """A lime pill (or `fill`) for the caller's words, the darker or lighter ink by contrast. None when it cannot fit.
+    `size` sets the pill at that size (a page's pills share one; it must fit `max_w`); `right` sets its RIGHT edge at
+    that x instead of its left at `x`."""
+    sz = chip_size(k, text, max_w, field) if size is None else size
     if sz is None:
         return None
     fill = fill or k.P["lime"]
     ink = k.P["chip_ink"] if vl._contrast(k.P["chip_ink"], fill) >= vl._contrast("FFFFFF", fill) else "FFFFFF"
     role = vl.TYPE[k.name][field][1]
+    if right is not None:
+        x = right - na.chip_width(text, sz, k.face(role))
     return na.chip(slide, x, y, text, size=sz, fill=fill, ink=ink, face=k.face(role), ea_face=k.ea_face(role, text))
 
 
@@ -1226,7 +1321,8 @@ def _tl_points(k, slide, f, image):
     rows = -(-n // ncol)
     pitch = (bottom - top) / rows
     tag_sz = vl.TYPE["tally"]["tag"][0] * s
-    tw = (max(na.chip_width(t, tag_sz, k.face("body")) for t in tags) + 0.3 * s) if tags else 0.0
+    pill_w = max(na.chip_width(t, tag_sz, k.face("body")) for t in tags) if tags else 0.0       # the widest pill, whole
+    tw = pill_w + 0.3 * s if tags else 0.0
     beside = bool(tags) and tw <= 0.30 * w
     nw = (1.7 if alt() == 0 else 1.1) * s
     rows_ = []
@@ -1241,17 +1337,27 @@ def _tl_points(k, slide, f, image):
                                               for i, (x, ry, _t) in enumerate(rows_)])
     words = plan_together(k, slide, "points", [(tcol, [(x_, t) for x_, t in (("item_head", hd), ("item_line", ln)) if t],
                                                 {"anchor": "middle"}) for (hd, ln), (_x, _y, tcol) in zip(pts, rows_)])
+    # ONE pill size for the page — the smallest any tag needs to fit its pill — and, beside the words, every pill's right
+    # edge on the column's margin (each shrank to fit alone: 11 / 12 / 12pt, and a right edge 0.12in either side of ragged)
+    mws = [((pill_w + 1e-6) if beside else tcol[2]) for (_x, _y, tcol) in rows_]   # (+1e-6: the widest tag is exactly pill_w)
+    pill_sz = None
+    if tags:
+        fits = [chip_size(k, t, mw, "tag") for t, mw in zip(tags, mws)]
+        for t, z in zip(tags, fits):
+            if z is None:
+                raise vl.VLTextOverflow("tally.points(): the tag {!r} does not fit its pill even at the floor size — "
+                                        "shorten it".format(t[:40]))
+        pill_sz = min(fits)
     for i, ((x, ry, tcol), (_nr, nd), (_tr, td_)) in enumerate(zip(rows_, nums, words)):
         art.append(lambda x=x, ry=ry: na.seg(slide, x, ry - 0.12 * s, x + w, ry - 0.12 * s, k.P["ink"], w=0.6, alpha=0.5))
         draws += [nd, td_]
         if tags:
-            mw = (tw - 0.3 * s) if beside else tcol[2]
-            if chip_size(k, tags[i], mw, "tag") is None:
-                raise vl.VLTextOverflow("tally.points(): the tag {!r} does not fit its pill even at the floor size — "
-                                        "shorten it".format(tags[i][:40]))
-            ch = tag_sz / 72.0 * 1.9
-            cx_, cy_ = (x + w - tw + 0.3 * s, ry + (pitch - 0.24 * s - ch) / 2.0) if beside else (tcol[0], tcol[1] + tcol[3] + 0.1 * s)
-            draws.append(lambda t=tags[i], cx_=cx_, cy_=cy_, mw=mw: tl_chip(k, slide, cx_, cy_, t, mw))
+            ch = pill_sz / 72.0 * (2.4 if dk._has_cjk(tags[i]) else 2.1)               # the pill's own height (na.chip)
+            if beside:
+                cx_, cy_, rt = x + w, ry + (pitch - 0.24 * s - ch) / 2.0, x + w
+            else:
+                cx_, cy_, rt = tcol[0], tcol[1] + tcol[3] + 0.1 * s, None
+            draws.append(lambda t=tags[i], cx_=cx_, cy_=cy_, mw=mws[i], rt=rt: tl_chip(k, slide, cx_, cy_, t, mw, size=pill_sz, right=rt))
     yl = top + rows * pitch - 0.12 * s
     for c in range(ncol):
         xc = x0 + c * (w + gap)
