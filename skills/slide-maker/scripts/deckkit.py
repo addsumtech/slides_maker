@@ -638,19 +638,30 @@ def _skin_card(slide, x, y, w, h, *, fill, legacy, emphasis=False):
     card = _th("card", WHITE)
     rule = _th("rule", RGBColor(0xD9, 0xDD, 0xE4))
     accent = fill_c if (emphasis and fill_c is not None) else None
+    # a data-coloured container (a funnel band, an org root) keeps a light tint of its colour under the line work: its
+    # AREA is the data, and line-only it shrank to two hairlines (measured on ink's funnel, 2026-10-15)
+    wash = _blend(accent, ground, 0.82) if accent is not None else None
     if v == "outlined":
-        box(slide, x, y, w, h, fill=None, line=accent or _on_surface(rule, ground, 3.0),
+        box(slide, x, y, w, h, fill=wash, line=accent or _on_surface(rule, ground, 3.0),
             line_w=(1.8 if accent else 1.2) * RULE_W_SCALE, round=True, r=0.06)
-        surf = ground
+        surf = wash if wash is not None else ground
     elif v == "hairline":
+        if wash is not None:
+            box(slide, x, y, w, h, fill=wash)
         c = accent or _on_surface(rule, ground, 3.0)
         connector(slide, (x, y), (x + w, y), color=c, width=(1.6 if accent else 0.75), arrow=False)
         connector(slide, (x, y + h), (x + w, y + h), color=c, width=0.75, arrow=False)
-        surf = ground
+        surf = wash if wash is not None else ground
     elif v == "window":
         f = accent or card
-        na.ui_window(slide, x, y, w, h, fill=str(f), line=str(_on_surface(rule, ground, 1.5)),
-                     drop=str(_blend(ground, _th("ink", DEEP), 0.10)), r=0.12)
+        if accent is not None:                  # a data-coloured container (a funnel band, an org root): the panel and
+            box(slide, x, y, w, h, fill=f, line=_on_surface(rule, ground, 1.5), line_w=0.75,   # its keyline, no
+                round=True, r=0.12)                                                                # UI drop edge
+        else:
+            na.ui_window(slide, x, y, w, h, fill=str(f), line=str(_on_surface(rule, ground, 1.5)),
+                         drop=str(_blend(ground, _th("ink", DEEP), 0.10)), r=0.12)
+            # the drop edge falls under whatever sits below the card
+            overlap_intent(list(slide.shapes)[n0], "a window's drop edge falls under whatever sits below it")
         surf = f
     elif v == "sign":
         f = accent or card
@@ -3021,9 +3032,22 @@ def venn(slide, x, y, w, h, sets, *, zones=None, accents=None, ink=None, mute=No
         o = _flat(slide.shapes.add_shape(MSO_SHAPE.OVAL, Inches(cx - rr), Inches(cy - rr),
                                          Inches(2 * rr), Inches(2 * rr)))
         _grad_fill(o, [(0.0, col, alpha), (1.0, col, alpha)])
-        if outline:
+        rv = _skin("rule")
+        if outline and rv == "chalk":                   # the language's rule skin draws the outline
+            o.line.fill.background()
+            _n0 = len(slide.shapes)
+            import native_art as _na
+            _na.chalk_ellipse(slide, cx, cy, rr, rr, str(_as_rgbc(col)))
+            _tag_new(slide, _n0, "rule", rv)
+            overlap_intent(o, "a chalk outline is traced round this circle")
+        elif outline:
             o.line.color.rgb = _as_rgb(col)
-            o.line.width = Pt(1.25)
+            o.line.width = Pt(0.75 if rv == "hairline" else 1.25)
+            if rv == "dashed":
+                from pptx.enum.dml import MSO_LINE_DASH_STYLE
+                o.line.dash_style = MSO_LINE_DASH_STYLE.DASH
+            if rv != "solid":
+                o.name = "{}rule:{}".format(SKIN_TAG, rv)
         else:
             o.line.fill.background()
 
@@ -7306,22 +7330,33 @@ def org_tree(slide, x, y, w, h, root, *, accent=None, node_h=0.42, gap_y=0.42,
         sx, depth = pos[id(node)]
         nx = x + sx * pitch
         ny = y + depth * (node_h + gap_y)
-        b = box(slide, nx, ny, node_w, node_h, fill=(acc if depth == 0 else _th("card", WHITE)),
-                line=(None if depth == 0 else acc), line_w=1.1, round=True, r=0.08)
+        nfill = acc if depth == 0 else _th("card", WHITE)
+        surf = _skin_card(slide, nx, ny, node_w, node_h, fill=nfill, emphasis=(depth == 0),
+                          legacy=lambda: box(slide, nx, ny, node_w, node_h, fill=nfill,
+                                             line=(None if depth == 0 else acc), line_w=1.1, round=True, r=0.08))
+        # the label reads on what the card skin leaves under it (an outlined or hairline root leaves the ground)
+        if depth == 0 and _skin("card") == "filled":
+            lab_c = _as_rgb(_legible_ink(_as_rgbc(acc)))
+        elif depth == 0:
+            lab_c = _as_rgb(_legible_ink(surf) if surf == _as_rgbc(acc) else _on_surface(_th("ink", DEEP), surf))
+        else:
+            lab_c = _as_rgb(_on_surface(DEEP, surf))
         text(slide, nx, ny, node_w, node_h,
-             [[(label, label_size if depth == 0 else label_size - 1,
-                _as_rgb(_legible_ink(_as_rgbc(acc))) if depth == 0 else _as_rgb(_on_surface(DEEP, _th("card", WHITE))), depth == 0, False,
-                font or FONT)]],
+             [[(label, label_size if depth == 0 else label_size - 1, lab_c, depth == 0, False, font or FONT)]],
              align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
         if kids:
             busy = ny + node_h + gap_y / 2
-            box(slide, nx + node_w / 2 - 0.008, ny + node_h, 0.016, gap_y / 2, fill=lc)
+            cx_ = nx + node_w / 2
+            _skin_rule(slide, (cx_, ny + node_h), (cx_, ny + node_h + gap_y / 2), color=lc, width=1.15,
+                       legacy=lambda: box(slide, nx + node_w / 2 - 0.008, ny + node_h, 0.016, gap_y / 2, fill=lc))
             kxs = [x + pos[id(k)][0] * pitch + node_w / 2 for k in kids]
-            box(slide, min(kxs) - 0.008, busy - 0.008, max(kxs) - min(kxs) + 0.016, 0.016, fill=lc)
+            _skin_rule(slide, (min(kxs), busy), (max(kxs), busy), color=lc, width=1.15,
+                       legacy=lambda: box(slide, min(kxs) - 0.008, busy - 0.008, max(kxs) - min(kxs) + 0.016, 0.016,
+                                          fill=lc))
             for k, kx in zip(kids, kxs):
-                box(slide, kx - 0.008, busy, 0.016, gap_y / 2, fill=lc)
+                _skin_rule(slide, (kx, busy), (kx, busy + gap_y / 2), color=lc, width=1.15,
+                           legacy=lambda kx=kx: box(slide, kx - 0.008, busy, 0.016, gap_y / 2, fill=lc))
                 draw(k)
-        return b
     draw(root)
     return y + (depth_max + 1) * (node_h + gap_y) - gap_y
 
@@ -9884,6 +9919,7 @@ def meter_bar(slide, x, y, w, frac, *, label=None, value=None, value_unit=None,
     tr = track if track is not None else _th("track", RGBColor(0xE6, 0xE9, 0xEE))
     vink = ink if ink is not None else DEEP
     lc = label_c if label_c is not None else MUTE
+    vface = _skin_number_face(value, value_font or font) if value is not None else (value_font or font)
     f = max(0.0, min(1.0, frac))
     # BY-CONSTRUCTION canvas guard (the recurring OFF_CANVAS bug this kills: a right-side value
     # label pushed past the slide edge by the roomy default value_w). Measure the value's REAL
@@ -9894,7 +9930,7 @@ def meter_bar(slide, x, y, w, frac, *, label=None, value=None, value_unit=None,
         vruns = [(str(value), True)]
         if value_unit:
             vruns.append((" " + str(value_unit), True))
-        natural = _natural_width_in(vruns, value_size, value_font or font) + 0.10
+        natural = _natural_width_in(vruns, value_size, vface) + 0.10
         vw = min(value_w, max(0.45, natural))
         sw, _sh = _slide_size(slide)
         overhang = (x + w + value_pad + vw) - (sw - 0.06)   # worst case: value_pos="right"
@@ -9908,7 +9944,8 @@ def meter_bar(slide, x, y, w, frac, *, label=None, value=None, value_unit=None,
     if label:
         text(slide, x, y, w, gap_above, [[(str(label), label_size, lc, False, False, font)]],
              anchor=MSO_ANCHOR.BOTTOM, space_after=0)
-    box(slide, x, yt, w, h, fill=tr, round=True, r=h / 2)
+    _skin_rule(slide, (x, yt + h / 2), (x + w, yt + h / 2), color=tr, width=max(1.0, h * 72 * 0.35),
+               legacy=lambda: box(slide, x, yt, w, h, fill=tr, round=True, r=h / 2))
     if f > 0:
         # FIDELITY over the pill. The fill used to be floored at `h` so a rounded cap never
         # degenerated — which silently overstated every small fraction: measured, frac=0.01 on a
@@ -9917,12 +9954,14 @@ def meter_bar(slide, x, y, w, frac, *, label=None, value=None, value_unit=None,
         # override. Draw the true width and shrink the corner radius to match; a thin sliver ends
         # up effectively square, which is correct — a 1% mark SHOULD look like a 1% mark.
         fw = w * f
-        box(slide, x, yt, fw, h, fill=acc, round=True, r=min(h, fw) / 2)
+        fb = box(slide, x, yt, fw, h, fill=acc, round=True, r=min(h, fw) / 2)
+        if _skin("rule") != "solid":                    # a line-skin track runs through the bar, by design
+            overlap_intent(fb, "the meter's value bar rides on its track line")
     if value is not None:
         vx = (x + w + value_pad) if value_pos == "right" else (x + w * f + value_pad)
-        runs = [(str(value), value_size, vink, True, False, value_font or font)]
+        runs = [(str(value), value_size, vink, True, False, vface)]
         if value_unit:
-            runs.append((" " + str(value_unit), unit_size, lc, True, False, value_font or font))
+            runs.append((" " + str(value_unit), unit_size, lc, True, False, vface))
         # value box shares the bar's y/h with MIDDLE anchor → text on the bar's centerline
         tbv = text(slide, vx, yt, vw, h, [runs], anchor=MSO_ANCHOR.MIDDLE, space_after=0)
         tbv.text_frame.word_wrap = False           # a value never wraps mid-number
@@ -12251,7 +12290,9 @@ def tier_stack(slide, x, y, w, h, tiers, *, mode="pyramid", direction=None, acce
     for i, lab in enumerate(tiers):
         band_w = w_area * fracs[i]
         bx = x + (w_area - band_w) / 2.0
-        box(slide, bx, cy, band_w, band_h, fill=cols[i], round=True, r=min(0.06, band_h / 4.0))
+        surf = _skin_card(slide, bx, cy, band_w, band_h, fill=cols[i], emphasis=True,
+                          legacy=lambda bx=bx, cy=cy, band_w=band_w, c=cols[i]: box(
+                              slide, bx, cy, band_w, band_h, fill=c, round=True, r=min(0.06, band_h / 4.0)))
         val_str = None
         if values is not None and i < len(values) and values[i] not in (None, ""):
             v = values[i]
@@ -12262,7 +12303,9 @@ def tier_stack(slide, x, y, w, h, tiers, *, mode="pyramid", direction=None, acce
         # band just to fit its text).
         too_thin = labels == "inside" and band_w < 0.85
         if labels == "inside" and not too_thin:
-            tc = _legible_ink(cols[i])
+            # on a filled band the ink reads on the band's colour; a line-only skin leaves the ground under it
+            tc = _legible_ink(cols[i]) if _skin("card") == "filled" else (
+                _legible_ink(surf) if surf == _as_rgbc(cols[i]) else _on_surface(_th("ink", DEEP), surf))
             lsize = fit_text_size([(str(lab), True)], max(0.4, band_w - 0.24), band_h - 0.06, 14,
                                   font=font, min_size=8)
             runs = [[(str(lab), lsize, tc, True, False, font)]]
@@ -12272,8 +12315,9 @@ def tier_stack(slide, x, y, w, h, tiers, *, mode="pyramid", direction=None, acce
                  anchor=MSO_ANCHOR.MIDDLE, space_after=0, line_spacing=0.98)
         elif too_thin:
             lx = bx + band_w + 0.16
-            connector(slide, (bx + band_w, band_cy), (lx - 0.04, band_cy),
-                      color=MUTE, width=1.0, arrow=False)
+            _skin_rule(slide, (bx + band_w, band_cy), (lx - 0.04, band_cy), color=MUTE, width=1.0,
+                       legacy=lambda: connector(slide, (bx + band_w, band_cy), (lx - 0.04, band_cy),
+                                                color=MUTE, width=1.0, arrow=False))
             runs = [(str(lab), 11.5, ic, True, False, font)]
             if val_str:
                 runs.append(("   " + val_str, 11.5, MUTE, False, False, font))
@@ -12281,8 +12325,9 @@ def tier_stack(slide, x, y, w, h, tiers, *, mode="pyramid", direction=None, acce
                  anchor=MSO_ANCHOR.MIDDLE, space_after=0)
         else:
             lx = x + w_area + 0.22
-            connector(slide, (bx + band_w, band_cy), (lx - 0.06, band_cy),
-                      color=MUTE, width=1.0, arrow=False)
+            _skin_rule(slide, (bx + band_w, band_cy), (lx - 0.06, band_cy), color=MUTE, width=1.0,
+                       legacy=lambda: connector(slide, (bx + band_w, band_cy), (lx - 0.06, band_cy),
+                                                color=MUTE, width=1.0, arrow=False))
             runs = [(str(lab), 12.5, ic, True, False, font)]
             if val_str:
                 runs.append(("   " + val_str, 12.5, MUTE, False, False, font))
@@ -12374,10 +12419,12 @@ def gantt(slide, x, y, w, tasks, *, axis_min=None, axis_max=None, ticks=None, ti
         sw, _sh = _slide_size(slide)
         for t, lbl in zip(ticks, tls):
             gx = X(t)
-            connector(slide, (gx, grid_top), (gx, chart_bottom),
-                      color=_th("rule", RGBColor(0xE4, 0xE7, 0xEC)), width=1.0, arrow=False)
+            gcol = _th("rule", RGBColor(0xE4, 0xE7, 0xEC))
+            _skin_rule(slide, (gx, grid_top), (gx, chart_bottom), color=gcol, width=1.0,
+                       legacy=lambda gx=gx, gcol=gcol: connector(slide, (gx, grid_top), (gx, chart_bottom),
+                                                                 color=gcol, width=1.0, arrow=False))
             lxp = max(0.05, min(gx - 0.6, sw - 1.25))
-            text(slide, lxp, y, 1.2, header_h - 0.02, [[(str(lbl), 10, MUTE, True, False, font)]],
+            text(slide, lxp, y, 1.2, header_h - 0.02, [[(str(lbl), 10, MUTE, True, False, _skin_number_face(lbl, font))]],
                  align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.BOTTOM, space_after=0)
     if today is not None:
         tx = X(today)

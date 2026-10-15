@@ -80,7 +80,9 @@ from lxml import etree
 # where the example does not draw every role the component routes, a call that does (the example's step_list is
 # vertical; only the horizontal form draws connectors)
 EXERCISE = {"step_list": 'dk.step_list(s, 0.8, 3.6, 8.0, [("Collect", "gather"), ("Train", "fit"), ("Ship", "go")], '
-                         'orientation="horizontal", active_idx=1)'}
+                         'orientation="horizontal", active_idx=1)',
+            "pyramid": 'dk.pyramid(s, 7.4, 1.0, 5.0, 3.0, ["Vision", "Strategy", "Execution"], labels="side")',
+            "gantt": 'dk.gantt(s, 0.6, 4.6, 8.8, [("Plan", 0, 4)], axis_min=0, axis_max=10, ticks=[0, 5, 10])'}
 def _xml_of(L, name, skin):
     prs, k = _use(L)
     dk.set_theme(dict(dk.THEME, skin=skin))
@@ -95,7 +97,8 @@ def _number_face(L, v):
 # each role a language sets differently from the default must change what the component draws — unless it is a
 # number face the component already sets its numerals in (cutpaper's display face IS its body face; agenda's
 # numerals are mono already), which is checked, not assumed
-DONE = ("step_list", "timeline", "agenda", "stat_row")           # grows as Tasks 3-4 route the rest
+DONE = ("step_list", "timeline", "agenda", "stat_row", "org_tree", "tier_stack", "funnel", "pyramid", "venn",
+        "meter_bar", "gantt", "bento")                          # grows as Task 4 routes the rest
 for name in DONE:
     for L in vl.LANGS:
         sk = S[L]["skin"]
@@ -117,6 +120,19 @@ def _cjk_faces(skin):
             if r.text.strip() in nums]
 got, base = _cjk_faces(S["ink"]["skin"]), _cjk_faces(dict(ct.SKIN_DEFAULT))
 check(len(got) == 2 and got == base, "step_list's CJK numerals keep their face under a display number skin ({} vs {})".format(got, base))
+dk.set_theme(None)
+
+# an explicit accent under a line-only card skin: the node text is chosen against the ground the skin leaves
+# (Review Focus 1)
+import lint_deck, re
+prs, k = _use("ink")
+s = k.new_slide()
+dk.org_tree(s, 0.8, 1.2, 8.0, 3.0, ("CEO", [("Eng", []), ("Ops", [])]), accent=dk.RGBColor(0x1F, 0x3B, 0xFF))
+prs.save(str(WORK / "org_ink.pptx")); buf = io.StringIO()
+with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(io.StringIO()):
+    lint_deck.lint(str(WORK / "org_ink.pptx"), static_ok=True)
+hard = [l for l in buf.getvalue().splitlines() if re.match(r"\s+slide \d+: (LOW CONTRAST|INVISIBLE)", l)]
+check(not hard, "org_tree with an explicit accent reads under a hairline card skin ({})".format(hard[:1]))
 dk.set_theme(None)
 
 for line in ok:

@@ -143,10 +143,11 @@ EXAMPLES = {
     "bento": 'for i, (bx, by, bw, bh) in enumerate(\n'
              '        dk.bento(s, 0.6, 1.2, 8.8, 3.9,\n'
              '                 [(2, 2), (2, 1), (1, 1), (1, 1), (4, 1)], cols=4)):\n'
-             '    dk.box(s, bx, by, bw, bh, fill=dk.DEEP if i == 0 else dk.TINT)\n'
+             '    fill = dk.DEEP if i == 0 else dk.TINT\n'
+             '    surface = dk.skin_card(s, bx, by, bw, bh, fill=fill, emphasis=(i == 0))   # the language\'s card\n'
              '    dk.text(s, bx + 0.2, by + 0.15, bw - 0.4, bh - 0.3,\n'
              '            [[("tile %d" % i, 16 if i else 22,\n'
-             '               dk.on(dk.DEEP if i == 0 else dk.TINT), i == 0, False)]])   # ink picked for its fill',
+             '               dk.on(surface), i == 0, False)]])   # ink picked for what it sits on',
     # qr_panel needs a PRE-RENDERED png unless segno/qrcode is installed; `size` is held to the
     # 10:1 scan rule and the caption/URL are sized from the CANVAS, not from the code.
     "qr_panel": 'dk.qr_panel(s, 0.7, 2.4, 1.8, "https://example.org/preprint",\n'
