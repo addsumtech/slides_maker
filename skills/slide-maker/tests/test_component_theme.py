@@ -105,6 +105,15 @@ for L in vl.LANGS:
         for name in TIER1:
             check(not by.get(name), "{}/{} {}: readable, no hard lint finding ({})".format(L, g, name, by.get(name, [])[:1]))
 
+# ── no literal colour in a Tier-1 component body (spec §5.2) ──
+import check_component_theme as cct
+fns = [f for f in TIER1 if hasattr(dk, f)] + ["tint", "native_chart", "draw_axis"]
+left = [x for x in cct.scan(str(ROOT / "scripts" / "deckkit.py"), fns) if (x[0], x[2]) not in cct.ALLOW]
+check(left == [], "no Tier-1 component draws a literal colour outside _th / the allowlist ({})".format(left[:4]))
+src = "def leaky(s):\n    box(s, 0, 0, 1, 1, fill=RGBColor(0x12, 0x34, 0x56))\n    text(s, 0, 0, 1, 1, [[('x', 10, '9AA0AE', False, False)]])\n"
+p_ = WORK / "leaky.py"; p_.write_text(src)
+check(len(cct.scan(str(p_), ["leaky"])) == 2, "the checker catches an RGBColor and a hex literal")
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

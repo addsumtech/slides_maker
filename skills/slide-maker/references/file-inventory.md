@@ -712,6 +712,9 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   languages (all by default), with a NEXT line.
 - `vl_docs.py` — `--write` / `--check` the `vl:NAME` marker blocks (counts, the drawn list, the offer
   guidance in three wordings) in SKILL.md, the references and both READMEs, from the registry; CI runs `--check`.
+- `check_component_theme.py` — no literal colour inside a Tier-1 component body: surfaces, rules, axes and tracks
+  come from `dk._th(role, legacy)` (the active visual language's role, else the old literal); semantic colours
+  allowlisted with reasons.
 - `collage.py` — `collage(slide, region, items, seed=, keep_clear=)`: 1-4 images as tilted, white-bordered,
   taped prints; geometry decided first — a print never enters `keep_clear` and never covers more than
   25% of its neighbour; deterministic for a seed; slot items keep the image-series tag.

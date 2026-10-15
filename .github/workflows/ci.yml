@@ -1040,6 +1040,14 @@ jobs:
             echo "::error::test_vl_contract did not run to completion"; exit 1; }
       - name: "Visual-language docs blocks match the registry"
         run: python scripts/vl_docs.py --check
+      - name: "Components in visual languages (ordinary decks unchanged, every language and ground readable)"
+        run: |
+          set -o pipefail
+          python tests/test_component_theme.py | tee /tmp/ctheme.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/ctheme.log || {
+            echo "::error::test_component_theme did not run to completion"; exit 1; }
+      - name: "Components take colours from the theme (no literal colour in a component)"
+        run: python scripts/check_component_theme.py
       - name: "Visual languages after the audit (measured with headroom, nothing dropped, upright pictures, clean own pages)"
         run: |
           set -o pipefail
