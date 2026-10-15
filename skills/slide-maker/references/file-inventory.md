@@ -419,7 +419,7 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   vertical margin label is measured exactly), the exact intersection of two tilted rectangles, and
   point-in-polygon. The one definition both geometry gates (`lint_deck.py`, `deckkit.lint_layout`)
   import — before it, both read the unrotated frame and were wrong in both directions.
-- **`sigs.py`** — one lookup, many helpers: exact signature + docstring head for every named deckkit/designed_charts helper, plus the run-tuple and RGBColor call-shape contracts. `--search TERM` to find one, `--list` for all, `--full` for whole docstrings. Use it BEFORE writing a build script; reading deckkit.py one function at a time costs a round-trip per question.
+- **`sigs.py`** — one lookup, many helpers: exact signature + docstring head for every named deckkit/designed_charts helper, plus the run-tuple and RGBColor call-shape contracts. `--search TERM` to find one, `--list` for all, `--full` for whole docstrings, `--example X --in LANGUAGE [--ground G]` for a scaffold placed in that visual language's content rect (`placed_example`). Use it BEFORE writing a build script; reading deckkit.py one function at a time costs a round-trip per question.
 - `lint_deck.py` — deterministic **render-time** layout lint and complement to deckkit's build-time
   `lint_layout`: re-checks geometry on the final file (off-slide overflow · block/image collision
   [containment excluded] · footer-zone intrusion · text-past-card · uneven rows) AND adds the
@@ -715,6 +715,10 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
 - `check_component_theme.py` — no literal colour inside a Tier-1 component body: surfaces, rules, axes and tracks
   come from `dk._th(role, legacy)` (the active visual language's role, else the old literal); semantic colours
   allowlisted with reasons.
+- `component_tiers.py` — plain data (no deckkit import): `TIER1` (the 38 general components held to every ground of every
+  language, placed in its content rect), `TIER2_SKIN` (the 15 that also draw cards / rules / markers / numerals in the
+  language's skin, and which roles each draws), `SKIN_VOCAB` / `SKIN_DEFAULT` (the values a manifest's `skin` may pick
+  per role). Read by deckkit's `_skin_*` helpers, `vl_contract`, `vl_docs`, `check_component_theme` and the tests.
 - `collage.py` — `collage(slide, region, items, seed=, keep_clear=)`: 1-4 images as tilted, white-bordered,
   taped prints; geometry decided first — a print never enters `keep_clear` and never covers more than
   25% of its neighbour; deterministic for a seed; slot items keep the image-series tag.
