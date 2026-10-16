@@ -9,13 +9,28 @@ import os
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
+DRAFTS = {}        # name -> file of a manifest still holding "FILL:" decisions (new_visual_language.py's draft)
+
+
+def _is_draft(o):
+    if isinstance(o, str):
+        return o.lstrip().startswith("FILL:")
+    if isinstance(o, dict):
+        return any(_is_draft(v) for v in o.values())
+    if isinstance(o, (list, tuple)):
+        return any(_is_draft(v) for v in o)
+    return False
 TOP_KEYS = ("name", "order", "kind", "display", "rationale", "offer", "look", "grounds", "type", "image_pages",
             "extras", "derived", "samples", "painters", "skin")      # = vl_contract.TOP_KEYS (kept here: this file imports nothing)
 
 
-def load(directory=None):
+def load(directory=None, drafts=False):
+    """{name: SPEC}. A DRAFT — a manifest still holding a "FILL:" decision — is left out unless drafts=True (only the
+    contract check and new_visual_language.py read drafts): every other importer reads colours, faces and copy from
+    a manifest, and one undecided field would break the whole skill. Left-out drafts are named in DRAFTS."""
     d = Path(directory or os.environ.get("VL_SPECS_DIR") or _HERE)
     specs, files = [], {}
+    DRAFTS.clear()
     for f in sorted(d.glob("*.py")):
         if f.name.startswith("_"):
             continue
@@ -34,6 +49,9 @@ def load(directory=None):
         if spec["name"] in files:
             raise ValueError("{} and {}: both declare name={!r}".format(files[spec["name"]], f.name, spec["name"]))
         files[spec["name"]] = f.name
+        if not drafts and _is_draft(spec):
+            DRAFTS[spec["name"]] = f.name
+            continue
         specs.append(spec)
     specs.sort(key=lambda s: s["order"])
     return {s["name"]: s for s in specs}

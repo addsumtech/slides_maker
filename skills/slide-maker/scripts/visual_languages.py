@@ -209,6 +209,9 @@ def use(name, prs, *, fonts="both", plan=None, image_dir=None, platform=None, gr
     ids. ground="light" (default), the language's contrast ground (VARIANTS[name]), or "auto": the light ground
     unless your last decks already sit on it (the look history) — then the contrast one; printed boards stay
     light. Record design_plan.visual_language = name and vl_ground (references/visual-languages.md)."""
+    if name in _vl_specs.DRAFTS:
+        raise VLNotReady("visual_languages.use(): {} is a draft — decide every FILL: in scripts/vl_specs/{} "
+                         "(python3 scripts/check_vl_contract.py {} names each one)".format(name, _vl_specs.DRAFTS[name], name))
     if name not in LANGS:
         raise KeyError("visual_languages.use(): unknown language {!r} — one of {}".format(name, sorted(LANGS)))
     if name in _UNREADY:
@@ -412,16 +415,26 @@ def painter(name, role):
 
 
 _UNREADY = {}      # name -> why the language cannot be used yet (use() refuses it; check_vl_contract names it)
-for _n in LANGS:
-    _g, _c = painter(_n, "ground"), painter(_n, "card")
+_PENDING = []      # languages whose painters live in scripts/vl_langs/: registered at this module's foot (below)
+
+
+def _register(n):
+    _g, _c = painter(n, "ground"), painter(n, "card")
     if _g is None or _c is None:
         import vl_langs as _vll
-        _UNREADY[_n] = ("{}: {} — write {} and {} in scripts/vl_langs/{}.py (references/visual-language-authoring.md; "
-                        "new_visual_language.py writes a first draft)".format(
-                            _n, _vll.ERRORS[_n] if _n in _vll.ERRORS else "its code is not written yet",
-                            REGISTRY[_n]["painters"]["ground"], REGISTRY[_n]["painters"]["card"], _n))
-        continue
-    rs.register(_n, ground=_g, card=_c, forbids=LANGS[_n]["forbids"], source=__file__)
+        _UNREADY[n] = ("{}: {} — write {} and {} in scripts/vl_langs/{}.py (references/visual-language-authoring.md; "
+                       "new_visual_language.py writes a first draft)".format(
+                           n, _vll.ERRORS[n] if n in _vll.ERRORS else "its code is not written yet",
+                           REGISTRY[n]["painters"]["ground"], REGISTRY[n]["painters"]["card"], n))
+        return
+    rs.register(n, ground=_g, card=_c, forbids=LANGS[n]["forbids"], source=__file__)
+
+
+for _n in LANGS:
+    if all(REGISTRY[_n]["painters"][r] in globals() for r in ("ground", "card")):
+        _register(_n)
+    else:                  # its module imports vl_native, which reads this module's later names (HEADROOM, …):
+        _PENDING.append(_n)    # loading it here, half-way down, failed as a circular import (2026-10-16)
 
 
 # ════════════════════════════════════════════════════════════════════════════════════════════════
@@ -2147,6 +2160,70 @@ def _print_gates(name, deck, topic, fonts, ground="light"):
     return 0
 
 
+_CARD_PAGES = ("cover", "section", "image_text", "points", "quote", "data", "closing")
+
+
+def _example_lines(name):
+    """The language's sample deck as code that runs as printed, from any folder (the bundled sample's own calls)."""
+    code = ["import sys", "sys.path.insert(0, {!r})".format(str(HERE)), "import deckkit as dk, visual_languages as vl",
+            "prs = dk.blank_deck(13.333, 7.5)", "k = vl.use({!r}, prs)".format(name)]
+    if name in NATIVE:
+        code += ["k.{}(k.new_slide(), **{!r})".format(page, fields) for page, fields in _SAMPLE_COPY_NATIVE[name]]
+    else:
+        kind = "watercolour" if name == "storybook" else "photo"
+        imgs = [str(ASSETS / x) for x in SAMPLE_IMAGES[kind]]
+        T = _SAMPLE_COPY[kind]
+        code += ["k.cover(k.new_slide(), kicker={!r}, title={!r}, image={!r})".format(
+                     T["kicker"], T["title"], imgs[:3] if name == "collage" else imgs[0]),
+                 "k.image_text(k.new_slide(), kicker={!r}, title={!r}, body={!r}, image={!r})".format(
+                     T["kicker"], T["it_title"], T["body"], imgs[1]),
+                 "k.quote(k.new_slide(), quote={!r}, attribution={!r}, image={!r})".format(T["quote"], T["attr"], imgs[2]),
+                 "k.data(k.new_slide(), number={!r}, label={!r}, note={!r}, image={!r})".format(
+                     T["num"], T["label"], T["note"], imgs[3])]
+    out = name + "-example.pptx"
+    code += ["prs.save({!r})".format(out),
+             "print({!r})".format("saved {} — NEXT: python3 {} {}".format(out, HERE / "render_deck.py", out))]
+    return code
+
+
+def describe(name):
+    """A language's card, printed from its manifest alone: what it is, its grounds, its pages, the extras it takes
+    (which pages, whether the deck remembers them, what to pass, what an absent one means), the words it derives, the
+    topics it is offered for, its faces — and its sample deck as code that runs as printed."""
+    chk = HERE / "check_vl_contract.py"
+    if name in _vl_specs.DRAFTS:
+        return ("{n}: a draft — its manifest (scripts/vl_specs/{f}) still holds FILL: decisions, so it is not offered "
+                "or usable yet.\nNEXT: python3 {c} {n}   (names each decision still to make)\n").format(
+                    n=name, f=_vl_specs.DRAFTS[name], c=chk)
+    sp = REGISTRY[name]
+    out = ["{} — {} / {}  ({})".format(name, sp["display"]["en"], sp["display"]["zh"], sp["kind"]), sp["rationale"],
+           "grounds:"]
+    out += ["  {:<10} {} / {} — a {} ground".format(g, gd["label"], gd["label_zh"], "dark" if gd["dark"] else "light")
+            for g, gd in sp["grounds"].items()]
+    out.append("pages: " + ", ".join(_CARD_PAGES) + (
+        "   (a picture on: {})".format(", ".join(sp["image_pages"])) if sp["image_pages"] else ""))
+    out.append("extras:" + ("" if sp["extras"] else " none"))
+    for x, d in sp["extras"].items():
+        out.append("  {}= on {}{} — takes {}; without it: {}".format(
+            x, "every page" if d["pages"] == "any" else ", ".join(d["pages"]),
+            ", remembered for the deck" if d["remembered"] else "", d["takes"], d["absent"]))
+    out.append("derived words:" + ("" if sp["derived"] else " none — every word on a page is the caller's"))
+    for dv in sp["derived"]:
+        words = "; ".join("{}: {}".format(l, " ".join(w)) for l, w in dv["words"].items()) or "no words — a mark"
+        out.append("  {} — {} ({})".format(dv["id"], dv["what"], words))
+    off = sp["offer"]
+    out.append("offered for: " + ("; ".join("{}: {}".format(l, ", ".join(off[l])) for l in ("en", "zh") if l in off)
+                                  if "en" in off else "decks with {}".format(off.get("pictures"))))
+    fo = sp["look"]["fonts"]
+    out.append("fonts: both {}  mac {}".format(fo.get("both"), fo.get("mac")))
+    if name in _UNREADY:
+        out.append("not ready: " + _UNREADY[name])
+        return "\n".join(out) + "\n"
+    out.append("example (runs as printed from any folder; saves {}-example.pptx there):".format(name))
+    out += _example_lines(name)
+    return "\n".join(out) + "\n"
+
+
 def main(argv=None):
     import argparse
     import shlex
@@ -2157,6 +2234,7 @@ def main(argv=None):
     ap.add_argument("--sample-sheet", nargs=2, metavar=("RENDER_DIR", "OUT_JPG"),
                     help="contact a rendered sample's four pages into one JPEG")
     ap.add_argument("--list", action="store_true", help="list the languages")
+    ap.add_argument("--describe", metavar="NAME", help="print a language's card and an example that runs as printed")
     ap.add_argument("--gates", metavar="NAME", help="print the exact record commands for a deck in this language")
     ap.add_argument("--deck", metavar="DECK_DIR", help="with --gates (required): the deck folder")
     ap.add_argument("--for", dest="topic", metavar="TOPIC", default=None, help="with --gates: what the deck is for")
@@ -2164,6 +2242,13 @@ def main(argv=None):
     ap.add_argument("--ground", default="light", help="with --gates: the ground the deck was built on (light, the "
                     "language's contrast ground, or auto)")
     a = ap.parse_args(argv)
+    if a.describe:
+        if a.describe not in REGISTRY and a.describe not in _vl_specs.DRAFTS:
+            print("visual_languages: --describe {!r}: no such language — one of {}".format(
+                a.describe, ", ".join(list(REGISTRY) + list(_vl_specs.DRAFTS))), file=sys.stderr)
+            return 2
+        print(describe(a.describe), end="")
+        return 0
     if a.gates:
         if not a.deck:                    # a printed placeholder path runs nowhere — refuse instead
             print("visual_languages: --gates needs --deck <the deck folder>, so every printed command runs as "
@@ -2198,6 +2283,11 @@ def main(argv=None):
             print("then: python3 {} --sample-sheet {} {}".format(shlex.quote(str(HERE / "visual_languages.py")),
                                                                  shlex.quote(str(rd)), shlex.quote(str(sheet))))
     return 0
+
+
+# the languages written after the fifteen, now that every name above exists (their modules import vl_native)
+for _n in _PENDING:
+    _register(_n)
 
 
 if __name__ == "__main__":

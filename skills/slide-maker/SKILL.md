@@ -98,6 +98,8 @@ Two time sinks compress well: ingesting material/assets, and the critic loop.
     **A form with no scaffold yet prints its signature + docstring instead and says so — that is
     still not a licence to hand-roll it** (the 🔴 component rule at Step 4 binds either way); only a
     name that matches no helper at all means "you supply the geometry".
+    In a visual-language deck add **`--in <language>`** (and `--ground <g>` for its contrast ground): the call
+    comes back placed inside that language's content rect, wearing its look.
   - **Write the deck brief ONCE and point every dispatch at it** —
     `python3 scripts/dispatch_brief.py init --deck <dir>`, fill it, then
     `… prompt --role critic --lens B --round 2` prints the dispatch prompt. Measured on a real

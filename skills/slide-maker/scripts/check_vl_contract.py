@@ -18,7 +18,7 @@ def main(argv=None):
     ap.add_argument("names", nargs="*", help="languages to check (default: all)")
     a = ap.parse_args(argv)
     try:
-        specs = vl_specs.load()
+        specs = vl_specs.load(drafts=True)
     except ValueError as e:
         print("  FAIL " + str(e))
         print("[vl-contract] the manifests cannot be loaded — fix the file named above")

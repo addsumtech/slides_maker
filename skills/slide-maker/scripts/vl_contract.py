@@ -271,6 +271,9 @@ def validate_all(specs):
     orders = {}
     for n, s in specs.items():
         orders.setdefault(s.get("order"), []).append(n)
+    # a draft (FILL: still in it) is named by validate() above; the cross-language checks read its colours and extras,
+    # which are not decided yet — "FILL: …" read as a hex crashed the whole check (2026-10-16)
+    specs = {n: s for n, s in specs.items() if not unfilled(s)}
     probs += ["order {} is used by {}".format(o, ns) for o, ns in orders.items() if len(ns) > 1]
     meaning = {}
     for n, s in specs.items():
