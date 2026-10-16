@@ -18,7 +18,7 @@ def main(argv=None):
     ap.add_argument("names", nargs="*", help="languages to check (default: all)")
     a = ap.parse_args(argv)
     try:
-        specs = vl_specs.load()
+        specs = vl_specs.load(drafts=True)
     except ValueError as e:
         print("  FAIL " + str(e))
         print("[vl-contract] the manifests cannot be loaded — fix the file named above")
@@ -41,6 +41,10 @@ def main(argv=None):
         return 1
     import vl_conformance as vcf           # imports visual_languages: only once every manifest is sound
     for n in names:
+        unready = vcf.painters_missing(n)
+        if unready:                        # nothing of it can be built yet: say what to write, check nothing else
+            probs += unready
+            continue
         missing = vcf.pages_missing(n)
         probs += missing + vcf.assets_missing(n)
         if missing:                        # the build checks need every page composed: say so, do not crash

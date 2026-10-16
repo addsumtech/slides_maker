@@ -98,6 +98,8 @@ Two time sinks compress well: ingesting material/assets, and the critic loop.
     **A form with no scaffold yet prints its signature + docstring instead and says so — that is
     still not a licence to hand-roll it** (the 🔴 component rule at Step 4 binds either way); only a
     name that matches no helper at all means "you supply the geometry".
+    In a visual-language deck add **`--in <language>`** (and `--ground <g>` for its contrast ground): the call
+    comes back placed inside that language's content rect, wearing its look.
   - **Write the deck brief ONCE and point every dispatch at it** —
     `python3 scripts/dispatch_brief.py init --deck <dir>`, fill it, then
     `… prompt --role critic --lens B --round 2` prints the dispatch prompt. Measured on a real
@@ -1679,6 +1681,8 @@ build to your **style brief** of it *per the chosen mimic mode* (`references/sty
 borrowed components + signature motif, but keep the topic-fit palette/type already locked in the
 Step-2 design plan — do NOT carry the example's colours.
 A few rules that matter (see `references/design-principles.md`):
+- **Adding a NEW visual language** (not using one): `references/visual-language-authoring.md` —
+  `scripts/new_visual_language.py <name>` starts it and `scripts/check_vl_contract.py <name>` names what is left.
 - **Visual languages (<!-- vl:list-image -->`editorial` · `soft` · `collage` · `storybook`<!-- /vl -->, and the <!-- vl:count-drawn -->eleven<!-- /vl --> drawn ones below):** when the picked direction is a
   visual language (`"vl"` in `directions.json`), READ `references/visual-languages.md` before the build
   script: `visual_languages.use(name, prs)` gives the palette, system fonts (both platforms by default,

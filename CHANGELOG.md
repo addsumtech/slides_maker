@@ -9,6 +9,35 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+**The visual languages become a system.** The fifteen languages share one checked contract, every general
+component wears the language it is placed in, each language was reworked where measurement found it weak (and the
+maintainer approved every change on before/after sheets), and a sixteenth language can be started with one command.
+
+- **One manifest per language.** Each language's data lives in `scripts/vl_specs/<name>.py`, checked by
+  `scripts/vl_contract.py` (`check_vl_contract.py`): grounds and their contrast, at least four designed series
+  colours per ground, the type scale and its floors, extras that mean one thing across languages, the words a
+  language derives, and how far each language's look is from every other's. The docs' lists and counts are
+  generated from the manifests (`vl_docs.py`).
+- **Components wear the language.** Charts, timelines, process steps, comparisons, KPI cards and the other general
+  components take their colours, faces, cards, rules, markers and numerals from the language and its ground, stay
+  readable on dark grounds, and can be placed inside the language's content area (`sigs.py --example <form> --in
+  <language>`). Ordinary decks draw exactly as before.
+- **The languages, reworked.** Quotes scale with their length and credits are set at 16pt or more (and never shrink
+  under 12pt); cover titles wrap before they shrink (at most 15%) and avoid a lone last word; dark grounds are
+  designed, not inverted; rules end at the words they serve; every type role is designed at 12pt or more (10pt for
+  furniture); `ink` moves to xuan paper and cinnabar so it no longer reads as `editorial`; and page fixes in each of the fifteen. The thirty bundled samples are re-rendered.
+- **Adding a language.** `new_visual_language.py <name>` drafts the manifest and its code
+  (`scripts/vl_langs/<name>.py`); `check_vl_contract.py` names every undecided field and every page still to
+  compose, and a half-made language never breaks the others. `visual_languages.py --describe <name>` prints a
+  language's card with an example that runs as printed. The steps and rules are in
+  `references/visual-language-authoring.md`.
+- **Fewer dead ends for agents that read only the docs.** The blind-read, taste-ledger, build-shape and
+  audience-brief summaries no longer print a pass beside their own section's fault; the GROUND REPEAT waiver its message names exists (`deliberate repeat: <why>`); a second deck no longer
+  renders over another deck's `render/`; `--gates` says which ground it recorded; `sigs.py` checks `--in` and
+  `--ground` when typed.
+- **Lint.** ORPHANED PUNCTUATION no longer flags a full stop attached to a Latin word (the estimate wraps per
+  character; a renderer breaks Latin only at spaces).
+
 ## [5.8.0] — 2026-10-10
 
 **The release about decks with no pictures.** Eleven drawn visual languages (`ink`, `poster`, `cutpaper`,

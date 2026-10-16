@@ -210,10 +210,31 @@ def _gate_step():
         pass
 
 
+def _render_owner(render_dir):
+    """The deck file name a render folder's cache says it holds, or None (no cache, or one from before the key)."""
+    try:
+        with open(os.path.join(render_dir, ".render-cache.json"), encoding="utf-8") as f:
+            v = json.load(f)
+        return v.get("deck") if isinstance(v, dict) and isinstance(v.get("deck"), str) else None
+    except Exception:
+        return None
+
+
 def _here_cmd(script):
     """`python3 <absolute path of a sibling script>` — a printed re-run line that works from any folder
     (`python3 scripts/check_register_pixels.py …` ran only from the skill folder; non-Claude audit, 2026-10-09)."""
     return "python3 " + shlex.quote(str(Path(__file__).resolve().parent / script))
+
+
+def gate_ok(line):
+    """Print a section's PASS summary only when nothing in that section failed. Faults inside a section are collected
+    and the section runs on, so a summary printed unconditionally sat beside its own fault and read as a pass — blind
+    read reported "59 answer(s)" (the letters of a placeholder) above "`answers` is missing" (docs-only run, 2026-10-16)."""
+    if _COLLECTED is not None and any(sec == _SECTION for sec, _m, _c in _COLLECTED):
+        return
+    if re.search(r"<[^<>]+>", line):     # a template placeholder is not a result
+        return
+    print(line)
 
 
 def die(msg, code=1):
@@ -2570,6 +2591,20 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
               "disagree about which deck this is.".format(path, _recorded, mode))
     delivery = _recorded or mode          # one of _KNOWN_DELIVERY, un-aliased
 
+    with _gate_section('renders'):
+        # the gates below read render/ beside the deck: renders of ANOTHER deck in the same folder are not this one's
+        _rdir = os.path.join(os.path.dirname(os.path.abspath(pptx)), "render")
+        _held = _render_owner(_rdir)
+        if _held and _held != os.path.basename(pptx):
+            if os.path.isfile(os.path.join(os.path.dirname(os.path.abspath(pptx)), _held)):
+                die("render/ holds {}'s pages, not {}'s — the checks below would judge another deck's pictures, and "
+                    "every gate reads the render/ beside its deck: give {} a folder of its own (move it, its build "
+                    "script and its .deck-gates.json there) and render it there.".format(
+                        _held, os.path.basename(pptx), os.path.basename(pptx)))
+            else:                         # the deck that rendered it is gone (renamed): a plain re-render replaces it
+                die("render/ holds {}'s pages — a deck no longer in this folder; re-render this one:\n  python3 {} {}"
+                    .format(_held, shlex.quote(str(Path(__file__).resolve())), shlex.quote(os.path.abspath(pptx))))
+
     with _gate_section('critic'):
         critic = _section(gates, "critic")
         if critic.get("waived"):
@@ -2833,6 +2868,8 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
         if design and not design.get("waived"):
             _n_slides = _deck_slide_count(pptx)
             _shape = str(design.get("build_shape", "")).strip()
+            if _shape.startswith("<") and _shape.endswith(">"):
+                _shape = ""                   # the template's own placeholder: nobody decided yet
             if _n_slides >= 7 and not _shape:
                 die("`design_plan.build_shape` is missing on a {}-slide deck. From ~6 content slides "
                     "up the build FANS OUT (one author per section, fresh context each — SKILL.md "
@@ -2844,7 +2881,7 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
                     "  Solo is a legitimate answer on every host; what is not legitimate is nobody "
                     "having decided.".format(_n_slides))
             elif _shape:
-                print("[gates] build shape: {}".format(_shape[:100]))
+                gate_ok("[gates] build shape: {}".format(_shape[:100]))
 
         _dial = str(design.get("boldness", "")).strip().lower()
         _move = str(design.get("signature_move", "")).strip().lower()
@@ -3167,7 +3204,7 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
             for _f in _tl.faults(_tl.design_of(gates), _entries):
                 with _gate_step():
                     die(_f)
-            print("[gates] taste ledger: {} active entry(ies), all accounted for".format(len(_live)))
+            gate_ok("[gates] taste ledger: {} active entry(ies), all accounted for".format(len(_live)))
 
     with _gate_section('content.arc'):
         # THE ARC COMPETITION, ported from the Codex record so both paths hold the same bar. The design
@@ -3344,7 +3381,7 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
             for _f in _ab.waiver_faults(_brief):
                 with _gate_step():
                     die("`content.audience_brief.waived` " + _f)
-            print("[gates] audience brief: WAIVED [{}] — {}".format(
+            gate_ok("[gates] audience brief: WAIVED [{}] — {}".format(
                 str(_brief.get("waived_category")).strip().lower(),
                 str(_brief.get("waived"))[:70]))
         elif _brief is None:
@@ -3353,7 +3390,7 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
             for _f in _ab.faults(_brief):
                 with _gate_step():
                     die("`content.audience_brief`: " + _f)
-            print("[gates] audience brief: {} decision(s) — {}".format(
+            gate_ok("[gates] audience brief: {} decision(s) — {}".format(
                 len(_brief.get("decisions") or []), str(_brief.get("who"))[:64]))
 
     with _gate_section('content.slides'):
@@ -3768,7 +3805,7 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
             _fs = _brd.get("findings") or []
             _hard = [f for f in _fs if isinstance(f, dict)
                      and str(f.get("severity") or "").lower() == "hard"]
-            print("[gates] blind read: {} answer(s), {} finding(s) answered ({} hard)"
+            gate_ok("[gates] blind read: {} answer(s), {} finding(s) answered ({} hard)"
                   .format(len(_brd.get("answers") or []), len(_fs), len(_hard)))
 
     with _gate_section('provenance'):
@@ -4493,6 +4530,16 @@ def main(argv):
         print("[gates] all hand-off gates pass — the deck may be handed over")
         return 0
 
+    # ONE deck's render/: a second deck in the same folder rendered over the first one's pages, silently, and the
+    # first deck's gates then read the other deck's pictures (docs-only run, 2026-10-16). An out_dir the caller
+    # names is theirs; the DEFAULT render/ belongs to the deck its cache names, while that deck is still there.
+    if len(argv) < 2:
+        _held = _render_owner(out)
+        if _held and _held != os.path.basename(pptx) and os.path.isfile(os.path.join(os.path.dirname(os.path.abspath(pptx)), _held)):
+            die("render_deck: {} holds {}'s pages — another deck in this folder. Every gate reads the render/ beside "
+                "its deck, so two decks cannot share a folder: give {} a folder of its own (move it, its build script "
+                "and its .deck-gates.json there) and render it there.".format(out, _held, os.path.basename(pptx)))
+
     # Checked here, before LibreOffice runs — same reason the --fast/--slides conflicts are:
     # failing after a successful render wastes the render and reads as a late surprise.
     if deliverables:
@@ -4823,7 +4870,7 @@ def main(argv):
         try:
             tmp_cache = cache_path + ".tmp"
             with open(tmp_cache, "w", encoding="utf-8") as f:
-                json.dump({"fingerprints": fps}, f)
+                json.dump({"fingerprints": fps, "deck": os.path.basename(pptx)}, f)
             os.replace(tmp_cache, cache_path)
         except OSError:
             try:

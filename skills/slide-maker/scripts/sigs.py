@@ -667,9 +667,13 @@ def placed_example(name, lang, ground=None):
             if geo:
                 hits.append((c, geo, params))
     lines = src.splitlines(keepends=True)
+
+    def _chars(line_no, byte_off):    # ast's col offsets count UTF-8 BYTES; the source is sliced by characters
+        return len(lines[line_no - 1].encode("utf-8")[:byte_off].decode("utf-8", "ignore"))
+
     def _span(node):
-        return (sum(len(l) for l in lines[:node.lineno - 1]) + node.col_offset,
-                sum(len(l) for l in lines[:node.end_lineno - 1]) + node.end_col_offset)
+        return (sum(len(l) for l in lines[:node.lineno - 1]) + _chars(node.lineno, node.col_offset),
+                sum(len(l) for l in lines[:node.end_lineno - 1]) + _chars(node.end_lineno, node.end_col_offset))
     edits = []
     if len(hits) > 1:
         raise ValueError("{}: {} drawing calls with literal geometry — no single placement; place it by hand in the "
@@ -873,6 +877,21 @@ def main(argv=None):
                     help="with --example: place each component in this visual language's content rect")
     ap.add_argument("--ground", metavar="GROUND", help="with --in: the language's ground (default: its first)")
     a = ap.parse_args(argv)
+    # checked when typed: --ground without --in was ignored, and an unknown language failed only when the printed
+    # script ran (the Phase 2 review's M8)
+    if a.ground and not a.lang:
+        print("sigs: --ground goes with --in <language> (it picks that language's ground)", file=sys.stderr)
+        return 2
+    if a.lang:
+        import vl_specs
+        langs = vl_specs.load()
+        if a.lang not in langs:
+            print("sigs: --in {!r}: no such visual language — one of {}".format(a.lang, ", ".join(langs)), file=sys.stderr)
+            return 2
+        if a.ground and a.ground not in langs[a.lang]["grounds"]:
+            print("sigs: --ground {!r}: {} has the grounds {}".format(a.ground, a.lang, ", ".join(langs[a.lang]["grounds"])),
+                  file=sys.stderr)
+            return 2
     reg = load()
     if not reg:
         print("sigs: no helpers found — is this running from the skill's scripts/ dir?", file=sys.stderr)

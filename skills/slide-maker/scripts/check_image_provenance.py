@@ -215,7 +215,9 @@ def check(deck_dir, *, pptx=None, gates=None, ledger=None, strict_credits=True):
                              "`provided — user (own material)` · `generated — <tool>` · `searched "
                              "(<origins>), none found → generated, flagged illustrative` · "
                              "`searched (<origins>), found but low-quality → …` · `searched "
-                             "(<origins>), none found → native form`.".format(row[:110])))
+                             "(<origins>), none found → native form`. A deck with no picture at all records "
+                             "the whole field as the string `n/a — <why>` (a string, not a row in a list)."
+                             .format(row[:110])))
             continue
         kinds.append((kind, m, row))
 
