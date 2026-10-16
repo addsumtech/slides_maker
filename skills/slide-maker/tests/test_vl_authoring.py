@@ -347,6 +347,30 @@ if _ex and (LD / "mosaic.py").is_file():
     check(r.returncode == 0 and "criticals 0" in r.stdout,
           "the guide's cover example builds a lint-clean cover ({})".format((r.stdout + r.stderr)[-200:]))
 
+# ── Task 11: what the two docs-only runs hit (EN broadsheet, ZH chalkboard — 2026-10-16) ──
+import audience_brief as _ab
+_brief = {"who": "社区里想借工具、但从没来过图书馆的居民", "decisions": [
+    {"decision": "怎么借", "needs": "登记要带什么证件，在哪里登记"},
+    {"decision": "什么时候去", "needs": "开放时间和每次能借多久"},
+    {"decision": "借哪一件工具最合适", "needs": "有哪些工具可借，适合做什么"}]}
+_f = _ab.faults(_brief)
+check(not any("is empty" in x for x in _f if "decisions[0]" in x or "decisions[1]" in x),
+      "a short Chinese decision is not called empty ({})".format([x for x in _f if "decisions[" in x][:1]))
+check(any("decisions[0]" in x and "short" in x for x in _f), "a too-short decision is called too short, with the bar")
+r = run([str(ROOT / "scripts" / "arc_divergence.py"), "--help"], script=True)
+check("path" in r.stdout.lower() and "json" in r.stdout.lower(), "arc_divergence --help says it takes a PATH to a JSON file")
+import check_image_provenance as _cip
+_msg = " ".join(m for _c, m in _cip.check_rows(["not a token"])) if hasattr(_cip, "check_rows") else ""
+_src = (ROOT / "scripts" / "check_image_provenance.py").read_text(encoding="utf-8")
+check("the whole field as the string `n/a" in _src, "the BAD TOKEN message names the n/a form a deck with no picture uses")
+_vld = (ROOT / "references" / "visual-languages.md").read_text(encoding="utf-8")
+for _needle, _why in (("interview.picks", "the auto checkpoint's picks table"), ("declare_delivery", "how to declare the delivery mode"),
+                      ("provenance.waived", "how to record a deck whose facts are all the user's"),
+                      ("build_<deck stem>.py", "the build script's name the STYLE APPLIED check looks for"),
+                      ("inline_ran", "the critic waiver's extra field on a host with no dispatch"),
+                      ('"waived_category": "conservative"', "the composition record of a conservative deck")):
+    check(_needle in _vld, "visual-languages.md says {} ({})".format(_why, _needle))
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

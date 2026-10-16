@@ -57,8 +57,11 @@ the shared runtime's `$DECK/.deck-gates.json`; on the Codex runtime the same val
    - Run `init` before `interview --set`. On a folder with no record, `interview --set` writes one holding only
      the interview, and `init` then refuses.
    - Give `length` in words (`"5 slides"`): a one-character answer such as `5` is refused at hand-off.
-3. **Write the build script** `$DECK/build_deck.py` with `vl.use` and one page function per slide, each in its own
-   `def slide_NN(prs, k):` (the Codex gate reads the calls inside each `def`). The `editorial` test deck:
+3. **Write the build script** `$DECK/build_repair-cafe.py` with `vl.use` and one page function per slide, each in its own
+   `def slide_NN(prs, k):` (the Codex gate reads the calls inside each `def`). Name it `build_<deck stem>.py` — the
+   STYLE APPLIED check looks for exactly that name beside the deck. A deck that is READ rather than presented says so
+   from the script: `dk.declare_delivery(HERE, "selfread")` (`presented` — the default — `textheavy`, `selfread`,
+   `surface`); the lint's budgets follow it. The `editorial` test deck:
    ```python
    import os
    import sys
@@ -114,7 +117,7 @@ the shared runtime's `$DECK/.deck-gates.json`; on the Codex runtime the same val
    The `tally` test deck was the same shape, with `formats.blank_deck("wide13")`, an ordinary agenda page (see
    **Ordinary pages** below), `points` with `tags=` and `data` with `total=`. More scaffolds:
    `python3 "$SKILL/scripts/sigs.py" --example vl_drawn vl_tally vl_broadsheet vl_journal vl_chalkboard vl_interface vl_wayfinding rs.ground`.
-4. **Build:** `python3 "$DECK/build_deck.py"`. With `ground="auto"` it prints the ground it chose and a
+4. **Build:** `python3 "$DECK/build_repair-cafe.py"`. With `ground="auto"` it prints the ground it chose and a
    `--gates` line with two `<…>` blanks. That line is a template: fill both blanks, because it will not run as printed.
 5. **Record the language.** Pass the ground the build printed (on the test machine `ink`, because its last decks
    sat on light paper; yours may print `light`), or `auto`, which reads the one `.pptx` in `$DECK`:
@@ -127,7 +130,12 @@ the shared runtime's `$DECK/.deck-gates.json`; on the Codex runtime the same val
 6. **Record the plan and the two checkpoints.** While `content.slides` has 4 or more rows (the placeholder rows
    `init` writes count) and `design_plan.checkpoint.mode` is not `approved` or `auto`, a full render refuses with
    `STEP 2 NOT DONE`. `--gate-check` reads both checkpoints (its "checkpoint ledger" line). Write one row per slide
-   with its real takeaway, and use `"mode": "auto"` when the user delegated the call:
+   with its real takeaway, and use `"mode": "auto"` when the user delegated the call. `auto` also asks for
+   `interview.picks`: one row per Step-0 axis (angle, audience, purpose, template, language, goal, density, length,
+   style, builds) saying who answered it (`stated`, `genre-default`, `inferred-from-request`, `from-material`,
+   `not-applicable` or `delegated`, with a `basis` for a delegated one, and an `alternative` for audience, purpose and
+   template); `angle` is never `delegated`. The rows `init` writes show the shape; `references/checkpoint-convention.md`
+   is the full rule:
    ```bash
    python3 "$SKILL/scripts/deck_gates.py" set "$DECK" content.slides '[{"slide": 1, "role": "cover", "takeaway": "A repair café fixes your broken things with you, once a month.", "evidence": ["the user brief"], "units": 2}, {"slide": 2, "role": "section", "takeaway": "The evening is hands-on: you fix it with a volunteer.", "evidence": ["the user brief"], "units": 1}, {"slide": 3, "role": "evidence", "takeaway": "Every bench has the tools; you bring only the broken thing.", "evidence": ["the user brief"], "units": 2}, {"slide": 4, "role": "quote", "takeaway": "Visitors leave knowing how their thing works.", "evidence": ["a visitor, quoted in the brief"], "units": 1}, {"slide": 5, "role": "close", "takeaway": "Bring one broken thing, and a neighbour.", "evidence": ["the user brief"], "units": 1}]'
    python3 "$SKILL/scripts/deck_gates.py" set "$DECK" content.checkpoint '{"mode": "approved", "record": "the slide table was shown in chat and the user said go"}'
@@ -157,17 +165,22 @@ count is the FIRST pass: a gate whose record is half-filled can list more faults
     that line. `design_plan.register_pixels_waived` waives the whole pixel check (see **Record and gates**).
 - **Everything else applies as on any deck.**
   - `critic`: `{"verdict": "consent" | "revise"}` from the review. A waiver is `{"waived": "<reason>",
-    "waived_category": "<category>"}`, and the gate prints the five categories, `user-waived` among them.
+    "waived_category": "<category>"}`, and the gate prints the five categories, `user-waived` among them;
+    `no-dispatch-on-host` also records `"inline_ran": true|false` (whether you ran the review inline).
   - `design_plan`: the rest of the Step 2 plan — `boldness`, `concept`, `signature_move`, `form_ledger`,
     `icon_family`, `build_shape`, `material_probe`, `signature_proof`, `composition`. `deck_gates.py check` lists
-    the missing ones.
+    the missing ones. A `conservative` deck records `composition` as
+    `{"waived": "<why>", "waived_category": "conservative"}`; a deck with no picture records `image_sources` as the
+    string `"n/a — <why>"` (not a list).
   - `taste` (when this machine's taste ledger has entries): one `design_plan.taste_applied` row per active entry.
     The command the gate prints lists them.
   - `content.arc`: the 2–3 candidate arcs themselves.
   - `content.audience_brief`: 3 or more decisions.
   - `render_selfcheck`: a verdict for every slide, written after looking at it.
   - `blind_read`: answers from a reader who was not shown the record (`blind_read.py`).
-  - `provenance`: a verdict on every claim.
+  - `provenance`: a verdict on every researched claim (`CONFIRMED` needs the primary-source URL). When every fact on
+    the pages is the user's own brief and nothing was researched, record `provenance.waived` with that reason — the
+    gate prints it as WAIVED, which is true; marking the user's facts `UNVERIFIABLE` is not.
 
   The rows marked `NOT CHECKED` (template profile, purpose, talk time, Q&A backup, citations, image series, and a
   direction with no `directions.json`) checked nothing and block nothing.

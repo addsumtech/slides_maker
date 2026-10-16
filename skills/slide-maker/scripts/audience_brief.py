@@ -51,6 +51,16 @@ _COMPREHENSION_OPENERS = (
     "be aware", "get a sense", "了解", "理解", "认识", "知道", "明白", "掌握", "感受")
 
 
+def _short(field, text, what) -> str:
+    """`field` is empty, or — when it has words — too short, with the bar: "怎么借" was reported EMPTY (docs-only
+    run in Chinese, 2026-10-16); it is 3 characters of a 6-character bar, and saying so is what lets it be fixed."""
+    w = _w(text)
+    if not w:
+        return "`{}` is empty — {}.".format(field, what)
+    return ("`{}` is too short ({} of {} — a CJK character counts 2, a letter 1): {}. Say it in a phrase, e.g. "
+            "\"how to borrow a tool\" / \"怎么借到工具\".".format(field, w, MIN_TEXT, what))
+
+
 def _w(text) -> int:
     """Width, not codepoints — the same bar in Chinese as in English.
 
@@ -110,12 +120,12 @@ def faults(brief) -> list[str]:
             out.append("`decisions[{}]` must be an object.".format(i))
             continue
         if _w(r.get("decision")) < MIN_TEXT:
-            out.append("`decisions[{}].decision` is empty — name what they must decide.".format(i))
+            out.append(_short("decisions[{}].decision".format(i), r.get("decision"), "name what they must decide"))
         elif _is_comprehension(r.get("decision")):
             comprehension += 1
         if _w(r.get("needs")) < MIN_TEXT:
-            out.append("`decisions[{}].needs` is empty. This is the half that aims the research: "
-                       "a decision with no stated need gathers nothing.".format(i))
+            out.append(_short("decisions[{}].needs".format(i), r.get("needs"),
+                              "this is the half that aims the research: a decision with no stated need gathers nothing"))
     if rows and comprehension * 2 >= len(rows):
         out.append("most `decisions` open with a comprehension verb (understand/know/了解/理解…) — "
                    "those are UNDERSTANDING GOALS, which is the subject brief wearing this "

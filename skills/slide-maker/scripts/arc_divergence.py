@@ -336,7 +336,8 @@ TEMPLATE = [
 
 def main():
     ap = argparse.ArgumentParser(description="mechanical narrative-arc candidate divergence check")
-    ap.add_argument("arcs", nargs="?", help="JSON list of 2-3 candidate arc objects")
+    ap.add_argument("arcs", nargs="?", help="PATH to a JSON file holding a list of 2-3 candidate arc objects "
+                                            "(--template prints one to fill); not the JSON itself")
     ap.add_argument("--json", action="store_true", dest="as_json")
     # A fillable skeleton, because a field list that lives only in this file's docstring is a field
     # list nobody reads: this repo has already printed a raw format string onto a slide because a
