@@ -273,6 +273,16 @@ def _ink_box(sh):
     return r[0] if r else None
 
 
+def _standin_slack(sh):
+    """One line of the text's largest size when any of its runs is set in a STAND-IN face, else 0: under substituted
+    metrics the layout's line model and lint's can disagree by a line (broadsheet's column held one more line on CI's
+    Linux faces than lint's ink box did, and its rule read 0.53in past the words — 2026-10-16)."""
+    runs = [r for p in sh.text_frame.paragraphs for r in p.runs if r.text.strip()]
+    if not any(r.font.name and dk._font_substituted(r.font.name) for r in runs):
+        return 0.0
+    return max((r.font.size.pt for r in runs if r.font.size), default=0.0) * dk._LINT_LINE_H / 72.0
+
+
 def rules_past_content(name, run_on=0.4):
     """A vertical rule (a column line, a margin line, a list spine) ends within `run_on` of the lowest text it serves —
     the text beside it, in its band. Built with SHORT copy (two points) and long, on the first ground: broadsheet's
@@ -288,7 +298,7 @@ def rules_past_content(name, run_on=0.4):
                 continue
             # the words a rule can serve: a grid letter or a folio (one or two glyphs) is furniture, not a column —
             # drafting's leader lines sit beside its border's zone letters (A, B, C)
-            texts = [b for b in (_ink_box(sh) for sh in s.shapes
+            texts = [b for b in (_ink_box(sh) + (_standin_slack(sh),) if _ink_box(sh) else None for sh in s.shapes
                                  if getattr(sh, "has_text_frame", False) and len(sh.text_frame.text.strip()) > 2) if b]
             for sh in s.shapes:
                 if getattr(sh, "has_text_frame", False) and sh.text_frame.text.strip():
@@ -302,8 +312,9 @@ def rules_past_content(name, run_on=0.4):
                 beside = [t for t in texts if t[1] < y + h and t[1] + t[3] > y and abs((t[0] + t[2] / 2) - x) < 3.2]
                 if not beside:
                     continue
-                low = max(t[1] + t[3] for t in beside)
-                if y + h - low > run_on:
+                lowest = max(beside, key=lambda t: t[1] + t[3])
+                low = lowest[1] + lowest[3]
+                if y + h - low > run_on + lowest[4]:
                     probs.append("{} {} {} ({} copy): a rule at x={:.2f} runs {:.2f}in past its text".format(
                         name, g, page, tag, x, y + h - low))
     return sorted(set(probs))

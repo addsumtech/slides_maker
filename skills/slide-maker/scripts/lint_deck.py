@@ -3957,6 +3957,13 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
             if _est_lines(t["paras"], _frame(t)["w"], t.get("font"), t.get("bold", False)) < 2:
                 continue
             ll = _last_line(t["paras"], _frame(t)["w"], t.get("font"), t.get("bold", False)).strip()
+            # the estimate wraps per CHARACTER. A renderer does so in CJK — a lone 。can open a line — but breaks
+            # Latin only at spaces, so a full stop attached to its word moves with it: there the mark is orphaned
+            # only after a space ("word …"). A Latin column whose widths happened to fill up to its final "." was
+            # flagged on cutpaper and broadsheet points (CI's Linux faces, and a Mac width too — 2026-10-16)
+            _src = t["full"].rstrip()
+            if ll and not _cjk(t) and not _src[:len(_src) - len(ll)].endswith((" ", " ")):
+                ll = ""
             if ll and all(c in _CLOSERS for c in ll):
                 finds.append(f"ORPHANED PUNCTUATION: the last line of '{t['txt']}' is just '{ll}' — "
                              f"widen the box / lower the size / reword so the mark stays attached (避头尾)")

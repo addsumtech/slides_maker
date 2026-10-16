@@ -11,6 +11,21 @@ ok, bad = [], []
 def check(cond, why):
     (ok if cond else bad).append(why)
 WORK = Path(tempfile.mkdtemp(prefix="vlopt_")); os.chdir(WORK)
+# a size or a rendered gap measured on the languages' REAL faces: the ubuntu CI runner has none of them (its stand-ins
+# are wider, and its CJK stand-in has no glyphs for the layout to measure), so those checks record a SKIP there — printed
+# at the end — instead of failing on the stand-in's widths (as test_native_languages_p4 does; 2026-10-16)
+import vl_specs as _vls
+_FACES = {f for sp in _vls.load().values() for v in (sp["look"]["fonts"].get("mac") or sp["look"]["fonts"]["both"]).values()
+          for f in ([v] if isinstance(v, str) else [])} | {"Songti SC", "Hiragino Sans GB"}
+FACES_HERE = sys.platform == "darwin" and not any(dk._font_substituted(f) for f in _FACES)
+skipped = []
+
+
+def check_mac(cond, why):
+    if FACES_HERE:
+        check(cond, why)
+    else:
+        skipped.append(why)
 
 
 def _deck(L, g=None):
@@ -88,7 +103,7 @@ for L in vl.LANGS:
         z = _size_of(sl, words)
         # poster's title size is the CEILING of a display stack sized to the page, not a target
         # ink sets a CJK title vertically in the approved two-column scroll (bounded by the column's height)
-        check(z >= need * base - 1e-6 or L == "poster" or (L == "ink" and tag == "cjk"), "{} cover title ({}) holds >= {:.0%} of {}pt ({:.1f}pt)".format(L, tag, need, base, z))
+        check_mac(z >= need * base - 1e-6 or L == "poster" or (L == "ink" and tag == "cjk"), "{} cover title ({}) holds >= {:.0%} of {}pt ({:.1f}pt)".format(L, tag, need, base, z))
 dk.set_theme(None)
 
 
@@ -308,7 +323,8 @@ for n in (3, 4):
     with contextlib.redirect_stdout(io.StringIO()):
         k.points(sl, title="Settings", items=LONG4[:n])
     heads = [_top_size(sh) for sh in _texts(sl) if any(sh.text_frame.text.strip().startswith(h[:18]) for h, _l in LONG4[:n])]
-    check(len(heads) == n and min(heads) >= 20 - 1e-6,
+    check(len(heads) == n, "interface points x{} with long copy: every head is drawn".format(n))
+    check_mac(len(heads) == n and min(heads) >= 20 - 1e-6,
           "interface points x{} with long copy: the heads hold >= 20pt in a roomier layout ({:.1f}pt)".format(n, min(heads or [0])))
 dk.set_theme(None)
 
@@ -568,7 +584,7 @@ for L_, g_ in (("ink", "light"), ("ink", "night")):
                 if imgs:                                      # the picture: the last ink of the column vs the rule's foot
                     ib = _ink(imgs[pg], (r_[0] + 0.06, 0.35, right_edge - 0.06, low + 0.02))
                     gap = r_[3] - ib[3] if ib else None
-                    check(gap is not None and INK_GAP[0] <= gap <= INK_GAP[1],
+                    check_mac(gap is not None and INK_GAP[0] <= gap <= INK_GAP[1],
                           "ink/{} {}: rule {} ends {} past the column's last ink (want {:.2f}-{:.2f}in)".format(
                               g_, tag, j, "{:.2f}in".format(gap) if gap is not None else "?", *INK_GAP))
         elif horiz:                                           # the horizontal rows: a rule hangs under ITS row's words
@@ -1022,7 +1038,9 @@ for _g in ("light", "salmon"):
         _hr = _lines_of(_sl, False)
         _span = max((r[2] - r[1] for r in _hr if r[0] > 1.2), default=0)
         _need = 180 if len(_num) > 6 else 200            # a nine-character figure is bounded by the measure itself (191pt)
-        check(_nsh is not None and _z >= _need - 1e-6 and not _solid and _span >= 0.88 * W13 - 0.01,
+        check(_nsh is not None and not _solid and _span >= 0.88 * W13 - 0.01, "broadsheet/{} data {!r}: no black cap ({} solid "
+              "ink boxes), and the block's rules run the measure ({:.1f}in)".format(_g, _num, len(_solid), _span))
+        check_mac(_nsh is not None and _z >= _need - 1e-6 and not _solid and _span >= 0.88 * W13 - 0.01,
               "broadsheet/{} data {!r}: the figure is >= {}pt ({:.0f}pt; was 150pt), no black cap ({} solid ink boxes), and the "
               "block's rules run the measure ({:.1f}in = {:.0%})".format(_g, _num, _need, _z, len(_solid), _span, _span / W13))
     _prs, _k, _sl = _page("broadsheet", _g, "data", number="3", label="conversations that changed our plan", note="Each one is archived.")
@@ -1167,9 +1185,17 @@ for _g in ("light", "night"):
                              ("a long tag on a square page", ["Short", _TL_LONG, "Mid tag"], (7.5, 7.5)),
                              ("a long tag on a portrait page", ["Short", _TL_LONG, "Mid tag"], (7.5, 13.333))):
         _prs = dk.blank_deck(*_cv)
-        with contextlib.redirect_stdout(io.StringIO()):
-            _k = vl.use("tally", _prs, ground=_g)
-            _k.points(_k.new_slide(), title="Where the quarter went", tags=_tags, items=_TL_PTS)
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                _k = vl.use("tally", _prs, ground=_g)
+                _k.points(_k.new_slide(), title="Where the quarter went", tags=_tags, items=_TL_PTS)
+        except vl.VLTextOverflow as _e:
+            # refusing loudly is the contract when a tag cannot fit even at its floor; on the real face the long tag
+            # fits, and only a wider STAND-IN (CI's Linux DejaVu) may refuse it — the suite stopped dead there before
+            _face = _k.face(vl.TYPE["tally"]["tag"][1])
+            check(dk._font_substituted(_face), "tally/{} points ({}): builds on its real face ({})".format(_g, _tag, str(_e)[:70]))
+            dk.set_theme(None)
+            continue
         _pl = _pills(_prs.slides[0], _k)
         _sizes = sorted({round(z_, 2) for _t, z_, _r in _pl})
         _rights = [r_ for _t, _z, r_ in _pl]
@@ -1684,6 +1710,20 @@ try:
     check(bool(vcf.rules_past_content("starlit")), "rules_past_content flags a rule running 3in past its words")
     vcf._built = lambda *a, **kw: _fixture(_col(0.1))
     check(not vcf.rules_past_content("starlit"), "rules_past_content passes a rule that ends with its words")
+
+    # under a STAND-IN face the two line models can disagree by a line (broadsheet on CI's Linux faces: the layout's
+    # box held a line lint's model did not) — one line of slack there, and a dangling rule is still caught
+    def _sub(over):
+        def make(s):
+            tb = dk.text(s, 1.0, 1.0, 3.0, 2.6, [[("A line of a column", 16, dk.RGBColor(255, 255, 255), False, False,
+                                                   "Zz Probe Nowhere 9")] for _ in range(8)])
+            ink = vcf._ink_box(tb)
+            dk.box(s, 4.2, 1.0, 0.02, ink[1] + ink[3] + over - 1.0, fill="FFFFFF")
+        return make
+    vcf._built = lambda *a, **kw: _fixture(_sub(0.55))
+    check(not vcf.rules_past_content("starlit"), "rules_past_content allows a stand-in face one line of slack")
+    vcf._built = lambda *a, **kw: _fixture(_sub(3.0))
+    check(bool(vcf.rules_past_content("starlit")), "rules_past_content still flags a dangling rule under a stand-in face")
 finally:
     vcf._built = _real
 dk.set_theme(None)
@@ -1719,8 +1759,48 @@ for L in vl.LANGS:
     check(z >= 12 - 0.05, "{}: a 60-word quote's attribution stays >= 12pt ({:.1f}pt)".format(L, z))
 dk.set_theme(None)
 
+# (8) lint's ORPHANED PUNCTUATION is the 避头尾 rule: a renderer breaks CJK between any two glyphs, so a lone 。can
+# open a line; it breaks Latin only at spaces, so a full stop attached to its word cannot. The char-level estimate put a
+# lone "." on its own line for Latin columns whenever the widths happened to fill up to it (cutpaper and broadsheet
+# points on CI's Linux faces; a fixer side-stepped it with "very long copy" before — 2026-10-16)
+import lint_deck as _ld
+
+
+def _orphan_width(text, size, want, face):
+    """A box width at which lint's char-level estimate leaves exactly `want` on the last line, or None."""
+    for i in range(4000, 300, -1):
+        w = i / 1000.0
+        if (_ld._est_lines([[(text, size)]], w, face, False) >= 2
+                and _ld._last_line([[(text, size)]], w, face, False).strip() == want):
+            return w
+    return None
+
+
+def _orphan_findings(text, size, w, face):
+    prs = dk.blank_deck(13.333, 7.5)
+    sl = prs.slides.add_slide(prs.slide_layouts[6])
+    dk.text(sl, 1.0, 1.0, w, 3.0, [[(text, size, dk.RGBColor(0x22, 0x22, 0x22), False, False, face)]])
+    p = WORK / "orphan.pptx"; prs.save(str(p)); buf = io.StringIO()
+    with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(io.StringIO()):
+        _ld.lint(str(p), static_ok=True)
+    return [l for l in buf.getvalue().splitlines() if "ORPHANED PUNCTUATION" in l]
+
+
+for _txt, _mark, _want, _face in (("Anything that switches on, unzips or wobbles is welcome.", ".", False, "Arial"),
+                                  ("我们一起把坏掉的东西修好，然后带着它们回家。", "。", True, "PingFang SC")):
+    _w = _orphan_width(_txt, 16, _mark, _face)
+    if _w is None:
+        check(False, "lint fixture: a width that orphans {!r} exists for {!r}".format(_mark, _txt[:16]))
+        continue
+    _f = _orphan_findings(_txt, 16, _w, _face)
+    check(bool(_f) == _want, "lint {} a lone {!r} on {}'s last line ({})".format(
+        "flags" if _want else "does not flag", _mark, "CJK" if _want else "a Latin column", _f[:1]))
+dk.set_theme(None)
+
 for line in ok:
     print("  ok   " + line)
+for line in skipped:
+    print("  SKIP " + line + " (the languages' real faces are not installed here)")
 for line in bad:
     print("  FAIL " + line)
 print("\n{} passed, {} failed".format(len(ok), len(bad)))

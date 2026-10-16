@@ -18,6 +18,7 @@ def good_spec():
     pal_d = {"ground": "1B2A41", "ink": "F2F4F8", "mute": "B9C3D4", "panel": "22344F",
              "accents": ["E8454C", "3D9BE0"], "text_accents": ["F2B705"]}
     t = {r: (20, "body", False, "ink", False, 11) for r in vc.CORE_TYPE}
+    t["attribution"] = (20, "body", False, "ink", False, 12)     # a credit never shrinks under the smallest tier
     return {
         "name": "fixture", "order": 99, "kind": "drawn",
         "display": {"en": "Fixture", "zh": "测试"}, "rationale": "drawn, no pictures: a test fixture",

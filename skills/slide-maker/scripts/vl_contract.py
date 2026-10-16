@@ -18,7 +18,10 @@ _HEX = re.compile(r"^[0-9A-Fa-f]{6}$")
 SERIES_MIN = 4          # spec §4.1 ruling: four designed colours per ground (Phase 2b, approved on its sheet 2026-10-15)
 SERIES_DE = 20.0        # two series colours closer than this (CIE76) read as one
 TYPE_FLOOR_CORE, TYPE_FLOOR_PRIVATE = 12, 10      # the smallest tier on a 13.333in page (spec §6.2)
-SMALL_TIER = ("kicker", "attribution", "caption")   # the core roles set at the smallest tier: their FLOOR too
+# the core role whose FLOOR must hold the smallest tier too: a long quote shrank its credit to 10.3pt. Not kicker or
+# caption — the lowest floor of all a language's roles is the floor its components keep (THEME["floor"]), and
+# raising theirs moved drafting's and chalkboard's components and refused cutpaper's 1:1 long copy (2026-10-16)
+SMALL_TIER = ("attribution",)
 # two languages whose grounds are this close (ΔE ground + ΔE first accent, +10 for a different display face) are one
 # look in two names (spec §6.2 distinctiveness; editorial/light and ink/light measured 4.2 — Phase 3, 2026-10-15)
 DISTINCT_MIN = 15.0
