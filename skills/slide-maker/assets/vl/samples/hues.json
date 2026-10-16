@@ -34,11 +34,10 @@
   "#EE7A62"
  ],
  "ink": [
-  "#B0362A",
-  "#A3322A"
+  "#BE2E1A"
  ],
  "ink-night": [
-  "#B23A2C"
+  "#E8452A"
  ],
  "interface": [
   "#2563EB"
@@ -64,7 +63,8 @@
   "#8E4430"
  ],
  "soft-dusk": [
-  "#E8A88F"
+  "#E8A88F",
+  "#F2B49B"
  ],
  "starlit": [
   "#D9B36C"
