@@ -1797,6 +1797,27 @@ for _txt, _mark, _want, _face in (("Anything that switches on, unzips or wobbles
         "flags" if _want else "does not flag", _mark, "CJK" if _want else "a Latin column", _f[:1]))
 dk.set_theme(None)
 
+# (9) broadsheet's cover plans its headline in what the standfirst and the Inside list leave it: a headline that WRAPS
+# before it shrinks (Task 2) kept a mid-length title tall enough on a 10in page to leave the Inside list a 0.72in column
+# (refused), and CI's wider faces refused the sigs.py scaffold's own cover (smoke, GitHub run 38890026577, 2026-10-16)
+for _t in ("Every street needs a night for fixing things",
+           "Every street needs a night for fixing the things we were told to throw away",
+           "Every street in the city needs one evening a month for fixing the things we were told to throw away"):
+    for _cv in ((10, 5.625), (13.333, 7.5), (7.5, 10)):
+        _prs = dk.blank_deck(*_cv)
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                _k = vl.use("broadsheet", _prs)
+                _k.cover(_k.new_slide(), title=_t, subtitle="How a repair evening works, and why it spreads.",
+                         masthead="The Repair Weekly", edition="No. 12",
+                         inside=["The idea", "The evening", "The numbers", "Next month"])
+            _found = _hard(_prs, "bscov")
+        except vl.VLTextOverflow as _e:
+            _found = ["refused: " + str(_e)[:90]]
+        check(not _found, "broadsheet cover ({} chars, {:g}x{:g}): the headline leaves the Inside list its room ({})".format(
+            len(_t), _cv[0], _cv[1], _found[:1]))
+        dk.set_theme(None)
+
 for line in ok:
     print("  ok   " + line)
 for line in skipped:

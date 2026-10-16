@@ -664,12 +664,30 @@ def _bs_cover(k, slide, f, image):
     lines = inside_lines(f.get("inside"))
     head = ([("kicker", caps(kick))] if kick and not as_name else []) + ([("title", title)] if title else [])
     hh = ((0.50 if o == "land" else 0.36) if alt() == 0 else (0.62 if o == "land" else 0.48)) * H
+    side = bool(lines) and o == "land"
+    sub, foot = text_of(f, "subtitle"), H - 0.6
+
+    def need(items, w_):                  # what fields take at their own sizes in a column w_ wide, flow's gaps included
+        def h_(f_, t_):                   # one paragraph a line, as flow measures the caller's own line breaks
+            z, wm = vl.TYPE[k.name][f_][0] * s, w_ * vl.HEADROOM
+            ls = [l_ for l_ in t_.split("\n") if l_.strip()]
+            return (sum(vl._field_height(k, f_, l_, z, wm) - 0.06 for l_ in ls) + 0.06) if len(ls) > 1 \
+                else vl._field_height(k, f_, t_, z, wm)
+        return (sum(h_(f_, t_) for f_, t_ in items) + vl.GAP * s * max(0, len(items) - 1)) if items else 0.0
+    ins = [("inside_h", caps(label("inside", *lines, k=k, f=f))), ("inside", "\n".join(lines))] if lines else []
+    sub_i = [("subtitle", sub)] if sub else []
+    below = (max(need(sub_i, 0.62 * W), need(ins, 0.24 * W)) if side
+             else need(sub_i, 0.90 * W) + (0.3 * s + need(ins, 0.90 * W) if ins else 0.0))
+    # the headline is planned in what the standfirst and the Inside list leave it: a headline that wraps before it
+    # shrinks kept a mid-length title tall enough on a 10in page to leave the list a 0.72in column (refused), and CI's
+    # wider faces refused sigs.py's own scaffold (GitHub run 38890026577, 2026-10-16)
+    if below:
+        hh = max(0.1, min(hh, foot - top - 0.32 * s - below))
     r, d = flow(k, slide, "cover", (0.05 * W, top, 0.90 * W, hh), head, anchor="top")
     rects, draws = dict(r), [d]
     yr = max((v[1] + v[3] for v in r.values()), default=top) + 0.16 * s
     art = [lambda: na.seg(slide, 0.05 * W, yr, 0.95 * W, yr, k.P["ink"], w=0.75)]
-    side = bool(lines) and o == "land"
-    sub, sb, foot = text_of(f, "subtitle"), yr, H - 0.6
+    sb = yr
     if sub:
         r, d = flow(k, slide, "cover", (0.05 * W, yr + 0.16 * s, (0.62 if side else 0.90) * W, foot - yr - 0.16 * s),
                     [("subtitle", sub)], anchor="top")
