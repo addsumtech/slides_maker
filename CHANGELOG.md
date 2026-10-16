@@ -9,6 +9,8 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+## [5.9.0] — 2026-10-16
+
 **The visual languages become a system.** The fifteen languages share one checked contract, every general
 component wears the language it is placed in, each language was reworked where measurement found it weak (and the
 maintainer approved every change on before/after sheets), and a sixteenth language can be started with one command.
