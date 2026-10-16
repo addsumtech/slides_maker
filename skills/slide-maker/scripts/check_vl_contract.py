@@ -31,7 +31,9 @@ def main(argv=None):
     own = {n: vc.validate(specs[n]) for n in names}
     every_own = {p for s in specs.values() for p in vc.validate(s)}
     cross = [p for p in vc.validate_all(specs) if p not in every_own]
-    probs = [p for n in names for p in own[n]] + [p for p in cross if any("'{}'".format(n) in p for n in names)]
+    # a cross problem names a language quoted ('ink') or as lang/ground (distinctiveness: "editorial/light and …")
+    probs = [p for n in names for p in own[n]] + [p for p in cross if any(
+        "'{}'".format(n) in p or any(w.split("/")[0] == n for w in p.split() if "/" in w) for n in names)]
     if probs:                              # the manifest itself is wrong: building pages from it would only crash
         for p in probs:
             print("  FAIL " + p)

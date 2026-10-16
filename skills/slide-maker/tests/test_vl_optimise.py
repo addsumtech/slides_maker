@@ -1562,6 +1562,163 @@ for g in vl.VARIANTS["storybook"]:
                       g, n, "" if pic else " (no picture)", len(dots), len(set(fills)), sorted(set(fills)), worst))
 dk.set_theme(None)
 
+# ══ Task 9: the whole-branch review's findings, each pinned (2026-10-16) ══
+import native_art as na, vl_contract as vc, vl_conformance as vcf, vl_specs, copy as _copy
+_KO_Q = "우리는 함께 고칠 수 있습니다 그리고 이웃을 데려오세요 모든 것은 작은 시작에서 비롯됩니다"
+_KO_T = "왜 모든 거리에는 수리의 밤이 필요한가"
+
+
+def _criticals(prs):
+    return sorted({f[2] for f in dk.lint_layout(prs, verbose=False) if f[1] == "CRITICAL"})
+
+
+# (1) a Korean line the glyphs set on one line but lint reads as two is not imposed by the native stack either: the
+# imposed paragraphs ran off the canvas / into the headline (clean before Phase 3)
+for L, cv, page, kw in (("tally", (13.333, 7.5), "quote", dict(quote=_KO_Q, attribution="Repair cafe volunteer")),
+                        ("interface", (10, 7.5), "quote", dict(quote=_KO_Q, attribution="Repair cafe volunteer")),
+                        ("wayfinding", (10, 7.5), "quote", dict(quote=_KO_Q, attribution="Repair cafe volunteer")),
+                        ("chalkboard", (13.333, 7.5), "cover", dict(title=_KO_T, kicker="Repair café"))):
+    prs = dk.blank_deck(*cv)
+    with contextlib.redirect_stdout(io.StringIO()):
+        k = vl.use(L, prs)
+        getattr(k, page)(k.new_slide(), **kw)
+    found = _criticals(prs)
+    check(not found, "{} {} {:.0f}x{}: a Korean {} is lint-clean ({})".format(L, page, cv[0], cv[1], page, found))
+    dk.set_theme(None)
+
+# (2) native_art.chip is a documented primitive: an ordinary deck's pill keeps its 1.9em height at every size; only a
+# language's own card-sized pill asks for the roomier padding
+prs = dk.blank_deck(13.333, 7.5)
+s = prs.slides.add_slide(prs.slide_layouts[6])
+for z in (12, 14, 20):
+    h = na.chip(s, 0.8, 0.6, "Q3 REVIEW", size=z, fill="C6F432", ink="0E0E10", face="Arial")[3]
+    check(abs(h - z / 72.0 * 1.9) < 1e-9, "na.chip at {}pt keeps its 1.9em height ({:.3f}in)".format(z, h))
+h = na.chip(s, 0.8, 2.0, "Q3 REVIEW", size=20, fill="C6F432", ink="0E0E10", face="Arial", roomy=True)[3]
+check(abs(h - 20 / 72.0 * 2.1) < 1e-9, "a roomy chip at 20pt gets half an em above and below ({:.3f}in)".format(h))
+
+# (3) ink's column rule runs as long as the LONGER of the two columns it separates (a long middle column's words ran
+# 2.5in past the rule on its left)
+_LONG = ("敞开大门欢迎每一位邻居今晚到来", "不用预约也不收费每个人都可以带着坏掉的东西来带着修好的东西走")
+for tag, items in (("short,LONG,short", [("共享", "一抽屉"), _LONG, ("就近", "十分钟")]),
+                   ("LONG,short,short", [_LONG, ("共享", "一抽屉"), ("就近", "十分钟")]),
+                   ("short,short,LONG", [("共享", "一抽屉"), ("就近", "十分钟"), _LONG])):
+    prs, k = _deck("ink")
+    sl = k.new_slide()
+    with contextlib.redirect_stdout(io.StringIO()):
+        k.points(sl, kicker="年度回顾", title="为什么每条街都需要修理之夜", items=items)
+    # the vertical columns' own boxes (vcol sizes each to its ink; _ink_box reads vertical text as horizontal and
+    # ends it 0.7in low), on the page — the off-canvas copy of the title is for the outline, not the reader
+    texts = [(x_, y_, w_, h_) for x_, y_, w_, h_ in ((v / 914400.0 for v in (sh.left, sh.top, sh.width, sh.height))
+             for sh in sl.shapes if getattr(sh, "has_text_frame", False) and len(sh.text_frame.text.strip()) > 1)
+             if y_ >= 0]
+    rules = [(x_, y_ + h_) for x_, y_, w_, h_ in ((v / 914400.0 for v in (sh.left, sh.top, sh.width, sh.height))
+             for sh in sl.shapes if not (getattr(sh, "has_text_frame", False) and sh.text_frame.text.strip()))
+             if w_ <= 0.06 and h_ >= 1.0]
+    short = []
+    for x_, bot in rules:
+        near = [t for t in texts if abs(t[0] + t[2] / 2.0 - x_) < 1.4]          # the columns on either side of it
+        low = max((t[1] + t[3] for t in near), default=0)
+        if bot < low - 0.05:
+            short.append("x={:.2f} ends {:.2f}in above its words".format(x_, low - bot))
+    check(rules and not short, "ink points ({}): every column rule reaches the longer of its two columns ({})".format(
+        tag, short or ("none short" if rules else "no rules found")))
+dk.set_theme(None)
+
+# (4) the author-facing CLI shows a language's distinctiveness problem (the message names "lang/ground", unquoted)
+import check_vl_contract as cvc
+_dm = vc.DISTINCT_MIN
+vc.DISTINCT_MIN = 1000.0
+buf = io.StringIO()
+with contextlib.redirect_stdout(buf):
+    cvc.main(["editorial"])
+vc.DISTINCT_MIN = _dm
+check("look alike" in buf.getvalue(), "check_vl_contract editorial prints editorial's look-alike pairs")
+
+# (5) every Phase 3 check BITES on a fixture made to fail it, and passes the twin made to pass it
+_S = vl_specs.load()
+_twin = _copy.deepcopy(_S["ink"]); _twin["name"] = "inkcopy"
+for g_ in _twin["grounds"]:
+    _twin["grounds"][g_]["palette"]["ground"] = _S["editorial"]["grounds"]["light"]["palette"]["ground"]
+    _twin["grounds"][g_]["palette"]["accents"] = list(_S["editorial"]["grounds"]["light"]["palette"]["accents"])
+_twin["look"]["fonts"] = _copy.deepcopy(_S["editorial"]["look"]["fonts"])
+_dp = vc.distinct_pairs({"editorial": _S["editorial"], "inkcopy": _twin})
+check(any("editorial/light" in p and "inkcopy" in p for p in _dp), "distinct_pairs flags a language set in another's "
+      "ground, accent and faces ({})".format(_dp[:1]))
+check(vc.distinct_pairs(_S) == [], "distinct_pairs passes the fifteen shipped languages, starlit and tally-night "
+      "among them ({})".format(vc.distinct_pairs(_S)[:1]))
+_small = _copy.deepcopy(_S["journal"])
+_small["type"]["kicker"] = (10,) + tuple(_small["type"]["kicker"][1:])
+check(any("kicker" in p and "smallest tier" in p for p in vc.validate(_small)), "the type floor flags a 10pt kicker")
+_low = _copy.deepcopy(_S["journal"])
+_low["type"]["attribution"] = tuple(_low["type"]["attribution"][:5]) + (9,)
+check(any("attribution" in p and "shrink" in p for p in vc.validate(_low)),
+      "the type floor flags an attribution allowed to SHRINK to 9pt")
+check(not vc.validate(_S["journal"]), "journal's own manifest passes ({})".format(vc.validate(_S["journal"])[:1]))
+
+
+def _fixture(make):
+    prs = dk.blank_deck(13.333, 7.5)
+    s = prs.slides.add_slide(prs.slide_layouts[6])
+    dk.box(s, 0, 0, 13.333, 7.5, fill="101830")
+    make(s)
+    return [("points", s)], prs
+
+
+_real = vcf._built
+try:
+    from PIL import Image as _Im
+    _white = str(WORK / "white.jpg"); _Im.new("RGB", (800, 600), (255, 255, 255)).save(_white)
+    vcf._built = lambda *a, **kw: _fixture(lambda s: dk.box(s, 1.0, 1.0, 6.0, 4.0, fill="FFFFFF"))
+    check(bool(vcf.bright_slabs("starlit")), "bright_slabs flags a drawn white slab on a dark ground")
+    vcf._built = lambda *a, **kw: _fixture(lambda s: dk.picture(s, _white, 1.0, 1.0, 6.0, 4.0))
+    check(not vcf.bright_slabs("starlit"), "bright_slabs leaves a user's white photograph alone")
+
+    def _col(over):
+        def make(s):                         # a column of eight lines, and a rule beside it ending `over` past its ink
+            tb = dk.text(s, 1.0, 1.0, 3.0, 2.6, [[("A line of a column", 16, dk.RGBColor(255, 255, 255), False, False)]
+                                                 for _ in range(8)])
+            ink = vcf._ink_box(tb)
+            dk.box(s, 4.2, 1.0, 0.02, ink[1] + ink[3] + over - 1.0, fill="FFFFFF")
+        return make
+    vcf._built = lambda *a, **kw: _fixture(_col(3.0))
+    check(bool(vcf.rules_past_content("starlit")), "rules_past_content flags a rule running 3in past its words")
+    vcf._built = lambda *a, **kw: _fixture(_col(0.1))
+    check(not vcf.rules_past_content("starlit"), "rules_past_content passes a rule that ends with its words")
+finally:
+    vcf._built = _real
+dk.set_theme(None)
+
+# (6) a very long quote on soft keeps its tucked mark clear of the first line (90 and 120 words were clean before)
+_W = ("Every repair we made that evening was a small argument for keeping things, and the room kept making it until "
+      "the last lamp came on and the tables were bare again.").split()
+for n in (90, 120):
+    prs, k = _deck("soft")
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            k.quote(k.new_slide(), quote=" ".join((_W * 5)[:n]) + ".", attribution="Mara Jensen, volunteer lead")
+        found = _criticals(prs)
+    except vl.VLTextOverflow:
+        found = []                                          # refused loudly is an allowed answer
+    check(not found, "soft: a {}-word quote is lint-clean or refused ({})".format(n, found))
+dk.set_theme(None)
+
+# (7) the smallest tier holds when a page SHRINKS: a 60-word quote's attribution stays >= 12pt (it fell to 10.3pt)
+for L in vl.LANGS:
+    prs, k = _deck(L)
+    sl = k.new_slide()
+    pic = str(vl.ASSETS / "photo/hall-repair.jpg") if "quote" in vl.REGISTRY[L]["image_pages"] else None
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            k.quote(sl, quote=" ".join((_W * 5)[:60]) + ".", attribution="Mara Jensen, volunteer lead",
+                    **({"image": pic} if pic else {}))
+    except vl.VLTextOverflow:
+        continue
+    z = min((r.font.size.pt for sh in sl.shapes if getattr(sh, "has_text_frame", False)
+             and "jensen" in sh.text_frame.text.lower() for p in sh.text_frame.paragraphs for r in p.runs
+             if r.font.size and r.text.strip()), default=0)
+    check(z >= 12 - 0.05, "{}: a 60-word quote's attribution stays >= 12pt ({:.1f}pt)".format(L, z))
+dk.set_theme(None)
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

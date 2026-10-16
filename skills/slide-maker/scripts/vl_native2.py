@@ -130,8 +130,9 @@ def flow(k, slide, page, col, items, **kw):
                         and not (dk._has_cjk(sh.text_frame.text) and dk._font_substituted(face_))):
                     z = sh.text_frame.paragraphs[0].runs[0].font.size
                     if z is not None:
-                        ls = vl._break_lines(k, f_, sh.text_frame.text, z.pt, sh.width / 914400.0 - dw)   # as measured
-                        if len(ls) > 1:
+                        mw = sh.width / 914400.0 - dw                                           # as measured
+                        ls = vl._break_lines(k, f_, sh.text_frame.text, z.pt, mw)
+                        if len(ls) > 1 and vl._lines_hold(k, f_, sh.text_frame.text, ls, z.pt, mw):
                             _split_paragraph(sh.text_frame, ls)
     go.sizes = getattr(draw, "sizes", {})
     go.exact = getattr(draw, "exact", {})
@@ -1210,7 +1211,7 @@ def tl_chip(k, slide, x, y, text, max_w, *, field="tag", fill=None, size=None, r
     role = vl.TYPE[k.name][field][1]
     if right is not None:
         x = right - na.chip_width(text, sz, k.face(role))
-    return na.chip(slide, x, y, text, size=sz, fill=fill, ink=ink, face=k.face(role), ea_face=k.ea_face(role, text))
+    return na.chip(slide, x, y, text, size=sz, fill=fill, ink=ink, face=k.face(role), ea_face=k.ea_face(role, text), roomy=True)
 
 
 def _tl_kicker(k, slide, f, x, y, max_w):

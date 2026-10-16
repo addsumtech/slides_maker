@@ -700,11 +700,17 @@ def _set_lines(k, field, text, size, w):
     # every imposed line must sit on ONE line by the measure lint reads too — else the renderer wraps it again and
     # the field grows a line its box never had (a grown Korean quote at 42.7pt, Phase 3, 2026-10-15); the field then
     # wraps naturally, inside the height measured by the larger of the two models
-    role, bold = TYPE[k.name][field][1], _weight(k, field, text)
+    return ls if _lines_hold(k, field, text, ls, size, w) else None
+
+
+def _lines_hold(k, field, text, ls, size, w):
+    """True when every line in `ls` sits on ONE line by the measure lint reads too, at width `w` — the condition for
+    imposing them as paragraphs (shared by _set_lines and vl_native2's stack: a Korean quote imposed there without it
+    ran off the canvas, final review 2026-10-16)."""
+    role = TYPE[k.name][field][1] if field in TYPE[k.name] else "body"
+    bold = _weight(k, field, text) if field in TYPE[k.name] else False
     face = k.ea_face(role, text) if dk._has_cjk(text) else k.face(role)
-    if any(dk._measure_lines([(l_, bold)], size, max(0.2, w - _INSET), font=face) > 1 for l_ in ls):
-        return None
-    return ls
+    return not any(dk._measure_lines([(l_, bold)], size, max(0.2, w - _INSET), font=face) > 1 for l_ in ls)
 
 
 def _widowed(k, field, text, size, w):
@@ -1068,7 +1074,13 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=Non
                 rr = [dk.mark(x, hl) for x in k.runs(t, sz, dk.RGBColor.from_string(_hex(ink)), bold, role, italic)]
             else:
                 rr = k.runs(t, sz, color, bold, role, italic)
-            dk.text(slide, fx, fy, fw, fh, [rr], align=al_f)
+            tb = dk.text(slide, fx, fy, fw, fh, [rr], align=al_f)
+            if tucks and f == "mark":
+                # the quote is TUCKED under the mark's box on purpose (its glyph's measured ink ends MARK_PAD above the
+                # first line); lint reads the mark's whole line box as ink, and a long quote's smaller mark crossed its
+                # 22% share (90 words, final review 2026-10-16) though the rendered glyphs never touch
+                dk.overlap_intent(tb, "the quote mark is tucked over the quote's first line box; its glyph ink ends "
+                                      "above the line (_mark_tuck)")
     draw.sizes = {f: sz for f, _t, sz, _r in plan}      # what each field was planned at (P4 sizes its art by it)
     draw.headroom = dw                                   # how much wider each box is drawn than its words were measured
     draw.exact = {f: sizes[f] for f, _t in items}       # …before the 0.1pt rounding: a size decided at 32.58pt (one

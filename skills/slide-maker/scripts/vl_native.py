@@ -670,6 +670,7 @@ def _ink_points(k, slide, f, image):
             right = r0[0] - 0.55 * s
         n = len(pts)
         step = min(2.35 * s, (right - 0.10 * W) / n)
+        feet = []
         for i, (head, line) in enumerate(pts):
             cr_ = right - i * step
             nr, nd = flow(k, slide, "points", (cr_ - step * 0.75, 0.10 * H, step * 0.6, 0.09 * H), [("mark", _NUM_ZH[i])],
@@ -681,8 +682,12 @@ def _ink_points(k, slide, f, image):
                 rl, zl, dl = vcol(k, slide, rh[0] - 0.18 * s, 0.25 * H, 0.50 * H, line, "item_line")
                 draws.append(dl); clear.append(rl)
                 foot = max(foot, _vink_bottom(rl, zl))
-            if i < n - 1:                              # the rule at this column's left edge stops at ITS words (it ran to
-                draws.append(_ink_hairline(k, slide, cr_ - step * 0.96, 0.12 * H, foot + tail, 0.3))   # a fixed 0.76H)
+            feet.append(foot)
+        # the rule between two columns stops at the words of the LONGER one (it ran to a fixed 0.76H; then to its right
+        # column's words only, and a long column beside a short one ran 2.5in past it — final review 2026-10-16)
+        for i in range(n - 1):
+            draws.append(_ink_hairline(k, slide, right - i * step - step * 0.96, 0.12 * H,
+                                       max(feet[i], feet[i + 1]) + tail, 0.3))
         if title:
             draws.append(_ink_hairline(k, slide, rects["title"][0] - 0.28 * s, 0.12 * H, _vink_bottom(r0, z0) + tail, 0.45))
         seal_at = ((rects["title"][0] + rects["title"][2] / 2.0) if title else right,

@@ -18,6 +18,7 @@ _HEX = re.compile(r"^[0-9A-Fa-f]{6}$")
 SERIES_MIN = 4          # spec §4.1 ruling: four designed colours per ground (Phase 2b, approved on its sheet 2026-10-15)
 SERIES_DE = 20.0        # two series colours closer than this (CIE76) read as one
 TYPE_FLOOR_CORE, TYPE_FLOOR_PRIVATE = 12, 10      # the smallest tier on a 13.333in page (spec §6.2)
+SMALL_TIER = ("kicker", "attribution", "caption")   # the core roles set at the smallest tier: their FLOOR too
 # two languages whose grounds are this close (ΔE ground + ΔE first accent, +10 for a different display face) are one
 # look in two names (spec §6.2 distinctiveness; editorial/light and ink/light measured 4.2 — Phase 3, 2026-10-15)
 DISTINCT_MIN = 15.0
@@ -189,6 +190,11 @@ def validate(spec):
             if v[0] < need:
                 probs.append("{}: type role {!r} is {}pt — the smallest tier is {}pt for {} roles".format(
                     name, r, v[0], need, "core" if r in CORE_TYPE else "private"))
+            # …and holds when a page SHRINKS: the small roles' floors too (a 60-word quote's attribution fell to
+            # 10.3pt in drafting — final review, 2026-10-16)
+            elif r in SMALL_TIER and v[5] < TYPE_FLOOR_CORE:
+                probs.append("{}: type role {!r} may shrink to {}pt — its floor (the last number) must be >= {}pt, "
+                             "the smallest tier".format(name, r, v[5], TYPE_FLOOR_CORE))
     for p in spec["image_pages"]:
         if p not in PAGES:
             probs.append("{}: image page {!r} is not one of {}".format(name, p, PAGES))
