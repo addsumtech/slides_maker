@@ -39,6 +39,9 @@ maintainer approved every change on before/after sheets), and a sixteenth langua
   `--ground` when typed.
 - **Lint.** ORPHANED PUNCTUATION no longer flags a full stop attached to a Latin word (the estimate wraps per
   character; a renderer breaks Latin only at spaces).
+- **Pillow 13.** Every font is now measured with Pillow's BASIC layout engine. Under Pillow 13.0.0 on Linux,
+  measuring a word could raise `raqm_layout() failed` and stop a build; widths now match macOS, where every
+  measurement was tuned.
 
 ## [5.8.0] — 2026-10-10
 
