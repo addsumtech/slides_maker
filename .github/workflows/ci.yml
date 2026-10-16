@@ -13,7 +13,8 @@ on:
 jobs:
   smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 30      # the job ran 12.4 min before the native languages' tests; apt alone has taken 13
+    timeout-minutes: 50      # the job ran 12.4 min before the native languages' tests; apt alone has taken 13;
+                             # the visual-language suites grew in 2026-10 and a 30-min run was cut off mid-suite
     defaults:
       run:
         working-directory: skills/slide-maker
