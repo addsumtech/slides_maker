@@ -53,7 +53,7 @@ def _pages(spec, T, pic):
 
 def painters_missing(name):
     """[why] when the language's ground or card painter is not written (or its module does not import), else []."""
-    return [vl._UNREADY[name]] if name in vl._UNREADY else []
+    return [] if vl.ready(name) else [vl._UNREADY[name]]
 
 
 def pages_missing(name, registry=None):

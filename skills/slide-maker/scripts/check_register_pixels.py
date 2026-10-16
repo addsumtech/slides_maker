@@ -203,8 +203,12 @@ def _repeat_waiver(design):
     """The reason after "deliberate repeat:" in design_plan.palette, or None — the waiver the GROUND REPEAT and LAST
     DECK'S SCHEME messages name. It waives those two history checks only (a ground the user named is not a house style
     creeping in); the declared colours must still reach the pixels. An empty reason is no waiver."""
-    m = re.search(r"deliberate repeat:\s*(\S.{3,})", str((design or {}).get("palette") or ""))
-    return m.group(1).strip() if m else None
+    m = re.search(r"deliberate repeat:\s*(.*)", str((design or {}).get("palette") or ""))
+    why = m.group(1).strip() if m else ""
+    # the message's own template ("<why>") and filler ("....") are not reasons: a placeholder must not pass the gate
+    if re.fullmatch(r"<[^<>]*>", why) or len(re.findall(r"[^\W\d_]", why)) < 3:
+        return None
+    return why
 
 
 def look_history(taste_path):

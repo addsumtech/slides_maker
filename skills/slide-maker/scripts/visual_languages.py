@@ -214,7 +214,7 @@ def use(name, prs, *, fonts="both", plan=None, image_dir=None, platform=None, gr
                          "(python3 scripts/check_vl_contract.py {} names each one)".format(name, _vl_specs.DRAFTS[name], name))
     if name not in LANGS:
         raise KeyError("visual_languages.use(): unknown language {!r} — one of {}".format(name, sorted(LANGS)))
-    if name in _UNREADY:
+    if not ready(name):
         raise VLNotReady("visual_languages.use(): " + _UNREADY[name])
     if fonts not in ("both", "mac"):
         raise ValueError("visual_languages.use(): fonts must be 'both' (macOS + Windows faces) or 'mac', got {!r}".format(fonts))
@@ -403,15 +403,22 @@ class VLNotReady(KeyError):
     """A language whose manifest is registered but whose code is not written yet (or does not import)."""
 
 
+def _has_module(name):
+    """Does scripts/vl_langs/<name>.py (or $VL_LANGS_DIR's) exist? Read without importing it."""
+    import os
+    return (Path(os.environ.get("VL_LANGS_DIR") or HERE / "vl_langs") / (name + ".py")).is_file()
+
+
 def painter(name, role):
-    """The language's `role` painter ("ground" or "card"): a function of this module named in its manifest, else the
-    same name in scripts/vl_langs/<name>.py. None when neither defines it."""
+    """The language's `role` painter ("ground" or "card"), by the name in its manifest: from its own
+    scripts/vl_langs/<name>.py when it has one (a language named "for" would otherwise get this module's _card_for),
+    else a function of this module. None when neither defines it."""
     fn = REGISTRY[name]["painters"][role]
-    if fn in globals():
-        return globals()[fn]
-    import vl_langs
-    mod = vl_langs.load().get(name)
-    return getattr(mod, fn, None) if mod is not None else None
+    if _has_module(name):
+        import vl_langs
+        mod = vl_langs.load().get(name)
+        return getattr(mod, fn, None) if mod is not None else None
+    return globals().get(fn)
 
 
 _UNREADY = {}      # name -> why the language cannot be used yet (use() refuses it; check_vl_contract names it)
@@ -422,16 +429,26 @@ def _register(n):
     _g, _c = painter(n, "ground"), painter(n, "card")
     if _g is None or _c is None:
         import vl_langs as _vll
-        _UNREADY[n] = ("{}: {} — write {} and {} in scripts/vl_langs/{}.py (references/visual-language-authoring.md; "
-                       "new_visual_language.py writes a first draft)".format(
-                           n, _vll.ERRORS[n] if n in _vll.ERRORS else "its code is not written yet",
-                           REGISTRY[n]["painters"]["ground"], REGISTRY[n]["painters"]["card"], n))
-        return
+        if n in _vll.ERRORS:
+            _UNREADY[n] = "{}: scripts/vl_langs/{}.py does not import — {}".format(n, n, _vll.ERRORS[n])
+        else:
+            _UNREADY[n] = ("{}: its code is not written yet — write {} and {} in scripts/vl_langs/{}.py "
+                           "(references/visual-language-authoring.md; new_visual_language.py writes a first draft)"
+                           .format(n, REGISTRY[n]["painters"]["ground"], REGISTRY[n]["painters"]["card"], n))
+        return False
+    _UNREADY.pop(n, None)
     rs.register(n, ground=_g, card=_c, forbids=LANGS[n]["forbids"], source=__file__)
+    return True
+
+
+def ready(name):
+    """Is the language usable now? A language found unready while its module was half-imported (vl_native imported
+    BEFORE this module: the module's own import of vl_native failed) is tried once more — by then it loads."""
+    return name not in _UNREADY or _register(name)
 
 
 for _n in LANGS:
-    if all(REGISTRY[_n]["painters"][r] in globals() for r in ("ground", "card")):
+    if not _has_module(_n) and all(REGISTRY[_n]["painters"][r] in globals() for r in ("ground", "card")):
         _register(_n)
     else:                  # its module imports vl_native, which reads this module's later names (HEADROOM, …):
         _PENDING.append(_n)    # loading it here, half-way down, failed as a circular import (2026-10-16)
@@ -2216,7 +2233,7 @@ def describe(name):
                                   if "en" in off else "decks with {}".format(off.get("pictures"))))
     fo = sp["look"]["fonts"]
     out.append("fonts: both {}  mac {}".format(fo.get("both"), fo.get("mac")))
-    if name in _UNREADY:
+    if not ready(name):
         out.append("not ready: " + _UNREADY[name])
         return "\n".join(out) + "\n"
     out.append("example (runs as printed from any folder; saves {}-example.pptx there):".format(name))

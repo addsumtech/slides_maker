@@ -297,8 +297,8 @@ check(r.returncode == 0 and _png_hash(), "deck a renders into render/ ({})".form
 _h = _png_hash()
 r = run([RENDER, str(_b)], script=True)
 _o = r.stdout + r.stderr
-check(r.returncode == 1 and "a.pptx" in _o and "render-b" in _o and _png_hash() == _h,
-      "a second deck into the same render/ is refused, naming the first and the command to use; a's pages kept ({})".format(_o[-200:]))
+check(r.returncode == 1 and "a.pptx" in _o and "folder of its own" in _o and _png_hash() == _h,
+      "a second deck into the same render/ is refused, naming the first and the way out; a's pages kept ({})".format(_o[-200:]))
 r = run([RENDER, str(_a)], script=True)
 check(r.returncode == 0, "the same deck renders again into its own render/")
 r = run([RENDER, str(_b), str(RD / "render-b")], script=True)
@@ -370,6 +370,46 @@ for _needle, _why in (("interview.picks", "the auto checkpoint's picks table"), 
                       ("inline_ran", "the critic waiver's extra field on a host with no dispatch"),
                       ('"waived_category": "conservative"', "the composition record of a conservative deck")):
     check(_needle in _vld, "visual-languages.md says {} ({})".format(_why, _needle))
+
+# ── Task 12: the whole-branch review's findings, each pinned ──
+# (I1) the render refusal's remedy must be one the gates accept: they read render/ beside the deck, so the way out is
+# a folder of its own — "render into render-b" left deck b failing its gates for ever
+RD2 = Path(tempfile.mkdtemp(prefix="twodecks2_", dir=WORK))
+_a2, _b2 = _fixture_deck(RD2, 2, "a.pptx"), _fixture_deck(RD2, 2, "b.pptx")
+run([RENDER, str(_a2)], script=True)
+r = run([RENDER, str(_b2)], script=True)
+_o = r.stdout + r.stderr
+check(r.returncode == 1 and "folder of its own" in _o and "render-b" not in _o,
+      "the refusal sends the second deck to a folder of its own, not to render-b ({})".format(_o[-160:]))
+run([str(ROOT / "scripts" / "deck_gates.py"), "init", str(RD2), "--slides", "2"], script=True)
+r = run([RENDER, str(_b2), "--gate-check"], script=True)
+_o = r.stdout + r.stderr
+check("render/ holds a.pptx's pages" in _o and "folder of its own" in _o and "render-b" not in _o,
+      "the gate's remedy is the same one ({})".format(_o[-160:]))
+(RD2 / "a.pptx").rename(RD2 / "c.pptx")             # the deck that owned render/ was renamed: a plain re-render fixes it
+r = run([RENDER, str(RD2 / "c.pptx"), "--gate-check"], script=True)
+_o = r.stdout + r.stderr
+check("render/ holds a.pptx's pages" in _o and "re-render" in _o and "folder of its own" not in _o,
+      "renders of a deck no longer here are fixed by a plain re-render, and the gate says so ({})".format(_o[-160:]))
+# (I2) the waiver's own template is not a waiver
+for _txt in ("#FFF / #2438F0 — deliberate repeat: <why>", "#FFF — deliberate repeat: ....", "#FFF — deliberate repeat:  "):
+    check(crp._repeat_waiver({"palette": _txt}) is None, "{!r} is not a waiver".format(_txt[-28:]))
+check(crp._repeat_waiver({"palette": "#FFF — deliberate repeat: 用户点名要这个底色"}), "a Chinese reason is a waiver")
+# (I3) importing vl_native (or vl_native2) BEFORE visual_languages leaves a ready language ready
+for _first in ("vl_native", "vl_native2"):
+    r = run("import {}; import deckkit as dk, visual_languages as vl; prs = dk.blank_deck(13.333, 7.5); "
+            "k = vl.use('mosaic', prs); k.cover(k.new_slide(), title='Fix it together'); print('ok')".format(_first), ENVG)
+    check(r.returncode == 0 and "ok" in r.stdout, "importing {} first leaves mosaic usable ({})".format(_first, r.stderr[-160:]))
+# a module that raises is named as raising, not as unwritten
+_bad = Path(tempfile.mkdtemp(prefix="vllangs_bad_", dir=WORK))
+(_bad / "mosaic.py").write_text("raise RuntimeError('half written')\n", encoding="utf-8")
+r = run("import deckkit as dk, visual_languages as vl; prs = dk.blank_deck(13.333, 7.5); vl.use('mosaic', prs)",
+        {"VL_SPECS_DIR": str(D16), "VL_LANGS_DIR": str(_bad)})
+check("half written" in r.stderr and "not written yet" not in r.stderr,
+      "a module that raises is reported with its error ({})".format(r.stderr[-160:]))
+# (minor → fixed) a name whose painters collide with this module's own functions (_card_for, _card_geom …)
+r = run([GEN, "for", "--specs-dir", str(SD), "--langs-dir", str(LD)], script=True)
+check(r.returncode == 2 and "collide" in r.stderr, "the generator refuses a name whose painters collide ({})".format(r.stderr[-120:]))
 
 for line in ok:
     print("  ok   " + line)

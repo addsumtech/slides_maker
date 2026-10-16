@@ -43,7 +43,7 @@ the shared runtime's `$DECK/.deck-gates.json`; on the Codex runtime the same val
    `wide13` (`dk.blank_deck(13.333, 7.5)` is the same canvas), and so do `sigs.py --example` scaffolds — a
    scaffold placed with `--in <language>` fits any canvas; one printed without `--in` keeps literal 13.333in
    coordinates. `"portrait"` is the 3:4 `red` canvas. **One deck per folder:** `render/` beside a deck is that
-   deck's; `render_deck.py` refuses to render a second deck over it and prints the command for its own folder.
+   deck's; `render_deck.py` refuses to render a second deck over it — give each deck a folder of its own.
    A4 and the posters are printed boards.
 2. **Interview, then make the record.** Ask the questions of SKILL.md Step 0 (on Codex, `references/codex-runtime.md`
    step 1). Then:

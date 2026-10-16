@@ -2596,12 +2596,14 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
         _rdir = os.path.join(os.path.dirname(os.path.abspath(pptx)), "render")
         _held = _render_owner(_rdir)
         if _held and _held != os.path.basename(pptx):
-            die("render/ holds {}'s pages, not {}'s — the checks below would judge another deck's pictures. Render "
-                "this deck into its own folder (python3 {} {} {}) or give each deck its own folder.".format(
-                    _held, os.path.basename(pptx), shlex.quote(str(Path(__file__).resolve())),
-                    shlex.quote(os.path.abspath(pptx)),
-                    shlex.quote(os.path.join(os.path.dirname(os.path.abspath(pptx)),
-                                             "render-" + os.path.splitext(os.path.basename(pptx))[0]))))
+            if os.path.isfile(os.path.join(os.path.dirname(os.path.abspath(pptx)), _held)):
+                die("render/ holds {}'s pages, not {}'s — the checks below would judge another deck's pictures, and "
+                    "every gate reads the render/ beside its deck: give {} a folder of its own (move it, its build "
+                    "script and its .deck-gates.json there) and render it there.".format(
+                        _held, os.path.basename(pptx), os.path.basename(pptx)))
+            else:                         # the deck that rendered it is gone (renamed): a plain re-render replaces it
+                die("render/ holds {}'s pages — a deck no longer in this folder; re-render this one:\n  python3 {} {}"
+                    .format(_held, shlex.quote(str(Path(__file__).resolve())), shlex.quote(os.path.abspath(pptx))))
 
     with _gate_section('critic'):
         critic = _section(gates, "critic")
@@ -4534,11 +4536,9 @@ def main(argv):
     if len(argv) < 2:
         _held = _render_owner(out)
         if _held and _held != os.path.basename(pptx) and os.path.isfile(os.path.join(os.path.dirname(os.path.abspath(pptx)), _held)):
-            _own = os.path.join(os.path.dirname(os.path.abspath(pptx)),
-                                "render-" + os.path.splitext(os.path.basename(pptx))[0])
-            die("render_deck: {} holds {}'s pages — another deck in this folder. Render this one into its own "
-                "folder:\n  python3 {} {} {}".format(out, _held, shlex.quote(str(Path(__file__).resolve())),
-                                                    shlex.quote(os.path.abspath(pptx)), shlex.quote(_own)))
+            die("render_deck: {} holds {}'s pages — another deck in this folder. Every gate reads the render/ beside "
+                "its deck, so two decks cannot share a folder: give {} a folder of its own (move it, its build script "
+                "and its .deck-gates.json there) and render it there.".format(out, _held, os.path.basename(pptx)))
 
     # Checked here, before LibreOffice runs — same reason the --fast/--slides conflicts are:
     # failing after a successful render wastes the render and reads as a late surprise.

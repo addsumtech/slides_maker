@@ -22,17 +22,17 @@ maintainer approved every change on before/after sheets), and a sixteenth langua
   components take their colours, faces, cards, rules, markers and numerals from the language and its ground, stay
   readable on dark grounds, and can be placed inside the language's content area (`sigs.py --example <form> --in
   <language>`). Ordinary decks draw exactly as before.
-- **The languages, reworked.** Quotes scale with their length and credits are 16pt; cover titles wrap before they
-  shrink (at most 15%) and avoid a lone last word; dark grounds are designed, not inverted; rules end at the words
-  they serve; the smallest text is 12pt (10pt for furniture); `ink` moves to xuan paper and cinnabar so it no longer
-  reads as `editorial`; and page fixes in each of the fifteen. The thirty bundled samples are re-rendered.
+- **The languages, reworked.** Quotes scale with their length and credits are set at 16pt or more (and never shrink
+  under 12pt); cover titles wrap before they shrink (at most 15%) and avoid a lone last word; dark grounds are
+  designed, not inverted; rules end at the words they serve; every type role is designed at 12pt or more (10pt for
+  furniture); `ink` moves to xuan paper and cinnabar so it no longer reads as `editorial`; and page fixes in each of the fifteen. The thirty bundled samples are re-rendered.
 - **Adding a language.** `new_visual_language.py <name>` drafts the manifest and its code
   (`scripts/vl_langs/<name>.py`); `check_vl_contract.py` names every undecided field and every page still to
   compose, and a half-made language never breaks the others. `visual_languages.py --describe <name>` prints a
   language's card with an example that runs as printed. The steps and rules are in
   `references/visual-language-authoring.md`.
-- **Fewer dead ends for agents that read only the docs.** A gate no longer prints a pass summary beside its own
-  fault; the GROUND REPEAT waiver its message names exists (`deliberate repeat: <why>`); a second deck no longer
+- **Fewer dead ends for agents that read only the docs.** The blind-read, taste-ledger, build-shape and
+  audience-brief summaries no longer print a pass beside their own section's fault; the GROUND REPEAT waiver its message names exists (`deliberate repeat: <why>`); a second deck no longer
   renders over another deck's `render/`; `--gates` says which ground it recorded; `sigs.py` checks `--in` and
   `--ground` when typed.
 - **Lint.** ORPHANED PUNCTUATION no longer flags a full stop attached to a Latin word (the estimate wraps per

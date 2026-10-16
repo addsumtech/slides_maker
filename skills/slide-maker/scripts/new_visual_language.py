@@ -112,6 +112,10 @@ def main(argv=None):
     specs = vl_specs.load(sd, drafts=True)
     if a.name in specs or (sd / (a.name + ".py")).exists() or (ld / (a.name + ".py")).exists():
         return refuse("{!r} already exists — pick another name".format(a.name))
+    vl_src = (HERE / "visual_languages.py").read_text(encoding="utf-8")
+    if re.search(r"\b_(ground|card)_{}\b".format(re.escape(a.name)), vl_src):
+        return refuse("{!r}: its painters (_ground_{n} / _card_{n}) would collide with names visual_languages.py "
+                      "already defines — pick another name".format(a.name, n=a.name))
     if a.like not in specs:
         return refuse("--like {!r}: no such language — one of {}".format(a.like, ", ".join(specs)))
     if specs[a.like]["kind"] != "drawn":
