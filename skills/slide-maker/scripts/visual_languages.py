@@ -2239,8 +2239,8 @@ def main(argv=None):
     ap.add_argument("--deck", metavar="DECK_DIR", help="with --gates (required): the deck folder")
     ap.add_argument("--for", dest="topic", metavar="TOPIC", default=None, help="with --gates: what the deck is for")
     ap.add_argument("--fonts", choices=("both", "mac"), default="both", help="with --gates: the fonts= you passed to use()")
-    ap.add_argument("--ground", default="light", help="with --gates: the ground the deck was built on (light, the "
-                    "language's contrast ground, or auto)")
+    ap.add_argument("--ground", default=None, help="with --gates: the ground the deck was built on (light — the default "
+                    "— the language's contrast ground, or auto)")
     a = ap.parse_args(argv)
     if a.describe:
         if a.describe not in REGISTRY and a.describe not in _vl_specs.DRAFTS:
@@ -2258,7 +2258,16 @@ def main(argv=None):
             print("visual_languages: --deck {!r} is a placeholder — pass the folder the deck is saved in".format(a.deck),
                   file=sys.stderr)
             return 2
-        return _print_gates(a.gates, a.deck, a.topic, a.fonts, a.ground)
+        if a.gates in REGISTRY:
+            other = [g for g in REGISTRY[a.gates]["grounds"] if g != "light"]
+            if a.ground is None:              # it was recorded silently (docs-only run, 2026-10-16)
+                print("# ground: light — the default; for the contrast ground pass --ground {}".format(
+                    " / --ground ".join(other)))
+            elif a.ground in REGISTRY[a.gates]["grounds"]:
+                print("# ground: {g} — if the USER named it and GROUND REPEAT holds the deck, append ' — deliberate "
+                      "repeat: the user named the {g} ground' to design_plan.palette (the waiver that check names)".format(
+                          g=a.ground))
+        return _print_gates(a.gates, a.deck, a.topic, a.fonts, a.ground or "light")
     if a.refresh_bundled and not a.sample:
         print("visual_languages: --refresh-bundled goes with --sample <OUT_DIR>", file=sys.stderr)
         return 2

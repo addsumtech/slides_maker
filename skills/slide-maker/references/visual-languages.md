@@ -2,6 +2,9 @@
 
 **When to read this:** the picked direction is a visual language (its entry in `directions.json` carries
 `"vl": "<name>"`), or the user asks for one of these looks by name. Read it before writing the build script.
+One language at a glance — its grounds, pages, extras, derived words and an example that runs as printed:
+`python3 "$SKILL/scripts/visual_languages.py" --describe <name>`. To ADD a language, read
+`references/visual-language-authoring.md` instead.
 
 **The skill folder, named once.** `SKILL` is the folder that holds `SKILL.md` (the path this skill was loaded
 from, e.g. `~/.claude/skills/slide-maker`). Every command in this file is written `python3 "$SKILL/scripts/…"` and
@@ -37,7 +40,10 @@ the shared runtime's `$DECK/.deck-gates.json`; on the Codex runtime the same val
    | `poster_a1_land` | `a1-landscape` `a1l` `poster-a1-landscape` | 33.11 × 23.39 |
 
    `"16:9"` resolves to `wide`, the **10 in** canvas. The examples in this file use 13.333 × 7.5, which is
-   `wide13` (`dk.blank_deck(13.333, 7.5)` is the same canvas). `"portrait"` is the 3:4 `red` canvas.
+   `wide13` (`dk.blank_deck(13.333, 7.5)` is the same canvas), and so do `sigs.py --example` scaffolds — a
+   scaffold placed with `--in <language>` fits any canvas; one printed without `--in` keeps literal 13.333in
+   coordinates. `"portrait"` is the 3:4 `red` canvas. **One deck per folder:** `render/` beside a deck is that
+   deck's; `render_deck.py` refuses to render a second deck over it and prints the command for its own folder.
    A4 and the posters are printed boards.
 2. **Interview, then make the record.** Ask the questions of SKILL.md Step 0 (on Codex, `references/codex-runtime.md`
    step 1). Then:
@@ -137,14 +143,18 @@ the shared runtime's `$DECK/.deck-gates.json`; on the Codex runtime the same val
 
 **Which hand-off gates a user-named visual-language look still owes.** After steps 1–8, `--gate-check` on the
 test decks passed `visual language` ("5 of 5 slide(s) built with it"), `register pixels`, `a11y`, `fonts`,
-`surface`, `density` and `interview`. It listed the rest, 8 gates on each deck, each with the record it wants:
+`surface`, `density` and `interview`. It listed the rest, 8 gates on each deck, each with the record it wants (the
+count is the FIRST pass: a gate whose record is half-filled can list more faults on the next run —
+`deck_gates.py check "$DECK"` lists every unfilled field at once):
 
 - **What the look itself changes.**
   - There was no competition, so record `design_plan.direction_gate` as `"n/a - user supplied the look"`. On Codex,
     also record `design.direction` as `{"branch": "user-named", …}` (step 2u there).
   - `visual_language`, `vl_fonts`, `vl_ground`, `style_pick`, `look_source` and `palette` come from step 5.
-  - A GROUND REPEAT is answered by rebuilding on the other ground, or by a written
-    `design_plan.register_pixels_waived` (see **Record and gates**).
+  - A GROUND REPEAT is answered by rebuilding on the other ground — or, when the USER named this ground, by
+    appending ` — deliberate repeat: the user named the <g> ground` to `design_plan.palette` (it waives the two
+    look-history checks only; the declared colours must still be on the pages). `--gates … --ground <g>` prints
+    that line. `design_plan.register_pixels_waived` waives the whole pixel check (see **Record and gates**).
 - **Everything else applies as on any deck.**
   - `critic`: `{"verdict": "consent" | "revise"}` from the review. A waiver is `{"waived": "<reason>",
     "waived_category": "<category>"}`, and the gate prints the five categories, `user-waived` among them.

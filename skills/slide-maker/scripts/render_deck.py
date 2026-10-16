@@ -210,6 +210,16 @@ def _gate_step():
         pass
 
 
+def _render_owner(render_dir):
+    """The deck file name a render folder's cache says it holds, or None (no cache, or one from before the key)."""
+    try:
+        with open(os.path.join(render_dir, ".render-cache.json"), encoding="utf-8") as f:
+            v = json.load(f)
+        return v.get("deck") if isinstance(v, dict) and isinstance(v.get("deck"), str) else None
+    except Exception:
+        return None
+
+
 def _here_cmd(script):
     """`python3 <absolute path of a sibling script>` — a printed re-run line that works from any folder
     (`python3 scripts/check_register_pixels.py …` ran only from the skill folder; non-Claude audit, 2026-10-09)."""
@@ -2581,6 +2591,18 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
               "disagree about which deck this is.".format(path, _recorded, mode))
     delivery = _recorded or mode          # one of _KNOWN_DELIVERY, un-aliased
 
+    with _gate_section('renders'):
+        # the gates below read render/ beside the deck: renders of ANOTHER deck in the same folder are not this one's
+        _rdir = os.path.join(os.path.dirname(os.path.abspath(pptx)), "render")
+        _held = _render_owner(_rdir)
+        if _held and _held != os.path.basename(pptx):
+            die("render/ holds {}'s pages, not {}'s — the checks below would judge another deck's pictures. Render "
+                "this deck into its own folder (python3 {} {} {}) or give each deck its own folder.".format(
+                    _held, os.path.basename(pptx), shlex.quote(str(Path(__file__).resolve())),
+                    shlex.quote(os.path.abspath(pptx)),
+                    shlex.quote(os.path.join(os.path.dirname(os.path.abspath(pptx)),
+                                             "render-" + os.path.splitext(os.path.basename(pptx))[0]))))
+
     with _gate_section('critic'):
         critic = _section(gates, "critic")
         if critic.get("waived"):
@@ -4506,6 +4528,18 @@ def main(argv):
         print("[gates] all hand-off gates pass — the deck may be handed over")
         return 0
 
+    # ONE deck's render/: a second deck in the same folder rendered over the first one's pages, silently, and the
+    # first deck's gates then read the other deck's pictures (docs-only run, 2026-10-16). An out_dir the caller
+    # names is theirs; the DEFAULT render/ belongs to the deck its cache names, while that deck is still there.
+    if len(argv) < 2:
+        _held = _render_owner(out)
+        if _held and _held != os.path.basename(pptx) and os.path.isfile(os.path.join(os.path.dirname(os.path.abspath(pptx)), _held)):
+            _own = os.path.join(os.path.dirname(os.path.abspath(pptx)),
+                                "render-" + os.path.splitext(os.path.basename(pptx))[0])
+            die("render_deck: {} holds {}'s pages — another deck in this folder. Render this one into its own "
+                "folder:\n  python3 {} {} {}".format(out, _held, shlex.quote(str(Path(__file__).resolve())),
+                                                    shlex.quote(os.path.abspath(pptx)), shlex.quote(_own)))
+
     # Checked here, before LibreOffice runs — same reason the --fast/--slides conflicts are:
     # failing after a successful render wastes the render and reads as a late surprise.
     if deliverables:
@@ -4836,7 +4870,7 @@ def main(argv):
         try:
             tmp_cache = cache_path + ".tmp"
             with open(tmp_cache, "w", encoding="utf-8") as f:
-                json.dump({"fingerprints": fps}, f)
+                json.dump({"fingerprints": fps, "deck": os.path.basename(pptx)}, f)
             os.replace(tmp_cache, cache_path)
         except OSError:
             try:

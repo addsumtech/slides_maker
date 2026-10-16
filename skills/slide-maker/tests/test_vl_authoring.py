@@ -314,6 +314,39 @@ r = run([RENDER, str(_a), "--gate-check"], script=True)
 check("render/ holds b.pptx's pages" in r.stdout + r.stderr,
       "the gate check names renders made from another deck ({})".format((r.stdout + r.stderr)[-160:]))
 
+# ── Task 9: the docs an agent reads say what the scripts really do ──
+_gd = Path(tempfile.mkdtemp(prefix="gatesd_", dir=WORK))
+r = run([VLPY, "--gates", "tally", "--deck", str(_gd)], script=True)
+check(r.returncode == 0 and "light — the default" in r.stdout and "--ground night" in r.stdout,
+      "--gates without --ground says it recorded the default ground, and how to pick the other ({})".format(r.stdout[:160]))
+r = run([VLPY, "--gates", "tally", "--deck", str(_gd), "--ground", "night"], script=True)
+check(r.returncode == 0 and "deliberate repeat: the user named the night ground" in r.stdout,
+      "--gates with a named ground prints the repeat waiver to use when the user chose it")
+
+GUIDE = (ROOT / "references" / "visual-language-authoring.md").read_text(encoding="utf-8") \
+    if (ROOT / "references" / "visual-language-authoring.md").is_file() else ""
+check(bool(GUIDE), "references/visual-language-authoring.md exists")
+for _scr in sorted(set(re.findall(r"scripts/([a-z_0-9]+\.py)", GUIDE))):
+    check((ROOT / "scripts" / _scr).is_file(), "the guide's scripts/{} exists".format(_scr))
+for _scr, _flags in re.findall(r"scripts/([a-z_0-9]+\.py)((?: [^`\n]*?)?)`", GUIDE):
+    for _fl in re.findall(r"(--[a-z][a-z-]+)", _flags):
+        _src = (ROOT / "scripts" / _scr).read_text(encoding="utf-8") if (ROOT / "scripts" / _scr).is_file() else ""
+        check('"{}"'.format(_fl) in _src, "the guide's {} {} is a real flag of that script".format(_scr, _fl))
+for _ref in sorted(set(re.findall(r"references/([a-z_\-]+\.md)", GUIDE))):
+    check((ROOT / "references" / _ref).is_file(), "the guide's references/{} exists".format(_ref))
+for _doc in ("SKILL.md", "references/visual-languages.md"):
+    check("visual-language-authoring.md" in (ROOT / _doc).read_text(encoding="utf-8"), "{} points to the authoring guide".format(_doc))
+# the guide's example composition runs, in the language Task 3 composed
+_ex = re.search(r"```python\n(.*?)```", GUIDE, re.S)
+check(bool(_ex), "the guide carries a composition example")
+if _ex and (LD / "mosaic.py").is_file():
+    (LD / "mosaic.py").write_text((LD / "mosaic.py").read_text(encoding="utf-8") + "\n\n" + _ex.group(1), encoding="utf-8")
+    r = run("import deckkit as dk, visual_languages as vl; prs = dk.blank_deck(13.333, 7.5); k = vl.use('mosaic', prs); "
+            "k.cover(k.new_slide(), kicker='Q3 review', title='The lending library, quarter three'); "
+            "fs = [f for f in dk.lint_layout(prs, verbose=False) if f[1] == 'CRITICAL']; print('criticals', len(fs), fs[:1])", ENVG)
+    check(r.returncode == 0 and "criticals 0" in r.stdout,
+          "the guide's cover example builds a lint-clean cover ({})".format((r.stdout + r.stderr)[-200:]))
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:
