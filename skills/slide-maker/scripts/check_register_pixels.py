@@ -199,6 +199,14 @@ def deck_field(pngs):
     return [(rgb, f / max(1, len(pngs))) for rgb, f in field]
 
 
+def _repeat_waiver(design):
+    """The reason after "deliberate repeat:" in design_plan.palette, or None — the waiver the GROUND REPEAT and LAST
+    DECK'S SCHEME messages name. It waives those two history checks only (a ground the user named is not a house style
+    creeping in); the declared colours must still reach the pixels. An empty reason is no waiver."""
+    m = re.search(r"deliberate repeat:\s*(\S.{3,})", str((design or {}).get("palette") or ""))
+    return m.group(1).strip() if m else None
+
+
 def look_history(taste_path):
     """Past decks as (deck, [rgb…]) from taste.md's LOOK HISTORY table, newest last."""
     try:
@@ -398,6 +406,9 @@ def check(deck_dir, renders=None, taste=None, recent=3, design=None):
 
     hist = look_history(taste) if taste else []
     facts["history"] = len(hist)
+    _waive = _repeat_waiver(design)
+    if _waive:
+        facts["repeat"] = "deliberate — " + _waive
     ground = field[0][0] if field else None
 
     # Scoped to LARGE-FORMAT boards, which is what the evidence is actually about. The ink,
@@ -451,6 +462,8 @@ def check(deck_dir, renders=None, taste=None, recent=3, design=None):
                 # three fail -> fix -> re-run rounds to learn a constraint the checker knew in full
                 # on the first. The distances and the threshold go in the message so one move can
                 # clear all of them.
+                if _waive:            # the user's own choice of ground, recorded with its reason
+                    break
                 _near_all = [(d2, c2[0], _dist(c2[0], ground))
                              for d2, c2 in recent_rows if _near(c2[0], ground, SAME_LOOK)]
                 _near_all.sort(key=lambda r: r[2])
@@ -471,8 +484,8 @@ def check(deck_dir, renders=None, taste=None, recent=3, design=None):
                                          "rather than from going dark."
                                          if printed is not None else
                                          "Move the VALUE (dark for a light run, or a different "
-                                         "paper), or record the repeat as deliberate in the "
-                                         "palette line.")))
+                                         "paper), or — when the repeat is the user's choice — add "
+                                         "\"deliberate repeat: <why>\" to design_plan.palette.")))
                 break
         band = _band(ground)
         same_band = [d for d, c in hist[-8:] if _band(c[0]) == band]
@@ -484,12 +497,13 @@ def check(deck_dir, renders=None, taste=None, recent=3, design=None):
             if len(cols) < 2:
                 continue                      # accents not recorded for that deck — cannot judge
             shared = [c for c in cols if any(_near(c, m, SAME_LOOK) for m in mine)]
-            if len(shared) >= 2 and any(_chromatic(c) for c in shared):
+            if len(shared) >= 2 and any(_chromatic(c) for c in shared) and not _waive:
                 problems.append(("LAST DECK'S SCHEME",
                                  "{} of this deck's colours also identify {!r} in the look history "
                                  "({}), at least one of them a real hue rather than a shared black "
-                                 "or white. Vary the accent as well as the ground, or record the "
-                                 "repeat as deliberate."
+                                 "or white. Vary the accent as well as the ground, or — when the "
+                                 "repeat is the user's choice — add \"deliberate repeat: <why>\" to "
+                                 "design_plan.palette."
                                  .format(len(shared), deck, ", ".join(_hx(c) for c in shared))))
                 break
     return problems, facts

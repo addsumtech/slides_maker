@@ -212,6 +212,108 @@ for _args, _word in ((["timeline", "--example", "--ground", "night"], "--ground 
     check(r.returncode == 2 and _word in r.stderr, "sigs.py {} is refused when typed, saying why ({} {})".format(
         " ".join(_args), r.returncode, (r.stdout + r.stderr)[-120:]))
 
+# ── Task 6: a gate's pass summary never sits beside a fault of its own section (friction 2) ──
+def _fixture_deck(d, n=3, name="d.pptx"):
+    code = ("import sys; sys.path.insert(0, {!r}); import deckkit as dk; prs = dk.blank_deck(13.333, 7.5)\n"
+            "for t in {!r}:\n    s = dk.add_slide(prs); dk.text(s, 1, 1, 6, 1, [[(t, 28, dk.RGBColor(0x22, 0x22, 0x22), True, False)]])\n"
+            "prs.save({!r})").format(str(ROOT / "scripts"), ["Page {}".format(i + 1) for i in range(n)], name)
+    subprocess.run([sys.executable, "-c", code], cwd=d, check=True, capture_output=True)
+    return d / name
+
+
+GD = Path(tempfile.mkdtemp(prefix="gates_", dir=WORK))
+_deck = _fixture_deck(GD)
+run([str(ROOT / "scripts" / "deck_gates.py"), "init", str(GD), "--slides", "3"], script=True)
+r = run([str(ROOT / "scripts" / "render_deck.py"), str(_deck), "--gate-check"], script=True)
+_gc = r.stdout + r.stderr
+check("hand-off gate(s) failed" in _gc, "the template record fails the gate check (fixture sanity)")
+check(not ("[gates] blind read:" in _gc and "`blind_read`" in _gc),
+      "blind read is not reported answered beside its own 'answers is missing'")
+check(not ("all accounted for" in _gc and re.search(r"\[\d+/\d+\] taste\b", _gc)),
+      "the taste ledger is not reported accounted for beside a taste fault")
+check(not re.search(r"\[gates\] (build shape|audience brief): .*<", _gc),
+      "no pass summary prints a template placeholder as its result ({})".format(
+          re.findall(r"\[gates\] (?:build shape|audience brief): .*", _gc)[:2]))
+
+# ── Task 7: the waiver the GROUND REPEAT message names exists — "deliberate repeat: <why>", history checks only ──
+import json as _json
+import check_register_pixels as crp
+from PIL import Image as _Img
+
+
+def _rp_deck(tag, ground, accents, palette_line, rows):
+    d = Path(tempfile.mkdtemp(prefix="rp_" + tag + "_", dir=WORK))
+    (d / "render").mkdir()
+    for i in range(3):
+        im = _Img.new("RGB", (480, 270), ground)
+        px = im.load()
+        for j, a in enumerate(accents):
+            for y in range(20 + j * 40, 36 + j * 40):
+                for x in range(20, 260):
+                    px[x, y] = a
+        im.save(d / "render" / ("slide%02d.png" % (i + 1)))
+    (d / ".deck-gates.json").write_text(_json.dumps({"design_plan": {"palette": palette_line}}), encoding="utf-8")
+    tp = d / "taste.md"
+    tp.write_text("## LOOK HISTORY\n| date | deck | look | canvas | motif |\n|---|---|---|---|---|\n" + "\n".join(
+        "| 2026-01-0%d | %s | x | %s | y |" % (i + 1, nm, " ".join("#%02X%02X%02X" % c for c in cols))
+        for i, (nm, cols) in enumerate(rows)) + "\n", encoding="utf-8")
+    return d, str(tp)
+
+
+_W, _B = (0xFF, 0xFF, 0xFF), (0x24, 0x38, 0xF0)
+_hist = [("white1", [(0xFF, 0xFF, 0xFF)]), ("white2", [(0xFA, 0xFA, 0xFA)])]
+for _tag, _line, _want_repeat in (("plain", "#FFFFFF / #2438F0", True),
+                                  ("named", "#FFFFFF / #2438F0 — deliberate repeat: the user named the light tally ground", False),
+                                  ("empty", "#FFFFFF / #2438F0 — deliberate repeat:", True)):
+    _d, _tp = _rp_deck(_tag, _W, [_B], _line, _hist)
+    _probs, _facts = crp.check(_d, taste=_tp)
+    _codes = {c for c, _m in _probs}
+    check(("GROUND REPEAT" in _codes) == _want_repeat, "repeat waiver ({}): GROUND REPEAT {} ({})".format(
+        _tag, "held" if _want_repeat else "waived", sorted(_codes)))
+    if _tag == "plain":
+        _msg = next((m for c, m in _probs if c == "GROUND REPEAT"), "")
+        check("deliberate repeat: <why>" in _msg, "the GROUND REPEAT message names the exact words of its waiver")
+    if _tag == "named":
+        check("user named" in str(_facts.get("repeat", "")), "the waiver's reason is recorded in the facts")
+_d, _tp = _rp_deck("hue", _W, [_B], "#FFFFFF / #C4122E — deliberate repeat: the user named the light ground", _hist)
+_codes = {c for c, _m in crp.check(_d, taste=_tp)[0]}
+check(_codes & {"DECLARED HUES ABSENT", "DECLARED PALETTE ABSENT"},
+      "the repeat waiver never silences a declared colour that is not on the pages ({})".format(sorted(_codes)))
+
+# ── Task 8: one deck's render/ is not another's (friction 4) ──
+import hashlib as _hl
+RENDER = str(ROOT / "scripts" / "render_deck.py")
+RD = Path(tempfile.mkdtemp(prefix="twodecks_", dir=WORK))
+_a, _b = _fixture_deck(RD, 2, "a.pptx"), _fixture_deck(RD, 2, "b.pptx")
+
+
+def _png_hash():
+    p = RD / "render" / "slide01.png"
+    return _hl.md5(p.read_bytes()).hexdigest() if p.is_file() else None
+
+
+r = run([RENDER, str(_a)], script=True)
+check(r.returncode == 0 and _png_hash(), "deck a renders into render/ ({})".format((r.stdout + r.stderr)[-120:]))
+_h = _png_hash()
+r = run([RENDER, str(_b)], script=True)
+_o = r.stdout + r.stderr
+check(r.returncode == 1 and "a.pptx" in _o and "render-b" in _o and _png_hash() == _h,
+      "a second deck into the same render/ is refused, naming the first and the command to use; a's pages kept ({})".format(_o[-200:]))
+r = run([RENDER, str(_a)], script=True)
+check(r.returncode == 0, "the same deck renders again into its own render/")
+r = run([RENDER, str(_b), str(RD / "render-b")], script=True)
+check(r.returncode == 0 and (RD / "render-b" / "slide01.png").is_file(), "deck b renders into the out dir it is given")
+_cp = RD / "render" / ".render-cache.json"
+_c = _json.loads(_cp.read_text(encoding="utf-8")) if _cp.is_file() else {}
+check(_c.get("deck") == "a.pptx", "the render cache records which deck it holds ({})".format(_c.get("deck")))
+_c.pop("deck", None); _cp.write_text(_json.dumps(_c), encoding="utf-8")
+r = run([RENDER, str(_b)], script=True)
+check(r.returncode == 0, "a cache written before the deck key existed is not refused")
+run([str(ROOT / "scripts" / "deck_gates.py"), "init", str(RD), "--slides", "2"], script=True)
+r = run([RENDER, str(_a), "--gate-check"], script=True)
+check("render/ holds b.pptx's pages" in r.stdout + r.stderr,
+      "the gate check names renders made from another deck ({})".format((r.stdout + r.stderr)[-160:]))
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

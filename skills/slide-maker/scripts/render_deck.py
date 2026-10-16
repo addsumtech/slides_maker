@@ -216,6 +216,17 @@ def _here_cmd(script):
     return "python3 " + shlex.quote(str(Path(__file__).resolve().parent / script))
 
 
+def gate_ok(line):
+    """Print a section's PASS summary only when nothing in that section failed. Faults inside a section are collected
+    and the section runs on, so a summary printed unconditionally sat beside its own fault and read as a pass — blind
+    read reported "59 answer(s)" (the letters of a placeholder) above "`answers` is missing" (docs-only run, 2026-10-16)."""
+    if _COLLECTED is not None and any(sec == _SECTION for sec, _m, _c in _COLLECTED):
+        return
+    if re.search(r"<[^<>]+>", line):     # a template placeholder is not a result
+        return
+    print(line)
+
+
 def die(msg, code=1):
     if _COLLECTED is not None:
         _COLLECTED.append((_SECTION, msg, code))
@@ -2833,6 +2844,8 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
         if design and not design.get("waived"):
             _n_slides = _deck_slide_count(pptx)
             _shape = str(design.get("build_shape", "")).strip()
+            if _shape.startswith("<") and _shape.endswith(">"):
+                _shape = ""                   # the template's own placeholder: nobody decided yet
             if _n_slides >= 7 and not _shape:
                 die("`design_plan.build_shape` is missing on a {}-slide deck. From ~6 content slides "
                     "up the build FANS OUT (one author per section, fresh context each — SKILL.md "
@@ -2844,7 +2857,7 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
                     "  Solo is a legitimate answer on every host; what is not legitimate is nobody "
                     "having decided.".format(_n_slides))
             elif _shape:
-                print("[gates] build shape: {}".format(_shape[:100]))
+                gate_ok("[gates] build shape: {}".format(_shape[:100]))
 
         _dial = str(design.get("boldness", "")).strip().lower()
         _move = str(design.get("signature_move", "")).strip().lower()
@@ -3167,7 +3180,7 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
             for _f in _tl.faults(_tl.design_of(gates), _entries):
                 with _gate_step():
                     die(_f)
-            print("[gates] taste ledger: {} active entry(ies), all accounted for".format(len(_live)))
+            gate_ok("[gates] taste ledger: {} active entry(ies), all accounted for".format(len(_live)))
 
     with _gate_section('content.arc'):
         # THE ARC COMPETITION, ported from the Codex record so both paths hold the same bar. The design
@@ -3344,7 +3357,7 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
             for _f in _ab.waiver_faults(_brief):
                 with _gate_step():
                     die("`content.audience_brief.waived` " + _f)
-            print("[gates] audience brief: WAIVED [{}] — {}".format(
+            gate_ok("[gates] audience brief: WAIVED [{}] — {}".format(
                 str(_brief.get("waived_category")).strip().lower(),
                 str(_brief.get("waived"))[:70]))
         elif _brief is None:
@@ -3353,7 +3366,7 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
             for _f in _ab.faults(_brief):
                 with _gate_step():
                     die("`content.audience_brief`: " + _f)
-            print("[gates] audience brief: {} decision(s) — {}".format(
+            gate_ok("[gates] audience brief: {} decision(s) — {}".format(
                 len(_brief.get("decisions") or []), str(_brief.get("who"))[:64]))
 
     with _gate_section('content.slides'):
@@ -3768,7 +3781,7 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
             _fs = _brd.get("findings") or []
             _hard = [f for f in _fs if isinstance(f, dict)
                      and str(f.get("severity") or "").lower() == "hard"]
-            print("[gates] blind read: {} answer(s), {} finding(s) answered ({} hard)"
+            gate_ok("[gates] blind read: {} answer(s), {} finding(s) answered ({} hard)"
                   .format(len(_brd.get("answers") or []), len(_fs), len(_hard)))
 
     with _gate_section('provenance'):
