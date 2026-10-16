@@ -1744,7 +1744,9 @@ def _number_gutter(k, labels, size, floor):
     face, bold = k.face("numeral"), bool(TYPE[k.name]["item_no"][2])
     need = max(max(dk._natural_width_in([(t, bold)], size, face), dt._glyph_width(t, size, face, bold) or 0.0)
                for t in labels)
-    return max(floor, NUMBER_SLACK * need + dk.TEXT_INSET_LR)
+    # + 2 EMU: a pptx stores whole EMU and python-pptx truncates, so a box sized to exactly 1.10x came back 1.0999x
+    # wherever the slack term beats the floor (CI's Linux faces, GitHub run 38892848519)
+    return max(floor, NUMBER_SLACK * need + dk.TEXT_INSET_LR + 2.0 / 914400)
 
 
 def _points_led(k, slide, fields, image):

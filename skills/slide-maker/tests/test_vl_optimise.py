@@ -1818,6 +1818,25 @@ for _t in ("Every street needs a night for fixing things",
             len(_t), _cv[0], _cv[1], _found[:1]))
         dk.set_theme(None)
 
+# (10) the number gutter's 10% holds AFTER the pptx stores it: a width is written in whole EMU, truncated, so a box sized
+# to exactly 1.10x its digits came back 1.0999x (GitHub run 38892848519, Linux faces, where the slack term beats the
+# floor) — the floor is 0 here so the slack term is what is measured, on every machine
+import display_type as _dtx
+for L in ("editorial", "soft", "collage"):
+    prs, k = _deck(L)
+    face, bold = k.face("numeral"), bool(vl.TYPE[L]["item_no"][2])
+    short = []
+    for z10 in range(200, 420, 7):
+        z = z10 / 10.0
+        need = max(dk._natural_width_in([("01", bold)], z, face), _dtx._glyph_width("01", z, face, bold) or 0.0)
+        g = vl._number_gutter(k, ["01"], z, 0.0)
+        stored = int(g * 914400) / 914400.0                # what python-pptx writes: Inches() truncates to whole EMU
+        if (stored - dk.TEXT_INSET_LR) / need < vl.NUMBER_SLACK:
+            short.append(z)
+    check(not short, "{}: the number gutter keeps its {:.0%} once stored in whole EMU (short at {})".format(
+        L, vl.NUMBER_SLACK - 1, short[:4]))
+    dk.set_theme(None)
+
 for line in ok:
     print("  ok   " + line)
 for line in skipped:
