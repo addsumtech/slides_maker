@@ -54,7 +54,7 @@ def _glyph_width(text, size, face, bold, italic=False):
     fk = (str(itf or f), max(8, int(size * 10)))
     fnt = _GW_FONTS.get(fk)
     if fnt is None:
-        fnt = _GW_FONTS[fk] = ImageFont.truetype(fk[0], fk[1])
+        fnt = _GW_FONTS[fk] = ImageFont.truetype(fk[0], fk[1], layout_engine=ImageFont.Layout.BASIC)
     # Synthetic bold / slant does NOT change advance widths in the renderer (measured 2026-10-03: Impact
     # 72pt regular vs bold = 913px both; Hiragino Sans GB +0.4%), so no allowance is added for them.
     w = fnt.getlength(text) / 10.0 / 72.0
@@ -136,7 +136,7 @@ def outlined(slide, x, y, w, h, text, *, color, face="Arial Black", stroke=None)
                          "instead".format(face, "".join(sorted({c for c in text if not c.isspace() and not covers(face, c)}))))
     c = color.lstrip("#")
     rgb = tuple(int(c[i:i + 2], 16) for i in (0, 2, 4))
-    font = ImageFont.truetype(str(dk._font_file(face)), 600)
+    font = ImageFont.truetype(str(dk._font_file(face)), 600, layout_engine=ImageFont.Layout.BASIC)
     sw = stroke or max(4, int(600 * 0.03))
     bb = font.getbbox(text, stroke_width=sw)
     im = Image.new("RGBA", (bb[2] - bb[0] + 2 * sw, bb[3] - bb[1] + 2 * sw), (0, 0, 0, 0))

@@ -1490,6 +1490,13 @@ jobs:
           grep -qE "\\] ok$" /tmp/statrow.log || {
             echo "::error::test_stat_row_measured did not run to completion"; exit 1; }
 
+      - name: Every Pillow font load uses the BASIC layout engine (no RAQM)
+        run: |
+          set -o pipefail
+          python tests/test_font_layout_engine.py | tee /tmp/fontengine.log
+          grep -qE "\\] ok$" /tmp/fontengine.log || {
+            echo "::error::test_font_layout_engine did not run to completion"; exit 1; }
+
       - name: Inventory guard is a detector (attack it, not just run it)
         run: |
           set -o pipefail

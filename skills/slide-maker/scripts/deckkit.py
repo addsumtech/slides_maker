@@ -473,7 +473,7 @@ def has_oldstyle_figures(face):
     if path:
         try:
             from PIL import ImageFont
-            f = ImageFont.truetype(path, 100)
+            f = ImageFont.truetype(path, 100, layout_engine=ImageFont.Layout.BASIC)
             boxes = [f.getbbox(d) for d in "0123456789"]
             spread = max(max(b[1] for b in boxes) - min(b[1] for b in boxes),
                          max(b[3] for b in boxes) - min(b[3] for b in boxes))
@@ -5516,10 +5516,12 @@ def _pil_font(name, size_pt, bold=False):
         from PIL import ImageFont
         path, idx = _font_face(name, bold) or (None, 0)
         px = max(1, int(round(size_pt * _MEAS_PREC)))
+        # BASIC, always: RAQM (used whenever libraqm loads — Pillow 13's Linux wheels) shapes differently from the
+        # macOS wheels every width here was tuned on, and raised `raqm_layout() failed` on CI (tests/test_font_layout_engine.py).
         try:
-            f = ImageFont.truetype(path, px, index=idx)
+            f = ImageFont.truetype(path, px, index=idx, layout_engine=ImageFont.Layout.BASIC)
         except Exception:
-            f = ImageFont.truetype(path, px)
+            f = ImageFont.truetype(path, px, layout_engine=ImageFont.Layout.BASIC)
         _PIL_FONT_CACHE[key] = f
     return f
 
@@ -7226,7 +7228,7 @@ def wordmark(text, out_path, *, font=None, color=None, size=180, rule=False, mon
         face = _font_face(chosen) if chosen else None
         if not face or face[0] != fp:                # fp came from a fallback — choose inside it
             face = (fp, _face_index(fp, False, chosen))
-        f = ImageFont.truetype(face[0], int(size), index=face[1])
+        f = ImageFont.truetype(face[0], int(size), index=face[1], layout_engine=ImageFont.Layout.BASIC)
     except Exception:
         f = ImageFont.load_default()
     s = str(text)
@@ -7260,7 +7262,7 @@ def wordmark(text, out_path, *, font=None, color=None, size=180, rule=False, mon
             except (AttributeError, TypeError):
                 dr.rectangle(rect, fill=ink_rgba)
         ch = (s.strip()[:1] or "•").upper()
-        cf = ImageFont.truetype(fp, max(1, int(mono_side * 0.60))) if fp else f
+        cf = ImageFont.truetype(fp, max(1, int(mono_side * 0.60)), layout_engine=ImageFont.Layout.BASIC) if fp else f
         cb = dr.textbbox((0, 0), ch, font=cf)
         dr.text((x + (mono_side - (cb[2] - cb[0])) / 2 - cb[0],
                  my + (mono_side - (cb[3] - cb[1])) / 2 - cb[1]), ch, font=cf, fill=(255, 255, 255, 255))

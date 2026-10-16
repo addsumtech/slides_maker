@@ -58,7 +58,7 @@ def build(render_dir, out_path, cols=4, sheet_w=2400, pad=14, label_h=30):
     sheet = Image.new("RGB", (sheet_w, sheet_h), (238, 238, 238))
     draw = ImageDraw.Draw(sheet)
     try:
-        font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 20)
+        font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 20, layout_engine=ImageFont.Layout.BASIC)
     except Exception:
         font = ImageFont.load_default()
 

@@ -398,7 +398,7 @@ def _label_font(px, sample=""):
     for c in cands:
         if os.path.exists(c):
             try:
-                return ImageFont.truetype(c, px)
+                return ImageFont.truetype(c, px, layout_engine=ImageFont.Layout.BASIC)
             except Exception:
                 continue
     return ImageFont.load_default()

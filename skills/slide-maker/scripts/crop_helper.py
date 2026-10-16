@@ -55,7 +55,7 @@ def _font(px):
               "/Library/Fonts/Arial.ttf"):
         if os.path.exists(p):
             try:
-                return ImageFont.truetype(p, px)
+                return ImageFont.truetype(p, px, layout_engine=ImageFont.Layout.BASIC)
             except Exception:
                 pass
     return ImageFont.load_default()
