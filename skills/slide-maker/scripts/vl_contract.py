@@ -78,12 +78,41 @@ def _hexes(where, d, keys, probs):
     return True
 
 
+FILL = "FILL:"     # new_visual_language.py writes every decision it cannot make as "FILL: <what to decide>"
+
+
+def unfilled(spec):
+    """["<name>: <dotted.path> is not filled — <hint>"] for every string still starting with FILL: (look.palette is
+    the light ground's palette, so it is read once, under grounds.light)."""
+    name = spec.get("name", "?") if isinstance(spec, dict) else "?"
+    out = []
+
+    def walk(v, path):
+        if path == "look.palette":
+            return
+        if isinstance(v, str) and v.strip().startswith(FILL):
+            out.append("{}: {} is not filled — {}".format(name, path, v.strip()[len(FILL):].strip() or "decide it"))
+        elif isinstance(v, dict):
+            for k, x in v.items():
+                walk(x, "{}.{}".format(path, k) if path else str(k))
+        elif isinstance(v, (list, tuple)):
+            for i, x in enumerate(v):
+                walk(x, "{}[{}]".format(path, i))
+    walk(spec, "")
+    return out
+
+
 def validate(spec):
     probs = []
     name = spec.get("name", "?")
     for k in TOP_KEYS:
         if k not in spec:
             probs.append("{}: the manifest has no {!r}".format(name, k))
+    if probs:
+        return probs
+    # a draft from new_visual_language.py: name what is still to decide, and only that — the checks below would read
+    # a "FILL: …" string as a bad colour or a bad face and bury the one message that says what to do
+    probs = unfilled(spec)
     if probs:
         return probs
     # every nested value is type-checked before it is read: a half-filled skeleton must get named problems, never a
@@ -226,6 +255,10 @@ def validate(spec):
     for k in ("ground", "card"):
         if not isinstance(spec["painters"].get(k), str):
             probs.append("{}: painters needs the name of its {} function".format(name, k))
+        elif spec["painters"][k] != "_{}_{}".format(k, name):
+            # the one spelling every reader and new_visual_language.py use: a free name could quietly point at
+            # another language's painter, and the language would draw that language's furniture
+            probs.append("{}: painters.{} must be '_{}_{}' (got {!r})".format(name, k, k, name, spec["painters"][k]))
     return probs
 
 

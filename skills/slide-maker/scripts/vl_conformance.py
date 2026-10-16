@@ -51,14 +51,23 @@ def _pages(spec, T, pic):
             ("closing", dict(title=T["title"], line=T["line"], **img("closing")))]
 
 
+def painters_missing(name):
+    """[why] when the language's ground or card painter is not written (or its module does not import), else []."""
+    return [vl._UNREADY[name]] if name in vl._UNREADY else []
+
+
 def pages_missing(name, registry=None):
     reg = registry or vl.REGISTRY
     spec = reg[name]
     if spec["kind"] == "image-led":
         have = set(vl.LAYOUTS.get(name, {})) | {"points"}       # points: the shared image-led points page
+        stubs = set()
     else:
-        have = set(vn.COMPOSERS.get(name, {}))
-    return ["{}: no composition for page {!r}".format(name, p) for p in PAGES if p not in have]
+        comp = vn.COMPOSERS.get(name, {})
+        stubs = {p for p, fn in comp.items() if getattr(fn, "stub", False)}
+        have = set(comp) - stubs
+    return ["{}: page {!r} is still a stub — compose it in scripts/vl_langs/{}.py".format(name, p, name) if p in stubs
+            else "{}: no composition for page {!r}".format(name, p) for p in PAGES if p not in have]
 
 
 def _strings(o):

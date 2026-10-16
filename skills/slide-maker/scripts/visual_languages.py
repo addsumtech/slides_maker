@@ -211,6 +211,8 @@ def use(name, prs, *, fonts="both", plan=None, image_dir=None, platform=None, gr
     light. Record design_plan.visual_language = name and vl_ground (references/visual-languages.md)."""
     if name not in LANGS:
         raise KeyError("visual_languages.use(): unknown language {!r} — one of {}".format(name, sorted(LANGS)))
+    if name in _UNREADY:
+        raise VLNotReady("visual_languages.use(): " + _UNREADY[name])
     if fonts not in ("both", "mac"):
         raise ValueError("visual_languages.use(): fonts must be 'both' (macOS + Windows faces) or 'mac', got {!r}".format(fonts))
     if ground == "auto":
@@ -394,10 +396,32 @@ _card_interface = _card_for("interface")
 _card_wayfinding = _card_for("wayfinding")
 
 
+class VLNotReady(KeyError):
+    """A language whose manifest is registered but whose code is not written yet (or does not import)."""
+
+
+def painter(name, role):
+    """The language's `role` painter ("ground" or "card"): a function of this module named in its manifest, else the
+    same name in scripts/vl_langs/<name>.py. None when neither defines it."""
+    fn = REGISTRY[name]["painters"][role]
+    if fn in globals():
+        return globals()[fn]
+    import vl_langs
+    mod = vl_langs.load().get(name)
+    return getattr(mod, fn, None) if mod is not None else None
+
+
+_UNREADY = {}      # name -> why the language cannot be used yet (use() refuses it; check_vl_contract names it)
 for _n in LANGS:
-    rs.register(_n, ground=globals()[REGISTRY[_n]["painters"]["ground"]],
-                card=globals()[REGISTRY[_n]["painters"]["card"]],
-                forbids=LANGS[_n]["forbids"], source=__file__)
+    _g, _c = painter(_n, "ground"), painter(_n, "card")
+    if _g is None or _c is None:
+        import vl_langs as _vll
+        _UNREADY[_n] = ("{}: {} — write {} and {} in scripts/vl_langs/{}.py (references/visual-language-authoring.md; "
+                        "new_visual_language.py writes a first draft)".format(
+                            _n, _vll.ERRORS[_n] if _n in _vll.ERRORS else "its code is not written yet",
+                            REGISTRY[_n]["painters"]["ground"], REGISTRY[_n]["painters"]["card"], _n))
+        continue
+    rs.register(_n, ground=_g, card=_c, forbids=LANGS[_n]["forbids"], source=__file__)
 
 
 # ════════════════════════════════════════════════════════════════════════════════════════════════

@@ -35,6 +35,17 @@ def register(lang, page, alts=1):
     return deco
 
 
+def stub(lang, page):
+    """Register a page that is not composed yet (new_visual_language.py writes one per page): calling it raises, and the
+    contract check counts it as a missing page, naming the file to compose it in."""
+    def fn(k, slide, fields, image):
+        raise NotImplementedError("{}.{}(): not composed yet — write it in scripts/vl_langs/{}.py "
+                                  "(references/visual-language-authoring.md)".format(lang, page, lang))
+    fn.stub = True
+    fn.__name__ = "_{}_{}_stub".format(lang, page)
+    return register(lang, page)(fn)
+
+
 def alt():
     return _ALT[0]
 
@@ -1649,3 +1660,6 @@ def _bp_points(k, slide, f, image):
 # ── the second set (P4) registers its compositions on import: every importer of vl_native gets them ──
 import vl_native2  # noqa: E402,F401
 import vl_native3  # noqa: E402,F401
+# …and every language written after the fifteen, from scripts/vl_langs/<name>.py (its compositions register on import)
+import vl_langs  # noqa: E402
+vl_langs.load()

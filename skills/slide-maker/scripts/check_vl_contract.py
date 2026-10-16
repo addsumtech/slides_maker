@@ -41,6 +41,10 @@ def main(argv=None):
         return 1
     import vl_conformance as vcf           # imports visual_languages: only once every manifest is sound
     for n in names:
+        unready = vcf.painters_missing(n)
+        if unready:                        # nothing of it can be built yet: say what to write, check nothing else
+            probs += unready
+            continue
         missing = vcf.pages_missing(n)
         probs += missing + vcf.assets_missing(n)
         if missing:                        # the build checks need every page composed: say so, do not crash
