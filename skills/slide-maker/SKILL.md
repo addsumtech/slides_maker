@@ -271,7 +271,7 @@ file under `$SKILL`, and runs as written only from inside that folder: from the 
 > its gate in the same commit; prefer deterministic (lint) > required-field > checklist > prose.
 >
 > **The mirror of this rule, for anyone REMOVING or merging something: read
-> the Maintenance boundaries section of `references/file-inventory.md` first.** It lists the tempting simplifications and what
+> `references/maintenance-boundaries.md` first.** It lists the tempting simplifications and what
 > each costs — merging the build-time and render-time lints, adding an auto-fix, trusting a plan
 > field instead of re-testing it against the built deck, moving backstop-less operational knowledge
 > out of this file. `check_skill_lossless.py` proves a refactor kept the *bytes*; it cannot see a

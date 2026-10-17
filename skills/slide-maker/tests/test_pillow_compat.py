@@ -35,8 +35,8 @@ for py in sorted(list((ROOT / "scripts").rglob("*.py")) + list((ROOT / "tests").
         continue
     tree = ast.parse(py.read_text(encoding="utf-8"), filename=str(py))
     # the one sanctioned call is the fallback inside image_qc.pixels() itself
-    shim = {id(n) for f in ast.walk(tree) if isinstance(f, ast.FunctionDef) and f.name == "pixels"
-            and py.name == "image_qc.py" for n in ast.walk(f)}
+    shim = ({id(n) for f in tree.body if isinstance(f, ast.FunctionDef) and f.name == "pixels" for n in ast.walk(f)}
+            if py.name == "image_qc.py" else set())
     for node in ast.walk(tree):
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "getdata":
             (helper if id(node) in shim else calls).append("{}:{}".format(py.relative_to(ROOT), node.lineno))

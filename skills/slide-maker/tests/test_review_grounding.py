@@ -21,7 +21,7 @@ THREE proposed checks are deliberately ABSENT, and their absence is part of the 
     kept trading one failure mode for another: associating "which object does this coordinate
     describe" cannot be done reliably by regex over prose. It confirmed a false span using a row
     cited two sentences away, then contradicted a correct claim whose first cited row falls
-    between glyph strokes. The Maintenance boundaries section of `file-inventory.md` says a check that cannot reach acceptable
+    between glyph strokes. `maintenance-boundaries.md` says a check that cannot reach acceptable
     precision should not ship; that applies to checks written here too.
 
 What replaces it is knowledge, not code: a review's quoted measurements are not evidence. Half of
