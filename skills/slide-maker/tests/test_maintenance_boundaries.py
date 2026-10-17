@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""The negative contracts in references/maintenance-boundaries.md, asserted where a program can.
+"""The negative contracts in references/file-inventory.md § Maintenance boundaries (was maintenance-boundaries.md),
+asserted where a program can.
 
 `check_skill_lossless.py` proves a refactor kept the BYTES. It cannot see two gates merged into
 one, a warning promoted to an auto-fix, or a plan field trusted instead of re-tested — each of
@@ -18,27 +19,41 @@ SCRIPTS = ROOT / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 ok, bad = [], []
-BOUNDARIES = ROOT / "references" / "maintenance-boundaries.md"
+INVENTORY = ROOT / "references" / "file-inventory.md"
+HEAD = "## Maintenance boundaries"
 
 
 def _read(p):
     return p.read_text(encoding="utf-8")
 
 
-# ---------------------------------------------------------------- the file exists and is reachable
-if BOUNDARIES.exists():
-    ok.append("references/maintenance-boundaries.md exists")
+def boundaries_section():
+    """The § Maintenance boundaries of file-inventory.md, alone — the rest of that file names every script, so a
+    check run over the whole file would pass on words the boundaries never say."""
+    t = _read(INVENTORY)
+    if HEAD not in t:
+        return None
+    s = t[t.index(HEAD):]
+    nxt = s.find("\n## ", len(HEAD))
+    return s if nxt < 0 else s[:nxt]
+
+
+# ---------------------------------------------------------------- the section exists and is reachable
+BOUNDARIES_TEXT = boundaries_section()
+if BOUNDARIES_TEXT:
+    ok.append("references/file-inventory.md carries the Maintenance boundaries section")
 else:
-    bad.append("references/maintenance-boundaries.md is missing — the negative contracts are gone")
+    bad.append("references/file-inventory.md has no '## Maintenance boundaries' section — the negative contracts "
+               "are gone")
     print("\n".join("  FAIL " + x for x in bad))
     raise SystemExit(1)
 
 skill = _read(ROOT / "SKILL.md")
-if "maintenance-boundaries.md" in skill:
+if "Maintenance boundaries" in skill and "file-inventory.md" in skill:
     ok.append("SKILL.md points at it, so a maintainer can find it without knowing it exists")
 else:
-    bad.append("nothing in SKILL.md names maintenance-boundaries.md — a reference with no live "
-               "pointer is a deleted reference")
+    bad.append("nothing in SKILL.md names the Maintenance boundaries section of file-inventory.md — a reference "
+               "with no live pointer is a deleted reference")
 
 # ---------------------------------------------------------------- 1. the two lints stay separate
 build_lint = _read(SCRIPTS / "deckkit.py")
@@ -124,7 +139,7 @@ for marker, what in (("Value→geometry mappers", "the component catalogue"),
                    f"layer 2")
 
 # ---------------------------------------------------------------- 6. the table itself is intact
-table = _read(BOUNDARIES)
+table = BOUNDARIES_TEXT
 rows = [l for l in table.splitlines() if l.startswith("| **Do") or
         (l.startswith("| **") and l.count("|") >= 3)]
 if len(rows) >= 8:

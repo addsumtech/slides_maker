@@ -73,7 +73,7 @@ legibility rules).
 ## Cross-cutting techniques every strong deck uses (the "instantly professional" moves)
 - **Semantic colour contract** — bind ONE hue to each concept (navy=structure, green=good/safe,
   red=risk, amber=brand) and propagate it to icons, headings, badges, table columns AND chart series.
-  Teach the legend on slide 2, reuse deck-wide. See `semantic-color-contract.md`; build with
+  Teach the legend on slide 2, reuse deck-wide. See `design-intelligence-addendum.md` §6.1; build with
   `palette()` / `accent_one` and pass the same hue everywhere.
 - **Action titles** (consulting) — make each slide title a *complete-sentence conclusion* ("Only 19%
   of customers return — a critical retention gap"), then restate the implication in an `insight_banner`.

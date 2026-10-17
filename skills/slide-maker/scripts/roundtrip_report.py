@@ -12,7 +12,7 @@ prevent. Goodhart, in a codebase whose whole history is gates being met rather t
 
 So it is a DEVELOPER tool, run after the fact, to find out where a build's turns went and whether
 a change to the skill moved them. It is not part of the deck pipeline, nothing reads its output,
-and `references/maintenance-boundaries.md` carries the contract that it stays that way.
+and the Maintenance boundaries section of `references/file-inventory.md` carries the contract that it stays that way.
 
 USAGE
     python3 scripts/roundtrip_report.py <transcript.jsonl> [--from "<text>"] [--to "<text>"]

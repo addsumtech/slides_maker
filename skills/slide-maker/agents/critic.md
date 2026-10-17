@@ -681,7 +681,7 @@ Do not just skim for the first few obvious issues. Run these passes:
      (navy=structure, green=good, red=risk, amber=brand, or a per-section accent), flag any slide that
      **breaks the contract** — the same concept in a different hue, or one hue carrying two meanings
      (a green "risk" cell, a brand colour reused for a warning). Colour must mean the same thing
-     deck-wide (`references/semantic-color-contract.md`). Well-bound semantic colour is *good* — don't
+     deck-wide (`references/design-intelligence-addendum.md` §6.1). Well-bound semantic colour is *good* — don't
      flag it as "too many hues."
    - **Action titles (consulting / readout decks):** flag a slide whose title is a **topic label**
      ("Customer Retention") where the purpose wants a **full-sentence conclusion** ("Only 19% of

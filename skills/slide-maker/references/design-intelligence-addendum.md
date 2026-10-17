@@ -21,7 +21,7 @@ gates, it does not restate their mechanics:
 - **Component catalogue / presets** → `design-gallery.md`; **charts** → `data-viz.md`; **schematics** →
   `schematic-diagrams.md`.
 - **Icons** → `icons.md`; **animation / builds** → `animation.md`; **semantic-colour mechanics**
-  (declare-once, propagate, teach-the-legend, contrast) → `semantic-color-contract.md`. §6 here adds the
+  (declare-once, propagate, teach-the-legend, contrast) → §6.1 here. §6 also adds the
   *ledger table* as an enforceable output on top of those mechanics.
 
 ## Contents
@@ -31,7 +31,7 @@ gates, it does not restate their mechanics:
 3. **Concept → Visualization decision table** — the single authoritative dictionary (use / avoid / failure mode).
 4. **Reference-vs-Generated Gap Heuristic** — is this plan art-directed, or just clean template output?
 5. **Evenness Penalty** — the "something must win" check.
-6. **Semantic Colour Ledger** — colour as bound meaning, as an enforceable output.
+6. **Semantic Colour Ledger** — colour as bound meaning, as an enforceable output; §6.1 the contract's mechanics (bind, declare once, propagate, teach the legend).
 7. **Minimum Deck-level Variation Requirements** — deck-level floors; hard gates at ~8+ content slides, strong guidance below.
 8. **Slide Archetype Alternatives** — escape hatches from the default page-type reflex.
 
@@ -367,7 +367,7 @@ Per-slide check:
 
 ## 6 — Semantic Colour Ledger
 
-`semantic-color-contract.md` owns the *mechanics* — bind one hue per concept, declare it once, propagate
+§6.1 below owns the *mechanics* — bind one hue per concept, declare it once, propagate
 it to every element that expresses the concept (headings, icons, badges, cells, chart series, keyword
 highlights), teach the legend early, and clear ≥4.5:1 contrast. This addendum adds the **ledger as an
 enforceable output**: the plan must state, up front, what each colour *means* and what it must *not* touch.
@@ -397,7 +397,67 @@ Rules:
   means colour is decoration, not meaning.
 
 Keep it to ≤5 bound concepts (beyond that colour stops reading as meaning), and never encode meaning by
-colour alone — pair it with a label / icon / shape (`semantic-color-contract.md`).
+colour alone — pair it with a label / icon / shape (§6.1).
+
+### 6.1 The mechanics — the semantic colour contract (was semantic-color-contract.md)
+
+The single biggest "this deck is credible" move in professional technical/consulting/data decks:
+**a colour always means the same thing.** Not "use accent_one for emphasis" (rationing) and not
+"palette(n) for n distinct hues" (categorical variety) — but a *contract* where each concept is
+bound to one hue and that hue is propagated identically to every element that expresses the concept:
+headings, icons, badges, table columns/cells, chart series, node fills, and inline keyword highlights.
+
+#### How to use it
+1. **Declare the map once**, at the top of the build, e.g.:
+   ```python
+   SEM = {"structure": NAVY, "good": EMERALD, "risk": CORAL, "brand": GOLD, "neutral": SLATE}
+   def sem(k): return SEM[k]
+   ```
+2. **Propagate it everywhere** the concept appears — the SAME `sem('risk')` colours the risk icon, the
+   risk heading, the risk table cell, the risk chart series, and the risk keyword in a sentence
+   (`highlight("…<k>critical gap</k>…", size, INK, sem('risk'))`). Never let "risk" be coral here and
+   red there.
+3. **Teach the legend early** (a small key on slide 2, or inline the first time each colour appears) so
+   the audience learns the code, then reads colour as meaning for the rest of the deck.
+
+#### The standard contracts
+- **Two-tier (technical):** `structure` (navy) vs `highlight` (accent blue) — encoder card navy header,
+  decoder card blue header; the rest of the type stays ink so only the *role* is coloured.
+- **Semantic data:** `good`/`cheap`/`winning` = green, `bad`/`expensive`/`losing` = red, everything
+  else neutral — so a table or chart shows the *verdict* in colour and nothing else competes.
+- **MBB 5-colour:** structure=navy · opportunity/good=emerald · brand/highlight=gold · risk/gap=coral ·
+  neutral=slate. (The `consulting` preset ships this set.)
+
+#### Section / positional binding (a special case)
+For a chaptered editorial or risograph deck, bind the active hue to the **section** instead of a
+concept: an "active section accent" tints that chapter's numeral badge, kicker, page marker, divider,
+and highlighted headline keyword — so flipping to a new section recolours the chrome with zero per-slide
+choices. Implement as a `section_accent = ACCENTS[chapter_idx]` you thread into the chrome calls, and/or
+auto-cycle a fixed ink set (blue→pink→ochre→black) per section. Same principle: colour carries
+*which group*, consistently.
+
+#### Pitfalls
+- Don't overload one hue with two meanings (gold = "brand" AND "warning" reads as confusion).
+- **When a BRAND colour collides with a semantic assignment** (the client's brand red vs red=risk):
+  the brand keeps the *chrome* (logo, title accents, cover), the semantic contract keeps the *data*
+  (charts, deltas, status) — and the contested hue gets ONE owner; shift the other meaning to a
+  neighbouring hue (risk → burnt orange) rather than letting the same red mean "us" on one slide
+  and "danger" on the next.
+- Keep it to ≤5 bound concepts; beyond that colour stops being legible as meaning.
+- Verify every bound colour's legibility with `contrast_ratio`, and never encode meaning
+  by colour ALONE — pair it with a label/icon/shape (accessibility + projection). **Split the check by
+  role:** a hue used as **TEXT** (a label, kicker, emphasized run) must clear **≥4.5:1** on its
+  background; a **fill-only** variant (a rule, bar, icon tile, header band, chip behind dark text) may
+  be brighter/lower as text-contrast but should still clear ~3:1 for non-text contrast. So a vivid
+  accent that fails as text is fine as a fill — just keep a **darker text-safe token** of the same hue
+  for any run set in that colour (see SKILL.md "Colour"). Meaning is what's bound; the two tokens are
+  the same concept at two legibility roles. **A MARK ON A FILLED GROUND takes the non-text role too** —
+  an icon glyph on its tile, a numeral/symbol on a coloured chip, an arrowhead on a band must clear
+  ~3:1 against *that ground*: the same-hue trap (a teal glyph on an aqua tile) and the dark-on-dark
+  trap (a coloured glyph on a near-black tile) are the two that go invisible. `deckkit.icon_tile`
+  enforces this by construction (reads the glyph ink, nudges the tile to ≥3:1).
+- The contract is deck-wide: a one-off recolour that breaks it (a green "risk" cell) is a real flaw the
+  critic should flag.
 
 ---
 

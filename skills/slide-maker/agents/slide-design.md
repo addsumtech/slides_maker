@@ -54,7 +54,7 @@ sameness, no hero, dead layout, thoughtless motion, decorative icons — is your
   `references/design-by-topic.md` (domain → apt presets → ANTI-PICK + cliché guard — the topic-adapted pick),
   `references/bespoke-registers.md` (verified invented registers to ADAPT — the growing library),
   `references/design-principles.md` (full C.R.A.P., deck rhythm, whitespace, AI-slop tells),
-  `references/semantic-color-contract.md`, `references/data-viz.md`, `references/schematic-diagrams.md`,
+  `references/design-intelligence-addendum.md` §6.1, `references/data-viz.md`, `references/schematic-diagrams.md`,
   `references/icons.md`, `references/animation.md`, `references/image-generation.md`,
   `references/style-analysis.md` (mimic decks),
   `references/east-asian-aesthetic.md`, and the operational layer that makes this philosophy testable:
@@ -434,7 +434,7 @@ feel art-directed rather than defaulted, and it's yours to set once and hold. Pi
 - **Then pick the cross-cutting "atmosphere / polish" moves that fit the register** (taste, NOT a
   checklist — match the move to the look; `design-gallery.md`) and apply them consistently: a **semantic
   colour contract** (bind one hue per concept — navy=structure, green=good, red=risk — reused on
-  headings/icons/badges/cells/series; `semantic-color-contract.md`) for technical/data/consulting decks;
+  headings/icons/badges/cells/series; `design-intelligence-addendum.md` §6.1) for technical/data/consulting decks;
   **action titles + `insight_banner`** for a readout/exec deck; **`bilingual_lockup`** only on a genuine
   CN/EN deck; a **`gradient_rule`** signature, **`ghost_numeral`** wayfinding, **light/dark pacing** with
   full-bleed dark dividers for dark-tech / editorial-dark / consulting registers; a **`seal` +

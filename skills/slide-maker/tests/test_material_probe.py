@@ -98,9 +98,11 @@ def anti_drift():
               mp.waiver_faults({"waived": "x" * 40, "waived_category": "conservative"})),
           "it carves the Step-4 ANCHOR proof — a deck that took no risk has nothing to prove — and "
           "deliberately not this one; whoever meets the error is exactly who needs to know why")
-    check("...and maintenance-boundaries.md tells the next person what re-inlining it would cost",
-          "material_probe.py" in
-          (SKILL / "references" / "maintenance-boundaries.md").read_text(encoding="utf-8"),
+    _inv = (SKILL / "references" / "file-inventory.md").read_text(encoding="utf-8")
+    _sec = _inv[_inv.find("## Maintenance boundaries"):] if "## Maintenance boundaries" in _inv else ""
+    _sec = _sec[:_sec.find("\n## ", 5)] if "\n## " in _sec[5:] else _sec    # that section alone, not the whole inventory
+    check("...and the Maintenance boundaries section tells the next person what re-inlining it would cost",
+          "material_probe.py" in _sec,
           "check_skill_lossless.py would score that refactor perfect while the property disappears")
 
 

@@ -8555,7 +8555,7 @@ def alt_text(shape, description):
 
 # ════════════════════════════════════════════════════════════════════════════════════════
 # Design-pattern components mined from professional sample decks (ppt-master gallery).
-# See references/design-gallery.md + semantic-color-contract.md for when/why.
+# See references/design-gallery.md + design-intelligence-addendum.md §6.1 for when/why.
 # ════════════════════════════════════════════════════════════════════════════════════════
 
 def _blend(c, other, t):

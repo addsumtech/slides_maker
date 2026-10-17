@@ -111,7 +111,7 @@ The recipes render a themed PNG → place with `deckkit.picture(out, ..., fit="c
 - **Chart with no takeaway** — a plot dropped on the slide with no assertion title / takeaway rail
   is data, not an argument; every chart answers a named question.
 - **Rainbow categorical palette** — hues with no semantic binding read as decoration; bind each hue
-  (semantic-color-contract.md) or stay monochrome + one accent.
+  (design-intelligence-addendum.md §6.1) or stay monochrome + one accent.
 
 ## The four rules every designed plot follows
 1. **Single highlight (one-accent discipline).** Recolor only the ONE series/wedge/row/bar that
@@ -191,7 +191,7 @@ notation, not a universal style. A bar's **fill** says which data world it shows
   a chart genuinely needs 3+ categorical hues and the deck palette isn't verified safe.
 - **Hue-only ban:** multi-series lines must differ by more than hue — vary linestyle/marker or add
   direct end-of-line labels; status semantics (green/red, RAG) always pair the colour with an
-  icon/label/shape (rule 4 above; semantic-color-contract.md).
+  icon/label/shape (rule 4 above; design-intelligence-addendum.md §6.1).
 
 ## Editable native charts vs matplotlib rasters — pick by need
 Three ways to put a chart on a slide; choose by what the deck needs:

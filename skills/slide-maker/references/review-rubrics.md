@@ -236,7 +236,7 @@ Score each dimension; cite specific slides.
    ("Conclusion" for a talk, "Next steps" for a status update — not a generic "Take home")?
    Diagnose layout with the **C.R.A.P. lens** (Contrast · Repetition · Alignment · Proximity — the
    shared vocabulary the planner designs to and the critic names). **Semantic colour contract:** if the
-   deck binds a hue to a concept (`semantic-color-contract.md`), the same concept keeps **one hue
+   deck binds a hue to a concept (`design-intelligence-addendum.md` §6.1), the same concept keeps **one hue
    deck-wide** and no hue carries two meanings — a drifting or double-booked binding is a real finding.
    **N-identical units:** many units identical except an index (replicas / layers / ensemble / team
    members) shown as *N duplicate blocks* is a flaw — expect the **pattern** (2–3 representatives + `…`

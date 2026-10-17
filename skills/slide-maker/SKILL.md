@@ -221,7 +221,7 @@ FYI form and follows its own auto rule at Step 3.
 
 **Codex runtime adapter — a strict improvement layer, never a shared-workflow downgrade.** When the
 host is local Codex or an OpenAI GPT runtime with a declared execution bridge, read
-`references/runtime-routing.md` and `references/codex-runtime.md` before Step 2, then run the evidence
+`references/codex-runtime.md` (its Runtime routing section first) before Step 2, then run the evidence
 gate before hand-off. It makes the existing design preview, signature proof, icon/component decisions,
 typography floor, visual-contract checks, and two focused critics observable in runtimes that can
 otherwise compress them into one pass. **Do not run this adapter or reinterpret
@@ -271,7 +271,7 @@ file under `$SKILL`, and runs as written only from inside that folder: from the 
 > its gate in the same commit; prefer deterministic (lint) > required-field > checklist > prose.
 >
 > **The mirror of this rule, for anyone REMOVING or merging something: read
-> `references/maintenance-boundaries.md` first.** It lists the tempting simplifications and what
+> the Maintenance boundaries section of `references/file-inventory.md` first.** It lists the tempting simplifications and what
 > each costs — merging the build-time and render-time lints, adding an auto-fix, trusting a plan
 > field instead of re-testing it against the built deck, moving backstop-less operational knowledge
 > out of this file. `check_skill_lossless.py` proves a refactor kept the *bytes*; it cannot see a
@@ -291,7 +291,7 @@ file under `$SKILL`, and runs as written only from inside that folder: from the 
 | Look / form / layout / rhythm / icons / motion (Step 2) | `agents/slide-design.md` |
 | Independent review + JSON schema | `agents/critic.md` · `agents/arbiter.md` · `references/review-rubrics.md` |
 | Which visual FORM a slide takes (avoid the card-grid default) | `references/form-selection.md` |
-| Colour-means-one-thing (bind a hue to a concept deck-wide) | `references/semantic-color-contract.md` |
+| Colour-means-one-thing (bind a hue to a concept deck-wide) | `references/design-intelligence-addendum.md` §6.1 |
 | Style + component catalogue (looks · presets · when to use each) | `references/design-gallery.md` |
 | Charts (which type · editable-native vs raster) | `references/data-viz.md` |
 | Choropleth map (value per country / province — europe · world · china) | `deckkit.choropleth()` · `scripts/maps.py` · `references/data-viz.md` |
@@ -952,7 +952,7 @@ interview answers that steer register
 (purpose/audience/time, delivery mode, style, template/brand decision, venue — plus, when the user
 gave a Q4 style example, the **written style brief + chosen mimic mode**), and the craft
 references it designs against (`form-selection.md`, `design-gallery.md`, `scripts/presets.py`,
-`design-by-purpose.md`, `design-by-topic.md`, `bespoke-registers.md`, `design-principles.md`, `design-intelligence-addendum.md`, `semantic-color-contract.md`, `data-viz.md`,
+`design-by-purpose.md`, `design-by-topic.md`, `bespoke-registers.md`, `design-principles.md`, `design-intelligence-addendum.md` (§6.1: semantic colour), `data-viz.md`,
 `schematic-diagrams.md`, `icons.md`, `animation.md`, `image-generation.md`,
 `east-asian-aesthetic.md` — and, for a mimic deck, `style-analysis.md`). It consumes the approved content — it does **not** reopen it — and
 returns a **Design plan**: the deck's **Design language** (a *named* signature motif + a
@@ -1886,7 +1886,7 @@ A few rules that matter (see `references/design-principles.md`):
   disabled, not a category — it makes a coloured row look half-finished). **Bind each hue to ONE
   concept deck-wide** (the accent = the proposed method, or "risk", or one product) — a colour that
   means the same thing on every slide is the biggest "this deck is credible" move: see
-  `references/semantic-color-contract.md`. **🔴 A hue used as TEXT must itself clear ≥4.5:1 on its
+  `references/design-intelligence-addendum.md` §6.1. **🔴 A hue used as TEXT must itself clear ≥4.5:1 on its
   background** — a vivid gold / coral / lime that looks great as a fill can render at 2–4:1 as small
   label/kicker/emphasis text on a light surface (invisible-ish), the recurring "the coloured text is
   too faint" bug. So keep TWO tokens per accent when needed: a **bright fill-only** variant (rules,

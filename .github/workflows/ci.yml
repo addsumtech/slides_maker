@@ -433,7 +433,7 @@ jobs:
           set -o pipefail
           python tests/test_maintenance_boundaries.py | tee /tmp/bounds.log
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/bounds.log || {
-            echo "::error::maintenance-boundaries suite did not run to completion"; exit 1; }
+            echo "::error::the maintenance-boundaries suite did not run to completion"; exit 1; }
 
       # A deck's wall clock is round-trips, not computation -- 9.1s of deterministic pipeline
       # inside an 88-minute build. deck_cycle.py and the contact sheet both shorten that, and both
