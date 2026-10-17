@@ -1848,7 +1848,7 @@ def _title_paras(prs):
             out.append([p.text for p in sh.text_frame.paragraphs])
     return out
 
-_nb_bad = []
+_nb_bad, _nb_built = [], 0
 for L in vl.LANGS:
     import formats as _fmt
     _p = _fmt.blank_deck("wide13")
@@ -1861,11 +1861,12 @@ for L in vl.LANGS:
         continue
     finally:
         dk.set_theme(None)
+    _nb_built += 1
     for paras in _title_paras(_p):
         if any(t.strip() in ("iPhone", "iPhone,") or t.strip().startswith("18") for t in paras):
             _nb_bad.append("{}: {}".format(L, paras))
-check(not _nb_bad, "a no-break space keeps 'iPhone 18' on one line on every language's cover ({})".format(
-    _nb_bad[:3]))
+check(_nb_built >= 12 and not _nb_bad, "a no-break space keeps 'iPhone 18' on one line on every language's "
+      "cover ({} built; {})".format(_nb_built, _nb_bad[:3]))
 import random as _rnd
 _rng = _rnd.Random(7)
 _alpha = "abc XYZ 12,.\t\n　 —é"
@@ -1881,9 +1882,11 @@ check(vl._words("a b c d e f") == ["a b", "c d", "e f"],
 # its credit, so a real deck squeezed source lines into page corners by hand (and one landed in the footer band of a
 # full-bleed cover). credit= is set by the page itself, on the picture it credits, at the language's caption size.
 _photo = str(ROOT / "assets" / "vl" / "photo" / "hall-repair.jpg")
-_CREDIT = "Photo: A. Example, CC BY 4.0"
 _cred_bad, _cred_cases = [], 0
-for L in vl.LANGS:
+# a Chinese credit too: its chip was measured in the Latin face (~3.1in for ~4.7in of 1-em characters), so the line
+# wrapped and hung out of a one-line chip (review of 475f816)
+for L, _CREDIT in [(L_, c_) for L_ in vl.LANGS for c_ in ("Photo: A. Example, CC BY 4.0",
+                                                           "摄影：张三，CC BY 4.0 授权，来源：维基共享资源")]:
     _pages = vl.PAGE_FIELDS if L in vl.IMAGE_LED else vl.NATIVE_IMAGE_PAGES.get(L, ())
     import formats as _fmt
     _p = _fmt.blank_deck("wide13")
@@ -1916,6 +1919,12 @@ for L in vl.LANGS:
                 _cred_bad.append("{}.{}: no credit text on the page".format(L, pg))
                 continue
             c = hits[0]
+            _sz = max((r.font.size.pt for p_ in c.text_frame.paragraphs for r in p_.runs if r.font.size), default=12)
+            _need = dk.measure_text([(_CREDIT, False)], c.width / 914400.0, _sz,   # it subtracts the insets itself
+                                    font=_k.ea_face("body", _CREDIT) if dk._has_cjk(_CREDIT) else _k.face("body"))
+            if _need > c.height / 914400.0 + 0.02:
+                _cred_bad.append("{}.{}: the credit needs {:.2f}in and its box is {:.2f}in ({!r})".format(
+                    L, pg, _need, c.height / 914400.0, _CREDIT[:12]))
             if c.left < 0 or c.top < 0 or c.left + c.width > W_ or c.top + c.height > H_:
                 _cred_bad.append("{}.{}: the credit leaves the canvas".format(L, pg))
             sizes = [r.font.size.pt for p_ in c.text_frame.paragraphs for r in p_.runs if r.font.size is not None]
@@ -1927,17 +1936,28 @@ for L in vl.LANGS:
             if not inside:
                 _cred_bad.append("{}.{}: the credit is not set on the picture it credits".format(L, pg))
         if _built:
-            for f in _hard(_p, "credit_" + L):
+            for f in _hard(_p, "credit_{}_{}".format(L, "cjk" if dk._has_cjk(_CREDIT) else "lat")):
                 _cred_bad.append("{}: {}".format(L, f))
     finally:
         dk.set_theme(None)
-check(_cred_cases >= 30 and not _cred_bad,
+check(_cred_cases >= 60 and not _cred_bad,
       "credit= sets a 12pt+ credit on the picture, inside the canvas, lint-clean, on {} picture page(s) in every "
       "language ({})".format(_cred_cases, _cred_bad[:4]))
+_p = _fmt.blank_deck("square")
+_k = vl.use("storybook", _p, ground="light")
+try:
+    _k.points(_k.new_slide(), kicker="Kicker", title="Points", items=[("One", "a"), ("Two", "b")], image=_photo,
+              credit="Photo: " + "a very long attribution line " * 5)
+    check(False, "a credit too long for its picture is refused (it was set across the page)")
+except ValueError as e:
+    check("credit" in str(e).lower() and "shorten" in str(e).lower(),
+          "a credit too long for its picture is refused, asking to shorten it ({})".format(str(e)[:80]))
+finally:
+    dk.set_theme(None)
 _p = _fmt.blank_deck("wide13")
 _k = vl.use("editorial", _p, ground="light")
 try:
-    _k.data(_k.new_slide(), number="42", label="a label", credit=_CREDIT)
+    _k.data(_k.new_slide(), number="42", label="a label", credit="Photo: A. Example, CC BY 4.0")
     check(False, "credit= without a picture is refused, naming the reason (it was accepted)")
 except (ValueError, TypeError) as e:
     check("unknown field" not in str(e) and "picture" in str(e).lower(),

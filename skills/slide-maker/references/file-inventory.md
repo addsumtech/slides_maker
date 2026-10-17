@@ -711,7 +711,7 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
 - `check_vl_contract.py` — `check_vl_contract.py [name …]`: the manifest and the conformance checks for the named
   languages (all by default), with a NEXT line.
 - `pil_compat.py` — Pillow version shims: `pixels(im)` reads an image's flattened pixel values through `get_flattened_data()`
-  where the installed Pillow has it and `getdata()` otherwise (Pillow 13 deprecates getdata, Pillow 14 removes it, and
+  where the installed Pillow has it and `getdata()` otherwise (Pillow 12+ warns getdata is deprecated, Pillow 14 removes it, and
   requirements allow Pillow 10); `tests/test_pillow_compat.py` names any `getdata()` call added elsewhere.
 - `new_visual_language.py` — `new_visual_language.py <name> [--like <drawn language>]` starts a sixteenth language:
   writes its manifest (`vl_specs/<name>.py`, drafted from `--like`, default `tally`, with every decision that makes

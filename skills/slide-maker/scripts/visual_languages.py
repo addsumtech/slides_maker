@@ -1702,30 +1702,67 @@ def _compose_one(k, slide, page, fields, image, lay):
 
 
 def _place_credit(k, slide, n0, credit):
-    """The caller's picture credit, set ON the picture this page placed (its largest), in its bottom-right corner: a
-    chip of the language's ground carrying the words in its ink, at the caption size and never under 12pt, kept clear
-    of the footer band. Only image_text had a caption; a CC BY photo on any other page had no lawful place for its
-    credit (iPhone 18 explainer, 2026-10-17)."""
+    """The caller's picture credit, set ON the picture this page placed, in its bottom-right corner: a chip of the
+    language's ground carrying the words in its ink, at the caption size and never under 12pt, kept clear of the
+    footer band. Only image_text had a caption; a CC BY photo on any other page had no lawful place for its credit
+    (iPhone 18 explainer, 2026-10-17). The words are measured by the model the lint reads — a Chinese credit in its
+    East-Asian face, one em per character (a Latin-face measure gave its chip two thirds of its width) — and a credit
+    that needs more than three lines, or a third of its picture's height, is refused: shorten it, never spread it over
+    the page."""
     import display_type as dt
     pics = [sh for sh in list(slide.shapes)[n0:] if sh.shape_type == 13]
     if not pics:
         raise ValueError("{}: credit= credits the page's picture, and the page placed none".format(k.name))
-    pic = max(pics, key=lambda sh: sh.width * sh.height)
+    big = max(sh.width * sh.height for sh in pics)
+    pic = [sh for sh in pics if sh.width * sh.height >= 0.5 * big][-1]     # the topmost of the large ones (collage)
     W, H = k.prs.slide_width / 914400.0, k.prs.slide_height / 914400.0
     left, top = max(0.0, pic.left / 914400.0), max(0.0, pic.top / 914400.0)
     right = min(W, (pic.left + pic.width) / 914400.0)
     bottom = min(H - 0.62 * H / 7.5, (pic.top + pic.height) / 914400.0)       # never into the footer band
     size = max(12.0, float(TYPE[k.name].get("caption", (12,))[0]) * min(W, H) / 7.5)
+    cjk = dk._has_cjk(credit)
     face = k.face("body")
+    mface = k.ea_face("body", credit) if cjk else face
     inset, pad = 0.12, 0.08
-    room = max(0.6, right - left - 2 * inset)
-    tw = (dt._glyph_width(credit, size, face, False) or len(credit) * size * 0.5 / 72.0) + 2 * pad + 0.06
-    cw = min(room, tw)
-    ch = dk.measure_text([(credit, False)], cw - 2 * pad, size, font=face) + 2 * 0.04
+
+    def _w(t):
+        if not cjk:
+            return dt._glyph_width(t, size, face, False) or len(t) * size * 0.55 / 72.0
+        total, run = 0.0, ""
+        for ch_ in t:
+            if dk._has_cjk(ch_):
+                total += (dt._glyph_width(run, size, face, False) or 0.0) if run else 0.0
+                run = ""
+                total += size / 72.0                                  # one em per CJK character
+            else:
+                run += ch_
+        return total + ((dt._glyph_width(run, size, face, False) or 0.0) if run else 0.0)
+    room = max(0.6, right - left - 2 * inset - 2 * pad)
+    tb_w = min(room, _w(credit) * 1.10 + dk.TEXT_INSET_LR + 0.06)          # headroom: the lint's estimate must agree
+    h_text = dk.measure_text([(credit, False)], tb_w, size, font=mface)
+    one = dk.measure_text([("x", False)], 10.0, size, font=mface)
+    if h_text > 3.05 * one or h_text + 0.2 > 0.35 * (bottom - top):
+        raise ValueError("{}: credit= {!r} needs more than three lines, or a third of its picture ({:.1f}in wide) — shorten it, "
+                         "e.g. 'Photo: <name>, <licence>', and put the full source on a sources page"
+                         .format(k.name, credit[:40] + ("…" if len(credit) > 40 else ""), right - left))
+    if h_text > 1.5 * one:                               # wrapped: the narrowest box that keeps the line count
+        lo_, hi_ = tb_w * 0.45, tb_w                      # balances the lines, so the last never holds one glyph
+        for _ in range(14):
+            mid = (lo_ + hi_) / 2
+            if dk.measure_text([(credit, False)], mid, size, font=mface) <= h_text + 1e-6:
+                hi_ = mid
+            else:
+                lo_ = mid
+        tb_w = min(tb_w, hi_ * 1.03 + 0.02)
+        h_text = dk.measure_text([(credit, False)], tb_w, size, font=mface)
+    if h_text > 1.5 * one:                               # the renderer's leading, not the tight measure, sets the box
+        h_text = dk.measure_text([(credit, False)], tb_w, size, font=mface, line_h_factor=1.3)
+    vpad = 0.04 if h_text <= 1.5 * one else 0.10        # a wrapped credit keeps the lint's 0.09in card padding
+    cw, ch = tb_w + 2 * pad, h_text + 2 * vpad
     x, y = right - inset - cw, max(top + inset, bottom - inset - ch)
     chip = dk.box(slide, x, y, cw, ch, fill=k.P["ground"])
     dk.overlap_intent(chip, "the picture credit is set on the picture it credits")
-    tb = dk.text(slide, x + pad, y + 0.04, cw - 2 * pad, ch - 0.08,
+    tb = dk.text(slide, x + pad, y + vpad, tb_w, h_text,
                  [k.runs(credit, size, dk.RGBColor.from_string(k.P["ink"]), False, role="body")],
                  anchor=MSO_ANCHOR.MIDDLE, space_after=0)
     dk.overlap_intent(tb, "the picture credit is set on the picture it credits")

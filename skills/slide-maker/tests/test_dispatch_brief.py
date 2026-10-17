@@ -56,6 +56,9 @@ check(code == 1 and "AB" in err and "fast" in err,
       "a critic dispatch with no lens is refused, and the refusal names AB for the fast tier ({})".format(
           err.strip()[:160]))
 
+code, out, err = run("prompt", "--brief", str(brief), "--role", "critic_sole", "--round", "1")
+check(code == 2, "the internal critic_sole prompt is not offered as a --role (exit {})".format(code))
+
 code, out, err = run("prompt", "--brief", str(brief), "--role", "critic", "--lens", "A", "--round", "2")
 check(code == 0 and "LENS A ONLY" in out, "--lens A still prints the single-lens dispatch")
 

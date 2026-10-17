@@ -238,7 +238,7 @@ def main():
 
     p = sub.add_parser("prompt", help="print the short dispatch prompt")
     p.add_argument("--brief", required=True)
-    p.add_argument("--role", required=True, choices=sorted(ROLE_PROMPTS))
+    p.add_argument("--role", required=True, choices=sorted(r for r in ROLE_PROMPTS if r != "critic_sole"))
     p.add_argument("--lens", choices=["A", "B", "AB"])
     p.add_argument("--round", default="1")
     p.add_argument("--section")

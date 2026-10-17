@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """No pixel read goes through Image.getdata(), which Pillow 14 removes (2027-10-15).
 
-WHY. Pillow 13 warns on every getdata() call ("deprecated and will be removed in Pillow 14 … Use
+WHY. Pillow 12+ warns on every getdata() call ("deprecated and will be removed in Pillow 14 … Use
 get_flattened_data instead"); the warning printed through a real deck's lint output (2026-10-17), and on
 Pillow 14 the same calls raise AttributeError inside the lint, the image QC and the surface probes. The
 replacement only exists from Pillow 12, while requirements.txt allows Pillow 10, so the reads go through

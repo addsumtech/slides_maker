@@ -86,7 +86,7 @@ def _initials(texts):
     words before a comma, honorifics skipped (vl_native3.initials)."""
     out = set()
     for t in texts:
-        words = [w for w in t.split(",")[0].split() if w[:1].isalpha()]
+        words = [w for w in vl._words(t.split(",")[0]) if w[:1].isalpha()]   # as vl_native3.initials splits
         while words and words[0].rstrip(".").upper() in _HONORIFIC:
             words = words[1:]
         if 1 <= len(words) <= 3 and all(w[:1].isupper() for w in words):

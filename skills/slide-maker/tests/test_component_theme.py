@@ -440,6 +440,11 @@ _r0, _b0, _ = _em_runs()
 check(_r0.get("iPhone 16 or newer") == 11.5 and _r0.get("Gets iOS 27") == 12,
       "eval_matrix with no size keeps its 11.5pt labels and 12pt heads ({} / {})".format(
           _r0.get("iPhone 16 or newer"), _r0.get("Gets iOS 27")))
+try:
+    _em_runs(0)
+    check(False, "eval_matrix(size=0) is refused (it drew a grid)")
+except ValueError as _e:
+    check("size" in str(_e), "eval_matrix(size=0) is refused, naming size= ({})".format(str(_e)[:60]))
 _r1, _b1, _s1 = _em_runs(18)
 check(_r1.get("iPhone 16 or newer") == 18 and (_r1.get("Gets iOS 27") or 0) >= 18,
       "eval_matrix(size=18) sets 18pt labels and heads at least as large ({} / {})".format(

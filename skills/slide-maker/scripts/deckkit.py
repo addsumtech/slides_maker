@@ -76,7 +76,6 @@ def _ensure_runtime_deps():
 _ensure_runtime_deps()
 
 from pptx import Presentation
-from pil_compat import pixels  # Image.getdata() leaves in Pillow 14
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
@@ -91,6 +90,7 @@ import sys as _sys_rg
 
 _sys_rg.path.insert(0, _os_rg.path.dirname(_os_rg.path.abspath(__file__)))
 import rotgeom  # noqa: E402 — where a rotated shape PAINTS; the one definition lint_deck shares
+from pil_compat import pixels  # noqa: E402 — Image.getdata() leaves in Pillow 14
 
 # ---- default professional palette (a neutral blue scheme). NOT tied to any brand —
 # when building on a template, override these with the template's real theme colours.
@@ -12584,10 +12584,12 @@ def eval_matrix(slide, x, y, w, options, criteria, cells, *, mark="ball", recomm
     nopt, ncrit = len(options), len(criteria)
     if nopt == 0 or ncrit == 0:
         raise ValueError("eval_matrix() needs at least one option and one criterion")
-    k = max(1.0, float(size) / 11.5)                # everything sized for 11.5pt grows with the type
-    crit_w = min(3.0 * k, max(1.4, w * 0.30))
+    if not (isinstance(size, (int, float)) and size > 0):
+        raise ValueError("eval_matrix(): size= is the labels' type size in points, a positive number — got {!r}".format(size))
+    kz = max(1.0, float(size) / 11.5)               # everything sized for 11.5pt grows with the type
+    crit_w = min(3.0 * kz, max(1.4, w * 0.30))
     col_w = (w - crit_w) / nopt
-    head_h = 0.5 * max(1.0, 0.85 * k)
+    head_h = 0.5 * max(1.0, 0.85 * kz)
     acc = _as_rgbc(accents[0]) if accents else BLUE
     rec_fill = tint(acc, 0.10)
     # a ✓/✕/◐ mark is TEXT: the recommend tint keeps text padding below the last row (a harvey ball is a shape)
@@ -12602,7 +12604,7 @@ def eval_matrix(slide, x, y, w, options, criteria, cells, *, mark="ball", recomm
     for c, opt in enumerate(options):
         ox = x + crit_w + c * col_w
         emph = (recommend == c)
-        text(slide, ox, y, col_w, head_h, [[(str(opt), 12 * k, _on_surface(acc, GROUND) if (emph and GROUND is not None) else (acc if emph else ic), True, False, font)]],
+        text(slide, ox, y, col_w, head_h, [[(str(opt), 12 * kz, _on_surface(acc, GROUND) if (emph and GROUND is not None) else (acc if emph else ic), True, False, font)]],
              align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
     # separators are CONNECTORS (not filled boxes) so a full-width rule crossing the tinted
     # recommend column is never mis-flagged as a node escaping it
@@ -12619,7 +12621,7 @@ def eval_matrix(slide, x, y, w, options, criteria, cells, *, mark="ball", recomm
             if mark == "ball":
                 harvey_ball(slide, ccx, ccy, val, d=min(row_h * 0.55, col_w * 0.42), accent=acc)
             else:
-                _eval_mark(slide, ccx, ccy, val, font=font, size=15 * k,
+                _eval_mark(slide, ccx, ccy, val, font=font, size=15 * kz,
                            surface=rec_fill if c == recommend else _th("ground", WHITE))
         if r < ncrit - 1:
             connector(slide, (x, ry + row_h), (x + w, ry + row_h),
@@ -12628,13 +12630,13 @@ def eval_matrix(slide, x, y, w, options, criteria, cells, *, mark="ball", recomm
     if legend and mark == "ball":
         ly = bottom + 0.2
         lx = x + crit_w
-        text(slide, x, ly, crit_w - 0.12, 0.24, [[(scale_label, _fl(9), MUTE, True, False, font)]],
+        text(slide, x, ly, crit_w - 0.12, 0.24, [[(scale_label, _fl(9) * kz, MUTE, True, False, font)]],
              anchor=MSO_ANCHOR.MIDDLE, space_after=0)
         step = min(0.92, (w - crit_w) / 5.0)          # five keys across the grid's width, never past it
         for k in range(5):
             hx = lx + k * step
             harvey_ball(slide, hx + 0.11, ly + 0.11, k, d=0.2, accent=acc)
-            text(slide, hx + 0.26, ly, min(0.62, step - 0.28), 0.24, [[(f"{k * 25}%", _fl(9), MUTE, False, False, font)]],
+            text(slide, hx + 0.26, ly, min(0.62, step - 0.28), 0.24, [[(f"{k * 25}%", _fl(9) * kz, MUTE, False, False, font)]],
                  anchor=MSO_ANCHOR.MIDDLE, space_after=0)
         bottom = ly + 0.32
     return bottom
