@@ -54,8 +54,8 @@ the shared runtime's `$DECK/.deck-gates.json`; on the Codex runtime the same val
    - `init` writes `$DECK/.deck-gates.json`, every value a placeholder; `--slides` is the planned slide count.
    - If the record already exists, `init` exits 2 and changes nothing. Keep it and go on with `set`; `--force`
      overwrites it and discards what is recorded.
-   - Run `init` before `interview --set`. On a folder with no record, `interview --set` writes one holding only
-     the interview, and `init` then refuses.
+   - Either order works: on a folder with no record, `interview --set` writes one holding only the interview, and
+     `init` then builds the full skeleton around those answers (it refuses only a record holding more than that).
    - Give `length` in words (`"5 slides"`): a one-character answer such as `5` is refused at hand-off.
 3. **Write the build script** `$DECK/build_repair-cafe.py` with `vl.use` and one page function per slide, each in its own
    `def slide_NN(prs, k):` (the Codex gate reads the calls inside each `def`). Name it `build_<deck stem>.py` — the

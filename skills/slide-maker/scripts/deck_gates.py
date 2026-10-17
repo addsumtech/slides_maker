@@ -442,13 +442,27 @@ def _save(deck_dir, g):
 
 def _cmd_init(a):
     p = _path(a.deck_dir)
+    kept = {}
     if p.exists() and not a.force:
-        print("{} already exists — pass --force to overwrite (this DISCARDS what is recorded), or keep it and "
-              "go on with `{} set …`".format(p, _SELF), file=sys.stderr)
-        return 2
+        try:
+            old = json.loads(p.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            old = None
+        # `interview --set` on a fresh folder writes a record holding ONLY the interview — the order the
+        # interview naturally runs in. Refusing here pointed at --force, which discards those answers
+        # (iPhone 18 explainer, 2026-10-17), so an interview-only record is carried into the skeleton.
+        if isinstance(old, dict) and set(old) == {"interview"} and isinstance(old["interview"], dict):
+            kept = {k: v for k, v in old["interview"].items() if str(v or "").strip()}
+        else:
+            print("{} already exists — pass --force to overwrite (this DISCARDS what is recorded), or keep it and "
+                  "go on with `{} set …`".format(p, _SELF), file=sys.stderr)
+            return 2
     g = template(a.slides, a.delivery)
+    if kept:
+        g.setdefault("interview", {}).update(kept)
     _save(a.deck_dir, g)
-    print("wrote {}".format(p))
+    print("wrote {}".format(p) + ("  (kept the recorded interview: {})".format(", ".join(sorted(kept)))
+                                  if kept else ""))
     print("every value is a placeholder; `{} check {}` lists what is still unfilled."
           .format(_SELF, shlex.quote(str(a.deck_dir))))
     return 0

@@ -74,6 +74,27 @@ with tempfile.TemporaryDirectory() as _td:
           "the template's OWN output was accused of being hand-written — a hint that fires on the "
           "correct workflow is noise, and noise is what teaches people to skim gates")
 
+    # ── interview --set first, init second: init KEEPS the answers (iPhone 18 explainer, 2026-10-17) ───
+    # `interview --set` on a fresh folder writes a record holding only the interview; `init` then refused
+    # ("already exists"), and the way out it named — --force — DISCARDS the answers just recorded.
+    early = td / "early"
+    early.mkdir()
+    subprocess.run([sys.executable, str(SCRIPTS / "deck_gates.py"), "interview", str(early),
+                    "--set", "language=en", "--set", "density=balanced", "--set", "length=9 slides",
+                    "--set", "goal=inform"], capture_output=True, text=True)
+    r = subprocess.run([sys.executable, str(SCRIPTS / "deck_gates.py"), "init", str(early), "--slides", "9"],
+                       capture_output=True, text=True)
+    rec = json.loads((early / ".deck-gates.json").read_text(encoding="utf-8"))
+    iv = rec.get("interview") or {}
+    check(r.returncode == 0 and "content" in rec and "design_plan" in rec,
+          "init after `interview --set` wrote the full skeleton (exit {}: {})".format(r.returncode, r.stderr.strip()[:120]))
+    check(iv.get("language") == "en" and iv.get("length") == "9 slides" and iv.get("goal") == "inform",
+          "init after `interview --set` kept the recorded answers ({})".format(
+              {k: iv.get(k) for k in ("language", "density", "length", "goal")}))
+    r2 = subprocess.run([sys.executable, str(SCRIPTS / "deck_gates.py"), "init", str(early)],
+                        capture_output=True, text=True)
+    check(r2.returncode == 2, "a FULL record is still protected: a second init without --force is refused")
+
     # ── a record that drops ONE block is not accused either ──────────────────────────────────────
     rec = json.loads((made / ".deck-gates.json").read_text(encoding="utf-8"))
     rec.get("content", {}).pop("open_ledger", None)          # legitimate on a no-source deck
