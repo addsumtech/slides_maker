@@ -76,6 +76,7 @@ def _ensure_runtime_deps():
 _ensure_runtime_deps()
 
 from pptx import Presentation
+from pil_compat import pixels  # Image.getdata() leaves in Pillow 14
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
@@ -389,7 +390,7 @@ def palette_from_image(path, n=5, *, keep_neutrals=False):
     im.thumbnail((220, 220))
     q = im.quantize(colors=64, method=Image.FASTOCTREE).convert("RGB")
     out = []
-    for (r, g, b), _ in Counter(q.getdata()).most_common():
+    for (r, g, b), _ in Counter(pixels(q)).most_common():
         mx, mn = max(r, g, b), min(r, g, b)
         if not keep_neutrals:
             if mx > 236 and mn > 226:        # near-white background
@@ -1530,7 +1531,7 @@ def _png_dominant_ink(path):
         im = Image.open(path).convert("RGBA")
         im.thumbnail((64, 64))
         rs = gs = bs = ws = 0.0
-        for r, g, b, a in im.getdata():
+        for r, g, b, a in pixels(im):
             if a > 40:
                 w = a / 255.0
                 rs += r * w; gs += g * w; bs += b * w; ws += w
@@ -1857,7 +1858,7 @@ def frosted_panel(slide, backdrop, x, y, w, h, *, tint="FFFFFF", alpha=None, blu
 
     def _judge(a_):
         comp = Image.blend(frosted, Image.new("RGB", frosted.size, t_rgb), a_).convert("L")
-        lum = sorted(comp.getdata())
+        lum = sorted(pixels(comp))
         lo_, hi_ = lum[int(0.10 * (len(lum) - 1))], lum[int(0.90 * (len(lum) - 1))]
         ends = (RGBColor(lo_, lo_, lo_), RGBColor(hi_, hi_, hi_))
         ink_ = max((WHITE, _BLACK), key=lambda c: min(contrast_ratio(c, e) for e in ends))
@@ -1877,7 +1878,7 @@ def frosted_panel(slide, backdrop, x, y, w, h, *, tint="FFFFFF", alpha=None, blu
     probe = frosted.convert("RGBA")
     if max(probe.size) > 64:
         probe = probe.resize((64, 64), Image.NEAREST)          # sampled as ASSET NOT USABLE does
-    probe_px = list(probe.getdata())
+    probe_px = list(pixels(probe))
     if _flat_bucket(probe_px, len(probe_px)):
         # A blur of a calm region can come out ONE colour — then it is a plate, not a picture,
         # and ASSET NOT USABLE (rightly) says so. Draw it as the box it is; it looks identical.
@@ -4703,7 +4704,7 @@ def gif_poster(path, out_png=None, frame="first"):
         # most visual content = largest per-channel variance (skips blank/loading frames)
         def score(fr):
             stat = fr.resize((64, 64))
-            px = list(stat.getdata())
+            px = list(pixels(stat))
             n = len(px)
             mean = [sum(c) / n for c in zip(*px)]
             return sum((c - mean[i]) ** 2 for p in px for i, c in enumerate(p))
@@ -10958,7 +10959,7 @@ def _asset_faults(prs):
                 im = im.convert("RGBA")
                 if max(im.size) > 64:
                     im = im.resize((64, 64), Image.NEAREST)
-                px = list(im.getdata())
+                px = list(pixels(im))
             except Exception as exc:
                 out.append((n, "CRITICAL", "ASSET NOT USABLE",
                             f"picture '{nm[:40] or '(unnamed)'}' does not decode ({type(exc).__name__})"

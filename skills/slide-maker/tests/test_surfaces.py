@@ -14,6 +14,7 @@ def check(cond, msg):
 
 
 import deckkit as dk, surfaces
+from pil_compat import pixels
 from pptx.oxml.ns import qn
 from PIL import Image
 prs = dk.blank_deck(13.333, 7.5)
@@ -26,7 +27,7 @@ cs = s._element.find(qn("p:cSld"))
 check(cs[0].tag == qn("p:bg") and len(cs.findall(qn("p:bg"))) == 1, "one <p:bg>, first in cSld")
 check(cs[0].find(".//" + qn("a:tile")) is not None and cs[0].find(".//" + qn("a:blip")) is not None, "a tiled picture fill")
 im = Image.open(p1).convert("L")
-lum = list(im.getdata())
+lum = list(pixels(im))
 base = Image.new("RGB", (1, 1), (0xF3, 0xEB, 0xDD)).convert("L").getpixel((0, 0))
 check(max(abs(v - base) for v in lum) <= 6, "noise within ±strength")
 check(len(set(lum)) > 4, "it is not flat")

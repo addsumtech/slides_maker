@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import image_fx  # noqa: E402
+from pil_compat import pixels  # noqa: E402
 from PIL import Image, ImageDraw, ImageFilter  # noqa: E402
 
 fails: list[str] = []
@@ -64,15 +65,15 @@ with tempfile.TemporaryDirectory() as td:
     scene((0, 177, 64), (196, 140, 92), size=(600, 600), box=(120, 100, 480, 520)).filter(
         ImageFilter.GaussianBlur(1.5)).save(sb)
     so = Image.open(image_fx.chroma_cutout(str(sb))).convert("RGBA")
-    greenish = [p for p in so.getdata() if p[3] > 0 and p[1] > max(p[0], p[2]) + 8]
+    greenish = [p for p in pixels(so) if p[3] > 0 and p[1] > max(p[0], p[2]) + 8]
     check(not greenish, "a soft edge keeps {} green-fringed pixel(s), e.g. {}".format(len(greenish), greenish[:3]))
     # a MAGENTA key's despill must not turn the edge green: capping red and blue AT green did exactly that
     # to a real watercolour pot (an orange rim went pale green). Subtract only the key's EXCESS.
     so2 = td / "soft_mg.png"
     scene((255, 0, 255), (214, 128, 70), size=(600, 600), box=(120, 100, 480, 520)).filter(
         ImageFilter.GaussianBlur(1.5)).save(so2)
-    o2 = list(Image.open(image_fx.chroma_cutout(str(so2), key="FF00FF")).convert("RGBA").getdata())
-    raw2 = list(Image.open(so2).convert("RGB").getdata())
+    o2 = list(pixels(Image.open(image_fx.chroma_cutout(str(so2), key="FF00FF")).convert("RGBA")))
+    raw2 = list(pixels(Image.open(so2).convert("RGB")))
     # the property: a visible pixel that carries NO key excess (for magenta: min(R, B) <= G) is the
     # subject's own colour and must come through UNCHANGED — the cap turned real orange (191,164,95) olive
     moved = [(r_, c_) for r_, c_ in zip(raw2, o2) if c_[3] > 0 and min(r_[0], r_[2]) <= r_[1] and c_[:3] != r_]

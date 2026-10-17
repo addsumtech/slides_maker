@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import deckkit as dk  # noqa: E402
+from pil_compat import pixels  # noqa: E402
 from PIL import Image  # noqa: E402
 
 fails: list[str] = []
@@ -112,7 +113,7 @@ with tempfile.TemporaryDirectory() as td:
         a_used = int(wash._element.xml.split('<a:alpha val="')[1].split('"')[0]) / 100000.0
         g6 = Image.open(io.BytesIO(plate.image.blob)).convert("RGB")
         comp = Image.blend(g6, Image.new("RGB", g6.size, (255, 255, 255)), a_used).convert("L")
-        lum6 = sorted(comp.getdata())
+        lum6 = sorted(pixels(comp))
         ends = [lum6[int(q * (len(lum6) - 1))] for q in (0.10, 0.90)]
         worst6 = min(dk.contrast_ratio(ink6, dk.RGBColor(v, v, v)) for v in ends)
         check(worst6 >= 4.45, "auto-wash ink clears only {:.2f}:1 on the glass it drew (alpha {})"

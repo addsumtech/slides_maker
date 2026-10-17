@@ -15,6 +15,7 @@ def check(cond, msg):
 
 
 import json, subprocess
+from pil_compat import pixels
 import deckkit as dk, visual_languages as vl, register_surface as rs, check_register_pixels as crp, check_visual_language as cvl
 def rgb(h): return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
 CONTRAST = {"editorial": "ink", "soft": "dusk", "collage": "slate", "storybook": "meadow"}
@@ -88,7 +89,7 @@ for g in ("light", "meadow"):
     k.image_text(s_, kicker="Tools", title="You need very few tools", body="A trowel.", image=wc)
     pics = [sh for sh in s_.shapes if sh.shape_type == 13]
     im = Image.open(io.BytesIO(pics[0].image.blob)).convert("RGBA")
-    px = [p_[:3] for p_ in im.getdata() if p_[3] > 230]
+    px = [p_[:3] for p_ in pixels(im) if p_[3] > 230]
     px.sort(key=lambda c: sum(c))
     paper = px[int(len(px) * 0.9)]                     # the light end of the painting: its paper
     d = crp._dist(paper, rgb(vl.VARIANTS["storybook"][g]["palette"]["ground"]))

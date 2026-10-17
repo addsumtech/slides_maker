@@ -28,6 +28,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+from pil_compat import pixels  # noqa: E402
 
 from deckkit import PIC_SHAPES  # noqa: E402
 from written_reason import reason_width  # noqa: E402
@@ -314,7 +315,7 @@ def image_stats(path, *, exclude=None):
     im = Image.open(path).convert("RGB")
     size = im.size
     im.thumbnail((128, 128))
-    px = list(im.getdata())
+    px = list(pixels(im))
     if exclude:
         kc = tuple(int(exclude[i:i + 2], 16) for i in (0, 2, 4))
         keep = [p for p in px if math.dist(p, kc) > 60]
@@ -325,7 +326,7 @@ def image_stats(path, *, exclude=None):
     n = float(len(px))
     mean = tuple(sum(p[i] for p in px) / n for i in range(3))
     lab = _lab("{:02X}{:02X}{:02X}".format(*(int(round(c)) for c in mean)))
-    hsv = list(im.convert("HSV").getdata())
+    hsv = list(pixels(im.convert("HSV")))
     sat = sum(p[1] for p in hsv) / (255.0 * n)
     lum = [0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2] for p in px]
     mu = sum(lum) / n

@@ -49,6 +49,8 @@ import os
 import math
 import re
 import sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from pil_compat import pixels  # noqa: E402  (Image.getdata() leaves in Pillow 14)
 from pptx import Presentation
 from pptx.enum.dml import MSO_FILL
 from pptx.enum.shapes import MSO_SHAPE_TYPE, PP_PLACEHOLDER
@@ -304,7 +306,7 @@ def _bg_pixels(bg, owner):
         if key not in _BG_PIX:
             im = Image.open(_io.BytesIO(blob)).convert("RGB")
             im.thumbnail((160, 160))
-            px = list(im.getdata())
+            px = list(pixels(im))
             med = tuple(sorted(c[i] for c in px)[len(px) // 2] for i in range(3))
             _BG_PIX[key] = (px, im.size, med)
         return _BG_PIX[key]
@@ -1269,7 +1271,7 @@ def _region_bg_lum(im, s, sw, sh, ink_lum):
     if reg.width * reg.height > 6400:                    # cap the pixel walk (~80×80 per shape)
         f = (6400.0 / (reg.width * reg.height)) ** 0.5
         reg = reg.resize((max(3, int(reg.width * f)), max(3, int(reg.height * f))))
-    lums = sorted(_px_lum(p) for p in reg.getdata())
+    lums = sorted(_px_lum(p) for p in pixels(reg))
     bg = [v for v in lums if abs(v - ink_lum) >= 0.14]
     if len(bg) < max(12, 0.2 * len(lums)):               # backdrop ≈ ink-coloured throughout
         bg = lums
@@ -1312,7 +1314,7 @@ def _icon_ink(blob):
         im = im.convert("RGBA")
         if max(im.size) > 96:
             im = im.resize((96, 96), Image.NEAREST)
-        px = list(im.getdata())
+        px = list(pixels(im))
     except Exception:
         return None
     op = [q for q in px if q[3] > 200]
@@ -2622,7 +2624,7 @@ def _load_render_lums(path, renders_dir, n, pngs=...):
             band = _render_void_band(im)
             w, h = im.size
             im = im.resize((64, max(1, int(64 * h / w))))
-            px = list(im.getdata())
+            px = list(pixels(im))
             m = len(px)
             lum = sum(0.299 * r + 0.587 * g + 0.114 * b for r, g, b in px) / (m * 255.0)
             sat = 0.0

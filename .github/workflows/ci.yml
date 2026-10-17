@@ -1504,6 +1504,13 @@ jobs:
           grep -qE "\\] ok$" /tmp/statrow.log || {
             echo "::error::test_stat_row_measured did not run to completion"; exit 1; }
 
+      - name: No pixel read goes through Image.getdata() (removed in Pillow 14)
+        run: |
+          set -o pipefail
+          python tests/test_pillow_compat.py | tee /tmp/pilcompat.log
+          grep -qE "\\] ok$" /tmp/pilcompat.log || {
+            echo "::error::test_pillow_compat did not run to completion"; exit 1; }
+
       - name: Every Pillow font load uses the BASIC layout engine (no RAQM)
         run: |
           set -o pipefail

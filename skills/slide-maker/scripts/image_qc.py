@@ -42,6 +42,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+from pil_compat import pixels  # noqa: E402
 
 EXTS = (".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff", ".bmp")
 
@@ -121,7 +122,7 @@ def _dhash(im, size=8):
     compare must abstain, not answer — a false NEAR DUPLICATE would push a run to delete a photo
     that is nothing like the other one."""
     g = im.convert("L").resize((size + 1, size))
-    px = list(g.getdata())
+    px = list(pixels(g))
     lo, hi = min(px), max(px)
     bits = 0
     for r in range(size):
