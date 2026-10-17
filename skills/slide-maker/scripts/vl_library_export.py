@@ -201,7 +201,8 @@ def _load_prev(lang_dir):
     try:
         return json.loads(f.read_text(encoding="utf-8"))
     except ValueError as e:
-        raise ExportError("{} is not valid JSON ({}) — fix or delete it; it carries each language's added_at".format(
+        raise ExportError("{} is not valid JSON ({}) — fix it by hand (git checkout it); deleting it resets every "
+                          "language's added_at and the NEW baseline".format(
             f, e)) from None
 
 
@@ -323,12 +324,24 @@ def check(site):
             dst = lang_dir / "media" / name / "sample-{}.jpg".format(gid)
             if not dst.is_file() or dst.read_bytes() != src.read_bytes():
                 out.append("stale sample sheet: {} ({} ground)".format(name, gid))
+    # a card whose dialog has no pages is not ready to publish, and renders nobody fingerprinted (a library.json
+    # rebuilt with --no-render over old files) cannot be shown to match the skill — both are stale, not fresh
     for x in prev.get("languages", []):
         if x["id"] not in vl.REGISTRY:
             continue
         for g in x["grounds"]:
-            if g.get("render_fp") and g["id"] in vl.REGISTRY[x["id"]]["grounds"] and \
-                    g["render_fp"] != _fingerprint(x["id"], g["id"]):
+            if g["id"] not in vl.REGISTRY[x["id"]]["grounds"]:
+                continue
+            have = [p for p in PAGES if (g.get("pages") or {}).get(p)]
+            if not have:
+                out.append("no page renders: {} ({} ground)".format(x["id"], g["id"]))
+            elif len(have) < len(PAGES):
+                out.append("missing page renders: {} ({} ground): {}".format(
+                    x["id"], g["id"], ", ".join(p for p in PAGES if p not in have)))
+            elif not g.get("render_fp"):
+                out.append("no render fingerprint: {} ({} ground) — its pages cannot be shown to match the skill; "
+                           "render it".format(x["id"], g["id"]))
+            elif g["render_fp"] != _fingerprint(x["id"], g["id"]):
                 out.append("stale page renders: {} ({} ground) — the demo deck no longer matches them".format(
                     x["id"], g["id"]))
     return out

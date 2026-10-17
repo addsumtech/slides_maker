@@ -106,8 +106,11 @@ with tempfile.TemporaryDirectory() as td:
     check(lib.get("baseline") == "2026-10-17" and all(x.get("added_at") == "2026-10-17" for x in langs),
           "the first export sets the baseline and dates every language to it ({}, {})".format(
               lib.get("baseline"), sorted({x.get("added_at") for x in langs})))
+    # a page whose cards have no rendered pages is not ready to publish: --check says so, by language and ground
     code, out = run("--site", site, "--check")
-    check(code == 0, "--check passes on the page it just wrote (exit {}: {})".format(code, out.strip()[-300:]))
+    check(code == 1 and all("no page renders: {} ({} ground)".format(n, g) in out for n in (langs[0]["id"], langs[-1]["id"])
+                            for g in REG[n]["grounds"]),
+          "--check after --no-render names every unrendered ground ({}: {})".format(code, out.strip()[-300:]))
 
     lib["languages"][0]["added_at"] = "2026-01-02"
     gone = lib["languages"].pop(1)
@@ -157,7 +160,9 @@ with tempfile.TemporaryDirectory() as td:
         others = [x for x in lib3["languages"] if x["id"] != "ink"]
         check(all(g.get("pages") == {} for x in others for g in x["grounds"]), "--only renders only the named language")
         code, out = run("--site", site, "--check")
-        check(code == 0, "--check passes after the render (exit {}: {})".format(code, out.strip()[-300:]))
+        check(code == 1 and "no page renders: ink " not in out and "no page renders: {} ".format(others[0]["id"]) in out,
+              "after --only ink, --check names the languages still unrendered and not ink ({}: {})".format(
+                  code, out.strip()[-300:]))
         code, out = run("--site", site, "--no-render", "--today", "2026-11-21")
         lib4 = json.loads(lib_p.read_text(encoding="utf-8"))
         ink4 = {x["id"]: x for x in lib4["languages"]}["ink"]
@@ -169,6 +174,33 @@ with tempfile.TemporaryDirectory() as td:
         code, out = run("--site", site, "--check")
         check(code == 1 and "stale page renders: ink ({} ground)".format(ink4["grounds"][1]["id"]) in out,
               "--check names renders that no longer match the demo deck ({}: {})".format(code, out.strip()[-200:]))
+
+        # ── a whole page: every ground rendered (ink's real renders stand in for the others' files, each carrying
+        # the fingerprint of its OWN demo deck) — --check passes; the same files listed by a library.json rebuilt with
+        # --no-render (no fingerprints) must not pass as fresh ──
+        import vl_library_export as vx
+        lib5 = json.loads(lib_p.read_text(encoding="utf-8"))
+        ink5 = {x["id"]: x for x in lib5["languages"]}["ink"]
+        ink5["grounds"][1]["render_fp"] = vx._fingerprint("ink", ink5["grounds"][1]["id"])
+        for x in lib5["languages"]:
+            if x["id"] == "ink":
+                continue
+            for g in x["grounds"]:
+                g["pages"] = {}
+                for page in PAGES:
+                    rel = "media/{}/{}/{}.jpg".format(x["id"], g["id"], page)
+                    (site / "languages" / rel).parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy(site / "languages" / ink5["grounds"][0]["pages"][page], site / "languages" / rel)
+                    g["pages"][page] = rel
+                g["render_fp"] = vx._fingerprint(x["id"], g["id"])
+        lib_p.write_text(json.dumps(lib5), encoding="utf-8")
+        code, out = run("--site", site, "--check")
+        check(code == 0, "--check passes on a fully rendered page (exit {}: {})".format(code, out.strip()[-300:]))
+        lib_p.unlink()
+        code, out = run("--site", site, "--no-render", "--today", "2026-10-18")
+        code, out = run("--site", site, "--check")
+        check(code == 1 and "no render fingerprint: ink" in out and "no page renders" not in out,
+              "renders listed without a fingerprint are not called fresh ({}: {})".format(code, out.strip()[-300:]))
 
 for line in ok:
     print("  ok   " + line)
