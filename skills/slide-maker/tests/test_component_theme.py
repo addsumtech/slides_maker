@@ -10,7 +10,7 @@ ok, bad = [], []
 def check(cond, why):
     (ok if cond else bad).append(why)
 
-from component_tiers import TIER1                      # the 38 (one source: docs, checker, tests)
+from vl_contract import TIER1                      # the 38 (one source: docs, checker, tests)
 WORK = Path(tempfile.mkdtemp(prefix="ctheme_")); os.chdir(WORK)
 
 

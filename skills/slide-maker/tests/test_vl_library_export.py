@@ -21,7 +21,7 @@ ROOT = HERE.parent
 SCRIPTS = ROOT / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
-import component_tiers as ct  # noqa: E402
+import vl_contract as ct  # noqa: E402
 import vl_specs  # noqa: E402
 
 EXPORT = SCRIPTS / "vl_library_export.py"

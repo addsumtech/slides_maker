@@ -28,7 +28,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from pil_compat import pixels  # noqa: E402
+from image_qc import pixels  # noqa: E402
 
 from deckkit import PIC_SHAPES  # noqa: E402
 from written_reason import reason_width  # noqa: E402

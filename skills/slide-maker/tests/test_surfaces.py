@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""surfaces.grain_background: a tiled grain/paper ground in <p:bg> — deterministic, capped amplitude, lint-clean."""
+"""register_surface.grain_background (was surfaces.py): a tiled grain/paper ground in <p:bg> — deterministic, capped amplitude, lint-clean."""
 from __future__ import annotations
 import sys, tempfile
 from pathlib import Path
@@ -13,8 +13,8 @@ def check(cond, msg):
         fails.append(msg)
 
 
-import deckkit as dk, surfaces
-from pil_compat import pixels
+import deckkit as dk, register_surface as surfaces
+from image_qc import pixels
 from pptx.oxml.ns import qn
 from PIL import Image
 prs = dk.blank_deck(13.333, 7.5)

@@ -32,7 +32,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
-import component_tiers as ct  # noqa: E402
+import vl_contract as ct  # noqa: E402
 import deckkit as dk  # noqa: E402
 import visual_languages as vl  # noqa: E402
 

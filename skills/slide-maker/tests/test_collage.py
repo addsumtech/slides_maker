@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""collage: 1-4 tilted, taped prints with bounded overlap that never enter the text-safe rect; deterministic for a seed; every canvas."""
+"""visual_languages.collage (was collage.py): 1-4 tilted, taped prints with bounded overlap that never enter the text-safe rect; deterministic for a seed; every canvas."""
 from __future__ import annotations
 import sys, tempfile
 from pathlib import Path
@@ -13,7 +13,8 @@ def check(cond, msg):
         fails.append(msg)
 
 
-import deckkit as dk, collage, rotgeom
+import deckkit as dk, rotgeom
+import visual_languages as collage   # collage.collage() reads as before
 from PIL import Image
 with tempfile.TemporaryDirectory() as td:
     td = Path(td)

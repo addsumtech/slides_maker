@@ -15,7 +15,7 @@ def check(cond, msg):
 
 
 import json, subprocess
-from pil_compat import pixels
+from image_qc import pixels
 import deckkit as dk, visual_languages as vl, register_surface as rs, check_register_pixels as crp, check_visual_language as cvl
 def rgb(h): return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
 CONTRAST = {"editorial": "ink", "soft": "dusk", "collage": "slate", "storybook": "meadow"}

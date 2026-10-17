@@ -135,6 +135,9 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   and so does painting a surface before `presets.apply()` has set the palette (it used to die on a
   blend deep inside a builder, with a TypeError that named nothing the caller could fix). Both gates NOTE a deck that declared a kitted register and used
   none of it.
+- `register_surface.grain_background(slide, color, strength=)` (was `surfaces.py`) — grounds that are not
+  flat colour: sets a deterministic tiled grain/paper tile as the slide's real background (`<p:bg>`), never a
+  picture shape, amplitude capped so text contrast holds.
 - `register_surface.load_kits(dir)` — imports a deck's own `surface_*.py` kits so its INVENTED
   registers exist in THIS process. Registration happens at import time and the gates run in a fresh
   process after the build, so without it a bespoke register's declared prohibitions were enforced
@@ -678,13 +681,20 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   resolution/DPI at the PLANNED box, crop loss, softness, flat plates, letterbox bars,
   near-duplicates, a possible-watermark heuristic, and EXIF rotation (`--fix` bakes it in). Its
   `--contact-sheet` is ONE labelled PNG of every candidate plus a sha256 — the artifact that makes
-  looking cheap, and that a critic's consent can name.
+  looking cheap, and that a critic's consent can name. It also holds the Pillow version shim (was `pil_compat.py`):
+  `pixels(im)` reads an image's flattened pixel values through `get_flattened_data()` where the installed Pillow has
+  it and `getdata()` otherwise (Pillow 12+ warns getdata is deprecated, Pillow 14 removes it, and requirements allow
+  Pillow 10); deckkit, lint_deck and image_series import it from here, and `tests/test_pillow_compat.py` names any
+  `getdata()` call added elsewhere.
 - `visual_languages.py` — <!-- vl:count-all -->fifteen<!-- /vl --> complete looks: <!-- vl:count-image -->four<!-- /vl --> image-led (<!-- vl:list-image-plain -->editorial, soft, collage, storybook<!-- /vl -->) and <!-- vl:count-drawn -->eleven<!-- /vl --> drawn (<!-- vl:list-drawn-plain -->ink, poster, cutpaper, drafting, starlit, broadsheet, journal, tally, chalkboard, interface, wayfinding<!-- /vl -->;
   their pages live in `vl_native.py` / `vl_native2.py` / `vl_native3.py`): palette with
   text-safe inks, system fonts per platform (`fonts="both"` default) and per SCRIPT (Han / kana / Hangul),
   a surface, image treatments and the page compositions; registered with register_surface for
   ground/card. Never imported by deckkit/presets/register_surface. Its CLI: `--list`, `--gates` (the record
   commands), `--sample` (sample decks; `--refresh-bundled` for maintainers). See references/visual-languages.md.
+  It also holds `collage()` (was `collage.py`): `collage(slide, region, items, seed=, keep_clear=)`: 1-4 images as tilted, white-bordered,
+  taped prints; geometry decided first — a print never enters `keep_clear` and never covers more than
+  25% of its neighbour; deterministic for a seed; slot items keep the image-series tag.
 - `vl_native.py` — page compositions of the native visual languages (`ink`, `poster`, `cutpaper`, `drafting`):
   plans the text first (measured, refused past each field's floor; display type breaks at clause marks, never a
   lone character), draws the art with the text kept clear, then sets the text; the points page; vertical CJK for
@@ -700,7 +710,11 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   script-aware way-out label.
 - `vl_contract.py` — the visual-language contract: `validate(spec)` / `validate_all(specs)` check a manifest (identity,
   offer topics, grounds with their `dark` flag and palette roles, type roles, pages, extras, derived words, samples,
-  painters); pure, imports nothing from the skill.
+  painters); pure, imports nothing from the skill. It also holds the component tiers (was `component_tiers.py`):
+  `TIER1` (the 38 general components held to every ground of every language, placed in its content rect),
+  `TIER2_SKIN` (the 15 that also draw cards / rules / markers / numerals in the language's skin, and which roles each
+  draws), `SKIN_VOCAB` / `SKIN_DEFAULT` (the values a manifest's `skin` may pick per role). Read by deckkit's `_skin_*`
+  helpers, `vl_docs`, `check_component_theme`, `vl_library_export` and the tests.
 - `vl_specs/` — one manifest per visual language (`SPEC`), loaded by `vl_specs/__init__.py` (`load()`, ordered by
   `order`); `visual_languages.py` builds its tables from them: `editorial.py`, `soft.py`, `collage.py`, `storybook.py`,
   `ink.py`, `poster.py`, `cutpaper.py`, `drafting.py`, `starlit.py`, `broadsheet.py`, `journal.py`, `tally.py`,
@@ -710,9 +724,6 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   pages, samples / sigs scaffold / docs rows present, and the build-matrix suites still iterating the registry.
 - `check_vl_contract.py` — `check_vl_contract.py [name …]`: the manifest and the conformance checks for the named
   languages (all by default), with a NEXT line.
-- `pil_compat.py` — Pillow version shims: `pixels(im)` reads an image's flattened pixel values through `get_flattened_data()`
-  where the installed Pillow has it and `getdata()` otherwise (Pillow 12+ warns getdata is deprecated, Pillow 14 removes it, and
-  requirements allow Pillow 10); `tests/test_pillow_compat.py` names any `getdata()` call added elsewhere.
 - `new_visual_language.py` — `new_visual_language.py <name> [--like <drawn language>]` starts a sixteenth language:
   writes its manifest (`vl_specs/<name>.py`, drafted from `--like`, default `tally`, with every decision that makes
   the language itself left as `"FILL: <what to decide>"`) and its code (`vl_langs/<name>.py`: a ground painter, the
@@ -728,19 +739,9 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
 - `check_component_theme.py` — no literal colour inside a Tier-1 component body: surfaces, rules, axes and tracks
   come from `dk._th(role, legacy)` (the active visual language's role, else the old literal); semantic colours
   allowlisted with reasons.
-- `component_tiers.py` — plain data (no deckkit import): `TIER1` (the 38 general components held to every ground of every
-  language, placed in its content rect), `TIER2_SKIN` (the 15 that also draw cards / rules / markers / numerals in the
-  language's skin, and which roles each draws), `SKIN_VOCAB` / `SKIN_DEFAULT` (the values a manifest's `skin` may pick
-  per role). Read by deckkit's `_skin_*` helpers, `vl_contract`, `vl_docs`, `check_component_theme` and the tests.
-- `collage.py` — `collage(slide, region, items, seed=, keep_clear=)`: 1-4 images as tilted, white-bordered,
-  taped prints; geometry decided first — a print never enters `keep_clear` and never covers more than
-  25% of its neighbour; deterministic for a seed; slot items keep the image-series tag.
 - `display_type.py` — display typography: `stacked` (one headline, one line per paragraph, each sized by
   its REAL glyph width to fill the measure), `two_tone` (named words in a second colour, CJK too),
   `outlined` (hollow display marks drawn as a picture — LibreOffice renders a native hollow run filled).
-- `surfaces.py` — grounds that are not flat colour: `grain_background(slide, color, strength=)` sets a
-  deterministic tiled grain/paper tile as the slide's real background (`<p:bg>`), never a picture shape,
-  amplitude capped so text contrast holds.
 - `image_series.py` — the ART-DIRECTED IMAGE SERIES for an image-led deck (`imagery: series`): `check`
   validates `series.json` (every slot's meaning line, REFERENT RULE, the people rule, frames, the chroma
   key vs the palette), `prompts` writes the Codex generator's manifest, `qc` compares every image with

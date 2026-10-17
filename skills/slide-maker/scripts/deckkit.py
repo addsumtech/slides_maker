@@ -90,7 +90,7 @@ import sys as _sys_rg
 
 _sys_rg.path.insert(0, _os_rg.path.dirname(_os_rg.path.abspath(__file__)))
 import rotgeom  # noqa: E402 — where a rotated shape PAINTS; the one definition lint_deck shares
-from pil_compat import pixels  # noqa: E402 — Image.getdata() leaves in Pillow 14
+from image_qc import pixels  # noqa: E402 — Image.getdata() leaves in Pillow 14
 
 # ---- default professional palette (a neutral blue scheme). NOT tied to any brand —
 # when building on a template, override these with the template's real theme colours.
@@ -575,7 +575,7 @@ def set_theme(theme):
         raise ValueError("set_theme(): unknown role(s) {} — known: {}".format(sorted(unknown), sorted(_THEME_KEYS)))
     sk = theme.get("skin")
     if sk is not None:
-        import component_tiers as _ct
+        import vl_contract as _ct
         bad_v = {r: v for r, v in sk.items() if r not in _ct.SKIN_VOCAB or v not in _ct.SKIN_VOCAB[r]}
         if bad_v:
             raise ValueError("set_theme(): skin value(s) outside the vocabulary: {}".format(bad_v))
@@ -603,7 +603,7 @@ SKIN_TAG = "deckkit-skin:"   # names the shapes a skin value drew: `deckkit-skin
 
 def _skin(role):
     """The active language's skin value for `role` ('card' | 'rule' | 'marker' | 'number'); the default without one."""
-    import component_tiers as _ct
+    import vl_contract as _ct
     return (THEME.get("skin") or {}).get(role) or _ct.SKIN_DEFAULT[role]
 
 

@@ -34,7 +34,7 @@ sys.path.insert(0, HERE)
 # supply the geometry". Leaving the surface kits out of it therefore did worse than hide them — it
 # told anyone asking for `halftone` or `starburst` to hand-roll the thing that had just been built.
 MODULES = ("deckkit", "designed_charts", "register_surface", "citations", "ornaments", "image_fx",
-           "image_series", "surfaces", "display_type", "collage", "visual_languages", "native_art")
+           "image_series", "display_type", "visual_languages", "native_art")
 
 # The three call-shape errors that actually cost round-trips on a real build. They are properties of
 # the API that no single signature line states, so they are printed with every lookup rather than
@@ -417,8 +417,8 @@ EXAMPLES = {
     "feather": 'import image_fx\n'
                'f = image_fx.feather("skyline.png", radius=0.1)       # edges fade into the ground\n'
                'dk.picture(s, f, 1.0, 0.6, 8.0, 4.4, fit="contain", alt="a city skyline")',
-    "grain_background": 'import surfaces\n'
-                        'surfaces.grain_background(s, "F3EBDD", strength=5)   # a paper ground; text stays crisp\n'
+    "grain_background": 'import register_surface as rs\n'
+                        'rs.grain_background(s, "F3EBDD", strength=5)   # a paper ground; text stays crisp\n'
                         'dk.text(s, 0.8, 0.8, 8, 1, [[("On paper", 28, dk.DEEP, True, False)]])',
     "stacked": 'import display_type as dt\n'
                'dt.stacked(s, 0.6, 0.6, 5.0, ["BRING IT", "BROKEN"], color=dk.DEEP, face="Impact")',
@@ -430,9 +430,9 @@ EXAMPLES = {
                 '    dt.outlined(s, 0.6, 0.6, 3.0, 2.0, "07", color="B23A28", face="Arial Black")   # a hollow number\n'
                 'else:                                # no such face here (Linux): set the number as text\n'
                 '    dk.text(s, 0.6, 0.6, 3.0, 2.0, [[("07", 96, dk.DEEP, True, False, "Arial Black")]])',
-    "collage": 'import collage\n'
-               'collage.collage(s, (5.0, 0.4, 4.6, 4.8), ["skyline.png", "gt_c1.png", "ours_c1.png"],\n'
-               '                seed=3, keep_clear=(0.4, 0.6, 4.2, 2.4))   # tilted prints + tape',
+    "collage": 'import visual_languages as vl\n'
+               'vl.collage(s, (5.0, 0.4, 4.6, 4.8), ["skyline.png", "gt_c1.png", "ours_c1.png"],\n'
+               '           seed=3, keep_clear=(0.4, 0.6, 4.2, 2.4))   # tilted prints + tape',
     # The visual-language scaffolds are whole pages that run AS PRINTED after the --example preamble: they use the
     # pictures bundled with the skill (vl.ASSETS), never a file the reader does not have. vl_cover once used
     # "skyline.png" and no `prs`, and failed when a non-Claude agent ran it (audit 2026-10-09).

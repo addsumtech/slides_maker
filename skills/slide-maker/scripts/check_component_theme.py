@@ -87,7 +87,7 @@ def _drop_th_legacy(tree, found, functions):
     return keep
 
 
-import component_tiers as _ct                                     # noqa: E402  plain data
+import vl_contract as _ct                                     # noqa: E402  plain data
 # the Tier-1 components deckkit draws (the designed_charts recipes are matplotlib: designed_charts._theme colours them),
 # plus the shared tint and axis helpers they draw through
 TIER1 = tuple(n for n in _ct.TIER1 if n not in ("distribution", "forest_plot", "km_curve", "marimekko", "radar",

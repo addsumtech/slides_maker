@@ -13,7 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import vl_specs                      # noqa: E402  plain-data manifests: no deckkit import, so gates can use it
-import component_tiers as ct         # noqa: E402  plain data too: the component tiers and the skin vocabulary
+import vl_contract as ct         # noqa: E402  plain data too: the component tiers and the skin vocabulary
 
 SKILL = Path(__file__).resolve().parent.parent
 REPO = SKILL.parent.parent

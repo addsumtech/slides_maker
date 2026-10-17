@@ -4,7 +4,7 @@ import contextlib, io, os, sys, tempfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-import deckkit as dk, visual_languages as vl, component_tiers as ct, vl_specs, vl_contract
+import deckkit as dk, visual_languages as vl, vl_contract as ct, vl_specs, vl_contract
 
 ok, bad = [], []
 def check(cond, why):
@@ -152,7 +152,7 @@ check('prstDash val="dash"' in x_cht, "drafting's dashed rule reaches the chart 
 dk.set_theme(None)
 
 # no component draws text below its language's floor (spec §5.2) — on every language
-import component_tiers as _ct2
+import vl_contract as _ct2
 for L in vl.LANGS:
     prs, k = _use(L)
     low = []

@@ -307,7 +307,7 @@ prs.save("collage.pptx")
   5.5in, sankey 5.0in — `sigs.PLACE_MIN_W`) raises with the width it needs instead of crowding. An example it cannot
   place is printed with the language's page and rect above it, still runnable — move its coordinates into the rect.
 - **Tier 2 — also draws in the language's skin** (spec §5.3): each language picks one value per role from
-  `scripts/component_tiers.py` `SKIN_VOCAB`; the component draws that role the language's way and picks its text ink
+  `scripts/vl_contract.py` `SKIN_VOCAB`; the component draws that role the language's way and picks its text ink
   against what the skin leaves under it. `dk.skin_card(s, x, y, w, h, fill=…)` gives your own containers (the cells
   `dk.bento()` returns) the same card.
 

@@ -50,7 +50,7 @@ import math
 import re
 import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from pil_compat import pixels  # noqa: E402  (Image.getdata() leaves in Pillow 14)
+from image_qc import pixels  # noqa: E402  (Image.getdata() leaves in Pillow 14)
 from pptx import Presentation
 from pptx.enum.dml import MSO_FILL
 from pptx.enum.shapes import MSO_SHAPE_TYPE, PP_PLACEHOLDER

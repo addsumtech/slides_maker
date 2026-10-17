@@ -57,7 +57,7 @@ manifest whose code is missing (or does not import) is listed as *not ready*, an
 | `grounds.*.roles` | `card`, `card_ink`, `rule`, `on_accent`, `series` [≥ 4], `highlight` | card_ink ≥ 4.5:1 on card; on_accent ≥ 3:1 on accents[0]; every series colour ≥ 3:1 on ground and on card, and ΔE ≥ 20 from the others |
 | `grounds.*.dark` | `True` / `False` | must match the palette (ink lighter than ground ⇒ dark) |
 | `type` | role → `(size, face role, bold, colour key, italic, floor)` | every core role present (`kicker` `title` `subtitle` `body` `quote` `attribution` `number` `label` `note` `caption` `line` `item_head` `item_line`); floor ≤ size; a core role's size ≥ 12pt, a private role's ≥ 10pt; the attribution's **floor** ≥ 12pt |
-| `skin` | one value per role: `card`, `rule`, `marker`, `number` | from `component_tiers.SKIN_VOCAB` — this is how charts and diagrams wear the language |
+| `skin` | one value per role: `card`, `rule`, `marker`, `number` | from `vl_contract.SKIN_VOCAB` — this is how charts and diagrams wear the language |
 | `image_pages` | pages that take a picture | a tuple of page names (a drawn language usually `("image_text",)`) |
 | `extras` | words only the caller gives (`masthead=`, `tags=` …): `{pages, remembered, takes, absent}` each | `pages` is `"any"` or a tuple; `remembered` says whether the deck keeps it; an extra name means one thing across all languages |
 | `derived` | the few words the language writes itself: `[{id, what, words: {script: [words]}}]` | everything else on a page is the caller's |

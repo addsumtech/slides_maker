@@ -12,6 +12,46 @@ KINDS = ("image-led", "drawn")
 CORE_TYPE = ("kicker", "title", "subtitle", "body", "quote", "attribution", "number", "label", "note", "caption",
              "line", "item_head", "item_line")
 ROLE_KEYS = ("card", "card_ink", "rule", "on_accent", "series", "highlight")
+
+# Component tiers (was component_tiers.py). Which general components wear a visual language, and how far (spec §5.5) — plain data, no deckkit import, so docs
+# and gates read it without building anything.
+#
+# TIER1: every general component is held to every ground of every language (theme colours, readable, placed).
+# TIER2_SKIN: the components that also draw their containers, rules, markers and numerals in the language's SKIN, and
+# which of those roles each one draws. SKIN_VOCAB: the values a manifest may pick per role (spec §5.3); a value is
+# implemented once in deckkit and reused by every language that picks it. A new language picks from here and adds a
+# value only when none fits.
+TIER1 = ("agenda bento consort_flow distribution dot_strip dumbbell_board eval_matrix forest_plot funnel gantt "
+         "heat_matrix iso_bars iso_prism iso_stack km_curve leaderboard marimekko meter_bar native_chart org_tree "
+         "position_map pyramid radar roc_curve sankey scorecard segmented_bar small_multiples stat_row step_list table "
+         "tier_stack timeline unit_grid venn waterfall bland_altman source_note").split()
+TIER1 = tuple(TIER1)
+
+TIER2_SKIN = {
+    "bento": ("card",),                     # through dk.skin_card — bento returns the rects, the caller draws them
+    "step_list": ("marker", "rule", "number"),
+    "timeline": ("rule", "marker", "number"),
+    "agenda": ("rule", "number"),
+    "stat_row": ("rule", "number"),
+    "org_tree": ("card", "rule"),
+    "tier_stack": ("card", "rule"),
+    "funnel": ("card", "rule"),
+    "pyramid": ("card", "rule"),
+    "venn": ("rule",),
+    "meter_bar": ("rule", "number"),
+    "gantt": ("rule", "number"),
+    "table": ("rule", "number"),
+    "native_chart": ("rule", "number"),
+    "heat_matrix": ("number",),
+}
+
+SKIN_VOCAB = {
+    "card": ("filled", "outlined", "hairline", "window", "sign", "chalk", "paper"),
+    "rule": ("solid", "hairline", "dashed", "chalk"),
+    "marker": ("disc-number", "dot", "roundel", "circled", "badge"),
+    "number": ("body", "display", "mono"),
+}
+SKIN_DEFAULT = {"card": "filled", "rule": "solid", "marker": "disc-number", "number": "body"}
 TOP_KEYS = ("name", "order", "kind", "display", "rationale", "offer", "look", "grounds", "type", "image_pages",
             "extras", "derived", "samples", "painters", "skin")
 _HEX = re.compile(r"^[0-9A-Fa-f]{6}$")
@@ -211,16 +251,15 @@ def validate(spec):
                 and v[5] <= v[0]):
             probs.append("{}: type role {!r} must be (size, role, bold, colour, italic, floor<=size), got {!r}".format(
                 name, r, v))
-    import component_tiers as _ct
     sk = spec.get("skin")
-    if not isinstance(sk, dict) or set(sk) != set(_ct.SKIN_VOCAB):
-        probs.append("{}: skin must name one value per role {} (got {!r})".format(name, sorted(_ct.SKIN_VOCAB), sk))
+    if not isinstance(sk, dict) or set(sk) != set(SKIN_VOCAB):
+        probs.append("{}: skin must name one value per role {} (got {!r})".format(name, sorted(SKIN_VOCAB), sk))
     else:
         for role, v in sk.items():
-            if v not in _ct.SKIN_VOCAB[role]:
+            if v not in SKIN_VOCAB[role]:
                 probs.append("{}: skin {} {!r} is not in the vocabulary {} — pick one, or add the value to "
-                             "component_tiers.SKIN_VOCAB and implement it in deckkit".format(
-                                 name, role, v, list(_ct.SKIN_VOCAB[role])))
+                             "vl_contract.SKIN_VOCAB and implement it in deckkit".format(
+                                 name, role, v, list(SKIN_VOCAB[role])))
     # the smallest tier (spec §6.2, calibrated 2026-10-15 on the fifteen languages): a core role is read by the
     # audience — >= 12pt; a language's private furniture (running heads, tags, editions) >= 10pt
     for r, v in t.items():
