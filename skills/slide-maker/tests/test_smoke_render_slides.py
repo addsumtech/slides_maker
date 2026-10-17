@@ -10,7 +10,7 @@ The contract this locks down is CORRECTNESS, not speed:
   3. incoherent flag combinations fail at parse time with a non-zero exit, not after
      LibreOffice has run.
 
-Run: python3 smoke_render_slides.py     (needs LibreOffice; skips cleanly without it)
+Run: python3 tests/test_smoke_render_slides.py     (needs LibreOffice; skips cleanly without it)
 """
 import hashlib
 import os
@@ -18,7 +18,8 @@ import subprocess
 import sys
 import tempfile
 
-HERE = os.path.dirname(os.path.abspath(__file__))
+# the scripts under test (this regression lived in scripts/ until 2026-10-17, where nothing ever ran it)
+HERE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts")
 RENDER = os.path.join(HERE, "render_deck.py")
 FAILS = []
 

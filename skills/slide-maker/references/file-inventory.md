@@ -564,11 +564,12 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
 - `_console.py` — make this toolchain's output survive a console that cannot encode it. The reports
   are full of ✓ · ✗ · → · 🔴, and on a legacy Windows code page encoding those raises
   `UnicodeEncodeError` and kills the tool MID-REPORT.
-- `smoke_component_audit.py` · `smoke_directions.py` · `smoke_render_slides.py` — regressions for
-  three tools whose FALSE-POSITIVE side is the dangerous one: a component's own output must never be
-  reported as a hand-roll (or the audit trains agents to stop using components); the direction gate
-  must move the ink, not just the colourway; and a `--slides` preview must be byte-identical to the
-  same page from a full render, leaving no cache behind.
+- `smoke_directions.py` — regression for a tool whose FALSE-POSITIVE side is the dangerous one: the
+  direction gate must move the ink, not just the colourway. Its two siblings now live in `tests/` and run in CI
+  (until 2026-10-17 they sat here and nothing ran them): `test_smoke_component_audit.py` — a component's own
+  output must never be reported as a hand-roll (or the audit trains agents to stop using components) — and
+  `test_smoke_render_slides.py` — a `--slides` preview must be byte-identical to the same page from a full
+  render, leaving no cache behind.
 - `deckkit.disc()` — the circle primitive. `box(round=True)` is a rounded rectangle at
   every radius, so before this the library could not draw a circle through any public
   helper while using `MSO_SHAPE.OVAL` seventeen times internally. Same fill/line grammar as

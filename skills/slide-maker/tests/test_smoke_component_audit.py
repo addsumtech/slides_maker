@@ -10,7 +10,8 @@ import os
 import sys
 import tempfile
 
-HERE = os.path.dirname(os.path.abspath(__file__))
+# the scripts under test (this regression lived in scripts/ until 2026-10-17, where nothing ever ran it)
+HERE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts")
 sys.path.insert(0, HERE)
 FAILS = []
 

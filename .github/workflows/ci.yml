@@ -587,6 +587,20 @@ jobs:
       - name: Direction gate smoke (divergence + bespoke requirement)
         run: python scripts/smoke_directions.py
 
+      - name: component_audit never reports a component's own output as a hand-roll (both directions)
+        run: |
+          set -o pipefail
+          python tests/test_smoke_component_audit.py | tee /tmp/smokeaudit.log
+          grep -q "smoke_component_audit: 0 failure(s)" /tmp/smokeaudit.log || {
+            echo "::error::test_smoke_component_audit did not run to completion"; exit 1; }
+
+      - name: render_deck --slides previews are byte-identical to the full render and leave no cache
+        run: |
+          set -o pipefail
+          python tests/test_smoke_render_slides.py | tee /tmp/smokeslides.log
+          grep -q "smoke_render_slides: 0 failure(s)" /tmp/smokeslides.log || {
+            echo "::error::test_smoke_render_slides did not run to completion"; exit 1; }
+
       - name: Review-contract validator selftest
         run: python scripts/validate_review.py --selftest
 
