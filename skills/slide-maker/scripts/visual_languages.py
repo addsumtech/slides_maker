@@ -31,6 +31,7 @@ sys.path.insert(0, str(HERE))
 import deckkit as dk  # noqa: E402
 import register_surface as rs  # noqa: E402
 from pptx.enum.shapes import MSO_SHAPE  # noqa: E402
+from pptx.enum.text import MSO_ANCHOR  # noqa: E402
 
 EA_FACES = dk.EA_FACES   # one table, in deckkit; the "win" faces: Microsoft's documented defaults — unverified here
 
@@ -1700,8 +1701,39 @@ def _compose_one(k, slide, page, fields, image, lay):
     return {"rects": rects, "image": img_rect, "free": None}
 
 
+def _place_credit(k, slide, n0, credit):
+    """The caller's picture credit, set ON the picture this page placed (its largest), in its bottom-right corner: a
+    chip of the language's ground carrying the words in its ink, at the caption size and never under 12pt, kept clear
+    of the footer band. Only image_text had a caption; a CC BY photo on any other page had no lawful place for its
+    credit (iPhone 18 explainer, 2026-10-17)."""
+    import display_type as dt
+    pics = [sh for sh in list(slide.shapes)[n0:] if sh.shape_type == 13]
+    if not pics:
+        raise ValueError("{}: credit= credits the page's picture, and the page placed none".format(k.name))
+    pic = max(pics, key=lambda sh: sh.width * sh.height)
+    W, H = k.prs.slide_width / 914400.0, k.prs.slide_height / 914400.0
+    left, top = max(0.0, pic.left / 914400.0), max(0.0, pic.top / 914400.0)
+    right = min(W, (pic.left + pic.width) / 914400.0)
+    bottom = min(H - 0.62 * H / 7.5, (pic.top + pic.height) / 914400.0)       # never into the footer band
+    size = max(12.0, float(TYPE[k.name].get("caption", (12,))[0]) * min(W, H) / 7.5)
+    face = k.face("body")
+    inset, pad = 0.12, 0.08
+    room = max(0.6, right - left - 2 * inset)
+    tw = (dt._glyph_width(credit, size, face, False) or len(credit) * size * 0.5 / 72.0) + 2 * pad + 0.06
+    cw = min(room, tw)
+    ch = dk.measure_text([(credit, False)], cw - 2 * pad, size, font=face) + 2 * 0.04
+    x, y = right - inset - cw, max(top + inset, bottom - inset - ch)
+    chip = dk.box(slide, x, y, cw, ch, fill=k.P["ground"])
+    dk.overlap_intent(chip, "the picture credit is set on the picture it credits")
+    tb = dk.text(slide, x + pad, y + 0.04, cw - 2 * pad, ch - 0.08,
+                 [k.runs(credit, size, dk.RGBColor.from_string(k.P["ink"]), False, role="body")],
+                 anchor=MSO_ANCHOR.MIDDLE, space_after=0)
+    dk.overlap_intent(tb, "the picture credit is set on the picture it credits")
+    return (x, y, cw, ch)
+
+
 def _page(page):
-    def fn(self, slide, *, image=None, **fields):
+    def fn(self, slide, *, image=None, credit=None, **fields):
         # words are words: a list was str()'d onto the slide as "['Bring it', 'broken']" and a float as
         # 0.30000000000000004 (robustness audit, 2026-10-09) — a whole number is shown as written, anything else refused
         fields = dict(fields)
@@ -1723,6 +1755,14 @@ def _page(page):
                 self.name, page, sorted(bad), list(PAGE_FIELDS[page]) + ["image"],
                 " and {}".format(sorted(extras)) if extras else "",
                 " ({})".format("; ".join(elsewhere)) if elsewhere else ""))
+        if credit is not None:
+            if not isinstance(credit, str) or not credit.strip():
+                raise ValueError("{}.{}(): credit= takes the credit line as text, e.g. 'Photo: A. Name, CC BY 4.0'"
+                                 .format(self.name, page))
+            if image is None:
+                raise ValueError("{}.{}(): credit= credits the page's picture, and this page has none — pass image= "
+                                 "too, or set the credit on the page that carries the picture".format(self.name, page))
+        n0_credit = len(slide.shapes)
         if self.name in NATIVE:
             import vl_native
             if image is not None:
@@ -1753,6 +1793,8 @@ def _page(page):
                 if isinstance(e, VLImageError):
                     raise VLImageError("{}.{}(): {}".format(self.name, page, e)) from None
                 raise
+        if credit is not None:
+            out.setdefault("rects", {})["credit"] = _place_credit(self, slide, n0_credit, credit.strip())
         # the page's title for screen readers: the kicker is set above it, or the title sits low, so neither lint
         # reading (a TITLE placeholder, or large text in the top 28%) found it — READING ORDER held the hand-off
         ttl = (" ".join(str(fields.get(f) or "") for f in ("number", "label")) if page == "data"
@@ -1762,7 +1804,8 @@ def _page(page):
         return out
     fn.__name__ = page
     fn.__doc__ = ("Compose a {} page: keyword fields {} plus image= (a P1 slot id, a file path, or None; the collage "
-                  "cover/closing take a list of up to 4). Returns {{'rects': {{field: (x, y, w, h)}}, ...}}; refuses "
+                  "cover/closing take a list of up to 4) and credit= (the picture's credit line, set on the picture "
+                  "at the caption size). Returns {{'rects': {{field: (x, y, w, h)}}, ...}}; refuses "
                   "with VLTextOverflow when even the floor sizes overflow, ValueError when there is nothing to place. "
                   "The native languages also take the words only you can give: seal= (ink), highlight= (poster), "
                   "icons= (cutpaper points), project= (drafting); masthead=, edition=, inside= (cover), tags= (points) "
@@ -1775,7 +1818,8 @@ def _page(page):
     fn.__signature__ = _insp.Signature(
         [_P("self", _P.POSITIONAL_OR_KEYWORD), _P("slide", _P.POSITIONAL_OR_KEYWORD)]
         + [_P(f, _P.KEYWORD_ONLY, default=None) for f in PAGE_FIELDS[page] if not (page == "quote" and f == "mark")]
-        + [_P("image", _P.KEYWORD_ONLY, default=None), _P("extras", _P.VAR_KEYWORD)])
+        + [_P("image", _P.KEYWORD_ONLY, default=None), _P("credit", _P.KEYWORD_ONLY, default=None),
+           _P("extras", _P.VAR_KEYWORD)])
     return fn
 
 

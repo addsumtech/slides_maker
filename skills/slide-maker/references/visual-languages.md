@@ -252,6 +252,10 @@ prs.save("collage.pptx")
   baked in (PowerPoint ignores the flag and placed it on its side), a 16-bit PNG is scaled to 8 bits, WebP
   and other formats PowerPoint cannot embed are re-saved as PNG. A file that cannot be read — truncated, or not
   a picture — is refused naming the page and the file (`vl.VLImageError`, a `ValueError`).
+- **Credits:** every page that takes a picture also takes `credit="Photo: A. Name, CC BY 4.0"` — set by the page ON
+  the picture (its bottom-right corner, on a chip of the ground, at the caption size and never under 12pt, clear of
+  the footer band). A licence that requires attribution is met on the page that shows the photo; `credit=` without
+  `image=` is refused.
 - **The picture gives the words room.** When a page's words do not fit beside its picture, the picture shrinks
   (to 80%, then 65% on the image-led pages; by a tenth, then a fifth on the drawn languages' `image_text`)
   before the page refuses.

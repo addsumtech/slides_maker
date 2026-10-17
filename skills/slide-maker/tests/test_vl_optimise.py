@@ -1876,6 +1876,75 @@ check(not _diff, "without a no-break space, _words() splits exactly as str.split
 check(vl._words("a b c d e f") == ["a b", "c d", "e f"],
       "_words() keeps U+00A0, U+202F and U+2007 inside the word they glue")
 
+# ── credit= on every page that carries a picture (iPhone 18 explainer, 2026-10-17) ─────────────────────────────
+# Only image_text had a caption; a CC BY photo on a cover, a points page or a data page had nowhere lawful to carry
+# its credit, so a real deck squeezed source lines into page corners by hand (and one landed in the footer band of a
+# full-bleed cover). credit= is set by the page itself, on the picture it credits, at the language's caption size.
+_photo = str(ROOT / "assets" / "vl" / "photo" / "hall-repair.jpg")
+_CREDIT = "Photo: A. Example, CC BY 4.0"
+_cred_bad, _cred_cases = [], 0
+for L in vl.LANGS:
+    _pages = vl.PAGE_FIELDS if L in vl.IMAGE_LED else vl.NATIVE_IMAGE_PAGES.get(L, ())
+    import formats as _fmt
+    _p = _fmt.blank_deck("wide13")
+    _k = vl.use(L, _p, ground="light")
+    _built = []
+    _copy = {"cover": dict(kicker="Kicker", title="A short title", subtitle="A subtitle"),
+             "section": dict(number="02", kicker="Kicker", title="A section"),
+             "image_text": dict(kicker="Kicker", title="A title", body="One sentence of body copy."),
+             "quote": dict(quote="A short quote that fits.", attribution="Someone"),
+             "data": dict(number="42", label="a label", note="A note."),
+             "closing": dict(title="Thank you", line="One line."),
+             "points": dict(kicker="Kicker", title="Three points", items=[("One", "a line"), ("Two", "a line")])}
+    try:
+        for pg in _pages:
+            s = _k.new_slide()
+            try:
+                getattr(_k, pg)(s, image=_photo, credit=_CREDIT, **_copy[pg])
+            except (vl.VLTextOverflow, ValueError) as e:
+                if "credit" in str(e).lower():
+                    _cred_bad.append("{}.{}: {}".format(L, pg, str(e)[:90]))
+                continue
+            except TypeError as e:
+                _cred_bad.append("{}.{}: {}".format(L, pg, str(e)[:90]))
+                continue
+            _cred_cases += 1
+            _built.append((len(_p.slides), pg))
+            W_, H_ = _p.slide_width, _p.slide_height
+            hits = [sh for sh in s.shapes if sh.has_text_frame and _CREDIT in sh.text_frame.text]
+            if not hits:
+                _cred_bad.append("{}.{}: no credit text on the page".format(L, pg))
+                continue
+            c = hits[0]
+            if c.left < 0 or c.top < 0 or c.left + c.width > W_ or c.top + c.height > H_:
+                _cred_bad.append("{}.{}: the credit leaves the canvas".format(L, pg))
+            sizes = [r.font.size.pt for p_ in c.text_frame.paragraphs for r in p_.runs if r.font.size is not None]
+            if not sizes or min(sizes) < 12:
+                _cred_bad.append("{}.{}: the credit is set under 12pt ({})".format(L, pg, sizes))
+            pics = [sh for sh in s.shapes if sh.shape_type == 13]
+            inside = any(c.left >= p_.left - 9144 and c.top >= p_.top - 9144 and c.left + c.width <= p_.left + p_.width + 9144
+                         and c.top + c.height <= p_.top + p_.height + 9144 for p_ in pics)
+            if not inside:
+                _cred_bad.append("{}.{}: the credit is not set on the picture it credits".format(L, pg))
+        if _built:
+            for f in _hard(_p, "credit_" + L):
+                _cred_bad.append("{}: {}".format(L, f))
+    finally:
+        dk.set_theme(None)
+check(_cred_cases >= 30 and not _cred_bad,
+      "credit= sets a 12pt+ credit on the picture, inside the canvas, lint-clean, on {} picture page(s) in every "
+      "language ({})".format(_cred_cases, _cred_bad[:4]))
+_p = _fmt.blank_deck("wide13")
+_k = vl.use("editorial", _p, ground="light")
+try:
+    _k.data(_k.new_slide(), number="42", label="a label", credit=_CREDIT)
+    check(False, "credit= without a picture is refused, naming the reason (it was accepted)")
+except (ValueError, TypeError) as e:
+    check("unknown field" not in str(e) and "picture" in str(e).lower(),
+          "credit= without a picture is refused, naming the reason ({})".format(str(e)[:80]))
+finally:
+    dk.set_theme(None)
+
 for line in ok:
     print("  ok   " + line)
 for line in skipped:

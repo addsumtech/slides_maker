@@ -289,7 +289,8 @@ def check(deck_dir, *, pptx=None, gates=None, ledger=None, strict_credits=True):
                     problems.append(("MISSING CREDIT",
                                      "{} is {} — attribution REQUIRED — and neither its author "
                                      "({!r}) nor its title appears anywhere in the deck. Add a "
-                                     "credit: deckkit.source_note(...) at the image, or one line "
+                                     "credit: credit= on a visual-language page, "
+                                     "deckkit.source_note(...) at the image, or one line "
                                      "on deckkit.sources_page(...). Ready-made text: "
                                      "`python3 scripts/fetch_images.py ledger <assets> --credits`."
                                      .format(e.get("file"), e.get("license"),
