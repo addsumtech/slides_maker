@@ -265,7 +265,7 @@ def display(k, slide, rect, text, field, *, highlight=None, caps=True, ink=None,
         # every Latin word must fit the line: LibreOffice breaks "1,250,000" after a comma, and a long token inside
         # Chinese text ("预算 Supercalifragilistic…", a URL) ran 8.9in past its box with no gate noticing (final
         # review) — so each non-CJK token is measured in the Latin face it renders in, whatever else the text holds
-        for wd in t.split():
+        for wd in vl._words(t):
             if dk._has_cjk(wd):
                 continue                                   # CJK breaks between any two characters
             gw = _dt._glyph_width(wd, sz_, latin_face, bold)
@@ -293,7 +293,7 @@ def display(k, slide, rect, text, field, *, highlight=None, caps=True, ink=None,
         if not vl._widowed(k, field, t, sz_, w_):
             return False
         ls = vl._break_lines(k, field, t, sz_, w_)
-        return dk._has_cjk(t) or len(ls) < 2 or len(ls[-2].split()) > 1
+        return dk._has_cjk(t) or len(ls) < 2 or len(vl._words(ls[-2])) > 1
 
     lines, bw = None, wm                           # bw: the MEASURE; the box is drawn (w - wm) wider
     if field in vl._NO_WIDOW:

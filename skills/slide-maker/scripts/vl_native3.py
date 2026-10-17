@@ -61,7 +61,7 @@ def initials(attribution):
     t = (attribution or "").split(",")[0].strip()
     if not t or dk._has_cjk(t):
         return None
-    words = t.split()
+    words = vl._words(t)
     while words and words[0].rstrip(".").lower() in HONORIFICS:      # "Dr. Ada Lovelace" is AL, not DA
         words = words[1:]
     if not 1 <= len(words) <= 3 or not all(w[:1].isalpha() and w[:1].isupper() for w in words):
@@ -266,7 +266,7 @@ def _ui_cover(k, slide, f, image):
     pw = 0.25 * W
     if side:
         tsz = vl.TYPE["interface"]["toggle"][0] * s
-        need = max(na.chip_width(wd, tsz, k.face("body")) for lab, _on in tog for wd in lab.split())
+        need = max(na.chip_width(wd, tsz, k.face("body")) for lab, _on in tog for wd in vl._words(lab))
         pw = min(max(pw, need + 0.84 * s + tw + 0.2 * s), 0.40 * W)
     if o == "land":
         win = (0.06 * W, (0.15 if alt() == 0 else 0.08) * H, (0.85 * W - pw) if side else 0.88 * W,

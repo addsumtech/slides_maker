@@ -579,6 +579,16 @@ HEADROOM = 0.97      # every language MEASURES its words in 97% of a column and 
 _LATIN_RUN = re.compile(r"[^\s]+")
 
 
+_BREAKABLE = re.compile(r"[^\S\u00a0\u2007\u202f]+")   # whitespace a line may break at: NOT the no-break kinds
+
+
+def _words(text):
+    """The words a line may break between. str.split() also splits at a NO-BREAK SPACE (U+00A0, U+2007, U+202F), so a
+    caller's "iPhone<NBSP>18" came back as two words and the widow balancer set "iPhone / 18, explained" — then joined
+    the lines with an ordinary space, so the glue was gone too (iPhone 18 explainer, 2026-10-17)."""
+    return [w_ for w_ in _BREAKABLE.split(text) if w_]
+
+
 def _tokens(text):
     """(separator, unit) pairs a line may break between. A Latin word — letters, digits and their own punctuation, a
     run of non-CJK characters — is ONE unit, even inside Chinese ("…进展report v2" never breaks "re / port", the
@@ -637,7 +647,7 @@ def _unbreakable_overwide(k, field, text, size, w):
     if dk._has_cjk(text) and not any(dk._is_hangul(ord(c)) for c in text):
         words = [u for _sep, u in _tokens(text) if not dk._has_cjk(u)]   # the Latin words inside Chinese/Japanese
     else:
-        words = [w_ for w_ in text.split() if not dk._has_cjk(w_)]
+        words = [w_ for w_ in _words(text) if not dk._has_cjk(w_)]
     for word in words:
         if (dt._glyph_width(word, size, k.face(role), bold) or 0) > w - _INSET:
             return word
@@ -683,7 +693,7 @@ def _widest_word_fits(k, field, text, size, w):
         return all((dt._glyph_width(u, size, k.face(role), bold) or 0) <= (w - _INSET)     # …but not inside a
                    for _sep, u in _tokens(text) if not dk._has_cjk(u))                          # Latin word among them
     face = k.ea_face(role, text) if korean else k.face(role)
-    return all((dt._glyph_width(word, size, face, bold) or 0) <= (w - _INSET) for word in text.split())
+    return all((dt._glyph_width(word, size, face, bold) or 0) <= (w - _INSET) for word in _words(text))
 
 
 def _break_lines(k, field, text, size, w):
@@ -774,7 +784,7 @@ def _widowed(k, field, text, size, w):
         return False
     last = ls[-1].strip()
     korean = any(dk._is_hangul(ord(c)) for c in text)
-    return len(last) <= 2 if dk._has_cjk(text) and not korean else len(last.split()) <= 1
+    return len(last) <= 2 if dk._has_cjk(text) and not korean else len(_words(last)) <= 1
 
 
 _NO_WIDOW = ("title", "quote", "label", "line", "subtitle")
@@ -880,7 +890,7 @@ def _even_lines(k, f, t, sz, w):
     the breaks are chosen, not wrapped, and set as explicit paragraphs. Space-separated words only (Latin, Korean);
     a Chinese or Japanese widow is balanced by the narrower measure."""
     import display_type as dt
-    words = t.split()
+    words = _words(t)
     korean = any(dk._is_hangul(ord(c)) for c in t)
     if (dk._has_cjk(t) and not korean) or len(words) < 3 or len(words) > 24:
         return None

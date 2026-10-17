@@ -1837,6 +1837,45 @@ for L in ("editorial", "soft", "collage"):
         L, vl.NUMBER_SLACK - 1, short[:4]))
     dk.set_theme(None)
 
+# ── a NO-BREAK SPACE holds its two words together (iPhone 18 explainer, 2026-10-17) ─────────────────────────────
+# The cover title "iPhone<NBSP>18, explained" was set "iPhone / 18, explained": the widow balancer split words with
+# str.split(), which treats U+00A0 as whitespace, chose a break INSIDE the glued pair and joined the lines back with
+# an ordinary space. Every language's cover, and the image-led ones, must keep the pair on one line.
+def _title_paras(prs):
+    out = []
+    for sh in prs.slides[0].shapes:
+        if sh.has_text_frame and "explained" in sh.text_frame.text and sh.top >= 0:
+            out.append([p.text for p in sh.text_frame.paragraphs])
+    return out
+
+_nb_bad = []
+for L in vl.LANGS:
+    import formats as _fmt
+    _p = _fmt.blank_deck("wide13")
+    _k = vl.use(L, _p, ground="light")
+    _img = str(ROOT / "assets" / "vl" / "photo" / "hall-repair.jpg")
+    try:
+        _k.cover(_k.new_slide(), kicker="An explainer", title="iPhone 18, explained",
+                 subtitle="What you can buy now", image=_img if L in vl.IMAGE_LED else None)
+    except Exception as _e:                      # a refusal is not this test's question
+        continue
+    finally:
+        dk.set_theme(None)
+    for paras in _title_paras(_p):
+        if any(t.strip() in ("iPhone", "iPhone,") or t.strip().startswith("18") for t in paras):
+            _nb_bad.append("{}: {}".format(L, paras))
+check(not _nb_bad, "a no-break space keeps 'iPhone 18' on one line on every language's cover ({})".format(
+    _nb_bad[:3]))
+import random as _rnd
+_rng = _rnd.Random(7)
+_alpha = "abc XYZ 12,.\t\n　 —é"
+_diff = [t for t in ("".join(_rng.choice(_alpha) for _ in range(_rng.randint(0, 40))) for _ in range(500))
+         if vl._words(t) != t.split()]
+check(not _diff, "without a no-break space, _words() splits exactly as str.split() did (500 generated strings; "
+                 "differs on {})".format([repr(t) for t in _diff[:2]]))
+check(vl._words("a b c d e f") == ["a b", "c d", "e f"],
+      "_words() keeps U+00A0, U+202F and U+2007 inside the word they glue")
+
 for line in ok:
     print("  ok   " + line)
 for line in skipped:
