@@ -301,7 +301,7 @@ def _dna_cover(S):
         dots = "".join(
             f'<span class="dna-m-dot" style="left:{lx}%;top:{ty}%;background:{_c(i%3,a)};'
             f'border-radius:{"50%" if i%2 else "0"}"></span>'
-            for i, (lx, ty) in enumerate([(6, 12), (88, 8), (92, 82), (5, 84), (78, 90)]))
+            for i, (lx, ty) in enumerate([(6, 12), (88, 8), (92, 82), (50, 7), (78, 90)]))
         return f'<div class="dna-memphis">{dots}<span class="dna-m-zig" style="border-color:{_c(1,a)}"></span></div>'
     if d == "glassmorphism":
         return (f'<div class="dna-glow" style="background:{_c(0,a)}"></div>'
@@ -573,7 +573,11 @@ def _direction_block(S, idx, deck_title="Deck Title"):
     rat = f' — <span class="rat">{_esc(S["rationale"])}</span>' if S["rationale"] else ""
     fonts = (f'<span class="fmeta">display: {_esc(S["font_display"].split(",")[0])} · '
              f'body: {_esc(S["font_body"].split(",")[0])} · {_esc(S["density"])}</span>')
-    slides = (_slide_cover(S, deck_title) + _slide_bullets(S) + _slide_diagram(S) + _slide_data(S))
+    # each slide is laid out at ONE design size (560x315) and scaled to its cell — like a picture — so the page shows
+    # the same composition at every window width; with px type and %-placed motifs, a narrow cell had moved the
+    # motifs onto the words (tests/test_direction_cover_legibility.py probes two widths)
+    slides = "".join('<div class="slide-cell"><div class="slide-stage">{}</div></div>'.format(x) for x in (
+        _slide_cover(S, deck_title), _slide_bullets(S), _slide_diagram(S), _slide_data(S)))
     # Per-direction font scoping via a wrapper class + inline custom props.
     return f'''<section class="dir" id="dir-{letter}" style="--fd:{S['font_display']};--fb:{S['font_body']}">
       <div class="dir-head">
@@ -614,6 +618,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-s
 @media(max-width:900px){.grid{grid-template-columns:1fr}}
 
 /* a slide card — fixed 16:9, internal sizes tuned to that box */
+/* a fluid cell holds a FIXED 560px stage: the slide's %-paddings resolve against its containing block, so the stage
+   (not the cell) must be the 560px box; the stage is scaled to the cell by fitSlides() */
+.slide-cell{position:relative;aspect-ratio:16/9;border-radius:8px;overflow:hidden;
+  box-shadow:0 1px 0 rgba(0,0,0,.4),0 6px 22px rgba(0,0,0,.28)}
+.slide-stage{position:absolute;left:0;top:0;width:560px;height:315px;transform-origin:0 0}
+.slide-stage>.slide{width:560px;height:315px;box-shadow:none;border-radius:0}
 .slide{position:relative;aspect-ratio:16/9;border-radius:8px;overflow:hidden;
   box-shadow:0 1px 0 rgba(0,0,0,.4),0 6px 22px rgba(0,0,0,.28);
   padding:22px 26px;font-family:var(--fb)}
@@ -787,9 +797,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-s
 .dna-glow2{left:-40px;bottom:-60px;right:auto;top:auto;opacity:.4}
 .dna-glass{position:absolute;right:8%;top:26%;width:150px;height:96px;border-radius:14px;
   background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(6px)}
-/* the pane goes where the title is NOT: over the colour panel on a split cover, a small corner pane above a centred one */
-.cov-split-vertical .dna-glass{right:auto;left:9%;top:24%}
-.cov-centred .dna-glass,.cov-full-bleed-type .dna-glass{top:7%;right:5%;width:118px;height:74px}
+
 .dna-grid{position:absolute;inset:0;opacity:.5;
   background-image:linear-gradient(#12365a 1px,transparent 1px),linear-gradient(90deg,#12365a 1px,transparent 1px);
   background-size:34px 34px}
@@ -808,8 +816,32 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-s
 /* mid-century — starburst + atomic orbit */
 .dna-starburst{position:absolute;right:9%;top:16%;width:0;height:0}
 .dna-ray{position:absolute;width:56px;height:2px;transform-origin:0 50%;opacity:.85}
-.dna-atom{position:absolute;left:6%;bottom:12%;width:70px;height:34px;border:2px solid;
+.dna-atom{position:absolute;left:6%;top:10%;width:70px;height:34px;border:2px solid;
   border-radius:50%;transform:rotate(-20deg);opacity:.7}
+/* ── every cover motif keeps OFF the words, on every cover composition ──────────────────────────────────────
+   Each motif was placed for its preset's own default cover; on another composition it crossed the title (the
+   glass pane, the bauhaus shapes, dark_tech's near-white island under a light title, the editorial hairline
+   striking through it, …). The words sit in the middle band (centred, full-bleed-type), the right half
+   (split-vertical) or the lower left (low-left): motifs go to the top band, the colour panel or the upper half.
+   tests/test_direction_cover_legibility.py measures every motif against every word's ink box. */
+.cov-split-vertical .dna-glass{right:auto;left:9%;top:24%}
+.cov-centred .dna-glass,.cov-full-bleed-type .dna-glass{top:7%;right:5%;width:118px;height:74px}
+.cov-centred .dna-hair,.cov-full-bleed-type .dna-hair{top:15%}
+.cov-centred .dna-hair2,.cov-full-bleed-type .dna-hair2{top:calc(15% + 8px)}
+.cov-split-vertical .dna-hair{left:46%;top:15%}
+.cov-split-vertical .dna-hair2{left:46%;top:calc(15% + 8px)}
+.cov-split-vertical .dna-island{right:auto;left:6%;top:28%}
+.cov-centred .dna-island,.cov-full-bleed-type .dna-island{top:6%;right:5%;width:110px;height:64px}
+.cov-split-vertical .dna-bh-c{right:auto;left:7%;top:12%}
+.cov-split-vertical .dna-bh-t{right:auto;left:20%;top:52%}
+.cov-split-vertical .dna-bh-s{right:auto;left:10%;top:70%}
+.cov-centred .dna-bh-c,.cov-full-bleed-type .dna-bh-c{top:5%;right:6%;width:58px;height:58px}
+.cov-centred .dna-bh-t,.cov-full-bleed-type .dna-bh-t{top:6%;right:24%;border-left-width:22px;border-right-width:22px;
+  border-bottom-width:38px}
+.cov-centred .dna-bh-s,.cov-full-bleed-type .dna-bh-s{top:7%;right:16%;width:40px;height:40px}
+.cov-full-bleed-type .dna-starburst{top:7%;right:6%}
+.cov-full-bleed-type .dna-ray{width:34px}
+.cov-centred .dna-riso,.cov-full-bleed-type .dna-riso{top:5%}
 /* terminal — scanlines + prompt */
 .dna-scan{position:absolute;inset:0;pointer-events:none;opacity:.5;
   background:repeating-linear-gradient(180deg,rgba(120,255,150,.05) 0 1px,transparent 1px 3px)}
@@ -923,6 +955,12 @@ def build_directions_html(directions, out_path, deck_title="Your Deck"):
     }}
   }}
   function copyAgain(){{ copyText(document.getElementById('cbarText').value); }}
+  function fitSlides(){{
+    document.querySelectorAll('.slide-cell').forEach(function(f){{
+      var s = f.firstElementChild; if (s) s.style.transform = 'scale(' + (f.clientWidth / 560) + ')';
+    }});
+  }}
+  fitSlides(); window.addEventListener('load', fitSlides); window.addEventListener('resize', fitSlides);
   function pick(letter, name){{
     document.querySelectorAll('.dir').forEach(function(d){{ d.classList.remove('selected'); }});
     var el = document.getElementById('dir-' + letter);
