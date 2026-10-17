@@ -71,14 +71,14 @@ Twelve directions, one set in English and one in Chinese. Each is a complete exa
       <a href="https://slides.addsum.top/viewer.html?deck=en/product-launch">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/product-launch/template.pptx">Download .pptx</a></sub>
     </td>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/nvidia-overview"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_nvidia-overview.png" alt="Company / Product Intro template preview"></a><br/>
-      <sub><strong>Company / Product Intro</strong><br/>company overview, product matrix, customer communication, fundraising intro<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/nvidia-overview">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/nvidia-overview/template.pptx">Download .pptx</a></sub>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/biology-lesson"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_biology-lesson.png" alt="Classroom Lesson / Courseware template preview"></a><br/>
+      <sub><strong>Classroom Lesson / Courseware</strong><br/>school lesson, courseware, in-class quiz, chalkboard look<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/biology-lesson">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/biology-lesson/template.pptx">Download .pptx</a></sub>
     </td>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/standup-history"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_standup-history.png" alt="History / Evolution Narrative template preview"></a><br/>
-      <sub><strong>History / Evolution Narrative</strong><br/>historical arc, industry evolution, timeline story<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/standup-history">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/standup-history/template.pptx">Download .pptx</a></sub>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/pour-over-coffee"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_pour-over-coffee.png" alt="Social Carousel / 3:4 Portrait template preview"></a><br/>
+      <sub><strong>Social Carousel / 3:4 Portrait</strong><br/>RedNote or Instagram carousel, how-to post, cheat sheet<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/pour-over-coffee">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/pour-over-coffee/template.pptx">Download .pptx</a></sub>
     </td>
   </tr>
   <tr>
@@ -93,9 +93,9 @@ Twelve directions, one set in English and one in Chinese. Each is a complete exa
       <a href="https://slides.addsum.top/viewer.html?deck=en/michael-jackson-king-of-pop">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/michael-jackson-king-of-pop/template.pptx">Download .pptx</a></sub>
     </td>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/nl-job-market-2026"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_nl-job-market-2026.png" alt="Data / Market Analysis template preview"></a><br/>
-      <sub><strong>Data / Market Analysis</strong><br/>industry research, trend explanation, structured analysis<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/nl-job-market-2026">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/nl-job-market-2026/template.pptx">Download .pptx</a></sub>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/ev-market-report"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_ev-market-report.png" alt="Market Report / Newsletter template preview"></a><br/>
+      <sub><strong>Market Report / Newsletter</strong><br/>industry report, periodic briefing, data with a world map<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/ev-market-report">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/ev-market-report/template.pptx">Download .pptx</a></sub>
     </td>
   </tr>
   <tr>
@@ -105,9 +105,9 @@ Twelve directions, one set in English and one in Chinese. Each is a complete exa
       <a href="https://slides.addsum.top/viewer.html?deck=en/corporate-training">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/corporate-training/template.pptx">Download .pptx</a></sub>
     </td>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/solo-company-talk"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_solo-company-talk.png" alt="AI Trends / Solo Talk template preview"></a><br/>
-      <sub><strong>AI Trends / Solo Talk</strong><br/>trend talk, personal presentation, startup story<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/solo-company-talk">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/solo-company-talk/template.pptx">Download .pptx</a></sub>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/thesis-defense"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_thesis-defense.png" alt="Thesis Defense / Research Talk template preview"></a><br/>
+      <sub><strong>Thesis Defense / Research Talk</strong><br/>thesis defense, proposal review, academic or engineering talk<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/thesis-defense">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/thesis-defense/template.pptx">Download .pptx</a></sub>
     </td>
     <td align="center" width="33%">
       <a href="https://slides.addsum.top/viewer.html?deck=en/kids-ai-explainer"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_kids-ai-explainer.png" alt="Teaching / Knowledge Sharing template preview"></a><br/>
@@ -134,8 +134,8 @@ Two ways to use a template:
 **Option 1: point at it (simplest).** Put the template path in your request:
 
 ```text
-Use slide-maker. Follow the style of slides_maker-site/templates/decks/en/nvidia-overview/template.pptx
-and build a product intro from my product.md.
+Use slide-maker. Follow the style of slides_maker-site/templates/decks/en/ev-market-report/template.pptx
+and build a market report from my data.md.
 ```
 
 It parses the template's layout and visual system, then applies them to your content.
@@ -144,10 +144,10 @@ It parses the template's layout and visual system, then applies them to your con
 
 ```bash
 # Claude Code users
-cp -r slides_maker-site/templates/decks/en/nvidia-overview ~/.claude/slide-templates/nvidia-overview
+cp -r slides_maker-site/templates/decks/en/ev-market-report ~/.claude/slide-templates/ev-market-report
 
 # Codex users
-cp -r slides_maker-site/templates/decks/en/nvidia-overview ~/.codex/slide-templates/nvidia-overview
+cp -r slides_maker-site/templates/decks/en/ev-market-report ~/.codex/slide-templates/ev-market-report
 ```
 
 The layouts match; only the copy language differs.

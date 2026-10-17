@@ -71,14 +71,14 @@
       <a href="https://slides.addsum.top/viewer.html?deck=zh/product-launch">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/product-launch/template.pptx">下载 .pptx</a></sub>
     </td>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/nvidia-overview"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_nvidia-overview.png" alt="公司 / 产品介绍模板预览"></a><br/>
-      <sub><strong>公司 / 产品介绍</strong><br/>公司介绍、产品矩阵、客户沟通、融资介绍<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/nvidia-overview">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/nvidia-overview/template.pptx">下载 .pptx</a></sub>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/biology-lesson"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_biology-lesson.png" alt="课堂教学 / 课件模板预览"></a><br/>
+      <sub><strong>课堂教学 / 课件</strong><br/>中小学课件、课堂讲解、随堂练习、黑板报风格<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/biology-lesson">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/biology-lesson/template.pptx">下载 .pptx</a></sub>
     </td>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/standup-history"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_standup-history.png" alt="历史 / 演变叙事模板预览"></a><br/>
-      <sub><strong>历史 / 演变叙事</strong><br/>历史脉络、行业演进、时间线故事<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/standup-history">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/standup-history/template.pptx">下载 .pptx</a></sub>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/pour-over-coffee"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_pour-over-coffee.png" alt="小红书图文 / 3:4 竖版模板预览"></a><br/>
+      <sub><strong>小红书图文 / 3:4 竖版</strong><br/>竖版轮播、教程笔记、参数清单<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/pour-over-coffee">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/pour-over-coffee/template.pptx">下载 .pptx</a></sub>
     </td>
   </tr>
   <tr>
@@ -93,9 +93,9 @@
       <a href="https://slides.addsum.top/viewer.html?deck=zh/michael-jackson-king-of-pop">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/michael-jackson-king-of-pop/template.pptx">下载 .pptx</a></sub>
     </td>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/nl-job-market-2026"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_nl-job-market-2026.png" alt="数据 / 市场分析模板预览"></a><br/>
-      <sub><strong>数据 / 市场分析</strong><br/>行业研究、趋势解读、结构化分析<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/nl-job-market-2026">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/nl-job-market-2026/template.pptx">下载 .pptx</a></sub>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/ev-market-report"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_ev-market-report.png" alt="行业报告 / 定期简报模板预览"></a><br/>
+      <sub><strong>行业报告 / 定期简报</strong><br/>行业报告、定期简报、数据解读、世界地图<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/ev-market-report">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/ev-market-report/template.pptx">下载 .pptx</a></sub>
     </td>
   </tr>
   <tr>
@@ -105,9 +105,9 @@
       <a href="https://slides.addsum.top/viewer.html?deck=zh/corporate-training">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/corporate-training/template.pptx">下载 .pptx</a></sub>
     </td>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/solo-company-talk"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_solo-company-talk.png" alt="AI 趋势 / 个人演讲模板预览"></a><br/>
-      <sub><strong>AI 趋势 / 个人演讲</strong><br/>趋势解读、个人表达、创业分享<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/solo-company-talk">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/solo-company-talk/template.pptx">下载 .pptx</a></sub>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/thesis-defense"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_thesis-defense.png" alt="毕业答辩 / 学术汇报模板预览"></a><br/>
+      <sub><strong>毕业答辩 / 学术汇报</strong><br/>毕业答辩、开题报告、学术或工程汇报<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/thesis-defense">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/thesis-defense/template.pptx">下载 .pptx</a></sub>
     </td>
     <td align="center" width="33%">
       <a href="https://slides.addsum.top/viewer.html?deck=zh/kids-ai-explainer"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_kids-ai-explainer.png" alt="课程 / 知识分享模板预览"></a><br/>
@@ -134,8 +134,8 @@ git clone --depth 1 https://github.com/addsumtech/slides_maker-site.git
 **用法一：直接指路（最简单）。** 把模板路径写进需求：
 
 ```text
-用 slide-maker，参考 slides_maker-site/templates/decks/zh/nvidia-overview/template.pptx 的风格，
-按我的 product.md 做一份产品介绍。
+用 slide-maker，参考 slides_maker-site/templates/decks/zh/ev-market-report/template.pptx 的风格，
+按我的 data.md 做一份行业报告。
 ```
 
 它会解析这份模板的版式和视觉系统，套用到你的内容上。
@@ -144,10 +144,10 @@ git clone --depth 1 https://github.com/addsumtech/slides_maker-site.git
 
 ```bash
 # Claude Code 用户
-cp -r slides_maker-site/templates/decks/zh/nvidia-overview ~/.claude/slide-templates/nvidia-overview
+cp -r slides_maker-site/templates/decks/zh/ev-market-report ~/.claude/slide-templates/ev-market-report
 
 # Codex 用户
-cp -r slides_maker-site/templates/decks/zh/nvidia-overview ~/.codex/slide-templates/nvidia-overview
+cp -r slides_maker-site/templates/decks/zh/ev-market-report ~/.codex/slide-templates/ev-market-report
 ```
 
 两套的版式一致，文案语言不同。
