@@ -22,6 +22,7 @@ def good_spec():
     return {
         "name": "fixture", "order": 99, "kind": "drawn",
         "display": {"en": "Fixture", "zh": "测试"}, "rationale": "drawn, no pictures: a test fixture",
+        "blurb": {"en": "A plain test look: two grounds, one accent, nothing drawn.", "zh": "一套测试用的朴素外观，两种底色。"},
         "offer": {"en": ["testing", "fixtures"], "zh": ["测试", "样例"]},
         "look": {"palette": pal_l, "fonts": {"both": {"display": "Arial", "body": "Arial"},
                                              "mac": {"display": "Arial", "body": "Arial"}},
@@ -51,6 +52,15 @@ for key in ("name", "order", "kind", "display", "rationale", "offer", "look", "g
     s = good_spec(); del s[key]
     probs = vc.validate(s)
     check(any(key in p for p in probs), "a manifest without {!r} is refused naming it ({})".format(key, probs[:1]))
+# the public blurb the library page shows (vl_library_export.py) — required, plain, long enough to say something
+s = good_spec(); del s["blurb"]
+check(any("blurb" in p for p in vc.validate(s)), "a manifest without a blurb is refused naming it")
+s = good_spec(); s["blurb"] = {"en": "Too short.", "zh": "一套测试用的朴素外观，两种底色。"}
+check(any("blurb" in p for p in vc.validate(s)), "an English blurb under 40 characters is refused")
+s = good_spec(); s["blurb"] = {"en": "A plain test look: two grounds, one accent, nothing drawn.", "zh": "太短"}
+check(any("blurb" in p for p in vc.validate(s)), "a Chinese blurb under 12 characters is refused")
+s = good_spec(); s["blurb"] = {"en": "FILL: one or two sentences for visitors", "zh": "FILL: 同上"}
+check(any("blurb" in p for p in vc.validate(s)), "an unfilled blurb is named as still to decide")
 s = good_spec(); s["kind"] = "painted"
 check(any("kind" in p for p in vc.validate(s)), "an unknown kind is refused")
 s = good_spec(); s["grounds"]["night"]["dark"] = False

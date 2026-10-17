@@ -133,6 +133,13 @@ def validate(spec):
         probs.append("{}: display needs non-empty 'en' and 'zh'".format(name))
     if not isinstance(spec["rationale"], str) or len(spec["rationale"]) < 12:
         probs.append("{}: rationale must say in a line what the language is".format(name))
+    # the visitor-facing line the library page shows (vl_library_export.py); not a TOP_KEY: vl_specs.load refuses a
+    # manifest missing one, and a field only the exporter reads must not brick every importer
+    b = spec.get("blurb")
+    if not (isinstance(b, dict) and isinstance(b.get("en"), str) and len(b["en"].strip()) >= 40
+            and isinstance(b.get("zh"), str) and len(b["zh"].strip()) >= 12):
+        probs.append("{}: blurb needs 'en' (40+ characters) and 'zh' (12+) — one or two plain sentences a visitor "
+                     "reads on the library page".format(name))
     off = spec["offer"]
     if spec["kind"] == "drawn":
         if not all(isinstance(off.get(s), list) and len(off[s]) >= 2 and all(isinstance(t, str) and t for t in off[s])

@@ -42,6 +42,8 @@ def draft(like, name, order):
     s["display"] = {"en": FILL + "the language's name in English (one or two words)",
                     "zh": FILL + "它的中文名（两到四个字）"}
     s["rationale"] = FILL + "one line: what the language looks like and which decks it fits"
+    s["blurb"] = {"en": FILL + "one or two plain sentences for visitors: what it looks like, what it suits (40+ characters)",
+                  "zh": FILL + "给访客看的一两句话：长什么样、适合什么（12 字以上）"}
     s["offer"] = {"en": [FILL + "a topic it fits", FILL + "another topic it fits"],
                   "zh": [FILL + "适合的主题", FILL + "另一个适合的主题"]}
     for g, gd in s["grounds"].items():

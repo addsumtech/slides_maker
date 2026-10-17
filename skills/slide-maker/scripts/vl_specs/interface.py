@@ -8,6 +8,8 @@ SPEC = {'name': 'interface',
  'display': {'en': 'Product interface', 'zh': '产品界面'},
  'rationale': 'drawn, no pictures: every page an app screen — windows, status chips, a settings list, a dashboard '
               'card, a dialog',
+ 'blurb': {'en': 'Drawn, no pictures needed: every page an app screen, with windows, status chips, a settings list, a dashboard card and a dialog. Suits product launches, apps and feature tours.',
+           'zh': '无需图片：每页都是一屏应用界面——窗口、状态标签、设置列表、仪表盘卡片、对话框。适合产品发布、应用、功能导览。'},
  'offer': {'en': ['product launch', 'app', 'SaaS', 'feature tour', 'internal tool'],
            'zh': ['产品发布', '应用', 'SaaS', '功能导览', '内部工具']},
  'look': {'palette': {'ground': 'F3F4F7',

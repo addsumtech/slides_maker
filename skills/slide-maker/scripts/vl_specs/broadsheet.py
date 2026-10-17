@@ -8,6 +8,8 @@ SPEC = {'name': 'broadsheet',
  'display': {'en': 'Broadsheet front page', 'zh': '报纸头版'},
  'rationale': 'drawn, no pictures: a masthead strip, a headline and standfirst, newspaper columns, a pull quote '
               'between rules',
+ 'blurb': {'en': 'Drawn, no pictures needed: a newspaper front page with a masthead strip, a headline and standfirst, columns and a pull quote between rules. Suits newsletters and periodic reports.',
+           'zh': '无需图片：报纸头版——报头条、标题和导语、分栏正文、夹在两条线之间的引语。适合通讯、定期报告、社区动态。'},
  'offer': {'en': ['newsletter', 'periodic report', 'community update'], 'zh': ['通讯', '定期报告', '社区动态']},
  'look': {'palette': {'ground': 'F2EEE5',
                       'ink': '141414',

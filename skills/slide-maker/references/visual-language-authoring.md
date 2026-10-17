@@ -49,6 +49,7 @@ manifest whose code is missing (or does not import) is listed as *not ready*, an
 | `kind` | `"drawn"` (words alone) or `"image-led"` | a new language is drawn: image-led ones compose through `visual_languages.LAYOUTS`, not a module |
 | `display` | `{"en": …, "zh": …}` | both non-empty |
 | `rationale` | one line: what it looks like, which decks it fits | at least a short sentence |
+| `blurb` | `{"en": …, "zh": …}`: one or two plain sentences a visitor reads on the library page (slides.addsum.top/languages/) | en ≥ 40 characters, zh ≥ 12; describe what the language draws and what it suits, nothing more |
 | `offer` | drawn: `{"en": [topics], "zh": [topics]}` | at least two topics per script — the direction offer matches decks to these |
 | `look` | `palette` (the light ground's, one object), `fonts` (`both` and `mac`: `display`, `body`, `numeral`…), `ea` (the CJK face kind per role), `grain`, `frames`, `forbids`, `cover`, `skeleton` | all present |
 | `grounds` | `light` (the key callers pass) and at least one contrast ground, each `{label, label_zh, palette, roles, dark}` | below |

@@ -8,6 +8,8 @@ SPEC = {'name': 'wayfinding',
  'display': {'en': 'Wayfinding', 'zh': '导视线路'},
  'rationale': 'drawn, no pictures: metro lines converging on an interchange, station signs, a strip map for ordered '
               'steps, a departure board',
+ 'blurb': {'en': 'Drawn, no pictures needed: metro lines converging on an interchange, station signs, a strip map for ordered steps and a departure board. Suits roadmaps, processes and onboarding.',
+           'zh': '无需图片：地铁线路汇向换乘站，站牌、按顺序排列步骤的线路图、发车信息牌。适合路线图、流程、新人上手。'},
  'offer': {'en': ['roadmap', 'process', 'onboarding', 'journey', 'strategy route', 'transport/city'],
            'zh': ['路线图', '流程', '新人上手', '用户旅程', '战略路径', '交通与城市']},
  'look': {'palette': {'ground': 'F6F5F1',
