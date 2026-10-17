@@ -102,8 +102,9 @@ def _shape_facts(sh, canvas):
         "gradient": x.find(".//" + _A + "gradFill") is not None,
         "soft-shadow": bool(inherit and ref_idx > 0),
         "faces": {r.get("typeface") for r in x.iter(_A + "latin") if r.get("typeface")},
+        # a picture's prstGeom is its FRAME — two photos side by side are not a confetti of shapes
         "big_primitive": bool(geom in PRIMITIVE_GEOMS and canvas and not has_text
-                              and area >= canvas * BIG_PRIMITIVE),
+                              and x.tag != _P + "pic" and area >= canvas * BIG_PRIMITIVE),
         "area": area,
         "rect": _rect(sh),
     }
@@ -419,6 +420,19 @@ def _selftest():
         if "confetti" not in codes(build(_one_hero), "bauhaus") else bad.append("hero flagged")
     ok.append("...and three of them are caught: its guard says one hero, never a confetti") \
         if "confetti" in codes(build(_confetti), "bauhaus") else bad.append("confetti missed")
+
+    # A PHOTOGRAPH is not a primitive. A placed picture carries prstGeom `rect` like any square, so
+    # counting geometry alone called two photos side by side a "confetti of shapes" and blocked an
+    # `editorial` (photo-led) deck at hand-off — its own lineup and before/after pages (2026-10-17).
+    _photo = str(Path(__file__).resolve().parent.parent / "assets" / "vl" / "photo" / "hall-repair.jpg")
+
+    def _two_photos(s, p):
+        dk.picture(s, _photo, 0.5, 1.0, 4.8, 3.6, fit="cover")
+        dk.picture(s, _photo, 5.6, 1.0, 4.8, 3.6, fit="cover")
+
+    ok.append("two photographs side by side are not a confetti of primitives — a picture's `rect` "
+              "geometry is its frame, not a hero shape") \
+        if "confetti" not in codes(build(_two_photos), "bauhaus") else bad.append("two photos called confetti")
 
     def _prop(s, p):
         dk.text(s, 1, 1, 4, 0.4, [[("heading", 20, dk.DEEP, True, False, "Helvetica Neue")]])
