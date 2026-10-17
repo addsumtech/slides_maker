@@ -2594,6 +2594,8 @@ critic is a *demanding* judge (see `agents/critic.md`), not a rubber stamp:
 > emit a prompt while any required section is unfilled, so a hollow brief fails loudly instead of
 > dispatching a critic that was told nothing. Everything the numbered item asks for still has to be
 > in the brief — the tool changes where it is written, never whether it is.
+> **`--lens AB` is the `fast` tier's ONE critic** (both lenses as two passes, as `agents/critic.md` asks of a sole
+> critic); `standard` and `thorough` dispatch `--lens A` and `--lens B` as separate critics.
 
 1. **Critique.** Dispatch an independent critic subagent through the host's available
    multi-agent/subagent tool, pointed at `agents/critic.md`, giving it the rendered PNGs, the deck's **purpose + audience**

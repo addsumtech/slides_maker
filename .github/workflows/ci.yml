@@ -1065,6 +1065,12 @@ jobs:
           python tests/test_vl_authoring.py | tee /tmp/vlauth.log
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/vlauth.log || {
             echo "::error::test_vl_authoring did not run to completion"; exit 1; }
+      - name: "dispatch_brief prints a dispatch for every tier's critic (the fast tier's sole critic too)"
+        run: |
+          set -o pipefail
+          python tests/test_dispatch_brief.py | tee /tmp/dispatchbrief.log
+          grep -qE "\\] ok$" /tmp/dispatchbrief.log || {
+            echo "::error::test_dispatch_brief did not run to completion"; exit 1; }
       - name: "Components take colours from the theme (no literal colour in a component)"
         run: python scripts/check_component_theme.py
       - name: "Visual languages after the audit (measured with headroom, nothing dropped, upright pictures, clean own pages)"

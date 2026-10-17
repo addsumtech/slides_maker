@@ -471,7 +471,7 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
 - `dispatch_brief.py` — write the deck brief ONCE, point every dispatch at it. `init --deck <dir>`
   creates the skeleton (in a scratch path, never the deck folder); `check --brief <p>` gates that
   every required section is filled; `prompt --brief <p> --role critic|section|planner|design
-  [--lens A|B] [--round N] [--section N --slides a-b]` prints the dispatch prompt. Exists because
+  [--lens A|B|AB] [--round N] [--section N --slides a-b]` prints the dispatch prompt. Exists because
   nine dispatches on one measured build cost 41,203 output tokens (~12.5 min) at ~4,600 each, and
   almost all of it was the same interview answers, paths, cap and CONTRACT CARD retyped nine times;
   the generated prompt is ~220 tokens. Second reason: it makes the contract card ONE artifact

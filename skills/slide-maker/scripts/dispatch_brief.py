@@ -40,6 +40,8 @@ Usage
   python3 scripts/dispatch_brief.py prompt --brief <path> \\
           --role critic --lens A --round 2                           # print the dispatch prompt
   python3 scripts/dispatch_brief.py prompt --brief <path> \\
+          --role critic --lens AB --round 1                          # the fast tier's sole critic
+  python3 scripts/dispatch_brief.py prompt --brief <path> \\
           --role section --section 2 --slides 6-10
 """
 import argparse
@@ -72,6 +74,17 @@ ROLE_PROMPTS = {
         "🔴 Read `{skill}/agents/critic.md` and apply ONLY lens {lens} (plus the shared "
         "high-recurrence box). Read `{skill}/references/review-rubrics.md` for your lens, and the "
         "ONE per-purpose section matching this deck's purpose — not the other eight.\n"
+        "🔴 Read the deck brief and CONTRACT CARD at `{brief}` before you open a slide.\n"
+        "Round {round}. Judge the RENDERED PIXELS in `{renders}`; the deck is `{deck}`.\n"
+        "You judge, you do not co-design. Return the review JSON your brief specifies; it is "
+        "validated by `validate_review.py critic`, so a non-conforming review is rejected."),
+    "critic_sole": (
+        "You are the SOLE CRITIC of the `fast` review tier for the slide-maker skill: you carry BOTH lenses.\n"
+        "🔴 Read `{skill}/agents/critic.md` and run lens A (content · fidelity · narrative) and lens B "
+        "(design · layout · legibility) as two passes over the whole deck (plus the shared "
+        "high-recurrence box) — list both in `coverage.passes` and fill both lens audits and both probes, "
+        "as critic.md asks of a sole critic. Read `{skill}/references/review-rubrics.md` for both lenses, "
+        "and the ONE per-purpose section matching this deck's purpose — not the other eight.\n"
         "🔴 Read the deck brief and CONTRACT CARD at `{brief}` before you open a slide.\n"
         "Round {round}. Judge the RENDERED PIXELS in `{renders}`; the deck is `{deck}`.\n"
         "You judge, you do not co-design. Return the review JSON your brief specifies; it is "
@@ -189,16 +202,18 @@ def cmd_prompt(args):
                          "unfilled sections: {}\n".format(", ".join(missing)))
         return 1
     if args.role == "critic" and not args.lens:
-        sys.stderr.write("dispatch_brief: --lens is required for a critic dispatch (A = content · "
-                         "fidelity · narrative, B = design · layout · legibility). One lens each — "
-                         "a critic carrying both is a different, weaker review.\n")
+        sys.stderr.write("dispatch_brief: --lens is required for a critic dispatch: A = content · "
+                         "fidelity · narrative, B = design · layout · legibility (the standard and "
+                         "thorough tiers dispatch one critic per lens), or AB = the fast tier's SOLE "
+                         "critic, which runs both lenses as two passes.\n")
         return 1
     if args.role == "section" and not (args.section and args.slides):
         sys.stderr.write("dispatch_brief: --section and --slides are required for a section "
                          "dispatch.\n")
         return 1
     deck_dir = os.path.dirname(os.path.abspath(args.brief))
-    print(ROLE_PROMPTS[args.role].format(
+    role = "critic_sole" if (args.role == "critic" and args.lens == "AB") else args.role
+    print(ROLE_PROMPTS[role].format(
         skill=_skill_root(), brief=os.path.abspath(args.brief),
         lens=args.lens or "", round=args.round, section=args.section or "",
         slides=args.slides or "", deck=args.deck or "<deck>.pptx",
@@ -224,7 +239,7 @@ def main():
     p = sub.add_parser("prompt", help="print the short dispatch prompt")
     p.add_argument("--brief", required=True)
     p.add_argument("--role", required=True, choices=sorted(ROLE_PROMPTS))
-    p.add_argument("--lens", choices=["A", "B"])
+    p.add_argument("--lens", choices=["A", "B", "AB"])
     p.add_argument("--round", default="1")
     p.add_argument("--section")
     p.add_argument("--slides")
