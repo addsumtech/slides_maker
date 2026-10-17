@@ -416,7 +416,9 @@ def _slide_cover(S, deck_title="Deck Title"):
     panel = (f'<div class="cover-panel" style="background:{S["accent"]}"></div>'
              if comp == "split-vertical" else "")
     dna = _dna_cover(S)
-    return f'''<div class="slide cover cov-{comp} dna-{S.get("dna") or "none"}" style="background:{cbg}">
+    # the cover's style marker is `look-<preset>`, never `dna-<preset>`: memphis's motif container IS `.dna-memphis`
+    # (position:absolute; inset:0), so the old marker pulled every memphis cover out of its slide over the whole page
+    return f'''<div class="slide cover cov-{comp} look-{S.get("dna") or "none"}" style="background:{cbg}">
       {dna}{bar}{panel}
       <div class="cover-body">
         <div class="cover-ttl" style="color:{tt}">{_esc(deck_title)}</div>
@@ -630,10 +632,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-s
 .co-body{color:#fff;font-size:13px;font-weight:500}
 .cover{display:flex;flex-direction:column;justify-content:center}
 .accentbar{position:absolute;left:0;top:0;bottom:0;width:10px}
-.cover-body{padding-left:8px}
+/* the cover's words sit ABOVE every style motif: a motif is positioned, so it painted over a static title —
+   the glassmorphism pane blurred a split-vertical title, and grids, frames and shapes crossed nine presets' titles
+   (tests/test_direction_cover_legibility.py) */
+.cover-body{padding-left:8px;position:relative;z-index:2}
 .cover-ttl{font-family:var(--fd);font-size:32px;font-weight:800;letter-spacing:-.01em}
 .cover-sub{font-size:15px;margin-top:9px}
-.cover-tag{position:absolute;left:26px;bottom:20px;font-size:11px;letter-spacing:.04em}
+.cover-tag{position:absolute;left:26px;bottom:20px;font-size:11px;letter-spacing:.04em;z-index:2}
 .pipe{display:flex;align-items:center;gap:7px;margin-top:24px}
 .chip{flex:1;border-radius:7px;padding:13px 10px;color:#fff;min-width:0}
 .chip-t{font-weight:700;font-size:14px}
@@ -782,6 +787,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-s
 .dna-glow2{left:-40px;bottom:-60px;right:auto;top:auto;opacity:.4}
 .dna-glass{position:absolute;right:8%;top:26%;width:150px;height:96px;border-radius:14px;
   background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(6px)}
+/* the pane goes where the title is NOT: over the colour panel on a split cover, a small corner pane above a centred one */
+.cov-split-vertical .dna-glass{right:auto;left:9%;top:24%}
+.cov-centred .dna-glass,.cov-full-bleed-type .dna-glass{top:7%;right:5%;width:118px;height:74px}
 .dna-grid{position:absolute;inset:0;opacity:.5;
   background-image:linear-gradient(#12365a 1px,transparent 1px),linear-gradient(90deg,#12365a 1px,transparent 1px);
   background-size:34px 34px}

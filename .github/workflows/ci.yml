@@ -1065,6 +1065,14 @@ jobs:
           python tests/test_vl_authoring.py | tee /tmp/vlauth.log
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/vlauth.log || {
             echo "::error::test_vl_authoring did not run to completion"; exit 1; }
+      - name: "Direction page: no style motif covers a cover title (18 presets x 4 covers, headless Chrome)"
+        run: |
+          set -o pipefail
+          python tests/test_direction_cover_legibility.py | tee /tmp/dircover.log
+          grep -qE "\\] ok$" /tmp/dircover.log || {
+            echo "::error::test_direction_cover_legibility did not run to completion"; exit 1; }
+          if grep -q "SKIP" /tmp/dircover.log; then echo "::error::no Chrome on the runner — the cover probe checked nothing"; exit 1; fi
+
       - name: "dispatch_brief prints a dispatch for every tier's critic (the fast tier's sole critic too)"
         run: |
           set -o pipefail
