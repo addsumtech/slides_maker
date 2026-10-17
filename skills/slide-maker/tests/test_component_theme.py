@@ -416,6 +416,39 @@ check("#123456" in [str(c).lower() for c in seen.get("lines", [])] and "#e8ecf5"
           sorted(set(map(str, seen.get("lines", []))))[:4], sorted(set(map(str, seen.get("texts", []))))[:3]))
 dk.set_theme(None)
 
+# ── eval_matrix takes a type size (iPhone 18 explainer, 2026-10-17) ─────────────────────────────────────────────
+# Its labels were fixed at 11.5pt and its heads at 12pt — under half the ~18pt a presented 13.3in deck needs, with no
+# parameter to raise them, so the deck had to rewrite the runs after the call. `size=` sets the labels; the heads,
+# the label column and the marks grow with it; the default keeps every existing deck byte-for-byte.
+def _em_runs(size=None):
+    prs = dk.blank_deck(13.333, 7.5)
+    s = dk.add_slide(prs)
+    kw = {} if size is None else {"size": size}
+    bottom = dk.eval_matrix(s, 0.67, 1.5, 12.0, ["Gets iOS 27", "Gets Siri AI"],
+                            ["iPhone 16 or newer", "iPhone 15 Pro, Pro Max", "Older than iPhone 11"],
+                            [["yes", "yes"], ["yes", "yes"], ["no", "no"]], mark="mark", **kw)
+    runs = {}
+    for sh in s.shapes:
+        if sh.has_text_frame:
+            for p in sh.text_frame.paragraphs:
+                for r in p.runs:
+                    if r.text.strip():
+                        runs[r.text] = r.font.size.pt if r.font.size is not None else None
+    return runs, bottom, s
+
+_r0, _b0, _ = _em_runs()
+check(_r0.get("iPhone 16 or newer") == 11.5 and _r0.get("Gets iOS 27") == 12,
+      "eval_matrix with no size keeps its 11.5pt labels and 12pt heads ({} / {})".format(
+          _r0.get("iPhone 16 or newer"), _r0.get("Gets iOS 27")))
+_r1, _b1, _s1 = _em_runs(18)
+check(_r1.get("iPhone 16 or newer") == 18 and (_r1.get("Gets iOS 27") or 0) >= 18,
+      "eval_matrix(size=18) sets 18pt labels and heads at least as large ({} / {})".format(
+          _r1.get("iPhone 16 or newer"), _r1.get("Gets iOS 27")))
+check(_b1 > _b0, "the larger type takes more height, so the grid's bottom moves down ({:.2f} > {:.2f})".format(_b1, _b0))
+_marks = [r.font.size.pt for sh in _s1.shapes if sh.has_text_frame for p in sh.text_frame.paragraphs
+          for r in p.runs if r.text in ("✓", "✕", "✔", "✗", "◐") and r.font.size is not None]
+check(_marks and min(_marks) >= 18, "the marks grow with the labels ({})".format(sorted(set(_marks))))
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

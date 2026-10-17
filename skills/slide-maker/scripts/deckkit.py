@@ -12560,13 +12560,14 @@ def _eval_mark(slide, cx, cy, val, *, font=None, size=15, surface=None):
     glyph, col = _EVAL_MARKS.get(str(val).strip().lower(), _EVAL_MARKS["partial"])
     if surface is not None:
         col = _on_surface(col, surface)
-    text(slide, cx - 0.3, cy - 0.18, 0.6, 0.36, [[(glyph, size, col, True, False, font)]],
+    g = max(1.0, size / 15.0)                       # the glyph's box grows with a larger mark
+    text(slide, cx - 0.3 * g, cy - 0.18 * g, 0.6 * g, 0.36 * g, [[(glyph, size, col, True, False, font)]],
          align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
 
 
 def eval_matrix(slide, x, y, w, options, criteria, cells, *, mark="ball", recommend=None,
                 row_h=0.42, legend=True, accents=None, ink=None, font=None,
-                recommend_label="Recommended", scale_label="SCALE"):
+                recommend_label="Recommended", scale_label="SCALE", size=11.5):
     """A decision / OPTION-vs-CRITERIA scoring grid: a header row of option names (columns), a left
     column of criteria labels (rows), and a cell grid. ``cells`` is a 2-D list ``cells[row][col]``:
     ``0..4`` for ``mark='ball'`` (a :func:`harvey_ball` per cell) or ``'yes'``/``'no'``/``'partial'``
@@ -12574,14 +12575,18 @@ def eval_matrix(slide, x, y, w, options, criteria, cells, *, mark="ball", recomm
     ``corner_tab`` "RECOMMENDED" on it — foreground the ONE option the analysis picks. ``legend=True``
     adds a small on-canvas 0–100 % harvey-ball key (ball mode only). ``accents[0]`` sets the
     recommend/ball hue; ``ink`` the label colour. Pass ``recommend_label``/``scale_label`` to
-    translate the chrome on a non-English deck (推荐方案 / 评分). Returns the bottom y."""
+    translate the chrome on a non-English deck (推荐方案 / 评分). ``size`` is the criteria labels' type
+    size (default 11.5, a document scale); the option heads, the label column, the header row and the ✓/✕
+    marks grow in proportion — on a PRESENTED 13.3in deck pass ``size=18`` (and a ``row_h`` that holds it).
+    Returns the bottom y."""
     ic = ink if ink is not None else DEEP
     nopt, ncrit = len(options), len(criteria)
     if nopt == 0 or ncrit == 0:
         raise ValueError("eval_matrix() needs at least one option and one criterion")
-    crit_w = min(3.0, max(1.4, w * 0.30))
+    k = max(1.0, float(size) / 11.5)                # everything sized for 11.5pt grows with the type
+    crit_w = min(3.0 * k, max(1.4, w * 0.30))
     col_w = (w - crit_w) / nopt
-    head_h = 0.5
+    head_h = 0.5 * max(1.0, 0.85 * k)
     acc = _as_rgbc(accents[0]) if accents else BLUE
     rec_fill = tint(acc, 0.10)
     # a ✓/✕/◐ mark is TEXT: the recommend tint keeps text padding below the last row (a harvey ball is a shape)
@@ -12596,7 +12601,7 @@ def eval_matrix(slide, x, y, w, options, criteria, cells, *, mark="ball", recomm
     for c, opt in enumerate(options):
         ox = x + crit_w + c * col_w
         emph = (recommend == c)
-        text(slide, ox, y, col_w, head_h, [[(str(opt), 12, _on_surface(acc, GROUND) if (emph and GROUND is not None) else (acc if emph else ic), True, False, font)]],
+        text(slide, ox, y, col_w, head_h, [[(str(opt), 12 * k, _on_surface(acc, GROUND) if (emph and GROUND is not None) else (acc if emph else ic), True, False, font)]],
              align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
     # separators are CONNECTORS (not filled boxes) so a full-width rule crossing the tinted
     # recommend column is never mis-flagged as a node escaping it
@@ -12604,7 +12609,7 @@ def eval_matrix(slide, x, y, w, options, criteria, cells, *, mark="ball", recomm
               color=_th("rule", RGBColor(0xD9, 0xDD, 0xE4)), width=1.2, arrow=False)
     for r in range(ncrit):
         ry = y + head_h + r * row_h
-        text(slide, x, ry, crit_w - 0.12, row_h, [[(str(criteria[r]), 11.5, ic, False, False, font)]],
+        text(slide, x, ry, crit_w - 0.12, row_h, [[(str(criteria[r]), size, ic, False, False, font)]],
              anchor=MSO_ANCHOR.MIDDLE, space_after=0)
         for c in range(nopt):
             ccx = x + crit_w + c * col_w + col_w / 2.0
@@ -12613,7 +12618,7 @@ def eval_matrix(slide, x, y, w, options, criteria, cells, *, mark="ball", recomm
             if mark == "ball":
                 harvey_ball(slide, ccx, ccy, val, d=min(row_h * 0.55, col_w * 0.42), accent=acc)
             else:
-                _eval_mark(slide, ccx, ccy, val, font=font,
+                _eval_mark(slide, ccx, ccy, val, font=font, size=15 * k,
                            surface=rec_fill if c == recommend else _th("ground", WHITE))
         if r < ncrit - 1:
             connector(slide, (x, ry + row_h), (x + w, ry + row_h),
