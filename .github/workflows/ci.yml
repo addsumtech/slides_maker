@@ -1504,6 +1504,15 @@ jobs:
           grep -qE "\\] ok$" /tmp/statrow.log || {
             echo "::error::test_stat_row_measured did not run to completion"; exit 1; }
 
+      - name: The visual-language library page's exporter (data, isolation, staleness, one rendered language)
+        run: |
+          set -o pipefail
+          python tests/test_vl_library_export.py | tee /tmp/vllibexport.log
+          grep -qE "\\] ok$" /tmp/vllibexport.log || {
+            echo "::error::test_vl_library_export did not run to completion"; exit 1; }
+          if grep -q "  SKIP " /tmp/vllibexport.log; then
+            echo "::error::the render half was skipped — LibreOffice is installed on this runner"; exit 1; fi
+
       - name: No pixel read goes through Image.getdata() (removed in Pillow 14)
         run: |
           set -o pipefail
