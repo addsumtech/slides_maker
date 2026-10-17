@@ -682,11 +682,7 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   resolution/DPI at the PLANNED box, crop loss, softness, flat plates, letterbox bars,
   near-duplicates, a possible-watermark heuristic, and EXIF rotation (`--fix` bakes it in). Its
   `--contact-sheet` is ONE labelled PNG of every candidate plus a sha256 — the artifact that makes
-  looking cheap, and that a critic's consent can name. It also holds the Pillow version shim (was `pil_compat.py`):
-  `pixels(im)` reads an image's flattened pixel values through `get_flattened_data()` where the installed Pillow has
-  it and `getdata()` otherwise (Pillow 12+ warns getdata is deprecated, Pillow 14 removes it, and requirements allow
-  Pillow 10); deckkit, lint_deck and image_series import it from here, and `tests/test_pillow_compat.py` names any
-  `getdata()` call added elsewhere.
+  looking cheap, and that a critic's consent can name.
 - `visual_languages.py` — <!-- vl:count-all -->fifteen<!-- /vl --> complete looks: <!-- vl:count-image -->four<!-- /vl --> image-led (<!-- vl:list-image-plain -->editorial, soft, collage, storybook<!-- /vl -->) and <!-- vl:count-drawn -->eleven<!-- /vl --> drawn (<!-- vl:list-drawn-plain -->ink, poster, cutpaper, drafting, starlit, broadsheet, journal, tally, chalkboard, interface, wayfinding<!-- /vl -->;
   their pages live in `vl_native.py` / `vl_native2.py` / `vl_native3.py`): palette with
   text-safe inks, system fonts per platform (`fonts="both"` default) and per SCRIPT (Han / kana / Hangul),
@@ -725,6 +721,9 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   pages, samples / sigs scaffold / docs rows present, and the build-matrix suites still iterating the registry.
 - `check_vl_contract.py` — `check_vl_contract.py [name …]`: the manifest and the conformance checks for the named
   languages (all by default), with a NEXT line.
+- `pil_compat.py` — Pillow version shims: `pixels(im)` reads an image's flattened pixel values through `get_flattened_data()`
+  where the installed Pillow has it and `getdata()` otherwise (Pillow 12+ warns getdata is deprecated, Pillow 14 removes it, and
+  requirements allow Pillow 10); `tests/test_pillow_compat.py` names any `getdata()` call added elsewhere.
 - `new_visual_language.py` — `new_visual_language.py <name> [--like <drawn language>]` starts a sixteenth language:
   writes its manifest (`vl_specs/<name>.py`, drafted from `--like`, default `tally`, with every decision that makes
   the language itself left as `"FILL: <what to decide>"`) and its code (`vl_langs/<name>.py`: a ground painter, the

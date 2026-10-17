@@ -90,7 +90,7 @@ import sys as _sys_rg
 
 _sys_rg.path.insert(0, _os_rg.path.dirname(_os_rg.path.abspath(__file__)))
 import rotgeom  # noqa: E402 — where a rotated shape PAINTS; the one definition lint_deck shares
-from image_qc import pixels  # noqa: E402 — Image.getdata() leaves in Pillow 14
+from pil_compat import pixels  # noqa: E402 — Image.getdata() leaves in Pillow 14
 
 # ---- default professional palette (a neutral blue scheme). NOT tied to any brand —
 # when building on a template, override these with the template's real theme colours.

@@ -14,7 +14,7 @@ def check(cond, msg):
 
 
 import deckkit as dk, register_surface as surfaces
-from image_qc import pixels
+from pil_compat import pixels
 from pptx.oxml.ns import qn
 from PIL import Image
 prs = dk.blank_deck(13.333, 7.5)

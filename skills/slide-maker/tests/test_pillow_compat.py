@@ -6,7 +6,7 @@ WHY. Pillow 12+ warns on every getdata() call ("deprecated and will be removed i
 get_flattened_data instead"); the warning printed through a real deck's lint output (2026-10-17), and on
 Pillow 14 the same calls raise AttributeError inside the lint, the image QC and the surface probes. The
 replacement only exists from Pillow 12, while requirements.txt allows Pillow 10, so the reads go through
-`image_qc.pixels()`, which uses whichever the installed Pillow has.
+`pil_compat.pixels()`, which uses whichever the installed Pillow has.
 
 Two halves: a SOURCE scan (no `.getdata(` call left anywhere but the helper — the next one added is named),
 and the BEHAVIOUR of the helper (the same values as getdata() in every mode, and no deprecation warning).
@@ -29,25 +29,21 @@ def check(cond, why):
     (ok if cond else bad).append(why)
 
 
-calls, helper = [], []
+calls = []
 for py in sorted(list((ROOT / "scripts").rglob("*.py")) + list((ROOT / "tests").glob("*.py"))):
-    if py.name == "test_pillow_compat.py":
+    if py.name in ("pil_compat.py", "test_pillow_compat.py"):
         continue
     tree = ast.parse(py.read_text(encoding="utf-8"), filename=str(py))
-    # the one sanctioned call is the fallback inside image_qc.pixels() itself
-    shim = ({id(n) for f in tree.body if isinstance(f, ast.FunctionDef) and f.name == "pixels" for n in ast.walk(f)}
-            if py.name == "image_qc.py" else set())
     for node in ast.walk(tree):
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "getdata":
-            (helper if id(node) in shim else calls).append("{}:{}".format(py.relative_to(ROOT), node.lineno))
-check(not calls, "no Image.getdata() call outside image_qc.pixels() ({} left: {})".format(len(calls), calls[:6]))
-check(len(helper) == 1, "the shim's own fallback call is found where it lives ({})".format(helper))
+            calls.append("{}:{}".format(py.relative_to(ROOT), node.lineno))
+check(not calls, "no Image.getdata() call outside pil_compat ({} left: {})".format(len(calls), calls[:6]))
 
 try:
-    from image_qc import pixels
+    from pil_compat import pixels
 except ImportError as e:
     pixels = None
-    bad.append("image_qc.pixels is importable ({})".format(e))
+    bad.append("pil_compat.pixels is importable ({})".format(e))
 
 if pixels is not None:
     from PIL import Image

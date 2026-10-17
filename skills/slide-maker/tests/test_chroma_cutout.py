@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import image_fx  # noqa: E402
-from image_qc import pixels  # noqa: E402
+from pil_compat import pixels  # noqa: E402
 from PIL import Image, ImageDraw, ImageFilter  # noqa: E402
 
 fails: list[str] = []
