@@ -1,4 +1,13 @@
 {
+ "airmail": [
+  "#C8202F",
+  "#1F3A8A",
+  "#B01E2C"
+ ],
+ "airmail-night": [
+  "#E5484D",
+  "#F27B7F"
+ ],
  "broadsheet": [],
  "broadsheet-salmon": [],
  "chalkboard": [
@@ -33,6 +42,13 @@
  "editorial-ink": [
   "#EE7A62"
  ],
+ "herbarium": [
+  "#56703F",
+  "#8A3F22"
+ ],
+ "herbarium-cabinet": [
+  "#E3A27C"
+ ],
  "ink": [
   "#BE2E1A"
  ],
@@ -57,6 +73,10 @@
  ],
  "poster-paper": [
   "#1F3BFF"
+ ],
+ "receipt": [],
+ "receipt-carbon": [
+  "#2C2466"
  ],
  "soft": [
   "#E8A88F",
@@ -86,6 +106,13 @@
  "tally-night": [
   "#7C89FF",
   "#C6F432"
+ ],
+ "vinyl": [
+  "#E8622C"
+ ],
+ "vinyl-cream": [
+  "#D9532B",
+  "#2F6F68"
  ],
  "wayfinding": [
   "#D7262E",

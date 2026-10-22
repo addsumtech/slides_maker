@@ -1,6 +1,6 @@
 """The visual-language contract: the manifest validator (part 1) and the conformance checks over every registered
 language (part 2, Task 3) and the docs blocks (part 3, Task 4). Prints `N passed, 0 failed`."""
-import copy, sys
+import copy, re, sys
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -337,7 +337,9 @@ try:
     t = tmpd / "visual-languages.md"
     shutil.copy(ROOT / "references" / "visual-languages.md", t)
     docs = {t: vl_docs.REQUIRED[ROOT / "references" / "visual-languages.md"]}
-    t.write_text(t.read_text(encoding="utf-8").replace("<!-- vl:count-all -->fifteen", "<!-- vl:count-all -->nine", 1), encoding="utf-8")
+    # whatever the count reads today (it grows with every language): a hard-coded "fifteen" stopped matching at 19
+    t.write_text(re.sub(r"(<!-- vl:count-all -->)[^<]+", r"\1zero", t.read_text(encoding="utf-8"), count=1),
+                 encoding="utf-8")
     probs = vl_docs.check(docs=docs)
     check(any("visual-languages.md" in p_ and "count-all" in p_ for p_ in probs), "a hand-edited block is named ({})".format(probs[:1]))
     vl_docs.write(docs=docs)

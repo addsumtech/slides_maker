@@ -506,6 +506,31 @@ EXAMPLES = {
                      'k.points(k.new_slide(), title="What we offer", items=["Support", "Training", "Hosting"])   # a directory sign\n'
                      'k.data(k.new_slide(), number="96.4%", label="Harbour line on time", board=[("North loop", "93.1%")])\n'
                      'k.closing(k.new_slide(), title="Questions?", line="Thank you.")',
+    "vl_herbarium": 'import visual_languages as vl\n'
+                    'k = vl.use("herbarium", prs)          # no extras; PL. 1, PL. 2 … are the page numbers (derived)\n'
+                    'k.cover(k.new_slide(), kicker="Field survey · spring", title="The trees on our street",\n'
+                    '        subtitle="A neighbourhood count of what grows where")   # the kicker is typed on the label card\n'
+                    'k.points(k.new_slide(), title="What the survey found",\n'
+                    '         items=[("Plane trees lead", "Two in five on the main road"), ("Young oaks arrive", "Planted since last year"),\n'
+                    '                ("Shade is uneven", "Half the canopy on the east side")])   # a specimen over each label\n'
+                    'k.data(k.new_slide(), number="214", label="trees counted in one afternoon")   # the number on a specimen tag',
+    "vl_airmail": 'import visual_languages as vl\n'
+                  'k = vl.use("airmail", prs)            # no extras; the small stamps on points are numbered 1 2 3\n'
+                  'k.cover(k.new_slide(), kicker="Exchange programme", title="Six cities, one summer",\n'
+                  '        subtitle="How our students travelled and stayed in touch")   # the title where the address goes\n'
+                  'k.data(k.new_slide(), number="6", label="cities on three continents")   # the stamp\'s denomination\n'
+                  'k.closing(k.new_slide(), title="Write home", line="The next intake opens in March")   # the sealed back',
+    "vl_vinyl": 'import visual_languages as vl\n'
+                'k = vl.use("vinyl", prs)              # the black sleeve; ground="cream" for the cream sleeve\n'
+                'k.cover(k.new_slide(), kicker="Season two", title="Songs from the night bus")   # printed on the album sleeve\n'
+                'k.points(k.new_slide(), title="This season", items=["The driver", "The baker", "The nurse", "The listener"])   # A1 A2 B1 B2\n'
+                'k.data(k.new_slide(), number="12", label="episodes this season")   # on the record\'s label, a tonearm on it',
+    "vl_receipt": 'import visual_languages as vl\n'
+                  'k = vl.use("receipt", prs)            # the till slip; ground="carbon" for the canary carbon copy\n'
+                  'k.points(k.new_slide(), kicker="Household budget", title="Itemised",\n'
+                  '         items=[("Rent and bills", "Fixed, paid on the first"), ("Groceries", "A little over plan")])   # 01 02 …\n'
+                  'k.data(k.new_slide(), number="18%", label="of income saved this month",\n'
+                  '       note="Up from twelve per cent")   # the number set to the right, as the total',
     # An ORDINARY page (agenda, list, chart) in a language's look: `rs.ground` paints the furniture and returns the
     # content rect, `rs.card` gives the language's card. Also printed for `--example rs.ground` / `rs.card`.
     "ground": 'import visual_languages as vl, register_surface as rs\n'

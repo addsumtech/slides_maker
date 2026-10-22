@@ -155,7 +155,7 @@ cp -r slides_maker-site/templates/decks/zh/ev-market-report ~/.codex/slide-templ
 
 ## 设计语言
 
-除了模板库，slide-maker 还内置<!-- vl:count-all-zh -->十五<!-- /vl -->套完整的**设计语言**：每套都有自己的字体气质（只用系统字体）、画面质感，以及封面、章节、图文、要点（两到四个）、引言、数据、结尾这几种页面版式。其中<!-- vl:count-image-zh -->四<!-- /vl -->套以图为主，排你的照片或一组插画；另外<!-- vl:count-drawn-zh -->十一<!-- /vl -->套用 PowerPoint 原生形状画出自己的画面，每个元素都能编辑，所以没有图片、也没有生图工具的 deck 同样能有完整的风格。所有设计语言都只排你自己的文字和图片，不会编造任何词、数字或名字：印章上的字、高亮的词、图标、项目名、报头、页眉、标签、总数、面包屑、状态、按钮文字、线路编号这类内容只来自你。
+除了模板库，slide-maker 还内置<!-- vl:count-all-zh -->十九<!-- /vl -->套完整的**设计语言**：每套都有自己的字体气质（只用系统字体）、画面质感，以及封面、章节、图文、要点（两到四个）、引言、数据、结尾这几种页面版式。其中<!-- vl:count-image-zh -->四<!-- /vl -->套以图为主，排你的照片或一组插画；另外<!-- vl:count-drawn-zh -->十五<!-- /vl -->套用 PowerPoint 原生形状画出自己的画面，每个元素都能编辑，所以没有图片、也没有生图工具的 deck 同样能有完整的风格。所有设计语言都只排你自己的文字和图片，不会编造任何词、数字或名字：印章上的字、高亮的词、图标、项目名、报头、页眉、标签、总数、面包屑、状态、按钮文字、线路编号这类内容只来自你。
 
 <table>
   <tr>
@@ -243,13 +243,37 @@ cp -r slides_maker-site/templates/decks/zh/ev-market-report ~/.codex/slide-templ
       深色底版本： <a href="skills/slide-maker/assets/vl/samples/wayfinding-night.jpg">night</a></sub>
     </td>
   </tr>
+  <tr>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/herbarium.jpg"><img src="skills/slide-maker/assets/vl/samples/herbarium.jpg" alt="herbarium 设计语言示例页"></a><br/>
+      <sub><strong>herbarium（标本图鉴）</strong> · 原生绘制，无需图片<br/>档案纸上的标本页：纸胶带固定的压制枝叶、打字标签卡<br/>
+      深色底版本： <a href="skills/slide-maker/assets/vl/samples/herbarium-cabinet.jpg">cabinet</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/airmail.jpg"><img src="skills/slide-maker/assets/vl/samples/airmail.jpg" alt="airmail 设计语言示例页"></a><br/>
+      <sub><strong>airmail（航空邮件）</strong> · 原生绘制，无需图片<br/>航空信封：红蓝斜纹边框、邮票与邮戳、火漆封印<br/>
+      深色底版本： <a href="skills/slide-maker/assets/vl/samples/airmail-night.jpg">night</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/vinyl.jpg"><img src="skills/slide-maker/assets/vl/samples/vinyl.jpg" alt="vinyl 设计语言示例页"></a><br/>
+      <sub><strong>vinyl（黑胶唱片）</strong> · 原生绘制，无需图片<br/>唱片与封套：音轨纹路、中心标签、A 面 / B 面曲目单<br/>
+      浅色底版本： <a href="skills/slide-maker/assets/vl/samples/vinyl-cream.jpg">cream</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <a href="skills/slide-maker/assets/vl/samples/receipt.jpg"><img src="skills/slide-maker/assets/vl/samples/receipt.jpg" alt="receipt 设计语言示例页"></a><br/>
+      <sub><strong>receipt（购物小票）</strong> · 原生绘制，无需图片<br/>热敏小票：锯齿撕边、等宽字体、合计行、条形码<br/>
+      复写联版本： <a href="skills/slide-maker/assets/vl/samples/receipt-carbon.jpg">carbon</a></sub>
+    </td>
+  </tr>
 </table>
 
 <p align="center"><sub>以上是风格示例（示例内容，不是你的 deck）。点图看大图；图下的链接是这套语言的另一种底色，你最近的 deck 都已经用第一种底色时会自动换用。星夜和黑板报两种底色都是深色。</sub></p>
 
 <p align="center"><a href="https://slides.addsum.top/languages/"><strong>浏览视觉语言模版库 →</strong></a><br/><sub>每套语言在两种底色上的七种页面、配色和字体，以及点名用它的那句话</sub></p>
 
-**什么时候会用到。** 只要你的 deck 会带照片或插画（你自己的，或 slide-maker 帮你生成、抓取的），它给你看的候选风格里至少有一个是以图为主的设计语言：照片按气质对应 editorial、soft 或 collage，插画对应 storybook。deck 没有图片时，候选风格里会有一套贴合主题的原生绘制语言，贴合的理由会和选择一起记录。对应关系是参考，不是查表：<!-- vl:offer-zh -->文化、历史、器物 → 水墨；发布会、宣言、观点 → 海报大字；儿童、讲故事、社区 → 剪纸层叠；工程、建筑、系统设计 → 蓝图技术线稿；年度回顾、书信、致谢、纪念 → 星夜；通讯、定期报告、社区动态 → 报纸头版；学术报告、组会、论文、答辩 → 学术期刊；指标、季度复盘、运营、增长 → 数据账本；课程、课堂、培训、讲解 → 黑板报；产品发布、应用、SaaS、功能导览、内部工具 → 产品界面；路线图、流程、新人上手、用户旅程、战略路径、交通与城市 → 导视线路。<!-- /vl -->也可以直接点名，比如"用 collage 风格"。想打开可编辑的示例 deck，在本地生成（它会打印把每套示例渲染到 `out/` 里的命令）：
+**什么时候会用到。** 只要你的 deck 会带照片或插画（你自己的，或 slide-maker 帮你生成、抓取的），它给你看的候选风格里至少有一个是以图为主的设计语言：照片按气质对应 editorial、soft 或 collage，插画对应 storybook。deck 没有图片时，候选风格里会有一套贴合主题的原生绘制语言，贴合的理由会和选择一起记录。对应关系是参考，不是查表：<!-- vl:offer-zh -->文化、历史、器物 → 水墨；发布会、宣言、观点 → 海报大字；儿童、讲故事、社区 → 剪纸层叠；工程、建筑、系统设计 → 蓝图技术线稿；年度回顾、书信、致谢、纪念 → 星夜；通讯、定期报告、社区动态 → 报纸头版；学术报告、组会、论文、答辩 → 学术期刊；指标、季度复盘、运营、增长 → 数据账本；课程、课堂、培训、讲解 → 黑板报；产品发布、应用、SaaS、功能导览、内部工具 → 产品界面；路线图、流程、新人上手、用户旅程、战略路径、交通与城市 → 导视线路；自然、生态、可持续、野外调研、生物 → 标本图鉴；旅行、国际化、跨境、物流、海外团队、交流项目 → 航空邮件；音乐、播客、文化活动、创意作品、周年回顾 → 黑胶唱片；定价、预算、成本拆解、零售、电商、费用复盘 → 购物小票。<!-- /vl -->也可以直接点名，比如"用 collage 风格"。想打开可编辑的示例 deck，在本地生成（它会打印把每套示例渲染到 `out/` 里的命令）：
 
 ```bash
 python3 skills/slide-maker/scripts/visual_languages.py --sample out/

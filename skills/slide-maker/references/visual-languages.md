@@ -1,4 +1,4 @@
-# Visual languages — <!-- vl:count-all -->fifteen<!-- /vl --> complete looks: <!-- vl:count-image -->four<!-- /vl --> image-led, <!-- vl:count-drawn -->eleven<!-- /vl --> drawn
+# Visual languages — <!-- vl:count-all -->nineteen<!-- /vl --> complete looks: <!-- vl:count-image -->four<!-- /vl --> image-led, <!-- vl:count-drawn -->fifteen<!-- /vl --> drawn
 
 **When to read this:** the picked direction is a visual language (its entry in `directions.json` carries
 `"vl": "<name>"`), or the user asks for one of these looks by name. Read it before writing the build script.
@@ -116,7 +116,7 @@ the shared runtime's `$DECK/.deck-gates.json`; on the Codex runtime the same val
    ```
    The `tally` test deck was the same shape, with `formats.blank_deck("wide13")`, an ordinary agenda page (see
    **Ordinary pages** below), `points` with `tags=` and `data` with `total=`. More scaffolds:
-   `python3 "$SKILL/scripts/sigs.py" --example vl_drawn vl_tally vl_broadsheet vl_journal vl_chalkboard vl_interface vl_wayfinding rs.ground`.
+   `python3 "$SKILL/scripts/sigs.py" --example vl_drawn vl_tally vl_broadsheet vl_journal vl_chalkboard vl_interface vl_wayfinding vl_herbarium vl_airmail vl_vinyl vl_receipt rs.ground`.
 4. **Build:** `python3 "$DECK/build_repair-cafe.py"`. With `ground="auto"` it prints the ground it chose and a
    `--gates` line with two `<…>` blanks. That line is a template: fill both blanks, because it will not run as printed.
 5. **Record the language.** Pass the ground the build printed (on the test machine `ink`, because its last decks
@@ -185,7 +185,7 @@ count is the FIRST pass: a gate whose record is half-filled can list more faults
   The rows marked `NOT CHECKED` (template profile, purpose, talk time, Q&A backup, citations, image series, and a
   direction with no `directions.json`) checked nothing and block nothing.
 
-## The <!-- vl:count-all -->fifteen<!-- /vl --> languages
+## The <!-- vl:count-all -->nineteen<!-- /vl --> languages
 
 A visual language is a whole look, not a palette: a type voice from system fonts, a surface, image
 treatments and seven page compositions (cover, section, image_text, points, quote, data, closing). Picking one gives a finished deck from your own words and images —
@@ -208,6 +208,10 @@ the page functions never invent a word, a number or a name.
 | `chalkboard` | none needed (a chalk doodle icon is optional) | Trebuchet MS (Chalkboard SE on mac) | a framed board with grain | chalk boxes, circled numbers, arrows only when ordered |
 | `interface` | none needed (a screenshot in a device frame is optional) | Arial (Helvetica Neue on mac), bold | the app canvas, windows with a status bar | a settings list, a dashboard card, a chat bubble, a dialog |
 | `wayfinding` | none needed (a poster photo is optional) | Arial (Helvetica Neue on mac); the board in Courier New / Menlo | enamel ground, navy station signs | lines and roundels, a strip map when ordered, a departure board |
+| `herbarium` | none needed (a specimen photograph is optional) | Georgia (Baskerville on mac); labels in Courier New (American Typewriter on mac) | archival paper, a hairline double frame, plate numbers | pressed sprigs held by paper tape, typed label cards, a specimen tag for the figure |
+| `airmail` | none needed (a postcard photo is optional) | Trebuchet MS (Futura on mac); quotes in a letter face | envelope paper inside the red-and-blue striped border | a perforated stamp carrying the number, a postmark, address labels, a wax seal |
+| `vinyl` | none needed (a square album photo is optional) | Impact (DIN Condensed on mac); liner notes in Georgia / Didot italic | a black record sleeve | grooved records with a coloured centre label, the title on an album sleeve, a track list |
+| `receipt` | none needed (a photo laid on the counter is optional) | Courier New (Menlo on mac), monospaced throughout | a thermal slip on a counter | torn zigzag edges, dashed separators, line items, the figure as the total, a barcode |
 
 ## Build
 
@@ -237,7 +241,7 @@ prs.save("collage.pptx")
   is optional everywhere except `image_text` (which refuses without one). A list of images is for the
   collage cover and closing only (1 to 4); anywhere else, or empty, or longer, it is refused rather than
   silently cut. A page with no text and no image is refused. Each returns `{"rects": {field: (x, y, w, h)}, …}`.
-  On the <!-- vl:count-drawn -->eleven<!-- /vl --> DRAWN languages a picture is drawn on `image_text` only (`drafting` also on `quote`;
+  On the <!-- vl:count-drawn -->fifteen<!-- /vl --> DRAWN languages a picture is drawn on `image_text` only (`drafting` also on `quote`;
   `vl.NATIVE_IMAGE_PAGES`): `image=` on any other page of theirs is refused, naming those pages — never dropped.
 - **Fields are text.** Pass every field as a string, exactly as it should read; `number=` also takes a whole
   number (`12`, shown as written). A list, a tuple or a float is refused by field name (`number=0.1 + 0.2` would
@@ -349,6 +353,10 @@ prs.save("collage.pptx")
 | `chalkboard` | chalk | chalk | circled | display |
 | `interface` | window | hairline | badge | body |
 | `wayfinding` | sign | solid | roundel | body |
+| `herbarium` | paper | hairline | circled | display |
+| `airmail` | paper | dashed | badge | display |
+| `vinyl` | filled | hairline | disc-number | display |
+| `receipt` | paper | dashed | dot | mono |
 <!-- /vl -->
 
   A new language picks from the vocabulary; it adds a value only when none fits, implemented once in deckkit's
@@ -432,7 +440,7 @@ every value they write is one PowerPoint opens without repair (`scripts/ooxml_sa
   "direction_gate": {"candidates": "directions.json", "picked": "<the one chosen>", "images": "none",
                      "native_fit": {"language": "ink", "why": "a talk on tea craft: culture and ritual"}}
   ```
-  `native_fit.language` is one of the native languages among the candidates (not necessarily the one picked). Guidance, not a rule: <!-- vl:offer-arrow -->culture, history, craft → `ink`; launch, manifesto, opinion → `poster`; children, storytelling, community → `cutpaper`; engineering, architecture, systems design → `drafting`; year in review, letter, thanks, commemoration → `starlit`; newsletter, periodic report, community update → `broadsheet`; research talk, lab meeting, paper, defence → `journal`; metrics, quarterly review, operations, growth → `tally`; lesson, class, training, explainer → `chalkboard`; product launch, app, SaaS, feature tour, internal tool → `interface`; roadmap, process, onboarding, journey, strategy route, transport/city → `wayfinding`.<!-- /vl -->
+  `native_fit.language` is one of the native languages among the candidates (not necessarily the one picked). Guidance, not a rule: <!-- vl:offer-arrow -->culture, history, craft → `ink`; launch, manifesto, opinion → `poster`; children, storytelling, community → `cutpaper`; engineering, architecture, systems design → `drafting`; year in review, letter, thanks, commemoration → `starlit`; newsletter, periodic report, community update → `broadsheet`; research talk, lab meeting, paper, defence → `journal`; metrics, quarterly review, operations, growth → `tally`; lesson, class, training, explainer → `chalkboard`; product launch, app, SaaS, feature tour, internal tool → `interface`; roadmap, process, onboarding, journey, strategy route, transport/city → `wayfinding`; nature, ecology, sustainability, field research, biology → `herbarium`; travel, international, cross-border, logistics, global teams, exchange programme → `airmail`; music, podcast, culture, creative work, anniversary → `vinyl`; pricing, budget, cost breakdown, retail, e-commerce, expenses → `receipt`.<!-- /vl -->
 
 ### The second set — `starlit` · `broadsheet` · `journal` · `tally` · `chalkboard`
 
@@ -484,6 +492,9 @@ first four: no pictures needed, everything on the page, nothing PowerPoint repai
   - `journal`'s `§` before a section's `number=` (`§ 02`; no `number=`, no `§`);
   - point numbers: `01 02 03` on `tally` and `poster` `points`; `一 二 三` on `ink` when the title is Chinese or
     Japanese, else `1 2 3`; `1 2 3` on `cutpaper`, `journal` and `chalkboard` (circled there); `starlit` numbers none;
+    `No. 1 No. 2` (`第 1 号` in Chinese or Japanese) on `herbarium`'s label cards; `1 2 3` on `airmail`'s small stamps;
+    the track numbers `A1 A2 … B1 B2` on `vinyl` (the first half of the points on side A); `01 02 03` on `receipt`;
+  - `herbarium`'s plate number at the top right of every page — the page's own number (`PL. 4`; `图版 4` / `図版 4`);
   - `journal` figure numbers over the deck's `image_text` pages, with `kicker=` to override;
   - the `broadsheet` ■ end mark on the closing page; the opening `“` on quote pages (not on `ink` or `tally`); the
     `— ` before an attribution on `journal`, `chalkboard` and `wayfinding`;
@@ -505,7 +516,8 @@ first four: no pictures needed, everything on the page, nothing PowerPoint repai
     | NOTE | 注 | 注 | 주석 |
 
   Some of your own words are re-cased: `poster` (above), the kicker and attribution on `starlit` and
-  `broadsheet`, and the kicker on `journal` and on `wayfinding` (cover, section, image_text, directory sign).
+  `broadsheet`, the kicker on `journal` and on `wayfinding` (cover, section, image_text, directory sign), the kicker
+  on `airmail`, `vinyl` and `receipt`, and each line item's head on `receipt`.
 - **Pages.** All seven pages come in both orientations.
   - `journal`'s `image_text` is its figure page: the title above, your figure WHOLE (never cropped), its label,
     caption (`body=`) and source line (`caption=`).
@@ -594,6 +606,51 @@ w.points(w.new_slide(), title="Four stops to a paying customer", ordered=True, i
 w.data(w.new_slide(), number="96.4%", label="Harbour line on time", board=[("North loop", "93.1%")])
 ```
 
+### The fourth set — `herbarium` · `airmail` · `vinyl` · `receipt`
+
+| Language | 中文 | Borrowed from | Purpose |
+|---|---|---|---|
+| `herbarium` | 标本图鉴 | a natural-history specimen sheet: pressed sprigs, paper tape, typed labels, numbered plates | nature, ecology, sustainability, field research, biology |
+| `airmail` | 航空邮件 | an air-mail envelope: the striped border, stamps, postmarks, address labels, a wax seal | travel, international work, cross-border, logistics, global teams, exchange programmes |
+| `vinyl` | 黑胶唱片 | a record and its sleeve: grooves, the centre label, the album front, the track list, the tonearm | music, podcasts, culture, creative work, anniversaries |
+| `receipt` | 购物小票 | a thermal till slip: torn edges, monospaced lines, dashed rules, the total, the barcode | pricing, budgets, cost breakdowns, retail, e-commerce, expenses |
+
+- **herbarium** — every page is a plate in a specimen collection, inside a hairline double frame with its plate
+  number at the top right. The cover sets your title beside a tall pressed sprig and a fern taped to the sheet, your
+  kicker typed on the label card under them; `section` flanks your number with two small sprigs; `image_text` mounts
+  your picture like a specimen (a card mount, tape at its corners, the caption on a label card); `points` is a plate
+  of specimens — a different leaf over each point's typed label card (rows with a single leaf on a portrait or square
+  page); `data` puts your number on a specimen tag with its eyelet and string; `closing` crosses two sprigs over your
+  title. Grounds: `light` (archival paper) · `cabinet` (specimen-cabinet green-black).
+- **airmail** — the deck is a letter. Every page sits inside the red-and-blue striped air-mail border; the cover is
+  an envelope front (your kicker where the sender writes, a stamp with a paper plane struck by a postmark, your title
+  where the address goes); `section` and `data` print your number as a stamp's denomination; `image_text` is a
+  postcard with a postmark across its corner; `points` are address labels with the striped band and a small numbered
+  stamp each; `quote` reads like a line from a letter; `closing` is the envelope's back — its flap and a wax seal.
+  Grounds: `light` (envelope) · `night` (night-mail navy).
+- **vinyl** — the deck is an album. The cover is the album front (your title printed on a coloured sleeve, the record
+  sliding out of it); `section` and `data` put your number on the record's centre label (a tonearm resting on the
+  record on `data`); `image_text` makes your picture the square album photograph with its record behind it; `points`
+  is a track list — A1 A2 … B1 B2 — beside a half record rising from the page's edge; `quote` is set like liner notes;
+  `closing` raises a record from the page's foot. Grounds: `light` (black sleeve, dark) · `cream` (cream sleeve).
+- **receipt** — every page is a till slip on a counter: torn zigzag edges, monospaced type, dashed rules, a barcode at
+  the foot. The cover and the closing lay an older slip askew behind; `points` reads as line items (`01  RENT AND
+  BILLS`, its line under it; two slips side by side for long copy on a wide page); `data` reads your number as the
+  total, set to the right under your label; `image_text` lays the slip over your picture's edge, the picture a print
+  on the counter. Grounds: `light` (till slip) · `carbon` (canary carbon copy, violet ink).
+- **Extras:** none — every word on these pages is yours, except the derived numbers above.
+
+```python
+import visual_languages as vl, deckkit as dk
+k = vl.use("herbarium", dk.blank_deck())
+k.data(k.new_slide(), number="214", label="trees counted in one afternoon", note="Mapped by twelve volunteers")
+v = vl.use("vinyl", dk.blank_deck(), ground="cream")
+v.points(v.new_slide(), title="This season", items=[("The driver", "Twenty years on the last route home"),
+         ("The baker", "Bread out of the oven at four"), ("The nurse", "A shift that ends at sunrise")])
+r = vl.use("receipt", dk.blank_deck(), ground="carbon")
+r.data(r.new_slide(), number="18%", label="of income saved this month", note="Up from twelve per cent")
+```
+
 ## Grounds
 
 Each language has its own light paper and ONE contrast ground; every text ink passes 4.5:1 on both:
@@ -615,6 +672,10 @@ Each language has its own light paper and ONE contrast ground; every text ink pa
 | tally | white grid | `night` — navy grid, periwinkle and lime |
 | interface | app light | `dark` — dark mode, deep windows |
 | wayfinding | enamel | `night` — navy, darker signs |
+| herbarium | archival paper | `cabinet` — specimen-cabinet green-black, sage leaves, labels in its own tones |
+| airmail | envelope | `night` — night-mail navy, red and ivory stripes |
+| vinyl | black sleeve (dark) | `cream` — cream sleeve, a teal album front |
+| receipt | till slip on a grey counter | `carbon` — canary carbon copy, violet carbon ink |
 
 `use(name, prs, ground=…)`: `"light"` (the default — the same deck on every machine), the contrast key, or
 `"auto"` (this machine's look history, across every deck built here — pass the ground yourself when the topic
@@ -647,6 +708,10 @@ viewer opens. `fonts="mac"` unlocks Mac-only faces and refuses one that is not i
 | chalkboard | Trebuchet MS / Chalkboard SE | Trebuchet MS / Chalkboard SE | Trebuchet MS / Chalkboard SE |
 | interface | Arial / Helvetica Neue | Arial / Helvetica Neue | Arial / Helvetica Neue |
 | wayfinding | Arial / Helvetica Neue | Arial / Helvetica Neue (the board: Courier New / Menlo) | Courier New / Menlo on the board |
+| herbarium | Georgia / Baskerville | Georgia (labels: Courier New / American Typewriter) | Times New Roman (lining) |
+| airmail | Trebuchet MS / Futura | Trebuchet MS / Avenir Next (quotes: Georgia / Baskerville) | Times New Roman / Didot |
+| vinyl | Impact / DIN Condensed | Arial / Avenir Next (liner notes: Georgia / Didot) | Impact / DIN Condensed |
+| receipt | Courier New / Menlo | Courier New / Menlo | Courier New / Menlo |
 
 The numerals column is the face of the `data` page's figure (collage draws a short one as an outlined shape).
 Digits inside Georgia text — body or display — are set in Times New Roman, a lining face, and so are the digits
@@ -730,6 +795,6 @@ the ground, its grain, its card and its inks are one look, and the variants are 
 style sample (the preview shows it, labelled "style sample — not your content"). It counts as a STYLED
 direction, never as the topic-invented bespoke direction the gate also requires. Image-led languages pair
 with the P1 image series (`references/image-generation.md`, the SERIES exception) when the deck's images
-are generated; with the user's own or fetched photos they need no generation at all. The <!-- vl:count-drawn -->eleven<!-- /vl --> native
+are generated; with the user's own or fetched photos they need no generation at all. The <!-- vl:count-drawn -->fifteen<!-- /vl --> native
 languages need no pictures: a deck without any offers the one that fits its topic and records why in
 `direction_gate.native_fit` (see Native languages above).
