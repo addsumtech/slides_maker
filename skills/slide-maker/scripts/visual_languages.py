@@ -876,7 +876,10 @@ def _balanced_width(k, f, t, sz, w):
     while wb < w:
         # the lint's line model must hold the same lines too: collage's 4.23in measure was four lines by the glyphs and
         # five by the measure lint reads, the height guard threw it away, and the widow came back (sheet review 2026-10-16)
+        # …and it holds the widest word: a greedy break lets an over-wide word overflow its line, so the count still
+        # matched while LibreOffice broke "Everythin / g" in a 3.12in measure (the herbarium review, 2026-10-22)
         if (len(_break_lines(k, f, t, sz, wb)) == n and not _widowed(k, f, t, sz, wb)
+                and _widest_word_fits(k, f, t, sz, wb)
                 and dk._measure_lines([(t, bold)], sz, max(0.2, wb - _INSET), font=face) <= n):
             return wb
         wb *= 1.04

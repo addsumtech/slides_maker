@@ -1965,6 +1965,16 @@ except (ValueError, TypeError) as e:
 finally:
     dk.set_theme(None)
 
+# a balanced (narrower) measure must still hold its widest word: a greedy break lets an over-wide word overflow its
+# line, so the line count still matched, and a 4.33in column set "Everything starts at the table" in 3.12in —
+# LibreOffice broke it "Everythin / g" (the herbarium review, 2026-10-22). Georgia ships on every machine.
+_kb = vl.use("ink", dk.blank_deck(13.333, 7.5))
+for _tt, _ww in (("Everything starts at the table", 4.33), ("Neighbourhood repair evenings work", 4.6),
+                 ("Extraordinary things happen here", 4.4)):
+    _wb2 = vl._balanced_width(_kb, "title", _tt, 50, _ww)
+    check(_wb2 is None or vl._widest_word_fits(_kb, "title", _tt, 50, _wb2),
+          "a balanced measure holds the widest word of {!r} ({})".format(_tt, None if _wb2 is None else round(_wb2, 2)))
+
 for line in ok:
     print("  ok   " + line)
 for line in skipped:
