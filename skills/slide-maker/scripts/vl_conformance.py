@@ -192,11 +192,15 @@ def assets_missing(name):
     ref = (SKILL / "references" / "visual-languages.md").read_text(encoding="utf-8")
     if "| `{}` |".format(name) not in ref:
         probs.append("{}: references/visual-languages.md has no table row for it".format(name))
-    for readme in ("README.md", "README_CN.md"):
-        if not (REPO / readme).is_file():       # an installed copy of the skill: no repo README to check
-            continue
-        if "samples/{}.jpg".format(name) not in (REPO / readme).read_text(encoding="utf-8"):
-            probs.append("{}: {} gallery has no cell for it".format(name, readme))
+    # the README gallery is a fixed showcase (2026-10-22): a language need not have a cell — the library page
+    # (vl_library_export.py) shows every one — but the two READMEs show the same languages
+    shown = {r: "samples/{}.jpg".format(name) in (REPO / r).read_text(encoding="utf-8")
+             for r in ("README.md", "README_CN.md") if (REPO / r).is_file()}    # an installed copy has neither
+    if len(set(shown.values())) > 1:
+        has = [r for r, v in shown.items() if v][0]
+        lacks = [r for r, v in shown.items() if not v][0]
+        probs.append("{}: the {} gallery shows it and the {} gallery does not — show it in both or in neither "
+                     "(the library page carries every language)".format(name, has, lacks))
     return probs
 
 

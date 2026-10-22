@@ -377,6 +377,37 @@ check(vc.SERIES_MIN == 4, "the series floor is four designed colours per ground"
 check(all(len(G["roles"]["series"]) >= 4 for s_ in vl_specs.load().values() for G in s_["grounds"].values()),
       "every ground carries at least four series colours")
 
+# the README gallery is a fixed showcase: a language without a cell lives on the library page, and the README
+# names how many more there are (2026-10-22: the user kept herbarium, airmail, vinyl and receipt off the README)
+import vl_docs as _vd
+_g = _vd.gallery(vl_specs.load())
+check(_g is not None and len(_g) < len(vl_specs.load()) and "herbarium" not in _g and "ink" in _g,
+      "the README gallery shows some of the languages, not all ({})".format(sorted(_g or [])))
+_reg = vl_specs.load()
+_n_more = len(_reg) - len(_g)
+check(_vd._render("gallery-more", _reg).startswith("The gallery above shows {} of them; {} more".format(
+      _vd._en(len(_g)), _vd._en(_n_more))), "gallery-more names the gallery and how many more: {!r}".format(
+      _vd._render("gallery-more", _reg)))
+check(_vd._render("gallery-more-zh", _reg).startswith("上面只展示了其中{}套".format(_vd._zh(len(_g)))),
+      "gallery-more-zh names the gallery: {!r}".format(_vd._render("gallery-more-zh", _reg)))
+_all_shown = {n: s_ for n, s_ in _reg.items() if n in _g}
+check(_vd._render("gallery-more", _all_shown) == "" and _vd._render("gallery-more-zh", _all_shown) == "",
+      "with every language in the gallery the clause says nothing (no 'zero more')")
+import vl_conformance as _vcf1
+check(not any("gallery" in x for x in _vcf1.assets_missing("herbarium")),
+      "a language off the README gallery is not a missing asset: {}".format(_vcf1.assets_missing("herbarium")))
+_repo1 = _vcf1.REPO
+_t1 = Path(tempfile.mkdtemp(prefix="gal_"))
+try:
+    (_t1 / "README.md").write_text("samples/ink.jpg samples/tally.jpg", encoding="utf-8")
+    (_t1 / "README_CN.md").write_text("samples/ink.jpg", encoding="utf-8")
+    _vcf1.REPO = _t1
+    check(any("README_CN.md" in x for x in _vcf1.assets_missing("tally")) and
+          not any("gallery" in x for x in _vcf1.assets_missing("ink")),
+          "a language in one README's gallery and not the other's is named: {}".format(_vcf1.assets_missing("tally")))
+finally:
+    _vcf1.REPO = _repo1; shutil.rmtree(_t1, ignore_errors=True)
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

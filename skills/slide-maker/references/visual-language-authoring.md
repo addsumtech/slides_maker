@@ -33,7 +33,9 @@ manifest whose code is missing (or does not import) is listed as *not ready*, an
      `NEXT:` and `then:` line, on macOS (`assets/vl/README.md`);
    - a `vl_<name>` scaffold in `scripts/sigs.py`'s `EXAMPLES`;
    - its row in the table of `references/visual-languages.md` (`| \`<name>\` | …`);
-   - its gallery cell in `README.md` and `README_CN.md` (`samples/<name>.jpg`);
+   - its place on the library page (slides.addsum.top/languages/): `python3 scripts/vl_library_export.py --site
+     <slides_maker-site> --only <name>`, then `--check`. The README gallery is a fixed showcase — a new language
+     gets no cell there; the README's counts ("N more are only in the library") follow from `vl_docs.py --write`;
    - the generated lists and counts: `python3 scripts/vl_docs.py --write`, then `--check`.
 6. **Run the suites.** `python3 scripts/check_vl_contract.py <name>` prints no problem, then the `NEXT:` line it
    prints (`tests/test_vl_contract.py`), and the full CI before anything is pushed.
@@ -138,4 +140,4 @@ Read two shipped compositions before writing your own — `tally` (`vl_native2.p
 - [ ] Nothing on a page that the caller did not give, except the words in `derived`.
 - [ ] A general component (`sigs.py --example timeline --in <name>`) placed in the language reads right on both
       grounds.
-- [ ] Samples, scaffold, docs row, gallery cells and `vl_docs.py --write` done; the full CI green.
+- [ ] Samples, scaffold, docs row, the library page export and `vl_docs.py --write` done; the full CI green.

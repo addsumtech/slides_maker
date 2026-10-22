@@ -26,8 +26,8 @@ REQUIRED = {
     REF / "interview-protocol.md": {"count-all", "count-image", "count-drawn", "list-image-comma", "offer-paren"},
     REF / "codex-runtime.md": {"list-drawn"},
     REF / "file-inventory.md": {"count-all", "count-image", "count-drawn", "list-image-plain", "list-drawn-plain"},
-    REPO / "README.md": {"count-all", "count-image-cap", "count-drawn", "offer-arrow"},
-    REPO / "README_CN.md": {"count-all-zh", "count-image-zh", "count-drawn-zh", "offer-zh"},
+    REPO / "README.md": {"count-all", "count-image-cap", "count-drawn", "offer-arrow", "gallery-more"},
+    REPO / "README_CN.md": {"count-all-zh", "count-image-zh", "count-drawn-zh", "offer-zh", "gallery-more-zh"},
 }
 DOCS = list(REQUIRED)
 _MARK = re.compile(r"<!-- vl:([a-z\-]+) -->|<!-- /vl -->")
@@ -49,6 +49,24 @@ def _en(n):
     return _EN[n] if n < len(_EN) else str(n)
 
 
+_CELL = re.compile(r"samples/([a-z0-9_]+)\.jpg")       # a gallery cell's sample (a second ground's link has a '-')
+
+
+def gallery(reg):
+    """The languages the README's gallery shows, or None without a repo README (an installed copy). The gallery is a
+    fixed showcase the user chose (2026-10-22): a new language gets no cell, the library page shows every language,
+    and the README says how many more there are (gallery-more)."""
+    p = REPO / "README.md"
+    if not p.is_file():
+        return None
+    return {n for n in _CELL.findall(p.read_text(encoding="utf-8")) if n in reg}
+
+
+def _more(reg):
+    g = gallery(reg)
+    return (len(g), len(reg) - len(g)) if g is not None else (len(reg), 0)
+
+
 def _render(block, reg):
     drawn = [s for s in reg.values() if s["kind"] == "drawn"]
     image = [s for s in reg.values() if s["kind"] == "image-led"]
@@ -65,6 +83,11 @@ def _render(block, reg):
         "offer-paren": lambda: (lambda parts: parts[0] if len(parts) == 1 else ", ".join(parts[:-1]) + " or " + parts[-1])(
             ["`{}` ({})".format(s["name"], ", ".join(s["offer"]["en"])) for s in drawn]),
         "offer-zh": lambda: "；".join("{} → {}".format("、".join(s["offer"]["zh"]), s["display"]["zh"]) for s in drawn) + "。",
+        "gallery-more": lambda: (lambda g, n: "" if n <= 0 else
+                                 "The gallery above shows {} of them; {} more are only in the library. ".format(
+                                     _en(g), _en(n)))(*_more(reg)),
+        "gallery-more-zh": lambda: (lambda g, n: "" if n <= 0 else
+                                    "上面只展示了其中{}套，另外{}套只在模版库里。".format(_zh(g), _zh(n)))(*_more(reg)),
         "tier-one-list": lambda: " · ".join("`{}`".format(n) for n in ct.TIER1),
         "tier-two-table": lambda: "\n" + "\n".join(["| component | draws in the skin |", "|---|---|"] +
                                          ["| `{}` | {} |".format(n, ", ".join(r)) for n, r in ct.TIER2_SKIN.items()]) + "\n",
@@ -160,7 +183,8 @@ def _known(reg):
     known = set()
     for b in ("count-all", "count-drawn", "count-image", "count-image-cap", "count-all-zh", "count-drawn-zh",
               "count-image-zh", "list-drawn", "list-image", "list-image-comma", "list-drawn-plain", "list-image-plain",
-              "offer-arrow", "offer-paren", "offer-zh", "tier-one-list", "tier-two-table", "skin-table"):
+              "offer-arrow", "offer-paren", "offer-zh", "tier-one-list", "tier-two-table", "skin-table", "gallery-more",
+              "gallery-more-zh"):
         known.add(b)
     return known
 

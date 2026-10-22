@@ -243,35 +243,11 @@ Beside the template gallery, slide-maker ships <!-- vl:count-all -->nineteen<!--
       contrast ground: <a href="skills/slide-maker/assets/vl/samples/wayfinding-night.jpg">night</a></sub>
     </td>
   </tr>
-  <tr>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/herbarium.jpg"><img src="skills/slide-maker/assets/vl/samples/herbarium.jpg" alt="herbarium visual language sample pages"></a><br/>
-      <sub><strong>herbarium</strong> · drawn, no pictures needed<br/>an archival specimen sheet: pressed sprigs held by paper tape, typed label cards<br/>
-      contrast ground: <a href="skills/slide-maker/assets/vl/samples/herbarium-cabinet.jpg">cabinet</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/airmail.jpg"><img src="skills/slide-maker/assets/vl/samples/airmail.jpg" alt="airmail visual language sample pages"></a><br/>
-      <sub><strong>airmail</strong> · drawn, no pictures needed<br/>an air-mail envelope: the striped border, a stamp and its postmark, a wax seal<br/>
-      contrast ground: <a href="skills/slide-maker/assets/vl/samples/airmail-night.jpg">night</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/vinyl.jpg"><img src="skills/slide-maker/assets/vl/samples/vinyl.jpg" alt="vinyl visual language sample pages"></a><br/>
-      <sub><strong>vinyl</strong> · drawn, no pictures needed<br/>a record and its sleeve: grooves, the centre label, a side A / side B track list<br/>
-      contrast ground: <a href="skills/slide-maker/assets/vl/samples/vinyl-cream.jpg">cream</a></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/receipt.jpg"><img src="skills/slide-maker/assets/vl/samples/receipt.jpg" alt="receipt visual language sample pages"></a><br/>
-      <sub><strong>receipt</strong> · drawn, no pictures needed<br/>a thermal till slip: torn edges, monospaced lines, the total, a barcode<br/>
-      contrast ground: <a href="skills/slide-maker/assets/vl/samples/receipt-carbon.jpg">carbon</a></sub>
-    </td>
-  </tr>
 </table>
 
 <p align="center"><sub>Style samples on sample content, not your deck. Click a sample for the full-size sheet; the link under it opens the language's second ground, taken automatically when your recent decks already sit on its first. Starlit and chalkboard are dark on both.</sub></p>
 
-<p align="center"><a href="https://slides.addsum.top/languages/"><strong>Browse the visual-language library →</strong></a><br/><sub>every language's seven page types on both grounds, its palette and type, and the line that asks for it</sub></p>
+<p align="center"><a href="https://slides.addsum.top/languages/"><strong>Browse all <!-- vl:count-all -->nineteen<!-- /vl --> visual languages in the library →</strong></a><br/><sub><!-- vl:gallery-more -->The gallery above shows fifteen of them; four more are only in the library. <!-- /vl -->Every language's seven page types on both grounds, its palette and type, and the line that asks for it.</sub></p>
 
 **How one gets picked.** When your deck will carry photos or illustrations (your own, or ones slide-maker generates or fetches for you), at least one of the candidate looks it shows you is a picture language: photos lead to editorial, soft or collage by tone, illustrations to storybook. When it has none, a drawn language that fits the topic is among the candidates, and the reason it fits is recorded with the choice. The fit is guidance, not a lookup: <!-- vl:offer-arrow -->culture, history, craft → `ink`; launch, manifesto, opinion → `poster`; children, storytelling, community → `cutpaper`; engineering, architecture, systems design → `drafting`; year in review, letter, thanks, commemoration → `starlit`; newsletter, periodic report, community update → `broadsheet`; research talk, lab meeting, paper, defence → `journal`; metrics, quarterly review, operations, growth → `tally`; lesson, class, training, explainer → `chalkboard`; product launch, app, SaaS, feature tour, internal tool → `interface`; roadmap, process, onboarding, journey, strategy route, transport/city → `wayfinding`; nature, ecology, sustainability, field research, biology → `herbarium`; travel, international, cross-border, logistics, global teams, exchange programme → `airmail`; music, podcast, culture, creative work, anniversary → `vinyl`; pricing, budget, cost breakdown, retail, e-commerce, expenses → `receipt`.<!-- /vl --> Or ask for one by name ("use the collage look"). To open the samples as editable decks, build them locally (it prints the commands that render each one into `out/`):
 
