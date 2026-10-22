@@ -513,9 +513,9 @@ def _number_beside(k, slide, page, r, ds, num, sprite, frac, gap, reason):
         r["number"], ds[di] = nr["number"], nd
         nx, nw = nx + lead, nw - lead
     iw = min(nw, _v2.ink_w(k, "number", num, size))
-    # the renderer sets a big Arial Black figure's baseline ~0.07em above the face-metric model (measured on a 150pt
-    # "36": modelled 4.03in, rendered 3.85in): without it the sprite's feet hung below the digits
-    base = ny + _v2.first_baseline(k, "number", num, size) - 0.07 * size / 72.0
+    # the figure's baseline as the renderer sets it (vl_native2.first_baseline models LibreOffice's 1.2em line with the
+    # baseline 1.0em below its top, face metrics aside): the sprite stands on it
+    base = ny + _v2.first_baseline(k, "number", num, size)
     box = (_gx(k, nx + nw / 2.0 - iw / 2.0 - lead), _gy(k, base - sh * sc * P), sw * sc * P, sh * sc * P)
     others = [v for f_, v in r.items() if f_ != "number"]
     if _inside(k, box) and _clear(box, others, 0.10 * s) and box[0] > X0 + 4 * P:
