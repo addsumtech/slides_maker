@@ -14,6 +14,7 @@
 
 <p align="center">
   <a href="https://clawhub.ai/dong845/skills/slide-maker"><img alt="ClawHub" src="docs/badges/clawhub.svg"></a>
+  <!-- vl:vl-badge --><a href="https://slides.addsum.top/languages/"><img alt="Visual languages: 19" src="https://img.shields.io/badge/visual_languages-19-c2410c"></a><!-- /vl -->
 </p>
 
 <p align="center"><sub>Free and open source, built by <a href="https://addsum.top/"><strong>Addsum</strong></a></sub></p>

@@ -26,8 +26,8 @@ REQUIRED = {
     REF / "interview-protocol.md": {"count-all", "count-image", "count-drawn", "list-image-comma", "offer-paren"},
     REF / "codex-runtime.md": {"list-drawn"},
     REF / "file-inventory.md": {"count-all", "count-image", "count-drawn", "list-image-plain", "list-drawn-plain"},
-    REPO / "README.md": {"count-all", "count-image-cap", "count-drawn", "offer-arrow", "gallery-more"},
-    REPO / "README_CN.md": {"count-all-zh", "count-image-zh", "count-drawn-zh", "offer-zh", "gallery-more-zh"},
+    REPO / "README.md": {"count-all", "count-image-cap", "count-drawn", "offer-arrow", "gallery-more", "vl-badge"},
+    REPO / "README_CN.md": {"count-all-zh", "count-image-zh", "count-drawn-zh", "offer-zh", "gallery-more-zh", "vl-badge-zh"},
 }
 DOCS = list(REQUIRED)
 _MARK = re.compile(r"<!-- vl:([a-z\-]+) -->|<!-- /vl -->")
@@ -67,6 +67,16 @@ def _more(reg):
     return (len(g), len(reg) - len(g)) if g is not None else (len(reg), 0)
 
 
+LIBRARY = "https://slides.addsum.top/languages/"
+
+
+def _badge(n, label, alt):
+    """The README's badge beside ClawHub: the library's language count, linked to the library page."""
+    from urllib.parse import quote
+    return '<a href="{}"><img alt="{}: {}" src="https://img.shields.io/badge/{}-{}-c2410c"></a>'.format(
+        LIBRARY, alt, n, quote(label), n)
+
+
 def _render(block, reg):
     drawn = [s for s in reg.values() if s["kind"] == "drawn"]
     image = [s for s in reg.values() if s["kind"] == "image-led"]
@@ -88,6 +98,8 @@ def _render(block, reg):
                                      _en(g), _en(n)))(*_more(reg)),
         "gallery-more-zh": lambda: (lambda g, n: "" if n <= 0 else
                                     "上面只展示了其中{}套，另外{}套只在模版库里。".format(_zh(g), _zh(n)))(*_more(reg)),
+        "vl-badge": lambda: _badge(len(reg), "visual_languages", "Visual languages"),
+        "vl-badge-zh": lambda: _badge(len(reg), "视觉语言模版库", "视觉语言模版库"),
         "tier-one-list": lambda: " · ".join("`{}`".format(n) for n in ct.TIER1),
         "tier-two-table": lambda: "\n" + "\n".join(["| component | draws in the skin |", "|---|---|"] +
                                          ["| `{}` | {} |".format(n, ", ".join(r)) for n, r in ct.TIER2_SKIN.items()]) + "\n",
@@ -184,7 +196,7 @@ def _known(reg):
     for b in ("count-all", "count-drawn", "count-image", "count-image-cap", "count-all-zh", "count-drawn-zh",
               "count-image-zh", "list-drawn", "list-image", "list-image-comma", "list-drawn-plain", "list-image-plain",
               "offer-arrow", "offer-paren", "offer-zh", "tier-one-list", "tier-two-table", "skin-table", "gallery-more",
-              "gallery-more-zh"):
+              "gallery-more-zh", "vl-badge", "vl-badge-zh"):
         known.add(b)
     return known
 

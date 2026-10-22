@@ -393,6 +393,16 @@ check(_vd._render("gallery-more-zh", _reg).startswith("上面只展示了其中{
 _all_shown = {n: s_ for n, s_ in _reg.items() if n in _g}
 check(_vd._render("gallery-more", _all_shown) == "" and _vd._render("gallery-more-zh", _all_shown) == "",
       "with every language in the gallery the clause says nothing (no 'zero more')")
+# the badge beside ClawHub counts the library (2026-10-22): generated, so the number follows the registry
+_b = _vd._render("vl-badge", _reg)
+check("https://slides.addsum.top/languages/" in _b and "-{}-".format(len(_reg)) in _b and "alt=\"Visual languages: {}\"".format(len(_reg)) in _b,
+      "vl-badge links the library and carries the count: {!r}".format(_b))
+_bz = _vd._render("vl-badge-zh", _reg)
+check("https://slides.addsum.top/languages/" in _bz and "-{}-".format(len(_reg)) in _bz, "vl-badge-zh carries the count: {!r}".format(_bz))
+for _f, _blk in (("README.md", "vl-badge"), ("README_CN.md", "vl-badge-zh")):
+    _txt = (_vd.REPO / _f).read_text(encoding="utf-8")
+    _i, _j = _txt.find("<!-- vl:{} -->".format(_blk)), _txt.find("clawhub")
+    check(_i >= 0 and abs(_i - _j) < 400, "{} carries {} beside the ClawHub badge".format(_f, _blk))
 import vl_conformance as _vcf1
 check(not any("gallery" in x for x in _vcf1.assets_missing("herbarium")),
       "a language off the README gallery is not a missing asset: {}".format(_vcf1.assets_missing("herbarium")))

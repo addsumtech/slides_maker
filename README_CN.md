@@ -14,6 +14,7 @@
 
 <p align="center">
   <a href="https://clawhub.ai/dong845/skills/slide-maker"><img alt="ClawHub" src="docs/badges/clawhub_cn.svg"></a>
+  <!-- vl:vl-badge-zh --><a href="https://slides.addsum.top/languages/"><img alt="视觉语言模版库: 19" src="https://img.shields.io/badge/%E8%A7%86%E8%A7%89%E8%AF%AD%E8%A8%80%E6%A8%A1%E7%89%88%E5%BA%93-19-c2410c"></a><!-- /vl -->
 </p>
 
 <p align="center"><sub><a href="https://addsum.top/cn/"><strong>增和科技 Addsum</strong></a> 出品 · 免费开源</sub></p>
