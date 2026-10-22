@@ -330,9 +330,11 @@ def _am_points(k, slide, f, image):
     pts = points_of(f.get("items"))
     n = len(pts)
     x0, w0 = m, W - 2 * m
+    # the roomier layouts start the title smaller: set at the largest size its room allows, a long title took the
+    # height the labels needed (a 30-character Chinese title on a square page, 2026-10-22)
     r, ds = _v2.stack(k, slide, "points", x0, w0, m, m + (0.22 if alt() == 0 else 0.30) * H,
                       [(_v2.fields(f, ("kicker",), ("kicker",)), 0.08 * s), (_v2.fields(f, ("title",)), 0.0)],
-                      anchor="top")
+                      anchor="top", start=None if alt() < 2 else {"title": 34 * s})
     top = max((v[1] + v[3] for v in r.values()), default=m) + (0.40 if alt() < 2 else 0.28) * s
     bottom = H - m
     st_w, st_h = 0.62 * s, 0.74 * s
@@ -372,8 +374,11 @@ def _am_points(k, slide, f, image):
     for rw in range(rows):
         ys.append(y)
         y += row_h[rw] + gap
+    # set at the sizes the probe measured: flowed afresh, a label breaks its clauses at the design size and can need
+    # a line more than the probe found at the shared size (a Chinese label on a square page, 2026-10-22)
+    sizes = {f_: z for _pr, d_ in probe for f_, z in getattr(d_, "sizes", {}).items()}
     planned = _v2.plan_together(k, slide, "points", [((x0 + (i % cols) * (cw + gap) + dx, ys[i // cols] + dy, w_,
-                                                      row_h[i // cols] - dy - pad), it, {"anchor": "top"})
+                                                      row_h[i // cols] - dy - pad), it, {"anchor": "top", "start": sizes})
                                                      for i, ((dx, dy, w_, h_), it) in enumerate(zip(rects, items))])
     art = []
     for i, (pr, pd) in enumerate(planned):

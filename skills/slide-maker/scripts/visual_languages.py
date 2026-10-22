@@ -441,9 +441,28 @@ def _register(n):
     return True
 
 
+_LAZY = set()      # languages with a scripts/vl_langs/ module not imported yet — it loads on first use (ready())
+
+
+def _lazy_painter(n, role):
+    """A stand-in for a module language's painter until its module is imported: registering the real one at import
+    time loaded every module, and through them vl_native and native_art, into decks that use only an image-led
+    language (spec §6 — measured when the first four module languages landed, 2026-10-22)."""
+    def paint(*a, **kw):
+        if not ready(n):
+            raise VLNotReady(_UNREADY[n])
+        return painter(n, role)(*a, **kw)
+    paint.__name__ = REGISTRY[n]["painters"][role]
+    return paint
+
+
 def ready(name):
-    """Is the language usable now? A language found unready while its module was half-imported (vl_native imported
-    BEFORE this module: the module's own import of vl_native failed) is tried once more — by then it loads."""
+    """Is the language usable now? A module language is imported here, on first use. A language found unready while
+    its module was half-imported (vl_native imported BEFORE this module: the module's own import of vl_native
+    failed) is tried once more — by then it loads."""
+    if name in _LAZY:
+        _LAZY.discard(name)
+        return _register(name)
     return name not in _UNREADY or _register(name)
 
 
@@ -2500,9 +2519,15 @@ def main(argv=None):
     return 0
 
 
-# the languages written after the fifteen, now that every name above exists (their modules import vl_native)
+# the languages written after the fifteen, now that every name above exists. A module language is registered with
+# stand-in painters and imported on first use (ready()), so a deck that never picks one never imports vl_native.
 for _n in _PENDING:
-    _register(_n)
+    if _has_module(_n):
+        _LAZY.add(_n)
+        rs.register(_n, ground=_lazy_painter(_n, "ground"), card=_lazy_painter(_n, "card"),
+                    forbids=LANGS[_n]["forbids"], source=__file__)
+    else:
+        _register(_n)
 
 
 if __name__ == "__main__":

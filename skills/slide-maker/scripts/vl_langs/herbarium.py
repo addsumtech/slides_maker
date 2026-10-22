@@ -58,8 +58,8 @@ _PROFILE = {        # half-width along the midrib, t = 0 at the base, 1 at the t
 _WIDTH = {"ovate": 0.50, "lance": 0.26, "round": 0.78}
 
 
-def _leaf(k, slide, bx, by, ang, L, shape, fill):
-    """One pressed leaf from its base along `ang` (radians, screen y down): its blade, then its midrib and veins."""
+def _blade(bx, by, ang, L, shape):
+    """The outline of a leaf's blade from its base along `ang` (radians, screen y down)."""
     ca, sa = math.cos(ang), math.sin(ang)
     prof, wd = _PROFILE[shape], L * _WIDTH[shape]
     right, left = [], []
@@ -69,7 +69,14 @@ def _leaf(k, slide, bx, by, ang, L, shape, fill):
         px, py = bx + ca * d, by + sa * d
         right.append((px - sa * hw, py + ca * hw))
         left.append((px + sa * hw, py - ca * hw))
-    blade = na.poly(slide, right + left[::-1], fill=fill)
+    return right + left[::-1]
+
+
+def _leaf(k, slide, bx, by, ang, L, shape, fill):
+    """One pressed leaf from its base along `ang` (radians, screen y down): its blade, then its midrib and veins."""
+    ca, sa = math.cos(ang), math.sin(ang)
+    prof, wd = _PROFILE[shape], L * _WIDTH[shape]
+    blade = na.poly(slide, _blade(bx, by, ang, L, shape), fill=fill)
     if blade is not None:
         dk.decorative(blade, "a pressed leaf of the specimen — ornament, nothing to read")
     if L < 0.35:
@@ -99,49 +106,73 @@ def _tangent(p0, c, p1, t):
     return math.atan2(dy, dx)
 
 
-def _sprig(k, slide, base, tip, *, bend=0.12, leaves=7, shape="ovate", seed=1, leaf_scale=1.0, tapes=(0.18,)):
-    """A pressed sprig: a gently curved stem from `base` to `tip`, leaves alternating up it (smaller toward the tip),
-    a terminal leaf, and paper tape across the stem at each fraction in `tapes`. Deterministic for a seed."""
-    W, H, s, o = ctx(k)
+def _sprig_plan(base, tip, bend, leaves, shape, seed, leaf_scale):
+    """Where a sprig's parts go, before anything is drawn: (control point, stem length, the leaves as
+    (x, y, angle, length, shape, fill index), the random stream left for the tapes). The same numbers every call."""
     rnd = random.Random(seed)
     (x0, y0), (x1, y1) = base, tip
     L = max(0.1, math.hypot(x1 - x0, y1 - y0))
     nx, ny = -(y1 - y0) / L, (x1 - x0) / L
     c = ((x0 + x1) / 2.0 + nx * bend * L, (y0 + y1) / 2.0 + ny * bend * L)
-    if shape == "fern":
-        return _fern(k, slide, base, c, tip, L, rnd, tapes)
-    stem = na.polyline(slide, [_bezier(base, c, tip, i / 24.0) for i in range(25)], k.P["stem"], w=1.5 * s)
-    dk.decorative(stem, "the stem of a drawn pressed sprig; ornament, nothing to read in it")
-    fills = [k.P["leaf"], k.P["leaf_dark"], k.P["leaf"], k.P["leaf_dry"]]
+    out = []
+    if shape == "fern":                       # a fern frond: many narrow pinnae, longest near the base
+        for j in range(11):
+            t = 0.10 + 0.86 * j / 10.0
+            px, py = _bezier(base, c, tip, t)
+            ta = _tangent(base, c, tip, t)
+            for side in (1, -1):
+                out.append((px, py, ta + side * 1.05, None, "lance", 0 if (j + (side > 0)) % 3 else 1, t))
+        return c, L, out, rnd
     for j in range(leaves):
         t = 0.14 + 0.74 * j / max(1, leaves - 1)
         px, py = _bezier(base, c, tip, t)
         side = 1 if j % 2 == 0 else -1
         a = _tangent(base, c, tip, t) + side * rnd.uniform(0.62, 0.92)
         ll = L * 0.30 * (1.0 - 0.45 * t) * leaf_scale * rnd.uniform(0.9, 1.08)
-        _leaf(k, slide, px, py, a, ll, shape, fills[(j + seed) % len(fills)])
-    _leaf(k, slide, tip[0], tip[1], _tangent(base, c, tip, 1.0), L * 0.17 * leaf_scale, shape, k.P["leaf"])
-    for t in tapes:
-        px, py = _bezier(base, c, tip, t)
-        _tape(k, slide, px, py, 0.70 * s, 0.20 * s, _tangent(base, c, tip, t) + math.pi / 2 + rnd.uniform(-0.25, 0.25))
+        out.append((px, py, a, ll, shape, (j + seed) % 4, t))
+    out.append((tip[0], tip[1], _tangent(base, c, tip, 1.0), L * 0.17 * leaf_scale, shape, -1, 1.0))
+    return c, L, out, rnd
 
 
-def _fern(k, slide, base, c, tip, L, rnd, tapes):
-    """A fern frond: a rachis with many narrow pinnae, longest near the base."""
+def _sprig_extent(k, base, tip, bend, leaves, shape, seed, leaf_scale):
+    """The box (x0, y0, x1, y1) a sprig's stem and blades cover."""
     W, H, s, o = ctx(k)
-    stem = na.polyline(slide, [_bezier(base, c, tip, i / 24.0) for i in range(25)], k.P["stem"], w=1.2 * s)
-    dk.decorative(stem, "the rachis of a drawn fern frond; ornament, nothing to read in it")
-    n = 11
-    for j in range(n):
-        t = 0.10 + 0.86 * j / (n - 1)
-        px, py = _bezier(base, c, tip, t)
-        ta = _tangent(base, c, tip, t)
-        ll = L * 0.26 * (1.0 - 0.75 * t) + 0.08 * s
-        for side in (1, -1):
-            _leaf(k, slide, px, py, ta + side * 1.05, ll, "lance", k.P["leaf"] if (j + (side > 0)) % 3 else k.P["leaf_dark"])
+    c, L, parts, _r = _sprig_plan(base, tip, bend, leaves, shape, seed, leaf_scale)
+    pts = [_bezier(base, c, tip, i / 24.0) for i in range(25)]
+    for px, py, a, ll, sh, _fi, t in parts:
+        pts += _blade(px, py, a, ll if ll is not None else L * 0.26 * (1.0 - 0.75 * t) + 0.08 * s, sh)
+    xs, ys = [p_[0] for p_ in pts], [p_[1] for p_ in pts]
+    return min(xs), min(ys), max(xs), max(ys)
+
+
+def _sprig(k, slide, base, tip, *, bend=0.12, leaves=7, shape="ovate", seed=1, leaf_scale=1.0, tapes=(0.18,)):
+    """A pressed sprig: a gently curved stem from `base` to `tip`, leaves alternating up it (smaller toward the tip),
+    a terminal leaf, and paper tape across the stem at each fraction in `tapes`. Deterministic for a seed.
+    A specimen is mounted INSIDE the plate's frame: a sprig whose leaves would cross it is drawn shorter, toward its
+    base, until it fits (a leaf past the frame was a hard OVERLAP in the delivery lint, 2026-10-22)."""
+    W, H, s, o = ctx(k)
+    lo = 0.33 * s + 0.10 * s
+    for _i in range(40):
+        ex0, ey0, ex1, ey1 = _sprig_extent(k, base, tip, bend, leaves, shape, seed, leaf_scale)
+        if ex0 >= lo and ey0 >= lo and ex1 <= W - lo and ey1 <= H - lo:
+            break
+        tip = (base[0] + (tip[0] - base[0]) * 0.95, base[1] + (tip[1] - base[1]) * 0.95)
+    c, L, parts, rnd = _sprig_plan(base, tip, bend, leaves, shape, seed, leaf_scale)
+    stem = na.polyline(slide, [_bezier(base, c, tip, i / 24.0) for i in range(25)], k.P["stem"],
+                       w=(1.2 if shape == "fern" else 1.5) * s)
+    dk.decorative(stem, "the rachis of a drawn fern frond; ornament, nothing to read in it" if shape == "fern"
+                  else "the stem of a drawn pressed sprig; ornament, nothing to read in it")
+    if shape == "fern":
+        for px, py, a, _ll, sh, fi, t in parts:
+            _leaf(k, slide, px, py, a, L * 0.26 * (1.0 - 0.75 * t) + 0.08 * s, sh, (k.P["leaf"], k.P["leaf_dark"])[fi])
+    else:
+        fills = [k.P["leaf"], k.P["leaf_dark"], k.P["leaf"], k.P["leaf_dry"]]
+        for px, py, a, ll, sh, fi, t in parts:
+            _leaf(k, slide, px, py, a, ll, sh, k.P["leaf"] if fi < 0 else fills[fi])
     for t in tapes:
         px, py = _bezier(base, c, tip, t)
-        _tape(k, slide, px, py, 0.70 * s, 0.20 * s, _tangent(base, c, tip, t) + math.pi / 2 + rnd.uniform(-0.2, 0.2))
+        _tape(k, slide, px, py, 0.70 * s, 0.20 * s, _tangent(base, c, tip, t) + math.pi / 2
+              + rnd.uniform(*((-0.2, 0.2) if shape == "fern" else (-0.25, 0.25))))
 
 
 def _tape(k, slide, cx, cy, w, h, ang):
@@ -336,13 +367,16 @@ def _hb_points(k, slide, f, image):
     _plate(k, slide, f)
     texts = [t_ for p_ in pts for t_ in p_ if t_]
     x0, w0 = 0.09 * W, 0.82 * W
-    r, ds = _v2.stack(k, slide, "points", x0, w0, 0.11 * H, (0.30 if alt() == 0 else 0.34) * H,
-                      [(_v2.fields(f, ("kicker",)), 0.08 * s), (_v2.fields(f, ("title",)), 0.0)], anchor="top")
+    # the last layout (no specimens) gives a long title a little more room and starts it near its floor: set as
+    # large as its room allows, a 30-character Chinese title took three lines and the cards' height (2026-10-22)
+    r, ds = _v2.stack(k, slide, "points", x0, w0, 0.11 * H, (0.30 if alt() == 0 else 0.34 if alt() == 1 else 0.37) * H,
+                      [(_v2.fields(f, ("kicker",)), 0.08 * s), (_v2.fields(f, ("title",)), 0.0)], anchor="top",
+                      start=None if alt() < 2 else {"title": 28 * s})
     top = max((v[1] + v[3] for v in r.values()), default=0.11 * H) + 0.30 * s
     bottom = H - 0.8 * s
     nos = [_no_label(k, f, i, texts) for i in range(n)]
     art = []
-    pad = 0.16 * s
+    pad = (0.16 if alt() < 2 else 0.12) * s
     if o == "land" and alt() < 2:
         gap = 0.40 * s
         cw = (w0 - (n - 1) * gap) / n
@@ -358,8 +392,10 @@ def _hb_points(k, slide, f, image):
         if cy - 0.25 * s - leaf_top < min_leaf:
             raise vl.VLTextOverflow("herbarium.points(): the labels leave the specimens {:.2f}in — trying a roomier "
                                     "layout".format(cy - 0.25 * s - leaf_top))
+        sizes = {f_: z for _pr, d_ in probe for f_, z in getattr(d_, "sizes", {}).items()}   # as measured (airmail)
         planned = _v2.plan_together(k, slide, "points", [((x0 + i * (cw + gap) + pad, cy + pad + 0.10 * s,
-                                                          cw - 2 * pad, need - 2 * pad - 0.10 * s), it, {"anchor": "top"})
+                                                          cw - 2 * pad, need - 2 * pad - 0.10 * s), it,
+                                                          {"anchor": "top", "start": sizes})
                                                          for i, it in enumerate(items)])
         for i, (pr, pd) in enumerate(planned):
             cx = x0 + i * (cw + gap)
@@ -371,7 +407,7 @@ def _hb_points(k, slide, f, image):
             hgt = cy - 0.10 * s - leaf_top
             lean = (0.18 if i % 2 == 0 else -0.18) * min(hgt, cw)
             art.append(lambda mid=mid, kind=kind, i=i, hgt=hgt, lean=lean: _sprig(
-                k, slide, (mid + lean * 0.3, cy + 0.05 * s), (mid - lean, leaf_top), bend=0.07 * (1 if i % 2 else -1),
+                k, slide, (mid + lean * 0.3, cy - 0.14 * s), (mid - lean, leaf_top), bend=0.07 * (1 if i % 2 else -1),
                 leaves=6 if kind != "round" else 5, shape=kind, seed=11 + i,
                 leaf_scale=min(1.15, 0.55 + 0.35 * hgt / s / 1.5), tapes=(0.16,)))
     else:
@@ -395,8 +431,9 @@ def _hb_points(k, slide, f, image):
             ys.append(y)
             y += row_h[rw] + gap
         boxes = [(x0 + (i % cols) * (cw + cgap), ys[i // cols], row_h[i // cols]) for i in range(n)]
+        sizes = {f_: z for _pr, d_ in probe for f_, z in getattr(d_, "sizes", {}).items()}   # as measured (airmail)
         planned = _v2.plan_together(k, slide, "points", [((bx + lw + pad, by + pad + 0.08 * s, cw - lw - 2 * pad,
-                                                          bh - 2 * pad - 0.08 * s), it, {"anchor": "top"})
+                                                          bh - 2 * pad - 0.08 * s), it, {"anchor": "top", "start": sizes})
                                                          for (bx, by, bh), it in zip(boxes, items)])
         for i, ((bx, by, bh), (pr, pd)) in enumerate(zip(boxes, planned)):
             r.update(pr)
@@ -496,8 +533,11 @@ def _hb_data(k, slide, f, image):
         iw = min(inner[2], _v2.ink_w(k, "number", num, size))
         nx, ny, nw, nh = nr["number"]
         tx = nx + nw / 2.0 - iw / 2.0 - pad_l               # the tag cut to the number, the number centred on it
-        th = min(tag_box[3], nh + 0.30 * s)
-        _tag(k, slide, tx, ny + nh / 2.0 - th / 2.0, iw + pad_l + pad_r, th, notch)
+        # the foot of a big figure's line box renders lower than its measured box (a renderer gives the line ~1.25x
+        # the size): pad the tag's foot by the size too, or the number sits on the tag's edge (TEXT PADDING, 4:3)
+        pad_b = 0.15 * s + 0.06 * size / 72.0
+        th = nh + 0.15 * s + pad_b
+        _tag(k, slide, tx, ny - 0.15 * s, iw + pad_l + pad_r, th, notch)
         rects.update(nr)
         draws.append(nd)
     r, d = _v2.flow(k, slide, "data", col, _v2.fields(f, ("label", "note")), anchor="middle")

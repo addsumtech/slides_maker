@@ -722,7 +722,9 @@ import sigs
 for fn in ("route", "roundel", "sign_panel", "ui_window", "ui_button", "ui_device", "vl_interface", "vl_wayfinding"):
     check(fn in sigs.EXAMPLES, "sigs.py --example {} has a runnable scaffold".format(fn))
 skill = re.sub(r"<!--.*?-->", "", (ROOT / "SKILL.md").read_text(encoding="utf-8"))   # read as rendered: counts are vl blocks
-check("`interface`" in skill and "`wayfinding`" in skill and "eleven drawn" in skill, "SKILL.md names the eleven drawn languages")
+import visual_languages as _vlc, vl_docs as _vld          # the count grows with every language: read it, never hard-code it
+_drawn = "{} drawn".format(_vld._en(len(_vlc.NATIVE)))
+check("`interface`" in skill and "`wayfinding`" in skill and _drawn in skill, "SKILL.md names the {} languages".format(_drawn))
 import directions_diversity as ddv
 check({"interface", "wayfinding"} <= set(ddv.NATIVE_LANGS), "directions_diversity offers interface and wayfinding as native languages")
 for doc in ("interview-protocol.md", "codex-runtime.md", "file-inventory.md"):

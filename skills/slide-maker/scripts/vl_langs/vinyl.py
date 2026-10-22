@@ -275,30 +275,52 @@ def _vy_points(k, slide, f, image):
     gap, side_gap = 0.20 * s, 0.42 * s
     items = [[("item_head", hd)] + ([("item_line", ln)] if ln else []) for hd, ln in pts]
     a = -(-n // 2)
-    share = (y1 - top - gap * (n - 1) - (side_gap - gap if n > a else 0.0)) / n - 0.05 * s
-    probe = _v2.plan_together(k, slide, "points", [((0, 0, w0 - nw, share), it, {"anchor": "top"}) for it in items])
-    hs = [max((v[1] + v[3] for v in pr.values()), default=0.0) + 0.05 * s for pr, _d in probe]
-    block = sum(hs) + gap * (n - 1) + (side_gap - gap if n > a else 0.0)
+    cgap = 0.5 * s
+
+    def _plan(two):
+        """The track list in one column, or (two) side A and side B side by side: (sides, column width, extra gap,
+        heights, block height)."""
+        sides = [list(range(a)), list(range(a, n))] if two else [list(range(n))]
+        cw = (w0 - cgap) / 2.0 if two else w0
+        extra = (side_gap - gap) if (not two and n > a) else 0.0     # one column: the wider gap between the sides
+        share = min((y1 - top - gap * (len(g) - 1) - extra) / len(g) for g in sides if g) - 0.05 * s
+        probe = _v2.plan_together(k, slide, "points", [((0, 0, cw - nw, share), it, {"anchor": "top"}) for it in items])
+        hs = [max((v[1] + v[3] for v in pr.values()), default=0.0) + 0.05 * s for pr, _d in probe]
+        return sides, cw, extra, hs, max(sum(hs[i] for i in g) + gap * (len(g) - 1) + extra for g in sides if g)
+
+    # with no record the sleeve's two columns are tried when one column does not fit: side A left, side B right
+    two_ok = not rec and n >= 2 and (w0 - cgap) / 2.0 - nw >= 1.4 * s
+    try:
+        sides, cw, extra, hs, block = _plan(False)
+    except vl.VLTextOverflow:
+        if not two_ok:
+            raise
+        block = float("inf")
+    if block > y1 - top + 1e-6 and two_ok:
+        sides, cw, extra, hs, block = _plan(True)
+    two = len(sides) == 2
     if block > y1 - top + 1e-6:
         raise vl.VLTextOverflow("vinyl.points(): the track list needs {:.2f}in, the page has {:.2f}in".format(
             block, y1 - top))
-    y = top + (y1 - top - block) * 0.35
-    ys = []
-    for i in range(n):
-        ys.append(y)
-        y += hs[i] + (side_gap if i == a - 1 else gap)
-    planned = _v2.plan_together(k, slide, "points", [((x0 + nw, ys[i], w0 - nw, hs[i] + 0.1 * s), it, {"anchor": "top"})
-                                                     for i, it in enumerate(items)])
-    numbers = [_v2.flow(k, slide, "points", (x0, ys[i] + 0.04 * s, nw - 0.1 * s, 0.5 * s), [("item_no", nos[i])],
+    xs, ys = [x0] * n, [0.0] * n
+    for gi, g in enumerate(sides):
+        y = top + (y1 - top - block) * 0.35                             # the two sides start level
+        for i in g:
+            xs[i], ys[i] = x0 + gi * (cw + cgap), y
+            y += hs[i] + (side_gap if (not two and i == a - 1) else gap)
+    planned = _v2.plan_together(k, slide, "points", [((xs[i] + nw, ys[i], cw - nw, hs[i] + 0.1 * s), it,
+                                                      {"anchor": "top"}) for i, it in enumerate(items)])
+    numbers = [_v2.flow(k, slide, "points", (xs[i], ys[i] + 0.04 * s, nw - 0.1 * s, 0.5 * s), [("item_no", nos[i])],
                         anchor="top") for i in range(n)]
     art = []
     if rec:
         art.append(lambda: _record(k, slide, cx, cy, d))
-    for i in range(n):
-        if i > 0:
-            yl = ys[i] - (side_gap if i == a else gap) / 2.0
-            art.append(lambda yl=yl, strong=(i == a): dk.decorative(
-                na.strokes(slide, [((x0, yl), (x0 + w0, yl))], k.P["ink"], w=1.2 if strong else 0.5,
+    for g in sides:
+        for i in g[1:]:
+            strong = not two and i == a
+            yl = ys[i] - (side_gap if strong else gap) / 2.0
+            art.append(lambda yl=yl, xl=xs[i], strong=strong: dk.decorative(
+                na.strokes(slide, [((xl, yl), (xl + cw, yl))], k.P["ink"], w=1.2 if strong else 0.5,
                            alpha=0.55 if strong else 0.25),
                 "the rule between two tracks (the stronger one between side A and side B)"))
     for (pr, pd), (nr, nd) in zip(planned, numbers):
@@ -329,29 +351,32 @@ def _vy_quote(k, slide, f, image):
     return r
 
 
-@register(NAME, "data", alts=2)
+@register(NAME, "data", alts=3)
 def _vy_data(k, slide, f, image):
     """The number printed on the record's centre label, the tonearm resting on the record; the label and the note
-    beside it (under it on a portrait or square page)."""
+    beside it (under it on a portrait or square page). A figure too wide for the label (1,250,000): the label stays
+    plain and the figure is set at the head of the column instead."""
     W, H, s, o = ctx(k)
     m = _m(k)
     num = text_of(f, "number")
+    on_label = alt() < 2
     if o == "land":
-        d = (0.84 if alt() == 0 else 0.74) * H
+        d = (0.84 if alt() == 0 else 0.74 if alt() == 1 else 0.66) * H
         cx, cy = m + d / 2.0, H / 2.0
         col = (cx + d / 2.0 + 1.1 * s, 0.16 * H, W - m - cx - d / 2.0 - 1.1 * s, 0.68 * H)
     else:
-        d = (0.80 if alt() == 0 else 0.66) * W
+        d = (0.80 if alt() == 0 else 0.66 if alt() == 1 else 0.50) * W
         cx, cy = W / 2.0 - 0.3 * s, m + d / 2.0
         col = (0.10 * W, cy + d / 2.0 + 0.5 * s, 0.80 * W, H - m - cy - d / 2.0 - 0.5 * s)
-    lr = _record(k, slide, cx, cy, d, label_frac=0.50, hole=not num)
+    lr = _record(k, slide, cx, cy, d, label_frac=0.50, hole=not (num and on_label))
     _tonearm(k, slide, cx, cy, d / 2.0)
     r, ds = {}, []
-    if num:
+    if num and on_label:
         nr, nd = _number_on_label(k, slide, "data", cx, cy, lr, num)
         r.update(nr)
         ds.append(nd)
-    tr, td = _v2.flow(k, slide, "data", col, _v2.fields(f, ("label", "note")), anchor="middle")
+    tr, td = _v2.flow(k, slide, "data", col, _v2.fields(f, ("label", "note") if on_label else ("number", "label", "note")),
+                      anchor="middle")
     r.update(tr)
     _run_all(ds + [td])
     return r
