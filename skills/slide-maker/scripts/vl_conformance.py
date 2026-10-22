@@ -306,6 +306,7 @@ def rules_past_content(name, run_on=0.4):
             for sc in ("en", "zh") for tag in ("short", "long")]          # CJK too: ink's vertical columns
     for tag, T in runs:
         built, prs = _built(name, g, T)
+        PW, PH = prs.slide_width / 914400.0, prs.slide_height / 914400.0
         for page, s in built:
             if page not in ("points", "cover"):
                 continue
@@ -321,6 +322,10 @@ def rules_past_content(name, run_on=0.4):
                 except Exception:
                     continue
                 if not (w <= 0.06 and h >= 1.5):     # a thin vertical line
+                    continue
+                # the page's own frame — a band at the page's edge running most of its height — serves no text: topo's
+                # neatline sides read as "a rule at x=0.21 runs 2.05in past its text" (2026-10-22)
+                if (x + w <= 0.06 * PW or x >= 0.94 * PW) and h >= 0.6 * PH:
                     continue
                 beside = [t for t in texts if t[1] < y + h and t[1] + t[3] > y and abs((t[0] + t[2] / 2) - x) < 3.2]
                 if not beside:

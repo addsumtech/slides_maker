@@ -1724,6 +1724,21 @@ try:
     check(not vcf.rules_past_content("starlit"), "rules_past_content allows a stand-in face one line of slack")
     vcf._built = lambda *a, **kw: _fixture(_sub(3.0))
     check(bool(vcf.rules_past_content("starlit")), "rules_past_content still flags a dangling rule under a stand-in face")
+
+    # a page's own frame is not a column rule: topo's thin side bands of the neatline (0.052in, the page's height, at
+    # the page edge) read as "a rule at x=0.21 runs 2.05in past its text" (2026-10-22); a full-height rule BETWEEN
+    # columns is still a rule and still caught
+    def _edge(x):
+        def make(s):
+            dk.text(s, 0.6, 1.0, 3.0, 2.6, [[("A line of a column", 16, dk.RGBColor(255, 255, 255), False, False)]
+                                             for _ in range(4)])
+            dk.box(s, x, 0.25, 0.05, 7.0, fill="FFFFFF")
+        return make
+    vcf._built = lambda *a, **kw: _fixture(_edge(0.21))
+    check(not vcf.rules_past_content("starlit"), "rules_past_content leaves a page-edge frame band alone: {}".format(
+        vcf.rules_past_content("starlit")))
+    vcf._built = lambda *a, **kw: _fixture(_edge(3.9))
+    check(bool(vcf.rules_past_content("starlit")), "rules_past_content still flags a full-height rule beside a column")
 finally:
     vcf._built = _real
 dk.set_theme(None)
