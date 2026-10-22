@@ -668,6 +668,25 @@ for name in ("editorial", "soft", "collage", "storybook", "ink", "poster", "cutp
             check(len(full) < 2 or len(full[-1].split()) > 1 or stack,
                   "{} {}x{}: {!r} has no lone last word at the width it is drawn ({})".format(name, W, H, t[:30], full[-2:]))
 
+# ── boardgame's quote: the rule between the quote and its attribution stays between them on any face metrics ──
+# GitHub's Linux runner (stand-in faces) measured the quote's foot lower than macOS; the attribution was only ever
+# pulled UP to it, never pushed down, so the rule set halfway between them crossed the attribution (felt/4:3/zh,
+# RULE_THROUGH_TEXT, 2026-10-22). Simulated here by moving the quote's foot 0.5in lower.
+import vl_langs as _vll
+_bg = _vll.load()["boardgame"]
+_foot0 = _bg._lint_foot
+_bg._lint_foot = lambda sh: _foot0(sh) + 0.5
+try:
+    for _g in ("light", "felt"):
+        _prs, _k = use("boardgame", 10.0, 7.5, _g)
+        _k.quote(_k.new_slide(), quote="来访者握着螺丝刀，志愿者只在旁边指导，这就是整个夜晚的意义所在。", attribution="志愿者手册")
+        with contextlib.redirect_stdout(io.StringIO()):
+            _crit = [f_ for f_ in dk.lint_layout(_prs, verbose=False) if f_[1] == "CRITICAL"]
+        check(not _crit, "boardgame/{} quote: the rule clears the attribution when the quote measures taller ({})".format(
+            _g, [(c_[2], c_[3][:60]) for c_ in _crit[:2]]))
+finally:
+    _bg._lint_foot = _foot0
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

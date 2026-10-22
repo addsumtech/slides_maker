@@ -832,10 +832,12 @@ def _bg_quote(k, slide, f, image):
         # the flow sizes a long quote's box by the lint's line model, often a line or two longer than the lines it
         # sets: on a card that air sat between the quote and its attribution (a portrait page, 1.5in). The
         # attribution is drawn up to the quote's foot as the delivery lint reckons it, plus the planned gap
+        # — and pushed DOWN to it as well: on other face metrics (GitHub's Linux runner) the quote's foot fell below
+        # the planned attribution, and the rule set halfway between them crossed it (felt/4:3/zh, 2026-10-22)
         ib = _ink_box(qsh)
         want = max(_lint_foot(qsh), ib[1] + ib[3]) + 0.36 * s
         at = ash.top / 914400.0
-        if at > want + 0.01:
+        if abs(at - want) > 0.01:
             ash.top = int(round(want * 914400))
             r["attribution"] = (r["attribution"][0], want) + tuple(r["attribution"][2:])
     # the card reaches past the words by its padding as the delivery lint reckons them too (lines x size x 1.25/1.4);
