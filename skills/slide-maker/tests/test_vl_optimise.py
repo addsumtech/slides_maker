@@ -1975,6 +1975,21 @@ for _tt, _ww in (("Everything starts at the table", 4.33), ("Neighbourhood repai
     check(_wb2 is None or vl._widest_word_fits(_kb, "title", _tt, 50, _wb2),
           "a balanced measure holds the widest word of {!r} ({})".format(_tt, None if _wb2 is None else round(_wb2, 2)))
 
+# align="r" sets the words to the right of their column (receipt's total, 2026-10-22): the box ends at the column's
+# right edge and the paragraph is right-aligned — before, "r" raised a KeyError at draw time
+_kr = vl.use("tally", dk.blank_deck(13.333, 7.5))
+_sr = _kr.new_slide()
+_rr, _dr = vl._flow(_kr, _sr, "data", (2.0, 1.0, 6.0, 3.0), [("label", "a total")], anchor="top", align="r")
+try:
+    _dr()
+    _tb = [sh for sh in _sr.shapes if sh.has_text_frame and sh.text_frame.text == "a total"]
+    from pptx.enum.text import PP_ALIGN as _PA
+    check(_tb and _tb[0].text_frame.paragraphs[0].alignment == _PA.RIGHT
+          and abs(_rr["label"][0] + _rr["label"][2] - 8.0) < 0.02,
+          "align='r' right-aligns the words and ends the box at the column's right edge ({})".format(_rr.get("label")))
+except KeyError as _e:
+    check(False, "align='r' is accepted by the flow (KeyError {})".format(_e))
+
 for line in ok:
     print("  ok   " + line)
 for line in skipped:

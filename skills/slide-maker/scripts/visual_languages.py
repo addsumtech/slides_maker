@@ -1099,13 +1099,13 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=Non
         fw = widths[f]                                   # the measure …
         fh = fheight(f, t, sz, fw)
         fw = fw + dw                                     # … and the box, drawn with the headroom
-        fx = x + (w_col - fw) / 2.0 if align == "c" else x
+        fx = x + (w_col - fw) / 2.0 if align == "c" else (x + w_col - fw if align == "r" else x)
         rects[f] = (fx, cy, fw, fh)
         plan.append((f, t, sz, (fx, cy, fw, fh)))
         cy += fh + gap_of(f, sz, fh, True)
 
     def draw():
-        al = {"l": PP_ALIGN.LEFT, "c": PP_ALIGN.CENTER}[align]
+        al = {"l": PP_ALIGN.LEFT, "c": PP_ALIGN.CENTER, "r": PP_ALIGN.RIGHT}[align]
         for f, t, sz, (fx, fy, fw, fh) in plan:
             _base, role, bold, ckey, italic, _floor = TYPE[k.name][f]
             al_f = al

@@ -135,6 +135,22 @@ def poly(slide, pts, *, fill=None, alpha=None, line=None, line_w=0.75):
                    line=line, line_w=line_w)
 
 
+def multipoly(slide, polys, fill, *, alpha=None):
+    """Many closed straight-edged polygons as ONE editable shape (a stripe colour, a stamp's perforations, a barcode's
+    bars) — a hundred shapes would be a hundred objects to select. None when there is nothing to draw. Not clipped:
+    keep the polygons on the page (or declare the shape's bleed)."""
+    polys = [p for p in polys if len(p) >= 3]
+    if not polys:
+        return None
+    xs = [x for p in polys for x, _y in p]
+    ys = [y for p in polys for _x, y in p]
+    x0, y0 = min(xs), min(ys)
+    w, h = max(max(xs) - x0, 0.01), max(max(ys) - y0, 0.01)
+    d = "".join(orn._ring([((x - x0) / w * U, (y - y0) / h * U) for x, y in p]) for p in polys)
+    return _custom(slide, x0, y0, w, h, '<a:path w="{u}" h="{u}">{d}</a:path>'.format(u=U, d=d), fill=hexstr(fill),
+                   alpha=alpha)
+
+
 def band(slide, top_pts, bottom_y, *, fill, alpha=None):
     """A band whose top edge is a smooth curve through `top_pts` and whose foot is flat — x clamped to the page,
     the foot to the page bottom, so a bleed reaches the edge and stops there."""
