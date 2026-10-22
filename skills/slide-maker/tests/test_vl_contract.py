@@ -316,9 +316,9 @@ finally:
 # ── part 3: docs blocks follow the registry ──
 import vl_docs
 _n = len(REG); _nd = len([s_ for s_ in REG.values() if s_["kind"] == "drawn"]); _ni = _n - _nd
-check(vl_docs.render("count-all") == vl_docs._EN[_n] and vl_docs.render("count-drawn") == vl_docs._EN[_nd]
-      and vl_docs.render("count-image") == vl_docs._EN[_ni], "the count blocks read the registry's counts")
-check(vl_docs.render("count-image-cap") == vl_docs._EN[_ni].capitalize(), "a sentence-initial count is capitalised")
+check(vl_docs.render("count-all") == vl_docs._en(_n) and vl_docs.render("count-drawn") == vl_docs._en(_nd)
+      and vl_docs.render("count-image") == vl_docs._en(_ni), "the count blocks read the registry's counts")
+check(vl_docs.render("count-image-cap") == vl_docs._en(_ni).capitalize(), "a sentence-initial count is capitalised")
 check(vl_docs.render("count-all-zh") == vl_docs._zh(_n) and vl_docs.render("count-image-zh") == vl_docs._zh(_ni),
       "the Chinese counts read the registry's counts")
 drawn_names = [s_["name"] for s_ in REG.values() if s_["kind"] == "drawn"]
@@ -393,6 +393,10 @@ check(_vd._render("gallery-more-zh", _reg).startswith("上面只展示了其中{
 _all_shown = {n: s_ for n, s_ in _reg.items() if n in _g}
 check(_vd._render("gallery-more", _all_shown) == "" and _vd._render("gallery-more-zh", _all_shown) == "",
       "with every language in the gallery the clause says nothing (no 'zero more')")
+# counts past twenty stay words: "four image-led and 26 drawn" mixed the two styles in one sentence (2026-10-22, 30)
+check([_vd._en(n) for n in (19, 20, 21, 26, 30, 45, 99)] ==
+      ["nineteen", "twenty", "twenty-one", "twenty-six", "thirty", "forty-five", "ninety-nine"],
+      "_en spells counts past twenty: {}".format([_vd._en(n) for n in (21, 26, 30, 99)]))
 # the badge beside ClawHub counts the library (2026-10-22): generated, so the number follows the registry
 _b = _vd._render("vl-badge", _reg)
 check("https://slides.addsum.top/languages/" in _b and "-{}-".format(len(_reg)) in _b and "alt=\"Visual languages: {}\"".format(len(_reg)) in _b,

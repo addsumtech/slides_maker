@@ -120,10 +120,7 @@ SPEC = {'name': 'calendar',
                                             ('Fix it together', 'A volunteer beside you'),
                                             ('Write it down', 'What broke, what we learned')]}),
                       ('quote', {'quote': 'Put the next date on the calendar before you leave the room.',
-                                 'attribution': 'Our first organiser'}),
-                      ('data', {'number': '12', 'label': 'evenings this year',
-                                'note': 'One on the first Friday of every month'}),
-                      ('closing', {'title': 'See you on the first Friday', 'line': 'Bring a neighbour'})]},
+                                 'attribution': 'Our first organiser'})]},
  'painters': {'ground': '_ground_calendar', 'card': '_card_calendar'}}
 # the light ground's palette IS the look's palette — one object, so a colour is decided once
 SPEC['look']['palette'] = SPEC['grounds']['light']['palette']

@@ -866,6 +866,11 @@ def _sb_quote(k, slide, f, image):
     land = o == "land"
     _bands(k, slide)
     att = text_of(f, "attribution")
+    # the words painted on the banner: the quote, or — given only an attribution — the attribution itself, so a word
+    # the caller gave is never dropped (an attribution alone crashed the page, audit A2, 2026-10-22)
+    qf = ("quote", text_of(f, "quote")) if text_of(f, "quote") else ("attribution", att)
+    if qf[0] == "attribution":
+        att = None
     bx, bw = ((0.09 if alt() == 0 else 0.06) * W, (0.82 if alt() == 0 else 0.88) * W) if land else (0.06 * W, 0.88 * W)
     padx, pady = 0.50 * s, 0.46 * s
     tie = 0.34 * s
@@ -877,14 +882,14 @@ def _sb_quote(k, slide, f, image):
         ar, ad = _v2.flow(k, slide, "quote", (bx, 0.0, bw, 1.6 * s), [("attribution", att)], anchor="top", align="r")
         ah = max(v[1] + v[3] for v in ar.values()) + 0.30 * s
     qr, qd = _v2.flow(k, slide, "quote", (bx + padx + 0.03 * (bw - 2 * padx), 0.0, 0.94 * (bw - 2 * padx),
-                                          y_room - ah - 2 * pady), [("quote", text_of(f, "quote"))],
+                                          y_room - ah - 2 * pady), [qf],
                       anchor="top", align="c", ink=k.P["banner_ink"])
     qh = max(v[1] + v[3] for v in qr.values())
     bh = qh + 2 * pady
-    qsz = getattr(qd, "sizes", {}).get("quote")
+    qsz = getattr(qd, "sizes", {}).get(qf[0])
     if qsz and qh <= qsz * 1.25 / 72.0 * 1.45 + 0.08:        # one line: the banner is cut to it, centred
         # slack past the measured words: cut to them, a Chinese line the lint models a little wider wrapped its '。'
-        cut = max(0.42 * W, 1.15 * _v2.ink_w(k, "quote", text_of(f, "quote"), qsz) + 2 * padx + 1.8 * s)
+        cut = max(0.42 * W, 1.15 * _v2.ink_w(k, qf[0], qf[1], qsz) + 2 * padx + 1.8 * s)
         if cut < bw:
             bx, bw = bx + (bw - cut) / 2.0, cut
             if att:                                            # the attribution, re-measured under the cut banner
@@ -899,7 +904,7 @@ def _sb_quote(k, slide, f, image):
     # was modelled a hair wider by the delivery lint, which wrapped its '。' onto a line of its own (4:3 sweep)
     iw = bw - 2 * padx
     qr, qd = _v2.flow(k, slide, "quote", (bx + padx + 0.03 * iw, by + pady, 0.94 * iw, qh + 0.02 * s),
-                      [("quote", text_of(f, "quote"))], anchor="top", align="c", ink=k.P["banner_ink"],
+                      [qf], anchor="top", align="c", ink=k.P["banner_ink"],
                       start=dict(getattr(qd, "sizes", {})) or None)
     r.update({f_: (bx + padx, v[1], iw, v[3]) for f_, v in qr.items()})
     ds.append(_widened(slide, qd, bx + padx, iw))

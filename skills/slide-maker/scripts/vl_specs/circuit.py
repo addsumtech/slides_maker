@@ -116,7 +116,6 @@ SPEC = {'name': 'circuit',
  'samples': {'copy': [('cover', {'kicker': 'Hardware review · rev B',
                                  'title': 'A sensor board for the community garden',
                                  'subtitle': 'Soil, light and water, read every ten minutes'}),
-                      ('section', {'number': '02', 'kicker': 'The design', 'title': 'What is on the board'}),
                       ('points', {'title': 'Three parts do the work',
                                   'items': [('The sensor hub', 'Reads soil, light and air'),
                                             ('The radio', 'Sends a reading every ten minutes'),
@@ -124,8 +123,7 @@ SPEC = {'name': 'circuit',
                       ('quote', {'quote': 'Route the power first; the signals will find their way.',
                                  'attribution': 'The board designer'}),
                       ('data', {'number': '18', 'label': 'months on one battery',
-                                'note': 'Measured on the test bench'}),
-                      ('closing', {'title': 'Plug it in this spring', 'line': 'The first ten boards go out in April'})]},
+                                'note': 'Measured on the test bench'})]},
  'painters': {'ground': '_ground_circuit', 'card': '_card_circuit'}}
 # the light ground's palette IS the look's palette — one object, so a colour is decided once
 SPEC['look']['palette'] = SPEC['grounds']['light']['palette']

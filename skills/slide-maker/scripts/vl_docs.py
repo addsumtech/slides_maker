@@ -45,8 +45,17 @@ def _zh(n):
     return _ZH[n // 10] + "十" + (_ZH[n % 10] if n % 10 else "")
 
 
+_TENS = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"]
+
+
 def _en(n):
-    return _EN[n] if n < len(_EN) else str(n)
+    """A count in words: digits in the middle of prose that spells its other counts read as a slip ("four image-led
+    and 26 drawn", 2026-10-22). Past ninety-nine, digits."""
+    if n < len(_EN):
+        return _EN[n]
+    if n < 100:
+        return _TENS[n // 10] + ("-" + _EN[n % 10] if n % 10 else "")
+    return str(n)
 
 
 _CELL = re.compile(r"samples/([a-z0-9_]+)\.jpg")       # a gallery cell's sample (a second ground's link has a '-')
