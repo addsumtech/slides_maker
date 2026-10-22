@@ -1137,6 +1137,64 @@ for _g in ("light", "green"):
           "journal/{} points: on a render, the numeral's ink stands on its head's baseline (bottoms differ by {} in; was ~0.12in)".format(
               _g, ", ".join("{:+.3f}".format(r_) for r_ in _rows if r_ is not None)))
 
+
+def _pdf_first_origins(prs, tag):
+    """The baseline (in, from the page top) of the first text span on each page of `prs`, read from LibreOffice's PDF
+    (the glyphs' own origins); None when soffice or PyMuPDF is missing."""
+    import shutil, subprocess
+    try:
+        import fitz
+    except ImportError:
+        return None
+    if not shutil.which("soffice"):
+        return None
+    f = WORK / (tag + ".pptx")
+    prs.save(str(f))
+    subprocess.run(["soffice", "-env:UserInstallation=" + (WORK / "lo_profile").as_uri(), "--headless", "--convert-to", "pdf",
+                    "--outdir", str(WORK), str(f)], capture_output=True, timeout=600)
+    pdf = WORK / (tag + ".pdf")
+    if not pdf.exists():
+        return None
+    out = []
+    for page in fitz.open(str(pdf)):
+        sp = [s_ for b_ in page.get_text("rawdict")["blocks"] for l_ in b_.get("lines", []) for s_ in l_["spans"]]
+        out.append(sp[0]["origin"][1] / 72.0 if sp else None)
+    return out
+
+
+# first_baseline() is where the RENDER sets the first baseline, in every face (bug 7). It modelled the face's own ascent
+# plus line gap; LibreOffice lays out a PPTX line FONT-INDEPENDENTLY — 1.2 em a line, its baseline 1.0 em under the
+# line's top, proportional spacing over 100% adding its extra above — measured on 16 faces from Courier New (ascent
+# 0.83 em) to Zapfino (1.88 em), 40–200pt, spacing 0.9–1.5. The face model put a 150pt Arial Black figure's baseline
+# 0.21in low (pixel's sprite hung under its digits) and a Hiragino Sans GB line's 0.41 em low.
+_BL_FACES = ("Arial Black", "Impact", "Arial", "Georgia", "Times New Roman", "Trebuchet MS", "Courier New")
+_bl_prs = dk.blank_deck(13.333, 7.5)
+with contextlib.redirect_stdout(io.StringIO()):
+    _bl_k = vl.use("journal", _bl_prs)
+_bl_cases = [(f_, z_, t_) for f_ in _BL_FACES for z_ in (40, 80, 150, 200) for t_ in ("3608", "Hx")]
+_bl_cases += [(f_, z_, "中文36") for f_ in ("Songti SC", "Hiragino Sans GB") for z_ in (40, 150)]
+_bl_model = []
+for _f, _z, _t in _bl_cases:
+    _bl_k.face = lambda role, *_a, _f=_f: _f                 # the kit's face for every role: this case's face
+    _bl_k.ea_face = lambda role, *_a, _f=_f: _f
+    _cjk = dk._has_cjk(_t)
+    _used = _f if _cjk else dk.numeral_run_face(_t, _f)      # the face the kit's own run draws (lining figures)
+    _bold = vl._weight(_bl_k, "item_head", _t)
+    _bl_model.append(0.5 + vls.first_baseline(_bl_k, "item_head", _t, _z))
+    dk.text(_bl_prs.slides.add_slide(_bl_prs.slide_layouts[6]), 0.5, 0.5, 12.0, 6.5,
+            [[(_t, _z, dk.DEEP, _bold, False, _used, _used if _cjk else None)]], space_after=0)
+_bl_seen = _pdf_first_origins(_bl_prs, "first_baseline")
+if _bl_seen is None:
+    skipped.append("first_baseline against a LibreOffice render (soffice or PyMuPDF missing)")
+else:
+    _bl_err = {}
+    for (_f, _z, _t), _m, _o in zip(_bl_cases, _bl_model, _bl_seen):
+        _e = abs(_m - _o) if _o is not None else 9.0
+        _bl_err[_f] = max(_bl_err.get(_f, 0.0), _e)
+    check_mac(max(_bl_err.values()) <= 0.01,
+              "first_baseline() is where LibreOffice sets the first baseline, 40–200pt, every face (worst error per "
+              "face: {})".format(", ".join("{} {:.3f}in".format(f_, e_) for f_, e_ in _bl_err.items())))
+
 _FIG = str(vl.ASSETS / "figure" / "illustrative-curves.jpg")
 for _g in ("light", "green"):
     _prs, _k, _sl = _page("journal", _g, "image_text", title="Error grows with acceleration", body="Error against acceleration.",

@@ -239,10 +239,30 @@ def _split_paragraph(tf, lines):
     return True
 
 
+def _moved_down(draw, slide, dy):
+    """`draw`, then every shape it added to `slide` moved `dy` inches down; the plan's sizes ride along."""
+    from pptx.util import Emu
+
+    def go():
+        before = set(slide.shapes._spTree)          # the elements themselves: held, their proxies keep their identity
+        draw()
+        for sh in slide.shapes:
+            if sh._element not in before:
+                sh.top = Emu(sh.top + int(round(dy * 914400)))
+    for a in ("sizes", "exact", "headroom"):
+        if hasattr(draw, a):
+            setattr(go, a, getattr(draw, a))
+    return go
+
+
 def stack(k, slide, page, x, w, y0, y1, groups, *, anchor="middle", align="l", **flow_kw):
     """Plan GROUPS of fields one under another — groups = [(items, gap_after_in), …], an empty group skipped — inside
-    [y0, y1], the whole stack anchored top or middle. Two passes: measured at the top, then placed. The gaps give an
-    underline or a rule its own room (flow's own gaps are for type). Returns (rects, draws)."""
+    [y0, y1], the whole stack anchored top, middle or bottom. Planned from the top; "middle" and "bottom" are that SAME
+    plan moved down — centred in [y0, y1] on its real height, or ending at y1 — never into the footer band the flow keeps
+    clear (H - vl._FOOT). So a stack that fits from the top fits centred and at the foot, at the same sizes. The gaps give
+    an underline or a rule its own room (flow's own gaps are for type). Returns (rects, draws)."""
+    if anchor not in ("top", "middle", "bottom"):
+        raise ValueError("stack(): anchor must be 'top', 'middle' or 'bottom', got {!r}".format(anchor))
     groups = [(items, gap) for items, gap in groups if items]
     reserve = [0.0] * len(groups)
     if len(groups) > 1:
@@ -261,19 +281,41 @@ def stack(k, slide, page, x, w, y0, y1, groups, *, anchor="middle", align="l", *
             hs.append((max(v[1] + v[3] for v in rs) - min(v[1] for v in rs)) if rs else 0.0)
         reserve = [sum(hs[j] + groups[j - 1][1] for j in range(i + 1, len(groups))) for i in range(len(groups))]
 
-    def plan(top):
+    def plan(top, bottom):
         rects, draws, y = {}, [], top
         for i, (items, gap) in enumerate(groups):
-            r, d = flow(k, slide, page, (x, y, w, max(0.1, y1 - y - reserve[i])), items, anchor="top", align=align,
+            r, d = flow(k, slide, page, (x, y, w, max(0.1, bottom - y - reserve[i])), items, anchor="top", align=align,
                         **flow_kw)
             rects.update(r)
             draws.append(d)
             y = max((v[1] + v[3] for v in r.values()), default=y) + (gap if i < len(groups) - 1 else 0.0)
         return rects, draws, y
-    rects, draws, foot = plan(y0)
-    if anchor == "middle" and groups:
-        rects, draws, foot = plan(y0 + max(0.0, (y1 - foot) / 2.0))
-    return rects, draws
+    rects, draws, foot = plan(y0, y1)
+    if anchor == "top" or not rects:
+        return rects, draws
+    # the top plan, moved down. It used to be planned AGAIN from the moved top, each group still reserving the JOINT
+    # plan's heights below it while the move came from the real ones: a 3:4 pixel cover whose joint plan set the title
+    # at 57.7pt in three lines (2.95in) — planned alone, 49.4pt in two (1.71in) — left its kicker a 0.14in column and
+    # was refused, though it fitted from the top (a generated corpus: 37 such refusals in 1,920 stacks, 2 shrunk kickers)
+    usable = min(y1, vl._canvas(k)[1] - vl._FOOT)
+    dy = max(0.0, min((y1 - foot) / 2.0, usable - foot) if anchor == "middle" else usable - foot)
+    if dy < 1e-6:
+        return rects, draws
+    # planned again in the window moved down with it, every group has the room it had, so it decides the same — then
+    # its draws are its own (and its boxes the very ones a top-set plan at that height would give); only where the
+    # footer band cuts a moved window (the flow never sets words in it) can it decide otherwise: then the top plan's
+    # own shapes are moved
+    try:
+        r2, d2, _f2 = plan(y0 + dy, y1 + dy)
+    except vl.VLTextOverflow:
+        r2 = None
+    if r2 is not None and set(r2) == set(rects) and all(
+            abs(r2[f_][i] - rects[f_][i] - (dy if i == 1 else 0.0)) < 1e-6 for f_ in rects for i in range(4)) and [
+            (getattr(a, "sizes", {}), getattr(a, "exact", {})) for a in d2] == [
+            (getattr(a, "sizes", {}), getattr(a, "exact", {})) for a in draws]:
+        return r2, d2
+    return ({f_: (v[0], v[1] + dy, v[2], v[3]) for f_, v in rects.items()},
+            [_moved_down(d, slide, dy) for d in draws])
 
 
 def meet(a, b, pad=0.0):
@@ -943,19 +985,34 @@ def _bs_points(k, slide, f, image):
 
 
 # ═══════════════════════════════════ journal 学术期刊 ═══════════════════════════════════
+LINE_EM = 1.2       # a PPTX line as LibreOffice sets it: 1.2 em of its size, whatever the face (deckkit's _LINT_LINE_H)
+ASCENT_EM = 1.0     # … its baseline 1.0 em under the line's top
+
+
+def line_baseline(size, ls=1.0):
+    """Inches from the top of a dk.text box (its 2pt inset) to the baseline of its FIRST line, set at `size` pt with
+    proportional line spacing `ls`. LibreOffice lays out a PPTX line FONT-INDEPENDENTLY (a fixed cell height): the line
+    is LINE_EM of the size and its baseline ASCENT_EM under the line's top in every face — spacing over 100% adds its
+    extra ABOVE the first baseline, under 100% the ascent is 80% of the shortened line. Measured on the glyph origins
+    of LibreOffice's PDF, 2026-10-22: 16 faces from Courier New (ascent 0.83 em) and Hoefler Text to Arial Black (1.10)
+    and Zapfino (1.88), Songti SC, PingFang SC and Hiragino Sans GB, 40–200pt, spacing 0.9 / 1.0 / 1.12 / 1.5 — every
+    one within 0.0005in of this (first baseline 0.9998 / 0.8639 / 1.1435 / 1.5998 em, pitch 1.2 × spacing)."""
+    if ls < 1.0:
+        asc = min(ASCENT_EM, 0.8 * LINE_EM * ls)
+    else:
+        asc = ASCENT_EM + LINE_EM * (ls - 1.0)
+    return (2.0 + asc * size) / 72.0            # dk.text's top inset is 2pt
+
+
 def first_baseline(k, field, text, size):
-    """Inches from the top of a text box (dk.text: a 2pt inset, single spacing, CJK_LS for Chinese or Japanese) to the
-    baseline of its FIRST line, from the face's own metrics — its ascent plus the line gap a renderer puts above the
-    line (Times New Roman has one, Georgia none: a 30pt numeral and a 21pt head set at the same top sat 0.12in apart
-    on the baseline, measured on a render). Used to set two fields of different faces and sizes on one baseline."""
-    role = vl.TYPE[k.name][field][1]
-    cjk = dk._has_cjk(text)
-    face = (k.ea_face(role, text) if cjk else None) or dk.numeral_run_face(text, k.face(role))
-    fnt = dk._pil_font(face, size, vl._weight(k, field, text))
-    asc, desc = fnt.getmetrics()
-    line = getattr(fnt.font, "height", asc + desc)             # ascent + descent + the face's line gap
-    ls = dk.CJK_LS if cjk else 1.0
-    return (2.0 + ls * line / dk._MEAS_PREC - desc / dk._MEAS_PREC) / 72.0
+    """Inches from the top of a field's text box (dk.text: a 2pt inset, single spacing, CJK_LS for CJK) to the baseline
+    of its FIRST line, as the renderer sets it (line_baseline): used to set two fields of different faces and sizes on
+    one baseline. It read the face's own ascent and line gap, which LibreOffice does not use — a 150pt Arial Black
+    figure's baseline came out 0.21in (0.10 em) under the rendered one, so pixel's sprite hung below its digits, and a
+    Hiragino Sans GB line's 0.41 em under it. `k` and `field` are kept for the callers: the face does not matter."""
+    if field not in vl.TYPE[k.name]:
+        raise KeyError("first_baseline(): {} has no field {!r}".format(k.name, field))
+    return line_baseline(size, dk.CJK_LS if dk._has_cjk(text) else 1.0)
 
 
 def jn_running_rect(k):

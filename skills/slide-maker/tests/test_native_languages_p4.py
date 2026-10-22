@@ -179,6 +179,82 @@ _sr, _sd = v2.stack(kx, kx.new_slide(), "cover", 1.0, 8.0, 1.0, 6.5,
 check(set(_sr) == {"title", "subtitle"} and _sr["subtitle"][1] - (_sr["title"][1] + _sr["title"][3]) >= 0.59
       and abs((_sr["title"][1] - 1.0) - (6.5 - (_sr["subtitle"][1] + _sr["subtitle"][3]))) < 0.05,
       "stack(): the gap after a group is kept, an empty group is skipped, the stack is centred: {}".format(_sr))
+# stack(anchor="middle" | "bottom") is the plan anchor="top" makes, moved down: a stack that fits from the top fits
+# centred and at the foot too, at the same sizes. pixel's 3:4 cover was refused centred though it fitted from the top:
+# the joint plan set the title at 57.7pt in three lines (2.95in), planned alone it took 49.4pt in two (1.71in); the
+# centring pass kept reserving the joint heights under the kicker but moved it down by half the SHORTER real room, and
+# left the kicker a 0.14in column ("column is 0.14in … kicker"). A generated corpus (8 languages × 5 canvases × en / zh
+# / ja / ko / digits × 4 windows) found 37 such refusals and 2 shrunk kickers (16 → 10.3pt); "bottom" was silently top.
+import vl_native as _vn0
+
+
+def _stack_or_err(k_, groups_, x_, w_, y0_, y1_, anchor_, start_):
+    try:
+        r_, d_ = v2.stack(k_, k_.new_slide(), "cover", x_, w_, y0_, y1_, groups_, anchor=anchor_, align="c", start=start_)
+        return r_, [dict(getattr(dd, "sizes", {})) for dd in d_]
+    except vl.VLTextOverflow as e_:
+        return e_
+
+
+def _moved_plan(top_, got_, want_):
+    """'' when got_ is top_'s plan moved down by want_ (same sizes, same boxes), else why not."""
+    if isinstance(got_, Exception):
+        return "refused: " + str(got_)[:90]
+    (rt_, zt_), (rg_, zg_) = top_, got_
+    if zg_ != zt_ or set(rg_) != set(rt_):
+        return "planned again: {} vs {}".format(zg_, zt_)
+    dys_ = [rg_[f_][1] - rt_[f_][1] for f_ in rt_]
+    if any(abs(rg_[f_][i_] - rt_[f_][i_]) > 1e-6 for f_ in rt_ for i_ in (0, 2, 3)) or max(dys_) - min(dys_) > 1e-6:
+        return "boxes changed: {}".format({f_: tuple(round(v_, 3) for v_ in rg_[f_]) for f_ in rg_})
+    return "" if abs(dys_[0] - want_) < 0.005 else "moved {:.3f}in, want {:.3f}in".format(dys_[0], want_)
+
+
+with contextlib.redirect_stdout(io.StringIO()):
+    kp = vl.use("pixel", dk.blank_deck(7.5, 10), ground="arcade")
+_sp = _vn0.ctx(kp)[2]
+_pg = [([("kicker", "Spring game jam")], 0.14 * _sp), ([("title", "Build a game in one weekend")], 0.24 * _sp),
+       ([("subtitle", "Teams of three, one theme, Friday to Sunday")], 0.0)]
+_top = _stack_or_err(kp, _pg, 0.6, 6.3, 1.69, 6.92, "top", {"title": 64})
+check(not isinstance(_top, Exception), "pixel 3:4 cover: the stack fits from the top ({})".format(_top))
+if not isinstance(_top, Exception):
+    _ft = max(v_[1] + v_[3] for v_ in _top[0].values())
+    for _an, _want in (("middle", (6.92 - _ft) / 2.0), ("bottom", 6.92 - _ft)):
+        _why = _moved_plan(_top, _stack_or_err(kp, _pg, 0.6, 6.3, 1.69, 6.92, _an, {"title": 64}), _want)
+        check(not _why, "pixel 3:4 cover: stack(anchor={!r}) is the top plan moved {:.2f}in down (the column the kicker "
+                        "was refused in, 0.14in) — {}".format(_an, _want, _why or "ok"))
+_bad6, _n6 = [], 0
+_COPY6 = {"en": ("Spring game jam", "Build a game in one weekend", "Teams of three, one theme, Friday to Sunday"),
+          "zh": ("春季游戏创作营", "一个周末，做出一款游戏", "三人一组，一个主题，周五到周日"),
+          "ko": ("봄 게임 잼", "주말 동안 게임 하나 만들기", "세 명이 한 팀, 주제 하나, 금요일부터 일요일까지"),
+          "digits": ("2026", "1,250,000 visitors in 12 months", "Up 38% from 905,000 in 2025")}
+for _ln6 in ("pixel", "chalkboard", "starlit"):
+    for _W6, _H6 in ((10.0, 7.5), (7.5, 7.5), (7.5, 10.0)):
+        with contextlib.redirect_stdout(io.StringIO()):
+            _k6 = vl.use(_ln6, dk.blank_deck(_W6, _H6))
+        _s6 = _vn0.ctx(_k6)[2]
+        for _c6, (_a6, _b6, _t6) in _COPY6.items():
+            _g6 = [([("kicker", _a6)], 0.14 * _s6), ([("title", _b6)], 0.24 * _s6), ([("subtitle", _t6)], 0.0)]
+            # the last window runs into the footer band (H - 0.55in): moved down, the words still stop above it
+            for _y0, _y1 in ((0.20 * _H6, 0.62 * _H6), (0.05 * _H6, 0.45 * _H6), (0.10 * _H6, _H6 - 0.3)):
+                for _st6 in (None, {"title": 64 * _s6}):
+                    _tp6 = _stack_or_err(_k6, _g6, 0.08 * _W6, 0.84 * _W6, _y0, _y1, "top", _st6)
+                    if isinstance(_tp6, Exception):
+                        continue
+                    _n6 += 1
+                    _ft6 = max(v_[1] + v_[3] for v_ in _tp6[0].values())
+                    _use6 = min(_y1, _H6 - vl._FOOT)
+                    for _an, _want in (("middle", min((_y1 - _ft6) / 2.0, _use6 - _ft6)), ("bottom", _use6 - _ft6)):
+                        _why = _moved_plan(_tp6, _stack_or_err(_k6, _g6, 0.08 * _W6, 0.84 * _W6, _y0, _y1, _an, _st6),
+                                           max(0.0, _want))
+                        if _why:
+                            _bad6.append("{} {}x{} {} [{:.2f},{:.2f}] {}: {}".format(_ln6, _W6, _H6, _c6, _y0, _y1, _an, _why))
+check(_n6 >= 100 and not _bad6, "stack(): every one of {} stacks that fit from the top fits centred and at the foot, "
+      "at the same sizes, moved down by the room it leaves ({} not: {})".format(_n6, len(_bad6), _bad6[:3]))
+try:
+    v2.stack(kp, kp.new_slide(), "cover", 0.6, 6.3, 1.69, 6.92, _pg, anchor="center")
+    check(False, "stack(anchor='center') is refused, not silently set from the top")
+except ValueError as _e6:
+    check("anchor" in str(_e6), "stack(anchor='center') is refused, not silently set from the top ({})".format(_e6))
 # a deck that never picks a native language still imports nothing new
 import subprocess
 probe = subprocess.run([sys.executable, "-c",
