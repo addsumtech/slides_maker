@@ -24,7 +24,8 @@ Checks (tuned for low false-positives):
                   let a band overlap the footer).
   Plus, measured against each text's RENDERED extent (alignment- + anchor-aware, so centred / middle
   text isn't mis-flagged) — the recurring "looks fine to a box-overlap check but cramped to the eye" bugs:
-  4. TEXT PADDING   — text inside a filled card crammed against (or past) the card's BOTTOM edge with
+  4. TEXT PADDING   — text inside a card (a filled block, or an outline that closes — never the bounding box
+                      of an open stroke) crammed against (or past) the card's BOTTOM edge with
                       less than the minimum interior margin (not just hard overflow).
   5. CHIP/LABEL TOO SMALL — a text box coincident with a small filled pill whose label is taller/wider
                       than the pill (a row of chips where the text overruns the chip — size the chip to its text).
@@ -85,6 +86,7 @@ except Exception:
 # to be an inline copy as a fallback; a second copy is how two readings drift apart, and deckkit sits in this
 # folder with the same dependencies, so a failure to import it is a broken install that should say so.
 from deckkit import _declared_overlap, _ink_reaching   # noqa: E402
+from deckkit import deck_hangs_punct as _deck_hangs   # noqa: E402 — the deck's own hangingPunct, one reading
 try:                                                  # real glyph advances, same metrics the build uses
     from deckkit import _pil_font as _dk_pil_font, _MEAS_PREC as _dk_prec
 except Exception:
@@ -412,8 +414,25 @@ def _boxes(slide, sw, sh, slide_no=None, record=True):
                 w, h = _pw, _ph
             else:
                 poly = rotgeom.corners(_fl, _ft, _fw, _fh, _rot)
+        # What the shape's geometry DRAWS, for the card checks (read in its own unrotated frame, before a vertical
+        # text frame is swapped below): see _paint_of / _regions.
+        _fill_on, _line_on = _paint_of(s)
+        _regs = _regions(s, _fl, _ft, _fw, _fh, _fill_on, _line_on)
+        _card = _card_body(s, _regs, _fill_on, _line_on, _fw, _fh)
+        _srot = _rot                                     # the SHAPE's turn; _rot below is where its text runs
         full = s.text_frame.text.strip() if s.has_text_frame else ""
         txt = full.replace("\n", " ")[:26]
+        # VERTICAL text (bodyPr vert="eaVert", ink's columns): its lines run DOWN the box and stack right to left —
+        # laid out exactly as horizontal text in a frame as long as the box is tall, turned 90deg clockwise. So it
+        # is recorded as that turned frame, and every text-flow check (line count, last line, rendered ink box,
+        # collisions) reads it the way it already reads rotated text. The painted footprint (l/t/r/b) is the box's
+        # own either way. Read as horizontal, an 11-character quote in a one-em column was eleven one-glyph lines:
+        # ORPHANED PUNCTUATION and WIDOW on every Chinese page of ink, whose render sets it in ONE column.
+        _vt = _vert_turn(s) if txt else 0.0
+        if _vt:
+            _cx, _cy = _fl + _fw / 2.0, _ft + _fh / 2.0
+            _fl, _ft, _fw, _fh = _cx - _fh / 2.0, _cy - _fw / 2.0, _fh, _fw
+            _rot = rotgeom.norm(_rot + _vt)
         paras, size, align, anchor, mathfont = [], 0.0, None, None, None
         pspace = []                                      # (space_before, space_after) pt, one per kept paragraph
         _face, _bold = None, False
@@ -522,7 +541,11 @@ def _boxes(slide, sw, sh, slide_no=None, record=True):
         except Exception:
             tph = False
         out.append({"l": l, "t": t, "w": w, "h": h, "zi": zi,
-                    "cpoly": _cust_polys(s, l, t, w, h) if not _rot else None,
+                    "cpoly": _cust_polys(s, l, t, w, h) if not _srot else None,
+                    # the CARD reading (TEXT PADDING, UNEVEN CARD HEIGHTS): does the geometry draw a body that
+                    # bounds a region, and which regions (freeform only, frame coordinates) — see _card_body
+                    "fill_on": _fill_on, "line_on": _line_on, "regions": _regs,
+                    "card": _card,
                     "r": l + w if _pr is None else _pr, "b": t + h if _pb is None else _pb,
                     "rot": _rot, "fl": _fl, "ft": _ft, "fw": _fw, "fh": _fh, "poly": poly,
                     "runs": run_colors, "run_hl": run_hl, "run_fmt": run_fmt, "fill": fill_rgb, "unk": fill_unk, "pic": is_pic, "grad": is_grad,
@@ -719,27 +742,95 @@ def _text_w(text, size_pt, face=None, bold=False):
     return w + len(rest) * (size_pt / 72.0) * 0.52
 
 
+# CJK LINE ENDS, as LibreOffice sets them. Probed 2026-10-22 on 2,558 rendered boxes (Songti SC, PingFang SC,
+# Hiragino Sans GB, Hiragino Mincho ProN, Hiragino Sans; 12-48pt; measures of 1-11 em; horizontal and eaVert;
+# the deck's hangingPunct on and off), reading the line breaks back from the PDF:
+#   * with hangingPunct="1", ONE closing mark that does not fit HANGS past the measure — 。，、；：！？． and the
+#     half-width . , ; : ! ? set after Chinese/Japanese — in every measure down to one ideograph;
+#   * nothing hangs after a Latin letter or a digit (the line also gets autospace this model does not see), and a
+#     second mark, or a closing bracket or quote, never hangs: the line breaks earlier and the character before goes
+#     down with it ("来访者手 / 里」", "/ 里。」", "来访 / 5。"); an opening bracket never ends a line ("/ 「握在");
+#   * an ellipsis, a dash, a tilde, ・ ー ッ CAN start a line — the render leaves '…' alone, so that one is real —
+#     where the line simply ends before it; a break moved back (a closing mark, or the inside of the pair '……',
+#     which never splits) moves past it too, before the character it follows ("西修 / 好……」", "在来 / 访……").
+# The estimate used to wrap every CJK character at 1 em, marks included: it put '。' on a line of its own, so nearly
+# every Chinese quote page drew ORPHANED PUNCTUATION and a phantom extra line (TEXT COLLISION) that the render has
+# never had. deckkit's build-time measure (_CJK_HANG / _CJK_CLOSE / _CJK_OPEN) and visual_languages._break_lines
+# already set lines this way; this is the delivery lint learning the same rule, from the same renderer.
+_HANG_MARKS = set("，。、；：！？．,.;:!?")
+_NO_LINE_START = _HANG_MARKS | set("）」』》】〉〕〗｝］”’～々)]}")
+_NO_LINE_END = set("（「『《【〈〔〖｛［“‘")
+_PAIRED = set("…‥")                                         # set in pairs that do not split ("……")
+_HANG_PUNCT = True        # the deck's own declaration — lint() sets it per deck (deckkit.deck_hangs_punct)
+
+
+def _wide(ch):
+    return ord(ch) > 0x2E80                    # the same CJK split _text_w measures by
+
+
+def _hangul(ch):
+    o = ord(ch)
+    return 0x1100 <= o <= 0x11FF or 0x3130 <= o <= 0x318F or 0xAC00 <= o <= 0xD7AF
+
+
+def _wrap_para(pr, width_in, face=None, bold=False):
+    """The wrapped lines (strings) of ONE paragraph [(text, size_pt), ...] at `width_in`: character by character,
+    each run at its own size, CJK at 1 em and Latin measured in the face (see `_text_w`). A paragraph with no CJK
+    wraps exactly as it always has. A CJK paragraph follows the rendered line-end rules above."""
+    items = []
+    for text, size_pt in pr:
+        for ch in text:
+            items.append((ch, 0.0 if ch == "\n" else _text_w(ch, size_pt, face, bold)))
+    if not any(_wide(ch) for ch, _w in items):
+        lines, line, w = [], "", 0.0
+        for ch, cw in items:
+            if ch == "\n":
+                lines.append(line); line, w = "", 0.0; continue
+            if w + cw > width_in and w > 0:
+                lines.append(line); line, w = ch, cw
+            else:
+                line += ch; w += cw
+        return lines + [line]
+    lines, cur, w = [], [], 0.0                # cur: [(ch, width, hung past the measure?)]
+    k = 0
+    while k < len(items):
+        ch, cw = items[k]
+        k += 1
+        if ch == "\n":
+            lines.append(cur); cur, w = [], 0.0; continue
+        if not (w + cw > width_in and w > 0):
+            cur.append((ch, cw, False)); w += cw; continue
+        nxt = items[k][0] if k < len(items) else None
+        if (_HANG_PUNCT and ch in _HANG_MARKS and not cur[-1][2]
+                and not any((c_.isalnum() and not _wide(c_)) or _hangul(c_) for c_, _w, _h in cur)
+                and nxt not in _NO_LINE_START):
+            cur.append((ch, cw, True)); w += cw; continue           # one mark hangs past a full line
+        if ch in _NO_LINE_START or cur[-1][0] in _NO_LINE_END or (ch in _PAIRED and cur[-1][0] == ch):
+            seq = cur + [(ch, cw, False)]
+            j = len(cur)                                            # the break goes before seq[j] ...
+            while j > 0 and (seq[j][0] in _NO_LINE_START or seq[j - 1][0] in _NO_LINE_END or seq[j][0] in _PAIRED):
+                j -= 1                                              # ... moved back past what may not start/end
+            if j == 0:                                              # nowhere to move it: break at the measure,
+                j = len(cur)                                        # taking down only what hangs past it
+                while j > 1 and cur[j - 1][2]:
+                    j -= 1
+            lines.append(cur[:j])
+            items[k - 1:k] = [(c_, w_) for c_, w_, _h in cur[j:]] + [(ch, cw)]
+            k -= 1                                                  # the carried characters start the next line
+            cur, w = [], 0.0
+            continue
+        lines.append(cur); cur, w = [(ch, cw, False)], cw
+    return ["".join(c_ for c_, _w, _h in ln) for ln in lines + [cur]]
+
+
 def _est_lines(paras, width_in, face=None, bold=False):
     """CJK-aware estimate of total wrapped line count across paragraphs, using each RUN's own font
     size (so a mixed-size 'small label + big value' stat line counts as one line, not two). CJK glyph
-    ≈ 1 em; Latin measured with the REAL face when `face` is known (see `_text_w`), else ≈ 0.52 em."""
+    ≈ 1 em; Latin measured with the REAL face when `face` is known (see `_text_w`), else ≈ 0.52 em.
+    CJK line ends follow the renderer (see _HANG_MARKS)."""
     if width_in <= 0 or not paras:
         return 1
-    total = 0
-    for pr in paras:
-        lines, w = 1, 0.0
-        for text, size_pt in pr:
-            em = max(0.01, size_pt / 72.0)
-            for ch in text:
-                if ch == "\n":
-                    lines += 1; w = 0.0; continue
-                cw = _text_w(ch, size_pt, face, bold)
-                if w + cw > width_in and w > 0:
-                    lines += 1; w = cw
-                else:
-                    w += cw
-        total += lines
-    return total or 1
+    return sum(len(_wrap_para(pr, width_in, face, bold)) for pr in paras) or 1
 
 
 def _last_line(paras, width_in, face=None, bold=False):
@@ -747,20 +838,7 @@ def _last_line(paras, width_in, face=None, bold=False):
     so we can catch a lone trailing punctuation mark or a single orphaned glyph (避头尾 / widow)."""
     if width_in <= 0 or not paras:
         return ""
-    line = ""
-    for pr in paras:
-        line, w = "", 0.0
-        for text, size_pt in pr:
-            em = max(0.01, size_pt / 72.0)
-            for ch in text:
-                if ch == "\n":
-                    line, w = "", 0.0; continue
-                cw = _text_w(ch, size_pt, face, bold)
-                if w + cw > width_in and w > 0:
-                    line, w = ch, cw          # this char starts a new line
-                else:
-                    line += ch; w += cw
-    return line                                # last paragraph's last line = the box's last line
+    return _wrap_para(paras[-1], width_in, face, bold)[-1]   # last paragraph's last line = the box's last line
 
 
 # punctuation that must never stand alone at the start of a line (closing marks)
@@ -1572,6 +1650,159 @@ def _cust_polys(sh, l, t, w, h):
         return out or None
     except Exception:
         return None
+
+
+_FILL_TAGS = ("solidFill", "gradFill", "blipFill", "pattFill", "grpFill")
+# preset geometries that are OPEN strokes: drawn in line only, they bound nothing
+_OPEN_PRESETS = {"line", "arc", "leftBracket", "rightBracket", "leftBrace", "rightBrace", "bracketPair", "bracePair",
+                 "straightConnector1", "bentConnector2", "bentConnector3", "bentConnector4", "bentConnector5",
+                 "curvedConnector2", "curvedConnector3", "curvedConnector4", "curvedConnector5"}
+
+
+def _paint_of(sh):
+    """(fill, line): does this shape paint a fill / a visible outline? Its own spPr decides; where spPr is silent,
+    its style's fillRef/lnRef do (idx 0 paints nothing). A picture or a table paints its box. Unreadable → (True,
+    False), the old reading (every solid shape a filled block)."""
+    try:
+        el = sh._element
+        if not el.tag.endswith("}sp"):
+            return True, False
+        sp = el.find(qn("p:spPr"))
+        style = el.find(qn("p:style"))
+
+        def ref(name):
+            r = style.find(qn("a:" + name)) if style is not None else None
+            try:
+                return r is not None and int(r.get("idx") or 0) > 0
+            except ValueError:
+                return False
+        fill = line = None
+        if sp is not None:
+            for c in sp:
+                tag = c.tag.split("}")[-1]
+                if tag == "noFill":
+                    fill = False
+                elif tag in _FILL_TAGS:
+                    fill = True
+            ln = sp.find(qn("a:ln"))
+            if ln is not None:
+                for c in ln:
+                    tag = c.tag.split("}")[-1]
+                    if tag == "noFill":
+                        line = False
+                    elif tag in _FILL_TAGS:
+                        line = True
+        return (ref("fillRef") if fill is None else fill), (ref("lnRef") if line is None else line)
+    except Exception:
+        return True, False
+
+
+def _regions(sh, l, t, w, h, fill, line):
+    """The regions a CUSTOM-GEOMETRY shape's drawing bounds, as polygons in its unrotated frame (l, t, w, h) — or None
+    for any other shape, or one this cannot read (an arcTo): the bounding box then stands in, as before.
+
+    A filled path bounds each of its sub-outlines (a fill closes them); a path drawn in line only bounds a sub-outline
+    that CLOSES — explicitly, or by coming back to its start (a hand-drawn chalk box ends a few hundredths short). An
+    OPEN polyline bounds nothing: a circuit trace, a hanger's hook, a set of pen strokes; nor does a sliver whose area is
+    under 5% of its box (a zero-area spacer drawn corner to corner). Bezier control points stand in for their curve;
+    flipH/flipV mirror the points."""
+    try:
+        el = sh._element
+        if not el.tag.endswith("}sp"):
+            return None                                      # a picture cropped to a shape stays its box, as before
+        A = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
+        paths = el.findall(".//" + A + "custGeom/" + A + "pathLst/" + A + "path")
+        if not paths or not w or not h:
+            return None
+        xf = el.find(".//" + A + "xfrm")
+        fh = xf is not None and xf.get("flipH") in ("1", "true")
+        fv = xf is not None and xf.get("flipV") in ("1", "true")
+        out = []
+        for path in paths:
+            p_fill = fill and path.get("fill") != "none"
+            p_line = line and path.get("stroke") not in ("0", "false")
+            pw, ph = float(path.get("w") or 0), float(path.get("h") or 0)
+            if pw <= 0 or ph <= 0:
+                return None
+            subs, cur = [], []
+            for cmd in path:
+                tag = cmd.tag.split("}")[-1]
+                pts = []
+                for p_ in cmd.findall(A + "pt"):
+                    u, v = float(p_.get("x")) / pw, float(p_.get("y")) / ph
+                    pts.append((l + (1 - u if fh else u) * w, t + (1 - v if fv else v) * h))
+                if tag == "moveTo":
+                    if cur:
+                        subs.append((cur, False))
+                    cur = list(pts)
+                elif tag in ("lnTo", "cubicBezTo", "quadBezTo"):
+                    cur += pts
+                elif tag == "close":
+                    if cur:
+                        subs.append((cur, True))
+                    cur = []
+                elif tag == "arcTo":
+                    return None
+            if cur:
+                subs.append((cur, False))
+            for pts, closed in subs:
+                if len(pts) < 3:
+                    continue                                 # a segment bounds nothing
+                xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+                bw_, bh_ = max(xs) - min(xs), max(ys) - min(ys)
+                if rotgeom.area(pts) < 0.05 * bw_ * bh_ or bw_ <= 0 or bh_ <= 0:
+                    continue                                 # a sliver (zero-area spacer, a line out and back)
+                if p_fill:
+                    out.append(pts)
+                elif p_line:
+                    gap = math.hypot(pts[0][0] - pts[-1][0], pts[0][1] - pts[-1][1])
+                    if closed or gap <= max(0.15, 0.08 * math.hypot(bw_, bh_)):
+                        out.append(pts)
+        return out
+    except Exception:
+        return None
+
+
+def _card_body(sh, regions, fill, line, fw, fh):
+    """May this shape be read as a CARD — a body that bounds the words on it, sized against its siblings?
+
+    A picture or a table: its box. A freeform whose drawing could be read: only when ONE region spans (90% of) its
+    frame — a card, a balloon, a die, a closed chalk outline; not a scatter of dots, a sprite's pixels, a run of
+    board squares, nor any open stroke (those bound nothing, so their box is nothing a reader sees). Anything else: it
+    must paint — a fill, or an outline that closes (a terminal or a brutalist card is drawn in line). Every freeform
+    used to be a card whatever it drew: an open circuit trace spanning the page read as a card its caption 'ran PAST'
+    (circuit, boardgame, scoreboard), two dot fields as a row of uneven cards (comic)."""
+    if str(sh.shape_type).startswith(("PICTURE", "TABLE")):
+        return True
+    if regions is not None:
+        for poly in regions:
+            xs, ys = [p[0] for p in poly], [p[1] for p in poly]
+            if (max(xs) - min(xs)) >= 0.9 * fw and (max(ys) - min(ys)) >= 0.9 * fh:
+                return True
+        return False
+    if fill:
+        return True
+    if not line:
+        return False
+    try:
+        g = sh._element.find(".//" + qn("a:prstGeom"))
+        return g is None or g.get("prst") not in _OPEN_PRESETS
+    except Exception:
+        return True
+
+
+# bodyPr vert: how far the lines turn from horizontal (clockwise). eaVert/vert: down the box, columns right to left;
+# vert270: up the box. The stacked word-art and Mongolian forms are read as eaVert (their column order differs).
+_VERT_TURN = {"vert": 90.0, "eaVert": 90.0, "wordArtVert": 90.0, "wordArtVertRtl": 90.0, "mongolianVert": 90.0,
+              "vert270": 270.0}
+
+
+def _vert_turn(sh):
+    try:
+        bp = sh._element.find(".//" + qn("a:bodyPr"))
+        return _VERT_TURN.get(bp.get("vert") if bp is not None else None, 0.0)
+    except Exception:
+        return 0.0
 
 
 def _in_polys(paths, x, y):
@@ -3338,6 +3569,10 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
         print(f"lint_deck: cannot open '{path}' (missing or not a .pptx)", file=sys.stderr)
         sys.exit(2)
     sw, sh = prs.slide_width / EMU, prs.slide_height / EMU
+    # CJK line ends hang punctuation only where the deck declares it (hangingPunct): read once, from this deck —
+    # the same declaration LibreOffice renders by and deckkit's build-time measure reads (see _HANG_MARKS)
+    global _HANG_PUNCT
+    _HANG_PUNCT = _deck_hangs(prs)
     total = 0
     warn_total = 0
     stats_rows = []
@@ -3856,9 +4091,23 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
         #    boundary" bug that a pure-overflow check misses).
         PAD = 0.09                                       # minimum interior padding (in)
         # (_cjk/_txt_h/_nat_width/_rbox are module-level — shared with the text-on-image sampler)
-        # a "card" for padding is a SMALL filled block (not a full/half-slide scrim or background plate)
-        cards = [s for s in bx if s["solid"] and not s["bg"] and not s["text"] and s["h"] > 0.35
-                 and s["w"] * s["h"] < 0.45 * sw * sh]
+        # a "card" for padding is a SMALL filled block (not a full/half-slide scrim or background plate) — one
+        # that draws a body (see _card_body). A freeform's cards are the REGIONS its drawing bounds, each by its
+        # own box: the box round an open trace, or round a collar and two cuffs, is nothing the words sit in.
+        cards = []
+        for s in bx:
+            if not s["solid"] or s["bg"] or s["text"]:
+                continue
+            if s.get("regions") is not None:
+                for poly in s["regions"]:
+                    xs, ys = [p[0] for p in poly], [p[1] for p in poly]
+                    rc = {"l": min(xs), "t": min(ys), "r": max(xs), "b": max(ys), "rot": 0.0,
+                          "orient": s.get("rot") or 0.0}         # in the shape's own frame already
+                    rc["w"], rc["h"] = rc["r"] - rc["l"], rc["b"] - rc["t"]
+                    if rc["h"] > 0.35 and rc["w"] * rc["h"] < 0.45 * sw * sh:
+                        cards.append(rc)
+            elif s.get("card", True) and s["h"] > 0.35 and s["w"] * s["h"] < 0.45 * sw * sh:
+                cards.append(s)
         for t0 in [s for s in bx if s["text"]]:
             # Padding is a question about text in a card of the SAME orientation, asked in their
             # shared FRAME (exactly the base behaviour for such a pair). A label at 270deg reaching
@@ -3868,7 +4117,7 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
             t = _frame(t0)
             host = None
             for c0 in cards:
-                _d = ((c0.get("rot") or 0.0) - _tr) % 180.0   # a card has no text: 180deg-periodic
+                _d = ((c0.get("orient", c0.get("rot")) or 0.0) - _tr) % 180.0   # a card has no text: 180deg-periodic
                 if min(_d, 180.0 - _d) > 0.5:
                     continue                     # different orientation: not this check's question
                 c = _frame(c0)
@@ -4011,7 +4260,11 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
             return (a is not b and a["w"] * a["h"] < b["w"] * b["h"]
                     and a["l"] >= b["l"] - tol and a["t"] >= b["t"] - tol
                     and a["l"] + a["w"] <= b["l"] + b["w"] + tol and a["t"] + a["h"] <= b["t"] + b["h"] + tol)
-        cset = [c for c in cset if not any(_nested(c, o) for o in cset)]
+        # Only a BODY sits in a row (see _card_body) — not a scatter of dots, a sprite's pixels or an open stroke
+        # (comic's halftone fields, circuit's traces read as rows of uneven cards). A drawing that is not a card
+        # still holds what lies inside its extent, as before: a pressed leaf inside its plant's stem is part of
+        # that drawing, never a sibling card (herbarium's covers, measured when the strokes left the row).
+        cset = [c for c in cset if c.get("card", True) and not any(_nested(c, o) for o in cset)]
         bycol = {}                                  # dedupe layered shapes per (top,left): keep the tallest (the card, not its header band)
         for c in cset:
             key = (round(c["t"] * 10), round(c["l"] * 10))

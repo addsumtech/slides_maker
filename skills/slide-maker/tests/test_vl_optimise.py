@@ -1774,10 +1774,12 @@ for L in vl.LANGS:
     check(z >= 12 - 0.05, "{}: a 60-word quote's attribution stays >= 12pt ({:.1f}pt)".format(L, z))
 dk.set_theme(None)
 
-# (8) lint's ORPHANED PUNCTUATION is the 避头尾 rule: a renderer breaks CJK between any two glyphs, so a lone 。can
-# open a line; it breaks Latin only at spaces, so a full stop attached to its word cannot. The char-level estimate put a
-# lone "." on its own line for Latin columns whenever the widths happened to fill up to it (cutpaper and broadsheet
-# points on CI's Linux faces; a fixer side-stepped it with "very long copy" before — 2026-10-16)
+# (8) lint's ORPHANED PUNCTUATION is the 避头尾 rule: a renderer breaks Latin only at spaces, so a full stop attached to
+# its word cannot open a line. The char-level estimate put a lone "." on its own line for Latin columns whenever the
+# widths happened to fill up to it (cutpaper and broadsheet points on CI's Linux faces; a fixer side-stepped it with
+# "very long copy" before — 2026-10-16). In CJK a closing mark cannot open a line either — LibreOffice hangs one past a
+# full line or takes the character before it down (measured 2026-10-22, lint_deck._HANG_MARKS) — but an ellipsis can,
+# and the render leaves it alone: that is the CJK orphan the lint must still flag.
 import lint_deck as _ld
 
 
@@ -1802,7 +1804,7 @@ def _orphan_findings(text, size, w, face):
 
 
 for _txt, _mark, _want, _face in (("Anything that switches on, unzips or wobbles is welcome.", ".", False, "Arial"),
-                                  ("我们一起把坏掉的东西修好，然后带着它们回家。", "。", True, "PingFang SC")):
+                                  ("我们一起把坏掉的东西修好，然后带着它们回家…", "…", True, "PingFang SC")):
     _w = _orphan_width(_txt, 16, _mark, _face)
     if _w is None:
         check(False, "lint fixture: a width that orphans {!r} exists for {!r}".format(_mark, _txt[:16]))
@@ -1810,6 +1812,9 @@ for _txt, _mark, _want, _face in (("Anything that switches on, unzips or wobbles
     _f = _orphan_findings(_txt, 16, _w, _face)
     check(bool(_f) == _want, "lint {} a lone {!r} on {}'s last line ({})".format(
         "flags" if _want else "does not flag", _mark, "CJK" if _want else "a Latin column", _f[:1]))
+_w = _orphan_width("我们一起把坏掉的东西修好，然后带着它们回家。", 16, "。", "PingFang SC")
+check(_w is None, "lint's line model never leaves a CJK '。' alone on a line — it hangs or takes a character down, "
+                  "as the render does (alone at {}in)".format(_w))
 dk.set_theme(None)
 
 # (9) broadsheet's cover plans its headline in what the standfirst and the Inside list leave it: a headline that WRAPS

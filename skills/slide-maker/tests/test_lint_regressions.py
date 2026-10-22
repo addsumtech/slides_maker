@@ -87,6 +87,210 @@ def _categorical_shapes():
             "categorical: a definition list counts, a bullet list does not (got %s)" % got)
 
 
+def _by_slide(out):
+    """{slide number: [hard finding lines]} from a lint report (warns and stats left out)."""
+    import re as _re
+    got = {}
+    for ln in out.splitlines():
+        m = _re.match(r"\s+slide (\d+): ([A-Z].*)$", ln)
+        if m and "[warn]" not in ln and "[stats]" not in ln:
+            got.setdefault(int(m.group(1)), []).append(m.group(2))
+    return got
+
+
+def _lint_static(prs, name):
+    d = tempfile.mkdtemp(prefix="lintcase-")
+    path = os.path.join(d, name)
+    prs.save(path)
+    r = subprocess.run([sys.executable, str(SCRIPTS / "lint_deck.py"), path, "--static"],
+                       capture_output=True, text=True)
+    out = r.stdout + r.stderr
+    if "layout finding(s)" not in out:
+        raise RuntimeError("lint did not complete on %s:\n%s" % (name, out[-800:]))
+    return _by_slide(out)
+
+
+def _card_geometry_cases():
+    """A CARD is a shape whose drawn geometry bounds a region — not any freeform's bounding box.
+
+    The card checks (TEXT PADDING, UNEVEN CARD HEIGHTS) used to take every FREEFORM's bounding box as a card,
+    whatever it drew. Three languages tripped on it (circuit, boardgame, scoreboard): an OPEN polyline — a circuit
+    trace spanning the page — read as a card the caption under it "ran PAST", outline stroke sets read as a row of
+    uneven cards, and a filled shape of separate parts (a jersey's collar and cuffs) held the number between them in
+    its box. Comic's two Ben-Day dot fields — a scatter of dots, one shape — read as a row of uneven cards.
+    Both directions are pinned: a filled card, a filled freeform card and a CLOSED outline card (the chalk and
+    terminal registers draw their cards in line) with cramped text must still fire, and so must a row of uneven
+    cards DECLARED decorative — `decorative()` waives NON-TEXT CONTRAST only, and the library declares real content
+    cards decorative (paper notes, label cards, element tiles), so it cannot be a way out of the card checks."""
+    sys.path.insert(0, str(SCRIPTS))
+    import deckkit as dk, native_art as na
+    from pptx.dml.color import RGBColor
+    ink, card = RGBColor.from_string("1C1A17"), RGBColor.from_string("EAE3D6")
+    prs = dk.blank_deck(7.5, 7.5)
+
+    def slide():
+        return prs.slides.add_slide(prs.slide_layouts[6])
+
+    def words(s, x, y, w, h, txt, size=12):
+        return dk.text(s, x, y, w, h, [[(txt, size, ink, False, False)]], space_after=0)
+
+    def zigzag(x, y, w, h, n=6):
+        return [(x + w * i / n, y + (h if i % 2 else 0.0)) for i in range(n + 1)]
+
+    def dots(x, y, w, h, d=0.08, pitch=0.25):
+        out, yy = [], y
+        while yy + d <= y + h + 1e-9:
+            xx = x
+            while xx + d <= x + w + 1e-9:
+                out.append([(xx, yy), (xx + d, yy), (xx + d, yy + d), (xx, yy + d)])
+                xx += pitch
+            yy += pitch
+        return out
+
+    s = slide()                                                     # 1: circuit's report, as filed
+    na.polyline(s, [(0.96, 6.58), (0.96, 2.57), (4.0, 2.57), (6.93, 4.1), (6.93, 6.58)], "D6B05A", w=2.0)
+    words(s, 2.0, 6.37, 4.35, 0.29, "Every bench has its tools")
+    s = slide()                                                     # 2: two open strokes, one row
+    na.polyline(s, zigzag(0.5, 1.0, 2.0, 1.5), "1C1A17", w=1.5)
+    na.polyline(s, zigzag(3.0, 1.0, 2.0, 2.5), "1C1A17", w=1.5)
+    s = slide()                                                     # 3: comic's dot fields, declared
+    for sh in (na.multipoly(s, dots(0.5, 1.0, 2.0, 1.5), "D9251D"), na.multipoly(s, dots(3.0, 1.0, 2.0, 2.6), "1E5FC0")):
+        dk.decorative(sh, "Ben-Day halftone dots, the printed tone of a panel; texture only")
+    s = slide()                                                     # 4: TP — uneven cards, declared decorative
+    for x, h in ((0.5, 1.5), (3.0, 2.5)):
+        dk.decorative(dk.box(s, x, 1.0, 2.0, h, fill=card), "a paper note holding one point; words carry it")
+    s = slide()                                                     # 5: TP — filled card, text past its foot
+    dk.box(s, 1.0, 1.0, 4.0, 1.0, fill=card)
+    words(s, 1.1, 1.1, 3.8, 0.8, "one line of words\nand a second line\nand a third one too", 20)
+    s = slide()                                                     # 6: TP — a filled FREEFORM card (one body)
+    na.poly(s, [(1.0, 1.0), (5.0, 1.05), (4.95, 2.0), (1.05, 1.98)], fill="EAE3D6")
+    words(s, 1.1, 1.1, 3.7, 0.8, "one line of words\nand a second line\nand a third one too", 20)
+    s = slide()                                                     # 7: TP — a CLOSED outline card (chalk)
+    na.chalk_box(s, 1.0, 1.0, 4.0, 1.0, "1C1A17", seed=3)
+    words(s, 1.1, 1.1, 3.8, 0.8, "one line of words\nand a second line\nand a third one too", 20)
+    s = slide()                                                     # 8: TP — an outline-only RECT card (terminal)
+    dk.box(s, 1.0, 1.0, 4.0, 1.0, fill=None, line=ink, line_w=1.0)
+    words(s, 1.1, 1.1, 3.8, 0.8, "one line of words\nand a second line\nand a third one too", 20)
+    s = slide()                                                     # 9: a filled shape of separate parts
+    na.multipoly(s, [[(2.0, 2.0), (5.0, 2.0), (5.0, 2.3), (2.0, 2.3)],          # collar
+                     [(1.0, 2.6), (1.5, 2.6), (1.5, 5.0), (1.0, 5.0)],          # left cuff
+                     [(5.5, 2.6), (6.0, 2.6), (6.0, 5.0), (5.5, 5.0)]], "FFB51F")
+    words(s, 2.2, 4.6, 3.0, 0.5, "the number between them", 20)
+    s = slide()                                                     # 10: leaves drawn along an open stem
+    na.polyline(s, [(2.0, 1.0), (4.2, 2.5), (2.1, 4.5)], "5B4A33", w=2.0)      # a curving stem
+    na.poly(s, [(2.2, 2.0), (3.0, 2.0), (3.0, 2.6), (2.2, 2.6)], fill="5E7746")
+    na.poly(s, [(3.1, 2.0), (3.9, 2.0), (3.9, 3.0), (3.1, 3.0)], fill="5E7746")
+    got = _lint_static(prs, "cards.pptx")
+
+    def has(n, tag):
+        return any(f.startswith(tag) for f in got.get(n, []))
+    ok, bad = [], []
+    for n, tag, want, why in (
+            (1, "TEXT PADDING", False, "an OPEN polyline (circuit's trace) is not a card the caption runs past"),
+            (2, "UNEVEN CARD HEIGHTS", False, "two open strokes in a row are not a row of uneven cards"),
+            (3, "UNEVEN CARD HEIGHTS", False, "two dot fields (a scatter of dots, one shape each) are not cards"),
+            (4, "UNEVEN CARD HEIGHTS", True, "uneven cards DECLARED decorative still fire (decor waives contrast only)"),
+            (5, "TEXT PADDING", True, "a filled card with text past its foot still fires"),
+            (6, "TEXT PADDING", True, "a filled one-body freeform card with text past its foot still fires"),
+            (7, "TEXT PADDING", True, "a closed chalk-outline card with text past its foot still fires"),
+            (8, "TEXT PADDING", True, "an outline-only rectangle card with text past its foot still fires"),
+            (9, "TEXT PADDING", False, "text between a filled shape's separate parts is not on a card"),
+            (10, "UNEVEN CARD HEIGHTS", False, "leaves inside an open stem's extent stay parts of that drawing "
+                                                "(herbarium's covers, once the strokes left the row)")):
+        (ok if has(n, tag) == want else bad).append(
+            "card geometry: %s (slide %d %s %s; got %s)" % (why, n, "fires" if want else "silent", tag,
+                                                            got.get(n, [])))
+    return ok, bad
+
+
+def _cjk_line_end_cases():
+    """The delivery lint's CJK line model, against what LibreOffice RENDERS (probed 2026-10-22, 2,558 boxes: Songti SC
+    / PingFang SC / Hiragino Sans GB / Hiragino Mincho ProN / Hiragino Sans, 12-48pt, columns 1-11 em, horizontal and
+    eaVert, hangingPunct on and off). With hangingPunct="1" ONE closing mark (。，、；：！？． and . , ; : ! ? after
+    CJK) hangs past a full line; a closing bracket or a second mark takes the ideograph before it down; after a Latin
+    letter or digit nothing hangs and the character goes down with the mark; an ellipsis, a dash or a tilde CAN start
+    a line (the render really leaves '…' alone). The lint wrapped every CJK character at 1 em, marks included, so it
+    put '。' alone on a line of its own: ORPHANED PUNCTUATION plus a phantom line (TEXT COLLISION) on Chinese quote
+    pages of nearly every language. And it read eaVert text (ink's columns) as horizontal — one glyph per line."""
+    sys.path.insert(0, str(SCRIPTS))
+    import deckkit as dk, lint_deck as L
+    from pptx.dml.color import RGBColor
+    from pptx.oxml.ns import qn
+    ink = RGBColor.from_string("1C1A17")
+    INS = dk.TEXT_INSET_LR
+
+    def deck(hang=True):
+        prs = dk.blank_deck(13.333, 7.5)
+        if not hang:
+            for root in [prs.part._element] + [m._element for m in prs.slide_masters]:
+                for el in root.iter():
+                    if el.get("hangingPunct") is not None:
+                        el.set("hangingPunct", "0")
+        return prs
+
+    def put(prs, rows, vert=False):
+        """One slide: rows of (x, y, w, h, text, size, ea_face). Returns the slide."""
+        s = prs.slides.add_slide(prs.slide_layouts[6])
+        for x, y, w, h, txt, size, ea in rows:
+            tb = dk.text(s, x, y, w, h, [[(txt, size, ink, False, False, "Arial", ea)]], space_after=0)
+            if vert:
+                tb.text_frame._txBody.find(qn("a:bodyPr")).set("vert", "eaVert")
+        return s
+
+    def col(n, size, extra=0.02):
+        return n * size / 72.0 + INS + extra * size / 72.0      # n ems of measure, as the probe built them
+
+    ZH, SZ = "螺丝刀握在来访者手里", 40.0
+    LH = SZ / 72.0 * 1.4                                         # the lint's CJK line pitch
+    two = 1.0 + 0.04 + 2 * LH + 0.12                             # just under a 2-line block
+    prs = deck()
+    put(prs, [(1.0, 1.0, col(5, SZ), 2.4, ZH + "。", SZ, "Songti SC"),            # 1: one mark hangs
+              (1.0, two, 6.0, 0.4, "一位志愿者", 16.0, "Songti SC")])
+    put(prs, [(1.0, 1.0, col(5, SZ), 2.4, ZH + "…", SZ, "Songti SC")])            # 2: TP '…' renders alone
+    put(prs, [(1.0, 1.0, col(5, SZ), 2.4, ZH + "」", SZ, "Songti SC")])           # 3: bracket takes 里 down
+    put(prs, [(1.0, 1.0, col(5, SZ), 2.4, ZH + "。」", SZ, "Songti SC")])         # 4: two marks take 里 down
+    # 5: a digit before the mark — no hang, '5。' goes down together
+    w5 = L._text_w("来访者手5", SZ, "Arial") + 0.02 * SZ / 72.0
+    put(prs, [(1.0, 1.0, max(col(5, SZ), w5 + INS), 2.4, "螺丝刀握在来访者手5。", SZ, "Songti SC")])
+    put(prs, [(1.0, 1.0, col(5, SZ), 2.4, "ドライバーは来訪者の。", SZ, "Hiragino Mincho ProN")])   # 6: Japanese
+    ko = "드라이버는 방문자의 손에 있다"                                            # 7: Korean — '.' rides its word
+    put(prs, [(1.0, 1.0, L._text_w(ko, 28.0, "Arial") + 0.01, 2.4, ko + ".", 28.0, "Apple SD Gothic Neo")])
+    three = 1.0 + 0.04 + 3 * LH + 0.12                           # 8: a mark mid-text — 3 lines, not 4
+    put(prs, [(1.0, 1.0, col(5, SZ), 3.2, ZH + "，" + ZH[:5] + "。", SZ, "Songti SC"),
+              (1.0, three, 6.0, 0.4, "一位志愿者", 16.0, "Songti SC")])
+    # 9 + 10: vertical (ink's quote page): the column is the box's HEIGHT
+    put(prs, [(10.04, 0.83, 0.62, 5.55, ZH + "。", 31.74, "Songti SC"),
+              (9.30, 3.60, 0.34, 1.36, "一位志愿者", 16.0, "Songti SC")], vert=True)
+    put(prs, [(10.0, 1.0, 1.6, col(3, 31.74), "螺丝刀握在来访", 31.74, "Songti SC")], vert=True)   # TP: 3|3|1
+    got = _lint_static(prs, "cjk_hang.pptx")
+    prs0 = deck(hang=False)                                      # hangingPunct="0": nothing hangs
+    put(prs0, [(1.0, 1.0, col(5, SZ), 2.4, ZH + "。", SZ, "Songti SC"),
+               (1.0, two, 6.0, 0.4, "一位志愿者", 16.0, "Songti SC")])
+    got0 = _lint_static(prs0, "cjk_nohang.pptx")
+
+    def has(g, n, tag):
+        return any(f.startswith(tag) for f in g.get(n, []))
+    ok, bad = [], []
+    for g, n, tag, want, why in (
+            (got, 1, "ORPHANED PUNCTUATION", False, "a closing mark hangs past a full line, never alone"),
+            (got, 1, "TEXT COLLISION", False, "the hung mark adds no line, so the text below is clear"),
+            (got, 2, "ORPHANED PUNCTUATION", True, "an ellipsis really starts a line of its own: still caught"),
+            (got, 3, "ORPHANED PUNCTUATION", False, "a closing bracket takes the ideograph before it down"),
+            (got, 4, "ORPHANED PUNCTUATION", False, "two marks take the ideograph before them down"),
+            (got, 5, "ORPHANED PUNCTUATION", False, "after a digit the mark does not hang and takes it down"),
+            (got, 6, "ORPHANED PUNCTUATION", False, "Japanese: the closing mark hangs as in Chinese"),
+            (got, 7, "ORPHANED PUNCTUATION", False, "Korean: a full stop rides its word, never alone"),
+            (got, 8, "TEXT COLLISION", False, "a mark mid-text hangs at its line end and the text goes on"),
+            (got, 9, "ORPHANED PUNCTUATION", False, "vertical text: the column runs down the box's height"),
+            (got, 9, "WIDOW", False, "vertical text: a column of characters is not a stack of widowed lines"),
+            (got, 10, "WIDOW", True, "vertical text: a lone glyph in the last column is still a widow"),
+            (got0, 1, "ORPHANED PUNCTUATION", False, "hangingPunct=0: the mark takes the ideograph down"),
+            (got0, 1, "TEXT COLLISION", True, "hangingPunct=0: that is one more line, into the text below")):
+        (ok if has(g, n, tag) == want else bad).append(
+            "CJK line ends: %s (slide %d %s %s; got %s)" % (why, n, "fires" if want else "silent", tag, g.get(n, [])))
+    return ok, bad
+
+
 def main():
     _require_deps()
     tmp = pathlib.Path(tempfile.mkdtemp(prefix="lintfx-"))
@@ -100,6 +304,10 @@ def main():
     ok, bad = [], []
     _pass, _msg = _categorical_shapes()
     (ok if _pass else bad).append(_msg)
+    for _case in (_card_geometry_cases, _cjk_line_end_cases):
+        _o, _b = _case()
+        ok += _o
+        bad += _b
 
     def ran(out, label):
         """A token's ABSENCE only means 'suppressed' if the lint actually ran. Without this the
