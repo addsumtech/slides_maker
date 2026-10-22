@@ -10,6 +10,7 @@ render path (`--only ink`) writes seven page images per ground, each a real 16:9
 Run: python3 tests/test_vl_library_export.py   (the render half needs LibreOffice; without it, it says SKIP)
 """
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -34,8 +35,8 @@ def check(cond, why):
     (ok if cond else bad).append(why)
 
 
-def run(*args):
-    r = subprocess.run([sys.executable, str(EXPORT)] + [str(a) for a in args], capture_output=True, text=True)
+def run(*args, env=None):
+    r = subprocess.run([sys.executable, str(EXPORT)] + [str(a) for a in args], capture_output=True, text=True, env=env)
     return r.returncode, r.stdout + r.stderr
 
 
@@ -106,6 +107,16 @@ with tempfile.TemporaryDirectory() as td:
     check(lib.get("baseline") == "2026-10-17" and all(x.get("added_at") == "2026-10-17" for x in langs),
           "the first export sets the baseline and dates every language to it ({}, {})".format(
               lib.get("baseline"), sorted({x.get("added_at") for x in langs})))
+    # NEW is decided by WHO was there at launch, not by comparing dates: a language added on the launch day itself
+    # would otherwise never wear NEW (added_at == baseline), and a clock ahead of UTC could hide one for hours
+    check(lib.get("baseline_ids") == list(REG), "the first export records which languages the page launched with ({})".format(
+        lib.get("baseline_ids")))
+    # a file under media/ that library.json does not name is stale too (only an export removes it)
+    (site / "languages" / "media" / "orphan").mkdir(parents=True)
+    (site / "languages" / "media" / "orphan" / "a.jpg").write_bytes(b"x")
+    code, out = run("--site", site, "--check")
+    check(code == 1 and "orphan media file: media/orphan/a.jpg" in out,
+          "--check names a media file library.json does not list ({}: {})".format(code, out.strip()[-200:]))
     # a page whose cards have no rendered pages is not ready to publish: --check says so, by language and ground
     code, out = run("--site", site, "--check")
     check(code == 1 and all("no page renders: {} ({} ground)".format(n, g) in out for n in (langs[0]["id"], langs[-1]["id"])
@@ -125,6 +136,17 @@ with tempfile.TemporaryDirectory() as td:
     check(by[langs[0]["id"]]["added_at"] == "2026-01-02", "a re-export keeps added_at")
     check(by[gone["id"]]["added_at"] == "2026-11-20", "a language new to the page is dated to the export")
     check(lib2["baseline"] == "2026-10-17", "a re-export keeps the baseline")
+    check(lib2.get("baseline_ids") == list(REG), "a re-export keeps the launch set ({})".format(lib2.get("baseline_ids")))
+    check(not (site / "languages" / "media" / "orphan").exists(), "the export removes the orphan media file")
+    # a library.json from before baseline_ids existed: the launch set is the languages dated on or before the baseline
+    legacy = dict(lib2)
+    legacy.pop("baseline_ids", None)
+    lib_p.write_text(json.dumps(legacy), encoding="utf-8")
+    run("--site", site, "--no-render", "--today", "2026-11-21")
+    lib_legacy = json.loads(lib_p.read_text(encoding="utf-8"))
+    check(lib_legacy.get("baseline_ids") == [n for n in REG if n != gone["id"]],
+          "an old library.json gets its launch set from the dates, without the language added later ({})".format(
+              lib_legacy.get("baseline_ids")))
     check(by[langs[3]["id"]]["blurb"] == REG[langs[3]["id"]]["blurb"], "a re-export restores the manifest's words")
     check("added" in out and gone["id"] in out, "the export says which language is new to the page ({})".format(
         out.strip()[-200:]))
@@ -134,6 +156,22 @@ with tempfile.TemporaryDirectory() as td:
     check(code == 2 and "folder" in out, "a site path that is a file is refused ({}: {})".format(code, out.strip()[-160:]))
     code, out = run("--site", site, "--only", "nosuch")
     check(code == 2 and "nosuch" in out, "an unknown --only id is refused, naming it ({}: {})".format(code, out.strip()[-160:]))
+    stray = Path(td) / "not-a-site"
+    stray.mkdir()
+    code, out = run("--site", stray, "--no-render")
+    check(code == 2 and "index.html" in out and not (stray / "languages").exists(),
+          "a folder that is not the site (no index.html) is refused and left untouched ({}: {})".format(
+              code, out.strip()[-160:]))
+    # a manifest the contract refuses is named, not a bare KeyError (the contract normally catches it first)
+    specs = Path(td) / "specs-noblurb"
+    shutil.copytree(SCRIPTS / "vl_specs", specs, ignore=shutil.ignore_patterns("__pycache__"))
+    victim = specs / "tally.py"
+    txt = victim.read_text(encoding="utf-8")
+    i = txt.index(" 'blurb': ")
+    victim.write_text(txt[:i] + txt[txt.index(" 'offer': ", i):], encoding="utf-8")
+    code, out = run("--site", site, "--no-render", env=dict(os.environ, VL_SPECS_DIR=str(specs)))
+    check(code == 2 and "tally" in out and "blurb" in out and "Traceback" not in out,
+          "a manifest without a blurb is refused by name ({}: {})".format(code, out.strip()[-200:]))
 
     # ── the render path: seven pages per ground ──
     if not (shutil.which("soffice") or shutil.which("libreoffice") or Path("/Applications/LibreOffice.app").exists()):
@@ -168,6 +206,23 @@ with tempfile.TemporaryDirectory() as td:
         ink4 = {x["id"]: x for x in lib4["languages"]}["ink"]
         check(all(list(g["pages"]) == list(PAGES) and g.get("render_fp") for g in ink4["grounds"]),
               "--no-render keeps the renders already on disk listed")
+        # the render fingerprint covers everything a render draws — pictures, textures, theme — not the slide XML only:
+        # a re-shot photo or a changed grain tile leaves every slide XML byte the same
+        import zipfile
+        import visual_languages as vl
+        import vl_library_export as vx
+        d1, d2 = vx.demo_deck("ink", "light", Path(td) / "fp1.pptx"), vx.demo_deck("ink", "light", Path(td) / "fp2.pptx")
+        check(vx.deck_fingerprint(d1) == vx.deck_fingerprint(d2), "two builds of one demo deck fingerprint the same")
+        swapped = Path(td) / "fp3.pptx"
+        with zipfile.ZipFile(d1) as zin, zipfile.ZipFile(swapped, "w", zipfile.ZIP_DEFLATED) as zout:
+            media = [n for n in zin.namelist() if n.startswith("ppt/media/")]
+            for n in zin.namelist():
+                data = zin.read(n)
+                zout.writestr(n, data + b"\0" if media and n == media[0] else data)
+        check(bool(media) and vx.deck_fingerprint(swapped) != vx.deck_fingerprint(d1),
+              "a changed picture changes the render fingerprint ({} media parts)".format(len(media)))
+        check(vl.sample_fingerprint(swapped) == vl.sample_fingerprint(d1),
+              "(and the slide-XML hash alone would not have seen it — why the fingerprint changed)")
         # renders made from an older demo deck are stale even when every file is present
         ink4["grounds"][1]["render_fp"] = "0" * 64
         lib_p.write_text(json.dumps(lib4), encoding="utf-8")
@@ -178,7 +233,6 @@ with tempfile.TemporaryDirectory() as td:
         # ── a whole page: every ground rendered (ink's real renders stand in for the others' files, each carrying
         # the fingerprint of its OWN demo deck) — --check passes; the same files listed by a library.json rebuilt with
         # --no-render (no fingerprints) must not pass as fresh ──
-        import vl_library_export as vx
         lib5 = json.loads(lib_p.read_text(encoding="utf-8"))
         ink5 = {x["id"]: x for x in lib5["languages"]}["ink"]
         ink5["grounds"][1]["render_fp"] = vx._fingerprint("ink", ink5["grounds"][1]["id"])

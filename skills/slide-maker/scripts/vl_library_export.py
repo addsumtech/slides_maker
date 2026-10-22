@@ -103,9 +103,29 @@ def demo_deck(name, ground, out_pptx):
     return out_pptx
 
 
+def deck_fingerprint(pptx):
+    """sha256 of everything in a built deck that a render draws — slides, their relationships, every picture and
+    texture (ppt/media), theme, masters and layouts — i.e. every part but docProps. A slide-XML-only hash
+    (visual_languages.sample_fingerprint) stays the same when a photo is re-shot or a grain tile changes, so renders
+    made from the old pictures would have been called fresh."""
+    import hashlib
+    import zipfile
+    h = hashlib.sha256()
+    with zipfile.ZipFile(str(pptx)) as z:
+        for n in sorted(n for n in z.namelist() if not n.startswith("docProps/")):
+            h.update(n.encode("utf-8") + b"\0" + z.read(n) + b"\0")
+    return h.hexdigest()
+
+
 def _fingerprint(name, ground):
     with tempfile.TemporaryDirectory() as td:
-        return vl.sample_fingerprint(demo_deck(name, ground, Path(td) / "demo.pptx"))
+        return deck_fingerprint(demo_deck(name, ground, Path(td) / "demo.pptx"))
+
+
+def _contract_problems():
+    """Every manifest problem the contract names — refused before anything is read, so a manifest without a blurb is a
+    named problem, not a KeyError halfway through the export."""
+    return [p for s in vl.REGISTRY.values() for p in ct.validate(s)]
 
 
 def _skill_version():
@@ -167,6 +187,18 @@ def _entry(name, prev, lang_dir, today, rendered):
     }
 
 
+def _baseline_ids(prev):
+    """The ids the page launched with (the first export) — the page marks NEW only a language NOT among them. Kept
+    from the previous library.json; one written before this field existed gives it from its dates (on or before the
+    baseline); the first export takes every language there is."""
+    if not prev:
+        return list(vl.REGISTRY)
+    if isinstance(prev.get("baseline_ids"), list):
+        return list(prev["baseline_ids"])
+    base = prev.get("baseline")
+    return [x["id"] for x in prev.get("languages", []) if base and x.get("added_at") and x["added_at"] <= base]
+
+
 def build_library(lang_dir, prev, today, rendered=None):
     """The whole library.json as a dict (writes nothing). `prev`: the previous library.json, or None."""
     rendered = rendered or {}
@@ -175,6 +207,7 @@ def build_library(lang_dir, prev, today, rendered=None):
         "schema": 1,
         "generated": today,
         "baseline": (prev or {}).get("baseline") or today,
+        "baseline_ids": _baseline_ids(prev),
         "skill_version": _skill_version(),
         "stats": {"languages": len(vl.REGISTRY), "grounds": sum(len(s["grounds"]) for s in vl.REGISTRY.values()),
                   "page_types": len(PAGES), "components": len(ct.TIER1)},
@@ -188,6 +221,9 @@ def _site_dirs(site):
     if not site.is_dir():
         raise ExportError("--site {} is not a folder — pass the site repo's folder (the one holding index.html)".format(
             site))
+    if not (site / "index.html").is_file():
+        raise ExportError("--site {} has no index.html — pass the site repo's folder (slides_maker-site); nothing was "
+                          "written".format(site))
     lang_dir = site / "languages"
     if lang_dir.is_symlink():
         raise ExportError("{} is a symlink — the exporter writes only inside the site".format(lang_dir))
@@ -226,7 +262,7 @@ def _render(name, ground, lang_dir, scratch):
             h = round(im.size[1] * WIDTH / im.size[0])
             im.resize((WIDTH, h), Image.LANCZOS).save(_inside(lang_dir, dest / (page + ".jpg")), "JPEG", quality=84,
                                                       optimize=True, progressive=True)
-    return vl.sample_fingerprint(deck)
+    return deck_fingerprint(deck)
 
 
 def _copy_samples(lang_dir):
@@ -251,9 +287,10 @@ def _prune(lang_dir, lib):
         return []
     gone = []
     for f in sorted(media.rglob("*")):
-        if f.is_file() and str(f.relative_to(lang_dir)) not in named:
+        rel = f.relative_to(lang_dir).as_posix()      # library.json names files with '/', on Windows too
+        if f.is_file() and rel not in named:
             _inside(lang_dir, f).unlink()
-            gone.append(str(f.relative_to(lang_dir)))
+            gone.append(rel)
     for d in sorted((d for d in media.rglob("*") if d.is_dir()), key=lambda d: -len(d.parts)):
         if not any(d.iterdir()):
             d.rmdir()
@@ -279,6 +316,10 @@ def _changes(prev, lib):
 
 def export(site, *, render=True, only=None, today=None):
     site, lang_dir = _site_dirs(site)
+    bad = _contract_problems()
+    if bad:
+        raise ExportError("the manifests do not pass the contract — fix them first (check_vl_contract.py names the "
+                          "same):\n  " + "\n  ".join(bad))
     today = today or _dt.date.today().isoformat()
     if only:
         unknown = [n for n in only if n not in vl.REGISTRY]
@@ -313,6 +354,9 @@ def export(site, *, render=True, only=None, today=None):
 def check(site):
     """[reasons the page is stale]; empty when library.json and its media match the skill."""
     site, lang_dir = _site_dirs(site)
+    bad = _contract_problems()
+    if bad:
+        return ["the manifests do not pass the contract: " + p for p in bad]
     prev = _load_prev(lang_dir)
     if prev is None:
         return ["{} does not exist — run the export".format(lang_dir / "library.json")]
@@ -344,6 +388,13 @@ def check(site):
             elif g["render_fp"] != _fingerprint(x["id"], g["id"]):
                 out.append("stale page renders: {} ({} ground) — the demo deck no longer matches them".format(
                     x["id"], g["id"]))
+    # a file the page does not name is left over from an older export; only an export removes it
+    named = {g.get("sample") for x in prev.get("languages", []) for g in x.get("grounds", [])}
+    named |= {r for x in prev.get("languages", []) for g in x.get("grounds", []) for r in (g.get("pages") or {}).values()}
+    media = lang_dir / "media"
+    if media.is_dir():
+        out += ["orphan media file: {}".format(f.relative_to(lang_dir).as_posix()) for f in sorted(media.rglob("*"))
+                if f.is_file() and f.relative_to(lang_dir).as_posix() not in named]
     return out
 
 
