@@ -9,6 +9,43 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+## [6.0.0] — 2026-10-22
+
+**Thirty visual languages, and a page to browse them.** Fifteen new drawn languages join the library (thirty in
+all), each with two designed grounds, seven composed pages and bundled samples, and slides.addsum.top/languages/
+shows every language's pages on both grounds, its palette and type, and the line that asks for it, generated from
+the skill in one command.
+
+- **Fifteen new languages.** `herbarium`, `airmail`, `vinyl`, `receipt`, `comic`, `pixel`, `bricks`, `boardgame`,
+  `circuit`, `topo`, `scoreboard`, `periodic`, `recipe`, `stainedglass` and `calendar`: drawn, no pictures needed,
+  each offered for its own topics (nature, travel, music, budgets, stories, games, modular systems, processes,
+  hardware, geography, sports, science, cooking, heritage, timelines). They are documented in
+  `references/visual-languages.md` ("The fourth set", "The fifth set"), and each has a runnable
+  `sigs.py --example vl_<name>`. The fifth set's extras keep the meanings they already had: `ordered=True` on
+  `points` (`boardgame`, `topo`, `recipe`, `pixel`) and `total=` on `pixel`'s `data`.
+- **The library page.** `vl_library_export.py --site <slides_maker-site>` writes the page's data and renders
+  (`--only`, `--no-render`, and `--check` for stale data, missing or unfingerprinted renders and orphan media); every
+  manifest carries a public `blurb`. The README links the page. Its gallery keeps the original fifteen, and a badge
+  and an "N more are only in the library" line are generated from the registry (`vl:vl-badge`, `vl:gallery-more`),
+  with counts past twenty spelled out.
+- **Credits on any picture page.** `credit=` beside `image=` on every page that carries a picture: set on the
+  picture it credits, at the caption size and never under 12pt, clear of the footer band. CJK credits are measured
+  as they render, and `credit=` without `image=` is refused.
+- **Layout core.** `_flow` aligns right (`align="r"`); a balanced title measure always holds its widest word; a
+  no-break space keeps its words on one line; `native_art.multipoly` draws many polygons as one shape;
+  `eval_matrix` takes `size=` for its labels (heads, label column and marks follow).
+- **Fixes.** The register guard no longer counts a photograph as an oversized primitive; direction-page cover motifs
+  keep off the words at any window width, and memphis covers stay in their slide; `deck_gates.py init` after
+  `interview --set` keeps the recorded answers; `dispatch_brief.py --lens AB` prints the fast tier's sole critic;
+  pixel reads go through `pil_compat.pixels()` (Pillow 14 removes `Image.getdata()`); broadsheet's points page drops
+  the initial on one-line bodies; a language written in `scripts/vl_langs/` loads on first use, so a deck in an
+  image-led language never imports the native modules.
+- **Fewer files.** `component_tiers.py` moved into `vl_contract.py`, `surfaces.py` into `register_surface.py` and
+  `collage.py` into `visual_languages.py`; `runtime-routing.md` is now the opening section of `codex-runtime.md`,
+  and `semantic-color-contract.md` is section 6.1 of `design-intelligence-addendum.md`. Commands keep their names,
+  but code that imports those three modules directly must import from their new homes, hence the major version.
+  Two regression scripts that nothing ran now live in `tests/` and run in CI.
+
 ## [5.9.0] — 2026-10-16
 
 **The visual languages become a system.** The fifteen languages share one checked contract, every general
