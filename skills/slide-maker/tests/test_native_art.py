@@ -130,6 +130,24 @@ check(len(imgs) == 1 and s._element.find(".//" + "{%s}blip" % na.A_NS) is not No
 w_en, w_long = na.chip_width("TAGS", 12, "Arial"), na.chip_width("TAGS AND MORE TAGS", 12, "Arial")
 check(w_long > w_en > 0.4, "a chip grows with its words ({:.2f} < {:.2f})".format(w_en, w_long))
 check(na.chip_width("会员资格", 12, "Arial") >= 4 * 12 / 72.0, "a CJK chip is at least an em per character")
+# a pill never wraps, so it must hold its words as LibreOffice sets them: 0.24 em of autospace at every change between
+# CJK and Latin (measured 2026-10-22), which the em-per-character reading left out
+_em = 12 / 72.0
+check(na.chip_width("GPT-5 模型", 12, "Arial") >= na.chip_width("GPT-5 ", 12, "Arial") + na.chip_width("模型", 12, "Arial")
+      - 1.2 * _em + 0.235 * _em, "a mixed chip holds the autospace between its scripts ({:.3f}in)".format(
+          na.chip_width("GPT-5 模型", 12, "Arial")))
+# …in the face its weight renders in: Chalkboard SE is ONE .ttc and its bold was measured in face 0, the regular
+# ("CHAPTER TWO" 1.615in for 1.673, the comic report 2026-10-22)
+if not dk._font_substituted("Chalkboard SE") and str(dk._font_file("Chalkboard SE")).lower().endswith(".ttc"):
+    from fontTools.ttLib import TTCollection
+    from PIL import ImageFont
+    _p = str(dk._font_file("Chalkboard SE"))
+    _names = [f_["name"].getDebugName(6) for f_ in TTCollection(_p, lazy=True).fonts]
+    _bold = ImageFont.truetype(_p, 170, index=_names.index("ChalkboardSE-Bold"), layout_engine=ImageFont.Layout.BASIC)
+    _want = _bold.getlength("CHAPTER TWO") / 10.0 / 72.0
+    _got = na.chip_width("CHAPTER TWO", 17, "Chalkboard SE", bold=True) - 1.2 * 17 / 72.0
+    check(_got >= _want - 1e-3, "a bold chip in a .ttc family is as wide as its bold face ({:.3f} for {:.3f}in)".format(
+        _got, _want))
 _tbs = [sh for sh in _s.shapes if getattr(sh, "has_text_frame", False) and sh.text_frame.text in ("MEMBERS", "会员")]
 check(len(_tbs) == 2 and all(t.text_frame.word_wrap is False for t in _tbs), "chip text never wraps")
 # the share bar draws its fraction of the track, clamped

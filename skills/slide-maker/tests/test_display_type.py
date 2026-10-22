@@ -76,6 +76,52 @@ except ValueError as e:
 crit = [f for f in dk.lint_layout(prs, strict=True, verbose=False) if f[1] == "CRITICAL"]
 check(not crit and all(f[1] != "WARN" or f[2] != "TEXT_OVERLAP" for f in dk.lint_layout(prs, verbose=False)), "lint: no critical, no overlap")
 
+# _glyph_width measures the FACE the run renders in. macOS ships whole families as ONE .ttc collection, and the
+# collection's face 0 was measured for every style: a bold "45" in Rockwell (2.444in at 150pt, the regular width; bold
+# is 2.625) was planned on one line of a timer dial and rendered on two (recipe, 2026-10-22); Chalkboard SE bold "CHAPTER
+# TWO" read 1.615in for 1.673 (comic); Avenir Next's face 0 is its BOLD, so its regular read 3.7% wide. The faces below
+# are the ones LibreOffice drew for these runs (PDF font names, rendered 2026-10-22); the oracle reads each face by its
+# PostScript name straight from the collection — never through the code under test. Italic: the family's real italic
+# face (8-11% narrower in Baskerville / Hoefler Text / Didot); a family with no italic face is SLANTED by the renderer,
+# which keeps the upright advances (Chalkboard SE: origins identical, measured); a bold italic the family lacks (Didot)
+# is measured at the wider of its italic and its bold, because LibreOffice drew Didot's as the slanted Bold.
+from fontTools.ttLib import TTCollection  # noqa: E402
+from PIL import ImageFont  # noqa: E402
+
+
+def _ps_width(face, ps, text, size):
+    path = dk._font_file(face)
+    if dk._font_substituted(face) or not path or not str(path).lower().endswith((".ttc", ".otc")):
+        return None
+    names = [f_["name"].getDebugName(6) for f_ in TTCollection(str(path), lazy=True).fonts]
+    if ps not in names:
+        return None
+    fnt = ImageFont.truetype(str(path), int(size * 10), index=names.index(ps), layout_engine=ImageFont.Layout.BASIC)
+    return fnt.getlength(text) / 10.0 / 72.0
+
+
+TTC_CASES = [("Rockwell", True, False, "Rockwell-Bold"), ("Chalkboard SE", True, False, "ChalkboardSE-Bold"),
+             ("Chalkboard SE", False, False, "ChalkboardSE-Regular"), ("Chalkboard SE", False, True, "ChalkboardSE-Regular"),
+             ("Avenir Next", False, False, "AvenirNext-Regular"), ("Avenir Next", True, False, "AvenirNext-Bold"),
+             ("Avenir Next", False, True, "AvenirNext-Italic"), ("Avenir Next", True, True, "AvenirNext-BoldItalic"),
+             ("Helvetica Neue", True, False, "HelveticaNeue-Bold"), ("Helvetica Neue", False, True, "HelveticaNeue-Italic"),
+             ("Baskerville", False, True, "Baskerville-Italic"), ("Hoefler Text", False, True, "HoeflerText-Italic"),
+             ("Didot", True, False, "Didot-Bold"), ("Didot", True, True, "Didot-Bold")]
+_ran = 0
+for _face, _b, _i, _ps in TTC_CASES:
+    for _t, _sz in (("45", 150), ("CHAPTER TWO", 17), ("Hamburgefonstiv 1,250", 40)):
+        want = _ps_width(_face, _ps, _t, _sz)
+        if want is None:
+            continue
+        _ran += 1
+        got = dt._glyph_width(_t, _sz, _face, _b, _i)
+        check(got is not None and abs(got - want) <= 0.002 * want + 1e-4,
+              "{} {}{} {!r} at {}pt is measured in {} ({:.3f}in), got {}".format(
+                  _face, "bold" if _b else "regular", " italic" if _i else "", _t, _sz, _ps, want,
+                  None if got is None else round(got, 3)))
+print("  ({} collection-face width checks ran here{})".format(
+    _ran, "" if _ran else " — none: this machine has none of these .ttc families"))
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_display_type] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)

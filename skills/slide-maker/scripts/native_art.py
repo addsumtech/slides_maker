@@ -811,24 +811,17 @@ def board_frame(slide, wood, chalk):
     return (t, t, W - 2 * t, H - 2 * t)
 
 
-def chip_width(text, size, face, *, bold=True):
-    """The width (in) of a one-line pill holding `text` at `size`: every CJK character an em, each Latin run measured
-    in `face` (0.62 em a character when the face is not installed here), plus the pill's padding."""
+def chip_width(text, size, face, *, bold=True, ea_face=None):
+    """The width (in) of a one-line pill holding `text` at `size`, plus the pill's padding: the wider of the lints'
+    reading (every CJK character an em, the rest in `face` — 0.62 em a character when the face is not installed here)
+    and LibreOffice's (display_type.line_width: each script in its own face — `ea_face` for CJK, an em a character
+    without one — and the autospace at every change between CJK and Latin, which "GPT-5 模型" has and a pill that never
+    wraps has no room for). Measured in the face the weight renders in: a .ttc family's bold, not its face 0."""
     import display_type as _dt
-    em = size / 72.0
-
-    def run_w(r):
-        if not r:
-            return 0.0
-        g = _dt._glyph_width(r, size, face, bold)
-        return g if g is not None else 0.62 * em * len(r)
-    w, run = 0.0, ""
-    for ch in text:
-        if dk._has_cjk(ch):
-            w, run = w + run_w(run) + em, ""
-        else:
-            run += ch
-    return w + run_w(run) + 1.2 * em
+    w = _dt.em_width(text, size, face, bold)
+    if dk._has_cjk(text):
+        w = max(w, _dt.line_width(text, size, face, ea_face, bold))
+    return w + 1.2 * size / 72.0
 
 
 def chip(slide, x, y, text, *, size, fill, ink, face, ea_face=None, bold=True, roomy=False):
@@ -837,7 +830,7 @@ def chip(slide, x, y, text, *, size, fill, ink, face, ea_face=None, bold=True, r
     # every pill is 1.9em tall unless its caller asks for room (ordinary decks unchanged at every size — a 14pt chip
     # grew 0.37 -> 0.41in when the room was decided by size alone, final review 2026-10-16); a roomy one big enough to
     # read as a card gets half an em above and below its line — a CJK line is set taller, so its pill is too
-    w, h = chip_width(text, size, face, bold=bold), size / 72.0 * 1.9
+    w, h = chip_width(text, size, face, bold=bold, ea_face=ea_face), size / 72.0 * 1.9
     if roomy and h > 0.35:
         h = size / 72.0 * (2.4 if dk._has_cjk(text) else 2.1)
     dk.box(slide, x, y, w, h, fill=hexstr(fill), round=True, r=h / 2.0)

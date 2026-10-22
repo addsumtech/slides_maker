@@ -595,6 +595,9 @@ def _canvas(k):
 HEADROOM = 0.97      # every language MEASURES its words in 97% of a column and draws the box at the full width: a line
 # measured to fit exactly was set one line longer by LibreOffice — collage on 9:16 measured "fix what it already owns"
 # at 4.894in in a 4.894in box and rendered "owns" on a fourth line, over the subtitle (audit sweep, 2026-10-09)
+WORD_HEADROOM = 0.99  # a field that is ONE word, still too wide for HEADROOM at its floor, may take the whole column with
+# this much of it to spare: one word has no line breaks to jitter, and LibreOffice keeps it whole once the box holds its
+# advance width (+0.1% held, -0.1% broke it: 8 face/size pairs, 2026-10-22); Pillow's unkerned advances read wider
 _LATIN_RUN = re.compile(r"[^\s]+")
 
 
@@ -632,29 +635,25 @@ def _tokens(text):
     return out
 
 
-def _line_width(k, field, text, size):
-    """The width (in) one line of `text` takes: CJK characters in the script's East-Asian face, every other character
-    in the field's Latin face — as it RENDERS (a run's <a:latin> and <a:ea> faces) — or, when wider, as the lint
-    measures it (the whole run in the East-Asian face). A line has to fit both: a chalkboard title split by the render
-    width alone was read by lint as one line more, under its own chalk underline (2026-10-09)."""
+def _line_width(k, field, text, size, italic=None):
+    """The width (in) one line of `text` takes — the widest of three models, because a line has to fit them all: as it
+    RENDERS (display_type.line_width: each script run in its own face, a space taking the script before it, and
+    LibreOffice's autospace at every change between CJK and Latin — without it "用 GPT-5 做 3 件事" read 3.67in and
+    rendered 4.04, its last character alone on a second line, calendar 2026-10-22); as the delivery lint reads it (one
+    em per CJK character, the rest in the Latin face — on a machine without the East-Asian face its stand-in has no CJK
+    glyphs and measured ~0.6em, the Linux font simulation 2026-10-09); and as deckkit's lint reads it (the whole run in
+    the East-Asian face). A chalkboard title split by the render width alone was read by lint as one line more, under
+    its own chalk underline (2026-10-09). `italic`: the style the run renders in, the field's own when None — a run
+    that carries any CJK is set upright (Kit.run), so a caller measuring a Latin PART of one passes italic=False."""
     import display_type as dt
-    role, bold, italic = TYPE[k.name][field][1], _weight(k, field, text), TYPE[k.name][field][4]
+    role, bold = TYPE[k.name][field][1], _weight(k, field, text)
+    italic = TYPE[k.name][field][4] if italic is None else italic
     if not dk._has_cjk(text):
         return dt._glyph_width(text, size, k.face(role), bold, italic) or 0
     ea = k.ea_face(role, text) or k.face(role)
     lat = k.face(role)
-    total, seg, seg_cjk = 0.0, "", None
-    for ch in text + "\0":
-        c = dk._has_cjk(ch) if ch != "\0" else None
-        if seg and (ch == "\0" or c != seg_cjk):
-            gw = dt._glyph_width(seg, size, ea if seg_cjk else lat, bold) or 0
-            # a CJK character is at least an em, as the lint counts it: on a machine without the East-Asian face its
-            # stand-in has no CJK glyphs and measured ~0.6em, under the render (the Linux font simulation, 2026-10-09)
-            total += max(gw, len(seg) * size / 72.0) if seg_cjk else gw
-            seg = ""
-        if ch != "\0":
-            seg, seg_cjk = seg + ch, c
-    return max(total, dk._natural_width_in([(text, bool(bold))], size, ea))
+    return max(dt.line_width(text, size, lat, ea, bold), dt.em_width(text, size, lat, bold),
+               dk._natural_width_in([(text, bool(bold))], size, ea))
 
 
 def _unbreakable_overwide(k, field, text, size, w):
@@ -734,7 +733,13 @@ def _break_lines(k, field, text, size, w):
     cjk = cjk and not korean                               # below: per-character CJK rules only
 
     def width(s_):
-        return (_line_width(k, field, s_, size) if cjk else dt._glyph_width(s_, size, face, bold, italic)) or 0
+        if korean:       # Hangul in its face, Latin words in theirs, the autospace between (display_type.line_width) —
+            return max(dt.line_width(s_, size, k.face(role), face, bold),            # or, when wider, the whole
+                       dt._glyph_width(s_, size, face, bold) or 0)                    # line in the Korean face
+        # a part of a CJK run is measured upright, as the whole run renders: measured in the field's italic, the Latin
+        # half of "v2 2026 道具" read 6% narrow in Didot Italic and was planned on one line (corpus diff, 2026-10-22)
+        return (_line_width(k, field, s_, size, italic=False) if cjk else
+                dt._glyph_width(s_, size, face, bold, italic)) or 0
     # (separator, unit) pairs; a Korean word wider than the whole line goes in as syllables — the renderer
     # breaks it between them ("인공지능기반의 / 료영상재구성", final review 2026-10-04)
     toks = []
@@ -1043,15 +1048,30 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=Non
     def total(tucked=False):
         return sum(fheight(f, t, sizes[f], widths[f]) + gap_of(f, sizes[f], fheight(f, t, sizes[f], widths[f]), tucked)
                    for f, t in items)
+    whole = set()        # one-word fields held to the WHOLE column at their floor: measured and drawn at w_col
     for f, t in items:
-        # ONE word is never re-wrapped, so it is held to the full column; the headroom is for where lines break
-        # ("1,250,000" at its floor was refused on a square board under Linux's wider faces, 2026-10-09)
-        while sizes[f] > floors[f] and not _widest_word_fits(k, f, t, sizes[f], w_col):
+        # ONE word is held to the same measure as every line — HEADROOM of the column, where _field_height counts its
+        # lines. Held to the full column, "1,250" filled 3.75in of a 3.754in inner width and LibreOffice set "1,25 / 0"
+        # (it keeps a word whole only once the box holds its whole advance width: -0.1% broke it, +0.1% did not,
+        # measured 2026-10-22), and a word between the two widths was planned a line taller than it is drawn — the
+        # figure sat at the top of a box twice its height (periodic, calendar).
+        while sizes[f] > floors[f] and not _widest_word_fits(k, f, t, sizes[f], w):
             sizes[f] = max(floors[f], sizes[f] * 0.94)
-        bad = _unbreakable_overwide(k, f, t, sizes[f], w_col) if not (f == "number" and _outlinable(k, t)) else None
+        if f == "number" and _outlinable(k, t):
+            continue                                     # drawn as a picture of its own size
+        # …except a field that IS one word and still misses the measure at its floor ("1,250,000" at 56pt in herbarium's
+        # 2.60in column): it is a single line with no line breaks to protect, so it takes the whole column, keeping
+        # WORD_HEADROOM of it to spare, and is measured there too — one line, in a box exactly the column wide
+        if (not _widest_word_fits(k, f, t, sizes[f], w) and len(_words(t)) == 1 and not dk._has_cjk(t)
+                and _widest_word_fits(k, f, t, sizes[f], w_col * WORD_HEADROOM)):
+            whole.add(f)
+            widths[f] = w_col
+            continue
+        bad = _unbreakable_overwide(k, f, t, sizes[f], w)
         if bad:                           # it would break mid-word and run into the next field (final review)
-            raise VLTextOverflow("{}.{}(): the {}'s word {!r} is wider than the {:.2f}in column even at the floor size "
-                                 "{:.0f}pt — shorten it, or break it with a space".format(k.name, page, f, bad, w_col, sizes[f]))
+            raise VLTextOverflow("{}.{}(): the {}'s word {!r} is wider than the {:.2f}in measure of the {:.2f}in column "
+                                 "even at the floor size {:.0f}pt — shorten it, or break it with a space".format(
+                                     k.name, page, f, bad, w, w_col, sizes[f]))
     # copy that cannot fit even at the floor sizes is refused at once, with the same numbers — the shrink loop below
     # measured an overlong title up to 200 times first (a refusal took ~20s a page, the audit's test, 2026-10-09)
     _start = dict(sizes)
@@ -1109,7 +1129,7 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=Non
                     break
         sizes[f] = sz
     if total() > h + 0.02:                 # balancing never adds lines; this is a guard, not a path
-        widths = {f: w for f in widths}
+        widths = {f: (w_col if f in whole else w) for f in widths}
     t_all = total(True)
     cy = y if anchor == "top" else (y + h - t_all if anchor == "bottom" else y + (h - t_all) / 2.0)
     rects, plan = {}, []
@@ -1117,7 +1137,8 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=Non
         sz = _math.floor(sizes[f] * 10 + 1e-9) / 10.0   # rounded DOWN: 32.58pt (one line) drawn at 32.6 set two lines
         fw = widths[f]                                   # the measure …
         fh = fheight(f, t, sz, fw)
-        fw = fw + dw                                     # … and the box, drawn with the headroom
+        fw = fw + (0.0 if f in whole else dw)            # … and the box, drawn with the headroom (a whole-column word:
+        #                                                  the column itself)
         fx = x + (w_col - fw) / 2.0 if align == "c" else (x + w_col - fw if align == "r" else x)
         rects[f] = (fx, cy, fw, fh)
         plan.append((f, t, sz, (fx, cy, fw, fh)))
@@ -1149,7 +1170,7 @@ def _flow(k, slide, page, col, items, *, anchor, align, underlay=None, start=Non
                 dk.text(slide, fx, fy, fw, fh, [k.runs(l_, sz, color, bold, role, italic) for l_ in phrased[f]],
                         align=al, space_after=0)
                 continue
-            lines = _set_lines(k, f, t, sz, fw - dw)
+            lines = _set_lines(k, f, t, sz, fw - (0.0 if f in whole else dw))
             if lines:                      # a wrapping display field is SET in its measured lines: drawn dw wider than it
                 dk.text(slide, fx, fy, fw, fh, [k.runs(l_, sz, color, bold, role, italic) for l_ in lines],   # was measured,
                         align=al, space_after=0)    # the renderer re-wrapped "…more than ever / before" (final review)
@@ -1748,20 +1769,25 @@ def _place_credit(k, slide, n0, credit):
     def _w(t):
         if not cjk:
             return dt._glyph_width(t, size, face, False) or len(t) * size * 0.55 / 72.0
-        total, run = 0.0, ""
-        for ch_ in t:
-            if dk._has_cjk(ch_):
-                total += (dt._glyph_width(run, size, face, False) or 0.0) if run else 0.0
-                run = ""
-                total += size / 72.0                                  # one em per CJK character
-            else:
-                run += ch_
-        return total + ((dt._glyph_width(run, size, face, False) or 0.0) if run else 0.0)
+        # the lints' one em a CJK character, or — when wider — as LibreOffice sets it, with the autospace at every
+        # change between Chinese and Latin ("摄影：张三，CC BY 4.0 授权" has four, an em between them)
+        return max(dt.em_width(t, size, face, False), dt.line_width(t, size, face, mface, False))
+    import lint_deck as _ld
+
+    def _box_h(w_):
+        # The box holds the lines by BOTH readings: as LibreOffice sets them (1.2 em a line x the paragraph's spacing —
+        # a CJK paragraph 1.12, so 1.344 em; measured 2026-10-22, the same in every face tried) and as the delivery lint
+        # reads them (its own line count, 1.4 em a CJK line, 1.25 a Latin one — lint_deck._txt_h, asked, not copied).
+        # The chip measured 1.3 em a CJK line, under both: a two-line Chinese credit at 14pt was "cramped against the
+        # card bottom" of its own chip (chalkboard, 10x7.5), and the text box was shorter than the lines it rendered.
+        return max(dk.measure_text([(credit, False)], w_, size, font=mface, line_h_factor=dk._LINT_LINE_H),
+                   _ld._txt_h({"paras": [[(credit, size)]], "w": w_, "font": face, "bold": False, "size": size,
+                               "full": credit}))
     room = max(0.6, right - left - 2 * inset - 2 * pad)
     tb_w = min(room, _w(credit) * 1.10 + dk.TEXT_INSET_LR + 0.06)          # headroom: the lint's estimate must agree
     h_text = dk.measure_text([(credit, False)], tb_w, size, font=mface)
     one = dk.measure_text([("x", False)], 10.0, size, font=mface)
-    if h_text > 3.05 * one or h_text + 0.2 > 0.35 * (bottom - top):
+    if h_text > 3.05 * one or _box_h(tb_w) + 0.2 > 0.35 * (bottom - top):
         raise ValueError("{}: credit= {!r} needs more than three lines, or a third of its picture ({:.1f}in wide) — shorten it, "
                          "e.g. 'Photo: <name>, <licence>', and put the full source on a sources page"
                          .format(k.name, credit[:40] + ("…" if len(credit) > 40 else ""), right - left))
@@ -1774,10 +1800,13 @@ def _place_credit(k, slide, n0, credit):
             else:
                 lo_ = mid
         tb_w = min(tb_w, hi_ * 1.03 + 0.02)
-        h_text = dk.measure_text([(credit, False)], tb_w, size, font=mface)
-    if h_text > 1.5 * one:                               # the renderer's leading, not the tight measure, sets the box
-        h_text = dk.measure_text([(credit, False)], tb_w, size, font=mface, line_h_factor=1.3)
-    vpad = 0.04 if h_text <= 1.5 * one else 0.10        # a wrapped credit keeps the lint's 0.09in card padding
+    # a chip that hugs the line it renders is a LABEL (0.04in above and below); one tall enough to read as a card (over
+    # 0.35in, where the lint starts to ask a card's 0.09in padding) holds its words by both readings and is padded as
+    # a card — a one-line 15.4pt Chinese credit on A4 was 0.37in tall with 0.04in under its words
+    h_text = dk.measure_text([(credit, False)], tb_w, size, font=mface, line_h_factor=dk._LINT_LINE_H)
+    vpad = 0.04
+    if h_text + 2 * vpad > 0.35:
+        h_text, vpad = _box_h(tb_w), 0.10
     cw, ch = tb_w + 2 * pad, h_text + 2 * vpad
     x, y = right - inset - cw, max(top + inset, bottom - inset - ch)
     chip = dk.box(slide, x, y, cw, ch, fill=k.P["ground"])

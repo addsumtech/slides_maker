@@ -687,6 +687,152 @@ try:
 finally:
     _bg._lint_foot = _foot0
 
+# ── C1 (2026-10-22): a line that mixes CJK and Latin is measured as LibreOffice sets it ──
+# calendar on 10x5.625 measured "用 GPT-5 做 3 件事" (31.5pt bold, Times New Roman + Songti SC) at 3.67in in a 3.79in
+# measure and planned one line; LibreOffice set 4.04in and put 事 alone on a second line. Measured (a PDF read back with
+# PyMuPDF): a space or a mark of no script is set in the face of the script BEFORE it, and every change between CJK and
+# Latin adds 0.24 em of autospace — four changes here, 0.41in.
+import display_type as _dt
+check(_dt.script_runs("用 GPT-5 做 3 件事") == [("用 ", "a"), ("GPT-5 ", "l"), ("做 ", "a"), ("3 ", "l"), ("件事", "a")],
+      "a space takes the script before it; digits and '-' are Latin ({})".format(_dt.script_runs("用 GPT-5 做 3 件事")))
+check(_dt.script_runs(" 用“中”") == [(" 用“中”", "a")] and _dt.script_runs("“A”中") == [("“A”", "l"), ("中", "a")],
+      "a leading weak mark takes the first script; quotation marks take their neighbour's")
+for _name in ("calendar", "journal", "chalkboard"):
+    _p, _k = use(_name, 10.0, 5.625)
+    for _f in ("title", "body"):
+        if _f not in vl.TYPE[_name]:
+            continue
+        for _a, _b in (("GPT-5", "做三件事"), ("Claude", "与模型"), ("2026", "年计划")):
+            for _sz in (14.0, 31.5):
+                _w_ab = vl._line_width(_k, _f, _a + _b, _sz)
+                _w_a, _w_b = vl._line_width(_k, _f, _a, _sz), vl._line_width(_k, _f, _b, _sz)
+                check(_w_ab >= _w_a + _w_b + 0.235 * _sz / 72.0,
+                      "{} {} {}pt: {!r} measures its parts plus the autospace between them ({:.3f} < {:.3f} + {:.3f} + "
+                      "{:.3f})".format(_name, _f, _sz, _a + _b, _w_ab, _w_a, _w_b, 0.24 * _sz / 72.0))
+# a run that carries CJK is set UPRIGHT (Kit.run), so a Latin part of it is measured upright too: measured in the quote's
+# italic, "v2 2026" read 6% narrow in Didot Italic and "v2 2026 道具" was planned as two lines that render as three
+_n_up = 0
+for _name in vl.LANGS:
+    for _f, _spec in vl.TYPE[_name].items():
+        if not _spec[4]:
+            continue
+        for _fonts in ("both", "mac"):
+            _p = dk.blank_deck(13.333, 7.5)
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                try:
+                    _k = vl.use(_name, _p, fonts=_fonts)
+                except ValueError:
+                    continue                                   # a mac face not installed here
+            _sz, _t = _spec[0] * 0.8, "v2 2026 道具"
+            _role, _b = _spec[1], vl._weight(_k, _f, _t)
+            for _w in (1.0, 1.2, 1.4, 1.8):
+                for _l in vl._break_lines(_k, _f, _t, _sz, _w):
+                    if " " not in _l.strip():
+                        continue                               # one unit: nothing to break
+                    _n_up += 1
+                    _up = max(_dt.line_width(_l, _sz, _k.face(_role), _k.ea_face(_role, _t), _b),
+                              _dt.em_width(_l, _sz, _k.face(_role), _b))
+                    check(_up <= _w - vl._INSET + 1e-6, "{} {} {}: {!r} is planned on one line of {:.2f}in and measures "
+                                                        "{:.3f}in upright, as it renders".format(
+                                                            _name, _fonts, _f, _l, _w - vl._INSET, _up))
+check(_n_up > 0, "the upright check ran ({} lines)".format(_n_up))
+_p, _k = use("calendar", 10.0, 5.625)
+_t = "用 GPT-5 做 3 件事"
+if not (dk._font_substituted("Times New Roman") or dk._font_substituted("Songti SC")):
+    _w = vl._line_width(_k, "title", _t, 31.5)
+    check(4.035 <= _w <= 4.04 * 1.04, "calendar's title is measured as LibreOffice set it (4.04in, rendered "
+                                      "2026-10-22): {:.3f}in".format(_w))
+_lines = vl._break_lines(_k, "title", _t, 31.5, 3.96 * vl.HEADROOM)
+check(len(_lines) == 2, "calendar's mixed title is planned on the two lines LibreOffice set it in ({})".format(_lines))
+check(vl._field_height(_k, "title", _t, 31.5, 3.96 * vl.HEADROOM) >= 2 * 31.5 / 72.0 * dk._LINT_LINE_H,
+      "…and its box is two lines tall")
+
+# ── C2 (2026-10-22): one word or figure gets the same headroom as every line of words ──
+# _widest_word_fits let a single word fill the whole column while _field_height measured in HEADROOM of it: periodic
+# planned "1,250" at 108.1pt measuring 3.75in in a 3.81in column (a 3.754in inner width) and LibreOffice set "1,25 / 0";
+# where the word fell between the two widths, the box was planned a line taller than the figure (calendar: "1,250" at the
+# top of a box twice its height). LibreOffice keeps a word whole only once the box holds its full advance width
+# (measured 2026-10-22: at -0.1% "1,25 / 0", at +0.1% whole), so the word is held to the measure the lines are.
+_n_flow = 0
+for _name in vl.LANGS:
+    if "number" not in vl.TYPE[_name]:
+        continue
+    for _txt, _start, _cw in (("1,250", 147.0, 3.81), ("1,250,000", 120.0, 3.81), ("42", 200.0, 0.9)):
+        _p, _k = use(_name)
+        _s = _k.new_slide()
+        try:
+            _r, _d = vl._flow(_k, _s, "data", (0.5, 0.5, _cw, 6.0), [("number", _txt)], anchor="top", align="l",
+                              start={"number": _start})
+        except vl.VLTextOverflow:
+            continue
+        if vl._outlinable(_k, _txt):
+            continue                                  # drawn as a picture of its own size
+        _n_flow += 1
+        _sz = _d.sizes["number"]
+        _gw = _dt._glyph_width(_txt, _sz, _k.face("numeral"), vl._weight(_k, "number", _txt)) or 0.0
+        _floor = max(9.0, vl.TYPE[_name]["number"][5] * 1.0)
+        # above its floor a figure keeps HEADROOM of the column; AT its floor one word may take the whole column, less
+        # WORD_HEADROOM, in a box exactly the column wide — never more
+        _meas = _cw * (vl.HEADROOM if _sz > _floor + 0.1 else vl.WORD_HEADROOM) - vl._INSET
+        check(_gw <= _meas + 1e-6 and _r["number"][2] <= _cw + 1e-6,
+              "{}: {!r} planned at {}pt measures {:.3f}in — within the {:.3f}in measure of its {}in column, in a box no "
+              "wider ({:.3f}in)".format(_name, _txt, _sz, _gw, _meas, _cw, _r["number"][2]))
+        _one = _sz / 72.0 * dk._LINT_LINE_H + 0.06                 # _field_height's one Latin line
+        check(_r["number"][3] <= _one + 1e-6, "{}: {!r}'s box is one line tall ({:.3f} for {:.3f}in)".format(
+            _name, _txt, _r["number"][3], _one))
+check(_n_flow >= 20, "the one-figure flow ran on the languages ({})".format(_n_flow))
+# …and at its floor a figure that misses HEADROOM but fits the column (with WORD_HEADROOM to spare) is SET, on one line,
+# not refused: "1,250,000" at 56pt in herbarium's 2.60in cabinet column (the generality corpus)
+_n_floor = 0
+for _name in ("herbarium", "periodic", "editorial", "calendar"):
+    _p, _k = use(_name)
+    _fl = max(9.0, vl.TYPE[_name]["number"][5])
+    if vl._outlinable(_k, "1,250,000"):
+        continue
+    _gw = _dt._glyph_width("1,250,000", _fl, _k.face("numeral"), vl._weight(_k, "number", "1,250,000"))
+    _cw = (_gw + vl._INSET) / 0.98                     # the figure fills 98% of the column at its floor
+    try:
+        _r, _d = vl._flow(_k, _k.new_slide(), "data", (0.5, 0.5, _cw, 6.0), [("number", "1,250,000")], anchor="top",
+                          align="l", start={"number": _fl})
+    except vl.VLTextOverflow as e:
+        check(False, "{}: a figure that fits its column at the floor is set, not refused ({})".format(_name, str(e)[:90]))
+        continue
+    _n_floor += 1
+    check(abs(_r["number"][2] - _cw) < 1e-6 and _r["number"][3] <= _fl / 72.0 * dk._LINT_LINE_H + 0.06 + 1e-6,
+          "{}: at its floor '1,250,000' takes the whole {:.2f}in column on one line ({})".format(_name, _cw, _r["number"]))
+check(_n_floor >= 3, "the floor case ran ({})".format(_n_floor))
+
+# ── C3 (2026-10-22): a picture credit's chip holds its words by the render AND by the lint ──
+# the chip was 1.3 em a CJK line; LibreOffice sets 1.344 em (1.2 x CJK_LS 1.12, every face measured) and the delivery
+# lint reads 1.4 em — a two-line Chinese credit at 13pt+ (chalkboard image_text, 10x7.5) and a one-line one tall enough to
+# be a card (A4, 15.4pt) were each "cramped against the card bottom" of their own chip.
+_CJK_CREDIT = "摄影：张三，CC BY 4.0 授权，来源：维基共享资源"
+_LAT_CREDIT = "Photo: Jane Doe, CC BY 4.0, via Wikimedia Commons"
+for _name, _W, _H in (("chalkboard", 10.0, 7.5), ("chalkboard", 8.27, 11.69), ("chalkboard", 13.333, 7.5),
+                      ("editorial", 13.333, 7.5), ("editorial", 7.5, 10.0), ("journal", 10.0, 7.5)):
+    for _cr in (_CJK_CREDIT, _LAT_CREDIT):
+        _p, _k = use(_name, _W, _H)
+        _s = _k.new_slide()
+        try:
+            _k.image_text(_s, title="每张桌上都有工具", body="志愿者坐在你身边。", image=img_for(_name), credit=_cr)
+        except ValueError as e:
+            check("shorten" in str(e), "{} {}x{}: a credit is placed or refused asking to shorten it ({})".format(
+                _name, _W, _H, str(e)[:60]))
+            continue
+        _path = td / "credit_{}_{}_{}.pptx".format(_name, _W, "zh" if dk._has_cjk(_cr) else "en")
+        _p.save(str(_path))
+        _buf = io.StringIO()
+        with contextlib.redirect_stdout(_buf), contextlib.redirect_stderr(io.StringIO()):
+            _ld.lint(str(_path), static_ok=True)
+        _pad = [l_.strip()[:120] for l_ in _buf.getvalue().splitlines() if "TEXT PADDING" in l_ and _cr[:8] in l_]
+        check(not _pad, "{} {}x{}: the credit is not cramped in its own chip ({})".format(_name, _W, _H, _pad[:1]))
+        _tb = [x for x in texts(_s) if x.text_frame.text == _cr][0]
+        _z = _tb.text_frame.paragraphs[0].runs[0].font.size.pt
+        _pitch = _z / 72.0 * dk._LINT_LINE_H * (dk.CJK_LS if dk._has_cjk(_cr) else 1.0)
+        _n = round((_tb.height / EMU) / _pitch) if _tb.height / EMU >= 1.5 * _pitch else 1
+        check(_tb.height / EMU >= _n * _pitch - 1e-3, "{} {}x{}: the credit's box holds the lines LibreOffice sets "
+                                                        "({:.3f}in)".format(_name, _W, _H, _tb.height / EMU))
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:
