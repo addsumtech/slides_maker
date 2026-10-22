@@ -683,7 +683,7 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   near-duplicates, a possible-watermark heuristic, and EXIF rotation (`--fix` bakes it in). Its
   `--contact-sheet` is ONE labelled PNG of every candidate plus a sha256 — the artifact that makes
   looking cheap, and that a critic's consent can name.
-- `visual_languages.py` — <!-- vl:count-all -->nineteen<!-- /vl --> complete looks: <!-- vl:count-image -->four<!-- /vl --> image-led (<!-- vl:list-image-plain -->editorial, soft, collage, storybook<!-- /vl -->) and <!-- vl:count-drawn -->fifteen<!-- /vl --> drawn (<!-- vl:list-drawn-plain -->ink, poster, cutpaper, drafting, starlit, broadsheet, journal, tally, chalkboard, interface, wayfinding, herbarium, airmail, vinyl, receipt<!-- /vl -->;
+- `visual_languages.py` — <!-- vl:count-all -->thirty<!-- /vl --> complete looks: <!-- vl:count-image -->four<!-- /vl --> image-led (<!-- vl:list-image-plain -->editorial, soft, collage, storybook<!-- /vl -->) and <!-- vl:count-drawn -->twenty-six<!-- /vl --> drawn (<!-- vl:list-drawn-plain -->ink, poster, cutpaper, drafting, starlit, broadsheet, journal, tally, chalkboard, interface, wayfinding, herbarium, airmail, vinyl, receipt, comic, pixel, bricks, boardgame, circuit, topo, scoreboard, periodic, recipe, stainedglass, calendar<!-- /vl -->;
   their pages live in `vl_native.py` / `vl_native2.py` / `vl_native3.py`): palette with
   text-safe inks, system fonts per platform (`fonts="both"` default) and per SCRIPT (Han / kana / Hangul),
   a surface, image treatments and the page compositions; registered with register_surface for
@@ -715,8 +715,9 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
 - `vl_specs/` — one manifest per visual language (`SPEC`), loaded by `vl_specs/__init__.py` (`load()`, ordered by
   `order`); `visual_languages.py` builds its tables from them: `editorial.py`, `soft.py`, `collage.py`, `storybook.py`,
   `ink.py`, `poster.py`, `cutpaper.py`, `drafting.py`, `starlit.py`, `broadsheet.py`, `journal.py`, `tally.py`,
-  `chalkboard.py`, `interface.py`, `wayfinding.py`, `herbarium.py`, `airmail.py`, `vinyl.py`, `receipt.py` (the last
-  four's pages in `vl_langs/<name>.py`).
+  `chalkboard.py`, `interface.py`, `wayfinding.py`, `herbarium.py`, `airmail.py`, `vinyl.py`, `receipt.py`, `comic.py`,
+  `pixel.py`, `bricks.py`, `boardgame.py`, `circuit.py`, `topo.py`, `scoreboard.py`, `periodic.py`, `recipe.py`,
+  `stainedglass.py`, `calendar.py` (every language after `wayfinding` has its pages in `vl_langs/<name>.py`).
 - `vl_conformance.py` — build-time checks of the contract over any registered language: all seven pages composed,
   no word on a sample page that is neither the caller's nor declared derived, every extra refused by name off its
   pages, samples / sigs scaffold / docs rows present, and the build-matrix suites still iterating the registry.

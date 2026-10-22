@@ -8,13 +8,46 @@
   "#E5484D",
   "#F27B7F"
  ],
+ "boardgame": [
+  "#C62828",
+  "#24509E",
+  "#A8231C"
+ ],
+ "boardgame-felt": [
+  "#F2C14E",
+  "#E8574A"
+ ],
+ "bricks": [
+  "#1E5BC6",
+  "#C9312A",
+  "#B42A22"
+ ],
+ "bricks-blue": [
+  "#F5C21B",
+  "#D23A31"
+ ],
  "broadsheet": [],
  "broadsheet-salmon": [],
+ "calendar": [
+  "#C42A1E"
+ ],
+ "calendar-night": [
+  "#FF7A62",
+  "#FF7B64"
+ ],
  "chalkboard": [
   "#F2D16B"
  ],
  "chalkboard-slate": [
   "#F2D16B"
+ ],
+ "circuit": [
+  "#D6B05A"
+ ],
+ "circuit-matte": [
+  "#D9B866",
+  "#BE9B4E",
+  "#DDBA68"
  ],
  "collage": [
   "#F2C230",
@@ -22,6 +55,12 @@
  ],
  "collage-slate": [
   "#F2C230"
+ ],
+ "comic": [
+  "#D9251D"
+ ],
+ "comic-noir": [
+  "#FF3B2F"
  ],
  "cutpaper": [
   "#EE8A6B",
@@ -67,6 +106,17 @@
  "journal-green": [
   "#D9C27A"
  ],
+ "periodic": [],
+ "periodic-dark": [
+  "#FF7A66"
+ ],
+ "pixel": [
+  "#2C5224"
+ ],
+ "pixel-arcade": [
+  "#FF4F6D",
+  "#FFC93C"
+ ],
  "poster": [
   "#D7FF3B",
   "#FF4B1F"
@@ -78,6 +128,23 @@
  "receipt-carbon": [
   "#2C2466"
  ],
+ "recipe": [
+  "#C8372D",
+  "#B0281F"
+ ],
+ "recipe-kraft": [
+  "#2D5A9E",
+  "#C0392B",
+  "#1F4785"
+ ],
+ "scoreboard": [
+  "#FFB51F",
+  "#FFBE3B"
+ ],
+ "scoreboard-turf": [
+  "#F4C430",
+  "#F7D04E"
+ ],
  "soft": [
   "#E8A88F",
   "#8E4430"
@@ -85,6 +152,15 @@
  "soft-dusk": [
   "#E8A88F",
   "#F2B49B"
+ ],
+ "stainedglass": [
+  "#A82835",
+  "#22509E",
+  "#9B2230"
+ ],
+ "stainedglass-nave": [
+  "#4E8FE8",
+  "#E9B95A"
  ],
  "starlit": [
   "#D9B36C"
@@ -106,6 +182,12 @@
  "tally-night": [
   "#7C89FF",
   "#C6F432"
+ ],
+ "topo": [
+  "#7C4F25"
+ ],
+ "topo-night": [
+  "#DDB68C"
  ],
  "vinyl": [
   "#E8622C"

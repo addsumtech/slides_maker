@@ -531,6 +531,72 @@ EXAMPLES = {
                   '         items=[("Rent and bills", "Fixed, paid on the first"), ("Groceries", "A little over plan")])   # 01 02 …\n'
                   'k.data(k.new_slide(), number="18%", label="of income saved this month",\n'
                   '       note="Up from twelve per cent")   # the number set to the right, as the total',
+    "vl_comic": 'import visual_languages as vl\n'
+                'k = vl.use("comic", prs)               # newsprint; ground="noir" for the black page with one hot red\n'
+                'k.cover(k.new_slide(), kicker="Team story", title="How we shipped in six weeks",\n'
+                '        subtitle="A launch told panel by panel")   # the title in a caption block on a burst\n'
+                'k.quote(k.new_slide(), quote="Ship the smallest thing that works.", attribution="The product lead")   # a balloon\n'
+                'k.data(k.new_slide(), number="6", label="weeks from idea to launch")   # the number in a burst',
+    "vl_pixel": 'import visual_languages as vl\n'
+                'k = vl.use("pixel", prs)               # handheld green; ground="arcade" for the night screen\n'
+                'k.cover(k.new_slide(), kicker="Spring game jam", title="Build a game in one weekend")   # the title screen\n'
+                'k.points(k.new_slide(), title="The rounds", ordered=True,\n'
+                '         items=[("Pitch", "Friday night"), ("Build", "All Saturday"), ("Play", "Sunday afternoon")])   # 1-1 1-2 1-3, a path\n'
+                'k.data(k.new_slide(), number="42", label="teams finished", total="50")   # a score with an HP bar filled to 42/50',
+    "vl_bricks": 'import visual_languages as vl\n'
+                 'k = vl.use("bricks", prs)              # grey baseplate; ground="blue" for the blue plate\n'
+                 'k.cover(k.new_slide(), kicker="Platform review", title="Built from small parts")   # a brick build beside it\n'
+                 'k.points(k.new_slide(), title="The modules",\n'
+                 '         items=[("Accounts", "Sign-in and roles"), ("Billing", "Plans and invoices"), ("Search", "One index for all")])   # a brick each\n'
+                 'k.data(k.new_slide(), number="12", label="services, one platform")   # the number on a tower of bricks',
+    "vl_boardgame": 'import visual_languages as vl\n'
+                    'k = vl.use("boardgame", prs)           # classic board; ground="felt" for the deluxe felt table\n'
+                    'k.cover(k.new_slide(), kicker="New starters", title="Your first month, square by square")   # the board centre\n'
+                    'k.points(k.new_slide(), title="The route", ordered=True,\n'
+                    '         items=[("Day one", "Laptop and badge"), ("Week one", "Meet your team"), ("Month one", "Ship a fix")])   # a pawn hops 1 2 3\n'
+                    'k.data(k.new_slide(), number="30", label="days to your first release")   # the square the pawn lands on',
+    "vl_circuit": 'import visual_languages as vl\n'
+                  'k = vl.use("circuit", prs)             # green solder mask; ground="matte" for the matte black board\n'
+                  'k.cover(k.new_slide(), kicker="Hardware review", title="The sensor board, rev C")   # buses converge on a chip\n'
+                  'k.points(k.new_slide(), title="What changed",\n'
+                  '         items=[("Power", "A quieter regulator"), ("Radio", "Half the standby draw"), ("Sensors", "Two more channels")])   # U1 U2 U3 on one bus\n'
+                  'k.data(k.new_slide(), number="38%", label="less power in standby")   # the number on a large chip',
+    "vl_topo": 'import visual_languages as vl\n'
+               'k = vl.use("topo", prs)                # survey paper; ground="night" for the night relief\n'
+               'k.cover(k.new_slide(), kicker="Field season", title="Mapping the upper valley")   # a summit beside the title\n'
+               'k.points(k.new_slide(), title="The route up", ordered=True,\n'
+               '         items=[("Base camp", "Day one"), ("The ridge", "Day two"), ("The summit", "Day three")])   # a trail climbs to 3\n'
+               'k.data(k.new_slide(), number="2,410", label="metres at the top")   # the summit\'s spot height',
+    "vl_scoreboard": 'import visual_languages as vl\n'
+                     'k = vl.use("scoreboard", prs)          # night match; ground="turf" for the striped pitch\n'
+                     'k.cover(k.new_slide(), kicker="Season review", title="The quarter we came back")   # lit on the scoreboard\n'
+                     'k.points(k.new_slide(), title="The lineup",\n'
+                     '         items=[("New clients", "Nine signed"), ("Renewals", "All but one"), ("Pipeline", "Twice last year")])   # shirts 1 2 3\n'
+                     'k.data(k.new_slide(), number="118%", label="of the quarter\'s target")   # on the LED board',
+    "vl_periodic": 'import visual_languages as vl\n'
+                   'k = vl.use("periodic", prs)            # lab white; ground="dark" for charcoal with glowing tiles\n'
+                   'k.cover(k.new_slide(), kicker="Chemistry week", title="What everything is made of")   # a wall chart of the table\n'
+                   'k.points(k.new_slide(), title="Three building blocks",\n'
+                   '         items=[("Carbon", "The backbone of life"), ("Oxygen", "What we breathe"), ("Iron", "In blood and bridges")])   # a tile each\n'
+                   'k.data(k.new_slide(), number="118", label="elements named so far")   # the number in a giant tile',
+    "vl_recipe": 'import visual_languages as vl\n'
+                 'k = vl.use("recipe", prs)              # gingham tablecloth; ground="kraft" for butcher paper\n'
+                 'k.cover(k.new_slide(), kicker="Sunday baking", title="A loaf in three hours")   # the index card\n'
+                 'k.points(k.new_slide(), title="Method", ordered=True,\n'
+                 '         items=[("Mix", "Flour, water, salt, yeast"), ("Prove", "Ninety minutes, covered"), ("Bake", "Forty minutes, hot")])   # numbered steps\n'
+                 'k.data(k.new_slide(), number="40", label="minutes in the oven")   # the number on a kitchen timer',
+    "vl_stainedglass": 'import visual_languages as vl\n'
+                       'k = vl.use("stainedglass", prs)        # limestone; ground="nave" for the night nave with glowing glass\n'
+                       'k.cover(k.new_slide(), kicker="Heritage week", title="Light through old windows")   # a rose window beside it\n'
+                       'k.points(k.new_slide(), title="Three windows",\n'
+                       '         items=[("The east rose", "Restored in spring"), ("The lancets", "Cleaned and releaded"), ("The porch", "Next year")])   # an arcade\n'
+                       'k.data(k.new_slide(), number="640", label="panes cleaned by hand")   # the number on the rose\'s clear centre',
+    "vl_calendar": 'import visual_languages as vl\n'
+                   'k = vl.use("calendar", prs)            # paper on oak; ground="night" for black stock at night\n'
+                   'k.cover(k.new_slide(), kicker="Countdown", title="Thirty days to launch")   # the current page of the pad\n'
+                   'k.points(k.new_slide(), title="This week",\n'
+                   '         items=[("Monday", "Freeze features"), ("Wednesday", "Final review"), ("Friday", "Ship")])   # day cells 1 2 3\n'
+                   'k.data(k.new_slide(), number="30", label="days to go")   # the giant red date',
     # An ORDINARY page (agenda, list, chart) in a language's look: `rs.ground` paints the furniture and returns the
     # content rect, `rs.card` gives the language's card. Also printed for `--example rs.ground` / `rs.card`.
     "ground": 'import visual_languages as vl, register_surface as rs\n'

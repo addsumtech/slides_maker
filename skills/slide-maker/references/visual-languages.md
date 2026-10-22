@@ -1,4 +1,4 @@
-# Visual languages — <!-- vl:count-all -->nineteen<!-- /vl --> complete looks: <!-- vl:count-image -->four<!-- /vl --> image-led, <!-- vl:count-drawn -->fifteen<!-- /vl --> drawn
+# Visual languages — <!-- vl:count-all -->thirty<!-- /vl --> complete looks: <!-- vl:count-image -->four<!-- /vl --> image-led, <!-- vl:count-drawn -->twenty-six<!-- /vl --> drawn
 
 **When to read this:** the picked direction is a visual language (its entry in `directions.json` carries
 `"vl": "<name>"`), or the user asks for one of these looks by name. Read it before writing the build script.
@@ -116,7 +116,8 @@ the shared runtime's `$DECK/.deck-gates.json`; on the Codex runtime the same val
    ```
    The `tally` test deck was the same shape, with `formats.blank_deck("wide13")`, an ordinary agenda page (see
    **Ordinary pages** below), `points` with `tags=` and `data` with `total=`. More scaffolds:
-   `python3 "$SKILL/scripts/sigs.py" --example vl_drawn vl_tally vl_broadsheet vl_journal vl_chalkboard vl_interface vl_wayfinding vl_herbarium vl_airmail vl_vinyl vl_receipt rs.ground`.
+   `python3 "$SKILL/scripts/sigs.py" --example vl_drawn vl_tally vl_broadsheet vl_journal vl_chalkboard vl_interface vl_wayfinding vl_herbarium vl_airmail vl_vinyl vl_receipt vl_comic vl_pixel vl_bricks vl_boardgame vl_circuit vl_topo
+   vl_scoreboard vl_periodic vl_recipe vl_stainedglass vl_calendar rs.ground`.
 4. **Build:** `python3 "$DECK/build_repair-cafe.py"`. With `ground="auto"` it prints the ground it chose and a
    `--gates` line with two `<…>` blanks. That line is a template: fill both blanks, because it will not run as printed.
 5. **Record the language.** Pass the ground the build printed (on the test machine `ink`, because its last decks
@@ -185,7 +186,7 @@ count is the FIRST pass: a gate whose record is half-filled can list more faults
   The rows marked `NOT CHECKED` (template profile, purpose, talk time, Q&A backup, citations, image series, and a
   direction with no `directions.json`) checked nothing and block nothing.
 
-## The <!-- vl:count-all -->nineteen<!-- /vl --> languages
+## The <!-- vl:count-all -->thirty<!-- /vl --> languages
 
 A visual language is a whole look, not a palette: a type voice from system fonts, a surface, image
 treatments and seven page compositions (cover, section, image_text, points, quote, data, closing). Picking one gives a finished deck from your own words and images —
@@ -212,6 +213,17 @@ the page functions never invent a word, a number or a name.
 | `airmail` | none needed (a postcard photo is optional) | Trebuchet MS (Futura on mac); quotes in a letter face | envelope paper inside the red-and-blue striped border | a perforated stamp carrying the number, a postmark, address labels, a wax seal |
 | `vinyl` | none needed (a square album photo is optional) | Impact (DIN Condensed on mac); liner notes in Georgia / Didot italic | a black record sleeve | grooved records with a coloured centre label, the title on an album sleeve, a track list |
 | `receipt` | none needed (a photo laid on the counter is optional) | Courier New (Menlo on mac), monospaced throughout | a thermal slip on a counter | torn zigzag edges, dashed separators, line items, the figure as the total, a barcode |
+| `comic` | none needed (a photo becomes a panel) | Impact display, Trebuchet MS lettering (Avenir Next body on mac) | a newsprint page of panels | heavy panel borders, Ben-Day dots, caption boxes, speech balloons, a burst for the figure |
+| `pixel` | none needed (a photo in a pixel window frame) | Arial Black display, Courier New (Menlo on mac) | an 8-bit screen with a pixel frame and a heart-and-coin HUD | sprites built square by square, a level map, an RPG dialogue box, a score counter |
+| `bricks` | none needed (a photo printed on a flat tile) | Trebuchet MS (Avenir Next on mac), Arial Black figures | a studded baseplate | glossy 2.5D toy bricks: a build, one brick per point, the figure on a tower |
+| `boardgame` | none needed (a photo printed on a card) | Georgia (Futura display on mac), Arial Black figures | a property board | a ring of colour-banded squares, dice, a pawn moving square to square when ordered, cards |
+| `circuit` | none needed (a photo as a display module) | Arial (DIN Condensed / Avenir Next on mac), Courier New labels | a solder-mask board with mounting holes | traces routed round the words, chips with pins on a bus, gold edge-connector fingers |
+| `topo` | none needed (a photo as an inset map panel) | Georgia display (Baskerville on mac), Trebuchet MS body | survey paper inside a neatline | contour lines broken round the words, waypoints, a trail to the summit when ordered |
+| `scoreboard` | none needed (a photo on the stadium's big screen) | Impact display (DIN Condensed on mac), Arial body | a pitch under floodlights | chalk pitch lines, the title on a scoreboard, jersey numbers, a lineup, an LED board |
+| `periodic` | none needed (a photo mounted in a tile) | Arial (Helvetica Neue on mac), Georgia italic lines | lab white, the table as a motif | element tiles coloured by real chemical family, a wall-chart cover, a legend tile |
+| `recipe` | none needed (a snapshot clipped to the card) | Georgia italic titles (Hoefler Text on mac), Courier New labels | a gingham tablecloth | a ruled index card, washi tape, tick boxes or numbered steps, a kitchen timer for the figure |
+| `stainedglass` | none needed (a photo in a pointed arch) | Georgia (Baskerville on mac) | limestone | geometric rose and lancet windows in lead, words only on stone or clear panes |
+| `calendar` | none needed (a photo on a picture-calendar page) | Times New Roman display and figures (Didot on mac), Arial body | a tear-off pad on a desk | binding rings, torn stubs, a page stack that thins as the deck goes on, a giant date numeral |
 
 ## Build
 
@@ -241,7 +253,7 @@ prs.save("collage.pptx")
   is optional everywhere except `image_text` (which refuses without one). A list of images is for the
   collage cover and closing only (1 to 4); anywhere else, or empty, or longer, it is refused rather than
   silently cut. A page with no text and no image is refused. Each returns `{"rects": {field: (x, y, w, h)}, …}`.
-  On the <!-- vl:count-drawn -->fifteen<!-- /vl --> DRAWN languages a picture is drawn on `image_text` only (`drafting` also on `quote`;
+  On the <!-- vl:count-drawn -->twenty-six<!-- /vl --> DRAWN languages a picture is drawn on `image_text` only (`drafting` also on `quote`;
   `vl.NATIVE_IMAGE_PAGES`): `image=` on any other page of theirs is refused, naming those pages — never dropped.
 - **Fields are text.** Pass every field as a string, exactly as it should read; `number=` also takes a whole
   number (`12`, shown as written). A list, a tuple or a float is refused by field name (`number=0.1 + 0.2` would
@@ -357,6 +369,17 @@ prs.save("collage.pptx")
 | `airmail` | paper | dashed | badge | display |
 | `vinyl` | filled | hairline | disc-number | display |
 | `receipt` | paper | dashed | dot | mono |
+| `comic` | outlined | solid | badge | display |
+| `pixel` | filled | solid | badge | display |
+| `bricks` | filled | solid | badge | display |
+| `boardgame` | paper | solid | badge | display |
+| `circuit` | outlined | solid | roundel | display |
+| `topo` | outlined | hairline | circled | body |
+| `scoreboard` | filled | solid | badge | display |
+| `periodic` | outlined | hairline | badge | display |
+| `recipe` | paper | solid | circled | display |
+| `stainedglass` | outlined | solid | roundel | display |
+| `calendar` | hairline | hairline | dot | display |
 <!-- /vl -->
 
   A new language picks from the vocabulary; it adds a value only when none fits, implemented once in deckkit's
@@ -440,7 +463,7 @@ every value they write is one PowerPoint opens without repair (`scripts/ooxml_sa
   "direction_gate": {"candidates": "directions.json", "picked": "<the one chosen>", "images": "none",
                      "native_fit": {"language": "ink", "why": "a talk on tea craft: culture and ritual"}}
   ```
-  `native_fit.language` is one of the native languages among the candidates (not necessarily the one picked). Guidance, not a rule: <!-- vl:offer-arrow -->culture, history, craft → `ink`; launch, manifesto, opinion → `poster`; children, storytelling, community → `cutpaper`; engineering, architecture, systems design → `drafting`; year in review, letter, thanks, commemoration → `starlit`; newsletter, periodic report, community update → `broadsheet`; research talk, lab meeting, paper, defence → `journal`; metrics, quarterly review, operations, growth → `tally`; lesson, class, training, explainer → `chalkboard`; product launch, app, SaaS, feature tour, internal tool → `interface`; roadmap, process, onboarding, journey, strategy route, transport/city → `wayfinding`; nature, ecology, sustainability, field research, biology → `herbarium`; travel, international, cross-border, logistics, global teams, exchange programme → `airmail`; music, podcast, culture, creative work, anniversary → `vinyl`; pricing, budget, cost breakdown, retail, e-commerce, expenses → `receipt`.<!-- /vl -->
+  `native_fit.language` is one of the native languages among the candidates (not necessarily the one picked). Guidance, not a rule: <!-- vl:offer-arrow -->culture, history, craft → `ink`; launch, manifesto, opinion → `poster`; children, storytelling, community → `cutpaper`; engineering, architecture, systems design → `drafting`; year in review, letter, thanks, commemoration → `starlit`; newsletter, periodic report, community update → `broadsheet`; research talk, lab meeting, paper, defence → `journal`; metrics, quarterly review, operations, growth → `tally`; lesson, class, training, explainer → `chalkboard`; product launch, app, SaaS, feature tour, internal tool → `interface`; roadmap, process, onboarding, journey, strategy route, transport/city → `wayfinding`; nature, ecology, sustainability, field research, biology → `herbarium`; travel, international, cross-border, logistics, global teams, exchange programme → `airmail`; music, podcast, culture, creative work, anniversary → `vinyl`; pricing, budget, cost breakdown, retail, e-commerce, expenses → `receipt`; storytelling, user journey, explainer, product launch, team story → `comic`; games, gamification, hackathon, youth event, onboarding challenge, game jam → `pixel`; children's education, modular product, system architecture, teamwork, building blocks, STEM workshop → `bricks`; processes, onboarding, strategy, gamified training, step-by-step plans, game plan → `boardgame`; hardware, IoT, embedded systems, AI infrastructure, engineering review, electronics → `circuit`; geography, outdoors, climate, field work, strategy landscape → `topo`; sports, competition, team results, sales push, leaderboard, tournament → `scoreboard`; science education, chemistry, building blocks of a topic, frameworks, taxonomies → `periodic`; food, cooking, recipes, how-to guide, step-by-step process, workshop → `recipe`; heritage, culture, celebrations, festivals, art and design history → `stainedglass`; timeline, event, anniversary, schedule, countdown, daily habit → `calendar`.<!-- /vl -->
 
 ### The second set — `starlit` · `broadsheet` · `journal` · `tally` · `chalkboard`
 
@@ -494,6 +517,11 @@ first four: no pictures needed, everything on the page, nothing PowerPoint repai
     Japanese, else `1 2 3`; `1 2 3` on `cutpaper`, `journal` and `chalkboard` (circled there); `starlit` numbers none;
     `No. 1 No. 2` (`第 1 号` in Chinese or Japanese) on `herbarium`'s label cards; `1 2 3` on `airmail`'s small stamps;
     the track numbers `A1 A2 … B1 B2` on `vinyl` (the first half of the points on side A); `01 02 03` on `receipt`;
+    `1 2 3` on `calendar`'s day cells, `stainedglass`'s lancet panes, `periodic`'s tiles (top left) and the shirts
+    of `scoreboard`'s lineup; `1 2 3` on `boardgame`'s squares, `topo`'s waypoints and `recipe`'s steps only with
+    `ordered=True`; the designators `U1 U2 …` on `circuit`'s chips; the level numbers `1-1 1-2 …` on `pixel`'s
+    level map; `comic` and `bricks` number none;
+  - `pixel`'s page number (`01 02 …`) beside the coin in the HUD at the top of every page;
   - `herbarium`'s plate number at the top right of every page — the page's own number (`PL. 4`; `图版 4` / `図版 4`);
   - `journal` figure numbers over the deck's `image_text` pages, with `kicker=` to override;
   - the `broadsheet` ■ end mark on the closing page; the opening `“` on quote pages (not on `ink` or `tally`); the
@@ -651,6 +679,101 @@ r = vl.use("receipt", dk.blank_deck(), ground="carbon")
 r.data(r.new_slide(), number="18%", label="of income saved this month", note="Up from twelve per cent")
 ```
 
+### The fifth set — `comic` · `pixel` · `bricks` · `boardgame` · `circuit` · `topo` · `scoreboard` · `periodic` · `recipe` · `stainedglass` · `calendar`
+
+| Language | 中文 | Borrowed from | Purpose |
+|---|---|---|---|
+| `comic` | 漫画分镜 | a printed comic page: panels, Ben-Day dots, caption boxes, balloons, bursts | storytelling, user journeys, explainers, product launches, team stories |
+| `pixel` | 像素游戏 | an 8-bit game screen: sprites on a pixel grid, a HUD, a level map, a dialogue box | games, gamification, hackathons, youth events, onboarding challenges |
+| `bricks` | 积木 | interlocking toy bricks on a baseplate | children's education, modular products, system architecture, teamwork |
+| `boardgame` | 棋盘游戏 | a property-style board game: banded squares, dice, a pawn, cards | processes, onboarding, strategy, gamified training, step-by-step plans |
+| `circuit` | 电路板 | a printed circuit board: traces, pads and vias, chips, silkscreen | hardware, IoT, embedded systems, AI infrastructure, engineering reviews |
+| `topo` | 等高线地形图 | a topographic survey sheet: contours, summits, waypoints, a trail | geography, outdoors, climate, field work, strategy landscapes |
+| `scoreboard` | 体育记分牌 | a stadium: pitch markings, the scoreboard, jerseys, a fans' banner | sports, competitions, team results, sales pushes, leaderboards |
+| `periodic` | 元素周期表 | the periodic table: element tiles coloured by chemical family | science education, chemistry, building blocks of a topic, frameworks |
+| `recipe` | 食谱卡 | a recipe index card on a gingham tablecloth | food, cooking, how-to guides, step-by-step processes, workshops |
+| `stainedglass` | 彩绘玻璃 | stained-glass windows: rose and lancet windows in lead, stone arches | heritage, culture, celebrations, festivals, art and design history |
+| `calendar` | 撕页日历 | a desk tear-off calendar: rings, torn stubs, a giant date | timelines, events, anniversaries, schedules, countdowns |
+
+- **comic** — every page is a comic page with paper gutters. The cover sets your kicker on a red masthead band and
+  your title in a caption block on a burst; `section` puts your number in a two-layer burst; `image_text` makes your
+  picture a panel and your body a balloon pointing at it; `points` gives each point a panel (head in a corner caption
+  box); `quote` is one big balloon whose tail points at the attribution; `data` sets your number in a burst with
+  focus lines; `closing` is a final wide panel. Grounds: `light` (newsprint) · `noir` (black page, one hot red).
+- **pixel** — an 8-bit game screen with a pixel frame and a heart-and-coin HUD on every page. The cover is a title
+  screen; `section` a level card with your number large; `image_text` frames your picture in a pixel window (on the
+  green ground it is shown dithered into the four greens — a copy; your file is untouched); `points` is a level map
+  of tiles `1-1 1-2 …` (a path, the hero and a goal flag with `ordered=True`); `quote` an RPG dialogue box with the
+  speaker standing above it; `data` a score counter (an HP bar with `total=`); `closing` the end screen with a goal
+  flag. Grounds: `light` (handheld green, four olive greens) · `arcade` (arcade night).
+- **bricks** — glossy toy bricks on a studded baseplate. The cover builds a small ziggurat beside your title;
+  `section` sets your number on one big brick; `image_text` prints your picture on a flat tile with bricks locked on
+  its corner; `points` gives each point its own brick (a course, a staggered stack, or a pyramid of two courses);
+  `quote` sets your words on a yellow flat tile under a red brick; `data` stands your number on a tower of bricks
+  (a stack, never a chart); `closing` finishes the build on a green plate. Grounds: `light` (grey baseplate) · `blue`
+  (blue baseplate).
+- **boardgame** — a generic property board: no brand, no game words. The cover is the whole board with your title on
+  its centre banner, dice and a pawn on the start corner; `section` puts your number on a big corner square;
+  `image_text` prints your picture on a card from the deck; `points` are squares on the track (with `ordered=True`
+  numbered, the pawn on square 1 and hops between them); `quote` is a drawn card; `data` is the square the pawn
+  landed on; `closing` runs into a chequered finish corner. Grounds: `light` (classic board) · `felt` (deluxe felt
+  table).
+- **circuit** — the page is a board: traces routed at 45° and 90° round your words, stopping in vias. The cover
+  converges buses on a large chip; `section` and `data` put your number on a chip (leads on four sides on `data`);
+  `image_text` makes your picture a display module; `points` are chips `U1 U2 …` on one gold bus; `quote` sits in a
+  silkscreen keep-out; `closing` is the board's edge-connector fingers. Grounds: `light` (green solder mask, dark) ·
+  `matte` (matte black board with gold traces).
+- **topo** — a survey sheet: contours traced from a height field, broken wherever a word sits, inside a graduated
+  neatline. The cover sets a summit with its survey triangle, a north arrow, a figureless scale bar and a stream
+  beside your title; `section` puts your number on a summit; `image_text` is an inset map panel; `points` are
+  numbered waypoints (a dashed trail to the summit with `ordered=True`); `quote` is a map legend box; `data` your
+  number as the summit's spot height; `closing` a path in switchbacks to a pennant. Grounds: `light` (survey paper) ·
+  `night` (night relief).
+- **scoreboard** — a stadium under floodlights; no team names, scores or labels of its own. The cover lights your
+  title on the scoreboard over a pitch in perspective; `section` prints your number on a jersey on its hook;
+  `image_text` puts your picture on the big screen, the caption in its ticker; `points` is a lineup, each point in a
+  numbered shirt, the shirts also in formation on a half pitch; `quote` a fans' banner on the stand's rail; `data`
+  your number on an LED board; `closing` the whole pitch from above. Grounds: `light` (night match, dark) · `turf`
+  (striped turf, dark).
+- **periodic** — the periodic table as a design system: tiles coloured by the real family of the element they stand
+  for (section N and point N take element N's family). The cover is a wall chart with your title in the table's bay;
+  `section` a large solid tile with your number and a small table with element N lit; `image_text` mounts your
+  picture in a tile; `points` are element tiles — the number top left, your head as the large mark, your line as the
+  name line; `quote` the legend tile; `data` a giant tile with your number (a percentage lights that share of a small
+  table); `closing` the table as an outline with element 118 lit. Grounds: `light` (lab white) · `dark` (charcoal,
+  glowing outline tiles).
+- **recipe** — a cream index card with a red header rule and blue ruled lines on a gingham tablecloth; words sit only
+  on cards. The cover lays the card over an older one with a whisk and spoon in red line; `section` is a recipe-box
+  divider with your number on its tab; `image_text` clips your picture to the card as a snapshot; `points` is a
+  checklist with tick boxes (numbered steps in rings with `ordered=True`); `quote` a yellow note card; `data` your
+  number on a kitchen timer's dial; `closing` a card signed with a red heart. Grounds: `light` (gingham tablecloth) ·
+  `kraft` (butcher paper with a blue-gingham napkin).
+- **stainedglass** — windows built from geometry: jewel glass in thick lead, stone tracery; your words never sit on
+  busy glass — only on stone, plaster or a clear pane. The cover sets a rose window beside your title; `section` and
+  `data` put your number on the rose's clear centre; `image_text` masks your picture to a pointed arch; `points` is an
+  arcade of lancets, one glass colour per point, the number on each pane, head and line on the stone below; `quote` a
+  plastered niche under an arch; `closing` a single lancet casting coloured light on the floor. Grounds: `light`
+  (limestone) · `nave` (night nave, glowing glass).
+- **calendar** — a tear-off pad on a desk: a bound header with two rings, torn stubs under it, a stack of leaves at
+  the foot that thins as the deck goes on (the closing page is the last leaf). The cover prints your kicker where the
+  month goes and your title large; `section` and `data` set your number as a giant red date; `image_text` is a picture
+  calendar; `points` a week-like strip of day cells numbered 1 2 3; `quote` a quote-a-day page. No month or weekday
+  names — only your words. Grounds: `light` (paper on oak) · `night` (black stock at night).
+- **Extras:** `ordered=True` on `points` for `boardgame`, `topo`, `recipe` and `pixel` (the same meaning as
+  `chalkboard`'s and `wayfinding`'s: a route or numbering only when the points really happen in order);
+  `total="…"` on `pixel` `data` (tally's rules: plain numbers, same kind, ≤ total).
+
+```python
+import visual_languages as vl, deckkit as dk
+p = vl.use("pixel", dk.blank_deck(), ground="arcade")
+p.points(p.new_slide(), title="The rounds", ordered=True,
+         items=[("Pitch", "Friday night"), ("Build", "All Saturday"), ("Play", "Sunday afternoon")])
+t = vl.use("topo", dk.blank_deck())
+t.data(t.new_slide(), number="2,410", label="metres at the top", note="Measured at the survey cairn")
+c = vl.use("calendar", dk.blank_deck(), ground="night")
+c.section(c.new_slide(), number="30", title="Days to launch")
+```
+
 ## Grounds
 
 Each language has its own light paper and ONE contrast ground; every text ink passes 4.5:1 on both:
@@ -676,6 +799,17 @@ Each language has its own light paper and ONE contrast ground; every text ink pa
 | airmail | envelope | `night` — night-mail navy, red and ivory stripes |
 | vinyl | black sleeve (dark) | `cream` — cream sleeve, a teal album front |
 | receipt | till slip on a grey counter | `carbon` — canary carbon copy, violet carbon ink |
+| comic | newsprint | `noir` — black page, paper-white keylines and balloons, one hot red |
+| pixel | handheld green (four olive greens) | `arcade` — arcade night, deep navy with saturated sprites |
+| bricks | grey baseplate | `blue` — blue baseplate, azure and white bricks |
+| boardgame | classic board (mint) | `felt` — deluxe felt table, gold banner and pawn |
+| circuit | green solder mask (dark — no light ground) | `matte` — matte black board, gold traces |
+| topo | survey paper | `night` — night relief, pale sage contours |
+| scoreboard | night match (dark — no light ground) | `turf` — striped turf, chalk-white lines |
+| periodic | lab white | `dark` — charcoal, glowing outline tiles |
+| recipe | gingham tablecloth | `kraft` — butcher paper, a blue-gingham napkin (a second light colourway) |
+| stainedglass | limestone | `nave` — night nave, glowing glass |
+| calendar | paper on oak | `night` — black stock at night, oxblood header, brass rings |
 
 `use(name, prs, ground=…)`: `"light"` (the default — the same deck on every machine), the contrast key, or
 `"auto"` (this machine's look history, across every deck built here — pass the ground yourself when the topic
@@ -712,6 +846,17 @@ viewer opens. `fonts="mac"` unlocks Mac-only faces and refuses one that is not i
 | airmail | Trebuchet MS / Futura | Trebuchet MS / Avenir Next (quotes: Georgia / Baskerville) | Times New Roman / Didot |
 | vinyl | Impact / DIN Condensed | Arial / Avenir Next (liner notes: Georgia / Didot) | Impact / DIN Condensed |
 | receipt | Courier New / Menlo | Courier New / Menlo | Courier New / Menlo |
+| comic | Impact | Trebuchet MS / Avenir Next (lettering: Trebuchet MS) | Impact |
+| pixel | Arial Black | Courier New / Menlo | Arial Black |
+| bricks | Trebuchet MS / Avenir Next | Trebuchet MS / Avenir Next | Arial Black |
+| boardgame | Georgia / Futura | Georgia | Arial Black |
+| circuit | Arial / DIN Condensed | Arial / Avenir Next (labels: Courier New / Menlo) | Arial / DIN Condensed |
+| topo | Georgia / Baskerville | Trebuchet MS / Avenir Next (labels: Trebuchet MS / Gill Sans) | Trebuchet MS / Avenir Next |
+| scoreboard | Impact / DIN Condensed | Arial / Avenir Next Condensed | Impact / DIN Condensed |
+| periodic | Arial / Helvetica Neue | Arial / Helvetica Neue (lines: Georgia italic) | Arial / Helvetica Neue |
+| recipe | Georgia / Hoefler Text | Georgia (labels: Courier New) | Trebuchet MS |
+| stainedglass | Georgia / Baskerville | Georgia (inscriptions: Georgia / Optima) | Times New Roman / Baskerville |
+| calendar | Times New Roman / Didot | Arial / Avenir Next | Times New Roman / Didot |
 
 The numerals column is the face of the `data` page's figure (collage draws a short one as an outlined shape).
 Digits inside Georgia text — body or display — are set in Times New Roman, a lining face, and so are the digits
@@ -795,6 +940,6 @@ the ground, its grain, its card and its inks are one look, and the variants are 
 style sample (the preview shows it, labelled "style sample — not your content"). It counts as a STYLED
 direction, never as the topic-invented bespoke direction the gate also requires. Image-led languages pair
 with the P1 image series (`references/image-generation.md`, the SERIES exception) when the deck's images
-are generated; with the user's own or fetched photos they need no generation at all. The <!-- vl:count-drawn -->fifteen<!-- /vl --> native
+are generated; with the user's own or fetched photos they need no generation at all. The <!-- vl:count-drawn -->twenty-six<!-- /vl --> native
 languages need no pictures: a deck without any offers the one that fits its topic and records why in
 `direction_gate.native_fit` (see Native languages above).
