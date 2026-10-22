@@ -333,18 +333,55 @@ for W, H in ((10.0, 7.5), (7.5, 7.5)):
     with contextlib.redirect_stdout(io.StringIO()):
         crit = [f_ for f_ in dk.lint_layout(prs, verbose=False) if f_[1] == "CRITICAL"]
     check(not crit, "broadsheet {}x{}: a long CJK masthead never runs into the headline: {}".format(W, H, crit[:2]))
-# columns: a raised initial opens a Latin body, none on CJK; rules between columns never cross words
+# columns: a raised initial opens a Latin body of two or more lines, none on CJK; rules between columns never cross words
 for W, H in ((13.333, 7.5), (10.0, 7.5), (7.5, 13.333)):
     prs, k = use("broadsheet", W, H)
     s = k.new_slide()
     k.points(s, title="How a repair evening works", tags=["The idea", "The evening", "Next"],
-             items=[("Bring it broken", "Anything that switches on is welcome."), ("Fix it together", "A volunteer sits beside you."),
-                    ("Take it home", "What could not be fixed goes on a list.")])
+             items=[("Bring it broken", "Anything that switches on, unzips, rattles or wobbles is welcome at the door, "
+                                        "and nobody is ever turned away."),
+                    ("Fix it together", "A volunteer sits beside you and explains each step, but your own hands do all "
+                                        "of the work."),
+                    ("Take it home", "What could not be fixed tonight goes on a list, and someone brings the right part "
+                                     "next month.")])
     firsts = [sh.text_frame.paragraphs[0].runs[0] for sh in texts(s) if txt_of(sh).startswith(("Anything", "A volunteer", "What"))]
     check(len(firsts) == 3 and all(len(r.text) == 1 and r.font.size.pt > 30 for r in firsts),
           "broadsheet {}x{}: each Latin column opens on a raised initial".format(W, H))
     hit = [g for g in segs_of(s) for sh in texts(s) if crosses(g, rect_of(sh))]
     check(not hit, "broadsheet {}x{}: no column rule crosses words".format(W, H))
+# short columns (the library page's demo copy, 2026-10-22): a ONE-line body is set plain — a raised initial on one line
+# reads as a typo ("S ay what is broken") — and the head with its columns sits balanced between the masthead strip
+# and the page foot instead of filling the top half and leaving 40% of the page empty under it
+SHORT = [("Sign in", "Say what is broken"), ("Sit down", "A volunteer joins you"), ("Fix it", "You hold the screwdriver")]
+LONG4 = [("Share the tools", "One drawer of screwdrivers feeds three tables."),
+         ("Open the door", "No booking, no fee, no questions about the object."),
+         ("Keep it walkable", "Ten minutes on foot is the limit we keep."),
+         ("Write every repair down", "A notebook per bench becomes next year's manual.")]
+
+
+def bs_gaps(W, H, items, title):
+    prs, k = use("broadsheet", W, H)
+    strip = v2.bs_strip(k, k.new_slide(), {})              # where the page's own strip ends (drawn on a spare slide)
+    s = k.new_slide()
+    k.points(s, kicker="Three steps", title=title, items=items)
+    head = min(sh.top for sh in texts(s) if sh.top >= 0 and txt_of(sh) in (title, "Three steps", "THREE STEPS")) / EMU
+    bodies = [sh for sh in texts(s) if txt_of(sh) in [b for _h, b in items]]
+    foot = max((sh.top + sh.height) / EMU for sh in texts(s) if sh.top >= 0)
+    return head - strip, (H - 0.6) - foot, bodies          # the head's top is its kicker's
+
+
+for W, H in ((13.333, 7.5), (10.0, 7.5)):
+    above, below, bodies = bs_gaps(W, H, SHORT, "How every repair begins")
+    check(len(bodies) == 3 and all(len(sh.text_frame.paragraphs[0].runs[0].text) > 1 for sh in bodies),
+          "broadsheet {}x{}: short bodies open plain, all of them alike ({})".format(
+              W, H, [sh.text_frame.paragraphs[0].runs[0].text for sh in bodies]))
+    check(below <= 0.25 * H and above >= 0.5,
+          "broadsheet {}x{}: short columns sit balanced on the page ({:.2f}in above the head, {:.2f}in under the "
+          "columns)".format(W, H, above, below))
+    check(above <= below + 0.2, "broadsheet {}x{}: the block sits at the optical centre, not low ({:.2f} above, "
+                                "{:.2f} below)".format(W, H, above, below))
+above, below, _b = bs_gaps(10.0, 7.5, LONG4, "Why every street deserves a place to fix what it owns")
+check(above <= 0.2, "broadsheet 10x7.5: columns that fill the page stay under the strip ({:.2f}in above)".format(above))
 prs, k = use("broadsheet")
 s = k.new_slide()
 k.points(s, title="修理之夜怎么进行", items=[("带着坏东西来", "能开机的都欢迎。"), ("一起动手修", "动手的是你。")])

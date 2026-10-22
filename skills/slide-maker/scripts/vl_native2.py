@@ -871,47 +871,67 @@ def _bs_closing(k, slide, f, image):
 def _bs_points(k, slide, f, image):
     """Newspaper columns: each point a column — the caller's tag over its head over its body, rules between; a Latin
     body opens on a raised initial when its column has room for the taller first line (and the one line the initial's
-    width may push down); where it has not, the body is set plain — the words never move for an ornament. Portrait
-    stacks the columns as rows; long copy gives the title more room."""
+    width may push down) and the body runs to two lines or more — on a one-line body an initial reads as a typo; where
+    it has not, the body is set plain — the words never move for an ornament. Short copy on a landscape page moves the
+    head and its columns to the optical centre instead of filling the top half. Portrait stacks the columns as rows;
+    long copy gives the title more room."""
     W, H, s, o = ctx(k)
     top = bs_strip(k, slide, f)
     pts = points_of(f.get("items"))
     n = len(pts)
     tags = tags_of(f, n, "broadsheet")
-    r, d = flow(k, slide, "points", (0.05 * W, top + 0.05 * s, 0.90 * W, (0.20 if alt() == 0 else 0.34) * H),
-                fields(f, ("kicker", "title"), ("kicker",)),
-                start={"title": 42 * s})                  # an inside page's head; the 80pt headline is the cover's
-    rects, draws, art = dict(r), [d], []
-    ctop = max((v[1] + v[3] for v in r.values()), default=top) + 0.30 * s
     bottom = H - 0.6
     gap = 0.30 * s
-    if o == "land":                                   # columns across the page
-        cw = (0.90 * W - (n - 1) * gap) / n
-        boxes = [(0.05 * W + i * (cw + gap), ctop, cw, bottom - ctop) for i in range(n)]
-        rules = [(b[0] - gap / 2, ctop, b[0] - gap / 2, bottom) for b in boxes[1:]]
-    elif alt() == 1 and n >= 3:                       # a square or portrait page with long copy: two columns of rows
-        cw, rows = (0.90 * W - gap) / 2, -(-n // 2)
-        rh = (bottom - ctop - (rows - 1) * 0.15 * s) / rows
-        boxes = [(0.05 * W + (i % 2) * (cw + gap), ctop + (i // 2) * (rh + 0.15 * s), cw, rh) for i in range(n)]
-        rules = [(0.05 * W + cw + gap / 2, ctop, 0.05 * W + cw + gap / 2, bottom)] + \
-                [(0.05 * W, ctop + r_ * (rh + 0.15 * s) - 0.08 * s, 0.95 * W, ctop + r_ * (rh + 0.15 * s) - 0.08 * s)
-                 for r_ in range(1, rows)]
-    else:                                             # portrait: the columns stacked as rows
-        slot = (bottom - ctop) / n
-        boxes = [(0.05 * W, ctop + i * slot, 0.90 * W, slot - 0.15 * s) for i in range(n)]
-        rules = [(0.05 * W, b[1] - 0.08 * s, 0.95 * W, b[1] - 0.08 * s) for b in boxes[1:]]
-    specs = [((x, y, w, h), ([("tag", caps(tags[i]))] if tags else []) + [("item_head", hd)] + ([("item_line", ln)] if ln else []),
-              {"anchor": "top"}) for i, ((hd, ln), (x, y, w, h)) in enumerate(zip(pts, boxes))]
-    foot = ctop                           # the lowest word of any column (a raised initial's taller first line included)
-    for (hd, ln), (x, y, w, h), (tr, td_) in zip(pts, boxes, plan_together(k, slide, "points", specs)):
-        initial = bool(ln) and ln[0].isalpha() and not dk._has_cjk(ln[0]) and "item_line" in tr
-        if initial:                       # room in the column for the taller first line and the one line its width
-            bx, by, bw, bh = tr["item_line"]  # may push down (lint measures a declared initial so: deckkit._ink_rect)
-            pitch = td_.sizes["item_line"] * dk._LINT_LINE_H / 72.0
-            initial = by + bh + 1.3 * pitch + pitch + 0.05 <= y + h
-        draws.append(_with_initial(k, slide, td_, ln) if initial else td_)
-        foot = max([foot] + [v[1] + v[3] + (max_extra(td_.sizes["item_line"] / s, s) if initial and f_ == "item_line" else 0.0)
-                             for f_, v in tr.items()])
+
+    def lay(dy):
+        """Plan the head and the columns with the block moved dy down; draws nothing."""
+        r, d = flow(k, slide, "points", (0.05 * W, top + 0.05 * s + dy, 0.90 * W, (0.20 if alt() == 0 else 0.34) * H),
+                    fields(f, ("kicker", "title"), ("kicker",)),
+                    start={"title": 42 * s})              # an inside page's head; the 80pt headline is the cover's
+        ctop = max((v[1] + v[3] for v in r.values()), default=top + dy) + 0.30 * s
+        if o == "land":                                   # columns across the page
+            cw = (0.90 * W - (n - 1) * gap) / n
+            boxes = [(0.05 * W + i * (cw + gap), ctop, cw, bottom - ctop) for i in range(n)]
+            rules = [(b[0] - gap / 2, ctop, b[0] - gap / 2, bottom) for b in boxes[1:]]
+        elif alt() == 1 and n >= 3:                       # a square or portrait page with long copy: two columns of rows
+            cw, rows = (0.90 * W - gap) / 2, -(-n // 2)
+            rh = (bottom - ctop - (rows - 1) * 0.15 * s) / rows
+            boxes = [(0.05 * W + (i % 2) * (cw + gap), ctop + (i // 2) * (rh + 0.15 * s), cw, rh) for i in range(n)]
+            rules = [(0.05 * W + cw + gap / 2, ctop, 0.05 * W + cw + gap / 2, bottom)] + \
+                    [(0.05 * W, ctop + r_ * (rh + 0.15 * s) - 0.08 * s, 0.95 * W, ctop + r_ * (rh + 0.15 * s) - 0.08 * s)
+                     for r_ in range(1, rows)]
+        else:                                             # portrait: the columns stacked as rows
+            slot = (bottom - ctop) / n
+            boxes = [(0.05 * W, ctop + i * slot, 0.90 * W, slot - 0.15 * s) for i in range(n)]
+            rules = [(0.05 * W, b[1] - 0.08 * s, 0.95 * W, b[1] - 0.08 * s) for b in boxes[1:]]
+        specs = [((x, y, w, h), ([("tag", caps(tags[i]))] if tags else []) + [("item_head", hd)] +
+                  ([("item_line", ln)] if ln else []), {"anchor": "top"})
+                 for i, ((hd, ln), (x, y, w, h)) in enumerate(zip(pts, boxes))]
+        planned = plan_together(k, slide, "points", specs)
+        latin = [(ln, tr, td_) for (hd, ln), (tr, td_) in zip(pts, planned)
+                 if ln and ln[0].isalpha() and not dk._has_cjk(ln[0]) and "item_line" in tr]
+        # an initial opens a PARAGRAPH: on a one-line body it reads as a typo ("S ay what is broken", the library
+        # page's demo, 2026-10-22) — and the stories on one page open the same way, so initials go on only when EVERY
+        # Latin body sets on two lines or more (one wrapped neighbour among one-liners got one alone)
+        paragraphs = bool(latin) and all(len(vl._break_lines(k, "item_line", ln, td_.sizes["item_line"], tr["item_line"][2]))
+                                         >= 2 for ln, tr, td_ in latin)
+        cols, foot = [], ctop             # the lowest word of any column (a raised initial's taller first line included)
+        for (hd, ln), (x, y, w, h), (tr, td_) in zip(pts, boxes, planned):
+            initial = paragraphs and bool(ln) and ln[0].isalpha() and not dk._has_cjk(ln[0]) and "item_line" in tr
+            if initial:                   # room in the column for the taller first line and the one line its width
+                bx, by, bw, bh = tr["item_line"]  # may push down (lint measures a declared initial so: deckkit._ink_rect)
+                pitch = td_.sizes["item_line"] * dk._LINT_LINE_H / 72.0
+                initial = by + bh + 1.3 * pitch + pitch + 0.05 <= y + h
+            cols.append(_with_initial(k, slide, td_, ln) if initial else td_)
+            foot = max([foot] + [v[1] + v[3] + (max_extra(td_.sizes["item_line"] / s, s) if initial and f_ == "item_line"
+                                                else 0.0) for f_, v in tr.items()])
+        return r, d, rules, cols, foot
+
+    r, d, rules, cols, foot = lay(0.0)
+    free = bottom - foot
+    if o == "land" and free > 0.12 * H:   # short copy filled only the top half (40% empty under it on the demo):
+        r, d, rules, cols, foot = lay(0.45 * free)        # the head and its columns move to the optical centre
+    rects, draws, art = dict(r), [d] + cols, []
     # a column rule ends 0.2in under the lowest words, reaching long copy and not dangling 2.5in under short copy
     # (the page's own bottom is the limit); a rule between rows runs the page's width and stays where it is
     for x0, y0, x1, y1 in rules:
