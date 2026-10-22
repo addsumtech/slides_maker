@@ -13,8 +13,10 @@ on:
 jobs:
   smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 50      # the job ran 12.4 min before the native languages' tests; apt alone has taken 13;
-                             # the visual-language suites grew in 2026-10 and a 30-min run was cut off mid-suite
+    timeout-minutes: 80      # the job ran 12.4 min before the native languages' tests; apt alone has taken 13;
+                             # the visual-language suites grew in 2026-10 and a 30-min run was cut off mid-suite;
+                             # with thirty languages a green run took 49.0 min (the component-theme step alone
+                             # 16.7) and the next was cancelled at 50 (2026-10-22)
     defaults:
       run:
         working-directory: skills/slide-maker
