@@ -33,9 +33,9 @@ manifest whose code is missing (or does not import) is listed as *not ready*, an
      `NEXT:` and `then:` line, on macOS (`assets/vl/README.md`);
    - a `vl_<name>` scaffold in `scripts/sigs.py`'s `EXAMPLES`;
    - its row in the table of `references/visual-languages.md` (`| \`<name>\` | …`);
-   - its place on the library page (slides.addsum.top/languages/): `python3 scripts/vl_library_export.py --site
-     <slides_maker-site> --only <name>`, then `--check`. The README gallery is a fixed showcase — a new language
-     gets no cell there; the README's counts ("N more are only in the library") follow from `vl_docs.py --write`;
+   - its place in the library section of slides.addsum.top (#languages): `python3 scripts/vl_library_export.py --site
+     <slides_maker-site> --only <name>`, then `--check`. The README gallery is a fixed showcase of twelve,
+     generated from `SHOWCASE` in `scripts/vl_docs.py` — a new language gets no cell there; the README's counts ("N more are only in the library") follow from `vl_docs.py --write`;
    - the generated lists and counts: `python3 scripts/vl_docs.py --write`, then `--check`.
 6. **Run the suites.** `python3 scripts/check_vl_contract.py <name>` prints no problem, then the `NEXT:` line it
    prints (`tests/test_vl_contract.py`), and the full CI before anything is pushed.
@@ -51,7 +51,7 @@ manifest whose code is missing (or does not import) is listed as *not ready*, an
 | `kind` | `"drawn"` (words alone) or `"image-led"` | a new language is drawn: image-led ones compose through `visual_languages.LAYOUTS`, not a module |
 | `display` | `{"en": …, "zh": …}` | both non-empty |
 | `rationale` | one line: what it looks like, which decks it fits | at least a short sentence |
-| `blurb` | `{"en": …, "zh": …}`: one or two plain sentences a visitor reads on the library page (slides.addsum.top/languages/) | en ≥ 40 characters, zh ≥ 12; describe what the language draws and what it suits, nothing more |
+| `blurb` | `{"en": …, "zh": …}`: one or two plain sentences a visitor reads in the library section of slides.addsum.top (#languages) | en ≥ 40 characters, zh ≥ 12; describe what the language draws and what it suits, nothing more |
 | `offer` | drawn: `{"en": [topics], "zh": [topics]}` | at least two topics per script — the direction offer matches decks to these |
 | `look` | `palette` (the light ground's, one object), `fonts` (`both` and `mac`: `display`, `body`, `numeral`…), `ea` (the CJK face kind per role), `grain`, `frames`, `forbids`, `cover`, `skeleton` | all present |
 | `grounds` | `light` (the key callers pass) and at least one contrast ground, each `{label, label_zh, palette, roles, dark}` | below |

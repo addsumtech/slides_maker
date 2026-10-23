@@ -26,8 +26,9 @@ REQUIRED = {
     REF / "interview-protocol.md": {"count-all", "count-image", "count-drawn", "list-image-comma", "offer-paren"},
     REF / "codex-runtime.md": {"list-drawn"},
     REF / "file-inventory.md": {"count-all", "count-image", "count-drawn", "list-image-plain", "list-drawn-plain"},
-    REPO / "README.md": {"count-all", "count-image-cap", "count-drawn", "offer-arrow", "gallery-more", "vl-badge"},
-    REPO / "README_CN.md": {"count-all-zh", "count-image-zh", "count-drawn-zh", "offer-zh", "gallery-more-zh", "vl-badge-zh"},
+    REPO / "README.md": {"count-all", "count-image-cap", "count-drawn", "gallery-more", "vl-badge", "vl-gallery"},
+    REPO / "README_CN.md": {"count-all-zh", "count-image-zh", "count-drawn-zh", "gallery-more-zh", "vl-badge-zh",
+                            "vl-gallery-zh"},
 }
 DOCS = list(REQUIRED)
 _MARK = re.compile(r"<!-- vl:([a-z\-]+) -->|<!-- /vl -->")
@@ -62,9 +63,9 @@ _CELL = re.compile(r"samples/([a-z0-9_]+)\.jpg")       # a gallery cell's sample
 
 
 def gallery(reg):
-    """The languages the README's gallery shows, or None without a repo README (an installed copy). The gallery is a
-    fixed showcase the user chose (2026-10-22): a new language gets no cell, the library page shows every language,
-    and the README says how many more there are (gallery-more)."""
+    """The languages the README's gallery shows, or None without a repo README (an installed copy). The gallery is
+    generated from SHOWCASE (vl-gallery); the library section shows every language, and the README says how many
+    more there are (gallery-more)."""
     p = REPO / "README.md"
     if not p.is_file():
         return None
@@ -72,18 +73,51 @@ def gallery(reg):
 
 
 def _more(reg):
-    g = gallery(reg)
-    return (len(g), len(reg) - len(g)) if g is not None else (len(reg), 0)
+    n = len([s for s in SHOWCASE if s in reg])
+    return n, len(reg) - n
 
 
-LIBRARY = "https://slides.addsum.top/languages/"
+LIBRARY = "https://slides.addsum.top/#languages"        # the library is a section of the home page (2026-10-23)
+LIBRARY_ZH = "https://slides.addsum.top/cn/#languages"
+# the README gallery (2026-10-23): twelve looks the user asked for, three to a row like the template gallery above it,
+# chosen for range of look and use; a new language gets no cell, the library section shows every one
+SHOWCASE = ("editorial", "poster", "ink", "comic", "vinyl", "stainedglass", "wayfinding", "chalkboard", "recipe",
+            "circuit", "storybook", "scoreboard")
+_CARRIES = {"photos": ("with your photos", "配你的照片"), "illustrations": ("with an illustration series", "配一组插画")}
 
 
-def _badge(n, label, alt):
-    """The README's badge beside ClawHub: the library's language count, linked to the library page."""
+def _gallery(reg, zh):
+    """The README gallery's table: each cell is a language's sample sheet and its name, what it suits (a picture
+    language: what it carries), and a link; the picture and the link open that language in the library section."""
+    missing = [n for n in SHOWCASE if n not in reg]
+    if missing:
+        raise ValueError("vl_docs.SHOWCASE names no registered language: {}".format(missing))
+    site, more = ("https://slides.addsum.top/cn/#vl-", "在模版库查看全部页面") if zh else \
+        ("https://slides.addsum.top/#vl-", "See every page in the library")
+    rows = []
+    for i in range(0, len(SHOWCASE), 3):
+        cells = []
+        for n in SHOWCASE[i:i + 3]:
+            s = reg[n]
+            pics = s["offer"].get("pictures")
+            use = _CARRIES[pics][1 if zh else 0] if pics else ("、" if zh else ", ").join(s["offer"]["zh" if zh else "en"][:3])
+            name = "{}（{}）".format(s["display"]["zh"], n) if zh else "{} ({})".format(s["display"]["en"], n)
+            cells.append(
+                '    <td align="center" width="33%">\n'
+                '      <a href="{u}{n}"><img src="skills/slide-maker/assets/vl/samples/{n}.jpg" alt="{alt}"></a><br/>\n'
+                '      <sub><strong>{name}</strong><br/>{use}<br/>\n'
+                '      <a href="{u}{n}">{more}</a></sub>\n'
+                '    </td>'.format(u=site, n=n, name=name, use=use, more=more,
+                                   alt="{} 设计语言示例页".format(n) if zh else "{} visual language sample pages".format(n)))
+        rows.append("  <tr>\n" + "\n".join(cells) + "\n  </tr>")
+    return "\n<table>\n" + "\n".join(rows) + "\n</table>\n"
+
+
+def _badge(n, label, alt, url=LIBRARY):
+    """The README's badge beside ClawHub: the library's language count, linked to the library section."""
     from urllib.parse import quote
     return '<a href="{}"><img alt="{}: {}" src="https://img.shields.io/badge/{}-{}-c2410c"></a>'.format(
-        LIBRARY, alt, n, quote(label), n)
+        url, alt, n, quote(label), n)
 
 
 def _render(block, reg):
@@ -108,7 +142,8 @@ def _render(block, reg):
         "gallery-more-zh": lambda: (lambda g, n: "" if n <= 0 else
                                     "上面只展示了其中{}套，另外{}套只在模版库里。".format(_zh(g), _zh(n)))(*_more(reg)),
         "vl-badge": lambda: _badge(len(reg), "visual_languages", "Visual languages"),
-        "vl-badge-zh": lambda: _badge(len(reg), "视觉语言模版库", "视觉语言模版库"),
+        "vl-badge-zh": lambda: _badge(len(reg), "视觉语言模版库", "视觉语言模版库", LIBRARY_ZH),
+        "vl-gallery": lambda: _gallery(reg, zh=False), "vl-gallery-zh": lambda: _gallery(reg, zh=True),
         "tier-one-list": lambda: " · ".join("`{}`".format(n) for n in ct.TIER1),
         "tier-two-table": lambda: "\n" + "\n".join(["| component | draws in the skin |", "|---|---|"] +
                                          ["| `{}` | {} |".format(n, ", ".join(r)) for n, r in ct.TIER2_SKIN.items()]) + "\n",
@@ -205,7 +240,7 @@ def _known(reg):
     for b in ("count-all", "count-drawn", "count-image", "count-image-cap", "count-all-zh", "count-drawn-zh",
               "count-image-zh", "list-drawn", "list-image", "list-image-comma", "list-drawn-plain", "list-image-plain",
               "offer-arrow", "offer-paren", "offer-zh", "tier-one-list", "tier-two-table", "skin-table", "gallery-more",
-              "gallery-more-zh", "vl-badge", "vl-badge-zh"):
+              "gallery-more-zh", "vl-badge", "vl-badge-zh", "vl-gallery", "vl-gallery-zh"):
         known.add(b)
     return known
 

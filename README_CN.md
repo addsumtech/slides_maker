@@ -14,7 +14,7 @@
 
 <p align="center">
   <a href="https://clawhub.ai/dong845/skills/slide-maker"><img alt="ClawHub" src="docs/badges/clawhub_cn.svg"></a>
-  <!-- vl:vl-badge-zh --><a href="https://slides.addsum.top/languages/"><img alt="视觉语言模版库: 30" src="https://img.shields.io/badge/%E8%A7%86%E8%A7%89%E8%AF%AD%E8%A8%80%E6%A8%A1%E7%89%88%E5%BA%93-30-c2410c"></a><!-- /vl -->
+  <!-- vl:vl-badge-zh --><a href="https://slides.addsum.top/cn/#languages"><img alt="视觉语言模版库: 30" src="https://img.shields.io/badge/%E8%A7%86%E8%A7%89%E8%AF%AD%E8%A8%80%E6%A8%A1%E7%89%88%E5%BA%93-30-c2410c"></a><!-- /vl -->
 </p>
 
 <p align="center"><sub><a href="https://addsum.top/cn/"><strong>增和科技 Addsum</strong></a> 出品 · 免费开源</sub></p>
@@ -120,6 +120,85 @@
 
 <p align="center"><sub>英文版在 <a href="https://github.com/addsumtech/slides_maker-site/tree/main/templates/decks/en">templates/decks/en/</a>，预览见 <a href="README.md">English README</a>。</sub></p>
 
+## 设计语言
+
+除了模板库，slide-maker 还内置<!-- vl:count-all-zh -->三十<!-- /vl -->套完整的**设计语言**：每套有自己的字体、质感和页面版式。其中<!-- vl:count-image-zh -->四<!-- /vl -->套排你的照片或插画，另外<!-- vl:count-drawn-zh -->二十六<!-- /vl -->套全部用可编辑的原生形状画成，不需要图片。它会按主题推荐合适的几套，你也可以直接点名（“用水墨风格”）。
+
+<!-- vl:vl-gallery-zh -->
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/cn/#vl-editorial"><img src="skills/slide-maker/assets/vl/samples/editorial.jpg" alt="editorial 设计语言示例页"></a><br/>
+      <sub><strong>杂志（editorial）</strong><br/>配你的照片<br/>
+      <a href="https://slides.addsum.top/cn/#vl-editorial">在模版库查看全部页面</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/cn/#vl-poster"><img src="skills/slide-maker/assets/vl/samples/poster.jpg" alt="poster 设计语言示例页"></a><br/>
+      <sub><strong>海报大字（poster）</strong><br/>发布会、宣言、观点<br/>
+      <a href="https://slides.addsum.top/cn/#vl-poster">在模版库查看全部页面</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/cn/#vl-ink"><img src="skills/slide-maker/assets/vl/samples/ink.jpg" alt="ink 设计语言示例页"></a><br/>
+      <sub><strong>水墨（ink）</strong><br/>文化、历史、器物<br/>
+      <a href="https://slides.addsum.top/cn/#vl-ink">在模版库查看全部页面</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/cn/#vl-comic"><img src="skills/slide-maker/assets/vl/samples/comic.jpg" alt="comic 设计语言示例页"></a><br/>
+      <sub><strong>漫画分镜（comic）</strong><br/>讲故事、用户旅程、科普讲解<br/>
+      <a href="https://slides.addsum.top/cn/#vl-comic">在模版库查看全部页面</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/cn/#vl-vinyl"><img src="skills/slide-maker/assets/vl/samples/vinyl.jpg" alt="vinyl 设计语言示例页"></a><br/>
+      <sub><strong>黑胶唱片（vinyl）</strong><br/>音乐、播客、文化活动<br/>
+      <a href="https://slides.addsum.top/cn/#vl-vinyl">在模版库查看全部页面</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/cn/#vl-stainedglass"><img src="skills/slide-maker/assets/vl/samples/stainedglass.jpg" alt="stainedglass 设计语言示例页"></a><br/>
+      <sub><strong>彩绘玻璃（stainedglass）</strong><br/>文化遗产、文化活动、庆典<br/>
+      <a href="https://slides.addsum.top/cn/#vl-stainedglass">在模版库查看全部页面</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/cn/#vl-wayfinding"><img src="skills/slide-maker/assets/vl/samples/wayfinding.jpg" alt="wayfinding 设计语言示例页"></a><br/>
+      <sub><strong>导视线路（wayfinding）</strong><br/>路线图、流程、新人上手<br/>
+      <a href="https://slides.addsum.top/cn/#vl-wayfinding">在模版库查看全部页面</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/cn/#vl-chalkboard"><img src="skills/slide-maker/assets/vl/samples/chalkboard.jpg" alt="chalkboard 设计语言示例页"></a><br/>
+      <sub><strong>黑板报（chalkboard）</strong><br/>课程、课堂、培训<br/>
+      <a href="https://slides.addsum.top/cn/#vl-chalkboard">在模版库查看全部页面</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/cn/#vl-recipe"><img src="skills/slide-maker/assets/vl/samples/recipe.jpg" alt="recipe 设计语言示例页"></a><br/>
+      <sub><strong>食谱卡（recipe）</strong><br/>美食、烹饪、食谱<br/>
+      <a href="https://slides.addsum.top/cn/#vl-recipe">在模版库查看全部页面</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/cn/#vl-circuit"><img src="skills/slide-maker/assets/vl/samples/circuit.jpg" alt="circuit 设计语言示例页"></a><br/>
+      <sub><strong>电路板（circuit）</strong><br/>硬件、物联网、嵌入式<br/>
+      <a href="https://slides.addsum.top/cn/#vl-circuit">在模版库查看全部页面</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/cn/#vl-storybook"><img src="skills/slide-maker/assets/vl/samples/storybook.jpg" alt="storybook 设计语言示例页"></a><br/>
+      <sub><strong>绘本（storybook）</strong><br/>配一组插画<br/>
+      <a href="https://slides.addsum.top/cn/#vl-storybook">在模版库查看全部页面</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/cn/#vl-scoreboard"><img src="skills/slide-maker/assets/vl/samples/scoreboard.jpg" alt="scoreboard 设计语言示例页"></a><br/>
+      <sub><strong>体育记分牌（scoreboard）</strong><br/>体育、比赛、团队战绩<br/>
+      <a href="https://slides.addsum.top/cn/#vl-scoreboard">在模版库查看全部页面</a></sub>
+    </td>
+  </tr>
+</table>
+<!-- /vl -->
+
+<p align="center"><a href="https://slides.addsum.top/cn/#languages"><strong>浏览全部<!-- vl:count-all-zh -->三十<!-- /vl -->套视觉语言 →</strong></a><br/><sub><!-- vl:gallery-more-zh -->上面只展示了其中十二套，另外十八套只在模版库里。<!-- /vl --></sub></p>
+
 ---
 
 ## 模板怎么用
@@ -152,109 +231,6 @@ cp -r slides_maker-site/templates/decks/zh/ev-market-report ~/.codex/slide-templ
 ```
 
 两套的版式一致，文案语言不同。
-
-
-## 设计语言
-
-除了模板库，slide-maker 还内置<!-- vl:count-all-zh -->三十<!-- /vl -->套完整的**设计语言**：每套都有自己的字体气质（只用系统字体）、画面质感，以及封面、章节、图文、要点（两到四个）、引言、数据、结尾这几种页面版式。其中<!-- vl:count-image-zh -->四<!-- /vl -->套以图为主，排你的照片或一组插画；另外<!-- vl:count-drawn-zh -->二十六<!-- /vl -->套用 PowerPoint 原生形状画出自己的画面，每个元素都能编辑，所以没有图片、也没有生图工具的 deck 同样能有完整的风格。所有设计语言都只排你自己的文字和图片，不会编造任何词、数字或名字：印章上的字、高亮的词、图标、项目名、报头、页眉、标签、总数、面包屑、状态、按钮文字、线路编号这类内容只来自你。
-
-<table>
-  <tr>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/editorial.jpg"><img src="skills/slide-maker/assets/vl/samples/editorial.jpg" alt="editorial 设计语言示例页"></a><br/>
-      <sub><strong>editorial（杂志）</strong> · 配你的照片<br/>安静的照片、大号衬线标题、引文、暖色纸面<br/>
-      深色底版本： <a href="skills/slide-maker/assets/vl/samples/editorial-ink.jpg">ink</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/soft.jpg"><img src="skills/slide-maker/assets/vl/samples/soft.jpg" alt="soft 设计语言示例页"></a><br/>
-      <sub><strong>soft（柔和）</strong> · 配你的照片<br/>温暖的照片、圆润无衬线字、大留白、奶油底配粉彩形状<br/>
-      深色底版本： <a href="skills/slide-maker/assets/vl/samples/soft-dusk.jpg">dusk</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/collage.jpg"><img src="skills/slide-maker/assets/vl/samples/collage.jpg" alt="collage 设计语言示例页"></a><br/>
-      <sub><strong>collage（拼贴）</strong> · 配你的照片<br/>胶带贴住的照片、粗重标题、荧光笔标签、牛皮纸纹理<br/>
-      深色底版本： <a href="skills/slide-maker/assets/vl/samples/collage-slate.jpg">slate</a></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/storybook.jpg"><img src="skills/slide-maker/assets/vl/samples/storybook.jpg" alt="storybook 设计语言示例页"></a><br/>
-      <sub><strong>storybook（绘本）</strong> · 配一组插画<br/>一组晕染进纸面的水彩插画、衬线字<br/>
-      彩色底版本： <a href="skills/slide-maker/assets/vl/samples/storybook-meadow.jpg">meadow</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/ink.jpg"><img src="skills/slide-maker/assets/vl/samples/ink.jpg" alt="ink 设计语言示例页"></a><br/>
-      <sub><strong>ink（水墨）</strong> · 原生绘制，无需图片<br/>雾中远山、中日文竖排、手刻印章、墨圈托住数字<br/>
-      深色底版本： <a href="skills/slide-maker/assets/vl/samples/ink-night.jpg">night</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/poster.jpg"><img src="skills/slide-maker/assets/vl/samples/poster.jpg" alt="poster 设计语言示例页"></a><br/>
-      <sub><strong>poster（海报大字）</strong> · 原生绘制，无需图片<br/>字就是画面，每页一种饱和色场<br/>
-      浅色底版本： <a href="skills/slide-maker/assets/vl/samples/poster-paper.jpg">paper</a></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/cutpaper.jpg"><img src="skills/slide-maker/assets/vl/samples/cutpaper.jpg" alt="cutpaper 设计语言示例页"></a><br/>
-      <sub><strong>cutpaper（剪纸层叠）</strong> · 原生绘制，无需图片<br/>层层彩纸剪出的小景，标题卡插在山丘之间<br/>
-      深色底版本： <a href="skills/slide-maker/assets/vl/samples/cutpaper-night.jpg">night</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/drafting.jpg"><img src="skills/slide-maker/assets/vl/samples/drafting.jpg" alt="drafting 设计语言示例页"></a><br/>
-      <sub><strong>drafting（蓝图技术线稿）</strong> · 原生绘制，无需图片<br/>带编号的图纸、每个要点一层等轴测板、带尺寸线的数字<br/>
-      晒图蓝版本： <a href="skills/slide-maker/assets/vl/samples/drafting-cyanotype.jpg">cyanotype</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/starlit.jpg"><img src="skills/slide-maker/assets/vl/samples/starlit.jpg" alt="starlit 设计语言示例页"></a><br/>
-      <sub><strong>starlit（星夜）</strong> · 原生绘制，无需图片<br/>星空与新月，要点连成星座，数字托在光晕里<br/>
-      黎明版本： <a href="skills/slide-maker/assets/vl/samples/starlit-dawn.jpg">dawn</a></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/broadsheet.jpg"><img src="skills/slide-maker/assets/vl/samples/broadsheet.jpg" alt="broadsheet 设计语言示例页"></a><br/>
-      <sub><strong>broadsheet（报纸头版）</strong> · 原生绘制，无需图片<br/>报头、大标题加导语、报纸分栏、两条线夹住的引语<br/>
-      粉报版本： <a href="skills/slide-maker/assets/vl/samples/broadsheet-salmon.jpg">salmon</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/journal.jpg"><img src="skills/slide-maker/assets/vl/samples/journal.jpg" alt="journal 设计语言示例页"></a><br/>
-      <sub><strong>journal（学术期刊）</strong> · 原生绘制，无需图片<br/>页眉、摘要、带编号和图注的完整插图、页边批注<br/>
-      期刊绿版本： <a href="skills/slide-maker/assets/vl/samples/journal-green.jpg">green</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/tally.jpg"><img src="skills/slide-maker/assets/vl/samples/tally.jpg" alt="tally 设计语言示例页"></a><br/>
-      <sub><strong>tally（数据账本）</strong> · 原生绘制，无需图片<br/>细网格、粗体大字、药丸标签、一个巨大的数字和它的占比条<br/>
-      深色底版本： <a href="skills/slide-maker/assets/vl/samples/tally-night.jpg">night</a></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/chalkboard.jpg"><img src="skills/slide-maker/assets/vl/samples/chalkboard.jpg" alt="chalkboard 设计语言示例页"></a><br/>
-      <sub><strong>chalkboard（黑板报）</strong> · 原生绘制，无需图片<br/>木框黑板、彩色粉笔线、按步骤的粉笔框、圈起来的数字<br/>
-      石板版本： <a href="skills/slide-maker/assets/vl/samples/chalkboard-slate.jpg">slate</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/interface.jpg"><img src="skills/slide-maker/assets/vl/samples/interface.jpg" alt="interface 设计语言示例页"></a><br/>
-      <sub><strong>interface（产品界面）</strong> · 原生绘制，无需图片<br/>应用窗口、状态标签、开关、数据看板卡片、对话框<br/>
-      深色底版本： <a href="skills/slide-maker/assets/vl/samples/interface-dark.jpg">dark</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/wayfinding.jpg"><img src="skills/slide-maker/assets/vl/samples/wayfinding.jpg" alt="wayfinding 设计语言示例页"></a><br/>
-      <sub><strong>wayfinding（导视线路）</strong> · 原生绘制，无需图片<br/>地铁线路与圆标、搪瓷站牌、发车信息屏<br/>
-      深色底版本： <a href="skills/slide-maker/assets/vl/samples/wayfinding-night.jpg">night</a></sub>
-    </td>
-  </tr>
-</table>
-
-<p align="center"><sub>以上是风格示例（示例内容，不是你的 deck）。点图看大图；图下的链接是这套语言的另一种底色，你最近的 deck 都已经用第一种底色时会自动换用。星夜和黑板报两种底色都是深色。</sub></p>
-
-<p align="center"><a href="https://slides.addsum.top/languages/"><strong>浏览全部<!-- vl:count-all-zh -->三十<!-- /vl -->套视觉语言 →</strong></a><br/><sub><!-- vl:gallery-more-zh -->上面只展示了其中十五套，另外十五套只在模版库里。<!-- /vl -->每套语言在两种底色上的七种页面、配色和字体，以及点名用它的那句话</sub></p>
-
-**什么时候会用到。** 只要你的 deck 会带照片或插画（你自己的，或 slide-maker 帮你生成、抓取的），它给你看的候选风格里至少有一个是以图为主的设计语言：照片按气质对应 editorial、soft 或 collage，插画对应 storybook。deck 没有图片时，候选风格里会有一套贴合主题的原生绘制语言，贴合的理由会和选择一起记录。对应关系是参考，不是查表：<!-- vl:offer-zh -->文化、历史、器物 → 水墨；发布会、宣言、观点 → 海报大字；儿童、讲故事、社区 → 剪纸层叠；工程、建筑、系统设计 → 蓝图技术线稿；年度回顾、书信、致谢、纪念 → 星夜；通讯、定期报告、社区动态 → 报纸头版；学术报告、组会、论文、答辩 → 学术期刊；指标、季度复盘、运营、增长 → 数据账本；课程、课堂、培训、讲解 → 黑板报；产品发布、应用、SaaS、功能导览、内部工具 → 产品界面；路线图、流程、新人上手、用户旅程、战略路径、交通与城市 → 导视线路；自然、生态、可持续、野外调研、生物 → 标本图鉴；旅行、国际化、跨境、物流、海外团队、交流项目 → 航空邮件；音乐、播客、文化活动、创意作品、周年回顾 → 黑胶唱片；定价、预算、成本拆解、零售、电商、费用复盘 → 购物小票；讲故事、用户旅程、科普讲解、产品发布、团队故事 → 漫画分镜；游戏、游戏化、黑客松、青少年活动、入职挑战、游戏开发 → 像素游戏；儿童教育、模块化产品、系统架构、团队协作、基础模块、科创课堂 → 积木；流程、入职引导、策略、游戏化培训、分步计划、行动路线 → 棋盘游戏；硬件、物联网、嵌入式、AI 基础设施、工程评审、电子 → 电路板；地理、户外、气候、野外工作、战略全景 → 等高线地形图；体育、比赛、团队战绩、销售冲刺、排行榜、赛事 → 体育记分牌；科学教育、化学、主题的基本构成、框架、分类体系 → 元素周期表；美食、烹饪、食谱、操作指南、分步流程、工作坊 → 食谱卡；文化遗产、文化活动、庆典、节日、艺术与设计史 → 彩绘玻璃；时间线、活动、纪念日、日程、倒计时、日常习惯 → 撕页日历。<!-- /vl -->也可以直接点名，比如"用 collage 风格"。想打开可编辑的示例 deck，在本地生成（它会打印把每套示例渲染到 `out/` 里的命令）：
-
-```bash
-python3 skills/slide-maker/scripts/visual_languages.py --sample out/
-```
 
 ---
 

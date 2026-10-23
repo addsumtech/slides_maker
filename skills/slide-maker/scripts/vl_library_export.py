@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""vl_library_export — write the visual-language library page's data and images (slides.addsum.top/languages/).
+"""vl_library_export — write the visual-language library's data and images (served from slides.addsum.top/languages/,
+shown in the home page's #languages section).
 
     python3 scripts/vl_library_export.py --site ~/code_project/slides_maker-site               # data + images
     python3 scripts/vl_library_export.py --site … --no-render                                  # data + sample sheets
     python3 scripts/vl_library_export.py --site … --only ink                                   # render one language
     python3 scripts/vl_library_export.py --site … --check                                      # exit 1 if stale
 
-The page (site repo: languages/index.html + library.js) renders whatever library.json lists, so a new language reaches
+The library section (site repo: index.html and cn/index.html, #languages, with languages/library.js) renders whatever
+library.json lists, so a new language reaches
 it by re-running this — nothing on the site is edited by hand. Everything comes from the manifests (scripts/vl_specs)
 and the registry; the stats are counted, never typed.
 

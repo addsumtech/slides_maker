@@ -14,7 +14,7 @@
 
 <p align="center">
   <a href="https://clawhub.ai/dong845/skills/slide-maker"><img alt="ClawHub" src="docs/badges/clawhub.svg"></a>
-  <!-- vl:vl-badge --><a href="https://slides.addsum.top/languages/"><img alt="Visual languages: 30" src="https://img.shields.io/badge/visual_languages-30-c2410c"></a><!-- /vl -->
+  <!-- vl:vl-badge --><a href="https://slides.addsum.top/#languages"><img alt="Visual languages: 30" src="https://img.shields.io/badge/visual_languages-30-c2410c"></a><!-- /vl -->
 </p>
 
 <p align="center"><sub>Free and open source, built by <a href="https://addsum.top/"><strong>Addsum</strong></a></sub></p>
@@ -120,6 +120,85 @@ Twelve directions, one set in English and one in Chinese. Each is a complete exa
 
 <p align="center"><sub>Chinese versions live in <a href="https://github.com/addsumtech/slides_maker-site/tree/main/templates/decks/zh">templates/decks/zh/</a>, previewed in the <a href="README_CN.md">Chinese README</a>.</sub></p>
 
+## Visual languages
+
+slide-maker also ships <!-- vl:count-all -->thirty<!-- /vl --> complete **visual languages**: whole looks with their own type, surface and page layouts. <!-- vl:count-image-cap -->Four<!-- /vl --> carry your photos or illustrations; the other <!-- vl:count-drawn -->twenty-six<!-- /vl --> draw everything in native, editable shapes, so a deck needs no pictures. It suggests the ones that fit your topic, or ask for one by name ("use the ink look").
+
+<!-- vl:vl-gallery -->
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/#vl-editorial"><img src="skills/slide-maker/assets/vl/samples/editorial.jpg" alt="editorial visual language sample pages"></a><br/>
+      <sub><strong>Editorial magazine (editorial)</strong><br/>with your photos<br/>
+      <a href="https://slides.addsum.top/#vl-editorial">See every page in the library</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/#vl-poster"><img src="skills/slide-maker/assets/vl/samples/poster.jpg" alt="poster visual language sample pages"></a><br/>
+      <sub><strong>Type poster (poster)</strong><br/>launch, manifesto, opinion<br/>
+      <a href="https://slides.addsum.top/#vl-poster">See every page in the library</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/#vl-ink"><img src="skills/slide-maker/assets/vl/samples/ink.jpg" alt="ink visual language sample pages"></a><br/>
+      <sub><strong>Ink wash (ink)</strong><br/>culture, history, craft<br/>
+      <a href="https://slides.addsum.top/#vl-ink">See every page in the library</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/#vl-comic"><img src="skills/slide-maker/assets/vl/samples/comic.jpg" alt="comic visual language sample pages"></a><br/>
+      <sub><strong>Comic panels (comic)</strong><br/>storytelling, user journey, explainer<br/>
+      <a href="https://slides.addsum.top/#vl-comic">See every page in the library</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/#vl-vinyl"><img src="skills/slide-maker/assets/vl/samples/vinyl.jpg" alt="vinyl visual language sample pages"></a><br/>
+      <sub><strong>Vinyl record (vinyl)</strong><br/>music, podcast, culture<br/>
+      <a href="https://slides.addsum.top/#vl-vinyl">See every page in the library</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/#vl-stainedglass"><img src="skills/slide-maker/assets/vl/samples/stainedglass.jpg" alt="stainedglass visual language sample pages"></a><br/>
+      <sub><strong>Stained glass (stainedglass)</strong><br/>heritage, culture, celebrations<br/>
+      <a href="https://slides.addsum.top/#vl-stainedglass">See every page in the library</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/#vl-wayfinding"><img src="skills/slide-maker/assets/vl/samples/wayfinding.jpg" alt="wayfinding visual language sample pages"></a><br/>
+      <sub><strong>Wayfinding (wayfinding)</strong><br/>roadmap, process, onboarding<br/>
+      <a href="https://slides.addsum.top/#vl-wayfinding">See every page in the library</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/#vl-chalkboard"><img src="skills/slide-maker/assets/vl/samples/chalkboard.jpg" alt="chalkboard visual language sample pages"></a><br/>
+      <sub><strong>Chalkboard (chalkboard)</strong><br/>lesson, class, training<br/>
+      <a href="https://slides.addsum.top/#vl-chalkboard">See every page in the library</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/#vl-recipe"><img src="skills/slide-maker/assets/vl/samples/recipe.jpg" alt="recipe visual language sample pages"></a><br/>
+      <sub><strong>Recipe card (recipe)</strong><br/>food, cooking, recipes<br/>
+      <a href="https://slides.addsum.top/#vl-recipe">See every page in the library</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/#vl-circuit"><img src="skills/slide-maker/assets/vl/samples/circuit.jpg" alt="circuit visual language sample pages"></a><br/>
+      <sub><strong>Circuit board (circuit)</strong><br/>hardware, IoT, embedded systems<br/>
+      <a href="https://slides.addsum.top/#vl-circuit">See every page in the library</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/#vl-storybook"><img src="skills/slide-maker/assets/vl/samples/storybook.jpg" alt="storybook visual language sample pages"></a><br/>
+      <sub><strong>Watercolour storybook (storybook)</strong><br/>with an illustration series<br/>
+      <a href="https://slides.addsum.top/#vl-storybook">See every page in the library</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/#vl-scoreboard"><img src="skills/slide-maker/assets/vl/samples/scoreboard.jpg" alt="scoreboard visual language sample pages"></a><br/>
+      <sub><strong>Scoreboard (scoreboard)</strong><br/>sports, competition, team results<br/>
+      <a href="https://slides.addsum.top/#vl-scoreboard">See every page in the library</a></sub>
+    </td>
+  </tr>
+</table>
+<!-- /vl -->
+
+<p align="center"><a href="https://slides.addsum.top/#languages"><strong>Browse all <!-- vl:count-all -->thirty<!-- /vl --> visual languages in the library →</strong></a><br/><sub><!-- vl:gallery-more -->The gallery above shows twelve of them; eighteen more are only in the library. <!-- /vl --></sub></p>
+
 ---
 
 ## How to use the templates
@@ -152,109 +231,6 @@ cp -r slides_maker-site/templates/decks/en/ev-market-report ~/.codex/slide-templ
 ```
 
 The layouts match; only the copy language differs.
-
-
-## Visual languages
-
-Beside the template gallery, slide-maker ships <!-- vl:count-all -->thirty<!-- /vl --> complete **visual languages**: whole looks, each with a type voice from system fonts, its own surface and page layouts for cover, section, image + text, points (two to four ideas), quote, data and closing. <!-- vl:count-image-cap -->Four<!-- /vl --> are built around pictures and carry your photos or an illustration series. The other <!-- vl:count-drawn -->twenty-six<!-- /vl --> draw their own surface with native, editable shapes, so a deck with no pictures (and no image tool) still gets a finished look. All of them lay out *your* words and pictures and never invent a word, a number or a name: a seal's characters, a highlighted word, icons, a project name, a masthead, a running head, tags, a total, a breadcrumb, a status, button words and a line code come only from you.
-
-<table>
-  <tr>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/editorial.jpg"><img src="skills/slide-maker/assets/vl/samples/editorial.jpg" alt="editorial visual language sample pages"></a><br/>
-      <sub><strong>editorial</strong> · with your photos<br/>quiet photographs, large serif display, pull quotes, warm paper<br/>
-      contrast ground: <a href="skills/slide-maker/assets/vl/samples/editorial-ink.jpg">ink</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/soft.jpg"><img src="skills/slide-maker/assets/vl/samples/soft.jpg" alt="soft visual language sample pages"></a><br/>
-      <sub><strong>soft</strong> · with your photos<br/>warm photographs, rounded sans, generous space, cream with pastel shapes<br/>
-      contrast ground: <a href="skills/slide-maker/assets/vl/samples/soft-dusk.jpg">dusk</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/collage.jpg"><img src="skills/slide-maker/assets/vl/samples/collage.jpg" alt="collage visual language sample pages"></a><br/>
-      <sub><strong>collage</strong> · with your photos<br/>loud photographs as taped prints, heavy headlines, highlighter kickers, kraft grain<br/>
-      contrast ground: <a href="skills/slide-maker/assets/vl/samples/collage-slate.jpg">slate</a></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/storybook.jpg"><img src="skills/slide-maker/assets/vl/samples/storybook.jpg" alt="storybook visual language sample pages"></a><br/>
-      <sub><strong>storybook</strong> · with an illustration series<br/>a watercolour illustration series melting into the paper, serif type<br/>
-      contrast ground: <a href="skills/slide-maker/assets/vl/samples/storybook-meadow.jpg">meadow</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/ink.jpg"><img src="skills/slide-maker/assets/vl/samples/ink.jpg" alt="ink visual language sample pages"></a><br/>
-      <sub><strong>ink</strong> · drawn, no pictures needed<br/>misty ink ridges, vertical Chinese and Japanese, a carved seal, an ensō around the figure<br/>
-      contrast ground: <a href="skills/slide-maker/assets/vl/samples/ink-night.jpg">night</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/poster.jpg"><img src="skills/slide-maker/assets/vl/samples/poster.jpg" alt="poster visual language sample pages"></a><br/>
-      <sub><strong>poster</strong> · drawn, no pictures needed<br/>the headline is the picture, one saturated colour field per page<br/>
-      contrast ground: <a href="skills/slide-maker/assets/vl/samples/poster-paper.jpg">paper</a></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/cutpaper.jpg"><img src="skills/slide-maker/assets/vl/samples/cutpaper.jpg" alt="cutpaper visual language sample pages"></a><br/>
-      <sub><strong>cutpaper</strong> · drawn, no pictures needed<br/>a layered paper diorama, the title card tucked between the hills<br/>
-      contrast ground: <a href="skills/slide-maker/assets/vl/samples/cutpaper-night.jpg">night</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/drafting.jpg"><img src="skills/slide-maker/assets/vl/samples/drafting.jpg" alt="drafting visual language sample pages"></a><br/>
-      <sub><strong>drafting</strong> · drawn, no pictures needed<br/>a numbered drawing sheet, one iso layer per point, a dimensioned figure<br/>
-      contrast ground: <a href="skills/slide-maker/assets/vl/samples/drafting-cyanotype.jpg">cyanotype</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/starlit.jpg"><img src="skills/slide-maker/assets/vl/samples/starlit.jpg" alt="starlit visual language sample pages"></a><br/>
-      <sub><strong>starlit</strong> · drawn, no pictures needed<br/>a night sky and a crescent moon, points as a constellation, the figure in a glow<br/>
-      contrast ground: <a href="skills/slide-maker/assets/vl/samples/starlit-dawn.jpg">dawn</a></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/broadsheet.jpg"><img src="skills/slide-maker/assets/vl/samples/broadsheet.jpg" alt="broadsheet visual language sample pages"></a><br/>
-      <sub><strong>broadsheet</strong> · drawn, no pictures needed<br/>a masthead strip, a headline and standfirst, newspaper columns, a pull quote between rules<br/>
-      contrast ground: <a href="skills/slide-maker/assets/vl/samples/broadsheet-salmon.jpg">salmon</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/journal.jpg"><img src="skills/slide-maker/assets/vl/samples/journal.jpg" alt="journal visual language sample pages"></a><br/>
-      <sub><strong>journal</strong> · drawn, no pictures needed<br/>a running head, an abstract, numbered figures with captions, margin notes<br/>
-      contrast ground: <a href="skills/slide-maker/assets/vl/samples/journal-green.jpg">green</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/tally.jpg"><img src="skills/slide-maker/assets/vl/samples/tally.jpg" alt="tally visual language sample pages"></a><br/>
-      <sub><strong>tally</strong> · drawn, no pictures needed<br/>a fine grid, heavy type, pill tags, one giant number with its share bar<br/>
-      contrast ground: <a href="skills/slide-maker/assets/vl/samples/tally-night.jpg">night</a></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/chalkboard.jpg"><img src="skills/slide-maker/assets/vl/samples/chalkboard.jpg" alt="chalkboard visual language sample pages"></a><br/>
-      <sub><strong>chalkboard</strong> · drawn, no pictures needed<br/>a framed board, coloured chalk strokes, boxed steps, a circled figure<br/>
-      contrast ground: <a href="skills/slide-maker/assets/vl/samples/chalkboard-slate.jpg">slate</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/interface.jpg"><img src="skills/slide-maker/assets/vl/samples/interface.jpg" alt="interface visual language sample pages"></a><br/>
-      <sub><strong>interface</strong> · drawn, no pictures needed<br/>app windows, a status chip, toggles, a dashboard card, a dialog<br/>
-      contrast ground: <a href="skills/slide-maker/assets/vl/samples/interface-dark.jpg">dark</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="skills/slide-maker/assets/vl/samples/wayfinding.jpg"><img src="skills/slide-maker/assets/vl/samples/wayfinding.jpg" alt="wayfinding visual language sample pages"></a><br/>
-      <sub><strong>wayfinding</strong> · drawn, no pictures needed<br/>transit lines and roundels, enamel station signs, a departure board<br/>
-      contrast ground: <a href="skills/slide-maker/assets/vl/samples/wayfinding-night.jpg">night</a></sub>
-    </td>
-  </tr>
-</table>
-
-<p align="center"><sub>Style samples on sample content, not your deck. Click a sample for the full-size sheet; the link under it opens the language's second ground, taken automatically when your recent decks already sit on its first. Starlit and chalkboard are dark on both.</sub></p>
-
-<p align="center"><a href="https://slides.addsum.top/languages/"><strong>Browse all <!-- vl:count-all -->thirty<!-- /vl --> visual languages in the library →</strong></a><br/><sub><!-- vl:gallery-more -->The gallery above shows fifteen of them; fifteen more are only in the library. <!-- /vl -->Every language's seven page types on both grounds, its palette and type, and the line that asks for it.</sub></p>
-
-**How one gets picked.** When your deck will carry photos or illustrations (your own, or ones slide-maker generates or fetches for you), at least one of the candidate looks it shows you is a picture language: photos lead to editorial, soft or collage by tone, illustrations to storybook. When it has none, a drawn language that fits the topic is among the candidates, and the reason it fits is recorded with the choice. The fit is guidance, not a lookup: <!-- vl:offer-arrow -->culture, history, craft → `ink`; launch, manifesto, opinion → `poster`; children, storytelling, community → `cutpaper`; engineering, architecture, systems design → `drafting`; year in review, letter, thanks, commemoration → `starlit`; newsletter, periodic report, community update → `broadsheet`; research talk, lab meeting, paper, defence → `journal`; metrics, quarterly review, operations, growth → `tally`; lesson, class, training, explainer → `chalkboard`; product launch, app, SaaS, feature tour, internal tool → `interface`; roadmap, process, onboarding, journey, strategy route, transport/city → `wayfinding`; nature, ecology, sustainability, field research, biology → `herbarium`; travel, international, cross-border, logistics, global teams, exchange programme → `airmail`; music, podcast, culture, creative work, anniversary → `vinyl`; pricing, budget, cost breakdown, retail, e-commerce, expenses → `receipt`; storytelling, user journey, explainer, product launch, team story → `comic`; games, gamification, hackathon, youth event, onboarding challenge, game jam → `pixel`; children's education, modular product, system architecture, teamwork, building blocks, STEM workshop → `bricks`; processes, onboarding, strategy, gamified training, step-by-step plans, game plan → `boardgame`; hardware, IoT, embedded systems, AI infrastructure, engineering review, electronics → `circuit`; geography, outdoors, climate, field work, strategy landscape → `topo`; sports, competition, team results, sales push, leaderboard, tournament → `scoreboard`; science education, chemistry, building blocks of a topic, frameworks, taxonomies → `periodic`; food, cooking, recipes, how-to guide, step-by-step process, workshop → `recipe`; heritage, culture, celebrations, festivals, art and design history → `stainedglass`; timeline, event, anniversary, schedule, countdown, daily habit → `calendar`.<!-- /vl --> Or ask for one by name ("use the collage look"). To open the samples as editable decks, build them locally (it prints the commands that render each one into `out/`):
-
-```bash
-python3 skills/slide-maker/scripts/visual_languages.py --sample out/
-```
 
 ---
 

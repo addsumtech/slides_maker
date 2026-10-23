@@ -378,12 +378,45 @@ check(all(len(G["roles"]["series"]) >= 4 for s_ in vl_specs.load().values() for 
       "every ground carries at least four series colours")
 
 # the README gallery is a fixed showcase: a language without a cell lives on the library page, and the README
-# names how many more there are (2026-10-22: the user kept herbarium, airmail, vinyl and receipt off the README)
+# names how many more there are. Since 2026-10-23 it is twelve looks the user asked for, generated from SHOWCASE, three
+# to a row like the template gallery, each cell opening its language in the library section of the home page
 import vl_docs as _vd
-_g = _vd.gallery(vl_specs.load())
-check(_g is not None and len(_g) < len(vl_specs.load()) and "herbarium" not in _g and "ink" in _g,
-      "the README gallery shows some of the languages, not all ({})".format(sorted(_g or [])))
 _reg = vl_specs.load()
+_g = _vd.gallery(_reg)
+check(len(_vd.SHOWCASE) == 12 == len(set(_vd.SHOWCASE)) and set(_vd.SHOWCASE) <= set(_reg),
+      "SHOWCASE names twelve distinct registered languages: {}".format(_vd.SHOWCASE))
+check(_g == set(_vd.SHOWCASE) and len(_g) < len(_reg),
+      "the README gallery shows exactly the showcase, not every language ({})".format(sorted(_g or [])))
+for _blk, _site in (("vl-gallery", "https://slides.addsum.top/#vl-"), ("vl-gallery-zh", "https://slides.addsum.top/cn/#vl-")):
+    _t = _vd._render(_blk, _reg)
+    _cells = re.findall(r"<td[^>]*>(.*?)</td>", _t, re.S)
+    check(len(_cells) == 12 and _t.count("<tr>") == 4,
+          "{} lays twelve cells out three to a row ({} cells, {} rows)".format(_blk, len(_cells), _t.count("<tr>")))
+    check(all(c.count('href="{}{}"'.format(_site, n)) == 2 and "samples/{}.jpg".format(n) in c
+              for n, c in zip(_vd.SHOWCASE, _cells)),
+          "{}: every cell shows its sample and links its picture and its line to {}<name>".format(_blk, _site))
+    check(all(re.search(r"<strong>[^<]+</strong>", c) for c in _cells), "{}: every cell names its look".format(_blk))
+check("配你的照片" in _vd._render("vl-gallery-zh", _reg) and "with your photos" in _vd._render("vl-gallery", _reg),
+      "a picture language says what it carries instead of topic tags")
+_bad_show = _vd.SHOWCASE
+try:
+    _vd.SHOWCASE = _bad_show[:11] + ("nosuchlook",)
+    _err = None
+    try:
+        _vd._render("vl-gallery", _reg)
+    except ValueError as e:
+        _err = str(e)
+    check(_err is not None and "nosuchlook" in _err, "a showcase name with no language fails loudly: {!r}".format(_err))
+finally:
+    _vd.SHOWCASE = _bad_show
+# the section sits directly under the template gallery (the user, 2026-10-23), in both READMEs
+for _f, _a, _b, _c in (("README.md", "## Template gallery", "## Visual languages", "## How to use the templates"),
+                       ("README_CN.md", "## 模板库", "## 设计语言", "## 模板怎么用")):
+    _txt = (_vd.REPO / _f).read_text(encoding="utf-8")
+    _heads = [l for l in _txt.splitlines() if l.startswith("## ")]
+    check(_a in _heads and _b in _heads and _c in _heads and _heads.index(_b) == _heads.index(_a) + 1 and
+          _heads.index(_c) == _heads.index(_b) + 1,
+          "{}: the visual languages follow the template gallery and precede how to use it ({})".format(_f, _heads[:6]))
 _n_more = len(_reg) - len(_g)
 check(_vd._render("gallery-more", _reg).startswith("The gallery above shows {} of them; {} more".format(
       _vd._en(len(_g)), _vd._en(_n_more))), "gallery-more names the gallery and how many more: {!r}".format(
@@ -399,10 +432,16 @@ check([_vd._en(n) for n in (19, 20, 21, 26, 30, 45, 99)] ==
       "_en spells counts past twenty: {}".format([_vd._en(n) for n in (21, 26, 30, 99)]))
 # the badge beside ClawHub counts the library (2026-10-22): generated, so the number follows the registry
 _b = _vd._render("vl-badge", _reg)
-check("https://slides.addsum.top/languages/" in _b and "-{}-".format(len(_reg)) in _b and "alt=\"Visual languages: {}\"".format(len(_reg)) in _b,
-      "vl-badge links the library and carries the count: {!r}".format(_b))
+# the library is a section of the home page since 2026-10-23 (#languages), the Chinese badge on the Chinese home page
+check('href="https://slides.addsum.top/#languages"' in _b and "-{}-".format(len(_reg)) in _b and "alt=\"Visual languages: {}\"".format(len(_reg)) in _b,
+      "vl-badge links the library section and carries the count: {!r}".format(_b))
 _bz = _vd._render("vl-badge-zh", _reg)
-check("https://slides.addsum.top/languages/" in _bz and "-{}-".format(len(_reg)) in _bz, "vl-badge-zh carries the count: {!r}".format(_bz))
+check('href="https://slides.addsum.top/cn/#languages"' in _bz and "-{}-".format(len(_reg)) in _bz,
+      "vl-badge-zh links the Chinese home page's library and carries the count: {!r}".format(_bz))
+for _f, _url in (("README.md", "https://slides.addsum.top/#languages"), ("README_CN.md", "https://slides.addsum.top/cn/#languages")):
+    _txt = (_vd.REPO / _f).read_text(encoding="utf-8")
+    check("slides.addsum.top/languages/\"" not in _txt and _txt.count(_url) >= 2,
+          "{} links the library section ({}), not the retired /languages/ page".format(_f, _url))
 for _f, _blk in (("README.md", "vl-badge"), ("README_CN.md", "vl-badge-zh")):
     _txt = (_vd.REPO / _f).read_text(encoding="utf-8")
     _i, _j = _txt.find("<!-- vl:{} -->".format(_blk)), _txt.find("clawhub")

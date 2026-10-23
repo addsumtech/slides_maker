@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""vl_library_export.py writes the library page's data and images (slides.addsum.top/languages/) from the registry.
+"""vl_library_export.py writes the library page's data and images (served from slides.addsum.top/languages/, shown in the home page's #languages section) from the registry.
 
 WHAT IS HELD. The page must never need a hand edit when a language is added, so the exporter is held to: one entry per
 registry language in manifest order; stats counted from the registry, never typed; every image the JSON names exists;
