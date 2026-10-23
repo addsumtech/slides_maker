@@ -10,6 +10,7 @@ outlined  hollow display marks (section numbers, big figures) — a PICTURE: a n
 from __future__ import annotations
 
 import hashlib
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -154,18 +155,44 @@ def script_runs(text):
     return [(s_, c_) for s_, c_ in out]
 
 
-def line_width(text, size, latin, ea, bold, italic=False):
+# ── figures in a lining face ─────────────────────────────────────────────────────────────────────────────────────────
+# A run whose face has OLD-STYLE figures (Didot, Hoefler Text, Georgia …) is drawn with every figure sequence cut out into
+# a run of a LINING face (visual_languages.Kit.runs; deckkit.numeral_face — Times New Roman), so the figures never bob.
+# Those figures must be MEASURED in the lining face too: Times New Roman's are 23% wider than Didot's ("12" at 40pt,
+# 0.453in measured, 0.556in drawn) and narrower than Georgia's, and a figure measured in Didot and drawn in Times New
+# Roman broke "21 / 4" and "1:25 / 0" in their boxes (stainedglass, airmail, rendered 2026-10-23). One cut, shared by the
+# drawing and every measure.
+FIGURE_RUN = re.compile(r"(\d(?:[\d,.:/%–-]*\d)?%?)")
+
+
+def figure_runs(text, face, figures=None):
+    """`text` as [(part, face)]: every figure sequence (FIGURE_RUN, with its own separators: "1,250", "3.5%", "9:30") in
+    `figures` — the lining face the run sets its figures in — and the rest in `face`. Without `figures`, or without a
+    digit: [(text, face)]."""
+    if not figures or not any(c.isdigit() for c in text):
+        return [(text, face)]
+    return [(p_, figures if p_[0].isdigit() else face) for p_ in FIGURE_RUN.split(text) if p_]
+
+
+def figures_width(text, size, face, bold, italic=False, figures=None):
+    """The width (in) of Latin `text` drawn as `figure_runs` cuts it: each part in its own face (no kerning across the
+    cut — LibreOffice sets them as separate runs)."""
+    return sum(_glyph_width(p_, size, f_, bold, italic) or 0.0 for p_, f_ in figure_runs(text, face, figures))
+
+
+def line_width(text, size, latin, ea, bold, italic=False, figures=None):
     """The width (in) LibreOffice sets ONE line of `text` in (see AUTOSPACE_EM): each script run in its own face —
     East-Asian runs in `ea`, the rest in `latin` (italic applies to those only: CJK has none) — plus the autospace at
-    every change of script. Without an `ea` face (or where it is not installed and its stand-in has no CJK glyphs),
-    a CJK character counts one em. The width a line takes, not where it may break: a caller breaking lines measures
-    each candidate line with it."""
+    every change of script. `figures`: the lining face the run's figure sequences are drawn in (see `figure_runs`),
+    when they are cut out of an old-style `latin`. Without an `ea` face (or where it is not installed and its stand-in
+    has no CJK glyphs), a CJK character counts one em. The width a line takes, not where it may break: a caller
+    breaking lines measures each candidate line with it."""
     runs = script_runs(text)
     em = size / 72.0
     total = 0.0
     for seg, c in runs:
         if c == "l":
-            total += _glyph_width(seg, size, latin, bold, italic) or 0.0
+            total += figures_width(seg, size, latin, bold, italic, figures)
             continue
         rest = "".join(ch for ch in seg if not dk._has_cjk(ch))
         floor = (len(seg) - len(rest)) * em + ((_glyph_width(rest, size, ea or latin, bold) or 0.0) if rest else 0.0)

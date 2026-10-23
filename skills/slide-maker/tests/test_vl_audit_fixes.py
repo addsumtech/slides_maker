@@ -833,6 +833,141 @@ for _name, _W, _H in (("chalkboard", 10.0, 7.5), ("chalkboard", 8.27, 11.69), ("
         check(_tb.height / EMU >= _n * _pitch - 1e-3, "{} {}x{}: the credit's box holds the lines LibreOffice sets "
                                                         "({:.3f}in)".format(_name, _W, _H, _tb.height / EMU))
 
+# ── D1 (2026-10-23): figures are measured in the face they are DRAWN in ──
+# Kit.runs sets a figure run of an old-style face (Didot, Hoefler Text, Georgia …) in a lining one (Times New Roman), but
+# the flow measured those figures in the role's own face: Didot's "214" (73.7pt) read 1.29in for the 1.54in Times New
+# Roman draws, in a 1.457in box — LibreOffice set "21 / 4" (stainedglass, fonts="mac"); airmail's Didot numeral "1:250"
+# (130pt, 13.333x7.5) rendered "1:25 / 0" (rendered 2026-10-23). Every measure now takes the face of each run Kit.runs
+# draws — never under the render — floored by the run's own face's reading, which is what both lints read (one face a
+# paragraph): Georgia's figures, wider than Times New Roman's, keep that width where the lints read Georgia.
+def _drawn_w(k, field, t, sz):
+    """The width (in) of `t` as Kit.runs draws it in `field`: each run in its own face (Latin text)."""
+    _, role, _b, _c, it, _f = vl.TYPE[k.name][field]
+    b = vl._weight(k, field, t)
+    return sum(_dt._glyph_width(r[0], sz, r[5], r[3], r[4]) or 0.0 for r in k.runs(t, sz, None, b, role, it))
+def _need_w(k, field, t, sz):
+    """…or, when wider, `t` read whole in its run's own face (Kit.run's face: the lining one for a run of figures)."""
+    _, role, _b, _c, it, _f = vl.TYPE[k.name][field]
+    r = k.run(t, sz, None, vl._weight(k, field, t), role, it)
+    return max(_drawn_w(k, field, t, sz), _dt._glyph_width(t, sz, r[5], r[3], r[4]) or 0.0)
+_n_d1 = 0
+for _name in vl.LANGS:
+    for _fonts in ("both", "mac"):
+        _p = dk.blank_deck(13.333, 7.5)
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            try:
+                _k = vl.use(_name, _p, fonts=_fonts)
+            except ValueError:
+                continue                                       # a mac face not installed here
+        for _f, _spec in vl.TYPE[_name].items():
+            if not isinstance(_spec, tuple) or not dk.has_oldstyle_figures(_k.face(_spec[1])):
+                continue
+            for _t in ("214", "1:250", "$4.2M", "The 2026 plan in 12 steps", "Q3 2025: 1,250 visitors"):
+                _sz = 40.0
+                _n_d1 += 1
+                _want, _need, _got = _drawn_w(_k, _f, _t, _sz), _need_w(_k, _f, _t, _sz), vl._line_width(_k, _f, _t, _sz)
+                check(abs(_got - _need) < 1e-6 and _got >= _want - 1e-9,
+                      "{} {} {}: {!r} measures {:.3f}in — never under the {:.3f}in it is drawn in ({}), and the run's "
+                      "own face's {:.3f}in".format(_name, _fonts, _f, _t, _got, _want,
+                                                   "+".join(sorted({r[5] for r in _k.runs(_t, _sz, None, False, _spec[1])})),
+                                                   _need))
+                for _word in vl._words(_t):        # the widest-word test and the line breaks use the same widths
+                    _dw, _nw = _drawn_w(_k, _f, _word, _sz), _need_w(_k, _f, _word, _sz)
+                    check(vl._widest_word_fits(_k, _f, _word, _sz, _nw + vl._INSET + 1e-4)
+                          and not vl._widest_word_fits(_k, _f, _word, _sz, _dw + vl._INSET - 1e-3),
+                          "{} {} {}: {!r} fits its measure, never one narrower than it is drawn ({:.3f}in)".format(
+                              _name, _fonts, _f, _word, _dw))
+                _one = vl._break_lines(_k, _f, _t, _sz, _need + vl._INSET + 1e-4)
+                check(len(_one) == 1, "{} {} {}: {!r} is one line in a measure as wide as it is read ({})".format(
+                    _name, _fonts, _f, _t, _one))
+                if len(vl._words(_t)) > 1:          # (one word is never broken by the plan: it is held to the measure)
+                    _less = vl._break_lines(_k, _f, _t, _sz, _want + vl._INSET - 1e-3)
+                    check(len(_less) >= 2, "{} {} {}: …and two in one a hair narrower ({})".format(
+                        _name, _fonts, _f, _less))
+check(_n_d1 >= 40, "the drawn-face check ran ({} cases)".format(_n_d1))
+# the reported page: a figure in a Didot numeral is held to its box as Times New Roman draws it (fonts="mac")
+_n_d1p = 0
+for _name, _num in (("airmail", "1:250"), ("airmail", "214"), ("calendar", "1:250"), ("calendar", "214"),
+                    ("calendar", "1,250,000")):
+    for _W, _H in ((13.333, 7.5), (7.5, 7.5), (5.625, 10.0)):
+        _p = dk.blank_deck(_W, _H)
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            try:
+                _k = vl.use(_name, _p, fonts="mac")
+            except ValueError:
+                break
+        if not dk.has_oldstyle_figures(_k.face("numeral")):
+            continue
+        for _cw, _start in ((1.6, 200.0), (2.4, 220.0), (3.81, 220.0)):
+            _s = _k.new_slide()
+            try:
+                _r, _d = vl._flow(_k, _s, "data", (0.5, 0.5, _cw, 6.0), [("number", _num)], anchor="top", align="l",
+                                  start={"number": _start})
+            except vl.VLTextOverflow:
+                continue
+            _d()
+            _tb = [x for x in _s.shapes if getattr(x, "has_text_frame", False) and x.text_frame.text == _num]
+            if not _tb:
+                continue
+            _n_d1p += 1
+            _tb = _tb[0]
+            _drawn = sum(_dt._glyph_width(r.text, r.font.size.pt, r.font.name, bool(r.font.bold)) or 0.0
+                         for r in _tb.text_frame.paragraphs[0].runs)
+            check(_drawn <= _tb.width / EMU - vl._INSET + 1e-6,
+                  "{} mac {}x{} {}in column: {!r} as drawn ({:.3f}in in {}) fits its box's {:.3f}in".format(
+                      _name, _W, _H, _cw, _num, _drawn, _tb.text_frame.paragraphs[0].runs[0].font.name,
+                      _tb.width / EMU - vl._INSET))
+check(_n_d1p >= 10 or not any(dk.has_oldstyle_figures(f) for f in ("Didot",)),
+      "the Didot figure flow ran ({})".format(_n_d1p))
+
+# ── D2 (2026-10-23): CJK line ends as LibreOffice sets them, measured on renders ──
+# Rendered 2,256 boxes (calendar body/title, journal body; 20/36pt; Songti SC, Hiragino Sans GB, Hiragino Sans with
+# Arial / Times New Roman / Georgia), each at the width that puts one mark — or the space before it — at the line end,
+# read back with PyMuPDF:
+#  * a SPACE that itself overflows is a break, whatever follows: "螺丝刀握 / ，在来访" (the mark starts the line);
+#    when the space fits, a mark after an ideograph and a space hangs ("螺丝刀握 ，"), a closing bracket there starts the
+#    next line ("螺丝刀握 / 」在来访"), and after a Latin word and a space the word goes down with the mark ("螺丝刀握 /
+#    GPT，在来访") — the model hung the mark, or carried one letter ("螺丝刀握 GP / T，");
+#  * an opening quote or bracket never ends a line — “ ‘ ( as well as （「 — even with a space after it, unless that
+#    space is what overflows;
+#  * a closing mark (or ” ’) that cannot start a line takes the WHOLE word before it down: "螺丝刀握 / WikiGPT-5，在来访"
+#    (the carry took one character: "螺丝刀握WikiGPT- / 5，"); with nothing on the line to move back to, the line
+#    breaks at the measure: "「Claude / 」在来访";
+#  * one mark hangs after an ideograph even when the line or the text has Latin elsewhere ("AB螺丝刀，" on one line,
+#    "在来访者。 / AB螺丝"), and a half-width , . ! ; : ? after an ideograph hangs as the full-width ones do; nothing
+#    hangs right after a Latin letter or digit.
+_p, _k = use("calendar")
+_role = vl.TYPE["calendar"]["body"][1]
+for _t, _prefix, _slack, _want in (
+        ("螺丝刀握 ，在来访者", "螺丝刀握", 0.1, ["螺丝刀握", "，在来访", "者"]),
+        ("螺丝刀握 GPT ，在来访者", "螺丝刀握 GPT", 0.1, ["螺丝刀握 GPT", "，在来访者"]),
+        ("螺丝刀握在来访“者手里”修好", "螺丝刀握在来访“", 0.1, ["螺丝刀握在来访", "“者手里”修好"]),
+        ("螺丝刀握(在来访)者手", "螺丝刀握(", 0.1, ["螺丝刀握", "(在来访)", "者手"]),
+        ("螺丝刀握WikiGPT-5，在来访者", "螺丝刀握WikiGPT-5", 0.1, ["螺丝刀握", "WikiGPT-5，在来访", "者"]),
+        ("螺丝刀握Claude。在来访者", "螺丝刀握Claude", 0.1, ["螺丝刀握", "Claude。在来访", "者"]),
+        ("ドライバーは来Claude、訪者の手", "ドライバーは来Claude", 0.1, ["ドライバーは来", "Claude、訪者の手"]),
+        ("螺丝刀握在”来访者", "螺丝刀握", 1.3, ["螺丝刀握", "在”来访者"]),
+        ("螺丝刀握「Claude」在来访", "螺丝刀握「", 0.1, ["螺丝刀握", "「Claude", "」在来访"]),
+        ("螺丝刀握在（ 握在来", "螺丝刀握在（", 0.05, ["螺丝刀握在（", "握在来"]),
+        ("螺丝刀握 ，在来访者", "螺丝刀握 ", 0.15, ["螺丝刀握 ，", "在来访者"]),
+        ("螺丝刀握 GPT ，在来访者", "螺丝刀握 GPT ", 0.15, ["螺丝刀握", "GPT ，在来访", "者"]),
+        ("螺丝刀握 」在来访者", "螺丝刀握 ", 0.15, ["螺丝刀握", "」在来访", "者"]),
+        ("螺丝刀握（ 在来访者", "螺丝刀握（ ", 0.15, ["螺丝刀握", "（ 在来访者"]),
+        ("螺。", None, 1.02, ["螺。"]),
+        ("螺」。", None, 1.02, ["螺", "」。"]),
+        ("AB螺丝刀，握在来访", "AB螺丝刀", 0.1, ["AB螺丝刀，", "握在来访"]),
+        ("螺丝刀握在,握在来访", "螺丝刀握在", 0.1, ["螺丝刀握在,", "握在来访"]),
+        ("螺丝刀握在来访者手里修好带走。AB螺丝", None, 7.02, ["螺丝刀握在来访", "者手里修好带走。", "AB螺丝"]),
+        ("螺丝刀握在A。", None, 3.02, ["螺丝刀", "握在", "A。"])):
+    for _sz in (20.0, 36.0):
+        _em = _sz / 72.0
+        _b = vl._weight(_k, "body", _t)
+        _w = (_slack * _em if _prefix is None else
+              _dt.line_width(_prefix, _sz, _k.face(_role), _k.ea_face(_role, _t) or _k.face(_role), _b) + _slack * _em)
+        _got = [l_.replace(" ", "") for l_ in vl._break_lines(_k, "body", _t, _sz, _w + vl._INSET)]
+        check(_got == [l_.replace(" ", "") for l_ in _want], "{}pt {!r}: lines as LibreOffice set them ({} — rendered "
+                                                             "{})".format(_sz, _t, " / ".join(_got), " / ".join(_want)))
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

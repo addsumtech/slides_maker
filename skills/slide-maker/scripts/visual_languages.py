@@ -177,13 +177,12 @@ class Kit:
     def runs(self, text, size, color=None, bold=False, role="body", italic=False):
         """The runs of one paragraph: run(), with every digit sequence inside an OLD-STYLE figure face (Georgia)
         split into a run in a lining face of the same register — "Repair café 2026" never bobs (final review,
-        2026-10-04; lining figures always). Use it for any text that may contain digits."""
+        2026-10-04; lining figures always). Use it for any text that may contain digits. The cut is
+        display_type.figure_runs, the one every measure of the flow uses (_drawn_width)."""
+        import display_type as dt
         r = self.run(text, size, color, bold, role, italic)
-        if not any(c.isdigit() for c in text) or not dk.has_oldstyle_figures(r[5]):
-            return [r]
-        lining = dk.numeral_face(r[5])
-        return [((part,) + r[1:5] + ((lining if part[0].isdigit() else r[5]),) + r[6:])
-                for part in re.split(r"(\d(?:[\d,.:/%\u2013-]*\d)?%?)", text) if part]
+        lat, figures = _run_faces(self.face(role), text)
+        return [(part,) + r[1:5] + (face,) + r[6:] for part, face in dt.figure_runs(text, lat, figures)]
 
     def new_slide(self):
         """A slide in the language: paints the language's ground (its grain, where it has one) and names the
@@ -635,7 +634,66 @@ def _tokens(text):
     return out
 
 
-def _line_width(k, field, text, size, italic=None):
+_RUN_FACES = {}
+
+
+def _run_faces(face, text):
+    """(latin, figures): the Latin face Kit.run sets a run of `text` in when its role's face is `face` — a run that is
+    mostly figures in a lining face entirely (dk.numeral_run_face) — and the lining face Kit.runs cuts its figure
+    sequences out into, when that face has old-style figures (None: they stay in `latin`). Memoised: the flow asks for
+    the same lines again and again while it shrinks."""
+    if not any(c.isdigit() for c in text):
+        return face, None                                  # no figure: numeral_run_face keeps the face
+    key = (face, text)
+    got = _RUN_FACES.get(key)
+    if got is None:
+        lat = dk.numeral_run_face(text, face)
+        got = (lat, dk.numeral_face(lat) if dk.has_oldstyle_figures(lat) else None)
+        if len(_RUN_FACES) > 200000:
+            _RUN_FACES.clear()
+        _RUN_FACES[key] = got
+    return got
+
+
+def _decisions(face, text, whole):
+    """The distinct (latin, figures) readings of `text` — on its own and as part of `whole` (see _drawn_width)."""
+    own = _run_faces(face, text)
+    if whole is None or whole == text:
+        return (own,)
+    other = _run_faces(face, whole)
+    return (own,) if other == own else (own, other)
+
+
+def _drawn_width(k, role, text, size, bold, italic=False, whole=None, floor=True):
+    """The width (in) of Latin `text` as Kit.runs DRAWS it in `role` — each part in its own face, the figures of an
+    old-style face in the lining face that sets them (display_type.figure_runs) — and never narrower than the run's own
+    face reads it whole. Measured in the role's face only, Didot's "214" read 1.29in where Times New Roman drew 1.54in,
+    in a 1.457in box: LibreOffice set "21 / 4" (stainedglass, 2026-10-22). The floor is what the lints read: each
+    measures a paragraph in ONE face (deckkit its first run's, lint_deck the face of most of its characters), so a run
+    split around its figures reads in its own face there — Georgia's figures, wider than they are drawn, keep their
+    width; a run set in the lining face entirely ("3,400") reads in that face everywhere. `whole`: the field `text` is
+    a line or word of — whether a run is set in the lining face entirely is decided on the run (mostly figures), and
+    the field is drawn either whole or as its measured lines, so the wider of the two readings is taken. floor=False:
+    the drawn width alone — where LibreOffice decides by what it draws (_break_lines: does the space overflow?)."""
+    import display_type as dt
+    best = 0.0
+    for lat, figures in _decisions(k.face(role), text, whole):
+        best = max(best, dt.figures_width(text, size, lat, bold, italic, figures))
+        if figures and floor:
+            best = max(best, dt.figures_width(text, size, lat, bold, italic))
+    return best
+
+
+def _drawn_advance(k, role, text, size, bold):
+    """deckkit's advance width (dk._natural_width_in, what its lint reads) of `text` as Kit.runs draws it in `role`:
+    each part in its own face, and never under the run's own face's reading (see _drawn_width)."""
+    import display_type as dt
+    lat, figures = _run_faces(k.face(role), text)
+    drawn = sum(dk._natural_width_in([(p_, bool(bold))], size, f_) for p_, f_ in dt.figure_runs(text, lat, figures))
+    return max(drawn, dk._natural_width_in([(text, bool(bold))], size, lat)) if figures else drawn
+
+
+def _line_width(k, field, text, size, italic=None, whole=None):
     """The width (in) one line of `text` takes — the widest of three models, because a line has to fit them all: as it
     RENDERS (display_type.line_width: each script run in its own face, a space taking the script before it, and
     LibreOffice's autospace at every change between CJK and Latin — without it "用 GPT-5 做 3 件事" read 3.67in and
@@ -644,30 +702,45 @@ def _line_width(k, field, text, size, italic=None):
     glyphs and measured ~0.6em, the Linux font simulation 2026-10-09); and as deckkit's lint reads it (the whole run in
     the East-Asian face). A chalkboard title split by the render width alone was read by lint as one line more, under
     its own chalk underline (2026-10-09). `italic`: the style the run renders in, the field's own when None — a run
-    that carries any CJK is set upright (Kit.run), so a caller measuring a Latin PART of one passes italic=False."""
+    that carries any CJK is set upright (Kit.run), so a caller measuring a Latin PART of one passes italic=False.
+    Latin text and the Latin runs of a CJK line are measured in the faces Kit.runs DRAWS them in (figures of an
+    old-style face in a lining one, _drawn_width); `whole`: the field `text` is a line of (see _drawn_width)."""
     import display_type as dt
     role, bold = TYPE[k.name][field][1], _weight(k, field, text)
     italic = TYPE[k.name][field][4] if italic is None else italic
     if not dk._has_cjk(text):
-        return dt._glyph_width(text, size, k.face(role), bold, italic) or 0
+        return _drawn_width(k, role, text, size, bold, italic, whole)
     ea = k.ea_face(role, text) or k.face(role)
     lat = k.face(role)
-    return max(dt.line_width(text, size, lat, ea, bold), dt.em_width(text, size, lat, bold),
+    return max(_render_width(k, role, text, size, ea, bold, whole), dt.em_width(text, size, lat, bold),
                dk._natural_width_in([(text, bool(bold))], size, ea))
+
+
+def _render_width(k, role, text, size, ea, bold, whole=None, floor=True):
+    """display_type.line_width — one line as LibreOffice sets it, script by script — in the faces Kit.runs draws `text`
+    in for `role` (see _drawn_width for `whole` and for the floor: the run's own face's reading), the East-Asian runs in
+    `ea`."""
+    import display_type as dt
+    best = 0.0
+    for lat, figures in _decisions(k.face(role), text, whole):
+        best = max(best, dt.line_width(text, size, lat, ea, bold, figures=figures))
+        if figures and floor:
+            best = max(best, dt.line_width(text, size, lat, ea, bold))
+    return best
 
 
 def _unbreakable_overwide(k, field, text, size, w):
     """The first word the renderer cannot keep whole AND will not break sensibly: a Latin token (identifier,
     URL, compound) wider than the column. A Korean word that is too wide breaks between syllables and is
     measured that way; Chinese/Japanese break between characters. None when every such word fits."""
-    import display_type as dt
     role, bold = TYPE[k.name][field][1], _weight(k, field, text)
+    italic = TYPE[k.name][field][4] and not dk._has_cjk(text)          # a run that carries CJK is set upright
     if dk._has_cjk(text) and not any(dk._is_hangul(ord(c)) for c in text):
         words = [u for _sep, u in _tokens(text) if not dk._has_cjk(u)]   # the Latin words inside Chinese/Japanese
     else:
         words = [w_ for w_ in _words(text) if not dk._has_cjk(w_)]
     for word in words:
-        if (dt._glyph_width(word, size, k.face(role), bold) or 0) > w - _INSET:
+        if _drawn_width(k, role, word, size, bold, italic, text) > w - _INSET:     # in the faces it is drawn in
             return word
     return None
 
@@ -704,22 +777,70 @@ def _field_height(k, field, text, size, w):
 
 
 def _widest_word_fits(k, field, text, size, w):
+    """Every word of `text` fits the measure `w` — a Latin word (and a figure) measured in the faces and the style
+    Kit.runs draws it in (_drawn_width; italic where the field is, upright inside CJK — Georgia Italic's "Everything"
+    is 4% wider than its upright), a Korean word in its Korean face; Chinese and Japanese break between characters,
+    so only the Latin words among them count."""
     import display_type as dt
     role, bold = TYPE[k.name][field][1], _weight(k, field, text)
     korean = any(dk._is_hangul(ord(c)) for c in text)
     if dk._has_cjk(text) and not korean:
-        return all((dt._glyph_width(u, size, k.face(role), bold) or 0) <= (w - _INSET)     # …but not inside a
-                   for _sep, u in _tokens(text) if not dk._has_cjk(u))                          # Latin word among them
-    face = k.ea_face(role, text) if korean else k.face(role)
-    return all((dt._glyph_width(word, size, face, bold) or 0) <= (w - _INSET) for word in _words(text))
+        return all(_drawn_width(k, role, u, size, bold, whole=text) <= (w - _INSET)     # …but not inside a
+                   for _sep, u in _tokens(text) if not dk._has_cjk(u))                  # Latin word among them
+    if korean:
+        face = k.ea_face(role, text)
+        return all((dt._glyph_width(word, size, face, bold) or 0) <= (w - _INSET) for word in _words(text))
+    italic = TYPE[k.name][field][4]
+    return all(_drawn_width(k, role, word, size, bold, italic, text) <= (w - _INSET) for word in _words(text))
+
+
+# CJK line ends as LibreOffice sets them (hangingPunct="1"). Measured on renders — 2,558 boxes for the delivery lint
+# (lint_deck._HANG_MARKS, 2026-10-22; this model sets all 2,444 horizontal ones as rendered) and 2,256 more for this line
+# model (2026-10-23: Songti SC, Hiragino Sans GB and Hiragino Sans with Arial, Times New Roman and Georgia, 20/36pt, each
+# box as wide as puts one mark, or the space before it, at the line end; lines read back from the PDF):
+#   * ONE of these marks hangs past a full line — the half-width ones too, after an ideograph ("螺丝刀握在,") — in every
+#     measure down to one ideograph ("螺。"), but never after Latin text ("握在 / A。", "螺丝刀握 / GPT，在来访" — a space
+#     after a word is Latin too), never a second one;
+_HANG_MARKS = frozenset(dk._CJK_HANG + ",.;:!?")
+#   * none of these starts a line — the break moves back to the last place it may fall, taking the WHOLE word or
+#     character before it down ("螺丝刀握 / WikiGPT-5，在来访", "螺丝刀握 / 在”来访者"; the curly quotes too) …
+_NO_LINE_START = _HANG_MARKS | frozenset(dk._CJK_CLOSE + "〗｝］”’～々)]}")
+#   * … and none of these ends one: an opening quote or bracket goes down with what it opens, even with a space after it
+#     ("螺丝刀握 / (在来访)", "螺丝刀握在来访 / “者手里”", "螺丝刀握 / （在来访者" from "握（ 在") — "(" as well as "（「";
+_NO_LINE_END = frozenset(dk._CJK_OPEN + "〖｛［“‘([{")
+#   * a SPACE: when the space itself is what overflows, the line breaks there, whatever follows ("螺丝刀握 / ，在来访",
+#     "螺丝刀握在（ / 握在来"); when it fits, a mark after it hangs where it may ("螺丝刀握 ，"), a closing bracket after an
+#     ideograph and a space starts the next line ("螺丝刀握 / 」在来访"), and after a Latin word and a space the word
+#     goes down with the mark ("螺丝刀握 / GPT，在来访");
+#   * with nowhere on the line to move the break back to, it falls at the measure ("螺丝刀握 / 「Claude / 」在来访").
+# A Latin word inside CJK is one unit (_tokens) — LibreOffice also breaks one after "-" or "/" before a letter ("Wiki- /
+# GPT，", "A/ / B，"), which this model does not: it moves the whole word down.
+
+
+def _latin_end(line):
+    """True when `line` does not end in East-Asian text — a Latin letter or digit, or anything else of the Latin script
+    ("87%", "v2)"), a weak mark taking the script before it (display_type.script_runs): no mark hangs after it. Rendered:
+    "握在 / A。", "来访 / 5。"; after an ideograph one hangs even when the line starts in Latin ("AB螺丝刀，")."""
+    import display_type as dt
+    runs = dt.script_runs(line)
+    return not runs or runs[-1][1] != "a"
+
+
+def _may_break(before, sep, unit):
+    """True when LibreOffice may break between the text `before` and `unit` (with `sep`, "" or " ", between them) INSIDE
+    a line — not where the space itself overflows (see _NO_LINE_END and the rules above it)."""
+    if before[-1:] in _NO_LINE_END:
+        return False
+    return unit[0] not in _NO_LINE_START or (sep == " " and not _latin_end(before))
 
 
 def _break_lines(k, field, text, size, w):
-    """Greedy line breaks with the real glyph widths of the face the run renders in (words for Latin,
-    characters for CJK) — an approximation of the renderer, good enough to see a widow. CJK line ends as
-    LibreOffice sets them (deckkit _CJK_HANG / _CJK_CLOSE / _CJK_OPEN, probed): ONE closing mark hangs past
-    the measure — in pure CJK text only, as measure_text; a closing bracket, or a second mark, takes the hung
-    mark and the ideograph before it down; an opening bracket never ends a line."""
+    """Greedy line breaks with the real glyph widths of the faces the run is DRAWN in (words for Latin, characters
+    for CJK; the figures of an old-style face in their lining face, _drawn_width) — an approximation of the renderer,
+    good enough to see a widow. Chinese and Japanese line ends follow LibreOffice (_HANG_MARKS, _NO_LINE_START,
+    _NO_LINE_END, _may_break, measured on renders): one closing mark hangs past a full line, a mark that may not start
+    a line takes the word or character before it down, an opening one never ends a line, a space that overflows is a
+    break. Korean and Latin wrap at spaces."""
     import display_type as dt
     role, bold, italic = TYPE[k.name][field][1], _weight(k, field, text), TYPE[k.name][field][4]
     cjk = dk._has_cjk(text)
@@ -728,18 +849,23 @@ def _break_lines(k, field, text, size, w):
     korean = any(dk._is_hangul(ord(c)) for c in text)     # wraps at spaces, like Latin (LibreOffice probe)
     pairs = _tokens(text)                                  # CJK characters and whole Latin words (see _tokens)
     limit = w - _INSET
-    may_hang = (dk.HANG_PUNCT and cjk and not korean and not any(c.isascii() and c.isalnum() for c in text)
-                and limit >= 2 * size / 72.0)
+    may_hang = dk.HANG_PUNCT                               # in every measure, down to one ideograph ("螺。", rendered
+    #                                                        12-48pt, lint_deck's probe 2026-10-22)
     cjk = cjk and not korean                               # below: per-character CJK rules only
 
     def width(s_):
         if korean:       # Hangul in its face, Latin words in theirs, the autospace between (display_type.line_width) —
-            return max(dt.line_width(s_, size, k.face(role), face, bold),            # or, when wider, the whole
+            return max(_render_width(k, role, s_, size, face, bold, text),           # or, when wider, the whole
                        dt._glyph_width(s_, size, face, bold) or 0)                    # line in the Korean face
         # a part of a CJK run is measured upright, as the whole run renders: measured in the field's italic, the Latin
         # half of "v2 2026 道具" read 6% narrow in Didot Italic and was planned on one line (corpus diff, 2026-10-22)
-        return (_line_width(k, field, s_, size, italic=False) if cjk else
-                dt._glyph_width(s_, size, face, bold, italic)) or 0
+        return (_line_width(k, field, s_, size, italic=False, whole=text) if cjk else
+                _drawn_width(k, role, s_, size, bold, italic, text)) or 0
+
+    def drawn(s_):       # the width LibreOffice itself sets — no lint's reading: it decides WHICH rule applies
+        if dk._has_cjk(s_):
+            return _render_width(k, role, s_, size, face, bold, text, floor=False)
+        return _drawn_width(k, role, s_, size, bold, False, text, floor=False)
     # (separator, unit) pairs; a Korean word wider than the whole line goes in as syllables — the renderer
     # breaks it between them ("인공지능기반의 / 료영상재구성", final review 2026-10-04)
     toks = []
@@ -748,28 +874,52 @@ def _break_lines(k, field, text, size, w):
             toks += [(sep if j_ == 0 else "", c_) for j_, c_ in enumerate(u)]
         else:
             toks.append((sep, u))
-    lines, cur = [], ""
-    for sep, u in toks:
-        nxt = (cur + sep + u) if cur else u
-        if not cur or width(nxt) <= limit:
-            cur = nxt
-        elif may_hang and u in dk._CJK_HANG and width(cur) <= limit:
-            cur = nxt                                      # one closing mark hangs at the line end
-        elif cjk and (u in dk._CJK_CLOSE or u in dk._CJK_HANG):
-            hung = len(cur) - len(cur.rstrip(dk._CJK_HANG))
-            take = hung + 1 if len(cur) > hung + 1 else hung
-            if 0 < take < len(cur):
-                lines.append(cur[:-take])
-                cur = cur[-take:] + u                      # "一二三四五 / 六。」"
+    if not cjk:
+        lines, cur = [], ""
+        for sep, u in toks:
+            nxt = (cur + sep + u) if cur else u
+            if not cur or width(nxt) <= limit:
+                cur = nxt
             else:
-                cur = nxt                                  # nothing to carry: it overflows, as the renderer does
-        elif cjk and len(cur) > 1 and cur[-1] in dk._CJK_OPEN:
-            lines.append(cur[:-1])                         # "意度很高 / （详见附"
-            cur = cur[-1] + u
-        else:
-            lines.append(cur)
-            cur = u
-    return lines + [cur]
+                lines.append(cur)
+                cur = u
+        return lines + [cur]
+
+    def joined(us):                                        # a line's units: its first one without the space before it
+        return "".join((s_ if i_ else "") + u_ for i_, (s_, u_, _h) in enumerate(us))
+    lines, cur = [], []                                    # cur: the line's [separator, unit, hung past the measure?]
+    for i, (sep, u) in enumerate(toks):
+        if not cur:
+            cur = [[sep, u, False]]
+            continue
+        line = joined(cur)
+        if width(line + sep + u) <= limit:
+            cur.append([sep, u, False])
+            continue
+        if sep and drawn(line + sep) > limit:              # the space itself overflows: the line breaks there
+            lines.append(line)
+            cur = [[sep, u, False]]
+            continue
+        after = toks[i + 1] if i + 1 < len(toks) else None
+        if (may_hang and u in _HANG_MARKS and not cur[-1][2] and not _latin_end(line)
+                and not (after and after[0] == "" and after[1][0] in _NO_LINE_START)):
+            cur.append([sep, u, True])                     # one mark hangs past a full line
+            continue
+        if not _may_break(line, sep, u):
+            seq = cur + [[sep, u, False]]
+            j = len(cur)                                   # the break goes before seq[j] — moved back past every unit
+            while j > 0 and not _may_break(joined(seq[:j]), seq[j][0], seq[j][1]):
+                j -= 1                                     # that may not start a line or follows one that may not end one
+            if j == 0:                                     # nowhere on the line to move it: it breaks at the measure,
+                j = len(cur)                               # taking down only what hangs past it
+                while j > 1 and cur[j - 1][2]:
+                    j -= 1
+            lines.append(joined(cur[:j]))
+            cur = [[s_, u_, False] for s_, u_, _h in seq[j:]]
+            continue
+        lines.append(line)
+        cur = [[sep, u, False]]
+    return lines + [joined(cur)]
 
 
 def _set_lines(k, field, text, size, w):
@@ -895,7 +1045,7 @@ def _balanced_width(k, f, t, sz, w):
         return None
     role, bold = TYPE[k.name][f][1], _weight(k, f, t)
     face = k.ea_face(role, t) if dk._has_cjk(t) else k.face(role)
-    full = dt._glyph_width(t, sz, face, bold) or 0
+    full = (dt._glyph_width(t, sz, face, bold) or 0) if dk._has_cjk(t) else _drawn_width(k, role, t, sz, bold)
     wb = full / n + _INSET
     while wb < w:
         # the lint's line model must hold the same lines too: collage's 4.23in measure was four lines by the glyphs and
@@ -932,7 +1082,7 @@ def _even_lines(k, f, t, sz, w):
         if (i, j) not in fits:
             s = " ".join(words[i:j])
             fits[(i, j)] = _one_line(k, f, s, sz, w)
-            seg[(i, j)] = dt._glyph_width(s, sz, face, bold) or 0
+            seg[(i, j)] = (dt._glyph_width(s, sz, face, bold) or 0) if korean else _drawn_width(k, role, s, sz, bold, whole=t)
         return fits[(i, j)]
     best = {}                                          # (start, lines left) -> (cost, breaks)
 
@@ -1206,12 +1356,12 @@ def _data_hero(k, slide, page, col, items, lay, underlay, orient):
     num = fields.get("number")
     if not num:
         return _flow(k, slide, page, col, items, anchor=lay["anchor"], align=lay["align"], underlay=underlay)
-    bold, face = TYPE[k.name]["number"][2], k.face("numeral")
+    bold = TYPE[k.name]["number"][2]
     s = min(*_canvas(k)) / 7.5
     rest = [it for it in items if it[0] != "number"]
     side = orient == "land" and bool(rest)
     tall = (0.80 if side else 0.55) * h * 72.0 / 1.2            # a line of the figure at ~1.2 em
-    adv = dk._natural_width_in([(num, bool(bold))], tall, face)
+    adv = _drawn_advance(k, "numeral", num, tall, bold)            # in the faces it is drawn in (lining figures)
     room = (0.50 if side else 0.86) * w
     if adv > room:
         tall *= room / adv
@@ -1220,13 +1370,13 @@ def _data_hero(k, slide, page, col, items, lay, underlay, orient):
     if not side:
         return _flow(k, slide, page, col, items, anchor="middle", align=lay["align"], underlay=underlay, start=start)
     line_h = tall / 72.0 * 1.2
-    nw = dk._natural_width_in([(num, bool(bold))], tall, face) + (0.5 * line_h if "circle" in lay["deco"] else 0.0) \
+    nw = _drawn_advance(k, "numeral", num, tall, bold) + (0.5 * line_h if "circle" in lay["deco"] else 0.0) \
         + 0.15 * line_h
     gutter = max(0.35, 0.06 * w)
     # the figure + caption GROUP is centred on the page (it hugged the left edge with half the page empty): the
     # caption column is as wide as its longest line wants (capped by what is left), the group shifts by the slack
     cw_room = max(1.0, w - nw - gutter)
-    want = max(dk._natural_width_in([(t, False)], start.get(f, 12), k.face("display" if f == "label" else "body"))
+    want = max(_drawn_advance(k, "display" if f == "label" else "body", t, start.get(f, 12), False)
                for f, t in rest) + 0.1
     cw = min(cw_room, max(want, 0.35 * cw_room))
     x0 = x + max(0.0, (w - (nw + gutter + cw)) / 2.0)
@@ -1695,7 +1845,7 @@ def _compose_one(k, slide, page, fields, image, lay):
             # the number's box so its measured ink sits at the shape's centre.
             x, y, w, h = r
             bold = TYPE[k.name]["number"][2]
-            adv = dk._natural_width_in([(str(t), bool(bold))], sz, k.face("numeral"))
+            adv = _drawn_advance(k, "numeral", str(t), sz, bold)          # as drawn: lining figures (Kit.runs)
             # a circle while the figure's ink is narrow enough to sit well inside it (<= 0.62 of its height — any single
             # figure in any face: DejaVu's "1" is 0.56, Trebuchet's 0.45); wider, a pill with a quarter-height margin
             # each side. A width-only rule made DejaVu's "1" a near-circle pill on Linux CI (2026-10-04).
@@ -1767,11 +1917,14 @@ def _place_credit(k, slide, n0, credit):
     inset, pad = 0.12, 0.08
 
     def _w(t):
+        # …and, when wider, as it is DRAWN: Kit.runs sets the figures of an old-style body face in a lining one
         if not cjk:
-            return dt._glyph_width(t, size, face, False) or len(t) * size * 0.55 / 72.0
+            return max(dt._glyph_width(t, size, face, False) or len(t) * size * 0.55 / 72.0,
+                       _drawn_width(k, "body", t, size, False))
         # the lints' one em a CJK character, or — when wider — as LibreOffice sets it, with the autospace at every
         # change between Chinese and Latin ("摄影：张三，CC BY 4.0 授权" has four, an em between them)
-        return max(dt.em_width(t, size, face, False), dt.line_width(t, size, face, mface, False))
+        return max(dt.em_width(t, size, face, False), dt.line_width(t, size, face, mface, False),
+                   _render_width(k, "body", t, size, mface, False))
     import lint_deck as _ld
 
     def _box_h(w_):
@@ -1933,11 +2086,11 @@ def _number_gutter(k, labels, size, floor):
     language's numeral face, by BOTH widths the kit uses (the glyph widths the flow measures, the font's advance the
     lint reads), plus NUMBER_SLACK and the text box's own insets — never under `floor`. A fixed 0.62in gutter held
     editorial's "01" (Arial Black 30.5pt, 0.5651in in LibreOffice) in an inner width of 0.5644in, and the renderer set
-    "0" over "1" (the group-A verification, 2026-10-15)."""
-    import display_type as dt
-    face, bold = k.face("numeral"), bool(TYPE[k.name]["item_no"][2])
-    need = max(max(dk._natural_width_in([(t, bold)], size, face), dt._glyph_width(t, size, face, bold) or 0.0)
-               for t in labels)
+    "0" over "1" (the group-A verification, 2026-10-15). Measured in the faces Kit.runs draws them in: Didot's "01"
+    is set in Times New Roman (lining figures)."""
+    bold = bool(TYPE[k.name]["item_no"][2])
+    need = max(max(_drawn_advance(k, "numeral", t, size, bold), _drawn_width(k, "numeral", t, size, bold))
+               for t in labels)                                  # in the faces Kit.runs draws them in
     # + 2 EMU: a pptx stores whole EMU and python-pptx truncates, so a box sized to exactly 1.10x came back 1.0999x
     # wherever the slack term beats the floor (CI's Linux faces, GitHub run 38892848519)
     return max(floor, NUMBER_SLACK * need + dk.TEXT_INSET_LR + 2.0 / 914400)
