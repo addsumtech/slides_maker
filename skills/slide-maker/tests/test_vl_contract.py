@@ -313,6 +313,31 @@ try:
 finally:
     vcf.pages_missing, vcf.invented_words, vcf.extras_not_refused = _pages, _iw, _ex
 
+# the NEXT line names a command that runs: a copy of the skill with no tests/ (the SkillHub package, 2026-10-23) printed
+# "NEXT: python3 …/tests/test_vl_contract.py", a file that is not there
+_saved = {f: getattr(vcf, f) for f in ("painters_missing", "pages_missing", "assets_missing", "invented_words",
+                                       "extras_not_refused", "bright_slabs", "rules_past_content")}
+_tests0 = cvc.TESTS if hasattr(cvc, "TESTS") else None
+try:
+    for _f in _saved:
+        setattr(vcf, _f, lambda n, registry=None: [])
+    with contextlib.redirect_stdout(io.StringIO()) as out:
+        rc = cvc.main(["tally"])
+    _nx = [l for l in out.getvalue().splitlines() if l.startswith("NEXT:")]
+    check(rc == 0 and len(_nx) == 1 and Path(_nx[0].split()[-1]).is_file(),
+          "a clean check names the contract tests, a file that exists: {}".format(_nx))
+    cvc.TESTS = Path(tempfile.mkdtemp(prefix="notests_"))
+    with contextlib.redirect_stdout(io.StringIO()) as out:
+        rc = cvc.main(["tally"])
+    _txt = out.getvalue()
+    check(rc == 0 and "NEXT:" not in _txt and "source repository" in _txt,
+          "without tests/ the check names no missing file and says where the tests run: {!r}".format(_txt[-200:]))
+finally:
+    for _f, _v in _saved.items():
+        setattr(vcf, _f, _v)
+    if _tests0 is not None:
+        cvc.TESTS = _tests0
+
 # ── part 3: docs blocks follow the registry ──
 import vl_docs
 _n = len(REG); _nd = len([s_ for s_ in REG.values() if s_["kind"] == "drawn"]); _ni = _n - _nd

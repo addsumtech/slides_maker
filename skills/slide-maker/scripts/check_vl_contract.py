@@ -12,6 +12,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import vl_contract as vc            # noqa: E402
 import vl_specs                     # noqa: E402
 
+# the contract's tests, which a packaged copy of the skill may leave out (the SkillHub package ships no tests/)
+TESTS = Path(__file__).resolve().parent.parent / "tests"
+
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
@@ -54,8 +57,13 @@ def main(argv=None):
     for p in probs:
         print("  FAIL " + p)
     print("[vl-contract] {} language(s), {} problem(s)".format(len(names), len(probs)))
-    if not probs:
-        print("NEXT: python3 {}/tests/test_vl_contract.py".format(Path(__file__).resolve().parent.parent))
+    if not probs:                          # a NEXT line is a command that runs, so it names only a file that is here
+        test = TESTS / "test_vl_contract.py"
+        if test.is_file():
+            print("NEXT: python3 {}".format(test))
+        else:
+            print("(this copy of the skill has no tests/: run tests/test_vl_contract.py on a checkout of the source "
+                  "repository)")
     return 1 if probs else 0
 
 
