@@ -246,7 +246,6 @@ def display(k, slide, rect, text, field, *, highlight=None, caps=True, ink=None,
         if not hi or hi.upper() not in t.upper():
             raise ValueError("{}: highlight= must be words of the {} itself, got {!r}".format(k.name, field, highlight))
     x, y, w, h = rect
-    face = k.ea_face(role, t) or k.face(role)
     sz, fl = base * s, max(9.0, floor * s)
     # measure the weight that RENDERS: Kit.run sets CJK display type bold where the Latin face has no CJK (poster's
     # Impact), and bold Hiragino is wider — measured light, "预算 budget" was one line and rendered two (2026-10-05)
@@ -254,8 +253,12 @@ def display(k, slide, rect, text, field, *, highlight=None, caps=True, ink=None,
 
     def measure(lines_, sz_, w_):
         # reserve what the delivery lint measures (~1.2 em a line; it never credits spacing below single), though
-        # the type is SET at 0.86 — measured 2026-10-05: a block reserved at 0.86 read as overlapping the line under it
-        return sum(dk.measure_text([(l_, bool(bold))], w_, sz_, font=face, line_h_factor=dk._LINT_LINE_H)
+        # the type is SET at 0.86 — measured 2026-10-05: a block reserved at 0.86 read as overlapping the line under it.
+        # Each line is counted in the faces Kit.runs draws it in (vl._measure_faces): a CJK line's Latin words and
+        # figures in its Latin face too — read in Songti SC, whose figures are narrow, a figure that breaks in the
+        # render fitted the plan (2026-10-23) — and a line that is mostly figures in the lining face that sets it
+        return sum(dk.measure_text([(l_, bool(bold))], w_, sz_, line_h_factor=dk._LINT_LINE_H,
+                                   **vl._measure_faces(k, role, l_))
                    for l_ in (lines_ or [t]))
     def words_fit(sz_):
         # every Latin word must fit the line: LibreOffice breaks "1,250,000" after a comma, and a long token inside
@@ -805,9 +808,8 @@ def _meta_height(k, kicker):
     if not kicker:
         return 0.4 * s
     t = kicker if dk._has_cjk(kicker) else kicker.upper()
-    face = k.ea_face("mono", t) or k.face("mono")
-    return max(0.4 * s, dk.measure_text([(t, True)], 0.62 * W, max(9.0, 11.0 * s), font=face,
-                                        line_h_factor=dk._LINT_LINE_H))
+    return max(0.4 * s, dk.measure_text([(t, True)], 0.62 * W, max(9.0, 11.0 * s), line_h_factor=dk._LINT_LINE_H,
+                                        **vl._measure_faces(k, "mono", t)))      # in the faces it is drawn in
 
 
 def _below_meta(k, rect, kicker):

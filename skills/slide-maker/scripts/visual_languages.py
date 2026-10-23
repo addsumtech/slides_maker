@@ -640,6 +640,28 @@ def _decisions(face, text, whole):
     return (own,) if other == own else (own, other)
 
 
+def _measure_faces(k, role, text):
+    """deckkit's measure's faces (dk._measure_lines, dk.measure_text) for one run of `text` in `role`: font= the face a
+    lint reads it in — its East-Asian face for a CJK run, else its Latin face — latin= the Latin face Kit.runs draws it
+    in and figures= the lining face its figures are cut out into (_run_faces)."""
+    lat, figures = _run_faces(k.face(role), text)
+    ea = k.ea_face(role, text) if dk._has_cjk(text) else None
+    return dict(font=ea or lat, latin=lat, figures=figures)
+
+
+def _lines_read(k, role, text, size, avail, bold, whole=None):
+    """How many lines one run of `text` in `role` takes in `avail` inches of usable width, by deckkit's measure (the
+    height every box is planned at) handed the faces Kit.runs DRAWS it in: a CJK run's Latin words and figures in the
+    run's Latin face, not its East-Asian one (LibreOffice sets each character in its script's face — read in Songti
+    SC, whose figures are narrow, "1,250,000" at 84pt fitted a 4in line it breaks in: 22 field heights a line short,
+    2026-10-23), a run that is mostly figures in its lining face entirely, the figures of an old-style face in their
+    lining face — and never under what either lint reads (dk._measure_lines takes the largest reading). `whole`: the
+    field `text` is a line or part of (see _drawn_width)."""
+    ea = k.ea_face(role, text) if dk._has_cjk(text) else None
+    return max(dk._measure_lines([(text, bool(bold))], size, avail, font=ea or lat, latin=lat, figures=figures)
+               for lat, figures in _decisions(k.face(role), text, whole))
+
+
 def _drawn_width(k, role, text, size, bold, italic=False, whole=None, floor=True):
     """The width (in) of Latin `text` as Kit.runs DRAWS it in `role` — each part in its own face, the figures of an
     old-style face in the lining face that sets them (display_type.figure_runs) — and never narrower than the run's own
@@ -741,13 +763,13 @@ def _field_height(k, field, text, size, w):
     _sz, role, bold = size, TYPE[k.name][field][1], _weight(k, field, text)
     if field == "number" and _outlinable(k, text):
         return size / 72.0 * 1.0                                   # an outlined picture, one line
-    runs = [(text, bold)]
     # measure East-Asian text with the EA face it renders in: a Latin face's metrics made a Korean quote
-    # one line where the render (and lint) set two, and it ran into its attribution
-    face = k.ea_face(role, text) if dk._has_cjk(text) else k.face(role)
+    # one line where the render (and lint) set two, and it ran into its attribution — and its Latin words and figures
+    # in the faces they are drawn in (_lines_read: "98.6%", drawn in Times New Roman, read in airmail's Didot was a word
+    # wider than its line and got a two-line box, 2026-10-23)
     # the larger of measure_text's count (what lint reads) and a break by the REAL glyphs of the style the
     # run renders in — an italic quote measured at upright widths rendered one line longer (2026-10-03)
-    lines = max(dk._measure_lines(runs, size, max(0.2, w - _INSET), font=face), len(_break_lines(k, field, text, size, w)))
+    lines = max(_lines_read(k, role, text, size, max(0.2, w - _INSET), bold), len(_break_lines(k, field, text, size, w)))
     lh = dk._LINT_LINE_H * (dk.CJK_LS if dk._has_cjk(text) else 1.0)
     return lines * size / 72.0 * lh + 0.06
 
@@ -844,8 +866,7 @@ def _lines_hold(k, field, text, ls, size, w):
     ran off the canvas, final review 2026-10-16)."""
     role = TYPE[k.name][field][1] if field in TYPE[k.name] else "body"
     bold = _weight(k, field, text) if field in TYPE[k.name] else False
-    face = k.ea_face(role, text) if dk._has_cjk(text) else k.face(role)
-    return not any(dk._measure_lines([(l_, bold)], size, max(0.2, w - _INSET), font=face) > 1 for l_ in ls)
+    return not any(_lines_read(k, role, l_, size, max(0.2, w - _INSET), bold, text) > 1 for l_ in ls)
 
 
 def _widowed(k, field, text, size, w):
@@ -887,10 +908,9 @@ def _one_line(k, f, seg, size, w):
     """The segment sits on ONE line by both models (the glyph break and measure_text, which lint reads), with
     3% to spare for a renderer a little wider than either."""
     role, bold = TYPE[k.name][f][1], _weight(k, f, seg)
-    face = k.ea_face(role, seg) if dk._has_cjk(seg) else k.face(role)
     ww = w * 0.97
     return (len(_break_lines(k, f, seg, size, ww)) == 1
-            and dk._measure_lines([(seg, bold)], size, max(0.2, ww - _INSET), font=face) == 1)
+            and _lines_read(k, role, seg, size, max(0.2, ww - _INSET), bold) == 1)
 
 
 def _phrase_lines(k, f, t, sz, w, min_size):
@@ -951,7 +971,7 @@ def _balanced_width(k, f, t, sz, w):
         # matched while LibreOffice broke "Everythin / g" in a 3.12in measure (the herbarium review, 2026-10-22)
         if (len(_break_lines(k, f, t, sz, wb)) == n and not _widowed(k, f, t, sz, wb)
                 and _widest_word_fits(k, f, t, sz, wb)
-                and dk._measure_lines([(t, bold)], sz, max(0.2, wb - _INSET), font=face) <= n):
+                and _lines_read(k, role, t, sz, max(0.2, wb - _INSET), bold) <= n):
             return wb
         wb *= 1.04
     return None
@@ -1811,6 +1831,9 @@ def _place_credit(k, slide, n0, credit):
     cjk = dk._has_cjk(credit)
     face = k.face("body")
     mface = k.ea_face("body", credit) if cjk else face
+    # its lines are counted in the faces the credit is DRAWN in — a Chinese one's "CC BY 4.0" in the body's Latin face,
+    # not its East-Asian one (_measure_faces) — and never under the lints' readings (dk._measure_lines)
+    mfaces = _measure_faces(k, "body", credit)
     inset, pad = 0.12, 0.08
 
     def _w(t):
@@ -1830,12 +1853,12 @@ def _place_credit(k, slide, n0, credit):
         # reads them (its own line count, 1.4 em a CJK line, 1.25 a Latin one — lint_deck._txt_h, asked, not copied).
         # The chip measured 1.3 em a CJK line, under both: a two-line Chinese credit at 14pt was "cramped against the
         # card bottom" of its own chip (chalkboard, 10x7.5), and the text box was shorter than the lines it rendered.
-        return max(dk.measure_text([(credit, False)], w_, size, font=mface, line_h_factor=dk._LINT_LINE_H),
+        return max(dk.measure_text([(credit, False)], w_, size, line_h_factor=dk._LINT_LINE_H, **mfaces),
                    _ld._txt_h({"paras": [[(credit, size)]], "w": w_, "font": face, "bold": False, "size": size,
                                "full": credit}))
     room = max(0.6, right - left - 2 * inset - 2 * pad)
     tb_w = min(room, _w(credit) * 1.10 + dk.TEXT_INSET_LR + 0.06)          # headroom: the lint's estimate must agree
-    h_text = dk.measure_text([(credit, False)], tb_w, size, font=mface)
+    h_text = dk.measure_text([(credit, False)], tb_w, size, **mfaces)
     one = dk.measure_text([("x", False)], 10.0, size, font=mface)
     if h_text > 3.05 * one or _box_h(tb_w) + 0.2 > 0.35 * (bottom - top):
         raise ValueError("{}: credit= {!r} needs more than three lines, or a third of its picture ({:.1f}in wide) — shorten it, "
@@ -1845,7 +1868,7 @@ def _place_credit(k, slide, n0, credit):
         lo_, hi_ = tb_w * 0.45, tb_w                      # balances the lines, so the last never holds one glyph
         for _ in range(14):
             mid = (lo_ + hi_) / 2
-            if dk.measure_text([(credit, False)], mid, size, font=mface) <= h_text + 1e-6:
+            if dk.measure_text([(credit, False)], mid, size, **mfaces) <= h_text + 1e-6:
                 hi_ = mid
             else:
                 lo_ = mid
@@ -1853,7 +1876,7 @@ def _place_credit(k, slide, n0, credit):
     # a chip that hugs the line it renders is a LABEL (0.04in above and below); one tall enough to read as a card (over
     # 0.35in, where the lint starts to ask a card's 0.09in padding) holds its words by both readings and is padded as
     # a card — a one-line 15.4pt Chinese credit on A4 was 0.37in tall with 0.04in under its words
-    h_text = dk.measure_text([(credit, False)], tb_w, size, font=mface, line_h_factor=dk._LINT_LINE_H)
+    h_text = dk.measure_text([(credit, False)], tb_w, size, line_h_factor=dk._LINT_LINE_H, **mfaces)
     vpad = 0.04
     if h_text + 2 * vpad > 0.35:
         h_text, vpad = _box_h(tb_w), 0.10

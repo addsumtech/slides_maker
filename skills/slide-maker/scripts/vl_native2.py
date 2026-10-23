@@ -1738,8 +1738,8 @@ def _cb_points(k, slide, f, image):
         tw_ = (bw - 2 * pad) * HEADROOM - dk.TEXT_INSET_LR
 
         def head_lines(hd, z_):
-            face_ = k.ea_face(role_h, hd) or k.face(role_h)
-            return dk._measure_lines([(hd, bool(bold_h))], z_, tw_, font=face_)
+            # in the faces it is drawn in: a CJK head's Latin words and figures in its Latin face too
+            return dk._measure_lines([(hd, bool(bold_h))], z_, tw_, **vl._measure_faces(k, role_h, hd))
         z_ = base_h * s
         while any(head_lines(hd, z_) > (1 if dk._has_cjk(hd) else 2) for hd, _ln in pts):
             z_ *= 0.95

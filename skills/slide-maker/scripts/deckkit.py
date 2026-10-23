@@ -5952,7 +5952,7 @@ def _as_runs(runs):
     return out
 
 
-def _measure_lines(runs, size_pt, avail_in, font=None):
+def _measure_lines(runs, size_pt, avail_in, font=None, latin=None, figures=None):
     """How many lines styled text wraps to — MEASURED, not estimated.
 
     `runs` = [(text, bold), ...] set at `size_pt` within `avail_in` inches of usable width.
@@ -5963,54 +5963,136 @@ def _measure_lines(runs, size_pt, avail_in, font=None):
     words that fit a line — stay whole and break at spaces; Chinese and Japanese break between
     characters and whole Latin words, with LibreOffice's line ends (one closing mark hangs past a full
     line, a mark that may not start a line takes the word or character before it down, an opening
-    bracket never ends a line — CJK_HANG_MARKS and the rules above it). Because it uses the same
-    font metrics the renderer does, the count matches the rendered layout far more closely than a
-    chars-per-line guess. Falls back to `_lines_heuristic` if Pillow or the font can't be loaded — so
-    a build never breaks over measurement. Lazy-imports Pillow/matplotlib."""
+    bracket never ends a line — CJK_HANG_MARKS and the rules above it). A paragraph's LEADING spaces take
+    room on its first line, as LibreOffice draws them (" Bring it / home" where "Bring it home" fits — only a
+    wrapped line's spaces vanish), and a line of their own when the first word does not fit after them.
+    Because it uses the same font metrics the renderer does, the count matches the rendered layout far
+    more closely than a chars-per-line guess. Falls back to `_lines_heuristic` if Pillow or the font
+    can't be loaded — so a build never breaks over measurement. Lazy-imports Pillow/matplotlib.
+
+    `font` is the ONE face the text is read in — for a CJK run, its East-Asian face. LibreOffice does not draw
+    a CJK run in one face: each character goes in the face of its SCRIPT (display_type.script_class), a Latin
+    word or a figure in the run's Latin face (<a:latin>), and the figures of an old-style face in the lining face
+    Kit.runs cuts them out into (display_type.figure_runs). Read in Songti SC, whose figures are narrow,
+    "1,250,000" at 84pt fitted a 4in line it breaks in ("1,250,0 / 00", rendered 2026-10-23) and 22 field heights
+    were planned a line short. So a caller that knows them names them: `latin`, the face the run's Latin text is
+    drawn in, and `figures`, the lining face of its figure sequences. The count is then the LARGEST of the run
+    read as drawn (each character in its script's face, the figures in theirs) and as each lint reads it — in the
+    ONE face it reads a paragraph in: deckkit's lint its first run's (`font` for a run that carries CJK), the
+    delivery lint the face most characters name, in the box's outer width (`_face_readings`) — never under either
+    lint, never under the render. Hiragino's figures are wider than the Latin face draws them: one line rendered,
+    two read by deckkit's lint, two counted (the floor 794a43f / 89e1f3f keep)."""
     fontname = font or FONT
     runs = _as_runs(runs)
     flat = "".join(t for t, _ in runs)
     if not flat:
         return 1
     avail = max(1.0, avail_in * 72.0)                       # usable width, in points
+    latin = latin if latin and latin != fontname else None
+    figures = figures if figures and any(c.isdigit() for c in flat) else None
     try:
-        fonts = {b: _pil_font(fontname, size_pt, b) for b in (False, True)}
-        getlen = lambda s, b: fonts[b].getlength(s) / _MEAS_PREC
-        getlen("x", False)                                  # probe — raises if unusable
+        fonts = {(nm, b): _pil_font(nm, size_pt, b) for nm in dict.fromkeys((fontname, latin, figures)) if nm
+                 for b in (False, True)}
+        fonts[(fontname, False)].getlength("x")             # probe — raises if unusable
     except Exception:
         return _lines_heuristic(flat, size_pt, avail_in)
+    if not flat.lstrip(" "):
+        return 1
     bolds = [b for t, b in runs for _ch in t]               # each character's weight
-    one_b = bolds[0] if len(set(bolds)) == 1 else None      # one weight throughout (the common case)
+    return max(_count_lines(flat, bolds, faces, fonts, size_pt, avail + slack)
+               for faces, slack in _face_readings(flat, fontname, latin, figures))
+
+
+def _face_readings(flat, font, latin, figures):
+    """The ways `flat` is read, as [(faces, slack)]: `faces` names every character's face, `slack` (pt) the room a
+    reading has beyond the caller's measure (see `_measure_lines`). In `font`, as given; and, when `latin` or `figures`
+    is given:
+      * as DRAWN — each character in its script's face, a weak one (a space, a mark of no script) taking the script
+        before it, at the start of the first that has one (display_type.script_runs); a figure sequence
+        (display_type.FIGURE_RUN, cut from the whole text as Kit.runs cuts it) in `figures`;
+      * as deckkit's lint reads it — the paragraph in its FIRST run's face (lint_layout: `_measuring_face`): `font`
+        when that run carries CJK, else its Latin face (`figures` when it is a figure cut out of the text);
+      * as the delivery lint reads it — every character but the CJK ones in the face most characters name (every
+        run's <a:latin>: `figures` when they are most of the text, else `latin`), wrapped in the box's OUTER width
+        (lint_deck._est_lines(t["w"])): `slack` TEXT_INSET_LR, for the caller's measure is its box less text()'s
+        insets, or narrower (read at the measure itself, 269 of 510 field heights the change moved planned a line
+        the lint does not read, rendered 2026-10-23).
+    A reading is dropped where another puts every character measured in a face (a CJK character is one em in any) in
+    the same faces with no more room."""
+    n = len(flat)
+    out = [((font,) * n, 0.0)]
+    if not latin and not figures:
+        return out
+    import display_type as dt                               # lazily: display_type imports deckkit
+    lat = latin or font
+    fig = [False] * n
+    if figures:
+        for m in dt.FIGURE_RUN.finditer(flat):
+            fig[m.start():m.end()] = [True] * (m.end() - m.start())
+    cls = [_script_class(c) for c in flat]
+    cur = next((c for c in cls if c), "l")
+    drawn = []
+    for i, c in enumerate(cls):
+        cur = c or cur
+        drawn.append(font if cur == "a" else (figures if fig[i] else lat))
+    cands = [(tuple(drawn), 0.0)]
+    first = next((p_ for p_ in dt.FIGURE_RUN.split(flat) if p_), flat) if figures else flat
+    if not _has_cjk(first):
+        cands.append((((figures if fig[0] else lat),) * n, 0.0))
+    nfig = sum(fig)
+    cands.append((((figures if nfig > n - nfig else lat),) * n, TEXT_INSET_LR * 72.0))
+    measured = [i for i, ch in enumerate(flat) if not (_is_wide(ord(ch)) or _is_hangul(ord(ch)))]
+    seen = {tuple(font for _i in measured): 0.0}
+    for faces, slack in cands:
+        key = tuple(faces[i] for i in measured)
+        if key not in seen or seen[key] > slack:
+            seen[key] = slack
+            out.append((faces, slack))
+    return out
+
+
+def _count_lines(flat, bolds, faces, fonts, size_pt, avail):
+    """`_measure_lines` for ONE reading: every character of `flat` in the face `faces` names, at the weight `bolds`
+    gives it; `fonts`: (face, bold) -> its loaded Pillow font; `avail` in points."""
     em = float(size_pt)
+    keys = list(zip(faces, bolds))
+    one = keys[0] if len(set(keys)) == 1 else None          # one face, one weight throughout (the common case)
+
+    def getlen(s, key):
+        return fonts[key].getlength(s) / _MEAS_PREC
 
     def tw(s, at):
         """The width (pt) of `s`, which starts at character `at` of `flat`: a CJK / full-width glyph or a Hangul
-        syllable one em, a run of anything else measured in the face, each weight in its own."""
+        syllable one em, a run of anything else measured in its face, each weight in its own."""
         if not s:
             return 0.0
-        if one_b is not None and max(s) < "\u1100":           # nothing wide, one weight: one measurement
-            return getlen(s, one_b)
-        w, seg, b0 = 0.0, "", None
+        if one is not None and max(s) < "\u1100":           # nothing wide, one face and weight: one measurement
+            return getlen(s, one)
+        w, seg, k0 = 0.0, "", None
         for k_, ch in enumerate(s):
-            b = bolds[at + k_]
+            kk = keys[at + k_]
             if _is_wide(ord(ch)) or _is_hangul(ord(ch)):
                 if seg:
-                    w += getlen(seg, b0); seg = ""
+                    w += getlen(seg, k0); seg = ""
                 w += em
                 continue
-            if seg and b != b0:
-                w += getlen(seg, b0); seg = ""
-            seg += ch; b0 = b
-        return w + (getlen(seg, b0) if seg else 0.0)
+            if seg and kk != k0:
+                w += getlen(seg, k0); seg = ""
+            seg += ch; k0 = kk
+        return w + (getlen(seg, k0) if seg else 0.0)
 
-    body = flat.lstrip(" ")                                 # a line's leading spaces take no room
-    if not body:
-        return 1
+    body = flat.lstrip(" ")
     q = len(flat) - len(body)
-    base, at, q = cjk_units(body), [], len(flat) - len(body)
+    lead = tw(flat[:q], 0)                                  # a paragraph's leading spaces take room on its first line
+    base, at = cjk_units(body), []
     for sep, u in base:                                     # where each unit starts in `flat`
         q += len(sep); at.append(q); q += len(u)
     bw = [tw(u, a_) for (_s, u), a_ in zip(base, at)]
+    # … and when the first word does not fit after them, they are a line of their own: " / Bring / it / hom / e",
+    # " / 1:250 / 门口" (LibreOffice renders, 2026-10-23 — the word moves down to the break the space offers)
+    alone = int(lead > 0 and lead + bw[0] > avail + 1e-9)
+    if alone:
+        lead = 0.0
     breaks = set()
     # a word wider than the WHOLE line breaks — Korean between syllables (one em a syllable is a deliberate
     # over-estimate of SD Gothic's 0.865 em, rendered 2026-10-04), Latin at its punctuation or mid-word — on a line of
@@ -6031,9 +6113,9 @@ def _measure_lines(runs, size_pt, avail_in, font=None):
     if _has_cjk(body):                                      # LibreOffice's autospace at every change of script
         import display_type as dt                           # (lazily: display_type imports deckkit)
         changes, auto = cjk_script_changes(units), dt.AUTOSPACE_EM * em
-        width = lambda a, b: pre[b] - pre[a] - sw[a] + auto * changes(a, b)
+        width = lambda a, b: pre[b] - pre[a] - sw[a] + auto * changes(a, b) + (lead if a == 0 else 0.0)
     else:
-        width = lambda a, b: pre[b] - pre[a] - sw[a]
+        width = lambda a, b: pre[b] - pre[a] - sw[a] + (lead if a == 0 else 0.0)
     lines = cjk_break(units, width, avail + 1e-9, lambda a, b: width(a, b) + sw[b], rules=cjk_by_char(body),
                       breaks=breaks)
     # a unit wider than the whole line even so (a glyph wider than the column) takes as many lines as it is wide:
@@ -6041,15 +6123,18 @@ def _measure_lines(runs, size_pt, avail_in, font=None):
     # 1.2in, an identifier, a URL — all counted 1 line, rendered 2-3). A wrap-OFF box stays one line: that caller
     # does not measure lines (lint_layout passes the box's own wrap; a box that sets word_wrap=False is never measured)
     extra = sum(int(-(-w_ // avail)) - 1 for w_ in uw if w_ > avail)
-    return max(1, len(lines) + extra)
+    return max(1, alone + len(lines) + extra)
 
 
 # ---- public "measure before you place" helpers (so a build knows a block's true height
 #      at a given width BEFORE choosing its y — measure-then-place, not place-and-pray) ----
-def measure_lines(runs, size_pt, avail_in, font=None):
+def measure_lines(runs, size_pt, avail_in, font=None, latin=None, figures=None):
     """Public wrapper: how many lines ``runs`` = [(text, bold), ...] wrap to at ``size_pt``
-    within ``avail_in`` inches. Same metric the renderer/`bullet`/`callout` use."""
-    return _measure_lines(runs, size_pt, avail_in, font=font)
+    within ``avail_in`` inches. Same metric the renderer/`bullet`/`callout` use. For a CJK run
+    measured in its East-Asian ``font``, name the faces its Latin text and figures are drawn in
+    (``latin``, ``figures`` — see `_measure_lines`)."""
+    drawn = {k_: v_ for k_, v_ in (("latin", latin), ("figures", figures)) if v_}
+    return _measure_lines(runs, size_pt, avail_in, font=font, **drawn)
 
 
 def measure_callout(label, body, w):
@@ -6192,7 +6277,7 @@ def measure_bullets(items, w, size=17, gap=0.26):
 
 
 def measure_text(runs, w, size, *, line_h_factor=1.12, pad=0.0, font=None,
-                 line_spacing=None):
+                 line_spacing=None, latin=None, figures=None):
     """Height (inches) a plain :func:`text` block of ``runs`` = [(text, bold), ...] needs at
     ``size`` within width ``w``. ``pad`` adds top+bottom slack. CJK-aware: when the runs carry
     CJK, the per-line factor rises to ``1.2 × CJK_LS`` (the pitch text()'s script-aware default
@@ -6215,11 +6300,17 @@ def measure_text(runs, w, size, *, line_h_factor=1.12, pad=0.0, font=None,
     because the geometry they check is computed from the same short number. Pass the SAME value
     to both — ``measure_text(runs, w, size, line_spacing=1.16)`` beside
     ``text(..., line_spacing=1.16)`` — and the pair cannot drift. The CJK floor still applies:
-    a CJK-bearing block never measures below the pitch its script-aware default renders."""
+    a CJK-bearing block never measures below the pitch its script-aware default renders.
+
+    🔴 A CJK run measured in its East-Asian ``font`` draws its Latin words and figures in ANOTHER face — name it
+    (``latin``, and ``figures`` for the lining face an old-style face's figures are cut out into): see
+    `_measure_lines`."""
     # text() sets the words in the box MINUS its 2pt left/right insets; measured at the full width, a title exactly
     # as wide as its box came back one line and rendered two (2026-10-04)
     runs = _as_runs(runs)
-    nlines = _measure_lines(runs, size, max(0.05, w - TEXT_INSET_LR), font=font)
+    # latin= / figures= go on only when named: a stand-in with the old signature (smoke_deckkit's spy) still works
+    drawn = {k_: v_ for k_, v_ in (("latin", latin), ("figures", figures)) if v_}
+    nlines = _measure_lines(runs, size, max(0.05, w - TEXT_INSET_LR), font=font, **drawn)
     # `line_spacing` is an OOXML spcPct MULTIPLIER on the face's natural line height, not the
     # em-per-line itself — so it COMPOSES with `line_h_factor`, it does not replace it. Getting
     # this wrong is optimistic in the direction the whole module forbids: replacing gave 1.16

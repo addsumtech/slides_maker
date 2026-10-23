@@ -1230,6 +1230,90 @@ try:
 finally:
     dk.HANG_PUNCT, _L._HANG_PUNCT = _hang0
 
+
+# ── D6 (2026-10-23): a field is planned in the faces its run is DRAWN in ──
+# deckkit's measure (the height every box is planned at) read a CJK run's Latin words and figures in the East-Asian
+# face it was handed; LibreOffice draws them in the run's Latin face (and an old-style face's figures in a lining one).
+# Songti SC's figures are narrow, so a big figure that breaks in the render ("1,250,0 / 00", "3,40 / 0", "Claud / e",
+# "202 / 6") fitted the plan: 22 field heights went a line short with 1516431 (6 Korean ones were short before it). Each
+# row below is a LibreOffice render of exactly that box (the field's run via Kit.runs in a 4.0in box, lines read back
+# from the PDF — the 2,499-box field-height probe); the field height must plan at least the lines it renders. Three
+# carry a LEADING space, which LibreOffice draws (" 1:250 门 / …"; the page functions strip a field, the measure must
+# not assume it). And a Latin field that is mostly figures is drawn in the lining face entirely (dk.numeral_run_face):
+# airmail mac's "98.6%" read in Didot was a word wider than its line and got a two-line box (3.66in) for the one line
+# Times New Roman draws.
+def _vl_mac(name, fonts):
+    _pp = dk.blank_deck(13.333, 7.5)
+    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+        return vl.use(name, _pp, fonts=fonts)
+
+
+_D6 = (('editorial|both|number|周见带上一位邻居志愿者坐在你身边每张桌 Claude 上都有工具，，', 90.0, 11),
+       ('recipe|mac|number|周见带上一位邻居志愿者坐在你身边每张桌 Claude 上都有工具，，', 90.0, 11),
+       ('calendar|mac|number|位邻居志，3,400愿者坐在', 132.0, 6),
+       ('calendar|both|number|位邻居志，3,400愿者坐在', 132.0, 6),
+       ('journal|both|number|周 1,250,000 见带「上」、', 84.0, 5),
+       ('calendar|mac|number|周 1,250,000 见带「上」、', 132.0, 7),
+       ('drafting|both|number|周 1,250,000 见带「上」、', 198.0, 10),
+       ('calendar|both|number|里修好带走它，」又能用了 1,250,000 今年、的', 132.0, 12),
+       ('calendar|both|number|来访1,250,000者手里修。好带走它又、能用了今年', 132.0, 12),
+       ('calendar|both|title| 1:250 门口，、点数下周！见带上', 48.0, 4),
+       ('stainedglass|mac|title| 1:250 门口，、点数下周！见带上', 48.0, 4),
+       ('tally|both|number|가져간다 드라이버는 방문자의 손에 2026', 120.0, 10),
+       ('cutpaper|mac|number|가져간다 드라이버는 방문자의 손에 2026', 120.0, 10),
+       ('tally|both|number|고쳐서 고장난 드라이버는 2026', 120.0, 9),
+       ('tally|both|number|드라이버는 고장난 있다 고쳐서 방문자의 2026', 120.0, 12))
+for _key, _sz, _rendered in _D6:
+    _name, _fonts, _f, _t = _key.split("|", 3)
+    _k6 = _vl_mac(_name, _fonts)
+    _role = vl.TYPE[_name][_f][1]
+    _faces = [_k6.face(_role), _k6.ea_face(_role, _t)] + [x_ for x_ in vl._run_faces(_k6.face(_role), _t) if x_]
+    if any(dk._font_substituted(x_) for x_ in _faces if x_):
+        print("  skip D6 {}: a face of {} is not installed here".format(_key, _faces))
+        continue
+    _lh = dk._LINT_LINE_H * (dk.CJK_LS if dk._has_cjk(_t) else 1.0)
+    _plan = (vl._field_height(_k6, _f, _t, _sz, 4.0) - 0.06) / (_sz / 72.0 * _lh)
+    check(round(_plan, 2) >= _rendered, "{} {} {:g}pt {!r}: the field height plans the {} lines it renders (planned "
+          "{:.2f})".format(_name, _fonts, _sz, _t, _rendered, _plan))
+_k6 = _vl_mac("airmail", "mac")
+if not any(dk._font_substituted(x_) for x_ in ("Didot", "Times New Roman")):
+    _sz, _wc = 107.9, 4.1665
+    for _w in (_wc, _wc * vl.HEADROOM, _wc * vl.WORD_HEADROOM):
+        _fh = vl._field_height(_k6, "number", "98.6%", _sz, _w)
+        check(abs(_fh - (_sz / 72.0 * dk._LINT_LINE_H + 0.06)) < 1e-6,
+              "airmail mac '98.6%' at {:g}pt in {:.3f}in: one line, as Times New Roman draws it (field height {:.2f}in"
+              ")".format(_sz, _w, _fh))
+# every measure of a field hands deckkit the faces Kit.runs draws its run in: latin= the run's Latin face, figures= the
+# lining face of an old-style one (the field height, the imposed lines, the clause lines and the balanced measure)
+_seen = []
+_real_ml = dk._measure_lines
+
+
+def _spy_ml(runs, size_pt, avail_in, font=None, latin=None, figures=None):
+    _seen.append(("".join(t_ for t_, _b in dk._as_runs(runs)), font, latin, figures))
+    return _real_ml(runs, size_pt, avail_in, font=font, latin=latin, figures=figures)
+
+
+_k6 = _vl_mac("calendar", "mac")
+try:
+    dk._measure_lines = _spy_ml
+    for _t in ("我们每月 2026 年开一次修理咖啡馆，带上 Claude 一起来。", "Repair café 2026, every month"):
+        _seen.clear()
+        vl._field_height(_k6, "title", _t, 40.0, 6.0)
+        vl._lines_hold(_k6, "title", _t, vl._break_lines(_k6, "title", _t, 40.0, 6.0), 40.0, 6.0)
+        vl._one_line(_k6, "title", _t, 40.0, 6.0)
+        vl._balanced_width(_k6, "title", _t, 40.0, 6.0)
+        _role = vl.TYPE["calendar"]["title"][1]
+        _lat, _fig = vl._run_faces(_k6.face(_role), _t)
+        # a part (a line, a clause) names a Latin face, and is read in its East-Asian face when it carries CJK
+        _off = [s_ for s_ in _seen if not s_[2] or s_[1] != (_k6.ea_face(_role, s_[0]) if dk._has_cjk(s_[0]) else s_[2])]
+        _whole = [s_ for s_ in _seen if s_[0] == _t]
+        check(_seen and not _off and any(s_[2] == _lat and s_[3] == _fig for s_ in _whole),
+              "calendar mac title {!r}: every measure names the faces it is drawn in (the whole: latin={} figures={}; "
+              "off: {})".format(_t[:16], _lat, _fig, _off[:2]))
+finally:
+    dk._measure_lines = _real_ml
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

@@ -306,6 +306,76 @@ def main():
     else:
         print("  skip mixed CJK line counts: Songti SC is not installed here")
 
+    # A CJK run's Latin words and figures are DRAWN in the run's LATIN face (<a:latin>), not in its East-Asian one, and
+    # the measure reads them there when the caller names it (latin=): handed only the East-Asian face it read Songti
+    # SC's narrow figures, so "1,250,000" at 84pt fitted a 4in line it breaks in ("1,250,0 / 00", five lines rendered,
+    # four planned — 22 field heights a line short after 1516431). Every count is a LibreOffice render of this exact box
+    # (2026-10-23, lines read back from the PDF): the break inside the figure follows the Latin face (Arial Black sets
+    # "1,250, / 000"), never the East-Asian one; a word between the two readings goes down as the Latin face says.
+    _need = ("Songti SC", "Hiragino Sans GB", "Times New Roman", "Arial", "Arial Black", "Georgia")
+    if not any(dk._font_substituted(f_) for f_ in _need):
+        for lat_ in ("Times New Roman", "Arial", "Arial Black"):
+            for ea_ in ("Songti SC", "Hiragino Sans GB"):
+                n = dk._measure_lines([("周 1,250,000 见带「上」、", False)], 84, 4.0 - dk.TEXT_INSET_LR, font=ea_,
+                                      latin=lat_)
+                check("84pt '周 1,250,000 见带「上」、' in %s + %s measures the 5 lines it renders" % (lat_, ea_), n == 5, n)
+        for t_, sz_, w_, lat_ in (("螺丝刀握在Claude来访者手里", 24, 2.9149, "Arial Black"),
+                                  ("螺丝刀握在Claude来访者手里", 40, 4.8229, "Arial Black"),
+                                  ("螺丝刀握在2026来访者手里", 24, 2.4514, "Times New Roman"),
+                                  ("螺丝刀握在2026来访者手里", 40, 4.0486, "Times New Roman"),
+                                  ("螺丝刀握在GPT-5来访者手里", 24, 2.7533, "Arial"),
+                                  ("螺丝刀握在GPT-5来访者手里", 40, 4.5484, "Arial"),
+                                  ("螺丝刀握在Wiki来访者手里", 24, 2.467, "Georgia"),
+                                  ("螺丝刀握在Wiki来访者手里", 40, 4.0868, "Georgia")):
+            n = dk._measure_lines([(t_, False)], sz_, w_ - dk.TEXT_INSET_LR, font="Songti SC", latin=lat_)
+            check("%gpt %r: the Latin word measured in %s goes down (3 lines, as rendered)" % (sz_, t_, lat_), n == 3, n)
+        # the other way, Hiragino's figures are WIDER than the Latin face draws them: LibreOffice sets one line where the
+        # East-Asian reading has two — and that reading is what deckkit's lint reads (a paragraph in its first run's
+        # face), so the measure never goes under it (the floor 794a43f / 89e1f3f keep): two lines planned, one rendered
+        for t_, sz_, w_, lat_ in (("螺丝刀握在2026", 24, 2.5764, "Times New Roman"), ("螺丝刀握在1,250", 40, 4.4618, "Arial")):
+            av_ = w_ - dk.TEXT_INSET_LR
+            n = dk._measure_lines([(t_, False)], sz_, av_, font="Hiragino Sans GB", latin=lat_)
+            lint_ = dk._measure_lines([(t_, False)], sz_, av_, font="Hiragino Sans GB")
+            check("%gpt %r: never under the lint's East-Asian reading (%d), never under the render (1)" % (sz_, t_, lint_),
+                  n == lint_ == 2, (n, lint_))
+        check("measure_text hands latin= to the measure",
+              dk.measure_text([("周 1,250,000 见带「上」、", False)], 4.0, 84, font="Songti SC", latin="Times New Roman")
+              >= 4.9 * 84 / 72.0 * dk._LINT_LINE_H)
+        # figures= — the lining face an old-style Latin face's figures are cut out into (display_type.figure_runs):
+        # Didot's "3,400" fits the line, the Times New Roman it is drawn in does not ("3,40 / 0", rendered 2026-10-23)
+        if not dk._font_substituted("Didot"):
+            n = dk._measure_lines([("位邻居志，3,400愿者坐在", True)], 132, 4.0 - 0.056, font="Songti SC", latin="Didot",
+                                  figures="Times New Roman")
+            check("132pt '位邻居志，3,400愿者坐在': its figures measured in their lining face (6 lines, as rendered)",
+                  n == 6, n)
+    else:
+        print("  skip Latin-face CJK counts: one of %s is not installed here" % (_need,))
+    # A paragraph's LEADING spaces take room on its first line (LibreOffice renders, 2026-10-23: " Bring it home" in a
+    # box that holds "Bring it home" and half a space sets " Bring it / home"; " 1:250 门口，、…" at 48pt sets
+    # " 1:250 门 / 口，、点数 / …", four lines for the three of "1:250 门口，、…"); only a WRAPPED line's spaces vanish.
+    # When the first word does not fit after them they are a line of their own (" / Bring / it / hom / e",
+    # " / 1:250 / 门口 / …", " / Donaudamp / fschifffahrt is / long": the word moves down to the break the space offers).
+    if not dk._font_substituted("Arial"):
+        for sz_, w_ in ((24, 2.061), (40, 3.403)):
+            for t_, want_ in ((" Bring it home", 2), ("   Bring it home", 2), ("Bring it home", 1)):
+                n = dk._measure_lines([(t_, False)], sz_, w_ - dk.TEXT_INSET_LR, font="Arial")
+                check("%gpt %r measures the %d line(s) it renders" % (sz_, t_, want_), n == want_, n)
+        for t_, sz_, w_, want_ in ((" Bring it home", 24, 0.877, 5), (" Bring it home", 40, 1.431, 5),
+                                   (" Donaudampfschifffahrt is long", 24, 1.955, 4),
+                                   (" Donaudampfschifffahrt is long", 40, 3.236, 4)):
+            n = dk._measure_lines([(t_, False)], sz_, w_ - dk.TEXT_INSET_LR, font="Arial")
+            check("%gpt %r in %.3fin: the space alone on line 1 (%d lines, as rendered)" % (sz_, t_, w_, want_),
+                  n == want_, n)
+    if not any(dk._font_substituted(f_) for f_ in ("Songti SC", "Times New Roman")):
+        for t_, want_ in ((" 1:250 门口，、点数下周！见带上", 4), ("1:250 门口，、点数下周！见带上", 3)):
+            n = dk._measure_lines([(t_, True)], 48, 4.0 - dk.TEXT_INSET_LR, font="Songti SC", latin="Times New Roman")
+            check("48pt %r measures the %d lines it renders" % (t_, want_), n == want_, n)
+        for sz_, w_ in ((24, 0.858), (40, 1.389)):
+            n = dk._measure_lines([(" 1:250 门口点数下周见带上", False)], sz_, w_ - dk.TEXT_INSET_LR, font="Songti SC",
+                                  latin="Times New Roman")
+            check("%gpt ' 1:250 门口点数下周见带上' in %.3fin: the space alone on line 1 (7 lines, as rendered)" % (sz_, w_),
+                  n == 7, n)
+
     # hanging is the DECK's declaration, not an assumption (final review, 2026-10-04): with hangingPunct="0", or
     # absent everywhere in the inheritance chain, LibreOffice does not hang and "一二三四五六。" renders on 2 lines
     prs_h = dk.blank_deck()
