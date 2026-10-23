@@ -1243,9 +1243,16 @@ finally:
 # airmail mac's "98.6%" read in Didot was a word wider than its line and got a two-line box (3.66in) for the one line
 # Times New Roman draws.
 def _vl_mac(name, fonts):
+    """The kit, or None where fonts="mac" names faces this machine lacks (vl.use refuses them — every Linux runner)."""
     _pp = dk.blank_deck(13.333, 7.5)
-    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-        return vl.use(name, _pp, fonts=fonts)
+    try:
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            return vl.use(name, _pp, fonts=fonts)
+    except ValueError as e:
+        if "not installed here" not in str(e):
+            raise
+        print("  skip D6 {} fonts={}: {}".format(name, fonts, str(e)[:90]))
+        return None
 
 
 _D6 = (('editorial|both|number|周见带上一位邻居志愿者坐在你身边每张桌 Claude 上都有工具，，', 90.0, 11),
@@ -1266,6 +1273,8 @@ _D6 = (('editorial|both|number|周见带上一位邻居志愿者坐在你身边�
 for _key, _sz, _rendered in _D6:
     _name, _fonts, _f, _t = _key.split("|", 3)
     _k6 = _vl_mac(_name, _fonts)
+    if _k6 is None:
+        continue
     _role = vl.TYPE[_name][_f][1]
     _faces = [_k6.face(_role), _k6.ea_face(_role, _t)] + [x_ for x_ in vl._run_faces(_k6.face(_role), _t) if x_]
     if any(dk._font_substituted(x_) for x_ in _faces if x_):
@@ -1276,7 +1285,7 @@ for _key, _sz, _rendered in _D6:
     check(round(_plan, 2) >= _rendered, "{} {} {:g}pt {!r}: the field height plans the {} lines it renders (planned "
           "{:.2f})".format(_name, _fonts, _sz, _t, _rendered, _plan))
 _k6 = _vl_mac("airmail", "mac")
-if not any(dk._font_substituted(x_) for x_ in ("Didot", "Times New Roman")):
+if _k6 is not None and not any(dk._font_substituted(x_) for x_ in ("Didot", "Times New Roman")):
     _sz, _wc = 107.9, 4.1665
     for _w in (_wc, _wc * vl.HEADROOM, _wc * vl.WORD_HEADROOM):
         _fh = vl._field_height(_k6, "number", "98.6%", _sz, _w)
@@ -1294,7 +1303,7 @@ def _spy_ml(runs, size_pt, avail_in, font=None, latin=None, figures=None):
     return _real_ml(runs, size_pt, avail_in, font=font, latin=latin, figures=figures)
 
 
-_k6 = _vl_mac("calendar", "mac")
+_k6 = _vl_mac("calendar", "mac") or _vl_mac("calendar", "both")     # the faces named, whichever set is installed
 try:
     dk._measure_lines = _spy_ml
     for _t in ("我们每月 2026 年开一次修理咖啡馆，带上 Claude 一起来。", "Repair café 2026, every month"):
@@ -1309,7 +1318,7 @@ try:
         _off = [s_ for s_ in _seen if not s_[2] or s_[1] != (_k6.ea_face(_role, s_[0]) if dk._has_cjk(s_[0]) else s_[2])]
         _whole = [s_ for s_ in _seen if s_[0] == _t]
         check(_seen and not _off and any(s_[2] == _lat and s_[3] == _fig for s_ in _whole),
-              "calendar mac title {!r}: every measure names the faces it is drawn in (the whole: latin={} figures={}; "
+              "calendar title {!r}: every measure names the faces it is drawn in (the whole: latin={} figures={}; "
               "off: {})".format(_t[:16], _lat, _fig, _off[:2]))
 finally:
     dk._measure_lines = _real_ml
