@@ -5311,12 +5311,7 @@ def _choose_face(faces, bold):
     up = [f for f in faces if not f["italic"]] or list(faces)
     if not up:
         return None
-    by_os2 = {f["weight"] for f in up}
-    by_name = {_weight_from_name(f["style"], f["full"], f["ps"]) for f in up}
-    if len(by_os2) == 1 and len(by_name) > 1:
-        ew = lambda f: _weight_from_name(f["style"], f["full"], f["ps"])
-    else:
-        ew = lambda f: f["weight"] or _weight_from_name(f["style"], f["full"], f["ps"])
+    ew = _effective_weight(up)
     deco = lambda f: any(t in (f["style"] + f["full"] + f["ps"]).lower() for t in _DECORATIVE)
     named = lambda f: next((k for k, nm in enumerate(_REGULAR_NAMES)
                             if nm == f["style"].strip().lower()), len(_REGULAR_NAMES))
@@ -5340,35 +5335,115 @@ def _choose_face(faces, bold):
     return min(pool, key=lambda f: (css(ew(f), 700), not f["bold_flag"], f["i"]))
 
 
-def _name_lookup(name, bold=False):
-    """(path, face_index) for a family found only through the name tables, or None.
+def _effective_weight(up):
+    """The weight `_choose_face` ranks the upright faces `up` of one family by: the OS/2 weight class, or — where every
+    face declares the same one (Lantinghei declares 400 for ExtraLight, DemiBold and Heavy alike) — the style name's."""
+    by_os2 = {f["weight"] for f in up}
+    by_name = {_weight_from_name(f["style"], f["full"], f["ps"]) for f in up}
+    if len(by_os2) == 1 and len(by_name) > 1:
+        return lambda f: _weight_from_name(f["style"], f["full"], f["ps"])
+    return lambda f: f["weight"] or _weight_from_name(f["style"], f["full"], f["ps"])
+
+
+# ---- where LibreOffice draws a DIFFERENT face: a regular run of a family with nothing under Medium ----------------
+# Read from the PDFs LibreOffice 26.2 (macOS) writes for b=0/1, i=0/1 runs of every installed family it resolves (311;
+# 51 have no face styled Regular). Its rule (vcl PhysicalFontFace::IsBetterMatch, on the weight CoreText reports) scores a
+# face's weight against the request in vcl's weight CLASSES — CoreText reports OS/2 500 as 0.23 and 600 as 0.3, both
+# SEMIBOLD to vcl — and gives a REGULAR request nothing at all for a face of SEMIBOLD or heavier; a tie goes to the face
+# that sorts LAST (by width, weight class, then style name). So a family with no face under Medium is drawn, for a
+# regular run, in its HEAVIEST normal-width face: Futura in Futura-Bold, YuGothic, YuKyokasho and YuKyokasho Yoko in
+# Bold, YuMincho and YuMincho +36p Kana in Extrabold; Klee's Medium and Demibold are one class, and Medium sorts later.
+# PowerPoint and Keynote draw those runs in the Medium — CoreText's own match for the family (NSFontManager and a
+# CTFontDescriptor both return Futura-Medium, YuGo-Medium, YuMin-Medium), which is `_choose_face`'s — so such a run is
+# MEASURED IN BOTH, the wider per string (`_choose_faces`): measured in the Medium, airmail's Futura section titles
+# (fonts="mac") planned for two lines set three, below their box, on all five canvases.
+# A face STYLED Regular (Roman, Book …) is CoreText's normal weight whatever its OS/2 class: Cochin, Snell Roundhand,
+# Lucida Grande and Yuppy declare 500 and LibreOffice drew each in that face, never in its Bold — so it stays the regular.
+# Elsewhere LibreOffice drew `_choose_face`'s face (301 of 311 regular runs, 303 of 311 bold ones) or one CoreText
+# weighs differently from the font's own OS/2 table (Hiragino Sans W3 for W4, Avenir Heavy for Black, Bodoni 72
+# Oldstyle's Book emboldened for its Bold) — which no metadata here predicts; see the commit for the measurements.
+# The 0.23 is CoreText's, and only macOS was measured: a platform that weighs a 500 face as vcl's MEDIUM would have
+# LibreOffice draw the Medium there, and the second face then only reads a run wider than it renders, never narrower.
+_LO_CLASS = ((150, 1), (250, 2), (350, 3), (450, 5), (650, 7), (750, 8), (850, 9))   # vcl FontWeight per CSS weight
+
+
+def _lo_weight_class(w):
+    """vcl's FontWeight class (1..10) for a CSS weight: CoreText's weight trait for the class (100 -0.8, 200 -0.6,
+    300 -0.4, 400 0, 500 0.23, 600 0.3, 700 0.4, 800 0.56, 900 0.62) mapped as vcl maps it (5 + t*5/0.68 above 0,
+    5 + 5t below) — 500 and 600 are both 7 (SEMIBOLD)."""
+    return next((c for lim, c in _LO_CLASS if w < lim), 10)
+
+
+def _regular_styled(style):
+    """True for a style NAMED as its family's regular: Regular, Roman, Book … — or, in an italic, nothing but the slant
+    ("Italic", "Book Oblique"; Cochin's "Italic" declares OS/2 500 and is CoreText's normal weight, as its Regular is)."""
+    import re as _re
+    s = _re.sub(r"\b(italic|oblique|inclined|slanted)\b", " ", str(style or "").lower())
+    s = " ".join(s.split())
+    return s == "" or s in _REGULAR_NAMES
+
+
+def _lo_face(faces, bold):
+    """The face LibreOffice DRAWS for a run of the family `faces` where it is not `_choose_face`'s, else None: for a
+    REGULAR run of a family none of whose normal-width upright faces is under Medium or styled as a regular, the one
+    vcl ranks last — the heaviest by weight class, then by style name (see the note above). Applied to an italic pool
+    (display_type) it is the same rule over the italic faces."""
+    if bold:
+        return None
+    up = [f for f in faces if not f["italic"]] or list(faces)
+    pool = [f for f in up if f["width"] == 5] or up
+    if len(pool) < 2:
+        return None
+    ew = _effective_weight(up)
+    if any(ew(f) < 450 or _regular_styled(f["style"]) for f in pool):
+        return None
+    return max(pool, key=lambda f: (_lo_weight_class(ew(f)), f["style"]))
+
+
+def _choose_faces(faces, bold):
+    """Every face a renderer draws a run of this family in: `_choose_face`'s (PowerPoint, Keynote — and LibreOffice,
+    almost always) first, then LibreOffice's where it differs (`_lo_face`). A run is measured in each and the WIDER
+    reading is taken, per string — Futura Medium's "C" is wider than its Bold's, so neither face is wider everywhere."""
+    nat = _choose_face(faces, bold)
+    lo = _lo_face(faces, bold)
+    return [f for f in (nat, lo if lo is not nat else None) if f is not None]
+
+
+def _name_lookups(name, bold=False):
+    """[(path, face_index), ...] for a family found only through the name tables (`_choose_faces`), or [].
 
     Chooses across EVERY file that registers the family — Heiti SC's Light and Medium live in two
     different .ttc files."""
     fam = _norm_family(name)
     paths = sorted({p for p, _i, _st in _name_table_index().get(fam, ())})
     cands = [dict(f, path=p) for p in paths for f in _face_meta(p) if fam in f["families"]]
-    pick = _choose_face(cands, bold) if cands else None
-    return (pick["path"], pick["i"]) if pick else None
+    return [(f["path"], f["i"]) for f in _choose_faces(cands, bold)] if cands else []
+
+
+def _name_lookup(name, bold=False):
+    """(path, face_index) for a family found only through the name tables, or None (the first of `_name_lookups`)."""
+    got = _name_lookups(name, bold)
+    return got[0] if got else None
 
 
 _FONT_FACE_CACHE = {}
 
 
-def _font_face(name, bold=False):
-    """(path, face_index) that draws `name` at this weight — the ONE resolution measuring uses.
+def _font_faces(name, bold=False):
+    """[(path, face_index), ...]: the faces that draw `name` at this weight — the ONE resolution measuring uses. The
+    first is the face a run is drawn with here (`_font_face`); a second is the face LibreOffice draws instead, where
+    it differs (`_choose_faces`), and a measure takes the wider of them.
 
-    matplotlib first; the family's faces are then chosen by `_choose_face` across EVERY file
-    matplotlib associates with that family, because a family's weights can sit in different files
-    (Heiti TC's Light and Medium; Hoefler Text's Regular and its Ornaments), and choosing inside the
-    one file matplotlib happened to return measured Hoefler Text in Ornaments. On a miss, the font
-    files' own name tables (`_name_lookup`); only then matplotlib's default face — a STAND-IN, which
-    `_font_substituted` reports as such.
+    matplotlib first; the family's faces are then chosen across EVERY file matplotlib associates with that family,
+    because a family's weights can sit in different files (Heiti TC's Light and Medium; Hoefler Text's Regular and its
+    Ornaments), and choosing inside the one file matplotlib happened to return measured Hoefler Text in Ornaments. On a
+    miss, the font files' own name tables (`_name_lookups`); only then matplotlib's default face — a STAND-IN, which
+    `_font_substituted` reports as such. [] only when nothing loads.
     """
     key = (name, bold)
     if key in _FONT_FACE_CACHE:
         return _FONT_FACE_CACHE[key]
-    res = None
+    res = []
     try:
         from matplotlib import font_manager as _fm
         props = _fm.FontProperties(family=name, weight=("bold" if bold else "normal"))
@@ -5382,17 +5457,24 @@ def _font_face(name, bold=False):
                                    if _norm_family(e.name) == fam}
             cands = [dict(f, path=fp) for fp in sorted(files) for f in _face_meta(fp)
                      if fam and fam in f["families"]]
-            pick = _choose_face(cands, bold) if cands else None
-            res = (pick["path"], pick["i"]) if pick else (str(path), _face_index(path, bold, name))
+            res = ([(f["path"], f["i"]) for f in _choose_faces(cands, bold)] if cands
+                   else [(str(path), _face_index(path, bold, name))])
         else:
-            res = _name_lookup(name, bold) if name else None
-            if res is None:
+            res = _name_lookups(name, bold) if name else []
+            if not res:
                 stand_in = _fm.findfont(props)
-                res = (stand_in, _face_index(stand_in, bold, None))
+                res = [(stand_in, _face_index(stand_in, bold, None))]
     except Exception:
-        res = None
+        res = []
     _FONT_FACE_CACHE[key] = res
     return res
+
+
+def _font_face(name, bold=False):
+    """(path, face_index) a run of `name` at this weight is DRAWN with here (wordmarks, ink boxes) — the first of
+    `_font_faces`; None only when nothing loads. A width is measured in all of `_font_faces`."""
+    got = _font_faces(name, bold)
+    return got[0] if got else None
 
 
 def _font_file(name, bold=False):
@@ -5510,19 +5592,30 @@ def _face_index(path, bold, family=None):
 def _pil_font(name, size_pt, bold=False):
     """A cached Pillow font for `name` at `size_pt` (loaded at size*PREC px).
 
-    Picks the right FACE inside a collection — see :func:`_face_index`."""
+    Picks the right FACE inside a collection — see :func:`_face_index`. Where LibreOffice draws the run in another
+    face than PowerPoint does (`_font_faces`: a regular Futura run is Futura-Bold there, Futura-Medium here), its
+    getlength() is the WIDER of the faces' readings of the string; drawing, bboxes and its name are the first face's."""
     key = (name, bold, round(size_pt, 2))
     f = _PIL_FONT_CACHE.get(key)
     if f is None:
         from PIL import ImageFont
-        path, idx = _font_face(name, bold) or (None, 0)
+        faces = _font_faces(name, bold) or [(None, 0)]
         px = max(1, int(round(size_pt * _MEAS_PREC)))
-        # BASIC, always: RAQM (used whenever libraqm loads — Pillow 13's Linux wheels) shapes differently from the
-        # macOS wheels every width here was tuned on, and raised `raqm_layout() failed` on CI (tests/test_font_layout_engine.py).
-        try:
-            f = ImageFont.truetype(path, px, index=idx, layout_engine=ImageFont.Layout.BASIC)
-        except Exception:
-            f = ImageFont.truetype(path, px, layout_engine=ImageFont.Layout.BASIC)
+
+        def load(path, idx):
+            # BASIC, always: RAQM (used whenever libraqm loads — Pillow 13's Linux wheels) shapes differently from the
+            # macOS wheels every width here was tuned on, and raised `raqm_layout() failed` on CI (tests/test_font_layout_engine.py).
+            try:
+                return ImageFont.truetype(path, px, index=idx, layout_engine=ImageFont.Layout.BASIC)
+            except Exception:
+                return ImageFont.truetype(path, px, layout_engine=ImageFont.Layout.BASIC)
+        f = load(*faces[0])
+        if len(faces) > 1:
+            others, own = [load(*pi) for pi in faces[1:]], f.getlength
+
+            def widest(text, *a, **kw):
+                return max([own(text, *a, **kw)] + [o.getlength(text, *a, **kw) for o in others])
+            f.getlength = widest
         _PIL_FONT_CACHE[key] = f
     return f
 

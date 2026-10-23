@@ -1547,11 +1547,18 @@ GROUNDS["chalkboard"] = _cb_ground
 def ink_w(k, field, text, size):
     """The width (in) one line of `text` takes at `size` in the field's face. Text with CJK in it is set in the
     East-Asian face, whose spaces and marks ("·") run wider than the Latin face measures — the sample's
-    "科学课 · 第 3 讲" ran past its box — so it counts every CJK character an em and every other at least 0.6 em."""
+    "科学课 · 第 3 讲" ran past its box — so it counts every CJK character an em and every other at least 0.6 em.
+    Where Kit.runs DRAWS it in other faces than the role's — the figures of an old-style face in a lining one — never
+    under that reading either (vl._drawn_width / vl._render_width): airmail's Didot numeral (fonts="mac") read "214"
+    2.27in where Times New Roman draws it 2.71in (130pt), and the stamp cut to it kept 0.17in a side of its designed
+    0.34in (10x5.625); calendar's "+38%" read 4.48in of 4.68in."""
     _b, role, bold, *_r = vl.TYPE[k.name][field]
     w = na.chip_width(text, size, k.face(role), bold=bool(bold)) - 1.2 * size / 72.0
     if dk._has_cjk(text):
         w = max(w, sum(1.0 if dk._has_cjk(ch) else 0.6 for ch in text) * size / 72.0)
+    if vl._run_faces(k.face(role), text) != (k.face(role), None):      # drawn in other faces (figures)
+        w = max(w, vl._render_width(k, role, text, size, None, bool(bold)) if dk._has_cjk(text)   # a CJK character an
+                else vl._drawn_width(k, role, text, size, bool(bold)))                            # em, as above
     return w
 
 

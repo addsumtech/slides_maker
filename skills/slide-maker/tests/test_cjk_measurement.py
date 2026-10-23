@@ -195,11 +195,12 @@ def main():
 
 def _probe_collection(path, faces):
     """Write a .ttc whose NAME TABLES register `faces` =
-    [(family, style, advance of 一[, OS/2 weight, width class, bold-flagged])].
+    [(family, style, advance of 一[, OS/2 weight, width class, bold-flagged, advance of A])].
 
     Built here so the resolver is tested on every runner: a CI box has neither PingFang nor
     Heiti, and a test that only runs where they exist tests the machine, not the code. Each face
-    gives 一 a different advance, so a width says which face was actually loaded.
+    gives 一 a different advance, so a width says which face was actually loaded. "A" is 500 units
+    unless a face gives it its own advance (two faces wider on DIFFERENT glyphs).
     """
     from fontTools.fontBuilder import FontBuilder
     from fontTools.pens.ttGlyphPen import TTGlyphPen
@@ -207,16 +208,20 @@ def _probe_collection(path, faces):
     fonts = []
     for face in faces:
         family, style, adv = face[:3]
-        weight, width, bold_flag = (tuple(face[3:6]) + (400, 5, False)[len(face) - 3:])[:3]
+        weight, width, bold_flag, adv_a = (tuple(face[3:7]) + (400, 5, False, 500)[len(face) - 3:])[:4]
         fb = FontBuilder(1000, isTTF=True)
-        fb.setupGlyphOrder([".notdef", "uni4E00", "space"])
-        fb.setupCharacterMap({0x4E00: "uni4E00", 0x20: "space"})
+        fb.setupGlyphOrder([".notdef", "uni4E00", "space", "A"])
+        fb.setupCharacterMap({0x4E00: "uni4E00", 0x20: "space", 0x41: "A"})
         pen = TTGlyphPen(None)
         pen.moveTo((40, 0)); pen.lineTo((40, 700)); pen.lineTo((adv - 40, 700))
         pen.lineTo((adv - 40, 0)); pen.closePath()
+        pen_a = TTGlyphPen(None)
+        pen_a.moveTo((40, 0)); pen_a.lineTo((40, 700)); pen_a.lineTo((adv_a - 40, 700))
+        pen_a.lineTo((adv_a - 40, 0)); pen_a.closePath()
         empty = TTGlyphPen(None).glyph()
-        fb.setupGlyf({".notdef": empty, "uni4E00": pen.glyph(), "space": empty})
-        fb.setupHorizontalMetrics({".notdef": (500, 0), "uni4E00": (adv, 40), "space": (250, 0)})
+        fb.setupGlyf({".notdef": empty, "uni4E00": pen.glyph(), "space": empty, "A": pen_a.glyph()})
+        fb.setupHorizontalMetrics({".notdef": (500, 0), "uni4E00": (adv, 40), "space": (250, 0),
+                                   "A": (adv_a, 40)})
         fb.setupHorizontalHeader(ascent=800, descent=-200)
         fb.setupNameTable({"familyName": family, "styleName": style,
                            "typographicFamily": family, "typographicSubfamily": style})
@@ -324,6 +329,20 @@ def _name_table_checks():
         ("Zz Fut", "Medium", 510, 500, 5, False),        # Futura: a condensed face is heavier
         ("Zz Fut", "Bold", 710, 700, 5, True),
         ("Zz Fut", "Condensed ExtraBold", 650, 800, 3, True),
+        ("Zz Yum", "Medium", 500, 500, 5, False),        # YuMincho: nothing under Medium either
+        ("Zz Yum", "Demibold", 560, 600, 5, True),
+        ("Zz Yum", "Extrabold", 640, 800, 5, True),
+        ("Zz Klee", "Medium", 530, 500, 5, False),       # Klee: Medium and Demibold are ONE weight to LibreOffice
+        ("Zz Klee", "Demibold", 545, 600, 5, True),
+        ("Zz Snell", "Regular", 505, 500, 5, False),     # Snell Roundhand / Cochin / Lucida Grande: a face STYLED
+        ("Zz Snell", "Bold", 705, 700, 5, False),        # Regular at OS/2 500 is still the regular
+        ("Zz Snell", "Black", 905, 900, 5, False),
+        ("Zz Cross", "Medium", 700, 500, 5, False, 400),  # each face wider on a different glyph (Futura Medium's
+        ("Zz Cross", "Bold", 600, 700, 5, True, 650),     # "C" is wider than its Bold's)
+        ("Zz Coch", "Regular", 505, 500, 5, False),      # Cochin: its Italic declares 500 too, and is the italic
+        ("Zz Coch", "Bold", 705, 700, 5, True),
+        ("Zz Coch", "Italic", 515, 500, 5, False),
+        ("Zz Coch", "Bold Italic", 715, 700, 5, True),
     ])
     split_a, split_b = tmp / "SplitLight.ttc", tmp / "SplitMedium.ttc"
     _probe_collection(split_a, [("Zz Split", "Light", 430, 300, 5, False)])
@@ -352,6 +371,37 @@ def _name_table_checks():
                 ("Zz Split", True, 880, "...and bold from the Medium file")):
             got = adv2(fam, bold)
             check("%s: %s" % (fam, why), got == want, "measured the face with advance %s, wanted %s" % (got, want))
+
+        # 🔴 A REGULAR run of a family with no face below Medium. LibreOffice (26.2, macOS) DRAWS it in the family's
+        # HEAVIEST upright face — Futura in Futura-Bold, YuGothic / YuKyokasho in Bold, YuMincho in Extrabold (read
+        # from the PDF it embeds) — while PowerPoint and Keynote draw the Medium. Measured in the Medium, airmail's
+        # Futura section titles planned for two lines rendered three, past their box, on all five canvases. Such a
+        # run is measured in BOTH faces, the wider one per string: neither renderer overflows.
+        def adv_of(name, text, bold=False):
+            return round(dk._pil_font(name, 250, bold).getlength(text) / dk._MEAS_PREC / 250 * 1000)
+
+        for fam, text, want, why in (
+                ("Zz Fut", "一", 710, "regular with nothing under Medium: LibreOffice draws the Bold (rendered: "
+                                      "Futura-Bold), PowerPoint the Medium — measured in the wider"),
+                ("Zz Yum", "一", 640, "...LibreOffice's choice is the HEAVIEST such face (rendered: YuMin-Extrabold)"),
+                ("Zz Klee", "一", 530, "...by LibreOffice's weight classes, where Medium and Demibold tie and the "
+                                       "later style name wins (rendered: Klee-Medium)"),
+                ("Zz Snell", "一", 505, "a face STYLED Regular is the regular, whatever its OS/2 weight (rendered: "
+                                        "Snell Roundhand, Cochin, Lucida Grande — never their Bold)"),
+                ("Zz Cross", "一", 700, "the wider face PER STRING: the Medium where it is wider..."),
+                ("Zz Cross", "A", 650, "...and the Bold where it is"),
+                ("Zz Cross", "一A", 1250, "...the string's width in each face, not the wider GLYPH of each (1350): "
+                                          "a renderer draws one face")):
+            got = adv_of(fam, text)
+            check("%s %r: %s" % (fam, text, why), got == want, "measured %s, wanted %s" % (got, want))
+        check("the face a run is DRAWN with (wordmark, ink boxes) is still the native regular (Medium)",
+              dk._pil_font("Zz Fut", 250).getname()[1] == "Medium", dk._pil_font("Zz Fut", 250).getname())
+        import display_type as dt
+        got_it = round(dt._glyph_width("一", 250, "Zz Coch", False, True) * 72 / 250 * 1000)
+        check("an italic STYLED as the regular one ('Italic', at OS/2 500 like Cochin's) is the regular italic, not "
+              "its Bold Italic (rendered: Cochin-Italic)", got_it == 515, got_it)
+        got_up = adv_of("Zz Coch", "一")
+        check("...and its upright 'Regular' at 500 is the regular", got_up == 505, got_up)
     finally:
         dk._extra_font_files = real_extra
         _reset_font_caches()
@@ -442,6 +492,24 @@ def _name_table_checks():
               % (reg, bold),
               f.getname() == (fam, reg) and dk._pil_font(fam, 13, True).getname() == (fam, bold),
               (f.getname(), dk._pil_font(fam, 13, True).getname()))
+    # Futura on macOS has Medium, Bold and two condensed faces — no Regular. LibreOffice draws a REGULAR Futura run in
+    # Futura-Bold (read from the PDF it embeds: airmail's section titles, 2026-10-23), PowerPoint and Keynote in
+    # Futura-Medium; so a regular run is measured in both, the wider per string.
+    if dk._font_substituted("Futura"):
+        SKIP.append("Futura")
+        print("  skip Futura is not installed on this machine")
+    else:
+        from PIL import ImageFont
+        _faces = {f["ps"]: (p, f["i"]) for p in {dk._font_face("Futura", b_)[0] for b_ in (False, True)}
+                  for f in dk._face_meta(p)}
+        _ft = {ps: ImageFont.truetype(p, 50 * dk._MEAS_PREC, index=i, layout_engine=ImageFont.Layout.BASIC)
+               for ps, (p, i) in _faces.items() if ps in ("Futura-Medium", "Futura-Bold")}
+        for s_ in ("The 2026 plan in", "12 steps to 2026", "What we fixed together", "CCCC"):
+            got = dk._pil_font("Futura", 50).getlength(s_)
+            want = max(f_.getlength(s_) for f_ in _ft.values())
+            check("regular Futura %r measures as the wider of Futura-Bold (LibreOffice) and Futura-Medium "
+                  "(PowerPoint): %.1f of %.1f" % (s_, got, want),
+                  len(_ft) == 2 and abs(got - want) < 1e-6, sorted(_ft))
     if not dk._font_substituted("Hiragino Sans GB"):
         import tempfile as _tf
         d = pathlib.Path(_tf.mkdtemp(prefix="wm-"))

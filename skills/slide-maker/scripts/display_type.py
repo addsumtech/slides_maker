@@ -42,26 +42,27 @@ _GW_FACES = {}     # (face, bold, italic) -> [(file, face index), ...]
 
 def _faces_for(face, bold, italic):
     """The (file, face index) pairs a run of `face` at this weight and style is measured in — deckkit's one choice
-    (dk._font_face: the family's faces across every file that holds them, chosen by their OS/2 metadata), never a
-    second rule. 🔴 macOS ships whole families as ONE .ttc collection and Pillow opens face 0 unless told otherwise:
+    (dk._font_faces: the family's faces across every file that holds them, chosen by their OS/2 metadata, and the face
+    LibreOffice draws where it differs — a regular Futura run is Futura-Bold there), never a second rule; the widest
+    reading is used. 🔴 macOS ships whole families as ONE .ttc collection and Pillow opens face 0 unless told otherwise:
     measured that way, every bold run of Rockwell, Chalkboard SE, Helvetica Neue … read at the REGULAR width (a bold
     "45" in Rockwell, 2.444in for 2.625, broke over two lines of a timer dial — recipe, 2026-10-22) and every run of
     Avenir Next read at its BOLD width (face 0).
 
-    Italic: the family's own italic faces, chosen by the same rule (dk._choose_face). A family without one is slanted
+    Italic: the family's own italic faces, chosen by the same rule (dk._choose_faces). A family without one is slanted
     by the renderer, which keeps the upright advances (measured 2026-10-22: Chalkboard SE and American Typewriter
-    italic set every glyph origin where the upright does) — so the upright face measures it. A BOLD italic the family
-    lacks may be drawn either way — LibreOffice set Didot's as the slanted Bold, Futura's as its Medium Italic — so
-    both faces are returned and the wider one is used."""
+    italic set every glyph origin where the upright does) — so the upright faces measure it (YuGothic's italic is its
+    slanted Bold in LibreOffice, rendered 2026-10-23). A BOLD italic the family lacks may be drawn either way —
+    LibreOffice set Didot's as the slanted Bold, Futura's as its Medium Italic — so both faces are returned."""
     key = (face, bool(bold), bool(italic))
     if key in _GW_FACES:
         return _GW_FACES[key]
-    up = dk._font_face(face, bool(bold)) if face else None
-    out = [up] if up else []
-    if up and italic:
+    ups = dk._font_faces(face, bool(bold)) if face else []
+    out = list(ups)
+    if ups and italic:
         fam = dk._norm_family(face)
-        files = {str(p_) for p_ in (up[0], (dk._font_face(face, not bold) or (None,))[0],
-                                    _italic_file(face, False), _italic_file(face, True)) if p_}
+        files = {str(p_) for p_ in [u[0] for u in ups] + [(dk._font_face(face, not bold) or (None,))[0],
+                                                          _italic_file(face, False), _italic_file(face, True)] if p_}
         try:
             from matplotlib import font_manager as fm
             files |= {str(e.fname) for e in fm.fontManager.ttflist if dk._norm_family(e.name) == fam}
@@ -70,10 +71,10 @@ def _faces_for(face, bold, italic):
         ital = [dict(f_, path=p_) for p_ in sorted(files) for f_ in dk._face_meta(p_)
                 if f_["italic"] and fam in f_["families"]]
         if ital:
-            pick = dk._choose_face(ital, bool(bold))
-            out = [(pick["path"], pick["i"])]
-            if bold and pick is dk._choose_face(ital, False):      # no heavier italic: the renderer may slant the bold
-                out.append(up)
+            picks = dk._choose_faces(ital, bool(bold))
+            out = [(p_["path"], p_["i"]) for p_ in picks]
+            if bold and picks[0] is dk._choose_face(ital, False):  # no heavier italic: the renderer may slant the bold
+                out += [u for u in ups if u not in out]
     _GW_FACES[key] = out
     return out
 

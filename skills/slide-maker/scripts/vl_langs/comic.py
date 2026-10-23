@@ -372,11 +372,19 @@ _CLOSERS = set("。．，、！？：；）》】」』〕〗｝….,!?:;)]}")
 
 def _lint_tail(k, field, para, size, width):
     """(lines, last line) of one paragraph as the delivery lint wraps it: character by character, every CJK glyph one
-    em (a closing mark too — it hangs nothing), in the box's full width."""
+    em (a closing mark too — it hangs nothing), in the box's full width — and in the face the lint reads the box in,
+    the face of most of its characters among the runs Kit.runs draws (vl._run_faces, display_type.figure_runs): a
+    run of an old-style face that is mostly figures is set, and read, in the lining face ("共1250000位" in Times New
+    Roman, not Didot). Measured against lint_deck's own wrap (2,976 generated lines, comic with Didot / Georgia /
+    Hoefler Text set in): this reading agrees as often as the shipped faces do (2,573 of 2,976 with Didot; the role's
+    face 2,431; the faces as drawn, vl._drawn_width, 2,312 — the lint does not read them)."""
     import display_type as dt
     role = vl.TYPE[NAME][field][1]
     bold = vl._weight(k, field, para)
-    face = k.face(role)
+    read = {}
+    for part, f_ in dt.figure_runs(para, *vl._run_faces(k.face(role), para)):
+        read[f_] = read.get(f_, 0) + len(part)
+    face = max(read, key=read.get) if read else k.face(role)
     n, line, w = 1, "", 0.0
     for ch in para:
         cw = size / 72.0 if ord(ch) > 0x2E80 else (dt._glyph_width(ch, size, face, bold) or 0.55 * size / 72.0)

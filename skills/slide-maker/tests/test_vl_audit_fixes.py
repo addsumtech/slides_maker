@@ -968,6 +968,213 @@ for _t, _prefix, _slack, _want in (
         check(_got == [l_.replace(" ", "") for l_ in _want], "{}pt {!r}: lines as LibreOffice set them ({} — rendered "
                                                              "{})".format(_sz, _t, " / ".join(_got), " / ".join(_want)))
 
+# ── D3 (2026-10-23): a regular Futura run is measured in the faces it is DRAWN in ──
+# Futura on macOS has Medium, Bold and two condensed faces — no Regular. LibreOffice 26.2 draws a regular (b=0) run in
+# Futura-BOLD (read from the PDF: its rule scores every face of Medium weight or heavier alike for a regular run, and a
+# tie goes to the heaviest — YuGothic, YuKyokasho and YuMincho behave the same), PowerPoint and Keynote in Futura-Medium.
+# Measured in the Medium, airmail's section titles (fonts="mac") planned as "The 2026 plan in / 12 steps" set three
+# lines and fell below their box on all five canvases (7 of 10 titles a canvas). A Futura box must hold its words, wrapped
+# at its spaces in EITHER face, in the lines its height was planned for (the flow's 1.2 em a line + 0.06in).
+_fut = {}
+if not dk._font_substituted("Futura"):
+    from PIL import ImageFont as _IF
+    for _b in (False, True):
+        _pth = dk._font_face("Futura", _b)[0]
+        for _fm in dk._face_meta(_pth):
+            if _fm["ps"] in ("Futura-Medium", "Futura-Bold"):
+                _fut[_fm["ps"]] = (_pth, _fm["i"])
+_n_d3 = 0
+if len(_fut) == 2:
+    def _fut_w(t, sz):
+        """`t` at `sz` in the wider of Futura-Bold (LibreOffice) and Futura-Medium (PowerPoint, Keynote), inches."""
+        return max(_IF.truetype(p_, int(sz * 20), index=i_, layout_engine=_IF.Layout.BASIC).getlength(t) / 20 / 72.0
+                   for p_, i_ in _fut.values())
+    for _W, _H in ((13.333, 7.5), (10.0, 5.625), (7.5, 7.5), (5.625, 10.0), (11.69, 8.27)):
+        for _t in ("The 2026 plan in 12 steps", "12 steps to 2026", "What we fixed together",
+                   "Bring it broken, take it home working", "Every street deserves a repair café"):
+            for _page, _kw in (("section", dict(number="02", kicker="Part 2", title=_t)),
+                               ("cover", dict(title=_t, subtitle="A plan for 2026 and 2027"))):
+                _p = dk.blank_deck(_W, _H)
+                with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                    _k = vl.use("airmail", _p, fonts="mac")
+                    _s = _k.new_slide()
+                    try:
+                        getattr(_k, _page)(_s, **_kw)
+                    except vl.VLTextOverflow:
+                        continue
+                for _tb in texts(_s):
+                    _runs = [r for pp in _tb.text_frame.paragraphs for r in pp.runs if r.text.strip()]
+                    if not _runs or any(r.font.name != "Futura" for r in _runs):
+                        continue
+                    _n_d3 += 1
+                    _room = _tb.width / EMU - vl._INSET
+                    _sz = max(r.font.size.pt for r in _runs if r.font.size)
+                    _set = []                                  # the lines a renderer sets, greedily at the spaces
+                    for pp in _tb.text_frame.paragraphs:
+                        _cur = ""
+                        for _wd in "".join(r.text for r in pp.runs).split():
+                            if _cur and _fut_w(_cur + " " + _wd, _sz) > _room + 1e-6:
+                                _set.append(_cur)
+                                _cur = _wd
+                            else:
+                                _cur = (_cur + " " + _wd).strip()
+                        if _cur:
+                            _set.append(_cur)
+                    _plan = round((_tb.height / EMU - 0.06) / (dk._LINT_LINE_H * _sz / 72.0))
+                    check(len(_set) <= _plan and all(_fut_w(l_, _sz) <= _room + 1e-6 for l_ in _set),
+                          "airmail mac {}x{} {}: {!r} ({:.1f}pt) sets {} in the faces it is drawn in (Futura-Bold, "
+                          "-Medium), within its box's {:.3f}in and the {} line(s) planned".format(
+                              _W, _H, _page, _tb.text_frame.text, _sz, " / ".join(_set), _room, _plan))
+check(_n_d3 >= 40 or len(_fut) < 2, "the Futura title check ran ({} boxes)".format(_n_d3))
+
+# ── D4 (2026-10-23): the last measures that read figures in the role's face ──
+# Kit.runs draws the figure runs of an old-style face in a lining one (D1); four more measures still read them in the
+# role's own face: poster's display() widest-word test, drafting's dimension line beside the figure's ink, chalkboard's
+# chalk box and ring (vl_native2.ink_w), comic's model of the lint's wrap (_lint_tail). None meets an old-style face
+# with the faces the languages ship (poster Impact / Arial / Helvetica Neue, drafting's numeral Times New Roman,
+# chalkboard Chalkboard SE / Trebuchet MS, comic Impact / Avenir Next / Trebuchet MS: each reads the same as it draws),
+# so each is pinned with an old-style face set in its role — as a caller choosing faces, or a future manifest, would.
+import vl_native as _vn, vl_native2 as _vn2, native_art as _na
+from vl_langs import comic as _comic
+import lint_deck as _ld
+
+
+def _patched(name, **faces):
+    _pp = dk.blank_deck(13.333, 7.5)
+    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+        _kk = vl.use(name, _pp, fonts="mac")
+    _kk._fonts.update(faces)
+    return _pp, _kk
+
+
+def _box_drawn(tb):
+    """The widest paragraph of a text box as its runs are drawn (each run in its own face), inches."""
+    return max(sum(_dt._glyph_width(r.text, r.font.size.pt, r.font.name, bool(r.font.bold)) or 0.0 for r in pp.runs)
+               for pp in tb.text_frame.paragraphs)
+
+
+def _words_drawn(tb):
+    """[(word, inches)]: every word of a text box (cut at its spaces) as its runs draw it, each part in its run's face."""
+    out = []
+    for pp in tb.text_frame.paragraphs:
+        parts = [(r.text, r.font.name, r.font.size.pt, bool(r.font.bold)) for r in pp.runs]
+        txt, pos = "".join(x[0] for x in parts), 0
+        for wd in txt.split(" "):
+            a, b, c, ww = pos, pos + len(wd), 0, 0.0
+            for tx, fn, sz, bd in parts:
+                lo, hi = max(a, c), min(b, c + len(tx))
+                if lo < hi:
+                    ww += _dt._glyph_width(tx[lo - c:hi - c], sz, fn, bd) or 0.0
+                c += len(tx)
+            out.append((wd, ww))
+            pos = b + 1
+    return out
+
+
+if not dk._font_substituted("Hoefler Text") and dk.has_oldstyle_figures("Hoefler Text"):
+    # poster.display(): every word must fit the line, measured in the faces it is drawn in. With Hoefler Text in its
+    # display role, "2025–2026" (Times New Roman as drawn) was measured in Hoefler Text and planned one line in a
+    # 3.2in box — rendered (13.333x7.5): LibreOffice set "2025– / 2026", and "THE 2025 / –2026 SEASON"
+    _p, _k = _patched("poster", display="Hoefler Text", numeral="Hoefler Text")
+    _n_d4a = 0
+    for _t in ("2025–2026", "THE 2025–2026 SEASON", "1,250,000", "IN 1,250,000 HOMES", "98.6% OF THEM"):
+        for _f, _w, _h in (("title", 3.2, 2.0), ("title", 3.2, 3.5), ("label", 2.0, 1.2), ("label", 2.0, 3.5),
+                           ("title", 2.0, 2.0), ("number", 2.6, 2.0)):
+            _s = _k.new_slide()
+            try:
+                _r, _z, _draw = _vn.display(_k, _s, (0.5, 0.5, _w, _h), _t, _f, caps=False)
+            except vl.VLTextOverflow:
+                continue
+            _draw()
+            _tb = [x for x in _s.shapes if getattr(x, "has_text_frame", False) and x.text_frame.text.strip()][-1]
+            _n_d4a += 1
+            _room = _tb.width / EMU - dk.TEXT_INSET_LR
+            check(all(ww <= _room + 1e-6 for _wd, ww in _words_drawn(_tb)),
+                  "poster display=Hoefler Text {} {}x{}in: every word of {!r} at {:.0f}pt fits its {:.3f}in box as "
+                  "drawn ({})".format(_f, _w, _h, _t, _z, _room, ", ".join("{} {:.3f}in".format(a, b)
+                                                                          for a, b in _words_drawn(_tb))))
+    check(_n_d4a >= 15, "the poster display() figure check ran ({})".format(_n_d4a))
+
+if not dk._font_substituted("Didot") and dk.has_oldstyle_figures("Didot"):
+
+    # drafting.data(): the dimension line stands 0.3in (scaled) clear of the figure's DRAWN ink
+    _rec = []
+    _real_dim = _vn.na.dimension_line
+    _vn.na.dimension_line = lambda slide, x, y0, y1, **kw: (_rec.append((x, y0, y1)), _real_dim(slide, x, y0, y1,
+                                                                                                 **kw))[1]
+    try:
+        for _W, _H in ((13.333, 7.5), (7.5, 7.5), (5.625, 10.0)):
+            for _num in ("1,250", "3,400", "1:250", "98.6%", "1,250,000", "2025–2026"):
+                _p = dk.blank_deck(_W, _H)
+                with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                    _k = vl.use("drafting", _p, fonts="mac")
+                _k._fonts.update(numeral="Didot")
+                _s = _k.new_slide()
+                del _rec[:]
+                with contextlib.redirect_stdout(io.StringIO()):
+                    _k.data(_s, number=_num, label="the scale of the plan", note="drawn in 2026")
+                _tb = [x for x in _s.shapes if getattr(x, "has_text_frame", False) and x.text_frame.text == _num]
+                if not _tb:
+                    continue
+                _tb = _tb[0]
+                _t0, _t1 = _tb.top / EMU, (_tb.top + _tb.height) / EMU      # the number's own line: beside its box
+                _mine = [x for x, y0, y1 in _rec if _t0 - 1e-6 <= y0 and y1 <= _t1 + 1e-6]
+                check(len(_mine) == 1, "drafting {}x{} {!r}: one dimension line beside the figure ({})".format(
+                    _W, _H, _num, _rec))
+                if len(_mine) != 1:
+                    continue
+                _ink_r = _tb.left / EMU + _tb.width / EMU / 2.0 + _box_drawn(_tb) / 2.0
+                _sc = min(_W, _H) / 7.5
+                check(_mine[0] >= _ink_r + 0.3 * _sc - 1e-6,
+                      "drafting numeral=Didot {}x{} {!r}: the dimension line at {:.3f}in stands {:.2f}in clear of the "
+                      "figure's drawn ink (ends {:.3f}in)".format(_W, _H, _num, _mine[0], 0.3 * _sc, _ink_r))
+    finally:
+        _vn.na.dimension_line = _real_dim
+
+    # vl_native2.ink_w with the faces SHIPPED: airmail's and calendar's numeral is Didot on a Mac — "214" read 2.27in,
+    # drawn 2.71in in Times New Roman (130pt); on 10x5.625 airmail's stamp, cut to that reading, kept 0.17in a side of
+    # its designed 0.34in
+    for _name in ("airmail", "calendar"):
+        _p, _k = _patched(_name)
+        _role, _bb = vl.TYPE[_name]["number"][1], vl.TYPE[_name]["number"][2]
+        for _t in ("214", "12", "1,250", "1:250", "3,400", "98.6%", "2026", "+38%", "$4.2M"):
+            for _sz in (40.0, 90.0, 130.0):
+                _dw = sum(_dt._glyph_width(r[0], _sz, r[5], r[3], r[4]) or 0.0 for r in _k.runs(_t, _sz, None, _bb, _role))
+                check(_vn2.ink_w(_k, "number", _t, _sz) >= _dw - 1e-9,
+                      "{} mac number {!r} {:.0f}pt: ink_w {:.3f}in, never under the {:.3f}in drawn".format(
+                          _name, _t, _sz, _vn2.ink_w(_k, "number", _t, _sz), _dw))
+
+    # chalkboard: the chalk box round the kicker, and the ring round the figure, are as wide as the words DRAWN
+    _p, _k = _patched("chalkboard", body="Didot", display="Didot", numeral="Didot")
+    for _f, _t in (("kicker", "Lesson 12 · 2026"), ("kicker", "2025–2026"), ("number", "1,250,000"),
+                   ("number", "98.6%"), ("number", "3,400")):
+        for _sz in (20.0, 44.0):
+            _role, _bb = vl.TYPE["chalkboard"][_f][1], vl.TYPE["chalkboard"][_f][2]
+            _dw = sum(_dt._glyph_width(r[0], _sz, r[5], r[3], r[4]) or 0.0 for r in _k.runs(_t, _sz, None, _bb, _role))
+            check(_vn2.ink_w(_k, _f, _t, _sz) >= _dw - 1e-9,
+                  "chalkboard {}=Didot {!r} {:.0f}pt: ink_w {:.3f}in, never under the {:.3f}in drawn".format(
+                      _f, _t, _sz, _vn2.ink_w(_k, _f, _t, _sz), _dw))
+
+    # comic._lint_tail models the DELIVERY LINT's wrap, which reads a box in the face of most of its characters — not
+    # the faces drawn: a run Kit.runs sets wholly in the lining face ("共1250000位", mostly figures) is read in that face
+    for _patch in ({"letter": "Didot", "display": "Didot"}, {"letter": "Georgia", "display": "Georgia"}):
+        _p, _k = _patched("comic", **_patch)
+        for _t in ("共1250000位来访者", "2026年3400位", "1250000", "12,500,000位"):
+            for _f in ("body", "caption"):
+                _role, _it = vl.TYPE["comic"][_f][1], vl.TYPE["comic"][_f][4]
+                _bb = vl._weight(_k, _f, _t)
+                for _sz in (18.0, 28.0):
+                    _cnt = {}
+                    for r in _k.runs(_t, _sz, None, _bb, _role, _it):          # the lint's face: most characters
+                        _cnt[r[5]] = _cnt.get(r[5], 0) + len(r[0])
+                    _lf = max(_cnt, key=_cnt.get)
+                    for _wd in (0.9, 1.4, 2.2):
+                        _ln = _ld._wrap_para([(_t, _sz)], _wd, _lf, _bb)
+                        _got = _comic._lint_tail(_k, _f, _t, _sz, _wd)
+                        check(_got == (len(_ln), _ln[-1].strip()),
+                              "comic {} {!r} {:.0f}pt in {}in: _lint_tail {} = the lint's wrap in {} ({} / {})".format(
+                                  _patch["letter"], _t, _sz, _wd, _got, _lf, len(_ln), " / ".join(_ln)))
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

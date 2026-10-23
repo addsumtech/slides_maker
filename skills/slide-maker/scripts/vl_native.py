@@ -257,19 +257,16 @@ def display(k, slide, rect, text, field, *, highlight=None, caps=True, ink=None,
         # the type is SET at 0.86 — measured 2026-10-05: a block reserved at 0.86 read as overlapping the line under it
         return sum(dk.measure_text([(l_, bool(bold))], w_, sz_, font=face, line_h_factor=dk._LINT_LINE_H)
                    for l_ in (lines_ or [t]))
-    import display_type as _dt
-
-    latin_face = k.face(role)
-
     def words_fit(sz_):
         # every Latin word must fit the line: LibreOffice breaks "1,250,000" after a comma, and a long token inside
         # Chinese text ("预算 Supercalifragilistic…", a URL) ran 8.9in past its box with no gate noticing (final
-        # review) — so each non-CJK token is measured in the Latin face it renders in, whatever else the text holds
+        # review) — so each non-CJK token is measured in the Latin faces it renders in, whatever else the text holds:
+        # Kit.runs sets the figures of an old-style face in a lining one (vl._drawn_width). Measured in its role's
+        # Hoefler Text, "2025–2026" was planned whole in a 3.2in box and rendered "2025– / 2026" (2026-10-23)
         for wd in vl._words(t):
             if dk._has_cjk(wd):
                 continue                                   # CJK breaks between any two characters
-            gw = _dt._glyph_width(wd, sz_, latin_face, bold)
-            if gw is not None and gw > w - dk.TEXT_INSET_LR:
+            if vl._drawn_width(k, role, wd, sz_, bold, False, t) > w - dk.TEXT_INSET_LR:
                 return False
         return True
     # measured in HEADROOM of the box and drawn at its full width, as every other field (vl.HEADROOM): on the CI's
@@ -1553,10 +1550,12 @@ def _bp_data(k, slide, f, image):
         rects.update(r); draws.append(d)
         nr = r.get("number", nrect)
         # beside the numeral's INK (it is centred in its rect): the plan clamped x to 46% of the width, which put the
-        # line through the "3" on a portrait sheet
-        import display_type as _dt
-        nsz = (nr[3] - 0.06) / 1.2 * 72.0                  # one line: _field_height's model, inverted
-        ink_w = _dt._glyph_width(num, nsz, k.face("numeral"), vl.TYPE[k.name]["number"][2]) or nr[2] * 0.5
+        # line through the "3" on a portrait sheet. The ink as DRAWN: at the size the flow set it (its rect, inverted
+        # as one line, read a Didot "98.6%" planned two lines tall at twice that) and in the faces Kit.runs draws
+        # (vl._drawn_width, floor=False: an old-style numeral's figures are set in a lining face — read in Didot, the
+        # line stood 0.19in off "1,250" where 0.30in was meant)
+        nsz = getattr(d, "sizes", {}).get("number") or (nr[3] - 0.06) / 1.2 * 72.0
+        ink_w = vl._drawn_width(k, "numeral", num, nsz, vl.TYPE[k.name]["number"][2], floor=False) or nr[2] * 0.5
         dxl = nr[0] + nr[2] / 2.0 + ink_w / 2.0 + 0.3 * s
         draws.append(lambda: na.dimension_line(slide, dxl, nr[1] + 0.1 * nr[3], nr[1] + 0.9 * nr[3], ink=k.P["ink"]))
     col = (cx + cw * 0.50, cy + 0.15 * ch, cw * 0.50, ch * 0.7) if o == "land" else (cx, cy + ch * 0.54, cw, ch * 0.44)
