@@ -829,15 +829,28 @@ def _break_lines(k, field, text, size, w):
         return _drawn_width(k, role, s_, size, bold, False, text, floor=False)
     # (separator, unit) pairs: CJK characters and whole Latin words; a Korean word wider than the whole line goes in as
     # syllables — the renderer breaks it between them ("인공지능기반의 / 료영상재구성", final review 2026-10-04)
-    base, cut = dk.cjk_units(text), set()                  # … on a line of its own (deckkit.cjk_split_overwide)
+    body = text.lstrip(" ")                                # a field's leading spaces start its first line (below)
+    base, cut = dk.cjk_units(body), set()                  # … on a line of its own (deckkit.cjk_split_overwide)
     units = (dk.cjk_split_overwide(base, lambda k_, i_, j_: width(base[k_][1][i_:j_]), limit, cut, latin=False)
              if korean else base)
 
     def joined(a, b):                                      # a line's units: its first one without the space before it
         return "".join((units[i][0] if i > a else "") + units[i][1] for i in range(a, b))
-    breaks = dk.cjk_break(units, lambda a, b: width(joined(a, b)), limit,
-                          (lambda a, b: drawn(joined(a, b) + units[b][0])) if by_char else None, rules=by_char,
-                          breaks=cut)
+
+    def space(a, b, n=None):                               # the line and the separator before units[b] (n spaces)
+        return drawn(joined(a, b) + units[b][0][:n])
+    # the spaces at a break go where LibreOffice puts them (deckkit's rule: after a hung mark, or the ones a run cannot
+    # keep, to the start of the next line), where they take their room — in the face of the script before them, never
+    # under either lint's reading (the Latin face, the East-Asian one) — and the autospace where the script changes
+    import display_type as dt
+    changes, lat_ = dk.cjk_script_changes(units), _run_faces(k.face(role), text)[0]
+    sp_ = {f_: (dt._glyph_width(" ", size, f_, bold) or 0.25 * size / 72.0) for f_ in {lat_, face} if f_}
+    one_sp = max(sp_.values() or [0.25 * size / 72.0])
+
+    def carry(a, n):
+        return n * one_sp + (dt.AUTOSPACE_EM * size / 72.0 if changes.carried(a) else 0.0)
+    breaks = dk.cjk_break(units, lambda a, b: width(joined(a, b)), limit, space, rules=by_char, breaks=cut,
+                          carry=carry, lead=len(text) - len(body))
     return [joined(a, b) for a, b in breaks]
 
 
@@ -851,7 +864,9 @@ def _set_lines(k, field, text, size, w):
         role = TYPE[k.name][field][1]
         if dk._font_substituted(k.ea_face(role, text) or k.face(role)):
             return None
-    ls = _break_lines(k, field, text, size, w)
+    # a line of spaces alone (LibreOffice sets one where spaces carried to a line's start do not fit with what follows
+    # them, deckkit.cjk_break) is not imposed: set as paragraphs, the lines after it start without those spaces
+    ls = [l_ for l_ in _break_lines(k, field, text, size, w) if l_.strip()]
     if len(ls) < 2 or "".join(ls).replace(" ", "") != text.replace(" ", ""):
         return None
     # every imposed line must sit on ONE line by the measure lint reads too — else the renderer wraps it again and

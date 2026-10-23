@@ -806,10 +806,16 @@ def _wrap_para(pr, width_in, face=None, bold=False):
         def width(a, b):
             return pre[ends[b - 1]] - pre[offs[a]] + auto * changes(a, b)
 
-        def space(a, b):
-            return width(a, b) + pre[offs[b]] - pre[ends[b - 1]]
+        def space(a, b, n=None):                                    # the line and the separator before units[b]
+            s0 = offs[b] - len(units[b][0])                         # (its first n spaces)
+            return width(a, b) + pre[offs[b] if n is None else min(offs[b], s0 + n)] - pre[s0]
+
+        def carry(a, n):                                            # n spaces carried to the start of a line
+            return pre[offs[a]] - pre[offs[a] - n] + auto * changes.carried(a)
+        # the spaces at a break go where LibreOffice puts them — after a hung mark, or the ones a run cannot keep, to
+        # the start of the next line; a paragraph's leading spaces to the start of its first (deckkit's rule)
         for a, b in _dk_break(units, width, width_in, space, hang=_HANG_PUNCT, rules=_dk_by_char(body),
-                              breaks=breaks):
+                              breaks=breaks, carry=carry, lead=len(seg) - len(body)):
             lines.append(seg[offs[a]:ends[b - 1]] if b > a else "")
     return lines
 

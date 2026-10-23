@@ -363,6 +363,24 @@ def _cjk_wrap_rule_cases():
             (ok if got == want else bad).append(
                 "CJK line rules: %gpt an over-wide Korean word starts its own line (%s; the lint set %s)"
                 % (sz, " / ".join(want), " / ".join(got)))
+        # the spaces at a line break (deckkit's rule, LibreOffice renders 2026-10-23, each row that exact box, read at its
+        # measure — the box less its 2pt insets): after a HUNG mark every space starts the next line and takes its room
+        # there, a line of its own when what follows does not fit after it; elsewhere a run of spaces keeps the ones that
+        # fit and one more. The lint dropped them all and read each box a line short.
+        for text, sz, w, lat, hang, want in (
+                ("修好、 report 能用了今年", 24.0, 0.8889, "Times New Roman", True, 6),
+                ("修好带走、 1,250 能用了今年", 24.0, 1.4056, "Times New Roman", True, 4),
+                ("修好、 （能用）了今年", 24.0, 0.7389, "Times New Roman", True, 6),
+                ("修好带、 ", 24.0, 1.0722, "Times New Roman", True, 2),
+                ("修好带走, 能用了今年的夜晚", 40.0, 2.3056, "Arial", True, 4),
+                ("修好带走   能用了今年的夜晚", 40.0, 2.3194, "Times New Roman", True, 4),
+                ("修好带走  report 能用了今年", 24.0, 1.4472, "Times New Roman", True, 4),
+                ("修好、  能用了今年的夜晚", 24.0, 0.7389, "Times New Roman", False, 7)):
+            L._HANG_PUNCT = hang
+            got = L._wrap_para([(text, sz)], w - 0.0556, lat)
+            (ok if len(got) == want else bad).append(
+                "CJK line rules: %gpt %r (hangingPunct=%d): the spaces at its breaks go where they render, %d lines "
+                "(the lint set %s)" % (sz, text, hang, want, " / ".join(repr(l_) for l_ in got)))
     finally:
         L._HANG_PUNCT = hang0
     return ok, bad

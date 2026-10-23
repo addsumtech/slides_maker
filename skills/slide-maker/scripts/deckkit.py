@@ -5676,6 +5676,23 @@ _CJK_OWN_UNIT = frozenset("…‥—")
 #   * with nowhere on the line to move the break back to, it falls at the measure ("螺丝刀握 / 「Claude / 」在来访").
 # A Latin word inside CJK is one unit. LibreOffice also breaks one after "-" or "/" before a letter ("Wiki- / GPT，",
 # "A/ / B，"), which these rules do not: they move the whole word down (one line more, never fewer).
+#
+# THE SPACES AT A BREAK, in every script (renders 2026-10-23: 4,029 boxes — Songti SC, PingFang SC, Hiragino Sans GB,
+# Hiragino Mincho ProN, Apple SD Gothic Neo with Times New Roman, Arial, Georgia; 24-40pt; hangingPunct on and off; lines
+# read back from the PDF with the spaces kept). All three line models dropped a separator at a break, and LibreOffice
+# does not:
+#   * a run of spaces keeps on the line the ones that fit and ONE more (that one takes no room); the rest START THE NEXT
+#     line ("修好带走␣ / ␣␣能用了", "Bring it␣ / ␣home", "고쳐서␣ / ␣ / 가져간") …
+#   * … but after a mark that HANGS past the measure none stays: the whole run starts the next line ("修好带走、 /
+#     ␣1,250␣ / 能用了今", where "1,250 能" fits without it; after ","  "，" "。" "！" alike);
+#   * spaces at the start of a line take their room there, and the autospace too where the script changes after them
+#     (they keep the script of the text before them: "、␣" then "1,250" is a change, display_type.AUTOSPACE_EM) — a
+#     paragraph's own leading spaces as well (" Bring it / home");
+#   * and they are a line of their own when what follows does not fit after them: the first unit, the first part of a
+#     word wider than the line, or what may not be parted from it ("修好、 / ␣ / report", "/ ␣ / （能 / 用）",
+#     " / Donaudamp / …"); spaces a paragraph ends in, carried so, are a last line of spaces ("修好带、 / ␣").
+# With hangingPunct="0" no mark hangs, and the first rule alone applies ("修 / 好、␣ / ␣能"). cjk_break carries them
+# (its `carry` and `lead`); each model brings the room they take.
 
 
 _CJK_CHAR = re.compile("[%s]" % "".join("%s-%s" % (re.escape(chr(a)), re.escape(chr(b))) for a, b in _CJK_ORD))
@@ -5698,9 +5715,10 @@ def cjk_units(text):
     """The (separator, unit) pairs a line of `text` may break between — the units all three line models break by.
     Chinese and Japanese: each CJK character is a unit (and each … ‥ —, see CJK_PAIRED); a run of anything else — a
     Latin word, a figure, "WikiGPT-5" — is ONE unit, even inside Chinese ("…进展report v2" never breaks "re / port");
-    a run of spaces is the separator before the next unit. Korean, and text with no CJK, break at spaces only: one unit
-    per word, one space before each (str.split; an empty unit — from two spaces running — never starts a line). In
-    order, the separators and units spell `text` but for the spaces it ends in (Chinese / Japanese). A tuple."""
+    a run of spaces is the separator before the next unit, and the spaces the text ends in are the separator of a last,
+    EMPTY unit. Korean, and text with no CJK, break at spaces only: one unit per word, one space before each (str.split;
+    an empty unit — from two spaces running, or the spaces the text ends in — never starts a line). In order, the
+    separators and units spell `text`. A tuple."""
     got = _UNITS.get(text)
     if got is None:
         got = tuple(_cjk_units(text))
@@ -5736,6 +5754,8 @@ def _cjk_units(text):
             cur += ch
     if cur:
         out.append((sep, cur))
+    elif sep and out:
+        out.append((sep, ""))                           # the spaces it ends in (see THE SPACES AT A BREAK)
     return out or [("", "")]
 
 
@@ -5801,7 +5821,9 @@ def cjk_script_changes(units):
     """count(a, b): how many times the script changes between East-Asian and other text within the line made of
     units[a:b] — where LibreOffice sets its AUTOSPACE (display_type.AUTOSPACE_EM, measured 0.24 em; a space or a mark
     of no script takes the script before it). A line model that adds widths unit by unit adds this too: without it a
-    mixed line read up to an em short ("读取 CSV、" fitted a line it overflows in the render, "读取 / CSV、清洗")."""
+    mixed line read up to an em short ("读取 CSV、" fitted a line it overflows in the render, "读取 / CSV、清洗").
+    count.carried(a): 1 when spaces carried to the start of a line before units[a] (cjk_break's `carry`) meet a change
+    there — they keep the script of the text before them, units[a:] starts in another — else 0."""
     key = tuple(units)
     got = _CHANGES.get(key)
     if got is None:
@@ -5837,6 +5859,11 @@ def _script_changes(units):
         if a < k < b:
             c -= chg[k + 1] - chg[k]
         return c
+
+    def carried(a):
+        k = nxt[a] if 0 <= a < n else n            # the first unit from a on that has a script, against the one before
+        return chg[k + 1] - chg[k] if k < n else 0
+    count.carried = carried
     return count
 
 
@@ -5864,16 +5891,25 @@ def cjk_may_break(before, sep, unit, moved=False):
     return c not in CJK_NO_LINE_START or (bool(sep) and not cjk_latin_end(before))
 
 
-def cjk_break(units, width, limit, space=None, hang=None, rules=True, breaks=()):
+def cjk_break(units, width, limit, space=None, hang=None, rules=True, breaks=(), carry=None, lead=0):
     """Greedy line breaks by LibreOffice's CJK line rules (above) — the one breaker deckkit's measure, the layout's line
     model and the delivery lint's share; each brings its own widths.
 
     `units`: cjk_units' (separator, unit) pairs. `width(a, b)`: the width of ONE line made of units[a:b] (units[a]'s
-    separator dropped). `space(a, b)`: that line's width WITH the separator before units[b], as LibreOffice draws it —
-    it decides whether the space itself overflows (None: the space never does). `hang`: the deck's hangingPunct
-    (None: HANG_PUNCT). `rules=False`: a plain greedy break at every separator (Korean, Latin — cjk_by_char).
-    `breaks`: unit indices a line must start at (a hard break). Returns the lines as unit ranges [(a, b), ...] —
-    one at least."""
+    separator dropped). `space(a, b, n=None)`: that line's width WITH the separator before units[b] — or its first n
+    spaces — as LibreOffice draws it: whether a space overflows, and how many of a run fit (None: a space never
+    overflows). `hang`: the deck's hangingPunct (None: HANG_PUNCT). `rules=False`: a plain greedy break at every
+    separator (Korean, Latin — cjk_by_char). `breaks`: unit indices a line must start at (a hard break).
+
+    The spaces at a break go where LibreOffice puts them (THE SPACES AT A BREAK, above): the ones a run cannot keep on
+    its line — all of them after a hung mark — start the next. `carry(a, n)`: the room n spaces carried to the start of
+    a line take there, before units[a] — their width and the autospace where the script changes after them
+    (cjk_script_changes' count.carried). `lead`: the spaces the text starts with, in front of units[0] (a caller that
+    strips them names how many): carried into line 1 the same way. A model that brings no `carry` cannot place such
+    spaces and is refused (TypeError) the first time a break carries any — never a silent line short.
+
+    Returns the lines as unit ranges [(a, b), ...] — one at least; a line of spaces alone is an EMPTY range (a, a)
+    (before units[a], or after the last unit at a == len(units))."""
     n = len(units)
     if n == 0:
         return [(0, 0)]
@@ -5882,38 +5918,95 @@ def cjk_break(units, width, limit, space=None, hang=None, rules=True, breaks=())
     def text(a, b):
         return "".join((units[i][0] if i > a else "") + units[i][1] for i in range(a, b))
 
-    lines, start, hung, i = [], 0, -1, 1           # hung: the index of the mark hung past the measure, or -1
+    def room(a, k):
+        if carry is None:
+            raise TypeError("cjk_break: %d space(s) start the line at unit %d (%r) — LibreOffice carries the spaces a "
+                            "break cannot keep to the next line, where they take room; pass carry(a, n), the room n "
+                            "spaces take at the start of a line before units[a]" % (k, a, text(0, n)[:40]))
+        return carry(a, k)
+
+    lines = []
+    state = {"start": 0, "hung": -1, "k": 0, "cw": 0.0}   # hung: the mark hung past the measure; k: spaces carried
+
+    def begin(s, k):
+        """A line starting at units[s] with k spaces carried in front of it — a line of their own when what follows
+        does not fit after them (the first unit, or the first part of a word wider than the line)."""
+        if k and s < n and (s in breaks or width(s, s + 1) + room(s, k) > limit):
+            lines.append((s, s))
+            k = 0
+        state.update(start=s, hung=-1, k=k, cw=room(s, k) if k else 0.0)
+
+    def carried(b):
+        """How many spaces of the run in front of units[b] (b == n: the spaces the text ends in) the break before it
+        sends to the next line: the run is units[b]'s separator and those of the empty units right before it."""
+        start, cw = state["start"], state["cw"]
+        e = b
+        while e - 1 > start and not units[e - 1][1]:
+            e -= 1
+        seps = [units[m][0] for m in range(e, min(b + 1, n))]
+        total = sum(len(s_) for s_ in seps)
+        if not total:
+            return 0
+        if state["hung"] >= 0 and state["hung"] == e - 1:
+            return total                               # after a hung mark no space stays
+        if space is None:
+            return 0
+        fit = 0                                        # the spaces of the run that fit, in order
+        for m in range(e, min(b + 1, n)):
+            for q in range(1, len(units[m][0]) + 1):
+                if space(start, m, q) + cw > limit:
+                    return total - min(fit + 1, total)  # … and one more stays, taking no room
+                fit += 1
+        return 0
+
+    def cut(b):
+        """The line ends before units[b]; the next starts there, with what the run in front of it carries."""
+        k = carried(b)
+        lines.append((state["start"], b))
+        begin(b, k)
+
+    begin(0, lead)
+    i = 1
     while i < n:
+        start, cw = state["start"], state["cw"]
         sep, u = units[i]
         if i in breaks and i > start:
-            lines.append((start, i)); start, hung = i, -1
-        elif not u or width(start, i + 1) <= limit:  # (an empty unit — spaces only — never starts a line)
+            cut(i)
+        elif not u or width(start, i + 1) + cw <= limit:  # (an empty unit — spaces only — never starts a line)
             pass
-        elif sep and space is not None and space(start, i) > limit:
-            lines.append((start, i)); start, hung = i, -1     # the space itself overflows: the line breaks there
+        elif sep and space is not None and space(start, i) + cw > limit:
+            cut(i)                                     # the space itself overflows: the line breaks there
         elif not rules:
-            lines.append((start, i)); start, hung = i, -1
+            cut(i)
         else:
             before = text(start, i)
             nxt = units[i + 1] if i + 1 < n else None
-            if (hang and u in CJK_HANG_MARKS and hung != i - 1 and not cjk_latin_end(before)
+            if (hang and u in CJK_HANG_MARKS and state["hung"] != i - 1 and not cjk_latin_end(before)
                     and not (nxt and not nxt[0] and nxt[1][:1] in CJK_NO_LINE_START)):
-                hung = i                               # one mark hangs past a full line
+                state["hung"] = i                      # one mark hangs past a full line
             elif not cjk_may_break(before, sep, u):
                 j = i - 1                              # the break goes before units[j] — moved back past every unit
                 while j > start and not cjk_may_break(text(start, j), units[j][0], units[j][1], moved=True):
                     j -= 1                             # that may not start a line or follows one that may not end one
+                if j == start and state["k"]:          # … or after the spaces the line starts with ("/ ␣ / （能")
+                    lines.append((start, start))
+                    begin(start, 0)
+                    i = start + 1
+                    continue
                 if j == start:                         # nowhere on the line to move it: it breaks at the measure,
                     j = i                              # taking down only what hangs past it
-                    if j - 1 > start and hung == j - 1:
+                    if j - 1 > start and state["hung"] == j - 1:
                         j -= 1
-                lines.append((start, j)); start, hung = j, -1
+                cut(j)
                 i = j + 1                              # what went down is set again on its own line: it may not fit
                 continue                               # there either ("又 / 「 / 1,250", not "「 1,250" past it)
             else:
-                lines.append((start, i)); start, hung = i, -1
+                cut(i)
         i += 1
-    lines.append((start, n))
+    tail = carried(n) if not units[-1][1] else 0      # the spaces the text ends in: a line of their own when carried
+    lines.append((state["start"], n))
+    if tail:
+        lines.append((n, n))
     return lines
 
 
@@ -6082,17 +6175,11 @@ def _count_lines(flat, bolds, faces, fonts, size_pt, avail):
         return w + (getlen(seg, k0) if seg else 0.0)
 
     body = flat.lstrip(" ")
-    q = len(flat) - len(body)
-    lead = tw(flat[:q], 0)                                  # a paragraph's leading spaces take room on its first line
-    base, at = cjk_units(body), []
-    for sep, u in base:                                     # where each unit starts in `flat`
-        q += len(sep); at.append(q); q += len(u)
+    q = lead = len(flat) - len(body)                        # a paragraph's leading spaces: carried into line 1, where
+    base, at = cjk_units(body), []                          # they take room (" Bring it / home"), a line of their own
+    for sep, u in base:                                     # when its first word does not fit after them
+        q += len(sep); at.append(q); q += len(u)            # (" / Bring / it / hom / e", " / 1:250 / 门口"; cjk_break)
     bw = [tw(u, a_) for (_s, u), a_ in zip(base, at)]
-    # … and when the first word does not fit after them, they are a line of their own: " / Bring / it / hom / e",
-    # " / 1:250 / 门口" (LibreOffice renders, 2026-10-23 — the word moves down to the break the space offers)
-    alone = int(lead > 0 and lead + bw[0] > avail + 1e-9)
-    if alone:
-        lead = 0.0
     breaks = set()
     # a word wider than the WHOLE line breaks — Korean between syllables (one em a syllable is a deliberate
     # over-estimate of SD Gothic's 0.865 em, rendered 2026-10-04), Latin at its punctuation or mid-word — on a line of
@@ -6100,30 +6187,38 @@ def _count_lines(flat, bolds, faces, fonts, size_pt, avail):
     units = cjk_split_overwide(base, lambda k, i, j: bw[k] if (i, j) == (0, len(base[k][1])) else
                                tw(base[k][1][i:j], at[k] + i), avail, breaks)
     if len(units) == len(base):
-        uw = bw
+        uw, ua = bw, at
         sw = [tw(sep, a_ - len(sep)) if sep else 0.0 for (sep, _u), a_ in zip(base, at)]
     else:
-        uw, sw, q = [], [], len(flat) - len(body)
+        uw, sw, ua, q = [], [], [], lead
         for sep, u in units:
             sw.append(tw(sep, q) if sep else 0.0); q += len(sep)
-            uw.append(tw(u, q)); q += len(u)
+            ua.append(q); uw.append(tw(u, q)); q += len(u)
     pre = [0.0]                                             # pre[i]: everything before units[i], separators too
     for a_, b_ in zip(sw, uw):
         pre.append(pre[-1] + a_ + b_)
     if _has_cjk(body):                                      # LibreOffice's autospace at every change of script
         import display_type as dt                           # (lazily: display_type imports deckkit)
         changes, auto = cjk_script_changes(units), dt.AUTOSPACE_EM * em
-        width = lambda a, b: pre[b] - pre[a] - sw[a] + auto * changes(a, b) + (lead if a == 0 else 0.0)
+        width = lambda a, b: pre[b] - pre[a] - sw[a] + auto * changes(a, b)
+        turn = lambda a: auto * changes.carried(a)
     else:
-        width = lambda a, b: pre[b] - pre[a] - sw[a] + (lead if a == 0 else 0.0)
-    lines = cjk_break(units, width, avail + 1e-9, lambda a, b: width(a, b) + sw[b], rules=cjk_by_char(body),
-                      breaks=breaks)
+        width = lambda a, b: pre[b] - pre[a] - sw[a]
+        turn = lambda a: 0.0
+
+    def space(a, b, n_=None):                               # the line and the separator before units[b] (n_ spaces)
+        sep = units[b][0]
+        return width(a, b) + (sw[b] if n_ is None or n_ >= len(sep) else tw(sep[:n_], ua[b] - len(sep)))
+
+    def carry(a, n_):                                       # n_ spaces carried to the start of a line, before units[a]
+        return tw(flat[ua[a] - n_:ua[a]], ua[a] - n_) + turn(a)
+    lines = cjk_break(units, width, avail + 1e-9, space, rules=cjk_by_char(body), breaks=breaks, carry=carry, lead=lead)
     # a unit wider than the whole line even so (a glyph wider than the column) takes as many lines as it is wide:
     # an under-count is the direction that hides a real overflow (LibreOffice renders, 2026-10-04: "99.9%" 40pt in
     # 1.2in, an identifier, a URL — all counted 1 line, rendered 2-3). A wrap-OFF box stays one line: that caller
     # does not measure lines (lint_layout passes the box's own wrap; a box that sets word_wrap=False is never measured)
     extra = sum(int(-(-w_ // avail)) - 1 for w_ in uw if w_ > avail)
-    return max(1, alone + len(lines) + extra)
+    return max(1, len(lines) + extra)
 
 
 # ---- public "measure before you place" helpers (so a build knows a block's true height

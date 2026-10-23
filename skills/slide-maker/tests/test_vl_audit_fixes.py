@@ -1469,6 +1469,76 @@ for _W, _H in ((13.333, 7.5),) if _f_stand_in(_k) else ((13.333, 7.5), (10.0, 7.
     check(_hard == 0, "bricks {}x{}: CJK quotes on a tile cut to their words are delivery-lint clean ({})".format(
         _W, _H, _why[:2]))
 
+
+# ── D7 (2026-10-23): the spaces at a line break go where LibreOffice puts them ──
+# After a mark that HANGS past the line no space stays behind it: LibreOffice starts the next line with it, where it
+# takes its room (and the autospace where the script changes), and sets it on a line of its own when what follows does
+# not fit after it ("手里， / ␣ / GPT"). A run of spaces keeps the ones that fit, and one more, on the line; the rest
+# start the next ("带走␣ / ␣␣能"). All three line models — the layout's (_break_lines), the delivery lint's
+# (lint_deck._wrap_para, read at the measure) and deckkit's measure (_lines_read, what the field height is planned
+# from) — dropped every one of them (cjk_break) and read these boxes a line or two short. Each row is a LibreOffice
+# render of exactly that field: the body run via Kit.runs in a box that wide, lines read back from the PDF.
+_D7 = (("journal", "修好带走、 1,250 能用了今年", 20, 0.7227, 7),       # 修好 / 带走、 / ␣ / 1,250 / 能用 / 了今 / 年
+       ("journal", "修好带走, 能用了今年的夜晚", 36, 1.0810, 7),        # 修好 / 带走, / ␣能 / 用了 / …
+       ("journal", "修好带走。 （能用）了今年", 20, 0.6254, 7),         # 修好 / 带走。 / ␣ / （能 / 用） / …
+       ("journal", "修好带走   能用了今年的夜晚", 36, 1.0810, 7),       # 修好 / 带走␣ / ␣␣能 / …
+       ("journal", "螺丝刀握在来访者手里， GPT 只是帮手。", 20, 0.6254, 9),  # … / 手里， / ␣ / GPT / 只是 / 帮手。
+       ("editorial", "修好带走, 能用了今年的夜晚", 20, 0.6254, 7),
+       ("editorial", "修好带走。 （能用）了今年", 36, 1.0810, 7),
+       ("editorial", "修好带走   能用了今年的夜晚", 20, 0.6254, 7),
+       ("editorial", "螺丝刀握在来访者手里， GPT 只是帮手。", 36, 1.2560, 9))
+_hang0 = (dk.HANG_PUNCT, _L._HANG_PUNCT)
+try:
+    dk.HANG_PUNCT = _L._HANG_PUNCT = True
+    for _name, _t, _sz, _w, _rendered in _D7:
+        _p, _k = use(_name)
+        _role = vl.TYPE[_name]["body"][1]
+        _bold = vl._weight(_k, "body", _t)
+        if any(dk._font_substituted(x_) for x_ in (_k.face(_role), _k.ea_face(_role, _t))):
+            print("  skip D7 {} {!r}: a face is not installed here".format(_name, _t))
+            continue
+        _lv = vl._break_lines(_k, "body", _t, _sz, _w)
+        _ll = _L._wrap_para([(_t, _sz)], _w - dk.TEXT_INSET_LR, _k.face(_role), _bold)
+        _nd = vl._lines_read(_k, _role, _t, _sz, _w - vl._INSET, _bold)
+        _lh = dk._LINT_LINE_H * dk.CJK_LS
+        _plan = (vl._field_height(_k, "body", _t, _sz, _w) - 0.06) / (_sz / 72.0 * _lh)
+        check(len(_lv) == len(_ll) == _nd == _rendered and round(_plan, 2) >= _rendered,
+              "{} {:g}pt {!r} in {}in: the layout, the lint and deckkit set the {} lines it renders, spaces where "
+              "LibreOffice puts them (layout {}; lint {}; deckkit {}; field height {:.2f} lines)".format(
+                  _name, _sz, _t, _w, _rendered, " / ".join(repr(l_) for l_ in _lv),
+                  " / ".join(repr(l_) for l_ in _ll), _nd, _plan))
+    # a line of spaces alone is never imposed as a paragraph of its own (the lines after it are set without them)
+    _p, _k = use("journal")
+    _t = "螺丝刀握在来访者手里， GPT 只是帮手。"
+    _role = vl.TYPE["journal"]["title"][1]
+    if any(dk._font_substituted(x_) for x_ in (_k.face(_role), _k.ea_face(_role, _t))):
+        print("  skip D7 journal title: a face is not installed here")
+    else:
+        _ls = vl._break_lines(_k, "title", _t, 20, 0.6254)
+        _set = vl._set_lines(_k, "title", _t, 20, 0.6254)
+        check(any(not l_.strip() for l_ in _ls) and (_set is None or all(l_.strip() for l_ in _set)),
+              "journal title {!r}: the layout counts the line the space takes alone ({}) and never imposes it ({})"
+              .format(_t, " / ".join(repr(l_) for l_ in _ls), _set))
+    # on every machine (no face needed): the layout's line model hands the breaker the room carried spaces take, and
+    # sets a line of spaces alone as an empty line — the lint's and deckkit's models do the same (test_lint_regressions,
+    # test_measure_contracts)
+    _seen7 = []
+    _real_cb = dk.cjk_break
+
+    def _spy_cb(*a_, **kw_):
+        _seen7.append(callable(kw_.get("carry")))
+        return _real_cb(*a_, **kw_)
+    try:
+        dk.cjk_break = _spy_cb
+        vl._break_lines(_k, "body", "修好带走、 report 能用了今年", 20, 0.6254)
+        vl._break_lines(_k, "body", "Bring it  home now", 20, 0.6254)
+    finally:
+        dk.cjk_break = _real_cb
+    check(_seen7 and all(_seen7), "the layout's line model passes cjk_break the room carried spaces take ({})".format(
+        _seen7))
+finally:
+    dk.HANG_PUNCT, _L._HANG_PUNCT = _hang0
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

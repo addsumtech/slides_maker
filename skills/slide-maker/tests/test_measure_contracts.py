@@ -376,6 +376,65 @@ def main():
             check("%gpt ' 1:250 门口点数下周见带上' in %.3fin: the space alone on line 1 (7 lines, as rendered)" % (sz_, w_),
                   n == 7, n)
 
+    # The SPACES AT A LINE BREAK go where LibreOffice puts them (renders 2026-10-23: 4,029 boxes — Songti SC, PingFang SC,
+    # Hiragino Sans GB, Hiragino Mincho ProN, Apple SD Gothic Neo with Times New Roman, Arial, Georgia; 24 and 40pt;
+    # hangingPunct on and off; lines read back from the PDF, spaces kept). After a mark that HANGS past the line no space
+    # stays behind it: the separator starts the next line and takes its room there, with the autospace where the
+    # script changes (" 1,250 / 能用了今", where "1,250 能" fits without it), and is a line of its own when what follows
+    # does not fit after it ("修好、 / ␣ / report"); a paragraph ending so ends in a line of spaces. Elsewhere a run of
+    # spaces keeps the ones that fit, and one more, on the line; the rest start the next ("修好带走␣ / ␣␣能用了").
+    # The measure dropped them all: one line short each. Every row is that exact box (text, pt, box width, faces,
+    # hangingPunct, the lines it rendered).
+    _space_rows = (
+        ("修好、 report 能用了今年", 24, 0.8889, "Songti SC", "Times New Roman", True, 6),     # 修好、 / ␣ / report / …
+        ("修好带走、 1,250 能用了今年", 24, 1.4056, "Songti SC", "Times New Roman", True, 4),  # 修好带走、 / ␣1,250 / 能用了今 / 年
+        ("修好、 （能用）了今年", 24, 0.7389, "Songti SC", "Times New Roman", True, 6),        # 修好、 / ␣ / （能 / 用） / …
+        ("修好带、 Donaudampfschifffahrt 能用", 24, 1.0722, "Songti SC", "Times New Roman", True, 7),
+        ("修好带、 ", 24, 1.0722, "Songti SC", "Times New Roman", True, 2),                   # 修好带、 / ␣
+        ("修好,  ", 24, 0.8889, "Songti SC", "Times New Roman", True, 2),                    # 修好,␣ / ␣
+        ("修好,  能用了今年的夜晚", 24, 0.8889, "Songti SC", "Times New Roman", True, 5),      # 修好,␣ / ␣能用 / …
+        ("修好带走, 能用了今年的夜晚", 40, 2.3056, "Songti SC", "Arial", True, 4),             # 修好带走, / ␣能用了 / …
+        ("修好带， 1,250 能用了今年", 24, 1.0722, "PingFang SC", "Arial", True, 5),           # 修好带， / ␣ / 1,250 / …
+        ("修好带走,   能用了今年的夜晚", 24, 1.4056, "Hiragino Sans GB", "Arial", True, 4),    # 修好带走, / ␣␣␣能用 / …
+        ("修好带走   能用了今年的夜晚", 40, 2.3194, "Songti SC", "Times New Roman", True, 4),   # 修好带走␣ / ␣␣能用了 / …
+        ("修好带走  report 能用了今年", 24, 1.4472, "Songti SC", "Times New Roman", True, 4),   # 修好带走␣ / ␣report / …
+        ("修好、  能用了今年的夜晚", 24, 0.7389, "Songti SC", "Times New Roman", False, 7))     # 修 / 好、␣ / ␣能 / …
+    if not any(dk._font_substituted(f_) for r_ in _space_rows for f_ in r_[3:5]):
+        _hp = dk.HANG_PUNCT
+        try:
+            for t_, sz_, w_, ea_, lat_, hang_, want_ in _space_rows:
+                dk.HANG_PUNCT = hang_
+                n = dk._measure_lines([(t_, False)], sz_, w_ - dk.TEXT_INSET_LR, font=ea_, latin=lat_)
+                check("%gpt %r in %.4fin (%s + %s, hangingPunct=%d): the spaces at its breaks go where they render "
+                      "(%d lines)" % (sz_, t_, w_, ea_, lat_, hang_, want_), n == want_, n)
+        finally:
+            dk.HANG_PUNCT = _hp
+    else:
+        print("  skip spaces at a line break: one of their faces is not installed here")
+    # … and the rule itself, in the ONE breaker all three line models share (deckkit.cjk_break), on widths that need no
+    # font (every unit one em, a space a quarter, no autospace) — so it is checked on every machine
+    def _synthetic(t_, limit_, carry_=True):
+        u_ = dk.cjk_units(t_)
+        wd = lambda a, b: sum(len(s_) * 0.25 + (1.0 if v_ else 0.0) for s_, v_ in u_[a:b]) - len(u_[a][0]) * 0.25
+        sp = lambda a, b, n_=None: wd(a, b) + 0.25 * (len(u_[b][0]) if n_ is None else n_)
+        cr = (lambda a, n_: 0.25 * n_) if carry_ else None
+        return [("".join(v_ for _s, v_ in u_[a:b]) or "␣") for a, b in
+                dk.cjk_break(u_, wd, limit_, sp, hang=True, carry=cr)]
+    for t_, limit_, want_ in (("修好带走、 能用了今", 4.05, ["修好带走、", "能用了", "今"]),   # the space starts line 2
+                              ("修、 能用", 1.05, ["修、", "␣", "能", "用"]),             # … alone: 能 does not fit after it
+                              ("修好带走   能用了今", 4.1, ["修好带走", "能用了", "今"]),    # 1 of 3 stays, 2 go down
+                              ("修好带走   能用了今年", 4.3, ["修好带走", "能用了今", "年"]),  # 2 stay (1 fits), 1 goes
+                              ("修好带走 能用了今", 4.3, ["修好带走", "能用了今"]),         # one space at the break stays
+                              ("修好、 ", 2.05, ["修好、", "␣"])):                         # the spaces it ends in
+        got = _synthetic(t_, limit_)
+        check("cjk_break %r at %g em: %s (one em a unit, a quarter a space)" % (t_, limit_, " / ".join(want_)),
+              got == want_, got)
+    try:
+        _synthetic("修好带走、 能用了今", 4.05, carry_=False)
+        check("cjk_break refuses a model that cannot place carried spaces (no carry=)", False, "no error")
+    except TypeError as e:
+        check("cjk_break refuses a model that cannot place carried spaces (no carry=)", "carry" in str(e), str(e))
+
     # hanging is the DECK's declaration, not an assumption (final review, 2026-10-04): with hangingPunct="0", or
     # absent everywhere in the inheritance chain, LibreOffice does not hang and "一二三四五六。" renders on 2 lines
     prs_h = dk.blank_deck()
