@@ -87,6 +87,9 @@ except Exception:
 # folder with the same dependencies, so a failure to import it is a broken install that should say so.
 from deckkit import _declared_overlap, _ink_reaching   # noqa: E402
 from deckkit import deck_hangs_punct as _deck_hangs   # noqa: E402 — the deck's own hangingPunct, one reading
+# CJK line breaking: deckkit's ONE rule set (see _wrap_para), never a copy of it
+from deckkit import (cjk_units as _dk_units, cjk_break as _dk_break, cjk_by_char as _dk_by_char,  # noqa: E402
+                     cjk_split_overwide as _dk_split, cjk_script_changes as _dk_changes)
 try:                                                  # real glyph advances, same metrics the build uses
     from deckkit import _pil_font as _dk_pil_font, _MEAS_PREC as _dk_prec
 except Exception:
@@ -742,25 +745,12 @@ def _text_w(text, size_pt, face=None, bold=False):
     return w + len(rest) * (size_pt / 72.0) * 0.52
 
 
-# CJK LINE ENDS, as LibreOffice sets them. Probed 2026-10-22 on 2,558 rendered boxes (Songti SC, PingFang SC,
-# Hiragino Sans GB, Hiragino Mincho ProN, Hiragino Sans; 12-48pt; measures of 1-11 em; horizontal and eaVert;
-# the deck's hangingPunct on and off), reading the line breaks back from the PDF:
-#   * with hangingPunct="1", ONE closing mark that does not fit HANGS past the measure — 。，、；：！？． and the
-#     half-width . , ; : ! ? set after Chinese/Japanese — in every measure down to one ideograph;
-#   * nothing hangs after a Latin letter or a digit (the line also gets autospace this model does not see), and a
-#     second mark, or a closing bracket or quote, never hangs: the line breaks earlier and the character before goes
-#     down with it ("来访者手 / 里」", "/ 里。」", "来访 / 5。"); an opening bracket never ends a line ("/ 「握在");
-#   * an ellipsis, a dash, a tilde, ・ ー ッ CAN start a line — the render leaves '…' alone, so that one is real —
-#     where the line simply ends before it; a break moved back (a closing mark, or the inside of the pair '……',
-#     which never splits) moves past it too, before the character it follows ("西修 / 好……」", "在来 / 访……").
-# The estimate used to wrap every CJK character at 1 em, marks included: it put '。' on a line of its own, so nearly
-# every Chinese quote page drew ORPHANED PUNCTUATION and a phantom extra line (TEXT COLLISION) that the render has
-# never had. deckkit's build-time measure (_CJK_HANG / _CJK_CLOSE / _CJK_OPEN) and visual_languages._break_lines
-# already set lines this way; this is the delivery lint learning the same rule, from the same renderer.
-_HANG_MARKS = set("，。、；：！？．,.;:!?")
-_NO_LINE_START = _HANG_MARKS | set("）」』》】〉〕〗｝］”’～々)]}")
-_NO_LINE_END = set("（「『《【〈〔〖｛［“‘")
-_PAIRED = set("…‥")                                         # set in pairs that do not split ("……")
+# CJK LINE ENDS, as LibreOffice sets them: deckkit's rule set (CJK_HANG_MARKS and the rules above it — cjk_units,
+# cjk_may_break, cjk_break), the same one the layout's line model and deckkit's build-time measure break by. This lint
+# carried its own copy (2026-10-22), and it drifted from the render: it refused a hang on any line with Latin in it
+# ("AB螺丝刀 / 握在来访" where LibreOffice sets "AB螺丝刀， / 握在来访"), carried ONE character down and split a Latin
+# word ("螺丝刀握WikiGPT- / 5，", "Claud / e。"), let ( [ { end a line, broke before the space in "GPT ，" and "（ 在"
+# (the render moves the word and the bracket down) and wrapped Korean character by character (it wraps at spaces).
 _HANG_PUNCT = True        # the deck's own declaration — lint() sets it per deck (deckkit.deck_hangs_punct)
 
 
@@ -768,22 +758,22 @@ def _wide(ch):
     return ord(ch) > 0x2E80                    # the same CJK split _text_w measures by
 
 
-def _hangul(ch):
-    o = ord(ch)
-    return 0x1100 <= o <= 0x11FF or 0x3130 <= o <= 0x318F or 0xAC00 <= o <= 0xD7AF
-
-
 def _wrap_para(pr, width_in, face=None, bold=False):
-    """The wrapped lines (strings) of ONE paragraph [(text, size_pt), ...] at `width_in`: character by character,
-    each run at its own size, CJK at 1 em and Latin measured in the face (see `_text_w`). A paragraph with no CJK
-    wraps exactly as it always has. A CJK paragraph follows the rendered line-end rules above."""
-    items = []
+    """The wrapped lines (strings) of ONE paragraph [(text, size_pt), ...] at `width_in`: each run at its own size, CJK
+    at 1 em and Latin measured in the face (see `_text_w`). A paragraph with no CJK wraps character by character,
+    exactly as it always has. One with CJK breaks by deckkit's line rules (cjk_units / cjk_break): Chinese and Japanese
+    between characters and whole Latin words, with LibreOffice's line ends, plus its autospace at every change of
+    script (deckkit.cjk_script_changes); Korean at spaces; a word wider than the line on a line of its own, broken
+    between its syllables or at its punctuation (deckkit.cjk_split_overwide)."""
+    chars, ws, ems = [], [], []
     for text, size_pt in pr:
         for ch in text:
-            items.append((ch, 0.0 if ch == "\n" else _text_w(ch, size_pt, face, bold)))
-    if not any(_wide(ch) for ch, _w in items):
+            chars.append(ch)
+            ws.append(0.0 if ch == "\n" else _text_w(ch, size_pt, face, bold))
+            ems.append(size_pt / 72.0)
+    if not any(_wide(ch) for ch in chars):
         lines, line, w = [], "", 0.0
-        for ch, cw in items:
+        for ch, cw in zip(chars, ws):
             if ch == "\n":
                 lines.append(line); line, w = "", 0.0; continue
             if w + cw > width_in and w > 0:
@@ -791,43 +781,44 @@ def _wrap_para(pr, width_in, face=None, bold=False):
             else:
                 line += ch; w += cw
         return lines + [line]
-    lines, cur, w = [], [], 0.0                # cur: [(ch, width, hung past the measure?)]
-    k = 0
-    while k < len(items):
-        ch, cw = items[k]
-        k += 1
-        if ch == "\n":
-            lines.append(cur); cur, w = [], 0.0; continue
-        if not (w + cw > width_in and w > 0):
-            cur.append((ch, cw, False)); w += cw; continue
-        nxt = items[k][0] if k < len(items) else None
-        if (_HANG_PUNCT and ch in _HANG_MARKS and not cur[-1][2]
-                and not any((c_.isalnum() and not _wide(c_)) or _hangul(c_) for c_, _w, _h in cur)
-                and nxt not in _NO_LINE_START):
-            cur.append((ch, cw, True)); w += cw; continue           # one mark hangs past a full line
-        if ch in _NO_LINE_START or cur[-1][0] in _NO_LINE_END or (ch in _PAIRED and cur[-1][0] == ch):
-            seq = cur + [(ch, cw, False)]
-            j = len(cur)                                            # the break goes before seq[j] ...
-            while j > 0 and (seq[j][0] in _NO_LINE_START or seq[j - 1][0] in _NO_LINE_END or seq[j][0] in _PAIRED):
-                j -= 1                                              # ... moved back past what may not start/end
-            if j == 0:                                              # nowhere to move it: break at the measure,
-                j = len(cur)                                        # taking down only what hangs past it
-                while j > 1 and cur[j - 1][2]:
-                    j -= 1
-            lines.append(cur[:j])
-            items[k - 1:k] = [(c_, w_) for c_, w_, _h in cur[j:]] + [(ch, cw)]
-            k -= 1                                                  # the carried characters start the next line
-            cur, w = [], 0.0
-            continue
-        lines.append(cur); cur, w = [(ch, cw, False)], cw
-    return ["".join(c_ for c_, _w, _h in ln) for ln in lines + [cur]]
+    import display_type as _dt
+    flat, lines, k0 = "".join(chars), [], 0
+    for seg in flat.split("\n"):                                    # a line break in the paragraph is a hard break
+        p0, k0 = k0, k0 + len(seg) + 1
+        pre = [0.0]
+        for cw in ws[p0:p0 + len(seg)]:
+            pre.append(pre[-1] + cw)
+        body = seg.lstrip(" ")
+        q = len(seg) - len(body)
+        base, at = _dk_units(body), []
+        for sep, u in base:                                         # where each unit starts in `seg`
+            q += len(sep); at.append(q); q += len(u)
+        breaks = set()                                              # a word wider than the line breaks, on its own
+        units = _dk_split(base, lambda k_, i_, j_: pre[at[k_] + j_] - pre[at[k_] + i_], width_in, breaks)
+        offs, q = [], len(seg) - len(body)                          # offs: where each unit itself starts in `seg`
+        for sep, u in units:
+            q += len(sep); offs.append(q); q += len(u)
+        ends = [o + len(u) for o, (_s, u) in zip(offs, units)]
+        changes = _dk_changes(units)
+        em = max(ems[p0:p0 + len(seg)] or [0.0])
+        auto = _dt.AUTOSPACE_EM * em
+
+        def width(a, b):
+            return pre[ends[b - 1]] - pre[offs[a]] + auto * changes(a, b)
+
+        def space(a, b):
+            return width(a, b) + pre[offs[b]] - pre[ends[b - 1]]
+        for a, b in _dk_break(units, width, width_in, space, hang=_HANG_PUNCT, rules=_dk_by_char(body),
+                              breaks=breaks):
+            lines.append(seg[offs[a]:ends[b - 1]] if b > a else "")
+    return lines
 
 
 def _est_lines(paras, width_in, face=None, bold=False):
     """CJK-aware estimate of total wrapped line count across paragraphs, using each RUN's own font
     size (so a mixed-size 'small label + big value' stat line counts as one line, not two). CJK glyph
     ≈ 1 em; Latin measured with the REAL face when `face` is known (see `_text_w`), else ≈ 0.52 em.
-    CJK line ends follow the renderer (see _HANG_MARKS)."""
+    CJK line ends follow the renderer (deckkit's line rules, see _wrap_para)."""
     if width_in <= 0 or not paras:
         return 1
     return sum(len(_wrap_para(pr, width_in, face, bold)) for pr in paras) or 1
@@ -3570,7 +3561,7 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
         sys.exit(2)
     sw, sh = prs.slide_width / EMU, prs.slide_height / EMU
     # CJK line ends hang punctuation only where the deck declares it (hangingPunct): read once, from this deck —
-    # the same declaration LibreOffice renders by and deckkit's build-time measure reads (see _HANG_MARKS)
+    # the same declaration LibreOffice renders by and deckkit's build-time measure reads (deckkit.CJK_HANG_MARKS)
     global _HANG_PUNCT
     _HANG_PUNCT = _deck_hangs(prs)
     total = 0

@@ -1175,6 +1175,61 @@ if not dk._font_substituted("Didot") and dk.has_oldstyle_figures("Didot"):
                               "comic {} {!r} {:.0f}pt in {}in: _lint_tail {} = the lint's wrap in {} ({} / {})".format(
                                   _patch["letter"], _t, _sz, _wd, _got, _lf, len(_ln), " / ".join(_ln)))
 
+# ── D5 (2026-10-23): ONE rule set for the three CJK line models ──
+# The layout's line model (_break_lines), the delivery lint's (lint_deck._wrap_para) and deckkit's measure
+# (_measure_lines, what every box height is planned from) each carried their own copy of the CJK line-end rules, and
+# the copies disagreed with each other and with LibreOffice: the lint refused a hang on any line with Latin in it,
+# split a Latin word before a mark ("Claud / e。") and let ( [ { end a line; deckkit refused every hang in mixed text
+# (ink's 16:9 quote page planned three lines for the two it renders) and left a mark after a Latin word on a line of
+# its own (two lines counted, three rendered). The rules now live in deckkit (cjk_units, cjk_may_break, cjk_break) and
+# the other two import them. Every expectation below is a LibreOffice render of exactly this box (journal body,
+# Georgia + Songti SC, (n + 0.1) em of measure, 20 and 36pt; lines read back from the PDF): the ellipsis pair never
+# splits and a break moved back passes it ("在来 / 访……"), the em-dash pair does split ("在来访— / —").
+import lint_deck as _L
+check(not any(hasattr(vl, _n) for _n in ("_HANG_MARKS", "_NO_LINE_START", "_NO_LINE_END", "_may_break", "_latin_end",
+                                          "_tokens"))
+      and not any(hasattr(_L, _n) for _n in ("_HANG_MARKS", "_NO_LINE_START", "_NO_LINE_END", "_PAIRED")),
+      "the CJK line rules are deckkit's, imported by the layout and the lint (no copies left to drift)")
+_p, _k = use("journal")
+_role = vl.TYPE["journal"]["body"][1]
+_hang0 = (dk.HANG_PUNCT, _L._HANG_PUNCT)
+try:
+    for _t, _n, _hang, _want in (
+            ("螺丝刀握在来访者手里。", 5, True, ["螺丝刀握在", "来访者手里。"]),
+            ("螺丝刀握在来访者手里」", 5, True, ["螺丝刀握在", "来访者手", "里」"]),
+            ("螺丝刀握在来访者手里。」", 5, True, ["螺丝刀握在", "来访者手", "里。」"]),
+            ("螺丝刀握在来访者手里！？", 5, True, ["螺丝刀握在", "来访者手", "里！？"]),
+            ("螺丝刀握在，来访者手里修好。带走它", 5, True, ["螺丝刀握在，", "来访者手里", "修好。带走", "它"]),
+            ("他说：「先从一个花盆开始。」然后笑了。", 1.25, True, ["他", "说：", "「", "先", "从", "一", "个", "花", "盆",
+                                                         "开", "始", "。", "」", "然", "后", "笑", "了。"]),
+            ("螺丝刀握在来访……", 4, True, ["螺丝刀握", "在来", "访……"]),
+            ("螺丝刀握在来访——", 4, True, ["螺丝刀握", "在来访—", "—"]),
+            ("螺丝刀握在来访……好", 4, True, ["螺丝刀握", "在来", "访……好"]),
+            ("螺丝刀握“来访者手里”", 5, True, ["螺丝刀握", "“来访者手", "里”"]),
+            ("螺丝刀握（来访者手里）", 5, True, ["螺丝刀握", "（来访者手", "里）"]),
+            ("ドライバーは来訪者の手の中。", 5, True, ["ドライバー", "は来訪者の", "手の中。"]),
+            ("螺丝刀握在来访者手里”。", 5, True, ["螺丝刀握在", "来访者手", "里”。"]),
+            ("螺。", 1, True, ["螺。"]),
+            ("螺丝刀握在来访者手里～", 5, True, ["螺丝刀握在", "来访者手", "里～"]),
+            ("螺丝刀握在来访者手里，GPT 只是来访者的帮手。", 10, True, ["螺丝刀握在来访者手里，", "GPT只是来访者的帮", "手。"]),
+            ("螺丝刀握在来访者手里，WikiGPT-5 只是帮手。", 10, True, ["螺丝刀握在来访者手里，", "WikiGPT-5只是帮手。"]),
+            ("螺丝刀握在来访者手里修好带走它又能用了。", 6, True, ["螺丝刀握在来", "访者手里修好", "带走它又能用", "了。"]),
+            ("螺丝刀握在来访者手里。", 5, False, ["螺丝刀握在", "来访者手", "里。"]),
+            ("螺丝刀握在来访者手里，修好带走。", 5, False, ["螺丝刀握在", "来访者手", "里，修好带", "走。"])):
+        dk.HANG_PUNCT = _L._HANG_PUNCT = _hang
+        for _sz in (20.0, 36.0):
+            _w = (_n + 0.1) * _sz / 72.0 + vl._INSET
+            _ea = _k.ea_face(_role, _t)
+            _lv = [l_.replace(" ", "") for l_ in vl._break_lines(_k, "body", _t, _sz, _w)]
+            _ll = [l_.replace(" ", "") for l_ in _L._wrap_para([(_t, _sz)], _w, _k.face(_role))]
+            _nd = dk._measure_lines([(_t, False)], _sz, _w - dk.TEXT_INSET_LR, font=_ea)
+            check(_lv == _want and _ll == _want and _nd == len(_want),
+                  "{}pt {!r} (hangingPunct={}): the layout, the lint and deckkit set the rendered {} (layout {}; lint "
+                  "{}; deckkit {} lines)".format(_sz, _t, int(_hang), " / ".join(_want), " / ".join(_lv),
+                                                 " / ".join(_ll), _nd))
+finally:
+    dk.HANG_PUNCT, _L._HANG_PUNCT = _hang0
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:

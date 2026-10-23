@@ -265,19 +265,46 @@ def main():
     # an opening bracket never ends a line (corpus render: "数据显示，/ 参与者的满 / 意度很高 / （详见附 / 录）。")
     n = dk._measure_lines([("数据显示，参与者的满意度很高（详见附录）。", False)], 48, 3.57, font="Songti SC")
     check("measure_text moves an opening bracket down to its text (five lines, as rendered)", n == 5, n)
-    # a line carrying Latin never hangs (autospace fills it) — both rendered in LibreOffice, corpus 2026-10-03
+    # mixed lines: autospace (0.25 em at each change of script) fills them, and nothing hangs right after Latin
+    # ('87%。') — both rendered in LibreOffice, corpus 2026-10-03, again 2026-10-23 ('读取 / CSV 、清洗')
     n = dk._measure_lines([("用 Python 写一个脚本：读取 CSV、清洗数据、画图。工具其实很少：一把小铲、一个喷壶、一卷麻绳。",
                             False)], 28, 2.14, font="Hiragino Sans GB")
-    check("measure_text does not hang a mark on a line that carries Latin (10 lines, as rendered)", n == 10, n)
+    check("a mixed paragraph measures with its autospace (10 lines, as rendered)", n == 10, n)
     n = dk._measure_lines([("2026年的数据（n=120）显示，满意度为 87%。", False)], 28, 7.75, font="Songti SC")
     check("a full stop after '87%' does not hang (two lines, as rendered)", n == 2, n)
-    # one ideograph per line (a 60pt line in a 1-1.9in column) — the renderer cannot hang there; rendered
-    # 17 lines at all three widths, and an under-count is the direction that hides a real overflow
+    # one ideograph per line (a 60pt line in a 1-1.9in column): rendered 17 lines at all three widths — a mark
+    # still hangs there ('说：', '了。'), but not before 」('始 / 。 / 」', re-rendered 2026-10-23); an under-count
+    # is the direction that hides a real overflow
     for w_ in (1.04, 1.38, 1.62):
         n = dk._measure_lines([("他说：「先从一个花盆开始。」然后笑了。", False)], 60, w_, font="Songti SC")
         check("a one-ideograph column never under-counts (>= 17 rendered lines at %.2fin)" % w_, n >= 17, n)
     n = dk._measure_lines([("一二三四五六。」七八九十一二", False)], 24, 6 * em24 + 0.02, font="Songti SC")
     check("after the push the next line holds 六。」 + four ideographs, then wraps (three lines)", n == 3, n)
+    # Mixed Chinese + Latin: the SAME line rules as the layout's and the delivery lint's (one rule set, 2026-10-23).
+    # Every count below is a LibreOffice render of the same text (Songti SC + Arial/Georgia, the box as wide as the
+    # prefix measures plus the slack, lines read back from the PDF). A mark hangs after an ideograph whatever Latin the
+    # text carries (the measure refused every hang in mixed text, so ink's 16:9 quote page planned three lines for
+    # the two it renders and set its attribution a line low); after a Latin word nothing hangs and the WHOLE word goes
+    # down with the mark (the measure left the mark on a line of its own: two lines counted, three rendered).
+    if not dk._font_substituted("Songti SC"):
+        q = "螺丝刀握在来访者手里，WikiGPT-5 只是帮手。"
+        for b_ in (False, True):
+            n = dk._measure_lines([(q, b_)], 54.8, 8.266 - dk.TEXT_INSET_LR, font="Songti SC")
+            check("ink's mixed quote measures the two lines it renders (bold=%s)" % b_, n == 2, n)
+        for t_, pre_, want_ in (("AB螺丝刀，握在来访", "AB螺丝刀", 2),
+                                ("螺丝刀握WikiGPT-5，在来访者", "螺丝刀握WikiGPT-5", 3),
+                                ("螺丝刀握Claude。在来访者", "螺丝刀握Claude", 3),
+                                ("螺丝刀握 GPT ，在来访者", "螺丝刀握 GPT ", 3)):
+            for sz_ in (20.0, 36.0):
+                av_ = dk._natural_width_in([(pre_, False)], sz_, "Songti SC") + 0.6 * sz_ / 72.0
+                n = dk._measure_lines([(t_, False)], sz_, av_, font="Songti SC")
+                check("%gpt %r measures the %d lines it renders" % (sz_, t_, want_), n == want_, n)
+        # what a move-back takes down is set again: "「 1,250" went down whole, past the measure (rendered 7 lines)
+        for sz_ in (24.0, 40.0):
+            n = dk._measure_lines([("又「 1,250 」」能！用了今年的）夜晚", False)], sz_, 3.2 * sz_ / 72.0, font="Songti SC")
+            check("%gpt what a move-back takes down is set again (7 lines, as rendered)" % sz_, n == 7, n)
+    else:
+        print("  skip mixed CJK line counts: Songti SC is not installed here")
 
     # hanging is the DECK's declaration, not an assumption (final review, 2026-10-04): with hangingPunct="0", or
     # absent everywhere in the inheritance chain, LibreOffice does not hang and "一二三四五六。" renders on 2 lines
@@ -308,6 +335,13 @@ def main():
         check("an over-wide Korean word breaks between syllables: {} (>= two lines, as rendered)".format(t_), 2 <= n <= 3, n)
     n = dk._measure_lines([("옥상에서도 채소가 자란다", False)], 24, 7 * em24 + 0.02, font="Apple SD Gothic Neo")
     check("Korean breaks at the space (two lines, as rendered)", n == 2, n)
+    # ... and an over-wide word goes to a line of its own before it breaks (rendered 2026-10-23, 24 and 40pt, a
+    # 2.5 em measure: "물건 / 을 / 고장 / 난 / 고쳐 / 서" — "을 고" would have fitted; the measure counted 5 and 6)
+    for sz_ in (24.0, 40.0):
+        for t_, want_ in (("물건을 고장난 고쳐서", 6), ("을 고장난 드라이버는 있다", 7)):
+            n = dk._measure_lines([(t_, False)], sz_, 2.5 * sz_ / 72.0, font="Apple SD Gothic Neo")
+            check("%gpt an over-wide Korean word starts its own line: %s (%d lines, as rendered)" % (sz_, t_, want_),
+                  n == want_, n)
     for t_, sz_, w_, want in (("동네 수리 카페는 한 달에 한 번 저녁에 열립니다. 동네 수리 카페는 한 달에 한 번 저녁에 열립니다.", 40, 3.72, 10),
                               ("작은 화분 하나로 시작하면 충분합니다. 고장 난 물건을 가져오세요. 고쳐서 가져가세요.", 24, 2.29, 8)):
         if dk._font_substituted("AppleMyungjo"):   # rendered on macOS; its spaces are AppleMyungjo's 0.4 em

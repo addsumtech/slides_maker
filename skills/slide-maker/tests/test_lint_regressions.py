@@ -291,6 +291,83 @@ def _cjk_line_end_cases():
     return ok, bad
 
 
+def _cjk_wrap_rule_cases():
+    """The delivery lint's line model (_wrap_para) breaks CJK lines by the SAME rules as the layout's
+    (visual_languages._break_lines) and deckkit's measure — deckkit's one rule set — and every expectation below is a
+    LibreOffice render of exactly this box (2026-10-23: Arial + Songti SC / Apple SD Gothic Neo, 20 and 36pt, each box
+    as wide as the lint measures the prefix plus the slack, lines read back from the PDF). The lint used to refuse a
+    hang on any line with Latin in it ("AB螺丝刀 / 握在来访" against the rendered "AB螺丝刀， / 握在来访"), carry ONE
+    character down and split a Latin word ("螺丝刀握WikiGPT- / 5，"), end a line with ( [ { (missing from its no-line-end
+    set), and break before the space in "GPT ，" and "（ 在" where the render moves the word or the bracket down. It
+    wrapped Korean character by character; Korean wraps at spaces ("드라이버는 / 방문자의 손에 / 있다.")."""
+    sys.path.insert(0, str(SCRIPTS))
+    import lint_deck as L
+    ok, bad = [], []
+    hang0 = L._HANG_PUNCT
+    try:
+        for text, prefix, slack, want in (
+                ("AB螺丝刀，握在来访", "AB螺丝刀", 0.6, ["AB螺丝刀，", "握在来访"]),
+                ("螺丝刀握WikiGPT-5，在来访者", "螺丝刀握WikiGPT-5", 0.6, ["螺丝刀握", "WikiGPT-5，在来访", "者"]),
+                ("螺丝刀握Claude。在来访者", "螺丝刀握Claude", 0.6, ["螺丝刀握", "Claude。在来访", "者"]),
+                ("螺丝刀握(在来访)者手", "螺丝刀握(", 0.6, ["螺丝刀握", "(在来访)", "者手"]),
+                ("螺丝刀握[在来访]者手", "螺丝刀握[", 0.6, ["螺丝刀握", "[在来访]", "者手"]),
+                ("螺丝刀握{在来访}者手", "螺丝刀握{", 0.6, ["螺丝刀握", "{在来访}", "者手"]),
+                ("螺丝刀握 GPT ，在来访者", "螺丝刀握 GPT ", 0.6, ["螺丝刀握", "GPT，在来访", "者"]),
+                ("螺丝刀握（ 在来访者", "螺丝刀握（ ", 0.6, ["螺丝刀握", "（在来访者"]),
+                ("螺丝刀握在来访……", "螺丝刀握", 0.3, ["螺丝刀握", "在来", "访……"]),
+                ("螺丝刀握在来访——", "螺丝刀握", 0.3, ["螺丝刀握", "在来访—", "—"]),
+                # after a Latin word LibreOffice breaks by its Western rules: the ellipsis rides the word ...
+                ("螺丝刀GPT……在来访者", "螺丝刀GPT", 0.6, ["螺丝刀", "GPT……在", "来访者"])):
+            for sz in (20.0, 36.0):
+                L._HANG_PUNCT = True
+                w = sum(L._text_w(c, sz, "Arial") for c in prefix) + slack * sz / 72.0
+                got = [l_.replace(" ", "") for l_ in L._wrap_para([(text, sz)], w, "Arial")]
+                (ok if got == want else bad).append(
+                    "CJK line rules: %gpt %r wraps as rendered (%s; the lint set %s)" % (sz, text, " / ".join(want),
+                                                                                       " / ".join(got)))
+        # ... and the dashes go together, the break before them (rendered "螺丝刀GPT / ——在来访…", both sizes)
+        for sz in (20.0, 36.0):
+            w = sum(L._text_w(c, sz, "Arial") for c in "螺丝刀GPT—") + 0.3 * sz / 72.0
+            got = [l_.replace(" ", "") for l_ in L._wrap_para([("螺丝刀GPT——在来访者", sz)], w, "Arial")]
+            (ok if got[:1] == ["螺丝刀GPT"] and got[1:2] and got[1].startswith("——") else bad).append(
+                "CJK line rules: %gpt the dashes after 'GPT' go down together (the lint set %s)" % (sz, " / ".join(got)))
+        # a figure wider than the whole line still breaks (rendered "手， / 里） / 1,25 / 0,00 / 0修 / 好带，", 24pt Arial,
+        # 2.5 em): kept whole as one unit it would be one line short (deckkit.cjk_split_overwide, as deckkit measures it)
+        got = L._wrap_para([("手，里） 1,250,000 修好带，", 24.0)], 2.5 * 24.0 / 72.0 + 0.0556, "Arial")
+        (ok if len(got) == 6 and not any("1,250,000" in l_ for l_ in got) else bad).append(
+            "CJK line rules: a figure wider than the line breaks, six lines as rendered (the lint set %s)"
+            % " / ".join(got))
+        # what a move-back takes down is set again on its own line: "「 1,250" went down whole and ran past the measure
+        # (rendered 7 lines, "又 / 「 1,2 / 50 」 / 」能！ / 用了今 / 年的） / 夜晚", 24 and 40pt, a 3.2 em box)
+        for sz in (24.0, 40.0):
+            got = L._wrap_para([("又「 1,250 」」能！用了今年的）夜晚", sz)], 3.2 * sz / 72.0, "Arial")
+            (ok if len(got) == 7 else bad).append(
+                "CJK line rules: %gpt what went down is set again, seven lines as rendered (the lint set %s)"
+                % (sz, " / ".join(got)))
+        # Korean wraps at spaces: never inside a word (rendered at 20pt: "드라이버는 / 방문자의 손에 / 있다."; at 36pt the
+        # render fits one word more — the lint counts a syllable one em, wider than Apple SD Gothic Neo draws it)
+        ko = "드라이버는 방문자의 손에 있다."
+        for sz in (20.0, 36.0):
+            w = sum(L._text_w(c, sz, "Arial") for c in "드라이버는 방문") + 0.3 * sz / 72.0
+            got = L._wrap_para([(ko, sz)], w, "Arial")
+            whole = all(set(l_.split()) <= set(ko.split()) for l_ in got)
+            (ok if whole and (sz != 20.0 or got == ["드라이버는", "방문자의 손에", "있다."]) else bad).append(
+                "CJK line rules: %gpt Korean wraps at spaces, never inside a word (the lint set %s)"
+                % (sz, " / ".join(got)))
+        # ... and a word wider than the line goes to a line of its own, then breaks between syllables (rendered
+        # "을 / 고장 / 난 / 드라 / 이버 / 는 / 있다", 24 and 40pt, a 2.5 em measure)
+        for sz in (24.0, 40.0):
+            got = [l_.replace(" ", "") for l_ in L._wrap_para([("을 고장난 드라이버는 있다", sz)],
+                                                               2.5 * sz / 72.0 + 0.0556, "Arial")]
+            want = ["을", "고장", "난", "드라", "이버", "는", "있다"]
+            (ok if got == want else bad).append(
+                "CJK line rules: %gpt an over-wide Korean word starts its own line (%s; the lint set %s)"
+                % (sz, " / ".join(want), " / ".join(got)))
+    finally:
+        L._HANG_PUNCT = hang0
+    return ok, bad
+
+
 def main():
     _require_deps()
     tmp = pathlib.Path(tempfile.mkdtemp(prefix="lintfx-"))
@@ -304,7 +381,7 @@ def main():
     ok, bad = [], []
     _pass, _msg = _categorical_shapes()
     (ok if _pass else bad).append(_msg)
-    for _case in (_card_geometry_cases, _cjk_line_end_cases):
+    for _case in (_card_geometry_cases, _cjk_line_end_cases, _cjk_wrap_rule_cases):
         _o, _b = _case()
         ok += _o
         bad += _b

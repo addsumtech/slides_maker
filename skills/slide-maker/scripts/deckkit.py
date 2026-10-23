@@ -5642,6 +5642,280 @@ _CJK_CLOSE = "）」』》】〉〕"
 # ... and an opening bracket never ENDS a line: it moves down to the text it opens ("意度很高 / （详见附")
 _CJK_OPEN = "（「『《【〈〔"
 
+# ── CJK LINE ENDS, as LibreOffice sets them: the ONE rule set every line model breaks by ─────────────────────────────
+# This measure (_measure_lines — the height every box is planned at), the layout's line model
+# (visual_languages._break_lines) and the delivery lint's (lint_deck._wrap_para) each carried a copy of these rules, and
+# the copies disagreed with each other and with the render: the lint refused a hang on any line with Latin in it and
+# split a Latin word before a mark ("Claud / e。"); this measure refused every hang in mixed text (ink's 16:9 quote page
+# planned three lines for the two it renders) and left a mark after a Latin word on a line of its own (two lines
+# counted, three rendered). Now the rules live here, and the other two import them. Measured on renders (2026-10-22/23:
+# ~7,000 boxes — Songti SC, PingFang SC, Hiragino Sans GB, Hiragino Mincho ProN, Hiragino Sans, Apple SD Gothic Neo with
+# Arial, Times New Roman and Georgia; 12-60pt; measures of 1-11 em; hangingPunct on and off; lines read from the PDF):
+#   * ONE of these marks hangs past a full line — the half-width ones too, after an ideograph ("螺丝刀握在,") — in every
+#     measure down to one ideograph ("螺。"), with Latin anywhere else on the line ("AB螺丝刀，"), but never right after
+#     Latin text ("握在 / A。", "螺丝刀握 / GPT，在来访": a space after a word is Latin too), never a second one, and not
+#     before a character that may not start a line ("始 / 。 / 」");
+CJK_HANG_MARKS = frozenset(_CJK_HANG + ",.;:!?")
+#   * none of these starts a line — the break moves back to the last place it may fall, taking the WHOLE word or
+#     character before it down ("螺丝刀握 / WikiGPT-5，在来访", "螺丝刀握 / 在”来访者") …
+CJK_NO_LINE_START = CJK_HANG_MARKS | frozenset(_CJK_CLOSE + "〗｝］”’～々)]}")
+#   * … and none of these ends one: an opening quote or bracket goes down with what it opens, even with a space after
+#     it ("螺丝刀握 / (在来访)", "螺丝刀握 / （ 在来访者", "{" and "[" as well);
+CJK_NO_LINE_END = frozenset(_CJK_OPEN + "〖｛［“‘([{")
+#   * an ellipsis pair never splits, and a break moved back passes it, before the character it follows ("在来 / 访……",
+#     "西修 / 好……」"); where the line simply ends before one, it starts the next ("在来访者 / ……"). The em-dash pair
+#     does split ("在来访— / —"). After an ideograph each of these is a unit of its own (cjk_units); after a Latin
+#     word, where LibreOffice breaks by its Western rules, an ellipsis rides the word ("螺丝刀 / GPT……在") and the
+#     dashes go together, the break before them ("螺丝刀GPT / ——在来访");
+CJK_PAIRED = frozenset("…‥")
+_CJK_OWN_UNIT = frozenset("…‥—")
+#   * a SPACE: when the space itself is what overflows, the line breaks there, whatever follows ("螺丝刀握 / ，在来访",
+#     "螺丝刀握在（ / 握在来"); when it fits, a mark after it hangs where it may ("螺丝刀握 ，"), a closing bracket after an
+#     ideograph and a space starts the next line ("螺丝刀握 / 」在来访"), and after a Latin word and a space the word
+#     goes down with the mark ("螺丝刀握 / GPT，在来访");
+#   * with nowhere on the line to move the break back to, it falls at the measure ("螺丝刀握 / 「Claude / 」在来访").
+# A Latin word inside CJK is one unit. LibreOffice also breaks one after "-" or "/" before a letter ("Wiki- / GPT，",
+# "A/ / B，"), which these rules do not: they move the whole word down (one line more, never fewer).
+
+
+_CJK_CHAR = re.compile("[%s]" % "".join("%s-%s" % (re.escape(chr(a)), re.escape(chr(b))) for a, b in _CJK_ORD))
+_BY_CHAR, _UNITS = {}, {}                          # memoised per text: the flows measure the same lines again and again
+
+
+def cjk_by_char(text):
+    """True when `text` breaks between characters — Chinese or Japanese. Korean wraps at spaces, like Latin
+    (LibreOffice renders "옥상에서도 / 채소가 자란다"), and so does text with no CJK at all."""
+    got = _BY_CHAR.get(text)
+    if got is None:
+        got = bool(_CJK_CHAR.search(text)) and not any(map(_is_hangul, map(ord, text)))
+        if len(_BY_CHAR) > 50000:
+            _BY_CHAR.clear()
+        _BY_CHAR[text] = got
+    return got
+
+
+def cjk_units(text):
+    """The (separator, unit) pairs a line of `text` may break between — the units all three line models break by.
+    Chinese and Japanese: each CJK character is a unit (and each … ‥ —, see CJK_PAIRED); a run of anything else — a
+    Latin word, a figure, "WikiGPT-5" — is ONE unit, even inside Chinese ("…进展report v2" never breaks "re / port");
+    a run of spaces is the separator before the next unit. Korean, and text with no CJK, break at spaces only: one unit
+    per word, one space before each (str.split; an empty unit — from two spaces running — never starts a line). In
+    order, the separators and units spell `text` but for the spaces it ends in (Chinese / Japanese). A tuple."""
+    got = _UNITS.get(text)
+    if got is None:
+        got = tuple(_cjk_units(text))
+        if len(_UNITS) > 50000:
+            _UNITS.clear()
+        _UNITS[text] = got
+    return got
+
+
+def _cjk_units(text):
+    if not cjk_by_char(text):
+        return [(" " if i else "", u) for i, u in enumerate(text.split(" "))]
+    is_cjk = _CJK_CHAR.match
+    out, cur, sep, dash = [], "", "", False             # dash: `cur` is a run of em dashes after a Latin word
+    for ch in text:
+        if ch == " ":
+            if cur:
+                out.append((sep, cur)); cur, sep = "", ""
+            sep += " "; dash = False
+        elif ch in CJK_PAIRED and cur and not dash:
+            cur += ch                                   # after Latin an ellipsis rides the word ("螺丝刀 / GPT……在")
+        elif ch == "—" and cur:                         # after Latin the dashes go together, the break before them
+            if not dash:                                # ("螺丝刀GPT / ——在来访"; after an ideograph "在来访— / —")
+                out.append((sep, cur)); cur, sep, dash = "", "", True
+            cur += ch
+        elif ch in _CJK_OWN_UNIT or is_cjk(ch):
+            if cur:
+                out.append((sep, cur)); cur, sep = "", ""
+            out.append((sep, ch)); sep = ""; dash = False
+        else:
+            if dash:
+                out.append((sep, cur)); cur, sep, dash = "", "", False
+            cur += ch
+    if cur:
+        out.append((sep, cur))
+    return out or [("", "")]
+
+
+def cjk_split_overwide(units, span_width, limit, breaks=None, latin=True):
+    """`units` with every word wider than the whole line `limit` cut where LibreOffice breaks it, after moving it to a
+    line of its own (as it does: "물건 / 을 / 고장 / 난", rendered 2026-10-23 — "을 고" would have fitted): a Korean word
+    between its syllables, a run of closing marks staying with the syllable before it ("인공지능기반의 / 료영상재구성",
+    rendered 2026-10-04); and with `latin`, a Latin token after / . _ - ? & = where it can, mid-word where it must (40
+    rendered cases, 2026-10-04: "99.9%" 40pt in 1.2in, an identifier, a URL — counted as ONE line, they rendered 2-3).
+    `span_width(k, i, j)`: the width a model gives units[k]'s unit[i:j]. `breaks`: a set that receives the index (in the
+    returned list) of each cut word's first part — cjk_break starts a line there. Other units are returned as they
+    are."""
+    out = []
+    for k, (sep, u) in enumerate(units):
+        parts = None
+        if len(u) > 1 and span_width(k, 0, len(u)) > limit:
+            if any(_is_hangul(ord(c)) for c in u):
+                parts, buf = [], ""
+                for c in u:
+                    if _is_hangul(ord(c)):
+                        if buf:
+                            parts.append(buf); buf = ""
+                        parts.append(c)
+                    elif buf or not parts or c not in CJK_NO_LINE_START:
+                        buf += c
+                    else:
+                        parts[-1] += c                 # a closing mark rides the syllable before it
+                if buf:
+                    parts.append(buf)
+            elif latin and not _has_cjk(u):
+                parts, i = [], 0
+                for seg in _OVERWIDE_SPLIT.findall(u):
+                    if seg:
+                        parts += [seg] if span_width(k, i, i + len(seg)) <= limit else list(seg)
+                        i += len(seg)
+        if parts and len(parts) > 1:
+            if breaks is not None:
+                breaks.add(len(out))
+            out += [(sep if i == 0 else "", p) for i, p in enumerate(parts)]
+        else:
+            out.append((sep, u))
+    return out
+
+
+_SCRIPT_CLASS = {}
+
+
+def _script_class(ch):
+    """display_type.script_class — the script LibreOffice gives a character — memoised: the line models ask it of the
+    same characters again and again."""
+    try:
+        return _SCRIPT_CLASS[ch]
+    except KeyError:
+        import display_type as dt                  # lazily: display_type imports deckkit
+        c = _SCRIPT_CLASS[ch] = dt.script_class(ch)
+        return c
+
+
+_CHANGES = {}
+
+
+def cjk_script_changes(units):
+    """count(a, b): how many times the script changes between East-Asian and other text within the line made of
+    units[a:b] — where LibreOffice sets its AUTOSPACE (display_type.AUTOSPACE_EM, measured 0.24 em; a space or a mark
+    of no script takes the script before it). A line model that adds widths unit by unit adds this too: without it a
+    mixed line read up to an em short ("读取 CSV、" fitted a line it overflows in the render, "读取 / CSV、清洗")."""
+    key = tuple(units)
+    got = _CHANGES.get(key)
+    if got is None:
+        got = _script_changes(key)
+        if len(_CHANGES) > 20000:
+            _CHANGES.clear()
+        _CHANGES[key] = got
+    return got
+
+
+def _script_changes(units):
+    n = len(units)
+    first, inner, chg = [None] * n, [0] * (n + 1), [0] * (n + 1)
+    prev = None
+    for i, (_sep, u) in enumerate(units):
+        cls = [c for c in map(_script_class, u) if c]
+        if cls:
+            first[i] = cls[0]
+            chg[i + 1] = int(prev is not None and cls[0] != prev)
+            inner[i + 1] = sum(1 for x, y in zip(cls, cls[1:]) if x != y)
+            prev = cls[-1]
+    nxt = [n] * (n + 1)                            # nxt[a]: the first unit at or after a that has a script
+    for i in range(n - 1, -1, -1):
+        nxt[i] = i if first[i] else nxt[i + 1]
+    for i in range(n):                             # prefix sums
+        inner[i + 1] += inner[i]
+        chg[i + 1] += chg[i]
+    def count(a, b):
+        if b <= a:
+            return 0
+        c = inner[b] - inner[a] + chg[b] - chg[a + 1]
+        k = nxt[a]                                 # its change is against a script from an earlier line
+        if a < k < b:
+            c -= chg[k + 1] - chg[k]
+        return c
+    return count
+
+
+def cjk_latin_end(line):
+    """True when `line` does not end in East-Asian text — its last character that has a script is Latin (a letter, a
+    digit, "87%", "v2)"; a space or a mark of no script takes the script before it, display_type.script_class), or
+    none has one: no mark hangs after it ("握在 / A。", "来访 / 5。"); after an ideograph one hangs even when the line
+    starts in Latin ("AB螺丝刀，")."""
+    for ch in reversed(line):
+        c = _script_class(ch)
+        if c:
+            return c != "a"
+    return True
+
+
+def cjk_may_break(before, sep, unit, moved=False):
+    """True when LibreOffice may break between the text `before` and `unit` (`sep`: the spaces between them, or "")
+    INSIDE a line — not where the space itself overflows (cjk_break settles that first). `moved`: the break is being
+    moved back from a later point it may not take — it passes an ellipsis too (see CJK_PAIRED)."""
+    if before[-1:] in CJK_NO_LINE_END:
+        return False
+    c = unit[:1]
+    if c in CJK_PAIRED and (moved or (not sep and before[-1:] == c)):
+        return False
+    return c not in CJK_NO_LINE_START or (bool(sep) and not cjk_latin_end(before))
+
+
+def cjk_break(units, width, limit, space=None, hang=None, rules=True, breaks=()):
+    """Greedy line breaks by LibreOffice's CJK line rules (above) — the one breaker deckkit's measure, the layout's line
+    model and the delivery lint's share; each brings its own widths.
+
+    `units`: cjk_units' (separator, unit) pairs. `width(a, b)`: the width of ONE line made of units[a:b] (units[a]'s
+    separator dropped). `space(a, b)`: that line's width WITH the separator before units[b], as LibreOffice draws it —
+    it decides whether the space itself overflows (None: the space never does). `hang`: the deck's hangingPunct
+    (None: HANG_PUNCT). `rules=False`: a plain greedy break at every separator (Korean, Latin — cjk_by_char).
+    `breaks`: unit indices a line must start at (a hard break). Returns the lines as unit ranges [(a, b), ...] —
+    one at least."""
+    n = len(units)
+    if n == 0:
+        return [(0, 0)]
+    hang = HANG_PUNCT if hang is None else hang
+
+    def text(a, b):
+        return "".join((units[i][0] if i > a else "") + units[i][1] for i in range(a, b))
+
+    lines, start, hung, i = [], 0, -1, 1           # hung: the index of the mark hung past the measure, or -1
+    while i < n:
+        sep, u = units[i]
+        if i in breaks and i > start:
+            lines.append((start, i)); start, hung = i, -1
+        elif not u or width(start, i + 1) <= limit:  # (an empty unit — spaces only — never starts a line)
+            pass
+        elif sep and space is not None and space(start, i) > limit:
+            lines.append((start, i)); start, hung = i, -1     # the space itself overflows: the line breaks there
+        elif not rules:
+            lines.append((start, i)); start, hung = i, -1
+        else:
+            before = text(start, i)
+            nxt = units[i + 1] if i + 1 < n else None
+            if (hang and u in CJK_HANG_MARKS and hung != i - 1 and not cjk_latin_end(before)
+                    and not (nxt and not nxt[0] and nxt[1][:1] in CJK_NO_LINE_START)):
+                hung = i                               # one mark hangs past a full line
+            elif not cjk_may_break(before, sep, u):
+                j = i - 1                              # the break goes before units[j] — moved back past every unit
+                while j > start and not cjk_may_break(text(start, j), units[j][0], units[j][1], moved=True):
+                    j -= 1                             # that may not start a line or follows one that may not end one
+                if j == start:                         # nowhere on the line to move it: it breaks at the measure,
+                    j = i                              # taking down only what hangs past it
+                    if j - 1 > start and hung == j - 1:
+                        j -= 1
+                lines.append((start, j)); start, hung = j, -1
+                i = j + 1                              # what went down is set again on its own line: it may not fit
+                continue                               # there either ("又 / 「 / 1,250", not "「 1,250" past it)
+            else:
+                lines.append((start, i)); start, hung = i, -1
+        i += 1
+    lines.append((start, n))
+    return lines
+
 
 def deck_hangs_punct(prs):
     """True when `prs` declares hanging punctuation (hangingPunct="1") at level 1 of its default text style or
@@ -5683,19 +5957,16 @@ def _measure_lines(runs, size_pt, avail_in, font=None):
 
     `runs` = [(text, bold), ...] set at `size_pt` within `avail_in` inches of usable width.
     Narrow runs are measured with the REAL Latin font's glyph advances (Pillow, the bold
-    parts measured bold); CJK / full-width glyphs are one em (= size_pt) by definition.
-    A greedy line-breaker then counts wraps, breaking at spaces, between CJK glyphs, and at
-    CJK↔Latin boundaries (Latin words — and Korean words that fit a line, see `_is_hangul` — stay
-    whole); a closing CJK mark hangs at the line end
-    (_CJK_HANG), a closing bracket takes the ideograph before it down (_CJK_CLOSE) and an opening
-    bracket never ends a line (_CJK_OPEN). Text that also carries Latin or digits never hangs: the
-    renderer puts autospace between the scripts, which this does not model, so mixed lines are fuller
-    than measured and the old extra line hid that — a hang there under-counted 11 of 12 rendered
-    cases (corpus vs LibreOffice, 2026-10-03). Hanging is the one rule that LOWERS a count, so it is
-    kept to pure CJK text, where it matched the render in 37 of 40 changed cases. Because it uses the same font metrics the
-    renderer does, the count matches the rendered layout far more closely than a chars-per-
-    line guess. Falls back to `_lines_heuristic` if Pillow or the font can't be loaded — so a
-    build never breaks over measurement. Lazy-imports Pillow/matplotlib."""
+    parts measured bold); CJK / full-width glyphs (and Hangul syllables) are one em (= size_pt)
+    by definition. The lines then break by the SHARED line rules (cjk_units / cjk_break — the
+    layout's and the delivery lint's line models break by the same ones): Latin words — and Korean
+    words that fit a line — stay whole and break at spaces; Chinese and Japanese break between
+    characters and whole Latin words, with LibreOffice's line ends (one closing mark hangs past a full
+    line, a mark that may not start a line takes the word or character before it down, an opening
+    bracket never ends a line — CJK_HANG_MARKS and the rules above it). Because it uses the same
+    font metrics the renderer does, the count matches the rendered layout far more closely than a
+    chars-per-line guess. Falls back to `_lines_heuristic` if Pillow or the font can't be loaded — so
+    a build never breaks over measurement. Lazy-imports Pillow/matplotlib."""
     fontname = font or FONT
     runs = _as_runs(runs)
     flat = "".join(t for t, _ in runs)
@@ -5708,128 +5979,69 @@ def _measure_lines(runs, size_pt, avail_in, font=None):
         getlen("x", False)                                  # probe — raises if unusable
     except Exception:
         return _lines_heuristic(flat, size_pt, avail_in)
+    bolds = [b for t, b in runs for _ch in t]               # each character's weight
+    one_b = bolds[0] if len(set(bolds)) == 1 else None      # one weight throughout (the common case)
+    em = float(size_pt)
 
-    items = []                                              # (width_pt, kind): 'w'ord 's'pace 'c'jk
-    _chw = {}                                               # one glyph's width, per (char, bold): an over-wide
-    def chw(ch, b):                                         # word breaks per character, and characters repeat
-        k_ = (ch, b)
-        if k_ not in _chw:
-            _chw[k_] = getlen(ch, b)
-        return _chw[k_]
-    for text, bold in runs:
-        word = []                                           # the current word's characters, in order
-        hw = [0]                                            # how many of them are Hangul
+    def tw(s, at):
+        """The width (pt) of `s`, which starts at character `at` of `flat`: a CJK / full-width glyph or a Hangul
+        syllable one em, a run of anything else measured in the face, each weight in its own."""
+        if not s:
+            return 0.0
+        if one_b is not None and max(s) < "\u1100":           # nothing wide, one weight: one measurement
+            return getlen(s, one_b)
+        w, seg, b0 = 0.0, "", None
+        for k_, ch in enumerate(s):
+            b = bolds[at + k_]
+            if _is_wide(ord(ch)) or _is_hangul(ord(ch)):
+                if seg:
+                    w += getlen(seg, b0); seg = ""
+                w += em
+                continue
+            if seg and b != b0:
+                w += getlen(seg, b0); seg = ""
+            seg += ch; b0 = b
+        return w + (getlen(seg, b0) if seg else 0.0)
 
-        def _flush():
-            # Korean wraps at spaces (a Hangul run is part of the word, one em a syllable) — but a word wider
-            # than the WHOLE line breaks between syllables ("인공지능기반의 / 료영상재구성"), so it goes in
-            # as syllables. A word with no Hangul is measured exactly as it always was (and as fast).
-            if not hw[0]:
-                if word:
-                    wtxt = "".join(word)
-                    ww = getlen(wtxt, bold)
-                    if ww > avail and len(wtxt) > 1:
-                        # wider than the whole line: the renderer breaks it — after / . _ - ? & = where it can,
-                        # mid-word where it must (40 rendered cases: 28 exact, 10 over, 2 a URL one line short;
-                        # the old ONE line was right once). Pieces join without a space, so they go in as "c";
-                        # the word first moves to a fresh line ("n"), as the renderer moves it before breaking it.
-                        items.append((0.0, "n"))
-                        for seg in _OVERWIDE_SPLIT.findall(wtxt):
-                            if not seg:
-                                continue
-                            sgw = getlen(seg, bold)
-                            if sgw <= avail:
-                                items.append((sgw, "c"))
-                            else:
-                                items.extend((chw(ch, bold), "c") for ch in seg)
-                    else:
-                        items.append((ww, "w"))
-                    word.clear()
-                return
-            hang_n, hw[0] = hw[0], 0
-            latin = "".join(c for c in word if not _is_hangul(ord(c)))
-            wd = (getlen(latin, bold) if latin else 0.0) + hang_n * float(size_pt)
-            if hang_n and wd > avail:
-                buf = ""
-                for c in word:
-                    if _is_hangul(ord(c)):
-                        if buf:
-                            items.append((getlen(buf, bold), "w")); buf = ""
-                        items.append((float(size_pt), "c"))
-                    else:
-                        buf += c
-                if buf:
-                    items.append((getlen(buf, bold), "w"))
-            elif word:
-                items.append((wd, "w"))
-            word.clear()
-        for ch in text:
-            if ch == " ":
-                _flush()
-                items.append((getlen(" ", bold), "s"))
-            elif ord(ch) < 0x1100:                          # nothing below U+1100 is Hangul or wide: the
-                word.append(ch)                             # common Latin case pays one compare
-            elif _is_hangul(ord(ch)):
-                word.append(ch)                             # Korean wraps at spaces: part of the word
-                hw[0] += 1
-            elif _is_wide(ord(ch)):
-                _flush()
-                items.append((float(size_pt), "h" if ch in _CJK_HANG else ("b" if ch in _CJK_CLOSE else
-                                                                     ("o" if ch in _CJK_OPEN else "c"))))
-            else:
-                word.append(ch)
-        _flush()
-
-    # pure CJK only (see the docstring), and a line of at least two ideographs: in a one-ideograph
-    # column the renderer cannot hang (it would leave the line empty) — 3 under-counts in the corpus
-    may_hang = (HANG_PUNCT and not any(k_ == "w" for _w, k_ in items) and avail >= 2 * size_pt
-                and not any(c.isascii() and c.isalnum() for c in flat))   # an over-wide Latin word goes in as "c"
-    x = 0.0
-    lines = 1
-    line = []                                               # the current line's items, for a bracket's push
-    for w, kind in items:
-        if kind == "n":                                     # an over-wide word starts its own line
-            if x > 0:
-                lines += 1
-                x, line = 0.0, []
-            continue
-        if kind == "s":                                     # a space never forces a wrap
-            if x > 0:
-                x += w
-                line.append((w, kind))
-            continue
-        if kind == "h" and may_hang and x > 0 and x <= avail + 1e-9:   # ONE mark hangs past the measure
-            x += w
-            line.append((w, kind))
-            continue
-        if kind in ("b", "h") and x + w > avail and x > 0:
-            # a bracket — or a second mark — takes the hung mark before it and the ideograph before
-            # that down with it ("开 / 始。」", "五 / 六！？")
-            carry = []
-            while line and line[-1][1] == "h":
-                carry.insert(0, line.pop())
-            if line and line[-1][1] == "c" and len(line) > 1:
-                carry.insert(0, line.pop())
-            lines += 1
-            line = carry + [(w, kind)]
-            x = sum(c[0] for c in line)
-            continue
-        if w > avail:                                       # a token wider than the whole line BREAKS
-            if x > 0:                                        # mid-word in a wrap-on box (LibreOffice renders,
-                lines += 1                                   # 2026-10-04: "99.9%" 40pt in 1.2in, an identifier,
-            extra = int(-(-w // avail)) - 1                  # a URL, "Donaudampfschifffahrtsgesellschaft" —
-            lines += extra                                   # all counted 1 line, rendered 2-3). A wrap-OFF box
-            x = w - extra * avail                            # stays one line: that caller does not measure lines
-            line = [(x, kind)]                               # (lint_layout passes the box's own wrap; a value
-            continue                                         # box that sets word_wrap=False is never measured)
-        if x + w > avail and x > 0:
-            lines += 1
-            carry = [line.pop()] if line and line[-1][1] == "o" and len(line) > 1 else []
-            line = carry                                    # an opening bracket goes down with its text
-            x = sum(c[0] for c in line)
-        x += w
-        line.append((w, kind))
-    return max(1, lines)
+    body = flat.lstrip(" ")                                 # a line's leading spaces take no room
+    if not body:
+        return 1
+    q = len(flat) - len(body)
+    base, at, q = cjk_units(body), [], len(flat) - len(body)
+    for sep, u in base:                                     # where each unit starts in `flat`
+        q += len(sep); at.append(q); q += len(u)
+    bw = [tw(u, a_) for (_s, u), a_ in zip(base, at)]
+    breaks = set()
+    # a word wider than the WHOLE line breaks — Korean between syllables (one em a syllable is a deliberate
+    # over-estimate of SD Gothic's 0.865 em, rendered 2026-10-04), Latin at its punctuation or mid-word — on a line of
+    # its own (cjk_split_overwide)
+    units = cjk_split_overwide(base, lambda k, i, j: bw[k] if (i, j) == (0, len(base[k][1])) else
+                               tw(base[k][1][i:j], at[k] + i), avail, breaks)
+    if len(units) == len(base):
+        uw = bw
+        sw = [tw(sep, a_ - len(sep)) if sep else 0.0 for (sep, _u), a_ in zip(base, at)]
+    else:
+        uw, sw, q = [], [], len(flat) - len(body)
+        for sep, u in units:
+            sw.append(tw(sep, q) if sep else 0.0); q += len(sep)
+            uw.append(tw(u, q)); q += len(u)
+    pre = [0.0]                                             # pre[i]: everything before units[i], separators too
+    for a_, b_ in zip(sw, uw):
+        pre.append(pre[-1] + a_ + b_)
+    if _has_cjk(body):                                      # LibreOffice's autospace at every change of script
+        import display_type as dt                           # (lazily: display_type imports deckkit)
+        changes, auto = cjk_script_changes(units), dt.AUTOSPACE_EM * em
+        width = lambda a, b: pre[b] - pre[a] - sw[a] + auto * changes(a, b)
+    else:
+        width = lambda a, b: pre[b] - pre[a] - sw[a]
+    lines = cjk_break(units, width, avail + 1e-9, lambda a, b: width(a, b) + sw[b], rules=cjk_by_char(body),
+                      breaks=breaks)
+    # a unit wider than the whole line even so (a glyph wider than the column) takes as many lines as it is wide:
+    # an under-count is the direction that hides a real overflow (LibreOffice renders, 2026-10-04: "99.9%" 40pt in
+    # 1.2in, an identifier, a URL — all counted 1 line, rendered 2-3). A wrap-OFF box stays one line: that caller
+    # does not measure lines (lint_layout passes the box's own wrap; a box that sets word_wrap=False is never measured)
+    extra = sum(int(-(-w_ // avail)) - 1 for w_ in uw if w_ > avail)
+    return max(1, len(lines) + extra)
 
 
 # ---- public "measure before you place" helpers (so a build knows a block's true height
