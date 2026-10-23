@@ -9,6 +9,38 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+## [6.0.1] — 2026-10-23
+
+**A package with no pictures works, every direction preview draws, and text is measured as LibreOffice sets it.**
+SkillHub accepts no image files; without the bundled pictures the direction preview, the runnable examples and the
+contract check now still work. Twenty-two direction previews that raised in 6.0.0 draw again, and a round of layout
+fixes measures figures, mixed Chinese and Latin lines, line ends and baselines the way the render sets them.
+
+- **A package with no pictures.** Without `assets/`, the direction preview takes the library's copy of each sample
+  from slides.addsum.top, laid over the palette cover (which shows if the picture cannot load);
+  `vl.sample_picture()` returns the bundled picture or draws a plain stand-in for the examples, the sample decks and
+  the contract's pages; the contract skips the bundled-sample check. With assets, nothing changes.
+- **Direction previews.** Eleven languages (`herbarium`, `airmail`, `vinyl`, `receipt`, `comic`, `bricks`,
+  `circuit`, `topo`, `periodic`, `stainedglass`, `calendar`) declared a cover the preview does not draw, and `comic`
+  a skeleton it does not draw, so choosing them in the direction gate raised (22 of 60 language x ground previews).
+  Their manifests now name covers the preview draws, and the contract refuses one it cannot. The style-sample label
+  is dark on its white strip, readable on dark grounds.
+- **Measured as LibreOffice sets it.**
+  - Figures of an old-style face (Didot, Hoefler Text, Georgia) are measured in the lining face they are drawn in:
+    "1:250" and "214" no longer break as "1:25 / 0" and "21 / 4".
+  - CJK line ends follow the render: one closing mark hangs, an opening quote or bracket never ends a line, and a
+    break moves back to keep a Latin word whole ("螺丝刀握 / WikiGPT-5，"), in the layout and in the delivery lint.
+  - In mixed CJK and Latin lines a space takes the script before it and the autospace between scripts is counted;
+    bold and italic of `.ttc` families are measured in their own faces; a one-word field keeps the same headroom as
+    the rest; credit chips hold their CJK lines.
+  - `vl_native2.stack()` centres and bottoms the plan it made, with no false refusals, and `first_baseline()`
+    follows the render's line model (pixel's coin stands on the digits' baseline again).
+- **Delivery lint.** A card is a body that a drawing bounds (open traces, outline sets and halftone dots are no
+  longer cards); vertical text is read as columns; a page's own frame band is not a column rule.
+- **README.** The visual-language section sits under the template gallery: twelve looks, three to a row, each
+  opening its language in the library, now a section of slides.addsum.top (`#languages`, `/cn/#languages`);
+  `/languages/` redirects there.
+
 ## [6.0.0] — 2026-10-22
 
 **Thirty visual languages, and a page to browse them.** Fifteen new drawn languages join the library (thirty in
