@@ -401,19 +401,20 @@ def _slide_cover(S, deck_title="Deck Title"):
     if S.get("sample") and _SAMPLE_URL_OK.match(str(S["sample"])):
         # the library's copy over the palette cover: offline, the picture removes itself and the cover shows
         cover = _slide_cover(dict(S, sample=None), deck_title)
-        bg, ink, src = S["bg"], S["ink"], S["sample"]
+        bg, src = S["bg"], S["sample"]   # the label is dark on its white strip, whatever the ground
         net = ('<div class="cov-sample-net" style="position:absolute;inset:0;z-index:5;background:' + bg + '">'
                '<img src="' + src + '" alt="style sample of ' + _esc(name) + '" loading="lazy" '
                'onerror="this.parentNode.remove()" style="width:100%;height:100%;object-fit:contain;display:block">'
-               '<div class="cover-tag" style="color:' + ink + ';background:rgba(255,255,255,.85);padding:2px 6px">'
+               '<div class="cover-tag" style="color:#1d1b16;background:rgba(255,255,255,.85);padding:2px 6px">'
                'Style sample — not your content · 风格样张，不是你的内容 · Direction: ' + _esc(name) + '</div></div>')
         return cover[:cover.rindex("</div>")] + net + "</div>"
     if S.get("sample"):
         # a curated visual language previews as its REAL rendered sample, labelled so nobody mistakes
-        # the sample's photographs and copy for their own deck
+        # the sample's photographs and copy for their own deck (dark on the white strip: a dark ground's light ink
+        # was unreadable there)
         return f'''<div class="slide cover cov-sample" style="background:{S['bg']};padding:0">
       <img src="{S['sample']}" alt="style sample of {_esc(name)}" style="width:100%;height:100%;object-fit:contain;display:block">
-      <div class="cover-tag" style="color:{S['ink']};background:rgba(255,255,255,.85);padding:2px 6px">Style sample — not your content · 风格样张，不是你的内容 · Direction: {_esc(name)}</div>
+      <div class="cover-tag" style="color:#1d1b16;background:rgba(255,255,255,.85);padding:2px 6px">Style sample — not your content · 风格样张，不是你的内容 · Direction: {_esc(name)}</div>
     </div>'''
     # Faithful cover: a DARK deck gets a dark cover (its bg + light ink title); a LIGHT deck gets
     # a bold inverted cover (ink panel + light title). Avoids the inverted/low-contrast preview bug.
