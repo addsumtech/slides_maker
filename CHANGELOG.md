@@ -29,7 +29,8 @@ fixes measures figures, mixed Chinese and Latin lines, line ends and baselines t
   - Figures of an old-style face (Didot, Hoefler Text, Georgia) are measured in the lining face they are drawn in:
     "1:250" and "214" no longer break as "1:25 / 0" and "21 / 4".
   - CJK line ends follow the render: one closing mark hangs, an opening quote or bracket never ends a line, and a
-    break moves back to keep a Latin word whole ("螺丝刀握 / WikiGPT-5，"), in the layout and in the delivery lint.
+    break moves back to keep a Latin word whole (a full-width comma after "WikiGPT-5" takes the whole word to the
+    next line, not its last letter), in the layout and in the delivery lint.
   - In mixed CJK and Latin lines a space takes the script before it and the autospace between scripts is counted;
     bold and italic of `.ttc` families are measured in their own faces; a one-word field keeps the same headroom as
     the rest; credit chips hold their CJK lines.
