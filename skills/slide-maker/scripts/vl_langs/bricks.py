@@ -686,11 +686,10 @@ def _bk_quote(k, slide, f, image):
     r, ds = plan(m + lift, tx, iw)
     foot0, z0 = _foot(r, m + lift), sizes_of(ds)
     if o == "land":
-        # the tile cut in to the words: the narrowest measure that sets them at the same sizes in the same height —
-        # with a little slack, so no line is set to the hair (a CJK line's hung 。 read as one more line by the lint)
+        # the tile cut in to the words: the narrowest measure that sets them at the same sizes in the same height
         for cut in (0.70, 0.80, 0.90):
-            iw2 = min(iw, iw * cut + 0.35 * s)
-            if iw2 + 2 * padx < max(0.36 * W, ab + 1.2 * s) or iw2 >= iw:
+            iw2 = iw * cut
+            if iw2 + 2 * padx < max(0.36 * W, ab + 1.2 * s):
                 continue
             try:
                 r1, d1 = plan(m + lift, tx, iw2)

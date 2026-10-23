@@ -1032,7 +1032,7 @@ check(_n_d3 >= 40 or len(_fut) < 2, "the Futura title check ran ({} boxes)".form
 # role's own face: poster's display() widest-word test, drafting's dimension line beside the figure's ink, chalkboard's
 # chalk box and ring (vl_native2.ink_w), comic's model of the lint's wrap (_lint_tail). None meets an old-style face
 # with the faces the languages ship (poster Impact / Arial / Helvetica Neue, drafting's numeral Times New Roman,
-# chalkboard Chalkboard SE / Trebuchet MS, comic Impact / Avenir Next / Trebuchet MS: each reads the same as it draws),
+# chalkboard Chalkboard SE / Trebuchet MS, comic Impact / Avenir Next / Chalkboard SE: each reads the same as it draws),
 # so each is pinned with an old-style face set in its role — as a caller choosing faces, or a future manifest, would.
 import vl_native as _vn, vl_native2 as _vn2, native_art as _na
 from vl_langs import comic as _comic
@@ -1322,6 +1322,152 @@ try:
               "off: {})".format(_t[:16], _lat, _fig, _off[:2]))
 finally:
     dk._measure_lines = _real_ml
+
+# ── F1 (2026-10-23): the Mac faces stainedglass and comic were designed in ──
+# stainedglass was designed in Didot (display and numeral) and comic's lettering in Chalkboard SE; on the day each was
+# built the face was swapped out (Baskerville; Trebuchet MS) for a measuring bug fixed since: Didot's old-style figures,
+# drawn in Times New Roman, were measured in Didot (D1: "214" read 1.29in, drawn 1.54in — LibreOffice set "21 / 4" on
+# the data pane, rendered on ea35c56), and Chalkboard SE's bold, one face of a .ttc, was measured as its regular
+# ("CHAPTER TWO" 17pt read 1.615in for the bold's 1.676in on 18fd17a). With the faces back, every page of both builds on
+# a Mac at three canvases in English and Chinese, every Latin word and figure as drawn inside its box, delivery-lint clean.
+_F1 = {"stainedglass": {"display": "Didot", "numeral": "Didot"}, "comic": {"letter": "Chalkboard SE"}}
+_F1_ZH = [("cover", dict(kicker="年度回顾", title="每条街都需要一个修东西的夜晚", subtitle="它是怎么运作的")),
+          ("section", dict(number="02", kicker="第二章", title="那个晚上")),
+          ("image_text", dict(kicker="在大厅里", title="每张桌上都有工具", body="志愿者坐在你身边。", caption="活动大厅")),
+          ("points", dict(kicker="三个步骤", title="怎么参加", items=[("带来", "任何能通电的东西。"), ("修好", "你自己动手。")])),
+          ("quote", dict(quote="螺丝刀握在来访者手里。", attribution="一位志愿者")),
+          ("data", dict(number="1,250,000", label="今年修好的东西", note="在门口点的数。")),
+          ("closing", dict(title="下周见", line="带上一位邻居。"))]
+_F1_EN = [(p_, dict(kw_, number="214") if p_ == "data" else
+           dict(kw_, kicker="Chapter two") if p_ == "section" else kw_) for p_, kw_ in FULL]
+for _name, _want in _F1.items():
+    check(all(vl.LANGS[_name]["fonts"]["mac"].get(r_) == f_ for r_, f_ in _want.items()),
+          "{}: its Mac faces are the ones it was designed in ({})".format(_name, _want))
+
+
+def _f_lint(path):
+    """(hard findings, their lines) of the delivery lint on a saved deck."""
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(io.StringIO()):
+        hard = _ld.lint(str(path), static_ok=True)
+    return hard, [l_.strip()[:110] for l_ in buf.getvalue().splitlines()
+                  if re.match(r"\s+slide \d+: [A-Z]", l_) and "[warn]" not in l_ and "[stats]" not in l_]
+
+
+def _f_stand_in(k):
+    """True off macOS where the language's faces are stand-ins (the ubuntu runner's DejaVu, ~10-15% wider): there the
+    F checks run on the one canvas the all-language lint tests cover, and a page the kit refuses is a printed skip."""
+    return sys.platform != "darwin" and any(dk._font_substituted(k.face(r)) for r in ("display", "body"))
+
+
+def _f_build(k, slide_fn, tag):
+    """Run one page; a refusal fails on a Mac, and is a printed skip on stand-in faces. True when it was built."""
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            slide_fn()
+        return True
+    except vl.VLTextOverflow as e:
+        if _f_stand_in(k):
+            print("  skip {} (stand-in faces): {}".format(tag, str(e)[:100]))
+            return False
+        check(False, "{}: builds ({})".format(tag, str(e)[:100]))
+        return False
+
+
+_n_f1, _f1_mac = 0, 0
+for _name in _F1:
+    _fonts = "mac"
+    try:
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            vl.use(_name, dk.blank_deck(13.333, 7.5), fonts="mac")
+    except ValueError as e:                               # a Mac face not installed here (every Linux runner):
+        if "not installed here" not in str(e):            # the same pages in the faces it has
+            raise
+        print("  F1 {}: {} — checked with fonts='both'".format(_name, str(e)[:90]))
+        _fonts = "both"
+    # (the stand-in faces of a Linux runner are checked on the canvas the other all-language lint tests cover)
+    for _W, _H in ((13.333, 7.5), (7.5, 7.5), (5.625, 10.0)) if _fonts == "mac" else ((13.333, 7.5),):
+        for _lang, _copy in (("en", _F1_EN), ("zh", _F1_ZH)):
+            _p = dk.blank_deck(_W, _H)
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                _k = vl.use(_name, _p, fonts=_fonts)
+            for _page, _kw in _copy:
+                _kw = dict(_kw, image=PHOTO) if _page == "image_text" else dict(_kw)
+                _f_build(_k, lambda: getattr(_k, _page)(_k.new_slide(), **_kw),
+                         "{} {} {}x{} {} {}".format(_name, _fonts, _W, _H, _lang, _page))
+            _past = []
+            for _s in _p.slides:
+                for _tb in texts(_s):
+                    _room = _tb.width / EMU - dk.TEXT_INSET_LR
+                    _past += ["{} {:.3f}in > {:.3f}in".format(w_, d_, _room) for w_, d_ in _words_drawn(_tb)
+                              if w_ and not dk._has_cjk(w_) and d_ > _room + 1e-6]
+            _n_f1 += 1
+            _f1_mac += _fonts == "mac"
+            check(not _past, "{} {} {}x{} {}: every Latin word and figure, as drawn, fits its box ({})".format(
+                _name, _fonts, _W, _H, _lang, _past[:3]))
+            _path = td / "f1_{}_{}_{}x{}_{}.pptx".format(_name, _fonts, _W, _H, _lang)
+            _p.save(str(_path))
+            _hard, _why = _f_lint(_path)
+            check(_hard == 0, "{} {} {}x{} {}: no hard delivery-lint finding ({})".format(_name, _fonts, _W, _H,
+                                                                                             _lang, _why[:2]))
+check(_n_f1 >= 4 and (_f1_mac >= 12 or any(dk._font_substituted(f_) for f_ in ("Didot", "Chalkboard SE"))),
+      "the decks were built ({}, {} in the Mac faces)".format(_n_f1, _f1_mac))
+
+# ── F2 (2026-10-23): comic's snug boxes are cut to their lines, a hung closing mark included ──
+# comic cut a caption, balloon or title box to its widest line plus one em when that line ended in a closing mark: room
+# for the delivery lint, which wrapped a hung mark onto a line of its own ('手里 / 。') until it learnt LibreOffice's
+# line ends (1516431). Over 100 generated comic decks (English, Chinese, Japanese, Korean and long copy; five canvases)
+# that em decided 545 box widths, each box an em wider than its words; without it the same decks stay delivery-lint
+# clean and render the same hung marks, inside their boxes.
+_p, _k = use("comic")
+for _f, _t, _z in (("caption", "螺丝刀握在来访者手里。", 20.0), ("title", "我们修好了什么？", 54.0),
+                   ("quote", "「先从一个花盆开始。」他说。", 32.0), ("body", "ドライバーは来訪者の手の中。", 18.0),
+                   ("caption", "드라이버는 방문자의 손에 있다.", 20.0), ("body", "The visitor holds it.", 18.0)):
+    _need = _comic._widest(_k, [(_f, _t)], {_f: _z}, 9.0, {_f: (0.0, 0.0, 9.0, 3.0)})
+    _want = (vl._line_width(_k, _f, _t, _z) + vl._INSET + 0.03) / vl.HEADROOM
+    check(len(vl._break_lines(_k, _f, _t, _z, 9.0 * vl.HEADROOM)) == 1 and abs(_need - _want) < 1e-6,
+          "comic {} {:g}pt {!r}: the snug column is its line's width ({:.3f}in), no em kept for a hung mark "
+          "({:.3f}in)".format(_f, _z, _t, _want, _need))
+_F2 = {"zh": [("cover", dict(kicker="年度回顾", title="我们修好了什么？", subtitle="螺丝刀握在来访者手里。")),
+              ("image_text", dict(kicker="在大厅里", title="下周见", body="按门口登记的数量统计。步行十分钟是我们坚持的距离。",
+                                  caption="步行十分钟是我们坚持的距离。")),
+              ("quote", dict(quote="「先从一个花盆开始。」他说。", attribution="一位志愿者")),
+              ("closing", dict(title="修好的不只是东西。", line="带上一位邻居，也带上坏掉的东西。"))],
+       "ja": [("cover", dict(kicker="持ち帰る", title="直したのは物だけではない。", subtitle="毎月一回、角の公民館で。")),
+              ("image_text", dict(kicker="ドアを開ける", title="また来週", body="三煎目で、ちょうどよくなる。",
+                                  caption="毎月一回、角の公民館で。")),
+              ("quote", dict(quote="自分の手で直します。", attribution="茶の時間")),
+              ("closing", dict(title="参加のしかた", line="直すことは、物語を残すことです。"))]}
+for _W, _H in ((13.333, 7.5),) if _f_stand_in(_k) else ((13.333, 7.5), (7.5, 7.5), (5.625, 10.0)):
+    for _lang, _copy in _F2.items():
+        _p, _k = use("comic", _W, _H, "light" if _lang == "zh" else "noir")
+        for _page, _kw in _copy:
+            _kw = dict(_kw, image=PHOTO) if _page == "image_text" else dict(_kw)
+            _f_build(_k, lambda: getattr(_k, _page)(_k.new_slide(), **_kw),
+                     "comic {}x{} {} {}".format(_W, _H, _lang, _page))
+        _path = td / "f2_{}x{}_{}.pptx".format(_W, _H, _lang)
+        _p.save(str(_path))
+        _hard, _why = _f_lint(_path)
+        check(_hard == 0, "comic {}x{} {}: snug boxes round lines that end in a closing mark are delivery-lint clean "
+                          "({})".format(_W, _H, _lang, _why[:2]))
+
+# ── F3 (2026-10-23): bricks' quote tile is cut to its words without slack ──
+# The tile was cut 0.35in wider than the narrowest measure that keeps the quote's sizes and height, so no CJK line was
+# set to the hair: the lint read a hung 。 as one more line (4:3, '螺丝刀握在来访者手里。' — ORPHANED PUNCTUATION, TEXT
+# PADDING, TEXT COLLISION). The lint hangs it now (1516431); quotes whose lines end in a closing mark, on the landscape
+# pages that cut the tile, stay clean with the tile cut to the hair.
+_p, _k = use("bricks")
+for _W, _H in ((13.333, 7.5),) if _f_stand_in(_k) else ((13.333, 7.5), (10.0, 7.5), (10.0, 5.625), (11.69, 8.27)):
+    _p, _k = use("bricks", _W, _H, "blue")
+    for _q, _a in (("螺丝刀握在来访者手里。", "一位志愿者"), ("你自己动手（我们只在旁边看着）。", "志愿者"),
+                   ("在门口点的数。", "三个步骤"), ("入口で数えました。", "茶の時間"), ("自分の手で直します。", "ドアを開ける"),
+                   ("志愿者坐在你身边，把螺丝刀递给你。", "社区修理网络 · 年度回顾")):
+        _f_build(_k, lambda: _k.quote(_k.new_slide(), quote=_q, attribution=_a), "bricks {}x{} {}".format(_W, _H, _q))
+    _path = td / "f3_{}x{}.pptx".format(_W, _H)
+    _p.save(str(_path))
+    _hard, _why = _f_lint(_path)
+    check(_hard == 0, "bricks {}x{}: CJK quotes on a tile cut to their words are delivery-lint clean ({})".format(
+        _W, _H, _why[:2]))
 
 for line in ok:
     print("  ok   " + line)

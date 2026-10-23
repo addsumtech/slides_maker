@@ -116,9 +116,12 @@ def _recolour(slide, draw, color):
 
 
 def _lint_foot(sh):
-    """Where the delivery lint reckons a text frame's words end: its top, 0.04in, then its own line estimate x size x
-    1.25 (1.4 for CJK) — lower than the glyphs' box when it counts a line more (a Chinese quote whose 。 it wraps
-    alone), and a banner or card round the words must clear it."""
+    """Where the delivery lint reckons a text frame's words end: its top, 0.04in, then lines x size x 1.25 (1.4 for
+    CJK), the lines being the larger of the glyph box's count (deckkit's measure) and the lint's own estimate
+    (lint_deck._est_lines: deckkit's CJK line rules, so a closing mark hangs as LibreOffice hangs it). A banner or
+    card round the words must clear it. The lint's is the larger where it reads a Hangul syllable at a full em: the
+    cover title "다음 주에 만나요" (44pt, a 4.66in box, fonts="mac") renders on one line and the lint reads two
+    (2 of 425 boxes over 85 decks of ordinary copy, 0 with fonts="both"; 2026-10-23)."""
     bb = dk._bbox_in(sh)
     r = dk._ink_rect(sh, bb) if bb else None
     if not r:

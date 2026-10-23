@@ -213,7 +213,7 @@ the page functions never invent a word, a number or a name.
 | `airmail` | none needed (a postcard photo is optional) | Trebuchet MS (Futura on mac); quotes in a letter face | envelope paper inside the red-and-blue striped border | a perforated stamp carrying the number, a postmark, address labels, a wax seal |
 | `vinyl` | none needed (a square album photo is optional) | Impact (DIN Condensed on mac); liner notes in Georgia / Didot italic | a black record sleeve | grooved records with a coloured centre label, the title on an album sleeve, a track list |
 | `receipt` | none needed (a photo laid on the counter is optional) | Courier New (Menlo on mac), monospaced throughout | a thermal slip on a counter | torn zigzag edges, dashed separators, line items, the figure as the total, a barcode |
-| `comic` | none needed (a photo becomes a panel) | Impact display, Trebuchet MS lettering (Avenir Next body on mac) | a newsprint page of panels | heavy panel borders, Ben-Day dots, caption boxes, speech balloons, a burst for the figure |
+| `comic` | none needed (a photo becomes a panel) | Impact display, Trebuchet MS lettering (Chalkboard SE lettering, Avenir Next body on mac) | a newsprint page of panels | heavy panel borders, Ben-Day dots, caption boxes, speech balloons, a burst for the figure |
 | `pixel` | none needed (a photo in a pixel window frame) | Arial Black display, Courier New (Menlo on mac) | an 8-bit screen with a pixel frame and a heart-and-coin HUD | sprites built square by square, a level map, an RPG dialogue box, a score counter |
 | `bricks` | none needed (a photo printed on a flat tile) | Trebuchet MS (Avenir Next on mac), Arial Black figures | a studded baseplate | glossy 2.5D toy bricks: a build, one brick per point, the figure on a tower |
 | `boardgame` | none needed (a photo printed on a card) | Georgia (Futura display on mac), Arial Black figures | a property board | a ring of colour-banded squares, dice, a pawn moving square to square when ordered, cards |
@@ -222,7 +222,7 @@ the page functions never invent a word, a number or a name.
 | `scoreboard` | none needed (a photo on the stadium's big screen) | Impact display (DIN Condensed on mac), Arial body | a pitch under floodlights | chalk pitch lines, the title on a scoreboard, jersey numbers, a lineup, an LED board |
 | `periodic` | none needed (a photo mounted in a tile) | Arial (Helvetica Neue on mac), Georgia italic lines | lab white, the table as a motif | element tiles coloured by real chemical family, a wall-chart cover, a legend tile |
 | `recipe` | none needed (a snapshot clipped to the card) | Georgia italic titles (Hoefler Text on mac), Courier New labels | a gingham tablecloth | a ruled index card, washi tape, tick boxes or numbered steps, a kitchen timer for the figure |
-| `stainedglass` | none needed (a photo in a pointed arch) | Georgia (Baskerville on mac) | limestone | geometric rose and lancet windows in lead, words only on stone or clear panes |
+| `stainedglass` | none needed (a photo in a pointed arch) | Georgia (Didot on mac) | limestone | geometric rose and lancet windows in lead, words only on stone or clear panes |
 | `calendar` | none needed (a photo on a picture-calendar page) | Times New Roman display and figures (Didot on mac), Arial body | a tear-off pad on a desk | binding rings, torn stubs, a page stack that thins as the deck goes on, a giant date numeral |
 
 ## Build
@@ -847,7 +847,7 @@ viewer opens. `fonts="mac"` unlocks Mac-only faces and refuses one that is not i
 | airmail | Trebuchet MS / Futura | Trebuchet MS / Avenir Next (quotes: Georgia / Baskerville) | Times New Roman / Didot |
 | vinyl | Impact / DIN Condensed | Arial / Avenir Next (liner notes: Georgia / Didot) | Impact / DIN Condensed |
 | receipt | Courier New / Menlo | Courier New / Menlo | Courier New / Menlo |
-| comic | Impact | Trebuchet MS / Avenir Next (lettering: Trebuchet MS) | Impact |
+| comic | Impact | Trebuchet MS / Avenir Next (lettering: Trebuchet MS / Chalkboard SE) | Impact |
 | pixel | Arial Black | Courier New / Menlo | Arial Black |
 | bricks | Trebuchet MS / Avenir Next | Trebuchet MS / Avenir Next | Arial Black |
 | boardgame | Georgia / Futura | Georgia | Arial Black |
@@ -856,7 +856,7 @@ viewer opens. `fonts="mac"` unlocks Mac-only faces and refuses one that is not i
 | scoreboard | Impact / DIN Condensed | Arial / Avenir Next Condensed | Impact / DIN Condensed |
 | periodic | Arial / Helvetica Neue | Arial / Helvetica Neue (lines: Georgia italic) | Arial / Helvetica Neue |
 | recipe | Georgia / Hoefler Text | Georgia (labels: Courier New) | Trebuchet MS |
-| stainedglass | Georgia / Baskerville | Georgia (inscriptions: Georgia / Optima) | Times New Roman / Baskerville |
+| stainedglass | Georgia / Didot | Georgia (inscriptions: Georgia / Optima) | Times New Roman / Didot |
 | calendar | Times New Roman / Didot | Arial / Avenir Next | Times New Roman / Didot |
 
 The numerals column is the face of the `data` page's figure (collage draws a short one as an outlined shape).

@@ -16,10 +16,7 @@ SPEC = {'name': 'stainedglass',
  'look': {'palette': None,             # = grounds.light.palette (set below)
           'fonts': {'both': {'display': 'Georgia', 'body': 'Georgia', 'numeral': 'Times New Roman',
                              'inscription': 'Georgia'},
-                    # not Didot: its figures are old-style, so k.runs sets them in Times New Roman while the flow
-                    # measures them in Didot — "214" measured 1.29in, drawn 1.54in, wrapped "21 / 4" on its pane
-                    'mac': {'display': 'Baskerville', 'body': 'Georgia', 'numeral': 'Baskerville',
-                            'inscription': 'Optima'}},
+                    'mac': {'display': 'Didot', 'body': 'Georgia', 'numeral': 'Didot', 'inscription': 'Optima'}},
           'ea': {'display': 'serif', 'body': 'serif'},
           'grain': 3,
           'frames': ['arch'],

@@ -360,10 +360,7 @@ def _widest(k, items, sizes, colw, rects):
         sz = z or sz
         for para in t2.split("\n"):
             for ln in vl._break_lines(k, f_, para.strip(), sz, wm):
-                # a closing mark the measure lets hang past the line is one more em to the lint, which wraps it alone
-                # onto a line of its own ('手里 / 。'): a snug CJK column keeps that em
-                hang = sz / 72.0 if dk._has_cjk(ln) and ln.rstrip()[-1:] in dk._CJK_HANG else 0.0
-                need = max(need, vl._line_width(k, f_, ln, sz) + hang)
+                need = max(need, vl._line_width(k, f_, ln, sz))
     return (need + vl._INSET + 0.03) / vl.HEADROOM
 
 
@@ -390,8 +387,12 @@ def _lint_tail(k, field, para, size, width):
 
 
 def _tail_bad(k, items, rects, sizes, colw):
-    """The CJK fields whose last line the lint would read as a lone closing mark or a lone glyph (ORPHANED
-    PUNCTUATION / WIDOW): flow lets the mark hang past a full line, the lint wraps it alone ('手里 / 。')."""
+    """The CJK fields whose last line is a lone glyph or a lone closing mark (WIDOW / ORPHANED PUNCTUATION) as the box
+    is DRAWN: read with the delivery lint's own wrap (_lint_tail) in the box's full width, not the 97% flow measured
+    in — LibreOffice fills the full width and can pull one more glyph up ('第一个晚上只来了三个人 / ……' where flow set
+    '…三个 / 人……'). On a grid of comic fields (CJK copy, 14-32pt, columns of 4.5-14 em) it fired on 1,166 columns;
+    of 60 rendered, 49 set the lone glyph in LibreOffice (34 already in flow's own lines, 15 only at the drawn width)
+    and 11 did not (the lint reads 'ー' alone where LibreOffice carries 'ビ' down with it) — 2026-10-23."""
     bad = []
     dw = colw * (1.0 - vl.HEADROOM)
     for f_, t in items:
@@ -410,8 +411,9 @@ def _tail_bad(k, items, rects, sizes, colw):
 
 
 def _flow3(k, slide, page, col, items, **kw):
-    """vl_native2.flow, kept clear of the lint's lone-mark reading: a CJK field whose last line the lint would read as
-    '。' alone is set again an em narrower (twice more at most), at the same size. Returns (rects, draw, width)."""
+    """vl_native2.flow, kept clear of a lone last glyph: a CJK field whose drawn last line would be one glyph or a
+    closing mark alone (_tail_bad) is set again an em narrower (twice more at most), at the same size. Returns (rects,
+    draw, width)."""
     x, y, w, h = col
     r, d = _v2.flow(k, slide, page, col, items, **kw)
     al = kw.get("align", "l")

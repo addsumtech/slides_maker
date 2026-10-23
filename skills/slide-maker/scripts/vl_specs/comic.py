@@ -17,9 +17,7 @@ SPEC = {'name': 'comic',
  'look': {'palette': None,             # = grounds.light.palette (set below)
           'fonts': {'both': {'display': 'Impact', 'body': 'Trebuchet MS', 'letter': 'Trebuchet MS',
                              'numeral': 'Impact'},
-                    # the lettering stays Trebuchet on a Mac: Chalkboard SE's bold lives in a .ttc, whose bold widths
-                    # display_type measures as the regular's, and its snug caption boxes came out a third too wide
-                    'mac': {'display': 'Impact', 'body': 'Avenir Next', 'letter': 'Trebuchet MS',
+                    'mac': {'display': 'Impact', 'body': 'Avenir Next', 'letter': 'Chalkboard SE',
                             'numeral': 'Impact'}},
           'ea': {'display': 'sans', 'body': 'sans'},
           'ea_heavy': True,
