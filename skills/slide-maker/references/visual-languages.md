@@ -234,18 +234,19 @@ import deckkit as dk
 import register_surface as rs
 import visual_languages as vl
 
-P = vl.ASSETS / "photo"                          # the bundled sample photos; put the user's own pictures here
+P = lambda f: vl.sample_picture("photo/" + f)   # the bundled sample photos (a drawn stand-in in a package
+                                                 # that ships no pictures); put the user's own pictures here
 prs = dk.blank_deck(13.333, 7.5)
 k = vl.use("collage", prs, ground="auto")       # fonts="both" (default): faces on macOS AND Windows;
                                                  # ground="auto": light, or the contrast ground after cream decks
 k.cover(k.new_slide(), kicker="A repair café", title="Bring it broken", subtitle="Once a month",
-        image=[str(P / "hall-repair.jpg"), str(P / "bench-toaster.jpg"), str(P / "jacket-mend.jpg")])   # collage cover: up to 4
+        image=[P("hall-repair.jpg"), P("bench-toaster.jpg"), P("jacket-mend.jpg")])   # collage cover: up to 4
 k.section(k.new_slide(), number="02", kicker="How it works", title="We fix it with you")
 k.image_text(k.new_slide(), kicker="What you find", title="Tools on every bench",
-             body="Volunteers bring the tools.", image=str(P / "tools-tray.jpg"))
+             body="Volunteers bring the tools.", image=P("tools-tray.jpg"))
 k.quote(k.new_slide(), quote="I left knowing how it works.", attribution="A visitor")
 k.data(k.new_slide(), number="1", label="evening a month", note="Always the first Friday.")
-k.closing(k.new_slide(), title="Bring one broken thing.", line="And bring a neighbour.", image=str(P / "table-mended.jpg"))
+k.closing(k.new_slide(), title="Bring one broken thing.", line="And bring a neighbour.", image=P("table-mended.jpg"))
 prs.save("collage.pptx")
 ```
 

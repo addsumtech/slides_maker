@@ -424,7 +424,8 @@ def _selftest():
     # A PHOTOGRAPH is not a primitive. A placed picture carries prstGeom `rect` like any square, so
     # counting geometry alone called two photos side by side a "confetti of shapes" and blocked an
     # `editorial` (photo-led) deck at hand-off — its own lineup and before/after pages (2026-10-17).
-    _photo = str(Path(__file__).resolve().parent.parent / "assets" / "vl" / "photo" / "hall-repair.jpg")
+    import visual_languages as _vl                  # the bundled photo, or its stand-in in a package with no pictures
+    _photo = _vl.sample_picture("photo/hall-repair.jpg")
 
     def _two_photos(s, p):
         dk.picture(s, _photo, 0.5, 1.0, 4.8, 3.6, fit="cover")

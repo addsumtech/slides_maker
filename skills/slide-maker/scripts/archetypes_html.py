@@ -158,8 +158,8 @@ def _norm(d):
         if k in s and not _FONT_OK.match(str(s[k])):
             warn.append(f"{s['name']}.{k}={s[k]!r}")
             s[k] = _DEFAULTS[k]
-    if s.get("sample") and not _SAMPLE_OK.match(str(s["sample"])):
-        warn.append(f"{s['name']}.sample (not a data:image/ URI — dropped)")
+    if s.get("sample") and not (_SAMPLE_OK.match(str(s["sample"])) or _SAMPLE_URL_OK.match(str(s["sample"]))):
+        warn.append(f"{s['name']}.sample (not a data:image/ URI or the library's sample address — dropped)")
         s["sample"] = None
     for k in ("cover_motif", "ambient_motif"):
         if s.get(k):
@@ -391,10 +391,23 @@ def _dna_ambient(S):
 
 
 _SAMPLE_OK = re.compile(r"^data:image/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$")
+# the one address a sample may come from instead: the library's copy of a bundled sample, for a package that ships
+# no pictures (SkillHub accepts no image files) — visual_languages.SAMPLE_SITE
+_SAMPLE_URL_OK = re.compile(r"^https://slides\.addsum\.top/languages/media/[a-z0-9_]+/sample-[a-z0-9_]+\.jpg$")
 
 
 def _slide_cover(S, deck_title="Deck Title"):
     name = S["name"]
+    if S.get("sample") and _SAMPLE_URL_OK.match(str(S["sample"])):
+        # the library's copy over the palette cover: offline, the picture removes itself and the cover shows
+        cover = _slide_cover(dict(S, sample=None), deck_title)
+        bg, ink, src = S["bg"], S["ink"], S["sample"]
+        net = ('<div class="cov-sample-net" style="position:absolute;inset:0;z-index:5;background:' + bg + '">'
+               '<img src="' + src + '" alt="style sample of ' + _esc(name) + '" loading="lazy" '
+               'onerror="this.parentNode.remove()" style="width:100%;height:100%;object-fit:contain;display:block">'
+               '<div class="cover-tag" style="color:' + ink + ';background:rgba(255,255,255,.85);padding:2px 6px">'
+               'Style sample — not your content · 风格样张，不是你的内容 · Direction: ' + _esc(name) + '</div></div>')
+        return cover[:cover.rindex("</div>")] + net + "</div>"
     if S.get("sample"):
         # a curated visual language previews as its REAL rendered sample, labelled so nobody mistakes
         # the sample's photographs and copy for their own deck

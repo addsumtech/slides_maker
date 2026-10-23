@@ -125,8 +125,8 @@ def invented_words(name):
     """Build all seven pages on every ground from the check's own words (COPY: an English and a Chinese pass); any
     token on a page that is neither those words nor a declared derived word was invented. Inspected in memory."""
     spec = vl.REGISTRY[name]
-    pic = str(vl.ASSETS / ("watercolour/rooftop-garden.jpg" if spec["samples"].get("kind") == "watercolour"
-                           else "photo/hall-repair.jpg"))
+    pic = vl.sample_picture("watercolour/rooftop-garden.jpg" if spec["samples"].get("kind") == "watercolour"
+                            else "photo/hall-repair.jpg")
     probs = []
     for script, T in COPY.items():
         texts = list(_strings(T))
@@ -180,12 +180,15 @@ def assets_missing(name):
     import sigs
     probs = []
     stems = [vl._sample_stem(name, g) for g in vl.VARIANTS[name]]
-    man = json.loads((SKILL / "assets" / "vl" / "samples" / "manifest.json").read_text())
-    for st in stems:
-        if not (SKILL / "assets" / "vl" / "samples" / (st + ".jpg")).exists():
-            probs.append("{}: no bundled sample {}.jpg".format(name, st))
-        if st not in man:                       # the stem is a KEY ('tally' is a substring of 'tally-night')
-            probs.append("{}: sample {} has no fingerprint in manifest.json".format(name, st))
+    # a package that ships no pictures (SkillHub accepts no image files) has no assets/: its samples live in the
+    # source repository, where this check runs on them
+    if vl.ASSETS.exists():
+        man = json.loads((vl.ASSETS / "samples" / "manifest.json").read_text())
+        for st in stems:
+            if not (vl.ASSETS / "samples" / (st + ".jpg")).exists():
+                probs.append("{}: no bundled sample {}.jpg".format(name, st))
+            if st not in man:                   # the stem is a KEY ('tally' is a substring of 'tally-night')
+                probs.append("{}: sample {} has no fingerprint in manifest.json".format(name, st))
     if not any(('"{}"'.format(name) in src) or ("'{}'".format(name) in src)
                for k, src in sigs.EXAMPLES.items() if k.startswith("vl_")):
         probs.append("{}: no sigs.py --example vl_* scaffold names it".format(name))
@@ -219,8 +222,8 @@ def suites_not_registry_driven():
 def _built(name, ground, T, canvas=(13.333, 7.5)):
     """Every page of `name` on `ground` from the words T, in memory: [(page, slide)] (a refused page is skipped)."""
     spec = vl.REGISTRY[name]
-    pic = str(vl.ASSETS / ("watercolour/rooftop-garden.jpg" if spec["samples"].get("kind") == "watercolour"
-                           else "photo/hall-repair.jpg"))
+    pic = vl.sample_picture("watercolour/rooftop-garden.jpg" if spec["samples"].get("kind") == "watercolour"
+                            else "photo/hall-repair.jpg")
     prs = dk.blank_deck(*canvas)
     with contextlib.redirect_stdout(io.StringIO()):
         k = vl.use(name, prs, ground=ground)

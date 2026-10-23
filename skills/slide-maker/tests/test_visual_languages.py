@@ -621,6 +621,81 @@ for scr in vl.EA_FACES:
         for plat in ("mac", "win"):
             check(vl.EA_FACES[scr][kind][plat] in _doc, "the EA face {} is not in the reference".format(vl.EA_FACES[scr][kind][plat]))
 
+# ── every language previews in the direction gate, on every ground (2026-10-23: 22 of 60 raised — a cover "split"
+# and a skeleton "grid" the preview does not draw) ──
+import archetypes_html as _ah_all
+for _n in vl.LANGS:
+    for _g in vl.VARIANTS[_n]:
+        try:
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                _ah_all.build_directions_html([vl.direction(_n, ground=_g)], str(Path(tempfile.mkdtemp()) / "d.html"))
+            _e = None
+        except Exception as e:
+            _e = "{}: {}".format(type(e).__name__, str(e)[:100])
+        check(_e is None, "{} / {}: the direction preview renders ({})".format(_n, _g, _e))
+import vl_contract as _vc_cs, copy as _copy_cs
+_sp_cs = _copy_cs.deepcopy(vl.REGISTRY["tally"]); _sp_cs["look"]["cover"] = "split"; _sp_cs["look"]["skeleton"] = "grid"
+_pr_cs = _vc_cs.validate(_sp_cs)
+check(any("look.cover" in x for x in _pr_cs) and any("look.skeleton" in x for x in _pr_cs),
+      "the contract refuses a cover and a skeleton the preview cannot draw ({})".format(_pr_cs[:2]))
+
+# ── a package with no pictures: SkillHub accepts no image files, so its copy has no assets/ (2026-10-23) ──
+# the direction preview raised FileNotFoundError, every runnable example with a bundled photo failed as printed, and
+# check_vl_contract crashed on samples/manifest.json. Simulated by pointing vl.ASSETS at a folder that does not exist.
+import vl_conformance as _vcf_na, sigs as _sigs_na, archetypes_html as _ah_na
+_assets_real = vl.ASSETS
+vl.ASSETS = Path(tempfile.mkdtemp(prefix="noassets_")) / "assets" / "vl"
+try:
+    try:
+        _d = vl.direction("comic", ground="noir"); _err = None
+    except Exception as e:
+        _d, _err = {}, "{}: {}".format(type(e).__name__, e)
+    _url = "https://slides.addsum.top/languages/media/comic/sample-noir.jpg"
+    check(_err is None and _d.get("sample") == _url,
+          "no assets: the preview takes the library's copy of the sample ({} {})".format(_err, _d.get("sample")))
+    if _d:
+        _out = Path(tempfile.mkdtemp()) / "dirs.html"
+        _out2 = Path(tempfile.mkdtemp()) / "dirs.html"
+        try:
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                _ah_na.build_directions_html([_d], str(_out))
+                _ah_na.build_directions_html([dict(_d, sample="https://example.com/x.jpg")], str(_out2))
+            _h, _h2, _e = _out.read_text(encoding="utf-8"), _out2.read_text(encoding="utf-8"), None
+        except Exception as e:
+            _h, _h2, _e = "", "", "{}: {}".format(type(e).__name__, str(e)[:100])
+        check(_e is None and _url in _h and "onerror" in _h and "cover-ttl" in _h,
+              "no assets: the preview page shows the library's sample, and the palette cover under it if it fails ({})"
+              .format(_e))
+        check(_e is None and "example.com" not in _h2, "no assets: any other address is still refused")
+    for _ex in sorted(k_ for k_ in _sigs_na.EXAMPLES if k_.startswith("vl_")):
+        _prs = dk.blank_deck(13.333, 7.5)
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                exec(_sigs_na.EXAMPLES[_ex], {"prs": _prs, "dk": dk}); _e = None
+        except Exception as e:
+            _e = "{}: {}".format(type(e).__name__, str(e)[:120])
+        check(_e is None, "no assets: sigs.py --example {} runs as printed ({})".format(_ex, _e))
+    for _n in ("editorial", "storybook", "comic"):
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                vl.build_sample(_n, tempfile.mkdtemp()); _e = None
+        except Exception as e:
+            _e = "{}: {}".format(type(e).__name__, str(e)[:120])
+        check(_e is None, "no assets: the {} sample deck builds ({})".format(_n, _e))
+    try:
+        _am = _vcf_na.assets_missing("comic"); _e = None
+    except Exception as e:
+        _am, _e = None, "{}: {}".format(type(e).__name__, e)
+    check(_e is None and _am == [], "no assets: the contract check skips the bundled samples ({} {})".format(_e, _am))
+    _cut = vl.sample_picture("photo/kettle-cutout.png") if hasattr(vl, "sample_picture") else None
+    if _cut:
+        from PIL import Image as _Im_na
+        check(Path(_cut).exists() and _Im_na.open(_cut).mode == "RGBA", "no assets: a cutout's stand-in is transparent")
+finally:
+    vl.ASSETS = _assets_real
+check(vl.sample_picture("photo/hall-repair.jpg") == str(vl.ASSETS / "photo" / "hall-repair.jpg")
+      if hasattr(vl, "sample_picture") else False, "with assets: the bundled picture itself is used")
+
 if skipped:
     print("  skip {} face-precise check(s): this machine lacks the macOS faces they were measured with "
           "(e.g. {!r})".format(len(skipped), skipped[0][:80]))

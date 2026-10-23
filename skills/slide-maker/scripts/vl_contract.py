@@ -191,6 +191,15 @@ def validate(spec):
     missing_look = [k for k in ("palette", "fonts", "ea", "grain", "frames", "forbids", "cover", "skeleton") if k not in look]
     if missing_look:
         probs.append("{}: look has no {}".format(name, missing_look))
+    # the direction preview draws look.cover / look.skeleton and refuses any other value: eleven languages shipped
+    # "split" (not a cover) and comic "grid" (not a skeleton), so choosing them in the direction gate raised (2026-10-23)
+    import archetypes_html as _ah                    # standard library only: the contract stays light
+    if "cover" in look and look["cover"] not in _ah._COVERS:
+        probs.append("{}: look.cover {!r} is not a cover the direction preview draws — one of {}".format(
+            name, look["cover"], _ah._COVERS))
+    if "skeleton" in look and look["skeleton"] not in _ah._SKELETONS:
+        probs.append("{}: look.skeleton {!r} is not a skeleton the direction preview draws — one of {}".format(
+            name, look["skeleton"], _ah._SKELETONS))
     gr = spec["grounds"]
     if not all(isinstance(gd, dict) for gd in gr.values()):
         probs.append("{}: every ground must be a dict, got {}".format(

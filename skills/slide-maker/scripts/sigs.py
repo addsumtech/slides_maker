@@ -434,15 +434,16 @@ EXAMPLES = {
                'vl.collage(s, (5.0, 0.4, 4.6, 4.8), ["skyline.png", "gt_c1.png", "ours_c1.png"],\n'
                '           seed=3, keep_clear=(0.4, 0.6, 4.2, 2.4))   # tilted prints + tape',
     # The visual-language scaffolds are whole pages that run AS PRINTED after the --example preamble: they use the
-    # pictures bundled with the skill (vl.ASSETS), never a file the reader does not have. vl_cover once used
+    # pictures bundled with the skill (vl.sample_picture — a drawn stand-in where a package ships no pictures),
+    # never a file the reader does not have. vl_cover once used
     # "skyline.png" and no `prs`, and failed when a non-Claude agent ran it (audit 2026-10-09).
     "vl_cover": 'import visual_languages as vl\n'
                 'k = vl.use("editorial", prs)               # image-led; fonts="both": faces on macOS AND Windows\n'
-                'photo = str(vl.ASSETS / "photo" / "hall-repair.jpg")   # a BUNDLED sample photo: put YOUR picture\'s path here\n'
+                'photo = vl.sample_picture("photo/hall-repair.jpg")   # a BUNDLED sample photo: put YOUR picture\'s path here\n'
                 'k.cover(k.new_slide(), kicker="A repair café", title="Bring it broken, take it home working", image=photo)\n'
                 'k.image_text(k.new_slide(), kicker="What you find", title="Tools on every bench",   # image= is required here\n'
                 '             body="Volunteers bring the tools; you bring the broken thing.",\n'
-                '             image=str(vl.ASSETS / "photo" / "tools-tray.jpg"))',
+                '             image=vl.sample_picture("photo/tools-tray.jpg"))',
     "vl_drawn": 'import visual_languages as vl\n'
                 'k = vl.use("starlit", prs)                 # a DRAWN language: every page without a picture\n'
                 'k.cover(k.new_slide(), kicker="2026 in review", title="A year of small repairs", subtitle="For everyone who came")\n'
@@ -453,7 +454,7 @@ EXAMPLES = {
                 'k.quote(k.new_slide(), quote="Nothing here is too broken to try.", attribution="A volunteer")\n'
                 'k.data(k.new_slide(), number="212", label="things mended this year")\n'
                 'k.closing(k.new_slide(), title="Thank you", line="See you in the new year.")\n'
-                '# image_text needs a picture on every language: image=str(vl.ASSETS / "photo" / "tools-tray.jpg")',
+                '# image_text needs a picture on every language: image=vl.sample_picture("photo/tools-tray.jpg")',
     "vl_tally": 'import visual_languages as vl\n'
                 'k = vl.use("tally", prs)                   # extras, YOUR words: tags= (points), total= (data)\n'
                 'k.points(k.new_slide(), title="Where the quarter went", tags=["Grew", "Flat", "Fell"],   # one tag per point\n'
@@ -477,7 +478,7 @@ EXAMPLES = {
                   '         items=[("Three methods", "Same data, same metric."), ("Four accelerations", "From 2x to 8x.")])\n'
                   'k.image_text(k.new_slide(), title="Error grows with acceleration",   # the FIGURE page: numbered for you\n'
                   '             body="Error against acceleration for three methods.", caption="Source: an illustrative figure",\n'
-                  '             image=str(vl.ASSETS / "figure" / "illustrative-curves.jpg"))   # YOUR figure, placed whole',
+                  '             image=vl.sample_picture("figure/illustrative-curves.jpg"))   # YOUR figure, placed whole',
     "vl_chalkboard": 'import visual_languages as vl\n'
                      'k = vl.use("chalkboard", prs)         # extras: doodle= (cover, closing), ordered=True (points)\n'
                      'k.cover(k.new_slide(), kicker="Science: lesson 3", title="How photosynthesis works",\n'
@@ -651,7 +652,7 @@ def _vl_scaffolds():
         if sp["kind"] == "drawn":
             def _arg(f, v):
                 if f == "image" and isinstance(v, str) and not v.startswith("/"):
-                    return "image=str(vl.ASSETS / {!r})".format(v)       # a bundled picture, from any folder
+                    return "image=vl.sample_picture({!r})".format(v)     # a bundled picture (or its stand-in), from any folder
                 return "{}={!r}".format(f, v)
             body = ["k.{}(k.new_slide(), {})".format(page, ", ".join(_arg(f, v) for f, v in fields.items()))
                     for page, fields in sp["samples"]["copy"]]
@@ -662,7 +663,7 @@ def _vl_scaffolds():
                       "A balcony gardener") if water else
                      ("A repair café", "Bring it broken, take it home working",
                       "The visitor holds the screwdriver; the volunteer only guides.", "How every repair begins"))
-            body = ['pic = str(vl.ASSETS / {!r})   # a BUNDLED sample picture: put YOUR picture\'s path here'.format(pic),
+            body = ['pic = vl.sample_picture({!r})   # a BUNDLED sample picture: put YOUR picture\'s path here'.format(pic),
                     'k.cover(k.new_slide(), kicker={!r}, title={!r}, image=pic)'.format(words[0], words[1]),
                     'k.quote(k.new_slide(), quote={!r}, attribution={!r}, image=pic)'.format(words[2], words[3]),
                     'k.closing(k.new_slide(), title="Questions", line="Thank you.", image=pic)']

@@ -2197,6 +2197,52 @@ def collage(slide, region, items, *, seed=0, keep_clear=None, tape=True, border=
 # Bundled samples — the direction preview shows these ("style sample — not your content").
 # ════════════════════════════════════════════════════════════════════════════════════════════════
 ASSETS = HERE.parent / "assets" / "vl"
+# a package with no pictures (SkillHub accepts no image files) previews a language from the library's copy of the
+# same sample; the direction preview lays it over the palette cover, which shows if it cannot load (offline)
+SAMPLE_SITE = "https://slides.addsum.top/languages/media/{name}/sample-{ground}.jpg"
+
+
+def sample_picture(rel):
+    """A picture bundled with the skill (`photo/hall-repair.jpg`, `figure/…`, `watercolour/…`, relative to assets/vl)
+    for the sample decks and the runnable examples — it stands for YOUR picture. A package that ships no pictures
+    (SkillHub accepts no image files) has no assets/: a plain stand-in of the same kind is drawn once into the temp
+    folder instead (no words on it; a cutout stays transparent), so every example still runs as printed."""
+    p = ASSETS / rel
+    if p.exists():
+        return str(p)
+    import tempfile
+    out = Path(tempfile.gettempdir()) / "slide-maker-sample-pictures" / rel
+    if not out.exists():
+        from PIL import Image, ImageDraw
+        out.parent.mkdir(parents=True, exist_ok=True)
+        kind = rel.split("/", 1)[0]
+        if out.suffix.lower() == ".png":                 # a cutout: a soft subject on transparency
+            im = Image.new("RGBA", (800, 800), (0, 0, 0, 0))
+            dr = ImageDraw.Draw(im)
+            dr.ellipse((150, 120, 650, 700), fill=(176, 150, 120, 255))
+            dr.ellipse((260, 230, 540, 510), fill=(206, 186, 158, 255))
+        elif kind == "figure":                            # a figure: a few curves on white
+            im = Image.new("RGB", (1200, 900), (255, 255, 255))
+            dr = ImageDraw.Draw(im)
+            dr.line([(120, 780), (1100, 780)], fill=(90, 90, 90), width=4)
+            dr.line([(120, 780), (120, 100)], fill=(90, 90, 90), width=4)
+            for i, col in enumerate(((40, 90, 160), (190, 90, 40))):
+                pts = [(120 + x, 760 - int((x / 980.0) ** (1.6 + i) * 600)) for x in range(0, 981, 20)]
+                dr.line(pts, fill=col, width=6)
+        else:                                             # a photograph or a watercolour: a quiet gradient
+            top, bot = ((214, 196, 170), (120, 104, 88)) if kind == "photo" else ((232, 226, 206), (178, 196, 160))
+            im = Image.new("RGB", (1200, 800))
+            dr = ImageDraw.Draw(im)
+            for y in range(800):
+                t = y / 799.0
+                dr.line([(0, y), (1199, y)], fill=tuple(int(a + (b - a) * t) for a, b in zip(top, bot)))
+            dr.ellipse((700, 260, 1000, 560), fill=tuple(max(0, c - 30) for c in bot))
+        tmp = out.with_name(out.stem + ".part" + out.suffix)
+        im.save(str(tmp))
+        tmp.replace(out)                                  # atomic: a parallel run never reads half a file
+    return str(out)
+
+
 SAMPLE_IMAGES = {
     "photo": ["photo/hall-repair.jpg", "photo/tools-tray.jpg", "photo/bench-toaster.jpg", "photo/jacket-mend.jpg",
               "photo/table-mended.jpg", "photo/kettle-cutout.png"],
@@ -2223,7 +2269,7 @@ def _resolved_copy(pages):
     for page, fields in pages:
         f = dict(fields)
         if isinstance(f.get("image"), str) and not Path(f["image"]).is_absolute():
-            f["image"] = str(ASSETS / f["image"])
+            f["image"] = sample_picture(f["image"])
         out.append((page, f))
     return out
 
@@ -2248,7 +2294,7 @@ def build_sample(name, out_dir, *, W=13.333, H=7.5, ground="light"):
         prs.save(str(out))
         return out
     kind = "watercolour" if name == "storybook" else "photo"
-    imgs = [str(ASSETS / x) for x in SAMPLE_IMAGES[kind]]
+    imgs = [sample_picture(x) for x in SAMPLE_IMAGES[kind]]
     T = _SAMPLE_COPY[kind]
     prs = dk.blank_deck(W, H)
     k = use(name, prs, ground=ground)
@@ -2358,7 +2404,11 @@ def direction(name, *, fonts="both", ground="light", W=13.333, H=7.5):
     if fonts == "mac":
         f.update(L["fonts"]["mac"])
     sample = ASSETS / "samples" / "{}.jpg".format(_sample_stem(name, ground))
-    if not sample.exists():
+    if sample.exists():
+        sample_src = "data:image/jpeg;base64," + base64.b64encode(sample.read_bytes()).decode("ascii")
+    elif not ASSETS.exists():          # a package with no pictures (SkillHub): the library's copy of the same sample
+        sample_src = SAMPLE_SITE.format(name=name, ground=ground)
+    else:
         raise FileNotFoundError("visual_languages.direction(): no bundled sample at {} — rebuild it: python3 "
                                 "scripts/visual_languages.py --sample <dir>".format(sample))
     return {"name": _DISPLAY_NAMES[name] + ("" if ground == "light" else " · " + VARIANTS[name][ground]["label"]),
@@ -2366,7 +2416,7 @@ def direction(name, *, fonts="both", ground="light", W=13.333, H=7.5):
             "bg": "#" + _hex(p["ground"]), "ink": "#" + _hex(p["ink"]), "accent": "#" + _hex(p["text_accents"][0]),
             "accents": ["#" + _hex(a) for a in p["text_accents"]],
             "font_display": f["display"], "font_body": f["body"], "cover": L["cover"], "skeleton": L["skeleton"],
-            "sample": "data:image/jpeg;base64," + base64.b64encode(sample.read_bytes()).decode("ascii")}
+            "sample": sample_src}
 
 def _print_gates(name, deck, topic, fonts, ground="light"):
     """The record a deck in `name` needs, as runnable commands — including the palette hexes the register-pixels
@@ -2425,7 +2475,7 @@ def _example_lines(name):
         code += ["k.{}(k.new_slide(), **{!r})".format(page, fields) for page, fields in _SAMPLE_COPY_NATIVE[name]]
     else:
         kind = "watercolour" if name == "storybook" else "photo"
-        imgs = [str(ASSETS / x) for x in SAMPLE_IMAGES[kind]]
+        imgs = [sample_picture(x) for x in SAMPLE_IMAGES[kind]]
         T = _SAMPLE_COPY[kind]
         code += ["k.cover(k.new_slide(), kicker={!r}, title={!r}, image={!r})".format(
                      T["kicker"], T["title"], imgs[:3] if name == "collage" else imgs[0]),
