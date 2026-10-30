@@ -94,7 +94,10 @@ def _rows(image_sources):
 
 
 def _is_na(image_sources):
-    """`n/a — <reason>` is the sanctioned escape, same shape as `logo plan: n/a — …`."""
+    """`n/a — <reason>` is the sanctioned escape, same shape as `logo plan: n/a — …`. A list holding
+    that one row and nothing else says the same thing (the init scaffold shows a list)."""
+    if isinstance(image_sources, list) and len(image_sources) == 1 and isinstance(image_sources[0], str):
+        image_sources = image_sources[0]
     if not isinstance(image_sources, str):
         return False
     n = _norm(image_sources).lower()
@@ -385,6 +388,15 @@ def _selftest():
     run("`n/a — text-only deck` is a legitimate answer",
         gates={"design_plan": {"image_sources": "n/a — text-only deck, no content images"}},
         ledger={"entries": [], "searches": []}, forbid_codes=("BAD TOKEN", "NO TOKENS"))
+
+    run("a list holding ONLY `n/a — …` means the same (the init scaffold shows a list, so a run wrote "
+        "its n/a there and was refused as a BAD TOKEN)",
+        gates={"design_plan": {"image_sources": ["n/a — text-only deck, no content images"]}},
+        ledger={"entries": [], "searches": []}, forbid_codes=("BAD TOKEN", "NO TOKENS"))
+
+    run("...but an n/a row beside real rows is still a contradiction in the plan",
+        gates={"design_plan": {"image_sources": ["n/a — none", "slide 4 | campus | campus.jpg"]}},
+        ledger=good_led, expect_codes=("BAD TOKEN",))
 
     run("...but not while photos sit in the ledger",
         gates={"design_plan": {"image_sources": "n/a — text-only deck"}},

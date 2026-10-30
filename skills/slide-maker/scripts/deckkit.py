@@ -2028,6 +2028,32 @@ def takeaway_rail(slide, x, y, w, label, hero, body, *, accent=MAGENTA, ink=DEEP
 
 
 # ============================================ layout patterns (editorial / diagram / wayfinding)
+# Line pitch of a CJK title as rendered, × em, when no East-Asian face is named: LibreOffice then picks
+# its own CJK fallback, measured at ~1.38 (macOS, from the rendered pixels) and ~1.45 (Noto Sans CJK on
+# Linux). Placing a rule at the Latin 1.2 struck a 2-line CJK title through on two real runs; the higher
+# of the two keeps it clear on both platforms (a hair more gap on macOS, never a strike).
+_CJK_LINE_H = 1.45
+
+
+def _title_line_h(title, size_pt, base):
+    """Inches per line for a title the caller places a rule under. Latin text keeps `base` (so every
+    existing Latin title is byte-identical). A title carrying CJK uses at least _CJK_LINE_H, raised —
+    never lowered — by a named East-Asian face's own ascent + descent. A face's metrics alone are NOT
+    trusted downward: Hiragino Sans GB reads ~1.0 × em from its metrics yet renders at the same pitch
+    as the fallback (measured from the pixels), and the rule struck its second line."""
+    if not _has_cjk(title):
+        return size_pt / 72.0 * base
+    factor = _CJK_LINE_H
+    face = EADISPLAY or EAFONT
+    if face:
+        try:
+            asc, desc = _pil_font(face, size_pt, True).getmetrics()
+            factor = max(factor, (asc + desc) / float(max(1, int(round(size_pt * _MEAS_PREC)))))
+        except Exception:                                                # noqa: BLE001
+            pass
+    return size_pt / 72.0 * max(base, factor)
+
+
 def editorial_header(slide, eyebrow, title, *, x=0.6, y=0.55, w=None, accent=MAGENTA, ink=DEEP,
                      serif=None, size=28, rule_w=1.2, rule=True):
     """Editorial header lockup: a caps eyebrow, a large title, and a short accent hairline beneath.
@@ -2043,7 +2069,7 @@ def editorial_header(slide, eyebrow, title, *, x=0.6, y=0.55, w=None, accent=MAG
     # MEASURE the wrapped title so the hairline sits below the LAST line — a hardcoded
     # one-line rule y strikes a 2-line title through.
     nlines = measure_lines([(title, True)], size, w, font=disp)
-    lh = size / 72.0 * 1.18
+    lh = _title_line_h(title, size, 1.18)
     tb = text(slide, x, y + 0.34, w, max(0.8, nlines * lh), [[(title, size, ink, True, False, disp)]],
               space_after=0, line_spacing=1.0)
     if EADISPLAY:
@@ -7649,7 +7675,7 @@ def title_bar(slide, title, kicker="", accent=BLUE, title_c=DEEP, w_in=None):
     tsz = fit_text_size([(title, True)], tw, 26 / 72.0 * _LINT_LINE_H * 2 + 0.02, 26,
                         font=disp, min_size=18)
     nlines = measure_lines([(title, True)], tsz, tw, font=disp)
-    lh = tsz / 72.0 * _LINT_LINE_H
+    lh = _title_line_h(title, tsz, _LINT_LINE_H)
     tb = text(slide, 0.55, ty, tw, max(0.7, nlines * lh),
               [[(title, tsz, title_c, True, False, disp)]], space_after=0)  # title gets the DISPLAY face
     if EADISPLAY:                                    # ...and a distinct CJK display face if set

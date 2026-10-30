@@ -268,6 +268,37 @@ want(nz < A.OVERLAP_T,
      "does not just match everything CJK" % nz,
      "unrelated Chinese asks scored %.2f, at or above the %.2f threshold" % (nz, A.OVERLAP_T))
 
+# ── the scaffolds a runtime FILLS carry the fields this module reads ─────────────────────────
+# Measured on a real run: `deck_gates.py init` wrote `opening_roles` and `ask` and no `serves_goal`
+# while this module reads `roles`, `closing_ask` and `serves_goal` — init and check passed, then
+# --gate-check refused the same record. The Codex template lacked `serves_goal` too.
+import deck_gates as _DG                                          # noqa: E402
+import codex_delivery_gate as _CG                                 # noqa: E402
+
+
+def _filled(c):
+    """A scaffold candidate with its <placeholders> replaced by plain text — shape/roles kept."""
+    out = {}
+    for k, v in c.items():
+        if isinstance(v, str) and v.startswith("<"):
+            v = "a real answer for " + k
+        if isinstance(v, list):
+            v = ["c1" if isinstance(x, str) and x.startswith("<") else x for x in v]
+        out[k] = v
+    return out
+
+
+for _label, _cands in (("deck_gates init", _DG.template(6)["content"]["arc"]["candidates"]),
+                       ("codex --init", _CG.TEMPLATE["content"]["arc"]["candidates"])):
+    for _c in _cands:
+        try:
+            A._features(_filled(_c))
+            _err = None
+        except ValueError as _e:
+            _err = str(_e)
+        want(_err is None, "%s: a filled-in arc candidate is accepted by arc_divergence" % _label,
+             "%s scaffold candidate is refused once filled: %s" % (_label, _err))
+
 print("\n".join("  ok   " + x for x in ok))
 if bad:
     print("\n".join("  FAIL " + x for x in bad))

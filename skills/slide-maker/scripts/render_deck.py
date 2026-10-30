@@ -3887,6 +3887,9 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
             if not isinstance(claims, list) or not claims:
                 die("`provenance` needs a per-claim `claims` list, not a summary tally. A tally is "
                     "written by the same pass that would have skipped the check.\n"
+                    "  A deck built ONLY from the user's own material has no web claims to refute: "
+                    "delete the `provenance`\n  section instead — its numbers are traced to the files "
+                    "through `content.sources`.\n"
                     '    "claims": [{"claim": "...", "verdict": "CONFIRMED|WRONG|PARTLY-WRONG|'
                     'UNVERIFIABLE", "url": "https://..."}]\n'
                     '  (a claim confirmed against the user\'s OWN material: "source": "<path to that '

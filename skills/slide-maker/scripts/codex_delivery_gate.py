@@ -107,6 +107,11 @@ def _picks_template() -> list[dict[str, str]]:
     return _dp.template_rows()
 
 
+def _arc_candidates() -> list[dict[str, Any]]:
+    import arc_divergence as _ad
+    return _ad.template_candidates()
+
+
 TEMPLATE = {
     "schema": SCHEMA,
     "runtime": "codex",
@@ -255,20 +260,7 @@ TEMPLATE = {
             # descriptive string and the gate then AttributeError'd on str.get). The `<…>` fields
             # are placeholders and the gate REFUSES them until filled — a filled competition is the
             # work, not a formality. `python3 scripts/arc_divergence.py --template` prints the shape.
-            "candidates": [
-                {"name": "<label-A>", "shape": "problem-turn-evidence",
-                 "roles": ["problem", "evidence", "conclusion"],
-                 "audience_question": "<the question this room is actually asking>",
-                 "objection": "<the objection this arc pre-empts>",
-                 "closing_ask": "<what the room should do or believe>",
-                 "evidence": ["<claim-ledger id>", "<claim-ledger id>"]},
-                {"name": "<label-B>", "shape": "recommendation-first",
-                 "roles": ["conclusion", "evidence", "roadmap"],
-                 "audience_question": "<a DIFFERENT question>",
-                 "objection": "<a DIFFERENT objection>",
-                 "closing_ask": "<a DIFFERENT ask>",
-                 "evidence": ["<claim-ledger id>", "<claim-ledger id>"]},
-            ],
+            "candidates": _arc_candidates(),   # every field arc_divergence.py reads, from it
             "rejected": [
                 {"name": "<label-B>", "why_lost": "<one clause>"},
             ],

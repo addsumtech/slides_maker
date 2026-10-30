@@ -86,6 +86,11 @@ ANCHOR_ROLES = ("signature", "complex", "data")
 BODY_FLOORS = {"presented": 13.5, "textheavy": 12.0, "selfread": 12.0}
 
 
+def _arc_candidates():
+    import arc_divergence                                              # noqa: PLC0415
+    return arc_divergence.template_candidates()
+
+
 def template(slides=None, delivery="presented"):
     """A fully-SHAPED skeleton. Every value is a placeholder that `check` will reject, so an
     unfilled template can never be mistaken for a filled one."""
@@ -166,11 +171,8 @@ def template(slides=None, delivery="presented"):
             # one row per `source_check.py material` finding: which value is right, and who said so
             "material_check": [],
             "arc": {
-                "candidates": [{"name": "<arc name>", "shape": "<evidence-build|…>",
-                                "opening_roles": ["<role>", "<role>", "<role>"],
-                                "audience_question": "<what the room is asking>",
-                                "objection": "<what it pre-empts>", "ask": "<the closing ask>",
-                                "evidence": ["<ledger id>"]}],
+                # every field arc_divergence.py reads — the candidates come from it, never retyped
+                "candidates": _arc_candidates(),
                 "chosen": "<the winner>",
                 "rejected": [{"name": "<loser>", "why_lost": "<one clause>"}],
                 "divergence": "<ok|flagged … → rediverged|justified: …>"},
@@ -202,6 +204,7 @@ def template(slides=None, delivery="presented"):
             "motif_generates": {"background": "<what the motif makes the canvas do>",
                                 "markers": "<the numeral/icon/bullet system it implies>",
                                 "page": "<the slide whose GEOMETRY is the motif | none — reason>"},
+            # one row per content image — or ["n/a — <why this deck carries no content images>"]
             "image_sources": ["slide <n> | <subject> | sourced — <origin> (<licence>)",
                               "slide <n> | <subject> | generated — <tool>"],
             "material_probe": {"png": "render/slideNN.png",
@@ -227,6 +230,8 @@ def template(slides=None, delivery="presented"):
         },
         "critic": {"verdict": "<consent|revise>", "rounds": 1,
                    "source": "<path to the recorded review>", "sha256": "<its hash>"},
+        # web-researched claims only — DELETE this section for a deck built only from the user's own
+        # material (content.sources traces those numbers). WRONG / PARTLY-WRONG rows block until fixed.
         "provenance": {"claims": [{"claim": "<the claim>", "verdict": "<CONFIRMED|WRONG|…>",
                                    # the gate reads `url`; a claim confirmed against the
                                    # USER'S OWN material cites the file as "source" instead

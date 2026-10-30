@@ -184,6 +184,29 @@ def _overlap(a, b):
     return len(ta & tb) / float(len(ta | tb))
 
 
+def template_candidates():
+    """Two example arc candidates carrying EVERY field `_features` reads — the scaffold both
+    record templates (deck_gates init, codex --init) show. Kept here, beside the reader, because the
+    two templates drifted from it: `opening_roles` / `ask` and no `serves_goal`, so init and check
+    passed and --gate-check then refused the same record."""
+    return [
+        {"name": "<label-A>", "shape": "problem-turn-evidence",
+         "roles": ["problem", "evidence", "conclusion"],
+         "audience_question": "<the question this room is actually asking>",
+         "serves_goal": "<how this order gets the room to the recorded goal>",
+         "objection": "<the objection this arc pre-empts>",
+         "closing_ask": "<what the room should do or believe>",
+         "evidence": ["<claim-ledger id>", "<claim-ledger id>"]},
+        {"name": "<label-B>", "shape": "recommendation-first",
+         "roles": ["conclusion", "evidence", "roadmap"],
+         "audience_question": "<a DIFFERENT question>",
+         "serves_goal": "<a DIFFERENT route to the same goal>",
+         "objection": "<a DIFFERENT objection>",
+         "closing_ask": "<a DIFFERENT ask>",
+         "evidence": ["<claim-ledger id>", "<claim-ledger id>"]},
+    ]
+
+
 def _checked(d, key, allowed):
     v = d.get(key)
     if v not in allowed:

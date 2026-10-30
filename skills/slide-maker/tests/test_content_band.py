@@ -159,6 +159,43 @@ def main():
     check("an empty slide falls back to the documented constant",
           abs(dk.chrome_band(s)[1] - dk.TITLE_BAND_DEFAULT) < 1e-9, dk.chrome_band(s)[1])
 
+    # ---- a 2-line CJK title: the accent rule sits below its LAST line, at CJK line height ---------
+    # Two real runs (Claude and docs-only Codex) both shipped titles the rule struck through: the
+    # wrap was measured right (2 lines), but the rule was placed at 1.2 × em per line while a CJK
+    # face renders ~1.38 × em (macOS, measured from pixels) to ~1.45 × em (Noto Sans CJK).
+    from pptx.util import Emu
+
+    def _rule_and_title(s):
+        boxes = [sh for sh in s.shapes if not sh.has_text_frame or not sh.text_frame.text.strip()]
+        rule = min((sh for sh in boxes if Emu(sh.height).inches < 0.06), key=lambda sh: sh.top)
+        title = max((sh for sh in s.shapes if sh.has_text_frame and sh.text_frame.text.strip()),
+                    key=lambda sh: len(sh.text_frame.text))
+        return rule, title
+
+    _saved_ea = (dk.EAFONT, dk.EADISPLAY)
+    for fn, ea in (("title_bar", None), ("editorial_header", None),
+                   ("title_bar", "Hiragino Sans GB"), ("editorial_header", "Hiragino Sans GB")):
+        dk.EAFONT = dk.EADISPLAY = ea                  # Hiragino: metrics read ~1.0 em, renders ~1.38
+        _, s = slide(title=False)
+        t = "北岸新区站均骑行量全市最低，新增站点应优先投向北岸新区（测算）"
+        if fn == "title_bar":
+            dk.title_bar(s, t, kicker="2025 年度运营")
+        else:
+            dk.editorial_header(s, "2025 年度运营", t)
+        rule, title = _rule_and_title(s)
+        sz = max(r.font.size.pt for p in title.text_frame.paragraphs for r in p.runs if r.font.size)
+        n = dk.measure_lines([(t, True)], sz, Emu(title.width).inches)
+        need = Emu(title.top).inches + n * sz / 72.0 * 1.40
+        check("{} ({}): a {}-line CJK title's rule sits below the last line at CJK line height".format(
+                  fn, ea or "no EA face", n),
+              n >= 2 and Emu(rule.top).inches >= need, (n, round(Emu(rule.top).inches, 3), round(need, 3)))
+    dk.EAFONT, dk.EADISPLAY = _saved_ea
+    _, s = slide(title=False)
+    dk.title_bar(s, "One idea per slide", kicker="k")
+    rule, title = _rule_and_title(s)
+    check("a one-line Latin title keeps its rule exactly where it was (0.54 + 0.62)",
+          abs(Emu(rule.top).inches - 1.16) < 0.005, Emu(rule.top).inches)
+
     print("\n{} passed, {} failed".format(len(PASS), len(FAIL)))
     return 1 if FAIL else 0
 
