@@ -2357,6 +2357,39 @@ def _qa_backup_gate(pptx, gates):
           '{"qa_backup": {"waived": "<why the answer lives somewhere else>"}}')
 
 
+def _brand_gate(pptx, gates):
+    """A deck recording a confirmed brand kit must be BUILT in it: no off-brand colour (text, fills,
+    lines, table cells, native chart series — pictures ignored; tints/shades of brand colours are
+    allowed), no off-brand face, and the logo rule on a single-entity deck. Same module as
+    codex_delivery_gate.py (`brand_kit.gate`). No `brand` section -> no brand gate, out loud."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    try:
+        import brand_kit as bkit
+    except Exception as exc:
+        not_checked(f"  [--] BRAND: NOT CHECKED — {exc.__class__.__name__}: {exc}")
+        return
+    if bkit.recorded_brand(gates) is None:
+        not_checked("  [--] brand: NOT CHECKED — no `brand` section (a deck without a brand kit)")
+        return
+    try:
+        findings, facts, waived = bkit.gate(pptx, gates, str(Path(pptx).resolve().parent))
+    except Exception as exc:
+        not_checked(f"  [--] brand: NOT CHECKED — {exc.__class__.__name__}: {exc}")
+        return
+    if waived:
+        print("[gates] brand WAIVED — {}".format(waived))
+        return
+    if not findings:
+        print("[gates] brand: on-brand — {} colour use(s) read, logo {}".format(
+            facts.get("colour_uses", 0), facts.get("logo", "—")))
+        return
+    die("the deck is off its recorded brand:\n    - "
+        + "\n    - ".join("{}: {}".format(c, m) for _s, c, m in findings)
+        + "\n    Draw with brand_style.py's colours/faces (`brand_kit.py style`), or record "
+          '{"brand": {"waived": "<which slides, whose palette, who approved>", '
+          '"waived_category": "co-branded | user-approved-deviation | third-party-material"}}')
+
+
 def _visual_language_gate(pptx, gates):
     """A deck recording a visual language must be BUILT in it (cover + half the pages carry its tag, its
     display face is used) and keep its prohibitions. Same module as codex_delivery_gate.py. No language
@@ -3897,6 +3930,10 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
     with _gate_section('fonts'):
         with _gate_step():
             _fonts_gate(pptx, gates)
+
+    with _gate_section('brand'):
+        with _gate_step():
+            _brand_gate(pptx, gates)
 
     with _gate_section('register_pixels'):
         with _gate_step():

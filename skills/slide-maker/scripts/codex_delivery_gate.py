@@ -146,6 +146,10 @@ TEMPLATE = {
              "alternative": "<what else was plausible, and the clause that lost it>"},
         ],
     },
+    # A company / lab / product deck built from a CONFIRMED brand kit (`brand_kit.py confirm`):
+    # {"file": "brand.json"} — check_brand holds the built deck to its colours, faces and logo rule.
+    # null for a deck without a brand kit (no brand gate).
+    "brand": None,
     "content": {
         # A talk's slot, in minutes — check_talk_time compares the built deck's speaker notes
         # against it. null for a deck that will be read rather than presented.
@@ -1750,6 +1754,47 @@ def check_image_series(evidence: dict[str, Any], deck_path: Path | None,
             print(f"  [--] image series: {code}: {why}")
 
 
+def check_brand(evidence: dict[str, Any], deck_path: Path | None,
+                errors: list[str]) -> None:
+    """A deck recording a confirmed brand kit must be BUILT in it — same module as
+    `render_deck.py --gate-check` (`brand_kit.gate`). The record is a top-level
+    `"brand": {"file": "brand.json"}` (or a categorised waiver); no section -> no brand gate."""
+    if deck_path is None:
+        return
+    try:
+        import importlib.util
+        path = Path(__file__).with_name("brand_kit.py")
+        spec = importlib.util.spec_from_file_location("slide_maker_brand_kit", path)
+        if spec is None or spec.loader is None:
+            raise RuntimeError("could not load brand_kit.py")
+        bkit = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(bkit)
+    except Exception as exc:
+        not_checked(f"  [--] BRAND NOT CHECKED — {exc.__class__.__name__}: {exc} (not the same as clean)")
+        return
+    if bkit.recorded_brand(evidence) is None:
+        not_checked("  [--] brand NOT CHECKED — no `brand` section (a deck without a brand kit)")
+        return
+    try:
+        findings, facts, waived = bkit.gate(str(deck_path), evidence, str(deck_path.resolve().parent))
+    except Exception as exc:
+        not_checked(f"  [--] brand NOT CHECKED — {exc} (not clean)")
+        return
+    if waived:
+        print(f"  [--] brand WAIVED — {waived}")
+        return
+    if not findings:
+        print("  [ok] brand: on-brand — {} colour use(s) read, logo {}".format(
+            facts.get("colour_uses", 0), facts.get("logo", "—")))
+        return
+    for _sev, code, why in findings:
+        errors.append(
+            f"brand {code}: {why} Draw with brand_style.py's colours/faces (`brand_kit.py style`), "
+            f'or record {{"brand": {{"waived": "<which slides, whose palette, who approved>", '
+            f'"waived_category": "co-branded | user-approved-deviation | third-party-material"}}}} '
+            f"in the evidence file.")
+
+
 def check_citations(evidence: dict[str, Any], deck_path: Path | None,
                     errors: list[str]) -> None:
     """Every marker resolves, every entry is cited, and every line comes from the .bib.
@@ -2861,6 +2906,7 @@ def evaluate(
         check_image_series(evidence, deck_path, errors)
         check_visual_language(evidence, deck_path, errors)
         check_citations(evidence, deck_path, errors)
+        check_brand(evidence, deck_path, errors)
         check_register_pixels(evidence, deck_path, errors)
         # DECLARED -> OBEYED. The two lines above read the source and the colour;
         # this reads whether the register's own prohibitions were respected.
