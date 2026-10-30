@@ -200,6 +200,6 @@ waiver changes: the post-build question is not posted as a stop; the coordinator
 preferences the user would have expressed; it does not cover declining review of a deck they never
 saw — skipping the loop entirely is a decision only the user can make, with the deck in front of
 them. An auto run that wants MORE than `fast` (a defense, an exec readout) may escalate and must
-record the reason: `review: standard (escalated — defense deck, auto)`. Either way the tier and
+record the reason: `review: thorough (escalated — defense deck, auto)`. Either way the tier and
 its derivation appear in the hand-off `review:` line; a tier recorded nowhere is
 indistinguishable from a review never run.

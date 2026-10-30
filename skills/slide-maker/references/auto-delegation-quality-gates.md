@@ -51,7 +51,7 @@ is asked at Step 5 with the deck visible; under auto it is posted as an FYI, not
 (`review: fast (post-build default — auto)`). Declining review entirely is a decision only the
 user can make, with the deck in front of them. Auto may ESCALATE above `fast` for a high-stakes
 purpose (defense / exec readout / pitch) and must record the reason:
-`review: standard (escalated — defense deck, auto)`. The surviving-blocker rule still applies at
+`review: thorough (escalated — defense deck, auto)`. The surviving-blocker rule still applies at
 `fast`: a blocker the single round cannot absorb goes back to the USER named, never shipped.
 
 ### Design targets (must meet)

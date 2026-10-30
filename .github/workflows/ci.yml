@@ -1095,6 +1095,15 @@ jobs:
           python tests/test_dispatch_brief.py | tee /tmp/dispatchbrief.log
           grep -qE "\\] ok$" /tmp/dispatchbrief.log || {
             echo "::error::test_dispatch_brief did not run to completion"; exit 1; }
+      # A rule stated in two files is two rules once they drift, and the reader who meets the losing
+      # copy follows it (review tier by stakes, fan-out threshold, auto-mode review, strict build lint,
+      # what the art-director brief and Gate A carry). No gate sees prose disagreeing with prose.
+      - name: "Rules stated twice say the same thing (tiers, fan-out, auto review, strict lint, briefs)"
+        run: |
+          set -o pipefail
+          python tests/test_rule_consistency.py | tee /tmp/ruleconsistency.log
+          grep -qE "\\] ok$" /tmp/ruleconsistency.log || {
+            echo "::error::test_rule_consistency did not run to completion"; exit 1; }
       - name: "Components take colours from the theme (no literal colour in a component)"
         run: python scripts/check_component_theme.py
       - name: "Visual languages after the audit (measured with headroom, nothing dropped, upright pictures, clean own pages)"

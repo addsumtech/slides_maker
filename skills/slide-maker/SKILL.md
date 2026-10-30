@@ -2542,8 +2542,8 @@ at Step 0 — post the rendered deck (contact sheet + the slide PNG paths) and a
 | option | what runs | rough cost |
 |---|---|---|
 | **`fast` (default)** | 1 generalist critic, 1 round, top-5 claims re-checked | ~10–20 min · ~250k tok |
-| `standard` | 2 lens critics (content · design), 2 rounds, top-10 claims — worth it for a defense / pitch / exec readout | ~30–60 min · ~600k |
-| `thorough` | multi-critic panel + arbiter, 3 rounds, every claim | ~1–2 h · ~2M |
+| `standard` | 2 lens critics (content · design), 2 rounds, top-10 claims — the low-stakes panel (lab meeting / status update / teaching) | ~30–60 min · ~600k |
+| `thorough` | multi-critic panel + arbiter, 3 rounds, every claim — worth it for a defense / pitch / exec readout (the high-stakes panel, `references/critic-panel.md`) | ~1–2 h · ~2M |
 | `none` | no review — deliver as-is | 0 |
 
 🔴 **On a runtime with NO choice UI — plain Codex chat, Kimi, a GPT surface, an API caller: the
@@ -2582,7 +2582,7 @@ entirely is a legitimate answer, not a loophole. Three rules keep it honest:
   sizing, not the decision to skip review entirely; the FYI records `review: fast (post-build
   default — auto)` and the user escalates at hand-off if they want more. Auto MAY escalate above
   `fast` for a high-stakes purpose (defense / exec readout / pitch) with the reason recorded —
-  `review: standard (escalated — defense deck, auto)` — it may only never decline.
+  `review: thorough (escalated — defense deck, auto)` — it may only never decline.
 
 Then run the **actor-critic loop** at the chosen tier — this is the quality engine, and the
 critic is a *demanding* judge (see `agents/critic.md`), not a rubber stamp:
