@@ -285,6 +285,65 @@ check("English: '$4.2 million' traces through its source_value row",
       unt == [(2, "3.4%")] and not res["row_faults"], (unt, res["row_faults"]))
 check("English: 'October 30, 2026' style cover date is not a finding", res["counts"]["cover_date"] == 1, res["counts"])
 
+# ───────────────────────────────────────────── generality: how real material and decks write numbers
+print("── generality")
+for text, want in (("学习率 1e-4", 1e-4), ("rate 1.2E+04", 12000.0), ("3.0×10⁴ cells", 30000.0),
+                   ("3.0 × 10^4", 30000.0), ("2.5x10^-3 mol", 0.0025)):
+    vals = [round(p["value"], 12) for p in S._tokens(S.split_dates(text)[0])]
+    check(f"scientific notation is one number: {text!r} → {want}", vals == [want], vals)
+for text in ("COVID-19 cases", "GPT-4 baseline", "H-1B visa"):
+    check(f"a hyphenated name is not a number: {text!r}", S._tokens(text) == [], S._tokens(text))
+for text, want in (("50k users", 50000.0), ("$4.5m raised", 4.5e6), ("€4.5mn", 4.5e6), ("$4.2b", 4.2e9)):
+    vals = [p["value"] for p in S._tokens(text)]
+    check(f"an abbreviated scale is kept: {text!r} → {want}", vals == [want], vals)
+for text in ("4.5m tall", "12 km", "3 kg"):
+    vals = [p["value"] for p in S._tokens(text)]
+    check(f"a metric unit is not a money scale: {text!r}", all(v < 100 for v in vals), vals)
+for text, want in (("2025.10 上线", (2025, 10, 0)), ("2025-10 launch", (2025, 10, 0)), ("2025年10月上线", (2025, 10, 0)),
+                   ("in Oct 2025", (2025, 10, 0)), ("October 2025", (2025, 10, 0))):
+    check(f"a year-month is a date: {text!r}", want in S.split_dates(text)[1], S.split_dates(text))
+check("a price 2025.10 元 is not a date", S.split_dates("售价 2025.10 元")[1] == [], S.split_dates("售价 2025.10 元"))
+
+G = TMP / "gen"
+G.mkdir()
+(G / "pnl.csv").write_text("line,FY2024,FY2025\nRevenue,38200000,42150000\nGross margin,0.412,0.437\n", encoding="utf-8")
+(G / "plan.md").write_text("2025年10月8日上线新系统。满意度 91.2%。\n", encoding="utf-8")
+(G / "gbk.csv").write_bytes("区域,销售额\n华东,5230\n华南,3180\n合计,8410\n".encode("gb18030"))
+write_deck(G / "deck.pptx", [["Cover"], ["Gross margin 43.7%", "2025.10 新系统上线", "华东 5,230"],
+                             ["Revenue chart"]])
+from pptx import Presentation as _P  # noqa: E402
+from pptx.chart.data import CategoryChartData as _CD  # noqa: E402
+from pptx.enum.chart import XL_CHART_TYPE as _XT  # noqa: E402
+from pptx.util import Inches as _In  # noqa: E402
+_prs = _P(str(G / "deck.pptx"))
+_cd = _CD(); _cd.categories = ["2024", "2025"]; _cd.add_series("满意度", (0.887, 0.912), number_format="0.0%")
+_prs.slides[2].shapes.add_chart(_XT.COLUMN_CLUSTERED, _In(1), _In(2), _In(6), _In(4), _cd)
+_cd = _CD(); _cd.categories = ["FY2024", "FY2025"]; _cd.add_series("Revenue ($M)", (38.2, 42.15))
+_prs.slides[2].shapes.add_chart(_XT.COLUMN_CLUSTERED, _In(7), _In(2), _In(5), _In(4), _cd)
+_prs.save(str(G / "deck.pptx"))
+res = S.trace(G / "deck.pptx", ["pnl.csv", "plan.md", "gbk.csv"], base=G)
+unt = {(s_, t) for s_, t, _, _ in res["untraced"]}
+check("a % on the slide traces to the same value stored as a fraction (0.437 → 43.7%)", (2, "43.7%") not in unt, unt)
+check("a year-month on the slide traces to a full date in the file", (2, "2025-10") not in unt and (2, "2025.10") not in unt, unt)
+check("a GBK-encoded csv is read", (2, "5,230") not in unt, unt)
+check("a %-formatted chart value (0.912) traces to 91.2% in the file", (3, "0.912") not in unt, unt)
+check("a chart value with no file source (0.887) is still caught", (3, "0.887") in unt, unt)
+check("a chart in $M (38.2) is NOT silently accepted against 38,200,000", (3, "38.2") in unt, unt)
+near = {t: n for s_, t, _, n in res["untraced"]}
+check("...but the report names the file figure and the unit to record",
+      any("38200000" in n[1] or "38,200,000" in n[1] for n in near.get("38.2", [])) and
+      '"unit": "M"' in S.format_trace(res), (near.get("38.2"), S.format_trace(res)[-600:]))
+res = S.trace(G / "deck.pptx", ["pnl.csv", "plan.md", "gbk.csv"],
+              [{"value": "38.2", "slide": 3, "source_value": "38200000", "unit": "M"},
+               {"value": "42.15", "slide": 3, "source_value": "42150000", "unit": "M"}], base=G)
+check("a source_value row with a declared unit traces a re-scaled chart value",
+      not any(t in ("38.2", "42.15") for _, t, _, _ in res["untraced"]) and not res["row_faults"], res["row_faults"])
+res = S.trace(G / "deck.pptx", ["pnl.csv", "plan.md", "gbk.csv"],
+              [{"value": "38.2", "slide": 3, "source_value": "38200000", "unit": "万"}], base=G)
+check("...and a WRONG declared unit is refused", any("does not round" in f for f in res["row_faults"]), res["row_faults"])
+_r = S.read_source(G / "gbk.csv")
+check("GBK csv labels decode (华东)", any("华东" in t for _, t in _r.lines), _r.lines[:3])
+
 # ───────────────────────────────────────────── the material check
 print("── material")
 res = S.material(SOURCES + ["branches_v2.csv", "shot.png"], base=D)
@@ -300,6 +359,39 @@ check("the same table in annual.md and branches_v2.csv with 4,345 vs 4,435 is ON
 check("branches_v2.csv: 5000+4435+3000 ≠ 12345 is its own total-row finding",
       any(k == "total-row" and "branches_v2.csv" in w for k, w in kinds), kinds)
 check("the image is listed as UNREADABLE (NOT checked)", "shot.png" in res["unreadable"])
+D4 = TMP / "shapes"
+D4.mkdir()
+_good = {
+    "unit_row.csv": "单位：万元,,\n项目,2024,2025\n人员,120,135\n运营,80,92\n合计,200,227\n注：数据未经审计,,\n",
+    "total_first.csv": "Segment,Revenue\nTotal,1000\nA,600\nB,400\n",
+    "frac_share.csv": "channel,share\nonline,0.55\nretail,0.30\nother,0.15\n",
+    "suffix_total.csv": "科目,金额\n工资,300\n房租,120\n费用合计,420\n",
+    "neg.csv": "item,change\nA,-5\nB,12\nC,-3\nNet total,4\n",
+    "years_v1.csv": "指标,2024,2025\n借阅,10500,12345\n活动,180,214\n会员,4800,5873\n志愿者,40,57\n",
+}
+for f, t in _good.items():
+    (D4 / f).write_text(t, encoding="utf-8")
+write_xlsx(D4 / "years_v2.xlsx", "data", [["指标", "2024", "2025"], ["借阅", 10500, 12345], ["活动", 180, 214],
+                                          ["会员", 4800, 5873], ["志愿者", 40, 57]])
+_r = S.material(list(_good) + ["years_v2.xlsx"], base=D4)
+check("correct tables of other shapes raise nothing (a unit row above, year headers, total first, "
+      "fractions, '费用合计', 'Net total', a csv and an xlsx that agree)", _r["findings"] == [],
+      [(f["kind"], f["where"], f["detail"]) for f in _r["findings"]])
+for f, old, new, kind in (("unit_row.csv", "合计,200,227", "合计,200,229", "total-row"),
+                          ("total_first.csv", "Total,1000", "Total,1100", "total-row"),
+                          ("frac_share.csv", "0.15", "0.25", "share-not-100"),
+                          ("suffix_total.csv", "费用合计,420", "费用合计,430", "total-row"),
+                          ("neg.csv", "Net total,4", "Net total,14", "total-row")):
+    (D4 / ("bad_" + f)).write_text(_good[f].replace(old, new), encoding="utf-8")
+    _r = S.material(["bad_" + f], base=D4)
+    check(f"a seeded error in {f} is found ({kind})", [x["kind"] for x in _r["findings"]] == [kind],
+          [(x["kind"], x["detail"]) for x in _r["findings"]])
+write_xlsx(D4 / "years_v3.xlsx", "data", [["指标", "2024", "2025"], ["借阅", 10500, 12354], ["活动", 180, 214],
+                                          ["会员", 4800, 5873], ["志愿者", 40, 57]])
+_r = S.material(["years_v1.csv", "years_v3.xlsx"], base=D4)
+check("a csv and an xlsx of one table with year headers: the cell that differs is a conflict",
+      len(_r["findings"]) == 1 and _r["findings"][0]["kind"] == "conflict" and "12354" in _r["findings"][0]["detail"],
+      [(x["kind"], x["detail"]) for x in _r["findings"]])
 ids1 = [f["id"] for f in res["findings"]]
 ids2 = [f["id"] for f in S.material(SOURCES + ["branches_v2.csv"], base=D)["findings"]]
 check("finding ids are stable across runs", ids1 == ids2, (ids1, ids2))

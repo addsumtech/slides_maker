@@ -14,6 +14,7 @@ Two checks, both local and deterministic (no network, no model):
   numbers   every number on the built slides must TRACE to the user's files: found there as written,
             or recorded in `content.numbers` as one of
               {"value": "1.2万", "slide": 3, "source_value": "12,345"}              rounded / re-unit
+              {"value": "38.2", "slide": 4, "source_value": "38,200,000", "unit": "M"}  a chart in $M
               {"value": "17.6%", "slide": 3, "derived": "(12345-10500)/10500*100"}  worked out
               {"value": "57", "slide": 2, "from_image": "volunteers.png (top table)"}  read off a picture
               {"value": "2026", "slide": 1, "not_a_claim": "<why this number is not a claim>"}
@@ -28,6 +29,10 @@ Two checks, both local and deterministic (no network, no model):
             gets a stable id; the gate needs a `content.material_check` row resolving every one
             ({"id": "M-3fa2c1", "resolution": "<which value is right and who said so>"}), because
             only the user can say which version is right — the skill never silently picks one.
+
+Read as one number each: 1.2e-3 · 3.0×10⁴ · 50k · $4.5m · 4.21 million · 3.2亿. A % on a slide also
+traces to the same value stored as a fraction (0.437), a %-formatted chart value (0.912) to 91.2%, and
+a year-month (2025.10 · 2025年10月 · Oct 2025) to any date in that month.
 
 Ignored on the deck side, by rule, not by taste: page chrome (page numbers, a numbered footer —
 deck_versions owns that), source-note lines ("Source: …", "来源：…"), bare integers 0–10 with no
@@ -124,22 +129,65 @@ def parse_number(tok):
             "scale": scale, "unit": unit, "token": tok}
 
 
-def _tokens(line):
-    """parse_number over every token of a line, with an English scale word after it folded in."""
+_SUP = str.maketrans("⁰¹²³⁴⁵⁶⁷⁸⁹⁻⁺", "0123456789-+")
+# 1e-4 · 1.2E+04 · 3.0×10⁴ · 3.0 × 10^4 · 2.5x10^-3 — matched on the RAW text, because NFKC would
+# fold "10⁴" into "104" before anyone could read it as a power.
+_SCI = re.compile(r"(?<![\w.])(\d+(?:\.\d+)?)\s*(?:[eE]([+\-−]?\d+)(?![\w.])|[×xX*]\s*10\s*(?:\^|\*\*)?\s*"
+                  r"([+\-−]?\d+|[⁻⁺]?[⁰¹²³⁴⁵⁶⁷⁸⁹]+))")
+_HYPHEN_NAME = re.compile(r"(?<=[A-Za-z])-\d+[A-Za-z]*")          # COVID-19 · GPT-4 · H-1B
+_K = re.compile(r"\s?[kK](?![A-Za-z])")
+_MONEY_SCALE = re.compile(r"\s?(mn|m|bn|b)(?![A-Za-z])")
+_MONEY_SCALE_VAL = {"m": 1e6, "mn": 1e6, "b": 1e9, "bn": 1e9}
+
+
+def _sci(raw):
+    """(text with scientific numbers blanked, [parsed]) — one value per 1.2e-3 / 3.0×10⁴."""
     out = []
-    t = unicodedata.normalize("NFKC", line or "")
+
+    def _sub(m):
+        exp = (m.group(2) or m.group(3)).translate(_SUP).replace("−", "-")
+        try:
+            val = float(m.group(1)) * 10 ** int(exp)
+        except (ValueError, OverflowError):
+            return m.group(0)
+        out.append({"value": abs(val), "mantissa": abs(val), "decimals": 0, "pct": False, "scale": 1.0,
+                    "unit": "", "token": m.group(0).strip(), "sci": True})
+        return " " * len(m.group(0))
+    return _SCI.sub(_sub, raw), out
+
+
+def _tokens(line):
+    """parse_number over every token of a line: scientific notation as one number, a hyphenated
+    name (COVID-19) as no number, and the scale written after a number folded in — "4.21 million",
+    "50k", "$4.5m" (m / b only after a currency sign: "4.5m" alone is a length)."""
+    raw, out = _sci(line or "")
+    t = _HYPHEN_NAME.sub(lambda m: " " * len(m.group(0)), unicodedata.normalize("NFKC", raw))
+    cursor = 0
     for tok in numbers_in(t):
         p = parse_number(tok)
         if not p:
             continue
-        if p["scale"] == 1.0:
-            i = t.find(tok)
-            if i >= 0:
-                w = _SCALE_WORD.match(t, i + len(tok))
-                if w:
-                    word = w.group(1).lower() if w.group(1).isascii() else w.group(1)
-                    p.update(unit=word, scale=SCALE[word], value=p["mantissa"] * SCALE[word],
-                             token=tok + " " + w.group(1) if w.group(1).isascii() else tok + w.group(1))
+        core = re.search(r"\d[\d,]*(?:\.\d+)?", tok).group(0)
+        i = t.find(core, cursor)
+        end = -1
+        if i >= 0:
+            end = i + len(core)
+            cursor = end
+            while end < len(t) and t[end] in "%万亿兆倍" and p["token"].endswith(t[end]):
+                end += 1
+        if p["scale"] == 1.0 and not p["pct"] and end >= 0:
+            w = _SCALE_WORD.match(t, end)
+            k = _K.match(t, end)
+            money = _MONEY_SCALE.match(t, end) if re.match(r"[+\-−]?[$€£¥]", tok) else None
+            if w:
+                word = w.group(1).lower() if w.group(1).isascii() else w.group(1)
+                p.update(unit=word, scale=SCALE[word], value=p["mantissa"] * SCALE[word],
+                         token=tok + " " + w.group(1) if w.group(1).isascii() else tok + w.group(1))
+            elif k:
+                p.update(unit="k", scale=1e3, value=p["mantissa"] * 1e3, token=tok + "k")
+            elif money:
+                sc = _MONEY_SCALE_VAL[money.group(1)]
+                p.update(unit=money.group(1), scale=sc, value=p["mantissa"] * sc, token=tok + money.group(1))
         out.append(p)
     return out
 
@@ -161,8 +209,18 @@ _DATE_EN = [
 ]
 
 
+_YM_PATTERNS = [
+    re.compile(r"(?<![\d.])((?:19|20)\d{2})\s*年\s*(\d{1,2})\s*月(?!\s*\d)"),
+    re.compile(r"(?<![\d.])((?:19|20)\d{2})[-/](0?[1-9]|1[0-2])(?![\d.\-/])"),
+    # "2025.10" is a month only with two month digits and no unit after it — "2025.10 元" is a price
+    re.compile(r"(?<![\d.])((?:19|20)\d{2})\.(0[1-9]|1[0-2])(?![\d.])(?!\s*(?:元|%|％|万|亿|美元|USD|RMB|[A-Za-z]))"),
+]
+_YM_EN = re.compile(r"\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?,?\s+((?:19|20)\d{2})\b", re.I)
+
+
 def split_dates(line):
-    """(line with full dates blanked, [(y, m, d), …]) — a date is ONE fact, not three numbers."""
+    """(line with dates blanked, [(y, m, d), …]) — a date is ONE fact, not three numbers. A
+    year-month ("2025.10", "2025年10月", "Oct 2025") is (y, m, 0)."""
     found = []
     t = unicodedata.normalize("NFKC", line or "")
 
@@ -183,6 +241,19 @@ def split_dates(line):
         _keep(m.group(3), _MONTHS[m.group(2)[:3].lower()], m.group(1), m.span())
     for m in list(_DATE_EN[1].finditer(t)):
         _keep(m.group(3), _MONTHS[m.group(1)[:3].lower()], m.group(2), m.span())
+
+    def _keep_ym(y, mo, span):
+        nonlocal t
+        y, mo = int(y), int(mo)
+        if 1 <= mo <= 12:
+            found.append((y, mo, 0))
+            t = t[:span[0]] + " " * (span[1] - span[0]) + t[span[1]:]
+
+    for rx in _YM_PATTERNS:
+        for m in list(rx.finditer(t)):
+            _keep_ym(m.group(1), m.group(2), m.span())
+    for m in list(_YM_EN.finditer(t)):
+        _keep_ym(m.group(2), _MONTHS[m.group(1)[:3].lower()], m.span())
     return t, found
 
 
@@ -206,6 +277,8 @@ class Source:
                 out.append((p["value"], p["token"], where))
                 if p["scale"] != 1.0:                       # "9.8万" also states 9.8
                     out.append((p["mantissa"], p["token"], where))
+            for g in re.finditer(r"(?<=[A-Za-z])\d{2,}(?:\.\d+)?", unicodedata.normalize("NFKC", text)):
+                out.append((float(g.group(0)), g.group(0), where))   # FY2024 states 2024 too
         for v, where in self.extra_values:
             out.append((abs(v), _fmt(v), where))
         return out, dates
@@ -404,8 +477,20 @@ def _read_xlsx(p, src):
                 src.tables.append({"where": "sheet {}".format(name), "rows": table})
 
 
+def _decode(p):
+    """Text of a file a user exported: UTF-8 (with or without BOM), else GB18030 (Excel on a Chinese
+    Windows saves csv that way), else UTF-8 with replacement — never a crash."""
+    b = p.read_bytes()
+    for enc in ("utf-8-sig", "gb18030"):
+        try:
+            return b.decode(enc)
+        except UnicodeDecodeError:
+            continue
+    return b.decode("utf-8", errors="replace")
+
+
 def _read_csv(p, src):
-    text = p.read_text(encoding="utf-8-sig", errors="replace")
+    text = _decode(p)
     delim = "\t" if p.suffix.lower() == ".tsv" else ","
     rows = [r for r in csv.reader(io.StringIO(text), delimiter=delim)]
     src.tables.append({"where": "table", "rows": rows})
@@ -419,7 +504,7 @@ _MD_RULE = re.compile(r"^\s*\|?\s*:?-{2,}")
 
 
 def _read_text(p, src):
-    text = p.read_text(encoding="utf-8", errors="replace")
+    text = _decode(p)
     if p.suffix.lower() in (".html", ".htm"):
         text = re.sub(r"(?is)<(script|style)\b.*?</\1>", " ", text)
         text = re.sub(r"(?i)<br\s*/?>|</(p|div|li|tr|h\d)>", "\n", text)
@@ -444,6 +529,32 @@ def _read_text(p, src):
 
 
 # ════════════════════════════════════════════════════════════════════════ check 1 — numbers trace
+def _date_tok(d):
+    return "{:04d}-{:02d}".format(d[0], d[1]) + ("-{:02d}".format(d[2]) if d[2] else "")
+
+
+def _date_traced(d, src_dates):
+    """A full date needs that day in the files; a year-month is stated by any date in that month."""
+    if d[2]:
+        return d in src_dates
+    return any(x[0] == d[0] and x[1] == d[1] for x in src_dates)
+
+
+def _file_hit(p, line, vals):
+    """Is this slide figure a figure the files state? As written, by its mantissa when it carries a
+    scale word, as a fraction when the slide shows a % (0.437 in a csv → 43.7%), and ×100 when it is
+    a chart value (a %-formatted chart stores 0.912 and SHOWS 91.2%)."""
+    if _found(p["value"], vals):
+        return True
+    if p["scale"] != 1.0 and _found(p["mantissa"], vals):
+        return True
+    if p["pct"] and _found(p["value"] / 100.0, vals):
+        return True
+    if line.startswith("chart ·") and not p["pct"] and p["value"] < 10 and _found(round(p["value"] * 100, 10), vals):
+        return True
+    return False
+
+
 def deck_numbers(pptx):
     """[(slide, token, parsed, line)] for every CLAIM number on the built slides."""
     import deck_versions as dv                                         # noqa: PLC0415
@@ -454,7 +565,7 @@ def deck_numbers(pptx):
                 continue
             rest, dates = split_dates(line)
             for d in dates:
-                out.append((s["index"], "{:04d}-{:02d}-{:02d}".format(*d), {"date": d}, line))
+                out.append((s["index"], _date_tok(d), {"date": d}, line))
             for p in _tokens(rest):
                 if (p["scale"] == 1.0 and not p["pct"] and p["decimals"] == 0 and not p["unit"]
                         and p["mantissa"] <= SMALL_INT and "," not in p["token"]):
@@ -483,10 +594,26 @@ def _index(sources):
         nums, ds = src.numbers()
         vals.extend((v, tok, "{} {}".format(name, where)) for v, tok, where in nums)
         dates.update(d for d, _ in ds)
-    return vals, dates
+    return _Vals(vals), dates
+
+
+class _Vals(list):
+    """The files' figures, with an index by value so a 300-page source is not scanned per number."""
+
+    def __init__(self, items):
+        super().__init__(items)
+        self.by = {}
+        for v, tok, where in self:
+            self.by.setdefault(_key(v), []).append((tok, where))
+
+
+def _key(v):
+    return "{:.9g}".format(abs(v))
 
 
 def _found(value, vals):
+    if isinstance(vals, _Vals):
+        return list(vals.by.get(_key(value), []))
     return [(tok, where) for v, tok, where in vals if _same(v, value)]
 
 
@@ -504,6 +631,9 @@ def _rounds_to(src_value, p):
     return False
 
 
+_RESCALE = {3: "k", 4: "万", 6: "M", 8: "亿", 9: "B"}
+
+
 def _near(p, vals, limit=3):
     """Source figures a mistyped or rounded slide number most likely came from."""
     if p.get("date"):
@@ -518,6 +648,10 @@ def _near(p, vals, limit=3):
         same_digits = sorted(re.sub(r"\D", "", _fmt(v))) == sorted(re.sub(r"\D", "", _fmt(target)))
         if _rounds_to(v, p):
             cands.append((0, tok, where, "rounds to it"))
+        elif p["scale"] == 1.0 and not p["pct"] and v >= 1000 and any(
+                _rounds_to(v, dict(p, scale=10.0 ** e)) for e in _RESCALE):
+            e = next(e for e in _RESCALE if _rounds_to(v, dict(p, scale=10.0 ** e)))
+            cands.append((0, tok, where, "the same figure in " + _RESCALE[e]))
         elif same_digits and rel < 0.2:
             cands.append((1, tok, where, "same digits, different order"))
         elif rel <= 0.02:
@@ -624,6 +758,13 @@ def trace(pptx, source_paths, rows=(), web_claims=(), base=None):
             sp = parse_number(r["source_value"])
             if sp is None:
                 return "{}: source_value holds no number".format(label)
+            unit = str(r.get("unit") or "").strip()
+            if unit:
+                if unit not in SCALE:
+                    return "{}: unit {!r} is not one of {}".format(label, unit, " / ".join(sorted(SCALE)))
+                if slide_p["scale"] != 1.0:
+                    return "{}: the slide already writes its unit ({}) — drop `unit`".format(label, slide_p["token"])
+                slide_p = dict(slide_p, scale=SCALE[unit], unit=unit, value=slide_p["mantissa"] * SCALE[unit])
             if not _found(sp["value"], vals) and not (sp["scale"] != 1 and _found(sp["mantissa"], vals)):
                 return "{}: source_value {} is not in the source files — copy it exactly as the " \
                        "file writes it".format(label, r["source_value"])
@@ -653,7 +794,7 @@ def trace(pptx, source_paths, rows=(), web_claims=(), base=None):
 
     for slide, tok, p, line in deck_numbers(pptx):
         if p.get("date"):
-            if p["date"] in src_dates:
+            if _date_traced(p["date"], src_dates):
                 traced.append((slide, tok, "file"))
                 counts["file"] += 1
                 continue
@@ -662,8 +803,7 @@ def trace(pptx, source_paths, rows=(), web_claims=(), base=None):
                 counts["cover_date"] += 1
                 continue
         else:
-            hits = _found(p["value"], vals) or (p["scale"] != 1.0 and _found(p["mantissa"], vals))
-            if hits:
+            if _file_hit(p, line, vals):
                 traced.append((slide, tok, "file"))
                 counts["file"] += 1
                 continue
@@ -727,6 +867,9 @@ def format_trace(res, cmd_hint=None):
                 if why == "rounds to it":
                     out.append('        if that is it, add: {{"value": "{}", "slide": {}, "source_value": "{}"}}'
                                .format(tok, slide, ntok))
+                elif why.startswith("the same figure in "):
+                    out.append('        if that is it, add: {{"value": "{}", "slide": {}, "source_value": "{}", '
+                               '"unit": "{}"}}'.format(tok, slide, ntok, why.rsplit(" ", 1)[1]))
         out.append("  For each: correct the slide to the file's figure; or record how it was reached in "
                    "content.numbers — source_value (rounded), derived (an expression over file figures), "
                    "from_image (read off a picture), not_a_claim (why it is not a claim).")
@@ -740,10 +883,24 @@ def format_trace(res, cmd_hint=None):
 # ════════════════════════════════════════════════════════════════════════ check 2 — material
 _TOTAL = re.compile(r"^\s*(合计|總計|总计|总和|總和|小计|小計|共计|共計|总数|總數|全部|"
                     r"total|sum|overall|grand total|all)\b", re.I)
-_SUBTOTAL = re.compile(r"^\s*(小计|小計|subtotal)", re.I)
+_SUBTOTAL = re.compile(r"(小计|小計|subtotal)", re.I)
+_TOTAL_END = re.compile(r"(合计|總計|总计|总和|總和|小计|小計|共计|共計|总数|總數|total|subtotal|sum)\s*$", re.I)
+
+
+def _is_total(label):
+    """A total row/column label: starts with the word (合计, Total, Sum …) or ends with it (费用合计,
+    Net total, Segment subtotal)."""
+    lbl = unicodedata.normalize("NFKC", str(label or "")).strip()
+    return bool(lbl) and bool(_TOTAL.match(lbl) or _TOTAL_END.search(lbl))
+
+
+def _yearish(cell):
+    t = unicodedata.normalize("NFKC", str(cell or "")).strip()
+    return bool(re.fullmatch(r"(?:FY|CY)?\s*(?:19|20)\d{2}(?:\s*(?:年|H[12]|Q[1-4]))?|Q[1-4]|H[12]", t, re.I))
 _SHARE = re.compile(r"占比|佔比|比例|比重|份额|份額|构成|構成|share|proportion|breakdown|distribution|mix", re.I)
-_NOT_PART = re.compile(r"率|rate|均|avg|average|mean|median|增长|增長|增幅|growth|change|同比|环比|"
-                       r"yoy|qoq|per\b|每|指数|index|排名|rank|id\b|编号|年份|year", re.I)
+_NOT_PART = re.compile(r"率|rate|均|avg|average|mean|median|per\b|每|指数|index|排名|rank|id\b|编号|年份|year", re.I)
+# growth / change columns add up when they hold amounts (a net change), never when they hold percents
+_GROWTH = re.compile(r"增长|增長|增幅|growth|change|同比|环比|yoy|qoq", re.I)
 
 
 def _cell_number(cell):
@@ -779,23 +936,30 @@ def _tol(cells):
 
 
 def _table_shape(rows):
-    """(header row index, label column index) — the first mostly-text row, the first mostly-text column."""
-    rows = [r for r in rows]
-    hdr = None
-    for i, r in enumerate(rows[:3]):
-        texts = [c for c in r if str(c).strip() and _cell_number(c) is None]
-        if len(texts) >= max(1, len([c for c in r if str(c).strip()]) // 2 + 1) or (
-                texts and len(texts) == len([c for c in r if str(c).strip()])):
-            hdr = i
+    """(header row index or None, label column index, first body row index).
+
+    The body starts at the first DATA row — a row with a text label and at least one number that is
+    not a year — and the header is the row just above it. So a title or a "单位：万元" line above the
+    header is skipped, and a header of years (指标 | 2024 | 2025) is a header, not data."""
+    first = None
+    for i, r in enumerate(rows[:8]):
+        cells = [c for c in r if str(c).strip()]
+        texts = [c for c in cells if _cell_number(c) is None and not _yearish(c)]
+        nums = [c for c in cells if _cell_number(c) is not None and not _yearish(c)]
+        if texts and nums:
+            first = i
             break
+    if first is None:
+        first = 1 if len(rows) > 1 else 0
+    hdr = first - 1 if first >= 1 else None
     width = max((len(r) for r in rows), default=0)
     label = 0
     for ci in range(width):
-        col = [r[ci] for r in rows[(hdr + 1 if hdr is not None else 0):] if ci < len(r) and str(r[ci]).strip()]
+        col = [r[ci] for r in rows[first:] if ci < len(r) and str(r[ci]).strip()]
         if col and sum(1 for c in col if _cell_number(c) is None) >= len(col) / 2:
             label = ci
             break
-    return hdr, label
+    return hdr, label, first
 
 
 def material(source_paths, base=None):
@@ -808,51 +972,56 @@ def material(source_paths, base=None):
             rows = [list(r) for r in t["rows"] if any(str(c).strip() for c in r)]
             if len(rows) < 2:
                 continue
-            hdr, lab = _table_shape(rows)
+            hdr, lab, first = _table_shape(rows)
             header = rows[hdr] if hdr is not None else []
-            body = rows[hdr + 1:] if hdr is not None else rows
+            body = rows[first:]
             where = "{} · {}".format(name, t["where"])
             width = max(len(r) for r in rows)
             headers = [header[ci] if ci < len(header) else "" for ci in range(width)]
             labels = [r[lab] if lab < len(r) else "" for r in body]
             all_tables.append((where, headers, labels, body, lab))
 
-            # (a) a TOTAL ROW is the sum of the rows it closes
+            # (a) a TOTAL ROW is the sum of the rows it closes — or, when it comes FIRST (some reports
+            # lead with the total), of the rows it opens
             for ci in range(width):
                 if ci == lab or _NOT_PART.search(str(headers[ci])):
                     continue
-                start = 0
-                leaf_since_start = []
-                all_leaves = []
-                for ri, r in enumerate(body):
-                    cell = _cell_number(r[ci]) if ci < len(r) else None
-                    lbl = str(r[lab]) if lab < len(r) else ""
-                    if _TOTAL.match(lbl) and cell is not None:
-                        parts = leaf_since_start if _SUBTOTAL.match(lbl) else all_leaves
+                cells = [(_cell_number(r[ci]) if ci < len(r) else None, str(r[lab]) if lab < len(r) else "")
+                         for r in body]
+                if _GROWTH.search(str(headers[ci])) and any(c and c["pct"] for c, _ in cells):
+                    continue
+                since, everything = [], []
+                for ri, (cell, lbl) in enumerate(cells):
+                    if _is_total(lbl) and cell is not None:
+                        parts = since if _SUBTOTAL.search(lbl) else everything
+                        if not parts:                                   # a total that leads
+                            parts = []
+                            for c2, l2 in cells[ri + 1:]:
+                                if _is_total(l2):
+                                    break
+                                if c2 is not None:
+                                    parts.append(c2)
                         if len(parts) >= 2:
-                            s = sum(c["signed"] for c in parts)
-                            if abs(s - cell["signed"]) > _tol(parts + [cell]):
+                            tot = sum(c["signed"] for c in parts)
+                            if abs(tot - cell["signed"]) > _tol(parts + [cell]):
                                 findings.append({
                                     "id": _fid("total-row", where, lbl, headers[ci]),
                                     "kind": "total-row",
                                     "where": "{} — row \"{}\", column \"{}\"".format(where, lbl, headers[ci]),
-                                    "detail": "the rows above add up to {} but the total says {}".format(
-                                        _fmt(round(s, 10)), cell["token"])})
-                        leaf_since_start = []
-                        start = ri + 1
-                    elif cell is not None:
-                        leaf_since_start.append(cell)
-                        all_leaves.append(cell)
-                    else:
-                        leaf_since_start, all_leaves = ([], []) if lbl and not cell else (leaf_since_start, all_leaves)
+                                    "detail": "its parts add up to {} but the total says {}".format(
+                                        _fmt(round(tot, 10)), cell["token"])})
+                        since = []
+                    elif cell is not None and not _is_total(lbl):
+                        since.append(cell)
+                        everything.append(cell)
             # (b) a TOTAL COLUMN is the sum of the part columns beside it
-            tcols = [ci for ci in range(width) if ci != lab and _TOTAL.match(str(headers[ci]))]
+            tcols = [ci for ci in range(width) if ci != lab and _is_total(headers[ci])]
             for tc in tcols:
                 parts_cols = [ci for ci in range(width) if ci not in tcols and ci != lab
-                              and not _NOT_PART.search(str(headers[ci]))
+                              and not _NOT_PART.search(str(headers[ci])) and not _GROWTH.search(str(headers[ci]))
                               and not _SHARE.search(str(headers[ci]))]
                 for r in body:
-                    if tc >= len(r) or _TOTAL.match(str(r[lab]) if lab < len(r) else ""):
+                    if tc >= len(r) or _is_total(r[lab] if lab < len(r) else ""):
                         continue
                     tot = _cell_number(r[tc])
                     cells = [_cell_number(r[ci]) for ci in parts_cols if ci < len(r)]
@@ -870,26 +1039,33 @@ def material(source_paths, base=None):
                                 _fmt(round(s, 10)), tot["token"])})
             # (c) a SHARE column reaches 100%
             for ci in range(width):
-                if ci == lab or not _SHARE.search(str(headers[ci])) or _NOT_PART.search(str(headers[ci])):
+                if ci == lab or not _SHARE.search(str(headers[ci])) or _NOT_PART.search(str(headers[ci])) \
+                        or _GROWTH.search(str(headers[ci])):
                     continue
                 cells = []
                 for r in body:
-                    if ci >= len(r) or _TOTAL.match(str(r[lab]) if lab < len(r) else ""):
+                    if ci >= len(r) or _is_total(r[lab] if lab < len(r) else ""):
                         continue
                     c = _cell_number(r[ci])
                     if c is not None:
                         cells.append(c)
-                if len(cells) < 2 or not all(c["pct"] or "%" in str(headers[ci]) for c in cells):
+                if len(cells) < 2 or any(c["signed"] < 0 for c in cells):
                     continue
-                if any(c["signed"] < 0 for c in cells):
+                if all(c["pct"] or "%" in str(headers[ci]) for c in cells):
+                    whole, unit = 100.0, "%"
+                elif not any(c["pct"] for c in cells) and all(c["value"] <= 1 for c in cells):
+                    whole, unit = 1.0, ""                                # shares stored as fractions
+                else:
                     continue
                 s = sum(c["value"] for c in cells)
-                if abs(s - 100) > max(_tol(cells), 0.5 * len(cells) if all(c["decimals"] == 0 for c in cells) else 0):
+                slack = max(_tol(cells), 0.5 * len(cells) if unit and all(c["decimals"] == 0 for c in cells) else 0)
+                if abs(s - whole) > slack:
                     findings.append({
                         "id": _fid("share", where, headers[ci]),
                         "kind": "share-not-100",
                         "where": "{} — column \"{}\"".format(where, headers[ci]),
-                        "detail": "the shares add up to {}%, not 100%".format(_fmt(round(s, 10)))})
+                        "detail": "the shares add up to {}{}, not {}{}".format(
+                            _fmt(round(s, 10)), unit, _fmt(whole), unit)})
 
     # (d) the SAME table, twice, with cells that disagree (two versions / the deck vs the sheet)
     def _cells(tab):

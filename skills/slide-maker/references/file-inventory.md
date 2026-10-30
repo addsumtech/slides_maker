@@ -554,8 +554,12 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   written verbatim there needs a `content.numbers` row — `source_value` (rounded / re-unit, re-checked to
   round to the slide figure), `derived` (an arithmetic expression over file figures, re-evaluated),
   `from_image` (counted as NOT machine-checked) or `not_a_claim`; it names the closest file figure for
-  each untraced one (a transposed 3,412 → 3,421). `material <deck-dir|files…>` checks the files against
-  THEMSELVES: a total row/column that is not the sum of its parts, shares off 100% beyond rounding, the
+  each untraced one (a transposed 3,412 → 3,421), or the unit to declare when a chart shows it in $M / 万
+  (`"unit": "M"`). Scientific notation, 50k / $4.5m, a % against a stored fraction, a %-formatted chart
+  value and a year-month date are each read as one figure; a GBK-encoded csv decodes. `material <deck-dir|files…>` checks the files against
+  THEMSELVES: a total row/column that is not the sum of its parts (a leading total, `费用合计` / `Net total`
+  labels and subtotals included; the header is found above the first data row, so a unit line or year
+  headers do not shift it), shares off 100% (or off 1 when stored as fractions) beyond rounding, the
   same table in two files with a cell that disagrees — stable `M-xxxxxx` ids, resolved in
   `content.material_check`. `read <file>` shows what one file yields. Images, scanned PDFs and .doc/.xls
   are UNREADABLE with the reason, never clean. Both gates run it (`gate_faults`); page chrome, source-note

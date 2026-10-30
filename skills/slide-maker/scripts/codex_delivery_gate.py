@@ -234,6 +234,7 @@ TEMPLATE = {
         # (scripts/source_check.py). A number not written verbatim in them needs one row saying how
         # it was reached — the gate re-checks each:
         #   {"value": "1.2万", "slide": 3, "source_value": "12,345"}           rounded / re-unit
+        #   {"value": "38.2", "slide": 4, "source_value": "38,200,000", "unit": "M"}  chart in $M
         #   {"value": "17.6%", "slide": 3, "derived": "(12345-10500)/10500*100"}
         #   {"value": "57", "slide": 2, "from_image": "volunteers.png (top table)"}
         #   {"value": "2026", "slide": 7, "not_a_claim": "<why it is not a claim>"}
