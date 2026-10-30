@@ -11,12 +11,16 @@ on:
   workflow_dispatch:
 
 jobs:
-  smoke:
+
+  # One serial job took 44 min (2026-10-29: the component-theme step alone 13, the native languages on untuned
+  # input 6). The steps share no file, log or state (every /tmp log is written and read inside the one step
+  # that owns it; checked by scripts/check_ci_split.py), so the same steps now run as four parallel jobs.
+  # Every step still runs exactly once; each job installs its own system + python deps. The job with the
+  # credential/version/doc checks keeps them BEFORE the installs, as before.
+
+  core:
     runs-on: ubuntu-latest
-    timeout-minutes: 80      # the job ran 12.4 min before the native languages' tests; apt alone has taken 13;
-                             # the visual-language suites grew in 2026-10 and a 30-min run was cut off mid-suite;
-                             # with thirty languages a green run took 49.0 min (the component-theme step alone
-                             # 16.7) and the next was cancelled at 50 (2026-10-22)
+    timeout-minutes: 45      # about 9 min measured (integrity 1 + fast suites 7 + setup); 45 = at least 3x headroom on every job
     defaults:
       run:
         working-directory: skills/slide-maker
@@ -28,6 +32,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: pip
+          cache-dependency-path: skills/slide-maker/requirements.txt
 
       # A SKILL.md slimming PR must LAYER content into references/, not delete it. Both look
       # identical in review — thousands of removed lines, every one of which *might* have landed
@@ -1014,6 +1020,70 @@ jobs:
           grep -qE "(^[0-9]+ passed, 0 failed|\\] ok$)" /tmp/ooxmlsafety.log || {
             echo "::error::test_ooxml_safety did not run to completion"; exit 1; }
 
+  components:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45      # about 15 min measured (the component-theme step alone is 13)
+    defaults:
+      run:
+        working-directory: skills/slide-maker
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the lossless guard diffs SKILL.md against the merge base
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: skills/slide-maker/requirements.txt
+
+      - name: Install system deps (LibreOffice, rsvg, CJK fonts)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q libreoffice-impress librsvg2-bin fonts-noto-cjk
+
+      - name: Install python deps
+        run: python -m pip install -r requirements.txt
+
+      - name: "Components in visual languages (ordinary decks unchanged, every language and ground readable)"
+        run: |
+          set -o pipefail
+          python tests/test_component_theme.py | tee /tmp/ctheme.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/ctheme.log || {
+            echo "::error::test_component_theme did not run to completion"; exit 1; }
+
+      - name: "Component skins (Tier-2 components draw cards, rules, markers and numerals the language's way)"
+        run: |
+          set -o pipefail
+          python tests/test_component_skin.py | tee /tmp/cskin.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/cskin.log || {
+            echo "::error::test_component_skin did not run to completion"; exit 1; }
+
+  native-languages:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45      # about 13 min measured (incl. the 6-min untuned-input step)
+    defaults:
+      run:
+        working-directory: skills/slide-maker
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the lossless guard diffs SKILL.md against the merge base
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: skills/slide-maker/requirements.txt
+
+      - name: Install system deps (LibreOffice, rsvg, CJK fonts)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q libreoffice-impress librsvg2-bin fonts-noto-cjk
+
+      - name: Install python deps
+        run: python -m pip install -r requirements.txt
+
       - name: Native art (page-clipped, in-range, deterministic)
         run: |
           set -o pipefail
@@ -1055,32 +1125,49 @@ jobs:
           python tests/test_vl_contract.py | tee /tmp/vlcontract.log
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/vlcontract.log || {
             echo "::error::test_vl_contract did not run to completion"; exit 1; }
+
       - name: "Visual-language docs blocks match the registry"
         run: python scripts/vl_docs.py --check
-      - name: "Components in visual languages (ordinary decks unchanged, every language and ground readable)"
+
+  visual-languages:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45      # about 10 min measured (the other visual-language suites + the late guards)
+    defaults:
+      run:
+        working-directory: skills/slide-maker
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the lossless guard diffs SKILL.md against the merge base
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: skills/slide-maker/requirements.txt
+
+      - name: Install system deps (LibreOffice, rsvg, CJK fonts)
         run: |
-          set -o pipefail
-          python tests/test_component_theme.py | tee /tmp/ctheme.log
-          grep -qE "^[0-9]+ passed, 0 failed" /tmp/ctheme.log || {
-            echo "::error::test_component_theme did not run to completion"; exit 1; }
-      - name: "Component skins (Tier-2 components draw cards, rules, markers and numerals the language's way)"
-        run: |
-          set -o pipefail
-          python tests/test_component_skin.py | tee /tmp/cskin.log
-          grep -qE "^[0-9]+ passed, 0 failed" /tmp/cskin.log || {
-            echo "::error::test_component_skin did not run to completion"; exit 1; }
+          sudo apt-get update -q
+          sudo apt-get install -y -q libreoffice-impress librsvg2-bin fonts-noto-cjk
+
+      - name: Install python deps
+        run: python -m pip install -r requirements.txt
+
       - name: "Visual languages optimised (quote scale, title fit, rules at content, dark grounds, smallest tier)"
         run: |
           set -o pipefail
           python tests/test_vl_optimise.py | tee /tmp/vlopt.log
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/vlopt.log || {
             echo "::error::test_vl_optimise did not run to completion"; exit 1; }
+
       - name: "Visual-language authoring kit (a new language's code, unfilled fields, --describe, the any-agent frictions)"
         run: |
           set -o pipefail
           python tests/test_vl_authoring.py | tee /tmp/vlauth.log
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/vlauth.log || {
             echo "::error::test_vl_authoring did not run to completion"; exit 1; }
+
       - name: "Direction page: no style motif covers a cover title (18 presets x 4 covers, headless Chrome)"
         run: |
           set -o pipefail
@@ -1095,8 +1182,10 @@ jobs:
           python tests/test_dispatch_brief.py | tee /tmp/dispatchbrief.log
           grep -qE "\\] ok$" /tmp/dispatchbrief.log || {
             echo "::error::test_dispatch_brief did not run to completion"; exit 1; }
+
       - name: "Components take colours from the theme (no literal colour in a component)"
         run: python scripts/check_component_theme.py
+
       - name: "Visual languages after the audit (measured with headroom, nothing dropped, upright pictures, clean own pages)"
         run: |
           set -o pipefail
