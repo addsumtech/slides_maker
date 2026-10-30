@@ -499,6 +499,27 @@ recs = V.read_deck(d_a / "deck.pptx")
 check("deckkit.a11y_title's off-canvas copy names the slide but its number is counted once",
       recs[0]["title"] == "1,350 repairs" and recs[0]["numbers"] == ["1,350"], recs[0])
 
+# ───────────────────────────────────────────── an old snapshot never speaks for the current build
+# render_deck's surface-kit note searched every .py under the deck folder, so a build script filed
+# under .versions/ that called register_surface made a deck that no longer does read as "built with
+# its surface kit". The note must read only the deck's live sources.
+import contextlib
+import io
+sys.path.insert(0, str(SCRIPTS))
+import render_deck as RD  # noqa: E402
+d_s = TMP / "surface_note"
+(d_s / ".versions" / "v001").mkdir(parents=True)
+shutil.copy(d_a / "deck.pptx", d_s / "deck.pptx")
+(d_s / "build_deck.py").write_text("# plain build, no surface kit\n", encoding="utf-8")
+(d_s / ".versions" / "v001" / "build_deck.py").write_text(
+    "import register_surface\nregister_surface.ground(None)\n", encoding="utf-8")
+buf = io.StringIO()
+with contextlib.redirect_stdout(buf):
+    RD._register_kit_note(str(d_s / "deck.pptx"), {"design_plan": {"style_pick": "memphis"}})
+note = buf.getvalue()
+check("render_deck's surface-kit note ignores build scripts kept under .versions/",
+      "HAS a buildable surface" in note and "was built with its surface kit" not in note, note[-300:])
+
 # ───────────────────────────────────────────── refusals name the fix
 rc, out = dv("diff", TMP / "nobuild_missing")
 check("diff on a folder that does not exist fails with a sentence, exit 2", rc == 2 and "no such" in out.lower(), out[-200:])

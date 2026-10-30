@@ -1918,8 +1918,12 @@ def _register_kit_note(pptx, gates):
             return
         if not rs.has(reg):
             return
+        # Live sources only: deck_versions.py files old build scripts under .versions/, and a
+        # snapshot that used the kit must not speak for a current build that does not.
+        live = [f for f in deck_dir.glob('**/*.py')
+                if not any(part.startswith('.') for part in f.relative_to(deck_dir).parts[:-1])]
         used = any('register_surface' in f.read_text(encoding='utf-8', errors='ignore')
-                   for f in list(deck_dir.glob('*.py')) + list(deck_dir.glob('**/*.py'))[:60])
+                   for f in live[:60])
     except Exception:
         return
     if used:
