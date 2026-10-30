@@ -116,6 +116,16 @@ if _ed is not None:
 else:
     check(False, "the editorial repair-cafe example is in visual-languages.md")
 
+# ─────────────────────────────────────────────── A7 · auto mode runs `fast`, and the reference says so once
+adq = read("references/auto-delegation-quality-gates.md")
+check("full critic panel is NOT OPTIONAL" not in adq,
+      "auto-delegation-quality-gates.md no longer demands the FULL panel in auto mode (auto runs `fast`)")
+_crit = adq[adq.find("## Critic"):][:2500]
+check("`fast`" in _crit and "--lens AB" in _crit,
+      "its critic section dispatches the `fast` sole critic (`--lens AB`) by default")
+check("skip rendering and the full critic panel" not in adq,
+      "its core-principle list does not promise the full panel")
+
 
 for line in ok:
     print("  ok   " + line)

@@ -10,7 +10,7 @@ make defensible choices yourself rather than asking.
 ## Core principle: Auto means "you choose", not "skip"
 
 **Every workflow step still runs.** The checkpoints are still posted, the agents still produce
-their artifacts, the critic panel still reviews. What changes:
+their artifacts, an independent critic still reviews. What changes:
 
 - ✅ You answer the Step-0 interview questions yourself (with derived, defensible picks).
 - ✅ You design the visual language yourself (within the design-intelligence targets).
@@ -18,7 +18,8 @@ their artifacts, the critic panel still reviews. What changes:
   for async veto (user can interrupt if they see it and disagree).
 - ❌ You do NOT skip the content plan agent.
 - ❌ You do NOT skip the design plan agent.
-- ❌ You do NOT skip rendering and the full critic panel.
+- ❌ You do NOT skip rendering or the critic review (auto runs the `fast` tier — one sole critic
+  carrying both lenses — and may escalate, never decline; see "Review tier in auto mode").
 - ❌ You do NOT compress multiple steps into one pass.
 
 ## Checkpoint protocol under auto delegation
@@ -195,20 +196,28 @@ you call it** — an invented helper or a guessed keyword fails at build time, a
 The catalogue is the component list **inline in `SKILL.md`** plus
 `references/design-gallery.md`. There is no `deckkit-component-guide.md`.
 
-## Critic panel: required in auto mode
+## Critic review: required in auto mode
 
-🔴 **Running the full critic panel is NOT OPTIONAL in auto mode.** It's the only independent
-verification that your auto-decisions produced a good deck.
+🔴 **Running the critic review is NOT OPTIONAL in auto mode — at the tier the section above sets.**
+It is the only independent verification that your auto-decisions produced a good deck. Auto runs
+the post-build default, `fast`: ONE sole critic carrying BOTH lenses, one round
+(`references/critic-panel.md`, SKILL.md Step 5). Escalating to `standard`/`thorough` for a
+high-stakes deck dispatches the lens panel instead; `none` is never an auto pick. *(This section
+once demanded the FULL panel in auto mode — written 2026-07-28, before the review question moved
+to after the render and made `fast` the default, 2026-08-16. The tier rule above is the current one.)*
 
-After build + render + lint, dispatch per `references/critic-panel.md` — the panel is
-LENS-based, pointed at `agents/critic.md`; there is no `role=content-critic` parameter:
-1. Dispatch a critic subagent with the **content lens** (brief: `agents/critic.md`)
-2. Dispatch a second with the **design lens**, given the render PNGs + `lint_deck --json`
+After build + render + lint, dispatch per `references/critic-panel.md` — critics are LENS-based,
+pointed at `agents/critic.md`; there is no `role=content-critic` parameter:
+1. **`fast` (the auto default):** one sole critic, both lenses as two passes —
+   `python3 scripts/dispatch_brief.py prompt --brief <path> --role critic --lens AB --round 1 --deck <dir>`
+   — given the render PNGs + `lint_deck --json`
+2. **Escalated (`standard` / `thorough`):** one critic per lens — `--lens A` (content) and
+   `--lens B` (design) — plus whatever that tier adds in `critic-panel.md`
 3. Validate each returned review: `python3 scripts/validate_review.py critic <review.json>`
    — a review failing schema/coverage is **rejected and re-dispatched once**, never acted on
 4. Record it as evidence, not as a claim:
    `python3 scripts/validate_review.py critic <review.json> --record <deck-dir>`
-5. **If either reports blocker/major issues, fix them** — don't hand off a deck with known
+5. **If any critic reports blocker/major issues, fix them** — don't hand off a deck with known
    problems just because the user said "auto"
 
 🔴 **If the host cannot dispatch subagents, say what was lost.** Running the lenses inline is
@@ -232,9 +241,10 @@ Before claiming "deck complete" in auto mode, verify:
 - ✅ All text-over-image has adequate scrim (contrast ≥ 3:1)
 - ✅ Deck rendered to PNG
 - ✅ Lint ran (hard errors = 0)
-- ✅ Content critic ran and issues addressed
-- ✅ Design critic ran and issues addressed
-- ✅ Review tier met the derived floor (never auto-downgraded)
+- ✅ Both lenses reviewed (one sole `fast` critic, or one critic per lens when escalated) and
+  issues addressed
+- ✅ Review tier recorded: `fast (post-build default — auto)`, or the escalation with its reason —
+  never `none`
 
 If any checkbox is unchecked, the deck is not ready. "Auto mode" is not a waiver for
 incomplete work.
