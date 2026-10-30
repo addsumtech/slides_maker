@@ -932,6 +932,10 @@ def cmd_confirm(a):
         for p in problems:
             print("brand_kit confirm: " + p, file=sys.stderr)
         return 1
+    if (fonts.get("cjk") or {}).get("name") and not a.lang:
+        print("  NOTE: a CJK face ({}) is set but --lang is not — its glyphs are NOT checked, and "
+              "`check` will refuse CJK text until you re-run confirm with --lang zh-Hans|zh-Hant|ja|ko."
+              .format(fonts["cjk"]["name"]))
     # grounds, ink and contrast pairs
     policy = "declared" if a.strict_neutrals else "achromatic"
     neutrals = [c["hex"] for c in kept if c["role"] == "neutral"]
@@ -1525,6 +1529,12 @@ def check_deck(pptx, b, base, multi_entity=False):
                          "why": "{} run(s) carry CJK text and the brand records no CJK face — re-run "
                                 "`{} confirm … --lang zh-Hans|zh-Hant|ja|ko` so one is chosen and checked."
                                 .format(cjk_runs, _SELF)})
+    elif cjk_runs and allowed and not (b.get("confirmed") or {}).get("lang"):
+        findings.append({"code": "CJK UNCHECKED", "sev": "block", "slide": None, "shape": None,
+                         "kind": "font", "value": None,
+                         "why": "{} run(s) carry CJK text, but the brand was confirmed without --lang, so "
+                                "its CJK face was never checked for the glyphs — re-run `{} confirm … "
+                                "--lang zh-Hans|zh-Hant|ja|ko`.".format(cjk_runs, _SELF)})
     # the logo rule
     if multi_entity:
         facts["logo"] = "NOT CHECKED — a multi-entity deck (co-branded / partner logos)"

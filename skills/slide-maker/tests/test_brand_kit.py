@@ -259,6 +259,13 @@ nf = load(TMP / "nofill.json")
 check(code == 0 and any(c["hex"] == "#123456" and "user" in c["source"] for c in nf["colors"]),
       "a typed --primary not in the draft is recorded with source user:\n" + out)
 
+# a CJK face confirmed without --lang: its glyphs were never checked, so a CJK deck is refused
+NL = TMP / "nolang"
+NL.mkdir()
+run("extract", png, "--font", "cjk=Songti SC", "--font", "body=Arial", "--out", NL / "brand.json")
+code, out = run("confirm", NL / "brand.json", "--primary", "#2F7D4F")
+check(code == 0 and "--lang" in out, "confirm warns that a CJK face without --lang is unchecked:\n" + out)
+
 # ── save / list / use ─────────────────────────────────────────────────────────────────────────
 code, out = run("save", TW / "brand.json", "--name", "tidewater")
 check(code == 0, "save exits 0:\n" + out)
@@ -406,6 +413,10 @@ for bdir in (TW, QH):
           "a single-entity {} deck with no logo is caught: {}".format(bdir.name, js["findings"]))
     code, js = findings(dv, bdir, "--multi-entity")
     check(code == 0, "…and the logo rule is not applied to a multi-entity deck: {}".format(js))
+
+code, out = run("check", QH / "deck_onbrand.pptx", "--brand", NL / "brand.json")
+check(code == 1 and "CJK UNCHECKED" in out, "a CJK deck against a kit confirmed without --lang is "
+      "refused:\n" + out)
 
 # the photo was ignored: no finding names a picture
 code, js = findings(TW / "deck_onbrand.pptx", TW)
