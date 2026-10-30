@@ -51,6 +51,7 @@ import math
 import re
 import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import numpy as np  # noqa: E402  (a declared requirement; the background-picture sampler below is vectorised)
 from pil_compat import pixels  # noqa: E402  (Image.getdata() leaves in Pillow 14)
 from pptx import Presentation
 from pptx.enum.dml import MSO_FILL
@@ -293,12 +294,13 @@ def _slide_bg_box(slide, sw, sh):
             "declared": False, "hollow": False, "motif": False, "bled": False}
 
 
-_BG_PIX = {}      # blob sha1 -> (thumbnail rgb list, (w, h), median rgb) — a 30-slide template re-decoded it per slide
+_BG_PIX = {}      # blob sha1 -> (thumbnail rgb array (h*w, 3) int64, (w, h), median rgb) — a 30-slide template re-decoded it per slide
 
 
 def _bg_pixels(bg, owner):
     """(pixels, (w, h), median) of a background picture PowerPoint shows as stored, or None: any colour effect on the
-    blip (transparency, washout, duotone, greyscale, …) means the render is not the pixels — those stay unknowable."""
+    blip (transparency, washout, duotone, greyscale, …) means the render is not the pixels — those stay unknowable.
+    `pixels` is an (h*w, 3) int64 array, row by row (what the list of RGB tuples it replaced held, value for value)."""
     try:
         import hashlib as _hl
         import io as _io
@@ -311,8 +313,8 @@ def _bg_pixels(bg, owner):
         if key not in _BG_PIX:
             im = Image.open(_io.BytesIO(blob)).convert("RGB")
             im.thumbnail((160, 160))
-            px = list(pixels(im))
-            med = tuple(sorted(c[i] for c in px)[len(px) // 2] for i in range(3))
+            px = np.array(list(pixels(im)), dtype=np.int64).reshape(-1, 3)
+            med = tuple(int(np.sort(px[:, i])[len(px) // 2]) for i in range(3))
             _BG_PIX[key] = (px, im.size, med)
         return _BG_PIX[key]
     except Exception:
@@ -320,14 +322,20 @@ def _bg_pixels(bg, owner):
 
 
 def _near_share(px, med):
-    """The share of pixels within a hair (redmean 20) of `med`."""
-    near = 0
-    for c in px:
-        rm = (c[0] + med[0]) / 2.0
-        dr, dg, db = c[0] - med[0], c[1] - med[1], c[2] - med[2]
-        if (2 + rm / 256.0) * dr * dr + 4 * dg * dg + (2 + (255 - rm) / 256.0) * db * db <= 400.0:
-            near += 1
-    return near / float(max(1, len(px)))
+    """The share of pixels within a hair (redmean 20) of `med`. `px` is an (n, 3+) integer array.
+
+    Vectorised from a per-pixel Python loop (it was 1,047 calls = 5.5 s of one suite). The arithmetic is the loop's,
+    operation for operation and in the same order, on float64 / exact integers, so every count — hence every verdict
+    against the 0.95 floors — is the one the loop gave (tests/test_lint_regressions.py pins it against the loop)."""
+    px = np.asarray(px)
+    n = len(px)
+    if n == 0:
+        return 0.0
+    c0, c1, c2 = px[:, 0], px[:, 1], px[:, 2]
+    rm = (c0 + med[0]) / 2.0
+    dr, dg, db = c0 - med[0], c1 - med[1], c2 - med[2]
+    d = (2 + rm / 256.0) * dr * dr + 4 * dg * dg + (2 + (255 - rm) / 256.0) * db * db
+    return int(np.count_nonzero(d <= 400.0)) / float(max(1, n))
 
 
 def _uniform_picture_fill(bg, owner):
@@ -353,8 +361,8 @@ def _bg_under(rec, t, sw, sh):
     px, (iw, ih), med = pix
     x0, x1 = max(0, int(t["l"] / sw * iw)), min(iw, max(int(t["l"] / sw * iw) + 1, int(t["r"] / sw * iw)))
     y0, y1 = max(0, int(t["t"] / sh * ih)), min(ih, max(int(t["t"] / sh * ih) + 1, int(t["b"] / sh * ih)))
-    sub = [px[yy * iw + xx] for yy in range(y0, y1) for xx in range(x0, x1)]
-    return rec["fill"] if sub and _near_share(sub, med) >= 0.95 else "UNKNOWN"
+    sub = px.reshape(ih, iw, 3)[y0:y1, x0:x1].reshape(-1, 3)     # the same pixels, row by row
+    return rec["fill"] if len(sub) and _near_share(sub, med) >= 0.95 else "UNKNOWN"
 
 
 _A11Y_TITLE_TAG = "deckkit-a11ytitle"
@@ -594,7 +602,18 @@ def _boxes(slide, sw, sh, slide_no=None, record=True):
     return out
 
 
-def categorical_slides(prs, sw=None, sh=None):
+def _slide_records(prs, boxes):
+    """`boxes` (one `_boxes` record list per slide, in slide order) if it is usable for `prs`, else None.
+
+    A caller-supplied list that does not line up with the deck (wrong length) is refused, not trusted: the
+    readers fall back to walking the slides themselves, so a mismatch can only cost time, never change an answer.
+    A None entry stands for a slide whose walk raised — skipped by the readers, exactly as when they walk it."""
+    if boxes is None:
+        return None
+    return boxes if len(boxes) == len(prs.slides) else None
+
+
+def categorical_slides(prs, sw=None, sh=None, boxes=None):
     """Slide numbers whose CONTENT looks like a category set — the shape an icon family serves.
 
     ONE definition, imported by both gate paths, never copied. `render_deck.py --gate-check` used
@@ -613,9 +632,13 @@ def categorical_slides(prs, sw=None, sh=None):
     It OVER-COUNTS by construction — tables, timelines and stat rows share this shape — so every
     caller must treat it as a prompt to re-decide, never as proof. Neither path may fail a deck on
     this number alone without offering a written escape.
+
+    `boxes`, when given, is the per-slide record lists `_boxes` already returned for THIS deck at this canvas size
+    (`_slide_records`) — read, never changed here — so a caller that has walked the deck does not walk it again.
     """
     if sw is None or sh is None:
         sw, sh = prs.slide_width / 914400.0, prs.slide_height / 914400.0
+    boxes = _slide_records(prs, boxes)
     hits = []
     for i, s in enumerate(prs.slides, 1):
         try:
@@ -623,7 +646,7 @@ def categorical_slides(prs, sw=None, sh=None):
             # notes are recorded ONCE by the walk that carries slide_no, and a second recording
             # walk re-reports every rotated group as "slide ?" — the exact regression
             # tests/test_lint_regressions.py guards.
-            bx = [b for b in _boxes(s, sw, sh, record=False)
+            bx = [b for b in (boxes[i - 1] if boxes is not None else _boxes(s, sw, sh, record=False))
                   if b.get("text") and not b.get("bg")]
         except Exception:
             continue
@@ -678,7 +701,7 @@ def categorical_slides(prs, sw=None, sh=None):
     return hits
 
 
-def icon_evidence(prs, sw=None, sh=None):
+def icon_evidence(prs, sw=None, sh=None, boxes=None):
     """What the BUILT FILE says about icons: which slides read as category sets, and how many
     icon-sized content pictures are actually in the deck.
 
@@ -697,21 +720,31 @@ def icon_evidence(prs, sw=None, sh=None):
     Returns {"categorical": [slide numbers], "icons": int}. Both callers treat `categorical` as a
     prompt to re-decide rather than proof — the detector over-counts by construction (tables,
     timelines, stat rows share the shape of a category row).
+
+    `boxes`: the per-slide `_boxes` records for this deck at this canvas size when the caller already has them
+    (`lint` does — it walked every slide once for its own checks); otherwise each slide is walked here, ONCE, and
+    the same records answer both questions below (they used to be walked twice more, to the same result).
     """
     if sw is None or sh is None:
         sw, sh = prs.slide_width / 914400.0, prs.slide_height / 914400.0
     sig, n_sl = {}, len(prs.slides) or 1
-    for s in prs.slides:
-        try:
-            boxes = _boxes(s, sw, sh, record=False)      # read-only walk; see categorical_slides
-        except Exception:
+    recs = _slide_records(prs, boxes)
+    if recs is None:
+        recs = []
+        for s in prs.slides:
+            try:
+                recs.append(_boxes(s, sw, sh, record=False))   # read-only walk; see categorical_slides
+            except Exception:
+                recs.append(None)                                # that slide is skipped by both readers
+    for slide_recs in recs:
+        if slide_recs is None:
             continue
-        for b in boxes:
+        for b in slide_recs:
             if b.get("pic") and not b.get("bg") and b["w"] < 1.2 and b["h"] < 1.2:
                 k = (round(b["l"], 1), round(b["t"], 1), round(b["w"], 1), round(b["h"], 1))
                 sig[k] = sig.get(k, 0) + 1
     icons = sum(c for c in sig.values() if c <= max(2, 0.5 * n_sl))
-    return {"categorical": categorical_slides(prs, sw, sh), "icons": icons}
+    return {"categorical": categorical_slides(prs, sw, sh, boxes=recs), "icons": icons}
 
 
 def _text_w(text, size_pt, face=None, bold=False):
@@ -3599,6 +3632,7 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
         # inside _datum_faults). If deckkit cannot be reached, the report has to say so.
         print(f"  [skipped] build-time checks (DATUM SCALE · ASSET NOT USABLE) NOT re-run here: "
               f"{type(_exc).__name__}: {_exc}")
+    _slide_bx = []                                       # every slide's _boxes records, in order (read-only after the loop)
     titles = []                                          # (slide#, normalized title, display snip)
     prov = []                                            # (slide#, claim numbers, sourced?)
     intent_map = {}                                      # si -> declared design intent (see design_intent)
@@ -3612,6 +3646,7 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
                     pass
                 break
         bx = _boxes(slide, sw, sh, slide_no=si + 1)
+        _slide_bx.append(bx)                     # handed to icon_evidence below: the same walk, not a third
         chrome = _layout_chrome(slide, sw, sh)   # layout/master brand furniture under the build
         try:
             stats_rows.append(_slide_stats(slide, bx, sw, sh))
@@ -4465,7 +4500,7 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
     # icon evidence is read from the FILE here, where `prs` is already open, and handed down —
     # `_print_stats` must not re-open the deck just to answer one question.
     try:
-        _icon_ev = icon_evidence(prs, sw, sh)
+        _icon_ev = icon_evidence(prs, sw, sh, boxes=_slide_bx)
     except Exception:
         _icon_ev = None
     deck_stats = _print_stats(stats_rows, mode, sw, sh, lums=lums, static_ok=static_ok,

@@ -1359,6 +1359,58 @@ def main():
     (ok if all({"slide", "text"} <= set(f) for f in _b.get("findings") or [])
      else bad).append("the pre-existing slide/text keys are untouched (severity is additive)")
 
+    # ── the speed-ups must not move an answer ─────────────────────────────────
+    # (1) `_near_share` was a per-pixel Python loop and is numpy now: the same counts, hence the same
+    # verdicts against the 0.95 floors. Held against the loop itself, with pixels on both sides of
+    # the redmean-20 boundary. (2) `lint()` hands the records it already built to `icon_evidence`
+    # instead of letting it walk every slide twice more: that is only correct while nothing in the
+    # lint pass changes a record, so the handed-down records are compared with a fresh walk.
+    import io as _io, contextlib as _cl, random as _rnd
+    import numpy as _np
+
+    def _near_loop(px, med):
+        n = 0
+        for c in px:
+            rm = (c[0] + med[0]) / 2.0
+            dr, dg, db = c[0] - med[0], c[1] - med[1], c[2] - med[2]
+            if (2 + rm / 256.0) * dr * dr + 4 * dg * dg + (2 + (255 - rm) / 256.0) * db * db <= 400.0:
+                n += 1
+        return n / float(max(1, len(px)))
+
+    _rg, _same, _cases = _rnd.Random(11), True, 0
+    for _ in range(400):
+        _med = tuple(_rg.randrange(256) for _ in range(3))
+        _wob = _rg.choice([3, 9, 40, 256])
+        _px = [tuple(min(255, max(0, m + _rg.randrange(-_wob, _wob + 1))) for m in _med)
+               for _ in range(_rg.choice([0, 1, 5, 300]))]
+        _cases += 1
+        if _near_loop(_px, _med) != _L._near_share(_np.array(_px, dtype=_np.int64).reshape(-1, 3), _med):
+            _same = False
+    (ok if _same else bad).append(
+        f"_near_share (numpy) equals the per-pixel loop on {_cases} random pixel sets, boundary included")
+
+    _seen = {}
+    _real_ev = _L.icon_evidence
+    def _spy(prs_, sw_, sh_, boxes=None):
+        _seen["boxes"], _seen["size"] = boxes, (sw_, sh_)
+        return _real_ev(prs_, sw_, sh_, boxes=boxes)
+    _L.icon_evidence = _spy
+    try:
+        with _cl.redirect_stdout(_io.StringIO()):
+            _L.lint(str(tmp / "g_grp.pptx"), static_ok=True)
+    finally:
+        _L.icon_evidence = _real_ev
+    _prs2 = _P(str(tmp / "g_grp.pptx"))
+    _fresh = [_L._boxes(sl, *_seen["size"], record=False) for sl in _prs2.slides] if _seen.get("boxes") else None
+    def _nogrp(recs):        # `grp` is id() of the group element: a per-walk identity, not a measurement
+        return [[{k: v for k, v in r.items() if k != "grp"} for r in sl] for sl in recs] if recs else recs
+    (ok if _seen.get("boxes") and _nogrp(_seen["boxes"]) == _nogrp(_fresh) else bad).append(
+        "lint() passes icon_evidence the records it built, and they equal a fresh walk after the whole pass")
+    (ok if _real_ev(_prs2) == _real_ev(_prs2, boxes=_fresh) else bad).append(
+        "icon_evidence answers the same from handed-down records as from its own walk")
+    (ok if _real_ev(_prs2, boxes=_fresh[:-1] if _fresh else []) == _real_ev(_prs2) else bad).append(
+        "records that do not line up with the deck are refused, not trusted")
+
     for line in ok:
         print("  ok   " + line)
     for line in bad:
