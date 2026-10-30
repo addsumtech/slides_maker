@@ -286,7 +286,9 @@ four template choices:
          corporate look", a Q4 mimic), that axis LEAVES the divergence set and the ≥2 rule re-applies
          to the ones that remain. A constraint relocates variance; it never licenses convergence.
        - 🔴 **Run the mechanical check before you post the link:**
-         `python3 "$SKILL/scripts/directions_diversity.py" directions.json`. It scores four axes — **palette
+         `python3 "$SKILL/scripts/directions_diversity.py" directions.json --images photos|illustrations|none`
+         (`--images` = what `direction_gate.images` will record; it checks the two picture rules above on the
+         candidate set). It scores four axes — **palette
          mood** (a light/dark flip counts as a palette divergence, so mode is folded in) · **type
          pairing** · **density** · **composition** — and flags any pair matching on ≥3 of the 4. It ALSO
          fails a set with no bespoke direction (above). **Exit 2 is not an auto-kill, and it now

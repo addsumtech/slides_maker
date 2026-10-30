@@ -259,6 +259,18 @@ def _native_langs():
 NATIVE_LANGS = _native_langs()      # = visual_languages.NATIVE: both come from the registry (a test pins it)
 
 
+def native_offer_fault(images, directions):
+    """The OFFER half of native_fault — checkable on the candidate set alone, before anyone has picked, so the
+    CLI below runs it at Gate A (native_fit is recorded later, with the pick). Returns the fault, or None."""
+    if str(images or "").strip().lower() != "none":
+        return None
+    if any(isinstance(d, dict) and d.get("vl") in NATIVE_LANGS for d in (directions or [])):
+        return None
+    return ("the deck has no pictures and no direction is a native visual language — offer the one that fits the "
+            "topic with visual_languages.direction('<name>'): " + _offer_paren() + " — "
+            "references/visual-languages.md")
+
+
 def native_fault(images, directions, fit=None):
     """The native-language rule, held by BOTH runtimes' direction gates: a deck with NO pictures offers at least one
     native visual language (drawn, no pictures needed) — the one that fits the topic — and records why in
@@ -266,11 +278,10 @@ def native_fault(images, directions, fit=None):
     fault, or None."""
     if str(images or "").strip().lower() != "none":
         return None
+    missing = native_offer_fault(images, directions)
+    if missing:
+        return missing
     offered = [d.get("vl") for d in (directions or []) if isinstance(d, dict) and d.get("vl") in NATIVE_LANGS]
-    if not offered:
-        return ("the deck has no pictures and no direction is a native visual language — offer the one that fits the "
-                "topic with visual_languages.direction('<name>'): " + _offer_paren() + " — "
-                "references/visual-languages.md")
     if not isinstance(fit, dict) or fit.get("language") not in offered or len(str(fit.get("why") or "").strip()) < 8:
         return ('record direction_gate.native_fit: {"language": "<the native language offered>", "why": "<why it '
                 'fits this topic>"} — offered: ' + ", ".join(offered))
@@ -298,6 +309,10 @@ def main():
     ap = argparse.ArgumentParser(description="mechanical direction-candidate diversity check")
     ap.add_argument("directions", help="the same directions.json passed to archetypes_html.py")
     ap.add_argument("--json", action="store_true", dest="as_json")
+    ap.add_argument("--images", type=str.lower, choices=IMAGES,
+                    help="the pictures this deck will carry (direction_gate.images): photos | illustrations | none. "
+                         "Checks the picture rules the hand-off gates hold — a deck with pictures offers a visual "
+                         "language; a deck with none offers a NATIVE one — here, before the link is built.")
     a = ap.parse_args()
     try:
         with open(a.directions, encoding="utf-8") as f:
@@ -308,9 +323,16 @@ def main():
     except Exception as e:                                        # noqa: BLE001
         print("[diversity] could not read directions: {}".format(e))
         sys.exit(1)
+    # THE PICTURE RULES, held here as well as at hand-off (audit 2026-10-29): this CLI exited 0 on a picture-less
+    # set with no native language — a set native_fault fails — so the miss surfaced after the user had picked.
+    r["images"] = a.images
+    r["native_missing"] = native_offer_fault(a.images, data) if a.images else None
+    r["images_fault"] = (images_fault(a.images, data) if a.images in ("photos", "illustrations") else None)
+    _picture_fault = bool(r["native_missing"] or r["images_fault"])
+    _fail = bool(r["flagged"] or r["no_bespoke"] or r["colourway_excess"] or _picture_fault)
     if a.as_json:
         print(json.dumps(r, indent=1))
-        sys.exit(2 if (r["flagged"] or r["no_bespoke"] or r["colourway_excess"]) else 0)
+        sys.exit(2 if _fail else 0)
     for p in r["pairs"]:
         mark = "x TOO SIMILAR" if p["too_similar"] else "v"
         print("  {}  {} vs {}: palette {} · comp {} vs {} · matched: {}".format(
@@ -368,7 +390,16 @@ def main():
     else:
         print("[styles]   v {} styled direction(s) (preset DNA or bespoke), <=1 colour scheme".format(
             sum(1 for d in data if _styled(d))))
-    sys.exit(2 if (r["flagged"] or r["no_bespoke"] or r["colourway_excess"]) else 0)
+    if not a.images:
+        print("[pictures] -- NOT CHECKED: pass --images photos|illustrations|none (what direction_gate.images will")
+        print("             record) to check the picture rules here — a deck with pictures offers a visual language,")
+        print("             a deck with NONE offers a native one. The hand-off gates hold both either way.")
+    elif _picture_fault:
+        print("[pictures] x " + (r["native_missing"] or r["images_fault"]))
+        print("             ESCAPE: a named `waived` on direction_gate, as the gates accept — never a silent set.")
+    else:
+        print("[pictures] v images: {} — the picture rule for the candidate set holds".format(a.images))
+    sys.exit(2 if _fail else 0)
 
 
 try:                                            # console safety: a legacy code page must

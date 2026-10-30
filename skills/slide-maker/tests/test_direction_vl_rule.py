@@ -146,6 +146,47 @@ check(any("native" in x for x in e), "codex gate holds the same deck: {}".format
 msg = dd.native_fault("none", [{"name": "x"}], None) or ""
 check(all(n in msg for n in vl.NATIVE), "the native-language fault names every native language: {}".format(msg[:120]))
 
+# 6. the CLI the Gate A procedure runs BEFORE the link is built holds the same two rules (audit 2026-10-29):
+# directions_diversity.py exited 0 on a picture-less set with no native language, a set native_fault fails —
+# so the miss surfaced only at hand-off, after the user had already picked from it.
+import json as _json, subprocess as _sp
+import archetypes_html as _ah
+_bespoke = {"name": "Sonar", "bg": "#06141B", "ink": "#E6F4F1", "accent": "#3FD0C9", "font_display": "Verdana",
+            "font_body": "Verdana", "cover": "full-bleed-type", "skeleton": "rail",
+            "cover_motif": "<svg width='80' height='80'><circle cx='40' cy='40' r='30' stroke='#3FD0C9' fill='none'/></svg>",
+            "ambient_motif": "<svg width='20' height='20'><circle cx='10' cy='10' r='6' stroke='#3FD0C9' fill='none'/></svg>"}
+_set = _ah.preset_directions(["swiss", "risograph", "blueprint"]) + [_bespoke]
+_native_set = _ah.preset_directions(["swiss", "risograph"]) + [_bespoke, vl.direction("drafting")]
+_photo_set = _ah.preset_directions(["swiss", "risograph"]) + [_bespoke, vl.direction("editorial")]
+
+
+def _cli(dirs, *flags):
+    f = td / "directions.json"
+    f.write_text(_json.dumps(dirs), encoding="utf-8")
+    r = _sp.run([sys.executable, str(ROOT / "scripts" / "directions_diversity.py"), str(f), *flags],
+                capture_output=True, text=True)
+    return r.returncode, r.stdout + r.stderr
+
+
+_rc, _out = _cli(_set)
+check(_rc == 0 and "NOT CHECKED" in _out and "--images" in _out,
+      "without --images the CLI says the picture rules were NOT CHECKED and how to check them (rc {}): {}"
+      .format(_rc, _out[-300:]))
+_rc, _out = _cli(_set, "--images", "none")
+check(_rc == 2 and "native" in _out.lower(),
+      "--images none + no native language among the directions exits 2 and says so (rc {}): {}".format(_rc, _out[-300:]))
+_rc, _out = _cli(_native_set, "--images", "none")
+check(_rc == 0, "--images none + a native language offered passes the CLI (rc {}): {}".format(_rc, _out[-300:]))
+_rc, _out = _cli(_set, "--images", "photos")
+check(_rc == 2 and "visual language" in _out,
+      "--images photos + no visual language exits 2 (the same images_fault the gates hold) (rc {}): {}"
+      .format(_rc, _out[-300:]))
+_rc, _out = _cli(_photo_set, "--images", "photos")
+check(_rc == 0, "--images photos + a visual language passes (rc {}): {}".format(_rc, _out[-300:]))
+_rc, _out = _cli(_set, "--images", "none", "--json")
+check(_rc == 2 and _json.loads(_out).get("native_missing"),
+      "--json reports native_missing and exits 2 (rc {}): {}".format(_rc, _out[-200:]))
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_direction_vl_rule] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)

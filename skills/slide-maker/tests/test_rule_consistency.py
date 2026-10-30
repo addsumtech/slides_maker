@@ -164,6 +164,11 @@ check("STEP 2 OPENS WITH A MATERIAL PROBE" in SK and "SKILL.md" in sd[sd.upper()
                                                                       sd.upper().find("MATERIAL PROBE") + 1500],
       "…and points at the SKILL.md Step-2 rule rather than restating it")
 
+# ─────────────────────────────────────────────── B2 · Gate A carries the no-pictures native rule
+cm = read("references/collaborative-mode.md")
+gate_a = cm[cm.find("### Gate A"):cm.find("### Gate B")]
+check("native" in gate_a.lower() and "--images" in gate_a,
+      "the Gate A procedure names the no-pictures native-language rule and the --images check")
 
 for line in ok:
     print("  ok   " + line)
