@@ -2828,7 +2828,11 @@ invariant):** the Step-6 hand-off carries one `provenance:` line — `N claims c
 without that line means the gate did not run (Step 6's checklist lists it). Decks built purely from the user's own material skip
 this gate — there, fidelity is to the provided source, and item 10 already owns it — **but** a
 source claim that §2(b) re-verification *updated or replaced* with a web-found current value counts
-as research-supplied, and pulls the gate in for those rows.
+as research-supplied, and pulls the gate in for those rows. **When a `provenance` record carries rows
+confirmed against the user's own material** (a mixed deck, or one that records them anyway), such a
+row cites that file instead of a URL — `{"claim": "…", "verdict": "CONFIRMED", "source": "<path to the
+user's file, relative to the deck folder>"}` — and the gate checks the file exists; a web-researched
+claim still needs its primary-source `url`.
 
 **High-stakes decks:** after each fix round's re-render, read `references/critic-panel.md` → "Verify the fixes and corroborate consent" — the arbiter re-check of the change manifest (with its required `dulled` flag) and the corroborated-consent rule that gates shipping. *(This is the "fail loudly at the cap" passage the round-cap rule above points at.)*
 

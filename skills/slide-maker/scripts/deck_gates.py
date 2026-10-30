@@ -208,7 +208,9 @@ def template(slides=None, delivery="presented"):
         "critic": {"verdict": "<consent|revise>", "rounds": 1,
                    "source": "<path to the recorded review>", "sha256": "<its hash>"},
         "provenance": {"claims": [{"claim": "<the claim>", "verdict": "<CONFIRMED|WRONG|…>",
-                                   "source": "<primary URL>"}]},
+                                   # the gate reads `url`; a claim confirmed against the
+                                   # USER'S OWN material cites the file as "source" instead
+                                   "url": "<primary-source URL>"}]},
         "render_selfcheck": {"slides": [{"n": i + 1, "verdict": "<ok — … | … fixed>"}
                                         for i in range(n)] or
                                        [{"n": 1, "verdict": "<ok — …>"}]},

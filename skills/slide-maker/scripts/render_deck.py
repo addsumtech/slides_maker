@@ -3820,16 +3820,49 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
                 die("`provenance` needs a per-claim `claims` list, not a summary tally. A tally is "
                     "written by the same pass that would have skipped the check.\n"
                     '    "claims": [{"claim": "...", "verdict": "CONFIRMED|WRONG|PARTLY-WRONG|'
-                    'UNVERIFIABLE", "url": "https://..."}]')
+                    'UNVERIFIABLE", "url": "https://..."}]\n'
+                    '  (a claim confirmed against the user\'s OWN material: "source": "<path to that '
+                    'file>" instead of "url")')
             ALLOWED = {"CONFIRMED", "WRONG", "PARTLY-WRONG", "UNVERIFIABLE"}
             bad = [c for c in claims if c.get("verdict") not in ALLOWED]
             if bad:
                 die("{} claim row(s) carry no valid verdict (one of {}).".format(
                     len(bad), " / ".join(sorted(ALLOWED))))
-            nourl = [c for c in claims if c.get("verdict") == "CONFIRMED" and not c.get("url")]
+            # A CONFIRMED row names its source: a primary-source `url` for a web-researched claim, OR
+            # — for a claim confirmed against the USER'S OWN material — a `source` path to that file,
+            # which must exist (relative to the deck folder, or absolute). Real run, 2026-10-29: a deck
+            # built from the user's annual review recorded rows confirmed against that review and
+            # every one was refused for having no URL, forcing a waiver on the very deck class
+            # SKILL.md says has fidelity "to the provided source". A path that does not exist is not
+            # a source, and a web claim still owes its URL.
+            _deck_root = os.path.dirname(os.path.abspath(pptx)) or "."
+            local_ok, local_missing, nourl = 0, [], []
+            for c in claims:
+                if c.get("verdict") != "CONFIRMED" or c.get("url"):
+                    continue
+                _src = str(c.get("source") or "").strip()
+                if not _src:
+                    nourl.append(c)
+                    continue
+                if re.match(r"(?i)^https?://\S", _src):
+                    continue                  # a URL under `source` (the init skeleton's old key) IS the URL
+                _p = os.path.expanduser(_src)
+                if not os.path.isabs(_p):
+                    _p = os.path.join(_deck_root, _p)
+                if os.path.isfile(_p):
+                    local_ok += 1
+                else:
+                    local_missing.append(_src)
             if nourl:
                 die("{} claim(s) are CONFIRMED with no primary-source URL. Confirmed-without-a-source "
-                    "is the exact failure this gate exists to catch.".format(len(nourl)))
+                    "is the exact failure this gate exists to catch. A claim confirmed against the "
+                    "user's OWN material cites that file instead: \"source\": \"<path to it, relative to "
+                    "the deck folder>\".".format(len(nourl)))
+            if local_missing:
+                die("{} CONFIRMED claim(s) cite a local `source` that does not exist (checked relative "
+                    "to the deck folder {}):\n  - {}\nA source nobody can open is not a source — fix the "
+                    "path, or cite the primary-source `url`.".format(
+                        len(local_missing), _deck_root, "\n  - ".join(local_missing[:5])))
             unresolved = [c for c in claims if c["verdict"] in ("WRONG", "PARTLY-WRONG")]
             if unresolved:
                 die("{} claim(s) still verdict WRONG / PARTLY-WRONG. Fix or cut them before hand-off:\n"
@@ -3838,8 +3871,10 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
             tally = {}
             for c in claims:
                 tally[c["verdict"]] = tally.get(c["verdict"], 0) + 1
-            print("[gates] provenance: {} claim(s) adversarially checked — {}".format(
-                len(claims), " · ".join("{} {}".format(v, k) for k, v in sorted(tally.items()))))
+            print("[gates] provenance: {} claim(s) adversarially checked — {}{}".format(
+                len(claims), " · ".join("{} {}".format(v, k) for k, v in sorted(tally.items())),
+                " ({} confirmed against {} local source{} — the user's own material)".format(
+                    local_ok, local_ok, "" if local_ok == 1 else "s") if local_ok else ""))
         else:
             print("[gates] no provenance record — fine for a deck built from the user's own material; "
                   "a research-sourced deck should carry one.")
