@@ -531,6 +531,16 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   rendering on a CRITICAL build fault. Carries the **LOOP BREAKER**: the same fault surviving three
   runs escalates, and the next run is REFUSED if the edit only moved numbers (the build script's AST
   is hashed with numeric literals normalised) — `--nudge-again "<why>"` overrides and records why.
+  After every build that completed it snapshots the deck into `.versions/` (`deck_versions.py`).
+- `deck_versions.py` — deck versions in `<deck-dir>/.versions/vNNN/` (pptx, build sources, renders
+  when they belong to that pptx, `manifest.json`): `snapshot <deck-dir> [--note] [--keep]` (automatic
+  after each `deck_cycle.py` build; unchanged content → no new version; newest 30 kept, `--keep` never
+  pruned) · `list <deck-dir>` (ends with the hand-off `version:` line) · `diff <deck-dir> [vA] [vB]`
+  (slides aligned so an insert/delete/move/retitle reads as one event; every changed NUMBER first;
+  writes `versions-diff_vA_vB.html`, a plain file:// page) · `restore <deck-dir> vNNN` (whole deck,
+  current state snapshotted first) · `restore … --slides 7[,9]` (slide numbers as in vNNN; replaces the
+  `def slide_NN` build function in the current script from vNNN's source via AST, then rebuild —
+  refuses on any ambiguity, never splices slide XML) · `prune <deck-dir> --keep-last N`.
 - `run_eval.py` — score a produced deck against `evals/evals.json`, machine-decidable assertions
   only: `--score <deck-dir> --eval <id>` (+ `--transcript` for `reference_reached`, the only way to
   answer *was that reference actually read*), `--record` to append under the current `VERSION`.

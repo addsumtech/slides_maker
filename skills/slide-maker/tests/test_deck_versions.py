@@ -395,6 +395,88 @@ bad = make_deck("badbuild", BASE)
 rc, out = cycle(bad)
 check("deck_cycle: a build that hits a CRITICAL fault is not snapshotted", rc == 2 and versions(bad) == [], out[-300:])
 
+# ───────────────────────────────────────────── page numbers are chrome, not content
+FOOT = HEADER.format(scripts=str(SCRIPTS)) + '''
+
+def _numbered(prs, title, lines, n, total):
+    s = _page(prs, title, lines)
+    dk.text(s, 0.6, 5.0, 4.0, 0.3, [[("Repair café · {} / {}".format(n, total), 10, INK, False, False)]])
+
+'''
+
+
+def footer_script(slides):
+    src = FOOT
+    total = len(slides)
+    for k, (fn, title, lines) in enumerate(slides, 1):
+        src += "\ndef {}(prs):\n    _numbered(prs, {!r}, {!r}, {}, {})\n".format(fn, title, list(lines), k, total)
+    src += ("\n\ndef main():\n    prs = dk.blank_deck()\n    for build in ({},):\n        build(prs)\n"
+            "    prs.save(\"deck.pptx\")\n\n\nmain()\n").format(", ".join(fn for fn, _t, _l in slides))
+    return src
+
+
+d_ft = TMP / "footer"
+d_ft.mkdir()
+(d_ft / "build_deck.py").write_text(footer_script(BASE), encoding="utf-8")
+build(d_ft)
+dv("snapshot", d_ft)
+(d_ft / "build_deck.py").write_text(footer_script(ins), encoding="utf-8")
+build(d_ft)
+dv("snapshot", d_ft)
+rc, out = dv("diff", d_ft)
+check("a numbered footer (\"· 3 / 5\" → \"· 4 / 6\") does not make an insert read as every slide changed",
+      "1 added" in out and re.search(r"\b0 changed\b", out), out[:900])
+check("…and its page numbers are not reported as changed numbers", "NUMBERS — none" in out, out[:600])
+
+# ───────────────────────────────────────────── native chart values are numbers too
+CHART = HEADER.format(scripts=str(SCRIPTS)) + '''
+from pptx.chart.data import CategoryChartData
+from pptx.enum.chart import XL_CHART_TYPE
+from pptx.util import Inches
+
+
+def slide_01(prs):
+    s = _page(prs, "Repairs by month", [])
+    cd = CategoryChartData()
+    cd.categories = ["Jan", "Feb", "Mar"]
+    cd.add_series("Repairs", VALUES)
+    s.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED, Inches(0.6), Inches(1.5), Inches(8), Inches(3.5), cd)
+
+
+def main():
+    prs = dk.blank_deck()
+    for build in (slide_01,):
+        build(prs)
+    prs.save("deck.pptx")
+
+
+main()
+'''
+d_ch = TMP / "chart"
+d_ch.mkdir()
+(d_ch / "build_deck.py").write_text(CHART.replace("VALUES", "(110, 125, 140)"), encoding="utf-8")
+build(d_ch)
+dv("snapshot", d_ch)
+(d_ch / "build_deck.py").write_text(CHART.replace("VALUES", "(110, 128, 140)"), encoding="utf-8")
+build(d_ch)
+dv("snapshot", d_ch)
+rc, out = dv("diff", d_ch)
+check("a native chart's changed series value is a changed number (125 → 128)", re.search(r"125\s*→\s*128", out), out[:700])
+
+# ───────────────────────────────────────────── an empty deck
+d_em = TMP / "empty"
+d_em.mkdir()
+EMPTY = HEADER.format(scripts=str(SCRIPTS)) + "\n\nprs = dk.blank_deck()\nprs.save(\"deck.pptx\")\n"
+(d_em / "build_deck.py").write_text(EMPTY, encoding="utf-8")
+build(d_em)
+rc, out = dv("snapshot", d_em)
+check("an empty deck (0 slides) snapshots without error", rc == 0 and versions(d_em) == ["v001"], out[-300:])
+(d_em / "build_deck.py").write_text(script_for(BASE[:1]), encoding="utf-8")
+build(d_em)
+dv("snapshot", d_em)
+rc, out = dv("diff", d_em)
+check("an empty deck → one slide reads as 1 added", rc == 0 and "1 added" in out, out[:500])
+
 # ───────────────────────────────────────────── refusals name the fix
 rc, out = dv("diff", TMP / "nobuild_missing")
 check("diff on a folder that does not exist fails with a sentence, exit 2", rc == 2 and "no such" in out.lower(), out[-200:])

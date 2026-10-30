@@ -535,6 +535,19 @@ interview answer at all — each reads the built file itself):
    `--nudge-again "<why>"` runs it and records the reason. A runtime that hand-runs
    `python3 build.py` then `lint_deck.py` gets neither the round-trip saving nor the guard, and the
    uncapped nudge loop is the one loop in this pipeline with no other ceiling.
+3c. **Versions — the same commands as the shared path.** Every build `deck_cycle.py` completes is
+   snapshotted into `<deck-dir>/.versions/vNNN/` (it prints `── versions` and the version name).
+   - Before showing the user a version: `python3 "$SKILL/scripts/deck_versions.py" snapshot "<deck folder>" --keep`.
+   - After a critic round or a feedback rebuild: `python3 "$SKILL/scripts/deck_versions.py" diff "<deck folder>"`
+     (default: the last two; or name `vA vB`). It prints the changed NUMBERS first — re-check each one
+     against its source — then every slide (an inserted, removed, moved or retitled slide is one row),
+     and writes `versions-diff_vA_vB.html` in the deck folder; give the user that file:// link.
+   - Go back: `… restore "<deck folder>" vNNN` (whole deck; the current state is snapshotted first) or
+     `… restore "<deck folder>" vNNN --slides 7` (slide numbers as in vNNN; needs one `def slide_NN(prs)`
+     per slide, called once from `main()`; it replaces that function in the build script and prints the
+     `deck_cycle.py` rebuild line to run next). A refusal names the cause and the alternative.
+   - `… list "<deck folder>"` ends with `HAND-OFF LINE: version: …` — paste it into the hand-off note.
+   No gate reads versions; nothing blocks without them.
 4. **Make component decisions auditable.** Run `component_audit.py --json` after the build. For every
    detected cluster, use one of the audit's suggested components in the mapped slide builder or record
    a waiver with the exact slide, pattern, and bespoke reason. A real component emitter is accepted when

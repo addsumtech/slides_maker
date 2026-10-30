@@ -59,6 +59,7 @@ RENDER_DIR = "render"
 MATCH_T = 0.45          # two slides below this similarity are different slides
 MOVE_T = 0.60           # an out-of-order pair must be at least this alike to read as "moved"
 VISUAL_EPS = 0.05       # % of pixels; below this two renders are the same picture
+CHROME_EPS = 0.5        # % of pixels a renumbered page-number footer may change without counting
 # The per-slide function convention — the same pattern slide_index.py uses to map slide -> function.
 SLIDE_FN = re.compile(r"^(s\d+|slide)[_0-9]")
 
@@ -703,10 +704,13 @@ def compare(a, b, pa=None, pb=None):
             g = difflib.SequenceMatcher(None, ga, gb, autojunk=False)
             moved = sum(max(i2 - i1, j2 - j1) for t, i1, i2, j1, j2 in g.get_opcodes() if t != "equal")
             vnote = "geometry: {} shape(s) added, removed or moved (no renders in both versions to measure pixels)".format(moved)
-        elif a.get("fingerprint") and b.get("fingerprint") and a["fingerprint"] != b["fingerprint"]:
+        elif a.get("fingerprint") and b.get("fingerprint") and a["fingerprint"] != b["fingerprint"] \
+                and a.get("chrome") == b.get("chrome"):      # a renumbered page is not a formatting change
             vnote = "formatting changed (same text and geometry; no renders in both versions to measure pixels)"
+    # When only the page chrome differs (a renumbered footer), its few changed pixels are not a change.
+    eps = VISUAL_EPS if a.get("chrome") == b.get("chrome") else CHROME_EPS
     is_changed = bool(removed or added or a["title"] != b["title"] or a.get("notes_sha") != b.get("notes_sha")
-                      or (visual is not None and visual >= VISUAL_EPS)
+                      or (visual is not None and visual >= eps)
                       or (visual is None and bool(vnote)))
     return {"changed": is_changed, "retitled": a["title"] != b["title"], "removed": removed,
             "added": added, "num_changed": changed, "num_removed": num_removed,
