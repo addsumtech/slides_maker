@@ -234,6 +234,21 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   registered templates use all of them), falls back to the profile's backticked hex tokens, and
   LEAVES OUT what it cannot derive. It refuses a palette that is just deckkit's defaults (it would
   match every stock deck) and refuses to overwrite an existing contract without `--force`.
+- `brand_kit.py` — the user's brand files -> one REVIEWED brand spec -> the deck's palette and
+  faces -> a check of the built deck. `extract` reads logos (SVG declared fills/strokes, else the
+  render; PNG/JPG clustered pixels with the transparent or plate background left out, and which
+  ground each logo reads on), brand-guide PDFs (hex/RGB codes and font names in the text, embedded
+  faces; a Pantone/CMYK line with no hex is UNDECIDED, never converted), .pptx/.potx themes (via
+  `lint_deck._theme_resolver` and `check_fonts_resolve._theme_of`) and typed `--hex`/`--font`, each
+  value with its `source`, into a DRAFT `brand.json`. `review` prints the table (and, `--auto`, the
+  delegated-pick row); `confirm` sets the roles, checks each face is installed (fallback named and
+  marked) and a CJK face covers `--lang`, records contrast pairs, and signs a digest — `style` and
+  `check` refuse a draft or an edited kit. `style` writes `brand_style.py` (the presets' keys, style.py's
+  names, `apply()` like `presets.apply()`). `check` reads text, fills, lines, table cells and native
+  chart SERIES (pictures and chart chrome ignored) against the brand colours' tint/shade ramps in
+  CIEDE2000 (TOLERANCE_DE, calibrated on four invented brands — numbers in the constant's comment),
+  faces against the brand faces + fallbacks, and the logo rule on a single-entity deck. `save` /
+  `list` / `use` keep kits under `<registry>/brands/`. Gate section `brand` on both runtimes.
 - `purposes.py` + `check_purpose.py` — a deck's GENRE declares content it is not finished without,
   checked against the built file on both gate paths. `references/design-by-purpose.md` carried nine
   purpose recipes and, measured by grep, NOTHING consumed it — so every per-purpose rule there was

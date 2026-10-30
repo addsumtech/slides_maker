@@ -1202,6 +1202,13 @@ jobs:
           grep -qE "\\] ok$" /tmp/parity.log || {
             echo "::error::test_gate_parity did not run to completion"; exit 1; }
 
+      - name: Brand kit (brand files -> reviewed brand.json -> on-brand deck, checked on both gates)
+        run: |
+          set -o pipefail
+          python tests/test_brand_kit.py | tee /tmp/brandkit.log
+          grep -qE "\\] ok$" /tmp/brandkit.log || {
+            echo "::error::test_brand_kit did not run to completion"; exit 1; }
+
       - name: Delegated picks (auto mode must say what it decided for the user)
         run: |
           set -o pipefail
