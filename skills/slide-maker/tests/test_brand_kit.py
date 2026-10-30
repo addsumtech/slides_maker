@@ -418,6 +418,12 @@ code, out = run("check", QH / "deck_onbrand.pptx", "--brand", NL / "brand.json")
 check(code == 1 and "CJK UNCHECKED" in out, "a CJK deck against a kit confirmed without --lang is "
       "refused:\n" + out)
 
+Presentation().save(TMP / "empty.pptx")
+code, out = run("check", TMP / "empty.pptx", "--brand", TW / "brand.json")
+check(code == 1 and "no slides" in out, "an EMPTY deck is refused, never checked clean:\n" + out)
+code, out = run("check", TMP / "nope.pptx", "--brand", TW / "brand.json")
+check(code == 2 and "nope.pptx" in out, "a missing deck names the file:\n" + out)
+
 # the photo was ignored: no finding names a picture
 code, js = findings(TW / "deck_onbrand.pptx", TW)
 check(not any("Picture" in str(f.get("shape")) for f in js["findings"]), "pictures are ignored")

@@ -1421,6 +1421,9 @@ def check_deck(pptx, b, base, multi_entity=False):
         numeral = {str(_dk.numeral_face(f)).lower() for f in allowed_fonts_cased(b)} - allowed
     except Exception:
         numeral = set()
+    if not len(prs.slides):
+        raise Refused("{} has no slides — there is nothing to hold to the brand; build the deck "
+                      "first.".format(pptx))
     status = _status_colours()
     findings, facts = [], {"slides": len(prs.slides), "colour_uses": 0, "unresolved": 0,
                            "status_uses": 0, "numeral_runs": 0,
@@ -1548,6 +1551,7 @@ def check_deck(pptx, b, base, multi_entity=False):
                                 "`{} use` or extract again.".format(
                                     ", ".join(lg.get("raster") or "?" for lg in b["logos"]), _SELF)})
     elif not placed:
+        facts["logo"] = "MISSING"
         findings.append({"code": "LOGO MISSING", "sev": "block", "slide": None, "shape": None,
                          "kind": "logo", "value": None,
                          "why": "a single-entity deck carries the brand's logo nowhere (looked for {}). "
@@ -1779,8 +1783,11 @@ def gate(pptx, record, root=None):
         _require_confirmed(b, p)
     except (Unreadable, Refused) as exc:
         return [("block", "BRAND FILE", str(exc))], {"applies": True}, None
-    findings, facts = check_deck(pptx, b, p.resolve().parent,
-                                 multi_entity=str(sec.get("entity") or "single") == "multi")
+    try:
+        findings, facts = check_deck(pptx, b, p.resolve().parent,
+                                     multi_entity=str(sec.get("entity") or "single") == "multi")
+    except (Unreadable, Refused) as exc:
+        return [("block", "BRAND CHECK", str(exc))], {"applies": True}, None
     facts["applies"] = True
     facts["file"] = str(p)
     return [("block", f["code"], f["why"]) for f in findings], facts, None
