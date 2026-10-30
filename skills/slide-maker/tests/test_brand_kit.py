@@ -269,6 +269,9 @@ check(code == 0 and "--lang" in out, "confirm warns that a CJK face without --la
 # ── save / list / use ─────────────────────────────────────────────────────────────────────────
 code, out = run("save", TW / "brand.json", "--name", "tidewater")
 check(code == 0, "save exits 0:\n" + out)
+# save writes into the shared template registry; an agent testing on someone else's machine must be
+# told how to point it elsewhere, in the output itself.
+check("SLIDE_MAKER_REGISTRY" in out, "save names the registry override it wrote under:\n" + out)
 code, out = run("list")
 check(code == 0 and "tidewater" in out, "list shows the saved kit:\n" + out)
 check((TMP / "registry" / "brands" / "tidewater" / "brand.json").is_file(),
@@ -287,6 +290,10 @@ check(code != 0, "save refuses a kit name that is a path:\n" + out)
 
 # ── style ─────────────────────────────────────────────────────────────────────────────────────
 code, out = run("style", TW / "brand.json")
+# A non-Claude run imported deckkit before brand_style and hit ModuleNotFoundError: brand_style is what
+# puts scripts/ on sys.path, so the printed recipe must say to import it FIRST.
+check("before" in out and "import brand_style" in out and "deckkit" in out,
+      "style says to import brand_style before deckkit:\n" + out)
 check(code == 0 and (TW / "brand_style.py").is_file(), "style writes brand_style.py:\n" + out)
 src = (TW / "brand_style.py").read_text(encoding="utf-8") if (TW / "brand_style.py").exists() else ""
 for k in ("BRAND", "INK", "ACCENT", "GREY", "MUTE", "LINE", "WHITE", "FONT", "def apply"):

@@ -1196,6 +1196,8 @@ def cmd_style(a):
             a.ground, ", ".join("{}: {}".format(lg["file"], lg["ground"]) for lg in b["logos"])))
     print("  In the build script, beside the deck:  import brand_style as bs;  B = bs.apply()  "
           "— then draw with bs.INK / bs.ACCENT / bs.ACCENTS / bs.GREY / bs.MUTE and place B['logo'].")
+    print("  Put `import brand_style` before `import deckkit`: brand_style is what puts the skill's "
+          "scripts/ on sys.path, so deckkit imported first fails with ModuleNotFoundError.")
     print("NEXT: build the deck, then  {} check <deck.pptx> --brand {}".format(
         _SELF, shlex.quote(str(a.brand))))
     return 0
@@ -1677,6 +1679,8 @@ def cmd_save(a):
     b["confirmed"]["digest"] = digest(b)
     save_brand(dest / "brand.json", b)
     print("brand kit saved: {}".format(dest / "brand.json"))
+    print("  (registry root {} — set ${} to a folder to save somewhere else, e.g. on a machine "
+          "that is not yours or in a test)".format(root, reg.ENV_OVERRIDE))
     print("NEXT: for the next deck of this brand —  {} use {} <deck-dir>".format(_SELF, a.name))
     return 0
 

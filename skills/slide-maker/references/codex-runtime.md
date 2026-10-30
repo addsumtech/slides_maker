@@ -372,7 +372,7 @@ python3 scripts/brand_kit.py confirm <deck-dir>/brand.json --primary "#0B5FFF" -
 python3 scripts/brand_kit.py style <deck-dir>/brand.json            # writes <deck-dir>/brand_style.py
 #   build script: import brand_style as bs; B = bs.apply(); draw with bs.INK/bs.ACCENT/…; place B['logo']
 python3 scripts/brand_kit.py check <deck>.pptx --brand <deck-dir>/brand.json
-python3 scripts/brand_kit.py save <deck-dir>/brand.json --name <name>   # at hand-off, for the next deck
+python3 scripts/brand_kit.py save <deck-dir>/brand.json --name <name>   # at hand-off, for the next deck ($SLIDE_MAKER_REGISTRY=<dir> saves elsewhere)
 ```
 
 `confirm` refuses to run without `--primary`, checks every face is installed (an absent one gets a
