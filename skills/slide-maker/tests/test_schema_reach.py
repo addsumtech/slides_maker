@@ -252,6 +252,20 @@ ck(all(k in SH["design_plan"] for k in ("visual_language", "vl_ground")) and all
 ck(cvl.recorded_language(SH) is None and cvl.recorded_language(CX) is None,
    "an unfilled scaffold records no language on either runtime — the gate says NOT CHECKED")
 
+print("\n— BRAND: a confirmed brand kit's section must be readable from both records")
+import brand_kit as bkit                                                  # noqa: E402
+
+_bsec = {"file": "brand.json"}
+sh_b = json.loads(json.dumps(SH)); sh_b["brand"] = _bsec
+cx_b = json.loads(json.dumps(CX)); cx_b["brand"] = _bsec
+for rec, label in ((sh_b, "shared .deck-gates.json"), (cx_b, "Codex evidence")):
+    got = bkit.recorded_brand(rec)
+    ck(got == _bsec, "%s -> the brand section reads back (got %r)" % (label, got))
+ck("brand" in SH and "brand" in CX,
+   "both scaffolds WRITE the `brand` key, so an agent can see the section exists")
+ck(bkit.recorded_brand(SH) is None and bkit.recorded_brand(CX) is None,
+   "an unfilled scaffold records no brand on either runtime — no brand gate, not a passing one")
+
 print("\n— the loop is closed: every record-FED gate section is covered here")
 import re                                                                 # noqa: E402
 import check_gate_parity as gp                                            # noqa: E402

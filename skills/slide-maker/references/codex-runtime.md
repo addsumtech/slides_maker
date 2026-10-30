@@ -355,6 +355,37 @@ correlation) · `designed_charts.roc_curve` (square + chance diagonal + AUC). A 
 a slide); the four chart recipes write a PNG, so `component_audit` cannot see them and the ROUTING is
 their only backstop — which is why they are named here.
 
+**Brand kit — when the user's answer to the template question is "our brand"** (a company / lab /
+product deck, and they hand over a logo, a brand-guide PDF, an old on-brand .pptx/.potx, or just hex
+codes and font names). Never guess a brand palette from the company's name: no file and no hex means
+ASK. Download nothing with the script — fetch files with your own tools first and pass local paths.
+Run these in order; each prints the exact `NEXT:` command, so follow those lines:
+
+```bash
+python3 scripts/brand_kit.py list                                   # a saved kit? then: use <name> <deck-dir>
+python3 scripts/brand_kit.py extract logo.svg guide.pdf old.pptx --hex "#0B5FFF" --font "heading=Inter" \
+        --out <deck-dir>/brand.json                                 # writes a DRAFT
+python3 scripts/brand_kit.py review <deck-dir>/brand.json           # paste its table to the user
+#   auto mode: review --auto prints an interview.picks row (axis template) — record it verbatim
+python3 scripts/brand_kit.py confirm <deck-dir>/brand.json --primary "#0B5FFF" --accent "#FF7A00" \
+        --neutral "#0B2545" --neutral "#F2F5F9" [--heading-font … --body-font … --cjk-font … --lang zh-Hans]
+python3 scripts/brand_kit.py style <deck-dir>/brand.json            # writes <deck-dir>/brand_style.py
+#   build script: import brand_style as bs; B = bs.apply(); draw with bs.INK/bs.ACCENT/…; place B['logo']
+python3 scripts/brand_kit.py check <deck>.pptx --brand <deck-dir>/brand.json
+python3 scripts/brand_kit.py save <deck-dir>/brand.json --name <name>   # at hand-off, for the next deck
+```
+
+`confirm` refuses to run without `--primary`, checks every face is installed (an absent one gets a
+named installed FALLBACK, marked), checks a CJK face has the deck's glyphs (`--lang`), and records the
+text/ground contrast pairs; `style` and `check` refuse a DRAFT or a kit edited after `confirm`. Record
+`"brand": {"file": "brand.json"}` at the TOP LEVEL of `.codex-deck-evidence.json` (the `--init`
+scaffold shows the key): `codex_delivery_gate.py` then fails on `COLOUR OFF BRAND` · `FONT OFF BRAND` ·
+`LOGO MISSING` · `LOGO GROUND` · `NO CJK FACE`, each naming slide and shape. Tints and shades of brand
+colours, achromatic greys and pictures pass by construction; a co-branded deck records
+`"entity": "multi"` in that object (no logo rule). Waive with `{"brand": {"waived": "<which slides,
+whose palette, who approved>", "waived_category": "co-branded | user-approved-deviation |
+third-party-material"}}`. No `brand` key means no brand gate.
+
 **Two gates the TEMPLATE branch adds, both shared with `render_deck.py --gate-check`** (they run on
 every deck, and they are the two that most often fire on a Codex run because they need no recorded
 interview answer at all — each reads the built file itself):

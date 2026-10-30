@@ -52,6 +52,7 @@ _RENDER = "python3 " + shlex.quote(str(Path(__file__).resolve().parent / "render
 # the drift `anchor_proof.py` was created to stop.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import audience_brief as ab  # noqa: E402
+import brand_kit as bkit  # noqa: E402
 import blind_read as brd  # noqa: E402
 import composition_probe as cpx  # noqa: E402
 import delegated_picks as dpk  # noqa: E402
@@ -111,6 +112,10 @@ def template(slides=None, delivery="presented"):
                     "value": "<registered name | none>"},
                    "<one row per axis: " + " · ".join(dpk.AXES) + ">"]),
         "delivery": delivery,
+        # A deck built from a CONFIRMED brand kit (`brand_kit.py confirm`): {"file": "brand.json"};
+        # --gate-check then holds the built deck to its colours, faces and logo rule. null = no
+        # brand kit, no brand gate. A waiver: {"waived": …, "waived_category": …} (brand_kit.py).
+        "brand": None,
         "content": {
             "slides": [{"slide": i + 1, "role": "<cover|hook|evidence|framework|…>",
                         "takeaway": "<the sentence a reader should leave with>",
@@ -411,6 +416,10 @@ def check(gates):
     if dpk.is_auto(gates):
         for f in dpk.faults(gates.get("interview"), auto=True):
             problems.append("`interview.picks` " + f)
+
+    # A recorded brand kit: the section's SHAPE here; brand_kit.gate checks the deck at --gate-check.
+    if bkit.recorded_brand(gates) is not None:
+        problems.extend(bkit.section_faults(bkit.recorded_brand(gates)))
 
     # What this user has already corrected by hand, on earlier decks. An empty ledger asks nothing.
     for f in tl.faults(tl.design_of(gates), tl.load()):

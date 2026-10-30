@@ -60,7 +60,7 @@ CONTRACTS = ("anchor_proof", "material_probe", "audience_brief", "blind_read", "
 # names, which no regex reads.
 RECORD_FED = ("purpose", "surface", "content.audience_brief", "checkpoints", "design_plan",
                "talk_time", "qa_backup", "citations", "image_series",
-               "visual_language")
+               "visual_language", "brand")
 
 REACH_SUITE = "tests/test_schema_reach.py"
 
