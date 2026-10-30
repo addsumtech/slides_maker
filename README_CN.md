@@ -14,7 +14,7 @@
 
 <p align="center">
   <a href="https://clawhub.ai/dong845/skills/slide-maker"><img alt="ClawHub" src="docs/badges/clawhub_cn.svg"></a>
-  <!-- vl:vl-badge-zh --><a href="https://slides.addsum.top/cn/#languages"><img alt="视觉语言模版库: 30" src="https://img.shields.io/badge/%E8%A7%86%E8%A7%89%E8%AF%AD%E8%A8%80%E6%A8%A1%E7%89%88%E5%BA%93-30-c2410c"></a><!-- /vl -->
+  <!-- vl:vl-badge-zh --><a href="https://slides.addsum.top/cn/#languages"><img alt="模板库: 30" src="https://img.shields.io/badge/%E6%A8%A1%E6%9D%BF%E5%BA%93-30-c2410c"></a><!-- /vl -->
 </p>
 
 <p align="center"><sub><a href="https://addsum.top/cn/"><strong>增和科技 Addsum</strong></a> 出品 · 免费开源</sub></p>
@@ -35,7 +35,6 @@
 <p align="center">
   <a href="https://slides.addsum.top/cn/"><strong>视频介绍</strong></a> ·
   <a href="#模板库"><strong>模板库</strong></a> ·
-  <a href="#设计语言"><strong>设计语言</strong></a> ·
   <a href="#slide-maker-不一样在哪"><strong>不一样在哪</strong></a> ·
   <a href="#它是怎么干活的"><strong>工作流程</strong></a> ·
   <a href="#快速开始"><strong>快速开始</strong></a> ·
@@ -45,192 +44,192 @@
 
 ## 模板库
 
-十二个方向，中英各一套。每套都是带真实内容的完整示例 deck，不是空占位。
+<!-- vl:count-all-zh -->三十<!-- /vl -->套可直接点名使用的 PPT 模板，每套都有自己的字体、配色和页面版式。每套提供两种配色，以及封面、章节、图文、要点、引语、数据、结尾七类页面，按你的材料重新排版。
 
-<table>
-  <tr>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/quarterly-review"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_quarterly-review.png" alt="季度复盘 / 经营汇报模板预览"></a><br/>
-      <sub><strong>季度复盘 / 经营汇报</strong><br/>季度复盘、经营汇报、数据看板、管理层沟通<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/quarterly-review">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/quarterly-review/template.pptx">下载 .pptx</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/chengdu"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_chengdu.png" alt="视觉叙事 / 文化介绍模板预览"></a><br/>
-      <sub><strong>视觉叙事 / 文化介绍</strong><br/>城市、文化、活动、品牌故事<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/chengdu">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/chengdu/template.pptx">下载 .pptx</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/transformer-talk"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_transformer-talk.png" alt="组会 / 论文汇报模板预览"></a><br/>
-      <sub><strong>组会 / 论文汇报</strong><br/>论文精读、组会、方法综述、实验结果汇报<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/transformer-talk">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/transformer-talk/template.pptx">下载 .pptx</a></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/product-launch"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_product-launch.png" alt="新品发布 / 产品上线模板预览"></a><br/>
-      <sub><strong>新品发布 / 产品上线</strong><br/>发布会、新品介绍、产品上线沟通<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/product-launch">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/product-launch/template.pptx">下载 .pptx</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/biology-lesson"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_biology-lesson.png" alt="课堂教学 / 课件模板预览"></a><br/>
-      <sub><strong>课堂教学 / 课件</strong><br/>中小学课件、课堂讲解、随堂练习、黑板报风格<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/biology-lesson">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/biology-lesson/template.pptx">下载 .pptx</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/pour-over-coffee"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_pour-over-coffee.png" alt="小红书图文 / 3:4 竖版模板预览"></a><br/>
-      <sub><strong>小红书图文 / 3:4 竖版</strong><br/>竖版轮播、教程笔记、参数清单<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/pour-over-coffee">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/pour-over-coffee/template.pptx">下载 .pptx</a></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/startup-pitch"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_startup-pitch.png" alt="融资路演 / BP 模板预览"></a><br/>
-      <sub><strong>融资路演 / BP</strong><br/>种子轮路演、投资人沟通、创业 BP<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/startup-pitch">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/startup-pitch/template.pptx">下载 .pptx</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/michael-jackson-king-of-pop"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_michael-jackson-king-of-pop.png" alt="人物 / 品牌故事模板预览"></a><br/>
-      <sub><strong>人物 / 品牌故事</strong><br/>名人传记、品牌档案、文化回顾<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/michael-jackson-king-of-pop">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/michael-jackson-king-of-pop/template.pptx">下载 .pptx</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/ev-market-report"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_ev-market-report.png" alt="行业报告 / 定期简报模板预览"></a><br/>
-      <sub><strong>行业报告 / 定期简报</strong><br/>行业报告、定期简报、数据解读、世界地图<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/ev-market-report">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/ev-market-report/template.pptx">下载 .pptx</a></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/corporate-training"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_corporate-training.png" alt="企业内训 / 工作坊模板预览"></a><br/>
-      <sub><strong>企业内训 / 工作坊</strong><br/>内训课件、工作坊、技能培训、练习引导<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/corporate-training">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/corporate-training/template.pptx">下载 .pptx</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/thesis-defense"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_thesis-defense.png" alt="毕业答辩 / 学术汇报模板预览"></a><br/>
-      <sub><strong>毕业答辩 / 学术汇报</strong><br/>毕业答辩、开题报告、学术或工程汇报<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/thesis-defense">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/thesis-defense/template.pptx">下载 .pptx</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/kids-ai-explainer"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_kids-ai-explainer.png" alt="课程 / 知识分享模板预览"></a><br/>
-      <sub><strong>课程 / 知识分享</strong><br/>课程讲解、读书分享、培训材料<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=zh/kids-ai-explainer">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/kids-ai-explainer/template.pptx">下载 .pptx</a></sub>
-    </td>
-  </tr>
-</table>
-
-<p align="center"><sub>英文版在 <a href="https://github.com/addsumtech/slides_maker-site/tree/main/templates/decks/en">templates/decks/en/</a>，预览见 <a href="README.md">English README</a>。</sub></p>
-
-## 设计语言
-
-除了模板库，slide-maker 还内置<!-- vl:count-all-zh -->三十<!-- /vl -->套完整的**设计语言**：每套有自己的字体、质感和页面版式。其中<!-- vl:count-image-zh -->四<!-- /vl -->套排你的照片或插画，另外<!-- vl:count-drawn-zh -->二十六<!-- /vl -->套全部用可编辑的原生形状画成，不需要图片。它会按主题推荐合适的几套，你也可以直接点名（“用水墨风格”）。
+其中<!-- vl:count-image-zh -->四<!-- /vl -->套适合搭配照片或插画，<!-- vl:count-drawn-zh -->二十六<!-- /vl -->套用可编辑的原生形状绘制，没有配图也能做。点击样张查看完整页面，选好后直接告诉 slide-maker 模板名称。
 
 <!-- vl:vl-gallery-zh -->
 <table>
   <tr>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/cn/#vl-editorial"><img src="skills/slide-maker/assets/vl/samples/editorial.jpg" alt="editorial 设计语言示例页"></a><br/>
-      <sub><strong>杂志（editorial）</strong><br/>配你的照片<br/>
-      <a href="https://slides.addsum.top/cn/#vl-editorial">在模版库查看全部页面</a></sub>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/cn/#vl-editorial"><img src="skills/slide-maker/assets/vl/samples/editorial.jpg" alt="editorial 模板示例页"></a><br/>
+      <sub><strong>杂志</strong><br/>配你的照片<br/>
+      <a href="https://slides.addsum.top/cn/#vl-editorial">查看全部页面</a></sub>
     </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/cn/#vl-poster"><img src="skills/slide-maker/assets/vl/samples/poster.jpg" alt="poster 设计语言示例页"></a><br/>
-      <sub><strong>海报大字（poster）</strong><br/>发布会、宣言、观点<br/>
-      <a href="https://slides.addsum.top/cn/#vl-poster">在模版库查看全部页面</a></sub>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/cn/#vl-soft"><img src="skills/slide-maker/assets/vl/samples/soft.jpg" alt="soft 模板示例页"></a><br/>
+      <sub><strong>柔和</strong><br/>配你的照片<br/>
+      <a href="https://slides.addsum.top/cn/#vl-soft">查看全部页面</a></sub>
     </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/cn/#vl-ink"><img src="skills/slide-maker/assets/vl/samples/ink.jpg" alt="ink 设计语言示例页"></a><br/>
-      <sub><strong>水墨（ink）</strong><br/>文化、历史、器物<br/>
-      <a href="https://slides.addsum.top/cn/#vl-ink">在模版库查看全部页面</a></sub>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/cn/#vl-collage"><img src="skills/slide-maker/assets/vl/samples/collage.jpg" alt="collage 模板示例页"></a><br/>
+      <sub><strong>拼贴</strong><br/>配你的照片<br/>
+      <a href="https://slides.addsum.top/cn/#vl-collage">查看全部页面</a></sub>
     </td>
-  </tr>
-  <tr>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/cn/#vl-comic"><img src="skills/slide-maker/assets/vl/samples/comic.jpg" alt="comic 设计语言示例页"></a><br/>
-      <sub><strong>漫画分镜（comic）</strong><br/>讲故事、用户旅程、科普讲解<br/>
-      <a href="https://slides.addsum.top/cn/#vl-comic">在模版库查看全部页面</a></sub>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/cn/#vl-storybook"><img src="skills/slide-maker/assets/vl/samples/storybook.jpg" alt="storybook 模板示例页"></a><br/>
+      <sub><strong>绘本</strong><br/>配一组插画<br/>
+      <a href="https://slides.addsum.top/cn/#vl-storybook">查看全部页面</a></sub>
     </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/cn/#vl-vinyl"><img src="skills/slide-maker/assets/vl/samples/vinyl.jpg" alt="vinyl 设计语言示例页"></a><br/>
-      <sub><strong>黑胶唱片（vinyl）</strong><br/>音乐、播客、文化活动<br/>
-      <a href="https://slides.addsum.top/cn/#vl-vinyl">在模版库查看全部页面</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/cn/#vl-stainedglass"><img src="skills/slide-maker/assets/vl/samples/stainedglass.jpg" alt="stainedglass 设计语言示例页"></a><br/>
-      <sub><strong>彩绘玻璃（stainedglass）</strong><br/>文化遗产、文化活动、庆典<br/>
-      <a href="https://slides.addsum.top/cn/#vl-stainedglass">在模版库查看全部页面</a></sub>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/cn/#vl-ink"><img src="skills/slide-maker/assets/vl/samples/ink.jpg" alt="ink 模板示例页"></a><br/>
+      <sub><strong>水墨</strong><br/>文化、历史、器物<br/>
+      <a href="https://slides.addsum.top/cn/#vl-ink">查看全部页面</a></sub>
     </td>
   </tr>
   <tr>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/cn/#vl-wayfinding"><img src="skills/slide-maker/assets/vl/samples/wayfinding.jpg" alt="wayfinding 设计语言示例页"></a><br/>
-      <sub><strong>导视线路（wayfinding）</strong><br/>路线图、流程、新人上手<br/>
-      <a href="https://slides.addsum.top/cn/#vl-wayfinding">在模版库查看全部页面</a></sub>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/cn/#vl-poster"><img src="skills/slide-maker/assets/vl/samples/poster.jpg" alt="poster 模板示例页"></a><br/>
+      <sub><strong>海报大字</strong><br/>发布会、宣言、观点<br/>
+      <a href="https://slides.addsum.top/cn/#vl-poster">查看全部页面</a></sub>
     </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/cn/#vl-chalkboard"><img src="skills/slide-maker/assets/vl/samples/chalkboard.jpg" alt="chalkboard 设计语言示例页"></a><br/>
-      <sub><strong>黑板报（chalkboard）</strong><br/>课程、课堂、培训<br/>
-      <a href="https://slides.addsum.top/cn/#vl-chalkboard">在模版库查看全部页面</a></sub>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/cn/#vl-cutpaper"><img src="skills/slide-maker/assets/vl/samples/cutpaper.jpg" alt="cutpaper 模板示例页"></a><br/>
+      <sub><strong>剪纸层叠</strong><br/>儿童、讲故事、社区<br/>
+      <a href="https://slides.addsum.top/cn/#vl-cutpaper">查看全部页面</a></sub>
     </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/cn/#vl-recipe"><img src="skills/slide-maker/assets/vl/samples/recipe.jpg" alt="recipe 设计语言示例页"></a><br/>
-      <sub><strong>食谱卡（recipe）</strong><br/>美食、烹饪、食谱<br/>
-      <a href="https://slides.addsum.top/cn/#vl-recipe">在模版库查看全部页面</a></sub>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/cn/#vl-drafting"><img src="skills/slide-maker/assets/vl/samples/drafting.jpg" alt="drafting 模板示例页"></a><br/>
+      <sub><strong>蓝图技术线稿</strong><br/>工程、建筑、系统设计<br/>
+      <a href="https://slides.addsum.top/cn/#vl-drafting">查看全部页面</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/cn/#vl-starlit"><img src="skills/slide-maker/assets/vl/samples/starlit.jpg" alt="starlit 模板示例页"></a><br/>
+      <sub><strong>星夜</strong><br/>年度回顾、书信、致谢<br/>
+      <a href="https://slides.addsum.top/cn/#vl-starlit">查看全部页面</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/cn/#vl-broadsheet"><img src="skills/slide-maker/assets/vl/samples/broadsheet.jpg" alt="broadsheet 模板示例页"></a><br/>
+      <sub><strong>报纸头版</strong><br/>通讯、定期报告、社区动态<br/>
+      <a href="https://slides.addsum.top/cn/#vl-broadsheet">查看全部页面</a></sub>
     </td>
   </tr>
   <tr>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/cn/#vl-circuit"><img src="skills/slide-maker/assets/vl/samples/circuit.jpg" alt="circuit 设计语言示例页"></a><br/>
-      <sub><strong>电路板（circuit）</strong><br/>硬件、物联网、嵌入式<br/>
-      <a href="https://slides.addsum.top/cn/#vl-circuit">在模版库查看全部页面</a></sub>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/cn/#vl-journal"><img src="skills/slide-maker/assets/vl/samples/journal.jpg" alt="journal 模板示例页"></a><br/>
+      <sub><strong>学术期刊</strong><br/>学术报告、组会、论文<br/>
+      <a href="https://slides.addsum.top/cn/#vl-journal">查看全部页面</a></sub>
     </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/cn/#vl-storybook"><img src="skills/slide-maker/assets/vl/samples/storybook.jpg" alt="storybook 设计语言示例页"></a><br/>
-      <sub><strong>绘本（storybook）</strong><br/>配一组插画<br/>
-      <a href="https://slides.addsum.top/cn/#vl-storybook">在模版库查看全部页面</a></sub>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/cn/#vl-tally"><img src="skills/slide-maker/assets/vl/samples/tally.jpg" alt="tally 模板示例页"></a><br/>
+      <sub><strong>数据账本</strong><br/>指标、季度复盘、运营<br/>
+      <a href="https://slides.addsum.top/cn/#vl-tally">查看全部页面</a></sub>
     </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/cn/#vl-scoreboard"><img src="skills/slide-maker/assets/vl/samples/scoreboard.jpg" alt="scoreboard 设计语言示例页"></a><br/>
-      <sub><strong>体育记分牌（scoreboard）</strong><br/>体育、比赛、团队战绩<br/>
-      <a href="https://slides.addsum.top/cn/#vl-scoreboard">在模版库查看全部页面</a></sub>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/cn/#vl-chalkboard"><img src="skills/slide-maker/assets/vl/samples/chalkboard.jpg" alt="chalkboard 模板示例页"></a><br/>
+      <sub><strong>黑板报</strong><br/>课程、课堂、培训<br/>
+      <a href="https://slides.addsum.top/cn/#vl-chalkboard">查看全部页面</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/cn/#vl-interface"><img src="skills/slide-maker/assets/vl/samples/interface.jpg" alt="interface 模板示例页"></a><br/>
+      <sub><strong>产品界面</strong><br/>产品发布、应用、SaaS<br/>
+      <a href="https://slides.addsum.top/cn/#vl-interface">查看全部页面</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/cn/#vl-wayfinding"><img src="skills/slide-maker/assets/vl/samples/wayfinding.jpg" alt="wayfinding 模板示例页"></a><br/>
+      <sub><strong>导视线路</strong><br/>路线图、流程、新人上手<br/>
+      <a href="https://slides.addsum.top/cn/#vl-wayfinding">查看全部页面</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/cn/#vl-herbarium"><img src="skills/slide-maker/assets/vl/samples/herbarium.jpg" alt="herbarium 模板示例页"></a><br/>
+      <sub><strong>标本图鉴</strong><br/>自然、生态、可持续<br/>
+      <a href="https://slides.addsum.top/cn/#vl-herbarium">查看全部页面</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/cn/#vl-airmail"><img src="skills/slide-maker/assets/vl/samples/airmail.jpg" alt="airmail 模板示例页"></a><br/>
+      <sub><strong>航空邮件</strong><br/>旅行、国际化、跨境<br/>
+      <a href="https://slides.addsum.top/cn/#vl-airmail">查看全部页面</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/cn/#vl-vinyl"><img src="skills/slide-maker/assets/vl/samples/vinyl.jpg" alt="vinyl 模板示例页"></a><br/>
+      <sub><strong>黑胶唱片</strong><br/>音乐、播客、文化活动<br/>
+      <a href="https://slides.addsum.top/cn/#vl-vinyl">查看全部页面</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/cn/#vl-receipt"><img src="skills/slide-maker/assets/vl/samples/receipt.jpg" alt="receipt 模板示例页"></a><br/>
+      <sub><strong>购物小票</strong><br/>定价、预算、成本拆解<br/>
+      <a href="https://slides.addsum.top/cn/#vl-receipt">查看全部页面</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/cn/#vl-comic"><img src="skills/slide-maker/assets/vl/samples/comic.jpg" alt="comic 模板示例页"></a><br/>
+      <sub><strong>漫画分镜</strong><br/>讲故事、用户旅程、科普讲解<br/>
+      <a href="https://slides.addsum.top/cn/#vl-comic">查看全部页面</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/cn/#vl-pixel"><img src="skills/slide-maker/assets/vl/samples/pixel.jpg" alt="pixel 模板示例页"></a><br/>
+      <sub><strong>像素游戏</strong><br/>游戏、游戏化、黑客松<br/>
+      <a href="https://slides.addsum.top/cn/#vl-pixel">查看全部页面</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/cn/#vl-bricks"><img src="skills/slide-maker/assets/vl/samples/bricks.jpg" alt="bricks 模板示例页"></a><br/>
+      <sub><strong>积木</strong><br/>儿童教育、模块化产品、系统架构<br/>
+      <a href="https://slides.addsum.top/cn/#vl-bricks">查看全部页面</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/cn/#vl-boardgame"><img src="skills/slide-maker/assets/vl/samples/boardgame.jpg" alt="boardgame 模板示例页"></a><br/>
+      <sub><strong>棋盘游戏</strong><br/>流程、入职引导、策略<br/>
+      <a href="https://slides.addsum.top/cn/#vl-boardgame">查看全部页面</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/cn/#vl-circuit"><img src="skills/slide-maker/assets/vl/samples/circuit.jpg" alt="circuit 模板示例页"></a><br/>
+      <sub><strong>电路板</strong><br/>硬件、物联网、嵌入式<br/>
+      <a href="https://slides.addsum.top/cn/#vl-circuit">查看全部页面</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/cn/#vl-topo"><img src="skills/slide-maker/assets/vl/samples/topo.jpg" alt="topo 模板示例页"></a><br/>
+      <sub><strong>等高线地形图</strong><br/>地理、户外、气候<br/>
+      <a href="https://slides.addsum.top/cn/#vl-topo">查看全部页面</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/cn/#vl-scoreboard"><img src="skills/slide-maker/assets/vl/samples/scoreboard.jpg" alt="scoreboard 模板示例页"></a><br/>
+      <sub><strong>体育记分牌</strong><br/>体育、比赛、团队战绩<br/>
+      <a href="https://slides.addsum.top/cn/#vl-scoreboard">查看全部页面</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/cn/#vl-periodic"><img src="skills/slide-maker/assets/vl/samples/periodic.jpg" alt="periodic 模板示例页"></a><br/>
+      <sub><strong>元素周期表</strong><br/>科学教育、化学、主题的基本构成<br/>
+      <a href="https://slides.addsum.top/cn/#vl-periodic">查看全部页面</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/cn/#vl-recipe"><img src="skills/slide-maker/assets/vl/samples/recipe.jpg" alt="recipe 模板示例页"></a><br/>
+      <sub><strong>食谱卡</strong><br/>美食、烹饪、食谱<br/>
+      <a href="https://slides.addsum.top/cn/#vl-recipe">查看全部页面</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/cn/#vl-stainedglass"><img src="skills/slide-maker/assets/vl/samples/stainedglass.jpg" alt="stainedglass 模板示例页"></a><br/>
+      <sub><strong>彩绘玻璃</strong><br/>文化遗产、文化活动、庆典<br/>
+      <a href="https://slides.addsum.top/cn/#vl-stainedglass">查看全部页面</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/cn/#vl-calendar"><img src="skills/slide-maker/assets/vl/samples/calendar.jpg" alt="calendar 模板示例页"></a><br/>
+      <sub><strong>撕页日历</strong><br/>时间线、活动、纪念日<br/>
+      <a href="https://slides.addsum.top/cn/#vl-calendar">查看全部页面</a></sub>
     </td>
   </tr>
 </table>
 <!-- /vl -->
 
-<p align="center"><a href="https://slides.addsum.top/cn/#languages"><strong>浏览全部<!-- vl:count-all-zh -->三十<!-- /vl -->套视觉语言 →</strong></a><br/><sub><!-- vl:gallery-more-zh -->上面只展示了其中十二套，另外十八套只在模版库里。<!-- /vl --></sub></p>
+<p align="center"><a href="https://slides.addsum.top/cn/#languages"><strong>在线翻看全部<!-- vl:count-all-zh -->三十<!-- /vl -->套模板的配色与页面 →</strong></a></p>
 
 ---
 
 ## 模板怎么用
 
-模板库在独立仓库 [slides_maker-site](https://github.com/addsumtech/slides_maker-site) 的 `templates/decks/` 下，中文在 `zh/`，英文在 `en/`。先克隆一份到本地：
-
-```bash
-git clone --depth 1 https://github.com/addsumtech/slides_maker-site.git
-```
-
-两种用法：
-
-**用法一：直接指路（最简单）。** 把模板路径写进需求：
+先点开喜欢的模板看样张，再把材料、观众和页数一起交给 slide-maker。例如：
 
 ```text
-用 slide-maker，参考 slides_maker-site/templates/decks/zh/ev-market-report/template.pptx 的风格，
-按我的 data.md 做一份行业报告。
+用 slide-maker，选择标本图鉴（herbarium）模板，用浅色配色。
+根据我的 notes.md，做一份给初中生讲解的 8 页生物课件。
 ```
 
-它会解析这份模板的版式和视觉系统，套用到你的内容上。
+没有偏好的模板，说明主题和观众，它会推荐合适的几套。已有学校或公司的 PPTX 模板，也可以直接提供，让它参考字体、配色和版式。
 
-**用法二：注册成常驻模板。** 把常用的模板复制到本机模板注册表，之后每次做 PPT 它都会自动列为可选项：
-
-```bash
-# Claude Code 用户
-cp -r slides_maker-site/templates/decks/zh/ev-market-report ~/.claude/slide-templates/ev-market-report
-
-# Codex 用户
-cp -r slides_maker-site/templates/decks/zh/ev-market-report ~/.codex/slide-templates/ev-market-report
-```
-
-两套的版式一致，文案语言不同。
 
 ---
 
@@ -334,7 +333,7 @@ python3 skills/slide-maker/scripts/install_skill.py --target both
 npx skills add addsumtech/slides_maker
 ```
 
-它会先问你装到哪个 agent、哪个范围。技能在仓库的 `skills/slide-maker/` 下，模板库和演示站放在独立仓库 [slides_maker-site](https://github.com/addsumtech/slides_maker-site)，主仓库没有大文件，所以装起来又小又快。加 `-g` 装到全局（所有项目），加 `-a claude-code`（或 `-a codex`）跳过 agent 选择，加 `-y` 全程免确认。上面那几个运行依赖照样要装：LibreOffice、一个 SVG 栅格化器，以及 `python3 -m pip install -r skills/slide-maker/requirements.txt`。
+它会先问你装到哪个 agent、哪个范围。技能和内置模板在仓库的 `skills/slide-maker/` 下，在线预览与成品示例放在独立仓库 [slides_maker-site](https://github.com/addsumtech/slides_maker-site)。加 `-g` 装到全局（所有项目），加 `-a claude-code`（或 `-a codex`）跳过 agent 选择，加 `-y` 全程免确认。上面那几个运行依赖照样要装：LibreOffice、一个 SVG 栅格化器，以及 `python3 -m pip install -r skills/slide-maker/requirements.txt`。
 
 **用 Claude Code 的话，也可以把它当插件装**，之后用普通插件命令就能更新：
 

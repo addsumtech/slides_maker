@@ -402,55 +402,37 @@ check(vc.SERIES_MIN == 4, "the series floor is four designed colours per ground"
 check(all(len(G["roles"]["series"]) >= 4 for s_ in vl_specs.load().values() for G in s_["grounds"].values()),
       "every ground carries at least four series colours")
 
-# the README gallery is a fixed showcase: a language without a cell lives on the library page, and the README
-# names how many more there are. Since 2026-10-23 it is twelve looks the user asked for, generated from SHOWCASE, three
-# to a row like the template gallery, each cell opening its language in the library section of the home page
+# The template library shows every registered style, five per row, and grows with the registry (2026-10-30).
 import vl_docs as _vd
 _reg = vl_specs.load()
 _g = _vd.gallery(_reg)
-check(len(_vd.SHOWCASE) == 12 == len(set(_vd.SHOWCASE)) and set(_vd.SHOWCASE) <= set(_reg),
-      "SHOWCASE names twelve distinct registered languages: {}".format(_vd.SHOWCASE))
-check(_g == set(_vd.SHOWCASE) and len(_g) < len(_reg),
-      "the README gallery shows exactly the showcase, not every language ({})".format(sorted(_g or [])))
+check(_g == set(_reg), "the README template library shows every registered style ({})".format(sorted(_g or [])))
 for _blk, _site in (("vl-gallery", "https://slides.addsum.top/#vl-"), ("vl-gallery-zh", "https://slides.addsum.top/cn/#vl-")):
     _t = _vd._render(_blk, _reg)
     _cells = re.findall(r"<td[^>]*>(.*?)</td>", _t, re.S)
-    check(len(_cells) == 12 and _t.count("<tr>") == 4,
-          "{} lays twelve cells out three to a row ({} cells, {} rows)".format(_blk, len(_cells), _t.count("<tr>")))
+    check(len(_cells) == len(_reg) and _t.count("<tr>") == (len(_reg) + 4) // 5 and
+          all(len(re.findall(r"<td\b", row)) == 5 for row in re.findall(r"<tr>(.*?)</tr>", _t, re.S)[:-1]),
+          "{} lays every style out five to a row ({} cells, {} rows)".format(_blk, len(_cells), _t.count("<tr>")))
     check(all(c.count('href="{}{}"'.format(_site, n)) == 2 and "samples/{}.jpg".format(n) in c
-              for n, c in zip(_vd.SHOWCASE, _cells)),
+              for n, c in zip(_reg, _cells)),
           "{}: every cell shows its sample and links its picture and its line to {}<name>".format(_blk, _site))
     check(all(re.search(r"<strong>[^<]+</strong>", c) for c in _cells), "{}: every cell names its look".format(_blk))
 check("配你的照片" in _vd._render("vl-gallery-zh", _reg) and "with your photos" in _vd._render("vl-gallery", _reg),
       "a picture language says what it carries instead of topic tags")
-_bad_show = _vd.SHOWCASE
-try:
-    _vd.SHOWCASE = _bad_show[:11] + ("nosuchlook",)
-    _err = None
-    try:
-        _vd._render("vl-gallery", _reg)
-    except ValueError as e:
-        _err = str(e)
-    check(_err is not None and "nosuchlook" in _err, "a showcase name with no language fails loudly: {!r}".format(_err))
-finally:
-    _vd.SHOWCASE = _bad_show
-# the section sits directly under the template gallery (the user, 2026-10-23), in both READMEs
-for _f, _a, _b, _c in (("README.md", "## Template gallery", "## Visual languages", "## How to use the templates"),
-                       ("README_CN.md", "## 模板库", "## 设计语言", "## 模板怎么用")):
+_expanded = dict(_reg, future_style=dict(_reg["calendar"], name="future_style"))
+for _blk in ("vl-gallery", "vl-gallery-zh"):
+    _future = _vd._render(_blk, _expanded)
+    check("samples/future_style.jpg" in _future and _future.count("<td ") == len(_expanded),
+          "{} automatically includes a newly registered style without editing a showcase".format(_blk))
+# One template library replaces the old example-deck gallery and visual-language section in both READMEs.
+for _f, _a, _b, _old in (("README.md", "## Template library", "## How to use the templates", "## Visual languages"),
+                        ("README_CN.md", "## 模板库", "## 模板怎么用", "## 设计语言")):
     _txt = (_vd.REPO / _f).read_text(encoding="utf-8")
     _heads = [l for l in _txt.splitlines() if l.startswith("## ")]
-    check(_a in _heads and _b in _heads and _c in _heads and _heads.index(_b) == _heads.index(_a) + 1 and
-          _heads.index(_c) == _heads.index(_b) + 1,
-          "{}: the visual languages follow the template gallery and precede how to use it ({})".format(_f, _heads[:6]))
-_n_more = len(_reg) - len(_g)
-check(_vd._render("gallery-more", _reg).startswith("The gallery above shows {} of them; {} more".format(
-      _vd._en(len(_g)), _vd._en(_n_more))), "gallery-more names the gallery and how many more: {!r}".format(
-      _vd._render("gallery-more", _reg)))
-check(_vd._render("gallery-more-zh", _reg).startswith("上面只展示了其中{}套".format(_vd._zh(len(_g)))),
-      "gallery-more-zh names the gallery: {!r}".format(_vd._render("gallery-more-zh", _reg)))
-_all_shown = {n: s_ for n, s_ in _reg.items() if n in _g}
-check(_vd._render("gallery-more", _all_shown) == "" and _vd._render("gallery-more-zh", _all_shown) == "",
-      "with every language in the gallery the clause says nothing (no 'zero more')")
+    check(_heads.count(_a) == 1 and _b in _heads and _heads.index(_b) == _heads.index(_a) + 1 and _old not in _heads,
+          "{} has one template library directly followed by its usage instructions ({})".format(_f, _heads[:6]))
+    check('viewer.html?deck=' not in _txt and 'gallery-more' not in _txt,
+          "{} no longer advertises the twelve-deck gallery or hides templates behind a more link".format(_f))
 # counts past twenty stay words: "four image-led and 26 drawn" mixed the two styles in one sentence (2026-10-22, 30)
 check([_vd._en(n) for n in (19, 20, 21, 26, 30, 45, 99)] ==
       ["nineteen", "twenty", "twenty-one", "twenty-six", "thirty", "forty-five", "ninety-nine"],
@@ -458,7 +440,7 @@ check([_vd._en(n) for n in (19, 20, 21, 26, 30, 45, 99)] ==
 # the badge beside ClawHub counts the library (2026-10-22): generated, so the number follows the registry
 _b = _vd._render("vl-badge", _reg)
 # the library is a section of the home page since 2026-10-23 (#languages), the Chinese badge on the Chinese home page
-check('href="https://slides.addsum.top/#languages"' in _b and "-{}-".format(len(_reg)) in _b and "alt=\"Visual languages: {}\"".format(len(_reg)) in _b,
+check('href="https://slides.addsum.top/#languages"' in _b and "-{}-".format(len(_reg)) in _b and "alt=\"Templates: {}\"".format(len(_reg)) in _b,
       "vl-badge links the library section and carries the count: {!r}".format(_b))
 _bz = _vd._render("vl-badge-zh", _reg)
 check('href="https://slides.addsum.top/cn/#languages"' in _bz and "-{}-".format(len(_reg)) in _bz,
@@ -473,7 +455,7 @@ for _f, _blk in (("README.md", "vl-badge"), ("README_CN.md", "vl-badge-zh")):
     check(_i >= 0 and abs(_i - _j) < 400, "{} carries {} beside the ClawHub badge".format(_f, _blk))
 import vl_conformance as _vcf1
 check(not any("gallery" in x for x in _vcf1.assets_missing("herbarium")),
-      "a language off the README gallery is not a missing asset: {}".format(_vcf1.assets_missing("herbarium")))
+      "a style present in both README libraries is not a missing asset: {}".format(_vcf1.assets_missing("herbarium")))
 _repo1 = _vcf1.REPO
 _t1 = Path(tempfile.mkdtemp(prefix="gal_"))
 try:

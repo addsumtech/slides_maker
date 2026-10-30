@@ -14,7 +14,7 @@
 
 <p align="center">
   <a href="https://clawhub.ai/dong845/skills/slide-maker"><img alt="ClawHub" src="docs/badges/clawhub.svg"></a>
-  <!-- vl:vl-badge --><a href="https://slides.addsum.top/#languages"><img alt="Visual languages: 30" src="https://img.shields.io/badge/visual_languages-30-c2410c"></a><!-- /vl -->
+  <!-- vl:vl-badge --><a href="https://slides.addsum.top/#languages"><img alt="Templates: 30" src="https://img.shields.io/badge/templates-30-c2410c"></a><!-- /vl -->
 </p>
 
 <p align="center"><sub>Free and open source, built by <a href="https://addsum.top/"><strong>Addsum</strong></a></sub></p>
@@ -34,8 +34,7 @@ Native-editable PPTX is now table stakes; several tools do it. Rarer is a deck t
 
 <p align="center">
   <a href="https://slides.addsum.top/"><strong>Intro video</strong></a> ·
-  <a href="#template-gallery"><strong>Templates</strong></a> ·
-  <a href="#visual-languages"><strong>Visual languages</strong></a> ·
+  <a href="#template-library"><strong>Templates</strong></a> ·
   <a href="#what-makes-slide-maker-different"><strong>What's different</strong></a> ·
   <a href="#how-it-works"><strong>How it works</strong></a> ·
   <a href="#quick-start"><strong>Quick start</strong></a> ·
@@ -43,194 +42,194 @@ Native-editable PPTX is now table stakes; several tools do it. Rarer is a deck t
 </p>
 
 
-## Template gallery
+## Template library
 
-Twelve directions, one set in English and one in Chinese. Each is a complete example deck with real content, not empty placeholders.
+Choose from <!-- vl:count-all -->thirty<!-- /vl --> PPT templates, each a complete style with its own type, colours and page layouts. Every template has two designed palettes and seven page types: cover, section, image with text, points, quote, data and closing. The pages are recomposed around your material.
 
-<table>
-  <tr>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/quarterly-review"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_quarterly-review.png" alt="Quarterly Review / Business Update template preview"></a><br/>
-      <sub><strong>Quarterly Review / Business Update</strong><br/>quarterly review, business update, metrics dashboard, exec readout<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/quarterly-review">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/quarterly-review/template.pptx">Download .pptx</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/chengdu"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_chengdu.png" alt="Visual Storytelling / Culture template preview"></a><br/>
-      <sub><strong>Visual Storytelling / Culture</strong><br/>city, culture, event, brand story<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/chengdu">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/chengdu/template.pptx">Download .pptx</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/transformer-talk"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_transformer-talk.png" alt="Lab Meeting / Paper Talk template preview"></a><br/>
-      <sub><strong>Lab Meeting / Paper Talk</strong><br/>paper reading, lab meeting, method overview, experiment report<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/transformer-talk">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/transformer-talk/template.pptx">Download .pptx</a></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/product-launch"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_product-launch.png" alt="Product Launch / Keynote template preview"></a><br/>
-      <sub><strong>Product Launch / Keynote</strong><br/>launch keynote, product reveal, spec walkthrough<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/product-launch">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/product-launch/template.pptx">Download .pptx</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/biology-lesson"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_biology-lesson.png" alt="Classroom Lesson / Courseware template preview"></a><br/>
-      <sub><strong>Classroom Lesson / Courseware</strong><br/>school lesson, courseware, in-class quiz, chalkboard look<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/biology-lesson">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/biology-lesson/template.pptx">Download .pptx</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/pour-over-coffee"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_pour-over-coffee.png" alt="Social Carousel / 3:4 Portrait template preview"></a><br/>
-      <sub><strong>Social Carousel / 3:4 Portrait</strong><br/>RedNote or Instagram carousel, how-to post, cheat sheet<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/pour-over-coffee">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/pour-over-coffee/template.pptx">Download .pptx</a></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/startup-pitch"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_startup-pitch.png" alt="Startup Pitch / Fundraising template preview"></a><br/>
-      <sub><strong>Startup Pitch / Fundraising</strong><br/>seed pitch, investor meeting, fundraising deck, demo day<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/startup-pitch">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/startup-pitch/template.pptx">Download .pptx</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/michael-jackson-king-of-pop"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_michael-jackson-king-of-pop.png" alt="Biography / Brand Story template preview"></a><br/>
-      <sub><strong>Biography / Brand Story</strong><br/>public figure, brand archive, cultural retrospective<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/michael-jackson-king-of-pop">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/michael-jackson-king-of-pop/template.pptx">Download .pptx</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/ev-market-report"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_ev-market-report.png" alt="Market Report / Newsletter template preview"></a><br/>
-      <sub><strong>Market Report / Newsletter</strong><br/>industry report, periodic briefing, data with a world map<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/ev-market-report">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/ev-market-report/template.pptx">Download .pptx</a></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/corporate-training"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_corporate-training.png" alt="Corporate Training / Workshop template preview"></a><br/>
-      <sub><strong>Corporate Training / Workshop</strong><br/>training deck, workshop, skills enablement, exercises<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/corporate-training">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/corporate-training/template.pptx">Download .pptx</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/thesis-defense"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_thesis-defense.png" alt="Thesis Defense / Research Talk template preview"></a><br/>
-      <sub><strong>Thesis Defense / Research Talk</strong><br/>thesis defense, proposal review, academic or engineering talk<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/thesis-defense">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/thesis-defense/template.pptx">Download .pptx</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/viewer.html?deck=en/kids-ai-explainer"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_kids-ai-explainer.png" alt="Teaching / Knowledge Sharing template preview"></a><br/>
-      <sub><strong>Teaching / Knowledge Sharing</strong><br/>class explanation, reading share, training material<br/>
-      <a href="https://slides.addsum.top/viewer.html?deck=en/kids-ai-explainer">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/kids-ai-explainer/template.pptx">Download .pptx</a></sub>
-    </td>
-  </tr>
-</table>
-
-<p align="center"><sub>Chinese versions live in <a href="https://github.com/addsumtech/slides_maker-site/tree/main/templates/decks/zh">templates/decks/zh/</a>, previewed in the <a href="README_CN.md">Chinese README</a>.</sub></p>
-
-## Visual languages
-
-slide-maker also ships <!-- vl:count-all -->thirty<!-- /vl --> complete **visual languages**: whole looks with their own type, surface and page layouts. <!-- vl:count-image-cap -->Four<!-- /vl --> carry your photos or illustrations; the other <!-- vl:count-drawn -->twenty-six<!-- /vl --> draw everything in native, editable shapes, so a deck needs no pictures. It suggests the ones that fit your topic, or ask for one by name ("use the ink look").
+<!-- vl:count-image-cap -->Four<!-- /vl --> templates work with your photos or illustrations; <!-- vl:count-drawn -->twenty-six<!-- /vl --> draw their look in native, editable shapes, with no pictures needed. Click a sample to see every page, then ask slide-maker for the template by name.
 
 <!-- vl:vl-gallery -->
 <table>
   <tr>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/#vl-editorial"><img src="skills/slide-maker/assets/vl/samples/editorial.jpg" alt="editorial visual language sample pages"></a><br/>
-      <sub><strong>Editorial magazine (editorial)</strong><br/>with your photos<br/>
-      <a href="https://slides.addsum.top/#vl-editorial">See every page in the library</a></sub>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/#vl-editorial"><img src="skills/slide-maker/assets/vl/samples/editorial.jpg" alt="editorial template sample pages"></a><br/>
+      <sub><strong>Editorial magazine</strong><br/>with your photos<br/>
+      <a href="https://slides.addsum.top/#vl-editorial">Preview all pages</a></sub>
     </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/#vl-poster"><img src="skills/slide-maker/assets/vl/samples/poster.jpg" alt="poster visual language sample pages"></a><br/>
-      <sub><strong>Type poster (poster)</strong><br/>launch, manifesto, opinion<br/>
-      <a href="https://slides.addsum.top/#vl-poster">See every page in the library</a></sub>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/#vl-soft"><img src="skills/slide-maker/assets/vl/samples/soft.jpg" alt="soft template sample pages"></a><br/>
+      <sub><strong>Soft organic</strong><br/>with your photos<br/>
+      <a href="https://slides.addsum.top/#vl-soft">Preview all pages</a></sub>
     </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/#vl-ink"><img src="skills/slide-maker/assets/vl/samples/ink.jpg" alt="ink visual language sample pages"></a><br/>
-      <sub><strong>Ink wash (ink)</strong><br/>culture, history, craft<br/>
-      <a href="https://slides.addsum.top/#vl-ink">See every page in the library</a></sub>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/#vl-collage"><img src="skills/slide-maker/assets/vl/samples/collage.jpg" alt="collage template sample pages"></a><br/>
+      <sub><strong>Collage scrapbook</strong><br/>with your photos<br/>
+      <a href="https://slides.addsum.top/#vl-collage">Preview all pages</a></sub>
     </td>
-  </tr>
-  <tr>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/#vl-comic"><img src="skills/slide-maker/assets/vl/samples/comic.jpg" alt="comic visual language sample pages"></a><br/>
-      <sub><strong>Comic panels (comic)</strong><br/>storytelling, user journey, explainer<br/>
-      <a href="https://slides.addsum.top/#vl-comic">See every page in the library</a></sub>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/#vl-storybook"><img src="skills/slide-maker/assets/vl/samples/storybook.jpg" alt="storybook template sample pages"></a><br/>
+      <sub><strong>Watercolour storybook</strong><br/>with an illustration series<br/>
+      <a href="https://slides.addsum.top/#vl-storybook">Preview all pages</a></sub>
     </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/#vl-vinyl"><img src="skills/slide-maker/assets/vl/samples/vinyl.jpg" alt="vinyl visual language sample pages"></a><br/>
-      <sub><strong>Vinyl record (vinyl)</strong><br/>music, podcast, culture<br/>
-      <a href="https://slides.addsum.top/#vl-vinyl">See every page in the library</a></sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/#vl-stainedglass"><img src="skills/slide-maker/assets/vl/samples/stainedglass.jpg" alt="stainedglass visual language sample pages"></a><br/>
-      <sub><strong>Stained glass (stainedglass)</strong><br/>heritage, culture, celebrations<br/>
-      <a href="https://slides.addsum.top/#vl-stainedglass">See every page in the library</a></sub>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/#vl-ink"><img src="skills/slide-maker/assets/vl/samples/ink.jpg" alt="ink template sample pages"></a><br/>
+      <sub><strong>Ink wash</strong><br/>culture, history, craft<br/>
+      <a href="https://slides.addsum.top/#vl-ink">Preview all pages</a></sub>
     </td>
   </tr>
   <tr>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/#vl-wayfinding"><img src="skills/slide-maker/assets/vl/samples/wayfinding.jpg" alt="wayfinding visual language sample pages"></a><br/>
-      <sub><strong>Wayfinding (wayfinding)</strong><br/>roadmap, process, onboarding<br/>
-      <a href="https://slides.addsum.top/#vl-wayfinding">See every page in the library</a></sub>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/#vl-poster"><img src="skills/slide-maker/assets/vl/samples/poster.jpg" alt="poster template sample pages"></a><br/>
+      <sub><strong>Type poster</strong><br/>launch, manifesto, opinion<br/>
+      <a href="https://slides.addsum.top/#vl-poster">Preview all pages</a></sub>
     </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/#vl-chalkboard"><img src="skills/slide-maker/assets/vl/samples/chalkboard.jpg" alt="chalkboard visual language sample pages"></a><br/>
-      <sub><strong>Chalkboard (chalkboard)</strong><br/>lesson, class, training<br/>
-      <a href="https://slides.addsum.top/#vl-chalkboard">See every page in the library</a></sub>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/#vl-cutpaper"><img src="skills/slide-maker/assets/vl/samples/cutpaper.jpg" alt="cutpaper template sample pages"></a><br/>
+      <sub><strong>Cut paper</strong><br/>children, storytelling, community<br/>
+      <a href="https://slides.addsum.top/#vl-cutpaper">Preview all pages</a></sub>
     </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/#vl-recipe"><img src="skills/slide-maker/assets/vl/samples/recipe.jpg" alt="recipe visual language sample pages"></a><br/>
-      <sub><strong>Recipe card (recipe)</strong><br/>food, cooking, recipes<br/>
-      <a href="https://slides.addsum.top/#vl-recipe">See every page in the library</a></sub>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/#vl-drafting"><img src="skills/slide-maker/assets/vl/samples/drafting.jpg" alt="drafting template sample pages"></a><br/>
+      <sub><strong>Drafting sheet</strong><br/>engineering, architecture, systems design<br/>
+      <a href="https://slides.addsum.top/#vl-drafting">Preview all pages</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/#vl-starlit"><img src="skills/slide-maker/assets/vl/samples/starlit.jpg" alt="starlit template sample pages"></a><br/>
+      <sub><strong>Starlit night</strong><br/>year in review, letter, thanks<br/>
+      <a href="https://slides.addsum.top/#vl-starlit">Preview all pages</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/#vl-broadsheet"><img src="skills/slide-maker/assets/vl/samples/broadsheet.jpg" alt="broadsheet template sample pages"></a><br/>
+      <sub><strong>Broadsheet front page</strong><br/>newsletter, periodic report, community update<br/>
+      <a href="https://slides.addsum.top/#vl-broadsheet">Preview all pages</a></sub>
     </td>
   </tr>
   <tr>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/#vl-circuit"><img src="skills/slide-maker/assets/vl/samples/circuit.jpg" alt="circuit visual language sample pages"></a><br/>
-      <sub><strong>Circuit board (circuit)</strong><br/>hardware, IoT, embedded systems<br/>
-      <a href="https://slides.addsum.top/#vl-circuit">See every page in the library</a></sub>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/#vl-journal"><img src="skills/slide-maker/assets/vl/samples/journal.jpg" alt="journal template sample pages"></a><br/>
+      <sub><strong>Journal article</strong><br/>research talk, lab meeting, paper<br/>
+      <a href="https://slides.addsum.top/#vl-journal">Preview all pages</a></sub>
     </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/#vl-storybook"><img src="skills/slide-maker/assets/vl/samples/storybook.jpg" alt="storybook visual language sample pages"></a><br/>
-      <sub><strong>Watercolour storybook (storybook)</strong><br/>with an illustration series<br/>
-      <a href="https://slides.addsum.top/#vl-storybook">See every page in the library</a></sub>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/#vl-tally"><img src="skills/slide-maker/assets/vl/samples/tally.jpg" alt="tally template sample pages"></a><br/>
+      <sub><strong>Data tally</strong><br/>metrics, quarterly review, operations<br/>
+      <a href="https://slides.addsum.top/#vl-tally">Preview all pages</a></sub>
     </td>
-    <td align="center" width="33%">
-      <a href="https://slides.addsum.top/#vl-scoreboard"><img src="skills/slide-maker/assets/vl/samples/scoreboard.jpg" alt="scoreboard visual language sample pages"></a><br/>
-      <sub><strong>Scoreboard (scoreboard)</strong><br/>sports, competition, team results<br/>
-      <a href="https://slides.addsum.top/#vl-scoreboard">See every page in the library</a></sub>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/#vl-chalkboard"><img src="skills/slide-maker/assets/vl/samples/chalkboard.jpg" alt="chalkboard template sample pages"></a><br/>
+      <sub><strong>Chalkboard</strong><br/>lesson, class, training<br/>
+      <a href="https://slides.addsum.top/#vl-chalkboard">Preview all pages</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/#vl-interface"><img src="skills/slide-maker/assets/vl/samples/interface.jpg" alt="interface template sample pages"></a><br/>
+      <sub><strong>Product interface</strong><br/>product launch, app, SaaS<br/>
+      <a href="https://slides.addsum.top/#vl-interface">Preview all pages</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/#vl-wayfinding"><img src="skills/slide-maker/assets/vl/samples/wayfinding.jpg" alt="wayfinding template sample pages"></a><br/>
+      <sub><strong>Wayfinding</strong><br/>roadmap, process, onboarding<br/>
+      <a href="https://slides.addsum.top/#vl-wayfinding">Preview all pages</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/#vl-herbarium"><img src="skills/slide-maker/assets/vl/samples/herbarium.jpg" alt="herbarium template sample pages"></a><br/>
+      <sub><strong>Herbarium plate</strong><br/>nature, ecology, sustainability<br/>
+      <a href="https://slides.addsum.top/#vl-herbarium">Preview all pages</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/#vl-airmail"><img src="skills/slide-maker/assets/vl/samples/airmail.jpg" alt="airmail template sample pages"></a><br/>
+      <sub><strong>Air mail</strong><br/>travel, international, cross-border<br/>
+      <a href="https://slides.addsum.top/#vl-airmail">Preview all pages</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/#vl-vinyl"><img src="skills/slide-maker/assets/vl/samples/vinyl.jpg" alt="vinyl template sample pages"></a><br/>
+      <sub><strong>Vinyl record</strong><br/>music, podcast, culture<br/>
+      <a href="https://slides.addsum.top/#vl-vinyl">Preview all pages</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/#vl-receipt"><img src="skills/slide-maker/assets/vl/samples/receipt.jpg" alt="receipt template sample pages"></a><br/>
+      <sub><strong>Shop receipt</strong><br/>pricing, budget, cost breakdown<br/>
+      <a href="https://slides.addsum.top/#vl-receipt">Preview all pages</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/#vl-comic"><img src="skills/slide-maker/assets/vl/samples/comic.jpg" alt="comic template sample pages"></a><br/>
+      <sub><strong>Comic panels</strong><br/>storytelling, user journey, explainer<br/>
+      <a href="https://slides.addsum.top/#vl-comic">Preview all pages</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/#vl-pixel"><img src="skills/slide-maker/assets/vl/samples/pixel.jpg" alt="pixel template sample pages"></a><br/>
+      <sub><strong>Pixel game</strong><br/>games, gamification, hackathon<br/>
+      <a href="https://slides.addsum.top/#vl-pixel">Preview all pages</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/#vl-bricks"><img src="skills/slide-maker/assets/vl/samples/bricks.jpg" alt="bricks template sample pages"></a><br/>
+      <sub><strong>Toy bricks</strong><br/>children's education, modular product, system architecture<br/>
+      <a href="https://slides.addsum.top/#vl-bricks">Preview all pages</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/#vl-boardgame"><img src="skills/slide-maker/assets/vl/samples/boardgame.jpg" alt="boardgame template sample pages"></a><br/>
+      <sub><strong>Board game</strong><br/>processes, onboarding, strategy<br/>
+      <a href="https://slides.addsum.top/#vl-boardgame">Preview all pages</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/#vl-circuit"><img src="skills/slide-maker/assets/vl/samples/circuit.jpg" alt="circuit template sample pages"></a><br/>
+      <sub><strong>Circuit board</strong><br/>hardware, IoT, embedded systems<br/>
+      <a href="https://slides.addsum.top/#vl-circuit">Preview all pages</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/#vl-topo"><img src="skills/slide-maker/assets/vl/samples/topo.jpg" alt="topo template sample pages"></a><br/>
+      <sub><strong>Topographic map</strong><br/>geography, outdoors, climate<br/>
+      <a href="https://slides.addsum.top/#vl-topo">Preview all pages</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/#vl-scoreboard"><img src="skills/slide-maker/assets/vl/samples/scoreboard.jpg" alt="scoreboard template sample pages"></a><br/>
+      <sub><strong>Scoreboard</strong><br/>sports, competition, team results<br/>
+      <a href="https://slides.addsum.top/#vl-scoreboard">Preview all pages</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/#vl-periodic"><img src="skills/slide-maker/assets/vl/samples/periodic.jpg" alt="periodic template sample pages"></a><br/>
+      <sub><strong>Periodic table</strong><br/>science education, chemistry, building blocks of a topic<br/>
+      <a href="https://slides.addsum.top/#vl-periodic">Preview all pages</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/#vl-recipe"><img src="skills/slide-maker/assets/vl/samples/recipe.jpg" alt="recipe template sample pages"></a><br/>
+      <sub><strong>Recipe card</strong><br/>food, cooking, recipes<br/>
+      <a href="https://slides.addsum.top/#vl-recipe">Preview all pages</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/#vl-stainedglass"><img src="skills/slide-maker/assets/vl/samples/stainedglass.jpg" alt="stainedglass template sample pages"></a><br/>
+      <sub><strong>Stained glass</strong><br/>heritage, culture, celebrations<br/>
+      <a href="https://slides.addsum.top/#vl-stainedglass">Preview all pages</a></sub>
+    </td>
+    <td align="center" width="20%">
+      <a href="https://slides.addsum.top/#vl-calendar"><img src="skills/slide-maker/assets/vl/samples/calendar.jpg" alt="calendar template sample pages"></a><br/>
+      <sub><strong>Tear-off calendar</strong><br/>timeline, event, anniversary<br/>
+      <a href="https://slides.addsum.top/#vl-calendar">Preview all pages</a></sub>
     </td>
   </tr>
 </table>
 <!-- /vl -->
 
-<p align="center"><a href="https://slides.addsum.top/#languages"><strong>Browse all <!-- vl:count-all -->thirty<!-- /vl --> visual languages in the library →</strong></a><br/><sub><!-- vl:gallery-more -->The gallery above shows twelve of them; eighteen more are only in the library. <!-- /vl --></sub></p>
+<p align="center"><a href="https://slides.addsum.top/#languages"><strong>Explore the palettes and pages of all <!-- vl:count-all -->thirty<!-- /vl --> templates online →</strong></a></p>
 
 ---
 
 ## How to use the templates
 
-The gallery lives in the [slides_maker-site](https://github.com/addsumtech/slides_maker-site) repo under `templates/decks/`, English under `en/`, Chinese under `zh/`. Grab it once:
-
-```bash
-git clone --depth 1 https://github.com/addsumtech/slides_maker-site.git
-```
-
-Two ways to use a template:
-
-**Option 1: point at it (simplest).** Put the template path in your request:
+Preview a template you like, then give slide-maker your material, audience and slide count. For example:
 
 ```text
-Use slide-maker. Follow the style of slides_maker-site/templates/decks/en/ev-market-report/template.pptx
-and build a market report from my data.md.
+Use slide-maker with the herbarium (Herbarium plate) template and its light palette.
+Turn notes.md into an 8-slide biology lesson for middle-school students.
 ```
 
-It parses the template's layout and visual system, then applies them to your content.
+No preferred template? Describe your topic and audience, and it will suggest a few. You can also supply a school or company PPTX template to match its fonts, colours and layouts.
 
-**Option 2: register it for repeated use.** Copy a template you like into the local template registry, and slide-maker will list it as an option every time:
-
-```bash
-# Claude Code users
-cp -r slides_maker-site/templates/decks/en/ev-market-report ~/.claude/slide-templates/ev-market-report
-
-# Codex users
-cp -r slides_maker-site/templates/decks/en/ev-market-report ~/.codex/slide-templates/ev-market-report
-```
-
-The layouts match; only the copy language differs.
 
 ---
 
@@ -335,7 +334,7 @@ If you only use one tool, replace `both` with `codex` or `claude`. Not sure what
 npx skills add addsumtech/slides_maker
 ```
 
-It prompts for the agent and scope. The skill lives under `skills/slide-maker/` and the repo carries no heavy assets (the gallery and demo site live in [slides_maker-site](https://github.com/addsumtech/slides_maker-site)), so the install stays small and fast. Add `-g` to install globally (all projects), `-a claude-code` (or `-a codex`) to skip the agent prompt, and `-y` for a fully non-interactive run. You still need the runtime dependencies above: LibreOffice, an SVG rasterizer, and `python3 -m pip install -r skills/slide-maker/requirements.txt`.
+It prompts for the agent and scope. The skill and its built-in templates live under `skills/slide-maker/`; online previews and complete example decks live in [slides_maker-site](https://github.com/addsumtech/slides_maker-site). Add `-g` to install globally (all projects), `-a claude-code` (or `-a codex`) to skip the agent prompt, and `-y` for a fully non-interactive run. You still need the runtime dependencies above: LibreOffice, an SVG rasterizer, and `python3 -m pip install -r skills/slide-maker/requirements.txt`.
 
 **On Claude Code, you can also add it as a plugin** so it stays updated with a normal plugin command:
 
