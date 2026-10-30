@@ -11,6 +11,7 @@ green is the same failure one level up, so most of what follows is an attack on 
 """
 from __future__ import annotations
 
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import os
 import subprocess
 import sys

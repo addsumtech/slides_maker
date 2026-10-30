@@ -14,6 +14,7 @@ frame's margins, measured wraps, the vertical anchor and the paragraph alignment
 """
 from __future__ import annotations
 
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import sys
 from pathlib import Path
 

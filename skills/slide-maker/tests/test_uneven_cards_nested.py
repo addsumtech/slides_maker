@@ -15,6 +15,7 @@ The two controls keep the check honest: genuinely uneven siblings, and genuinely
 
 Run:  python3 tests/test_uneven_cards_nested.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import contextlib
 import io
 import pathlib

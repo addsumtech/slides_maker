@@ -11,6 +11,7 @@ teaches the reader to skip the output where the real findings live.
 
 Each negative below names the real-deck case it came from.
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import io, pathlib, sys, tempfile
 
 HERE = pathlib.Path(__file__).resolve().parent

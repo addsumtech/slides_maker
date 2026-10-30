@@ -5,6 +5,7 @@ no helper made one: a docs-only agent's text box tripped OFF_CANVAS + DUPLICATE_
 visual-language page that set its kicker before its title (or its title below the top 28%) was held at hand-off on
 READING ORDER or reported NO SLIDE TITLE (restricted non-Claude run, 2026-10-04)."""
 from __future__ import annotations
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import io, contextlib, re, sys, tempfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

@@ -30,8 +30,10 @@ Run: python3 tests/test_register_pixels.py
 """
 from __future__ import annotations
 
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import json
 import pathlib
+import os
 import subprocess
 import sys
 import tempfile
@@ -230,6 +232,22 @@ check("import check_register_pixels" in render,
 check("check_register_pixels.py" in codex and "check_register_pixels(evidence" in codex,
       "the codex delivery gate runs the same checker",
       "a rule enforced on one runtime only is how the two paths drift")
+
+# ── 3. a RE-RUN reads the same taste.md the gate read ────────────────────────────────────────
+# The gate scores freshness against the registry's taste.md; the command it prints for a re-run
+# used to take only the deck folder, so the re-run silently scored against nothing and could
+# disagree with the gate that sent the user there.
+_reg = pathlib.Path(os.environ["SLIDE_MAKER_REGISTRY"])
+(_reg / "taste.md").write_text("# taste\n", encoding="utf-8")
+r = subprocess.run([sys.executable, str(SCRIPTS / "check_register_pixels.py"), str(d)],
+                   capture_output=True, text=True)
+check("taste: " + str(_reg / "taste.md") in r.stdout,
+      "a CLI re-run with no --taste scores against the registry's taste.md, and says which file",
+      r.stdout[-400:] + r.stderr[-300:])
+r = subprocess.run([sys.executable, str(SCRIPTS / "check_register_pixels.py"), str(d), "--no-taste"],
+                   capture_output=True, text=True)
+check("taste: not used" in r.stdout, "--no-taste skips the freshness half and says so", r.stdout[-300:])
+(_reg / "taste.md").unlink()
 
 # The selftest must be runnable and green — it is what a non-Claude runtime runs to trust this.
 r = subprocess.run([sys.executable, str(SCRIPTS / "check_register_pixels.py"), "--selftest"],

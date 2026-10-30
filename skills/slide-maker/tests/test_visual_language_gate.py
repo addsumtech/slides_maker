@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """The visual-language gate, read from the file on both runtimes: a recorded language must be APPLIED (cover + half the pages carry its tag, its display face is used) and its prohibitions hold; unknown names and unreadable decks block."""
 from __future__ import annotations
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import sys, tempfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

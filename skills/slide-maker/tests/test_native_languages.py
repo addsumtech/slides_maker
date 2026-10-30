@@ -2,6 +2,7 @@
 """The four NATIVE visual languages: registered like the image-led four, their grounds' inks pass contrast,
 pages compose on every canvas, and nothing they draw leaves the page or trips PowerPoint."""
 from __future__ import annotations
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import contextlib, io, os, sys, tempfile, zipfile, hashlib, json
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

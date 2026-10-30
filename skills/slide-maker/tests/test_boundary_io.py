@@ -24,6 +24,7 @@ a wrong input. These assertions face outward.
 """
 from __future__ import annotations
 
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import os
 import shutil
 import subprocess

@@ -21,6 +21,7 @@ What this suite holds the tool to, in both directions:
 
 Run:  python3 tests/test_source_check.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import json
 import pathlib
 import subprocess

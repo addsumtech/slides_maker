@@ -11,6 +11,7 @@ enough to look elegant and too translucent to read.
 
 These hold the three claims that make the component worth having over a hand-rolled box.
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import sys
 import tempfile
 import warnings

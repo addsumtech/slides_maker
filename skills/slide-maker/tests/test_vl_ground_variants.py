@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Visual-language ground variants: every language has its light ground and one contrast ground (inks pass 4.5:1, a different look by the register-pixels distance), use(ground='auto') avoids the look history (a printed board stays light), and the record, the direction preview and the gate name the variant."""
 from __future__ import annotations
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import sys, tempfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

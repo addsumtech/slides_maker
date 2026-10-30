@@ -18,6 +18,7 @@ deck was built by a skill that did not contain rules the repo had already fixed 
 A version string cannot answer "am I on main". A content fingerprint can, without hooking an
 installer we do not own.
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import hashlib
 import io
 import shutil

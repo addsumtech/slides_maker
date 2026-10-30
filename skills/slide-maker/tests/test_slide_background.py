@@ -8,6 +8,7 @@ green gates, unreadable slides, no signal anywhere. The load-bearing test in thi
 therefore not "does <p:bg> exist" but the EQUIVALENCE property: a <p:bg> deck and the
 full-canvas-rect deck it replaces must produce the same findings, including the failures.
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import pathlib, sys, tempfile
 
 HERE = pathlib.Path(__file__).resolve().parent

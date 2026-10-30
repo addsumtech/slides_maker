@@ -18,6 +18,7 @@ NameError, so it silently did nothing while looking like it passed — the same 
 stopped looking" failure it exists to prevent. The mid-suite assertion that a KNOWN-BAD deck
 still fires is there so that can never recur quietly.
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import pathlib, sys, tempfile
 
 HERE = pathlib.Path(__file__).resolve().parent

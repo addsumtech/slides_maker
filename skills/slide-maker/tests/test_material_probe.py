@@ -29,6 +29,7 @@ Two holes are closed here, and the second is the sharper one:
 
 Run:  python3 tests/test_material_probe.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import copy
 import json
 import pathlib

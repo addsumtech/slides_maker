@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """display_type: stacked headlines fill one measure, two-tone splits named words, outlined marks are pictures (LibreOffice draws a native hollow run filled)."""
 from __future__ import annotations
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import sys, tempfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

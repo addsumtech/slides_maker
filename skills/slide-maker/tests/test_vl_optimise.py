@@ -1,5 +1,6 @@
 """Phase 3 — the languages' own pages, measured (spec §6): quote scale, title fit, rules at their content, designed dark
 grounds, the smallest tier, distinctiveness, and the per-language fixes. Prints `N passed, 0 failed`."""
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import contextlib, io, os, re, sys, tempfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

@@ -23,6 +23,7 @@ Run: python3 tests/test_rule_consistency.py
 """
 from __future__ import annotations
 
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import os
 import re
 import subprocess

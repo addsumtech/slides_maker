@@ -21,6 +21,7 @@ The load-bearing half is what it must stay SILENT on:
 
 Run:  python3 tests/test_composition_boldness.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import json
 import os
 import pathlib

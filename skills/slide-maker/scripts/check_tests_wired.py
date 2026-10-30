@@ -70,6 +70,11 @@ def main(argv=None) -> int:
         return 0
 
     missing = [f.name for f in files if f.name not in run and f.name not in ALLOWLIST]
+    # …and every test runs HERMETIC: it imports tests/_hermetic.py before anything else, so a run on
+    # a developer's machine never reads that person's taste.md / taste ledger (the gates read both),
+    # and a result cannot depend on what they have taught the skill.
+    leaky = [f.name for f in files
+             if not re.search(r"^import _hermetic\b", f.read_text(encoding="utf-8"), re.M)]
     # …and the mirror: an allowlist entry for a file that no longer exists is stale permission.
     have = {f.name for f in files}
     stale = [n for n in ALLOWLIST if n not in have]
@@ -78,6 +83,9 @@ def main(argv=None) -> int:
     for n in missing:
         print("[tests-wired] tests/{} is never run by CI. Add a step for it in "
               ".github/workflows/ci.yml, or add it to ALLOWLIST here WITH A REASON.".format(n))
+    for n in leaky:
+        print("[tests-wired] tests/{} does not `import _hermetic` (first import, after any "
+              "`from __future__`) — it may read the user's own taste.md / taste ledger.".format(n))
     for n in stale:
         print("[tests-wired] ALLOWLIST names tests/{}, which no longer exists — stale permission."
               .format(n))
@@ -85,7 +93,7 @@ def main(argv=None) -> int:
         print("[tests-wired] CI runs tests/{}, which does not exist — that step is failing or "
               "silently doing nothing.".format(n))
 
-    bad = len(missing) + len(stale) + len(ghosts)
+    bad = len(missing) + len(stale) + len(ghosts) + len(leaky)
     print("[tests-wired] {} test file(s): {} wired, {} allowlisted, {} problem(s)."
           .format(len(files), len(run & have), len(ALLOWLIST) - len(stale), bad))
     return 1 if bad else 0

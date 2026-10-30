@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """East-Asian faces follow the SCRIPT: a run the deck's EA face cannot draw (Hangul under a Chinese face) gets that script's face of the same register, in text(), retrofit_ea() and the CJK_NO_EA advice."""
 from __future__ import annotations
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import sys, tempfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

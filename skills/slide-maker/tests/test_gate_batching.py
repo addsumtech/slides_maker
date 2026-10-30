@@ -21,6 +21,7 @@ The batching is only worth having if it did not weaken anything, so both directi
 
 Run:  python3 tests/test_gate_batching.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import copy
 import json
 import pathlib

@@ -3,6 +3,7 @@
 the first four, every page × ground × canvas × script composes, nothing leaves the page or trips PowerPoint, and the
 words only the caller can give are never invented."""
 from __future__ import annotations
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import contextlib, io, re, sys, tempfile, zipfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

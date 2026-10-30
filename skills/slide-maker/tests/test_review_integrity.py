@@ -21,6 +21,7 @@ FAILURE paths are actually exercised.
 
 Run:  python3 tests/test_review_integrity.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import copy
 import hashlib
 import json

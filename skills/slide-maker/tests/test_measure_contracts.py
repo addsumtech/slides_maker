@@ -28,6 +28,7 @@ are two multipliers and it passed only one.
 
 Run:  python3 tests/test_measure_contracts.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import pathlib
 import sys
 

@@ -8,6 +8,7 @@ prohibitions, and the content rect a kit hands back must be usable (nothing loud
 That last one is not theoretical: the first render put a memphis triangle through a card corner and
 a bauhaus disc through the third card, under a docstring promising it could not happen.
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import sys
 import warnings
 from pathlib import Path

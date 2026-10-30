@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Image-series follow-ups: a negated label is not a label, a slot placed twice or on another slide is said, a stale series-qc.json is said, prompts() writes absolute paths, a contact-sheet failure is printed, an explicit --size is honoured and moderation goes to generations only, chroma_cutout has an example."""
 from __future__ import annotations
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import sys, tempfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

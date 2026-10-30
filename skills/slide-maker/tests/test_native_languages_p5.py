@@ -3,6 +3,7 @@
 them, every page × ground × canvas × script composes, nothing leaves the page or trips PowerPoint, the words only the
 caller can give are never invented, and a structure (a route) is drawn only when the caller says the points are ordered."""
 from __future__ import annotations
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import contextlib, io, re, sys, tempfile, zipfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

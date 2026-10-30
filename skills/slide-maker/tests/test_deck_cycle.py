@@ -12,6 +12,7 @@ what this suite asserts:
   · the contact sheet is ADDITIVE — the render still writes every per-slide PNG, and the next-step
     hint still asks for all of them.
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import os, pathlib, subprocess, sys, tempfile
 
 HERE = pathlib.Path(__file__).resolve().parent

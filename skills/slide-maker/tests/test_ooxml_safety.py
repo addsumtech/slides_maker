@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """ooxml_safety: values PowerPoint repairs that LibreOffice renders (found on the 2026-10-05 look-dev deck:
 a negative outerShdw dir; and off-page geometry PowerPoint shows while editing)."""
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import contextlib, io, sys, tempfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

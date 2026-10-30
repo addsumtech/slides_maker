@@ -15,6 +15,7 @@ Two holes, both reported by an author on a real deck and neither visible to any 
    reach the pixels) and `check_style_applied` (a declared preset must be called) — and the
    direction, the one thing the USER personally chose, had none.
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import json
 import subprocess
 import sys

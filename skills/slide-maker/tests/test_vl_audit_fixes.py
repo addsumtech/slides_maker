@@ -3,6 +3,7 @@
 with room to spare and by script (Latin words never split), no caller's words or pictures dropped, photos upright,
 the kit's own pages clear of its own gates, and the image-led languages level with the drawn ones."""
 from __future__ import annotations
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import contextlib, io, re, sys, tempfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

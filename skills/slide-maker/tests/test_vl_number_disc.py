@@ -4,6 +4,7 @@ across, drawn from the text box's LEFT edge: a "1" sat 16% of the circle left of
 outside it (the user, looking at the gallery, 2026-10-04). A single figure gets a circle; a wider number a pill of the
 same height, so the line the flow reserved does not change. Ink width = the run's measured advance."""
 from __future__ import annotations
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import io, contextlib, sys
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

@@ -11,6 +11,7 @@ real run (iPhone 18 explainer, 2026-10-17) dispatched two single-lens critics in
 
 Run: python3 tests/test_dispatch_brief.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import os
 import subprocess
 import sys

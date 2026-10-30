@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """register_surface.grain_background (was surfaces.py): a tiled grain/paper ground in <p:bg> — deterministic, capped amplitude, lint-clean."""
 from __future__ import annotations
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import sys, tempfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

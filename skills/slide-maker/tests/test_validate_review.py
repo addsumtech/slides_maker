@@ -19,6 +19,7 @@ legitimate review, and the first honest failure teaches everyone to bypass the g
 
 Run:  python3 tests/test_validate_review.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import copy
 import json
 import os

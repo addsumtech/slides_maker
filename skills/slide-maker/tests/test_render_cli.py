@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """render_deck's command line: --help works, renders default to the folder BESIDE the deck (where the gates read them), and --slides naming every slide is a full render that the design checkpoint holds."""
 from __future__ import annotations
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import sys, tempfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

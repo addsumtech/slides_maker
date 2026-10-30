@@ -15,6 +15,7 @@ make one module the only place the rule is written. The import tests below are w
 way, because a re-implementation would look perfectly correct in review — it just would not be the
 same rule six months later.
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import ast
 import pathlib
 import sys

@@ -17,6 +17,7 @@ SKIP, and CI turns a SKIP into a failure.
 
 Run: python3 tests/test_direction_cover_legibility.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import json
 import re
 import subprocess

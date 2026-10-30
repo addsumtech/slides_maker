@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Deferred minors from P0-P2, fixed or pinned: function defaults restored with the palette, a slot id without plan= says so, the overflow message leads with the total, a photo is not a cut-out, mark()'s size error, the seam space off a highlight, frosted_panel's .alpha."""
 from __future__ import annotations
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import sys, tempfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

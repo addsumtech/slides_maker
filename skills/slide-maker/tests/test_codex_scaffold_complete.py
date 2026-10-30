@@ -14,6 +14,7 @@ run the real gate, and fail if any error names a field the scaffold never mentio
 """
 from __future__ import annotations
 
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import hashlib
 import json
 import re

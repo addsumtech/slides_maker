@@ -7,6 +7,7 @@ entry must leave by being PROMOTED to a real gate rather than by being forgotten
 """
 from __future__ import annotations
 
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import json
 import os
 import subprocess

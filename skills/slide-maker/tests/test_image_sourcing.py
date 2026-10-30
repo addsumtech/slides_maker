@@ -16,6 +16,7 @@ where the skill has already drifted once:
     ZERO on Commons (measured live), and a ladder that does not narrow toward distinctive terms
     would silently restore the false `none found` it was written to prevent.
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import ast
 import pathlib
 import re

@@ -12,6 +12,7 @@ with both linters green the whole way.
 Item 10 used to answer that case with "may be fine where the deck is presented" — which is the
 wrong risk, stated reassuringly. These hold the distinction.
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import subprocess
 import sys
 import tempfile

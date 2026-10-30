@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Render-time lint corner cases: paragraph spacing is not a hidden line (a covered line still is), a highlighted run is judged on its highlight, a crossing pair of rotated labels is one collision."""
 from __future__ import annotations
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import sys, tempfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

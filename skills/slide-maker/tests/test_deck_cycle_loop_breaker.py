@@ -20,6 +20,7 @@ reason, and the refused run really does skip the build rather than reporting aft
 
 Run:  python3 tests/test_deck_cycle_loop_breaker.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import io
 import json
 import pathlib

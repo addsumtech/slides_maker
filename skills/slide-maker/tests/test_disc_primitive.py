@@ -13,6 +13,7 @@ really is not — the second is what makes the first worth having.
 """
 from __future__ import annotations
 
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import sys
 import tempfile
 from pathlib import Path

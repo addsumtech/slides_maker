@@ -27,6 +27,7 @@ THREE proposed checks are deliberately ABSENT, and their absence is part of the 
 What replaces it is knowledge, not code: a review's quoted measurements are not evidence. Half of
 the ones examined were wrong. Re-measure before acting on a number in a finding.
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import io, json, pathlib, subprocess, sys, tempfile
 
 HERE = pathlib.Path(__file__).resolve().parent

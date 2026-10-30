@@ -6,6 +6,7 @@ The tool must (a) catch a genuinely hand-rolled common form, and (b) stay silent
 geometry was drawn BY a component the deck actually called — a component's own output must never
 be reported as a hand-roll, or the audit trains an agent to stop using components.
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import os
 import sys
 import tempfile

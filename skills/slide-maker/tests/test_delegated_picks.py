@@ -8,6 +8,7 @@ that the reference stating the rule finally has a backstop.
 """
 from __future__ import annotations
 
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import os
 import subprocess
 import sys
@@ -261,11 +262,32 @@ check(_rc == 2 and "desgin_plan" in _out and _gf.read_text(encoding="utf-8") == 
       "a misspelt top-level section is refused by name, not written as a new block (rc {}): {}"
       .format(_rc, _out[-200:]))
 
+# the Codex evidence's section names are not typos by spelling distance, but they are the wrong
+# record: `design` merged into .deck-gates.json landed as a block no shared gate reads
+_bad.write_text(_json.dumps({"design": {"boldness": "bold"}}), encoding="utf-8")
+_rc, _out = _dg("merge", _deck, _bad)
+check(_rc == 2 and "design_plan" in _out and _gf.read_text(encoding="utf-8") == _before,
+      "a Codex-evidence section name (`design`) is refused, naming the shared one (`design_plan`) "
+      "(rc {}): {}".format(_rc, _out[-300:]))
+
 # the docs that tell an operator how to record picks name the command
 for _doc in ("SKILL.md", "references/checkpoint-convention.md"):
     check("deck_gates.py\" picks" in (ROOT / _doc).read_text(encoding="utf-8")
           or "deck_gates.py picks" in (ROOT / _doc).read_text(encoding="utf-8"),
           "{} tells the operator to record picks with `deck_gates.py picks`".format(_doc))
+
+# the Codex evidence template shows a row for EVERY axis: a runtime filling a scaffold copies its
+# shape, and a three-row example under a comment naming ten is how the other seven went missing
+import json as _json, subprocess as _sp, tempfile as _tf
+_t = Path(_tf.mkdtemp()) / "ev.json"
+_sp.run([sys.executable, str(ROOT / "scripts" / "codex_delivery_gate.py"), "--init", str(_t)],
+        capture_output=True, text=True)
+try:
+    _axes = [r.get("axis") for r in _json.loads(_t.read_text())["interview"]["picks"]]
+except Exception as _e:                                                   # noqa: BLE001
+    _axes = ["<unreadable: {}>".format(_e)]
+check(_axes == list(dp.AXES), "the Codex --init template has one picks row per axis, in order ({})"
+      .format(_axes))
 
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_delegated_picks] {}".format(

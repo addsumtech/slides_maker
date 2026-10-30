@@ -13,6 +13,7 @@ and the BEHAVIOUR of the helper (the same values as getdata() in every mode, and
 
 Run: python3 tests/test_pillow_compat.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import ast
 import sys
 import warnings

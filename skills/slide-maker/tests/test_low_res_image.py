@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """LOW_RES_IMAGE: a picture whose visible source pixels are spread too thin over its frame (< 72 ppi WARN, < 36 ppi CRITICAL; long side >= 1.5in; decorative and declared pixel art exempt)."""
 from __future__ import annotations
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import sys, tempfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

@@ -17,6 +17,7 @@ material and a 'none' stub has no web to sweep — neither should be forced to c
 
 Run:  python3 tests/test_web_research_floors.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import pathlib
 import sys
 

@@ -19,6 +19,7 @@ exception, the gate has no way to express it, and the author writes something un
 Plus the divergence nothing watched for: a user's hand-edits to a delivered .pptx were invisible to
 every tool in the repo.
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import hashlib
 import json
 import os

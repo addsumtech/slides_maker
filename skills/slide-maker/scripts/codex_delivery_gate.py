@@ -101,6 +101,12 @@ STRUCTURAL_ROLES = frozenset((
     "cover", "agenda", "divider", "closing", "section", "thanks", "qa",
     "封面", "目录", "分隔", "收尾", "结尾", "致谢", "问答"))
 
+def _picks_template() -> list[dict[str, str]]:
+    """One `interview.picks` row per axis — delegated_picks owns the axes and the rows."""
+    import delegated_picks as _dp
+    return _dp.template_rows()
+
+
 TEMPLATE = {
     "schema": SCHEMA,
     "runtime": "codex",
@@ -132,19 +138,13 @@ TEMPLATE = {
         # Delete this key on a SUPERVISED deck — a run where the user answered Step 0 records
         # nothing extra. One row per axis: angle · audience · purpose · template · language ·
         # goal · density · length · style · builds.
-        "picks": [
-            {"axis": "angle", "source": "genre-default|stated", "value": "<which deck this is>"},
-            {"axis": "audience", "source": "delegated", "value": "<who>",
-             "basis": "<what in the REQUEST or the MATERIAL points at this>",
-             "alternative": "<what else was plausible, and the clause that lost it>"},
-            # 🔴 The template row is what `check_template_profile` binds on. A DESIGNED registry
-            # template has no .pptx and therefore no layout fingerprint, so a deck that declared
-            # one and then built in stock colours binds to nothing and reads as NOT CHECKED —
-            # this row is the only thing that catches it. Use the registered name.
-            {"axis": "template", "source": "stated", "value": "<registered name | none>",
-             "basis": "<what in the REQUEST or the MATERIAL points at this>",
-             "alternative": "<what else was plausible, and the clause that lost it>"},
-        ],
+        # 🔴 The template row is what `check_template_profile` binds on. A DESIGNED registry
+        # template has no .pptx and therefore no layout fingerprint, so a deck that declared one and
+        # then built in stock colours binds to nothing and reads as NOT CHECKED — that row is the
+        # only thing that catches it. Use the registered name. Every axis is shown: a runtime
+        # filling this copies its SHAPE, and three example rows under a comment naming ten is how
+        # the other seven went missing.
+        "picks": _picks_template(),
     },
     # A company / lab / product deck built from a CONFIRMED brand kit (`brand_kit.py confirm`):
     # {"file": "brand.json"} — check_brand holds the built deck to its colours, faces and logo rule.

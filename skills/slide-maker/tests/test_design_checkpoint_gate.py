@@ -16,6 +16,7 @@ gate that fires on those would break the very flow that produces the plan.
 
 Run:  python3 tests/test_design_checkpoint_gate.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import json
 import os
 import pathlib

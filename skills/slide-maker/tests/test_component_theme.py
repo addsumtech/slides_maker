@@ -1,5 +1,6 @@
 """Components inside visual languages (Phase 2a): the theme plumbing, the ordinary-deck byte-identical guard, the
 component × language × ground matrix, chart defaults, and the no-literal-colour checker. Prints `N passed, 0 failed`."""
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import contextlib, hashlib, io, json, os, re, sys, tempfile, zipfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

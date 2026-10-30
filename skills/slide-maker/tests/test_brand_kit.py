@@ -12,6 +12,7 @@ first brand's colours and goes green on the second) and asserts the target the d
 """
 from __future__ import annotations
 
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import io
 import contextlib
 import json

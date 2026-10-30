@@ -9,6 +9,7 @@ An untagged ornament is a loose shape every overlap rule would fight, or ignore.
 """
 from __future__ import annotations
 
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import subprocess
 import sys
 import tempfile

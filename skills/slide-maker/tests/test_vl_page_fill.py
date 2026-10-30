@@ -6,6 +6,7 @@
   the slide): a portrait picture now takes the page's *_tall frame, chosen from the picture's own aspect.
 Every language, both canvases, short and long numbers, a CJK label."""
 from __future__ import annotations
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import contextlib, io, sys
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

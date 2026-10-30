@@ -26,6 +26,7 @@ holds for one order is a trap rather than a contract.
 
 Run:  python3 tests/test_shape_declarations.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import itertools
 import pathlib
 import sys

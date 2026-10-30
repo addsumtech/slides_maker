@@ -69,6 +69,22 @@ _DISTANCE = {s: i for i, s in enumerate(SOURCES)}
 # 🔴 Never invented. See the module docstring for the deck this cost.
 NEVER_DELEGATED = ("angle",)
 
+
+def template_rows() -> list[dict]:
+    """One example `interview.picks` row per axis, in AXES order — the scaffold a runtime fills.
+    Every axis is shown: a runtime filling a template copies its SHAPE, and three example rows under
+    a comment naming ten is how the other seven went missing."""
+    rows = []
+    for axis in AXES:
+        if axis in NEVER_DELEGATED:
+            rows.append({"axis": axis, "source": "genre-default|stated", "value": "<which deck this is>"})
+            continue
+        rows.append({"axis": axis, "source": "<" + " | ".join(SOURCES) + ">",
+                     "value": "<registered name | none>" if axis == "template" else "<the pick>",
+                     "basis": "<what in the REQUEST or the MATERIAL points at this>",
+                     "alternative": "<what else was plausible, and the clause that lost it>"})
+    return rows
+
 # Where a named runner-up is worth the sentence: these three aim the research, the look and the
 # whole build, and a wrong one is discovered at hand-off.
 ALTERNATIVE_REQUIRED = ("audience", "purpose", "template")

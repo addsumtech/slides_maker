@@ -661,7 +661,9 @@ def main(argv=None):
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("deck_dir", nargs="?")
     ap.add_argument("--renders", help="render directory (default <deck-dir>/render)")
-    ap.add_argument("--taste", help="taste.md to score freshness against (registry.py prints the root)")
+    ap.add_argument("--taste", help="taste.md to score freshness against (default: the registry's, "
+                                    "the same file the delivery gate reads)")
+    ap.add_argument("--no-taste", action="store_true", help="skip the freshness half")
     ap.add_argument("--selftest", action="store_true")
     a = ap.parse_args(argv)
     if a.selftest:
@@ -674,7 +676,19 @@ def main(argv=None):
     except ImportError:
         print("cannot run: Pillow is required (pip install -r requirements.txt)", file=sys.stderr)
         return 2
-    probs, facts = check(a.deck_dir, a.renders, a.taste)
+    taste = None if a.no_taste else a.taste
+    if taste is None and not a.no_taste:
+        # The gate scores freshness against the registry's taste.md; a re-run that read nothing
+        # could disagree with the gate that printed it.
+        try:
+            import registry                                            # noqa: PLC0415
+            t = registry.taste_file()
+            taste = str(t) if t else None
+        except Exception:                                              # noqa: BLE001
+            taste = None
+    print("taste: {}".format("not used (--no-taste)" if a.no_taste else (taste or "none found — "
+                                                                           "freshness sits out")))
+    probs, facts = check(a.deck_dir, a.renders, taste)
     if facts.get("waived"):
         print("design_plan records a written waiver for this check — not run.")
         return 0

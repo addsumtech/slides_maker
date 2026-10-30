@@ -25,6 +25,7 @@ a divider, so the thresholds exist and are tested, not assumed.
 
 Run:  python3 tests/test_deck_level_faults.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import pathlib
 import sys
 

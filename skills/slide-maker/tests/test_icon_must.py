@@ -18,6 +18,7 @@ and codex_delivery_gate._icon_waiver_ok share the ICON_NONE_CATEGORIES set.
 
 Run:  python3 tests/test_icon_must.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import json
 import pathlib
 import sys

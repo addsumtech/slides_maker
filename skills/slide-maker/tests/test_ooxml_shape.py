@@ -31,6 +31,7 @@ missing something it does not model is the day to reconsider the full validator,
 
 Run:  python3 tests/test_ooxml_shape.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import pathlib
 import sys
 

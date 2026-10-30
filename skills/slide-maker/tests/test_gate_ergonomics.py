@@ -25,6 +25,7 @@ sourced + generated imagery. Everything here is a measurement from that run.
     still had to be retyped on every lint run or `NO BUILDS` fired on a deck that is static by
     their decision.
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import json
 import os
 import pathlib

@@ -24,6 +24,7 @@ which is the only thing that keeps a curriculum honest.
 
 Run:  python3 tests/test_scaffold_teaches.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import pathlib
 import re
 import subprocess

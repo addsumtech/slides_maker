@@ -25,6 +25,7 @@ rule in the wrong scope is not a gate, which is why this one is a required field
 
 Run:  python3 tests/test_audience_brief.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import ast
 import json
 import pathlib

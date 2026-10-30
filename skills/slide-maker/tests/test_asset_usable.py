@@ -11,6 +11,7 @@ The negatives matter more than the positives, and one especially: an icon is mos
 construction, so a rule about emptiness that is written carelessly fires on every icon in the
 library.
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import io, pathlib, sys, tempfile
 
 HERE = pathlib.Path(__file__).resolve().parent

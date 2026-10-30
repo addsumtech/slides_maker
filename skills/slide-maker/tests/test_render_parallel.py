@@ -20,6 +20,7 @@ Two traps are encoded here because both were hit while writing the feature:
 
 Run:  python3 tests/test_render_parallel.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import hashlib
 import os
 import pathlib

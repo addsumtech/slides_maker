@@ -30,6 +30,7 @@ Three holes are closed here, and the first is the sharpest:
 
 Run:  python3 tests/test_step1_artifacts.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import copy
 import json
 import os

@@ -821,7 +821,12 @@ def _cmd_picks(a):
 # (a typo would otherwise land as a new block every gate ignores) and only notes one that is not.
 _KNOWN_SECTIONS = ("blind_read", "content", "critic", "delivery", "design_plan", "interview", "provenance",
                    "render_selfcheck", "a11y", "fonts", "purpose", "sameness", "talk_time", "template_profile",
-                   "timidity", "citations", "qa_backup", "surface", "taste")
+                   "timidity", "citations", "qa_backup", "surface", "taste", "brand")
+# The Codex evidence file names some sections differently, and has some the shared record does not.
+# Neither is a typo by spelling distance, so both used to merge "anyway" as blocks no shared gate reads.
+_CODEX_NAMES = {"design": "design_plan", "critics": "critic"}
+_CODEX_ONLY = ("arbiters", "build", "deck", "fast_basis", "icons", "review_effort", "runtime", "schema",
+               "thorough_panel", "visual_contract", "waivers")
 
 
 def _deep_merge(dst, src, path, changed):
@@ -854,6 +859,14 @@ def _cmd_merge(a):
         return 2
     typos = []
     for k in frag:
+        if k in _CODEX_NAMES:
+            typos.append("{!r} is the Codex evidence's name — in .deck-gates.json it is {!r}".format(
+                k, _CODEX_NAMES[k]))
+            continue
+        if k in _CODEX_ONLY:
+            typos.append("{!r} is a section of the Codex evidence (.codex-deck-evidence.json), not of "
+                         ".deck-gates.json".format(k))
+            continue
         if k not in _KNOWN_SECTIONS:
             near = difflib.get_close_matches(k, _KNOWN_SECTIONS, n=1, cutoff=0.8)
             if near:
@@ -861,7 +874,7 @@ def _cmd_merge(a):
             else:
                 print("note: {!r} is not a section the gates read — merged anyway".format(k))
     if typos:
-        print("NOT merged — unknown section(s) that look like typos: {}".format(", ".join(typos)), file=sys.stderr)
+        print("NOT merged — section(s) the shared record does not have: {}".format("; ".join(typos)), file=sys.stderr)
         return 2
     g = _load(a.deck_dir) if _path(a.deck_dir).exists() else {}
     changed = []

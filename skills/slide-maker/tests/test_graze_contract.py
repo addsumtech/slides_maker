@@ -23,6 +23,7 @@ the load-bearing one: a check that fires on good decks is worse than no check.
 
 Run:  python3 tests/test_graze_contract.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import pathlib
 import sys
 

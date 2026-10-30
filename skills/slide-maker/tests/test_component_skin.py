@@ -1,5 +1,6 @@
 """The skin layer (Phase 2b): vocabulary, manifests, THEME, the four helpers, and that a skin reaches the drawing.
 Prints `N passed, 0 failed`."""
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import contextlib, io, os, sys, tempfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

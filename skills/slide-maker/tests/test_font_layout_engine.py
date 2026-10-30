@@ -21,6 +21,7 @@ Two halves, because either alone is blind:
 
 Run: python3 tests/test_font_layout_engine.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import ast
 import os
 import sys

@@ -16,6 +16,7 @@ Four defects from one delivered lab-meeting deck, each of which the pipeline had
    height placed at 1.16 was ~4% short — and a divider derived from it was drawn THROUGH the block
    above, with both linters reporting the page clean.
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import json
 import sys
 import warnings

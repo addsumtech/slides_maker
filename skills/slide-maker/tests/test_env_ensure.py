@@ -13,6 +13,7 @@ These tests monkeypatch the detector / installer / soffice-finder — they never
 
 Run:  python3 tests/test_env_ensure.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import os
 import pathlib
 import sys

@@ -22,6 +22,7 @@ figures. A check that fires on correct diagrams is worse than no check.
 
 Run:  python3 tests/test_connector_in_box.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import pathlib
 import sys
 

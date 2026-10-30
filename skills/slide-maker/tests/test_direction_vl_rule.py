@@ -5,6 +5,7 @@ for one, so the four image-led looks rarely reached the person they were built f
 states `images: photos | illustrations | none`; one checker (directions_diversity.images_fault) holds the rule on
 both runtimes, and the gate's named `waived` remains the escape."""
 from __future__ import annotations
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import contextlib, io, sys, tempfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

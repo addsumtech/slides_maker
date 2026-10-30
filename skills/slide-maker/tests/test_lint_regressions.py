@@ -13,6 +13,7 @@ falsely flagged for craft. The two directions matter equally and are asserted se
 
 Run:  python3 tests/test_lint_regressions.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import json, os, pathlib, shutil, subprocess, sys, tempfile
 
 HERE = pathlib.Path(__file__).resolve().parent

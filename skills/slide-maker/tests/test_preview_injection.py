@@ -21,6 +21,7 @@ sanitiser that also eats the `<svg>` is a sanitiser nobody will keep.
 
 Run:  python3 tests/test_preview_injection.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import json
 import pathlib
 import subprocess

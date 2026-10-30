@@ -17,6 +17,7 @@ score every pair of Chinese closing asks at 0.0 and turn two of the four axes of
 deck — passing, quietly, forever. Both directions are tested: a Chinese collapse must FIRE, and
 two genuinely different Chinese arcs must NOT.
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import json
 import pathlib
 import subprocess

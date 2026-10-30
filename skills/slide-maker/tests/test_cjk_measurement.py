@@ -25,6 +25,7 @@ already walk — so all three agree by construction rather than by coincidence.
 
 Run:  python3 tests/test_cjk_measurement.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import pathlib
 import sys
 

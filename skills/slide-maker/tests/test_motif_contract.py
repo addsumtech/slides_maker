@@ -27,6 +27,7 @@ that never uses this vocabulary must never be punished for it.
 
 Run:  python3 tests/test_motif_contract.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import pathlib
 import sys
 

@@ -4,6 +4,7 @@ look and the user's own words — instead of staging four preview directions nob
 the carve ("n/a - user supplied the look"); design.direction had none, so a docs-only agent whose user said "editorial"
 stayed BLOCKED on "clean design direction needs four named preview directions" (restricted run, 2026-10-04)."""
 from __future__ import annotations
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import sys, tempfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

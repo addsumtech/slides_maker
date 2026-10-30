@@ -6,6 +6,7 @@ Every page must BUILD — a composition tries its alternative layouts before ref
 the page, overlap, or carry a value PowerPoint repairs. The first run of this corpus refused 184 of 1440 pages and
 found 26 critical faults (circles off a square page, a mixed-script label running into its note)."""
 from __future__ import annotations
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import contextlib, io, sys, tempfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

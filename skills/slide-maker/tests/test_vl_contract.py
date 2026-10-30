@@ -1,5 +1,6 @@
 """The visual-language contract: the manifest validator (part 1) and the conformance checks over every registered
 language (part 2, Task 3) and the docs blocks (part 3, Task 4). Prints `N passed, 0 failed`."""
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import copy, re, sys
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

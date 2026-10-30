@@ -15,6 +15,7 @@ quietly rewrote a deliberate per-run face, would each be worse than the fault it
 
 Run:  python3 tests/test_retrofit_ea.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import copy
 import pathlib
 import sys

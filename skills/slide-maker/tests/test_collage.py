@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """visual_languages.collage (was collage.py): 1-4 tilted, taped prints with bounded overlap that never enter the text-safe rect; deterministic for a seed; every canvas."""
 from __future__ import annotations
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import sys, tempfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

@@ -8,6 +8,7 @@ XML assertion and still ship a rectangle.
 """
 from __future__ import annotations
 
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import re
 import subprocess
 import sys

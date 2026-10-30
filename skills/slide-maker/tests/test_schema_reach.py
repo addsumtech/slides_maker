@@ -26,6 +26,7 @@ Run: python3 tests/test_schema_reach.py
 """
 from __future__ import annotations
 
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import json
 import os
 import subprocess

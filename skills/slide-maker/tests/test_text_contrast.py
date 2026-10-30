@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """WCAG 1.4.3 text contrast as a hand-off floor: text under 14pt (or under 18pt and not bold) needs 4.5:1 on a resolved backing — no judgement needed, so the a11y gate holds it (a low-contrast caption passed --gate-check clean)."""
 from __future__ import annotations
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import sys, tempfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

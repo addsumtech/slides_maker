@@ -22,6 +22,7 @@ Run: python3 tests/test_template_branch_gates.py
 """
 from __future__ import annotations
 
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import os
 import sys
 import tempfile

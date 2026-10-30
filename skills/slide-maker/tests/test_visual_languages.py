@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """visual_languages: four complete looks — data, fonts per platform AND per script, contrast, register contracts, page compositions on every canvas and language."""
 from __future__ import annotations
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import contextlib, io, sys, tempfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

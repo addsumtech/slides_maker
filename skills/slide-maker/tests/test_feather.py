@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """image_fx.feather: an illustration's edges fade into the paper ground (storybook); colour and existing alpha kept."""
 from __future__ import annotations
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import sys, tempfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

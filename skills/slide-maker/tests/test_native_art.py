@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """native_art: every primitive draws ON the page, in range, deterministically, on any canvas."""
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import sys, tempfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

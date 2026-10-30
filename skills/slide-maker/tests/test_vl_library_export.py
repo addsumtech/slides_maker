@@ -9,6 +9,7 @@ render path (`--only ink`) writes seven 960px preview JPEGs and seven 1920px ful
 
 Run: python3 tests/test_vl_library_export.py   (the render half needs LibreOffice; without it, it says SKIP)
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import json
 import os
 import shutil

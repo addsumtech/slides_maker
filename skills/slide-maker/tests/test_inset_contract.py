@@ -5,6 +5,7 @@ the frame width it counts one line short and the component is built too small (a
 below under DejaVu, CI simulation 2026-10-04). Each case is built from the CURRENT font's metrics, so it holds on any
 machine: the word is set wider than the inner width and narrower than the frame."""
 from __future__ import annotations
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import sys
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

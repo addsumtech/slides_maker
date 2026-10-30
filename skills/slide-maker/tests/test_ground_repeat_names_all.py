@@ -15,6 +15,7 @@ would be a worse trade than the round-trips.
 """
 from __future__ import annotations
 
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import json
 import sys
 import tempfile

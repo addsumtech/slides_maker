@@ -22,6 +22,7 @@ skill starts producing pages that pass checks instead of pages that read well.
 
 Run:  python3 tests/test_hollow_ink.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import pathlib
 import subprocess
 import sys

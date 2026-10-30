@@ -10,6 +10,7 @@ This suite is the other half. It is deliberately small: only boundaries that are
 mechanically, so nothing here depends on someone remembering. The rest of the table stays prose
 because a human has to read it.
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import pathlib, re, sys
 
 HERE = pathlib.Path(__file__).resolve().parent

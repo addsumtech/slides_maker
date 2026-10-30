@@ -30,6 +30,7 @@ that check, at the level the defect lived: the built PPTX, not the arithmetic.
 
 Run:  python3 tests/test_register_expression.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import pathlib
 import sys
 

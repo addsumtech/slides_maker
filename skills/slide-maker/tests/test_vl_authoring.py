@@ -1,6 +1,7 @@
 """Phase 4 — the authoring kit and any-agent use (spec §7): a sixteenth language is started by one command and named
 by the checks until it is finished, without breaking the fifteen; the docs and the scripts' printed output are enough
 for an agent that is not Claude. Prints `N passed, 0 failed`."""
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import contextlib, copy, io, os, pprint, re, shutil, subprocess, sys, tempfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent

@@ -21,6 +21,7 @@ floor keeps its behaviour exactly.
 
 Run:  python3 tests/test_written_reason.py
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import copy
 import json
 import pathlib

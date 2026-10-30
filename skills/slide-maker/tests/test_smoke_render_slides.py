@@ -12,6 +12,7 @@ The contract this locks down is CORRECTNESS, not speed:
 
 Run: python3 tests/test_smoke_render_slides.py     (needs LibreOffice; skips cleanly without it)
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import hashlib
 import os
 import subprocess

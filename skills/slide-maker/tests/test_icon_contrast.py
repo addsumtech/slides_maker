@@ -12,6 +12,7 @@ file is NEGATIVE: a photograph, a two-colour illustration, an opaque PNG and an 
 backdrop must all produce SILENCE, because a confident wrong finding about a colour the image
 does not actually have is worse than the miss it replaces.
 """
+import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
 import io, pathlib, sys, tempfile
 
 HERE = pathlib.Path(__file__).resolve().parent
