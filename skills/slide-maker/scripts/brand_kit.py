@@ -67,19 +67,20 @@ ASSETS = "brand-assets"
 # 🔴 CALIBRATED on four invented brands (blue / green+CJK / saffron on a dark ground / a low-chroma
 # graphite), each built from `style` output with real deckkit components — tests/test_brand_kit.py
 # keeps two of them as the regression. CIEDE2000 to the nearest point on the tint/shade ramps:
-#   on-brand colours in the built decks ........ max 0.61 (integer rounding of deckkit's mixes)
+#   on-brand colours in the built decks ........ max 0.49 (integer rounding of deckkit's mixes)
 #   a JPEG q75 round-trip of a brand colour ..... max 0.70
 #   +-3 RGB drift (an eyedropper, colour mgmt) .. p99 2.13 / 2.76 / 2.31 / 4.09 per brand
-#   the deliberately off-brand variants ......... min 17.8 (violet, raspberry, jade series)
+#   the deliberately off-brand variants ......... min 8.7 (a jade series on the green brand;
+#     violet / raspberry text and fills 17.8-28.6)
 #   a 10-degree hue rotation of primary/accent .. min 3.76 / 5.54 on mid-chroma hues, but 0.87 for
 #     the saturated blue (gamut clipping pulls it back) and 1.93 for the low-chroma graphite
-# 3.0 clears every on-brand use with ~5x headroom and catches every deliberate variant; what it
+# 3.0 clears every on-brand use with ~6x headroom and catches every deliberate variant; what it
 # lets through is what a person reads as the SAME colour (a clipped azure beside a brand blue,
 # deckkit's own SLATE beside a graphite brand at 1.8). Lower and eyedropper drift starts failing
-# real decks; higher and deckkit's stock MUTE/DEEP/GOLD (3.8 / 4.5 / 5.7 from the blue brand) would pass.
+# real decks; higher and deckkit's stock MUTE/DEEP/GOLD (3.8 / 4.5 / 5.1 from the blue brand) would pass.
 TOLERANCE_DE = 3.0
 # Lab chroma at or below which a colour is a grey (no hue to be off-brand WITH). Pure greys measure
-# 0; deckkit's own neutral SLATE/MUTE greys measure 6-9, so they are NOT swept in by this.
+# 0; deckkit's own blue-grey SLATE/MUTE measure 9.2, so they are NOT swept in by this.
 ACHROMATIC_C = 4.0
 LOGO_MATCH = 14.0              # mean abs diff (0-255) of 24x24 premultiplied thumbnails
 WAIVER_CATEGORIES = ("co-branded", "user-approved-deviation", "third-party-material")
@@ -418,7 +419,7 @@ _ROLE_WORDS = (("primary", ("primary", "main colour", "main color", "主色", "�
                ("accent", ("accent", "highlight", "强调", "辅助", "点缀")),
                ("secondary", ("secondary", "supporting", "次要", "第二")),
                ("neutral", ("neutral", "background", "text colour", "text color", "grey", "gray",
-                            "black", "white", "中性", "背景", "灰")))
+                            "black", "white", "ink", "paper", "中性", "背景", "灰", "墨", "纸")))
 _FONT_KW = re.compile(r"typeface|type face|font|字体|字型|書体|서체", re.I)
 _FONT_ROLE = (("heading", re.compile(r"heading|headline|display|title|标题|見出し|제목", re.I)),
               ("body", re.compile(r"\bbody|paragraph|\btext\b|copy|正文|本文|본문", re.I)),
@@ -596,7 +597,10 @@ def _guess_roles(cols):
         chromatic[0]["role_guess"] = "primary"
     for c in cols:
         if not c.get("role_guess"):
-            c["role_guess"] = "neutral" if chroma(rgb_of(c["hex"])) <= 12 else "accent"
+            L = lab(rgb_of(c["hex"]))[0]
+            # a near-black or near-white is a ground/ink even with a tint in it (#1F1235 "Night")
+            c["role_guess"] = ("neutral" if chroma(rgb_of(c["hex"])) <= 12 or L < 20 or L > 95
+                               else "accent")
     return cols
 
 
@@ -709,7 +713,7 @@ def cmd_extract(a):
     for role in ("heading", "body", "cjk"):
         if not fg[role]:
             print("  could not decide a {} face from these files — confirm takes --{}-font "
-                  "if the user names one.".format(role, role))
+                  "if the user names one{}.".format(role, role, " (a CJK deck only)" if role == "cjk" else ""))
     print("NEXT: {} review {}".format(_SELF, shlex.quote(str(out))))
     return 0
 
@@ -730,7 +734,7 @@ def _confirm_cmd(path, b):
     for c in b["colors"]:
         r = c.get("role") or c.get("role_guess")
         if r in ROLES:
-            parts += ["--" + r, c["hex"]]
+            parts += ["--" + r, shlex.quote(c["hex"])]   # '#' unquoted starts a shell COMMENT
     for role in ("heading", "body", "cjk", "mono"):
         f = b["fonts"].get(role)
         if f and f.get("name"):
@@ -740,7 +744,8 @@ def _confirm_cmd(path, b):
 
 def cmd_review(a):
     b = load_brand(a.brand)
-    print("Brand kit {} — {} ({})".format(b.get("name") or "", a.brand, b["status"].upper()))
+    print("Brand kit{} — {} ({})".format(" " + b["name"] if b.get("name") else "", a.brand,
+                                          b["status"].upper()))
     print("  {:<3} {:<8} {:<10} {:>6}  {}".format("#", "hex", "role" if b["status"] == "confirmed"
                                                  else "guess", "weight", "source · label"))
     for i, c in enumerate(b["colors"], 1):
@@ -756,6 +761,11 @@ def cmd_review(a):
     for u in b.get("undecided", []):
         print("  UNDECIDED: " + u)
     cmd = _confirm_cmd(a.brand, b)
+    if b["status"] == "confirmed":
+        print("Already CONFIRMED (the roles above are the reviewed ones). To change them, run "
+              "confirm again: " + cmd)
+        print("NEXT: {} style {}".format(_SELF, shlex.quote(str(a.brand))))
+        return 0
     if a.auto:
         prim = next((c for c in b["colors"] if (c.get("role") or c.get("role_guess")) == "primary"), None)
         alt = next((c for c in b["colors"] if c is not prim and chroma(rgb_of(c["hex"])) > 12), None)
@@ -925,14 +935,14 @@ def cmd_confirm(a):
     # grounds, ink and contrast pairs
     policy = "declared" if a.strict_neutrals else "achromatic"
     neutrals = [c["hex"] for c in kept if c["role"] == "neutral"]
-    lights = neutrals + (["#FFFFFF"] if policy == "achromatic" else [])
-    darks = neutrals + (["#000000"] if policy == "achromatic" else [])
-    light = max(lights, key=lambda h: contrast(h, "#000000")) if lights else None
-    dark = min(darks, key=lambda h: contrast(h, "#000000")) if darks else None
-    if light and contrast(light, "#000000") < 10:
-        light = None                                   # not a light ground
-    if dark and contrast(dark, "#FFFFFF") < 10:
-        dark = None
+    # The brand's OWN neutrals ground the deck first (its paper, its night); white / black only
+    # when it declares none light / dark enough and the achromatic policy allows them.
+    lt = [h for h in neutrals if contrast(h, "#000000") >= 10]
+    dk_ = [h for h in neutrals if contrast(h, "#FFFFFF") >= 10]
+    light = (max(lt, key=lambda h: contrast(h, "#000000")) if lt else
+             "#FFFFFF" if policy == "achromatic" else None)
+    dark = (min(dk_, key=lambda h: contrast(h, "#000000")) if dk_ else
+            "#000000" if policy == "achromatic" else None)
     pairs, twins = [], {}
     for c in kept:
         for gname, g in (("light", light), ("dark", dark)):
@@ -978,10 +988,15 @@ def cmd_confirm(a):
         print("  no face is part of this brand — check will test colour only, and say so")
     print("  grounds: light {} · dark {} · ink {}".format(light or "—", dark or "—",
                                                        (ink or {}).get("hex", "—")))
-    for p in pairs:
-        if p["use"] == "fill only":
-            print("  {} on {} = {}:1 — fill only; text in it uses the twin {}".format(
-                p["fg"], p["bg"], p["ratio"], twins.get(p["fg"], {}).get("hex", "—")))
+    for c in kept:
+        if c["role"] == "neutral":
+            continue
+        row = ["{} on {} {}:1 ({})".format(gname, p["bg"], p["ratio"], p["use"])
+               for gname in ("light", "dark") for p in pairs
+               if p["fg"] == c["hex"] and p["ground"] == gname]
+        tw = twins.get(c["hex"])
+        print("  {} {}{}".format(c["hex"], " · ".join(row),
+                                 "  -> as TEXT on light uses the shade {}".format(tw["hex"]) if tw else ""))
     if dropped:
         print("  dropped (not named at confirm): " + ", ".join(dropped))
     print("  neutrals: " + ("declared only (--strict-neutrals)" if policy == "declared" else
@@ -1127,8 +1142,10 @@ def cmd_style(a):
         "    'name': {!r},".format(b.get("name")),
         "    'bg': GROUND, 'ink': INK, 'muted': MUTE, 'accents': ACCENTS,",
         "    'font': FONT, 'display': DISPLAY, 'mono': MONO, 'ea': EAFONT, 'ea_display': EADISPLAY,",
-        "    'logo': {!r}, 'logo_ground': {!r},".format(rel_logo if logo else None,
-                                                     logo["ground"] if logo else None),
+        "    # absolute at import, so a build run from any folder finds it",
+        "    'logo': {}, 'logo_ground': {!r},".format(
+            "str(__import__('pathlib').Path(__file__).resolve().parent / {!r})".format(rel_logo)
+            if logo else None, logo["ground"] if logo else None),
         "}",
         "",
         "",
@@ -1600,11 +1617,19 @@ def cmd_check(a):
     deck_dir = Path(a.deck).resolve().parent
     rel = _rel(a.brand, deck_dir)
     obj = json.dumps({"file": rel})
-    print("NEXT: python3 {} set {} brand {}".format(
-        shlex.quote(str(HERE / "deck_gates.py")), shlex.quote(str(deck_dir)), shlex.quote(obj)))
+    dg = "python3 " + shlex.quote(str(HERE / "deck_gates.py"))
+    setc = "{} set {} brand {}".format(dg, shlex.quote(str(deck_dir)), shlex.quote(obj))
+    if (deck_dir / ".deck-gates.json").is_file():
+        print("NEXT: " + setc)
+    else:                                       # `set` needs the record to exist first
+        print("NEXT: {} init {}".format(dg, shlex.quote(str(deck_dir))))
+        print("THEN: " + setc)
     print("  (Codex runtime: put  \"brand\": {}  in .codex-deck-evidence.json instead.)".format(obj))
-    print("THEN: python3 {} {} --gate-check   (Codex: codex_delivery_gate.py --evidence …)".format(
+    print("THEN: python3 {} {} --gate-check".format(
         shlex.quote(str(HERE / "render_deck.py")), shlex.quote(str(a.deck))))
+    print("  (Codex runtime: the delivery gate as references/codex-runtime.md 'Evidence record and "
+          "gate' runs it — codex_delivery_gate.py --lint … --components … --build-script … "
+          "--evidence .codex-deck-evidence.json)")
     return 0
 
 
@@ -1625,7 +1650,10 @@ def cmd_save(a):
     b = load_brand(a.brand)
     _require_confirmed(b, a.brand)
     reg = _brand_roots()
-    _rn, root = reg.root_for_write()
+    if os.environ.get(reg.ENV_OVERRIDE, "").strip():
+        root = reg.all_roots()[0][1]                # the override WINS for writes (registry.py's
+    else:                                           # contract), even before it exists — never
+        _rn, root = reg.root_for_write()            # silently the user's real registry instead
     dest = root / "brands" / a.name
     dest.mkdir(parents=True, exist_ok=True)
     src_base = Path(a.brand).resolve().parent

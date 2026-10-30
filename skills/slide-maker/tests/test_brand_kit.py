@@ -30,6 +30,8 @@ BK = str(SCRIPTS / "brand_kit.py")
 os.environ["SLIDE_MAKER_TASTE_LEDGER"] = "/nonexistent/taste-ledger-for-tests.json"
 TMP = Path(tempfile.mkdtemp(prefix="brandkit-test-"))
 os.environ["SLIDE_MAKER_REGISTRY"] = str(TMP / "registry")
+(TMP / "registry").mkdir()        # an ABSENT override is skipped on read: the kit must never leak
+                                  # into the user's real ~/.claude/slide-templates
 
 fails: list[str] = []
 
@@ -203,6 +205,20 @@ check(code == 0 and "#0B5FFF" in out and "confirm" in next_line(out),
 code, out = run("review", TW / "brand.json", "--auto")
 check(code == 0 and '"axis": "template"' in out and '"basis"' in out and '"alternative"' in out,
       "review --auto prints a delegated-pick row to record:\n" + out)
+import delegated_picks as dp  # noqa: E402
+row = next((json.loads(ln) for ln in out.splitlines() if ln.startswith('{"axis"')), None)
+picks = [{"axis": ax, "source": "genre-default", "value": "the deck the request implies"}
+         if ax == "angle" else
+         {"axis": ax, "source": "stated", "value": "what the user said"} for ax in dp.AXES]
+picks = [row if p["axis"] == "template" else p for p in picks]
+check(row is not None and not dp.faults({"picks": picks}, auto=True),
+      "the printed auto-mode row passes the delegated-picks contract: {}".format(
+          dp.faults({"picks": picks}, auto=True) if row else out))
+# '#' unquoted starts a shell COMMENT — a printed confirm line must survive being pasted
+nxt = next_line(out)
+check("--primary '#" in nxt, "the printed confirm line quotes its hex values: " + nxt)
+r = subprocess.run(nxt[len("NEXT: "):] + " --help", shell=True, capture_output=True, text=True)
+check(r.returncode == 0, "the printed confirm line parses in a shell: " + r.stderr[-300:])
 
 # ── confirm ───────────────────────────────────────────────────────────────────────────────────
 code, out = run("confirm", TW / "brand.json")
@@ -216,6 +232,8 @@ roles = {c["hex"]: c["role"] for c in bj["colors"]}
 check(roles.get("#0B5FFF") == "primary" and roles.get("#FF7A00") == "accent",
       "confirm sets the roles: {}".format(roles))
 check(bj["confirmed"].get("pairs"), "confirm records text/background contrast pairs")
+check(bj["confirmed"].get("ground_light") == "#F2F5F9" and bj["confirmed"].get("ground_dark") == "#0B2545",
+      "the brand's OWN neutrals ground the deck before white/black: {}".format(bj["confirmed"]))
 check("style" in next_line(out), "confirm prints NEXT: style …\n" + out)
 
 # a font that is not installed -> a named, installed fallback, marked
@@ -246,6 +264,8 @@ code, out = run("save", TW / "brand.json", "--name", "tidewater")
 check(code == 0, "save exits 0:\n" + out)
 code, out = run("list")
 check(code == 0 and "tidewater" in out, "list shows the saved kit:\n" + out)
+check((TMP / "registry" / "brands" / "tidewater" / "brand.json").is_file(),
+      "save wrote under $SLIDE_MAKER_REGISTRY, not into some other registry root")
 DECK2 = TMP / "deck2"
 DECK2.mkdir()
 code, out = run("use", "tidewater", DECK2)
