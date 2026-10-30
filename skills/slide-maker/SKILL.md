@@ -101,7 +101,8 @@ Two time sinks compress well: ingesting material/assets, and the critic loop.
     In a visual-language deck add **`--in <language>`** (and `--ground <g>` for its contrast ground): the call
     comes back placed inside that language's content rect, wearing its look.
   - **Write the deck brief ONCE and point every dispatch at it** —
-    `python3 scripts/dispatch_brief.py init --deck <dir>`, fill it, then
+    `python3 scripts/dispatch_brief.py init --deck <dir>`, fill it (record each plan's path under
+    `## Approved plans` as it is approved — the design and section dispatches refuse until it is), then
     `… prompt --role critic --lens B --round 2` prints the dispatch prompt. Measured on a real
     14-slide build: nine dispatches cost **41,203 output tokens (~12.5 min)**, the most expensive
     turn class in the pipeline, at ~4,600 tokens each — and almost all of it was the SAME

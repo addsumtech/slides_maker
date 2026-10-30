@@ -62,6 +62,39 @@ check(code == 2, "the internal critic_sole prompt is not offered as a --role (ex
 code, out, err = run("prompt", "--brief", str(brief), "--role", "critic", "--lens", "A", "--round", "2")
 check(code == 0 and "LENS A ONLY" in out, "--lens A still prints the single-lens dispatch")
 
+# ── the design dispatch names the APPROVED content plan FILE (audit 2026-10-29) ─────────────────────────────
+# The design prompt said the approved content plan was "in the deck brief", and the brief had no slot for it —
+# so the art director was pointed at a document that carried no plan.
+b2 = tmp / "brief2.md"
+code, out, err = run("init", "--deck", str(deck), "--out", str(b2))
+t2 = b2.read_text(encoding="utf-8")
+check("## Approved plans" in t2 and "content plan:" in t2 and "design plan:" in t2,
+      "init writes an Approved plans slot with content plan:/design plan: lines")
+b2.write_text(t2.replace("<<FILL>>", "no source; web-supplement: free within a cap of 10"), encoding="utf-8")
+code, out, err = run("prompt", "--brief", str(b2), "--role", "planner")
+check(code == 0, "the planner dispatch needs no approved plan — it writes it (exit {}; {})".format(code, err.strip()[:160]))
+code, out, err = run("prompt", "--brief", str(b2), "--role", "design")
+check(code == 1 and "content plan" in err, "the design dispatch is refused while the content plan is pending "
+                                          "(exit {}; {})".format(code, err.strip()[:160]))
+code, out, err = run("check", "--brief", str(b2), "--role", "design")
+check(code == 1 and "content plan" in err, "check --role design requires the content plan path (exit {}; {})"
+      .format(code, err.strip()[:160]))
+plan = tmp / "content-plan.md"
+b2.write_text(b2.read_text(encoding="utf-8").replace("content plan: pending", "content plan: " + str(tmp / "nope.md")),
+              encoding="utf-8")
+code, out, err = run("prompt", "--brief", str(b2), "--role", "design")
+check(code == 1 and "nope.md" in err, "a content plan path that does not exist is refused by name ({})"
+      .format(err.strip()[:160]))
+plan.write_text("# Content plan\n", encoding="utf-8")
+b2.write_text(b2.read_text(encoding="utf-8").replace(str(tmp / "nope.md"), str(plan)), encoding="utf-8")
+code, out, err = run("check", "--brief", str(b2), "--role", "design")
+check(code == 0, "check --role design passes once the content plan exists (exit {}; {})".format(code, err.strip()[:160]))
+code, out, err = run("prompt", "--brief", str(b2), "--role", "design")
+check(code == 0 and str(plan) in out, "the design prompt names the content plan FILE ({!r})".format(out[:300]))
+code, out, err = run("prompt", "--brief", str(b2), "--role", "section", "--section", "1", "--slides", "1-4")
+check(code == 1 and "design plan" in err, "a section author also needs the approved design plan (exit {}; {})"
+      .format(code, err.strip()[:160]))
+
 for line in ok:
     print("  ok   " + line)
 for line in bad:
