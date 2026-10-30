@@ -162,6 +162,9 @@ _home = Path(tempfile.mkdtemp())
 (_home / ".slide-maker" / "slide-templates").mkdir(parents=True)
 (_home / ".slide-maker" / "slide-templates" / "taste.md").write_text(Path(_cream).read_text(encoding="utf-8"), encoding="utf-8")
 _env = dict(_os.environ, HOME=str(_home))
+# this block isolates by a fake HOME, whose host-neutral root holds the taste.md; the registry override
+# (tests/_hermetic.py) is exclusive, so it would hide that root — drop it for these subprocesses
+_env.pop("SLIDE_MAKER_REGISTRY", None)
 _a4 = Path(tempfile.mkdtemp()); dk.blank_deck(8.27, 11.69).save(str(_a4 / "board.pptx"))
 r_ = subprocess.run([sys.executable, "scripts/visual_languages.py", "--gates", "editorial", "--ground", "auto", "--deck", str(_a4)],
                     cwd=str(ROOT), capture_output=True, text=True, env=_env)
