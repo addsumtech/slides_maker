@@ -1215,7 +1215,8 @@ def main(argv=None):
     n = sub.add_parser("numbers", help="every number on the slides traces to the user's files")
     n.add_argument("target", help="the deck folder (reads .deck-gates.json) or a .pptx")
     n.add_argument("--pptx")
-    n.add_argument("--source", nargs="+", help="source files (instead of content.sources)")
+    n.add_argument("--source", nargs="+", action="extend", help="source files (instead of content.sources); "
+                   "list them after one --source or repeat the flag")
     m = sub.add_parser("material", help="the user's files checked against themselves")
     m.add_argument("targets", nargs="+", help="the deck folder (reads content.sources) or the files")
     r = sub.add_parser("read", help="what one source file yields")

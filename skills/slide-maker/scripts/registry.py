@@ -33,7 +33,7 @@ them, and `user-taste.md` already calls the profile "portable across hosts".
 WRITE picks the first root that exists; if NONE does, it picks the host-neutral root, which is
 the only one safe to create on a runtime whose home directory this skill does not own.
 
-    $SLIDE_MAKER_REGISTRY        explicit override — always wins, read and write
+    $SLIDE_MAKER_REGISTRY        explicit override — the ONLY root when set, read and write
     ~/.claude/slide-templates    Claude Code
     ~/.codex/slide-templates     Codex
     ~/.slide-maker/slide-templates   host-neutral — every other runtime, and the fallback
@@ -87,7 +87,11 @@ def all_roots() -> list[tuple[str, Path]]:
                   f"one fixed place in a tool that changes directory — anchoring it to your home "
                   f"as {env_path}. Set an absolute path to choose somewhere else.",
                   file=sys.stderr)
-        out.append(("env", env_path))
+        # EXCLUSIVE, not merely first: the override is how a run keeps the user's own profile out
+        # (a test, a demo, a second person on the machine). Measured: with it pointing at an empty
+        # folder, taste_file() fell through to ~/.claude/slide-templates/taste.md, so freshness was
+        # still scored against — and templates still listed from — the profile it was set to avoid.
+        return [("env", env_path)]
     out.extend((name, home / rel) for name, rel in _ROOTS)
     return out
 
@@ -130,6 +134,8 @@ def root_for_write() -> tuple[str, Path]:
     conjured at read time is indistinguishable from a user who has one, and
     `references/user-taste.md`'s empty-file rule turns on exactly that difference.
     """
+    if os.environ.get(ENV_OVERRIDE, "").strip():
+        return all_roots()[0]                    # the override, existing or not — it is the only root
     existing = roots_for_read()
     if existing:
         return existing[0]

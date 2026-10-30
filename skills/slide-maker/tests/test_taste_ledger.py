@@ -120,6 +120,23 @@ for name in ("render_deck.py", "deck_gates.py", "codex_delivery_gate.py"):
     check("taste_applied" not in src or "import taste_ledger" in src,
           "{} references the field without importing the contract".format(name))
 
+# the registry override isolates the LEDGER too: a real run that set SLIDE_MAKER_REGISTRY to keep the
+# user's profile out was still blocked by the two entries in ~/.slide-maker/taste-ledger.json
+import os as _os
+_saved = {k: _os.environ.get(k) for k in ("SLIDE_MAKER_TASTE_LEDGER", "SLIDE_MAKER_REGISTRY")}
+_os.environ.pop("SLIDE_MAKER_TASTE_LEDGER", None)
+_os.environ["SLIDE_MAKER_REGISTRY"] = "/tmp/some-isolated-registry"
+check(str(tl.ledger_path()) == "/tmp/some-isolated-registry/taste-ledger.json",
+      "with SLIDE_MAKER_REGISTRY set, the ledger lives in that registry (got {})".format(tl.ledger_path()))
+_os.environ["SLIDE_MAKER_TASTE_LEDGER"] = "/tmp/explicit-ledger.json"
+check(str(tl.ledger_path()) == "/tmp/explicit-ledger.json",
+      "an explicit SLIDE_MAKER_TASTE_LEDGER still wins over the registry")
+for _k, _v in _saved.items():
+    if _v is None:
+        _os.environ.pop(_k, None)
+    else:
+        _os.environ[_k] = _v
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_taste_ledger] {}".format("FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))
 sys.exit(1 if fails else 0)

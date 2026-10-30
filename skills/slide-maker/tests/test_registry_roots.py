@@ -146,6 +146,16 @@ def main():
         check("...and is labelled as the override, not as a host",
               registry.root_for_write()[0] == "env")
 
+    print("\n== the override is EXCLUSIVE: nothing is read from the host roots behind it ==")
+    # Measured: with the override pointing at an empty folder, taste_file() returned the user's
+    # ~/.claude/slide-templates/taste.md — so a test run (or a run that set the override to keep
+    # the user's profile out) still scored freshness against that profile and listed its templates.
+    with fake_home(CLAUDE, env="myreg", taste=(CLAUDE, "# taste\n- the user's own profile\n")) as home:
+        check("an empty override reads NO taste.md from the host root behind it",
+              registry.taste_file() is None, registry.taste_file())
+        check("...and lists only the override as a read root",
+              [n for n, _ in registry.roots_for_read()] == ["env"], registry.roots_for_read())
+
     print("\n== degrades LOUDLY, never fatally, on a root it cannot read ==")
     # macOS TCC revokes access to home subdirectories mid-session (it does this to ~/Downloads
     # and ~/Desktop routinely). A PermissionError escaping the Step-0 interview would kill a

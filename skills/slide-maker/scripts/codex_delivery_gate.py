@@ -981,6 +981,58 @@ def check_render_selfcheck(
                       "(a slide with no verdict is a slide nobody looked at)")
 
 
+def attestation_faults(declared_zones: set, declared_icons: set, hotspot_checks: list, icon_checks: list) -> list[str]:
+    """The design review's probe rows must attest every declared zone and icon. A refusal names the
+    ids still missing and the exact row that attests one — a docs-only run spent seven gate runs
+    guessing the shape from "did not attest every declared icon" alone."""
+    def _ok(rows):
+        return {row.get("id") for row in rows
+                if isinstance(row, dict) and row.get("result") == "pass"
+                and isinstance(row.get("observed"), str) and len(row["observed"].strip()) >= 12}
+    out = []
+    zones = sorted(declared_zones - _ok(hotspot_checks))
+    icons = sorted(declared_icons - _ok(icon_checks))
+    if zones:
+        out.append("design critic did not visually attest every declared local hotspot — missing: {}. "
+                   "Add to the design (or fast-tier general) review's probes.hotspot_checks one row each: "
+                   '{{"id": "<zone id from visual-contract.json>", "result": "pass", "observed": "<what '
+                   'the pixels show there, 12+ characters>"}}'.format(", ".join(zones[:8])))
+    if icons:
+        out.append("design critic did not attest every declared icon's semantic fit — missing: {}. "
+                   "Add to the design (or fast-tier general) review's probes.icon_checks one row each: "
+                   '{{"id": "<icon id from visual-contract.json>", "result": "pass", "observed": "<what '
+                   'the icon depicts and why it fits this content, 12+ characters>"}}'.format(", ".join(icons[:8])))
+    return out
+
+
+def reviewer_faults(reviewer: dict[str, Any], waived: bool) -> list[str]:
+    """The critic's provenance must be TRUE. An isolated or human reviewer saw the deck with a fresh
+    context; a self-review cannot have one, and is allowed only under a `critic-independence` waiver.
+    (The gate once demanded fresh_context: true of every reviewer while allowing self-review — so a
+    runtime with no subagents had to write a false record to pass.)"""
+    out = []
+    origin = reviewer.get("origin")
+    if origin not in {"isolated", "human", "self-review"}:
+        out.append("reviewer.origin must be isolated, human, or self-review")
+    ident = reviewer.get("identity")
+    if not isinstance(ident, str) or len(ident.strip()) < 3:
+        out.append("reviewer.identity must name who reviewed (at least 3 characters)")
+    fresh = reviewer.get("fresh_context")
+    if origin in {"isolated", "human"} and fresh is not True:
+        out.append("reviewer.fresh_context must be true for an {} reviewer — one who saw the deck "
+                   "without the build conversation".format(origin))
+    if origin == "self-review":
+        if fresh is not False:
+            out.append("reviewer.fresh_context must be false for a self-review — the builder reviewing "
+                       "its own deck has the build context; record that truthfully")
+        if not waived:
+            out.append("reviewer is self-review; record a critic-independence waiver (waivers[]: "
+                       '{"kind": "critic-independence", "lens": "<content|design|general>", '
+                       '"reason": "<why no independent reviewer — at least 12 characters>"}) '
+                       "and report it as self-audit, never as independent consent")
+    return out
+
+
 def check_source_trace(evidence: dict[str, Any], root: Path, deck_path: Path | None, errors: list[str]) -> None:
     """THE USER'S OWN MATERIAL, number by number — the same rules as `render_deck.py --gate-check`
     (scripts/source_check.py owns both). Every number on the final slides must trace to the
@@ -2729,14 +2781,8 @@ def check_critics(
         if not isinstance(reviewer, dict):
             errors.append(f"{label} must record reviewer provenance (isolated, human, or self-review)")
         else:
-            origin = reviewer.get("origin")
-            if origin not in {"isolated", "human", "self-review"}:
-                errors.append(f"{label}.reviewer.origin must be isolated, human, or self-review")
-            require_string(reviewer.get("identity"), f"{label}.reviewer.identity", errors, minimum=3)
-            if reviewer.get("fresh_context") is not True:
-                errors.append(f"{label}.reviewer.fresh_context must be true")
-            if origin == "self-review" and not waived(evidence, "critic-independence", lens=lens):
-                errors.append(f"{label} is self-review; record a critic-independence waiver instead of claiming independent consent")
+            for f in reviewer_faults(reviewer, waived(evidence, "critic-independence", lens=lens)):
+                errors.append(f"{label}.{f}")
         for issue in validator.validate_critic(review):
             errors.append(f"{label} invalid critic schema: {issue}")
         coverage = review.get("coverage", {})
@@ -2865,18 +2911,7 @@ def check_visual_contract(
     probes = design_review.get("probes", {}) if isinstance(design_review, dict) else {}
     hotspot_checks = probes.get("hotspot_checks", []) if isinstance(probes, dict) else []
     icon_checks = probes.get("icon_checks", []) if isinstance(probes, dict) else []
-    checked_zones = {
-        row.get("id") for row in hotspot_checks
-        if isinstance(row, dict) and row.get("result") == "pass" and isinstance(row.get("observed"), str) and len(row["observed"].strip()) >= 12
-    }
-    checked_icons = {
-        row.get("id") for row in icon_checks
-        if isinstance(row, dict) and row.get("result") == "pass" and isinstance(row.get("observed"), str) and len(row["observed"].strip()) >= 12
-    }
-    if not declared_zones.issubset(checked_zones):
-        errors.append("design critic did not visually attest every declared local hotspot")
-    if not declared_icons.issubset(checked_icons):
-        errors.append("design critic did not attest every declared icon's semantic fit")
+    errors.extend(attestation_faults(declared_zones, declared_icons, hotspot_checks, icon_checks))
 
 
 def evaluate(

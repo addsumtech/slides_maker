@@ -806,6 +806,36 @@ def main() -> int:
         if not any("placeholder" in e for e in errs):
             failures.append("a raw --template placeholder in a candidate field passed the codex gate")
 
+        # An unattested icon names WHICH icon and the row that attests it — a docs-only run spent
+        # seven gate runs guessing the row shape and finally emptied the declared icons to pass.
+        _msgs = gate.attestation_faults({"z1"}, {"icon-bike"}, [], [{"id": "icon-bike", "result": "pass"}])
+        _icon = " ".join(m for m in _msgs if "icon" in m)
+        if not ("icon-bike" in _icon and '"result": "pass"' in _icon and '"observed"' in _icon):
+            failures.append("an unattested icon does not name the icon and the icon_checks row shape: " + _icon[:300])
+        _zone = " ".join(m for m in _msgs if "hotspot" in m)
+        if not ("z1" in _zone and "hotspot_checks" in _zone):
+            failures.append("an unattested hotspot does not name the zone and the row: " + _zone[:300])
+        if gate.attestation_faults({"z1"}, {"i"}, [{"id": "z1", "result": "pass", "observed": "the label clears the bar"}],
+                                   [{"id": "i", "result": "pass", "observed": "a bicycle for the rides KPI"}]):
+            failures.append("fully attested zones and icons were refused")
+
+        # A self-review cannot have a fresh context. The gate used to demand fresh_context: true of
+        # EVERY reviewer while allowing self-review under a waiver — so a run with no subagents had
+        # to write a false record to pass (a real docs-only run did exactly that).
+        rf = gate.reviewer_faults
+        if rf({"origin": "isolated", "identity": "critic-a", "fresh_context": True}, waived=False):
+            failures.append("an isolated reviewer with a fresh context was refused")
+        if not rf({"origin": "isolated", "identity": "critic-a", "fresh_context": False}, waived=False):
+            failures.append("an isolated reviewer WITHOUT a fresh context passed")
+        if rf({"origin": "self-review", "identity": "the builder", "fresh_context": False}, waived=True):
+            failures.append("an honest self-review (fresh_context false) under a waiver was refused: "
+                            + "; ".join(rf({"origin": "self-review", "identity": "the builder",
+                                            "fresh_context": False}, waived=True)))
+        if not rf({"origin": "self-review", "identity": "the builder", "fresh_context": True}, waived=True):
+            failures.append("a self-review claiming a fresh context passed — that record is false")
+        if not rf({"origin": "self-review", "identity": "the builder", "fresh_context": False}, waived=False):
+            failures.append("a self-review with no critic-independence waiver passed")
+
         if failures:
             print("\n".join("FAIL: " + failure for failure in failures))
             return 1

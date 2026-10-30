@@ -23,9 +23,11 @@ exist, the write target, and whether a `taste.md` is already there. `~/.claude/s
 NEITHER — Kimi, Gemini, Cursor, Coze, an API caller — falls back to the host-neutral
 `~/.slide-maker/slide-templates/`. That fallback exists because the two-host list was the whole
 list for a long time, so on every other runtime this file's protocol silently did not run: no
-root, no read, no write, and nothing anywhere reporting it. `$SLIDE_MAKER_REGISTRY` overrides
-all of them. Reads scan every root that exists (higher priority wins on a name clash), so a
-template or profile saved under one agent is findable from another.
+root, no read, no write, and nothing anywhere reporting it. `$SLIDE_MAKER_REGISTRY` replaces
+all of them — when it is set it is the ONLY root, for reads and writes, and the taste ledger lives
+in it too (a test, a demo or a second person keeps the user's profile out by setting it). Without
+it, reads scan every root that exists (higher priority wins on a name clash), so a template or
+profile saved under one agent is findable from another.
 
 It lives at that root and **not inside this skill**, because it is the user's personal
 footprint: portable across hosts, theirs to edit or delete line-by-line. **A missing or empty `taste.md` is silently skipped** —

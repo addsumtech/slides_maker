@@ -702,8 +702,8 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   `planned_icon_family`) so no gate spells `design_plan`/`design` or `icon_family`/`icons[]` itself.
 - `taste_ledger.py` — what THIS user has already corrected by hand, so the next deck does not
   relearn it: `add` · `list [--binds-at …] [--format prompt]` · `retire <id> --gate <CODE>` ·
-  `check <deck-dir>`. Data lives OUTSIDE the repo (`~/.slide-maker/taste-ledger.json`, override
-  with `$SLIDE_MAKER_TASTE_LEDGER`) — a user's verbatim words are not repo content. **Self-limiting:
+  `check <deck-dir>`. Data lives OUTSIDE the repo (`~/.slide-maker/taste-ledger.json`; inside
+  `$SLIDE_MAKER_REGISTRY` when that is set; override with `$SLIDE_MAKER_TASTE_LEDGER`) — a user's verbatim words are not repo content. **Self-limiting:
   an entry is RETIRED once it earns a deterministic gate**, so the ledger only ever holds
   taught-but-ungated rules. An empty ledger asks nothing; the gate checks each rule was CONSIDERED,
   never that it was obeyed.

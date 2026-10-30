@@ -473,6 +473,11 @@ rerun = subprocess.run(__import__("shlex").split(_next[0].split("then: ", 1)[1])
                        capture_output=True, text=True) if _next else None
 check("CLI numbers on a .pptx: the printed NEXT command runs as printed (keeps --source)",
       rerun is not None and rerun.returncode == 1 and "3,421" in rerun.stdout, (_next, rerun and rerun.stdout[-300:]))
+out = subprocess.run([sys.executable, str(SC), "numbers", str(D / "deck.pptx")] +
+                     sum([["--source", str(D / x)] for x in SOURCES], []), capture_output=True, text=True)
+check("--source repeated once per file keeps EVERY file (a real run lost all but the last: 111 false findings)",
+      out.returncode == 1 and "3,421" in out.stdout and "12,345" not in "".join(
+          l for l in out.stdout.splitlines() if l.strip().startswith("slide")), out.stdout[-500:])
 out = subprocess.run([sys.executable, str(SC), "material", str(D)], capture_output=True, text=True)
 check("CLI material on the deck folder: exit 1 with ids and the record shape",
       out.returncode == 1 and "M-" in out.stdout and "material_check" in out.stdout, out.stdout[-400:] + out.stderr[-300:])

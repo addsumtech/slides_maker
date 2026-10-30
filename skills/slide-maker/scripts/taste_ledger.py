@@ -74,9 +74,19 @@ def _w(text) -> int:
 
 
 def ledger_path() -> Path:
+    """$SLIDE_MAKER_TASTE_LEDGER, else the ledger inside $SLIDE_MAKER_REGISTRY when that override is
+    set (it is how a run keeps the user's own profile out — a real run that set it was still blocked
+    by the user's ledger entries), else ~/.slide-maker/taste-ledger.json."""
     env = os.environ.get("SLIDE_MAKER_TASTE_LEDGER")
     if env:
         return Path(env).expanduser()
+    reg = os.environ.get("SLIDE_MAKER_REGISTRY", "").strip()
+    if reg:
+        try:
+            import registry                                            # noqa: PLC0415
+            return registry.all_roots()[0][1] / "taste-ledger.json"
+        except Exception:                                              # noqa: BLE001
+            return Path(reg).expanduser() / "taste-ledger.json"
     return Path.home() / ".slide-maker" / "taste-ledger.json"
 
 

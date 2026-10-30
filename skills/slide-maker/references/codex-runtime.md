@@ -643,9 +643,11 @@ interview answer at all — each reads the built file itself):
    normal two focused critics separately: content/fidelity and design/layout/legibility. Each final
    review is a separate JSON file, has full-deck coverage, declares its lens, consents, and records the
    SHA-256 of the final PPTX it reviewed. The review must also record `reviewer: {origin, identity,
-   fresh_context}`. `origin: isolated` or `human` is the normal path; `self-review` is allowed only
-   with a named `critic-independence` waiver and must be reported as self-audit, never as independent
-   consent. The design review's `probes` must include one `hotspot_checks` row for every visual-contract
+   fresh_context}`. `origin: isolated` or `human` is the normal path, with `fresh_context: true`;
+   `self-review` is allowed only with a named `critic-independence` waiver — `waivers[]: {"kind":
+   "critic-independence", "lens": "<content|design|general>", "reason": "<12+ characters>"}` — records
+   `fresh_context: false` (the builder has the build context; say so), and must be reported as
+   self-audit, never as independent consent. The design review's `probes` must include one `hotspot_checks` row for every visual-contract
    zone and one `icon_checks` row for every semantic icon, each with an observed-pixels note. A review
    that lists both lenses is not a substitute for two independent records in this adapter. For a full
    `thorough` panel, also preserve the arbiter's final fix-confirmation JSON; the original skill's
