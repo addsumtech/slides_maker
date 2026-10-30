@@ -3640,6 +3640,37 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
             print("[gates] open ledger: {} claim(s) the source marks as unresolved{}"
                   .format(len(_open),
                           "" if _open else " — swept, nothing open"))
+
+            # THE USER'S OWN MATERIAL, number by number. A deck built from someone's report has no
+            # web source to refute it against, so the primary-source spot-check skips it, and the
+            # ledger and the critic compare the slides with what the PLANNER wrote down — a figure
+            # mistyped on the way (3,412 → 3,421) or a growth rate worked out wrongly passes both.
+            # So every number on the built slides must trace to the files (or to a recorded,
+            # re-checked rounding / derivation), and the files are checked against THEMSELVES
+            # (totals, shares, two versions of one table). `[]` is legitimate — a web-sourced or
+            # no-source deck — and, like open_ledger, the missing KEY is what blocks.
+            # The rules live in scripts/source_check.py so the Codex gate runs the same ones.
+            if "sources" not in _content:
+                die("`content.sources` is missing. List the user's own material this deck was built "
+                    "from, relative to the deck folder:\n"
+                    '    "sources": [{"path": "annual-report.pdf"}, {"path": "data.xlsx"}]\n'
+                    "  Every number on the slides is then traced to those files. Write [] when the "
+                    "deck has no user material (web-researched or no-source).")
+            if not isinstance(_content.get("sources"), list):
+                die("`content.sources` must be a LIST ([] when there is no user material).")
+            import source_check as _sc
+            _web = [str(c.get("claim") or "") for c in (_section(gates, "provenance").get("claims") or [])
+                    if isinstance(c, dict) and c.get("url")]
+            _sc_faults, _sc_line = _sc.gate_faults(_content, os.path.dirname(os.path.abspath(pptx)),
+                                                   pptx, web_claims=_web)
+            if _sc_faults:
+                die("the deck does not trace to the user's material ({} problem(s)):\n  - {}\n"
+                    "  See every number with its closest source figure: {} numbers {}\n"
+                    "  and the material's own contradictions:           {} material {}"
+                    .format(len(_sc_faults), "\n  - ".join(_sc_faults[:12]),
+                            _here_cmd("source_check.py"), shlex.quote(os.path.dirname(os.path.abspath(pptx))),
+                            _here_cmd("source_check.py"), shlex.quote(os.path.dirname(os.path.abspath(pptx)))))
+            gate_ok("[gates] " + _sc_line)
             # The units column exists to make an about-to-be-empty or about-to-be-dense page visible
             # AT THE CHECKPOINT rather than at the render. Printed, never fatal: a 0 on a pure-image
             # beat and a 6 on a spoken one are both legitimate, and only the author knows which.

@@ -851,6 +851,19 @@ verbatim-vs-skimmed line + the `selection FYI:` line; a missing/partial map is "
 for a video-sourced deck the transcript-status line** (supplied locator or the visual-only GAP
 line); an empty/hedged/untraced brief is **not ready** — send it back to the planner. Fold in the
 user's edits to the story, then move to design (Step 2).
+> **🔴 THE USER'S OWN FILES, checked against themselves — before the planner reads them.** Record the
+> files in the gate record (`content.sources`: `[{"path": "report.pdf"}, …]`, relative to the deck
+> folder; `[]` for a deck with no user material) and run
+> `python3 scripts/source_check.py material <deck-dir>`. It finds a total that is not the sum of its
+> rows or columns, shares off 100% beyond rounding, and the same table in two files with a cell that
+> disagrees. Each finding is a **「材料自相矛盾」 open question at the content checkpoint** — only the
+> user can say which value is right (auto mode: decide, give the basis, and list it in the hand-off) —
+> recorded as `content.material_check: [{"id": "M-…", "resolution": "<which value, who said so>"}]`.
+> The gate later traces **every number on the built slides** to these files
+> (`source_check.py numbers <deck-dir>`): a figure rounded, converted or worked out goes in
+> `content.numbers` as a `source_value` / `derived` row the gate re-checks; one read off a picture is a
+> `from_image` row and is reported as not machine-checked. Images, scanned PDFs and .doc/.xls are
+> UNREADABLE — ask for a .pdf/.docx/.xlsx/.csv export when the numbers matter.
 > **🔴 CHECKPOINT — CONTENT:** show the comprehension brief + claim ledger + narrative arc + the
 > per-slide takeaways/content, and confirm the pace/slide-count, before any design work begins —
 > rendered as the compact ≤~25-line checkpoint artifact defined under the 🔴 CHECKPOINT convention
@@ -2840,7 +2853,11 @@ as research-supplied, and pulls the gate in for those rows. **When a `provenance
 confirmed against the user's own material** (a mixed deck, or one that records them anyway), such a
 row cites that file instead of a URL — `{"claim": "…", "verdict": "CONFIRMED", "source": "<path to the
 user's file, relative to the deck folder>"}` — and the gate checks the file exists; a web-researched
-claim still needs its primary-source `url`.
+claim still needs its primary-source `url`. **A deck built from the user's material skips the web
+spot-check but NOT the number trace:** `content.sources` + `source_check.py` (Step 1) hold every slide
+number to those files at the gate, on both runtimes, and the hand-off's `provenance:` line carries its
+tally (`N numbers traced · N rounded · N derived · N from images (not machine-checked) · N material
+findings resolved`).
 
 **High-stakes decks:** after each fix round's re-render, read `references/critic-panel.md` → "Verify the fixes and corroborate consent" — the arbiter re-check of the change manifest (with its required `dulled` flag) and the corroborated-consent rule that gates shipping. *(This is the "fail loudly at the cap" passage the round-cap rule above points at.)*
 

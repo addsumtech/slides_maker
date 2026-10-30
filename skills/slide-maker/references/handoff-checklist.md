@@ -9,7 +9,11 @@ forward-looking content you added, open questions (e.g. a missing real brand ass
 authoritative hand-off checklist; the owning rules point here):** the `provenance: N checked · N
 confirmed · N fixed · N cut` line (research-sourced decks — the PRIMARY-SOURCE GATE's artifact;
 when the user answered `none` at the post-build question it reads
-`provenance: skipped — user declined post-build review`, never a tally that implies it ran), the
+`provenance: skipped — user declined post-build review`, never a tally that implies it ran; a deck
+built from the user's own files carries the number-trace tally instead or as well — `N numbers traced
+to your files · N rounded · N derived · N read off images (not machine-checked) · N material
+contradictions resolved` — the image count and each resolved contradiction named, because those are
+the figures only the user can vouch for), the
 **capability ledger** (the four host lines from Step 0, plus what was LOST wherever a
 capability was absent — a degraded run must be legible as degraded), the
 **`review:` line** (the tier that ran plus HOW it was reached at the post-build question —

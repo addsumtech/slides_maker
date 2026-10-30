@@ -348,7 +348,12 @@ Use the web for **three jobs**, and run it whether or not you have a source:
   scheduled/dated event — from the SOURCE as well as the web — must be a ledger row before it can
   appear on a slide **or in a Spoken thread** (the narration is a claim surface too — a number the
   audience *hears* misleads exactly like one they read); a row with **verified? = N is cut or
-  marked open, never shipped**. **Recency
+  marked open, never shipped**. **For the user's own files, copy every figure exactly as the file
+  writes it** — the delivery gate traces each slide number back to them (`scripts/source_check.py`), so
+  a rounded / re-unit figure records its `source_value`, a worked-out one its `derived` expression over
+  file figures, and one read off a picture is `from_image`. Bring the `source_check.py material`
+  findings (the files contradicting themselves) to the checkpoint as 「材料自相矛盾」 open questions —
+  never pick a side silently. **Recency
   by type:** superlatives / SOTA / rankings / prices / counts / versions / role-holders →
   re-verify at *today's* date with a recency-bounded search; dated events → check whether they
   have already happened as of today and write the correct tense; stable facts (definitions,

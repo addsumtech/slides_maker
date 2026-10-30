@@ -526,6 +526,13 @@ jobs:
       # slide. Asserted both ways: an inserted/deleted/moved/retitled slide reads as that ONE event,
       # stale renders are never filed as a version's pictures, and restore --slides goes through the
       # build source and refuses on every ambiguity instead of guessing.
+      - name: Source check (every slide number traces to the user's files; the files checked against themselves)
+        run: |
+          set -o pipefail
+          python tests/test_source_check.py | tee /tmp/source_check.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/source_check.log || {
+            echo "::error::source-check suite did not run to completion"; exit 1; }
+
       - name: Deck versions (snapshot · diff numbers-first · restore through the source)
         run: |
           set -o pipefail

@@ -152,6 +152,18 @@ def template(slides=None, delivery="presented"):
             "open_ledger": [{"claim": "<what the source marks as NOT yet shown>",
                              "source": "<where it says so>",
                              "in_deck": "<absent | stated as open on slide N>"}],
+            # the USER'S OWN material the deck was built from, relative to the deck folder — every
+            # number on the slides is traced to these files (source_check.py). [] when the deck has
+            # no user material (web-researched / no-source).
+            "sources": [{"path": "<the user's file, e.g. annual-report.pdf — or make the list []>"}],
+            # how a number NOT found verbatim in those files was reached — one route per row:
+            # {"value": "1.2万", "slide": 3, "source_value": "12,345"}          rounded / re-unit
+            # {"value": "17.6%", "slide": 3, "derived": "(12345-10500)/10500*100"}
+            # {"value": "57", "slide": 2, "from_image": "volunteers.png (top table)"}
+            # {"value": "2026", "slide": 7, "not_a_claim": "<why it is not a claim>"}
+            "numbers": [],
+            # one row per `source_check.py material` finding: which value is right, and who said so
+            "material_check": [],
             "arc": {
                 "candidates": [{"name": "<arc name>", "shape": "<evidence-build|…>",
                                 "opening_roles": ["<role>", "<role>", "<role>"],
@@ -318,6 +330,18 @@ def check(gates):
                         problems.append("`content.open_ledger[{}]` needs a `source` — where the "
                                         "source says it is unresolved. Without the locator the row "
                                         "is an opinion about the material.".format(i))
+        if "sources" not in content:
+            problems.append("`content.sources` is missing — the user's own files the deck was built "
+                            "from ([{\"path\": \"report.pdf\"}], relative to the deck folder), or [] "
+                            "when there are none. Every number on the slides is traced to them.")
+        elif not isinstance(content.get("sources"), list):
+            problems.append("`content.sources` must be a LIST ([] when there is no user material).")
+        else:
+            for i, r in enumerate(content["sources"]):
+                path = r.get("path") if isinstance(r, dict) else r
+                if not isinstance(path, str) or not path.strip() or _ph(path):
+                    problems.append("`content.sources[{}]` needs a real `path` (or make the list [] "
+                                    "when the deck has no user material).".format(i))
 
     probe = _need(gates, "design_plan.material_probe", problems, dict,
                   why="Step 2 opens by BUILDING one real slide and looking at it.")
@@ -590,6 +614,7 @@ def _selftest():
                       {"decision": "what to tell the board in March",
                        "needs": "one number they can repeat without a caveat"}]}
     g["content"]["open_ledger"] = []          # swept; the source marks nothing as unresolved
+    g["content"]["sources"] = []              # no user material — nothing to trace numbers against
     g["critic"] = {"waived": "user declined with the deck visible", "waived_category": "user-waived"}
     g["render_selfcheck"] = {"slides": [{"n": i + 1, "verdict": "ok"} for i in range(3)]}
     # A blind read whose findings are COMPUTED from its own answers and then answered. Typing the

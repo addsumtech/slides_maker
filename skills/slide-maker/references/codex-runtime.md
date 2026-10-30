@@ -355,6 +355,17 @@ correlation) · `designed_charts.roc_curve` (square + chance diagonal + AUC). A 
 a slide); the four chart recipes write a PNG, so `component_audit` cannot see them and the ROUTING is
 their only backstop — which is why they are named here.
 
+**The user's own files — checked against themselves, and every slide number traced to them.** For a
+`provided` deck, before planning run `python3 scripts/source_check.py material <file> …` (the same files
+as `content.sources`). Each `M-…` finding — a total that is not the sum of its rows/columns, shares off
+100%, the same table in two files disagreeing — is a question for the user (auto mode: decide and say so
+in the hand-off), recorded as `content.material_check: [{"id": "M-…", "resolution": "…"}]`. After the
+build, `python3 scripts/source_check.py numbers <deck.pptx> --source <file> …` lists every slide number the
+files do not state, with the closest file figure; fix the slide, or add a `content.numbers` row
+(`source_value` · `derived` · `from_image` · `not_a_claim` — the evidence template shows each). The
+delivery gate runs both checks on the `provided` sources; a claim-ledger row whose `source` is a URL
+traces the numbers it states. Images, scanned PDFs and .doc/.xls are UNREADABLE — ask for an export.
+
 **Brand kit — when the user's answer to the template question is "our brand"** (a company / lab /
 product deck, and they hand over a logo, a brand-guide PDF, an old on-brand .pptx/.potx, or just hex
 codes and font names). Never guess a brand palette from the company's name: no file and no hex means

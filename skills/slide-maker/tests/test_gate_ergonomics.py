@@ -125,6 +125,7 @@ d.update({"boldness": "bold",
 # `[]` is the legitimate "swept the source, nothing it marks as open" value — the gate blocks the
 # missing KEY, never the count.
 filled["content"]["open_ledger"] = []
+filled["content"]["sources"] = []          # no user material in this fixture — nothing to trace
 filled["content"]["audience_brief"] = {
     "who": "the two editors deciding whether to run this investigation",
     "decisions": [{"decision": "run it or hold it", "needs": "which claim is the weakest link"},

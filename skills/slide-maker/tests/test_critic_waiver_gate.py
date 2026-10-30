@@ -171,6 +171,8 @@ def content_ok(n_slides: int = 3) -> dict:
             # a no-source fixture legitimately carries. The gate blocks the missing KEY, never the
             # count, so a fixture must still say which it is.
             "open_ledger": [],
+            # no user material: the numbers trace (source_check.py) has nothing to trace against
+            "sources": [],
             # Who this fixture deck is FOR and what they have to decide — the frame that aims the
             # research, required since a deck built for travellers shipped a land-survey thesis
             "audience_brief": {
@@ -1130,11 +1132,55 @@ def check_form_reach(deck: Path) -> tuple[int, int]:
     return ok, bad
 
 
+def check_source_trace(td: Path) -> tuple[int, int]:
+    """The shared gate traces every slide number to the user's files (scripts/source_check.py) —
+    end to end through `--gate-check`, so the wiring is tested, not just the module."""
+    ok = bad = 0
+    d = td / "trace"
+    d.mkdir()
+    sys.path.insert(0, str(SKILL / "scripts"))
+    import deckkit as dk
+    prs = dk.blank_deck(10, 5.625)
+    for i, line in enumerate(("Slide 1", "参与人数 3,421 人", "Slide 3")):
+        s = prs.slides.add_slide(prs.slide_layouts[6])
+        dk.text(s, 1, 1, 8, 1, [[(line, 28, dk.DEEP, True, False)]])
+    deck = d / "t.pptx"
+    prs.save(str(deck))
+    write_proof(d)
+    (d / "events.md").write_text("2025 年活动参与人数 3,412 人。\n", encoding="utf-8")
+    gates = {"critic": {"verdict": "consent", "rounds": 2}, "design_plan": DESIGN_OK,
+             "provenance": PROV_OK, "content": dict(content_ok(3), sources=[{"path": "events.md"}])}
+    for name, cond in (
+            ("gate: a slide number the user's file does not state fails, naming the file's figure",
+             lambda c, o: c != 0 and "3,421" in o and "3,412" in o and "traces to nothing" in o),):
+        code, out = run_gate(deck, gates)
+        if cond(code, out):
+            ok += 1; print(f"  ok   {name}")
+        else:
+            bad += 1; print(f"  FAIL {name}: exit={code}\n       " + out.strip()[-500:])
+    (d / "events.md").write_text("2025 年活动参与人数 3,421 人。\n", encoding="utf-8")
+    code, out = run_gate(deck, gates)
+    if code == 0 and "traced" in out:
+        ok += 1; print("  ok   gate: the same deck passes once the file states the number")
+    else:
+        bad += 1; print(f"  FAIL gate: traced deck should pass: exit={code}\n       " + out.strip()[-500:])
+    no_key = dict(gates, content={k: v for k, v in gates["content"].items() if k != "sources"})
+    code, out = run_gate(deck, no_key)
+    if code != 0 and "content.sources" in out:
+        ok += 1; print("  ok   gate: a record without content.sources is refused (the missing KEY blocks)")
+    else:
+        bad += 1; print(f"  FAIL gate: missing content.sources should block: exit={code}")
+    return ok, bad
+
+
 def main() -> int:
     passed = failed = 0
     with tempfile.TemporaryDirectory() as td:
         deck = build_deck(Path(td))
         write_proof(Path(td))
+        _o, _b = check_source_trace(Path(td))
+        passed += _o
+        failed += _b
         for name, critic_block, should_pass, needle in CASES:
             gates = dict(critic_block)
             gates.setdefault("design_plan", DESIGN_OK)

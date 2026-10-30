@@ -230,6 +230,17 @@ TEMPLATE = {
                 "verified": True,
             }
         ],
+        # EVERY NUMBER on the final slides is traced to the `provided` sources above
+        # (scripts/source_check.py). A number not written verbatim in them needs one row saying how
+        # it was reached — the gate re-checks each:
+        #   {"value": "1.2万", "slide": 3, "source_value": "12,345"}           rounded / re-unit
+        #   {"value": "17.6%", "slide": 3, "derived": "(12345-10500)/10500*100"}
+        #   {"value": "57", "slide": 2, "from_image": "volunteers.png (top table)"}
+        #   {"value": "2026", "slide": 7, "not_a_claim": "<why it is not a claim>"}
+        "numbers": [],
+        # One row per `source_check.py material` finding (a total that is not the sum of its rows,
+        # shares off 100%, two versions of one table disagreeing): which value is right, who said so.
+        "material_check": [],
         # THE ARC COMPETITION. This record bound the DESIGN competition (design.direction, with a
         # hashed directions.html) and recorded nothing about the CONTENT one — backwards, by the
         # skill's own reckoning: a wrong form costs one slide, a wrong arc costs the design plan and
@@ -967,6 +978,25 @@ def check_render_selfcheck(
     if expected_slides and set(seen) != expected_slides:
         errors.append("render_selfcheck.slides must carry one verdict for every slide "
                       "(a slide with no verdict is a slide nobody looked at)")
+
+
+def check_source_trace(evidence: dict[str, Any], root: Path, deck_path: Path | None, errors: list[str]) -> None:
+    """THE USER'S OWN MATERIAL, number by number — the same rules as `render_deck.py --gate-check`
+    (scripts/source_check.py owns both). Every number on the final slides must trace to the
+    `provided` sources, or to a re-checked `content.numbers` row; the provided files are checked
+    against themselves, and each finding needs a `content.material_check` resolution. A web claim in
+    the claim ledger (its source a URL) traces the numbers it states."""
+    content = evidence.get("content")
+    if not isinstance(content, dict) or deck_path is None:
+        return
+    paths = [s.get("path") for s in (content.get("sources") or [])
+             if isinstance(s, dict) and s.get("kind") == "provided" and isinstance(s.get("path"), str)]
+    web = [str(c.get("claim") or "") for c in (content.get("claim_ledger") or [])
+           if isinstance(c, dict) and _re.match(r"(?i)^https?://", str(c.get("source") or ""))]
+    import source_check as _sc
+    faults, _line = _sc.gate_faults(content, str(root), str(deck_path), web_claims=web, source_paths=paths)
+    for f in faults:
+        errors.append("source trace: " + f)
 
 
 def check_content(
@@ -2884,6 +2914,7 @@ def evaluate(
     check_lint(lint, delivery, evidence, errors)
     if expected_slides:
         check_content(evidence, root, expected_slides, errors)
+        check_source_trace(evidence, root, deck_path, errors)
         check_render_selfcheck(evidence, expected_slides, errors)
         design_rows = check_design(evidence, root, expected_slides, deck_hash, errors)
         build_script, calls = check_build(evidence, root, supplied_script, errors)

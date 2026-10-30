@@ -548,6 +548,19 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   runs escalates, and the next run is REFUSED if the edit only moved numbers (the build script's AST
   is hashed with numeric literals normalised) — `--nudge-again "<why>"` overrides and records why.
   After every build that completed it snapshots the deck into `.versions/` (`deck_versions.py`).
+- `source_check.py` — a deck built from the USER'S OWN material, held to that material (local, no network,
+  no model). `numbers <deck-dir>` traces every number on the built slides to the files in `content.sources`
+  (pdf text layer · docx · pptx · xlsx cell values incl. percent formats · csv · md/txt/html); a number not
+  written verbatim there needs a `content.numbers` row — `source_value` (rounded / re-unit, re-checked to
+  round to the slide figure), `derived` (an arithmetic expression over file figures, re-evaluated),
+  `from_image` (counted as NOT machine-checked) or `not_a_claim`; it names the closest file figure for
+  each untraced one (a transposed 3,412 → 3,421). `material <deck-dir|files…>` checks the files against
+  THEMSELVES: a total row/column that is not the sum of its parts, shares off 100% beyond rounding, the
+  same table in two files with a cell that disagrees — stable `M-xxxxxx` ids, resolved in
+  `content.material_check`. `read <file>` shows what one file yields. Images, scanned PDFs and .doc/.xls
+  are UNREADABLE with the reason, never clean. Both gates run it (`gate_faults`); page chrome, source-note
+  lines, bare integers ≤10 and the cover date are not claims. Limit: a wrong number that happens to equal
+  ANOTHER figure in the files passes — the critic's fidelity item still owns meaning.
 - `deck_versions.py` — deck versions in `<deck-dir>/.versions/vNNN/` (pptx, build sources, renders
   when they belong to that pptx, `manifest.json`): `snapshot <deck-dir> [--note] [--keep]` (automatic
   after each `deck_cycle.py` build; unchanged content → no new version; newest 30 kept, `--keep` never
