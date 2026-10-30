@@ -516,6 +516,17 @@ jobs:
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/cycle_breaker.log || {
             echo "::error::loop-breaker suite did not run to completion"; exit 1; }
 
+      # A rebuild must be reviewable slide by slide — numbers first — and undoable for the deck or one
+      # slide. Asserted both ways: an inserted/deleted/moved/retitled slide reads as that ONE event,
+      # stale renders are never filed as a version's pictures, and restore --slides goes through the
+      # build source and refuses on every ambiguity instead of guessing.
+      - name: Deck versions (snapshot · diff numbers-first · restore through the source)
+        run: |
+          set -o pipefail
+          python tests/test_deck_versions.py | tee /tmp/deck_versions.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/deck_versions.log || {
+            echo "::error::deck-versions suite did not run to completion"; exit 1; }
+
       # Both checks here came out of VERIFYING a review's claims rather than trusting them: of six
       # re-measured by hand, three were factually wrong, and two of those nearly became lint checks
       # built to enforce a defect that did not exist. What survived verification ships; what did

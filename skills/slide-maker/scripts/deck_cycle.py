@@ -390,6 +390,17 @@ def main(argv):
     # a streak here — and only when the lint actually ran and judged them.
     _loop_breaker(deck_dir, script_path, out, lint_out, lint_ran)
 
+    # The build completed (a CRITICAL fault returned above), so this deck is a state worth going
+    # back to: snapshot it into <deck-dir>/.versions (deduplicated on content). A versioning aid
+    # must never be the reason a cycle fails — it cannot change this run's exit code.
+    print("\n── versions " + "─" * 52)
+    try:
+        import deck_versions
+        deck_versions.snapshot(deck_dir, note="deck_cycle", pptx=str(pptx), script=str(script_path),
+                               render_dir=deck_dir / "render")
+    except Exception as exc:            # noqa: BLE001
+        print("   snapshot NOT taken — {}: {}".format(type(exc).__name__, exc))
+
     total = sum(d for _l, _r, d in stages)
     line = " · ".join(f"{l} {d:.1f}s" for l, _r, d in stages)
     print(f"\n── cycle  {total:.1f}s  ({line})")
