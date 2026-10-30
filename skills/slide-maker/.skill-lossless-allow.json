@@ -188,6 +188,13 @@
   "84b682d5d2f560d4": "Rewritten in place, not deleted: the native-language list gained `interface` · `wayfinding` (P5) and the line re-wrapped; the rest of the sentence is unchanged.",
   "3f06ce06c9097032": "Rewritten in place, not deleted: the count / list is now a generated vl block (scripts/vl_docs.py writes it from the registry, CI checks it); the sentence is otherwise unchanged.",
   "1bc1badfab1219c0": "Rewritten in place, not deleted: the count / list is now a generated vl block (scripts/vl_docs.py writes it from the registry, CI checks it); the sentence is otherwise unchanged.",
-  "93059ad33a132050": "Rewritten in place, not deleted: the count / list is now a generated vl block (scripts/vl_docs.py writes it from the registry, CI checks it); the sentence is otherwise unchanged."
+  "93059ad33a132050": "Rewritten in place, not deleted: the count / list is now a generated vl block (scripts/vl_docs.py writes it from the registry, CI checks it); the sentence is otherwise unchanged.",
+  "d02af02d236f2ce5": "Reworded in place, not removed: the dispatch-brief line now also says to record each approved plan's path under ## Approved plans (fix/audit-rules-briefs B3).",
+  "e3c6cc98dbb27a2d": "Reworded in place, not removed: the delegated-picks paragraph now names `deck_gates.py picks`/`merge` before the same hand-off sentence (fix/audit-rules-briefs B4).",
+  "bd110c3e10398a62": "Reworded in place, not removed: the fan-out paragraph now points at large-deck-orchestration.md as the owner of the ~6 threshold before the same history note (fix/audit-rules-briefs A2).",
+  "e5165db9c7f4383c": "Corrected, not removed: Step 5 named the non-blocking `dk.lint_layout(prs)` as the build-time gate; it now names `dk.lint_layout(prs, strict=True)`, matching Step 4 (fix/audit-rules-briefs A6).",
+  "f931bc72e9a0978e": "Contradiction fixed: standard is the low-stakes panel everywhere else (Step 0, interview-protocol, critic-panel); the 'defense / pitch / exec readout' clause moved to the thorough row (fix/audit-rules-briefs A1).",
+  "bd6cf3be2264bba7": "Extended in place: the thorough row now carries the 'worth it for a defense / pitch / exec readout' clause moved from the standard row (fix/audit-rules-briefs A1).",
+  "73a2ef97f42108c2": "Contradiction fixed: an auto escalation for a defense deck goes to thorough (the high-stakes tier), not standard; same line, one word changed (fix/audit-rules-briefs A1)."
  }
 }
