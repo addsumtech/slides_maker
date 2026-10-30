@@ -2105,7 +2105,7 @@ only the emitted form-candidates (per-slide runner-up from a different family) +
 tally push toward the ceiling. A delegated deck emits them for itself, not for the user.
 
 ## Step 5 — Render, verify, then run the actor–critic loop
-**You should already have run the build-time geometry gate** (`dk.lint_layout(prs)` at the end of
+**You should already have run the build-time geometry gate** (`dk.lint_layout(prs, strict=True)` at the end of
 Step 4) and cleared its CRITICALs (off-canvas · overflow · text-on-text) in-process, so the render
 loop starts mostly geometry-clean. `lint_deck.py` below then re-checks that geometry on the final file
 as a backstop and adds the render/parse-only faults; the rest is what needs real pixels (crop,

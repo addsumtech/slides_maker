@@ -61,7 +61,11 @@ the shared runtime's `$DECK/.deck-gates.json`; on the Codex runtime the same val
    `def slide_NN(prs, k):` (the Codex gate reads the calls inside each `def`). Name it `build_<deck stem>.py` — the
    STYLE APPLIED check looks for exactly that name beside the deck. A deck that is READ rather than presented says so
    from the script: `dk.declare_delivery(HERE, "selfread")` (`presented` — the default — `textheavy`, `selfread`,
-   `surface`); the lint's budgets follow it. The `editorial` test deck:
+   `surface`); the lint's budgets follow it. **End `main()` with `dk.lint_layout(prs, strict=True)` before
+   `prs.save`:** strict makes the build-time geometry check a gate — an unresolved CRITICAL (off-canvas, overflow,
+   text-on-text, a rule through text) raises and the file is never written — while the default `strict=False` only
+   prints and still saves, so a broken page reaches the render and the critic (and the Codex gate refuses a build
+   script without it). The `editorial` test deck:
    ```python
    import os
    import sys
@@ -107,6 +111,7 @@ the shared runtime's `$DECK/.deck-gates.json`; on the Codex runtime the same val
        k = vl.use("editorial", prs, ground="auto")
        for build in (slide_01, slide_02, slide_03, slide_04, slide_05):
            build(prs, k)
+       dk.lint_layout(prs, strict=True)             # a CRITICAL raises here and the deck is never saved
        prs.save(str(HERE / "repair-cafe.pptx"))
        print("saved", HERE / "repair-cafe.pptx")
 
@@ -247,6 +252,7 @@ k.image_text(k.new_slide(), kicker="What you find", title="Tools on every bench"
 k.quote(k.new_slide(), quote="I left knowing how it works.", attribution="A visitor")
 k.data(k.new_slide(), number="1", label="evening a month", note="Always the first Friday.")
 k.closing(k.new_slide(), title="Bring one broken thing.", line="And bring a neighbour.", image=P("table-mended.jpg"))
+dk.lint_layout(prs, strict=True)                # criticals raise before anything is saved
 prs.save("collage.pptx")
 ```
 
@@ -580,6 +586,7 @@ k.points(k.new_slide(), title="How it works", tags=["Idea", "Evening", "Next"],
          items=[("Bring it broken", "Anything that switches on is welcome."), ("Fix it together", "Your hands do the work."),
                 ("Take it home", "What is not fixed goes on the list.")])
 k.closing(k.new_slide(), title="See you next week", line="Bring a neighbour.")
+dk.lint_layout(prs, strict=True)                # criticals raise before anything is saved
 prs.save("weekly.pptx")
 ```
 

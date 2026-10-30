@@ -683,7 +683,9 @@ prs = dk.blank_deck(13.333, 7.5)        # the canvas (formats.blank_deck("<name>
 s = dk.add_slide(prs)                   # the page most scaffolds draw on (a visual-language deck starts EVERY
                                         # page with k.new_slide() instead, so leave this line out there)
 # A file name such as "skyline.png" stands for YOUR file; the vl_* and ground scaffolds use pictures bundled
-# with the skill. End the script with prs.save("<deck folder>/<deck>.pptx").
+# with the skill. End the script with dk.lint_layout(prs, strict=True) and then
+# prs.save("<deck folder>/<deck>.pptx"): strict raises on a CRITICAL so a broken page is never saved
+# (the default strict=False only prints, and the file still saves).
 """
 
 # The same preamble for a visual-language deck: its pages start with k.new_slide(), so the ordinary `s` (an empty

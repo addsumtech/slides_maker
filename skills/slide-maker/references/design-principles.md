@@ -421,7 +421,7 @@ ask of each element "is there suitable, balanced space around it, or is it crowd
   "no overlaps, perfect layout" is to derive every position from the measured layout helpers
   (`content_band` for the safe rect, `columns`/`rows` for splits, `vstack(bottom=…)` for stacks,
   `bottom_callout` for the bottom) so blocks *can't* collide, then run the **two nets in order**:
-  `deckkit.lint_layout(prs)` at BUILD time (in-process, before any render — off-canvas · overflow ·
+  `deckkit.lint_layout(prs, strict=True)` at BUILD time (in-process, before any render — off-canvas · overflow ·
   text-on-text · card-escape · footer · off-centre) and `scripts/lint_deck.py` AFTER render (re-checks
   geometry on the final file + the render-only faults: CJK kinsoku/widow · missing EA font ·
   whole-page-image · uneven rows). Hand-placed coordinates are where overlaps creep in; measured

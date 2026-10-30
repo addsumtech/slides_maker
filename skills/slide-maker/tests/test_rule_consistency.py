@@ -83,6 +83,39 @@ check("large-deck-orchestration.md" in _scale,
 check("from ~9 slides the BUILD fans out" not in read("references/critic-panel.md"),
       "critic-panel.md does not restate the stale ~9 build threshold")
 
+# ─────────────────────────────────────────────── A6 · documented build scripts end with the STRICT lint
+import sigs  # noqa: E402
+
+check("lint_layout(prs, strict=True)" in sigs.PREAMBLE,
+      "sigs.py's printed scaffold preamble tells a build script to end with dk.lint_layout(prs, strict=True)")
+vld = read("references/visual-languages.md")
+blocks = re.findall(r"```python\n(.*?)```", vld, re.S)
+_saving = [b for b in blocks if "prs.save(" in b]
+check(_saving, "visual-languages.md carries build examples that save a deck")
+for b in _saving:
+    lint_at = b.find("lint_layout(prs, strict=True)")
+    check(0 <= lint_at < b.find("prs.save("),
+          "visual-languages.md example calls dk.lint_layout(prs, strict=True) BEFORE prs.save: {!r}"
+          .format(b.strip().splitlines()[-1][:60]))
+check("`dk.lint_layout(prs)` at the end of" not in SK,
+      "SKILL.md Step 5 does not describe the build-time gate as the non-blocking lint_layout(prs)")
+check("`deckkit.lint_layout(prs)` at BUILD time" not in read("references/design-principles.md"),
+      "design-principles.md names the strict build-time gate, not the non-blocking call")
+# …and the editorial example still BUILDS under strict mode (a documented example that raises would teach
+# the reader to switch strict off — the exact thing this fixes).
+_ed = next((b for b in _saving if "repair-cafe.pptx" in b), None)
+if _ed is not None:
+    td = Path(tempfile.mkdtemp(prefix="vl-strict-"))
+    script = td / "build_repair-cafe.py"
+    script.write_text("\n".join(l[3:] if l.startswith("   ") else l for l in _ed.splitlines()), encoding="utf-8")
+    env = dict(os.environ, SKILL=str(SKILL))
+    r = subprocess.run([sys.executable, str(script)], capture_output=True, text=True, cwd=str(td), env=env)
+    check(r.returncode == 0 and (td / "repair-cafe.pptx").exists(),
+          "the editorial worked example builds and saves under lint_layout(strict=True) (exit {}; {})"
+          .format(r.returncode, (r.stderr or r.stdout).strip()[-300:]))
+else:
+    check(False, "the editorial repair-cafe example is in visual-languages.md")
+
 
 for line in ok:
     print("  ok   " + line)
