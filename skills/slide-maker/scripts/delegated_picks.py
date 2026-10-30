@@ -194,7 +194,8 @@ MISSING = (
     '         "alternative": "<who else it could have been for, and why not>"},\n'
     '        {"axis": "language", "source": "stated", "value": "<the user\'s own>"}, …]}\n'
     '  Axes: ' + " · ".join(AXES) + '\n'
-    '  Sources: ' + " | ".join(SOURCES) + '  ·  `angle` may never be `delegated`.')
+    '  Sources: ' + " | ".join(SOURCES) + '  ·  `angle` may never be `delegated`.\n'
+    '  Record each row with: python3 scripts/deck_gates.py picks <deck-dir> --set AXIS=VALUE --source …')
 
 
 # ── CLI ──────────────────────────────────────────────────────────────────────────────────────────

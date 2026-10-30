@@ -21,6 +21,12 @@ did. An unusual angle is a proposal: name it in one line in the first FYI so it 
 to veto — a missing TOPIC or unlocatable source material is still asked (that one question, not the
 form), same class as the save-location stop. Preference questions the request already answers
 are simply recorded, not re-picked.
+**Record each pick with the command, not by hand-editing JSON:**
+`python3 scripts/deck_gates.py picks <deck-dir> --set AXIS=VALUE --source <stated|genre-default|inferred-from-request|from-material|not-applicable|delegated> [--basis "…"] [--alternative "…"]`
+— one row per axis, checked by `delegated_picks` BEFORE it is written (a `delegated` angle, or a decided
+audience/purpose/template with no alternative, is refused on the spot instead of at hand-off); re-running it
+on an axis replaces that row, and `deck_gates.py picks <deck-dir>` alone lists what is still unrecorded. A
+plan's gate block (a JSON object of record sections) goes in with `deck_gates.py merge <deck-dir> <fragment.json>`.
 **Delegated picks are DERIVED, not defaulted — the waiver removes the asking, never the
 understanding.** Before picking, actually look at what they gave: scan provided material for its
 genre, register, density, and audience clues (a clinical paper, a pitch doc, and a course note
@@ -200,6 +206,6 @@ waiver changes: the post-build question is not posted as a stop; the coordinator
 preferences the user would have expressed; it does not cover declining review of a deck they never
 saw — skipping the loop entirely is a decision only the user can make, with the deck in front of
 them. An auto run that wants MORE than `fast` (a defense, an exec readout) may escalate and must
-record the reason: `review: standard (escalated — defense deck, auto)`. Either way the tier and
+record the reason: `review: thorough (escalated — defense deck, auto)`. Either way the tier and
 its derivation appear in the hand-off `review:` line; a tier recorded nowhere is
 indistinguishable from a review never run.

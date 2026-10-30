@@ -36,7 +36,7 @@ The brief is written to a SCRATCH path, never into the deliverable folder
 Usage
 -----
   python3 scripts/dispatch_brief.py init  --deck <deck-dir>          # create + print the path
-  python3 scripts/dispatch_brief.py check --brief <path>             # gate: all sections filled?
+  python3 scripts/dispatch_brief.py check --brief <path> [--role design] # gate: all sections filled?
   python3 scripts/dispatch_brief.py prompt --brief <path> \\
           --role critic --lens A --round 2                           # print the dispatch prompt
   python3 scripts/dispatch_brief.py prompt --brief <path> \\
@@ -66,7 +66,16 @@ SECTIONS = [
                         "source cannot settle stays flagged, never filled from memory"),
     ("Contract card", "assembled from the APPROVED plans — declarations only, never rationale. "
                       "Full required field list: references/critic-panel.md -> 'The CONTRACT CARD'"),
+    ("Approved plans", "absolute path of each APPROVED plan file, `pending` until it is approved. The "
+                       "design dispatch reads the content plan from here; a section author needs both"),
 ]
+
+# The plan FILES, which the brief POINTS AT rather than copies (audit 2026-10-29: the design prompt said
+# the approved content plan was "in the deck brief", and the brief had no slot for it). Written `pending`
+# by init, because the planner is dispatched before any plan exists; each role below cannot start until
+# the plans it reads are named AND exist.
+PLAN_KEYS = ("content plan", "design plan")
+PLANS_NEEDED = {"design": ("content plan",), "section": ("content plan", "design plan")}
 
 ROLE_PROMPTS = {
     "critic": (
@@ -91,7 +100,8 @@ ROLE_PROMPTS = {
         "validated by `validate_review.py critic`, so a non-conforming review is rejected."),
     "section": (
         "Author ONE section of this deck as a Python module, per the slide-maker skill.\n"
-        "🔴 Read the deck brief, the approved plans and the CONTRACT CARD at `{brief}` first.\n"
+        "🔴 Read the deck brief and the CONTRACT CARD at `{brief}` first, then the APPROVED content plan "
+        "`{content_plan}` and design plan `{design_plan}`.\n"
         "🔴 Copy the scaffold in `{skill}/references/examples/section_example.py`: import the "
         "shared `style`, expose `build_section(prs)`, one function per slide with its plan-row "
         "docstring, and set START_PAGE so page numbers stay continuous.\n"
@@ -110,8 +120,8 @@ ROLE_PROMPTS = {
     "design": (
         "You are the ART DIRECTOR (slide-design agent) for this deck, per the slide-maker skill.\n"
         "🔴 Read `{skill}/agents/slide-design.md` and work to it.\n"
-        "🔴 Read the deck brief and the APPROVED content plan at `{brief}` — the message is "
-        "locked; you design on top of it and never re-open it.\n"
+        "🔴 Read the deck brief at `{brief}`, then the APPROVED content plan at `{content_plan}` — the "
+        "message is locked; you design on top of it and never re-open it.\n"
         "Return the Design plan with every required field, including the gate line."),
 }
 
@@ -138,7 +148,8 @@ def cmd_init(args):
              "is wrong, fix it HERE — the agents all read this copy, so a fix reaches all of them.",
              ""]
     for name, hint in SECTIONS:
-        lines += ["## {}".format(name), "*({})*".format(hint), TODO, ""]
+        body = (["{}: pending".format(k) for k in PLAN_KEYS] if name == "Approved plans" else [TODO])
+        lines += ["## {}".format(name), "*({})*".format(hint)] + body + [""]
     with open(path, "w", encoding="utf-8") as fh:
         fh.write("\n".join(lines))
     print(path)
@@ -152,6 +163,8 @@ def _unfilled(path):
         text = fh.read()
     missing = []
     for name, _hint in SECTIONS:
+        if name == "Approved plans":
+            continue                  # per ROLE, in _plan_faults — the planner runs before any plan exists
         m = re.search(r"^##\s+" + re.escape(name) + r"\s*$(.*?)(?=^##\s|\Z)",
                       text, re.M | re.S)
         body = (m.group(1) if m else "")
@@ -177,11 +190,43 @@ def _unfilled(path):
     return missing
 
 
+def _plans(path):
+    """{"content plan": "<path>" | "pending" | None, …} as the brief's Approved plans section names them."""
+    with open(path, encoding="utf-8") as fh:
+        text = fh.read()
+    m = re.search(r"^##\s+Approved plans\s*$(.*?)(?=^##\s|\Z)", text, re.M | re.S)
+    out = {k: None for k in PLAN_KEYS}
+    for k in PLAN_KEYS:
+        hit = re.search(r"^\s*[-*]?\s*" + k + r"\s*[:：]\s*(.+?)\s*$", m.group(1) if m else "", re.M | re.I)
+        if hit:
+            out[k] = hit.group(1).strip().strip("`")
+    return out
+
+
+def _plan_faults(path, role):
+    """What the brief is missing for THIS role to start: each plan it reads, named and present on disk."""
+    faults = []
+    plans = _plans(path)
+    base = os.path.dirname(os.path.abspath(path))
+    for k in PLANS_NEEDED.get(role, ()):
+        v = plans.get(k)
+        if not v or v.lower() == "pending" or TODO in v:
+            faults.append("Approved plans → `{}:` is {} — the {} dispatch reads that file, so name the "
+                          "APPROVED plan's absolute path there".format(k, "missing" if not v else repr(v), role))
+            continue
+        fp = os.path.expanduser(v)
+        if not os.path.isabs(fp):
+            fp = os.path.join(base, fp)
+        if not os.path.isfile(fp):
+            faults.append("Approved plans → `{}:` names {}, which does not exist".format(k, v))
+    return faults
+
+
 def cmd_check(args):
     if not os.path.exists(args.brief):
         sys.stderr.write("dispatch_brief: no brief at {}\n".format(args.brief))
         return 2
-    missing = _unfilled(args.brief)
+    missing = _unfilled(args.brief) + (_plan_faults(args.brief, args.role) if args.role else [])
     if missing:
         sys.stderr.write("dispatch_brief: NOT READY — still unfilled: {}\n"
                          "  A dispatched agent reads this file instead of being told inline, so an\n"
@@ -211,13 +256,21 @@ def cmd_prompt(args):
         sys.stderr.write("dispatch_brief: --section and --slides are required for a section "
                          "dispatch.\n")
         return 1
+    plan_faults = _plan_faults(args.brief, args.role)
+    if plan_faults:
+        sys.stderr.write("dispatch_brief: refusing to emit a {} dispatch prompt — {}\n"
+                         .format(args.role, "; ".join(plan_faults)))
+        return 1
+    plans = _plans(args.brief)
     deck_dir = os.path.dirname(os.path.abspath(args.brief))
     role = "critic_sole" if (args.role == "critic" and args.lens == "AB") else args.role
     print(ROLE_PROMPTS[role].format(
         skill=_skill_root(), brief=os.path.abspath(args.brief),
         lens=args.lens or "", round=args.round, section=args.section or "",
         slides=args.slides or "", deck=args.deck or "<deck>.pptx",
-        renders=os.path.join(args.deck or deck_dir, "render") if args.deck else "render/"))
+        renders=os.path.join(args.deck or deck_dir, "render") if args.deck else "render/",
+        content_plan=plans.get("content plan") or "pending",
+        design_plan=plans.get("design plan") or "pending"))
     return 0
 
 
@@ -234,6 +287,8 @@ def main():
 
     p = sub.add_parser("check", help="are all required sections filled?")
     p.add_argument("--brief", required=True)
+    p.add_argument("--role", choices=sorted(r for r in ROLE_PROMPTS if r != "critic_sole"),
+                   help="also require what THIS role reads (design: the content plan; section: both plans)")
     p.set_defaults(fn=cmd_check)
 
     p = sub.add_parser("prompt", help="print the short dispatch prompt")

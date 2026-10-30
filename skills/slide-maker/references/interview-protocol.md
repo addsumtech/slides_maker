@@ -271,7 +271,8 @@ four template choices:
          direction fills one of the existing slots, never an extra one. Picking it records
          `design_plan.imagery: "series"` + `design_plan.image_series: "<deck>/series.json"` and runs
          the SERIES pipeline (`references/image-generation.md` → "Image-led decks — the SERIES
-         exception"); picking any other direction keeps `imagery: "selective"`, today's rule.
+         exception"); picking any other direction keeps `imagery: "selective"`, today's rule
+         (`"none"` is accepted too on a no-picture deck — the word `direction_gate.images` uses).
        - 🔴 **DIVERGENCE IS A PAIRWISE RULE, NOT AN EXHORTATION: any two directions must differ on
          ≥2 of four axes — {palette mood · type attitude · density/scale · COMPOSITION ENVELOPE}.**
          "Distinct light/dark, warm/cool, serif/sans" describes *knobs*; a dark version and a light
@@ -285,7 +286,9 @@ four template choices:
          corporate look", a Q4 mimic), that axis LEAVES the divergence set and the ≥2 rule re-applies
          to the ones that remain. A constraint relocates variance; it never licenses convergence.
        - 🔴 **Run the mechanical check before you post the link:**
-         `python3 "$SKILL/scripts/directions_diversity.py" directions.json`. It scores four axes — **palette
+         `python3 "$SKILL/scripts/directions_diversity.py" directions.json --images photos|illustrations|none`
+         (`--images` = what `direction_gate.images` will record; it checks the two picture rules above on the
+         candidate set). It scores four axes — **palette
          mood** (a light/dark flip counts as a palette divergence, so mode is folded in) · **type
          pairing** · **density** · **composition** — and flags any pair matching on ≥3 of the 4. It ALSO
          fails a set with no bespoke direction (above). **Exit 2 is not an auto-kill, and it now

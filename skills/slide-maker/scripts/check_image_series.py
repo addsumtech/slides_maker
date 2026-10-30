@@ -85,12 +85,19 @@ def _near(root, name, depth=3):
     return max(hits, key=lambda p: p.stat().st_mtime) if hits else None
 
 
+# design_plan.imagery values that mean "not an image-led deck" ("" = not recorded)
+NOT_A_SERIES = ("", "selective", "none")
+
+
 def recorded_series(gates):
-    """{"imagery", "plan"} for an image-led deck — or for an imagery value that is neither "series" nor
-    "selective" (a misspelt switch, e.g. "image-led", must not read as "not a series deck"); else None."""
+    """{"imagery", "plan"} for an image-led deck — or for an imagery value that is not one of series ·
+    selective · none (a misspelt switch, e.g. "image-led", must not read as "not a series deck"); else None.
+
+    `none` is accepted because "no pictures" has to be ONE vocabulary: `direction_gate.images` records it
+    as `none`, and a real run (2026-10-29) that wrote the same word here was refused as UNKNOWN IMAGERY."""
     for sec in ("design_plan", "design"):
         d = (gates or {}).get(sec) or {}
-        if isinstance(d, dict) and d.get("imagery") not in (None, "", "selective"):
+        if isinstance(d, dict) and str(d.get("imagery") or "").strip().lower() not in NOT_A_SERIES:
             return {"imagery": d.get("imagery"), "plan": d.get("image_series") or None}
     return None
 
@@ -108,8 +115,9 @@ def check(pptx, rec, deck_dir):
     if not rec:
         return findings, facts
     if rec.get("imagery") != "series":
-        return [("block", "UNKNOWN IMAGERY", "imagery is {!r} — it must be \"series\" (an image-led deck) or "
-                 "\"selective\" (any other deck)".format(rec.get("imagery")))], facts
+        return [("block", "UNKNOWN IMAGERY", "imagery is {!r} — it must be \"series\" (an image-led deck), "
+                 "\"selective\" (any other deck) or \"none\" (a deck with no pictures — the same word "
+                 "direction_gate.images uses)".format(rec.get("imagery")))], facts
     try:
         return _check(pptx, rec, deck_dir, findings, facts)
     except Exception as e:                  # a series deck the checks cannot read is not "not checked"

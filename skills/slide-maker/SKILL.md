@@ -101,7 +101,8 @@ Two time sinks compress well: ingesting material/assets, and the critic loop.
     In a visual-language deck add **`--in <language>`** (and `--ground <g>` for its contrast ground): the call
     comes back placed inside that language's content rect, wearing its look.
   - **Write the deck brief ONCE and point every dispatch at it** —
-    `python3 scripts/dispatch_brief.py init --deck <dir>`, fill it, then
+    `python3 scripts/dispatch_brief.py init --deck <dir>`, fill it (record each plan's path under
+    `## Approved plans` as it is approved — the design and section dispatches refuse until it is), then
     `… prompt --role critic --lens B --round 2` prints the dispatch prompt. Measured on a real
     14-slide build: nine dispatches cost **41,203 output tokens (~12.5 min)**, the most expensive
     turn class in the pipeline, at ~4,600 tokens each — and almost all of it was the SAME
@@ -200,7 +201,9 @@ delegation covers preferences, never information only the user has, and never WH
 measured, a run read a Chinese "you decide the rest" directive as licence to pick the angle and shipped a thesis on 19th-century
 building regulation, passing every gate. Enforced by `scripts/delegated_picks.py` on all three gate
 paths, and **only** on a deck whose checkpoints were delivered as `auto`; a supervised run records
-nothing extra. Repeat the delegated rows in the hand-off note: a pick the user never sees is a
+nothing extra. **Record each row with `python3 scripts/deck_gates.py picks <deck> --set AXIS=VALUE
+--source … [--basis …] [--alternative …]`** — validated before it is written; `deck_gates.py merge <deck>
+<fragment.json>` takes a plan's gate block — never hand-edited JSON. Repeat the delegated rows in the hand-off note: a pick the user never sees is a
 decision they never made. Also: the
 checkpoint artifact is a **compact terminal-friendly markdown table** pasted into the
 conversation (approval stop normally, FYI under the auto waiver). The waiver covers the
@@ -1924,7 +1927,8 @@ does not change "build the whole deck in one script run" — `main()` always bui
 **Scaling up — section fan-out.** For a **tiny deck (~≤5 slides)** one author writing one build
 script is both cheaper and more coherent — **that's the default there**. From **~6 slides up,
 fan out** (when the host can dispatch subagents); also fan out at any size for
-**independently-sourced sections** (different papers/datasets/areas). *(This threshold has moved
+**independently-sourced sections** (different papers/datasets/areas). The number is owned by
+`references/large-deck-orchestration.md` — change it there, then here and in both gates. *(This threshold has moved
 twice, 15+ → 9 → 6, both times on the same evidence. The old rule was weighed on TOKEN cost,
 where one author is genuinely cheaper — no context is duplicated — and wall clock was never on
 the scale. Measured across five real build sessions, the build step is 40–71% of all
@@ -2104,7 +2108,7 @@ only the emitted form-candidates (per-slide runner-up from a different family) +
 tally push toward the ceiling. A delegated deck emits them for itself, not for the user.
 
 ## Step 5 — Render, verify, then run the actor–critic loop
-**You should already have run the build-time geometry gate** (`dk.lint_layout(prs)` at the end of
+**You should already have run the build-time geometry gate** (`dk.lint_layout(prs, strict=True)` at the end of
 Step 4) and cleared its CRITICALs (off-canvas · overflow · text-on-text) in-process, so the render
 loop starts mostly geometry-clean. `lint_deck.py` below then re-checks that geometry on the final file
 as a backstop and adds the render/parse-only faults; the rest is what needs real pixels (crop,
@@ -2542,8 +2546,8 @@ at Step 0 — post the rendered deck (contact sheet + the slide PNG paths) and a
 | option | what runs | rough cost |
 |---|---|---|
 | **`fast` (default)** | 1 generalist critic, 1 round, top-5 claims re-checked | ~10–20 min · ~250k tok |
-| `standard` | 2 lens critics (content · design), 2 rounds, top-10 claims — worth it for a defense / pitch / exec readout | ~30–60 min · ~600k |
-| `thorough` | multi-critic panel + arbiter, 3 rounds, every claim | ~1–2 h · ~2M |
+| `standard` | 2 lens critics (content · design), 2 rounds, top-10 claims — the low-stakes panel (lab meeting / status update / teaching) | ~30–60 min · ~600k |
+| `thorough` | multi-critic panel + arbiter, 3 rounds, every claim — worth it for a defense / pitch / exec readout (the high-stakes panel, `references/critic-panel.md`) | ~1–2 h · ~2M |
 | `none` | no review — deliver as-is | 0 |
 
 🔴 **On a runtime with NO choice UI — plain Codex chat, Kimi, a GPT surface, an API caller: the
@@ -2582,7 +2586,7 @@ entirely is a legitimate answer, not a loophole. Three rules keep it honest:
   sizing, not the decision to skip review entirely; the FYI records `review: fast (post-build
   default — auto)` and the user escalates at hand-off if they want more. Auto MAY escalate above
   `fast` for a high-stakes purpose (defense / exec readout / pitch) with the reason recorded —
-  `review: standard (escalated — defense deck, auto)` — it may only never decline.
+  `review: thorough (escalated — defense deck, auto)` — it may only never decline.
 
 Then run the **actor-critic loop** at the chosen tier — this is the quality engine, and the
 critic is a *demanding* judge (see `agents/critic.md`), not a rubber stamp:
@@ -2827,7 +2831,11 @@ invariant):** the Step-6 hand-off carries one `provenance:` line — `N claims c
 without that line means the gate did not run (Step 6's checklist lists it). Decks built purely from the user's own material skip
 this gate — there, fidelity is to the provided source, and item 10 already owns it — **but** a
 source claim that §2(b) re-verification *updated or replaced* with a web-found current value counts
-as research-supplied, and pulls the gate in for those rows.
+as research-supplied, and pulls the gate in for those rows. **When a `provenance` record carries rows
+confirmed against the user's own material** (a mixed deck, or one that records them anyway), such a
+row cites that file instead of a URL — `{"claim": "…", "verdict": "CONFIRMED", "source": "<path to the
+user's file, relative to the deck folder>"}` — and the gate checks the file exists; a web-researched
+claim still needs its primary-source `url`.
 
 **High-stakes decks:** after each fix round's re-render, read `references/critic-panel.md` → "Verify the fixes and corroborate consent" — the arbiter re-check of the change manifest (with its required `dulled` flag) and the corroborated-consent rule that gates shipping. *(This is the "fail loudly at the cap" passage the round-cap rule above points at.)*
 

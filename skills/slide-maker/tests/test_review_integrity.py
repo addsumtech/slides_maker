@@ -163,6 +163,42 @@ def main():
         check("the no-dispatch waiver still passes (honest, not a consent)",
               rc == 0 and "NOT INDEPENDENTLY REVIEWED" in out, out)
 
+        print("== provenance: a CONFIRMED row may cite the USER'S OWN source file ==")
+        # 🔴 Real run, 2026-10-29: a deck built from the user's annual-review material recorded
+        # provenance rows confirmed against that material, and the gate refused every one for having
+        # no URL — forcing a waiver on exactly the deck class SKILL.md says has fidelity "to the
+        # provided source". A local source must EXIST, and a web claim still needs its URL.
+        src_dir = d / "source"
+        src_dir.mkdir(exist_ok=True)
+        (src_dir / "annual-review.docx").write_bytes(b"user material")
+        local = {"claims": [{"claim": "income rose 12%", "verdict": "CONFIRMED",
+                             "source": "source/annual-review.docx"}]}
+        rc, out = gate(deck, base(n, deck, provenance=local))
+        check("a CONFIRMED row citing an existing local source file (relative to the deck) passes",
+              rc == 0 and "1 local source" in out, out)
+        absolute = {"claims": [{"claim": "c", "verdict": "CONFIRMED",
+                                "source": str(src_dir / "annual-review.docx")}]}
+        rc, out = gate(deck, base(n, deck, provenance=absolute))
+        check("…and an absolute path to it passes too", rc == 0, out)
+        missing = {"claims": [{"claim": "c", "verdict": "CONFIRMED", "source": "source/nope.pdf"}]}
+        rc, out = gate(deck, base(n, deck, provenance=missing))
+        check("a CONFIRMED row citing a local source that does not exist is refused, by path",
+              rc != 0 and "source/nope.pdf" in out, out)
+        nothing = {"claims": [{"claim": "c", "verdict": "CONFIRMED"}]}
+        rc, out = gate(deck, base(n, deck, provenance=nothing))
+        check("a CONFIRMED row with neither a URL nor a source is still refused",
+              rc != 0 and "no primary-source URL" in out, out)
+        # The `deck_gates.py init` skeleton spelled this row's URL as `source` until 2026-10-30, so a
+        # record written from it carries a URL under `source`: that is a URL, not a missing file.
+        url_as_source = {"claims": [{"claim": "c", "verdict": "CONFIRMED",
+                                     "source": "https://example.org/report"}]}
+        rc, out = gate(deck, base(n, deck, provenance=url_as_source))
+        check("a URL written under `source` (the old init skeleton's key) counts as the URL", rc == 0, out)
+        mixed = {"claims": [{"claim": "web", "verdict": "CONFIRMED", "url": "https://example.org/a"},
+                            {"claim": "own", "verdict": "CONFIRMED", "source": "source/annual-review.docx"}]}
+        rc, out = gate(deck, base(n, deck, provenance=mixed))
+        check("a mixed deck (web claims by URL, the user's own by file) passes", rc == 0, out)
+
     print("== both gate paths carry the render_selfcheck check ==")
     src_codex = (SKILL / "scripts" / "codex_delivery_gate.py").read_text(encoding="utf-8")
     src_render = (SKILL / "scripts" / "render_deck.py").read_text(encoding="utf-8")

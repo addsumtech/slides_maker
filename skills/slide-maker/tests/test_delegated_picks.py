@@ -188,6 +188,85 @@ skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
 check("delegated_picks.py" in skill,
       "SKILL.md never names the script, so a run that skips the reference meets nothing")
 
+# ── recording picks and merging a plan's gate fragment have a COMMAND (audit 2026-10-29) ──────────
+# Operators hand-edited .deck-gates.json to add interview.picks rows and to paste a plan's gate block in —
+# the one record the hand-off gates all read, edited as free JSON with nothing validating a row until the
+# gate ran at the end.
+import json as _json  # noqa: E402
+import tempfile as _tf  # noqa: E402
+
+_DG = [sys.executable, str(SCRIPTS / "deck_gates.py")]
+
+
+def _dg(*args):
+    p = subprocess.run(_DG + [str(a) for a in args], capture_output=True, text=True)
+    return p.returncode, p.stdout + p.stderr
+
+
+_deck = Path(_tf.mkdtemp(prefix="dg-picks-"))
+_gf = _deck / ".deck-gates.json"
+_gf.write_text(_json.dumps({"content": {"checkpoint": {"mode": "auto"}}}), encoding="utf-8")
+_rc, _out = _dg("picks", _deck, "--set", "audience=neighbours who might volunteer", "--source", "delegated",
+                "--basis", BASIS, "--alternative", ALT)
+_rec = _json.loads(_gf.read_text(encoding="utf-8"))
+_rows = (_rec.get("interview") or {}).get("picks") or []
+check(_rc in (0, 1) and any(r.get("axis") == "audience" and r.get("source") == "delegated"
+                            and r.get("basis") == BASIS and r.get("alternative") == ALT for r in _rows),
+      "`deck_gates.py picks --set audience=…` records a validated row (rc {}): {}".format(_rc, _out[-300:]))
+check("still to record" in _out and "angle" in _out,
+      "…and says which axes are still unrecorded: {}".format(_out[-300:]))
+_rc, _out = _dg("picks", _deck, "--set", "angle=whatever I like", "--source", "delegated", "--basis", BASIS)
+_rec = _json.loads(_gf.read_text(encoding="utf-8"))
+check(_rc == 2 and "may not be" in _out and not any(r.get("axis") == "angle" for r in _rec["interview"]["picks"]),
+      "a DELEGATED angle is refused by the same floor and NOT written (rc {}): {}".format(_rc, _out[-300:]))
+_rc, _out = _dg("picks", _deck, "--set", "purpose=a lab meeting", "--source", "delegated", "--basis", BASIS)
+check(_rc == 2 and "alternative" in _out, "a delegated purpose with no alternative is refused (rc {}): {}"
+      .format(_rc, _out[-200:]))
+_rc, _out = _dg("picks", _deck, "--set", "audience=the city council", "--source", "stated")
+_rec = _json.loads(_gf.read_text(encoding="utf-8"))
+_aud = [r for r in _rec["interview"]["picks"] if r.get("axis") == "audience"]
+check(len(_aud) == 1 and _aud[0]["source"] == "stated" and "basis" not in _aud[0],
+      "re-recording an axis REPLACES its row rather than adding a second: {}".format(_aud))
+for _a in dp.AXES:
+    if _a == "audience":
+        continue
+    _dg("picks", _deck, "--set", "{}=a value".format(_a), "--source", "stated")
+_rc, _out = _dg("picks", _deck)
+check(_rc == 0 and "all" in _out.lower(), "with every axis recorded, `picks` reports clean (rc {}): {}"
+      .format(_rc, _out[-200:]))
+
+# merge: a plan's gate fragment lands in the record, deep, without clobbering what is already there
+_frag = _deck / "design-fragment.json"
+_frag.write_text(_json.dumps({"design_plan": {"boldness": "bold", "type_scale": {"body": 18}}}), encoding="utf-8")
+_rec = _json.loads(_gf.read_text(encoding="utf-8"))
+_rec["design_plan"] = {"palette": "kept: ink on paper with one red", "type_scale": {"title": 40}}
+_gf.write_text(_json.dumps(_rec), encoding="utf-8")
+_rc, _out = _dg("merge", _deck, _frag)
+_rec = _json.loads(_gf.read_text(encoding="utf-8"))
+check(_rc == 0 and _rec["design_plan"].get("boldness") == "bold"
+      and _rec["design_plan"]["type_scale"] == {"title": 40, "body": 18}
+      and _rec["design_plan"]["palette"].startswith("kept") and _rec["interview"]["picks"],
+      "`deck_gates.py merge` deep-merges a fragment and keeps every field it does not name (rc {}): {}"
+      .format(_rc, _out[-300:]))
+check("design_plan.boldness" in _out, "…and lists what it set: {}".format(_out[-300:]))
+_bad = _deck / "bad.json"
+_bad.write_text("[1, 2]", encoding="utf-8")
+_before = _gf.read_text(encoding="utf-8")
+_rc, _out = _dg("merge", _deck, _bad)
+check(_rc == 2 and _gf.read_text(encoding="utf-8") == _before,
+      "a fragment that is not a JSON object is refused and the record is untouched (rc {})".format(_rc))
+_bad.write_text(_json.dumps({"desgin_plan": {"boldness": "bold"}}), encoding="utf-8")
+_rc, _out = _dg("merge", _deck, _bad)
+check(_rc == 2 and "desgin_plan" in _out and _gf.read_text(encoding="utf-8") == _before,
+      "a misspelt top-level section is refused by name, not written as a new block (rc {}): {}"
+      .format(_rc, _out[-200:]))
+
+# the docs that tell an operator how to record picks name the command
+for _doc in ("SKILL.md", "references/checkpoint-convention.md"):
+    check("deck_gates.py\" picks" in (ROOT / _doc).read_text(encoding="utf-8")
+          or "deck_gates.py picks" in (ROOT / _doc).read_text(encoding="utf-8"),
+          "{} tells the operator to record picks with `deck_gates.py picks`".format(_doc))
+
 print("\n".join("FAIL " + f for f in fails) if fails else "", end="")
 print("[test_delegated_picks] {}".format(
     "FAILED: {} problem(s)".format(len(fails)) if fails else "ok"))

@@ -88,6 +88,11 @@ with tempfile.TemporaryDirectory() as td:
     check(cis.recorded_series({"design": {"imagery": "series", "image_series": "x"}})["plan"] == "x",
           "recorded_series reads the Codex design twin")
     check(cis.recorded_series({"design_plan": {"imagery": "selective"}}) is None, "selective = not a series deck")
+    # "no pictures" is ONE vocabulary: direction_gate.images accepts `none`, so the design plan's imagery
+    # does too (real run, 2026-10-29: `imagery: none` was refused as UNKNOWN IMAGERY on a no-picture deck)
+    for _none in ("none", "None", " none "):
+        check(cis.recorded_series({"design_plan": {"imagery": _none}}) is None,
+              "imagery {!r} = not a series deck (the same word direction_gate.images uses)".format(_none))
     # clean: both slots placed, persona labelled, no names on the generic person
     p = build(td)
     f, facts = cis.check(str(p), rec, td)
@@ -169,7 +174,10 @@ with tempfile.TemporaryDirectory() as td:
     # a misspelled switch ("image-led") is not silently "not a series deck"
     odd = cis.recorded_series({"design_plan": {"imagery": "image-led", "image_series": "series.json"}})
     check(odd is not None and "UNKNOWN IMAGERY" in codes(cis.check(str(p), odd, td)[0], "block"),
-          "imagery other than series/selective must block: {}".format(odd))
+          "imagery other than series/selective/none must block: {}".format(odd))
+    _msg = " ".join(m for _s, _c, m in cis.check(str(p), odd, td)[0])
+    check('"none"' in _msg and '"selective"' in _msg and '"series"' in _msg,
+          "…and the refusal lists every accepted value, none included: {}".format(_msg[:200]))
     # a plan that would crash the checks blocks instead of reading as NOT CHECKED
     (Path(td) / "series.json").write_text(json.dumps(dict(PLAN, slots=[dict(PLAN["slots"][0], frame="arch")])),
                                           encoding="utf-8")

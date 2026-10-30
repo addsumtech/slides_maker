@@ -318,6 +318,37 @@ ck(any("stated count has gone stale" in f for f in _counts),
 ck(not any("never names" in f for f in _counts),
    "…and nothing else fired on it, so that really was the count arm and not a name check in disguise")
 
+print("\n— a NOUN in the material is not the deck's genre (real run, 2026-10-29)")
+# 🔴 MEASURED. An annual-review deck whose material listed 社区基金会 (a community foundation) as an
+# income source was bound to "Grant proposal / funding pitch" by the bare term 基金, and the purpose
+# gate demanded feasibility and risk sections from a year-in-review. `recorded_purpose` reads the
+# audience brief and `interview.record` — under auto mode a carved summary of the MATERIAL — so a
+# bare noun that merely appears in the content binds the deck. Each pair below: a mention that must
+# NOT bind, and the genre itself, which still must.
+for text, want in (
+        ("社区服务中心2025年度工作回顾：收入来源包括政府购买服务和社区基金会资助", None),
+        ("申请国家自然科学基金面上项目", "grant"),
+        ("国家自然科学基金申请书答辩", "grant"),
+        ("实验室年度总结：本年度获国家自然科学基金资助3项", None),   # a grant RECEIVED is content
+        ("国自然申请的预答辩", "grant"),
+        ("年度回顾：本年度获得市慈善基金会和企业捐赠的支持", None),
+        ("We received a grant from the community foundation; this is our year in review", None),
+        ("funding came from individual donors and the city — our year in review", None),
+        ("a grant pitch to the Wellcome Trust", "grant"),
+        ("applying for funding from the national science foundation", "grant"),
+        ("an immigrant support charity's annual report", None),
+        ("of course, the annual report to our members", None),
+        ("we ran 12 workshops this year — annual report", None),
+        ("teaching a course on MRI physics", "teaching"),
+        ("医院年度总结：全年收治病例3000例，多学科合作开展义诊", None),
+        ("疑难病例讨论", "clinical_case"),
+        ("多学科会诊病例汇报", "clinical_case"),
+        ("hospital annual report: mortality rates fell", None),
+        ("morbidity and mortality conference", "clinical_case")):
+    got = purposes.match(text)
+    ck((got.name if got else None) == want,
+       "%r -> %s (want %s)" % (text[:40], got.name if got else "NOTHING", want or "NOTHING"))
+
 print()
 print("%d passed, %d failed" % (len(OK), len(BAD)))
 raise SystemExit(1 if BAD else 0)

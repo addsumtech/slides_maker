@@ -472,8 +472,9 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   an explicit `SLIDES` registry, falls back to source order; names any module it could not import
   instead of failing the run, because a partial map still beats grepping.
 - `dispatch_brief.py` — write the deck brief ONCE, point every dispatch at it. `init --deck <dir>`
-  creates the skeleton (in a scratch path, never the deck folder); `check --brief <p>` gates that
-  every required section is filled; `prompt --brief <p> --role critic|section|planner|design
+  creates the skeleton (in a scratch path, never the deck folder); `check --brief <p> [--role R]` gates that
+  every required section is filled (with `--role design|section`, also that the APPROVED plan files the
+  role reads are named under `## Approved plans` and exist — the prompt names those files); `prompt --brief <p> --role critic|section|planner|design
   [--lens A|B|AB] [--round N] [--section N --slides a-b]` prints the dispatch prompt. Exists because
   nine dispatches on one measured build cost 41,203 output tokens (~12.5 min) at ~4,600 each, and
   almost all of it was the same interview answers, paths, cap and CONTRACT CARD retyped nine times;

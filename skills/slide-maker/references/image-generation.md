@@ -64,7 +64,8 @@ look.)* It is entered ONLY by picking an image-led direction at the direction ga
 an absolute path, or one relative to the deck folder; `imagery` takes only `"series"` or `"selective"`.
 Write them with `python3 scripts/deck_gates.py set <deck> design_plan.imagery series` and
 `python3 scripts/deck_gates.py set <deck> design_plan.image_series series.json`.
-Every other deck keeps `imagery: "selective"` — the rule above, unchanged.
+Every other deck keeps `imagery: "selective"` — the rule above, unchanged. A deck with no pictures at all
+may write `imagery: "none"`, the same word `direction_gate.images` uses; both mean "not a series deck".
 
 Three floors that do not relax:
 1. **Every slot carries a meaning line** — what this image SAYS on its slide (`meaning`, at least 24

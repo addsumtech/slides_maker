@@ -104,10 +104,18 @@ direction*; the single real render confirms *fidelity*.
    direction's `style.py` later, so there's **one source of truth** and no HTML→pptx drift. Write the
    2–4 directions to a `directions.json` in a disposable `_directions/` subfolder of the deck folder.
 3. 🔴 **Check the divergence mechanically BEFORE building the link:**
-   `python3 scripts/directions_diversity.py directions.json`. Exit 2 means EITHER a pair matched on
-   ≥3 of the four axes, OR the set contains no bespoke direction (at least one candidate must be a
-   register invented for THIS topic, carrying its own `cover_motif`/`ambient_motif` — see
-   `references/interview-protocol.md` Q1(c)). Read the output; `--json` separates `flagged` from
+   `python3 scripts/directions_diversity.py directions.json --images photos|illustrations|none`. Exit 2
+   means a pair matched on ≥3 of the four axes, OR the set contains no bespoke direction (at least one
+   candidate must be a register invented for THIS topic, carrying its own `cover_motif`/`ambient_motif`
+   — see `references/interview-protocol.md` Q1(c)), OR it breaks a picture rule. **`--images` is what
+   `direction_gate.images` will record, and it is not optional prose:** a deck WITH pictures (the
+   user's, generated or fetched) offers at least one visual language among its directions, and a deck
+   with **NO pictures (`none`) offers at least one NATIVE visual language** — the drawn languages that
+   need no pictures (ink, poster, drafting, journal, … — the list and the per-topic fit live in
+   `references/interview-protocol.md` → "A native visual language when the deck has no pictures"),
+   with the pick's reason recorded later as `direction_gate.native_fit`. Both hand-off gates hold
+   both rules; checking here catches a miss before the user picks from the set, not after. Without
+   `--images` the script prints `[pictures] NOT CHECKED`. Read the output; `--json` separates `flagged` from
    `no_bespoke`. Either way: fix it, or keep it and record the reason on the checkpoint's
    `direction gate:` line. This is not distrust of the pick; it is that the agent writing the three
    directions and the agent judging their difference are the same mind, and that mind's failure
