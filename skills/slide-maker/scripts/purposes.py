@@ -52,9 +52,21 @@ PURPOSES = (
         # 🔴 No bare "proposal": a business proposal, a project proposal and a marriage proposal
         # are not this genre, and `recorded_purpose` also reads the AUDIENCE BRIEF, so a loose term
         # binds far more decks than the purpose row alone would.
-        binds_on=("grant proposal", "research proposal", "grant application", "grant", "funding",
-                  "fellowship", "erc ", "nwo", "nih ", "horizon europe",
-                  "基金", "课题申请", "项目申请", "经费申请"),
+        # 🔴 No bare "grant", "funding" or 基金 either (real run, 2026-10-29): an annual review
+        # whose material listed 社区基金会 — a community foundation, as an INCOME SOURCE — bound
+        # here and was asked for feasibility and risk sections. "a grant from X", "funding came
+        # from donors", 慈善基金会 are things a deck MENTIONS; the genre is APPLYING for one. Bare
+        # "grant" also matched inside "immigrant". `match` is a substring test, so every term
+        # below names the act of applying or pitching, not the money.
+        binds_on=("grant proposal", "research proposal", "grant application", "grant pitch",
+                  "grant renewal", "grant interview", "grant panel", "funding proposal",
+                  "funding application", "funding pitch", "funding request", "apply for funding",
+                  "applying for funding", "apply for a grant", "applying for a grant",
+                  "fellowship application", "fellowship interview", "erc ", "nwo", "nih ",
+                  "horizon europe",
+                  "基金申请", "申请基金", "基金项目申请", "申请国家自然科学基金", "国家自然科学基金申请",
+                  "国自然申请", "国自然本子", "基金本子", "基金标书", "基金答辩",
+                  "课题申请", "项目申请", "经费申请"),
         required_sections=(
             ("aims", ("aim", "aims", "objective", "objectives", "research question", "goal of this",
                       "what i propose", "目标", "研究目标", "科学问题")),
@@ -116,9 +128,11 @@ PURPOSES = (
         "A fixed clinical narrative — presentation, investigations, management, outcome. The "
         "structure is not a style choice: colleagues are being asked to judge a decision, and they "
         "cannot do that without the information that was available when it was made.",
+        # 🔴 No bare "morbidity"/"mortality", 病例 or 多学科: a hospital's annual report says
+        # "mortality fell", "收治病例 3000 例", "多学科合作" — content, not a case presentation.
         binds_on=("case presentation", "clinical case", "tumour board", "tumor board", "mdt",
-                  "morbidity", "mortality", "m&m", "grand round", "病例", "疑难病例", "多学科",
-                  "查房"),
+                  "morbidity and mortality", "m&m", "grand round", "病例汇报", "病例讨论",
+                  "病例分享", "病例报告", "疑难病例", "多学科会诊", "多学科讨论", "查房"),
         required_sections=(
             ("presentation", ("history", "presented", "presentation", "symptom", "chief complaint",
                               "病史", "主诉", "现病史")),
@@ -266,8 +280,11 @@ PURPOSES = (
         "recipe already names the three: an objectives slide up front, a 'concept → example' "
         "spine, and a recap at the end — which is also what every instructional-design framework "
         "asks for, and what a lecture assembled under time pressure drops first.",
-        binds_on=("lecture", "teaching", "tutorial", "course", "class", "workshop", "讲课",
-                  "教学", "授课", "课程", "培训"),
+        # 🔴 No bare "course", "class" or "workshop": "of course", "world-class", "classification"
+        # and "we ran 12 workshops this year" are not lectures (`match` is a substring test).
+        binds_on=("lecture", "teaching", "tutorial", "a course on", "a course for", "a class on",
+                  "a class for", "classroom", "teaching workshop", "training workshop",
+                  "hands-on workshop", "workshop session", "讲课", "教学", "授课", "课程", "培训"),
         required_sections=(
             ("objectives", ("objective", "objectives", "learning goal", "by the end", "you will "
                             "be able", "what you will learn", "目标", "学习目标", "本节")),
