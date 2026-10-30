@@ -67,6 +67,22 @@ check(not _esc_std, "no file shows an auto escalation to `standard` for a high-s
 check("review: thorough (escalated — defense deck, auto)" in SK,
       "SKILL.md's auto-escalation example escalates a defense deck to `thorough`")
 
+# ─────────────────────────────────────────────── A2 · one fan-out threshold, owned by the reference
+ldo = read("references/large-deck-orchestration.md")
+_rule = "\n".join(l for l in ldo.split("## ")[0].splitlines() if not l.startswith(">"))   # the rule, not its history
+check("~9" not in _rule and "9+" not in _rule,
+      "large-deck-orchestration.md no longer states the stale ~9-slide build threshold")
+check("~6 content slides" in _rule and "owns the build fan-out threshold" in _rule,
+      "large-deck-orchestration.md states — and owns — the current ~6-content-slide threshold")
+check(">= 7" in read("scripts/render_deck.py") and "len(expected_slides) >= 7" in read("scripts/codex_delivery_gate.py"),
+      "both gates still fire at 7+ slides (6 content slides + the cover) — the number the reference documents")
+check("7+" in ldo.split("## ")[0], "the reference says what the gates count (7+ slides including the cover)")
+_scale = SK[SK.find("**Scaling up — section fan-out.**"):][:1500]
+check("large-deck-orchestration.md" in _scale,
+      "SKILL.md 'Scaling up' points at the reference that owns the number")
+check("from ~9 slides the BUILD fans out" not in read("references/critic-panel.md"),
+      "critic-panel.md does not restate the stale ~9 build threshold")
+
 
 for line in ok:
     print("  ok   " + line)

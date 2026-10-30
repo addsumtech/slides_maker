@@ -220,7 +220,7 @@ line — `references/handoff-checklist.md` owns both.
        purpose:** a short single-paper talk (e.g. a ~10-min conference oral) takes the
        **light** end — 2 critics, and **skip the arbiter pass** below; a long, career-
        defining deck (a 45-min job talk, thesis defense, or investor pitch) earns the
-       **full** 2–3-critic panel **plus** that arbiter cross-validation. For a **large deck (~15+ slides)** — a size threshold, NOT "was it built by section authors": from ~9 slides the BUILD fans out (`references/large-deck-orchestration.md`) while the review stays whole-deck — add **per-section critics plus one
+       **full** 2–3-critic panel **plus** that arbiter cross-validation. For a **large deck (~15+ slides)** — a size threshold, NOT "was it built by section authors": from ~6 content slides the BUILD fans out (`references/large-deck-orchestration.md` owns that number) while the review stays whole-deck — add **per-section critics plus one
        whole-deck critic for coherence/arc/seams**, then — after the arbiter pass below —
        **route only the *promoted* findings** back to the section that owns each slide
        (see `references/large-deck-orchestration.md`). Keep

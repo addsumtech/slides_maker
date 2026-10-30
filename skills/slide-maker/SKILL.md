@@ -1924,7 +1924,8 @@ does not change "build the whole deck in one script run" — `main()` always bui
 **Scaling up — section fan-out.** For a **tiny deck (~≤5 slides)** one author writing one build
 script is both cheaper and more coherent — **that's the default there**. From **~6 slides up,
 fan out** (when the host can dispatch subagents); also fan out at any size for
-**independently-sourced sections** (different papers/datasets/areas). *(This threshold has moved
+**independently-sourced sections** (different papers/datasets/areas). The number is owned by
+`references/large-deck-orchestration.md` — change it there, then here and in both gates. *(This threshold has moved
 twice, 15+ → 9 → 6, both times on the same evidence. The old rule was weighed on TOKEN cost,
 where one author is genuinely cheaper — no context is duplicated — and wall clock was never on
 the scale. Measured across five real build sessions, the build step is 40–71% of all
