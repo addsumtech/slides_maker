@@ -184,7 +184,10 @@ def read_deck(pptx):
             kind = "ph" if getattr(sh, "is_placeholder", False) else str(getattr(sh, "shape_type", "")).split(".")[-1].split(" ")[0]
             geo.append("{}:{:.1f},{:.1f},{:.1f},{:.1f}".format(kind, l, t, w, h))
             sl = _shape_lines(sh)
-            lines.extend(sl)
+            # deckkit.a11y_title: an off-canvas copy of the visible title for screen readers — it names
+            # the slide, but counting its words again would double every number in that title.
+            if not str(getattr(sh, "name", "") or "").startswith(L._A11Y_TITLE_TAG):
+                lines.extend(sl)
             if sl and getattr(sh, "has_text_frame", False) and sh.has_text_frame:
                 try:
                     size = max((r.font.size.pt for p in sh.text_frame.paragraphs for r in p.runs
@@ -500,7 +503,7 @@ def snapshot(deck_dir, *, note="", keep=False, pptx=None, script=None, render_di
                     "source changed without changing the deck; if you meant to change the deck, "
                     "rebuild first: {})".format(have[-1], _cmd("deck_cycle.py", deck_dir / (latest.get("build_script") or "build_<deck>.py"))))
             say(_next("deck_versions.py", "diff", deck_dir) if len(have) >= 2 else
-                "NEXT: show the user this version; after the next rebuild: " + _cmd("deck_versions.py", "diff", deck_dir))
+                _first_next(deck_dir, latest.get("keep")))
             return 0, have[-1]
     ver = "v{:03d}".format(int(have[-1][1:]) + 1 if have else 1)
     vd = _vdir(deck_dir) / ver
@@ -545,9 +548,18 @@ def snapshot(deck_dir, *, note="", keep=False, pptx=None, script=None, render_di
         say("   per-slide: " + (fnote if fmap else "restore --slides unavailable for this version — " + fnote))
     if pruned:
         say("   pruned (beyond the newest {}): {}".format(keep_last, ", ".join(pruned)))
-    say(_next("deck_versions.py", "diff", deck_dir) if have else
-        "NEXT: show the user this version; after the next rebuild: " + _cmd("deck_versions.py", "diff", deck_dir))
+    say(_next("deck_versions.py", "diff", deck_dir) if have else _first_next(deck_dir, keep))
     return 0, ver
+
+
+def _first_next(deck_dir, kept=False):
+    if kept:
+        return ("NEXT: show the user this version (kept). After the next rebuild — deck_cycle.py snapshots "
+                "it — run: " + _cmd("deck_versions.py", "diff", deck_dir))
+    return (_next("deck_versions.py", "snapshot", deck_dir, "--keep") +
+            "\n   (run it when you show the user this version — a kept version is never pruned and is what "
+            "the hand-off line compares against; after the next rebuild: " +
+            _cmd("deck_versions.py", "diff", deck_dir) + ")")
 
 
 def _prune(deck_dir, keep_last):
@@ -724,6 +736,26 @@ def _render_path(deck_dir, ver, man, s):
     return _vdir(deck_dir) / ver / "render" / "slide{:02d}.png".format(s["index"])
 
 
+def _slides_now(deck_dir, ver, man):
+    """The version's slides re-read from ITS stored pptx with THIS reader.
+
+    The manifest copy is what the reader of the day extracted; comparing two manifests written by
+    different reader versions reports the reader's change as the deck's (measured: a fix that stopped
+    counting the off-canvas a11y title twice made every slide read as changed). The stored .pptx is
+    the ground truth, so both sides of a diff are always read the same way."""
+    vd = _vdir(deck_dir) / ver
+    try:
+        slides = read_deck(vd / man["pptx_name"])
+    except Exception as e:                                             # noqa: BLE001
+        raise Refuse("deck_versions: cannot read {}/{} ({}: {})".format(ver, man["pptx_name"], type(e).__name__, e))
+    if man.get("renders"):
+        for s in slides:
+            png = vd / "render" / "slide{:02d}.png".format(s["index"])
+            if png.is_file():
+                s["render_sha"] = _file_sha(png)
+    return slides
+
+
 def diff_versions(deck_dir, va, vb):
     ma, mb = _load(deck_dir, va), _load(deck_dir, vb)
     for v, m in ((va, ma), (vb, mb)):
@@ -731,7 +763,7 @@ def diff_versions(deck_dir, va, vb):
             raise Refuse("deck_versions: {} holds no deck (a pre-restore backup of the build sources "
                          "only) — diff two versions that hold a .pptx (list them: {})".format(
                              v, _cmd("deck_versions.py", "list", deck_dir)))
-    A, B = ma["slides"], mb["slides"]
+    A, B = _slides_now(deck_dir, va, ma), _slides_now(deck_dir, vb, mb)
     rows = []
     for i, j, kind in align(A, B):
         a = A[i] if i is not None else None

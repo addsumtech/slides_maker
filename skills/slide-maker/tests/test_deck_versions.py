@@ -477,6 +477,28 @@ dv("snapshot", d_em)
 rc, out = dv("diff", d_em)
 check("an empty deck → one slide reads as 1 added", rc == 0 and "1 added" in out, out[:500])
 
+# ───────────────────────────────────────────── diff reads the stored pptx, not a stale manifest
+# A manifest written by an older reader must not make the reader's change look like the deck's.
+mm = manifest(d_cjk, "v001")
+for s in mm["slides"]:
+    s["text_lines"] = s["text_lines"] + ["an extra line an older reader extracted"]
+(d_cjk / ".versions/v001/manifest.json").write_text(json.dumps(mm, ensure_ascii=False), encoding="utf-8")
+rc, out = dv("diff", d_cjk)
+check("diff re-reads each version's stored pptx (a stale manifest text does not leak into the diff)",
+      re.search(r"\b1 changed\b", out) and "older reader" not in out, out[:600])
+
+# ───────────────────────────────────────────── the off-canvas a11y title is not counted twice
+A11Y = script_for([("slide_01", "Stats", ["x"])]).replace(
+    "    _page(prs, 'Stats', ['x'])",
+    "    s = _page(prs, '1,350 repairs', [])\n    dk.a11y_title(s, '1,350 repairs')")
+d_a = TMP / "a11y"
+d_a.mkdir()
+(d_a / "build_deck.py").write_text(A11Y, encoding="utf-8")
+build(d_a)
+recs = V.read_deck(d_a / "deck.pptx")
+check("deckkit.a11y_title's off-canvas copy names the slide but its number is counted once",
+      recs[0]["title"] == "1,350 repairs" and recs[0]["numbers"] == ["1,350"], recs[0])
+
 # ───────────────────────────────────────────── refusals name the fix
 rc, out = dv("diff", TMP / "nobuild_missing")
 check("diff on a folder that does not exist fails with a sentence, exit 2", rc == 2 and "no such" in out.lower(), out[-200:])
