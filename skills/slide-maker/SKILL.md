@@ -201,7 +201,9 @@ delegation covers preferences, never information only the user has, and never WH
 measured, a run read a Chinese "you decide the rest" directive as licence to pick the angle and shipped a thesis on 19th-century
 building regulation, passing every gate. Enforced by `scripts/delegated_picks.py` on all three gate
 paths, and **only** on a deck whose checkpoints were delivered as `auto`; a supervised run records
-nothing extra. Repeat the delegated rows in the hand-off note: a pick the user never sees is a
+nothing extra. **Record each row with `python3 scripts/deck_gates.py picks <deck> --set AXIS=VALUE
+--source … [--basis …] [--alternative …]`** — validated before it is written; `deck_gates.py merge <deck>
+<fragment.json>` takes a plan's gate block — never hand-edited JSON. Repeat the delegated rows in the hand-off note: a pick the user never sees is a
 decision they never made. Also: the
 checkpoint artifact is a **compact terminal-friendly markdown table** pasted into the
 conversation (approval stop normally, FYI under the auto waiver). The waiver covers the

@@ -17,6 +17,8 @@ This does not change the gate. It puts the shapes where they can be read BEFORE 
     python3 scripts/deck_gates.py check <deck-dir>          # ALL shape problems at once
     python3 scripts/deck_gates.py set   <deck-dir> design_plan.boldness bold
     python3 scripts/deck_gates.py set   <deck-dir> design_plan.carried_by '[4, 6, 13]'
+    python3 scripts/deck_gates.py picks <deck-dir> --set audience=… --source delegated --basis … --alternative …
+    python3 scripts/deck_gates.py merge <deck-dir> <fragment.json>   # a plan's gate block, deep-merged
     python3 scripts/deck_gates.py --selftest
 
 🔴 It writes the SHARED record, `.deck-gates.json` — the one `render_deck.py --gate-check` and
@@ -732,6 +734,109 @@ def _cmd_interview(a):
     return 0
 
 
+def _cmd_picks(a):
+    """Record ONE auto-mode `interview.picks` row, validated by delegated_picks BEFORE it is written.
+
+    Operators hand-edited `.deck-gates.json` to add these rows (audit 2026-10-29), so a row that broke the
+    floor — a `delegated` angle, a delegated audience with no alternative — was discovered only by the
+    hand-off gate at the end of the run. This applies the same `delegated_picks.faults` to the one row, refuses
+    to write a faulty one, replaces an existing row on the same axis, and says which axes are still unrecorded.
+    """
+    g = _load(a.deck_dir) if _path(a.deck_dir).exists() else {}
+    iv = g.get("interview") if isinstance(g.get("interview"), dict) else {}
+    picks = [p for p in (iv.get("picks") or []) if isinstance(p, dict)] if isinstance(iv.get("picks"), list) else []
+    if a.set:
+        if "=" not in a.set or not a.source:
+            print("picks --set takes AXIS=VALUE and needs --source ({})".format(" | ".join(dpk.SOURCES)),
+                  file=sys.stderr)
+            return 2
+        axis, _, value = a.set.partition("=")
+        row = {"axis": axis.strip().lower(), "source": a.source.strip().lower(), "value": value.strip()}
+        if a.basis:
+            row["basis"] = a.basis.strip()
+        if a.alternative:
+            row["alternative"] = a.alternative.strip()
+        own = [f for f in dpk.faults({"picks": [row]}, auto=True) if not f.startswith("no pick recorded for")]
+        if own:
+            print("NOT recorded — this row breaks the delegated-picks contract:", file=sys.stderr)
+            for f in own:
+                print("  - " + f, file=sys.stderr)
+            return 2
+        picks = [p for p in picks if str(p.get("axis") or "").strip().lower() != row["axis"]] + [row]
+        iv["picks"] = picks
+        g["interview"] = iv
+        _save(a.deck_dir, g)
+        print("recorded: {} = {} ({})".format(row["axis"], row["value"] or "—", row["source"]))
+    probs = dpk.faults({"picks": picks}, auto=True) if picks else []
+    rest = [f for f in probs if not f.startswith("no pick recorded for")]
+    seen = {str(p.get("axis") or "").strip().lower() for p in picks}
+    missing = [x for x in dpk.AXES if x not in seen]
+    for f in rest:
+        print("  ✗ " + f)
+    if missing:
+        print("still to record: {} — `{} picks {} --set AXIS=VALUE --source …`".format(
+            " · ".join(missing), _SELF, shlex.quote(str(a.deck_dir))))
+    if rest or missing:
+        return 1
+    print("all {} Step-0 axes recorded; delegated_picks finds nothing wrong".format(len(dpk.AXES)))
+    return 0
+
+
+# Top-level sections the gates read. `merge` refuses an unknown key that is a near-miss of one of these
+# (a typo would otherwise land as a new block every gate ignores) and only notes one that is not.
+_KNOWN_SECTIONS = ("blind_read", "content", "critic", "delivery", "design_plan", "interview", "provenance",
+                   "render_selfcheck", "a11y", "fonts", "purpose", "sameness", "talk_time", "template_profile",
+                   "timidity", "citations", "qa_backup", "surface", "taste")
+
+
+def _deep_merge(dst, src, path, changed):
+    for k, v in src.items():
+        here = "{}.{}".format(path, k) if path else k
+        if isinstance(v, dict) and isinstance(dst.get(k), dict):
+            _deep_merge(dst[k], v, here, changed)
+        else:
+            if dst.get(k) != v:
+                changed.append(here)
+            dst[k] = v
+
+
+def _cmd_merge(a):
+    """Merge a plan's gate FRAGMENT (a JSON object of record sections) into `.deck-gates.json`.
+
+    Objects merge key by key, so a design-plan fragment does not erase what an earlier step recorded under
+    the same section; any other value (lists included) is replaced whole, as `set` does. Nothing is written
+    if the fragment is not a JSON object or names a near-miss of a known section.
+    """
+    import difflib
+    try:
+        frag = json.loads(Path(os.path.expanduser(a.fragment)).read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        print("cannot read the fragment {}: {}".format(a.fragment, exc), file=sys.stderr)
+        return 2
+    if not isinstance(frag, dict) or not frag:
+        print("the fragment must be a non-empty JSON OBJECT of record sections, e.g. "
+              '{"design_plan": {...}} — got ' + type(frag).__name__, file=sys.stderr)
+        return 2
+    typos = []
+    for k in frag:
+        if k not in _KNOWN_SECTIONS:
+            near = difflib.get_close_matches(k, _KNOWN_SECTIONS, n=1, cutoff=0.8)
+            if near:
+                typos.append("{!r} (did you mean {!r}?)".format(k, near[0]))
+            else:
+                print("note: {!r} is not a section the gates read — merged anyway".format(k))
+    if typos:
+        print("NOT merged — unknown section(s) that look like typos: {}".format(", ".join(typos)), file=sys.stderr)
+        return 2
+    g = _load(a.deck_dir) if _path(a.deck_dir).exists() else {}
+    changed = []
+    _deep_merge(g, frag, "", changed)
+    p = _save(a.deck_dir, g)
+    print("merged into {}: {}".format(p, ", ".join(changed) or "nothing changed"))
+    print("next: `{} check {}` (shape) — then the gate itself.".format(_SELF, shlex.quote(str(a.deck_dir))))
+    return 0
+
+
 # Keys `init` ALWAYS writes. A record missing several of them was not produced by it.
 _INIT_MARKERS = (("design_plan", "composition"), ("design_plan", "material_probe"),
                  ("design_plan", "signature_proof"), ("content", "audience_brief"),
@@ -780,6 +885,19 @@ def main(argv=None):
     p.add_argument("--ask", action="store_true", help="print the questions even if all are answered")
     p.add_argument("--lang", choices=sorted(INTERVIEW_QUESTIONS), help="the USER's language")
     p.set_defaults(fn=_cmd_interview)
+
+    p = sub.add_parser("picks", help="record ONE auto-mode interview.picks row, validated before it is written.")
+    p.add_argument("deck_dir")
+    p.add_argument("--set", metavar="AXIS=VALUE", help="one of: " + " · ".join(dpk.AXES))
+    p.add_argument("--source", help=" | ".join(dpk.SOURCES))
+    p.add_argument("--basis", help="what in the request or the material supports a decided pick")
+    p.add_argument("--alternative", help="audience · purpose · template: what else was plausible and why it lost")
+    p.set_defaults(fn=_cmd_picks)
+
+    p = sub.add_parser("merge", help="deep-merge a plan's gate fragment (a JSON object) into the record.")
+    p.add_argument("deck_dir")
+    p.add_argument("fragment")
+    p.set_defaults(fn=_cmd_merge)
 
     p = sub.add_parser("check", help="report EVERY shape problem at once (never opens the pptx).")
     p.add_argument("deck_dir")
