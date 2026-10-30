@@ -242,9 +242,10 @@ def _rel(path, base):
 # ════════════════════════════════════════════════════════════════════════ extractors
 
 def _pixels(im):
-    """A PIL image's pixels as a list — `get_flattened_data` where Pillow has it (getdata is going)."""
-    f = getattr(im, "get_flattened_data", None)
-    return list(f() if f else im.getdata())
+    """A PIL image's pixels as a list, through the skill's one Pillow-version shim."""
+    sys.path.insert(0, str(HERE))
+    from pil_compat import pixels
+    return list(pixels(im))
 
 
 def _clusters(pixels, min_share=0.04):
