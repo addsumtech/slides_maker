@@ -402,37 +402,52 @@ check(vc.SERIES_MIN == 4, "the series floor is four designed colours per ground"
 check(all(len(G["roles"]["series"]) >= 4 for s_ in vl_specs.load().values() for G in s_["grounds"].values()),
       "every ground carries at least four series colours")
 
-# The template library shows every registered style, five per row, and grows with the registry (2026-10-30).
+# The README shows twelve selected styles, three per row; the online library shows every style (2026-10-30).
 import vl_docs as _vd
 _reg = vl_specs.load()
 _g = _vd.gallery(_reg)
-check(_g == set(_reg), "the README template library shows every registered style ({})".format(sorted(_g or [])))
+check(len(_vd.SHOWCASE) == len(set(_vd.SHOWCASE)) == 12 and _g == set(_vd.SHOWCASE) <= set(_reg),
+      "the README template library shows twelve distinct registered styles ({})".format(sorted(_g or [])))
 for _blk, _site in (("vl-gallery", "https://slides.addsum.top/#vl-"), ("vl-gallery-zh", "https://slides.addsum.top/cn/#vl-")):
     _t = _vd._render(_blk, _reg)
     _cells = re.findall(r"<td[^>]*>(.*?)</td>", _t, re.S)
-    check(len(_cells) == len(_reg) and _t.count("<tr>") == (len(_reg) + 4) // 5 and
-          all(len(re.findall(r"<td\b", row)) == 5 for row in re.findall(r"<tr>(.*?)</tr>", _t, re.S)[:-1]),
-          "{} lays every style out five to a row ({} cells, {} rows)".format(_blk, len(_cells), _t.count("<tr>")))
+    check(len(_cells) == 12 and _t.count("<tr>") == 4 and
+          all(len(re.findall(r"<td\b", row)) == 3 for row in re.findall(r"<tr>(.*?)</tr>", _t, re.S)),
+          "{} lays twelve styles out three to a row ({} cells, {} rows)".format(_blk, len(_cells), _t.count("<tr>")))
     check(all(c.count('href="{}{}"'.format(_site, n)) == 2 and "samples/{}.jpg".format(n) in c
-              for n, c in zip(_reg, _cells)),
+              for n, c in zip(_vd.SHOWCASE, _cells)),
           "{}: every cell shows its sample and links its picture and its line to {}<name>".format(_blk, _site))
     check(all(re.search(r"<strong>[^<]+</strong>", c) for c in _cells), "{}: every cell names its look".format(_blk))
-check("配你的照片" in _vd._render("vl-gallery-zh", _reg) and "with your photos" in _vd._render("vl-gallery", _reg),
+check("照片排版" in _vd._render("vl-gallery-zh", _reg) and "Photo layouts" in _vd._render("vl-gallery", _reg),
       "a picture language says what it carries instead of topic tags")
 _expanded = dict(_reg, future_style=dict(_reg["calendar"], name="future_style"))
 for _blk in ("vl-gallery", "vl-gallery-zh"):
     _future = _vd._render(_blk, _expanded)
-    check("samples/future_style.jpg" in _future and _future.count("<td ") == len(_expanded),
-          "{} automatically includes a newly registered style without editing a showcase".format(_blk))
+    check("samples/future_style.jpg" not in _future and _future.count("<td ") == 12 and
+          "-{}-".format(len(_expanded)) in _vd._render("vl-badge", _expanded),
+          "{} stays curated while the library badge counts every registered style".format(_blk))
+_selected = _vd.SHOWCASE
+try:
+    _vd.SHOWCASE = _selected[:-1] + ("missing_style",)
+    try:
+        _vd._render("vl-gallery", _reg)
+        _selection_error = None
+    except ValueError as e:
+        _selection_error = str(e)
+    check(_selection_error is not None and "missing_style" in _selection_error,
+          "a selected style absent from the registry is refused by name")
+finally:
+    _vd.SHOWCASE = _selected
 # One template library replaces the old example-deck gallery and visual-language section in both READMEs.
-for _f, _a, _b, _old in (("README.md", "## Template library", "## How to use the templates", "## Visual languages"),
-                        ("README_CN.md", "## 模板库", "## 模板怎么用", "## 设计语言")):
+for _f, _a, _b, _old in (("README.md", "## Template library", "### Using a template", "## Visual languages"),
+                        ("README_CN.md", "## 模板库", "### 模板怎么用", "## 设计语言")):
     _txt = (_vd.REPO / _f).read_text(encoding="utf-8")
     _heads = [l for l in _txt.splitlines() if l.startswith("## ")]
-    check(_heads.count(_a) == 1 and _b in _heads and _heads.index(_b) == _heads.index(_a) + 1 and _old not in _heads,
-          "{} has one template library directly followed by its usage instructions ({})".format(_f, _heads[:6]))
+    _library = _txt.split(_a, 1)[1].split("\n## ", 1)[0] if _a in _txt else ""
+    check(_heads.count(_a) == 1 and _b in _library and _old not in _heads,
+          "{} has one template library containing its usage instructions ({})".format(_f, _heads[:6]))
     check('viewer.html?deck=' not in _txt and 'gallery-more' not in _txt,
-          "{} no longer advertises the twelve-deck gallery or hides templates behind a more link".format(_f))
+          "{} no longer advertises the old twelve-deck gallery".format(_f))
 # counts past twenty stay words: "four image-led and 26 drawn" mixed the two styles in one sentence (2026-10-22, 30)
 check([_vd._en(n) for n in (19, 20, 21, 26, 30, 45, 99)] ==
       ["nineteen", "twenty", "twenty-one", "twenty-six", "thirty", "forty-five", "ninety-nine"],
@@ -455,7 +470,7 @@ for _f, _blk in (("README.md", "vl-badge"), ("README_CN.md", "vl-badge-zh")):
     check(_i >= 0 and abs(_i - _j) < 400, "{} carries {} beside the ClawHub badge".format(_f, _blk))
 import vl_conformance as _vcf1
 check(not any("gallery" in x for x in _vcf1.assets_missing("herbarium")),
-      "a style present in both README libraries is not a missing asset: {}".format(_vcf1.assets_missing("herbarium")))
+      "a style outside the README selection is not a missing gallery asset: {}".format(_vcf1.assets_missing("herbarium")))
 _repo1 = _vcf1.REPO
 _t1 = Path(tempfile.mkdtemp(prefix="gal_"))
 try:

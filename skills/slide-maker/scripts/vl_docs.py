@@ -72,15 +72,20 @@ def gallery(reg):
 
 LIBRARY = "https://slides.addsum.top/#languages"        # the library is a section of the home page (2026-10-23)
 LIBRARY_ZH = "https://slides.addsum.top/cn/#languages"
-# Every registered language belongs in the template library, five per row (2026-10-30).
-GALLERY_COLUMNS = 5
-_CARRIES = {"photos": ("with your photos", "配你的照片"), "illustrations": ("with an illustration series", "配一组插画")}
+# Keep the README compact; the online library contains every registered style (2026-10-30).
+SHOWCASE = ("editorial", "poster", "ink", "comic", "vinyl", "stainedglass", "wayfinding", "chalkboard", "recipe",
+            "circuit", "storybook", "scoreboard")
+GALLERY_COLUMNS = 3
+_CARRIES = {"photos": ("Photo layouts", "照片排版"), "illustrations": ("Illustrated storytelling", "插画叙事")}
 
 
 def _gallery(reg, zh):
     """The README gallery's table: each cell is a language's sample sheet and its name, what it suits (a picture
     language: what it carries), and a link; the picture and the link open that language in the library section."""
-    names = list(reg)
+    missing = [n for n in SHOWCASE if n not in reg]
+    if missing:
+        raise ValueError("vl_docs.SHOWCASE names no registered style: {}".format(missing))
+    names = SHOWCASE
     site, more = ("https://slides.addsum.top/cn/#vl-", "查看全部页面") if zh else \
         ("https://slides.addsum.top/#vl-", "Preview all pages")
     rows = []
@@ -92,7 +97,7 @@ def _gallery(reg, zh):
             use = _CARRIES[pics][1 if zh else 0] if pics else ("、" if zh else ", ").join(s["offer"]["zh" if zh else "en"][:3])
             name = s["display"]["zh" if zh else "en"]
             cells.append(
-                '    <td align="center" width="20%">\n'
+                '    <td align="center" width="33%">\n'
                 '      <a href="{u}{n}"><img src="skills/slide-maker/assets/vl/samples/{n}.jpg" alt="{alt}"></a><br/>\n'
                 '      <sub><strong>{name}</strong><br/>{use}<br/>\n'
                 '      <a href="{u}{n}">{more}</a></sub>\n'
