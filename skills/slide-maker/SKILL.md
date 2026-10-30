@@ -149,6 +149,8 @@ Two time sinks compress well: ingesting material/assets, and the critic loop.
     runs; if a constant genuinely IS the fix, `--nudge-again "<why>"` runs it and records the
     reason beside the deck. Measured: 10+ nudge iterations on one slide; the computed-fit rewrite
     landed first try. It replaces nothing: `render_deck.py` and `lint_deck.py` behave as before.
+    After every build that completed it also **snapshots the deck** into `<deck-dir>/.versions/`
+    (`scripts/deck_versions.py`; unchanged content makes no new version) — Step 6 shows the user the diff.
 - **Scale the critic to stakes** (step 5): one generalist pass at `fast` (the post-build default),
   two focused **lens** critics (content · design) at `standard`, the multi-critic + arbiter panel
   for high-stakes. You never skip the loop on your own authority — only the user can, by answering
@@ -3024,6 +3026,18 @@ slides; continuing in this direction unless you'd change something." Cheaper tha
 palette/density/structure mismatch after all 20 are built. (A soft check-in, not a 🔴 stop: under a
 per-deck auto directive, post the early renders as an FYI and continue without waiting; in the
 default flow, wait briefly for a reaction before finishing. Short decks: just build and run the critic.)
+
+**Versions — show what a rebuild changed, and go back.** `deck_cycle.py` snapshots every completed
+build into `<deck-dir>/.versions/`. Right before you show the user a version, mark it:
+`python3 scripts/deck_versions.py snapshot <deck-dir> --keep` (the version they saw is never pruned).
+After a critic round or a feedback rebuild, run `python3 scripts/deck_versions.py diff <deck-dir>`
+(default: the last two versions) and show the user its `versions-diff_vA_vB.html` with the changed
+NUMBERS it lists first — each one is a claim to re-check against its source. To go back:
+`python3 scripts/deck_versions.py restore <deck-dir> vNNN` (whole deck; the current state is
+snapshotted first) or `… restore <deck-dir> vNNN --slides 7` (slide numbers as in vNNN; replaces that
+slide's `def slide_NN` in the build script, then rebuild with the printed `deck_cycle.py` line).
+`python3 scripts/deck_versions.py list <deck-dir>` ends with the hand-off `version:` line. Each command
+prints its `NEXT:`; a refusal says why and what to do instead.
 
 **Presenting, editing, and iterating after delivery — `references/handoff-checklist.md` (same file, later section).** Read it at hand-off on **any deck that carries speaker notes** (Presenter View / `export_notes.py` / how to edit without losing work), and **always** before you re-run the build on the user's feedback — it holds the reconcile-don't-clobber procedure and the required `user-dials:` round-record line.
 

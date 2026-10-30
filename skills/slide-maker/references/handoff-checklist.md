@@ -72,6 +72,11 @@ in the file a reader receives — the plain export carried none) and, when the d
 `<deck>-notes.pdf`, the **speaker handout**: one page per slide, the slide above its own notes, to
 rehearse from and to hand out. A deliverable the user is not told about is one they never open.
 
+**Optional `version:` line — when `<deck-dir>/.versions/` exists.** Paste the `HAND-OFF LINE:` that
+`python3 scripts/deck_versions.py list <deck-dir>` prints: `version: v007 · 3 slides changed since v004,
+the version you last saw` (the comparison is against the newest version snapshotted with `--keep`).
+If slides changed, link the `versions-diff_vA_vB.html` that `deck_versions.py diff <deck-dir> vA vB` writes.
+
 🔴 **Report the COVERAGE line, not just the pass.** The gate run ends with
 `COVERAGE: N section(s) ran — X bound, Y NOT CHECKED`. If anything was not checked, say which and
 why in one clause — "the talk-time gate was silent because no time budget was recorded" is a
@@ -108,3 +113,7 @@ generically "better". On each user-feedback round, add one **`user-dials:`** lin
 record — `dimension → direction, layer — "verbatim user words"` (e.g. `colour: +vivid, content
 layer — "太素了"`) — WHY the round happened is the datum the taste profile promotes from, and the
 evidence the pendulum-overshoot check cites (`references/handoff-and-iteration.md` "Move the dial").
+
+**Undo a round with versions, not by memory.** Every rebuild through `deck_cycle.py` is snapshotted
+into `.versions/`, so a round that went the wrong way is undone with
+`python3 scripts/deck_versions.py restore <deck-dir> vNNN [--slides N]`, never by re-typing the old content.
