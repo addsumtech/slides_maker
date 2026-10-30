@@ -83,6 +83,36 @@ check("large-deck-orchestration.md" in _scale,
 check("from ~9 slides the BUILD fans out" not in read("references/critic-panel.md"),
       "critic-panel.md does not restate the stale ~9 build threshold")
 
+# ─────────────────────────────────────────────── A5 · the plan budget and the render lint count words ONE way
+# A real Chinese run (2026-10-29) saw plan loads of 38–57 and lint loads of 63–88 and read it as two CJK
+# counting rules. It is not: plan_wordcount imports lint_deck._text_load, and the same text on a slide reads
+# the same number. The gap is what design ADDS (kicker, chart labels, source line). Pinned so a second
+# counter can never creep in on either side.
+import lint_deck as _ld  # noqa: E402
+from pptx import Presentation as _P  # noqa: E402
+import deckkit as _dk  # noqa: E402
+
+_pw = read("scripts/plan_wordcount.py")
+check("from lint_deck import _text_load" in _pw and "_text_load(takeaway) + _text_load(units)" in _pw,
+      "plan_wordcount measures with lint_deck's own _text_load (one counter, not a copy)")
+for _tk, _un in (("社区服务中心2025年收入增长12%，主要来自政府购买服务",
+                  "政府购买服务 120 万；社区基金会资助 35 万；个人捐赠 18 万"),
+                 ("Income rose 12%, mostly from contracted services",
+                  "contracted services 1.2M; community foundation 350k; donors 180k")):
+    _prs = _dk.blank_deck(13.333, 7.5)
+    _s = _dk.add_slide(_prs)
+    for _i, _t in enumerate((_tk, _un)):
+        _dk.text(_s, 0.6, 0.6 + 0.9 * _i, 12, 0.7, [[(_t, 16, _dk.RGBColor(0x22, 0x22, 0x22), False, False)]])
+    _f = Path(tempfile.mkdtemp(prefix="pw-")) / "d.pptx"
+    _prs.save(str(_f))
+    _pp = _P(str(_f))
+    _sl = _pp.slides[0]
+    _sw, _sh = _pp.slide_width / 914400.0, _pp.slide_height / 914400.0
+    _lint = _ld.reading_load(_sl, _ld._boxes(_sl, _sw, _sh), _sh)
+    _plan = _ld._text_load(_tk) + _ld._text_load(_un)
+    check(_lint == _plan, "the same text reads the same load to the plan budget and the render lint "
+                          "({!r}…: plan {} · lint {})".format(_tk[:12], _plan, _lint))
+
 # ─────────────────────────────────────────────── A6 · documented build scripts end with the STRICT lint
 import sigs  # noqa: E402
 
