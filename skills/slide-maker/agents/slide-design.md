@@ -766,6 +766,24 @@ fall and stage each built slide FULLY (think SMART, not by quota):
   emoji in titles or as bullet markers, no rounded-card-with-left-accent on *every* slide, no three
   near-identical feature cards.
 
+### 8 — 🔴 The MATERIAL PROBE: build the signature page BEFORE you write the plan
+The rule and its measured reason live in **SKILL.md Step 2 → "STEP 2 OPENS WITH A MATERIAL PROBE"**;
+read it there. What it asks of YOU, in order:
+- Once §0–§1 have settled the concept and the register, **build ONE real slide** — the page the
+  signature move lands on — with real deckkit in the deck's own `build_<deck>.py`, render it
+  (`render_deck.py … --slides 1`), and LOOK at the PNG.
+- **Answer one question in one line: what would the SAFE version of this page have been?** If the
+  honest answer is "about the same thing", the register is a look, not a move — go back to §0/§1
+  and invent again, before any declaration below is written on top of it.
+- **Only then write the Design plan**, describing the artifact that exists. The plan carries a
+  **`material probe:`** line — the rendered PNG path + that one-sentence comparison — recorded as
+  `design_plan.material_probe` (`png`/`path` + `safe_version`).
+- **Skip only on the named carves** (a registered/provided template, a Mode-A mimic, a 1–2 slide tiny
+  ask), recorded as `{"material_probe": {"waived": "…", "waived_category": "registered-template |
+  provided-template | mode-a-mimic | tiny-ask"}}`. `boldness: conservative` is NOT a carve.
+The page is not a throwaway: it becomes the signature slide and the Step-4 anchor proof's
+`signature` anchor.
+
 ## Output — the Design plan
 Produce a single human-readable **Design plan** (markdown), built ON TOP of the approved Content plan
 (reference its slide numbers/takeaways; do not restate or alter its content). Include exactly these

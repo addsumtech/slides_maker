@@ -126,6 +126,14 @@ check("`fast`" in _crit and "--lens AB" in _crit,
 check("skip rendering and the full critic panel" not in adq,
       "its core-principle list does not promise the full panel")
 
+# ─────────────────────────────────────────────── B1 · the art-director brief carries the MATERIAL PROBE
+sd = read("agents/slide-design.md")
+check("MATERIAL PROBE" in sd.upper() and "material probe:" in sd,
+      "agents/slide-design.md tells the art director to build the material probe and carry its `material probe:` line")
+check("STEP 2 OPENS WITH A MATERIAL PROBE" in SK and "SKILL.md" in sd[sd.upper().find("MATERIAL PROBE") - 400:
+                                                                      sd.upper().find("MATERIAL PROBE") + 1500],
+      "…and points at the SKILL.md Step-2 rule rather than restating it")
+
 
 for line in ok:
     print("  ok   " + line)
