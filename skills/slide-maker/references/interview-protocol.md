@@ -271,7 +271,8 @@ four template choices:
          direction fills one of the existing slots, never an extra one. Picking it records
          `design_plan.imagery: "series"` + `design_plan.image_series: "<deck>/series.json"` and runs
          the SERIES pipeline (`references/image-generation.md` → "Image-led decks — the SERIES
-         exception"); picking any other direction keeps `imagery: "selective"`, today's rule.
+         exception"); picking any other direction keeps `imagery: "selective"`, today's rule
+         (`"none"` is accepted too on a no-picture deck — the word `direction_gate.images` uses).
        - 🔴 **DIVERGENCE IS A PAIRWISE RULE, NOT AN EXHORTATION: any two directions must differ on
          ≥2 of four axes — {palette mood · type attitude · density/scale · COMPOSITION ENVELOPE}.**
          "Distinct light/dark, warm/cool, serif/sans" describes *knobs*; a dark version and a light
