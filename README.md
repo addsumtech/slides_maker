@@ -6,8 +6,6 @@
 
 <p align="center">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
-  <img alt="Codex" src="https://img.shields.io/badge/Codex-supported-111827">
-  <img alt="Claude Code" src="https://img.shields.io/badge/Claude_Code-supported-5b5bd6">
   <img alt="Output: editable PPTX" src="https://img.shields.io/badge/output-native_editable_PPTX-0f766e">
   <a href="https://skillhub.cloud.tencent.com/skills/slides-maker"><img alt="Tencent SkillHub" src="https://img.shields.io/badge/Tencent_SkillHub-get_it-2f6feb"></a>
 </p>
@@ -19,7 +17,7 @@
 
 <p align="center"><sub>Free and open source, built by <a href="https://addsum.top/"><strong>Addsum</strong></a></sub></p>
 
-slide-maker is an open-source skill for Codex and Claude Code. Give it a paper, repository, document or topic. It plans the content, designs the slides and generates a `.pptx` you can edit in PowerPoint, along with the build script.
+slide-maker is an open-source tool for creating editable presentations. Give it a paper, repository, document or topic. It plans the content, designs the slides and generates a `.pptx` you can edit in PowerPoint, along with the build script.
 
 Choose a built-in template or bring a reference deck. Confirm the outline and design before the build, then view the rendered slides and choose the level of independent review.
 

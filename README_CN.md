@@ -6,8 +6,6 @@
 
 <p align="center">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
-  <img alt="Codex" src="https://img.shields.io/badge/Codex-supported-111827">
-  <img alt="Claude Code" src="https://img.shields.io/badge/Claude_Code-supported-5b5bd6">
   <img alt="Output: editable PPTX" src="https://img.shields.io/badge/output-native_editable_PPTX-0f766e">
   <a href="https://skillhub.cloud.tencent.com/skills/slides-maker"><img alt="腾讯 SkillHub" src="https://img.shields.io/badge/%E8%85%BE%E8%AE%AF_SkillHub-%E7%AB%8B%E5%8D%B3%E8%8E%B7%E5%8F%96-2f6feb"></a>
 </p>
@@ -19,7 +17,7 @@
 
 <p align="center"><sub><a href="https://addsum.top/cn/"><strong>增和科技 Addsum</strong></a> 出品 · 免费开源</sub></p>
 
-slide-maker 是在 Codex 和 Claude Code 中使用的开源技能。提供论文、代码仓库、文档或一个主题，它会整理内容、设计页面，生成可在 PowerPoint 中继续编辑的 `.pptx`，并附上构建脚本。
+slide-maker 是一个生成可编辑 PPT 的开源工具。提供论文、代码仓库、文档或一个主题，它会整理内容、设计页面，生成可在 PowerPoint 中继续编辑的 `.pptx`，并附上构建脚本。
 
 你可以先选模板，也可以提供参考 PPT。生成前确认内容结构和设计方向，生成后查看预览，再决定独立评审的力度。
 
