@@ -77,6 +77,12 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: python scripts/check_versions.py
 
+      # SkillHub takes at most 200 files and no images per skill; the package is a trimmed copy and
+      # the trim used to be done by hand (6.0.1 went up at 202). Build it from HEAD and refuse it here.
+      - name: SkillHub package builds (≤200 files, no images, every module still imports)
+        working-directory: ${{ github.workspace }}
+        run: python scripts/build_skillhub.py --selftest
+
       # A documented command must be runnable AS WRITTEN, and CI is the one place that could
       # never notice this one: `actions/setup-python` puts a `python` on PATH, so 35 bare
       # `python <script>.py` lines across SKILL.md, its references and the scripts' own printed
