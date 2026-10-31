@@ -9,6 +9,56 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+## [6.1.0] — 2026-10-31
+
+**Brand kits, slide-by-slide versions, and every number held to the user's own files.**
+A company or lab deck can now be built from the user's logo, brand guide or old deck and checked for off-brand
+colours and fonts; every rebuild is kept as a version that can be compared slide by slide and rolled back; and a
+deck built from the user's material has every number on its slides traced to those files, with the files checked
+against themselves first. Two end-to-end runs (one as Claude, one as a docs-only non-Claude agent) drove a round of
+fixes to the gates, their scaffolds and the isolation of a user's own profile.
+
+- **Brand kit** (`scripts/brand_kit.py`). `extract` reads a logo (SVG or raster), a brand-guide PDF, an old
+  .pptx/.potx and explicit hex codes and font names into one draft spec, every value with its source; `review`,
+  `confirm` (roles, installed faces, CJK glyph coverage, contrast), `style` (the palette and faces the build
+  imports), `check` (off-brand colours, faces and logo use in the built deck, calibrated so tints of a brand colour
+  pass) and `save` / `list` / `use` for reuse. A `brand` gate section on both runtimes.
+- **Deck versions** (`scripts/deck_versions.py`). Each completed build is snapshotted into `.versions/`; `diff`
+  aligns slides (an inserted, deleted or moved slide reads as one event), lists every changed number first and
+  writes a side-by-side page; `restore` rolls back the whole deck, or single slides through the build script's own
+  source. The hand-off can say how many slides changed since the version the user last saw.
+- **Numbers traced to the user's files** (`scripts/source_check.py`). Every number on the built slides must be
+  found in the files listed in `content.sources` (pdf, docx, pptx, xlsx including percent formats, csv, markdown,
+  text, html); a rounded, re-scaled or computed figure is recorded with its source value or its expression and
+  re-checked, a figure read off a picture is counted as not machine-checked, and the report names the closest file
+  figure for a mistyped one. `material` checks the files against themselves (totals that are not the sum of their
+  parts, shares off 100%, the same table in two files disagreeing) and each finding needs a recorded resolution.
+  Scientific notation, abbreviated scales, a percent against a stored fraction, percent-formatted charts,
+  year-month dates and GB18030 csv files are read as written. Both gates run it.
+- **The registry override is exclusive.** With `SLIDE_MAKER_REGISTRY` set it is now the only registry root for
+  reads and writes, and the taste ledger lives in it; before, reads fell through to the user's own profile, so an
+  isolated run or a test still scored against it. Every test now runs isolated, and a guard keeps it so.
+- **Gates and scaffolds agree.** The record scaffolds carry the fields the gates read (arc candidates, a one-row
+  "n/a" image list, a note that a material-only deck needs no provenance section); the Codex template shows every
+  delegated-pick axis; a self-review records that it had no fresh context instead of being made to claim one; an
+  unattested icon or hotspot names the ids and the row that attests it; `deck_gates.py picks` and `merge` record
+  picks and plan fragments (and refuse the Codex evidence's section names).
+- **Rules stated once.** Review tiers, the fan-out threshold, the auto-mode review tier, the purpose keywords, the
+  imagery vocabulary and the strict build-time lint in every scaffold now say the same thing everywhere, with a test
+  holding them together; a confirmed provenance row may cite the user's own file.
+- **Layout.** A two-line CJK title's accent rule sits below its last line; fonts are measured in the face the
+  renderer draws (including lining figures of old-style faces), and CJK line breaks, the spaces at a break and
+  mixed Chinese and Latin runs follow one rule set for the layout, the delivery lint and the measure.
+- **Tooling.** CI runs as four parallel jobs; two lint passes reuse their measurements (identical output on 628
+  decks); `scripts/build_skillhub.py` builds the SkillHub package (198 files, no images, every module importing)
+  and CI refuses one that is over the limit.
+- **Docs.** The READMEs lead with `npx skills add`, describe first use for every assistant, and show the visual
+  styles as one template library with full-size previews.
+
+**Upgrading:** a `.deck-gates.json` written before 6.1.0 needs `content.sources` (`[]` when the deck has no user
+material), and a setup that relied on `SLIDE_MAKER_REGISTRY` falling back to `~/.claude/slide-templates` must point
+it at the folder it means.
+
 ## [6.0.1] — 2026-10-23
 
 **A package with no pictures works, every direction preview draws, and text is measured as LibreOffice sets it.**
