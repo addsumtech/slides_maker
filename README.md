@@ -56,74 +56,74 @@ The skill includes <!-- vl:count-all -->thirty<!-- /vl --> templates. Each has t
 
 <!-- vl:count-image-cap -->Four<!-- /vl --> templates use images: **Editorial magazine (editorial), Soft organic (soft) and Collage scrapbook (collage)** arrange your photos; **Watercolour storybook (storybook)** works with a series of illustrations. The other <!-- vl:count-drawn -->twenty-six<!-- /vl --> templates use editable native shapes and need no pictures.
 
-Twelve selected styles are shown below. Click a sample to preview all page types and both palettes.
+Twelve selected styles are shown below. Select “Preview all pages” beneath a sample to see every page type and both palettes.
 
 <!-- vl:vl-gallery -->
 <table>
   <tr>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/#vl-editorial"><img src="skills/slide-maker/assets/vl/samples/editorial.jpg" alt="editorial template sample pages"></a><br/>
+      <picture><img src="skills/slide-maker/assets/vl/samples/editorial.jpg" alt="editorial template sample pages"></picture><br/>
       <sub><strong>Editorial magazine</strong><br/>Photo layouts<br/>
       <a href="https://slides.addsum.top/#vl-editorial">Preview all pages</a></sub>
     </td>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/#vl-poster"><img src="skills/slide-maker/assets/vl/samples/poster.jpg" alt="poster template sample pages"></a><br/>
+      <picture><img src="skills/slide-maker/assets/vl/samples/poster.jpg" alt="poster template sample pages"></picture><br/>
       <sub><strong>Type poster</strong><br/>launch, manifesto, opinion<br/>
       <a href="https://slides.addsum.top/#vl-poster">Preview all pages</a></sub>
     </td>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/#vl-ink"><img src="skills/slide-maker/assets/vl/samples/ink.jpg" alt="ink template sample pages"></a><br/>
+      <picture><img src="skills/slide-maker/assets/vl/samples/ink.jpg" alt="ink template sample pages"></picture><br/>
       <sub><strong>Ink wash</strong><br/>culture, history, craft<br/>
       <a href="https://slides.addsum.top/#vl-ink">Preview all pages</a></sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/#vl-comic"><img src="skills/slide-maker/assets/vl/samples/comic.jpg" alt="comic template sample pages"></a><br/>
+      <picture><img src="skills/slide-maker/assets/vl/samples/comic.jpg" alt="comic template sample pages"></picture><br/>
       <sub><strong>Comic panels</strong><br/>storytelling, user journey, explainer<br/>
       <a href="https://slides.addsum.top/#vl-comic">Preview all pages</a></sub>
     </td>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/#vl-vinyl"><img src="skills/slide-maker/assets/vl/samples/vinyl.jpg" alt="vinyl template sample pages"></a><br/>
+      <picture><img src="skills/slide-maker/assets/vl/samples/vinyl.jpg" alt="vinyl template sample pages"></picture><br/>
       <sub><strong>Vinyl record</strong><br/>music, podcast, culture<br/>
       <a href="https://slides.addsum.top/#vl-vinyl">Preview all pages</a></sub>
     </td>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/#vl-stainedglass"><img src="skills/slide-maker/assets/vl/samples/stainedglass.jpg" alt="stainedglass template sample pages"></a><br/>
+      <picture><img src="skills/slide-maker/assets/vl/samples/stainedglass.jpg" alt="stainedglass template sample pages"></picture><br/>
       <sub><strong>Stained glass</strong><br/>heritage, culture, celebrations<br/>
       <a href="https://slides.addsum.top/#vl-stainedglass">Preview all pages</a></sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/#vl-wayfinding"><img src="skills/slide-maker/assets/vl/samples/wayfinding.jpg" alt="wayfinding template sample pages"></a><br/>
+      <picture><img src="skills/slide-maker/assets/vl/samples/wayfinding.jpg" alt="wayfinding template sample pages"></picture><br/>
       <sub><strong>Wayfinding</strong><br/>roadmap, process, onboarding<br/>
       <a href="https://slides.addsum.top/#vl-wayfinding">Preview all pages</a></sub>
     </td>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/#vl-chalkboard"><img src="skills/slide-maker/assets/vl/samples/chalkboard.jpg" alt="chalkboard template sample pages"></a><br/>
+      <picture><img src="skills/slide-maker/assets/vl/samples/chalkboard.jpg" alt="chalkboard template sample pages"></picture><br/>
       <sub><strong>Chalkboard</strong><br/>lesson, class, training<br/>
       <a href="https://slides.addsum.top/#vl-chalkboard">Preview all pages</a></sub>
     </td>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/#vl-recipe"><img src="skills/slide-maker/assets/vl/samples/recipe.jpg" alt="recipe template sample pages"></a><br/>
+      <picture><img src="skills/slide-maker/assets/vl/samples/recipe.jpg" alt="recipe template sample pages"></picture><br/>
       <sub><strong>Recipe card</strong><br/>food, cooking, recipes<br/>
       <a href="https://slides.addsum.top/#vl-recipe">Preview all pages</a></sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/#vl-circuit"><img src="skills/slide-maker/assets/vl/samples/circuit.jpg" alt="circuit template sample pages"></a><br/>
+      <picture><img src="skills/slide-maker/assets/vl/samples/circuit.jpg" alt="circuit template sample pages"></picture><br/>
       <sub><strong>Circuit board</strong><br/>hardware, IoT, embedded systems<br/>
       <a href="https://slides.addsum.top/#vl-circuit">Preview all pages</a></sub>
     </td>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/#vl-storybook"><img src="skills/slide-maker/assets/vl/samples/storybook.jpg" alt="storybook template sample pages"></a><br/>
+      <picture><img src="skills/slide-maker/assets/vl/samples/storybook.jpg" alt="storybook template sample pages"></picture><br/>
       <sub><strong>Watercolour storybook</strong><br/>Illustrated storytelling<br/>
       <a href="https://slides.addsum.top/#vl-storybook">Preview all pages</a></sub>
     </td>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/#vl-scoreboard"><img src="skills/slide-maker/assets/vl/samples/scoreboard.jpg" alt="scoreboard template sample pages"></a><br/>
+      <picture><img src="skills/slide-maker/assets/vl/samples/scoreboard.jpg" alt="scoreboard template sample pages"></picture><br/>
       <sub><strong>Scoreboard</strong><br/>sports, competition, team results<br/>
       <a href="https://slides.addsum.top/#vl-scoreboard">Preview all pages</a></sub>
     </td>

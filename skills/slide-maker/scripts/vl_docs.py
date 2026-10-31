@@ -81,7 +81,8 @@ _CARRIES = {"photos": ("Photo layouts", "照片排版"), "illustrations": ("Illu
 
 def _gallery(reg, zh):
     """The README gallery's table: each cell is a language's sample sheet and its name, what it suits (a picture
-    language: what it carries), and a link; the picture and the link open that language in the library section."""
+    language: what it carries), and a text link to the library. <picture> keeps GitHub from automatically linking
+    each image to its original file."""
     missing = [n for n in SHOWCASE if n not in reg]
     if missing:
         raise ValueError("vl_docs.SHOWCASE names no registered style: {}".format(missing))
@@ -98,7 +99,7 @@ def _gallery(reg, zh):
             name = s["display"]["zh" if zh else "en"]
             cells.append(
                 '    <td align="center" width="33%">\n'
-                '      <a href="{u}{n}"><img src="skills/slide-maker/assets/vl/samples/{n}.jpg" alt="{alt}"></a><br/>\n'
+                '      <picture><img src="skills/slide-maker/assets/vl/samples/{n}.jpg" alt="{alt}"></picture><br/>\n'
                 '      <sub><strong>{name}</strong><br/>{use}<br/>\n'
                 '      <a href="{u}{n}">{more}</a></sub>\n'
                 '    </td>'.format(u=site, n=n, name=name, use=use, more=more,

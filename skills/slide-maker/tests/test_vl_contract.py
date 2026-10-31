@@ -414,9 +414,9 @@ for _blk, _site in (("vl-gallery", "https://slides.addsum.top/#vl-"), ("vl-galle
     check(len(_cells) == 12 and _t.count("<tr>") == 4 and
           all(len(re.findall(r"<td\b", row)) == 3 for row in re.findall(r"<tr>(.*?)</tr>", _t, re.S)),
           "{} lays twelve styles out three to a row ({} cells, {} rows)".format(_blk, len(_cells), _t.count("<tr>")))
-    check(all(c.count('href="{}{}"'.format(_site, n)) == 2 and "samples/{}.jpg".format(n) in c
+    check(all(c.count('href="{}{}"'.format(_site, n)) == 1 and "samples/{}.jpg".format(n) in c
               for n, c in zip(_vd.SHOWCASE, _cells)),
-          "{}: every cell shows its sample and links its picture and its line to {}<name>".format(_blk, _site))
+          "{}: every cell shows its sample and has one text link to {}<name>".format(_blk, _site))
     check(all(re.search(r"<strong>[^<]+</strong>", c) for c in _cells), "{}: every cell names its look".format(_blk))
 check("照片排版" in _vd._render("vl-gallery-zh", _reg) and "Photo layouts" in _vd._render("vl-gallery", _reg),
       "a picture language says what it carries instead of topic tags")

@@ -56,74 +56,74 @@ npx skills add addsumtech/slides_maker
 
 搭配图片使用的<!-- vl:count-image-zh -->四<!-- /vl -->套分别是：**杂志（editorial）、柔和（soft）、拼贴（collage）**，用于排版你的照片；**绘本（storybook）**，用于搭配一组插画。其余<!-- vl:count-drawn-zh -->二十六<!-- /vl -->套用可编辑的原生形状构成画面，无需准备配图。
 
-下面是十二套精选模板。点击样张可查看该模板的全部页面和两种配色。
+下面是十二套精选模板。点击样张下方的“查看全部页面”，可查看该模板的全部页面和两种配色。
 
 <!-- vl:vl-gallery-zh -->
 <table>
   <tr>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/cn/#vl-editorial"><img src="skills/slide-maker/assets/vl/samples/editorial.jpg" alt="editorial 模板示例页"></a><br/>
+      <picture><img src="skills/slide-maker/assets/vl/samples/editorial.jpg" alt="editorial 模板示例页"></picture><br/>
       <sub><strong>杂志</strong><br/>照片排版<br/>
       <a href="https://slides.addsum.top/cn/#vl-editorial">查看全部页面</a></sub>
     </td>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/cn/#vl-poster"><img src="skills/slide-maker/assets/vl/samples/poster.jpg" alt="poster 模板示例页"></a><br/>
+      <picture><img src="skills/slide-maker/assets/vl/samples/poster.jpg" alt="poster 模板示例页"></picture><br/>
       <sub><strong>海报大字</strong><br/>发布会、宣言、观点<br/>
       <a href="https://slides.addsum.top/cn/#vl-poster">查看全部页面</a></sub>
     </td>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/cn/#vl-ink"><img src="skills/slide-maker/assets/vl/samples/ink.jpg" alt="ink 模板示例页"></a><br/>
+      <picture><img src="skills/slide-maker/assets/vl/samples/ink.jpg" alt="ink 模板示例页"></picture><br/>
       <sub><strong>水墨</strong><br/>文化、历史、器物<br/>
       <a href="https://slides.addsum.top/cn/#vl-ink">查看全部页面</a></sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/cn/#vl-comic"><img src="skills/slide-maker/assets/vl/samples/comic.jpg" alt="comic 模板示例页"></a><br/>
+      <picture><img src="skills/slide-maker/assets/vl/samples/comic.jpg" alt="comic 模板示例页"></picture><br/>
       <sub><strong>漫画分镜</strong><br/>讲故事、用户旅程、科普讲解<br/>
       <a href="https://slides.addsum.top/cn/#vl-comic">查看全部页面</a></sub>
     </td>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/cn/#vl-vinyl"><img src="skills/slide-maker/assets/vl/samples/vinyl.jpg" alt="vinyl 模板示例页"></a><br/>
+      <picture><img src="skills/slide-maker/assets/vl/samples/vinyl.jpg" alt="vinyl 模板示例页"></picture><br/>
       <sub><strong>黑胶唱片</strong><br/>音乐、播客、文化活动<br/>
       <a href="https://slides.addsum.top/cn/#vl-vinyl">查看全部页面</a></sub>
     </td>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/cn/#vl-stainedglass"><img src="skills/slide-maker/assets/vl/samples/stainedglass.jpg" alt="stainedglass 模板示例页"></a><br/>
+      <picture><img src="skills/slide-maker/assets/vl/samples/stainedglass.jpg" alt="stainedglass 模板示例页"></picture><br/>
       <sub><strong>彩绘玻璃</strong><br/>文化遗产、文化活动、庆典<br/>
       <a href="https://slides.addsum.top/cn/#vl-stainedglass">查看全部页面</a></sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/cn/#vl-wayfinding"><img src="skills/slide-maker/assets/vl/samples/wayfinding.jpg" alt="wayfinding 模板示例页"></a><br/>
+      <picture><img src="skills/slide-maker/assets/vl/samples/wayfinding.jpg" alt="wayfinding 模板示例页"></picture><br/>
       <sub><strong>导视线路</strong><br/>路线图、流程、新人上手<br/>
       <a href="https://slides.addsum.top/cn/#vl-wayfinding">查看全部页面</a></sub>
     </td>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/cn/#vl-chalkboard"><img src="skills/slide-maker/assets/vl/samples/chalkboard.jpg" alt="chalkboard 模板示例页"></a><br/>
+      <picture><img src="skills/slide-maker/assets/vl/samples/chalkboard.jpg" alt="chalkboard 模板示例页"></picture><br/>
       <sub><strong>黑板报</strong><br/>课程、课堂、培训<br/>
       <a href="https://slides.addsum.top/cn/#vl-chalkboard">查看全部页面</a></sub>
     </td>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/cn/#vl-recipe"><img src="skills/slide-maker/assets/vl/samples/recipe.jpg" alt="recipe 模板示例页"></a><br/>
+      <picture><img src="skills/slide-maker/assets/vl/samples/recipe.jpg" alt="recipe 模板示例页"></picture><br/>
       <sub><strong>食谱卡</strong><br/>美食、烹饪、食谱<br/>
       <a href="https://slides.addsum.top/cn/#vl-recipe">查看全部页面</a></sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/cn/#vl-circuit"><img src="skills/slide-maker/assets/vl/samples/circuit.jpg" alt="circuit 模板示例页"></a><br/>
+      <picture><img src="skills/slide-maker/assets/vl/samples/circuit.jpg" alt="circuit 模板示例页"></picture><br/>
       <sub><strong>电路板</strong><br/>硬件、物联网、嵌入式<br/>
       <a href="https://slides.addsum.top/cn/#vl-circuit">查看全部页面</a></sub>
     </td>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/cn/#vl-storybook"><img src="skills/slide-maker/assets/vl/samples/storybook.jpg" alt="storybook 模板示例页"></a><br/>
+      <picture><img src="skills/slide-maker/assets/vl/samples/storybook.jpg" alt="storybook 模板示例页"></picture><br/>
       <sub><strong>绘本</strong><br/>插画叙事<br/>
       <a href="https://slides.addsum.top/cn/#vl-storybook">查看全部页面</a></sub>
     </td>
     <td align="center" width="33%">
-      <a href="https://slides.addsum.top/cn/#vl-scoreboard"><img src="skills/slide-maker/assets/vl/samples/scoreboard.jpg" alt="scoreboard 模板示例页"></a><br/>
+      <picture><img src="skills/slide-maker/assets/vl/samples/scoreboard.jpg" alt="scoreboard 模板示例页"></picture><br/>
       <sub><strong>体育记分牌</strong><br/>体育、比赛、团队战绩<br/>
       <a href="https://slides.addsum.top/cn/#vl-scoreboard">查看全部页面</a></sub>
     </td>
