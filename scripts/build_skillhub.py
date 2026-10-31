@@ -127,21 +127,32 @@ def annotate(skill: Path, gone: list[str]) -> int:
     return count
 
 
-def _imports(scripts: Path) -> dict[str, bool]:
-    env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1",
-               SLIDE_MAKER_REGISTRY=tempfile.mkdtemp(prefix="skillhub-reg-"),
-               SLIDE_MAKER_TASTE_LEDGER=os.path.join(tempfile.mkdtemp(), "ledger.json"))
-    code = ("import importlib, json, sys\nok = {}\nfor m in sys.argv[1:]:\n"
-            "    try:\n        importlib.import_module(m); ok[m] = True\n"
-            "    except BaseException:\n        ok[m] = False\nprint(json.dumps(ok))")
-    mods = sorted(p.stem for p in scripts.glob("*.py") if p.stem != "__init__")
+def _env() -> dict[str, str]:
+    return dict(os.environ, PYTHONDONTWRITEBYTECODE="1",
+                SLIDE_MAKER_REGISTRY=tempfile.mkdtemp(prefix="skillhub-reg-"),
+                SLIDE_MAKER_TASTE_LEDGER=os.path.join(tempfile.mkdtemp(), "ledger.json"))
+
+
+def _imports(scripts: Path, mods: list[str] | None = None) -> dict[str, str | None]:
+    """{module: None if it imports, else "<Exception>: <message>"} — all in ONE process (fast)."""
+    code = ("import importlib, json, sys\nres = {}\nfor m in sys.argv[1:]:\n"
+            "    try:\n        importlib.import_module(m); res[m] = None\n"
+            "    except BaseException as e:\n        res[m] = '%s: %s' % (type(e).__name__, str(e)[:200])\n"
+            "print(json.dumps(res))")
+    mods = mods or sorted(p.stem for p in scripts.glob("*.py") if p.stem != "__init__")
     r = subprocess.run([sys.executable, "-c", code] + mods, cwd=str(scripts), capture_output=True, text=True,
-                       env=env, timeout=600)
+                       env=_env(), timeout=900)
     import json
     try:
         return json.loads(r.stdout.strip().splitlines()[-1])
     except (ValueError, IndexError):
         raise SystemExit("could not run the import check in {}:\n{}".format(scripts, r.stderr[-800:]))
+
+
+def _import_alone(scripts: Path, mod: str) -> str | None:
+    """The same import in a FRESH process: an in-process failure can come from a module imported before it
+    (a CI run flagged `anim`, which imports nothing but python-pptx)."""
+    return _imports(scripts, [mod])[mod]
 
 
 def verify(pkg: Path, full: Path, limit: int) -> list[str]:
@@ -154,10 +165,18 @@ def verify(pkg: Path, full: Path, limit: int) -> list[str]:
     if imgs:
         problems.append("image files in the package (SkillHub refuses them): " + ", ".join(imgs[:8]))
     have, base = _imports(pkg / "scripts"), _imports(full / "scripts")
-    broke = sorted(m for m, ok in have.items() if not ok and base.get(m))
+    suspects = sorted(m for m, err in have.items() if err and base.get(m) is None)
+    broke = []
+    for m in suspects:                       # confirm each one alone, in both trees, before refusing
+        err = _import_alone(pkg / "scripts", m)
+        if err and _import_alone(full / "scripts", m) is None:
+            broke.append("{} ({})".format(m, err))
+        else:
+            print("note: {} failed only when imported after the others in one process ({}) — not a "
+                  "missing file; it imports alone".format(m, have[m]))
     if broke:
         problems.append("modules that import in the full tree but NOT in the package (they need a dropped "
-                        "file): " + ", ".join(broke))
+                        "file): " + "; ".join(broke))
     left = []
     for md in pkg.rglob("*.md"):
         for n in [Path(g).name for g in dropped(full) if g.startswith(_MARKED)]:
