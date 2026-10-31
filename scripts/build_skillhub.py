@@ -155,6 +155,18 @@ def _import_alone(scripts: Path, mod: str) -> str | None:
     return _imports(scripts, [mod])[mod]
 
 
+def vacuous(base: dict[str, str | None], share: float = 0.2) -> str | None:
+    """The import comparison means nothing when the FULL tree cannot import either — a run before the
+    python deps were installed failed nearly every module in both trees and passed. Refuse instead."""
+    bad = [m for m, err in base.items() if err]
+    if base and len(bad) / len(base) > share:
+        return ("{} of {} modules fail to import in the FULL tree too (e.g. {}) — the environment lacks "
+                "the skill's dependencies, so the package-vs-full comparison would check nothing. "
+                "pip install -r skills/slide-maker/requirements.txt first.".format(
+                    len(bad), len(base), "; ".join("{}: {}".format(m, base[m]) for m in bad[:2])))
+    return None
+
+
 def verify(pkg: Path, full: Path, limit: int) -> list[str]:
     problems = []
     files = [p for p in pkg.rglob("*") if p.is_file()]
@@ -165,6 +177,9 @@ def verify(pkg: Path, full: Path, limit: int) -> list[str]:
     if imgs:
         problems.append("image files in the package (SkillHub refuses them): " + ", ".join(imgs[:8]))
     have, base = _imports(pkg / "scripts"), _imports(full / "scripts")
+    gap = vacuous(base)
+    if gap:
+        problems.append(gap)
     suspects = sorted(m for m, err in have.items() if err and base.get(m) is None)
     broke = []
     for m in suspects:                       # confirm each one alone, in both trees, before refusing
@@ -241,6 +256,12 @@ def build(ref: str, out: Path, limit: int = LIMIT, keep: bool = True,
 
 
 def _selftest() -> int:
+    if not vacuous({"a": "ModuleNotFoundError: x", "b": "ModuleNotFoundError: y", "c": None}):
+        print("[build_skillhub selftest] FAILED: a tree where most modules cannot import was not refused")
+        return 1
+    if vacuous({"a": None, "b": None, "c": None, "d": None, "e": None, "f": "SystemExit: 2"}):
+        print("[build_skillhub selftest] FAILED: one CLI-at-import script was taken for a missing environment")
+        return 1
     code, _ = build("HEAD", Path(tempfile.mkdtemp()), keep=False)
     print("[build_skillhub selftest] {}".format("ok" if code == 0 else "FAILED"))
     return code
