@@ -19,7 +19,7 @@
 
 <p align="center"><sub>Free and open source, built by <a href="https://addsum.top/"><strong>Addsum</strong></a></sub></p>
 
-slide-maker is an open-source tool for creating editable presentations. Give it a paper, repository, document or topic. It plans the content, designs the slides and generates a `.pptx` you can edit in PowerPoint, along with the build script.
+slide-maker is an open-source AI skill for creating editable presentations. It runs in AI assistants that support skills. Give it a paper, repository, document or topic. It plans the content, designs the slides and generates a `.pptx` you can edit in PowerPoint, along with the build script.
 
 Choose a built-in template or bring a reference deck. Confirm the outline and design before the build, then view the rendered slides and choose the level of independent review.
 
@@ -31,6 +31,24 @@ Choose a built-in template or bring a reference deck. Confirm the outline and de
   <a href="#quick-start"><strong>Quick start</strong></a> ·
   <a href="#troubleshooting"><strong>Troubleshooting</strong></a>
 </p>
+
+## Quick start
+
+Install slide-maker in your AI assistant. In an environment that supports `npx skills`, run:
+
+```bash
+npx skills add addsumtech/slides_maker
+```
+
+You can also use your assistant's skill-import flow. See [Installation and setup](#installation-and-setup) for runtime dependencies and other methods. On first use, ask the assistant to run the skill's `scripts/check_env.py` and resolve any missing dependencies.
+
+Then give the assistant your material and a request:
+
+```text
+Use slide-maker to turn paper.pdf into an English lab-meeting presentation for my advisor and labmates. A 12-minute live talk, about 15 slides, visual and concise. Show me the outline and design directions first.
+```
+
+To choose a style, browse the templates below and copy its prompt.
 
 ## Template library
 
@@ -161,7 +179,7 @@ The skill is free. Running it uses your AI subscription or API credits. Slide co
 
 Long decks are reviewed by section as well as for overall coherence. Delegating the choice runs at least `fast`; it never skips review automatically.
 
-## Quick start
+## Installation and setup
 
 ### 1. Install runtime dependencies
 
@@ -177,16 +195,16 @@ Windows has less test coverage. Use the [environment check](#troubleshooting) if
 
 ### 2. Install the skill
 
-Clone the repository, install its Python packages and register the skill for Codex and Claude Code:
+Clone the repository, install its Python packages and copy the skill into the AI-assistant skill directories already present on your machine:
 
 ```bash
 git clone --depth 1 https://github.com/addsumtech/slides_maker.git
 cd slides_maker
 python3 -m pip install -r skills/slide-maker/requirements.txt
-python3 skills/slide-maker/scripts/install_skill.py --target both
+python3 skills/slide-maker/scripts/install_skill.py --target all
 ```
 
-Replace `both` with `codex` or `claude` if you use only one tool.
+`all` detects existing host directories. On a fresh machine with none, it uses the host-neutral `~/.agents/skills/` directory. To select a directory explicitly, replace `all` with `agents`, `codex` or `claude`.
 
 You can also install the skill with [`npx skills`](https://github.com/vercel-labs/skills):
 
@@ -207,7 +225,7 @@ The same runtime dependencies apply. Other distribution options: [Tencent SkillH
 
 ### 3. Create a presentation
 
-In Claude Code, enter `/slide-maker`. In Codex, ask for the skill in your request. Put your sources in the current project or supply a full path:
+Ask for slide-maker in the AI assistant where you installed it; Claude Code also accepts `/slide-maker`. Put your sources in the current project or supply a full path:
 
 ```text
 Use slide-maker to turn paper.pdf into an English lab-meeting presentation for my advisor and labmates. A 12-minute live talk, about 15 slides, visual and concise. Show me the outline and design directions first.
@@ -244,9 +262,12 @@ Ask for image generation when you need a cover or illustrations. Use the image-g
 
 ## Troubleshooting
 
-If generation or rendering fails, run the check for your installation:
+If generation or rendering fails, ask your assistant to locate and run the skill's `scripts/check_env.py`. For a global installation, you can also use the matching directory:
 
 ```bash
+# Host-neutral skill directory
+python3 ~/.agents/skills/slide-maker/scripts/check_env.py
+
 # Codex
 python3 ~/.codex/skills/slide-maker/scripts/check_env.py
 

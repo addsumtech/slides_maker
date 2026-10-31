@@ -19,7 +19,7 @@
 
 <p align="center"><sub><a href="https://addsum.top/cn/"><strong>增和科技 Addsum</strong></a> 出品 · 免费开源</sub></p>
 
-slide-maker 是一个生成可编辑 PPT 的开源工具。提供论文、代码仓库、文档或一个主题，它会整理内容、设计页面，生成可在 PowerPoint 中继续编辑的 `.pptx`，并附上构建脚本。
+slide-maker 是一个生成可编辑 PPT 的开源 AI 技能，可在支持技能的 AI 助手中使用。提供论文、代码仓库、文档或一个主题，它会整理内容、设计页面，生成可在 PowerPoint 中继续编辑的 `.pptx`，并附上构建脚本。
 
 你可以先选模板，也可以提供参考 PPT。生成前确认内容结构和设计方向，生成后查看预览，再决定独立评审的力度。
 
@@ -31,6 +31,24 @@ slide-maker 是一个生成可编辑 PPT 的开源工具。提供论文、代码
   <a href="#快速开始"><strong>快速开始</strong></a> ·
   <a href="#遇到问题"><strong>遇到问题</strong></a>
 </p>
+
+## 快速开始
+
+先把 slide-maker 安装到你使用的 AI 助手中。支持 `npx skills` 的环境可运行：
+
+```bash
+npx skills add addsumtech/slides_maker
+```
+
+也可以按 AI 助手的技能导入方式安装。运行依赖和其他安装方式见[安装与环境](#安装与环境)。首次使用时，可让助手运行技能内的 `scripts/check_env.py`，按提示补齐环境。
+
+安装后，把材料和需求一起交给助手：
+
+```text
+用 slide-maker，根据 paper.pdf 做一份中文组会汇报。观众是导师和同学，现场讲 12 分钟，约 15 页，图多字少。先给我看内容结构和设计方向。
+```
+
+想指定画风，可以先在下方选模板，再复制对应提示词。
 
 ## 模板库
 
@@ -161,7 +179,7 @@ slide-maker 是一个生成可编辑 PPT 的开源工具。提供论文、代码
 
 长篇 PPT 会按章节分工评审，并检查整体连贯性。让它“自己决定”时，默认至少运行 `fast`，不会自动跳过评审。
 
-## 快速开始
+## 安装与环境
 
 ### 1. 安装运行依赖
 
@@ -177,16 +195,16 @@ Windows 的测试覆盖较少，遇到依赖问题可先运行[环境检查](#�
 
 ### 2. 安装技能
 
-克隆仓库、安装 Python 包，再注册到 Codex 和 Claude Code：
+克隆仓库、安装 Python 包，再安装到本机已有的 AI 助手技能目录：
 
 ```bash
 git clone --depth 1 https://github.com/addsumtech/slides_maker.git
 cd slides_maker
 python3 -m pip install -r skills/slide-maker/requirements.txt
-python3 skills/slide-maker/scripts/install_skill.py --target both
+python3 skills/slide-maker/scripts/install_skill.py --target all
 ```
 
-只用一个工具时，把 `both` 换成 `codex` 或 `claude`。
+`all` 会识别本机已有的技能目录；首次安装且没有可识别目录时，会使用通用的 `~/.agents/skills/`。需要指定目录时，可将 `all` 换成 `agents`、`codex` 或 `claude`。
 
 也可以通过 [`npx skills`](https://github.com/vercel-labs/skills) 安装技能：
 
@@ -207,7 +225,7 @@ Claude Code 也支持插件安装：
 
 ### 3. 开始制作
 
-在 Claude Code 中输入 `/slide-maker`，或在 Codex 中直接提出需求。材料可以放在当前项目中，也可以给出完整路径：
+在已安装技能的 AI 助手中直接提出需求；Claude Code 也可以输入 `/slide-maker`。材料可以放在当前项目中，也可以给出完整路径：
 
 ```text
 用 slide-maker，根据 paper.pdf 做一份中文组会汇报。观众是导师和同学，现场讲 12 分钟，约 15 页，图多字少。先给我看内容结构和设计方向。
@@ -244,9 +262,12 @@ Claude Code 也支持插件安装：
 
 ## 遇到问题
 
-生成或渲染报错时，先按安装环境运行检查：
+生成或渲染报错时，可让助手找到技能内的 `scripts/check_env.py` 并运行。全局安装也可以按实际目录运行：
 
 ```bash
+# 通用技能目录
+python3 ~/.agents/skills/slide-maker/scripts/check_env.py
+
 # Codex
 python3 ~/.codex/skills/slide-maker/scripts/check_env.py
 

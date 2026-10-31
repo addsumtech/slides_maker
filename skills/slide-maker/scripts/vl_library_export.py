@@ -168,10 +168,10 @@ def _entry(name, prev, lang_dir, today, rendered):
             "pages": pages, "render_fp": fp,
             "python": 'k = vl.use("{}", prs)'.format(name) if light else
                       'k = vl.use("{}", prs, ground="{}")'.format(name, gid),
-            "prompt": {"en": "Use the {} ({}) visual language{} for this deck.".format(
-                           name, disp["en"], "" if light else ", on its {} ground,".format(gd["label"])),
-                       "zh": "用 {}（{}）视觉语言{}做这份 PPT。".format(
-                           name, disp["zh"], "" if light else "的{}".format(gd["label_zh"]))},
+            "prompt": {"en": "Use slide-maker with the {} ({}) template and its {} palette to create a "
+                             "presentation from my material.".format(disp["en"], name, gd["label"]),
+                       "zh": "使用 slide-maker，采用{}（{}）模板的{}，根据我提供的材料制作 PPT。".format(
+                           disp["zh"], name, gd["label_zh"])},
         })
     ea = s["look"]["ea"]
     return {

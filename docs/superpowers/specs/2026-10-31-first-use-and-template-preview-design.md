@@ -1,11 +1,11 @@
 # First use and template previews
 
-The user approved the six review recommendations on 2026-10-31:
+The user approved the review recommendations on 2026-10-31, with this final scope:
 
 - Put a short installation and first-request path before the README's twelve selected templates. Keep full dependency and alternative-installation instructions later.
 - Describe slide-maker as an open-source AI skill without restricting it to two hosts. Document the installer's existing `all` and host-neutral `agents` targets; keep platform-specific instructions where useful.
 - Make every copied template prompt name slide-maker, the template and the selected palette, and refer to the user's own material.
-- Link the existing editable industry-report PPTX from the README and website. The user explicitly declined generating new PPTX files for the thirty styles, to avoid unnecessary cost. No new decks or images will be generated.
+- Do not add download links. The user declined both generating new PPTX files for the thirty styles and promoting the existing example decks. No new decks or images will be generated.
 - Present editorial, poster, ink and circuit first on the website, then preserve the remaining registry order. Keep thirty styles and four desktop columns.
 - Let visitors enlarge an individual page or sample sheet from the template detail. Support keyboard closing, focus restoration and responsive sizing.
 
