@@ -15,7 +15,9 @@ script is the recipe:
      source repository, so no instruction points at a file that is not there;
   4. VERIFY: no image files; at most --limit files; every scripts/ module imports in the package exactly
      when it imports in the full tree (a module that only fails here lost something it needs);
-  5. write <out>/slide-maker-<VERSION>-skillhub.zip and the unzipped folder beside it.
+  5. write <out>/slide-maker-<VERSION>-skillhub.zip and the unzipped folder beside it — named
+     <VERSION>+<commit> unless <ref> is that release's tag, and never over an existing file
+     without --force.
 
     python3 scripts/build_skillhub.py                     # HEAD → ~/Downloads
     python3 scripts/build_skillhub.py --ref v6.1.0 --out ~/Desktop
@@ -170,7 +172,19 @@ def verify(pkg: Path, full: Path, limit: int) -> list[str]:
     return problems
 
 
-def build(ref: str, out: Path, limit: int = LIMIT, keep: bool = True) -> tuple[int, Path | None]:
+def _label(ref: str, version: str) -> str:
+    """`6.1.0` when <ref> IS that release's tag; otherwise `6.1.0+<commit>` — a package of unreleased
+    work named like the release is how two different packages end up with one file name."""
+    def _git(*a):
+        r = subprocess.run(["git", "-C", str(REPO)] + list(a), capture_output=True, text=True)
+        return r.stdout.strip() if r.returncode == 0 else ""
+    commit = _git("rev-parse", "--short", ref + "^{commit}")
+    tag_commit = _git("rev-parse", "--short", "v{}^{{commit}}".format(version))
+    return version if commit and commit == tag_commit else "{}+{}".format(version, commit or "unknown")
+
+
+def build(ref: str, out: Path, limit: int = LIMIT, keep: bool = True,
+          force: bool = False) -> tuple[int, Path | None]:
     work = Path(tempfile.mkdtemp(prefix="skillhub-build-"))
     full = _archive(ref, work / "full")
     pkg = _archive(ref, work / "pkg")
@@ -187,12 +201,18 @@ def build(ref: str, out: Path, limit: int = LIMIT, keep: bool = True) -> tuple[i
         return 1, None
     if not keep:
         return 0, pkg
+    label = _label(ref, version)
     out.mkdir(parents=True, exist_ok=True)
-    folder = out / "slide-maker-{}-skillhub".format(version)
+    folder = out / "slide-maker-{}-skillhub".format(label)
+    zpath = out / "slide-maker-{}-skillhub.zip".format(label)
+    taken = [str(p) for p in (folder, zpath) if p.exists()]
+    if taken and not force:
+        print("REFUSED: {} already exist(s) — it may be a package you uploaded. Move it, pick another "
+              "--out, or pass --force to replace it.".format(", ".join(taken)))
+        return 1, None
     if folder.exists():
         shutil.rmtree(folder)
     shutil.copytree(pkg, folder / "slide-maker")
-    zpath = out / "slide-maker-{}-skillhub.zip".format(version)
     with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as z:
         for p in sorted(pkg.rglob("*")):
             if p.is_file():
@@ -212,11 +232,12 @@ def main(argv=None) -> int:
     ap.add_argument("--ref", default="HEAD", help="git ref to package (default HEAD)")
     ap.add_argument("--out", default=str(Path.home() / "Downloads"), help="output folder (default ~/Downloads)")
     ap.add_argument("--limit", type=int, default=LIMIT, help="file limit (default 200, SkillHub's)")
+    ap.add_argument("--force", action="store_true", help="replace an existing package of the same name")
     ap.add_argument("--selftest", action="store_true")
     a = ap.parse_args(argv)
     if a.selftest:
         return _selftest()
-    code, _ = build(a.ref, Path(os.path.expanduser(a.out)), a.limit)
+    code, _ = build(a.ref, Path(os.path.expanduser(a.out)), a.limit, force=a.force)
     return code
 
 
