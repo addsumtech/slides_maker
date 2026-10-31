@@ -193,7 +193,15 @@ Windows has less test coverage. Use the [environment check](#troubleshooting) if
 
 ### 2. Install the skill
 
-Clone the repository, install its Python packages and copy the skill into the AI-assistant skill directories already present on your machine:
+Install the skill with [`npx skills`](https://github.com/vercel-labs/skills):
+
+```bash
+npx skills add addsumtech/slides_maker
+```
+
+It prompts for the tool and installation scope. Add `-g` for a global install, `-a claude-code` or `-a codex` to select a tool, and `-y` to skip confirmation. On first use, slide-maker checks the runtime environment and guides you through installing any missing dependencies.
+
+To keep a source checkout or install manually, use:
 
 ```bash
 git clone --depth 1 https://github.com/addsumtech/slides_maker.git
@@ -203,14 +211,6 @@ python3 skills/slide-maker/scripts/install_skill.py --target all
 ```
 
 `all` detects existing host directories. On a fresh machine with none, it uses the host-neutral `~/.agents/skills/` directory. To select a directory explicitly, replace `all` with `agents`, `codex` or `claude`.
-
-You can also install the skill with [`npx skills`](https://github.com/vercel-labs/skills):
-
-```bash
-npx skills add addsumtech/slides_maker
-```
-
-It prompts for the tool and installation scope. Add `-g` for a global install, `-a claude-code` or `-a codex` to select a tool, and `-y` to skip confirmation. This does not install runtime dependencies. After installation, ask your assistant to run the skill's `scripts/check_env.py` and follow its instructions to install missing Python packages and system tools.
 
 Claude Code also supports plugin installation:
 

@@ -193,7 +193,15 @@ Windows 的测试覆盖较少，遇到依赖问题可先运行[环境检查](#�
 
 ### 2. 安装技能
 
-克隆仓库、安装 Python 包，再安装到本机已有的 AI 助手技能目录：
+通过 [`npx skills`](https://github.com/vercel-labs/skills) 安装技能：
+
+```bash
+npx skills add addsumtech/slides_maker
+```
+
+它会询问安装到哪个工具和作用范围。加 `-g` 可全局安装，`-a claude-code` 或 `-a codex` 可指定工具，`-y` 可跳过确认。首次制作时会自动检查运行环境，缺少依赖时按提示安装即可。
+
+需要保留仓库源码或手动安装时，可以使用以下方式：
 
 ```bash
 git clone --depth 1 https://github.com/addsumtech/slides_maker.git
@@ -203,14 +211,6 @@ python3 skills/slide-maker/scripts/install_skill.py --target all
 ```
 
 `all` 会识别本机已有的技能目录；首次安装且没有可识别目录时，会使用通用的 `~/.agents/skills/`。需要指定目录时，可将 `all` 换成 `agents`、`codex` 或 `claude`。
-
-也可以通过 [`npx skills`](https://github.com/vercel-labs/skills) 安装技能：
-
-```bash
-npx skills add addsumtech/slides_maker
-```
-
-它会询问安装到哪个工具和作用范围。加 `-g` 可全局安装，`-a claude-code` 或 `-a codex` 可指定工具，`-y` 可跳过确认。此方式不会替你安装运行依赖；安装完成后，先让助手运行技能中的 `scripts/check_env.py`，按提示补齐 Python 包和系统工具。
 
 Claude Code 也支持插件安装：
 
