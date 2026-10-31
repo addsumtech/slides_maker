@@ -40,8 +40,6 @@ Install slide-maker in your AI assistant. In an environment that supports `npx s
 npx skills add addsumtech/slides_maker
 ```
 
-You can also use your assistant's skill-import flow. See [Installation and setup](#installation-and-setup) for details.
-
 After installation, ask your AI assistant to create a presentation. On first use, slide-maker automatically checks the runtime environment and guides you through installing anything missing. For example:
 
 ```text

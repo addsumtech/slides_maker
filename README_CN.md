@@ -40,8 +40,6 @@ slide-maker 是一个生成可编辑 PPT 的开源 AI 技能，可在支持技�
 npx skills add addsumtech/slides_maker
 ```
 
-也可以按 AI 助手的技能导入方式安装，详见[安装与环境](#安装与环境)。
-
 安装后即可向 AI 助手提出制作需求。首次使用时，slide-maker 会自动检查运行环境；如有缺失，会提示你完成安装。例如：
 
 ```text
