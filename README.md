@@ -19,7 +19,7 @@
 
 <p align="center"><sub>Free and open source, built by <a href="https://addsum.top/"><strong>Addsum</strong></a></sub></p>
 
-slide-maker is an open-source AI skill for creating editable presentations. It runs in AI assistants that support skills. Give it a paper, repository, document or topic. It plans the content, designs the slides and generates a `.pptx` you can edit in PowerPoint, along with the build script.
+slide-maker is an open-source AI skill for creating editable presentations. It runs in AI assistants that support skills. Give it a paper, repository, document or topic. It plans the content, designs the slides and generates a `.pptx` you can edit in PowerPoint, along with the script used to generate and revise it.
 
 Choose a built-in template or bring a reference deck. Confirm the outline and design before the build, then view the rendered slides and choose the level of independent review.
 
@@ -34,16 +34,18 @@ Choose a built-in template or bring a reference deck. Confirm the outline and de
 
 ## Quick start
 
-Install slide-maker in your AI assistant. In an environment that supports `npx skills`, run:
+Install slide-maker in your AI assistant. Open a terminal, run this command, then choose your assistant and installation scope:
 
 ```bash
 npx skills add addsumtech/slides_maker
 ```
 
-After installation, ask your AI assistant to create a presentation. On first use, slide-maker automatically checks the runtime environment and guides you through installing anything missing. For example:
+After installation, ask your AI assistant to create a presentation. The first run checks the environment and guides you through any missing dependencies. Replace `paper.pdf` in this example with your own filename:
 
 ```text
-Use slide-maker to turn paper.pdf into an English lab-meeting presentation for my advisor and labmates. A 12-minute live talk, about 15 slides, visual and concise. Show me the outline and design directions first.
+Use slide-maker to turn paper.pdf into an English lab-meeting presentation.
+Audience: my advisor and labmates. A 12-minute live talk, about 15 slides.
+Keep it visual and concise. Show me the outline and design directions first.
 ```
 
 To choose a style, browse the templates below and copy its prompt.
@@ -133,10 +135,11 @@ Twelve selected styles are shown below. Click a sample to preview all page types
 
 ### Using a template
 
-Choose a style in the [online library](https://slides.addsum.top/#languages), copy its prompt, and add your material, audience and slide count. For example:
+Choose a style in the [online library](https://slides.addsum.top/#languages), copy its prompt and paste it into the AI assistant where you installed slide-maker. Add your material, audience and slide count. For example:
 
 ```text
-Use slide-maker with the Herbarium (herbarium) template and its light palette. Turn notes.md into an 8-slide biology lesson for middle-school students.
+Use slide-maker with the Herbarium (herbarium) template and its light palette.
+Turn notes.md into an 8-slide biology lesson for middle-school students.
 ```
 
 If you are unsure which style to use, ask for recommendations based on your topic. You can also supply a school or company PPTX as a reference for typography, colours and layout.
@@ -148,8 +151,8 @@ If you are unsure which style to use, ask for recommendations based on your topi
 | Editable PPTX | Text boxes, native shapes and native charts you can change in PowerPoint. Photos, illustrations and cropped paper figures remain images. |
 | Equations and data | Editable math text where possible; two-dimensional layouts such as fractions and matrices may be rendered as images. Data charts use native chart objects where suitable, so you can change their values. |
 | Notes and animation | Presentation decks include per-slide speaker notes. Click builds are optional; static slides are supported. |
-| Previews and build script | PPTX, PDF, browser preview and build script, delivered to `~/Downloads/<deck-name>/` by default. The same script supports later revisions. |
-| Brand and preferences | Extract a brand kit from guidelines, a logo, an existing deck or specified colours, then confirm and save it for reuse. Recurring design preferences can be stored in a text file you can inspect, edit or delete. Your current request takes priority. |
+| Previews and build script | PPTX, PDF, browser preview and the generation script. Files go into a subfolder named after the presentation in your Downloads folder by default. The script supports later revisions. |
+| Brand and preferences | Extract fonts and colours from brand guidelines, a logo or an existing deck, then confirm and save them for reuse. Recurring design preferences can also be saved. Your current request takes priority. |
 | Version history | Keep build versions, compare changes and restore a whole deck or selected slides. |
 | Canvas sizes | 16:9, 4:3, 1:1, rednote 3:4 cards, 9:16 portrait and A4, with layouts recomposed for each format. |
 
@@ -179,29 +182,34 @@ Long decks are reviewed by section as well as for overall coherence. Delegating 
 
 ## Installation and setup
 
-### 1. Install runtime dependencies
+Choose either automatic or manual installation. Automatic installation is recommended for most users.
 
-You need **Python 3.9+**, **LibreOffice** to render previews, and librsvg, cairosvg or a Chrome-family browser to rasterize SVG icons.
+### Automatic installation (recommended)
 
-| OS | LibreOffice | SVG icons |
-| --- | --- | --- |
-| macOS | `brew install --cask libreoffice` | `brew install librsvg` |
-| Linux | `sudo apt install libreoffice` | `sudo apt install librsvg2-bin` |
-| Windows | `winget install TheDocumentFoundation.LibreOffice` | Install Chrome or Edge |
-
-Windows has less test coverage. Use the [environment check](#troubleshooting) if dependencies fail.
-
-### 2. Install the skill
-
-Install the skill with [`npx skills`](https://github.com/vercel-labs/skills):
+Run this command in a terminal:
 
 ```bash
 npx skills add addsumtech/slides_maker
 ```
 
-It prompts for the tool and installation scope. Add `-g` for a global install, `-a claude-code` or `-a codex` to select a tool, and `-y` to skip confirmation. On first use, slide-maker checks the runtime environment and guides you through installing any missing dependencies.
+Choose your AI assistant and installation scope when prompted. Select a global installation if you want to use the skill across projects. Once installed, ask your assistant to create a presentation.
 
-To keep a source checkout or install manually, use:
+If `npx` is not found or your Node.js version is too old, install [Node.js](https://nodejs.org/en/download) 22.20 or later, reopen the terminal and try again.
+
+<details>
+<summary>More automatic-installation options</summary>
+
+- `-g`: install globally for use across projects.
+- `-a claude-code` or `-a codex`: select an assistant without the tool-selection prompt.
+- `-y`: skip installation confirmation.
+
+See the [npx skills documentation](https://github.com/vercel-labs/skills) for all options.
+
+</details>
+
+### Manual installation
+
+Use this method if you want a source checkout or prefer to maintain the installation yourself. With Git and Python installed, run these commands in order:
 
 ```bash
 git clone --depth 1 https://github.com/addsumtech/slides_maker.git
@@ -210,42 +218,68 @@ python3 -m pip install -r skills/slide-maker/requirements.txt
 python3 skills/slide-maker/scripts/install_skill.py --target all
 ```
 
-`all` detects existing host directories. On a fresh machine with none, it uses the host-neutral `~/.agents/skills/` directory. To select a directory explicitly, replace `all` with `agents`, `codex` or `claude`.
+The final command copies the skill into the AI-assistant skill directories detected on your machine.
 
-Claude Code also supports plugin installation:
+<details>
+<summary>Select a manual-installation directory</summary>
+
+`all` detects existing host directories. If none are found, it uses the host-neutral `~/.agents/skills/` directory. To select a directory explicitly, replace `all` with `agents`, `codex` or `claude`.
+
+</details>
+
+<details>
+<summary>Claude Code plugin and skill marketplaces</summary>
+
+For plugin installation, enter these commands in Claude Code:
 
 ```text
 /plugin marketplace add addsumtech/slides_maker
 /plugin install slide-maker@slides-maker
 ```
 
-The same runtime dependencies apply. Other distribution options: [Tencent SkillHub](https://skillhub.cloud.tencent.com/skills/slides-maker) and [ClawHub](https://clawhub.ai/dong845/skills/slide-maker). OpenClaw users can follow the ClawHub installation instructions.
+Other distribution options: [Tencent SkillHub](https://skillhub.cloud.tencent.com/skills/slides-maker) and [ClawHub](https://clawhub.ai/dong845/skills/slide-maker). OpenClaw users can follow the ClawHub installation instructions.
 
-### 3. Create a presentation
+</details>
 
-Ask for slide-maker in the AI assistant where you installed it; Claude Code also accepts `/slide-maker`. Put your sources in the current project or supply a full path:
+### Runtime environment
+
+Whichever installation method you choose, the first presentation request checks the environment and attempts to install missing Python packages. If system tools such as Python or LibreOffice are missing, follow the installation instructions shown. Existing tools do not need to be installed again.
+
+You need **Python 3.9+**, **LibreOffice** to render page previews, and librsvg, cairosvg or a Chrome-family browser to rasterize SVG icons. For system tools, use the commands below:
+
+| OS | LibreOffice | SVG icons |
+| --- | --- | --- |
+| macOS | `brew install --cask libreoffice` | `brew install librsvg` |
+| Linux (Ubuntu / Debian) | `sudo apt install libreoffice` | `sudo apt install librsvg2-bin` |
+| Windows | `winget install TheDocumentFoundation.LibreOffice` | Install Chrome or Edge |
+
+Windows has less test coverage. If your terminal only provides the `python` command, replace `python3` in the examples with `python`. See [Troubleshooting](#troubleshooting) for other issues.
+
+### Create a presentation
+
+Give your material to the assistant where you installed the skill, or provide a file path it can read, and describe what you need. Claude Code also accepts `/slide-maker`.
+
+In addition to the paper-talk example above, you can start from a repository:
 
 ```text
-Use slide-maker to turn paper.pdf into an English lab-meeting presentation for my advisor and labmates. A 12-minute live talk, about 15 slides, visual and concise. Show me the outline and design directions first.
+Use slide-maker to introduce this codebase to new teammates.
+Focus on the architecture and main workflows.
 ```
 
-It asks for details that affect the plan, such as a reference template, language, content density and animation. Short answers are enough; say “you decide” to delegate a choice. You can also start from a repository:
+With a reference deck, specify which parts to use:
 
 ```text
-Use slide-maker to introduce this codebase to new teammates, focusing on the architecture and main workflows.
+Use the typography, colours and layouts in /path/ref.pptx as a reference.
+Build a new English presentation using the content of paper.pdf.
 ```
 
-With a reference deck, say whether to reuse only its design or also its content:
-
-```text
-Use the typography, colours and layouts in /path/ref.pptx as a reference. Build a new English presentation using the content of paper.pdf.
-```
+The assistant asks about details that affect the plan, such as audience, slide count and style. Short answers are enough; say “you decide” to delegate a choice.
 
 ### Updates and optional images
 
 When a newer version is available, slide-maker asks before updating. It stays quiet when current or offline. Remote version information is cached for 24 hours; local changes are checked each time. To disable version notifications, set `export SLIDE_MAKER_NO_VERSION_CHECK=1`.
 
-Ask for image generation when you need a cover or illustrations. Use the image-generation tool available in your Codex environment, or configure an OpenAI API key. Image generation is optional; native text, shapes and charts do not depend on it.
+Ask for image generation when you need a cover or illustrations. Use the image-generation tool available in your AI assistant, or configure an OpenAI API key. Image generation is optional; native text, shapes and charts do not depend on it.
 
 ## Use cases
 
@@ -273,7 +307,7 @@ python3 ~/.codex/skills/slide-maker/scripts/check_env.py
 python3 ~/.claude/skills/slide-maker/scripts/check_env.py
 ```
 
-It lists missing dependencies and repair commands. For a plugin or project-local installation, ask your assistant to locate and run the skill's `scripts/check_env.py`.
+It lists missing dependencies and repair commands.
 
 For build errors, fonts, rendering and image sourcing, see [Troubleshooting & FAQ](skills/slide-maker/references/troubleshooting-faq.md). If the problem persists, open an [issue](https://github.com/addsumtech/slides_maker/issues) with the error output.
 
