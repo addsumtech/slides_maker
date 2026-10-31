@@ -40,9 +40,9 @@ Install slide-maker in your AI assistant. In an environment that supports `npx s
 npx skills add addsumtech/slides_maker
 ```
 
-You can also use your assistant's skill-import flow. See [Installation and setup](#installation-and-setup) for runtime dependencies and other methods. On first use, ask the assistant to run the skill's `scripts/check_env.py` and resolve any missing dependencies.
+You can also use your assistant's skill-import flow. See [Installation and setup](#installation-and-setup) for details.
 
-Then give the assistant your material and a request:
+After installation, ask your AI assistant to create a presentation. On first use, slide-maker automatically checks the runtime environment and guides you through installing anything missing. For example:
 
 ```text
 Use slide-maker to turn paper.pdf into an English lab-meeting presentation for my advisor and labmates. A 12-minute live talk, about 15 slides, visual and concise. Show me the outline and design directions first.
