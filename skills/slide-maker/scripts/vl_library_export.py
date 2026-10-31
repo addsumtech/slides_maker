@@ -13,7 +13,8 @@ it by re-running this — nothing on the site is edited by hand. Everything come
 and the registry; the stats are counted, never typed.
 
 Writes ONLY under <site>/languages/: library.json, media/<id>/sample-<ground>.jpg (the bundled four-page sheet) and
-media/<id>/<ground>/<page>.jpg (the seven page types rendered from ONE shared demo text, 960px JPEG). A file under
+media/<id>/<ground>/<page>.jpg (960px previews) and <page>@2x.jpg (1920px enlarged views), rendered from ONE shared
+demo text. A file under
 languages/media that the new library.json does not name is removed — a language that left the skill leaves the page.
 
 added_at is the date a language first appeared in an export and survives re-exports; `baseline` is the first export's
@@ -44,6 +45,7 @@ PAGE_NAMES = {"cover": ("Cover", "封面"), "section": ("Section", "章节页"),
               "closing": ("Closing", "结尾页")}
 PICTURES_ZH = {"photos": "照片", "illustrations": "插画"}
 WIDTH = 960
+FULL_WIDTH = 1920
 
 # ONE demo text for every language, so languages compare on identical words. The words for the four sample pages are
 # the bundled samples' own (visual_languages._SAMPLE_COPY); the other three pages are added here. An illustration-led
@@ -156,6 +158,8 @@ def _entry(name, prev, lang_dir, today, rendered):
         pal, roles = gd["palette"], gd["roles"]
         pages = {p: "media/{}/{}/{}.jpg".format(name, gid, p) for p in PAGES}
         pages = {p: r for p, r in pages.items() if (lang_dir / r).is_file()}
+        pages_hd = {p: "media/{}/{}/{}@2x.jpg".format(name, gid, p) for p in pages}
+        pages_hd = {p: r for p, r in pages_hd.items() if (lang_dir / r).is_file()}
         fp = rendered.get(gid) or (old.get(gid, {}).get("render_fp") if pages else None)
         label = {"en": gd["label"], "zh": gd["label_zh"]}
         light = gid == "light"
@@ -165,7 +169,7 @@ def _entry(name, prev, lang_dir, today, rendered):
                          "accents": list(pal["accents"]), "text_accents": list(pal["text_accents"]),
                          "series": list(roles["series"])},
             "sample": "media/{}/sample-{}.jpg".format(name, gid),
-            "pages": pages, "render_fp": fp,
+            "pages": pages, "pages_hd": pages_hd, "render_fp": fp,
             "python": 'k = vl.use("{}", prs)'.format(name) if light else
                       'k = vl.use("{}", prs, ground="{}")'.format(name, gid),
             "prompt": {"en": "Use slide-maker with the {} ({}) template and its {} palette to create a "
@@ -245,7 +249,7 @@ def _load_prev(lang_dir):
 
 
 def _render(name, ground, lang_dir, scratch):
-    """Render `name` on `ground` into media/<name>/<ground>/<page>.jpg; returns the deck's fingerprint."""
+    """Render small and full-size page JPEGs from the deck; returns its fingerprint."""
     from PIL import Image
     deck = demo_deck(name, ground, scratch / "{}-{}.pptx".format(name, ground))
     out = scratch / "render-{}-{}".format(name, ground)
@@ -261,9 +265,17 @@ def _render(name, ground, lang_dir, scratch):
     for page, png in zip(PAGES, pngs):
         with Image.open(png) as im:
             im = im.convert("RGB")
+            if im.width < FULL_WIDTH:
+                raise ExportError("{} ({} ground): {} is only {}px wide — render at least {}px; "
+                                  "enlarged previews must not upscale a small image".format(
+                                      name, ground, png.name, im.width, FULL_WIDTH))
             h = round(im.size[1] * WIDTH / im.size[0])
             im.resize((WIDTH, h), Image.LANCZOS).save(_inside(lang_dir, dest / (page + ".jpg")), "JPEG", quality=84,
                                                       optimize=True, progressive=True)
+            full_h = round(im.height * FULL_WIDTH / im.width)
+            im.resize((FULL_WIDTH, full_h), Image.LANCZOS).save(
+                _inside(lang_dir, dest / (page + "@2x.jpg")), "JPEG", quality=94, subsampling=0,
+                optimize=True, progressive=True)
     return deck_fingerprint(deck)
 
 
@@ -284,6 +296,7 @@ def _prune(lang_dir, lib):
     """Remove every file under languages/media the library does not name (and the folders left empty)."""
     named = {g["sample"] for x in lib["languages"] for g in x["grounds"]}
     named |= {r for x in lib["languages"] for g in x["grounds"] for r in g["pages"].values()}
+    named |= {r for x in lib["languages"] for g in x["grounds"] for r in g["pages_hd"].values()}
     media = lang_dir / "media"
     if not media.is_dir():
         return []
@@ -390,9 +403,26 @@ def check(site):
             elif g["render_fp"] != _fingerprint(x["id"], g["id"]):
                 out.append("stale page renders: {} ({} ground) — the demo deck no longer matches them".format(
                     x["id"], g["id"]))
+            full = g.get("pages_hd") or {}
+            missing = [p for p in PAGES if not full.get(p) or not (lang_dir / full[p]).is_file()]
+            if missing:
+                out.append("missing full-size renders: {} ({} ground): {}".format(
+                    x["id"], g["id"], ", ".join(missing)))
+            else:
+                from PIL import Image
+                for page, rel in full.items():
+                    try:
+                        with Image.open(lang_dir / rel) as im:
+                            valid = im.format == "JPEG" and im.size == (FULL_WIDTH, 1080)
+                    except (OSError, ValueError):
+                        valid = False
+                    if not valid:
+                        out.append("invalid full-size render: {}/{}/{} — expected 1920x1080 JPEG".format(
+                            x["id"], g["id"], page))
     # a file the page does not name is left over from an older export; only an export removes it
     named = {g.get("sample") for x in prev.get("languages", []) for g in x.get("grounds", [])}
     named |= {r for x in prev.get("languages", []) for g in x.get("grounds", []) for r in (g.get("pages") or {}).values()}
+    named |= {r for x in prev.get("languages", []) for g in x.get("grounds", []) for r in (g.get("pages_hd") or {}).values()}
     media = lang_dir / "media"
     if media.is_dir():
         out += ["orphan media file: {}".format(f.relative_to(lang_dir).as_posix()) for f in sorted(media.rglob("*"))

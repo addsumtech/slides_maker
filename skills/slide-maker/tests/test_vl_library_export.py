@@ -5,7 +5,7 @@ WHAT IS HELD. The page must never need a hand edit when a language is added, so 
 registry language in manifest order; stats counted from the registry, never typed; every image the JSON names exists;
 nothing written outside <site>/languages/; a language that left the skill leaves the page (its media too); `added_at`
 survives a re-export and a new id gets the export date; `--check` fails on a stale page and names the language. The
-render path (`--only ink`) writes seven page images per ground, each a real 16:9 JPEG 960px wide.
+render path (`--only ink`) writes seven 960px preview JPEGs and seven 1920px full-size JPEGs per ground.
 
 Run: python3 tests/test_vl_library_export.py   (the render half needs LibreOffice; without it, it says SKIP)
 """
@@ -94,6 +94,8 @@ with tempfile.TemporaryDirectory() as td:
                   "{}/{}: its sample sheet is on disk ({})".format(x["id"], g.get("id"), g.get("sample")))
             check(g.get("pages") == {}, "{}/{}: --no-render on an empty site lists no page images ({})".format(
                 x["id"], g.get("id"), g.get("pages")))
+            check(g.get("pages_hd") == {}, "{}/{}: --no-render does not invent full-size images".format(
+                x["id"], g.get("id")))
     check(len(names) == want["grounds"], "every ground has its own sample sheet ({} of {})".format(len(names), want["grounds"]))
 
     # ── isolation ──
@@ -194,6 +196,12 @@ with tempfile.TemporaryDirectory() as td:
                 except Exception as e:      # noqa: BLE001 — any unreadable file is the finding
                     good, size = False, e
                 check(good, "ink/{}/{}: a 960px 16:9 JPEG ({})".format(g["id"], page, size))
+            check(list(g.get("pages_hd", {})) == list(PAGES), "ink/{}: all seven full-size pages listed".format(g["id"]))
+            for page, rel in g.get("pages_hd", {}).items():
+                with Image.open(site / "languages" / rel) as im:
+                    check(im.format == "JPEG" and im.size == (1920, 1080),
+                          "ink/{}/{}: a 1920x1080 full-size JPEG ({})".format(g["id"], page, im.size))
+                check(rel != g["pages"][page], "ink/{}/{}: full-size and preview URLs differ".format(g["id"], page))
             check(bool(g.get("render_fp")), "ink/{}: the render fingerprint is recorded".format(g["id"]))
         others = [x for x in lib3["languages"] if x["id"] != "ink"]
         check(all(g.get("pages") == {} for x in others for g in x["grounds"]), "--only renders only the named language")
@@ -206,6 +214,21 @@ with tempfile.TemporaryDirectory() as td:
         ink4 = {x["id"]: x for x in lib4["languages"]}["ink"]
         check(all(list(g["pages"]) == list(PAGES) and g.get("render_fp") for g in ink4["grounds"]),
               "--no-render keeps the renders already on disk listed")
+        check(all(list(g["pages_hd"]) == list(PAGES) and all((site / "languages" / r).exists()
+                  for r in g["pages_hd"].values()) for g in ink4["grounds"]),
+              "--no-render preserves full-size image files and their URLs")
+        full_rel = ink4["grounds"][0]["pages_hd"]["cover"]
+        full_path = site / "languages" / full_rel
+        full_bytes = full_path.read_bytes()
+        full_path.unlink()
+        code, out = run("--site", site, "--check")
+        check(code == 1 and "missing full-size renders: ink (light ground): cover" in out,
+              "--check rejects a missing full-size image")
+        shutil.copy(site / "languages" / ink4["grounds"][0]["pages"]["cover"], full_path)
+        code, out = run("--site", site, "--check")
+        check(code == 1 and "invalid full-size render: ink/light/cover" in out,
+              "--check rejects a small image saved at a full-size URL")
+        full_path.write_bytes(full_bytes)
         # the render fingerprint covers everything a render draws — pictures, textures, theme — not the slide XML only:
         # a re-shot photo or a changed grain tile leaves every slide XML byte the same
         import zipfile
@@ -241,11 +264,15 @@ with tempfile.TemporaryDirectory() as td:
                 continue
             for g in x["grounds"]:
                 g["pages"] = {}
+                g["pages_hd"] = {}
                 for page in PAGES:
                     rel = "media/{}/{}/{}.jpg".format(x["id"], g["id"], page)
                     (site / "languages" / rel).parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy(site / "languages" / ink5["grounds"][0]["pages"][page], site / "languages" / rel)
                     g["pages"][page] = rel
+                    full_rel = "media/{}/{}/{}@2x.jpg".format(x["id"], g["id"], page)
+                    shutil.copy(site / "languages" / ink5["grounds"][0]["pages_hd"][page], site / "languages" / full_rel)
+                    g["pages_hd"][page] = full_rel
                 g["render_fp"] = vx._fingerprint(x["id"], g["id"])
         lib_p.write_text(json.dumps(lib5), encoding="utf-8")
         code, out = run("--site", site, "--check")
