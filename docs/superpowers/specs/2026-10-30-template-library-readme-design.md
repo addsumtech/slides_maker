@@ -21,3 +21,12 @@ The user approved this structure on 2026-10-30:
 The existing template files, style manifests, rendered sample images and published promotional copy remain unchanged. This is a presentation and documentation change; it does not change PPT generation behaviour.
 
 Validation covers generated documentation consistency, the existing visual-language contract checks, all thirty image/link mappings, desktop/mobile layout, language switching and opening a style preview.
+
+## Amendment, 2026-11-03: the example decks return as their own section
+
+The repository owner restored the twelve example decks in both READMEs (`## Example decks` / `## 完整示例`) and on the demo site (`#examples`), directly after the template library. The two do different jobs:
+
+- **Template library:** choose a look. Each style has two palettes and a few sample pages, plus a prompt to copy.
+- **Example decks:** see what a finished deck contains. Each is 10–16 slides of real material for one common use, with KPI grids, native charts, tables, timelines, diagrams, equations, backup slides and a sources page. Each can be flipped through online or downloaded as a `.pptx`. To reuse a deck's design, give its `.pptx` to slide-maker as a reference deck.
+
+The template library still links styles only; the example section links whole decks only. `tests/test_vl_contract.py` checks both, as well as the order of the two sections.

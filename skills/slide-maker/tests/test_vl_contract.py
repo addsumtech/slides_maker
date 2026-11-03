@@ -439,16 +439,27 @@ try:
           "a selected style absent from the registry is refused by name")
 finally:
     _vd.SHOWCASE = _selected
-# One template library replaces the old example-deck gallery and visual-language section in both READMEs.
-for _f, _a, _b, _old in (("README.md", "## Template library", "### Using a template", "## Visual languages"),
-                        ("README_CN.md", "## 模板库", "### 模板怎么用", "## 设计语言")):
+# One template library replaces the old visual-language section in both READMEs (2026-10-30). The twelve example
+# decks come back as their own section right after it (the owner, 2026-11-03): templates set the look, the examples
+# show what a finished deck contains (charts, tables, timelines, diagrams), so they link a whole deck, never a style.
+for _f, _a, _b, _old, _ex, _lang in (
+        ("README.md", "## Template library", "### Using a template", "## Visual languages", "## Example decks", "en"),
+        ("README_CN.md", "## 模板库", "### 模板怎么用", "## 设计语言", "## 完整示例", "zh")):
     _txt = (_vd.REPO / _f).read_text(encoding="utf-8")
     _heads = [l for l in _txt.splitlines() if l.startswith("## ")]
     _library = _txt.split(_a, 1)[1].split("\n## ", 1)[0] if _a in _txt else ""
     check(_heads.count(_a) == 1 and _b in _library and _old not in _heads,
           "{} has one template library containing its usage instructions ({})".format(_f, _heads[:6]))
-    check('viewer.html?deck=' not in _txt and 'gallery-more' not in _txt,
-          "{} no longer advertises the old twelve-deck gallery".format(_f))
+    check('viewer.html?deck=' not in _library and 'gallery-more' not in _txt,
+          "{}: the template library links styles, not example decks".format(_f))
+    check(_heads.count(_ex) == 1 and _heads.index(_ex) == _heads.index(_a) + 1,
+          "{}: the example decks follow the template library as their own section ({})".format(_f, _heads[:6]))
+    _examples = _txt.split(_ex, 1)[1].split("\n## ", 1)[0] if _ex in _txt else ""
+    _decks = re.findall(r'viewer\.html\?deck=({}/[a-z0-9-]+)"><img'.format(_lang), _examples)
+    check(len(_decks) == len(set(_decks)) == 12 and
+          all(_examples.count("templates/decks/{}/template.pptx".format(d)) == 1 for d in _decks) and
+          "#vl-" not in _examples,
+          "{}: twelve {} example decks, each flippable online and downloadable ({})".format(_f, _lang, _decks))
 # counts past twenty stay words: "four image-led and 26 drawn" mixed the two styles in one sentence (2026-10-22, 30)
 check([_vd._en(n) for n in (19, 20, 21, 26, 30, 45, 99)] ==
       ["nineteen", "twenty", "twenty-one", "twenty-six", "thirty", "forty-five", "ninety-nine"],

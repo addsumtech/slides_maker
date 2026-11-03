@@ -26,6 +26,7 @@ Choose a built-in template or bring a reference deck. Confirm the outline and de
 <p align="center">
   <a href="https://slides.addsum.top/#intro"><strong>Intro video</strong></a> ·
   <a href="#template-library"><strong>Templates</strong></a> ·
+  <a href="#example-decks"><strong>Examples</strong></a> ·
   <a href="#features-and-deliverables"><strong>Features</strong></a> ·
   <a href="#how-it-works"><strong>How it works</strong></a> ·
   <a href="#quick-start"><strong>Quick start</strong></a> ·
@@ -143,6 +144,83 @@ Turn notes.md into an 8-slide biology lesson for middle-school students.
 ```
 
 If you are unsure which style to use, ask for recommendations based on your topic. You can also supply a school or company PPTX as a reference for typography, colours and layout.
+
+## Example decks
+
+Twelve finished decks, each built from real material for a common use, in English and in Chinese. The template library sets the look; these show what a complete deck contains: KPI grids, native charts, tables, timelines, diagrams, equations, backup slides and a sources page. Flip through one online, or download its `.pptx` and click into any object. To reuse a deck's design, give its `.pptx` to slide-maker as a reference deck.
+
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=en/quarterly-review"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_quarterly-review.png" alt="Quarterly Review / Business Update example deck preview"></a><br/>
+      <sub><strong>Quarterly Review / Business Update</strong><br/>quarterly review, business update, metrics dashboard, exec readout<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/quarterly-review">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/quarterly-review/template.pptx">Download .pptx</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=en/chengdu"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_chengdu.png" alt="Visual Storytelling / Culture example deck preview"></a><br/>
+      <sub><strong>Visual Storytelling / Culture</strong><br/>city, culture, event, brand story<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/chengdu">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/chengdu/template.pptx">Download .pptx</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=en/transformer-talk"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_transformer-talk.png" alt="Lab Meeting / Paper Talk example deck preview"></a><br/>
+      <sub><strong>Lab Meeting / Paper Talk</strong><br/>paper reading, lab meeting, method overview, experiment report<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/transformer-talk">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/transformer-talk/template.pptx">Download .pptx</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=en/product-launch"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_product-launch.png" alt="Product Launch / Keynote example deck preview"></a><br/>
+      <sub><strong>Product Launch / Keynote</strong><br/>launch keynote, product reveal, spec walkthrough<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/product-launch">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/product-launch/template.pptx">Download .pptx</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=en/biology-lesson"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_biology-lesson.png" alt="Classroom Lesson / Courseware example deck preview"></a><br/>
+      <sub><strong>Classroom Lesson / Courseware</strong><br/>school lesson, courseware, in-class quiz, chalkboard look<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/biology-lesson">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/biology-lesson/template.pptx">Download .pptx</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=en/pour-over-coffee"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_pour-over-coffee.png" alt="Social Carousel / 3:4 Portrait example deck preview"></a><br/>
+      <sub><strong>Social Carousel / 3:4 Portrait</strong><br/>RedNote or Instagram carousel, how-to post, cheat sheet<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/pour-over-coffee">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/pour-over-coffee/template.pptx">Download .pptx</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=en/startup-pitch"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_startup-pitch.png" alt="Startup Pitch / Fundraising example deck preview"></a><br/>
+      <sub><strong>Startup Pitch / Fundraising</strong><br/>seed pitch, investor meeting, fundraising deck, demo day<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/startup-pitch">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/startup-pitch/template.pptx">Download .pptx</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=en/michael-jackson-king-of-pop"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_michael-jackson-king-of-pop.png" alt="Biography / Brand Story example deck preview"></a><br/>
+      <sub><strong>Biography / Brand Story</strong><br/>public figure, brand archive, cultural retrospective<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/michael-jackson-king-of-pop">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/michael-jackson-king-of-pop/template.pptx">Download .pptx</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=en/ev-market-report"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_ev-market-report.png" alt="Market Report / Newsletter example deck preview"></a><br/>
+      <sub><strong>Market Report / Newsletter</strong><br/>industry report, periodic briefing, data with a world map<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/ev-market-report">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/ev-market-report/template.pptx">Download .pptx</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=en/corporate-training"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_corporate-training.png" alt="Corporate Training / Workshop example deck preview"></a><br/>
+      <sub><strong>Corporate Training / Workshop</strong><br/>training deck, workshop, skills enablement, exercises<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/corporate-training">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/corporate-training/template.pptx">Download .pptx</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=en/thesis-defense"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_thesis-defense.png" alt="Thesis Defense / Research Talk example deck preview"></a><br/>
+      <sub><strong>Thesis Defense / Research Talk</strong><br/>thesis defense, proposal review, academic or engineering talk<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/thesis-defense">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/thesis-defense/template.pptx">Download .pptx</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=en/kids-ai-explainer"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_en_kids-ai-explainer.png" alt="Teaching / Knowledge Sharing example deck preview"></a><br/>
+      <sub><strong>Teaching / Knowledge Sharing</strong><br/>class explanation, reading share, training material<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=en/kids-ai-explainer">Flip online</a> · <a href="https://slides.addsum.top/templates/decks/en/kids-ai-explainer/template.pptx">Download .pptx</a></sub>
+    </td>
+  </tr>
+</table>
+
+<p align="center"><sub>The Chinese versions are in the <a href="README_CN.md#完整示例">Chinese README</a>.</sub></p>
 
 ## Features and deliverables
 

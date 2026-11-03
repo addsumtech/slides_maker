@@ -26,6 +26,7 @@ slide-maker 是一个生成可编辑 PPT 的开源 AI 技能，可在支持技�
 <p align="center">
   <a href="https://slides.addsum.top/cn/#intro"><strong>视频介绍</strong></a> ·
   <a href="#模板库"><strong>模板库</strong></a> ·
+  <a href="#完整示例"><strong>完整示例</strong></a> ·
   <a href="#功能与交付"><strong>功能与交付</strong></a> ·
   <a href="#工作流程"><strong>工作流程</strong></a> ·
   <a href="#快速开始"><strong>快速开始</strong></a> ·
@@ -143,6 +144,83 @@ npx skills add addsumtech/slides_maker
 ```
 
 不确定选哪套，可以让它按主题推荐。已有学校或公司的 PPTX，也可以提供文件，让它参考字体、配色和版式。
+
+## 完整示例
+
+十二份完整成品，每份用真实材料做一个常见场景，中英各一套。模板库决定画风；这里展示一份完整 deck 里有什么：指标网格、原生图表、表格、时间线、示意图、公式、备用页和来源页。可以在线翻页，也可以下载 `.pptx` 点开任意对象。想沿用某一份的设计，把它的 `.pptx` 作为参考 deck 交给 slide-maker。
+
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/quarterly-review"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_quarterly-review.png" alt="季度复盘 / 经营汇报示例预览"></a><br/>
+      <sub><strong>季度复盘 / 经营汇报</strong><br/>季度复盘、经营汇报、数据看板、管理层沟通<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/quarterly-review">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/quarterly-review/template.pptx">下载 .pptx</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/chengdu"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_chengdu.png" alt="视觉叙事 / 文化介绍示例预览"></a><br/>
+      <sub><strong>视觉叙事 / 文化介绍</strong><br/>城市、文化、活动、品牌故事<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/chengdu">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/chengdu/template.pptx">下载 .pptx</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/transformer-talk"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_transformer-talk.png" alt="组会 / 论文汇报示例预览"></a><br/>
+      <sub><strong>组会 / 论文汇报</strong><br/>论文精读、组会、方法综述、实验结果汇报<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/transformer-talk">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/transformer-talk/template.pptx">下载 .pptx</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/product-launch"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_product-launch.png" alt="新品发布 / 产品上线示例预览"></a><br/>
+      <sub><strong>新品发布 / 产品上线</strong><br/>发布会、新品介绍、产品上线沟通<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/product-launch">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/product-launch/template.pptx">下载 .pptx</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/biology-lesson"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_biology-lesson.png" alt="课堂教学 / 课件示例预览"></a><br/>
+      <sub><strong>课堂教学 / 课件</strong><br/>中小学课件、课堂讲解、随堂练习、黑板报风格<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/biology-lesson">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/biology-lesson/template.pptx">下载 .pptx</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/pour-over-coffee"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_pour-over-coffee.png" alt="小红书图文 / 3:4 竖版示例预览"></a><br/>
+      <sub><strong>小红书图文 / 3:4 竖版</strong><br/>竖版轮播、教程笔记、参数清单<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/pour-over-coffee">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/pour-over-coffee/template.pptx">下载 .pptx</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/startup-pitch"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_startup-pitch.png" alt="融资路演 / BP 示例预览"></a><br/>
+      <sub><strong>融资路演 / BP</strong><br/>种子轮路演、投资人沟通、创业 BP<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/startup-pitch">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/startup-pitch/template.pptx">下载 .pptx</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/michael-jackson-king-of-pop"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_michael-jackson-king-of-pop.png" alt="人物 / 品牌故事示例预览"></a><br/>
+      <sub><strong>人物 / 品牌故事</strong><br/>名人传记、品牌档案、文化回顾<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/michael-jackson-king-of-pop">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/michael-jackson-king-of-pop/template.pptx">下载 .pptx</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/ev-market-report"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_ev-market-report.png" alt="行业报告 / 定期简报示例预览"></a><br/>
+      <sub><strong>行业报告 / 定期简报</strong><br/>行业报告、定期简报、数据解读、世界地图<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/ev-market-report">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/ev-market-report/template.pptx">下载 .pptx</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/corporate-training"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_corporate-training.png" alt="企业内训 / 工作坊示例预览"></a><br/>
+      <sub><strong>企业内训 / 工作坊</strong><br/>内训课件、工作坊、技能培训、练习引导<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/corporate-training">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/corporate-training/template.pptx">下载 .pptx</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/thesis-defense"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_thesis-defense.png" alt="毕业答辩 / 学术汇报示例预览"></a><br/>
+      <sub><strong>毕业答辩 / 学术汇报</strong><br/>毕业答辩、开题报告、学术或工程汇报<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/thesis-defense">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/thesis-defense/template.pptx">下载 .pptx</a></sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/kids-ai-explainer"><img src="https://slides.addsum.top/docs/assets/screenshots/preview_kids-ai-explainer.png" alt="课程 / 知识分享示例预览"></a><br/>
+      <sub><strong>课程 / 知识分享</strong><br/>课程讲解、读书分享、培训材料<br/>
+      <a href="https://slides.addsum.top/viewer.html?deck=zh/kids-ai-explainer">在线翻页</a> · <a href="https://slides.addsum.top/templates/decks/zh/kids-ai-explainer/template.pptx">下载 .pptx</a></sub>
+    </td>
+  </tr>
+</table>
+
+<p align="center"><sub>英文版见 <a href="README.md#example-decks">English README</a>。</sub></p>
 
 ## 功能与交付
 
