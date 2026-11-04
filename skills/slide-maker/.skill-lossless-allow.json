@@ -195,6 +195,7 @@
   "e5165db9c7f4383c": "Corrected, not removed: Step 5 named the non-blocking `dk.lint_layout(prs)` as the build-time gate; it now names `dk.lint_layout(prs, strict=True)`, matching Step 4 (fix/audit-rules-briefs A6).",
   "f931bc72e9a0978e": "Contradiction fixed: standard is the low-stakes panel everywhere else (Step 0, interview-protocol, critic-panel); the 'defense / pitch / exec readout' clause moved to the thorough row (fix/audit-rules-briefs A1).",
   "bd6cf3be2264bba7": "Extended in place: the thorough row now carries the 'worth it for a defense / pitch / exec readout' clause moved from the standard row (fix/audit-rules-briefs A1).",
-  "73a2ef97f42108c2": "Contradiction fixed: an auto escalation for a defense deck goes to thorough (the high-stakes tier), not standard; same line, one word changed (fix/audit-rules-briefs A1)."
+  "73a2ef97f42108c2": "Contradiction fixed: an auto escalation for a defense deck goes to thorough (the high-stakes tier), not standard; same line, one word changed (fix/audit-rules-briefs A1).",
+  "1b6edd24220b6a9c": "Rewritten, not removed (2026-11-04, after merging PR #8): the website brand step keeps every instruction and adds three, so it now pins easybrandkit@0.4.0 instead of @latest, offers the step and runs it only on a yes, and falls back to asking for the logo, hex codes and font names."
  }
 }
