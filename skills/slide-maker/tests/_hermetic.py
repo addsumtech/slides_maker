@@ -18,3 +18,5 @@ _ROOT = tempfile.mkdtemp(prefix="slide-maker-hermetic-")
 os.environ["SLIDE_MAKER_REGISTRY"] = os.path.join(_ROOT, "registry")
 os.makedirs(os.environ["SLIDE_MAKER_REGISTRY"], exist_ok=True)
 os.environ["SLIDE_MAKER_TASTE_LEDGER"] = os.path.join(_ROOT, "taste-ledger.json")
+# The early preview opens the contact sheet on a desktop session (progress.py); a test run never does.
+os.environ["SLIDE_MAKER_NO_OPEN"] = "1"

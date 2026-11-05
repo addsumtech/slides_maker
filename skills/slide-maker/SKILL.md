@@ -2162,6 +2162,14 @@ refuses to cache when the page count and slide count disagree). **Use it for the
 and for post-delivery tweaks** ("change slide 7 to a chart"); use a plain full render for the first
 render of a deck and whenever you pass `--deliverables`.
 
+🔴 **CHECKPOINT — FIRST PREVIEW (an FYI in every mode, never a stop).** The first full render of the
+deck prints a `TELL THE USER (step 3/6)` / `告诉用户（第 3/6 步）` block and, on a desktop session, opens
+the contact sheet on the user's screen. Post it in chat right then, before the lint or any fix: the
+contact sheet image, the slide count, what happens next and the time still to go, and that they can
+comment now. Treat it exactly like the content and design checkpoints, which you post as FYIs: a
+correction they send is a HARD INTERRUPT. Measured (2026-11-05, four real runs, two agents): the block
+was printed every time and posted zero times, so the user first saw a page at the end of the run.
+
 First **render and look** (`bash scripts/render_deck.sh <deck.pptx>` → one PNG per
 slide). python-pptx writes blind — overflow, low contrast, a callout on the footer,
 or a missing glyph only show up in the image. Fix mechanical issues and re-render.

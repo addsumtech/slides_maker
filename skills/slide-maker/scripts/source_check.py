@@ -36,7 +36,8 @@ a year-month (2025.10 · 2025年10月 · Oct 2025) to any date in that month.
 
 Ignored on the deck side, by rule, not by taste: page chrome (page numbers, a numbered footer —
 deck_versions owns that), source-note lines ("Source: …", "来源：…"), bare integers 0–10 with no
-unit (counts, list numbers, ordinals) and a full date on the cover slide (the deck's own date).
+unit (counts, list numbers, ordinals), a month label (11月 · 12 月; "12个月" is a duration and is
+checked) and a full date on the cover slide (the deck's own date).
 
 Readable source formats: .pdf (text layer) .docx .pptx/.potx .xlsx/.xlsm (cached cell values; a
 percent-formatted cell also counts ×100) .csv/.tsv .md/.txt/.json/.html/.htm. Anything else — an
@@ -556,6 +557,9 @@ def _file_hit(p, line, vals):
     return False
 
 
+_MONTH_LABEL = re.compile(r"(?<![\d.])(?<!\d,)(1[0-2]|0?[1-9])\s*月")   # "，12 月" NFKCs to ",12 月"; "1,012月" is a figure
+
+
 def deck_numbers(pptx):
     """[(slide, token, parsed, line)] for every CLAIM number on the built slides."""
     import deck_versions as dv                                         # noqa: PLC0415
@@ -567,9 +571,15 @@ def deck_numbers(pptx):
             rest, dates = split_dates(line)
             for d in dates:
                 out.append((s["index"], _date_tok(d), {"date": d}, line))
+            # A month label ("11月", "12 月") is a date, not a figure: all four real runs (2026-11-05)
+            # wrote not_a_claim rows for chart months 11 and 12 by hand. "12个月" is a duration and stays.
+            months = {int(m) for m in _MONTH_LABEL.findall(unicodedata.normalize("NFKC", rest))}
             for p in _tokens(rest):
                 if (p["scale"] == 1.0 and not p["pct"] and p["decimals"] == 0 and not p["unit"]
                         and p["mantissa"] <= SMALL_INT and "," not in p["token"]):
+                    continue
+                if (p["scale"] == 1.0 and not p["pct"] and p["decimals"] == 0 and not p["unit"]
+                        and int(p["mantissa"]) in months):
                     continue
                 out.append((s["index"], p["token"], p, line))
     return out
@@ -786,7 +796,11 @@ def trace(pptx, source_paths, rows=(), web_claims=(), base=None):
                 return "{}: derived uses {} — not in the source files (every input must be a " \
                        "figure the files state)".format(label, ", ".join(_fmt(m) for m in missing))
             target = abs(result)
-            if not _rounds_to(target, slide_p):
+            # Inputs already in the slide's unit: a cost table in 万元 sums to 1342 and the slide writes
+            # 1,342万. Three of four real runs (2026-11-05) were refused here ("would write as 0.0万")
+            # and multiplied by 10000 by hand; the same figure at the slide's own unit is the same claim.
+            in_unit = slide_p["scale"] != 1.0 and _rounds_to(target, dict(slide_p, scale=1.0))
+            if not _rounds_to(target, slide_p) and not in_unit:
                 return "{}: `{}` = {:.6g}, which the slide would write as {}{} — not {}".format(
                     label, r["derived"], result,
                     round(target / slide_p["scale"], slide_p["decimals"]),

@@ -29,6 +29,8 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -106,6 +108,42 @@ def _load(deck_dir):
         return {}
 
 
+def open_command(path, env=None, platform=None):
+    """The command that shows `path` on the user's own screen, or None when there is no screen to show
+    it on. Four real runs (2026-11-05, two agents) printed the early preview and relayed it to the user
+    zero times, so the preview no longer depends on the agent: on a desktop session the contact sheet
+    simply opens. Off: SLIDE_MAKER_NO_OPEN=1, a CI run, an SSH session, a Linux box with no display.
+    SLIDE_MAKER_OPEN_CMD (a command, the path appended) replaces the platform opener."""
+    env = os.environ if env is None else env
+    platform = platform or sys.platform
+    if env.get("SLIDE_MAKER_NO_OPEN") or env.get("CI") or env.get("SSH_CONNECTION") or env.get("SSH_TTY"):
+        return None
+    if env.get("SLIDE_MAKER_OPEN_CMD"):
+        return shlex.split(env["SLIDE_MAKER_OPEN_CMD"]) + [str(path)]
+    if platform == "darwin":
+        return ["open", str(path)]
+    if platform.startswith("win"):
+        return ["cmd", "/c", "start", "", str(path)]
+    if env.get("DISPLAY") or env.get("WAYLAND_DISPLAY"):
+        return ["xdg-open", str(path)]
+    return None
+
+
+def show(path, out=None):
+    """Open `path` for the user without waiting on the viewer; returns True when an opener started."""
+    cmd = open_command(path)
+    if not cmd or not os.path.exists(str(path)):
+        return False
+    try:
+        subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL,
+                         start_new_session=True)
+    except (OSError, ValueError):
+        return False
+    print("(opened {} on the user's screen; SLIDE_MAKER_NO_OPEN=1 turns this off)".format(path),
+          file=out or sys.stdout)
+    return True
+
+
 def in_run(deck_dir):
     """A real skill run: the deck folder carries a gate record (shared or Codex)."""
     return bool(deck_dir) and any((Path(deck_dir) / n).is_file() for n in RECORDS)
@@ -136,6 +174,8 @@ def announce(deck_dir, stage, *, slides=None, contact=None, once=True, out=None)
                                                   more=more))
         text = "\n".join(lines)
         print("\n" + text, file=out or sys.stdout)
+        if stage == "preview" and contact:
+            show(contact, out=out)
         if stage == "preview":
             # Said to the AGENT, not the user. (It used to also say "when the review starts, run
             # progress.py review"; a real Codex-path run ran it at once, a minute after the preview, so

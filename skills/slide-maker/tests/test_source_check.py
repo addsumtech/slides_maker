@@ -556,6 +556,26 @@ out = subprocess.run([sys.executable, str(SC), "material", str(DX)], capture_out
 check("material on the folder reads the provided sources from the Codex evidence (a web row is not a file)",
       out.returncode == 0 and "UNREADABLE" not in out.stdout, out.stdout[-300:])
 
+# Two time sinks from four real runs (2026-11-05): a derived figure already in the slide's unit (a 万元
+# table summed, the slide writing 1,342万) was refused as "0.0万", and chart month labels 11/12 needed
+# hand-written not_a_claim rows in every run.
+print("── units and month labels")
+DU = TMP / "units-months"
+DU.mkdir()
+(DU / "cost.csv").write_text("项目,金额（万元）\n人员,612\n药品,438\n设备,156\n宣教,47\n其他,89\n", encoding="utf-8")
+write_deck(DU / "deck.pptx", [["分项合计 1,342万 元"], ["分项合计 1,350万 元"], ["门诊 11月 起走高，12 月达峰"],
+                              ["服务期 12个月"]])
+rows_u = [{"value": "1,342万", "slide": 1, "derived": "612+438+156+47+89"},
+          {"value": "1,350万", "slide": 2, "derived": "612+438+156+47+89"}]
+res_u = S.trace(DU / "deck.pptx", ["cost.csv"], rows_u, base=DU)
+fault_txt = " ".join(res_u["row_faults"])
+check("a derived sum already in 万 traces to the slide's 1,342万 (no *10000 by hand)",
+      "content.numbers[0]" not in fault_txt, res_u["row_faults"])
+check("…and a WRONG one (1,350万) is still refused", "content.numbers[1]" in fault_txt, res_u["row_faults"])
+untr = {(sl, tok) for sl, tok, _l, _n in res_u["untraced"]}
+check("month labels 11月 / 12 月 are dates, not claims", not any(sl == 3 for sl, _t in untr), untr)
+check("'12个月' (a duration) is still a claim to trace", (4, "12") in untr, untr)
+
 print(f"\n{len(PASS)} passed, {len(FAIL)} failed")
 print("[test_source_check] " + ("ok" if not FAIL else f"FAILED: {len(FAIL)} problem(s)"))
 raise SystemExit(1 if FAIL else 0)

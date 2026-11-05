@@ -92,6 +92,20 @@ cx.mkdir()
 check("a Codex run with only .codex-deck-evidence.json is a run, and its interview language is used",
       "告诉用户（第 3/6 步）" in P.announce(str(cx), "preview", slides=9))
 
+print("── opening the contact sheet")
+oc = P.open_command
+check("macOS desktop: open <path>", oc("/x/c.png", env={}, platform="darwin") == ["open", "/x/c.png"])
+check("Windows: start", oc("/x/c.png", env={}, platform="win32")[:3] == ["cmd", "/c", "start"])
+check("Linux with a display: xdg-open", oc("/x/c.png", env={"DISPLAY": ":0"}, platform="linux") == ["xdg-open", "/x/c.png"])
+check("Linux with no display: nothing", oc("/x/c.png", env={}, platform="linux") is None)
+check("SLIDE_MAKER_NO_OPEN=1: nothing", oc("/x/c.png", env={"SLIDE_MAKER_NO_OPEN": "1"}, platform="darwin") is None)
+check("a CI run: nothing", oc("/x/c.png", env={"CI": "true"}, platform="darwin") is None)
+check("an SSH session: nothing (the screen is not the user's)",
+      oc("/x/c.png", env={"SSH_CONNECTION": "1 2 3 4"}, platform="darwin") is None)
+check("SLIDE_MAKER_OPEN_CMD replaces the opener", oc("/x/c.png", env={"SLIDE_MAKER_OPEN_CMD": "viewer --flag"},
+                                                    platform="darwin") == ["viewer", "--flag", "/x/c.png"])
+check("this test process never opens a window (_hermetic sets SLIDE_MAKER_NO_OPEN)", oc("/x/c.png") is None)
+
 out = run(SCRIPTS / "progress.py", en, "plan")
 check("CLI: announces a stage by hand, exit 0", out.returncode == 0 and "step 2/6" in out.stdout, out.stdout + out.stderr)
 out = run(SCRIPTS / "progress.py", plain, "plan")
@@ -185,6 +199,8 @@ if soffice and have_pptx:
           "AGENT NEXT:" in out.stdout and "before your next command" in out.stdout
           and "progress.py" not in out.stdout.split("AGENT NEXT:", 1)[-1].split("\n", 1)[0], out.stdout[-600:])
     nxt = [l for l in out.stdout.splitlines() if l.startswith("next:")]
+    check("render_deck under the tests: the contact sheet is NOT opened", "on the user's screen" not in out.stdout,
+          out.stdout[-300:])
     check("render_deck, first render: telling the user is step (1) of the next: line, the lint is (2) — agents act "
           "on next:, and both real runs skipped a preview printed above it",
           nxt and nxt[-1].startswith("next: (1) post the TELL THE USER block") and "(2) python3" in nxt[-1], nxt)
@@ -212,6 +228,27 @@ if soffice and have_pptx:
     out = run(SCRIPTS / "deck_cycle.py", dc / "build_deck.py", "--render", cwd=dc)
     check("deck_cycle --render, again: no preview and no tell-the-user NEXT",
           "告诉用户" not in out.stdout and "post the TELL THE USER" not in out.stdout, out.stdout[-300:])
+    # The opener really fires on the first full render: point it at a script that records what it was given.
+    op = deck_dir("opener", "English")
+    shutil.copy(rd / "deck.pptx", op / "deck.pptx")
+    marker = TMP / "opened.txt"
+    (TMP / "fake_open.py").write_text("import sys\nopen(%r, 'w').write(sys.argv[1])\n" % str(marker), encoding="utf-8")
+    env = dict(os.environ, SLIDE_MAKER_OPEN_CMD="{} {}".format(sys.executable, TMP / "fake_open.py"))
+    env.pop("SLIDE_MAKER_NO_OPEN", None)
+    env.pop("CI", None)
+    env.pop("SSH_CONNECTION", None)
+    env.pop("SSH_TTY", None)
+    out = subprocess.run([sys.executable, str(SCRIPTS / "render_deck.py"), str(op / "deck.pptx"), str(op / "render")],
+                         capture_output=True, text=True, env=env)
+    import time as _t
+    for _ in range(50):
+        if marker.exists():
+            break
+        _t.sleep(0.1)
+    check("first full render on a desktop session: the contact sheet is opened for the user (any agent)",
+          marker.exists() and marker.read_text().endswith("contact.png") and "on the user's screen" in out.stdout,
+          (marker.exists(), out.stdout[-400:]))
+
     nr = TMP / "no-record"
     nr.mkdir()
     shutil.copy(rd / "deck.pptx", nr / "deck.pptx")
