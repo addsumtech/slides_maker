@@ -43,6 +43,7 @@ percent-formatted cell also counts ×100) .csv/.tsv .md/.txt/.json/.html/.htm. A
 image, a scanned PDF, .doc/.xls/.key — is reported as UNREADABLE with the reason, never as clean.
 
     python3 scripts/source_check.py numbers  <deck-dir> [--pptx deck.pptx]   # reads .deck-gates.json
+    python3 scripts/source_check.py numbers  <deck-dir> --write-rows          # + record the unambiguous rows
     python3 scripts/source_check.py numbers  <deck.pptx> --source a.pdf b.xlsx
     python3 scripts/source_check.py material <deck-dir>                      # or: material a.pdf b.xlsx
     python3 scripts/source_check.py read     <file>                          # what a file yields
@@ -880,6 +881,40 @@ def format_trace(res, cmd_hint=None):
     return "\n".join(out)
 
 
+def _sig_digits(tok):
+    p = parse_number(tok)
+    if p is None:
+        return 0
+    # "12,000" → 2, "1.2万" → 2, "0.05" → 1, "1.05" → 3: the digits that carry information
+    return len(re.sub(r"\D", "", "{:.12g}".format(abs(p["mantissa"]))).strip("0"))
+
+
+def auto_rows(res):
+    """The rows `--write-rows` may write by itself, and the numbers it leaves to the agent.
+
+    Only the two matches the report already spells out as a ready row: ONE source figure (however
+    often it appears) that rounds to the slide's figure, or the same figure in another unit (万/M/亿…).
+    Two different candidates, a figure with a single significant digit (a "15" can round from almost
+    anything), "same digits, different order" and "within 2%" are the agent's call — they are how a
+    mistyped number looks, so writing them away would hide exactly what this check exists to catch.
+    Each written row carries `auto` naming where the figure came from, so the critic and the next
+    reader can see the row was not typed by a person."""
+    rows, left = [], []
+    for slide, tok, line, near in res["untraced"]:
+        best = [c for c in near if c[0] == 0]
+        vals = {parse_number(c[1])["value"] for c in best if parse_number(c[1])}
+        if len(vals) != 1 or _sig_digits(tok) < 2:
+            left.append((slide, tok, line, near))
+            continue
+        _, ntok, where, why = best[0]
+        row = {"value": tok, "slide": slide, "source_value": ntok}
+        if why.startswith("the same figure in "):
+            row["unit"] = why.rsplit(" ", 1)[1]
+        row["auto"] = "{} in {} — {}".format(ntok, where, why)
+        rows.append(row)
+    return rows, left
+
+
 # ════════════════════════════════════════════════════════════════════════ check 2 — material
 _TOTAL = re.compile(r"^\s*(合计|總計|总计|总和|總和|小计|小計|共计|共計|总数|總數|全部|"
                     r"total|sum|overall|grand total|all)\b", re.I)
@@ -1217,6 +1252,10 @@ def main(argv=None):
     n.add_argument("--pptx")
     n.add_argument("--source", nargs="+", action="extend", help="source files (instead of content.sources); "
                    "list them after one --source or repeat the flag")
+    n.add_argument("--write-rows", action="store_true",
+                   help="write the unambiguous rows (one source figure that rounds to the slide's, or the "
+                        "same figure in another unit) into content.numbers, tagged `auto`; the rest stay "
+                        "for you. Needs the deck folder as the target.")
     m = sub.add_parser("material", help="the user's files checked against themselves")
     m.add_argument("targets", nargs="+", help="the deck folder (reads content.sources) or the files")
     r = sub.add_parser("read", help="what one source file yields")
@@ -1274,10 +1313,33 @@ def main(argv=None):
         print("no source files: record them in content.sources, or pass --source <files>")
         return 2
     res = trace(pptx, paths, rows, web, base=base)
+    if a.write_rows:
+        if not target.is_dir() or not (target / ".deck-gates.json").is_file():
+            print("--write-rows writes into <deck-dir>/.deck-gates.json — pass the deck folder")
+            return 2
+        new, _ = auto_rows(res)
+        if new:
+            rec = _record(target)
+            rec.setdefault("content", {}).setdefault("numbers", [])
+            rec["content"]["numbers"].extend(new)
+            (target / ".deck-gates.json").write_text(json.dumps(rec, indent=2, ensure_ascii=False) + "\n",
+                                                     encoding="utf-8")
+            rows = rec["content"]["numbers"]
+            print("wrote {} row(s) to content.numbers — check each; a wrong one is deleted, not argued with:"
+                  .format(len(new)))
+            for r in new:
+                print("  slide {}: {} ← {}".format(r["slide"], r["value"], r["auto"]))
+            res = trace(pptx, paths, rows, web, base=base)
+        else:
+            print("--write-rows: nothing unambiguous to write")
     print(format_trace(res))
     if res["untraced"] or res["row_faults"]:
         again = [shlex.quote(str(a.target))] + (["--pptx", shlex.quote(a.pptx)] if a.pptx else []) + \
             (["--source"] + [shlex.quote(x) for x in a.source] if a.source else [])
+        auto_n = len(auto_rows(res)[0])
+        if auto_n and not a.write_rows and target.is_dir():
+            print("{} of these have exactly one source figure that rounds to them — add --write-rows to "
+                  "record those rows for you (tagged `auto`), then decide the rest.".format(auto_n))
         print("NEXT: fix those slides or rows, rebuild, then: {} numbers {}".format(_SELF, " ".join(again)))
         return 1
     print("NEXT: every number traces — run the gate check")

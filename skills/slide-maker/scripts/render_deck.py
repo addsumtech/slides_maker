@@ -4394,6 +4394,16 @@ def _density_stats(pptx, budget=70):
 
 
 
+def _announce(stage, deck_dir, **kw):
+    """A TELL THE USER line from progress.py; silent outside a real run, never fatal."""
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import progress
+        progress.announce(deck_dir, stage, **kw)
+    except Exception:
+        pass
+
+
 def _contact_sheet(out, n_pages):
     """One image of the WHOLE deck, written beside the per-slide PNGs as `contact.png`.
 
@@ -4638,6 +4648,7 @@ def main(argv):
     if gate_only:
         check_handoff_gates(pptx, mode, gate_check=True)
         print("[gates] all hand-off gates pass — the deck may be handed over")
+        _announce("done", os.path.dirname(os.path.abspath(pptx)))
         return 0
 
     # ONE deck's render/: a second deck in the same folder rendered over the first one's pages, silently, and the
@@ -5059,6 +5070,11 @@ def main(argv):
         print("contact sheet -> {}  (DECK-LEVEL view only: rhythm, bookends, form variety, "
               "chrome repetition. Body text is ~8px here and unreadable — the per-slide visual "
               "read is still required and this does not replace it.)".format(", ".join(_cs)))
+    if _cs and not deliverables:
+        # The early preview (progress.py): the FIRST full render of a real run tells the user the
+        # deck exists and can be steered now, instead of at hand-off 25-33 minutes later (measured).
+        _announce("preview", os.path.dirname(os.path.abspath(pptx)), slides=n_pages,
+                  contact=os.path.abspath(os.path.join(out, _cs[0])))
     if not deliverables:
         print("pdf/viewer: not generated (deck still in progress) — at hand-off, once the user "
               "confirms the deck is final, re-run with --deliverables")

@@ -542,6 +542,16 @@ jobs:
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/source_check.log || {
             echo "::error::source-check suite did not run to completion"; exit 1; }
 
+      # Measured 2026-10-30: a full first render existed at minute ~8 and the user first saw a page at
+      # minute 34-41. The scripts that mark a stage now print what to tell the user (progress.py);
+      # this suite runs them as commands, including a real render, and asserts on their output.
+      - name: Stage progress (early preview at the first render, said once, silent outside a run)
+        run: |
+          set -o pipefail
+          python tests/test_progress.py | tee /tmp/progress.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/progress.log || {
+            echo "::error::progress suite did not run to completion"; exit 1; }
+
       - name: Deck versions (snapshot · diff numbers-first · restore through the source)
         run: |
           set -o pipefail

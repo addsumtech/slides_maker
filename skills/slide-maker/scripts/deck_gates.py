@@ -771,6 +771,8 @@ def _cmd_interview(a):
         print("\nstill unanswered: {}".format(", ".join(missing)))
         return 1
     print("all four axes answered")
+    import progress
+    progress.announce(a.deck_dir, "brief")
     return 0
 
 

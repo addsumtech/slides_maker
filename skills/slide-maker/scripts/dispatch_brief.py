@@ -264,6 +264,15 @@ def cmd_prompt(args):
     plans = _plans(args.brief)
     deck_dir = os.path.dirname(os.path.abspath(args.brief))
     role = "critic_sole" if (args.role == "critic" and args.lens == "AB") else args.role
+    if args.role == "critic":
+        # The review stage's TELL THE USER line (progress.py) — said once, on the first critic dispatch.
+        try:
+            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+            import progress
+            _d = args.deck if args.deck and os.path.isdir(args.deck) else os.path.dirname(args.deck or "")
+            progress.announce(_d or os.getcwd(), "review", out=sys.stderr)
+        except Exception:
+            pass
     print(ROLE_PROMPTS[role].format(
         skill=_skill_root(), brief=os.path.abspath(args.brief),
         lens=args.lens or "", round=args.round, section=args.section or "",

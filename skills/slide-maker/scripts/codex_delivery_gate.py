@@ -3034,6 +3034,15 @@ def main() -> int:
         print(f"{n} error(s) above — fix them in ONE pass, then re-run.")
         return 1
     print("CODEX DELIVERY GATE: PASS")
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import progress
+        for _d in (args.build_script.resolve().parent, args.evidence.resolve().parent):
+            if progress.in_run(str(_d)):
+                progress.announce(str(_d), "done")
+                break
+    except Exception:
+        pass
     if args.receipt:
         try:
             write_receipt(args.receipt, evidence_path=args.evidence, build_script=args.build_script, evidence=evidence)

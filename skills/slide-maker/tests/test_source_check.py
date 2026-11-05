@@ -486,6 +486,52 @@ check("CLI material on a clean file: exit 0 with NEXT", out.returncode == 0 and 
 out = subprocess.run([sys.executable, str(SC), "read", str(D / "shot.png")], capture_output=True, text=True)
 check("CLI read on an image: UNREADABLE, exit 2", out.returncode == 2 and "UNREADABLE" in out.stdout, out.stdout)
 
+# ───────────────────────────────────────────── --write-rows: only the unambiguous rows, tagged auto
+# Measured 2026-10-30: the agent hand-typed the rows this report already printed, into JSON, through
+# heredocs. --write-rows records those itself; everything a mistyped number could look like stays.
+print("── --write-rows")
+DW = TMP / "write-rows"
+DW.mkdir()
+(DW / "report.md").write_text("借阅量 12,345 册。收入 38,200,000 元。人均借阅 4.21 本（东区 4.24 本）。成本 41,000 元。\n",
+                              encoding="utf-8")
+write_deck(DW / "deck.pptx", [["借阅量约 1.2万 册"], ["收入（百万元）", "38.2"], ["收入 38.2M 元"],
+                              ["人均 4.2 本"], ["成本约 4万 元"], ["借阅 12,400 册"]])
+(DW / ".deck-gates.json").write_text(json.dumps({"content": {"sources": ["report.md"], "numbers": []}}),
+                                     encoding="utf-8")
+out = subprocess.run([sys.executable, str(SC), "numbers", str(DW)], capture_output=True, text=True)
+check("without the flag: exit 1, and it says how many rows --write-rows would record",
+      out.returncode == 1 and "2 of these" in out.stdout and "--write-rows" in out.stdout, out.stdout[-700:])
+check("without the flag: the record is untouched",
+      json.loads((DW / ".deck-gates.json").read_text(encoding="utf-8"))["content"]["numbers"] == [])
+out = subprocess.run([sys.executable, str(SC), "numbers", str(DW), "--write-rows"], capture_output=True, text=True)
+rows_w = json.loads((DW / ".deck-gates.json").read_text(encoding="utf-8"))["content"]["numbers"]
+by_slide = {r["slide"]: r for r in rows_w}
+check("writes exactly the two unambiguous rows (slides 1, 2; 38.2M on slide 3 is in the file as written)",
+      sorted(by_slide) == [1, 2], rows_w)
+check("a rounded figure: source_value 12,345 for 1.2万",
+      by_slide.get(1, {}).get("source_value") == "12,345" and "unit" not in by_slide.get(1, {}), by_slide.get(1))
+check("a unit-less chart value: source_value + unit M",
+      str(by_slide.get(2, {}).get("source_value")).startswith("38,200,000") and by_slide.get(2, {}).get("unit") == "M",
+      by_slide.get(2))
+check("every written row is tagged `auto` with the file it came from",
+      all("report.md" in str(r.get("auto")) for r in rows_w), rows_w)
+check("two candidates (4.21 / 4.24), one significant digit (4万) and within-2% (12,400) are NOT written",
+      not ({4, 5, 6} & set(by_slide)), rows_w)
+check("after writing: exit 1 and only the three left-over numbers are still named",
+      out.returncode == 1 and all(t in out.stdout for t in ("4.2", "4万", "12,400"))
+      and "wrote 2 row(s)" in out.stdout, out.stdout[-900:])
+res_w = S.trace(DW / "deck.pptx", ["report.md"], rows_w, base=DW)
+check("the written rows pass the gate's own re-check (no row faults, 3 untraced left)",
+      not res_w["row_faults"] and len(res_w["untraced"]) == 3, (res_w["row_faults"], res_w["untraced"]))
+out = subprocess.run([sys.executable, str(SC), "numbers", str(DW), "--write-rows"], capture_output=True, text=True)
+check("a second --write-rows adds nothing (no duplicate rows)",
+      "nothing unambiguous" in out.stdout and len(json.loads((DW / ".deck-gates.json").read_text(
+          encoding="utf-8"))["content"]["numbers"]) == 2, out.stdout[-300:])
+out = subprocess.run([sys.executable, str(SC), "numbers", str(DW / "deck.pptx"), "--source", str(DW / "report.md"),
+                      "--write-rows"], capture_output=True, text=True)
+check("--write-rows on a bare .pptx refuses (exit 2): there is no record to write into",
+      out.returncode == 2 and "deck folder" in out.stdout, out.stdout)
+
 print(f"\n{len(PASS)} passed, {len(FAIL)} failed")
 print("[test_source_check] " + ("ok" if not FAIL else f"FAILED: {len(FAIL)} problem(s)"))
 raise SystemExit(1 if FAIL else 0)

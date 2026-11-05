@@ -252,6 +252,14 @@ every **🔴 CHECKPOINT** is a hard stop.
 **Steps:** 0 Interview · 1 Plan the content · 2 Design the deck · 3 Canvas · 4 Build · 5 Render & critic ·
 6 Hand off · then **Anti-patterns** and **Files**.
 
+🔴 **Tell the user as you go — the commands say when.** A block that starts `TELL THE USER (step k/6)` /
+`告诉用户（第 k/6 步）` is printed by the command that just marked a stage: the interview's last answer, the
+**FIRST full render** (the early preview: post the contact sheet it names, the whole deck, and invite comments
+— do not hold it for the review question), the critic dispatch, and the passing gate. Relay it to the user in
+your own words the moment it prints, with the image for the preview, in auto mode too; follow its
+`AGENT NEXT` line. Measured on two real runs: a full render existed at minute ~8 and the user first saw a page
+at minute 34–41. A stage no command marks: `python3 "$SKILL/scripts/progress.py" <deck-dir> <stage>`.
+
 **Where commands run.** `SKILL` names the folder that holds this `SKILL.md` (the path the skill was loaded from);
 set it once per shell: `export SKILL="/absolute/path/to/slide-maker"`. A command written
 `python3 "$SKILL/scripts/…"` runs from any working directory. A command written `python3 scripts/…` means the same
@@ -866,6 +874,9 @@ user's edits to the story, then move to design (Step 2).
 > `content.numbers` as a `source_value` / `derived` row the gate re-checks; one read off a picture is a
 > `from_image` row and is reported as not machine-checked. Images, scanned PDFs and .doc/.xls are
 > UNREADABLE — ask for a .pdf/.docx/.xlsx/.csv export when the numbers matter.
+> `source_check.py numbers <deck-dir> --write-rows` records the unambiguous rows for you (one file figure
+> that rounds to the slide's, or the same figure in another unit — each tagged `auto`); read what it wrote,
+> delete a wrong one, and decide the rest yourself.
 > **🔴 CHECKPOINT — CONTENT:** show the comprehension brief + claim ledger + narrative arc + the
 > per-slide takeaways/content, and confirm the pace/slide-count, before any design work begins —
 > rendered as the compact ≤~25-line checkpoint artifact defined under the 🔴 CHECKPOINT convention

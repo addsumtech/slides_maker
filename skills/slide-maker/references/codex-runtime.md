@@ -362,7 +362,9 @@ as `content.sources`). Each `M-…` finding — a total that is not the sum of i
 in the hand-off), recorded as `content.material_check: [{"id": "M-…", "resolution": "…"}]`. After the
 build, `python3 scripts/source_check.py numbers <deck.pptx> --source <file> …` lists every slide number the
 files do not state, with the closest file figure; fix the slide, or add a `content.numbers` row
-(`source_value` · `derived` · `from_image` · `not_a_claim` — the evidence template shows each). The
+(`source_value` · `derived` · `from_image` · `not_a_claim` — the evidence template shows each);
+run it on the deck folder with `--write-rows` and the unambiguous rows (one file figure that rounds to the
+slide's, or the same figure in another unit) are written for you, tagged `auto` — read them, decide the rest. The
 delivery gate runs both checks on the `provided` sources; a claim-ledger row whose `source` is a URL
 traces the numbers it states. Images, scanned PDFs and .doc/.xls are UNREADABLE — ask for an export.
 

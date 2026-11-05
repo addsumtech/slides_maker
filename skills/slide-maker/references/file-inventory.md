@@ -548,6 +548,13 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   runs escalates, and the next run is REFUSED if the edit only moved numbers (the build script's AST
   is hashed with numeric literals normalised) — `--nudge-again "<why>"` overrides and records why.
   After every build that completed it snapshots the deck into `.versions/` (`deck_versions.py`).
+- `progress.py` — the lines a run says to the USER at each stage (brief → plan → preview → fixes → review →
+  done), printed by the commands that mark them: `deck_gates.py interview` (brief), the FIRST full render in
+  `render_deck.py` (the early preview: slide count, the contact sheet's path, the measured time still to go,
+  and an AGENT NEXT line naming the review command), `dispatch_brief.py prompt --role critic` (review, on
+  stderr), `render_deck.py --gate-check` and `codex_delivery_gate.py` passing (done). Each is said once, in the
+  interview's language, recorded in `<deck-dir>/.deck-progress.json`; silent outside a real run (no
+  `.deck-gates.json`), never fatal. `progress.py <deck-dir> <stage>` announces one by hand (`--status`).
 - `source_check.py` — a deck built from the USER'S OWN material, held to that material (local, no network,
   no model). `numbers <deck-dir>` traces every number on the built slides to the files in `content.sources`
   (pdf text layer · docx · pptx · xlsx cell values incl. percent formats · csv · md/txt/html); a number not
@@ -561,7 +568,9 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   labels and subtotals included; the header is found above the first data row, so a unit line or year
   headers do not shift it), shares off 100% (or off 1 when stored as fractions) beyond rounding, the
   same table in two files with a cell that disagrees — stable `M-xxxxxx` ids, resolved in
-  `content.material_check`. `read <file>` shows what one file yields. Images, scanned PDFs and .doc/.xls
+  `content.material_check`. `numbers <deck-dir> --write-rows` records the unambiguous rows itself (ONE source figure
+  that rounds to the slide's, or the same figure in another unit), each tagged `auto` with where it came from;
+  two candidates, a one-significant-digit figure, same-digits and within-2% stay the agent's call. `read <file>` shows what one file yields. Images, scanned PDFs and .doc/.xls
   are UNREADABLE with the reason, never clean. Both gates run it (`gate_faults`); page chrome, source-note
   lines, bare integers ≤10 and the cover date are not claims. Limit: a wrong number that happens to equal
   ANOTHER figure in the files passes — the critic's fidelity item still owns meaning.
