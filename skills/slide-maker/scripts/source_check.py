@@ -1222,9 +1222,38 @@ def gate_faults(content, deck_dir, pptx, web_claims=(), source_paths=None):
 
 
 # ════════════════════════════════════════════════════════════════════════ CLI
+RECORDS = (".codex-deck-evidence.json", ".deck-gates.json")
+
+
+def _record_path(deck_dir):
+    """The record this run's gate reads. The Codex runtime keeps its sources and number rows in
+    `.codex-deck-evidence.json` and may carry a `.deck-gates.json` too (the interview command writes
+    one), so the evidence file wins when present — reading or writing the other one is how a real
+    run (2026-11-05) saw rows the gate had accepted reported as missing, and would have had
+    --write-rows write where its gate never looks."""
+    for name in RECORDS:
+        p = Path(deck_dir) / name
+        if p.is_file():
+            return p
+    return None
+
+
+def _sources_of(content):
+    """Source paths from a record's content: plain paths, {"path"} rows, and on the Codex record
+    only the `provided` ones (a `web` row is traced through its claims, not read as a file)."""
+    out = []
+    for s in (content.get("sources") or []):
+        if isinstance(s, dict):
+            if s.get("kind", "provided") == "provided" and isinstance(s.get("path"), str):
+                out.append(s["path"])
+        elif isinstance(s, str):
+            out.append(s)
+    return out
+
+
 def _record(deck_dir):
-    p = Path(deck_dir) / ".deck-gates.json"
-    if not p.is_file():
+    p = _record_path(deck_dir)
+    if p is None:
         return None
     try:
         return json.loads(p.read_text(encoding="utf-8"))
@@ -1279,8 +1308,7 @@ def main(argv=None):
         t0 = Path(a.targets[0])
         if len(a.targets) == 1 and t0.is_dir():
             rec = _record(t0) or {}
-            paths = [s.get("path") if isinstance(s, dict) else s
-                     for s in (rec.get("content", {}).get("sources") or [])]
+            paths = _sources_of(rec.get("content", {}) or {})
             if not paths:
                 print("no content.sources in {} — pass the files: {} material <file> …".format(
                     t0 / ".deck-gates.json", _SELF))
@@ -1302,7 +1330,7 @@ def main(argv=None):
         base = target
         rec = _record(target) or {}
         content = rec.get("content", {}) or {}
-        paths = a.source or [s.get("path") if isinstance(s, dict) else s for s in (content.get("sources") or [])]
+        paths = a.source or _sources_of(content)
         rows = content.get("numbers") or []
         web = [c.get("claim", "") for c in ((rec.get("provenance") or {}).get("claims") or [])
                if isinstance(c, dict) and c.get("url")]
@@ -1314,19 +1342,20 @@ def main(argv=None):
         return 2
     res = trace(pptx, paths, rows, web, base=base)
     if a.write_rows:
-        if not target.is_dir() or not (target / ".deck-gates.json").is_file():
-            print("--write-rows writes into <deck-dir>/.deck-gates.json — pass the deck folder")
+        if not target.is_dir() or _record_path(target) is None:
+            print("--write-rows writes into the deck folder's record (.codex-deck-evidence.json or "
+                  ".deck-gates.json) — pass the deck folder")
             return 2
         new, _ = auto_rows(res)
         if new:
             rec = _record(target)
             rec.setdefault("content", {}).setdefault("numbers", [])
             rec["content"]["numbers"].extend(new)
-            (target / ".deck-gates.json").write_text(json.dumps(rec, indent=2, ensure_ascii=False) + "\n",
-                                                     encoding="utf-8")
+            _record_path(target).write_text(json.dumps(rec, indent=2, ensure_ascii=False) + "\n",
+                                            encoding="utf-8")
             rows = rec["content"]["numbers"]
-            print("wrote {} row(s) to content.numbers — check each; a wrong one is deleted, not argued with:"
-                  .format(len(new)))
+            print("wrote {} row(s) to content.numbers in {} — check each; a wrong one is deleted, not argued with:"
+                  .format(len(new), _record_path(target).name))
             for r in new:
                 print("  slide {}: {} ← {}".format(r["slide"], r["value"], r["auto"]))
             res = trace(pptx, paths, rows, web, base=base)

@@ -532,6 +532,30 @@ out = subprocess.run([sys.executable, str(SC), "numbers", str(DW / "deck.pptx"),
 check("--write-rows on a bare .pptx refuses (exit 2): there is no record to write into",
       out.returncode == 2 and "deck folder" in out.stdout, out.stdout)
 
+# The Codex runtime keeps sources and rows in .codex-deck-evidence.json, and the interview command may
+# leave a .deck-gates.json beside it. A real run (2026-11-05) saw the CLI ignore the evidence file.
+print("── the Codex evidence record")
+DX = TMP / "codex-record"
+DX.mkdir()
+shutil_copy = __import__("shutil").copy
+shutil_copy(DW / "report.md", DX / "report.md")
+shutil_copy(DW / "deck.pptx", DX / "deck.pptx")
+(DX / ".deck-gates.json").write_text(json.dumps({"interview": {"language": "中文"}}), encoding="utf-8")
+(DX / ".codex-deck-evidence.json").write_text(json.dumps({"content": {
+    "sources": [{"kind": "provided", "path": "report.md"}, {"kind": "web", "url": "https://example.org/x"}],
+    "numbers": [{"value": "4.2", "slide": 4, "source_value": "4.21"}]}}), encoding="utf-8")
+out = subprocess.run([sys.executable, str(SC), "numbers", str(DX)], capture_output=True, text=True)
+check("with both records, numbers reads the Codex evidence: its provided source and its row (4.2 traced)",
+      out.returncode == 1 and "1 rounded" in out.stdout and "slide 4" not in out.stdout, out.stdout[-600:])
+out = subprocess.run([sys.executable, str(SC), "numbers", str(DX), "--write-rows"], capture_output=True, text=True)
+ev = json.loads((DX / ".codex-deck-evidence.json").read_text(encoding="utf-8"))
+check("--write-rows writes into the Codex evidence, never the shared record",
+      len(ev["content"]["numbers"]) == 3 and ".codex-deck-evidence.json" in out.stdout and
+      "content" not in json.loads((DX / ".deck-gates.json").read_text(encoding="utf-8")), out.stdout[-400:])
+out = subprocess.run([sys.executable, str(SC), "material", str(DX)], capture_output=True, text=True)
+check("material on the folder reads the provided sources from the Codex evidence (a web row is not a file)",
+      out.returncode == 0 and "UNREADABLE" not in out.stdout, out.stdout[-300:])
+
 print(f"\n{len(PASS)} passed, {len(FAIL)} failed")
 print("[test_source_check] " + ("ok" if not FAIL else f"FAILED: {len(FAIL)} problem(s)"))
 raise SystemExit(1 if FAIL else 0)

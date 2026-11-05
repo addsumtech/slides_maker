@@ -404,6 +404,11 @@ def main(argv):
     total = sum(d for _l, _r, d in stages)
     line = " · ".join(f"{l} {d:.1f}s" for l, _r, d in stages)
     print(f"\n── cycle  {total:.1f}s  ({line})")
+    if render and any(m in out_r for m in ("TELL THE USER (step", "告诉用户（第")):
+        # The render printed a stage line for the user (progress.py) far above this summary; an agent
+        # reads the end of the output, so the instruction is repeated where it will be acted on.
+        print("NEXT: before anything else, post the TELL THE USER / 告诉用户 block from the render "
+              "above to the user (with the contact sheet image), then carry on.")
     if not render:
         print("   render not run (add --render). The build-time lint above is geometry only; "
               "pixel-level checks and the per-slide visual read still need a render.")

@@ -858,6 +858,16 @@ def main(argv):
     print("OK — valid %s output" % kind)
     if record_dir is not None:
         print("[gate] %s" % record_gate(kind, obj, path, record_dir))
+    if kind == "critic":
+        # The review stage's TELL THE USER line (progress.py), for hosts with no dispatch script: a
+        # valid critic review is the one review-stage event every path produces. Said once.
+        try:
+            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+            import progress
+            _d = record_dir or (os.path.dirname(os.path.abspath(path)) if path != "-" else os.getcwd())
+            progress.announce(_d, "review")
+        except Exception:
+            pass
     return 0
 
 

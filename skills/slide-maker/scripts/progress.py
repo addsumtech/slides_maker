@@ -9,10 +9,15 @@ saw a page at the very end, minute 34–41. The polishing between (self-check, f
 has no backstop and is skipped silently; a line printed by the command the agent just ran is read on
 every host, Claude Code, Codex or any other agent that reads stdout.
 
+A second measurement (2026-11-05, both paths) showed the block alone is not enough: printed above a
+`next:` line, it was skipped by both agents, who acted on the `next:` line. So the render makes telling
+the user step (1) of its `next:` line, deck_cycle repeats it as its last line, and the review stage is
+announced by commands (dispatch_brief.py, validate_review.py) rather than left to the agent's timing.
+
 So the commands that mark a stage print a block that starts with TELL THE USER, in the deck's language
 (the interview's `language` answer), and this module keeps `<deck-dir>/.deck-progress.json` so each
 stage is announced once — the early preview above all, which must come at the FIRST render and never
-again. Nothing happens outside a real run: no `.deck-gates.json` in the folder, no line and no file
+again. Nothing happens outside a real run: no gate record (`.deck-gates.json` or the Codex `.codex-deck-evidence.json`) in the folder, no line and no file
 (so CI renders of the examples and the tests stay silent).
 
     python3 scripts/progress.py <deck-dir> <stage>      # announce a stage by hand (plan, fixes)
@@ -44,7 +49,7 @@ _TEXT = {
                     "接下来我会逐页检查、修正，再请独立评审把关。你现在就可以提意见"
                     "（改哪页、哪里不对、风格要不要换），我会在接下来的修改里一并处理。"),
         "fixes": "正在逐页检查和修正。",
-        "review": "修正完成，正在请独立评审逐页检查。",
+        "review": "进入独立评审：评审逐页检查后，我按意见修正，再做最终检查。",
         "done": "最终检查已全部通过，可以交付。",
         "eta": "按以往实测，{size}页左右的 deck 从这里到交付大约还要 {lo}–{hi} 分钟{more}。",
         "more": "；页数更多会更久",
@@ -59,7 +64,7 @@ _TEXT = {
                     "comment now (a slide to change, something wrong, a different look) and I will fold "
                     "it into the fixes that follow."),
         "fixes": "Checking and fixing every slide.",
-        "review": "Fixes done; an independent reviewer is now checking every slide.",
+        "review": "In independent review: a reviewer checks every slide; I fix what it finds, then run the final checks.",
         "done": "All final checks passed; the deck is ready to hand over.",
         "eta": "From past measured runs, a deck of about {size}slides takes roughly {lo}–{hi} more minutes "
                "from here{more}.",
@@ -69,14 +74,21 @@ _TEXT = {
 }
 
 
+RECORDS = (".deck-gates.json", ".codex-deck-evidence.json")    # the shared and the Codex gate record
+
+
 def _lang(deck_dir):
-    """The deck's language from the interview answer; English unless it reads as Chinese."""
-    try:
-        g = json.loads((Path(deck_dir) / ".deck-gates.json").read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return "en"
-    iv = g.get("interview") if isinstance(g, dict) else None
-    v = str((iv or {}).get("language") or "").strip().lower() if isinstance(iv, dict) else ""
+    """The deck's language from the interview answer (either record); English unless it reads as Chinese."""
+    v = ""
+    for name in RECORDS:
+        try:
+            g = json.loads((Path(deck_dir) / name).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        iv = g.get("interview") if isinstance(g, dict) else None
+        v = str((iv or {}).get("language") or "").strip().lower() if isinstance(iv, dict) else ""
+        if v:
+            break
     if v.startswith("zh") or "中" in v or "chinese" in v or "汉" in v:
         return "zh"
     return "en"
@@ -95,8 +107,8 @@ def _load(deck_dir):
 
 
 def in_run(deck_dir):
-    """A real skill run: the deck folder carries its gate record."""
-    return bool(deck_dir) and (Path(deck_dir) / ".deck-gates.json").is_file()
+    """A real skill run: the deck folder carries a gate record (shared or Codex)."""
+    return bool(deck_dir) and any((Path(deck_dir) / n).is_file() for n in RECORDS)
 
 
 def announce(deck_dir, stage, *, slides=None, contact=None, once=True, out=None):
@@ -125,12 +137,11 @@ def announce(deck_dir, stage, *, slides=None, contact=None, once=True, out=None)
         text = "\n".join(lines)
         print("\n" + text, file=out or sys.stdout)
         if stage == "preview":
-            # Said to the AGENT, not the user: the review stage has a script hook only on hosts that
-            # dispatch through dispatch_brief.py, so every other host is told here, at the one render
-            # every path goes through.
-            print("AGENT NEXT: say the block above to the user now, in your own words, with the image. "
-                  "When the independent review starts, run:  python3 {} {} review".format(
-                      os.path.abspath(__file__), os.path.abspath(deck_dir)), file=out or sys.stdout)
+            # Said to the AGENT, not the user. (It used to also say "when the review starts, run
+            # progress.py review"; a real Codex-path run ran it at once, a minute after the preview, so
+            # the review stage is now announced by dispatch_brief.py and validate_review.py instead.)
+            print("AGENT NEXT: say the block above to the user now, in your own words, with the image, "
+                  "before your next command.", file=out or sys.stdout)
         seen[stage] = time.strftime("%Y-%m-%dT%H:%M:%S")
         state["stages"] = seen
         if isinstance(slides, int):
@@ -157,7 +168,7 @@ def main(argv=None):
         print("unknown stage {!r} — one of: {}".format(stage, ", ".join(STAGES)), file=sys.stderr)
         return 2
     if not in_run(deck_dir):
-        print("{} has no .deck-gates.json — not a slide-maker run, nothing announced".format(deck_dir),
+        print("{} has no gate record (.deck-gates.json or .codex-deck-evidence.json) — not a slide-maker run, nothing announced".format(deck_dir),
               file=sys.stderr)
         return 2
     return 0 if announce(deck_dir, stage, once=False) else 1

@@ -551,8 +551,10 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
 - `progress.py` — the lines a run says to the USER at each stage (brief → plan → preview → fixes → review →
   done), printed by the commands that mark them: `deck_gates.py interview` (brief), the FIRST full render in
   `render_deck.py` (the early preview: slide count, the contact sheet's path, the measured time still to go,
-  and an AGENT NEXT line naming the review command), `dispatch_brief.py prompt --role critic` (review, on
-  stderr), `render_deck.py --gate-check` and `codex_delivery_gate.py` passing (done). Each is said once, in the
+  and, because agents act on it, telling the user as step (1) of its `next:` line; `deck_cycle.py --render`
+  repeats that as its last line), `dispatch_brief.py prompt --role critic` (review, on stderr) or the first
+  valid `validate_review.py critic` (review, for hosts with no dispatch script), `render_deck.py --gate-check`
+  and `codex_delivery_gate.py` passing (done). Each is said once, in the
   interview's language, recorded in `<deck-dir>/.deck-progress.json`; silent outside a real run (no
   `.deck-gates.json`), never fatal. `progress.py <deck-dir> <stage>` announces one by hand (`--status`).
 - `source_check.py` — a deck built from the USER'S OWN material, held to that material (local, no network,

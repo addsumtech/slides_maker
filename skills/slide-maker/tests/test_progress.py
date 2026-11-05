@@ -86,6 +86,12 @@ broken = deck_dir("broken", "English")
 check("a corrupt state file never raises, and the stage is still said",
       P.announce(str(broken), "done").startswith("TELL THE USER"))
 
+cx = TMP / "codex-only"
+cx.mkdir()
+(cx / ".codex-deck-evidence.json").write_text(json.dumps({"interview": {"language": "zh"}}), encoding="utf-8")
+check("a Codex run with only .codex-deck-evidence.json is a run, and its interview language is used",
+      "告诉用户（第 3/6 步）" in P.announce(str(cx), "preview", slides=9))
+
 out = run(SCRIPTS / "progress.py", en, "plan")
 check("CLI: announces a stage by hand, exit 0", out.returncode == 0 and "step 2/6" in out.stdout, out.stdout + out.stderr)
 out = run(SCRIPTS / "progress.py", plain, "plan")
@@ -124,6 +130,31 @@ if brief_path:
 else:
     check("dispatch_brief init made a brief to dispatch from", False, out.stdout + out.stderr)
 
+# validate_review.py critic: the review-stage event every host produces (the Codex path has no dispatch script)
+GOOD_CRITIC = {
+    "purpose": "annual review, 12 min", "rubric_overlay": "work status update",
+    "coverage": {"slides_opened": [1, 2, 3], "passes": ["content lens (full deck)", "design lens (full deck)"],
+                 "stats_block_seen": True, "contract_card_seen": "none-declared"},
+    "plan_audit": None,
+    "probes": {"per_slide": [{"slide": 1, "first_read": "big title", "takeaway_guess": "visits grew"}],
+               "memory_sentence": "visits grew; message understood"},
+    "verdict": "revise", "summary": "Fix the clipped legend first.", "strengths": ["clean grid"],
+    "findings": [{"id": "s2-crop-1", "slide": 2, "severity": "major", "dimension": "figures",
+                  "issue": "legend clipped", "why": "the curves cannot be decoded",
+                  "fix": "re-crop to include the legend", "fix_risk": "low"}],
+}
+vr = deck_dir("validate-review", "中文")
+(vr / "critic.json").write_text(json.dumps(GOOD_CRITIC), encoding="utf-8")
+out = run(SCRIPTS / "validate_review.py", "critic", vr / "critic.json")
+check("validate_review critic, review JSON in the deck folder: valid, and the review stage is announced in Chinese",
+      out.returncode == 0 and "告诉用户（第 5/6 步）" in out.stdout, out.stdout[-400:] + out.stderr[-300:])
+out = run(SCRIPTS / "validate_review.py", "critic", vr / "critic.json")
+check("validate_review a second round: not announced again", "告诉用户" not in out.stdout, out.stdout[-300:])
+(plain / "critic.json").write_text(json.dumps(GOOD_CRITIC), encoding="utf-8")
+out = run(SCRIPTS / "validate_review.py", "critic", plain / "critic.json")
+check("validate_review outside a run: valid and silent", out.returncode == 0 and "告诉用户" not in out.stdout
+      and "TELL THE USER" not in out.stdout, out.stdout[-300:])
+
 soffice = shutil.which("soffice") or shutil.which("libreoffice") or os.environ.get("SOFFICE")
 try:
     import pptx  # noqa: F401
@@ -145,11 +176,38 @@ if soffice and have_pptx:
     check("render_deck, first render of a run: the early preview with 3 slides and the contact sheet's path",
           "TELL THE USER (step 3/6)" in out.stdout and "3 slides" in out.stdout and contact in out.stdout,
           out.stdout[-900:] + out.stderr[-300:])
-    check("render_deck: the AGENT NEXT line names the review command to run later",
-          "AGENT NEXT:" in out.stdout and "progress.py" in out.stdout and " review" in out.stdout, out.stdout[-600:])
+    check("render_deck: the AGENT NEXT line says to tell the user before the next command, and does NOT hand the "
+          "agent a review command to time (a real run fired it at once)",
+          "AGENT NEXT:" in out.stdout and "before your next command" in out.stdout
+          and "progress.py" not in out.stdout.split("AGENT NEXT:", 1)[-1].split("\n", 1)[0], out.stdout[-600:])
+    nxt = [l for l in out.stdout.splitlines() if l.startswith("next:")]
+    check("render_deck, first render: telling the user is step (1) of the next: line, the lint is (2) — agents act "
+          "on next:, and both real runs skipped a preview printed above it",
+          nxt and nxt[-1].startswith("next: (1) post the TELL THE USER block") and "(2) python3" in nxt[-1], nxt)
     out = run(SCRIPTS / "render_deck.py", rd / "deck.pptx", rd / "render", "--fast")
     check("render_deck, second render: no preview again", out.returncode == 0 and "TELL THE USER" not in out.stdout,
           out.stdout[-400:])
+    check("render_deck, second render: next: is the plain lint command again",
+          any(l.startswith("next: python3") for l in out.stdout.splitlines()), out.stdout[-300:])
+
+    # deck_cycle --render (the Codex path's entry point) prints its own summary after the render's output,
+    # so the render's next: line is no longer last; the cycle repeats the instruction at the very end.
+    dc = deck_dir("cycle", "中文")
+    (dc / "build_deck.py").write_text(
+        "from pptx import Presentation\nfrom pptx.util import Inches\nimport os\n"
+        "p = Presentation(); p.slide_width, p.slide_height = Inches(13.333), Inches(7.5)\n"
+        "for i in range(2):\n"
+        "    p.slides.add_slide(p.slide_layouts[6]).shapes.add_textbox(Inches(1), Inches(1), Inches(8), Inches(1))"
+        ".text_frame.text = '第 %d 页' % (i + 1)\n"
+        "p.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'deck.pptx'))\n", encoding="utf-8")
+    out = run(SCRIPTS / "deck_cycle.py", dc / "build_deck.py", "--render", cwd=dc)
+    tail = [l for l in out.stdout.splitlines() if l.strip()][-3:]
+    check("deck_cycle --render, first render of a run: the preview printed AND the last lines say to post it first",
+          "告诉用户（第 3/6 步）" in out.stdout and any(l.startswith("NEXT: before anything else, post the TELL THE USER")
+                                                    for l in tail), (out.returncode, tail, out.stderr[-300:]))
+    out = run(SCRIPTS / "deck_cycle.py", dc / "build_deck.py", "--render", cwd=dc)
+    check("deck_cycle --render, again: no preview and no tell-the-user NEXT",
+          "告诉用户" not in out.stdout and "post the TELL THE USER" not in out.stdout, out.stdout[-300:])
     nr = TMP / "no-record"
     nr.mkdir()
     shutil.copy(rd / "deck.pptx", nr / "deck.pptx")
