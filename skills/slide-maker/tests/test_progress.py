@@ -171,6 +171,10 @@ if soffice and have_pptx:
         prs.slides.add_slide(prs.slide_layouts[6]).shapes.add_textbox(
             Inches(1), Inches(1), Inches(8), Inches(1)).text_frame.text = "Slide {}".format(i + 1)
     prs.save(str(rd / "deck.pptx"))
+    out = run(SCRIPTS / "render_deck.py", rd / "deck.pptx", rd / "probe", "--slides", "1,2")
+    check("render_deck --slides probe: never the preview (a real run told the user '3 slides' from a probe)",
+          out.returncode == 0 and "TELL THE USER" not in out.stdout and not (rd / ".deck-progress.json").exists(),
+          out.stdout[-400:] + out.stderr[-300:])
     out = run(SCRIPTS / "render_deck.py", rd / "deck.pptx", rd / "render")
     contact = os.path.abspath(str(rd / "render" / "contact.png"))
     check("render_deck, first render of a run: the early preview with 3 slides and the contact sheet's path",

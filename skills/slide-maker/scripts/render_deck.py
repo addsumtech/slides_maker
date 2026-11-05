@@ -5072,7 +5072,10 @@ def main(argv):
               "chrome repetition. Body text is ~8px here and unreadable — the per-slide visual "
               "read is still required and this does not replace it.)".format(", ".join(_cs)))
     _previewed = ""
-    if _cs and not deliverables:
+    # Only a render of the WHOLE deck is the preview: a real run (2026-11-05) fired it on a 3-slide
+    # `--slides` probe, which told the user "the first version is built, 3 slides" and, said once,
+    # silenced the real first render that followed.
+    if _cs and not deliverables and only is None:
         # The early preview (progress.py): the FIRST full render of a real run tells the user the
         # deck exists and can be steered now, instead of at hand-off 25-33 minutes later (measured).
         _previewed = _announce("preview", os.path.dirname(os.path.abspath(pptx)), slides=n_pages,
