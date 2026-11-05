@@ -9,9 +9,10 @@ assertion is on what an agent actually reads in the output, whichever agent it i
   · outside a real run (no .deck-gates.json) nothing is printed and nothing is written — the examples'
     CI renders and every other test stay silent;
   · the interview's last answer announces the brief, in the deck's language;
-  · the FIRST full render of a real run prints the early preview — the slide count, the contact sheet's
-    absolute path, the measured time still to go, and an AGENT NEXT line naming the review command —
-    and a second render never repeats it;
+  · the FIRST full render of the WHOLE deck prints the early preview — the slide count, the contact
+    sheet's absolute path, the measured time still to go — and, on a desktop session, OPENS the contact
+    sheet for the user (six real runs: agents relayed the printed preview zero times); a --slides probe
+    and a second render never do
   · a critic dispatch announces the review on stderr, so the dispatch prompt on stdout stays clean;
   · every stage is said once, the state lives in <deck-dir>/.deck-progress.json, and a broken state
     file never fails the command that tried to announce.
@@ -194,21 +195,15 @@ if soffice and have_pptx:
     check("render_deck, first render of a run: the early preview with 3 slides and the contact sheet's path",
           "TELL THE USER (step 3/6)" in out.stdout and "3 slides" in out.stdout and contact in out.stdout,
           out.stdout[-900:] + out.stderr[-300:])
-    check("render_deck: the AGENT NEXT line says to tell the user before the next command, and does NOT hand the "
-          "agent a review command to time (a real run fired it at once)",
-          "AGENT NEXT:" in out.stdout and "before your next command" in out.stdout
-          and "progress.py" not in out.stdout.split("AGENT NEXT:", 1)[-1].split("\n", 1)[0], out.stdout[-600:])
+    check("render_deck: no AGENT NEXT relay line any more", "AGENT NEXT" not in out.stdout, out.stdout[-300:])
     nxt = [l for l in out.stdout.splitlines() if l.startswith("next:")]
     check("render_deck under the tests: the contact sheet is NOT opened", "on the user's screen" not in out.stdout,
           out.stdout[-300:])
-    check("render_deck, first render: telling the user is step (1) of the next: line, the lint is (2) — agents act "
-          "on next:, and both real runs skipped a preview printed above it",
-          nxt and nxt[-1].startswith("next: (1) post the TELL THE USER block") and "(2) python3" in nxt[-1], nxt)
+    check("render_deck, first render: next: is the plain lint command (the relay wording measured no effect)",
+          nxt and nxt[-1].startswith("next: python3"), nxt)
     out = run(SCRIPTS / "render_deck.py", rd / "deck.pptx", rd / "render", "--fast")
     check("render_deck, second render: no preview again", out.returncode == 0 and "TELL THE USER" not in out.stdout,
           out.stdout[-400:])
-    check("render_deck, second render: next: is the plain lint command again",
-          any(l.startswith("next: python3") for l in out.stdout.splitlines()), out.stdout[-300:])
 
     # deck_cycle --render (the Codex path's entry point) prints its own summary after the render's output,
     # so the render's next: line is no longer last; the cycle repeats the instruction at the very end.
@@ -222,12 +217,10 @@ if soffice and have_pptx:
         "p.save(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'deck.pptx'))\n", encoding="utf-8")
     out = run(SCRIPTS / "deck_cycle.py", dc / "build_deck.py", "--render", cwd=dc)
     tail = [l for l in out.stdout.splitlines() if l.strip()][-3:]
-    check("deck_cycle --render, first render of a run: the preview printed AND the last lines say to post it first",
-          "告诉用户（第 3/6 步）" in out.stdout and any(l.startswith("NEXT: before anything else, post the TELL THE USER")
-                                                    for l in tail), (out.returncode, tail, out.stderr[-300:]))
+    check("deck_cycle --render, first render of a run: the preview is printed (the Codex path's entry point)",
+          "告诉用户（第 3/6 步）" in out.stdout, (out.returncode, tail, out.stderr[-300:]))
     out = run(SCRIPTS / "deck_cycle.py", dc / "build_deck.py", "--render", cwd=dc)
-    check("deck_cycle --render, again: no preview and no tell-the-user NEXT",
-          "告诉用户" not in out.stdout and "post the TELL THE USER" not in out.stdout, out.stdout[-300:])
+    check("deck_cycle --render, again: no preview", "告诉用户" not in out.stdout, out.stdout[-300:])
     # The opener really fires on the first full render: point it at a script that records what it was given.
     op = deck_dir("opener", "English")
     shutil.copy(rd / "deck.pptx", op / "deck.pptx")

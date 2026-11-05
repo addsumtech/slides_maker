@@ -579,10 +579,6 @@ interview answer at all — each reads the built file itself):
    `--nudge-again "<why>"` runs it and records the reason. A runtime that hand-runs
    `python3 build.py` then `lint_deck.py` gets neither the round-trip saving nor the guard, and the
    uncapped nudge loop is the one loop in this pipeline with no other ceiling.
-   🔴 **The first `--render` of the whole deck is the FIRST PREVIEW checkpoint** (SKILL.md Step 5): it
-   prints a `TELL THE USER (step 3/6)` / `告诉用户（第 3/6 步）` block and opens the contact sheet on a
-   desktop session. Post it in chat at once, before the lint or a fix, as you post the content and design
-   FYIs. Do not pipe that first `--render` through `tail`/`head`: a real run cut the block off that way.
 3c. **Versions — the same commands as the shared path.** Every build `deck_cycle.py` completes is
    snapshotted into `<deck-dir>/.versions/vNNN/` (it prints `── versions` and the version name).
    - Before showing the user a version: `python3 "$SKILL/scripts/deck_versions.py" snapshot "<deck folder>" --keep`.

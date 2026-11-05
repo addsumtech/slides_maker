@@ -5071,14 +5071,13 @@ def main(argv):
         print("contact sheet -> {}  (DECK-LEVEL view only: rhythm, bookends, form variety, "
               "chrome repetition. Body text is ~8px here and unreadable — the per-slide visual "
               "read is still required and this does not replace it.)".format(", ".join(_cs)))
-    _previewed = ""
     # Only a render of the WHOLE deck is the preview: a real run (2026-11-05) fired it on a 3-slide
     # `--slides` probe, which told the user "the first version is built, 3 slides" and, said once,
     # silenced the real first render that followed.
     if _cs and not deliverables and only is None:
         # The early preview (progress.py): the FIRST full render of a real run tells the user the
         # deck exists and can be steered now, instead of at hand-off 25-33 minutes later (measured).
-        _previewed = _announce("preview", os.path.dirname(os.path.abspath(pptx)), slides=n_pages,
+        _announce("preview", os.path.dirname(os.path.abspath(pptx)), slides=n_pages,
                   contact=os.path.abspath(os.path.join(out, _cs[0])))
     if not deliverables:
         print("pdf/viewer: not generated (deck still in progress) — at hand-off, once the user "
@@ -5101,12 +5100,7 @@ def main(argv):
             print("WARNING: {} at the deck root {} now STALE — re-run with --deliverables (and "
                   "without --fast) before handing the deck over".format(
                       " and ".join(_stale), "is" if len(_stale) == 1 else "are"), file=sys.stderr)
-    # Measured on two real runs (2026-11-05): with the preview printed ABOVE this line, both agents
-    # ran the command here and never told the user. Agents act on the `next:` line, so when the
-    # preview has just been printed, telling the user IS the next step, and the lint comes second.
-    print("next: {}python3 {} {} --renders {}  # render-time lint, then the actor-critic loop".format(
-        "(1) post the TELL THE USER block above to the user now, with the contact sheet image; "
-        "(2) " if _previewed else "",
+    print("next: python3 {} {} --renders {}  # render-time lint, then the actor-critic loop".format(
         shlex.quote(os.path.join(os.path.dirname(os.path.abspath(__file__)), "lint_deck.py")),
         shlex.quote(pptx), shlex.quote(out)))
     # The render self-check is the single largest round-trip sink in the pipeline: one image Read

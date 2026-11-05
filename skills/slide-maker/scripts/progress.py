@@ -9,10 +9,12 @@ saw a page at the very end, minute 34–41. The polishing between (self-check, f
 has no backstop and is skipped silently; a line printed by the command the agent just ran is read on
 every host, Claude Code, Codex or any other agent that reads stdout.
 
-A second measurement (2026-11-05, both paths) showed the block alone is not enough: printed above a
-`next:` line, it was skipped by both agents, who acted on the `next:` line. So the render makes telling
-the user step (1) of its `next:` line, deck_cycle repeats it as its last line, and the review stage is
-announced by commands (dispatch_brief.py, validate_review.py) rather than left to the agent's timing.
+Measured again (2026-11-05, six real runs, two agents): the agents relayed the printed preview ZERO
+times — they act on the `next:` line, pipe output through `tail`, and even a 🔴 checkpoint in SKILL.md
+did not move them. So the preview does not depend on the agent: on a desktop session the first full
+render OPENS the contact sheet on the user's screen (`show`), which reached the user at minute 5.3 and
+15.8 instead of at hand-off. The stage lines stay, for hosts whose UI shows command output; the review
+stage is announced by commands (dispatch_brief.py, validate_review.py), never left to an agent's timing.
 
 So the commands that mark a stage print a block that starts with TELL THE USER, in the deck's language
 (the interview's `language` answer), and this module keeps `<deck-dir>/.deck-progress.json` so each
@@ -176,12 +178,6 @@ def announce(deck_dir, stage, *, slides=None, contact=None, once=True, out=None)
         print("\n" + text, file=out or sys.stdout)
         if stage == "preview" and contact:
             show(contact, out=out)
-        if stage == "preview":
-            # Said to the AGENT, not the user. (It used to also say "when the review starts, run
-            # progress.py review"; a real Codex-path run ran it at once, a minute after the preview, so
-            # the review stage is now announced by dispatch_brief.py and validate_review.py instead.)
-            print("AGENT NEXT: say the block above to the user now, in your own words, with the image, "
-                  "before your next command.", file=out or sys.stdout)
         seen[stage] = time.strftime("%Y-%m-%dT%H:%M:%S")
         state["stages"] = seen
         if isinstance(slides, int):
@@ -212,6 +208,13 @@ def main(argv=None):
               file=sys.stderr)
         return 2
     return 0 if announce(deck_dir, stage, once=False) else 1
+
+
+try:                                            # console safety: a legacy code page must
+    from _console import safe_stdio             # degrade a character, never kill the report
+    safe_stdio()
+except Exception:
+    pass
 
 
 if __name__ == "__main__":

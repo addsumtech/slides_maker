@@ -252,14 +252,6 @@ every **🔴 CHECKPOINT** is a hard stop.
 **Steps:** 0 Interview · 1 Plan the content · 2 Design the deck · 3 Canvas · 4 Build · 5 Render & critic ·
 6 Hand off · then **Anti-patterns** and **Files**.
 
-🔴 **Tell the user as you go — the commands say when.** A block that starts `TELL THE USER (step k/6)` /
-`告诉用户（第 k/6 步）` is printed by the command that just marked a stage: the interview's last answer, the
-**FIRST full render** (the early preview: post the contact sheet it names, the whole deck, and invite comments
-— do not hold it for the review question), the critic dispatch, and the passing gate. Relay it to the user in
-your own words the moment it prints, with the image for the preview, in auto mode too; follow its
-`AGENT NEXT` line. Measured on two real runs: a full render existed at minute ~8 and the user first saw a page
-at minute 34–41. A stage no command marks: `python3 "$SKILL/scripts/progress.py" <deck-dir> <stage>`.
-
 **Where commands run.** `SKILL` names the folder that holds this `SKILL.md` (the path the skill was loaded from);
 set it once per shell: `export SKILL="/absolute/path/to/slide-maker"`. A command written
 `python3 "$SKILL/scripts/…"` runs from any working directory. A command written `python3 scripts/…` means the same
@@ -2161,14 +2153,6 @@ hidden slides from the PDF, so page N stops being slide N — a full render now 
 refuses to cache when the page count and slide count disagree). **Use it for the actor-critic fix rounds
 and for post-delivery tweaks** ("change slide 7 to a chart"); use a plain full render for the first
 render of a deck and whenever you pass `--deliverables`.
-
-🔴 **CHECKPOINT — FIRST PREVIEW (an FYI in every mode, never a stop).** The first full render of the
-deck prints a `TELL THE USER (step 3/6)` / `告诉用户（第 3/6 步）` block and, on a desktop session, opens
-the contact sheet on the user's screen. Post it in chat right then, before the lint or any fix: the
-contact sheet image, the slide count, what happens next and the time still to go, and that they can
-comment now. Treat it exactly like the content and design checkpoints, which you post as FYIs: a
-correction they send is a HARD INTERRUPT. Measured (2026-11-05, four real runs, two agents): the block
-was printed every time and posted zero times, so the user first saw a page at the end of the run.
 
 First **render and look** (`bash scripts/render_deck.sh <deck.pptx>` → one PNG per
 slide). python-pptx writes blind — overflow, low contrast, a callout on the footer,
