@@ -1,0 +1,161 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""design_plan_record — the art director's Design plan is a FILE the hand-off gate re-reads.
+
+🔴 WHY THIS EXISTS. Measured 2026-11-07: in eight real runs of the current skill not one opened
+`agents/slide-design.md`. The agents typed the `design_plan` fields into `.deck-gates.json`
+themselves, and the gate — which required the fields — could not tell that from an art director's
+work. Three of four runs of the older skill read the file, and the older skill won a blind design
+comparison on three or four of four briefs. A required FIELD is satisfied by typing; a required
+ARTIFACT in the shape slide-design.md's "Output — the Design plan" prescribes is not.
+
+So the Design plan the art director returns is saved as a markdown file and recorded here:
+
+    python3 scripts/design_plan_record.py <design-plan.md> --deck <deck-dir> --dispatched
+    python3 scripts/design_plan_record.py <design-plan.md> --deck <deck-dir> \\
+            --waived "<why no subagent could run>" --category no-dispatch-on-host
+
+It checks the plan carries the Output sections (Design language · Deck rhythm · Per-slide design ·
+Form ledger · Design self-verify — English or Chinese headings) and at least 15 of the 19 lettered
+self-verify checks (a)–(s), then writes `design_plan.plan_file` = {path, sha256, dispatched} into
+`.deck-gates.json`, keeping every other field. `render_deck.py --gate-check` re-reads the file: a
+missing record, a plan edited after recording, or a self-authored plan without an allowed waiver
+category blocks. `--dispatched` is a claim about what you did, like a critic review's provenance —
+the gate can check the artifact, not the dispatch; on a host that can dispatch, dispatch.
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import re
+import sys
+
+GATES = ".deck-gates.json"
+SECTIONS = (  # (name, accepted heading phrases, lower-cased)
+    ("Design language", ("design language", "设计语言")),
+    ("Deck rhythm", ("deck rhythm", "rhythm", "节奏")),
+    ("Per-slide design", ("per-slide design", "per-slide", "逐页", "每页设计")),
+    ("Form ledger", ("form ledger", "形式台账", "形式账本", "台账")),
+    ("Design self-verify", ("self-verify", "自检")),
+)
+CHECK_LETTERS = "abcdefghijklmnopqrs"
+MIN_CHECKS = 15
+WAIVER_CATEGORIES = ("no-dispatch-on-host", "tiny-ask")
+
+
+def validate(text: str) -> list[str]:
+    """Faults in a Design plan's shape; [] when it carries slide-design.md's Output sections."""
+    if not text.strip():
+        return ["the design plan file is empty"]
+    heads = [l.strip().lstrip("#").strip().lower() for l in text.splitlines() if re.match(r"^\s*#{1,6}\s", l)]
+    faults = []
+    for name, phrases in SECTIONS:
+        if not any(p in h for h in heads for p in phrases):
+            faults.append("missing the `%s` section (agents/slide-design.md → \"Output — the Design plan\")" % name)
+    found = set(re.findall(r"\(([a-s])\)", text))
+    if len(found) < MIN_CHECKS:
+        faults.append("carries %d of the 19 Design self-verify checks (a)–(s); the plan is not ready until "
+                      "at least %d are answered" % (len(found), MIN_CHECKS))
+    return faults
+
+
+def _sha(path):
+    with open(path, "rb") as f:
+        return hashlib.sha256(f.read()).hexdigest()
+
+
+def _resolve(path, deck_dir):
+    return path if os.path.isabs(path) else os.path.join(deck_dir, path)
+
+
+def gate_faults(design: dict, deck_dir: str) -> list[str]:
+    """What the hand-off gate refuses about the recorded art-director plan; [] when it holds."""
+    pf = design.get("plan_file") if isinstance(design, dict) else None
+    if not isinstance(pf, dict) or not pf.get("path"):
+        return ["no art-director plan on record. Dispatch agents/slide-design.md (`python3 scripts/"
+                "dispatch_brief.py prompt --brief <brief> --role design`), save the Design plan it returns "
+                "as a .md file, and record it: `python3 scripts/design_plan_record.py <design-plan.md> "
+                "--deck %s --dispatched`" % (deck_dir or ".")]
+    path = _resolve(pf["path"], deck_dir)
+    if not os.path.isfile(path):
+        return ["the recorded design plan %s does not exist — record the file the art director returned"
+                % pf["path"]]
+    faults = []
+    if pf.get("sha256") != _sha(path):
+        faults.append("the design plan %s changed after it was recorded — re-run design_plan_record.py on "
+                      "the version the deck was built from" % pf["path"])
+    with open(path, encoding="utf-8", errors="replace") as f:
+        faults += validate(f.read())
+    if pf.get("dispatched") is not True:
+        if pf.get("waived_category") not in WAIVER_CATEGORIES or not str(pf.get("waived") or "").strip():
+            faults.append("the design plan is SELF-AUTHORED (dispatched: false) with no allowed waiver — "
+                          "dispatch the art director, or record why one could not run: --waived \"<why>\" "
+                          "--category %s" % " | ".join(WAIVER_CATEGORIES))
+    return faults
+
+
+def record(plan_path, deck_dir, dispatched, waived=None, category=None) -> dict:
+    if not os.path.isfile(plan_path):
+        raise SystemExit("[design_plan_record] no such file: %s" % plan_path)
+    with open(plan_path, encoding="utf-8", errors="replace") as f:
+        faults = validate(f.read())
+    if faults:
+        raise SystemExit("[design_plan_record] %s is not a complete Design plan:\n  - %s"
+                         % (plan_path, "\n  - ".join(faults)))
+    if not dispatched and (category not in WAIVER_CATEGORIES or not (waived or "").strip()):
+        raise SystemExit("[design_plan_record] a self-authored plan needs --waived \"<why>\" and --category "
+                         "one of: %s" % ", ".join(WAIVER_CATEGORIES))
+    gp = os.path.join(deck_dir, GATES)
+    try:
+        with open(gp, encoding="utf-8") as f:
+            gates = json.load(f)
+    except FileNotFoundError:
+        gates = {}
+    except ValueError as e:
+        raise SystemExit("[design_plan_record] %s is not valid JSON: %s" % (gp, e))
+    design = gates.get("design_plan")
+    if not isinstance(design, dict):
+        design = {}
+    abs_plan, abs_deck = os.path.abspath(plan_path), os.path.abspath(deck_dir)
+    rel = os.path.relpath(abs_plan, abs_deck) if abs_plan.startswith(abs_deck + os.sep) else abs_plan
+    pf = {"path": rel, "sha256": _sha(plan_path), "dispatched": bool(dispatched)}
+    if not dispatched:
+        pf.update(waived=waived, waived_category=category)
+    design["plan_file"] = pf
+    gates["design_plan"] = design
+    with open(gp, "w", encoding="utf-8") as f:
+        json.dump(gates, f, ensure_ascii=False, indent=1)
+        f.write("\n")
+    return pf
+
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap.add_argument("plan")
+    ap.add_argument("--deck", required=True)
+    who = ap.add_mutually_exclusive_group(required=True)
+    who.add_argument("--dispatched", action="store_true", help="the plan came from a dispatched art director")
+    who.add_argument("--waived", help="why no art director could be dispatched")
+    ap.add_argument("--category", choices=WAIVER_CATEGORIES)
+    a = ap.parse_args(argv)
+    try:
+        pf = record(a.plan, a.deck, a.dispatched, a.waived, a.category)
+    except SystemExit as e:
+        print(e, file=sys.stderr)
+        return 2
+    print("[design_plan_record] recorded %s (%s)" % (pf["path"], "dispatched" if pf["dispatched"]
+                                                     else "SELF-AUTHORED — " + pf["waived_category"]))
+    return 0
+
+
+try:                                            # console safety: a legacy code page must
+    from _console import safe_stdio             # degrade a character, never kill the report
+    safe_stdio()
+except Exception:
+    pass
+
+
+if __name__ == "__main__":
+    sys.exit(main())

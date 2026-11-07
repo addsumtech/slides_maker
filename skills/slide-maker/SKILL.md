@@ -693,6 +693,16 @@ checklist** (which the Step-5 critic's design lens then applies), and the **imag
 art director is *one mind* over the whole deck — only it sees every slide at once, so deck rhythm and
 where the appear-builds fall are its call, not the builder's.
 
+🔴 **On a host that CAN dispatch subagents, the art director IS a subagent, and its Design plan is a
+FILE.** `python3 scripts/dispatch_brief.py prompt --brief <brief> --role design` prints its prompt; save
+the Design plan it returns as a .md file next to the deck brief (plan files never ship beside the
+deck), then record it: `python3 scripts/design_plan_record.py <design-plan.md> --deck <deck-dir>
+--dispatched`. The hand-off gate re-reads that file — slide-design.md's Output sections and its
+self-verify checks — and blocks without it; a host that cannot dispatch records
+`--waived "<why>" --category no-dispatch-on-host` and runs the same brief inline *with slide-design.md
+open*. Measured 2026-11-07: eight runs of this skill typed the design fields themselves and none opened
+slide-design.md; the older skill's runs read it, and won a blind design comparison 3–4 of 4.
+
 **The design plan is the cheapest place to change visual direction**, so end the step by showing it
 and getting the user's OK before the canvas is set up or anything is built. **This design intelligence
 runs on EVERY deck — it's how the art director designs, never opt-in per deck — and scales down

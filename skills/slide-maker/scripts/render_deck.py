@@ -3213,6 +3213,20 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
                         .format(n=len(_low_reach["forms"]), t=_low_reach["total"],
                                 s=_low_reach["script"]))
                 print("[gates] form reach WAIVED — %s" % _why[:150])
+
+            # ART-DIRECTOR PLAN — the fields above can be typed by anyone; this asks for the artifact.
+            # Measured 2026-11-07: eight real runs of the current skill, not one opened
+            # agents/slide-design.md, and the older skill whose runs read it won a blind design
+            # comparison 3–4 of 4. design_plan_record.py owns the shape check and the record.
+            import design_plan_record as _dpr
+            _ad = _dpr.gate_faults(design, os.path.dirname(path) or ".")
+            if _ad:
+                die("the Design plan must be the art director's FILE, not only fields typed into this "
+                    "record:\n  - " + "\n  - ".join(_ad))
+            _pf = design["plan_file"]
+            print("[gates] art-director plan %s — %s" % (
+                _pf["path"], "dispatched" if _pf.get("dispatched") is True
+                else "SELF-AUTHORED (%s): %s" % (_pf.get("waived_category"), str(_pf.get("waived"))[:120])))
         else:
             die("no `design_plan` record. Step 2 dispatches agents/slide-design.md as the deck's art "
                 "director; nothing else decides deck rhythm or the signature move.\n"

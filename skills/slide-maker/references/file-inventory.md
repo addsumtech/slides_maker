@@ -557,6 +557,12 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   and `codex_delivery_gate.py` passing (done). Each is said once, in the
   interview's language, recorded in `<deck-dir>/.deck-progress.json`; silent outside a real run (no
   `.deck-gates.json`), never fatal. `progress.py <deck-dir> <stage>` announces one by hand (`--status`).
+- `design_plan_record.py` — records the art director's Design plan as a FILE the hand-off gate re-reads:
+  checks it carries `agents/slide-design.md`'s Output sections (English or Chinese headings) and at least 15
+  of the 19 self-verify checks, then writes `design_plan.plan_file` {path · sha256 · dispatched} into
+  `.deck-gates.json`. `--dispatched` for a plan from a dispatched art director; `--waived "<why>" --category
+  no-dispatch-on-host|tiny-ask` for a self-authored one. `render_deck.py --gate-check` blocks on a missing
+  record, a plan edited after recording, or a self-authored plan without an allowed category.
 - `design_benchmark.py` — design-strength numbers for one built deck (type drama, size tokens, occupancy,
   skeleton repetition, card dominance, envelope monoculture, picture/chart share, standout), read from the
   file and lint's stats; `--compare a.json b.json …` prints decks side by side. ADVISORY and for skill
