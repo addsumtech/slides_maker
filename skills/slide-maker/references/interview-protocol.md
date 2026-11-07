@@ -609,3 +609,13 @@ four template choices:
      branch), **or a Mode-A mimic example** (Q4 "reproduce the look")
      means the look is already decided — **don't offer the gate** in those cases. (A Mode-B mimic
      stays eligible for the lighter case-(b) offer — its palette/mood is re-chosen for the topic.)
+
+
+## Why the length question is on the fallback list
+
+🔴 **The length question is on this list because it was MISSING from it**, while
+`references/interview-protocol.md` had carried "deck length is ALWAYS the user's choice — surface
+it, never silently derive it" the whole time. A runtime with a choice UI reads that file and asks;
+a plain-chat runtime copies THIS block, and this block never mentioned length. That is the
+layering failure this skill keeps re-learning: a rule in layer 2 with no trigger in layer 1 is a
+rule that only fires on the hosts that were already going to follow it.

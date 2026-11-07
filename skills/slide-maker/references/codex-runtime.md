@@ -829,3 +829,15 @@ required, disclose it as an **unverified draft — Codex gate not applicable**, 
 clean render or generic PPTX inspection as equivalent proof.
 
 This command is **not** part of Claude Code's hand-off and must not be added to its default pipeline.
+
+
+## Codex PPTX routing — HARD RULE
+
+**Codex PPTX routing — HARD RULE.** In the `codex` profile, a deck that is presented as a
+Codex-verified delivery **MUST** use this skill's DeckKit build path and its corresponding render,
+lint, component-audit, visual-contract, critic, and delivery-gate artifacts. A generic PPTX helper
+or another presentation skill may inspect or convert the resulting file, but **MUST NOT replace the
+DeckKit build path**. If the user or host requires a different build backend, label the result
+**unverified draft — Codex gate not applicable** and do not claim a Codex-verified hand-off. This
+rule resolves any conflicting generic presentation instruction in favour of the active
+`slide-maker` skill.

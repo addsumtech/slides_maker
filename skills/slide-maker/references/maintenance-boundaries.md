@@ -38,3 +38,36 @@ entry says *why*, not just *don't*.
 | **Re-implement the anchor-proof rule inside either gate** | `render_deck.py --gate-check` and `codex_delivery_gate.py` both enforce it and have already diverged once on this exact field — the file key was spelled `path` in one and `png` in the other, so a bridged run wrote what its own gate demanded and the other rejected it for the key name alone. `scripts/anchor_proof.py` is the single place the rule is written; `tests/test_anchor_proof.py` asserts by AST that both still import it. A local copy looks correct in review and simply stops being the same rule six months later. |
 | **Grow `evals.json` toward a scenario count** | Scenarios are chosen by BLIND SPOT, not by number. Each of the later three sits on a defect class this repo has actually shipped while every gate passed clean — CJK faces, signed native bars, non-16:9 — and each arrived with an assertion that did not exist before it. A scenario that only re-runs assertions the existing ones already run measures nothing new; twenty of those are not broader coverage, they are a longer bill on a run that builds real decks with real tokens. And do not add an eval whose input artifact does not exist: unreproducible scenarios inflate the count and decide nothing. |
 | **Move a check from deterministic code into the critic's judgment** | The direction of travel is one-way: deterministic > required field > checklist > prose. A contrast ratio, a bar-length proportion, a schema order — each has one arithmetic answer, and paying model prices for it in a dispatch that might not look next time is a downgrade even when the model gets it right. The reverse move (critic judgment → deterministic check) is always welcome. |
+
+
+## Enforcement invariant (moved from SKILL.md)
+
+> **Enforcement invariant — binding on THIS run when you meet a rule, and on anyone evolving this
+> skill when they add one:** every 🔴 MUST must be *wired into a gate
+> artifact* — an interview question, a required plan field/column, a self-verify item, the PRE-FLIGHT
+> checklist (Step 4), a deterministic lint check, or a named critic-rubric item. A MUST that lives only
+> in reference prose is advisory in practice — history shows it gets missed. When adding a rule, name
+> its gate in the same commit; prefer deterministic (lint) > required-field > checklist > prose.
+>
+> **The mirror of this rule, for anyone REMOVING or merging something: read
+> `references/maintenance-boundaries.md` first.** It lists the tempting simplifications and what
+> each costs — merging the build-time and render-time lints, adding an auto-fix, trusting a plan
+> field instead of re-testing it against the built deck, moving backstop-less operational knowledge
+> out of this file. `check_skill_lossless.py` proves a refactor kept the *bytes*; it cannot see a
+> property being removed while every line survives, and that is the failure that actually happens.
+
+
+## Changing the SKILL itself — score it
+
+**Changing the SKILL itself? Score it, don't guess.** `scripts/run_eval.py --score <deck-dir>
+--eval <id>` checks a produced deck against `evals/evals.json` — machine-decidable assertions
+only (pptx exists · hard-lint clean · the `.deck-gates.json` blocks present · the user's numbers
+verbatim on a slide · **no figure the prompt never supplied** · notes coverage · and
+`reference_reached`, which needs `--transcript` and is the ONLY way to answer *was that reference
+actually read during the run*). Deliberately no taste scoring: reference-similarity rewards
+imitation and closed-form beauty composites fight this skill's own diversity gates, so both were
+examined and rejected. `--record` appends the result under the current `VERSION` so "this
+version is better" stops being an impression. 🔴 A **skipped** assertion is not a pass. This
+exists because the suites in `tests/` all ask whether the CODE works, and a lossless refactor can
+score 2298/2298 while the next live run reads 3 of 10 reference files and ships zero icons —
+which has happened, twice.

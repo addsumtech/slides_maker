@@ -248,3 +248,61 @@ Before claiming "deck complete" in auto mode, verify:
 
 If any checkbox is unchecked, the deck is not ready. "Auto mode" is not a waiver for
 incomplete work.
+
+
+## The per-deck AUTO WAIVER — full text
+
+**The per-deck AUTO WAIVER (distinct from Standard mode, which is the default — and never
+invisible).** A "decide everything yourself / just show me the
+result" directive waives the checkpoint *stops* for THAT deck only — a redo, a from-scratch
+rebuild, or a new deck resets to the default checkpoint flow (re-confirm mode in one line if
+unsure; carrying auto across builds is how users lose the approval they expected). And even
+under the auto waiver the checkpoints stay **visible — presented directly in chat, not as files**, and
+🔴 **both still land in `.deck-gates.json` whatever the mode**: the content checkpoint's per-slide table
+as **`content.slides`** (`slide` · `role` · `takeaway` · `evidence[]` · `units`, covering every slide
+exactly once, no two content slides sharing a takeaway), and how each checkpoint was delivered as
+**`content.checkpoint`** / **`design_plan.checkpoint`** (`{"mode": "approved"|"auto", "record": …}`).
+Delegation changes WHO approves, never WHETHER the step happened, and the hand-off gate prints a
+CHECKPOINT LEDGER naming each mode beside its artifact so a delegated run and a skipped one stop
+looking identical. Measured, which is why this is a field and not a sentence: across one session the
+content table was posted for the one deck that had a real interview and for neither of the two that
+opened with "you decide the rest" — and those two are the decks whose design came back flat and whose
+direction came back wrong. `content.slides` is not a new field either: `codex_delivery_gate.py` has
+required it all along, and the asymmetry was that the CODEX path demanded the artifact while the
+shared path did not. Under a genuine exception, waive it in writing (`content.slides_waived`). Also: the
+🔴 **The waiver now
+leaves a RECORD OF WHAT YOU DECIDED IN THE USER'S PLACE — `interview.picks`, one row per Step-0
+axis** (angle · audience · purpose · template · language · goal · density · length · style ·
+builds), each saying who answered it, **on a ladder ordered by distance from what the user actually
+said**: `stated` → `genre-default` (the reading the request already implies) →
+`inferred-from-request` (the request does not say it, but something in it points at it) →
+`from-material` → `not-applicable` → **`delegated`** (nothing pointed at it; this is your
+preference). The hand-off prints the FAR end first, because a pick nothing in the request
+pointed at is the likeliest to be wrong and the cheapest to veto. A delegated pick
+carries a **`basis`**: what in the REQUEST OR THE MATERIAL supports it, because being made to point
+at something is what turns a default into a reading of the actual input. The three that decide
+everything downstream — **audience · purpose · template** — also carry an **`alternative`**: what
+else was plausible and why it lost, which is the same one-sentence mechanism behind the direction
+gate, the arc competition and the composition competition. 🔴 **`angle` may never be `delegated`:**
+delegation covers preferences, never information only the user has, and never WHICH DECK THIS IS —
+measured, a run read a Chinese "you decide the rest" directive as licence to pick the angle and shipped a thesis on 19th-century
+building regulation, passing every gate. Enforced by `scripts/delegated_picks.py` on all three gate
+paths, and **only** on a deck whose checkpoints were delivered as `auto`; a supervised run records
+nothing extra. **Record each row with `python3 scripts/deck_gates.py picks <deck> --set AXIS=VALUE
+--source … [--basis …] [--alternative …]`** — validated before it is written; `deck_gates.py merge <deck>
+<fragment.json>` takes a plan's gate block — never hand-edited JSON. Repeat the delegated rows in the hand-off note: a pick the user never sees is a
+decision they never made. Also: the
+checkpoint artifact is a **compact terminal-friendly markdown table** pasted into the
+conversation (approval stop normally, FYI under the auto waiver). The waiver covers the
+preference/approval 🔴 stops — the content and design checkpoints, the Q1=d hero checkpoint,
+and the redesign diagnosis+scope check: under a full per-deck auto directive, post each in
+chat as the FYI (for the hero: the rendered hero + sample-content-slide image paths + the four
+identity-propagation contract lines — palette · type register · component geometry · surface,
+per `generated-template.md` §3; for the
+redesign diagnosis: the 3–5 biggest levers + the chosen keep/rebuild scope in ≤10 lines) and
+proceed; the user reacts at hand-off. **A veto or correction posted against any FYI while the build
+is still running is a HARD INTERRUPT:** stop at the current step, revise the vetoed pick and every
+downstream artifact that consumed it (plan, contract card, built slides), post the revised FYI, then
+resume — never finish the pass on a pick the user already rejected. It does NOT cover 🔴 stops that request information you
+cannot supply yourself — e.g. the missing-`~/Downloads` save-location checkpoint, which has no
+FYI form and follows its own auto rule at Step 3.

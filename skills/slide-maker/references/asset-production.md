@@ -303,3 +303,28 @@ generated or sourced. Fold in the user's design edits, then set up the canvas (S
     expression of what the code computes (verify against the code), not invented or wrongly-simplified.
   - Either way the **fidelity rule applies** — verify the rendered math against the source.
   `extract_pdf.py` is for figures/tables; formulas go through `equation_native` (editable) / `equation_png` (2-D).
+
+
+## Dispatch the image manifest — then keep working
+
+> ### 🔴 The moment you have a folder, DISPATCH THE IMAGE MANIFEST — then keep working
+> Generated plates are the slowest thing in this pipeline (~30–90s each, and the scripts run them
+> concurrently). Authoring the build script is the longest thing YOU do. They are independent:
+> generation is waiting on a hosted model, authoring is you writing Python. **Run them at the same
+> time.** Put every approved plate — hero, dividers, interior, per-slide — into ONE manifest, start
+> it, and go straight on to the canvas and the build script without waiting. By the time you
+> *execute* the script the images are on disk, and you paid for them in wall clock you were
+> spending anyway.
+> - **The build RUN is the barrier, not your judgment** — `python-pptx` raises on a missing image
+>   file, so a script executed too early fails loudly and names the file. There is no version of
+>   this that quietly ships a deck with holes in it.
+> - **The one thing that genuinely blocks: the signature slide's assets.** Step 4 opens with the
+>   SIGNATURE PROOF, so `asset-prep` delivers that slide's plate/figure/icons first (its brief
+>   already says so). Everything else can land while you author.
+> - **Order the manifest to match:** signature slide first, then the rest.
+> - **Do not** dispatch before the Step-2 DESIGN checkpoint is approved — the prompts, placements
+>   and opt-ins are exactly what that checkpoint locks, and regenerating a rejected plate costs
+>   more than it saved.
+>
+> *(Serial by default was never a decision anyone made — the pipeline simply read top-to-bottom.
+> Measured cost of leaving it serial: the full generation batch, dead, before authoring starts.)*
