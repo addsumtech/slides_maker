@@ -12,6 +12,7 @@ with no independent critic ever involved.
 from __future__ import annotations
 
 import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
+import _ad_plan  # noqa: E402 — the art director's plan file the gate re-reads
 import json
 import os
 import subprocess
@@ -304,30 +305,9 @@ def write_proof(dest: Path) -> None:
         im.save(dest / name)
 
 
-# The art director's Design plan is a FILE the gate re-reads (scripts/design_plan_record.py). No
-# fixture here is ABOUT that artifact, so a valid one is written beside each deck, the same way the
-# interview answers are filled in — each test stays about the thing it checks.
-AD_PLAN = ("### Design language\nfixture\n### Deck rhythm\nfixture\n### Per-slide design\nfixture\n"
-           "### Form ledger\nfixture\n### Design self-verify\n"
-           + "\n".join("- (%s) ok" % c for c in "abcdefghijklmnopqrs") + "\n")
-
-
-def with_ad_plan(gates: dict, deck_dir) -> dict:
-    import hashlib
-    d = gates.get("design_plan")
-    if not isinstance(d, dict) or d.get("waived") or "plan_file" in d:
-        return gates
-    scratch = Path(deck_dir).parent / (Path(deck_dir).name + "-scratch")   # plan files never ship
-    scratch.mkdir(exist_ok=True)                                              # beside the deck
-    p = scratch / "design-plan.md"
-    p.write_text(AD_PLAN, encoding="utf-8")
-    pf = {"path": str(p), "sha256": hashlib.sha256(p.read_bytes()).hexdigest(), "dispatched": True}
-    return dict(gates, design_plan=dict(d, plan_file=pf))
-
-
 def run_gate(deck: Path, gates: dict, *flags: str) -> tuple[int, str]:
     gates = fit_content(gates, deck)
-    gates = with_ad_plan(gates, deck.parent)
+    gates = _ad_plan.with_ad_plan(gates, deck.parent)
     if "interview" not in gates:                 # the four recorded answers are now required;
         gates = dict(gates, interview={          # no fixture below is ABOUT the interview, so
             "language": "English", "density": "balanced",     # filling it here keeps each test

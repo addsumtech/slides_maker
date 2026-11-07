@@ -31,6 +31,7 @@ Three holes are closed here, and the first is the sharpest:
 Run:  python3 tests/test_step1_artifacts.py
 """
 import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
+import _ad_plan  # noqa: E402 — the art director's plan file the gate re-reads
 import copy
 import json
 import os
@@ -83,6 +84,7 @@ def gate(deck, gates):
     if "interview" not in gates:
         gates = dict(gates, interview={"language": "English", "density": "balanced",
                                        "length": "medium 9-15", "goal": "inform"})
+    gates = _ad_plan.with_ad_plan(gates, deck.parent)
     (deck.parent / ".deck-gates.json").write_text(json.dumps(gates, ensure_ascii=False),
                                                   encoding="utf-8")
     p = subprocess.run([sys.executable, str(RENDER), str(deck), "--gate-check", "--static"],

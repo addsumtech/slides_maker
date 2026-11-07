@@ -22,6 +22,7 @@ The batching is only worth having if it did not weaken anything, so both directi
 Run:  python3 tests/test_gate_batching.py
 """
 import _hermetic  # noqa: F401,E402 — never read the user's own taste.md / taste ledger
+import _ad_plan  # noqa: E402 — the art director's plan file the gate re-reads
 import copy
 import json
 import pathlib
@@ -58,6 +59,7 @@ def gate(deck, gates, *flags):
         gates = dict(gates, interview={          # no fixture below is ABOUT the interview, so
             "language": "English", "density": "balanced",     # filling it here keeps each test
             "length": "medium 9-15", "goal": "inform"})       # about the thing it checks
+    gates = _ad_plan.with_ad_plan(gates, deck.parent)
     (deck.parent / ".deck-gates.json").write_text(json.dumps(gates), encoding="utf-8")
     p = subprocess.run([sys.executable, str(RENDER), str(deck), "--gate-check", "--static", *flags],
                        capture_output=True, text=True)
