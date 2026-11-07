@@ -65,7 +65,7 @@ def _sheet(left_dir, right_dir, path):
     sheet.save(path)
 
 
-def make_pairs(entries: list[dict], out_dir: str, seed: int) -> list[dict]:
+def make_pairs(entries: list[dict], out_dir: str, seed: int, comparisons=COMPARISONS) -> list[dict]:
     os.makedirs(out_dir, exist_ok=True)
     rng = random.Random(seed)
     by = {}
@@ -74,7 +74,7 @@ def make_pairs(entries: list[dict], out_dir: str, seed: int) -> list[dict]:
     pairs, key = [], {}
     for brief in sorted(by):
         arms = by[brief]
-        for x, y in COMPARISONS:
+        for x, y in comparisons:
             if x not in arms or y not in arms:
                 continue
             for left, right in ((arms[x], arms[y]), (arms[y], arms[x])):
@@ -96,9 +96,12 @@ def main(argv=None) -> int:
     ap.add_argument("entries")
     ap.add_argument("--out", required=True)
     ap.add_argument("--seed", type=int, default=20261107)
+    ap.add_argument("--compare", nargs="+", metavar="X:Y",
+                    help="arm pairs to compare (default v420:current current:baseline)")
     a = ap.parse_args(argv)
     with open(a.entries, encoding="utf-8") as f:
-        pairs = make_pairs(json.load(f), a.out, a.seed)
+        comps = tuple(tuple(c.split(":", 1)) for c in a.compare) if a.compare else COMPARISONS
+        pairs = make_pairs(json.load(f), a.out, a.seed, comps)
     print("{} sheet(s) in {}".format(len(pairs), a.out))
     return 0
 

@@ -72,5 +72,9 @@ check("the sheet is built from slide PNGs, not the lint contact sheet", (0, 0, 0
 again = MP.make_pairs(entries, str(TMP / "pairs2"), seed=7)
 check("same seed, same pairing", [(p["left"], p["right"]) for p in again] == [(p["left"], p["right"]) for p in pairs])
 
+custom = MP.make_pairs(entries, str(TMP / "pairs3"), seed=7, comparisons=(("v420", "baseline"),))
+check("custom comparisons: only the requested pair, both orders", len(custom) == 4 and
+      {p["comparison"] for p in custom} == {"v420-vs-baseline"}, [p["comparison"] for p in custom])
+
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 sys.exit(1 if FAIL else 0)
