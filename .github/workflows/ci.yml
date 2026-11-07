@@ -552,6 +552,13 @@ jobs:
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/progress.log || {
             echo "::error::progress suite did not run to completion"; exit 1; }
 
+      - name: Design benchmark (design-strength numbers for side-by-side comparison)
+        run: |
+          set -o pipefail
+          python tests/test_design_benchmark.py | tee /tmp/design_benchmark.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/design_benchmark.log || {
+            echo "::error::design-benchmark suite did not run to completion"; exit 1; }
+
       - name: Deck versions (snapshot · diff numbers-first · restore through the source)
         run: |
           set -o pipefail

@@ -557,6 +557,11 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   and `codex_delivery_gate.py` passing (done). Each is said once, in the
   interview's language, recorded in `<deck-dir>/.deck-progress.json`; silent outside a real run (no
   `.deck-gates.json`), never fatal. `progress.py <deck-dir> <stage>` announces one by hand (`--status`).
+- `design_benchmark.py` — design-strength numbers for one built deck (type drama, size tokens, occupancy,
+  skeleton repetition, card dominance, envelope monoculture, picture/chart share, standout), read from the
+  file and lint's stats; `--compare a.json b.json …` prints decks side by side. ADVISORY and for skill
+  developers: run it after a large change on decks built from the same material, against the gallery
+  decks, to see whether the skill got timid. Not wired into any gate.
 - `source_check.py` — a deck built from the USER'S OWN material, held to that material (local, no network,
   no model). `numbers <deck-dir>` traces every number on the built slides to the files in `content.sources`
   (pdf text layer · docx · pptx · xlsx cell values incl. percent formats · csv · md/txt/html); a number not
