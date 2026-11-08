@@ -884,6 +884,12 @@ deck's ground (a dark page in a light deck or the reverse) — the peak, the key
 paints the QUIET ground on every content page, so a flip is painted on purpose:
 `dk.slide_background(slide, <the register's deep colour>)` and ink re-chosen for that ground (contrast
 floors still apply). The hand-off gate reads the rendered pages and refuses a planned flip that is not built.
+🔴 **And one `hero:` line — the page the deck exists for, set at full volume.** `hero: slide <n> — <the number or
+words it is built around>`: its largest type must reach **2.5x** the deck's typical top size (the gate measures
+the built file and names the target size), with the deck's accent at full strength on it. Or `hero: none —
+<conservative | template-locked | tiny-deck | image-led>: <why>` (image-led: a full-bleed picture or a character
+carries the peak). *(Measured 2026-11-08 on a launch brief: the winning decks' biggest type sat at 5.7–7.1x the
+deck's typical top size, the gallery decks at 2.3–6.5x; the losing deck at 1.6x — "tidy but quiet".)*
 *(Measured 2026-11-08: the older skill's decks flipped 1–3 interior pages each and won a blind design
 comparison on every consistent pair; the newer decks flipped 0–1 — dark covers and closers around one
 quiet ground — and the reviewers named the missing light/dark alternation every time.)*

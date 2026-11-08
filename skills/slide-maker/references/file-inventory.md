@@ -570,6 +570,8 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   It also reads the plan's `grounds:` line (light/dark pacing: `flips <slides>` — two or more interior pages on
   the flipped ground — or `single — <conservative | visual-language | template-locked | tiny-deck>`) and the gate
   checks the rendered pages carry each planned flip (`ground_faults`).
+  And the `hero:` line (`slide <n>` — its largest type must reach 2.5x the median of every slide's largest type,
+  measured on the built file by `hero_faults` — or `none — <conservative | template-locked | tiny-deck | image-led>`).
 - `design_benchmark.py` — design-strength numbers for one built deck (type drama, size tokens, occupancy,
   skeleton repetition, card dominance, envelope monoculture, picture/chart share, standout), read from the
   file and lint's stats; `--compare a.json b.json …` prints decks side by side. ADVISORY and for skill

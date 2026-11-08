@@ -48,6 +48,13 @@ CHECK_LETTERS = "abcdefghijklmnopqrs"
 SINGLE_GROUND = ("conservative", "visual-language", "template-locked", "tiny-deck")
 FLIP_DELTA = 0.35       # luminance distance from the deck's median ground that reads as a flipped page
 _GROUNDS_RE = re.compile(r"^\s*[-*]?\s*(?:\*\*)?(grounds|底色)(?:\*\*)?\s*[:：]\s*(.+)$", re.I | re.M)
+# The hero page — one moment of type drama. Measured 2026-11-08 on the launch brief: the winning decks put
+# their biggest type at 5.7–7.1x the deck's typical top size (the gallery decks 2.3–6.5x); the losing one at
+# 1.6x — "tidy but quiet". A planned hero is checked on the built file: its largest type must reach HERO_RATIO
+# times the median of every slide's largest type.
+HERO_NONE = ("conservative", "template-locked", "tiny-deck", "image-led")
+HERO_RATIO = 2.5
+_HERO_RE = re.compile(r"^\s*[-*]?\s*(?:\*\*)?(hero|高潮页)(?:\*\*)?\s*[:：]\s*(.+)$", re.I | re.M)
 MIN_CHECKS = 15
 WAIVER_CATEGORIES = ("no-dispatch-on-host", "tiny-ask")
 
@@ -68,6 +75,69 @@ def parse_grounds(text: str):
         cat, _, reason = why.partition(":") if ":" in why else why.partition("：")
         return {"single": cat.strip().lower(), "why": reason.strip()}
     return {"bad": body}
+
+
+def parse_hero(text: str):
+    """The plan's `hero:` line — {"slide": n, "why"} or {"none": category, "why"}, {"bad": raw}, or None."""
+    m = _HERO_RE.search(text or "")
+    if not m:
+        return None
+    body = m.group(2).strip()
+    parts = re.split(r"\s+[—–]\s+|\s+--?\s+", body, maxsplit=1)
+    head, why = parts[0].strip(), (parts[1].strip() if len(parts) > 1 else "")
+    low = head.lower()
+    if low.startswith(("none", "无")):
+        cat, _, reason = why.partition(":") if ":" in why else why.partition("：")
+        return {"none": cat.strip().lower(), "why": reason.strip()}
+    n = re.findall(r"\d+", head)
+    if n and (low.startswith(("slide", "第", "p")) or head.strip().isdigit()):
+        return {"slide": int(n[0]), "why": why}
+    return {"bad": body}
+
+
+def _slide_tops(pptx_path):
+    """The largest font size (pt) on each slide, groups included; 0 for a slide with no sized text."""
+    from pptx import Presentation
+    from pptx.enum.shapes import MSO_SHAPE_TYPE
+
+    def walk(shapes):
+        for sh in shapes:
+            if sh.shape_type == MSO_SHAPE_TYPE.GROUP:
+                yield from walk(sh.shapes)
+            else:
+                yield sh
+    tops = []
+    for slide in Presentation(pptx_path).slides:
+        top = 0.0
+        for sh in walk(slide.shapes):
+            if not getattr(sh, "has_text_frame", False) or not sh.has_text_frame:
+                continue
+            for p in sh.text_frame.paragraphs:
+                for r in p.runs:
+                    sz = r.font.size or p.font.size
+                    if sz is not None and r.text.strip():
+                        top = max(top, sz.pt)
+        tops.append(top)
+    return tops
+
+
+def hero_faults(hero, pptx_path: str) -> list[str]:
+    """[] when the planned hero page carries the deck's type drama; a named fault with a target size otherwise."""
+    if not isinstance(hero, dict) or not hero.get("slide") or not pptx_path or not os.path.isfile(pptx_path):
+        return []
+    tops = _slide_tops(pptx_path)
+    n = hero["slide"]
+    if not 1 <= n <= len(tops):
+        return ["the planned hero is slide %d, but the deck has %d slides" % (n, len(tops))]
+    sized = sorted(t for t in tops if t > 0)
+    if not sized:
+        return []
+    med = sized[len(sized) // 2]
+    if tops[n - 1] < HERO_RATIO * med:
+        return ["the hero page (slide %d) tops out at %.0f pt — %.1fx the deck's typical top size (%.0f pt). The "
+                "peak needs its number or words at %.0f pt or more (%.1fx), so it reads as the moment the deck "
+                "exists for" % (n, tops[n - 1], tops[n - 1] / med, med, HERO_RATIO * med, HERO_RATIO)]
+    return []
 
 
 def validate(text: str) -> list[str]:
@@ -92,6 +162,14 @@ def validate(text: str) -> list[str]:
     elif "single" in g and g["single"] not in SINGLE_GROUND:
         faults.append("`grounds: single` needs a category from: %s (got %r)"
                       % (", ".join(SINGLE_GROUND), g["single"]))
+    h = parse_hero(text)
+    if h is None:
+        faults.append("no `hero:` line in the Deck rhythm — write `hero: slide <n> — <the number or words it "
+                      "is built around>` or `hero: none — <%s>: <why>`" % " | ".join(HERO_NONE))
+    elif "bad" in h:
+        faults.append("the `hero:` line must be `slide <n>` or `none`, not %r" % h["bad"][:60])
+    elif "none" in h and h["none"] not in HERO_NONE:
+        faults.append("`hero: none` needs a category from: %s (got %r)" % (", ".join(HERO_NONE), h["none"]))
     found = set(re.findall(r"\(([a-s])\)", text))
     if len(found) < MIN_CHECKS:
         faults.append("carries %d of the 19 Design self-verify checks (a)–(s); the plan is not ready until "
@@ -184,7 +262,10 @@ def record(plan_path, deck_dir, dispatched, waived=None, category=None) -> dict:
     rel = os.path.relpath(abs_plan, abs_deck) if abs_plan.startswith(abs_deck + os.sep) else abs_plan
     with open(plan_path, encoding="utf-8", errors="replace") as f:
         grounds = parse_grounds(f.read())
-    pf = {"path": rel, "sha256": _sha(plan_path), "dispatched": bool(dispatched), "grounds": grounds}
+    with open(plan_path, encoding="utf-8", errors="replace") as f:
+        hero = parse_hero(f.read())
+    pf = {"path": rel, "sha256": _sha(plan_path), "dispatched": bool(dispatched), "grounds": grounds,
+          "hero": hero}
     if not dispatched:
         pf.update(waived=waived, waived_category=category)
     design["plan_file"] = pf

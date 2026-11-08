@@ -3230,6 +3230,14 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
             _gf = _dpr.ground_faults(_g, os.path.join(os.path.dirname(path) or ".", "render"))
             if _gf:
                 die("the Design plan's light/dark pacing is not in the built deck:\n  - " + "\n  - ".join(_gf))
+            _h = _pf.get("hero") or {}
+            _hf = _dpr.hero_faults(_h, pptx)
+            if _hf:
+                die("the Design plan's hero page does not carry the deck's type drama:\n  - " + "\n  - ".join(_hf))
+            if _h.get("slide"):
+                print("[gates] hero: slide %d carries the deck's biggest type, as planned" % _h["slide"])
+            elif _h.get("none"):
+                print("[gates] hero: none (%s) — %s" % (_h["none"], str(_h.get("why"))[:100]))
             if _g.get("flips"):
                 print("[gates] grounds: flips on slides %s built as planned" % ", ".join(map(str, _g["flips"])))
             elif _g.get("single"):

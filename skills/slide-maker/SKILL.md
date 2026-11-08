@@ -708,7 +708,9 @@ slide-design.md; the older skill's runs read it, and won a blind design comparis
 number, a turn) or `grounds: single — <conservative | visual-language | template-locked | tiny-deck>: <why>`.
 Register kits paint the quiet ground on every content page, so a flip is painted on purpose with
 `dk.slide_background(slide, <deep colour>)`. Measured 2026-11-08: the older skill's decks flipped 1–3 interior
-pages each and won every consistent blind pair; the newer ones flipped 0–1.
+pages each and won every consistent blind pair; the newer ones flipped 0–1. The same rhythm names a **`hero: slide <n>`**
+whose number or words reach 2.5x the deck's typical top type size, accent at full strength (or `hero: none —
+conservative | template-locked | tiny-deck | image-led: <why>`); the gate measures it on the built file.
 
 **The design plan is the cheapest place to change visual direction**, so end the step by showing it
 and getting the user's OK before the canvas is set up or anything is built. **This design intelligence

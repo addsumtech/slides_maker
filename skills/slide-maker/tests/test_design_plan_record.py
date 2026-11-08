@@ -37,16 +37,16 @@ def check(name, cond, detail=""):
 
 
 CHECKS = "\n".join("- **(%s)** passes — reason" % c for c in "abcdefghijklmnopqrs")
-PLAN_EN = ("# Design plan\n\n### Design language\nconcept: a ledger\n\n### Deck rhythm\nquiet-loud-quiet\ngrounds: flips 4, 8 — the two turns of the argument\n\n"
+PLAN_EN = ("# Design plan\n\n### Design language\nconcept: a ledger\n\n### Deck rhythm\nquiet-loud-quiet\ngrounds: flips 4, 8 — the two turns of the argument\nhero: slide 6 — the 86% that the deck exists for\n\n"
            "### Per-slide design\n| 1 | cover |\n\n### Form ledger + diversity gate\ncards: 2\n\n"
            "### Design self-verify\n" + CHECKS + "\n")
-PLAN_ZH = ("# 设计方案\n\n## 设计语言\n概念：账本\n\n## 整体节奏\n静-响-静\n底色：翻转 5、9 — 两个转折\n\n## 逐页设计\n| 1 | 封面 |\n\n"
+PLAN_ZH = ("# 设计方案\n\n## 设计语言\n概念：账本\n\n## 整体节奏\n静-响-静\n底色：翻转 5、9 — 两个转折\n高潮页：第 6 页 — 86%\n\n## 逐页设计\n| 1 | 封面 |\n\n"
            "## 形式台账\n卡片 2\n\n## 设计自检\n" + CHECKS + "\n")
 
 print("── validate")
 check("an English plan with every Output section validates", DPR.validate(PLAN_EN) == [], DPR.validate(PLAN_EN))
 check("a Chinese plan with every Output section validates", DPR.validate(PLAN_ZH) == [], DPR.validate(PLAN_ZH))
-no_rhythm = PLAN_EN.replace("### Deck rhythm\nquiet-loud-quiet\ngrounds: flips 4, 8 — the two turns of the argument\n\n", "")
+no_rhythm = PLAN_EN.replace("### Deck rhythm\nquiet-loud-quiet\ngrounds: flips 4, 8 — the two turns of the argument\nhero: slide 6 — the 86% that the deck exists for\n\n", "")
 check("a missing section is named", any("deck rhythm" in f.lower() for f in DPR.validate(no_rhythm)),
       DPR.validate(no_rhythm))
 few = PLAN_EN.replace(CHECKS, "\n".join("- (%s) ok" % c for c in "abcde"))
@@ -118,6 +118,41 @@ f = DPR.ground_faults({"flips": [4, 6]}, str(rd))
 check("a planned flip the deck does not carry is named", any("slide 6" in x for x in f), f)
 check("single ground: nothing to measure", DPR.ground_faults({"single": "conservative"}, str(rd)) == [])
 check("no renders: no fault (not checked)", DPR.ground_faults({"flips": [4, 8]}, str(TMP / "nowhere")) == [])
+
+print("── the hero page (one moment of type drama)")
+check("hero: slide parsed", DPR.parse_hero(PLAN_EN) == {"slide": 6, "why": "the 86% that the deck exists for"},
+      DPR.parse_hero(PLAN_EN))
+check("高潮页：第 N 页 parsed", DPR.parse_hero(PLAN_ZH).get("slide") == 6, DPR.parse_hero(PLAN_ZH))
+no_h = PLAN_EN.replace("hero: slide 6 — the 86% that the deck exists for\n", "")
+check("a plan with no hero line is refused", any("hero" in f for f in DPR.validate(no_h)), DPR.validate(no_h))
+img = PLAN_EN.replace("hero: slide 6 — the 86% that the deck exists for", "hero: none — image-led: the mascot page carries it")
+check("hero: none with an allowed category validates", DPR.validate(img) == [], DPR.validate(img))
+bad_h = PLAN_EN.replace("hero: slide 6 — the 86% that the deck exists for", "hero: none — modest: no")
+check("hero: none with an unknown category is refused", any("hero" in f for f in DPR.validate(bad_h)), DPR.validate(bad_h))
+
+from pptx import Presentation
+from pptx.util import Inches, Pt
+
+
+def deck_with_tops(tops):
+    pr = Presentation()
+    for pt in tops:
+        sl = pr.slides.add_slide(pr.slide_layouts[6])
+        tb = sl.shapes.add_textbox(Inches(1), Inches(1), Inches(8), Inches(3))
+        r = tb.text_frame.paragraphs[0].add_run()
+        r.text, r.font.size = "x", Pt(pt)
+    path = TMP / ("tops_%d.pptx" % len(list(TMP.glob("tops_*.pptx"))))
+    pr.save(path)
+    return str(path)
+
+
+strong = deck_with_tops([60, 28, 28, 30, 28, 120, 28, 28, 40])
+flat = deck_with_tops([44, 28, 28, 30, 28, 40, 28, 28, 40])
+check("a hero page at 4x the deck's typical top size passes", DPR.hero_faults({"slide": 6}, strong) == [],
+      DPR.hero_faults({"slide": 6}, strong))
+f = DPR.hero_faults({"slide": 6}, flat)
+check("a hero page barely bigger than the rest is named, with a target size", f and "slide 6" in f[0] and "pt" in f[0], f)
+check("hero: none measures nothing", DPR.hero_faults({"none": "image-led"}, flat) == [])
 
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 sys.exit(1 if FAIL else 0)
