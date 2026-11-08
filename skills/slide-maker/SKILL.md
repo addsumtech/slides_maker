@@ -2348,8 +2348,9 @@ out explicitly here so they can confirm it.
 > `references/troubleshooting-faq.md` → "Sameness and timidity".
 
 **`--deliverables` refuses to run until `.deck-gates.json` records that the Step-2 design plan, the Step-5
-critic and the Step-6 provenance pass actually ran** (the arc competition, `style_pick`, `motif_generates`,
-`image_sources`, `type_scale`, the critic verdict or its waiver …). It names each missing field; the field
+critic and the Step-6 provenance pass actually ran** — the arc competition; the design plan's `concept`, `boldness`,
+`signature_move`, `carried_by`, `form_ledger`, `icon_family`, `palette`, `type_scale`, `signature_proof`,
+`motif_generates`, `style_pick`, `image_sources`; the critic verdict or its waiver. It names each missing field; the field
 specs are in `references/troubleshooting-faq.md` → "What --deliverables requires".
 
 **Before you write the hand-off note, read `references/handoff-checklist.md` — every deck.** It is the ONE authoritative list of what the note carries (minimal caveats + next steps, never a recap or self-praise) and of the conditional REQUIRED lines the owning rules point here for: `provenance:`, **`review:`** (the effort tier that ran + how it was reached) and **`cost:`** (subagents · tokens · wall-clock — a dial whose bill is never shown builds no intuition), click order, image licences, the GIF note, accepted advisories, `distinctiveness:`, the delegated-picks recap, the optional `ceiling` line, and the two taste-ecosystem offers — **including the save-this-look offer, which is skipped entirely under a per-deck auto directive: never an un-consented registry write.** For a Codex-verified PPTX, the hand-off note is forbidden until the final-file guard passes; an explicit **unverified draft** is the only disclosure alternative.
