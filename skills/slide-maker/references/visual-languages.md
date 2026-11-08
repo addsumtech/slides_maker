@@ -57,7 +57,9 @@ the shared runtime's `$DECK/.deck-gates.json`; on the Codex runtime the same val
    - Either order works: on a folder with no record, `interview --set` writes one holding only the interview, and
      `init` then builds the full skeleton around those answers (it refuses only a record holding more than that).
    - Give `length` in words (`"5 slides"`): a one-character answer such as `5` is refused at hand-off.
-3. **Write the build script** `$DECK/build_repair-cafe.py` with `vl.use` and one page function per slide, each in its own
+3. **Write the build script** `$DECK/build_repair-cafe.py` with `vl.use`: a page function for each STANDARD page, and the
+   anchors (signature · densest · key data) composed for THIS content inside the language (SKILL.md Step 4 → "A visual
+   language is a VOCABULARY") — never a deck made only of page functions. Each slide in its own
    `def slide_NN(prs, k):` (the Codex gate reads the calls inside each `def`). Name it `build_<deck stem>.py` — the
    STYLE APPLIED check looks for exactly that name beside the deck. A deck that is READ rather than presented says so
    from the script: `dk.declare_delivery(HERE, "selfread")` (`presented` — the default — `textheavy`, `selfread`,

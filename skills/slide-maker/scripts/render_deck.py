@@ -4083,21 +4083,31 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
                   "surface has no per-slide budget)" % delivery)
             return
         over, total, median = _density_stats(pptx, budget=70 if delivery == "presented" else 120)
+        # A waiver records the USER's text-heavy choice, never the author's escape (density_choice.py:
+        # twelve real runs waived their way to 83–168 words a slide and lost a blind design comparison).
+        import density_choice as _dc
+        _w_ok, _w_why = _dc.waiver_allowed(gates)
         if total:
-            if isinstance(txt, dict) and txt.get("waived"):
+            if isinstance(txt, dict) and txt.get("waived") and _w_ok:
                 print("[gates] density: {}/{} slide(s) over the presented text budget, median {} "
                       "words — WAIVED: {}".format(over, total, median, str(txt["waived"])[:110]))
+            elif isinstance(txt, dict) and txt.get("waived") and over * 3 > total:
+                die("{} of {} slides are over the {} text budget (median {} words a slide), and the "
+                    "density waiver does not apply: {}".format(over, total, delivery, median, _w_why))
             elif over * 3 > total:
                 die("{} of {} slides are over the {} text budget (median {} words a slide; "
                     "aim ~40, warn >{}). The skill's own reference deck runs at 27.\n"
                     "    A slide is a visual aid for a speaker — the sentences belong in the speaker "
                     "notes, which this deck already has.\n"
-                    "    Cut the on-slide prose, or record the deliberate choice:\n"
+                    "    Cut the on-slide prose, or — ONLY when the USER chose a text-heavy deck — record it:\n"
                     '    "density": {{"waived": "why this deck is meant to be read, not presented"}}'
                     .format(over, total, delivery, median, 70 if delivery == "presented" else 120))
             else:
                 print("[gates] density: {}/{} slide(s) over the text budget, median {} words a slide"
                       .format(over, total, median))
+            _sparse = _dc.sparse_note(median, total)
+            if _sparse:
+                print("[gates] " + _sparse)
 
 
 SAMENESS_WAIVER_KINDS = {

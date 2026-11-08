@@ -563,15 +563,17 @@ four template choices:
      level has *both* text and visuals; what changes is how much each *point* says and how much the
      diagram carries. Offer three concrete levels (this is the "text-heavy vs diagram-heavy" question):
      - **Diagram-heavy** — *a phrase per point* (~3–7 words); a diagram / figure / chart carries the
-       idea, the text is a terse label or takeaway. Lets an audience follow a *speaker*. (Presented default.)
-     - **Balanced** — *one short sentence per point* + a supporting visual; scannable live, still mostly
-       clear when skimmed.
+       idea, the text is a terse label or takeaway. Lets an audience follow a *speaker*.
+     - **Balanced (图文均衡) — the DEFAULT, and the pick when the user delegates** — *one short sentence per
+       point* + a supporting visual; scannable live, still mostly clear when skimmed. Measured 2026-11-08:
+       the decks that won a blind design comparison sat at ~54–66 words a slide; the ones that lost, at
+       83–168.
      - **Text-heavy** — *2–3 self-contained sentences per point* (a short paragraph); the slide reads on
        its own without a speaker, visuals support the prose. For a **read-without-a-speaker** artifact —
        leave-behind, emailed/reference/appendix deck, board pre-read, **poster**, single-slide
        **infographic** — that fuller text is the deliverable, not a flaw.
      **Surface it explicitly (like deck length) and scale the options to delivery (Q2):** a **presented**
-     deck → *diagram-heavy (recommended) ↔ balanced* (a text-heavy presented deck is a wall of text —
+     deck → *balanced (recommended) ↔ diagram-heavy* (a text-heavy presented deck is a wall of text —
      steer away); a **self-read / poster** deck → *balanced ↔ text-heavy*. Don't silently decide it from
      the purpose. (This sets the deck's **delivery mode** — see `references/design-principles.md`.)
    - **"Mimic an example I'll provide"** — the user hands over a **whole deck, a few slides, or even ONE

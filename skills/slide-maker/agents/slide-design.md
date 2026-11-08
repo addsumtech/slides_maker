@@ -927,7 +927,9 @@ NOT a blanket per-slide quota):
   the block-dependency audit passes (§2).
 - **(c) form reasoning** — every non-obvious slide names the alternative its form beat (`form-selection.md`).
 - **(d) design language concrete** — a *named* signature motif + a deliberately-chosen palette/type,
-  never a defaulted light/minimal/blue look with no motif.
+  never a defaulted light/minimal/blue look with no motif. A visual-language pick counts as concrete only when the anchors (signature ·
+  densest · key data) are composed for THIS content inside the language — a deck made only of the kit's page
+  functions reads as a template (measured: it lost a blind comparison three times out of three).
 - **(e) semantic-colour ledger** — present; no accent hue ships without a bound meaning (§6).
 - **(f) appear-builds** — honors the user's WHETHER-choice: if opted OUT (or self-read), every manifest
   line is `static: user opted out` / `static: self-read` and that is complete; if opted IN, the

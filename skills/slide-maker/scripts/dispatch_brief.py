@@ -122,7 +122,14 @@ ROLE_PROMPTS = {
         "🔴 Read `{skill}/agents/slide-design.md` and work to it.\n"
         "🔴 Read the deck brief at `{brief}`, then the APPROVED content plan at `{content_plan}` — the "
         "message is locked; you design on top of it and never re-open it.\n"
-        "Return the Design plan with every required field, including the gate line."),
+        "Design the deck to be BOLD inside the floors: one clear peak page, type drama, pages whose form "
+        "is the idea. Density is balanced (one short sentence per point beside a visual) unless the brief "
+        "records the user's own text-heavy choice — prose goes to the speaker notes. A visual language is a "
+        "vocabulary, not the layouts: compose the signature, densest and key-data pages for this content. "
+        "Icons are the default on categorical content; reach for a deckkit component before hand-building "
+        "a form (`python3 {skill}/scripts/sigs.py --list`).\n"
+        "Return the Design plan with every required field, including the gate line, as markdown in "
+        "slide-design.md's Output shape — it is recorded with design_plan_record.py."),
 }
 
 

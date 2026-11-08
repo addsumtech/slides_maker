@@ -557,6 +557,10 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   and `codex_delivery_gate.py` passing (done). Each is said once, in the
   interview's language, recorded in `<deck-dir>/.deck-progress.json`; silent outside a real run (no
   `.deck-gates.json`), never fatal. `progress.py <deck-dir> <stage>` announces one by hand (`--status`).
+- `density_choice.py` — whose decision a dense deck is, for the density gate in `render_deck.py`: a
+  `density` waiver counts only when `interview.density` is text-heavy AND the user chose it (a `delegated` picks row
+  does not count); balanced (图文均衡, the default) and diagram-heavy decks get no free-text waiver. A deck of 4+
+  slides with a median under 6 words a slide gets a note, never a block.
 - `design_plan_record.py` — records the art director's Design plan as a FILE the hand-off gate re-reads:
   checks it carries `agents/slide-design.md`'s Output sections (English or Chinese headings) and at least 15
   of the 19 self-verify checks, then writes `design_plan.plan_file` {path · sha256 · dispatched} into

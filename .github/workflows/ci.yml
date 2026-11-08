@@ -552,6 +552,13 @@ jobs:
           grep -qE "^[0-9]+ passed, 0 failed" /tmp/progress.log || {
             echo "::error::progress suite did not run to completion"; exit 1; }
 
+      - name: Density choice (a waiver is the user's text-heavy choice, never the author's)
+        run: |
+          set -o pipefail
+          python tests/test_density_choice.py | tee /tmp/density_choice.log
+          grep -qE "^[0-9]+ passed, 0 failed" /tmp/density_choice.log || {
+            echo "::error::density-choice suite did not run to completion"; exit 1; }
+
       - name: Art-director plan (the Design plan is a file the gate re-reads)
         run: |
           set -o pipefail

@@ -146,7 +146,8 @@ checkpoint *stops* for THAT deck only (a redo, a rebuild or a new deck resets to
 there. What binds every auto run: the checkpoints stay **visible** (posted in chat as FYIs) and still land in
 `.deck-gates.json` (`content.slides`, and `content.checkpoint` / `design_plan.checkpoint` with `mode: auto`);
 every Step-0 axis you decided is recorded with `python3 scripts/deck_gates.py picks <deck> --set AXIS=VALUE
---source … [--basis …] [--alternative …]`, and 🔴 **`angle` is never `delegated`**; a veto posted against any FYI
+--source … [--basis …] [--alternative …]`, and 🔴 **`angle` is never `delegated`**; a delegated **`density` is
+balanced (图文均衡)** — only the user can choose text-heavy, and only that choice waives the text budget; a veto posted against any FYI
 while the build runs is a **HARD INTERRUPT** (stop, revise the pick and everything downstream of it, re-post,
 resume); and the waiver never covers a 🔴 stop that asks for information only the user has. The gates check
 the records — the picks through `scripts/delegated_picks.py` on all three gate paths.
@@ -1379,6 +1380,16 @@ A few rules that matter (see `references/design-principles.md`):
   `python3 "$SKILL/scripts/visual_languages.py" --gates NAME --ground G --deck "<deck folder>" --for "<what it is for>"`,
   then run the commands it prints (`--deck` is required). The whole order, canvas to `--gate-check`, every command
   run end to end: `references/visual-languages.md` → "Build a visual-language deck, in order".
+- 🔴 **A visual language is a VOCABULARY, not the deck's layouts.** Its palette, fonts, ground and furniture
+  carry the look, and its seven page functions are the STANDARD pages (cover, section, quote, closing, a plain
+  points or data page) — never hand-roll those. But the three anchors (signature · densest · key data) and every
+  page whose idea has a shape are COMPOSED for this content inside the language: `vl.use`'s palette, fonts and
+  ground, the kit's furniture, deckkit's components (`python3 scripts/sigs.py --example <form> --in <language>`)
+  and icons — and no more than about half the interior pages are stock page functions. Measured 2026-11-07/08:
+  kids-explainer decks built page function by page function, in three different languages, lost a blind
+  comparison to a bespoke deck every time ("repetitive, reads as a template"). When no template is given, the
+  strongest direction is often a register invented from the subject's world (`references/bespoke-registers.md`);
+  a visual language has to beat it at the direction gate on FIT, never on convenience.
 - **Use the source's own figures, WHOLE — integral is the default.** For *any* deck
   (research, work, exec, teaching): if the source — paper, report, doc, existing slide, or a
   chart already produced from the code/data — has a figure (architecture, results, a plot),
