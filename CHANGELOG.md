@@ -9,6 +9,42 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+## [6.2.0] — 2026-11-08
+
+**Design strength restored and gated, a SKILL.md an agent can read to the end, and a run the user can see.**
+A blind comparison against the older v4.2.0 showed the newer skill had become timid: every slide on one quiet
+ground, no page that shouts, and agents skipping half of a 325 KB SKILL.md. This release measures that, fixes what
+was measured, and holds the fixes with gates on the built deck. On the two briefs re-run with the final version
+(a product launch and a city guide), blind side-by-side judging preferred it over both v4.2.0 and 6.1.0 on all eight
+sheets, each pair shown in both orders. Two briefs, one run each: a direction, not a guarantee.
+
+- **Light/dark pacing is planned and built.** The Design plan's Deck rhythm ends with `grounds: flips <slides> —
+  why` (two or more interior pages on the flipped ground) or `grounds: single — <conservative | visual-language |
+  template-locked | tiny-deck>: why`; `--gate-check` reads the rendered pages and refuses a planned flip that is not
+  there. Register kits paint the quiet ground on every content page, so a flip is painted on purpose with
+  `dk.slide_background`.
+- **One hero page, measured.** `hero: slide <n>` names the page the deck exists for; its largest type must reach
+  2.5x the deck's typical top size on the built file (or `hero: none — <conservative | template-locked | tiny-deck |
+  image-led>`).
+- **The art director's Design plan is a file the gate re-reads** (`scripts/design_plan_record.py`): it must carry
+  `agents/slide-design.md`'s Output sections and its self-verify checks, and records whether a dispatched art
+  director wrote it. On a host that can dispatch subagents, the art director and the critic are subagents.
+- **Balanced density (图文均衡) by default**, also for a delegated pick; a density waiver now counts only when the
+  user chose text-heavy.
+- **A visual language is a vocabulary, not the deck's layouts**: stock page functions for the standard pages, the
+  signature, densest and key-data pages composed for the content.
+- **SKILL.md 325 KB → 250 KB, nothing lost.** Script- and gate-backed detail and the long incident accounts moved
+  verbatim into `references/` (setup and gate rules into `troubleshooting-faq.md`, the research budget into
+  `content-plan-spec.md`) with a named-trigger pointer left in place; the component catalogue, the render self-check
+  and the design method stay inline. `check_skill_lossless.py`: every baseline line accounted for.
+- **The user sees the run.** The first full render opens the contact sheet on a desktop session (not CI, not SSH;
+  `SLIDE_MAKER_NO_OPEN=1` turns it off), and the commands that mark each stage print one line to tell the user.
+- **Numbers.** `source_check.py` reads the Codex evidence record, accepts a derived figure in the slide's own unit
+  (万元) and treats month labels as dates; `--write-rows` records the unambiguous rows.
+- **Brand step from a website** (#8): offers `easybrandkit@0.4.0` (pinned) and runs it only on a yes.
+- **For maintainers:** `scripts/design_benchmark.py` (advisory design numbers) and `scripts/design_bench/`
+  (gallery content as test material, blind side-by-side sheets). README: the twelve example decks are back.
+
 ## [6.1.0] — 2026-10-31
 
 **Brand kits, slide-by-slide versions, and every number held to the user's own files.**
