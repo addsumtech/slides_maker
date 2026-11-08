@@ -85,7 +85,7 @@ Two time sinks compress well: ingesting material/assets, and the critic loop.
   Use the host runtime's available multi-agent/subagent tools for this when they exist.
 - **Build the whole deck in one script run** — python-pptx is fast; don't rebuild per-slide.
 - **Cut round-trips, never quality** — every tool call re-sends the whole conversation, so a deck costs
-  `round-trips × context` (the measurements: `references/efficiency-and-iteration.md`). Put independent
+  `round-trips × context` (the measurements: `references/troubleshooting-faq.md`). Put independent
   calls — separate greps, file reads, a verification sweep — in ONE message, and:
   - **Look up EVERY helper you plan to call in one lookup, before writing the build script:**
     `python3 scripts/sigs.py text box native_chart takeaway_rail …` prints each signature, its
@@ -110,7 +110,7 @@ Two time sinks compress well: ingesting material/assets, and the critic loop.
     prompt is ~220 tokens. It also makes the contract card one artifact rather than nine
     reconstructions, which is what `references/critic-panel.md` asks for and cannot check.
   - **Repair with `Edit`, not a whole-script rewrite** (*default*). Which canon rules (Duarte, Minto, Mayer,
-    Tufte…) are gated and which stay judgment: `references/efficiency-and-iteration.md`.
+    Tufte…) are gated and which stay judgment: `references/troubleshooting-faq.md`.
   - 🔴 **NEVER pipe a gate through `tail`/`head`. Read the whole report.** Every gate batches on
     purpose — `deck_gates.py check`, `render_deck.py --gate-check` and `codex_delivery_gate.py`
     each list ALL their faults in one run and number them `[4/9]`. MEASURED, on a real 12-page
@@ -123,7 +123,7 @@ Two time sinks compress well: ingesting material/assets, and the critic loop.
     rendering on a CRITICAL. 🔴 Its LOOP BREAKER binds: after the same fault survives 3 runs, a re-run whose
     edit only moved numbers is REFUSED — re-derive that layout by measurement, or pass
     `--nudge-again "<why>"`. Every completed build is snapshotted into `.versions/` (Step 6 shows the diff).
-    Full behaviour: `references/efficiency-and-iteration.md`.
+    Full behaviour: `references/troubleshooting-faq.md`.
 - **Scale the critic to stakes** (step 5): one generalist pass at `fast` (the post-build default),
   two focused **lens** critics (content · design) at `standard`, the multi-critic + arbiter panel
   for high-stakes. You never skip the loop on your own authority — only the user can, by answering
@@ -282,7 +282,7 @@ exits silently, so it can never be the reason a deck did not get built. It lives
 than in a reference because a check nobody triggers is a check that does not exist. Opt out with
 `SLIDE_MAKER_NO_VERSION_CHECK=1`.
 
-🔴 **When it reports an update (or `DIFFERS … at the same version`), read `references/setup-and-version.md`
+🔴 **When it reports an update (or `DIFFERS … at the same version`), read `references/troubleshooting-faq.md`
 BEFORE replying.** It holds the three options to ASK as the first thing in the conversation (spell out what
 each answer does; under a per-deck AUTO WAIVER do not stop — build on the installed version and say so), the
 per-`shape` update command (never `npx skills add` on a plugin install), the rule to re-read SKILL.md after an
@@ -294,7 +294,7 @@ update, and why `dirty: null` means *unknown*, never "no local changes".
 when everything is present and installs missing pip deps itself. Act on the exit code: **`0`** go on; **`3`**
 LibreOffice is missing — show the user the install command it printed NOW (the render needs it); **`1`** a pip
 dep could not be installed — show the printed command, and never add `--break-system-packages` for them.
-Skip it on a critique/question run. Details: `references/setup-and-version.md`.
+Skip it on a critique/question run. Details: `references/troubleshooting-faq.md`.
 
 **Run this interview every time, from scratch — do not skip it because earlier
 conversation, a previous deck, or context "obviously" implies an answer.** A terse
@@ -366,7 +366,7 @@ when in doubt, keep it. Never assume the **topic/content**, the **style**, or **
 template** — confirm each.
 
 🔴 **Hand-off checks that bind when their record exists** — each runs on both gate paths; the full rules are in
-`references/gated-checks.md`. Record the field whenever it applies:
+`references/troubleshooting-faq.md`. Record the field whenever it applies:
 - **Purpose sections** — 12 of the 13 purposes declare required content (e.g. defense: contributions ·
   limitations · future work); `check_purpose.py` looks for it in the built deck (extend with
   `design_plan.purpose_section_terms`).
@@ -590,7 +590,7 @@ user's edits to the story, then move to design (Step 2).
 > `content.sources` (`[]` if none) and run `python3 scripts/source_check.py material <deck-dir>`; each finding
 > is a 「材料自相矛盾」 open question at the content checkpoint, resolved in `content.material_check`. The gate
 > later traces every number on the built slides to these files (`source_check.py numbers <deck-dir>`;
-> `--write-rows` records the unambiguous ones). Row shapes and limits: `references/gated-checks.md`.
+> `--write-rows` records the unambiguous ones). Row shapes and limits: `references/troubleshooting-faq.md`.
 > **🔴 CHECKPOINT — CONTENT:** show the comprehension brief + claim ledger + narrative arc + the
 > per-slide takeaways/content, and confirm the pace/slide-count, before any design work begins —
 > rendered as the compact ≤~25-line checkpoint artifact defined under the 🔴 CHECKPOINT convention
@@ -822,7 +822,7 @@ gate has no standing to second-guess that, only to record it. `icon_none_checked
 flagged slide.
 🔴 **The icon-waiver category is verified against the BUILT pages** (`motif-dominant` needs a real loud motif,
 `tiny-deck` a real tiny deck, `template-locked` a real template) and must name every flagged slide — full rule:
-`references/gated-checks.md`.
+`references/troubleshooting-faq.md`.
 
 **Codex only:** include `references/codex-runtime.md` in the art-director brief and begin its hidden
 `.codex-deck-evidence.json` once the design direction is known. Its per-slide ledger must mark which
@@ -936,7 +936,7 @@ than the current working directory, so `python /path/to/build_<deck>.py` works f
 
 - **Accessibility is a FLOOR.** Missing alt-text, untitled or duplicate-titled slides, reading order and
   non-text contrast block at hand-off on both gate paths; waive only in writing
-  (`{"a11y": {"waived": "…", "waived_category": "…"}}`). Details: `references/gated-checks.md`.
+  (`{"a11y": {"waived": "…", "waived_category": "…"}}`). Details: `references/troubleshooting-faq.md`.
 
 **Fonts (every deck, both branches).** A `.pptx` stores font *names*, not the fonts — before setting `deckkit.FONT`/`MONO`/`EAFONT`/`EQ_MATHFONT`, read `references/deck-setup.md` → "Fonts" (CJK `EAFONT` is required for any Chinese / Japanese / Korean deck; portability, the `EQ_MATHFONT` / STIX / Cambria Math dependency to flag at hand-off, and tofu recovery live there) and flag any font dependency at hand-off.
 🔴 **A face the deck NAMES but the machine cannot RESOLVE is a measurement fault, not a portability note.** Every fit/wrap/overflow/footer guard sits on `deckkit._measure_lines`, which measures whichever face it can resolve — so a named-but-absent face makes the build and the lint compute from the same wrong number and **agree with each other while the render disagrees with both**. "Will the presenter have it?" stays advisory (unknowable from the file); "does it resolve HERE?" is decidable and now blocks at hand-off on both gate paths via `scripts/check_fonts_resolve.py` (waive with `{"fonts": {"waived": "<why a substituted measurement is acceptable here>"}}`). Two consequences worth knowing before you set a face: deckkit's shipped defaults are `FONT='Calibri'` / `MONO='Consolas'` and **neither ships with macOS**, so a stock macOS build measures everything in a stand-in until you call `deckkit.use_platform_fonts()` or install them; and a font that lives only inside an application bundle (macOS keeps Calibri and Cambria inside PowerPoint) is invisible to the renderer, so copy it into `~/Library/Fonts` first — ask before copying, it is the user's machine.
@@ -1013,7 +1013,7 @@ than the current working directory, so `python /path/to/build_<deck>.py` works f
 >    `scripts/anchor_proof.py`, imported by both gate paths so they cannot drift apart).
 >
 > 🔴 **The carve is recordable:** `{"material_probe": {"waived": "…", "waived_category": "registered-template |
-> provided-template | mode-a-mimic | tiny-ask"}}` — never `conservative` (`references/gated-checks.md`).
+> provided-template | mode-a-mimic | tiny-ask"}}` — never `conservative` (`references/troubleshooting-faq.md`).
 > **Skip only when:** `boldness: conservative` with its "deliberately restrained" clause recorded (no
 > risk was taken, so there is nothing to prove), or a 1–2 slide tiny-ask. A registered/provided template
 > does NOT skip it — a borrowed look still has a signature slide, and that is exactly where a template
@@ -1511,7 +1511,7 @@ A few rules that matter (see `references/design-principles.md`):
   non-blocking report). It runs in milliseconds before any render and hard-fails (CRITICAL) on content
   off-canvas, text overflowing its box, text-on-text, a connector routed through a block, a rule drawn through
   text and a malformed slide part — each printed with its fix; the full list and why each exists:
-  `references/gated-checks.md` → "Build-time lint". (Each code's plain-language
+  `references/troubleshooting-faq.md` → "Build-time lint". (Each code's plain-language
   meaning + first fix: `references/troubleshooting-faq.md` §4.) Every CRITICAL it prints is real *when the deck's fonts are
   installed* — when a font is substituted for measurement it says so and carries ~1 line of slack
   (conservative, may under-flag), so it never fabricates. It is a **net, not a substitute for
@@ -1677,7 +1677,7 @@ from the file, and a check that fails on what it cannot know is one people learn
 `NOT CHECKED` + exit 2 means it could not run, which is never the same as clean.
 **`preflight_check.py` also emits four hard FAILs that are not numbered items** — mono overflow, a mono face
 not installed, a Latin run followed by a full-width mark, and a non-positive text box. When one fires, fix the
-deck rather than route around it; each is explained in `references/gated-checks.md`.
+deck rather than route around it; each is explained in `references/troubleshooting-faq.md`.
 **It deliberately does NOT decide 5, 6, 6b, 9, 11** — those are judgment (is the figure the real
 artifact, does the first look land on the hero, is the title the takeaway) and it prints them as
 still-yours rather than implying coverage. Item 12 keeps its own script. *(Why: eleven of the twelve
@@ -1749,7 +1749,7 @@ contrast, balance, a tofu glyph, text on a busy image), which only the render sh
 
 **Iterating on a deck you already rendered? Add `--fast`** — `render_deck … --fast` fingerprints every slide and
 re-renders only the ones that changed. Details and when a full render is still required:
-`references/efficiency-and-iteration.md`.
+`references/troubleshooting-faq.md`.
 
 First **render and look** (`bash scripts/render_deck.sh <deck.pptx>` → one PNG per
 slide). python-pptx writes blind — overflow, low contrast, a callout on the footer,
@@ -1810,7 +1810,7 @@ A slide whose visible title is not first in reading order (a kicker above it) or
 `dk.declare_delivery(OUT, "selfread")` beside `prs.save(OUT)` — one of `presented` · `textheavy` ·
 🔴 **And `notes="none"` when the user declined the spoken script** —
 `dk.declare_delivery(OUT, "presented", builds="static", notes="none")`, so `NO NOTES` does not fire on their
-decision (why: `references/gated-checks.md`).
+decision (why: `references/troubleshooting-faq.md`).
 
 **It then prints a DECK STATS block — the measured form of the design targets. READ it, don't skim
 past it** (pass `--selfread` for a read-alone deck — it raises the TEXT WALL budget (~40→~90 words); `--briefing` for an **editorial data briefing** — an FT/Economist-style dense read where ~150 words beside six charts is the FORM, which raises the word budget to ~150 and the occupancy band to 80% rather than removing either check the way `--textheavy` does
@@ -1823,7 +1823,7 @@ reading load, coverage against the slide role's occupancy band, build presence a
 deck-wide, the font histogram and type drama. Every `[stats]` warning names the rule it measures and its first
 fix (`TEXT WALL`, `HOLLOW FILL`, `LAYOUT SAMENESS`, `FLAT TYPE`, `SMALL TYPE`, `CROWDED`, `CARD DOMINANCE`,
 `ENVELOPE MONOCULTURE` …) — 🔴 act on each one or write why not; the full list is in
-`references/gated-checks.md` → "Deck stats". It is a net, not a replacement for looking.
+`references/troubleshooting-faq.md` → "Deck stats". It is a net, not a replacement for looking.
 
 **Codex only — close the execution loop before consent is treated as hand-off:** retain the final
 lint JSON and component-audit JSON, complete `.codex-deck-evidence.json`, then run
@@ -2290,7 +2290,7 @@ shipped self-reviewed decks — and the runs that dispatched were the ones whose
    issues). Converge; keep a short record of what changed each round so improvement is
    visible, not just churn.
 
-**🔴 Before any web research, read `references/research-budget.md`** — the search cap is shared with every
+**🔴 Before any web research, read `references/content-plan-spec.md`** — the search cap is shared with every
 subagent and never resets within a conversation: do the small named lookups first, state a budget in each
 dispatch, record planned vs spent. A deck whose load-bearing claims came from web research passes the
 **PRIMARY-SOURCE GATE** (an adversarial spot-check by independent verifiers) before hand-off.
@@ -2345,12 +2345,12 @@ out explicitly here so they can confirm it.
 > **Two of those gates judge DESIGN and can send you back to the build:** **SAMENESS** (repetition alone does
 > not block; four independent kinds of it do) and **TIMIDITY** (a timid cover, monotone ink…). When either
 > fires, take the repair the advisories name first — re-form the page, never delete to pass. Details:
-> `references/gated-checks.md` → "Sameness and timidity".
+> `references/troubleshooting-faq.md` → "Sameness and timidity".
 
 **`--deliverables` refuses to run until `.deck-gates.json` records that the Step-2 design plan, the Step-5
 critic and the Step-6 provenance pass actually ran** (the arc competition, `style_pick`, `motif_generates`,
 `image_sources`, `type_scale`, the critic verdict or its waiver …). It names each missing field; the field
-specs are in `references/gated-checks.md` → "What --deliverables requires".
+specs are in `references/troubleshooting-faq.md` → "What --deliverables requires".
 
 **Before you write the hand-off note, read `references/handoff-checklist.md` — every deck.** It is the ONE authoritative list of what the note carries (minimal caveats + next steps, never a recap or self-praise) and of the conditional REQUIRED lines the owning rules point here for: `provenance:`, **`review:`** (the effort tier that ran + how it was reached) and **`cost:`** (subagents · tokens · wall-clock — a dial whose bill is never shown builds no intuition), click order, image licences, the GIF note, accepted advisories, `distinctiveness:`, the delegated-picks recap, the optional `ceiling` line, and the two taste-ecosystem offers — **including the save-this-look offer, which is skipped entirely under a per-deck auto directive: never an un-consented registry write.** For a Codex-verified PPTX, the hand-off note is forbidden until the final-file guard passes; an explicit **unverified draft** is the only disclosure alternative.
 

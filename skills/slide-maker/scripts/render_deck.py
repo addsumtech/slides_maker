@@ -4101,10 +4101,10 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
                   "surface has no per-slide budget)" % delivery)
             return
         over, total, median = _density_stats(pptx, budget=70 if delivery == "presented" else 120)
-        # A waiver records the USER's text-heavy choice, never the author's escape (density_choice.py:
+        # A waiver records the USER's text-heavy choice, never the author's escape (design_plan_record.py density rules:
         # twelve real runs waived their way to 83–168 words a slide and lost a blind design comparison).
-        import density_choice as _dc
-        _w_ok, _w_why = _dc.waiver_allowed(gates)
+        import design_plan_record as _dc
+        _w_ok, _w_why = _dc.density_waiver_allowed(gates)
         if total:
             if isinstance(txt, dict) and txt.get("waived") and _w_ok:
                 print("[gates] density: {}/{} slide(s) over the presented text budget, median {} "
@@ -4123,7 +4123,7 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
             else:
                 print("[gates] density: {}/{} slide(s) over the text budget, median {} words a slide"
                       .format(over, total, median))
-            _sparse = _dc.sparse_note(median, total)
+            _sparse = _dc.density_sparse_note(median, total)
             if _sparse:
                 print("[gates] " + _sparse)
 

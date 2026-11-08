@@ -53,8 +53,8 @@ CI_ONLY = ("check_component_theme", "check_design_contracts", "check_gate_parity
 # Maintainer tools: adding a NEW visual language, exporting the site library, installing from a checkout.
 # None is imported by the deck-building path (each is named only in strings, comments and docs).
 MAINTAINER = ("new_visual_language", "check_vl_contract", "vl_conformance", "vl_library_export",
-              "install_skill")
-MAINTAINER_DOCS = ("maintenance-boundaries.md", "visual-language-authoring.md")
+              "install_skill", "design_benchmark")
+MAINTAINER_DOCS = ("maintenance-boundaries.md", "visual-language-authoring.md", "why-log.md")
 IMAGE_EXT = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".tif", ".tiff", ".heic", ".ico", ".svg"}
 NOTE = " (in the source repository, {}, not in this package)".format(SOURCE_URL)
 

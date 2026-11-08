@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""density_choice.py — a density waiver is the USER's text-heavy choice, never the author's escape.
+"""design_plan_record.py density rules — a density waiver is the USER's text-heavy choice, never the author's escape.
 
 Measured 2026-11-07/08: twelve real runs of the current skill shipped presented decks at a median of
 83–168 words a slide by writing `"density": {"waived": …}` in their own words, while the older skill's
@@ -19,7 +19,12 @@ import pathlib
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "scripts"))
-import density_choice as DC  # noqa: E402
+import design_plan_record as _DPR  # noqa: E402
+
+
+class DC:                                   # the density rules, formerly density_choice.py
+    waiver_allowed = staticmethod(_DPR.density_waiver_allowed)
+    sparse_note = staticmethod(_DPR.density_sparse_note)
 
 PASS, FAIL = [], []
 
