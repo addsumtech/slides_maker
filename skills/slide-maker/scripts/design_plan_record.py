@@ -41,8 +41,33 @@ SECTIONS = (  # (name, accepted heading phrases, lower-cased)
     ("Design self-verify", ("self-verify", "自检")),
 )
 CHECK_LETTERS = "abcdefghijklmnopqrs"
+# The ground plan — light/dark pacing, decided in the Deck rhythm. Measured 2026-11-08: the older skill's
+# decks flipped 1–3 interior pages against the deck's ground (7 across four decks) and won a blind design
+# comparison on every consistent pair; the newer decks flipped 0–1, because register kits paint the quiet
+# ground on every content page, and reviewers named "dark and light pages alternate" as the difference.
+SINGLE_GROUND = ("conservative", "visual-language", "template-locked", "tiny-deck")
+FLIP_DELTA = 0.35       # luminance distance from the deck's median ground that reads as a flipped page
+_GROUNDS_RE = re.compile(r"^\s*[-*]?\s*(?:\*\*)?(grounds|底色)(?:\*\*)?\s*[:：]\s*(.+)$", re.I | re.M)
 MIN_CHECKS = 15
 WAIVER_CATEGORIES = ("no-dispatch-on-host", "tiny-ask")
+
+
+def parse_grounds(text: str):
+    """The plan's `grounds:` line — {"flips": [slide numbers], "why"} or {"single": category, "why"},
+    {"bad": raw} when it is neither, None when there is no such line."""
+    m = _GROUNDS_RE.search(text or "")
+    if not m:
+        return None
+    body = m.group(2).strip()
+    parts = re.split(r"\s+[—–]\s+|\s+--?\s+", body, maxsplit=1)
+    head, why = parts[0].strip(), (parts[1].strip() if len(parts) > 1 else "")
+    low = head.lower()
+    if low.startswith(("flip", "翻转")):
+        return {"flips": [int(n) for n in re.findall(r"\d+", head)], "why": why}
+    if low.startswith(("single", "单一", "统一")):
+        cat, _, reason = why.partition(":") if ":" in why else why.partition("：")
+        return {"single": cat.strip().lower(), "why": reason.strip()}
+    return {"bad": body}
 
 
 def validate(text: str) -> list[str]:
@@ -54,11 +79,48 @@ def validate(text: str) -> list[str]:
     for name, phrases in SECTIONS:
         if not any(p in h for h in heads for p in phrases):
             faults.append("missing the `%s` section (agents/slide-design.md → \"Output — the Design plan\")" % name)
+    g = parse_grounds(text)
+    if g is None:
+        faults.append("no `grounds:` line in the Deck rhythm — write `grounds: flips <slide>, <slide> — <why>` "
+                      "(the interior beats that flip against the deck's ground, as a family) or `grounds: single "
+                      "— <%s>: <why>`" % " | ".join(SINGLE_GROUND))
+    elif "bad" in g:
+        faults.append("the `grounds:` line must start with `flips` or `single`, not %r" % g["bad"][:60])
+    elif "flips" in g and len(g["flips"]) < 2:
+        faults.append("`grounds: flips` names %d page — flips come as a family (two or more interior beats); a "
+                      "lone flip reads as an error, not rhythm" % len(g["flips"]))
+    elif "single" in g and g["single"] not in SINGLE_GROUND:
+        faults.append("`grounds: single` needs a category from: %s (got %r)"
+                      % (", ".join(SINGLE_GROUND), g["single"]))
     found = set(re.findall(r"\(([a-s])\)", text))
     if len(found) < MIN_CHECKS:
         faults.append("carries %d of the 19 Design self-verify checks (a)–(s); the plan is not ready until "
                       "at least %d are answered" % (len(found), MIN_CHECKS))
     return faults
+
+
+def ground_faults(grounds, render_dir: str) -> list[str]:
+    """Planned flips the BUILT deck does not carry, read from the rendered pages; [] when they hold or when
+    there is nothing to measure (no renders, or a single-ground plan)."""
+    if not isinstance(grounds, dict) or not grounds.get("flips"):
+        return []
+    import glob
+    files = sorted(glob.glob(os.path.join(render_dir or "", "slide[0-9]*.png")))
+    if not files:
+        return []
+    from PIL import Image, ImageStat
+    lum = [ImageStat.Stat(Image.open(f).convert("L").resize((96, 54))).mean[0] / 255 for f in files]
+    med = sorted(lum)[len(lum) // 2]
+    out = []
+    for n in grounds["flips"]:
+        if not 1 <= n <= len(lum):
+            out.append("planned flip on slide %d, but the deck has %d slides" % (n, len(lum)))
+        elif abs(lum[n - 1] - med) <= FLIP_DELTA:
+            out.append("planned flip on slide %d is not built — its page reads on the deck's own ground "
+                       "(luminance %.2f vs the deck's %.2f). Paint the flipped ground "
+                       "(`dk.slide_background(slide, <deep colour>)`, ink re-chosen for it) or change the plan"
+                       % (n, lum[n - 1], med))
+    return out
 
 
 def _sha(path):
@@ -120,7 +182,9 @@ def record(plan_path, deck_dir, dispatched, waived=None, category=None) -> dict:
         design = {}
     abs_plan, abs_deck = os.path.abspath(plan_path), os.path.abspath(deck_dir)
     rel = os.path.relpath(abs_plan, abs_deck) if abs_plan.startswith(abs_deck + os.sep) else abs_plan
-    pf = {"path": rel, "sha256": _sha(plan_path), "dispatched": bool(dispatched)}
+    with open(plan_path, encoding="utf-8", errors="replace") as f:
+        grounds = parse_grounds(f.read())
+    pf = {"path": rel, "sha256": _sha(plan_path), "dispatched": bool(dispatched), "grounds": grounds}
     if not dispatched:
         pf.update(waived=waived, waived_category=category)
     design["plan_file"] = pf

@@ -877,6 +877,16 @@ The planned **sequence of visual protagonists** (e.g. cover → diagram → char
 divider), the dense↔light / colour pacing, the ~50–70% whitespace target, where the **WOW/hero** beats
 fall (every ~6–8 slides, **one anchored on the content plan's money slide** — the "slide this deck
 exists for"), and where the **appear-builds** cluster or spread.
+🔴 **End the section with one `grounds:` line — the light/dark pacing, decided.** Either
+`grounds: flips <slide>, <slide>[, …] — <why these beats>`: two or more INTERIOR pages that flip against the
+deck's ground (a dark page in a light deck or the reverse) — the peak, the key number, a turn of the argument
+— or `grounds: single — <conservative | visual-language | template-locked | tiny-deck>: <why>`. A register kit
+paints the QUIET ground on every content page, so a flip is painted on purpose:
+`dk.slide_background(slide, <the register's deep colour>)` and ink re-chosen for that ground (contrast
+floors still apply). The hand-off gate reads the rendered pages and refuses a planned flip that is not built.
+*(Measured 2026-11-08: the older skill's decks flipped 1–3 interior pages each and won a blind design
+comparison on every consistent pair; the newer decks flipped 0–1 — dark covers and closers around one
+quiet ground — and the reviewers named the missing light/dark alternation every time.)*
 
 ### Per-slide design
 A row per slide (keep it workable — the runner-up folds into *Reasoning*):

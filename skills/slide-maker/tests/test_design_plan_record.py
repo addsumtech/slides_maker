@@ -37,16 +37,16 @@ def check(name, cond, detail=""):
 
 
 CHECKS = "\n".join("- **(%s)** passes — reason" % c for c in "abcdefghijklmnopqrs")
-PLAN_EN = ("# Design plan\n\n### Design language\nconcept: a ledger\n\n### Deck rhythm\nquiet-loud-quiet\n\n"
+PLAN_EN = ("# Design plan\n\n### Design language\nconcept: a ledger\n\n### Deck rhythm\nquiet-loud-quiet\ngrounds: flips 4, 8 — the two turns of the argument\n\n"
            "### Per-slide design\n| 1 | cover |\n\n### Form ledger + diversity gate\ncards: 2\n\n"
            "### Design self-verify\n" + CHECKS + "\n")
-PLAN_ZH = ("# 设计方案\n\n## 设计语言\n概念：账本\n\n## 整体节奏\n静-响-静\n\n## 逐页设计\n| 1 | 封面 |\n\n"
+PLAN_ZH = ("# 设计方案\n\n## 设计语言\n概念：账本\n\n## 整体节奏\n静-响-静\n底色：翻转 5、9 — 两个转折\n\n## 逐页设计\n| 1 | 封面 |\n\n"
            "## 形式台账\n卡片 2\n\n## 设计自检\n" + CHECKS + "\n")
 
 print("── validate")
 check("an English plan with every Output section validates", DPR.validate(PLAN_EN) == [], DPR.validate(PLAN_EN))
 check("a Chinese plan with every Output section validates", DPR.validate(PLAN_ZH) == [], DPR.validate(PLAN_ZH))
-no_rhythm = PLAN_EN.replace("### Deck rhythm\nquiet-loud-quiet\n\n", "")
+no_rhythm = PLAN_EN.replace("### Deck rhythm\nquiet-loud-quiet\ngrounds: flips 4, 8 — the two turns of the argument\n\n", "")
 check("a missing section is named", any("deck rhythm" in f.lower() for f in DPR.validate(no_rhythm)),
       DPR.validate(no_rhythm))
 few = PLAN_EN.replace(CHECKS, "\n".join("- (%s) ok" % c for c in "abcde"))
@@ -89,6 +89,35 @@ bad = subprocess.run([sys.executable, str(SCRIPTS / "design_plan_record.py"), st
                       str(deck), "--dispatched"], capture_output=True, text=True)
 check("record on a missing file is a clear error, not a traceback",
       bad.returncode != 0 and "Traceback" not in bad.stderr, bad.stderr[-300:])
+
+print("── the ground plan (light/dark pacing)")
+check("grounds: flips parsed", DPR.parse_grounds(PLAN_EN) == {"flips": [4, 8], "why": "the two turns of the argument"},
+      DPR.parse_grounds(PLAN_EN))
+check("底色：翻转 parsed", DPR.parse_grounds(PLAN_ZH).get("flips") == [5, 9], DPR.parse_grounds(PLAN_ZH))
+single = PLAN_EN.replace("grounds: flips 4, 8 — the two turns of the argument",
+                         "grounds: single — visual-language: the kit's paper is the look")
+check("grounds: single with a category parsed", DPR.parse_grounds(single).get("single") == "visual-language",
+      DPR.parse_grounds(single))
+no_g = PLAN_EN.replace("grounds: flips 4, 8 — the two turns of the argument\n", "")
+check("a plan with no grounds line is refused", any("grounds" in f for f in DPR.validate(no_g)), DPR.validate(no_g))
+lone = PLAN_EN.replace("flips 4, 8", "flips 4")
+check("a lone flip is refused (flips come as a family)", any("family" in f for f in DPR.validate(lone)),
+      DPR.validate(lone))
+badcat = PLAN_EN.replace("grounds: flips 4, 8 — the two turns of the argument", "grounds: single — easier: one ground")
+check("single with an unknown category is refused", any("category" in f for f in DPR.validate(badcat)),
+      DPR.validate(badcat))
+
+from PIL import Image
+rd = TMP / "render"
+rd.mkdir()
+for i in range(1, 11):
+    Image.new("L", (96, 54), 20 if i in (4, 8) else 235).save(rd / ("slide%02d.png" % i))
+check("built flips match the plan: no fault", DPR.ground_faults({"flips": [4, 8]}, str(rd)) == [],
+      DPR.ground_faults({"flips": [4, 8]}, str(rd)))
+f = DPR.ground_faults({"flips": [4, 6]}, str(rd))
+check("a planned flip the deck does not carry is named", any("slide 6" in x for x in f), f)
+check("single ground: nothing to measure", DPR.ground_faults({"single": "conservative"}, str(rd)) == [])
+check("no renders: no fault (not checked)", DPR.ground_faults({"flips": [4, 8]}, str(TMP / "nowhere")) == [])
 
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 sys.exit(1 if FAIL else 0)

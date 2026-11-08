@@ -567,6 +567,9 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   `.deck-gates.json`. `--dispatched` for a plan from a dispatched art director; `--waived "<why>" --category
   no-dispatch-on-host|tiny-ask` for a self-authored one. `render_deck.py --gate-check` blocks on a missing
   record, a plan edited after recording, or a self-authored plan without an allowed category.
+  It also reads the plan's `grounds:` line (light/dark pacing: `flips <slides>` — two or more interior pages on
+  the flipped ground — or `single — <conservative | visual-language | template-locked | tiny-deck>`) and the gate
+  checks the rendered pages carry each planned flip (`ground_faults`).
 - `design_benchmark.py` — design-strength numbers for one built deck (type drama, size tokens, occupancy,
   skeleton repetition, card dominance, envelope monoculture, picture/chart share, standout), read from the
   file and lint's stats; `--compare a.json b.json …` prints decks side by side. ADVISORY and for skill

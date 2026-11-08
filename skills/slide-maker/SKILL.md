@@ -703,6 +703,12 @@ self-verify checks — and blocks without it; a host that cannot dispatch record
 `--waived "<why>" --category no-dispatch-on-host` and runs the same brief inline *with slide-design.md
 open*. Measured 2026-11-07: eight runs of this skill typed the design fields themselves and none opened
 slide-design.md; the older skill's runs read it, and won a blind design comparison 3–4 of 4.
+🔴 **The plan decides the light/dark pacing, and the gate checks the built pages.** Its Deck rhythm ends with
+`grounds: flips <slide>, <slide> — <why>` (two or more interior beats on the flipped ground — the peak, the key
+number, a turn) or `grounds: single — <conservative | visual-language | template-locked | tiny-deck>: <why>`.
+Register kits paint the quiet ground on every content page, so a flip is painted on purpose with
+`dk.slide_background(slide, <deep colour>)`. Measured 2026-11-08: the older skill's decks flipped 1–3 interior
+pages each and won every consistent blind pair; the newer ones flipped 0–1.
 
 **The design plan is the cheapest place to change visual direction**, so end the step by showing it
 and getting the user's OK before the canvas is set up or anything is built. **This design intelligence

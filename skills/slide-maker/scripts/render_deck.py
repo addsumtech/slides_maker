@@ -3224,6 +3224,16 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
                 die("the Design plan must be the art director's FILE, not only fields typed into this "
                     "record:\n  - " + "\n  - ".join(_ad))
             _pf = design["plan_file"]
+            # The ground plan, tested against the BUILT pages: a flip the plan promised and the deck does not
+            # carry is the "bookends dark, interior one quiet ground" deck the reviewers marked down.
+            _g = _pf.get("grounds") or {}
+            _gf = _dpr.ground_faults(_g, os.path.join(os.path.dirname(path) or ".", "render"))
+            if _gf:
+                die("the Design plan's light/dark pacing is not in the built deck:\n  - " + "\n  - ".join(_gf))
+            if _g.get("flips"):
+                print("[gates] grounds: flips on slides %s built as planned" % ", ".join(map(str, _g["flips"])))
+            elif _g.get("single"):
+                print("[gates] grounds: single (%s) — %s" % (_g["single"], str(_g.get("why"))[:100]))
             print("[gates] art-director plan %s — %s" % (
                 _pf["path"], "dispatched" if _pf.get("dispatched") is True
                 else "SELF-AUTHORED (%s): %s" % (_pf.get("waived_category"), str(_pf.get("waived"))[:120])))

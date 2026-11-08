@@ -9,7 +9,7 @@ The plan is written OUTSIDE the deck folder, because plan files never ship besid
 import hashlib
 from pathlib import Path
 
-AD_PLAN = ("### Design language\nfixture\n### Deck rhythm\nfixture\n### Per-slide design\nfixture\n"
+AD_PLAN = ("### Design language\nfixture\n### Deck rhythm\nfixture\ngrounds: single — template-locked: CI fixture\n### Per-slide design\nfixture\n"
            "### Form ledger\nfixture\n### Design self-verify\n"
            + "\n".join("- (%s) ok" % c for c in "abcdefghijklmnopqrs") + "\n")
 
@@ -22,5 +22,6 @@ def with_ad_plan(gates: dict, deck_dir) -> dict:
     scratch.mkdir(exist_ok=True)
     p = scratch / "design-plan.md"
     p.write_text(AD_PLAN, encoding="utf-8")
-    pf = {"path": str(p), "sha256": hashlib.sha256(p.read_bytes()).hexdigest(), "dispatched": True}
+    pf = {"path": str(p), "sha256": hashlib.sha256(p.read_bytes()).hexdigest(), "dispatched": True,
+          "grounds": {"single": "template-locked", "why": "CI fixture"}}
     return dict(gates, design_plan=dict(d, plan_file=pf))
