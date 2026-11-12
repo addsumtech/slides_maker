@@ -392,3 +392,25 @@ python3 ~/.claude/skills/slide-maker/scripts/check_env.py
 ## 安全与开源协议
 
 安全问题的报告方式见 [SECURITY.md](SECURITY.md)。本项目采用 [MIT 协议](LICENSE)。
+
+## 商业赞助
+
+[![Infistar.cc](docs/sponsors/infistar-cn.png)](https://www.infistar.cc/register?aff=7EYG68N9&ref_source=link)
+
+slides_maker × Infistar.cc 无限星河｜Claude、GPT、Gemini、Grok、DeepSeek 等全家桶，一个 Key，官方价的零头
+
+💥 低至官方 0.1 折，省 99%：同样的模型，只花官方价的零头
+
+✅ 官方渠道，100% 官方纯血模型：不降智、不掺水，每个模型都能验真
+
+⚡ 上千线路安全冗余自动切换：一条线出问题马上换下一条，不再总是报错
+
+🧩 200+ 个模型、16 个品牌：文本、图片、视频一个 Key 全搞定
+
+🏆 100+ 顶级开源项目都在推荐，最高 10 万+ star
+
+🎯 多智能体分析和 AI 配图，一个 Key 使用多家模型，只花官方价的零头
+
+🎁 slides_maker 用户专属：通过专属链接注册直接送人民币 5 元
+
+https://www.infistar.cc/register?aff=7EYG68N9&ref_source=link

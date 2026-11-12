@@ -392,3 +392,25 @@ For build errors, fonts, rendering and image sourcing, see [Troubleshooting & FA
 ## Security and license
 
 See [SECURITY.md](SECURITY.md) for reporting security issues. The project uses the [MIT license](LICENSE).
+
+## Sponsor
+
+[![Infistar.cc](docs/sponsors/infistar-en.png)](https://www.infistar.cc/register?aff=7EYG68N9&ref_source=link)
+
+slides_maker × Infistar.cc | Claude, GPT, Gemini, Grok, DeepSeek & more, one key, a fraction of official prices
+
+💥 Up to 99% off: from 0.1x official pricing
+
+✅ Official upstreams, 100% genuine models: no downgrades, no dilution, every model verifiable
+
+⚡ 1,000+ redundant routes with automatic failover: one route stumbles, the next takes over
+
+🧩 200+ models from 16 brands: text, image and video with one key
+
+🏆 Recommended by 100+ top open-source projects, the largest with 100k+ stars
+
+🎯 Run multi-agent analysis and AI illustration with multiple models through one key, at a fraction of official prices
+
+🎁 slides_maker users: sign up through the exclusive link and get CNY 5 free
+
+https://www.infistar.cc/register?aff=7EYG68N9&ref_source=link
