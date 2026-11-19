@@ -1331,8 +1331,11 @@ def pangu(s, mode=None):
 # Measured 2026-11-19 on two bench decks: "Hailo-10H, 40 TOPS (INT4), 自带 8 GB 内存" and
 # "17.6% 降到 13.4%; 第六根柱" — a half-width , ; : ! ? touching a CJK character is the commonest
 # machine tell in a Chinese deck, and the opt-in CJK_SPACING was never set by any run. Only the
-# unambiguous case is changed: the mark touches a CJK character or CJK punctuation on either side
-# (spaces between them are dropped). Commas between Latin words, decimals, ratios (16:9),
+# unambiguous case is changed: the mark FOLLOWS a CJK character or CJK punctuation (spaces between
+# them are dropped). After a Latin letter or digit it is left half-width on purpose: a full-width
+# mark there makes the renderer's CJK/Latin auto-spacer open a gap before it ("11.7% ；" — seen on
+# the bench render), the defect preflight_check's Latin→full-width check fails a deck for. Reword
+# so a Chinese word precedes the mark instead. Commas between Latin words, decimals, ratios (16:9),
 # a sentence-final "." and URL/path/code strings are left as written. Chinese only: a string with
 # kana or hangul is Japanese / Korean (Korean uses half-width marks; Japanese 、。), and text() /
 # table() apply it only on a deck with an East-Asian face set (EAFONT) — an English deck that
@@ -1340,7 +1343,6 @@ def pangu(s, mode=None):
 _CJK_CTX = PANGU_CJK_CLASS + "\u3000-\u303f\uff00-\uffef"
 _HW_FW = {",": "\uff0c", ";": "\uff1b", ":": "\uff1a", "!": "\uff01", "?": "\uff1f"}
 _CJKP_L = re.compile("([%s]) *([,;:!?]) *" % _CJK_CTX)
-_CJKP_R = re.compile("([,;:!?]) *(?=[%s])" % _CJK_CTX)
 _HAN = re.compile("[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]")
 # narrower than _PANGU_EXEMPT: units and ratios ("Gb/s", "I/O", "1/2") are ordinary text here
 _CJKP_EXEMPT = re.compile(r"://|www\.|`|[A-Za-z]:\\|\\[A-Za-z]|(?:^|\s)/[\w.-]+/")
@@ -1348,19 +1350,18 @@ _KANA_HANGUL = re.compile("[\u3040-\u30ff\u31f0-\u31ff\u1100-\u11ff\u3130-\u318f
 
 
 def cjk_punct(s):
-    """Half-width , ; : ! ? that touch a Chinese character → their full-width forms (，；：！？).
+    """Half-width , ; : ! ? that follow a Chinese character → their full-width forms (，；：！？).
 
     Idempotent. Returned untouched: a string with no Han character, one with kana or hangul
     (Japanese / Korean), and a URL/path/code-looking one."""
     if not s or _CJKP_EXEMPT.search(s) or not _HAN.search(s) or _KANA_HANGUL.search(s):
         return s
-    s = _CJKP_L.sub(lambda m: m.group(1) + _HW_FW[m.group(2)], s)
-    return _CJKP_R.sub(lambda m: _HW_FW[m.group(1)], s)
+    return _CJKP_L.sub(lambda m: m.group(1) + _HW_FW[m.group(2)], s)
 
 
 def _cjk_punct_para(para):
-    """`cjk_punct` over one text() paragraph: each run, and the seam where a run ends on a
-    half-width mark and the next begins with CJK (or the reverse). MONO / math runs are exempt."""
+    """`cjk_punct` over one text() paragraph: each run, and the seam where a run ending on CJK is
+    followed by a run that starts with a half-width mark. MONO / math runs are exempt."""
     joined = "".join(str(r[0]) for r in para)
     if not _HAN.search(joined) or _KANA_HANGUL.search(joined):    # the PARAGRAPH's language decides
         return para
@@ -1374,10 +1375,8 @@ def _cjk_punct_para(para):
         if not (live[k] and live[k + 1]) or not a[0].strip() or not b[0].strip():
             continue
         sa, sb = a[0].rstrip(" "), b[0].lstrip(" ")
-        if sa[-1] in _HW_FW and re.match("[%s]" % _CJK_CTX, sb[0]) and not _CJKP_EXEMPT.search(a[0]):
-            a[0], b[0] = sa[:-1] + _HW_FW[sa[-1]], sb
-        elif sb[0] in _HW_FW and re.match("[%s]" % _CJK_CTX, sa[-1]) and not _CJKP_EXEMPT.search(b[0]):
-            a[0], b[0] = sa, _HW_FW[sb[0]] + sb[1:].lstrip(" ")
+        if sb[0] in _HW_FW and re.match("[%s]" % _CJK_CTX, sa[-1]) and not _CJKP_EXEMPT.search(b[0]):
+            a[0], b[0] = sa, _HW_FW[sb[0]] + sb[1:].lstrip(" ")   # CJK | ", 同比" → CJK | "，同比"
     if all(tuple(o) == tuple(r) for o, r in zip(out, para)):
         return para
     rebuilt = [tuple(r) for r in out]

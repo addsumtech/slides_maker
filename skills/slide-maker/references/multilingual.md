@@ -290,8 +290,9 @@ language but is **most visible and most damaging in Chinese**, so check 中文 c
   stair-motif deck). → The motif lives in the picture; the copy says the number.
 - **中英夹杂的眉题和正文** — "IN-LINE WITH GUIDANCE", "CORE ELECTRONICS 实测", "accounted for" inside a Chinese
   sentence. → The kicker is written in the deck's language; only names, units and established terms stay
-  in English (the one-language rule above). Half-width , ; : ! ? beside Chinese are converted by `text()` and
-  `table()` automatically (`dk.cjk_punct`).
+  in English (the one-language rule above). A half-width , ; : ! ? after a Chinese word is converted by `text()` and
+  `table()` automatically (`dk.cjk_punct`); after a Latin word or a number it is left alone, because a
+  full-width mark there opens a renderer gap ("11.7% ；") — reword so a Chinese word carries the mark.
 
 **Fewer tells is not the goal — a better deck is.** These cures must never cost accuracy or force: a
 derived number keeps its mark, a real hook keeps its edge, a figure the audience needs stays on the

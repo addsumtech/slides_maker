@@ -189,11 +189,12 @@ check("the proposed line parses back to the same pages",
       {i: k.replace("_", "-") for i, k in hp.items()}, line)
 
 print("── cjk_punct(): half-width marks inside a Chinese clause")
-CP = {"Hailo-10H, 40 TOPS (INT4), 自带 8 GB 内存, 走 PCIe.": "Hailo-10H, 40 TOPS (INT4)，自带 8 GB 内存，走 PCIe.",
-      "同比 11.7%; 营业利润率 33.2%": "同比 11.7%；营业利润率 33.2%",
-      "營收成長 13.4%; 毛利率持平": "營收成長 13.4%；毛利率持平",
+CP = {"Hailo-10H, 40 TOPS (INT4), 自带 8 GB 内存, 走 PCIe.": "Hailo-10H, 40 TOPS (INT4), 自带 8 GB 内存，走 PCIe.",
+      "营收持平; 利润率下滑": "营收持平；利润率下滑",
+      "營收持平 ; 毛利率下滑": "營收持平；毛利率下滑",
+      "同比 11.7%; 营业利润率 33.2%": "同比 11.7%; 营业利润率 33.2%",   # after a digit: no gap-making full-width
       "来源: Product Brief": "来源：Product Brief",
-      "2 × 4 通道 MIPI, 各 1.5 Gb/s": "2 × 4 通道 MIPI，各 1.5 Gb/s",
+      "两路 MIPI 通道, 各 1.5 Gb/s": "两路 MIPI 通道，各 1.5 Gb/s",
       "真的吗?是的!": "真的吗？是的！",
       "16:9 画幅": "16:9 画幅", "10:1 拆股": "10:1 拆股", "Netflix, Inc. 第二季度": "Netflix, Inc. 第二季度",
       "见 https://a.com/x?y=1, 第二页": "见 https://a.com/x?y=1, 第二页",
@@ -203,6 +204,9 @@ CP = {"Hailo-10H, 40 TOPS (INT4), 自带 8 GB 内存, 走 PCIe.": "Hailo-10H, 40
 bad = [(k, dk.cjk_punct(k)) for k, v in CP.items() if dk.cjk_punct(k) != v]
 check("Chinese clauses convert; Latin lists, ratios, URLs, paths, Japanese and Korean do not", not bad, bad)
 check("cjk_punct is idempotent", all(dk.cjk_punct(dk.cjk_punct(k)) == dk.cjk_punct(k) for k in CP))
+import re as _re
+check("it never writes a Latin glyph before a full-width mark (preflight's Latin→full-width defect)",
+      not any(_re.search(r"[A-Za-z0-9%+\)\]][，；：！？]", dk.cjk_punct(k)) for k in CP))
 
 
 def _one(eafont, runs):
