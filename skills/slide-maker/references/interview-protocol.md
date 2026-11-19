@@ -125,6 +125,15 @@ four template choices:
    *"generate a template with an image tool (needs `codex login` once — free on your subscription)"* —
    so the setup cost is visible **before** the choice, not after. Never silently substitute a paid
    path for the missing free one; see the billing gate in `references/image-generation.md`.
+   **Recommend (d) when the topic lives on atmosphere and the probe found a free path.** A launch or
+   keynote, an event or festival, a place / travel / culture deck, a brand deck or a story: list (d)
+   FIRST, marked *(Recommended)*, with a one-clause reason drawn from THIS topic (*"…a dark-stage hero
+   plate for the reveal"*), not a generic "it looks nicer". The plates of the gallery launch deck carried
+   its atmosphere, and AI reviewers under-weight atmosphere, so the user rarely asks for it unprompted.
+   Do NOT recommend it for a report, earnings or data review, an academic or teaching deck, or training —
+   there a generated plate adds no meaning and reads as stock. A recommendation is an offer only: the
+   user still picks, nothing is generated before the pick, and an auto-mode run without a pick does not
+   generate.
    **Past work rolls up; general choices always stay.** Never enumerate the saved templates in the
    first question — a returning user's registry (which can hold many) would crowd the general
    choices out of a bounded-option UI, and the generic paths must stay visible on every deck. If the
