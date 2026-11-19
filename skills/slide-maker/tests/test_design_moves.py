@@ -84,6 +84,17 @@ check("a CJK rail title is set vertically",
       any(getattr(sh, "has_text_frame", False) and sh.text_frame._txBody.bodyPr.get("vert") == "eaVert"
           for sh in rail_cjk.shapes))
 check("an unknown kind is refused", raises(lambda: dk.headline(prs.slides[0], "banner", "x")))
+for (pw, ph), t in [((5.625, 10.0), "两级台阶已经发生，第三级写在指引里"), ((10.0, 7.5), "Two steps up, the third is guided")]:
+    pp_ = dk.blank_deck(pw, ph)                     # a hero title that WRAPS — the body must start under its measured end
+    sp = pp_.slides.add_slide(pp_.slide_layouts[6])
+    bx, by, bw_, bh_ = dk.headline(sp, "hero", t, kicker="Q3")
+    dk.text(sp, bx, by, bw_, 0.6, [[("正文" if "台" in t else "Body", 14, dk.DEEP, False, False)]])
+    try:
+        dk.lint_layout(pp_, strict=True)
+        ok_ = True
+    except Exception as e:
+        ok_ = str(e)
+    check("a wrapped hero title (%gx%g) clears the body under it" % (pw, ph), ok_ is True, ok_)
 s = prs.slides.add_slide(prs.slide_layouts[6])
 dk.display_type(s, -0.4, 1.2, "970", size=300, bleed="the numeral is the page")
 anim.morph(s)

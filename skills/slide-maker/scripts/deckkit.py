@@ -7753,6 +7753,9 @@ def headline(slide, kind, title, *, kicker="", accent=BLUE, ink=None, image=None
     W, H = _slide_size(slide)
     ink_c = ink if ink is not None else DEEP
     disp = DISPLAY or FONT
+    # measure a CJK title in the face it renders in (and lint measures it in): the Latin display
+    # face under-counts its lines, and the body under a wrapped title collides with it
+    mf = (EADISPLAY or EAFONT or disp) if _has_cjk(title) else disp
     bottom = H - FOOTER_BAND - 0.15
 
     def _ea(tb):
@@ -7778,13 +7781,13 @@ def headline(slide, kind, title, *, kicker="", accent=BLUE, ink=None, image=None
                              space_after=0))
             ty = 0.62
         box_h = max(1.2, (H - ty) * 0.42)
-        sz = size or fit_text_size([(title, True)], tw, box_h, 96, font=disp, min_size=54)
-        nl = measure_lines([(title, True)], sz, tw, font=disp)
+        sz = size or fit_text_size([(title, True)], tw - TEXT_INSET_LR, box_h, 96, font=mf, min_size=54)
+        nl = measure_lines([(title, True)], sz, tw - TEXT_INSET_LR, font=mf)
         th = nl * _title_line_h(title, sz, _LINT_LINE_H)
         tb = text(slide, 0.55, ty, tw, th, [[(title, sz, ink_c, True, False, disp)]], space_after=0)
         _ea(tb)
         _tag_chrome(tb)
-        return content_band(slide)
+        return content_band(slide, top=round(ty + th + 0.25, 4))   # the group gap under the title's MEASURED end
 
     if kind == "lower_third":
         if image is not None:
@@ -7792,8 +7795,8 @@ def headline(slide, kind, title, *, kicker="", accent=BLUE, ink=None, image=None
             scrim_overlay(slide, 0, H * 0.45, W, H * 0.55, color=scrim,
                           stops=((0.0, 0.0), (1.0, 0.72)), angle=90.0)
         tw = W * 0.62
-        sz = size or fit_text_size([(title, True)], tw, 1.6, 54, font=disp, min_size=30)
-        nl = measure_lines([(title, True)], sz, tw, font=disp)
+        sz = size or fit_text_size([(title, True)], tw - TEXT_INSET_LR, 1.6, 54, font=mf, min_size=30)
+        nl = measure_lines([(title, True)], sz, tw - TEXT_INSET_LR, font=mf)
         th = nl * _title_line_h(title, sz, _LINT_LINE_H)
         ty = bottom - th - 0.10
         c = WHITE if image is not None else ink_c
@@ -7818,7 +7821,7 @@ def headline(slide, kind, title, *, kicker="", accent=BLUE, ink=None, image=None
     if vert:
         vertical_title(slide, rx, ry, rw - 0.8, rh, title, color=ink_c, size=size)
     else:
-        sz = size or fit_text_size([(title, True)], rw - 0.8, rh * 0.7, 54, font=disp, min_size=28)
+        sz = size or fit_text_size([(title, True)], rw - 0.8 - TEXT_INSET_LR, rh * 0.7, 54, font=mf, min_size=28)
         tb = text(slide, rx, ry, rw - 0.8, rh * 0.7, [[(title, sz, ink_c, True, False, disp)]], space_after=0)
         _ea(tb)
     box(slide, rw - 0.1, 0.45, 0.02, bottom - 0.45, fill=accent)
