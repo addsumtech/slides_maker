@@ -238,6 +238,18 @@ transition keep it calm (fade/none, never cube/push/morph-everywhere), and recor
 manifest as one line (`transition: fade` / `transition: none`) — distinct from the per-slide
 `build:`/`static:` lines that carry the real work.
 
+**Morph — the one transition that IS design, on 1–3 beats.** `anim.morph(slide)` makes PowerPoint
+animate every object two neighbouring slides share: the key number on page 4 grows into the hero on
+page 5, a diagram assembles part by part across two pages, a photograph pushes in on its detail, a map
+pans to the next stop. Build the pair as two ordinary slides (the END state of the first is the START of
+the second, objects kept alike so Morph matches them by object; force a pair with `anim.morph_key(shape,
+"hero")` on both) and call `anim.morph()` on the SECOND. Spend it only where the deck turns — the reveal,
+the peak, the "before → after" — and only on a presented deck whose user has not opted out of motion.
+It writes a fade fallback, so Keynote, LibreOffice and older PowerPoint show a calm fade and the file stays
+valid. 🔴 The render cannot show it (LibreOffice draws the two end states): list the morph slides in the
+motion manifest (`transition: morph → slides 5, 9`; `anim.morph_slides(prs)` reads them back) and tell the
+user to watch them in PowerPoint.
+
 ## Record a motion manifest (so the critic can judge what it can't see)
 A static render — and the critic reviewing it — can't watch a reveal sequence. So as you
 build, jot a one-line-per-slide **motion manifest**: `build: <what reveals, in order>` or

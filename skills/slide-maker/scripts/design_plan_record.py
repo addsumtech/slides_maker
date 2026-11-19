@@ -56,6 +56,13 @@ HERO_NONE = ("conservative", "template-locked", "tiny-deck", "image-led")
 HERO_RATIO = 2.5
 _HERO_RE = re.compile(r"^\s*[-*]?\s*(?:\*\*)?(hero|高潮页)(?:\*\*)?\s*[:：]\s*(.+)$", re.I | re.M)
 MIN_CHECKS = 15
+# The headline chassis — WHERE the title sits, decided per page. Measured 2026-11-18 on the gallery decks: ~11-13 of
+# every 14 interior pages carried the same kicker + title in the same top-left spot, because every skeleton divides
+# the band UNDER the title bar. A plan names the pages that leave it (deckkit.headline kinds) and the gate measures
+# them on the built file, the way it measures the hero and the grounds.
+HEADLINE_KINDS = ("hero", "lower-third", "rail", "none")
+HEADER_ONLY = ("conservative", "template-locked", "tiny-deck", "report")
+_HEADLINES_RE = re.compile(r"^\s*[-*]?\s*(?:\*\*)?(headlines|标题位置)(?:\*\*)?\s*[:：]\s*(.+)$", re.I | re.M)
 WAIVER_CATEGORIES = ("no-dispatch-on-host", "tiny-ask")
 
 
@@ -93,6 +100,117 @@ def parse_hero(text: str):
     if n and (low.startswith(("slide", "第", "p")) or head.strip().isdigit()):
         return {"slide": int(n[0]), "why": why}
     return {"bad": body}
+
+
+def parse_headlines(text: str):
+    """The plan's `headlines:` line — {"pages": {slide: kind}, "why"} or {"header": category, "why"},
+    {"bad": raw} when it is neither, None when there is no such line."""
+    m = _HEADLINES_RE.search(text or "")
+    if not m:
+        return None
+    body = m.group(2).strip()
+    parts = re.split(r"\s+[—–]\s+|\s+--?\s+", body, maxsplit=1)
+    head, why = parts[0].strip(), (parts[1].strip() if len(parts) > 1 else "")
+    low = head.lower().replace("_", "-")
+    if low.startswith(("header", "页眉")):
+        cat, _, reason = why.partition(":") if ":" in why else why.partition("：")
+        return {"header": cat.strip().lower(), "why": reason.strip()}
+    pages = {}
+    for kind, nums in re.findall(r"(hero|lower-third|rail|none)\s*([\d,，、\s]+)", low):
+        for n in re.findall(r"\d+", nums):
+            pages[int(n)] = kind
+    if not pages:
+        return {"bad": body}
+    return {"pages": pages, "why": why}
+
+
+def _slide_text_boxes(pptx_path):
+    """Per slide: (canvas w, h in inches, [(size pt, left, top, w, h, vertical)], picture area share)."""
+    from pptx import Presentation
+    from pptx.enum.shapes import MSO_SHAPE_TYPE
+
+    def walk(shapes):
+        for sh in shapes:
+            if sh.shape_type == MSO_SHAPE_TYPE.GROUP:
+                yield from walk(sh.shapes)
+            else:
+                yield sh
+    prs = Presentation(pptx_path)
+    W, H = prs.slide_width / 914400.0, prs.slide_height / 914400.0
+    out = []
+    for slide in prs.slides:
+        boxes, pic = [], 0.0
+        for sh in walk(slide.shapes):
+            if sh.width is None or sh.height is None:
+                continue
+            l, t, w, h = (v / 914400.0 for v in (sh.left or 0, sh.top or 0, sh.width, sh.height))
+            if sh.shape_type == MSO_SHAPE_TYPE.PICTURE:
+                vis_w = max(0.0, min(l + w, W) - max(l, 0.0))
+                vis_h = max(0.0, min(t + h, H) - max(t, 0.0))
+                pic = max(pic, vis_w * vis_h / (W * H))
+                continue
+            if not getattr(sh, "has_text_frame", False) or not sh.has_text_frame:
+                continue
+            if t + h <= 0 or l + w <= 0:                  # a11y_title sits wholly above the canvas
+                continue
+            size = 0.0
+            for p in sh.text_frame.paragraphs:
+                for r in p.runs:
+                    sz = r.font.size or p.font.size
+                    if sz is not None and r.text.strip():
+                        size = max(size, sz.pt)
+            if size:
+                vert = sh.text_frame._txBody.bodyPr.get("vert") in ("eaVert", "vert", "vert270", "wordArtVertRtl")
+                boxes.append((size, l, t, w, h, vert))
+        out.append((W, H, boxes, pic))
+    return out
+
+
+def headline_faults(headlines, pptx_path: str) -> list[str]:
+    """Planned headline pages the BUILT deck does not carry; [] when they hold or nothing is planned."""
+    if not isinstance(headlines, dict) or not headlines.get("pages") or not pptx_path or not os.path.isfile(pptx_path):
+        return []
+    deck = _slide_text_boxes(pptx_path)
+    planned = {int(k) for k in headlines["pages"]}
+    zone = []                     # the deck's header-title size: top band, left edge, on the UNplanned pages
+    for i, (W, H, boxes, _pic) in enumerate(deck, 1):
+        if i in planned:
+            continue
+        z = [b[0] for b in boxes if b[0] >= 18 and not b[5] and b[2] < 0.2 * H and b[1] < 0.25 * W]
+        if z:
+            zone.append(max(z))
+    title = sorted(zone)[len(zone) // 2] if zone else 26.0
+    out = []
+    for n, kind in sorted((int(k), v) for k, v in headlines["pages"].items()):   # JSON keys arrive as strings
+        if not 1 <= n <= len(deck):
+            out.append("planned %s headline on slide %d, but the deck has %d slides" % (kind, n, len(deck)))
+            continue
+        W, H, boxes, pic = deck[n - 1]
+        big = max(boxes, key=lambda b: b[0]) if boxes else None
+        if kind == "hero":
+            if not big or big[0] < 1.8 * title:
+                out.append("slide %d is planned as a HERO headline but its largest type is %.0f pt — %.1fx the deck's "
+                           "title size (%.0f pt); the headline-as-image needs %.0f pt or more (`dk.headline(slide, "
+                           "'hero', …)`)" % (n, big[0] if big else 0, (big[0] if big else 0) / title, title, 1.8 * title))
+        elif kind == "lower-third":
+            low = [b for b in boxes if b[0] >= 18 and b[2] >= 0.5 * H]
+            if pic < 0.4 or not low:
+                out.append("slide %d is planned as a LOWER-THIRD headline: it needs a picture over at least 40%% of "
+                           "the page (has %.0f%%) and the title in the lower half (%s) — `dk.headline(slide, "
+                           "'lower_third', …, image=<path>)`" % (n, pic * 100, "found" if low else "none there"))
+        elif kind == "rail":
+            ok = any(b[5] or (b[1] + b[3] / 2 < 0.4 * W and b[4] >= 0.4 * H) for b in boxes if b[0] >= 18)
+            if not ok:
+                out.append("slide %d is planned as a RAIL headline but no title runs down the left of the page (a "
+                           "column at least 40%% of the height, or vertical text) — `dk.headline(slide, 'rail', …)`" % n)
+        elif kind == "none":
+            hdr = [b for b in boxes if 0.8 * title <= b[0] < 1.8 * title and not b[5] and b[2] < 0.2 * H
+                   and b[1] < 0.25 * W]
+            if hdr:
+                out.append("slide %d is planned with NO visible headline but carries a %.0f pt title in the header "
+                           "spot — let the number or picture speak and put the title in `dk.a11y_title()` "
+                           "(`dk.headline(slide, 'none', …)` does both)" % (n, hdr[0][0]))
+    return out
 
 
 def _slide_tops(pptx_path):
@@ -170,6 +288,19 @@ def validate(text: str) -> list[str]:
         faults.append("the `hero:` line must be `slide <n>` or `none`, not %r" % h["bad"][:60])
     elif "none" in h and h["none"] not in HERO_NONE:
         faults.append("`hero: none` needs a category from: %s (got %r)" % (", ".join(HERO_NONE), h["none"]))
+    hl = parse_headlines(text)
+    if hl is None:
+        faults.append("no `headlines:` line in the Deck rhythm — write `headlines: hero <n>; lower-third <n>; rail "
+                      "<n>; none <n> — <why>` (two or more interior pages whose headline leaves the header spot) or "
+                      "`headlines: header — <%s>: <why>`" % " | ".join(HEADER_ONLY))
+    elif "bad" in hl:
+        faults.append("the `headlines:` line must name pages as `hero|lower-third|rail|none <slide numbers>` or be "
+                      "`header — <category>: <why>`, not %r" % hl["bad"][:60])
+    elif "pages" in hl and len(hl["pages"]) < 2:
+        faults.append("`headlines:` names %d page — move the headline on two or more interior pages, or write "
+                      "`headlines: header — <category>: <why>`" % len(hl["pages"]))
+    elif "header" in hl and hl["header"] not in HEADER_ONLY:
+        faults.append("`headlines: header` needs a category from: %s (got %r)" % (", ".join(HEADER_ONLY), hl["header"]))
     found = set(re.findall(r"\(([a-s])\)", text))
     if len(found) < MIN_CHECKS:
         faults.append("carries %d of the 19 Design self-verify checks (a)–(s); the plan is not ready until "
@@ -264,8 +395,10 @@ def record(plan_path, deck_dir, dispatched, waived=None, category=None) -> dict:
         grounds = parse_grounds(f.read())
     with open(plan_path, encoding="utf-8", errors="replace") as f:
         hero = parse_hero(f.read())
+    with open(plan_path, encoding="utf-8", errors="replace") as f:
+        headlines = parse_headlines(f.read())
     pf = {"path": rel, "sha256": _sha(plan_path), "dispatched": bool(dispatched), "grounds": grounds,
-          "hero": hero}
+          "hero": hero, "headlines": headlines}
     if not dispatched:
         pf.update(waived=waived, waived_category=category)
     design["plan_file"] = pf

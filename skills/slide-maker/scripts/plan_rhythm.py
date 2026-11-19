@@ -206,6 +206,62 @@ def plan(roles, carry=(), min_distinct=MIN_DISTINCT, home=None):
     return out
 
 
+# Where each page's HEADLINE sits (deckkit.headline kinds). `header` stays the deck's home base; a few interior pages
+# leave it — the claim that should own its page becomes the picture (hero), a result with a photograph puts its title
+# in the picture (lower_third), a process or roadmap runs its title down a rail. Roles not named keep the header.
+HEADLINE_FIT = {
+    "problem": "hero", "takeaway": "hero", "insight": "hero", "idea": "hero", "conclusion": "hero",
+    "hook": "hero", "objective": "hero", "concept": "hero",
+    "result": "lower_third", "evidence": "lower_third", "case-study": "lower_third",
+    "method": "rail", "roadmap": "rail", "next": "rail", "prerequisite": "rail",
+}
+
+
+def headline_plan(rows, images=0, carry=()):
+    """{slide: headline kind} for the pages that leave the header spot — a proposal for the `headlines:` line.
+
+    lower_third needs a photograph, so it is proposed only while `images` (usable content pictures) last; a
+    statement skeleton or a carry page with no picture takes `hero`. At most ~a third of the body pages move,
+    never two neighbours with the same kind, so `header` stays the visible default."""
+    body = [(i, str(r).lower(), k) for i, r, k, _w in rows if str(r).lower() not in STRUCTURAL]
+    cap = max(2, len(body) // 3)
+    out, left, prev = {}, int(images or 0), None
+    for i, role, sk in body:
+        if len(out) >= cap:
+            break
+        kind = HEADLINE_FIT.get(role)
+        if kind is None and (sk == "statement" or i in carry):
+            kind = "hero"
+        if kind is None and sk == "rail":
+            kind = "rail"
+        if kind == "lower_third":
+            if left <= 0:
+                kind = "hero" if i in carry else None
+            else:
+                left -= 1
+        if kind and kind != prev and (i - 1) not in out:
+            out[i] = kind
+            prev = kind
+        else:
+            prev = None
+    if len(out) < 2 and len(body) >= 6:            # a deck this long moves at least two headlines
+        for i, role, sk in body[1:]:
+            if len(out) >= 2:
+                break
+            if i not in out and (i - 1) not in out and (i + 1) not in out:
+                out[i] = "hero" if sk in ("statement", "island") else "rail"
+    return out
+
+
+def headline_line(hp):
+    if not hp:
+        return "headlines: header — tiny-deck: <why>"
+    by = {}
+    for i, k in sorted(hp.items()):
+        by.setdefault(k.replace("_", "-"), []).append(str(i))
+    return "headlines: " + "; ".join("%s %s" % (k, ", ".join(v)) for k, v in by.items()) + " — <why these pages>"
+
+
 def check(rows, min_distinct=MIN_DISTINCT, home=None):
     """[] if the sequence clears both floors, else the reasons it does not."""
     problems = []
@@ -324,6 +380,20 @@ def _selftest():
          len({k for _i, _ro, k, _w in r}) >= MIN_DISTINCT,
          str({k for _i, _ro, k, _w in r}))
 
+    r = plan(["cover", "context", "problem", "method", "result", "result", "compare", "takeaway", "next", "close"])
+    hp = headline_plan(r, images=1)
+    case("a 10-slide argument moves two or more headlines off the header spot", hp, len(hp) >= 2, str(hp))
+    case("...lower_third only while photographs last", hp,
+         sum(1 for k in hp.values() if k == "lower_third") <= 1, str(hp))
+    case("...no two neighbouring pages both move", hp,
+         all((i + 1) not in hp for i in hp), str(hp))
+    import deckkit as _dk
+    case("every proposed headline kind exists in deckkit.HEADLINES", hp,
+         set(hp.values()) <= set(_dk.HEADLINES), str(set(hp.values())))
+    hp0 = headline_plan(plan(["result"] * 8), images=0)
+    case("with no photographs nothing is proposed as lower_third", hp0,
+         "lower_third" not in hp0.values(), str(hp0))
+
     print("\n".join("  ok   " + x for x in ok))
     if bad:
         print("\n".join("  FAIL " + x for x in bad))
@@ -340,6 +410,8 @@ def main(argv=None):
     ap.add_argument("--home", help="the deck's HOME-BASE architecture — the direction gate's picked "
                                    "composition, which must be the map's plurality")
     ap.add_argument("--gates", help="a deck dir — read roles from its .deck-gates.json content.slides")
+    ap.add_argument("--images", type=int, default=0, help="usable content photographs — lower-third headlines "
+                                                         "are proposed only while they last")
     ap.add_argument("--json", action="store_true", help="machine-readable output")
     ap.add_argument("--selftest", action="store_true")
     a = ap.parse_args(argv)
@@ -360,11 +432,14 @@ def main(argv=None):
     except ValueError as exc:
         print(exc, file=sys.stderr)
         return 2
+    hp = headline_plan(rows, a.images, carry)
     if a.json:
-        print(json.dumps([{"slide": i, "role": r, "skeleton": k, "why": w}
+        print(json.dumps([{"slide": i, "role": r, "skeleton": k, "why": w, "headline": hp.get(i, "header")}
                           for i, r, k, w in rows], indent=1))
         return 0
     print("\n".join(render(rows, a.home)))
+    print("\nProposed for the Deck rhythm (`deckkit.headline(slide, kind, title)`; every other page keeps "
+          "`header`):\n  " + headline_line(hp))
     problems = check(rows, home=a.home)
     if problems:
         print("\nthis sequence does NOT clear the floors:\n  - " + "\n  - ".join(problems))

@@ -524,6 +524,20 @@ in `design-principles.md`), and record how each is satisfied:
   on **>2 consecutive slides**, the plan is NOT ready unless a stated content reason justifies it — this is
   stricter than the format-family gate (which counts families and can be gamed), so run both.
 
+**Type as image — the cheapest bold move.** On the pages that carry the deck's voice, let the type BE the
+picture: `dk.display_type(slide, x, y, "970", size=330, bleed="<why the crop is the design>")` sets one line of
+120–400pt foreground ink that may run off the trim (declared, never accidental); `dk.vertical_title()` sets a
+CJK title in vertical columns down a rail or a photograph's edge; a **weight-contrast lockup** is one paragraph
+of runs in one `dk.text()` call — the heavy display face for the noun, a light or serif face for the rest, sizes
+mixed on one baseline (e.g. `[("2026", 96, ink, True, False, DISPLAY), (" 第二季度", 40, mute, False, False, "Songti SC")]` — use a serif the deck's font plan installs).
+Keep what must be read — the claim, the number's meaning — whole on the page; only the display word is cropped.
+(Outline/stroke text is NOT offered: LibreOffice renders it solid, so the render check would show a different page
+than PowerPoint does.)
+**Provenance on a presented deck — one line.** `dk.source_note()` carries the source and its date and nothing else;
+method notes, caveats and "this page does not estimate X" go in the speaker notes (they count as provenance) or on
+the sources page. Several tiers of tiny grey text on every page is clutter the room cannot read — the lint's
+SOURCE CLUTTER line names the pages.
+
 ### 4 — Design the DECK RHYTHM (only you see every slide at once)
 Read DOWN the column you've built. Vary the **visual protagonist** and pace density — the builder builds
 each slide in isolation and can't retrofit rhythm, so this is yours.
@@ -884,6 +898,19 @@ deck's ground (a dark page in a light deck or the reverse) — the peak, the key
 paints the QUIET ground on every content page, so a flip is painted on purpose:
 `dk.slide_background(slide, <the register's deep colour>)` and ink re-chosen for that ground (contrast
 floors still apply). The hand-off gate reads the rendered pages and refuses a planned flip that is not built.
+🔴 **And one `headlines:` line — WHERE the title sits, decided per page.** Every `skeleton()` divides the band UNDER
+the title bar, so a deck built from skeletons alone varies below the title and nowhere else (measured on the gallery
+decks: ~11–13 of every 14 interior pages carried the same kicker + title top-left). Keep `header` as the home base
+and move the headline on two or more interior pages with `dk.headline(slide, kind, title)` — it draws the chassis
+and returns the body rect for `skeleton(…, band=)`: **`hero`** (the sentence IS the visual, 54–96pt — the claim that
+should own its page), **`lower_third`** (`image=` full-bleed with a scrim, the title in the picture — the page a
+photograph carries), **`rail`** (the title down a left rail; a CJK title sets vertically), **`none`** (no visible title —
+the number or the picture speaks; the title goes to the outline). Write `headlines: hero 3, 8; lower-third 6; none 11
+— <why these pages>` (`python3 scripts/plan_rhythm.py … --images <n>` proposes one), or `headlines: header —
+<conservative | template-locked | tiny-deck | report>: <why>` (report: a read-alone newspaper whose masthead is the
+design). The hand-off gate measures each planned page on the built file. **With two or more usable photographs,
+let 2–3 interior pages be image-led** (`lower_third` or a `full_bleed` skeleton) — a picture used only on the cover
+and closer is a picture wasted.
 🔴 **And one `hero:` line — the page the deck exists for, set at full volume.** `hero: slide <n> — <the number or
 words it is built around>`: its largest type must reach **2.5x** the deck's typical top size (the gate measures
 the built file and names the target size), with the deck's accent at full strength on it. Or `hero: none —

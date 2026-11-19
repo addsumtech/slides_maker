@@ -127,6 +127,23 @@ EXAMPLES = {
                       '# panel="none" gives the safe rect and an ink chosen from the image\'s own\n'
                       '# luminance - and then the contrast is yours to own.',
 
+    # headline() draws WHERE the title sits (header | hero | lower_third | rail | none) and RETURNS
+    # the body rect; build the page inside it with skeleton(band=...). The planned pages are
+    # measured by the hand-off gate against the Design plan's `headlines:` line.
+    "headline": 'body = dk.headline(s, "lower_third", "The claim, inside the picture",\n'
+                '                   kicker="Result", image="skyline.png", alt="a city skyline")\n'
+                'R = dk.skeleton(s, "statement", band=body)   # the stage above the title\n'
+                '# "hero": the sentence IS the visual · "rail": title down a left rail\n'
+                '# (CJK sets vertically) · "none": no visible title, the outline keeps it',
+
+    # display_type() — one line of 120-400pt foreground ink; running off the canvas needs bleed=.
+    "display_type": 'dk.display_type(s, -0.3, 1.0, "970", size=260, color=dk.DEEP,\n'
+                    '                bleed="the numeral is the page; cropped at the trim on purpose")\n'
+                    'dk.text(s, 5.6, 3.6, 3.8, 0.8, [[("hours watched, H1", 18, dk.DEEP, True, False)]])',
+
+    # vertical_title() — a CJK title in vertical columns (bodyPr vert="eaVert").
+    "vertical_title": 'dk.vertical_title(s, 0.6, 0.5, 1.2, 4.4, "真正能感觉到的地方", color=dk.DEEP)',
+
     # skeleton() RETURNS NAMED RECTS for one of the eight page ARCHITECTURES and paints nothing.
     # `plan_rhythm.py` proposes which kind each slide gets; this is how you build it.
     "skeleton": 'R = dk.skeleton(s, "split")            # statement split island dashboard\n'

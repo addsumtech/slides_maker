@@ -2953,6 +2953,9 @@ def sources_page(slide, sources, *, title="Sources", cols=2, x=0.7, y=1.4, accen
             cy += 0.46
 
 
+SOURCE_TAG = "deckkit-source"
+
+
 def source_note(slide, sources, *, as_of=None, label="Source", x=None, y=None, w=None,
                 size=8.5, ink=None, font=None, sep="  ·  ", align=None):
     """The PROVENANCE LINE for one slide — where THIS slide's numbers came from, on the slide.
@@ -2971,6 +2974,10 @@ def source_note(slide, sources, *, as_of=None, label="Source", x=None, y=None, w
     tag, a caption), so it can be called last without geometry bookkeeping. Returns the y used.
 
     Set `label=""` for a bare line, or `label="来源"` on a Chinese deck.
+
+    On a PRESENTED deck keep it to ONE line — the source and its date. Method notes, caveats and
+    "this page does not estimate X" go in the speaker notes (the lint counts notes as provenance)
+    or on the sources page; a two-line grey footer on every page is clutter the room cannot read.
     """
     size = _fl(size)                                # never below the active language's type floor
     sw, sh = _slide_size(slide)
@@ -3006,8 +3013,15 @@ def source_note(slide, sources, *, as_of=None, label="Source", x=None, y=None, w
             yy -= h + 0.06
     else:
         yy = y
-    text(slide, lx, yy, lw, h, [runs], space_after=0,
-         align=align if align is not None else PP_ALIGN.LEFT)
+    tb = text(slide, lx, yy, lw, h, [runs], space_after=0,
+              align=align if align is not None else PP_ALIGN.LEFT)
+    # Tag it with its measured line count: on a PRESENTED deck the lint asks for ONE line (source + date) and
+    # sends method notes and caveats to the speaker notes, which it already counts as provenance.
+    try:
+        nl = measure_lines([(r[0], r[3]) for r in runs], size, lw, font=fnt)
+        tb.name = "%s:%d" % (SOURCE_TAG, nl)
+    except Exception:
+        pass
     return yy
 
 
@@ -7702,6 +7716,175 @@ def footer(slide, tag="", page=None, w_in=None, h_in=None):
     if page is not None:
         text(slide, w_in - 1.0, h_in - 0.35, 0.6, 0.3,
              [[(str(page), 9, MUTE, True, False)]], align=PP_ALIGN.RIGHT, space_after=0)
+
+
+HEADLINES = ("header", "hero", "lower_third", "rail", "none")
+
+
+def headline(slide, kind, title, *, kicker="", accent=BLUE, ink=None, image=None, alt=None,
+             size=None, rail_w=0.30, vertical=None, scrim="000000"):
+    """WHERE the page's headline sits — the chassis — drawn, and the body rect left for the content.
+
+        header       the kicker + title + rule of `title_bar()`; body = `content_band()`
+        hero         the headline IS the visual: a statement-sized title (54-96pt, ≤2 lines) set
+                     across the top of the page; body = the band under it
+        lower_third  cinematic: `image=` drawn full-bleed (cover) with a graduated scrim, the title
+                     anchored bottom-left in white; body = the stage above the title
+        rail         the title runs down a left rail (`rail_w` of the width; `vertical=True` sets a
+                     CJK title in vertical columns); body = the area right of the rail
+        none         no visible title — the number or the picture speaks; the title goes to
+                     `a11y_title()` for the outline and screen readers; body = the whole safe area
+
+    Returns the body rect `(x, y, w, h)` — pass it to `skeleton(slide, kind, band=...)`.
+
+    Why: every `skeleton()` divides the band UNDER the title bar, so a deck built only from them
+    varies below the title and nowhere else. Measured on the gallery decks: ~11-13 of every 14
+    interior pages put the same kicker + title in the same top-left spot — the PowerPoint
+    default, however good the content under it. A designer moves the headline itself: makes it
+    the picture, drops it into the photograph, turns it down the side, or leaves it out. Plan
+    which pages do (`plan_rhythm.py` proposes a `headlines:` line) and keep `header` as the
+    deck's home base; the gate measures the planned pages on the built file.
+    """
+    if kind not in HEADLINES:
+        raise ValueError("headline(): unknown kind {!r} — one of: {}".format(kind, ", ".join(HEADLINES)))
+    title = " ".join(str(title or "").split())
+    if not title:
+        raise ValueError("headline(): the title is empty")
+    W, H = _slide_size(slide)
+    ink_c = ink if ink is not None else DEEP
+    disp = DISPLAY or FONT
+    bottom = H - FOOTER_BAND - 0.15
+
+    def _ea(tb):
+        if EADISPLAY:
+            for p in tb.text_frame.paragraphs:
+                for r in p.runs:
+                    _apply_ea(r, EADISPLAY)
+
+    if kind == "header":
+        title_bar(slide, title, kicker, accent=accent, title_c=ink_c)
+        return content_band(slide)
+
+    if kind == "none":
+        a11y_title(slide, title)
+        top = 0.45
+        return (GUTTER, top, W - 2 * GUTTER, bottom - top)
+
+    if kind == "hero":
+        tw = W - 2 * 0.55
+        ty = 0.40
+        if kicker:
+            _tag_chrome(text(slide, 0.55, 0.30, tw, 0.3, [[(kicker.upper(), 11, accent, True, False)]],
+                             space_after=0))
+            ty = 0.62
+        box_h = max(1.2, (H - ty) * 0.42)
+        sz = size or fit_text_size([(title, True)], tw, box_h, 96, font=disp, min_size=54)
+        nl = measure_lines([(title, True)], sz, tw, font=disp)
+        th = nl * _title_line_h(title, sz, _LINT_LINE_H)
+        tb = text(slide, 0.55, ty, tw, th, [[(title, sz, ink_c, True, False, disp)]], space_after=0)
+        _ea(tb)
+        _tag_chrome(tb)
+        return content_band(slide)
+
+    if kind == "lower_third":
+        if image is not None:
+            picture(slide, image, 0, 0, W, H, fit="cover", alt=alt or title)
+            scrim_overlay(slide, 0, H * 0.45, W, H * 0.55, color=scrim,
+                          stops=((0.0, 0.0), (1.0, 0.72)), angle=90.0)
+        tw = W * 0.62
+        sz = size or fit_text_size([(title, True)], tw, 1.6, 54, font=disp, min_size=30)
+        nl = measure_lines([(title, True)], sz, tw, font=disp)
+        th = nl * _title_line_h(title, sz, _LINT_LINE_H)
+        ty = bottom - th - 0.10
+        c = WHITE if image is not None else ink_c
+        if kicker:
+            text(slide, 0.62, ty - 0.36, tw, 0.3, [[(kicker.upper(), 11, c if image is not None else accent,
+                                                     True, False)]], space_after=0)
+        tb = text(slide, 0.62, ty, tw, th, [[(title, sz, c, True, False, disp)]], space_after=0)
+        _ea(tb)
+        top = 0.45
+        return (GUTTER, top, W - 2 * GUTTER, max(0.5, ty - (0.45 if kicker else 0.2) - top))
+
+    # rail
+    if not 0.15 <= rail_w <= 0.45:
+        raise ValueError("headline('rail'): rail_w must be 0.15-0.45 of the width, not {}".format(rail_w))
+    rw = W * rail_w
+    rx, ry, rh = 0.55, 0.45, bottom - 0.45
+    vert = _has_cjk(title) if vertical is None else bool(vertical)
+    if kicker and not vert:
+        text(slide, rx, ry, rw - 0.8, 0.3, [[(kicker.upper(), 11, accent, True, False)]], space_after=0)
+        ry += 0.36
+        rh -= 0.36
+    if vert:
+        vertical_title(slide, rx, ry, rw - 0.8, rh, title, color=ink_c, size=size)
+    else:
+        sz = size or fit_text_size([(title, True)], rw - 0.8, rh * 0.7, 54, font=disp, min_size=28)
+        tb = text(slide, rx, ry, rw - 0.8, rh * 0.7, [[(title, sz, ink_c, True, False, disp)]], space_after=0)
+        _ea(tb)
+    box(slide, rw - 0.1, 0.45, 0.02, bottom - 0.45, fill=accent)
+    bx = rw + 0.25
+    return (bx, 0.45, W - bx - GUTTER, bottom - 0.45)
+
+
+def vertical_title(slide, x, y, w, h, title, *, color=None, size=None, font=None):
+    """A CJK title set in VERTICAL columns (top to bottom, columns right to left) — `bodyPr vert="eaVert"`.
+
+    The East-Asian display gesture a horizontal deck rarely makes: a spine of large characters down
+    a rail or the edge of a photograph. Latin text has no vertical form — pass a CJK title (Latin
+    words inside it turn on their side, as in print). `size` defaults to the largest that fits the
+    column height. Renders in PowerPoint, Keynote and LibreOffice alike, and `lint_deck` measures
+    it as vertical text."""
+    t = " ".join(str(title or "").split())
+    if not _has_cjk(t):
+        raise ValueError("vertical_title(): {!r} has no CJK — vertical setting is for CJK titles; use a "
+                         "rail headline set horizontally instead".format(t[:40]))
+    n = max(1, len(t))
+    sz = size or max(28.0, min(96.0, h * 72.0 / (n * 1.08), w * 72.0 * 0.9))
+    face = font or EADISPLAY or EAFONT or DISPLAY or FONT
+    tb = text(slide, x, y, w, h, [[(t, sz, color if color is not None else DEEP, True, False, face)]],
+              space_after=0, line_spacing=1.0)
+    tb.text_frame._txBody.bodyPr.set("vert", "eaVert")
+    for p in tb.text_frame.paragraphs:
+        for r in p.runs:
+            _apply_ea(r, face)
+    return tb
+
+
+def display_type(slide, x, y, text_str, *, size, color=None, font=None, bleed=None, align=None):
+    """Type AS IMAGE: one line of oversized display type (120-400pt), allowed to run off the canvas.
+
+    A word or a number set so large it becomes the page's shape — cropped by the trim, behind or
+    beside the content. Different from `big_numeral` (a figure with its label) and `ghost_numeral`
+    (a faint watermark): this is foreground ink at full strength, the poster move.
+
+    The box is sized to the MEASURED line, so lint sees the real extent. If that extent leaves the
+    canvas, `bleed="<why>"` is required and is recorded with `bleed_intent` — an undeclared overrun
+    is still the OFF_CANVAS accident it always was. Keep what must be read (the claim, the number's
+    meaning) fully on the page; only the display word may be cropped. Returns the shape."""
+    t = str(text_str or "").strip()
+    if not t or "\n" in t:
+        raise ValueError("display_type(): one non-empty line of text, please")
+    if size < 72:
+        raise ValueError("display_type(): {}pt is body type — display type starts at 72pt; use text()".format(size))
+    W, H = _slide_size(slide)
+    face = font or DISPLAY or FONT
+    mface = (EADISPLAY or EAFONT or face) if _has_cjk(t) else face
+    tw = _natural_width_in([(t, True)], size, mface) + 0.3
+    th = size / 72.0 * 1.15
+    tb = text(slide, x, y, tw, th, [[(t, size, color if color is not None else DEEP, True, False, face)]],
+              space_after=0, line_spacing=0.9, wrap=False, align=align if align is not None else PP_ALIGN.LEFT)
+    if _has_cjk(t):
+        for p in tb.text_frame.paragraphs:
+            for r in p.runs:
+                _apply_ea(r, EADISPLAY or EAFONT or face)
+    off = x < -0.01 or y < -0.01 or x + tw > W + 0.01 or y + th > H + 0.01
+    if off:
+        if not bleed or not str(bleed).strip():
+            raise ValueError("display_type(): {!r} at {:.0f}pt runs off the canvas ({:.2f}..{:.2f} x "
+                             "{:.2f}..{:.2f} in on a {:.2f}x{:.2f} page) — pass bleed=\"<why the crop is the "
+                             "design>\", or move/shrink it".format(t[:30], size, x, x + tw, y, y + th, W, H))
+        bleed_intent(tb, bleed)
+    return tb
 
 
 def wordmark(text, out_path, *, font=None, color=None, size=180, rule=False, monogram=False, pad=0.12):

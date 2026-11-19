@@ -37,16 +37,16 @@ def check(name, cond, detail=""):
 
 
 CHECKS = "\n".join("- **(%s)** passes — reason" % c for c in "abcdefghijklmnopqrs")
-PLAN_EN = ("# Design plan\n\n### Design language\nconcept: a ledger\n\n### Deck rhythm\nquiet-loud-quiet\ngrounds: flips 4, 8 — the two turns of the argument\nhero: slide 6 — the 86% that the deck exists for\n\n"
+PLAN_EN = ("# Design plan\n\n### Design language\nconcept: a ledger\n\n### Deck rhythm\nquiet-loud-quiet\ngrounds: flips 4, 8 — the two turns of the argument\nhero: slide 6 — the 86% that the deck exists for\nheadlines: hero 3; none 7 — the claim and the number\n\n"
            "### Per-slide design\n| 1 | cover |\n\n### Form ledger + diversity gate\ncards: 2\n\n"
            "### Design self-verify\n" + CHECKS + "\n")
-PLAN_ZH = ("# 设计方案\n\n## 设计语言\n概念：账本\n\n## 整体节奏\n静-响-静\n底色：翻转 5、9 — 两个转折\n高潮页：第 6 页 — 86%\n\n## 逐页设计\n| 1 | 封面 |\n\n"
+PLAN_ZH = ("# 设计方案\n\n## 设计语言\n概念：账本\n\n## 整体节奏\n静-响-静\n底色：翻转 5、9 — 两个转折\n高潮页：第 6 页 — 86%\n标题位置：hero 3；none 7 — 主张与数字\n\n## 逐页设计\n| 1 | 封面 |\n\n"
            "## 形式台账\n卡片 2\n\n## 设计自检\n" + CHECKS + "\n")
 
 print("── validate")
 check("an English plan with every Output section validates", DPR.validate(PLAN_EN) == [], DPR.validate(PLAN_EN))
 check("a Chinese plan with every Output section validates", DPR.validate(PLAN_ZH) == [], DPR.validate(PLAN_ZH))
-no_rhythm = PLAN_EN.replace("### Deck rhythm\nquiet-loud-quiet\ngrounds: flips 4, 8 — the two turns of the argument\nhero: slide 6 — the 86% that the deck exists for\n\n", "")
+no_rhythm = PLAN_EN.replace("### Deck rhythm\nquiet-loud-quiet\ngrounds: flips 4, 8 — the two turns of the argument\nhero: slide 6 — the 86% that the deck exists for\nheadlines: hero 3; none 7 — the claim and the number\n\n", "")
 check("a missing section is named", any("deck rhythm" in f.lower() for f in DPR.validate(no_rhythm)),
       DPR.validate(no_rhythm))
 few = PLAN_EN.replace(CHECKS, "\n".join("- (%s) ok" % c for c in "abcde"))

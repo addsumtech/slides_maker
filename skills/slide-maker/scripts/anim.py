@@ -183,11 +183,78 @@ _TRANSITIONS = {
 }
 
 
+_MC_NS = "http://schemas.openxmlformats.org/markup-compatibility/2006"
+_P159_NS = "http://schemas.microsoft.com/office/powerpoint/2015/09/main"
+_P14_NS = "http://schemas.microsoft.com/office/powerpoint/2010/main"
+
+
+def _place_transition(slide, el):
+    """Put a transition where CT_Slide wants it: after clrMapOvr, before timing and extLst."""
+    sld = slide._element
+    if sld.find(qn("p:transition")) is not None or sld.find("{%s}AlternateContent" % _MC_NS) is not None:
+        raise ValueError("this slide already carries a transition — one per slide")
+    for tag in ("p:timing", "p:extLst"):
+        nxt = sld.find(qn(tag))
+        if nxt is not None:
+            nxt.addprevious(el)
+            return
+    sld.append(el)
+
+
+def morph(slide, duration=1.6):
+    """PowerPoint MORPH into this slide from the previous one — the cinematic move between two pages.
+
+    Morph animates every object the two slides share: a number grows into the hero, a diagram
+    assembles part by part, a photograph pushes in, a map pans. PowerPoint pairs objects BY OBJECT
+    (same picture, same text, same shape type); name a pair with `morph_key()` when the match must be
+    forced (a box that becomes a different box). Spend it on 1-3 beats a deck exists for — the
+    reveal, the turn, the peak — never on every slide: a morph everywhere is a screensaver.
+
+    Written as `mc:AlternateContent` with a FADE fallback, so viewers without Morph (Keynote,
+    LibreOffice, older PowerPoint) still get a calm fade and the file stays valid. 🔴 The render
+    check cannot see it — LibreOffice draws the two end states only; confirm the motion in
+    PowerPoint itself (`morph_slides(prs)` lists which slides carry one)."""
+    ms = int(duration * 1000)
+    xml = ('<mc:AlternateContent xmlns:mc="{mc}"><mc:Choice xmlns:p159="{p159}" Requires="p159">'
+           '<p:transition xmlns:p="{p}" xmlns:p14="{p14}" spd="slow" p14:dur="{ms}">'
+           '<p159:morph option="byObject"/></p:transition></mc:Choice>'
+           '<mc:Fallback><p:transition xmlns:p="{p}" spd="slow"><p:fade/></p:transition></mc:Fallback>'
+           '</mc:AlternateContent>').format(mc=_MC_NS, p159=_P159_NS, p=P_NS, p14=_P14_NS, ms=ms)
+    _place_transition(slide, parse_xml(xml))
+
+
+def morph_key(shape, key):
+    """Force Morph to pair this shape with the one carrying the same key on the neighbouring slide.
+
+    PowerPoint's rule: two shapes whose names both start with `!!` and are otherwise identical are
+    morphed into each other whatever they look like. Refuses a shape that carries a deckkit tag in
+    its name (chrome, bleed, motif, overlap…) — those names are lint declarations and renaming would
+    erase them; key a plain shape, or let Morph match by object."""
+    k = str(key or "").strip()
+    if not k or any(c in k for c in ":|"):
+        raise ValueError("morph_key(): give a short plain key like 'hero' (no ':' or '|')")
+    name = str(getattr(shape, "name", "") or "")
+    if name.startswith("deckkit") or ":" in name or "+" in name.split(" ")[0]:
+        raise ValueError("morph_key(): {!r} carries a deckkit tag in its name — key a plain shape, or rely "
+                         "on Morph's by-object matching".format(name[:60]))
+    shape.name = "!!" + k
+    return shape
+
+
+def morph_slides(prs):
+    """1-based numbers of the slides that morph in — for the hand-off note and a PowerPoint check."""
+    out = []
+    for i, s in enumerate(prs.slides, 1):
+        if s._element.find(".//{%s}morph" % _P159_NS) is not None:
+            out.append(i)
+    return out
+
+
 def slide_transition(slide, kind="fade", duration=0.5):
     """Add a simple slide-level transition (subtle; 'fade' is the safe default).
 
-    `kind` is one of 'fade' | 'cut' | 'wipe' | 'push'. Goes before <p:timing> in the slide; call
-    before Build.apply() if you use both."""
+    `kind` is one of 'fade' | 'cut' | 'wipe' | 'push' — for the cinematic move use `morph()`. Goes
+    before <p:timing> in the slide; call before Build.apply() if you use both."""
     if kind not in _TRANSITIONS:
         # Raise rather than fall back. `kind` was accepted and never read for as long as this
         # function existed — grep found it exactly once in the file, in the signature — while the

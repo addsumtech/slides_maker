@@ -77,6 +77,9 @@ CHANGED_ON_PURPOSE = {           # name -> the listed fix that changed it, and t
                "the page field before the agenda was drawn)", "df52779038053f2e1bf355cfde458f37c8ac3c589b6f97a58bc778eb7e2f5f75"),
     "sankey": ("Task 6: each ribbon declares overlap_intent (its end tucks under the node bar on purpose) — names only",
                "a580101c1d4dc22f451c31e0f5bb9eaed53294e63cd00f7ff5da83385ad0aec8"),
+    "source_note": ("2026-11-18: the line records its measured line count in its name (deckkit-source:N) for the "
+                    "lint's SOURCE CLUTTER line — names only",
+                    "0455290bfec84bc9285bed356930f0edd6d79efba364f879703979495e665422"),
 }
 dk.set_theme(None)
 # the hashes were taken with macOS faces: text measured with another platform's faces lays out differently, so the

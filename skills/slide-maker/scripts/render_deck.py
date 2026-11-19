@@ -3234,6 +3234,15 @@ def _handoff_gate_checks(pptx, mode="presented", gate_check=False):
             _hf = _dpr.hero_faults(_h, pptx)
             if _hf:
                 die("the Design plan's hero page does not carry the deck's type drama:\n  - " + "\n  - ".join(_hf))
+            _hl = _pf.get("headlines") or {}
+            _hlf = _dpr.headline_faults(_hl, pptx)
+            if _hlf:
+                die("the Design plan's headline chassis is not in the built deck:\n  - " + "\n  - ".join(_hlf))
+            if _hl.get("pages"):
+                print("[gates] headlines: %s built as planned" % ", ".join(
+                    "%s %s" % (k, n) for n, k in sorted((int(a), b) for a, b in _hl["pages"].items())))
+            elif _hl.get("header"):
+                print("[gates] headlines: header (%s) — %s" % (_hl["header"], str(_hl.get("why"))[:100]))
             if _h.get("slide"):
                 print("[gates] hero: slide %d carries the deck's biggest type, as planned" % _h["slide"])
             elif _h.get("none"):

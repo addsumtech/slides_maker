@@ -2194,6 +2194,19 @@ def _edge_pairs(bx):
     return out
 
 
+def _source_lines(slide):
+    """Line count of the slide's `deckkit.source_note()` (recorded in its name at build time); 0 when none."""
+    n = 0
+    for shp in slide.shapes:
+        nm = str(getattr(shp, "name", "") or "")
+        if nm.startswith("deckkit-source:"):
+            try:
+                n = max(n, int(nm.split(":", 1)[1]))
+            except ValueError:
+                pass
+    return n
+
+
 def _slide_stats(slide, bx, sw, sh):
     footer_y = sh - 0.6                                  # used by the half-occupancy checks below
     load = reading_load(slide, bx, sh)
@@ -2299,6 +2312,7 @@ def _slide_stats(slide, bx, sw, sh):
         "halves": halves, "boxy": boxy, "lean_x": lean_x, "edge_pairs": _edge_pairs(bx),
         "notes": notes_text,
         "notes_words": _text_load(notes_text),
+        "src_lines": _source_lines(slide),
         "pingfang": pingfang,
         "cjk_tight": tight, "sp_spaced": sp_y, "sp_unspaced": sp_n,
         "size_clusters": _size_clusters(bx, sh),
@@ -3494,6 +3508,11 @@ def _print_stats(rows, mode, sw, sh, lums=None, static_ok=False, icon_ev=None, b
         warns.append(f"SMALL TYPE: body-median {body_med:.0f}pt is under the ~{floor:.0f}pt floor for this "
                      f"{sw:.1f}in-wide canvas (≈18-22pt on a standard 13.3in slide) — a presented deck's body "
                      f"text must read from the back of the room; fewer words, bigger type")
+    src_long = [i + 1 for i, r in enumerate(rows) if r.get("src_lines", 0) >= 2]
+    if mode == "presented" and src_long:
+        warns.append("SOURCE CLUTTER: the source line runs to 2+ lines on slide(s) %s — on a presented deck keep it "
+                     "to one line (source + date); move method notes and caveats to the speaker notes (they count "
+                     "as provenance) or the sources page" % ", ".join(map(str, src_long[:8])))
     if mode in ("presented", "textheavy") and builds == 0 and n > 2 and not static_ok:
         warns.append("NO BUILDS: a presented deck with zero appear-builds — the motion manifest "
                      "should name build:/static:+reason per slide (anim.py Build). If the user opted "
