@@ -276,6 +276,26 @@ language but is **most visible and most damaging in Chinese**, so check 中文 c
   众所周知、由此可见". → Vary the structure; trust the reader; cut connectors a person wouldn't say aloud.
 - **节奏单一 + 破折号成瘾** — every sentence the same length, "X —— Y" on every line. → Vary length (let some
   lines be short fragments — slides aren't prose); use 破折号 sparingly.
+- **否定式对比 + 页页金句** — "它不是给 I/O 做加法，是做乘法", "一块板子的价值，取决于什么能接上来": a slogan
+  built for quoting, on page after page. → Keep at most one for the hook or the close; elsewhere state the
+  finding plainly with its number ("I/O 带宽是上一代的 2–3 倍"). If a line sounds like it wants to be quoted, rewrite it.
+- **页面上的自我声明** — "本 deck 计算", "非本文档计算", "公司未作因果表述（本 deck 观察）" written on the slide.
+  The honesty is right; the placement is wrong — a presenter defending the deck against a reviewer, not talking
+  to the room. → Keep the slide's one source line short; mark a derived figure with a single symbol (`*` 推算)
+  defined once on the sources page, and put the method and caveats in the speaker notes. Nothing is dropped —
+  every derived number still says it is derived; it says so in one place.
+- **元标签** — copy describing the slide instead of the subject: "十二项指标 · 一屏可查", "先说清楚对标的是谁". → Cut;
+  the page shows it.
+- **视觉意象渗进文案** — the deck's motif turned into metaphors in the words ("下一格刻度", "两级台阶" on a
+  stair-motif deck). → The motif lives in the picture; the copy says the number.
+- **中英夹杂的眉题和正文** — "IN-LINE WITH GUIDANCE", "CORE ELECTRONICS 实测", "accounted for" inside a Chinese
+  sentence. → The kicker is written in the deck's language; only names, units and established terms stay
+  in English (the one-language rule above). Half-width , ; : ! ? beside Chinese are converted by `text()` and
+  `table()` automatically (`dk.cjk_punct`).
+
+**Fewer tells is not the goal — a better deck is.** These cures must never cost accuracy or force: a
+derived number keeps its mark, a real hook keeps its edge, a figure the audience needs stays on the
+slide. Rewrite the wording; never delete a fact to sound more human.
 
 **Do (any language):** concrete nouns + active verbs over abstract nouns; the specific number/name over a
 vague claim; vary sentence length and structure; cut every adjective not doing work; match the **register

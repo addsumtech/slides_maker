@@ -1327,6 +1327,68 @@ def pangu(s, mode=None):
     return s
 
 
+# ---- half-width punctuation inside a Chinese clause → full-width (always on, not opt-in).
+# Measured 2026-11-19 on two bench decks: "Hailo-10H, 40 TOPS (INT4), 自带 8 GB 内存" and
+# "17.6% 降到 13.4%; 第六根柱" — a half-width , ; : ! ? touching a CJK character is the commonest
+# machine tell in a Chinese deck, and the opt-in CJK_SPACING was never set by any run. Only the
+# unambiguous case is changed: the mark touches a CJK character or CJK punctuation on either side
+# (spaces between them are dropped). Commas between Latin words, decimals, ratios (16:9),
+# a sentence-final "." and URL/path/code strings are left as written. Chinese only: a string with
+# kana or hangul is Japanese / Korean (Korean uses half-width marks; Japanese 、。), and text() /
+# table() apply it only on a deck with an East-Asian face set (EAFONT) — an English deck that
+# quotes one Chinese name ("Visited 北京, then Shanghai") keeps its comma.
+_CJK_CTX = PANGU_CJK_CLASS + "\u3000-\u303f\uff00-\uffef"
+_HW_FW = {",": "\uff0c", ";": "\uff1b", ":": "\uff1a", "!": "\uff01", "?": "\uff1f"}
+_CJKP_L = re.compile("([%s]) *([,;:!?]) *" % _CJK_CTX)
+_CJKP_R = re.compile("([,;:!?]) *(?=[%s])" % _CJK_CTX)
+_HAN = re.compile("[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]")
+# narrower than _PANGU_EXEMPT: units and ratios ("Gb/s", "I/O", "1/2") are ordinary text here
+_CJKP_EXEMPT = re.compile(r"://|www\.|`|[A-Za-z]:\\|\\[A-Za-z]|(?:^|\s)/[\w.-]+/")
+_KANA_HANGUL = re.compile("[\u3040-\u30ff\u31f0-\u31ff\u1100-\u11ff\u3130-\u318f\uac00-\ud7af]")
+
+
+def cjk_punct(s):
+    """Half-width , ; : ! ? that touch a Chinese character → their full-width forms (，；：！？).
+
+    Idempotent. Returned untouched: a string with no Han character, one with kana or hangul
+    (Japanese / Korean), and a URL/path/code-looking one."""
+    if not s or _CJKP_EXEMPT.search(s) or not _HAN.search(s) or _KANA_HANGUL.search(s):
+        return s
+    s = _CJKP_L.sub(lambda m: m.group(1) + _HW_FW[m.group(2)], s)
+    return _CJKP_R.sub(lambda m: _HW_FW[m.group(1)], s)
+
+
+def _cjk_punct_para(para):
+    """`cjk_punct` over one text() paragraph: each run, and the seam where a run ends on a
+    half-width mark and the next begins with CJK (or the reverse). MONO / math runs are exempt."""
+    joined = "".join(str(r[0]) for r in para)
+    if not _HAN.search(joined) or _KANA_HANGUL.search(joined):    # the PARAGRAPH's language decides
+        return para
+    out = [list(r) for r in para]
+    live = [not _pangu_exempt_run(r[5] if len(r) > 5 else None) for r in out]
+    for r, ok in zip(out, live):
+        if ok:
+            r[0] = cjk_punct(r[0])
+    for k in range(len(out) - 1):
+        a, b = out[k], out[k + 1]
+        if not (live[k] and live[k + 1]) or not a[0].strip() or not b[0].strip():
+            continue
+        sa, sb = a[0].rstrip(" "), b[0].lstrip(" ")
+        if sa[-1] in _HW_FW and re.match("[%s]" % _CJK_CTX, sb[0]) and not _CJKP_EXEMPT.search(a[0]):
+            a[0], b[0] = sa[:-1] + _HW_FW[sa[-1]], sb
+        elif sb[0] in _HW_FW and re.match("[%s]" % _CJK_CTX, sa[-1]) and not _CJKP_EXEMPT.search(b[0]):
+            a[0], b[0] = sa, _HW_FW[sb[0]] + sb[1:].lstrip(" ")
+    if all(tuple(o) == tuple(r) for o, r in zip(out, para)):
+        return para
+    rebuilt = [tuple(r) for r in out]
+    for i, orig in enumerate(para):                   # a mark()ed run keeps its highlight
+        hl = getattr(orig, "highlight", None)
+        if hl is not None:
+            rebuilt[i] = _Marked(rebuilt[i])
+            rebuilt[i].highlight = hl
+    return rebuilt
+
+
 def _pangu_exempt_run(font_name):
     """Runs typeset in the code/math faces keep their spacing verbatim."""
     return font_name is not None and font_name in (MONO, EQ_MATHFONT)
@@ -1487,6 +1549,8 @@ def text(slide, x, y, w, h, runs, align=PP_ALIGN.LEFT, anchor=MSO_ANCHOR.TOP,
     tf.margin_left = tf.margin_right = Pt(2)
     tf.margin_top = tf.margin_bottom = Pt(2)
     for i, para in enumerate(runs):
+        if EAFONT:                          # a CJK deck: half-width , ; : ! ? in a Chinese clause → full-width
+            para = _cjk_punct_para(para)
         if CJK_SPACING:                     # opt-in 盘古之白 normalizer (default None = untouched)
             para = _pangu_para(para)
         p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
@@ -7196,7 +7260,7 @@ def table(slide, x, y, w, rows, col_w=None, header=True, highlight=None,
             raw = rows[i][j] if j < len(rows[i]) else ""
             # table cells count toward lint's 盘古之白 tally, so the opt-in CJK_SPACING
             # normalizer covers them too (pangu() is a no-op when the flag is unset)
-            cell.text = pangu(raw)
+            cell.text = pangu(cjk_punct(raw) if EAFONT else raw)
             cell.margin_left = cell.margin_right = Pt(7)
             cell.margin_top = cell.margin_bottom = Pt(2)
             cell.vertical_anchor = MSO_ANCHOR.MIDDLE

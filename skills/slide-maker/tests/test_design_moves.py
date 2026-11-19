@@ -188,5 +188,44 @@ check("the proposed line parses back to the same pages",
       DPR.parse_headlines(line.replace("<why these pages>", "x"))["pages"] ==
       {i: k.replace("_", "-") for i, k in hp.items()}, line)
 
+print("── cjk_punct(): half-width marks inside a Chinese clause")
+CP = {"Hailo-10H, 40 TOPS (INT4), 自带 8 GB 内存, 走 PCIe.": "Hailo-10H, 40 TOPS (INT4)，自带 8 GB 内存，走 PCIe.",
+      "同比 11.7%; 营业利润率 33.2%": "同比 11.7%；营业利润率 33.2%",
+      "營收成長 13.4%; 毛利率持平": "營收成長 13.4%；毛利率持平",
+      "来源: Product Brief": "来源：Product Brief",
+      "2 × 4 通道 MIPI, 各 1.5 Gb/s": "2 × 4 通道 MIPI，各 1.5 Gb/s",
+      "真的吗?是的!": "真的吗？是的！",
+      "16:9 画幅": "16:9 画幅", "10:1 拆股": "10:1 拆股", "Netflix, Inc. 第二季度": "Netflix, Inc. 第二季度",
+      "见 https://a.com/x?y=1, 第二页": "见 https://a.com/x?y=1, 第二页",
+      "目录 /usr/local/bin, 第二页": "目录 /usr/local/bin, 第二页",
+      "東京, そして大阪": "東京, そして大阪", "서울, 부산": "서울, 부산",
+      "Revenue grew 13%, margin flat": "Revenue grew 13%, margin flat"}
+bad = [(k, dk.cjk_punct(k)) for k, v in CP.items() if dk.cjk_punct(k) != v]
+check("Chinese clauses convert; Latin lists, ratios, URLs, paths, Japanese and Korean do not", not bad, bad)
+check("cjk_punct is idempotent", all(dk.cjk_punct(dk.cjk_punct(k)) == dk.cjk_punct(k) for k in CP))
+
+
+def _one(eafont, runs):
+    old = dk.EAFONT
+    dk.EAFONT = eafont
+    try:
+        p_ = dk.blank_deck()
+        return dk.text(p_.slides.add_slide(p_.slide_layouts[6]), 1, 1, 6, 1, runs).text_frame.text
+    finally:
+        dk.EAFONT = old
+
+
+R_ = lambda t, *f: (t, 14, dk.DEEP, False, False) + f
+check("text() converts across a run seam on a Chinese deck",
+      _one("Hiragino Sans GB", [[R_("营收"), R_(", 同比 +13.4%")]]) == "营收，同比 +13.4%")
+check("an English deck quoting a Chinese name keeps its comma",
+      _one(None, [[R_("Visited 北京, then Shanghai")]]) == "Visited 北京, then Shanghai")
+check("a Japanese paragraph split into runs is left alone",
+      _one("Hiragino Sans", [[R_("東京,"), R_("そして大阪")]]) == "東京,そして大阪")
+check("a MONO run keeps its code punctuation",
+      _one("Hiragino Sans GB", [[R_("代码 "), R_("f(a, b)", dk.MONO)]]) == "代码 f(a, b)")
+mk = dk._cjk_punct_para([dk.mark(("关键,", 14, dk.DEEP, True, False), "FFE066"), R_("同比")])
+check("a mark()ed run keeps its highlight", mk[0][0] == "关键，" and str(getattr(mk[0], "highlight", None)) == "FFE066", mk)
+
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 sys.exit(1 if FAIL else 0)
