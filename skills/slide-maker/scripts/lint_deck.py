@@ -4525,6 +4525,16 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
     deck_stats = _print_stats(stats_rows, mode, sw, sh, lums=lums, static_ok=static_ok,
                               notes_ok=notes_ok,
                               icon_ev=_icon_ev, boldness=_declared_boldness(path, gates_path))
+    # copy tells (on-slide self-reference, repeated not-X-but-Y, English caps kickers in a Chinese
+    # deck): defined ONCE in preflight_check and printed here too, because this lint runs after
+    # every render and PRE-FLIGHT is a step a run can skip. Advisory; it never adds a finding.
+    try:
+        import preflight_check as _pf
+        _ct = _pf.check_copy_tells(prs)
+        if _ct[0] != "PASS":
+            print("  [warn] COPY TELLS: " + _ct[1])
+    except Exception as _exc:                       # a wording advisory must never break the lint
+        print("  [--] copy-tells check did not run (%s)" % type(_exc).__name__)
     if stats_out is not None:
         stats_out.update(deck_stats)
         # Whether the render-backed members of SAMENESS_CODES could run at all. A gate that cannot

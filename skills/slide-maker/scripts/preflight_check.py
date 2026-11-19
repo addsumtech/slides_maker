@@ -492,6 +492,76 @@ def check_mono_wrap(prs):
     return "PASS", "every monospace line fits its panel with margin, in an installed face"
 
 
+# ---- copy tells: wording that reads as machine-written, decidable from the slide text alone.
+# Measured 2026-11-19 on bench decks from three skill versions: a quarterly deck carried "本 deck
+# 计算 / 观察" on 8-12 slides and an English caps kicker ("IN-LINE WITH GUIDANCE") in a Chinese
+# deck; a launch deck carried "非本文档计算" and "不是…，是…" slogans. The cure was written in
+# references/multilingual.md and no run read it, so the finding has to come from a tool every
+# run already executes. ADVISORY: the honesty behind a self-reference is right, only its place
+# is wrong, and a caps line can be a proper name — the reader decides, the fix line says how.
+_SELF_REF = re.compile(r"本\s?deck|(?:非)?本(?:文档|演示文稿?)(?:计算|推算|估算|观察|判断|未)|非本文|\bthis deck'?s? (?:own )?(?:calculation|computation|"
+                       r"estimate|observation)|\bnot (?:computed|calculated) (?:by|in) this (?:deck|document)",
+                       re.I)
+_NOT_X_BUT_Y = re.compile(r"不是[^，。；！？\n]{1,16}[，,]\s*(?:而)?是|\b(?:it'?s|this is|is) not (?:just |only )?"
+                          r"[^,.;\n]{1,30}[,;—–]\s*(?:it'?s|but)\b", re.I)
+_CAPS_WORD = re.compile(r"\b[A-Z][A-Z\-]+\b")
+# a sources / references / appendix page — provenance written there is in its right place
+_SOURCES_PAGE = re.compile(r"^(?:资料|数据)?(?:来源|出处)|^参考(?:资料|文献)|^附录|(?:口径|数据|注释|说明)[与和及](?:来源|出处)|"
+                           r"^(?:sources?|references?|appendix|bibliography|notes and sources)\b", re.I)
+_HAN_RE = re.compile("[\u3400-\u4dbf\u4e00-\u9fff]")
+
+
+def _is_sources_heading(txt):
+    """A short heading naming a sources page ("来源说明", "14 · 口径与来源", "Sources") — not a
+    footnote reference ("来源 01") or the "来源 [1] …" line every slide carries."""
+    t = re.sub(r"^[\d\s·.:/\-—]+", "", txt.strip())
+    return 3 <= len(t) <= 10 and not re.search(r"\d", t) and bool(_SOURCES_PAGE.search(t))
+
+
+def check_copy_tells(prs):
+    """On-slide self-provenance, repeated not-X-but-Y slogans, English caps kickers in a Chinese deck."""
+    self_ref, slogans, caps = [], [], []
+    han = latin = 0
+    paras = [(i, txt) for i, s in enumerate(prs.slides, 1) for _sh, txt, _pt, _f, _sy in _paras(s)]
+    for _i, txt in paras:
+        han += len(_HAN_RE.findall(txt))
+        latin += len(re.findall(r"[A-Za-z]", txt))
+    # a page TITLED as sources — a short heading, not the "来源 [1] …" line every slide carries
+    sources = {i for i, txt in paras if _is_sources_heading(txt)}
+    seen = set()
+    for i, txt in paras:
+        m = _SELF_REF.search(txt)
+        if m and i not in sources:
+            self_ref.append((i, m.group(0)))
+        m = _NOT_X_BUT_Y.search(txt)
+        key = (i, re.sub(r"[\s，,；;]", "", m.group(0))) if m else None
+        if m and key not in seen:                   # a title echoed in an a11y/outline box is one slogan
+            seen.add(key)
+            slogans.append((i, m.group(0)))
+        # no digit: a dated title or a citation in caps ("1979 · OFF THE WALL", "VASWANI ET AL. ·
+        # NEURIPS 2017") is a name; measured on the 24 gallery decks, both were the only false hits
+        if han > latin and not _HAN_RE.search(txt) and len(_CAPS_WORD.findall(txt)) >= 3 \
+                and txt.upper() == txt and not re.search(r"\d", txt):
+            caps.append((i, txt.strip()[:36]))
+    out = []
+    if self_ref:
+        out.append("self-reference on %d slide(s) %s (e.g. %r) — keep the source line short, mark a "
+                   "derived figure with one symbol defined on the sources page, move method and caveats "
+                   "to the notes" % (len({i for i, _ in self_ref}), sorted({i for i, _ in self_ref})[:8],
+                                     self_ref[0][1]))
+    if len(slogans) >= 2:
+        out.append("%d not-X-but-Y slogans (slides %s, e.g. %r) — keep one for the hook or the close, "
+                   "say the finding plainly elsewhere" % (len(slogans), [i for i, _ in slogans][:8],
+                                                        slogans[0][1]))
+    if caps:
+        out.append("English caps line(s) in a Chinese deck on slide(s) %s (e.g. %r) — write the kicker "
+                   "in the deck's language; keep it only if it is a proper name"
+                   % (sorted({i for i, _ in caps})[:8], caps[0][1]))
+    if out:
+        return "ADVISORY", " · ".join(out)
+    return "PASS", "no on-slide self-reference, repeated not-X-but-Y slogan or foreign caps kicker"
+
+
 def check_latin_fullwidth(prs):
     """A space appears BEFORE full-width punctuation that follows a Latin run.
 
@@ -717,6 +787,7 @@ def main() -> int:
     residue = [
         ("mono wrap",        check_mono_wrap(prs)),
         ("Latin→full-width", check_latin_fullwidth(prs)),
+        ("copy tells",       check_copy_tells(prs)),
         ("box geometry",     check_box_geometry(prs)),
         ("derived pitch",    check_handrolled_pitch(a.build)),
         ("bar of means",     check_bar_of_means(a.build)),

@@ -231,5 +231,56 @@ check("a MONO run keeps its code punctuation",
 mk = dk._cjk_punct_para([dk.mark(("关键,", 14, dk.DEEP, True, False), "FFE066"), R_("同比")])
 check("a mark()ed run keeps its highlight", mk[0][0] == "关键，" and str(getattr(mk[0], "highlight", None)) == "FFE066", mk)
 
+print("── copy tells (preflight + lint)")
+import preflight_check as PF  # noqa: E402
+
+
+def _deck(pages, eafont="Hiragino Sans GB"):
+    old = dk.EAFONT
+    dk.EAFONT = eafont
+    try:
+        p_ = dk.blank_deck()
+        for lines in pages:
+            s_ = p_.slides.add_slide(p_.slide_layouts[6])
+            for k, line in enumerate(lines):
+                dk.text(s_, 0.6, 0.4 + 0.7 * k, 8.5, 0.6, [[R_(line)]])
+        return p_
+    finally:
+        dk.EAFONT = old
+
+
+body = "营收同比增长百分之十三，利润率小幅回落，现金流下降近三成，回购创下单季新高。"
+clean = _deck([[body], [body], ["来源说明", "[1] 股东信"]])
+check("a plain Chinese deck passes", PF.check_copy_tells(clean)[0] == "PASS", PF.check_copy_tells(clean))
+st, det = PF.check_copy_tells(_deck([[body, "占比为本 deck 计算"], [body, "倍数为公司公布值，非本文档计算"],
+                                      ["来源说明", "占比与增量为本 deck 计算"]]))
+check("on-slide self-provenance is named by slide, and the sources page is exempt",
+      st == "ADVISORY" and "slide(s) [1, 2]" in det, det)
+check("an ordinary 本文档编制于 date line is not self-provenance",
+      PF.check_copy_tells(_deck([[body, "本文档编制于 2026 年 7 月 26 日"]]))[0] == "PASS")
+check("a 来源 [1] footer on every page does not make every page a sources page",
+      "slide(s) [1, 2]" in PF.check_copy_tells(_deck([[body, "来源 [1] 股东信；占比为本 deck 计算"],
+                                                      [body, "来源 [2] 报表；本 deck 计算"]]))[1])
+one = _deck([["它不是给 I/O 做加法，是做乘法"], [body]])
+check("one not-X-but-Y line (the hook) is allowed", PF.check_copy_tells(one)[0] == "PASS", PF.check_copy_tells(one))
+two = _deck([["它不是给 I/O 做加法，是做乘法"], ["这不是字数问题，是冲突没找准"]])
+check("a second one is named", "2 not-X-but-Y" in PF.check_copy_tells(two)[1], PF.check_copy_tells(two))
+en2 = _deck([["It's not a faster board, it's a new platform"], ["This is not a chip, it's a system"]], eafont=None)
+check("...in English too", "2 not-X-but-Y" in PF.check_copy_tells(en2)[1], PF.check_copy_tells(en2))
+en_ref = _deck([["Margin fell 0.7 points (this deck's own calculation)"]], eafont=None)
+check("English on-slide self-reference is named", "self-reference" in PF.check_copy_tells(en_ref)[1])
+caps = _deck([["IN-LINE WITH GUIDANCE", body], [body]])
+check("an English caps kicker in a Chinese deck is named", "caps line" in PF.check_copy_tells(caps)[1])
+check("...not a dated title or citation in caps",
+      PF.check_copy_tells(_deck([["1979 · OFF THE WALL", body], ["VASWANI ET AL. · NEURIPS 2017", body]]))[0] == "PASS")
+check("...not caps in an English deck",
+      PF.check_copy_tells(_deck([["QUARTERLY BUSINESS REVIEW", "Revenue grew thirteen percent and margin held."]],
+                                eafont=None))[0] == "PASS")
+cp = TMP / "tells.pptx"
+caps.save(str(cp))
+r = subprocess.run(LINT + [str(cp)], capture_output=True, text=True)
+check("the render-time lint prints COPY TELLS (it runs on every render; preflight can be skipped)",
+      "COPY TELLS" in r.stdout, r.stdout[-500:])
+
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 sys.exit(1 if FAIL else 0)

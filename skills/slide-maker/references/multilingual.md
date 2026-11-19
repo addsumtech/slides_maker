@@ -294,6 +294,10 @@ language but is **most visible and most damaging in Chinese**, so check 中文 c
   `table()` automatically (`dk.cjk_punct`); after a Latin word or a number it is left alone, because a
   full-width mark there opens a renderer gap ("11.7% ；") — reword so a Chinese word carries the mark.
 
+The three you can decide from the text alone — on-slide self-reference, a second not-X-but-Y line, an English
+caps kicker in a Chinese deck — are named by slide in `preflight_check.py` (copy tells) and in the render-time
+lint (`COPY TELLS`), as an advisory: read each one and fix it, or keep it when it is a proper name or the one hook.
+
 **Fewer tells is not the goal — a better deck is.** These cures must never cost accuracy or force: a
 derived number keeps its mark, a real hook keeps its edge, a figure the audience needs stays on the
 slide. Rewrite the wording; never delete a fact to sound more human.
