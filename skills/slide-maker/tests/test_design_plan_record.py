@@ -118,6 +118,18 @@ f = DPR.ground_faults({"flips": [4, 6]}, str(rd))
 check("a planned flip the deck does not carry is named", any("slide 6" in x for x in f), f)
 check("single ground: nothing to measure", DPR.ground_faults({"single": "conservative"}, str(rd)) == [])
 check("no renders: no fault (not checked)", DPR.ground_faults({"flips": [4, 8]}, str(TMP / "nowhere")) == [])
+dd = TMP / "render-dark"                          # a dark deck (ground 0.10): white flips refused, a lifted tone passes
+dd.mkdir()
+for i in range(1, 11):
+    Image.new("L", (96, 54), {4: 235, 8: 85, 9: 40}.get(i, 26)).save(dd / ("slide%02d.png" % i))
+f = DPR.ground_faults({"flips": [4, 8]}, str(dd))
+check("a dark deck's flip to near-white is refused, naming it", len(f) == 1 and "slide 4" in f[0] and "near-white" in f[0], f)
+check("a dark deck's lifted mid-tone flip passes", DPR.ground_faults({"flips": [8]}, str(dd)) == [],
+      DPR.ground_faults({"flips": [8]}, str(dd)))
+f = DPR.ground_faults({"flips": [9]}, str(dd))
+check("a dark deck's flip barely off its ground is not built", any("slide 9" in x and "not built" in x for x in f), f)
+many = PLAN_EN.replace("grounds: flips 4, 8", "grounds: flips 3, 4, 6, 8")
+check("more than three flips are refused", any("at most 3" in x for x in DPR.validate(many)), DPR.validate(many))
 
 print("── the hero page (one moment of type drama)")
 check("hero: slide parsed", DPR.parse_hero(PLAN_EN) == {"slide": 6, "why": "the 86% that the deck exists for"},

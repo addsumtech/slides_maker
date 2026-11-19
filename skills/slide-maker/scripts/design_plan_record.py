@@ -47,6 +47,12 @@ CHECK_LETTERS = "abcdefghijklmnopqrs"
 # ground on every content page, and reviewers named "dark and light pages alternate" as the difference.
 SINGLE_GROUND = ("conservative", "visual-language", "template-locked", "tiny-deck")
 FLIP_DELTA = 0.35       # luminance distance from the deck's median ground that reads as a flipped page
+# A DARK deck flips UP to a lifted, tinted ground (slate, steel — a palette tone), not to white: measured
+# 2026-11-19, launch decks on a 0.10 ground flipped 2–4 pages to 0.88–0.93 and read as a different deck
+# cutting in (user: "背景颜色反差较大有点突兀"). The light-deck flip to a deep page is unchanged.
+DARK_DECK = 0.35        # a deck whose median page is darker than this is a dark deck
+DARK_FLIP = (0.12, 0.60)  # a dark deck's flip: at least this far above its ground, and no brighter than this
+MAX_FLIPS = 3
 _GROUNDS_RE = re.compile(r"^\s*[-*]?\s*(?:\*\*)?(grounds|底色)(?:\*\*)?\s*[:：]\s*(.+)$", re.I | re.M)
 # The hero page — one moment of type drama. Measured 2026-11-08 on the launch brief: the winning decks put
 # their biggest type at 5.7–7.1x the deck's typical top size (the gallery decks 2.3–6.5x); the losing one at
@@ -274,6 +280,9 @@ def validate(text: str) -> list[str]:
                       "— <%s>: <why>`" % " | ".join(SINGLE_GROUND))
     elif "bad" in g:
         faults.append("the `grounds:` line must start with `flips` or `single`, not %r" % g["bad"][:60])
+    elif "flips" in g and len(g["flips"]) > MAX_FLIPS:
+        faults.append("`grounds: flips` names %d pages — at most %d; a flip is an accent on the deck's turns, and "
+                      "more pages read as a second deck cutting in" % (len(g["flips"]), MAX_FLIPS))
     elif "flips" in g and len(g["flips"]) < 2:
         faults.append("`grounds: flips` names %d page — flips come as a family (two or more interior beats); a "
                       "lone flip reads as an error, not rhythm" % len(g["flips"]))
@@ -321,10 +330,21 @@ def ground_faults(grounds, render_dir: str) -> list[str]:
     lum = [ImageStat.Stat(Image.open(f).convert("L").resize((96, 54))).mean[0] / 255 for f in files]
     med = sorted(lum)[len(lum) // 2]
     out = []
+    dark = med < DARK_DECK
     for n in grounds["flips"]:
         if not 1 <= n <= len(lum):
             out.append("planned flip on slide %d, but the deck has %d slides" % (n, len(lum)))
-        elif abs(lum[n - 1] - med) <= FLIP_DELTA:
+        elif dark and lum[n - 1] > DARK_FLIP[1]:
+            out.append("planned flip on slide %d jumps to a near-white page (luminance %.2f) in a dark deck "
+                       "(%.2f) — it reads as another deck cutting in. Lift the ground to a tinted mid tone "
+                       "from the palette instead (a slate or steel, luminance %.2f-%.2f; light cards on it "
+                       "carry a chart that needs a light field)" % (n, lum[n - 1], med, med + DARK_FLIP[0],
+                                                                   DARK_FLIP[1]))
+        elif dark and lum[n - 1] - med < DARK_FLIP[0]:
+            out.append("planned flip on slide %d is not built — its page reads on the deck's own dark ground "
+                       "(luminance %.2f vs %.2f). Lift it to a tinted mid tone (luminance %.2f-%.2f) or change "
+                       "the plan" % (n, lum[n - 1], med, med + DARK_FLIP[0], DARK_FLIP[1]))
+        elif not dark and abs(lum[n - 1] - med) <= FLIP_DELTA:
             out.append("planned flip on slide %d is not built — its page reads on the deck's own ground "
                        "(luminance %.2f vs the deck's %.2f). Paint the flipped ground "
                        "(`dk.slide_background(slide, <deep colour>)`, ink re-chosen for it) or change the plan"

@@ -565,7 +565,8 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   record, a plan edited after recording, or a self-authored plan without an allowed category.
   It also reads the plan's `grounds:` line (light/dark pacing: `flips <slides>` — two or more interior pages on
   the flipped ground — or `single — <conservative | visual-language | template-locked | tiny-deck>`) and the gate
-  checks the rendered pages carry each planned flip (`ground_faults`).
+  checks the rendered pages carry each planned flip (`ground_faults`; at most 3 flips, and a dark deck's flip is a
+  lifted mid tone, luminance ≤0.60, not white).
   And the `hero:` line (`slide <n>` — its largest type must reach 2.5x the median of every slide's largest type,
   measured on the built file by `hero_faults` — or `none — <conservative | template-locked | tiny-deck | image-led>`).
   It also owns the density gate's rule (`density_waiver_allowed`): a `density` waiver counts only when

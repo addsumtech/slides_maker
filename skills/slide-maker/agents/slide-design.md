@@ -897,7 +897,10 @@ deck's ground (a dark page in a light deck or the reverse) — the peak, the key
 — or `grounds: single — <conservative | visual-language | template-locked | tiny-deck>: <why>`. A register kit
 paints the QUIET ground on every content page, so a flip is painted on purpose:
 `dk.slide_background(slide, <the register's deep colour>)` and ink re-chosen for that ground (contrast
-floors still apply). The hand-off gate reads the rendered pages and refuses a planned flip that is not built.
+floors still apply). At most 3 flips. A DARK deck flips UP to a lifted, tinted mid tone from its palette (a slate or
+steel), never to white — a white page in a dark deck reads as another deck cutting in; a chart that needs a light
+field sits on a light card on that mid ground. The hand-off gate reads the rendered pages and refuses a planned flip
+that is not built, and a dark deck's flip brighter than luminance 0.60.
 🔴 **And one `headlines:` line — WHERE the title sits, decided per page.** Every `skeleton()` divides the band UNDER
 the title bar, so a deck built from skeletons alone varies below the title and nowhere else (measured on the gallery
 decks: ~11–13 of every 14 interior pages carried the same kicker + title top-left). Keep `header` as the home base
