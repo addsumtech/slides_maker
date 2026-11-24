@@ -1,6 +1,6 @@
 # Hand-off & iterating after delivery — don't lose the user's edits
 
-🔴 **You no longer have to REMEMBER to check whether the user hand-edited the deck.** `declare_delivery`
+🔴 **Checking whether the user hand-edited the deck is automatic.** `declare_delivery`
 records the sha256 of what the build script saved, and `render_deck.py --gate-check` reports
 `EDITED SINCE BUILD` when the file on disk no longer matches it. Measured, and the reason this exists:
 a user edited a delivered deck in PowerPoint and saved it beside the built one — it was invisible to

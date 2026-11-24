@@ -503,8 +503,8 @@ to copy.
 
    **Do NOT pass `--count <deck-slide-count>`.** Feeding the full deck length would emit a
    context-free plate for every slide regardless of whether the design wants one — thoughtless,
-   padded imagery. The script no longer pads to a count; it emits one prompt per heading in
-   your sub-outline. (`--count` remains only as an optional *cap* that truncates the list.)
+   padded imagery. The script does not pad to a count; it emits one prompt per heading in
+   your sub-outline. (`--count` is only an optional *cap* that truncates the list.)
 4. Feed each prompt from `image_prompt_manifest.json` to the
    agent's image generation skill/tool.
 5. Save the selected outputs to the manifest filenames in the deck folder. **Note the
@@ -738,7 +738,7 @@ Codex path scales with the machine — `cores//3` clamped to 2–4, so a small C
 and a workstation stops queueing against nothing, since each job spends its time waiting on a hosted
 model rather than on a local core). Put hero + divider + interior-plate (and any per-slide heroes) in ONE manifest and run it
 once: a 3-image generated template lands in roughly the time of one image, not three. Lower
-`--concurrency 1` only if you hit API rate limits; a single failure no longer aborts the batch (it's
+`--concurrency 1` only if you hit API rate limits; a single failure does not abort the batch (it's
 reported and the rest continue). This is the main multi-process win in slide generation — the deck
 *build* itself (python-pptx) is already fast and stays one script run.
 

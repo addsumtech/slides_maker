@@ -582,7 +582,7 @@ the density directly:**
 - **Primary goal / intent → the arc shape.** *Inform & educate* builds to the evidence and
   explains; *support a decision* leads with the recommendation + the ask, then justifies (don't
   bury the decision); *inspire / motivate action* opens on the stakes and closes on a clear call
-  to action. **This derivation SEEDS the candidate set, it no longer settles it** — the derived
+  to action. **This derivation SEEDS the candidate set; it does not settle it** — the derived
   shape is candidate #1, and the competition exists to find out whether this deck's material
   argues better some other way. State the chosen shape and the alternatives it beat in the
   Narrative arc section.

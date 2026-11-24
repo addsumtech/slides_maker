@@ -13,7 +13,7 @@ Measured: a real deck was built in this repo's own session with language never a
 record carried `delivery`, `builds` and `content.slides` (the three axes something downstream
 demanded) and no answer for language, density, length or goal. Send **two calls**. Then RECORD the
 four: `interview.language / .density / .length / .goal`, required by both gates from one shared list
-(`deck_gates.INTERVIEW_AXES`) and scaffolded by `deck_gates.py --init`. An axis with no artifact
+(`deck_gates.INTERVIEW_AXES`) and scaffolded by `deck_gates.py init`. An axis with no artifact
 demanding it is an axis that goes unasked — this file said exactly that about deck length, in prose,
 and the failure moved one axis over.
 

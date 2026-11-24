@@ -32,7 +32,7 @@ direction*; the single real render confirms *fidelity*.
 ## The four gates (each cheap to change; expensive work deferred)
 
 ### Gate A — Direction + archetypes
-> **Note:** Gate A is no longer collaborative-mode-only — on the Q1(c) *design-a-clean-one*
+> **Note:** Gate A is not collaborative-mode-only — on the Q1(c) *design-a-clean-one*
 > branch it runs BY DEFAULT (SKILL.md Q1(c); named carves there), because that is the one
 > branch where the look is invented from nothing and the user has seen no options.
 1. From the interview (purpose/audience/style) offer **differentiated directions** — distinct design

@@ -760,9 +760,9 @@ fall and stage each built slide FULLY (think SMART, not by quota):
     (flagged)` · or `n/a — <named inline as text | template carries it | third-party assessment |
     user opted out>` — and a **ROSTER slide additionally carries `entity marks: <N of M sourced |
     none — reason>`**, since one line cannot answer both "the deck's own mark" and "the eight
-    institutions on slide 5". `multi-entity` is no longer a value: it named the deck's SHAPE and
-    was read as a blanket exemption, which is exactly how a roster slide shipped eight identical
-    blue squares. The replacement names the DECISION — you looked, and chose type. **The third-party arm is decided BEFORE the search, not after it** — it is a question about
+    institutions on slide 5". `multi-entity` is not one of the `n/a` reasons: it names the deck's
+    SHAPE and reads as a blanket exemption (that is how a roster slide shipped eight identical
+    blue squares). The `entity marks:` line names the DECISION — you looked, and chose type. **The third-party arm is decided BEFORE the search, not after it** — it is a question about
     who wrote the deck, so a found logo does not overturn it and "not found" is not its reason; say
     which finding makes the deck independent (a real one: a briefing carrying two open Class I recalls
     and a "first, but not alone" correction went to build in the subject's brand colours until this was

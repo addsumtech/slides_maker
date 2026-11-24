@@ -347,7 +347,7 @@ repo's own session: a real deck was built and language was never asked, while th
 answer for language, density, length or goal. Send **two calls** (four, then the rest); a host with
 widgets does not get a shorter interview. 🔴 **And RECORD the answers**: `interview.language`,
 `.density`, `.length` and `.goal` are required by `--gate-check` and by the codex gate, from one
-shared axis list (`deck_gates.INTERVIEW_AXES`), and `deck_gates.py --init` scaffolds them. Those
+shared axis list (`deck_gates.INTERVIEW_AXES`), and `deck_gates.py init` scaffolds them. Those
 four are singled out because nothing else demands them — which is exactly why they are the ones
 that go unasked. The waiver is written (`{"interview": {"waived": "<why>"}}`), and under the auto
 directive these are your delegated picks: the waiver removes the STOP, never the record.
@@ -464,7 +464,7 @@ invalidates everything downstream — a wrong form costs one slide, a wrong arc 
 and the build under it — and it was the one decision with no alternative on the record.
 🔴 **Its GATE is `content.arc.candidates` in `.deck-gates.json` — the candidate arcs THEMSELVES, not a
 verdict about them.** The hand-off gate runs `arc_divergence.check()` over them at delivery, so the
-line you paste is no longer the evidence: it re-scores the set. Losers go in `content.arc.rejected`
+line you paste is not the evidence: it re-scores the set. Losers go in `content.arc.rejected`
 (every one of them, with its clause) and a flagged-but-kept set needs
 `content.arc.divergence_justified`. This changed because a delivered deck passed with
 `"divergence": "ok"` — two characters — while the script had never been run for it; the previous
@@ -2412,8 +2412,8 @@ A checkable red-flag list; if a draft does any of these, stop and fix it before 
   **COMPOSED** — one protagonist, vast air around it. A 60pt statement over an empty lower half is the
   oldest move in editorial design; the air is the frame the hero is mounted in. `UNDERFILLED` and
   `DEAD BOTTOM` now stand down on their own when a slide has typographic dominance (its biggest run
-  ≥2× its own body tier) AND few objects (≤6) — you no longer have to declare a composition to be
-  allowed one. **LEFTOVER** — a grid that ran out of content: flat type, many peers, and a band of
+  ≥2× its own body tier) AND few objects (≤6) — a composition does not have to be declared to be
+  allowed. **LEFTOVER** — a grid that ran out of content: flat type, many peers, and a band of
   nothing at the bottom because the last row had nothing to put in it. That is what this rule forbids.
   *(Interior pages keep balanced fullness — the role OCCUPANCY bands stand. Vast whitespace is a
   register for the BOOKENDS and the statement/pivot page, not the default for a content slide; the

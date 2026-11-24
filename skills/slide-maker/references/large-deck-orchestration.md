@@ -146,8 +146,8 @@ makes its verdict worth anything.
 - Animations (`anim.py`) are added **inside** a section's `build_section`, per slide.
 - Output still lands in `~/Downloads/<deck>/` (the normal rule); the assembled `.pptx`
   is the deliverable, with a `render/` of the final PNGs (the `.pdf` and `viewer.html` are the
-  reserved hand-off pair — `render_deck … --deliverables`, generated once the deck is final). Section subagents' self-renders no longer drop a PDF beside their section deck (the PDF is a
-  reserved deliverable now), so there is nothing to clean up at assembly.
+  reserved hand-off pair — `render_deck … --deliverables`, generated once the deck is final). Section subagents' self-renders write no PDF beside their section deck (the PDF is a
+  reserved deliverable), so there is nothing to clean up at assembly.
 - If the deck is small, skip all of this — one build script is the right tool.
 
 **Final rhythm-normalization pass (required after assembly).** Section authors each see only their

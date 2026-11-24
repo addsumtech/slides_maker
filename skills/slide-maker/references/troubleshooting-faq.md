@@ -604,7 +604,7 @@ nothing else on the page is doing (three DIFFERENT KINDS of fact side by side; t
 reader scans FOR an item) and none where another element already encodes the distinction (a
 position map, semantic colour, numbered routes, the motif itself).
 `design_plan.icon_none_category` + `icon_none_checked: [slides]` (Codex: an `icon` waiver with
-`category`). A bare "not category-rich" no longer clears it, and the category explains the REST of the
+`category`). A bare "not category-rich" does not clear it, and the category explains the REST of the
 deck — it is **never** a licence to drop icons from the categorical slides that do have them (a
 motif-dominant deck may still put icons on its one roster/preview page, as this skill's own UK-labour
 deck does on its two 3-item slides). 🔴 **But icons must ENCODE, not decorate** — a topic-stamp beside
