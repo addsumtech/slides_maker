@@ -29,6 +29,7 @@ Choose a built-in template or bring a reference deck. Confirm the outline and de
   <a href="#example-decks"><strong>Examples</strong></a> ·
   <a href="#features-and-deliverables"><strong>Features</strong></a> ·
   <a href="#how-it-works"><strong>How it works</strong></a> ·
+  <a href="#under-the-hood"><strong>Under the hood</strong></a> ·
   <a href="#quick-start"><strong>Quick start</strong></a> ·
   <a href="#troubleshooting"><strong>Troubleshooting</strong></a>
 </p>
@@ -257,6 +258,31 @@ The skill is free. Running it uses your AI subscription or API credits. Slide co
 | `none` | Your explicit choice after viewing the render: skip independent review, including its source re-check. |
 
 Long decks are reviewed by section as well as for overall coherence. Delegating the choice runs at least `fast`; it never skips review automatically.
+
+## Under the hood
+
+A typical slide generator turns one prompt into slides in a single pass. slide-maker splits the work across
+specialised agents, checks the file it actually built, and remembers what you taught it.
+
+<p align="center"><img src="docs/readme/how-it-works-en.jpg" alt="Pipeline: interview, content planner, art director, build, render and gates, hand-off; independent critics loop with the build until they consent; a blind reader sees only the rendered pages; memory feeds the interview, design and review" width="860"></p>
+
+| Technique | What it does |
+| --- | --- |
+| Multi-agent roles | A content planner reads your material and proposes 2–3 competing story arcs (`arc_divergence.py` checks they really differ before one is picked); an art director writes the design plan; build-time workers prepare assets. Each runs in its own context when the host can dispatch subagents, otherwise inline. |
+| Native, editable PPTX | DeckKit builds real text boxes, shapes and charts, not screenshots, in one of 30 visual languages or your own template. |
+| Gates on the built file | Deterministic checks read the `.pptx` and its rendered pages: overflow, overlaps, fonts, contrast, whether the planned hero page and light/dark rhythm actually landed, and whether each number traces back to your source. |
+| Actor–critic loop | Independent critics review content and design; the deck is revised until a critic consents, and a consent must cite the exact review it rests on. |
+| Blind read-back | A separate reader gets only the rendered images and a fixed question list; where its reading disagrees with the plan, that is a finding. |
+| Any agent runtime | Claude Code, Codex and other agents run the same scripts; Codex runs get an extra delivery gate. |
+
+### Memory
+
+<p align="center"><img src="docs/readme/memory-en.jpg" alt="Claude Code, Codex or any agent calls memory.py recall to read your slide memory (profile, preferences, taught rules, references); a note, close, propose cycle grows it; stored locally; returning users are seeded once from past decks" width="860"></p>
+
+- **One command per step.** `memory.py recall --step design` returns your profile, standing preferences, vetoes and the rules you taught, so any agent applies them without reading the docs.
+- **Learns from use.** What you ask for is logged in your own words; a request repeated across decks becomes a proposed preference, and a rule you keep skipping is put back to you.
+- **You decide.** Anything that binds future decks is written only on your yes; `memory.py forget` removes any line. It is stored under your home folder, and personal identifiers are refused.
+- **Returning users** are asked once whether the records past decks left may seed it; new users start fresh.
 
 ## Installation and setup
 
