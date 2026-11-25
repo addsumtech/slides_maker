@@ -269,6 +269,139 @@ check(M.read_sections(FULL_TASTE)["DIALS"][1].startswith("| density"),
       "read_sections kept the header/separator rows")
 
 
+# ── Task 3: close · proposals · accept · reject · forget ─────────────────────────────────────────
+def props(b):
+    code, out, err = b.run("proposals", "--format", "json")
+    try:
+        return json.loads(out)
+    except json.JSONDecodeError:
+        fails.append("proposals --format json did not print JSON: " + out + err)
+        return []
+
+
+code, out, err = Box().run("note", "--kind", "requirement", "--key", "habits", "--quote",
+                           "always notes", "--deck", "a", "--direction", "require")
+check(code == 1, "a requirement on a PROFILE key was accepted (profile keys take profile-fact)")
+
+b = Box()
+note(b, deck="deck-a")
+note(b, deck="deck-a", quote="还是太素")
+check(props(b) == [], "two notes in ONE deck proposed a standing preference")
+note(b, deck="deck-b", quote="颜色再多一点")
+p = props(b)
+dial = [x for x in p if x["target"] == "dial" and x["key"] == "colour"]
+check(len(dial) == 1 and sorted(dial[0]["decks"]) == ["deck-a", "deck-b"]
+      and dial[0]["needs_confirm"] is False,
+      "the same key+direction in two decks did not propose one dial: {}".format(p))
+
+b = Box()
+note(b, "--standing", deck="deck-a", key="numerals", direction="require",
+     quote="digits must always line up")
+p = props(b)
+check(any(x["target"] == "dial" and x["key"] == "numerals" for x in p),
+      "a standing note in one deck did not propose")
+pid = [x for x in p if x["key"] == "numerals"][0]["id"]
+code, out, err = b.run("accept", pid)
+check(code == 1 and b.taste() == "", "a dial accept without --position wrote something")
+code, out, err = b.run("accept", pid, "--position", "lining figures always")
+check(code == 0 and "| numerals | lining figures always |" in b.taste()
+      and "digits must always line up" in b.taste() and "recorded to your taste profile" in out,
+      "a dial accept did not write the evidenced row + FYI line:\n" + out + err + b.taste())
+check(not any(x["id"] == pid for x in props(b)), "an accepted proposal was proposed again")
+note(b, "--standing", deck="deck-c", key="numerals", direction="avoid",
+     quote="actually old-style digits are fine always")
+p = [x for x in props(b) if x["key"] == "numerals"]
+check(len(p) == 1 and p[0]["direction"] == "avoid" and "UPDATE" in p[0]["reason"],
+      "an opposite later direction did not propose an UPDATE: {}".format(p))
+b.run("accept", p[0]["id"], "--position", "old-style allowed")
+check(b.taste().count("| numerals |") == 1 and "old-style allowed" in b.taste(),
+      "the update did not replace the row (two rows argue about one dimension)")
+
+b = Box()
+code, out, err = note(b, "--value", "MRI reconstruction researcher", kind="profile-fact",
+                      key="role", direction=None, quote="我是做MRI重建的")
+p = props(b)
+check(len(p) == 1 and p[0]["target"] == "profile" and p[0]["needs_confirm"] is True,
+      "a profile fact did not propose a confirm-first PROFILE line: {}".format(p))
+code, out, err = b.run("accept", p[0]["id"])
+check(code == 1 and b.taste() == "" and "ask the user" in (out + err).lower(),
+      "a PROFILE accept without --confirmed was not refused with the question to ask")
+code, out, err = b.run("accept", p[0]["id"], "--confirmed")
+check(code == 0 and "- role: MRI reconstruction researcher" in b.taste()
+      and b.taste().index("## PROFILE") >= 0, "a confirmed PROFILE accept did not write the line")
+code, out, err = b.run("forget", "profile:role")
+check(code == 0 and "role:" not in b.taste(), "forget profile:role did not remove the line")
+
+b = Box()
+for d in ("deck-a", "deck-b"):
+    note(b, deck=d, key="length", direction="less", quote="太长了，压缩一点")
+p = [x for x in props(b) if x["target"] == "rule"]
+check(len(p) == 1 and p[0]["needs_confirm"], "a recurring content requirement did not propose a "
+      "confirm-first ledger rule: {}".format(p))
+code, out, err = b.run("accept", p[0]["id"], "--confirmed")
+check(code == 1, "a rule accept without --rule was accepted")
+code, out, err = b.run("accept", p[0]["id"], "--confirmed", "--rule",
+                       "keep decks short: cut to the core claims before adding slides")
+led = json.loads(b.ledger.read_text())["entries"] if b.ledger.exists() else []
+check(code == 0 and len(led) == 1 and led[0]["id"] == "length-less"
+      and led[0]["binds_at"] == "content" and led[0]["quote"] == "太长了，压缩一点",
+      "a confirmed rule accept did not land in the ledger: {} {}".format(led, out + err))
+
+b = Box()
+for d in ("deck-a", "deck-b"):
+    note(b, deck=d, key="motion", direction="less", quote="no flying text")
+pid = props(b)[0]["id"]
+b.run("reject", pid)
+check(props(b) == [], "a rejected proposal came straight back")
+note(b, deck="deck-c", key="motion", direction="less", quote="still too much motion")
+check(any(x["id"] == pid for x in props(b)), "a rejected proposal did not return on a NEW deck")
+
+
+def deck_dir(b, name, applied, skipped, codex=False):
+    d = b.td / name
+    d.mkdir()
+    rows = [{"id": i, "applied": True} for i in applied] + [
+        {"id": i, "applied": False, "why_not": "does not bind on this deck at all"} for i in skipped]
+    rec = {"design": {"taste_applied": rows}} if codex else {"design_plan": {"taste_applied": rows}}
+    (d / (".codex-deck-evidence.json" if codex else ".deck-gates.json")).write_text(json.dumps(rec))
+    return d
+
+
+b = Box()
+b.ledger.write_text(json.dumps([ledger_entry(1, "design"), ledger_entry(2, "design")]))
+note(b, deck="deck-1")
+code, out, err = b.run("close", str(deck_dir(b, "deck-1", ["rule-1"], ["rule-2"])))
+rec = [o for o in b.obs() if o["kind"] == "applied-record"]
+check(code == 0 and len(rec) == 1 and rec[0]["skipped"] == ["rule-2"]
+      and "1 observation" in out, "close did not snapshot taste_applied + report the count:\n" + out)
+b.run("close", str(b.td / "deck-1"))
+check(len([o for o in b.obs() if o["kind"] == "applied-record"]) == 1,
+      "closing the same deck twice logged two records (would fake 'consecutive' skips)")
+code, out, err = b.run("close", str(deck_dir(b, "deck-2", [], ["rule-2"], codex=True)))
+check(code == 0 and [o for o in b.obs() if o["kind"] == "applied-record"][-1]["skipped"] == ["rule-2"],
+      "close did not read the Codex `design` record")
+check(not any(x["target"] == "review" for x in props(b)), "two skips already proposed a review")
+b.run("close", str(deck_dir(b, "deck-3", ["rule-1"], ["rule-2"])))
+rv = [x for x in props(b) if x["target"] == "review"]
+check(len(rv) == 1 and rv[0]["key"] == "rule:rule-2",
+      "three consecutive skips did not propose a review of that rule: {}".format(rv))
+
+b = Box()
+(b.reg / "taste.md").write_text(FULL_TASTE, encoding="utf-8")
+b.today = "2027-09-01"
+rv = [x["key"] for x in props(b) if x["target"] == "review"]
+check("dial:colour" in rv and "profile:role" in rv,
+      "lines with evidence older than 365 days were not proposed for review: {}".format(rv))
+note(b, deck="deck-z", key="colour", direction="more", quote="colour still matters")
+rv = [x["key"] for x in props(b) if x["target"] == "review"]
+check("dial:colour" not in rv, "a fresh observation on that key did not re-confirm the dial")
+pid = [x for x in props(b) if x["key"] == "profile:role"][0]["id"]
+b.run("reject", pid)
+check(not any(x["id"] == pid for x in props(b)), "a kept (rejected) stale review came straight back")
+b.today = "2028-09-02"
+check(any(x["id"] == pid for x in props(b)), "a kept stale review never came back a year later")
+
+
 # ── report ───────────────────────────────────────────────────────────────────────────────────────
 for f in fails:
     print("FAIL: " + f)
