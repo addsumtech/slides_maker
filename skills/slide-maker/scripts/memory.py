@@ -61,7 +61,8 @@ PROFILE_KEYS = ("role", "field", "organization", "audiences", "venues", "languag
                 "habits")
 DIRECTIONS = ("more", "less", "require", "avoid")
 OPPOSITE = {"more": "less", "less": "more", "require": "avoid", "avoid": "require"}
-KINDS = ("requirement", "correction", "praise", "profile-fact", "veto", "applied-record")
+KINDS = ("requirement", "correction", "praise", "profile-fact", "veto", "applied-record", "recorded")
+WRITTEN_BY_SCRIPT = ("applied-record", "recorded")     # `close` / `seed` only, never `note`
 STEPS = ("interview", "content", "design", "build", "critic", "handoff")
 OBS_CAP = 300
 MIN_QUOTE = 4
@@ -157,15 +158,39 @@ def today() -> _dt.date:
 def memory_root() -> Path:
     """The registry root that holds (or will hold) `taste.md` — memory lives beside it."""
     f = registry.taste_file()
-    if f:
-        return f.parent
-    # no taste.md yet: a root that already holds memory files wins, so a log written under the
-    # host-neutral root is not stranded when ~/.claude or ~/.codex appears later
+    target = f.parent if f else registry.root_for_write()[1]
+    _gather(target)
+    return target
+
+
+MEMORY_FILES = ("observations.jsonl", "memory-state.json", "references.jsonl")
+_GATHERED: set = set()
+
+
+def _gather(target: Path) -> None:
+    """Keep memory in the ONE root registry.py names (where the agent also appends LOOK HISTORY).
+
+    Measured failure this prevents: memory started under the host-neutral root, then ~/.claude
+    appeared — registry.py moved taste.md's write target there while the log stayed behind, so
+    taste.md could split across two roots with the higher-priority one hiding the other. Memory
+    files found in another root are MOVED (never overwritten) into the target, once, out loud."""
+    if target in _GATHERED:
+        return
+    _GATHERED.add(target)
     for _, root in registry.roots_for_read():
-        if any((root / n).exists() for n in ("observations.jsonl", "memory-state.json",
-                                              "references.jsonl")):
-            return root
-    return registry.root_for_write()[1]
+        if root == target:
+            continue
+        for n in MEMORY_FILES:
+            src, dst = root / n, target / n
+            try:
+                if src.is_file() and not dst.exists():
+                    target.mkdir(parents=True, exist_ok=True)
+                    src.replace(dst)
+                    print("memory: moved {} → {} (the registry root this runtime uses)"
+                          .format(src, dst), file=sys.stderr)
+            except OSError as exc:
+                print("memory: could not move {} ({}) — it stays where it is".format(src, exc),
+                      file=sys.stderr)
 
 
 def taste_path() -> Path:
@@ -269,9 +294,9 @@ def _refuse(msg: str) -> int:
 # ── note ─────────────────────────────────────────────────────────────────────────────────────────
 def note_faults(kind, key, quote, deck, direction, value) -> list[str]:
     out = []
-    if kind not in KINDS or kind == "applied-record":
-        out.append("--kind must be one of {} (applied-record is written by `close` only)"
-                   .format(" | ".join(k for k in KINDS if k != "applied-record")))
+    if kind not in KINDS or kind in WRITTEN_BY_SCRIPT:
+        out.append("--kind must be one of {} (applied-record / recorded are written by `close` / "
+                   "`seed` only)".format(" | ".join(k for k in KINDS if k not in WRITTEN_BY_SCRIPT)))
     if key not in all_keys():
         out.append("--key {!r} is not in the vocabulary. Design: {}. Content/process: {}. "
                    "Profile: {}.".format(key, ", ".join(DESIGN_KEYS), ", ".join(CONTENT_KEYS),
@@ -311,6 +336,7 @@ def deck_name(d) -> str:
 
 
 def _cmd_note(a) -> int:
+    _mark_fresh()
     direction = a.direction or ("avoid" if a.kind == "veto" else None)
     bad = note_faults(a.kind, a.key, a.quote, a.deck, direction, a.value)
     if bad:
@@ -331,7 +357,7 @@ def _cmd_keys(_a) -> int:
         "{} [{}]".format(k, v) for k, v in CONTENT_KEYS.items()))
     print("profile keys (→ taste.md PROFILE): " + ", ".join(PROFILE_KEYS))
     print("directions: " + " | ".join(DIRECTIONS) + "   kinds: " +
-          " | ".join(k for k in KINDS if k != "applied-record"))
+          " | ".join(k for k in KINDS if k not in WRITTEN_BY_SCRIPT))
     return 0
 
 
@@ -555,6 +581,8 @@ def recall(step: str, venue=None) -> dict:
     if step in ("interview", "handoff"):
         d["proposals"] = len(proposals())
     nxt = [NOTE_NEXT]
+    if step == "interview" and "seeded" not in load_state() and legacy_footprint():
+        nxt.insert(0, _seed_line())
     if step == "design" and d["rules"]:
         nxt.append('NEXT: record design_plan.taste_applied — one row per TAUGHT RULE above: '
                    '{"id": "<id>", "applied": true} or {"id": "<id>", "applied": false, '
@@ -685,6 +713,7 @@ def ref_faults(key, url, facts) -> list[str]:
 def _cmd_ref(a) -> int:
     now = today()
     if a.ref_cmd == "add":
+        _mark_fresh()
         bad = ref_faults(a.key, a.url, a.facts)
         if bad:
             return _refuse("; ".join(bad))
@@ -718,7 +747,7 @@ def _pid(*parts) -> str:
 
 
 def _target(kind, key):
-    if kind == "profile-fact":
+    if kind == "profile-fact" or (kind == "recorded" and key in PROFILE_KEYS):
         return "profile"
     if key in DESIGN_KEYS:
         return "nogo" if kind == "veto" else "dial"
@@ -742,17 +771,34 @@ def _recurrence(obs, secs, state) -> list[dict]:
         t = _target(o.get("kind"), o.get("key"))
         if t is None:
             continue
-        third = (o.get("value") or "").strip().lower() if t == "profile" else o.get("direction")
-        g = groups.setdefault((t, o.get("key"), third), {"recs": [], "last": -1})
+        recorded = o.get("kind") == "recorded"
+        third = ((o.get("value") or "").strip().lower() if t == "profile" or recorded
+                 else o.get("direction"))
+        g = groups.setdefault((t, o.get("key"), third, recorded), {"recs": [], "last": -1})
         g["recs"].append(o)
         g["last"] = i
     profile_now = {_line_key("PROFILE", l): l for l in secs["PROFILE"]}
     dial_keys = {_line_key("DIALS", l) for l in secs["DIALS"]}
     out = []
-    for (t, key, third), g in groups.items():
+    for (t, key, third, recorded), g in groups.items():
         recs = g["recs"]
         decks = sorted({r.get("deck") for r in recs})
         standing = any(r.get("standing") for r in recs)
+        if recorded:
+            # an answer a past deck's record holds — inferred, not their words: ≥2 decks, ask first
+            line = profile_now.get(key, "") if t == "profile" else ""
+            if len(decks) < 2 or (third and third in line.lower()):
+                continue
+            pid = _pid("recorded", t, key, third)
+            if pid in state["accepted"] or (pid in state["rejected"]
+                                            and len(decks) <= int(state["rejected"][pid] or 0)):
+                continue
+            out.append({"id": pid, "target": t, "key": key, "direction": "",
+                        "value": recs[-1].get("value", ""), "decks": decks,
+                        "quotes": [r.get("quote") for r in recs][-2:], "newest": recs[-1],
+                        "reason": "the same answer on {} past decks (from their records)"
+                        .format(len(decks)), "needs_confirm": True, "seen": len(decks)})
+            continue
         if t == "profile":
             line = profile_now.get(key, "")
             if third and third in line.lower():
@@ -760,7 +806,7 @@ def _recurrence(obs, secs, state) -> list[dict]:
             ok = True
         else:
             ok = len(decks) >= 2 or standing
-            opp = groups.get((t, key, OPPOSITE.get(third)))
+            opp = groups.get((t, key, OPPOSITE.get(third), False))
             if opp and opp["last"] > g["last"] and (len({r.get("deck") for r in opp["recs"]}) >= 2
                                                      or any(r.get("standing") for r in opp["recs"])):
                 ok = False                         # the newer, opposite group speaks for this key
@@ -847,7 +893,8 @@ def _cell(s) -> str:
 
 def _command(p) -> str:
     if p["target"] == "dial":
-        return '{} accept {} --position "<the standing position, in a few words>"'.format(SELF, p["id"])
+        pos = _flat(p["value"]) if p.get("value") else "<the standing position, in a few words>"
+        return '{} accept {} --position {}'.format(SELF, p["id"], shlex.quote(pos))
     if p["target"] == "nogo":
         return '{} accept {} --text "<the veto, as a rule>"'.format(SELF, p["id"])
     if p["target"] == "profile":
@@ -897,6 +944,7 @@ def _find(pid):
 
 
 def _cmd_accept(a) -> int:
+    _mark_fresh()
     import taste_ledger as tl
     p = _find(a.id)
     if p is None:
@@ -1021,6 +1069,7 @@ def _cmd_forget(a) -> int:
 
 
 def _cmd_close(a) -> int:
+    _mark_fresh()
     import taste_ledger as tl
     deck = Path(a.deck).expanduser().resolve()
     rec = None
@@ -1047,6 +1096,147 @@ def _cmd_close(a) -> int:
         _write_jsonl(obs_path(), (obs + [snap])[-OBS_CAP:])
     n = sum(1 for o in load_obs() if o.get("deck") == deck.name and o.get("kind") != "applied-record")
     print("FYI for the hand-off note: logged {} observation(s) on this deck ({}).".format(n, deck.name))
+    print_proposals(proposals())
+    return 0
+
+
+# ── seed: start an EXISTING user's memory from the records past decks left ─────────────────────────
+SEED_DIRS = ("Downloads", "Desktop", "Documents")
+SEED_DEPTH = 3
+SEED_MAX_DIRS = 20000                 # a bound, so a huge Documents tree cannot stall the interview
+SEED_SKIP = {"node_modules", "Library", "__pycache__", "site-packages", "venv", "env", "Applications"}
+RECORDS = (".deck-gates.json", ".codex-deck-evidence.json")
+SEED_AXES = {"language": "languages", "density": "density"}
+
+
+def legacy_footprint() -> bool:
+    """Did this user use slide-maker before memory existed? taste.md, taught rules, saved templates
+    or invented registers. A brand-new user has none, and is never asked to seed."""
+    import taste_ledger as tl
+    if read_sections(read_taste()) != {k: [] for k in SECTIONS} or read_taste().strip():
+        return True
+    try:
+        if tl.load():
+            return True
+    except SystemExit:
+        return True                                       # a ledger exists, even if unreadable
+    try:
+        return bool(registry.list_templates()) or (memory_root() / "registers.md").exists()
+    except OSError:
+        return False
+
+
+def _mark_fresh() -> None:
+    """The first memory write of a brand-new user settles the seed question for good."""
+    state = load_state()
+    if "seeded" not in state and not legacy_footprint():
+        state["seeded"] = {"date": today().isoformat(), "how": "fresh — no past records"}
+        save_state(state)
+
+
+def _seed_line() -> str:
+    return ('NEXT: this user used slide-maker before, but their memory was never seeded. Ask them '
+            'ONCE: "May I read the records your past decks left (.deck-gates.json files in '
+            '~/Downloads, ~/Desktop, ~/Documents — not the slides themselves) to start your '
+            'memory?" — yes → {s} seed [--scan <another deck folder they name>]; no → {s} seed '
+            '--skip').format(s=SELF)
+
+
+def find_records(tops, report) -> list[Path]:
+    """Every deck record under `tops`, ≤ SEED_DEPTH levels, hidden and tool folders pruned. Reads
+    directory listings only; opens nothing but the record files the caller asks for."""
+    found, visited = [], 0
+    for top in tops:
+        if not top.is_dir():
+            continue
+        base = len(top.parts)
+        for dirpath, dirnames, filenames in os.walk(top, onerror=lambda e: report.append(
+                "could not read {} ({})".format(e.filename, e.__class__.__name__))):
+            visited += 1
+            if visited > SEED_MAX_DIRS:
+                report.append("stopped after {} folders — pass --scan <deck folder> to look further"
+                              .format(SEED_MAX_DIRS))
+                return found
+            depth = len(Path(dirpath).parts) - base
+            dirnames[:] = [] if depth >= SEED_DEPTH else [
+                d for d in dirnames if not d.startswith(".") and d not in SEED_SKIP]
+            rec = next((r for r in RECORDS if r in filenames), None)
+            if rec:
+                found.append(Path(dirpath) / rec)
+    return found
+
+
+def _stated(interview: dict, axis: str):
+    v = interview.get(axis)
+    if not isinstance(v, str) or not v.strip() or v.strip().startswith("<"):
+        return None                                        # missing or an unfilled placeholder
+    for row in interview.get("picks") or []:
+        if isinstance(row, dict) and row.get("axis") == axis and row.get("source") != "stated":
+            return None                                    # the skill chose it, not the user
+    v = _flat(v)
+    return None if pii_faults(v) else v
+
+
+def _cmd_seed(a) -> int:
+    import taste_ledger as tl
+    state = load_state()
+    if a.skip:
+        state["seeded"] = {"date": today().isoformat(), "how": "skipped by the user"}
+        save_state(state)
+        print("memory: seed skipped — memory starts from what happens next")
+        return 0
+    if "seeded" in state:
+        print("memory: already seeded ({}, {}) — nothing to do".format(
+            state["seeded"].get("how"), state["seeded"].get("date")))
+        return 0
+    home = Path.home()
+    tops = [home / d for d in SEED_DIRS] + [Path(x).expanduser() for x in (a.scan or [])]
+    report: list[str] = []
+    for x in a.scan or []:
+        if not Path(x).expanduser().is_dir():
+            report.append("could not read {} (not a folder)".format(x))
+    obs = load_obs()
+    logged = {o.get("deck") for o in obs if o.get("kind") == "applied-record"}
+    new, decks = [], 0
+    names_here: dict = {}
+    for f in find_records(tops, report):
+        deck = f.parent.name
+        if deck in names_here and names_here[deck] != f.parent:
+            deck = "{}/{}".format(f.parent.parent.name, deck)  # two decks in same-named folders
+        names_here.setdefault(f.parent.name, f.parent)
+        if deck in logged:
+            continue
+        try:
+            rec = json.loads(f.read_text(encoding="utf-8"))
+            date = _dt.date.fromtimestamp(f.stat().st_mtime).isoformat()
+        except (OSError, ValueError) as exc:
+            report.append("could not read {} ({})".format(f, exc.__class__.__name__))
+            continue
+        if not isinstance(rec, dict):
+            continue
+        decks += 1
+        logged.add(deck)
+        rows = [r for r in ((tl.design_of(rec) or {}).get("taste_applied") or []) if isinstance(r, dict)]
+        new.append({"date": date, "deck": deck, "kind": "applied-record", "step": "seed",
+                    "applied": [str(r.get("id")) for r in rows if r.get("applied") is True],
+                    "skipped": [str(r.get("id")) for r in rows if r.get("applied") is not True]})
+        interview = rec.get("interview") if isinstance(rec.get("interview"), dict) else {}
+        for axis, key in SEED_AXES.items():
+            v = _stated(interview, axis)
+            if v:
+                new.append({"date": date, "deck": deck, "step": "seed", "kind": "recorded",
+                            "key": key, "direction": "", "value": v, "standing": False,
+                            "quote": "recorded interview answer — {} = {}".format(axis, v)})
+    _write_jsonl(obs_path(), (obs + new)[-OBS_CAP:])
+    state = load_state()
+    state["seeded"] = {"date": today().isoformat(), "how": "scanned {} past deck record(s)".format(decks)}
+    save_state(state)
+    print("memory: seeded from {} past deck record(s) — {} answer(s) recorded; looked in {}".format(
+        decks, sum(1 for o in new if o["kind"] == "recorded"), ", ".join(str(t) for t in tops)))
+    for r in report:
+        print("memory: " + r + (" — macOS may block this folder; grant access or pass --scan"
+                                if "could not read" in r else ""))
+    print("Show the user what was found; nothing below is written until they say yes.")
     print_proposals(proposals())
     return 0
 
@@ -1114,6 +1304,9 @@ def main(argv=None) -> int:
     ra.add_argument("--ttl-days", type=int)
     rl = rsub.add_parser("list")
     rl.add_argument("--expired", action="store_true")
+    sd = sub.add_parser("seed", help="once, for an existing user: read past deck records")
+    sd.add_argument("--scan", action="append", help="another folder holding past decks")
+    sd.add_argument("--skip", action="store_true", help="the user said no — start fresh")
     cl = sub.add_parser("close", help="Step-6: snapshot taste_applied, then list proposals")
     cl.add_argument("deck")
     a = ap.parse_args(argv)
@@ -1127,7 +1320,8 @@ def main(argv=None) -> int:
         if a.cmd == "recall":
             return _cmd_recall(a)
         handler = {"proposals": _cmd_proposals, "accept": _cmd_accept, "reject": _cmd_reject,
-                   "forget": _cmd_forget, "close": _cmd_close, "ref": _cmd_ref}.get(a.cmd)
+                   "forget": _cmd_forget, "close": _cmd_close, "ref": _cmd_ref,
+                   "seed": _cmd_seed}.get(a.cmd)
         if handler:
             return handler(a)
     except OSError as exc:

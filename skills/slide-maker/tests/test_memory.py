@@ -595,6 +595,122 @@ check((home / ".slide-maker" / "slide-templates" / "observations.jsonl").exists(
 r = run("proposals")
 check("colour" in r.stdout, "memory in the neutral root was stranded once ~/.claude appeared:\n"
       + r.stdout + r.stderr)
+# ONE root: memory must sit where registry.py tells the agent to append LOOK HISTORY, or taste.md
+# splits across two roots and the higher-priority one silently hides the other
+reg = subprocess.run([sys.executable, str(SCRIPTS / "registry.py")], capture_output=True, text=True,
+                     env=env).stdout
+target = [l for l in reg.splitlines() if "write target:" in l][0].split("write target:", 1)[1]
+target = target.strip().rsplit("  (", 1)[0]
+check((Path(target) / "observations.jsonl").exists()
+      and not (home / ".slide-maker" / "slide-templates" / "observations.jsonl").exists(),
+      "memory files did not move to the root registry.py names ({})".format(target))
+
+
+# ── Task 6: seed memory for existing users ───────────────────────────────────────────────────────
+class HomeBox(Box):
+    """A Box whose HOME is a temp dir too — `seed` scans HOME's Downloads / Desktop / Documents."""
+
+    def __init__(self):
+        super().__init__()
+        self.home = self.td / "home"
+        for d in ("Downloads", "Desktop", "Documents"):
+            (self.home / d).mkdir(parents=True)
+
+    def env(self):
+        e = super().env()
+        e["HOME"] = str(self.home)
+        return e
+
+
+def past_deck(where: Path, name, language=None, density=None, applied=(), skipped=(), codex=False,
+              delegated_language=False):
+    d = where / name
+    d.mkdir(parents=True)
+    rows = [{"id": i, "applied": True} for i in applied] + [
+        {"id": i, "applied": False, "why_not": "does not bind on this deck at all"} for i in skipped]
+    if codex:
+        rec = {"interview": {"record": "user chose 中文, diagram-heavy"},
+               "design": {"taste_applied": rows}}
+    else:
+        interview = {"language": language, "density": density, "length": "10", "goal": "inform"}
+        if delegated_language:
+            interview["picks"] = [{"axis": "language", "source": "delegated", "value": language}]
+        rec = {"interview": interview, "design_plan": {"taste_applied": rows}}
+    (d / (".codex-deck-evidence.json" if codex else ".deck-gates.json")).write_text(
+        json.dumps(rec, ensure_ascii=False), encoding="utf-8")
+    (d / "deck.pptx").write_text("NOT A DECK — seed must never open this", encoding="utf-8")
+    return d
+
+
+b = HomeBox()
+b.ledger.write_text(json.dumps({"entries": [ledger_entry(1, "design")]}), encoding="utf-8")
+past_deck(b.home / "Downloads", "talk-1", "中文", "diagram-heavy", applied=["rule-1"])
+past_deck(b.home / "Desktop" / "work", "talk-2", "中文", "diagram-heavy", skipped=["rule-1"])
+past_deck(b.home / "Documents", "talk-3", codex=True, skipped=["rule-1"])
+past_deck(b.home / "Downloads", "talk-4", "<中文 / English / bilingual EN+中文>",
+          "<diagram-heavy / balanced / text-heavy>")
+past_deck(b.home / "Downloads", "talk-5", "English", "balanced", delegated_language=True)
+extra = b.td / "elsewhere"
+past_deck(extra, "talk-6", "中文", "text-heavy")
+locked = b.home / "Downloads" / "locked"
+locked.mkdir()
+code, out, err = b.run("recall", "--step", "interview")
+check(" seed" in out and "ask" in out.lower(),
+      "an existing, unseeded user was not offered the one-time seed:\n" + out)
+os.chmod(locked, 0)
+try:
+    code, out, err = b.run("seed", "--scan", str(extra))
+finally:
+    os.chmod(locked, 0o755)
+check(code == 0, "seed failed: " + out + err)
+recs = {o["deck"]: o for o in b.obs() if o["kind"] == "applied-record"}
+check(sorted(recs) == ["talk-1", "talk-2", "talk-3", "talk-4", "talk-5", "talk-6"]
+      and recs["talk-3"]["skipped"] == ["rule-1"],
+      "seed did not snapshot every past record's taste_applied: {}".format(sorted(recs)))
+langs = [o for o in b.obs() if o["kind"] == "recorded" and o["key"] == "languages"]
+check(sorted(o["deck"] for o in langs) == ["talk-1", "talk-2", "talk-6"],
+      "seed used a placeholder or a delegated language: {}".format([o["deck"] for o in langs]))
+check(str(locked) in (out + err) and "could not read" in (out + err).lower(),
+      "an unreadable folder was not reported:\n" + out + err)
+p = props(b)
+lp = [x for x in p if x["target"] == "profile" and x["key"] == "languages"]
+dp = [x for x in p if x["target"] == "dial" and x["key"] == "density"]
+check(lp and lp[0]["value"] == "中文" and lp[0]["needs_confirm"]
+      and dp and dp[0]["value"] == "diagram-heavy" and dp[0]["needs_confirm"],
+      "recurring recorded answers did not become confirm-first proposals: {}".format(p))
+check(not any(x["key"] == "density" and x["value"] == "balanced" for x in p),
+      "a density seen on decks with different values was proposed")
+n = len(b.obs())
+code, out, err = b.run("seed")
+check(code == 0 and len(b.obs()) == n and "already" in out.lower(), "a second seed re-ran")
+code, out, err = b.run("recall", "--step", "interview")
+check(" seed" not in out, "a seeded user was offered the seed again")
+dial_id = dp[0]["id"]
+code, out, err = b.run("accept", dial_id, "--position", "diagram-heavy")
+check(code == 1 and "density" not in b.taste(), "a seeded dial was written without --confirmed")
+
+b = HomeBox()
+(b.reg / "taste.md").write_text("# t\n", encoding="utf-8")
+past_deck(b.home / "Documents" / "2025-ismrm", "slides", "中文", "balanced")
+past_deck(b.home / "Documents" / "2026-lab", "slides", "中文", "balanced")
+b.run("seed")
+recs = [o["deck"] for o in b.obs() if o["kind"] == "applied-record"]
+check(len(recs) == 2 and len(set(recs)) == 2,
+      "two past decks in same-named folders were merged into one: {}".format(recs))
+
+b = HomeBox()
+(b.reg / "taste.md").write_text("# t\n\n## NO-GOs\n- No x — a · 2026-11-01\n", encoding="utf-8")
+code, out, err = b.run("seed", "--skip")
+code, out, err = b.run("recall", "--step", "interview")
+check(code == 0 and " seed" not in out, "`seed --skip` did not settle the question")
+
+b = HomeBox()
+code, out, err = b.run("recall", "--step", "interview")
+check(" seed" not in out, "a brand-new user was offered a seed")
+note(b)
+(b.reg / "taste.md").write_text("# t\n\n## NO-GOs\n- No x — a · 2026-11-01\n", encoding="utf-8")
+code, out, err = b.run("recall", "--step", "interview")
+check(" seed" not in out, "a user who started fresh was later asked to seed")
 
 
 # ── report ───────────────────────────────────────────────────────────────────────────────────────

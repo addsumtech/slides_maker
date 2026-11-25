@@ -392,7 +392,7 @@ every claim that reaches a slide is traced to a primary source at every breadth.
 
 **🔴 Recall what you already know about this user first — `python3 scripts/memory.py recall --step interview`**
 (any runtime; one block: PROFILE · DIALS · NO-GOs · last look · pending proposals · brand/venue facts
-to research). The PROFILE pre-fills options under the two-stage rule — it never answers for the user.
+to research · for a returning user, a one-time offer to seed memory from past deck records). The PROFILE pre-fills options under the two-stage rule — it never answers for the user.
 **At ANY step, when the user states a requirement, a correction or a fact about themselves, log it
 verbatim with `memory.py note`** (the recall's `NEXT:` line prints the exact command): that log is what
 turns a request they keep repeating into a standing preference (`references/user-taste.md` → Memory).

@@ -200,6 +200,20 @@ network call) and records `memory.py ref add --key org:<name>|venue:<name> --url
 "<what it says>"`; they expire (org 180 days, venue 365) and recall asks for a re-check. Nothing found
 → `--url none --facts unknown` and ask the user — never a guessed spec.
 
+**Seeding an existing user — once.** A user who built decks before memory existed has a footprint
+(`taste.md`, taught rules, saved templates or `registers.md`) but no `seeded` mark in
+`memory-state.json`; `recall --step interview` then prints a one-time `NEXT:` — ask them ONCE whether
+the records their past decks left may be read. Yes → `memory.py seed [--scan <folder>]` walks
+`~/Downloads`, `~/Desktop`, `~/Documents` (+ `--scan`), ≤3 levels, and opens ONLY `.deck-gates.json` /
+`.codex-deck-evidence.json` — never the slides. Each record's `taste_applied` becomes review evidence;
+the shared record's `interview.language` / `interview.density` (not placeholders, not delegated picks)
+become `recorded` observations — the Codex record keeps the interview as free text, so only its
+`taste_applied` is used. An answer recurring on ≥2 past decks becomes a proposal, always confirm-first
+(inferred, not their words). No → `memory.py seed --skip`. An unreadable folder (macOS can block
+`~/Downloads`) is named, never read as empty. A brand-new user is never asked: their first memory
+write marks them `fresh`. Memory always lives in the ONE root `registry.py` names; files left in
+another root (memory begun under the host-neutral root before `~/.claude` appeared) are moved there.
+
 **Privacy** — enforced by the script, not by care: email addresses, phone / ID / card-length numbers,
 street addresses and postcodes, and URLs carrying credentials or tokens are refused in every stored
 string; profile facts additionally refuse sensitive categories about the user (health, money,

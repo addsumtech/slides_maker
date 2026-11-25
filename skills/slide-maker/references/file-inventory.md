@@ -735,7 +735,8 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   step should use (PROFILE · DIALS · NO-GOs · last look · taught rules · cached brand/venue facts) ending
   in `NEXT:` commands; `note` logs a requirement / correction / fact verbatim at any step; `close
   <deck-dir>` snapshots `taste_applied` and lists proposals; `proposals` · `accept` (PROFILE lines and
-  taught rules need `--confirmed`) · `reject` · `forget` · `ref add|list` · `keys`. Data at the registry
+  taught rules need `--confirmed`) · `reject` · `forget` · `ref add|list` · `keys` · `seed [--scan DIR]
+  [--skip]` (once, for a user who built decks before memory existed: reads only past deck records). Data at the registry
   root `registry.py` resolves (`taste.md` + `observations.jsonl` + `references.jsonl` +
   `memory-state.json`); no network calls; PII refused. Spec: `references/user-taste.md` → Memory.
 - `taste_ledger.py` — what THIS user has already corrected by hand, so the next deck does not
