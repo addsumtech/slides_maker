@@ -135,9 +135,138 @@ code, out, err = note(b)
 check(code == 0 and "skipp" in err.lower(), "a corrupt log line was not skipped with a warning")
 
 b2 = Box()
+import memory as _m  # noqa: E402
+_saved = {k: os.environ.get(k) for k in ("SLIDE_MAKER_REGISTRY", "SLIDE_MAKER_TASTE_LEDGER")}
+os.environ.update({"SLIDE_MAKER_REGISTRY": str(b2.reg), "SLIDE_MAKER_TASTE_LEDGER": str(b2.ledger)})
 for i in range(305):
-    note(b2, deck="d{}".format(i))
-check(len(b2.obs()) == 300, "the log was not pruned to 300 lines: {}".format(len(b2.obs())))
+    _m.append_obs({"date": "2026-11-25", "deck": "d{}".format(i), "kind": "requirement",
+                   "key": "colour", "direction": "more", "quote": "more colour"})
+os.environ.update({k: v for k, v in _saved.items() if v is not None})
+check(len(b2.obs()) == 300 and b2.obs()[0]["deck"] == "d5",
+      "the log was not pruned to the newest 300 lines: {}".format(len(b2.obs())))
+
+
+# ── Task 2: taste.md sections + recall ───────────────────────────────────────────────────────────
+import memory as M  # noqa: E402
+
+FULL_TASTE = """# taste.md — Tester's slide taste (portable · edit or delete freely)
+
+Some prose the user wrote by hand. Keep me.
+
+## PROFILE  (≤8 lines)
+- role: MRI reconstruction researcher — "我是做 MRI 重建的" · cine-mri · 2026-06-14
+- field: medical imaging — stated in interview · cine-mri · 2026-06-14
+- organization: LUMC — stated in interview · cine-mri · 2026-06-14
+- audiences: lab meeting, conference — stated · cine-mri · 2026-06-14
+- venues: ISMRM — stated · cine-mri · 2026-06-14
+- languages: zh conversation, en slides — stated · cine-mri · 2026-06-14
+- brand: registry template lkeb-lumc — stated · cine-mri · 2026-06-14
+- habits: always speaker notes — stated · cine-mri · 2026-06-14
+
+## DIALS  (≤10 rows)
+| dimension | position | evidence (deck · date · the user's verbatim words) |
+|---|---|---|
+| colour | vivid content, quiet chrome | cine-mri · 2026-06-14 · "太素了" |
+| density | balanced \\| never empty | a · 2026-06-15 · "too empty" |
+| boldness | balanced+ | b · 2026-06-16 · "bolder" |
+| icons | SVG family on categories | c · 2026-07-11 · "svg icon should appear" |
+| numerals | lining figures always | d · 2026-07-12 · "忽上忽下" |
+| type | sans body | e · 2026-07-13 · "font" |
+| motion | appear builds only | f · 2026-07-14 · "no flying" |
+| imagery | real domain photos | g · 2026-07-15 · "real images" |
+| architecture | rotate layouts | h · 2026-07-16 · "each page same" |
+| background | one canvas system | i · 2026-07-17 · "lone slide" |
+
+*(an italic note the user kept)*
+
+## NO-GOs  (≤5 lines)
+- No card grids — a · 2026-06-29
+- No bottom strip on every page — b · 2026-07-11
+- No Georgia digits — c · 2026-07-12
+- No stock blue — d · 2026-07-13
+- No lone background — e · 2026-07-14
+
+## LOOK HISTORY  (most recent 10 lines only)
+| date | deck | preset/look | canvas value | signature motif |
+|---|---|---|---|---|
+| 2026-10-09 | muse-pitch | approval trail | #FBFAF7 | progress rail |
+| 2026-10-22 | caselip | journal | #FBFAF6 | ledger rule |
+"""
+
+
+def ledger_entry(i, binds):
+    return {"id": "rule-{}".format(i), "quote": "the user said {}".format(i),
+            "rule": "do the thing number {} on every deck".format(i), "binds_at": binds,
+            "learned_from": {"deck": "deck-{}".format(i), "date": "2026-09-0{}".format(i)},
+            "retired_by": ""}
+
+
+b = Box()
+code, out, err = b.run("recall", "--step", "interview")
+lines = out.strip().splitlines()
+check(code == 0 and lines[0] == "memory: none on file" and len(lines) == 2
+      and lines[1].startswith("NEXT:") and " note " in lines[1],
+      "an empty store did not recall as exactly `none on file` + the note line:\n" + out + err)
+
+b = Box()
+(b.reg / "taste.md").write_text(FULL_TASTE, encoding="utf-8")
+binds = ["design", "design", "design", "content", "content", "build"]
+b.ledger.write_text(json.dumps([ledger_entry(i + 1, x) for i, x in enumerate(binds)]),
+                    encoding="utf-8")
+code, out, err = b.run("recall", "--step", "design")
+check(code == 0, "design recall failed: " + err)
+check(len(out.strip().splitlines()) <= 50,
+      "design recall over 50 lines: {}".format(len(out.splitlines())))
+check(all("rule-{}".format(i) in out for i in range(1, 7)),
+      "design recall did not list EVERY active rule (the gate requires all):\n" + out)
+check("taste_applied" in out, "design recall did not say to record taste_applied")
+check("lining figures always" in out and "No stock blue" in out and "caselip" in out
+      and "MRI reconstruction researcher" in out, "design recall dropped a taste section:\n" + out)
+check("balanced | never empty" in out, "an escaped \\| leaked into the recall display")
+check("muse-pitch" not in out, "design recall printed more than the LAST look-history line")
+code, out, err = b.run("recall", "--step", "content")
+check("rule-4" in out and "rule-5" in out and "rule-1" not in out and "rule-6" not in out,
+      "content recall did not filter rules by binds_at:\n" + out)
+check("lining figures always" not in out, "content recall printed design dials")
+code, out, err = b.run("recall", "--step", "build", "--format", "json")
+try:
+    d = json.loads(out)
+    check([r["id"] for r in d["rules"]] == ["rule-6"] and isinstance(d["next"], list),
+          "build recall json has the wrong rules: {}".format(d.get("rules")))
+except json.JSONDecodeError:
+    check(False, "recall --format json did not print JSON:\n" + out)
+code, out, err = b.run("recall", "--step", "handoff")
+check(" close " in out, "handoff recall did not name the close command:\n" + out)
+
+# edit_preserves_other_bytes
+new = M.upsert_line(FULL_TASTE, "PROFILE", "role", "- role: PhD researcher — x · y · 2026-11-25",
+                    cap=8)
+a_lines, b_lines = FULL_TASTE.splitlines(), new.splitlines()
+diff = [i for i, (x, y) in enumerate(zip(a_lines, b_lines)) if x != y]
+check(len(a_lines) == len(b_lines) and len(diff) == 1 and "PhD researcher" in b_lines[diff[0]],
+      "replacing one PROFILE line changed {} lines".format(len(diff)))
+new = M.upsert_line(FULL_TASTE, "DIALS", "density", "| density | airy | z · 2026-11-25 · \"q\" |",
+                    cap=10)
+check(new.count("airy") == 1 and "never empty" not in new and new.count("| density |") == 1,
+      "a DIALS update did not replace the row in place")
+try:
+    M.upsert_line(FULL_TASTE, "PROFILE", "extra", "- extra: x", cap=8)
+    check(False, "a 9th PROFILE line was accepted")
+except M.CapFull:
+    check(True, "")
+no_profile = FULL_TASTE.split("## PROFILE")[0] + "## DIALS" + FULL_TASTE.split("## DIALS")[1]
+new = M.upsert_line(no_profile, "PROFILE", "role", "- role: tester — q · d · 2026-11-25", cap=8)
+check(new.index("## PROFILE") < new.index("## DIALS") and "Keep me." in new
+      and all(l in new.splitlines() for l in no_profile.splitlines()),
+      "creating PROFILE did not insert it above DIALS while keeping every other line")
+created = M.upsert_line("", "NO-GOs", None, "- No x — d · 2026-11-25", cap=5)
+check(created.startswith("# taste.md") and "## NO-GOs" in created and "- No x" in created,
+      "a first write did not create a taste.md skeleton")
+txt, gone = M.remove_line(FULL_TASTE, "PROFILE", "venues")
+check(gone and "venues:" not in txt and len(txt.splitlines()) == len(a_lines) - 1,
+      "remove_line did not remove exactly one line")
+check(M.read_sections(FULL_TASTE)["DIALS"][1].startswith("| density"),
+      "read_sections kept the header/separator rows")
 
 
 # ── report ───────────────────────────────────────────────────────────────────────────────────────

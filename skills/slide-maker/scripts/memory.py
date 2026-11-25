@@ -267,6 +267,273 @@ def _cmd_keys(_a) -> int:
     return 0
 
 
+# ── taste.md sections ────────────────────────────────────────────────────────────────────────────
+# Edited line by line: the file is the user's own, often hand-edited, so every byte outside the one
+# targeted line survives. Section order when a section has to be created: PROFILE · DIALS · NO-GOs ·
+# LOOK HISTORY (LOOK HISTORY is appended by the Step-6 close as before; this script never writes it).
+SECTIONS = ("PROFILE", "DIALS", "NO-GOs", "LOOK HISTORY")
+TABLE = {"DIALS": "| dimension | position | evidence (deck · date · the user's verbatim words) |\n"
+                  "|---|---|---|",
+         "LOOK HISTORY": "| date | deck | preset/look | canvas value | signature motif |\n"
+                         "|---|---|---|---|---|"}
+HEADING = {"PROFILE": "## PROFILE  (≤8 lines · facts that shape decks · say \"drop it\" to remove any line)",
+           "DIALS": "## DIALS  (≤10 rows)", "NO-GOs": "## NO-GOs  (≤5 lines)",
+           "LOOK HISTORY": "## LOOK HISTORY  (most recent 10 lines only — prune the oldest at append)"}
+CAPS = {"PROFILE": 8, "DIALS": 10, "NO-GOs": 5}
+SKELETON = "# taste.md — slide taste (portable · edit or delete freely)\n"
+
+
+class CapFull(Exception):
+    pass
+
+
+def _section_of(line: str):
+    if not line.startswith("## "):
+        return None
+    head = line[3:].strip()
+    for s in SECTIONS:
+        if head.startswith(s):
+            return s
+    return "?"
+
+
+def _spans(lines: list[str]) -> dict:
+    """section → (heading index, end index exclusive)."""
+    out, cur, start = {}, None, 0
+    for i, l in enumerate(lines):
+        s = _section_of(l)
+        if s is not None:
+            if cur and cur != "?":
+                out.setdefault(cur, (start, i))
+            cur, start = s, i
+    if cur and cur != "?":
+        out.setdefault(cur, (start, len(lines)))
+    return out
+
+
+def _content_idx(lines, section, span) -> list[int]:
+    h, e = span
+    idx = []
+    if section in TABLE:
+        rows = [i for i in range(h + 1, e) if lines[i].lstrip().startswith("|")]
+        idx = [i for i in rows[1:] if not re.match(r"^\s*\|[\s:|-]+\|\s*$", lines[i])]
+    else:
+        idx = [i for i in range(h + 1, e) if lines[i].lstrip().startswith("- ")]
+    return idx
+
+
+def _line_key(section, line) -> str:
+    s = line.strip()
+    if section in TABLE:
+        cells = re.split(r"(?<!\\)\|", s.strip("|"))
+        return cells[0].strip().lower() if cells else ""
+    body = s[2:] if s.startswith("- ") else s
+    return body.split(":", 1)[0].strip().lower() if ":" in body else body.strip().lower()
+
+
+def read_sections(text: str) -> dict:
+    lines = (text or "").splitlines()
+    spans = _spans(lines)
+    return {s: [lines[i] for i in _content_idx(lines, s, spans[s])] if s in spans else []
+            for s in SECTIONS}
+
+
+def upsert_line(text: str, section: str, match_key, new_line: str, cap=None) -> str:
+    """Replace the first line in `section` whose key is `match_key`, else append. Creates the
+    section (and the file skeleton) when missing. Raises CapFull when an append would exceed cap."""
+    text = text or ""
+    lines = text.splitlines()
+    trailing = text.endswith("\n") or not text
+    if not lines:
+        lines = SKELETON.rstrip("\n").splitlines()
+    spans = _spans(lines)
+    if section not in spans:
+        block = ["", HEADING[section]] + (TABLE[section].splitlines() if section in TABLE else [])
+        after = SECTIONS[SECTIONS.index(section) + 1:]
+        nxt = min((spans[s][0] for s in after if s in spans), default=None)
+        if nxt is None:
+            lines = lines + block
+        else:
+            # insert before the next known section, keeping one blank line between blocks
+            lines = lines[:nxt] + block[1:] + [""] + lines[nxt:]
+        spans = _spans(lines)
+    idx = _content_idx(lines, section, spans[section])
+    if match_key is not None:
+        for i in idx:
+            if _line_key(section, lines[i]) == str(match_key).lower():
+                lines[i] = new_line
+                return "\n".join(lines) + ("\n" if trailing else "")
+    if cap is not None and len(idx) >= cap:
+        raise CapFull("{} is full ({} lines) — drop one first (`{} forget …`)"
+                      .format(section, cap, SELF))
+    h, e = spans[section]
+    if idx:
+        at = idx[-1] + 1
+    elif section in TABLE:
+        rows = [i for i in range(h + 1, e) if lines[i].lstrip().startswith("|")]
+        at = (rows[-1] + 1) if rows else h + 1
+    else:
+        at = h + 1
+    lines.insert(at, new_line)
+    return "\n".join(lines) + ("\n" if trailing else "")
+
+
+def remove_line(text: str, section: str, match_key):
+    """Remove the line in `section` whose key matches (or the N-th line for a 1-based int)."""
+    lines = (text or "").splitlines()
+    spans = _spans(lines)
+    if section not in spans:
+        return text, None
+    idx = _content_idx(lines, section, spans[section])
+    target = None
+    if isinstance(match_key, int):
+        if 1 <= match_key <= len(idx):
+            target = idx[match_key - 1]
+    else:
+        target = next((i for i in idx if _line_key(section, lines[i]) == str(match_key).lower()),
+                      None)
+    if target is None:
+        return text, None
+    gone = lines.pop(target)
+    return "\n".join(lines) + ("\n" if text.endswith("\n") else ""), gone
+
+
+def read_taste() -> str:
+    p = taste_path()
+    try:
+        return p.read_text(encoding="utf-8") if p.exists() else ""
+    except OSError as exc:
+        print("memory: cannot read {} ({}) — treating it as absent".format(p, exc), file=sys.stderr)
+        return ""
+
+
+def write_taste(text: str) -> Path:
+    p = taste_path()
+    p.parent.mkdir(parents=True, exist_ok=True)
+    tmp = p.with_suffix(".md.tmp")
+    tmp.write_text(text, encoding="utf-8")
+    tmp.replace(p)
+    return p
+
+
+# ── recall ───────────────────────────────────────────────────────────────────────────────────────
+RECALL_CAP = 50
+CLIP = 160
+RULES_AT = {"interview": None, "content": "content", "design": "*", "build": "build",
+            "critic": "critic", "handoff": None}
+TASTE_AT = {"interview": ("PROFILE", "DIALS", "NO-GOs", "LAST"),
+            "content": ("PROFILE",), "design": ("PROFILE", "DIALS", "NO-GOs", "LAST"),
+            "build": ("DIALS", "NO-GOs"), "critic": ("DIALS", "NO-GOs"), "handoff": ()}
+NOTE_NEXT = ("NEXT: when the user states a requirement, correction or a fact about themselves → "
+             "{s} note --kind requirement|correction|praise|veto|profile-fact --key <key> "
+             "--quote \"<their words>\" --deck <deck-folder> [--direction more|less|require|avoid] "
+             "[--value <fact>] [--standing]   (keys: {s} keys)").format(s=SELF)
+
+
+def _clip(text: str, width=CLIP) -> str:
+    from written_reason import reason_width
+    t = " ".join(str(text).split())
+    if reason_width(t) <= width:
+        return t
+    out, w = "", 0
+    for ch in t:
+        cw = reason_width(ch) or 1
+        if w + cw > width - 1:
+            break
+        out, w = out + ch, w + cw
+    return out + "…"
+
+
+def _row_text(line: str) -> str:
+    s = line.strip()
+    if s.startswith("|"):
+        cells = [c.strip() for c in re.split(r"(?<!\\)\|", s.strip("|"))]
+        return " — ".join(c.replace("\\|", "|") for c in cells if c)
+    return s[2:] if s.startswith("- ") else s
+
+
+def _rules(step: str) -> list[dict]:
+    import taste_ledger as tl
+    want = RULES_AT[step]
+    if want is None:
+        return []
+    return tl.active(tl.load(), None if want == "*" else want)
+
+
+def recall(step: str, venue=None) -> dict:
+    secs = read_sections(read_taste())
+    show = TASTE_AT[step]
+    d = {"step": step, "root": str(memory_root()),
+         "profile": [_row_text(l) for l in secs["PROFILE"]] if "PROFILE" in show else [],
+         "dials": [_row_text(l) for l in secs["DIALS"]] if "DIALS" in show else [],
+         "nogos": [_row_text(l) for l in secs["NO-GOs"]] if "NO-GOs" in show else [],
+         "last_look": (_row_text(secs["LOOK HISTORY"][-1])
+                       if "LAST" in show and secs["LOOK HISTORY"] else ""),
+         "rules": [{"id": e.get("id"), "rule": e.get("rule"), "quote": e.get("quote"),
+                    "deck": (e.get("learned_from") or {}).get("deck"),
+                    "date": (e.get("learned_from") or {}).get("date")} for e in _rules(step)],
+         "refs": [], "research": [], "proposals": 0, "next": []}
+    if step in ("interview", "handoff"):
+        d["proposals"] = len(proposals())
+    nxt = [NOTE_NEXT]
+    if step == "design" and d["rules"]:
+        nxt.append('NEXT: record design_plan.taste_applied — one row per TAUGHT RULE above: '
+                   '{"id": "<id>", "applied": true} or {"id": "<id>", "applied": false, '
+                   '"why_not": "<why it does not bind here>"}')
+    if d["proposals"]:
+        nxt.append("NEXT: {} pending proposal(s) — {} proposals".format(d["proposals"], SELF))
+    if step == "handoff":
+        nxt.append("NEXT: at the Step-6 close → {} close <deck-dir>".format(SELF))
+    d["next"] = nxt
+    return d
+
+
+def _empty(d) -> bool:
+    return not any(d[k] for k in ("profile", "dials", "nogos", "last_look", "rules", "refs",
+                                  "research", "proposals"))
+
+
+def render_prompt(d: dict) -> str:
+    if _empty(d):
+        return "\n".join(["memory: none on file"] + d["next"])
+    out = ["MEMORY · step {} · {}  (current request > interview answers > this memory)"
+           .format(d["step"], d["root"])]
+    for title, items in (("PROFILE (who the user is)", d["profile"]),
+                         ("DIALS (standing design preferences)", d["dials"]),
+                         ("NO-GOs (hard vetoes)", d["nogos"])):
+        if items:
+            out.append(title + ":")
+            out += ["  " + _clip(x) for x in items]
+    if d["last_look"]:
+        out.append("LAST LOOK (vary at least one foundation against it): " + _clip(d["last_look"]))
+    if d["rules"]:
+        out.append("TAUGHT RULES (apply each, or record why it does not bind):")
+        out += ['  [{}] {} — they said "{}" ({}{})'.format(
+            r["id"], _clip(r["rule"], 90), _clip(r["quote"], 50), r["deck"] or "?",
+            ", " + r["date"] if r["date"] else "") for r in d["rules"]]
+    tail = []
+    if d["refs"]:
+        tail.append("REFERENCES (cached external facts):")
+        tail += ["  " + _clip(x) for x in d["refs"]]
+    tail += d["research"]
+    room = RECALL_CAP - len(out) - len(d["next"])
+    out += tail[:max(room, 0)]
+    return "\n".join(out + d["next"])
+
+
+def _cmd_recall(a) -> int:
+    d = recall(a.step, a.venue)
+    if a.format == "json":
+        print(json.dumps(d, ensure_ascii=False, indent=1))
+    else:
+        print(render_prompt(d))
+    return 0
+
+
+def proposals(now=None) -> list[dict]:
+    return []
+
+
 # ── selftest ─────────────────────────────────────────────────────────────────────────────────────
 def _selftest() -> int:
     fails = []
@@ -301,6 +568,10 @@ def main(argv=None) -> int:
     n.add_argument("--standing", action="store_true",
                    help="the user marked it as standing (any language)")
     sub.add_parser("keys", help="print the closed vocabulary")
+    r = sub.add_parser("recall", help="the memory THIS step should use")
+    r.add_argument("--step", required=True, choices=STEPS)
+    r.add_argument("--venue", help="the deck's venue, to match cached references")
+    r.add_argument("--format", choices=("prompt", "json"), default="prompt")
     a = ap.parse_args(argv)
     if a.selftest:
         return _selftest()
@@ -309,6 +580,8 @@ def main(argv=None) -> int:
             return _cmd_note(a)
         if a.cmd == "keys":
             return _cmd_keys(a)
+        if a.cmd == "recall":
+            return _cmd_recall(a)
     except OSError as exc:
         print("memory: could not run — {}".format(exc), file=sys.stderr)
         return 2
