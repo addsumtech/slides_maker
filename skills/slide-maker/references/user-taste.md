@@ -13,6 +13,7 @@ one-deck guess never hardens into a standing rule.
 - The schema — fixed sections, HARD CAPS (whole file ≤ ~500 tokens)
 - READ protocol
 - WRITE protocol — conservative by construction (Step 6 only)
+- Memory — the entry point (`scripts/memory.py`): PROFILE · observation log · proposals · references · privacy
 - Why this shape
 
 ## Where it lives — and the empty-file rule
@@ -43,7 +44,7 @@ corroboration only and never overrides either. *(Gate: the Design plan's require
 `taste profile:` line — a Step-2 design-gate precondition — records exactly what was applied,
 so an override would be visible, not silent.)*
 
-## The schema — fixed sections, HARD CAPS (whole file ≤ ~500 tokens)
+## The schema — fixed sections, HARD CAPS (whole file ≤ ~650 tokens)
 An unbounded profile stops being readable at interview speed, so **prune at append**:
 
 ```markdown
@@ -85,7 +86,8 @@ evidence, like any other dial.)*
   written as prose ("teal=you, amber=leverage"), so the accent half of *never reuse the last
   deck's scheme* had nothing to compare against. A prose description of a colour is unreadable to
   every check downstream; keep the prose, add the hex.
-- 🔴 **MUST — SCOPE EXCLUSION: design dials, NO-GOs, and look history ONLY; never
+- **PROFILE (≤8 lines)** — facts about the user that shape decks; schema in "Memory" below.
+- 🔴 **MUST — SCOPE EXCLUSION: PROFILE facts, design dials, NO-GOs, and look history ONLY; never
   workflow/mode directives** (the per-deck auto waiver, checkpoint skips) — SKILL.md settles
   those per-deck, and recording one here would silently carry an approval waiver across decks.
   *(Gate: the schema has no field that could hold one.)*
@@ -154,6 +156,55 @@ vetted deck *proved*. This is the same single persist that collaborative mode's 
 names — one save, one owner, re-timed to hand-off. A look the user **explicitly praised**
 ("I love this one") additionally gets a `— praised` annotation on its LOOK-HISTORY line —
 those lines lead when Q4's "like one of my previous decks" expands.
+
+## Memory — the entry point (`scripts/memory.py`)
+Every store above is reached through ONE command per step, so a runtime that never opens this file
+still gets the memory: `python3 scripts/memory.py recall --step interview|content|design|build|critic|handoff
+[--venue V] [--format prompt|json]` prints a block of ≤ 50 lines (taught rules and NO-GOs are never
+truncated) ending in the `NEXT:` commands for that step. An empty store prints `memory: none on file`.
+It uses the registry root `registry.py` resolves and the ledger path `taste_ledger.py` resolves — no new
+locations. What each step gets: interview = PROFILE + DIALS + NO-GOs + last look + proposals count;
+content = PROFILE + content rules; design = PROFILE + DIALS + NO-GOs + last look + **every** active rule;
+build / critic = DIALS + NO-GOs + their rules; interview, content and design also get cached
+brand/venue facts, or a `NEXT: research …` line when a PROFILE organization/venue has none.
+
+**PROFILE** (in `taste.md`, above DIALS) — one line per key, closed set: `role` · `field` ·
+`organization` · `audiences` · `venues` · `languages` · `brand` · `habits`; each carries its evidence:
+```markdown
+## PROFILE  (≤8 lines · facts that shape decks · say "drop it" to remove any line)
+- role: MRI reconstruction researcher — cine-mri · 2026-06-14 · "我是做 MRI 重建的"
+```
+
+**Observation log** (`<root>/observations.jsonl`, newest 300 lines) — `memory.py note --kind
+requirement|correction|praise|veto|profile-fact --key <key> --quote "<their words>" --deck <deck-folder>
+[--direction more|less|require|avoid] [--value <fact>] [--standing]`, the moment the user says it, at any
+step. Keys are a closed vocabulary (`memory.py keys`): design keys → DIALS / NO-GOs, content/process keys
+→ taught rules, profile keys → PROFILE. A closed set is what lets recurrence be counted without guessing.
+`--standing` records that the user marked it standing in any language ("always", "一直", "altijd"…).
+The Step-6 `user-dials:` round lines stay as they are; log the same feedback through `note` too.
+
+**Proposals** — `memory.py close <deck-dir>` at the Step-6 close (or `memory.py proposals` any time)
+computes the promotion gate above instead of re-reading round records: same key + direction on ≥2
+distinct decks, or a standing mark → a proposal; a profile fact → a proposal on first sight; a newer
+opposite direction → a proposal that UPDATES the row. It also proposes **reviews**: a taught rule
+skipped on the last 3 decks (from each deck's `taste_applied`, snapshotted by `close`), or a DIALS /
+PROFILE line last confirmed over a year ago. **Consent tiers:** the observation log is evidence and
+steers nothing (silent; the hand-off FYI gives its count) · DIALS / NO-GOs are written at the close and
+announced with the easy veto · a PROFILE line or a new taught rule binds every future deck, so `accept`
+refuses it without `--confirmed` — the user's yes. `reject <id>` sets a proposal aside until new
+evidence; a review is answered with `forget …` (drop) or `reject` (keep).
+
+**References** (`<root>/references.jsonl`) — external facts tied to the profile: an organization's
+brand guide, a venue's speaker spec. The agent researches with its OWN web tool (no script makes a
+network call) and records `memory.py ref add --key org:<name>|venue:<name> --url <source> --facts
+"<what it says>"`; they expire (org 180 days, venue 365) and recall asks for a re-check. Nothing found
+→ `--url none --facts unknown` and ask the user — never a guessed spec.
+
+**Privacy** — enforced by the script, not by care: email addresses, phone / ID / card-length numbers,
+street addresses and postcodes, and URLs carrying credentials or tokens are refused in every stored
+string; profile facts additionally refuse sensitive categories about the user (health, money,
+religion, politics, sexuality, immigration status). All of it lives under the user's home, never in the
+skill or a repo. `memory.py forget profile:KEY|dial:DIM|nogo:N|rule:ID|obs:KEY|ref:KEY` removes any line.
 
 ## Why this shape
 The store is small and evidenced, so it stays trustworthy; the ledger is per-deck, so

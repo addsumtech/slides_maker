@@ -305,7 +305,8 @@ code, out, err = b.run("accept", pid)
 check(code == 1 and b.taste() == "", "a dial accept without --position wrote something")
 code, out, err = b.run("accept", pid, "--position", "lining figures always")
 check(code == 0 and "| numerals | lining figures always |" in b.taste()
-      and "digits must always line up" in b.taste() and "recorded to your taste profile" in out,
+      and "digits must always line up" in b.taste()
+      and "recorded to your taste profile: numerals — lining figures always" in out,
       "a dial accept did not write the evidenced row + FYI line:\n" + out + err + b.taste())
 check(not any(x["id"] == pid for x in props(b)), "an accepted proposal was proposed again")
 note(b, "--standing", deck="deck-c", key="numerals", direction="avoid",

@@ -731,6 +731,13 @@ waiver once carried a whole deck through `all hand-off gates pass` with no indep
   **`no-reader`** (records that the deck shipped UNREAD, which is not the same as saying it was
   read) · `tiny-ask` · `user-waived`. It owns the two-schema key lookups (`design_of`,
   `planned_icon_family`) so no gate spells `design_plan`/`design` or `icon_family`/`icons[]` itself.
+- `memory.py` — the ONE memory entry point for any runtime: `recall --step <step>` prints what that
+  step should use (PROFILE · DIALS · NO-GOs · last look · taught rules · cached brand/venue facts) ending
+  in `NEXT:` commands; `note` logs a requirement / correction / fact verbatim at any step; `close
+  <deck-dir>` snapshots `taste_applied` and lists proposals; `proposals` · `accept` (PROFILE lines and
+  taught rules need `--confirmed`) · `reject` · `forget` · `ref add|list` · `keys`. Data at the registry
+  root `registry.py` resolves (`taste.md` + `observations.jsonl` + `references.jsonl` +
+  `memory-state.json`); no network calls; PII refused. Spec: `references/user-taste.md` → Memory.
 - `taste_ledger.py` — what THIS user has already corrected by hand, so the next deck does not
   relearn it: `add` · `list [--binds-at …] [--format prompt]` · `retire <id> --gate <CODE>` ·
   `check <deck-dir>`. Data lives OUTSIDE the repo (`~/.slide-maker/taste-ledger.json`; inside

@@ -66,7 +66,8 @@ when the profile can carry what the vetted deck *proved* — this is collaborati
 persist, re-timed: one save, one owner); **skip the offer entirely under a per-deck auto directive**
 — never an un-consented registry write; **(b) the taste write-back FYI** — whenever the Step-6 close
 below wrote anything to `taste.md`, one line: *"recorded to your taste profile: <X> — say the word
-and I'll drop it"* (visibility + easy veto is what keeps a memory trustworthy). Do
+and I'll drop it"* (visibility + easy veto is what keeps a memory trustworthy), plus the observation count
+`memory.py close` printed and any proposal waiting on the user's yes (a PROFILE line or a new taught rule). Do
 **not** narrate the deck slide-by-slide, restate what they can see in the render, or self-praise the
 result — a tight hand-off respects their time and reads as senior.
 

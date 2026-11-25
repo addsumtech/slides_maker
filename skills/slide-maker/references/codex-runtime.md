@@ -730,7 +730,9 @@ provenance gate, the critic, and fifteen `ok` self-check verdicts. No independen
 runtime? REPLACE `answers` and `findings` with `{"waived": "<why no independent reader read this deck>",
 "waived_category": "no-reader"}` (both keys; a category beside unanswered `answers` is not a waiver) — it
 records that the deck shipped **unread**, which is a different statement from claiming it was read.
-🔴 **The taste ledger is consulted at design time** — `scripts/taste_ledger.py list --binds-at
+🔴 **Memory on any runtime: `scripts/memory.py recall --step <step>`** is the one entry point — profile,
+dials, no-gos, taught rules and cached brand/venue facts for that step, ending in its `NEXT:` commands
+(`references/user-taste.md` → Memory). 🔴 **The taste ledger is consulted at design time** — `scripts/taste_ledger.py list --binds-at
 design --format prompt` prints what THIS user has already corrected by hand on earlier decks, and
 `design_plan.taste_applied` records one row per active entry (`applied: true`, or `applied: false`
 with `why_not`). An empty ledger asks nothing, which is the normal fresh-install case. The gate

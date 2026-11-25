@@ -29,7 +29,8 @@ anything else (Kimi · Gemini · Cursor · Coze · an API caller) falls back to 
 `~/.slide-maker/slide-templates/`, which exists because a hardcoded two-host list left every
 other runtime with no root at all — and therefore, silently, with no saved templates to offer
 at Q1(a) and no taste profile. **Read `taste.md` at that
-same registry root in the same pass** — the user's portable taste profile (schema +
+same registry root in the same pass** (`python3 "$SKILL/scripts/memory.py" recall --step interview` prints it
+with the PROFILE, pending proposals and any brand/venue facts to research, in one block) — the user's portable taste profile (schema +
 read/write protocol: `references/user-taste.md`): its DIALS/NO-GOs seed *delegated* picks
 under an auto directive, and its LOOK HISTORY supplies the substance of the two-stage
 rolled-up history options below — never new option shapes, never an auto-lock. **Precedence

@@ -1064,6 +1064,13 @@ jobs:
           grep -qE "(^[0-9]+ passed, 0 failed|\\] ok$)" /tmp/tasteledger.log || {
             echo "::error::test_taste_ledger did not run to completion"; exit 1; }
 
+      - name: User memory (one recall entry point; consent tiers; privacy)
+        run: |
+          set -o pipefail
+          python tests/test_memory.py | tee /tmp/usermemory.log
+          grep -qE "(^[0-9]+ passed, 0 failed|\\] ok$)" /tmp/usermemory.log || {
+            echo "::error::test_memory did not run to completion"; exit 1; }
+
       - name: Shape declarations (four tags that must not erase each other)
         run: |
           set -o pipefail

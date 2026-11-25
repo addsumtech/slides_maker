@@ -390,6 +390,13 @@ purpose decides, deck SIZE never lowers it) — state the derived value in the S
 and hand it to the planner at Step 1. Research narrows BREADTH only, never the fidelity floor:
 every claim that reaches a slide is traced to a primary source at every breadth.
 
+**🔴 Recall what you already know about this user first — `python3 scripts/memory.py recall --step interview`**
+(any runtime; one block: PROFILE · DIALS · NO-GOs · last look · pending proposals · brand/venue facts
+to research). The PROFILE pre-fills options under the two-stage rule — it never answers for the user.
+**At ANY step, when the user states a requirement, a correction or a fact about themselves, log it
+verbatim with `memory.py note`** (the recall's `NEXT:` line prints the exact command): that log is what
+turns a request they keep repeating into a standing preference (`references/user-taste.md` → Memory).
+
 **🔴 Read `references/interview-protocol.md` before you ask anything on a build ask** — it owns the rest of Step 0: two-stage personalization from THIS user's footprint + `taste.md` precedence (🔴 MUST: current request > this interview's answers > `taste.md`), scaling the interview to the ask, Q1's four template choices (a)–(d) — all four MUST be offered, never a hardcoded institution — with each branch, Q2's delivery · deck-length · appear-builds · primary-goal axes + per-purpose cases + venue research, and Q3's source-material routing per input format.
 > **One 🔴 CHECKPOINT lives in that file:** the Q1(d) generated-template **hero checkpoint** (show the hero + a sample content slide, iterate until the user confirms). The Q1(c) **direction gate** (4 rendered directions) RUNS BY DEFAULT on the design-a-clean-one branch — skippable only via its named carves, and recorded on the design checkpoint's `direction gate:` line.
 
@@ -422,6 +429,8 @@ units, and code may stay in their original form (that's not "mixing"). Build a
 systematically (same pairing on every slide). See `references/multilingual.md`.
 
 ## Step 1 — Understand & plan the CONTENT (use the content-planner)
+Hand the planner `python3 scripts/memory.py recall --step content [--venue <venue>]`: the user's
+profile (field, audiences, languages), the content rules they taught, and cached venue facts.
 **Use `agents/content-planner.md` for this step — the CONTENT only** — dispatch
 it through an available multi-agent/subagent tool when the host exposes one (in Codex,
 discover multi-agent tools with `tool_search` if needed), otherwise run the same planner
@@ -603,7 +612,9 @@ user's edits to the story, then move to design (Step 2).
 ## Step 2 — Design the deck (use the slide-design agent)
 
 > ### 🔴 OPEN STEP 2 BY READING WHAT THIS USER HAS ALREADY TAUGHT
-> `python3 scripts/taste_ledger.py list --binds-at design --format prompt`
+> `python3 scripts/memory.py recall --step design` — every active taught rule (the gate checks all of
+> them, whatever step they bind at) plus PROFILE, DIALS, NO-GOs, the last look and cached brand/venue
+> facts. (`python3 scripts/taste_ledger.py list --binds-at design --format prompt` prints the design rules alone.)
 >
 > Corrections the user made by hand on *earlier* decks live here — icons missing on categorical
 > content, a deck that came back as grey blocks, a motif louder than the content it carried, a type
@@ -1741,6 +1752,8 @@ only the emitted form-candidates (per-slide runner-up from a different family) +
 tally push toward the ceiling. A delegated deck emits them for itself, not for the user.
 
 ## Step 5 — Render, verify, then run the actor–critic loop
+Every critic dispatch carries `python3 scripts/memory.py recall --step critic` — this user's dials,
+NO-GOs and critic-bound rules — so a review judges against what they already asked for.
 **You should already have run the build-time geometry gate** (`dk.lint_layout(prs, strict=True)` at the end of
 Step 4) and cleared its CRITICALs (off-canvas · overflow · text-on-text) in-process, so the render
 loop starts mostly geometry-clean. `lint_deck.py` below then re-checks that geometry on the final file
@@ -2390,6 +2403,10 @@ prints its `NEXT:`; a refusal says why and what to do instead.
    without them)*; conflicting later feedback UPDATES the existing row, never appends a contradiction.
 3. **Announce every write in the hand-off FYI line with the easy veto** (above) — a silent write
    didn't happen.
+4. **Run `python3 scripts/memory.py close <deck-dir>`** — it snapshots this deck's `taste_applied`,
+   prints the observation count for the FYI line, and lists proposals by consent tier: DIALS / NO-GOs
+   are written now and announced (item 3); a PROFILE line or a new taught rule is written only on the
+   user's yes (`accept … --confirmed`). Items 1–2 still apply; `close` computes the recurrence for 2.
 A brand-new user with nothing durable gets no writes and no FYI — create `taste.md` only when the
 first durable signal exists.
 

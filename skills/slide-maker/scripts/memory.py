@@ -882,7 +882,7 @@ def _cmd_accept(a) -> int:
     save_state(state)
     print("memory: wrote → {}".format(where))
     print("FYI line for the user: recorded to your taste profile: {} — say the word and I'll drop it"
-          .format(_clip(line, 160)))
+          .format(_clip(_row_text(line), 160)))
     return 0
 
 
