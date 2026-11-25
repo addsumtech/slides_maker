@@ -49,7 +49,8 @@ sys.path.insert(0, str(HERE))
 
 import registry  # noqa: E402
 
-SELF = "python3 " + str(Path(__file__).resolve())
+import shlex  # noqa: E402
+SELF = "python3 " + shlex.quote(str(Path(__file__).resolve()))
 
 DESIGN_KEYS = ("colour", "density", "boldness", "icons", "type", "numerals", "motion", "imagery",
                "architecture", "background", "motif")
@@ -65,8 +66,14 @@ STEPS = ("interview", "content", "design", "build", "critic", "handoff")
 OBS_CAP = 300
 MIN_QUOTE = 4
 
-STANDING_WORDS = ("always", "every deck", "all my decks", "in general", "from now on",
-                  "一直", "每次", "所有", "以后都", "总是", "永远")
+# Only a FALLBACK for when the agent did not decide (`--standing` / `--not-standing` win): phrases
+# that mark a preference as standing, never bare words — "this slide always looks cramped" and
+# "这页所有的字都太小了" are about one slide.
+STANDING_RX = re.compile(
+    r"every deck|all (?:of )?my (?:decks|slides|presentations)|in general|from now on|"
+    r"\balways (?:use|want|prefer|make|keep|put|add|give|do|show|start|end|have)\b|"
+    r"以后都|以后每|每次都|每一次都|所有的?(?:ppt|PPT|幻灯片|slides?|deck)|"
+    r"一直(?:都)?(?:要|希望|喜欢|用|想)|总是(?:要|希望|喜欢|用)|永远", re.I)
 
 # ── privacy ──────────────────────────────────────────────────────────────────────────────────────
 _EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
@@ -74,17 +81,35 @@ _DIGITS = re.compile(r"\+?\d[\d \-().]{6,}\d")
 _URL_CRED = re.compile(r"https?://[^\s/@]+:[^\s/@]+@")
 _URL_TOKEN = re.compile(r"[?&](token|key|sig|signature|secret|password|access_token|api_key|"
                         r"apikey|auth)=", re.I)
-_STREET = re.compile(r"\b\d{1,5}\s+(?:[A-Za-z][\w'-]*\s+){0,3}(?:street|st\.|road|rd\.|avenue|"
-                     r"ave\.|lane|boulevard|blvd|drive|way)\b", re.I)
-_STREET_NL = re.compile(r"\b\w+(?:straat|laan|weg|plein|gracht|kade)\s+\d+", re.I)
-_POSTCODE_NL = re.compile(r"\b\d{4}\s?[A-Z]{2}\b")
-_STREET_ZH = re.compile(r"[路街道巷弄]\s*\d+\s*号")
-SENSITIVE = ("health", "diagnos", "disease", "illness", "medication", "therapy", "pregnan",
-             "disabilit", "diabetes", "cancer", "depression", "salary", "income", "debt",
-             "mortgage", "bank account", "religio", "church", "mosque", "political", "party member",
-             "sexual", "gay", "lesbian", "visa", "immigration", "residence permit", "asylum",
-             "病", "诊断", "药", "怀孕", "残疾", "工资", "薪", "收入", "负债", "贷款", "宗教", "信仰",
-             "政治", "党员", "性取向", "签证", "移民", "居留", "庇护", "抑郁", "癌")
+_STREET = re.compile(r"\b\d{1,5}\s+(?:[A-Z][\w'-]*\s+){1,3}(?:Street|St\.|Road|Rd\.|Avenue|"
+                     r"Ave\.|Lane|Boulevard|Blvd)\b")
+_STREET_EU = re.compile(r"\b[A-ZÄÖÜ][\wäöüß-]*(?:straat|laan|weg|plein|gracht|kade|dreef|singel|"
+                        r"straße|strasse|gasse)\s+\d+")
+# a postcode only with address context: a city after it, or the word itself; never a year + acronym
+_POSTCODE = re.compile(r"\b(?!19\d\d|20\d\d)[1-9]\d{3}\s?[A-Z]{2}\s+[A-Z][a-z]+|"
+                       r"(?i:postcode|zip code|postal code)\s*:?\s*\S+")
+_STREET_ZH = re.compile(r"[\u4e00-\u9fff](?:路|街|大道|巷|弄)\s*\d+\s*号")
+_ISO_DATE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
+_YEAR = re.compile(r"^(?:19|20)\d\d$")
+_SENS_EN = (r"health|diagnos\w*|diseases?|illness\w*|medications?|therapy|pregnan\w*|disabilit\w*|"
+            r"diabet\w*|cancer|depress\w*|salary|income|debts?|mortgage|bank account|religio\w*|"
+            r"church|mosque|politic\w*|sexual\w*|gay|lesbian|visa|immigra\w*|residence permit|asylum")
+_SENS_ZH = ("疾病", "患有", "确诊", "诊断出", "吃药", "服药", "怀孕", "残疾", "工资", "薪水", "收入",
+            "负债", "贷款", "宗教", "信仰", "政治立场", "党员", "性取向", "签证", "移民", "居留",
+            "庇护", "抑郁", "癌症")
+_SENS_WORD = re.compile(r"\b(?:" + _SENS_EN + r")\b", re.I)
+# a statement ABOUT the user: "I have diabetes", "I'm pregnant", "my visa…", "我的签证…", "我患有…".
+# Deliberately not "I work on cancer imaging" / "我在癌症研究所工作" — those are about their work.
+_SENS_FIRST = re.compile(
+    r"\b(?:i have|i've|i had|i've got|i suffer|i'm suffering|i take|i'm taking|i'm on)\b"
+    r"[^.!?;\n]{0,30}?\b(?:" + _SENS_EN + r")\b|"
+    r"\b(?:i am|i'm)\s+(?:" + _SENS_EN + r")\b|\bmy\s+(?:\w+\s+)?(?:" + _SENS_EN + r")\b|"
+    r"我的?(?:签证|工资|薪水|收入|负债|贷款|宗教|信仰|性取向|病|身体|居留)|"
+    r"我(?:有|患有|得了|确诊了?|在吃药|怀孕|抑郁|是党员)", re.I)
+# employers and research fields legitimately carry these words ("Netherlands Cancer Institute",
+# "digital health", "药学研究员"): for these keys only a first-person statement is refused
+PROFESSIONAL_KEYS = ("organization", "field", "role")
+LIST_KEYS = ("audiences", "venues", "languages", "habits")  # a new value ADDS, it does not replace
 
 
 def pii_faults(text) -> list[str]:
@@ -93,28 +118,34 @@ def pii_faults(text) -> list[str]:
     out = []
     if _EMAIL.search(t):
         out.append("an email address")
-    for m in _DIGITS.finditer(t):
+    for m in _DIGITS.finditer(_ISO_DATE.sub(" ", t)):
+        tokens = [x for x in re.split(r"[\s\-().]+", m.group()) if x]
+        if tokens and all(_YEAR.match(x) for x in tokens):
+            continue                                     # a run of years, not a number
         if sum(ch.isdigit() for ch in m.group()) >= 9:
             out.append("a phone / ID / card-length number")
             break
     if _URL_CRED.search(t) or _URL_TOKEN.search(t):
         out.append("a URL carrying credentials or a token")
-    if _STREET.search(t) or _STREET_NL.search(t) or _POSTCODE_NL.search(t) or _STREET_ZH.search(t):
+    if _STREET.search(t) or _STREET_EU.search(t) or _POSTCODE.search(t) or _STREET_ZH.search(t):
         out.append("a street address or postcode")
     return out
 
 
-def sensitive_faults(text) -> list[str]:
+def sensitive_faults(text, professional=False) -> list[str]:
     """Sensitive categories about the USER. Applied to profile facts only — a design note about a
-    medical deck ("the disease figure needs more colour") is not a fact about the user."""
-    t = str(text or "").lower()
-    hits = sorted({w for w in SENSITIVE if w in t})
-    return ["a sensitive personal category ({})".format(", ".join(hits))] if hits else []
+    medical deck ("the disease figure needs more colour") is not a fact about the user. With
+    `professional` (an organization / field / role value, or any quote) only a FIRST-PERSON statement
+    counts; otherwise the term itself does."""
+    t = str(text or "")
+    m = _SENS_FIRST.search(t)
+    if not m and not professional:
+        m = _SENS_WORD.search(t) or next((re.search(re.escape(w), t) for w in _SENS_ZH if w in t), None)
+    return ["a sensitive personal category ({!r})".format(m.group().strip())] if m else []
 
 
 def standing_words(text) -> bool:
-    t = str(text or "").lower()
-    return any(w in t for w in STANDING_WORDS)
+    return bool(STANDING_RX.search(str(text or "")))
 
 
 # ── paths and io ─────────────────────────────────────────────────────────────────────────────────
@@ -126,7 +157,15 @@ def today() -> _dt.date:
 def memory_root() -> Path:
     """The registry root that holds (or will hold) `taste.md` — memory lives beside it."""
     f = registry.taste_file()
-    return f.parent if f else registry.root_for_write()[1]
+    if f:
+        return f.parent
+    # no taste.md yet: a root that already holds memory files wins, so a log written under the
+    # host-neutral root is not stranded when ~/.claude or ~/.codex appears later
+    for _, root in registry.roots_for_read():
+        if any((root / n).exists() for n in ("observations.jsonl", "memory-state.json",
+                                              "references.jsonl")):
+            return root
+    return registry.root_for_write()[1]
 
 
 def taste_path() -> Path:
@@ -157,13 +196,25 @@ def _read_jsonl(path: Path) -> list[dict]:
         except json.JSONDecodeError:
             bad += 1
             continue
-        if isinstance(rec, dict):
+        if isinstance(rec, dict) and _shape_ok(rec):
             out.append(rec)
         else:
             bad += 1
     if bad:
         print("memory: skipped {} unreadable line(s) in {}".format(bad, path), file=sys.stderr)
     return out
+
+
+def _shape_ok(rec: dict) -> bool:
+    """A record every reader can trust: the fields they index are strings (refs have their own)."""
+    if "key" in rec and "url" in rec:                                 # a reference
+        return all(isinstance(rec.get(k), str) for k in ("key", "url", "facts", "fetched"))
+    if not all(isinstance(rec.get(k), str) and rec.get(k) for k in ("kind", "deck")):
+        return False
+    if rec["kind"] == "applied-record":
+        return all(isinstance(rec.get(k), list) for k in ("applied", "skipped"))
+    return (isinstance(rec.get("key"), str) and isinstance(rec.get("quote"), str)
+            and all(isinstance(rec.get(k, ""), str) for k in ("value", "direction", "date")))
 
 
 def _write_jsonl(path: Path, recs: list[dict]) -> Path:
@@ -191,8 +242,12 @@ def load_state() -> dict:
     except json.JSONDecodeError:
         print("memory: {} is unreadable — treating it as empty".format(p), file=sys.stderr)
         d = {}
-    d.setdefault("accepted", {})
-    d.setdefault("rejected", {})
+    if not isinstance(d, dict):
+        print("memory: {} does not hold an object — treating it as empty".format(p), file=sys.stderr)
+        d = {}
+    for k in ("accepted", "rejected"):
+        if not isinstance(d.get(k), dict):
+            d[k] = {}
     return d
 
 
@@ -221,7 +276,7 @@ def note_faults(kind, key, quote, deck, direction, value) -> list[str]:
         out.append("--key {!r} is not in the vocabulary. Design: {}. Content/process: {}. "
                    "Profile: {}.".format(key, ", ".join(DESIGN_KEYS), ", ".join(CONTENT_KEYS),
                                          ", ".join(PROFILE_KEYS)))
-    if not str(deck or "").strip():
+    if not deck_name(deck or ""):
         out.append("--deck must name the deck (its folder name)")
     from written_reason import reason_width
     if reason_width(quote) < MIN_QUOTE:
@@ -231,7 +286,8 @@ def note_faults(kind, key, quote, deck, direction, value) -> list[str]:
             out.append("a profile-fact needs a profile key: " + ", ".join(PROFILE_KEYS))
         if not str(value or "").strip():
             out.append("a profile-fact needs --value (the fact itself, in a few words)")
-        out += sensitive_faults(value) + sensitive_faults(quote)
+        out += sensitive_faults(value, professional=key in PROFESSIONAL_KEYS)
+        out += [f for f in sensitive_faults(quote, professional=True) if f not in out]
     elif key in PROFILE_KEYS:
         out.append("profile keys take --kind profile-fact")
     elif kind in ("requirement", "correction", "praise") and direction not in DIRECTIONS:
@@ -244,15 +300,25 @@ def note_faults(kind, key, quote, deck, direction, value) -> list[str]:
     return out
 
 
+def _flat(s) -> str:
+    """One line: a newline inside a quote would split a taste.md bullet or table row."""
+    return " ".join(str(s or "").split())
+
+
+def deck_name(d) -> str:
+    """The deck's folder name, however it was spelled (path, trailing slash, bare name)."""
+    return Path(str(d).strip().rstrip("/\\")).name
+
+
 def _cmd_note(a) -> int:
     direction = a.direction or ("avoid" if a.kind == "veto" else None)
     bad = note_faults(a.kind, a.key, a.quote, a.deck, direction, a.value)
     if bad:
         return _refuse("; ".join(bad))
-    rec = {"date": today().isoformat(), "deck": a.deck.strip(), "step": a.step or "",
+    standing = (True if a.standing else False if a.not_standing else standing_words(a.quote))
+    rec = {"date": today().isoformat(), "deck": deck_name(a.deck), "step": a.step or "",
            "kind": a.kind, "key": a.key, "direction": direction or "",
-           "value": (a.value or "").strip(), "standing": bool(a.standing or standing_words(a.quote)),
-           "quote": a.quote.strip()}
+           "value": _flat(a.value), "standing": standing, "quote": _flat(a.quote)}
     path = append_obs(rec)
     print("memory: noted {} {} {}{} → {}".format(a.kind, a.key, direction or rec["value"],
                                                  " (standing)" if rec["standing"] else "", path))
@@ -292,9 +358,9 @@ class CapFull(Exception):
 def _section_of(line: str):
     if not line.startswith("## "):
         return None
-    head = line[3:].strip()
+    head = line[3:].strip().upper()
     for s in SECTIONS:
-        if head.startswith(s):
+        if head.startswith(s.upper()):
             return s
     return "?"
 
@@ -373,7 +439,11 @@ def upsert_line(text: str, section: str, match_key, new_line: str, cap=None) -> 
         at = idx[-1] + 1
     elif section in TABLE:
         rows = [i for i in range(h + 1, e) if lines[i].lstrip().startswith("|")]
-        at = (rows[-1] + 1) if rows else h + 1
+        if not rows:                       # a hand-written heading with no table yet: add the header
+            lines[h + 1:h + 1] = TABLE[section].splitlines()
+            at = h + 1 + len(TABLE[section].splitlines())
+        else:
+            at = rows[-1] + 1
     else:
         at = h + 1
     lines.insert(at, new_line)
@@ -429,7 +499,7 @@ TASTE_AT = {"interview": ("PROFILE", "DIALS", "NO-GOs", "LAST"),
 NOTE_NEXT = ("NEXT: when the user states a requirement, correction or a fact about themselves → "
              "{s} note --kind requirement|correction|praise|veto|profile-fact --key <key> "
              "--quote \"<their words>\" --deck <deck-folder> [--direction more|less|require|avoid] "
-             "[--value <fact>] [--standing]   (keys: {s} keys)").format(s=SELF)
+             "[--value <fact>] [--standing|--not-standing]   (keys: {s} keys)").format(s=SELF)
 
 
 def _clip(text: str, width=CLIP) -> str:
@@ -507,19 +577,20 @@ def render_prompt(d: dict) -> str:
         return "\n".join(["memory: none on file"] + d["next"])
     out = ["MEMORY · step {} · {}  (current request > interview answers > this memory)"
            .format(d["step"], d["root"])]
-    for title, items in (("PROFILE (who the user is)", d["profile"]),
-                         ("DIALS (standing design preferences)", d["dials"]),
-                         ("NO-GOs (hard vetoes)", d["nogos"])):
+    for title, items, clip in (("PROFILE (who the user is)", d["profile"], True),
+                               ("DIALS (standing design preferences)", d["dials"], True),
+                               ("NO-GOs (hard vetoes)", d["nogos"], False)):
         if items:
             out.append(title + ":")
-            out += ["  " + _clip(x) for x in items]
+            out += ["  " + (_clip(x) if clip else _flat(x)) for x in items]
     if d["last_look"]:
         out.append("LAST LOOK (vary at least one foundation against it): " + _clip(d["last_look"]))
     if d["rules"]:
         out.append("TAUGHT RULES (apply each, or record why it does not bind):")
-        out += ['  [{}] {} — they said "{}" ({}{})'.format(
-            r["id"], _clip(r["rule"], 90), _clip(r["quote"], 50), r["deck"] or "?",
-            ", " + r["date"] if r["date"] else "") for r in d["rules"]]
+        for r in d["rules"]:        # in full: the gate needs every word, as taste_ledger list prints it
+            out.append("  [{}] {}".format(r["id"], _flat(r["rule"])))
+            out.append('      they said: "{}" ({}{})'.format(_flat(r["quote"]), r["deck"] or "?",
+                                                         ", " + r["date"] if r["date"] else ""))
     tail = []
     if d["refs"]:
         tail.append("REFERENCES (cached external facts):")
@@ -590,9 +661,9 @@ def _ref_line(r) -> str:
 def _research_line(kind, name) -> str:
     what = ("its official brand / visual-identity guide (colours, fonts, logo rules)" if kind == "org"
             else "its speaker guidelines (slot length, aspect ratio, template, poster size)")
-    return ('NEXT: research "{n}" with your own web tool — {w} — then {s} ref add --key {k}:{n} '
-            '--url <source> --facts "<what it says>"; nothing found → --url none --facts unknown, '
-            'and ask the user').format(n=name, w=what, s=SELF, k=kind)
+    return ('NEXT: research "{n}" with your own web tool — {w} — then {s} ref add --key {key} '
+            '--url "<source>" --facts "<what it says>"; nothing found → --url none --facts unknown, '
+            'and ask the user').format(n=name, w=what, s=SELF, key=shlex.quote(kind + ":" + name))
 
 
 def ref_faults(key, url, facts) -> list[str]:
@@ -703,8 +774,11 @@ def _recurrence(obs, secs, state) -> list[dict]:
         reason = ("seen on {} decks".format(len(decks)) if len(decks) >= 2 else
                   "the user marked it standing")
         if t == "profile":
-            reason = "a fact the user stated" + ("; UPDATES the existing `{}` line".format(key)
-                                                 if key in profile_now else "")
+            reason = "a fact the user stated"
+            if key in profile_now:
+                cur = _row_text(profile_now[key]).split(" — ", 1)[0]
+                reason += ("; ADDS to the current line ({})" if key in LIST_KEYS else
+                           "; REPLACES the current line ({})").format(cur)
         elif t == "dial" and key in dial_keys:
             reason += "; UPDATES the existing `{}` row".format(key)
         out.append({"id": pid, "target": t, "key": key,
@@ -777,9 +851,9 @@ def _command(p) -> str:
     if p["target"] == "nogo":
         return '{} accept {} --text "<the veto, as a rule>"'.format(SELF, p["id"])
     if p["target"] == "profile":
-        return "{} accept {} --confirmed".format(SELF, p["id"])
+        return "{} accept {}".format(SELF, p["id"])
     if p["target"] == "rule":
-        return '{} accept {} --confirmed --rule "<what to DO on every deck>"'.format(SELF, p["id"])
+        return '{} accept {} --rule "<what to DO on every deck>"'.format(SELF, p["id"])
     return "drop: {} {}   ·   keep: {} reject {}".format(SELF, p["drop"], SELF, p["id"])
 
 
@@ -830,9 +904,11 @@ def _cmd_accept(a) -> int:
     if p["target"] == "review":
         return _refuse("a review is the user's call, not an accept: " + _command(p))
     if p["needs_confirm"] and not a.confirmed:
-        print('memory: not written. Ask the user: "Should I remember {} {}{} for every future '
-              'deck?" — on their yes: {}'.format(p["key"], p["direction"] or p["value"],
-                                                 " (" + p["reason"] + ")", _command(p)))
+        again = " ".join(shlex.quote(x) for x in sys.argv[1:])
+        print('memory: not written. Ask the user: "Should I remember {} {} for every future deck? '
+              '({})" — ONLY after they say yes: python3 {} {} --confirmed'.format(
+                  p["key"], p["direction"] or p["value"], p["reason"],
+                  shlex.quote(str(Path(__file__).resolve())), again))
         return 1
     n = p["newest"]
     ev = '{} · {} · "{}"'.format(n.get("deck"), n.get("date"), n.get("quote"))
@@ -844,7 +920,8 @@ def _cmd_accept(a) -> int:
         eid = a.rule_id or "{}-{}".format(p["key"], p["direction"])
         if any(str(e.get("id")) == eid for e in entries):
             return _refuse("ledger id `{}` already exists — pass --rule-id".format(eid))
-        e = {"id": eid, "quote": n.get("quote"), "rule": a.rule, "binds_at": CONTENT_KEYS[p["key"]],
+        e = {"id": eid, "quote": n.get("quote"), "rule": _flat(a.rule),
+             "binds_at": CONTENT_KEYS[p["key"]],
              "learned_from": {"deck": n.get("deck"), "date": n.get("date")}, "retired_by": ""}
         bad = tl.entry_faults(e) + pii_faults(a.rule)
         if bad:
@@ -856,17 +933,24 @@ def _cmd_accept(a) -> int:
             if not a.position:
                 return _refuse("a dial needs --position \"<the standing position>\"")
             section, key, line = "DIALS", p["key"], "| {} | {} | {} |".format(
-                p["key"], _cell(a.position), _cell(ev))
+                p["key"], _cell(a.position), _cell(ev))   # _cell flattens newlines too
             free = a.position
         elif p["target"] == "nogo":
             if not a.text:
                 return _refuse("a NO-GO needs --text \"<the veto, as a rule>\"")
-            section, key, line = "NO-GOs", None, "- {} — {}".format(_clip(a.text, 120), ev)
+            section, key, line = "NO-GOs", None, "- {} — {}".format(_flat(a.text), ev)
             free = a.text
         else:
-            section, key, line = "PROFILE", p["key"], "- {}: {} — {}".format(
-                p["key"], p["value"], ev)
-            free = p["value"]
+            value = p["value"]
+            cur = {_line_key("PROFILE", l): l for l in read_sections(read_taste())["PROFILE"]}
+            if p["key"] in LIST_KEYS and p["key"] in cur:
+                old = _row_text(cur[p["key"]]).split(" — ", 1)[0].split(":", 1)[-1]
+                vals = [v.strip() for v in re.split(r"[,·、;]", old) if v.strip()]
+                if value.lower() not in [v.lower() for v in vals]:
+                    vals.append(value)
+                value = ", ".join(vals)
+            section, key, line = "PROFILE", p["key"], "- {}: {} — {}".format(p["key"], value, ev)
+            free = value
             bad = sensitive_faults(free)
             if bad:
                 return _refuse("; ".join(bad))
@@ -879,6 +963,9 @@ def _cmd_accept(a) -> int:
             return _refuse(str(exc))
         where = write_taste(text)
     state["accepted"][p["id"]] = today().isoformat()
+    if p["target"] in ("dial", "rule") and p["direction"] in OPPOSITE:
+        # the row now says this direction: a later return to the opposite one must be proposable
+        state["accepted"].pop(_pid(p["target"], p["key"], OPPOSITE[p["direction"]]), None)
     save_state(state)
     print("memory: wrote → {}".format(where))
     print("FYI line for the user: recorded to your taste profile: {} — say the word and I'll drop it"
@@ -995,8 +1082,11 @@ def main(argv=None) -> int:
     n.add_argument("--direction")
     n.add_argument("--value")
     n.add_argument("--step", choices=STEPS)
-    n.add_argument("--standing", action="store_true",
-                   help="the user marked it as standing (any language)")
+    st = n.add_mutually_exclusive_group()
+    st.add_argument("--standing", action="store_true",
+                    help="the user marked it as standing (any language)")
+    st.add_argument("--not-standing", action="store_true",
+                    help="override the standing-phrase fallback")
     sub.add_parser("keys", help="print the closed vocabulary")
     r = sub.add_parser("recall", help="the memory THIS step should use")
     r.add_argument("--step", required=True, choices=STEPS)

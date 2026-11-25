@@ -445,6 +445,158 @@ code, out, err = b.run("ref", "add", "--key", "LUMC", "--url", "https://a.b", "-
 check(code == 1, "a ref key without org:/venue: was accepted")
 
 
+# ── Final review fixes ───────────────────────────────────────────────────────────────────────────
+# F1 — taught rules and NO-GOs are never truncated (the gate needs them whole)
+b = Box()
+long_rule = ("Every categorical list gets icons from a single family; never emoji, never a mix of "
+             "families, and never icons on non-categorical prose or on a slide whose only content "
+             "is a single number.")
+zh_rule = "每一页的数字都必须用等高数字，不能用旧式数字，表格和图表里的数字也一样，标题里的年份也一样，没有例外。"
+long_nogo = "No " + "very " * 40 + "long veto"
+b.ledger.write_text(json.dumps({"entries": [
+    dict(ledger_entry(1, "design"), rule=long_rule), dict(ledger_entry(2, "design"), rule=zh_rule,
+                                                          quote="数字忽上忽下的，看着很难受，我说过很多次了")]}),
+    encoding="utf-8")
+(b.reg / "taste.md").write_text("# t\n\n## NO-GOs\n- " + long_nogo + " — a · 2026-11-01\n",
+                                encoding="utf-8")
+code, out, err = b.run("recall", "--step", "design")
+check(long_rule in out and zh_rule in out and "数字忽上忽下的，看着很难受，我说过很多次了" in out
+      and long_nogo in out, "design recall truncated a taught rule / quote / NO-GO:\n" + out)
+
+# F2 — the privacy filter must not refuse ordinary words, venues, dates, employers or fields
+b = Box()
+for ok in ("ISMRM 2027 MR session", "In 2026 MR images need more colour",
+           "show 1000 CT slices bigger", "do the 2 charts this way", "show 3 results the same way",
+           "dates 2026-11-25 - 2026-12-01", "the 2025 2026 2027 editions", "我知道3号页太挤"):
+    code, out, err = note(b, quote=ok)
+    check(code == 0, "an ordinary quote was refused as PII: {!r} {}".format(ok, err))
+for key, val in (("organization", "Philips Healthcare"), ("organization", "Netherlands Cancer Institute"),
+                 ("organization", "Churchill College"), ("field", "diagnostic imaging"),
+                 ("field", "radiation therapy physics"), ("field", "digital health"),
+                 ("field", "病理图像分析"), ("role", "药学研究员")):
+    code, out, err = note(b, "--value", val, kind="profile-fact", key=key, direction=None,
+                          quote="I work on " + val)
+    check(code == 0, "an employer / field / role was refused as sensitive: {!r} {}".format(val, err))
+for bad in ("I have diabetes", "我的签证状态是待定", "salary band 5", "my visa expires soon"):
+    code, out, err = note(b, "--value", bad, kind="profile-fact", key="habits", direction=None,
+                          quote=bad)
+    check(code == 1, "a sensitive fact about the user was accepted: {!r}".format(bad))
+code, out, err = note(b, "--value", "MRI researcher", kind="profile-fact", key="role",
+                      direction=None, quote="I am an MRI researcher and I have diabetes")
+check(code == 1, "a first-person health fact inside a role quote was stored")
+for bad in ("postcode 2333 ZA", "2333 ZA Leiden", "Albinusdreef 2", "Hauptstraße 5",
+            "I live at 12 Baker Street", "上海市南京西路123号"):
+    code, out, err = note(b, quote=bad)
+    check(code == 1, "an address was accepted: {!r}".format(bad))
+
+# F3 — standing is the agent's call; the word list is only a fallback, and a tight one
+b = Box()
+for q, want in (("这页所有的字都太小了", False), ("this slide always looks cramped to me", False),
+                ("以后都要用这个配色", True), ("每次都太长了", True), ("from now on more colour", True)):
+    note(b, quote=q)
+    check(b.obs()[-1]["standing"] is want, "standing fallback wrong for {!r}".format(q))
+note(b, "--not-standing", quote="以后都要用这个配色")
+check(b.obs()[-1]["standing"] is False, "--not-standing did not overrule the word list")
+
+# F4 — one deck is one deck however it is spelled
+b = Box()
+note(b, deck=str(b.td / "talk-b") + "/")
+note(b, deck="talk-b")
+check(props(b) == [] and b.obs()[0]["deck"] == "talk-b",
+      "a path and a folder name for the same deck counted as two decks")
+
+# F5 — a preference that flips back is proposed again
+b = Box()
+for d in ("a", "b"):
+    note(b, deck=d, key="density", direction="less", quote="too dense")
+b.run("accept", props(b)[0]["id"], "--position", "airy")
+for d in ("c", "d"):
+    note(b, deck=d, key="density", direction="more", quote="too empty")
+b.run("accept", [x for x in props(b) if x["key"] == "density"][0]["id"], "--position", "fuller")
+for d in ("e", "f"):
+    note(b, deck=d, key="density", direction="less", quote="dense again")
+p = [x for x in props(b) if x["key"] == "density"]
+check(len(p) == 1 and p[0]["direction"] == "less",
+      "a preference that flipped back was never proposed again: {}".format(p))
+
+# F6 — a list-type PROFILE key gains a value instead of losing the old ones
+b = Box()
+(b.reg / "taste.md").write_text("# t\n\n## PROFILE\n- venues: ISMRM, ESMRMB — stated · a · 2026-11-01\n",
+                                encoding="utf-8")
+note(b, "--value", "RSNA", kind="profile-fact", key="venues", direction=None, quote="RSNA this year")
+p = props(b)
+check(p and "ISMRM" in p[0]["reason"], "the question did not show the existing venues line: {}".format(p))
+b.run("accept", p[0]["id"], "--confirmed")
+check("ISMRM" in b.taste() and "ESMRMB" in b.taste() and "RSNA" in b.taste(),
+      "adding a venue dropped the old ones:\n" + b.taste())
+
+# F7 — hand-edited headings: no table yet, or different case
+b = Box()
+(b.reg / "taste.md").write_text("# t\n\n## Dials\n\n## NO-GOs\n- No x — a · 2026-11-01\n",
+                                encoding="utf-8")
+note(b, "--standing", key="colour", quote="always more colour please")
+b.run("accept", props(b)[0]["id"], "--position", "vivid")
+code, out, err = b.run("recall", "--step", "design")
+check("vivid" in out and b.taste().count("## ") == 2 and b.taste().lower().count("## dials") == 1,
+      "a dial accepted under a hand-written heading vanished or duplicated the section:\n"
+      + b.taste() + out)
+
+# F8 — a valid-JSON but malformed log line is skipped, never a crash
+b = Box()
+(b.reg / "observations.jsonl").write_text(
+    '{"kind":"requirement","key":"colour","direction":"more","quote":"x y z w"}\n'
+    '{"kind":"profile-fact","key":"role","value":7,"deck":"a","quote":"q q q q"}\n', encoding="utf-8")
+(b.reg / "memory-state.json").write_text("[1, 2]", encoding="utf-8")
+for args in (["recall", "--step", "interview"], ["proposals"]):
+    code, out, err = b.run(*args)
+    check(code == 0 and "Traceback" not in err, "a malformed log line crashed `{}`:\n{}".format(
+        args[0], err))
+
+# F9 + consent — printed commands run as printed; the consent tier is not pre-answered
+import shlex  # noqa: E402
+b = Box()
+(b.reg / "taste.md").write_text("# t\n\n## PROFILE\n- organization: Leiden University Medical "
+                                "Center — stated · a · 2026-11-01\n", encoding="utf-8")
+code, out, err = b.run("recall", "--step", "content")
+line = next((l for l in out.splitlines() if l.startswith("NEXT: research")), "")
+cmd = line.split(" — then ", 1)[-1].split("; nothing found", 1)[0]
+cmd = cmd.replace("<source>", "https://www.lumc.nl/x").replace("<what it says>", "blue #001158")
+r = subprocess.run(["bash", "-c", cmd], capture_output=True, text=True, env=b.env())
+check(r.returncode == 0, "the printed research command did not run as printed:\n{}\n{}".format(
+    cmd, r.stderr))
+check(" ".join(shlex.split(cmd)[:2]).endswith("memory.py"), "SELF is not a shell-safe command")
+b = Box()
+note(b, "--value", "teacher", kind="profile-fact", key="role", direction=None, quote="我是老师")
+code, out, err = b.run("close", str(deck_dir(b, "deck-a", [], [])))
+arrow = [l for l in out.splitlines() if "→" in l and "accept" in l]
+check(arrow and all("--confirmed" not in l for l in arrow),
+      "close pre-answered the user's consent by printing --confirmed:\n" + out)
+
+# F11 — a multi-line quote never splits a taste.md line
+b = Box()
+note(b, "--standing", kind="veto", key="motif", direction=None, quote="no rulers\nanywhere ever")
+b.run("accept", props(b)[0]["id"], "--text", "No ruler\nmotifs")
+check("- No ruler motifs — " in b.taste() and "no rulers anywhere ever" in b.taste(),
+      "a multi-line quote/text split a taste.md line:\n" + b.taste())
+
+# F12 + neutral root — memory written before a higher-priority root appears is not stranded
+home = Path(tempfile.mkdtemp(prefix="mem-home-"))
+env = {k: v for k, v in os.environ.items() if k not in ("SLIDE_MAKER_REGISTRY",
+                                                          "SLIDE_MAKER_TASTE_LEDGER")}
+env.update({"HOME": str(home), "SLIDE_MAKER_TODAY": "2026-11-25"})
+run = lambda *a: subprocess.run([sys.executable, str(MEM), *a], capture_output=True, text=True,  # noqa: E731
+                                env=env)
+for d in ("a", "b"):
+    run("note", "--kind", "correction", "--key", "colour", "--direction", "more", "--quote",
+        "more colour", "--deck", d)
+check((home / ".slide-maker" / "slide-templates" / "observations.jsonl").exists(),
+      "with no Claude/Codex root, the log did not land in the host-neutral root")
+(home / ".claude" / "slide-templates").mkdir(parents=True)
+r = run("proposals")
+check("colour" in r.stdout, "memory in the neutral root was stranded once ~/.claude appeared:\n"
+      + r.stdout + r.stderr)
+
+
 # ── report ───────────────────────────────────────────────────────────────────────────────────────
 for f in fails:
     print("FAIL: " + f)
