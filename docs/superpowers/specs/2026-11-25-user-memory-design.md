@@ -211,3 +211,20 @@ No user decks are used as input; fixtures only.
   log cap 300, PROFILE cap 8 lines.
 - `memory.py` is the only new script; it imports `registry.py` and `taste_ledger.py`, does not copy them.
 - Work happens on a new branch off `origin/main`; the installed copy is rsynced only after it lands.
+
+## Addendum (2026-11-25, user request) — seeding memory for existing users
+- **Existing user** = a legacy footprint exists (`taste.md`, ledger entries, registered templates or
+  `registers.md`) and `memory-state.json` has no `seeded` mark. `recall --step interview` then prints a
+  one-time `NEXT:` telling the agent to ask once (decided by the user: ask first) whether it may read
+  the records past decks left behind; yes → `memory.py seed`, no → `memory.py seed --skip`.
+- **New user** = no footprint: no prompt; the first memory write marks `seeded: fresh`, so the
+  question never appears later.
+- `seed [--scan DIR …]` walks `~/Downloads`, `~/Desktop`, `~/Documents` (decided by the user) plus any
+  `--scan` dirs, ≤3 levels, and reads ONLY `.deck-gates.json` / `.codex-deck-evidence.json` — never the
+  slides or any other file. Unreadable folders (macOS TCC) are reported, never treated as empty.
+- From each record: `taste_applied` → an applied-record (staleness evidence, silent); the shared
+  record's `interview.language` / `interview.density` (when not a placeholder and not a delegated pick)
+  → `kind: recorded` observations. Codex records carry the interview as free text, so only their
+  `taste_applied` is used. Recorded answers recurring on ≥2 decks become proposals (languages →
+  PROFILE, density → DIALS), **all confirm-first**, because they are inferred, not the user's words.
+- Runs once: `seeded` is recorded; decks already logged are skipped.

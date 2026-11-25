@@ -115,3 +115,9 @@ Rules:
 - [ ] **Step 5:** read every step's recall output on the fixture store by eye.
 - [ ] **Step 6:** commit `wire memory.py into the pipeline; docs + CI`.
 - [ ] **Step 7:** whole-branch review by a fresh reviewer; fix confirmed findings; re-run CI.
+
+### Task 6: seed memory for existing users (spec Addendum)
+**Files:** Modify `memory.py`, `test_memory.py`, `references/user-taste.md`, `references/file-inventory.md`
+**Produces:** `legacy_footprint() -> bool` · `seed(dirs: list[Path]) -> dict` · CLI `seed [--scan DIR…] [--skip]`; kind `recorded` (written by seed only); state key `seeded`.
+- [ ] Step 1: failing tests — fixture HOME with two shared records (language 中文, density diagram-heavy, taste_applied), one Codex record, one placeholder record, one delegated-language record, one unreadable folder; seed → 3 applied-records, a confirm-first languages proposal and a confirm-first density proposal, the unreadable folder named; second seed → no duplicates; `--skip` marks; recall prompts only for a legacy, unseeded user; a new user's first note marks fresh and no prompt follows.
+- [ ] Step 2–4: FAIL → implement → PASS. Step 5: commit.
