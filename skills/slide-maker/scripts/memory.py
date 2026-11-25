@@ -475,6 +475,13 @@ def recall(step: str, venue=None) -> dict:
                     "deck": (e.get("learned_from") or {}).get("deck"),
                     "date": (e.get("learned_from") or {}).get("date")} for e in _rules(step)],
          "refs": [], "research": [], "proposals": 0, "next": []}
+    if step in REF_STEPS:
+        secs_all = read_sections(read_taste())
+        names = ([("venue", venue.strip())] if venue and venue.strip() else []) + \
+            _profile_names(secs_all)
+        fresh, missing = refs_for(names, today())
+        d["refs"] = [_ref_line(r) for r in fresh]
+        d["research"] = [_research_line(k, n) for k, n in missing[:MAX_RESEARCH]]
     if step in ("interview", "handoff"):
         d["proposals"] = len(proposals())
     nxt = [NOTE_NEXT]
@@ -529,6 +536,102 @@ def _cmd_recall(a) -> int:
         print(json.dumps(d, ensure_ascii=False, indent=1))
     else:
         print(render_prompt(d))
+    return 0
+
+
+# ── references: external facts with source, date and expiry ───────────────────────────────────────
+REF_TTL = {"org": 180, "venue": 365}
+REF_STEPS = ("interview", "content", "design")
+MAX_RESEARCH = 2
+
+
+def load_refs() -> list[dict]:
+    return _read_jsonl(refs_path())
+
+
+def _ref_expired(r, now) -> bool:
+    d = _date(r.get("fetched"))
+    return d is None or (now - d).days > int(r.get("ttl_days") or 0)
+
+
+def _profile_names(secs) -> list[tuple[str, str]]:
+    """(kind, name) for every organization / venue the PROFILE names."""
+    out = []
+    for line in secs["PROFILE"]:
+        k = _line_key("PROFILE", line)
+        kind = {"organization": "org", "venues": "venue"}.get(k)
+        if not kind:
+            continue
+        value = line.split(":", 1)[1].split(" — ", 1)[0]
+        value = re.sub(r"\([^)]*\)", "", value)
+        out += [(kind, n.strip()) for n in re.split(r"[,·、;/]", value) if n.strip()]
+    return out
+
+
+def refs_for(names, now) -> tuple[list, list]:
+    """(fresh refs matching `names`, names with no fresh ref) — names are (kind, name)."""
+    by_key = {str(r.get("key", "")).lower(): r for r in load_refs()}
+    fresh, missing = [], []
+    for kind, name in names:
+        r = by_key.get("{}:{}".format(kind, name).lower())
+        if r and not _ref_expired(r, now):
+            if r not in fresh:
+                fresh.append(r)
+        else:
+            missing.append((kind, name))
+    return fresh, missing
+
+
+def _ref_line(r) -> str:
+    return "{}: {}  (source {}, fetched {})".format(r.get("key"), r.get("facts"), r.get("url"),
+                                                    r.get("fetched"))
+
+
+def _research_line(kind, name) -> str:
+    what = ("its official brand / visual-identity guide (colours, fonts, logo rules)" if kind == "org"
+            else "its speaker guidelines (slot length, aspect ratio, template, poster size)")
+    return ('NEXT: research "{n}" with your own web tool — {w} — then {s} ref add --key {k}:{n} '
+            '--url <source> --facts "<what it says>"; nothing found → --url none --facts unknown, '
+            'and ask the user').format(n=name, w=what, s=SELF, k=kind)
+
+
+def ref_faults(key, url, facts) -> list[str]:
+    out = []
+    kind, _, name = str(key or "").partition(":")
+    if kind not in REF_TTL or not name.strip():
+        out.append("--key must be org:<name> or venue:<name>")
+    unknown = str(facts or "").strip().lower() == "unknown"
+    if not str(facts or "").strip():
+        out.append("--facts must say what the source says (or `unknown`)")
+    if not unknown and not re.match(r"^https?://\S+$", str(url or "")):
+        out.append("--url must be the http(s) source the facts came from (`none` only with "
+                   "--facts unknown)")
+    for f in pii_faults(url) + pii_faults(facts):
+        out.append("contains " + f)
+    return out
+
+
+def _cmd_ref(a) -> int:
+    now = today()
+    if a.ref_cmd == "add":
+        bad = ref_faults(a.key, a.url, a.facts)
+        if bad:
+            return _refuse("; ".join(bad))
+        kind = a.key.split(":", 1)[0]
+        rec = {"key": a.key.strip(), "url": a.url.strip(), "facts": " ".join(a.facts.split()),
+               "fetched": now.isoformat(), "ttl_days": a.ttl_days or REF_TTL[kind]}
+        refs = [r for r in load_refs() if str(r.get("key", "")).lower() != rec["key"].lower()]
+        path = _write_jsonl(refs_path(), refs + [rec])
+        print("memory: cached {} (re-check after {} days) → {}".format(rec["key"], rec["ttl_days"],
+                                                                      path))
+        return 0
+    refs = load_refs()
+    if a.expired:
+        refs = [r for r in refs if _ref_expired(r, now)]
+    for r in refs:
+        print(("EXPIRED " if _ref_expired(r, now) else "") + _ref_line(r))
+    if not refs:
+        print("memory: no references" + (" expired" if a.expired else ""))
     return 0
 
 
@@ -912,6 +1015,15 @@ def main(argv=None) -> int:
     rj.add_argument("id")
     fg = sub.add_parser("forget", help="remove a line from any store")
     fg.add_argument("target")
+    rf = sub.add_parser("ref", help="external facts: brand guide / venue spec, cached with source")
+    rsub = rf.add_subparsers(dest="ref_cmd", required=True)
+    ra = rsub.add_parser("add")
+    ra.add_argument("--key", required=True, help="org:<name> | venue:<name>")
+    ra.add_argument("--url", required=True)
+    ra.add_argument("--facts", required=True)
+    ra.add_argument("--ttl-days", type=int)
+    rl = rsub.add_parser("list")
+    rl.add_argument("--expired", action="store_true")
     cl = sub.add_parser("close", help="Step-6: snapshot taste_applied, then list proposals")
     cl.add_argument("deck")
     a = ap.parse_args(argv)
@@ -925,7 +1037,7 @@ def main(argv=None) -> int:
         if a.cmd == "recall":
             return _cmd_recall(a)
         handler = {"proposals": _cmd_proposals, "accept": _cmd_accept, "reject": _cmd_reject,
-                   "forget": _cmd_forget, "close": _cmd_close}.get(a.cmd)
+                   "forget": _cmd_forget, "close": _cmd_close, "ref": _cmd_ref}.get(a.cmd)
         if handler:
             return handler(a)
     except OSError as exc:

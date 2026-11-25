@@ -402,6 +402,48 @@ b.today = "2028-09-02"
 check(any(x["id"] == pid for x in props(b)), "a kept stale review never came back a year later")
 
 
+# ── Task 4: external references ──────────────────────────────────────────────────────────────────
+b = Box()
+(b.reg / "taste.md").write_text("# taste.md\n\n## PROFILE\n"
+                                "- organization: LUMC (Leiden) — stated · a · 2026-11-01\n"
+                                "- venues: ISMRM, ESMRMB · RSNA — stated · a · 2026-11-01\n",
+                                encoding="utf-8")
+code, out, err = b.run("recall", "--step", "content")
+research = [l for l in out.splitlines() if l.startswith("NEXT: research")]
+check(len(research) == 2 and '"LUMC"' in research[0],
+      "missing refs did not ask for research (≤2 lines, org first):\n" + out)
+code, out, err = b.run("ref", "add", "--key", "org:LUMC", "--url",
+                       "https://www.lumc.nl/huisstijl", "--facts", "primary blue #001158; Frutiger")
+check(code == 0, "a valid ref was refused: " + out + err)
+code, out, err = b.run("recall", "--step", "design")
+check("#001158" in out and "lumc.nl" in out and '"LUMC"' not in out,
+      "a fresh ref did not replace the research line with its facts:\n" + out)
+code, out, err = b.run("ref", "add", "--key", "venue:ISMRM-2027", "--url", "https://ismrm.org/27",
+                       "--facts", "power pitch 3 min, 16:9")
+code, out, err = b.run("recall", "--step", "content", "--venue", "ISMRM-2027")
+check("power pitch 3 min" in out, "--venue did not match its cached ref:\n" + out)
+code, out, err = b.run("ref", "add", "--key", "org:LUMC", "--url", "https://www.lumc.nl/v2",
+                       "--facts", "primary blue #001E5A")
+code, out, err = b.run("ref", "list")
+check(out.count("org:LUMC") == 1 and "#001E5A" in out and "#001158" not in out,
+      "a newer ref for the same key did not replace the older:\n" + out)
+b.today = "2027-06-30"
+code, out, err = b.run("ref", "list", "--expired")
+check("org:LUMC" in out and "ISMRM-2027" not in out,
+      "TTL expiry wrong (org 180 days, venue 365):\n" + out)
+code, out, err = b.run("recall", "--step", "content")
+check('research "LUMC"' in out, "an expired ref did not ask for re-research:\n" + out)
+for bad in (["--url", "https://x.org/?token=abc", "--facts", "x"],
+            ["--url", "ftp://x.org/a", "--facts", "x"],
+            ["--url", "none", "--facts", "x"]):
+    code, out, err = b.run("ref", "add", "--key", "org:X", *bad)
+    check(code == 1, "a bad ref was accepted: {}".format(bad))
+code, out, err = b.run("ref", "add", "--key", "org:Y", "--url", "none", "--facts", "unknown")
+check(code == 0, "an honest `unknown` ref was refused: " + err)
+code, out, err = b.run("ref", "add", "--key", "LUMC", "--url", "https://a.b", "--facts", "x")
+check(code == 1, "a ref key without org:/venue: was accepted")
+
+
 # ── report ───────────────────────────────────────────────────────────────────────────────────────
 for f in fails:
     print("FAIL: " + f)
