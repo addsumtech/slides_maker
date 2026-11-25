@@ -9,6 +9,48 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+## [6.3.0] — 2026-11-25
+
+**User memory: the skill remembers who you are and what you keep asking for — on any agent runtime.**
+Past decks already left hints (a taste profile, rules the user corrected by hand), but they were reached through
+prose spread over SKILL.md and its references, so an agent that skipped a reference lost them, and a requirement
+voiced mid-build was only kept if someone remembered it at the hand-off. This release adds one entry point that any
+runtime (Claude Code, Codex, or any other agent) runs per step, and lets memory grow from use.
+
+- **`scripts/memory.py recall --step <interview|content|design|build|critic|handoff>`** prints the memory that step
+  should use in one bounded block — a new `## PROFILE` section in `taste.md` (role, field, organization, audiences,
+  venues, languages, brand, habits), DIALS, NO-GOs, the last look, every active taught rule (in full; the existing
+  `taste_applied` gate checks all of them) and cached brand/venue facts — ending in the exact `NEXT:` commands.
+  It uses the registry root `registry.py` resolves, including the host-neutral fallback, and keeps all memory in
+  that one root.
+- **Continuous capture.** `memory.py note` logs a requirement, correction, veto or fact verbatim at any step, keyed
+  by a closed vocabulary (`memory.py keys`) so recurrence is counted, not guessed.
+- **Memory that evolves.** `memory.py close <deck-dir>` at the Step-6 close snapshots the deck's `taste_applied`
+  and lists proposals: the same request on two or more decks (or one the user marked standing) becomes a standing
+  preference, a newer opposite request updates the row, a rule skipped on three decks in a row or a line not
+  confirmed for a year is put back to the user. External facts (an organization's brand guide, a venue's speaker
+  spec) are researched by the agent's own web tool and cached with source, date and expiry (`memory.py ref`).
+- **Consent tiers.** The observation log is evidence and steers nothing; DIALS and NO-GOs are written at the close
+  and announced with an easy veto; a PROFILE line or a new taught rule binds every future deck, so it is written
+  only on the user's yes (`accept … --confirmed`). `memory.py forget` removes any line.
+- **Privacy by construction.** Email addresses, phone/ID/card-length numbers, street addresses and postcodes, and
+  URLs carrying credentials are refused in every stored string; profile facts also refuse sensitive categories
+  about the user (health, money, religion, politics, sexuality, immigration status). All data stays under the
+  user's home, never in the skill.
+- **Returning users start with a memory.** A user who built decks before this release is asked once whether the
+  records their past decks left (`.deck-gates.json` / `.codex-deck-evidence.json`, never the slides) may be read;
+  `memory.py seed` turns recurring recorded answers into confirm-first proposals. A new user is never asked.
+- **Design moves.** The headline can leave the header (`headline()` with a measured `headlines:` line), type can be
+  the image (`display_type`, `vertical_title`), Morph transitions (`anim.morph`, fade fallback), and presented decks
+  get one-line provenance. `headline()` measures the title in the face it renders in; a dark deck's ground flip goes
+  to a tinted mid tone instead of white, at most three flips.
+- **Chinese copy.** Half-width punctuation inside a Chinese clause becomes full-width in `text()` / `table()` (only
+  after a Chinese character); new copy tells catch on-slide self-reference, a repeated "not X but Y" and English caps
+  kickers in a Chinese deck.
+- **Interview.** Recommends the generated-template option when the topic lives on atmosphere.
+- **CI.** The SkillHub 200-file package check left GitHub CI; `scripts/build_skillhub.py` still enforces it when
+  building the local upload zip.
+
 ## [6.2.0] — 2026-11-08
 
 **Design strength restored and gated, a SKILL.md an agent can read to the end, and a run the user can see.**
