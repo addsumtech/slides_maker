@@ -515,6 +515,7 @@ def _boxes(slide, sw, sh, slide_no=None, record=True):
                         except Exception:
                             run_fmt.append((None, None))
         fill_rgb = None                                  # solid-fill colour of this shape, if resolvable
+        fill_alpha = 1.0                                 # <a:alpha> on that solid fill (1.0 = opaque)
         fill_unk = False                                 # True = fill exists but colour unknowable
         try:                                             #   (gradient/picture/pattern, or theme solid)
             from pptx.enum.dml import MSO_FILL
@@ -523,6 +524,10 @@ def _boxes(slide, sw, sh, slide_no=None, record=True):
                 fill_unk = True                          # theme colour raises below, leaving unk=True
                 fill_rgb = str(s.fill.fore_color.rgb)
                 fill_unk = False
+                _fa = s._element.spPr.find(qn("a:solidFill"))
+                _fa = _fa.find(".//" + qn("a:alpha")) if _fa is not None else None
+                if _fa is not None:                      # a translucent tint is NOT its own colour:
+                    fill_alpha = int(_fa.get("val", "100000")) / 100000.0   # composited in _backing_fill
             elif ft in (MSO_FILL.GRADIENT, MSO_FILL.PATTERNED, MSO_FILL.PICTURE, MSO_FILL.TEXTURED):
                 fill_unk = True
         except Exception:
@@ -559,7 +564,7 @@ def _boxes(slide, sw, sh, slide_no=None, record=True):
                     "card": _card,
                     "r": l + w if _pr is None else _pr, "b": t + h if _pb is None else _pb,
                     "rot": _rot, "fl": _fl, "ft": _ft, "fw": _fw, "fh": _fh, "poly": poly,
-                    "runs": run_colors, "run_hl": run_hl, "run_fmt": run_fmt, "fill": fill_rgb, "unk": fill_unk, "pic": is_pic, "grad": is_grad,
+                    "runs": run_colors, "run_hl": run_hl, "run_fmt": run_fmt, "fill": fill_rgb, "alpha": fill_alpha, "unk": fill_unk, "pic": is_pic, "grad": is_grad,
                     "icon": icon_ink,
                     "st": str(s.shape_type).split()[0], "txt": txt, "full": full, "size": size or 12.0,
                     "paras": paras, "pspace": pspace, "solid": s.shape_type in SOLID, "align": align, "anchor": anchor,
@@ -1851,6 +1856,15 @@ def _in_polys(paths, x, y):
     return False
 
 
+def _over(top, alpha, under):
+    """`top` at `alpha` composited over `under` (hex). Unknown underneath → "UNKNOWN" (never assume white)."""
+    if not under or under == "UNKNOWN":
+        return "UNKNOWN"
+    a, b = int(top, 16), int(under, 16)
+    ch = [round(alpha * ((a >> sh) & 255) + (1 - alpha) * ((b >> sh) & 255)) for sh in (16, 8, 0)]
+    return "%02X%02X%02X" % tuple(ch)
+
+
 def _backing_fill(bx, ti, own=True, chrome=()):
     """The topmost solid fill under text shape bx[ti]: the shape's OWN fill if solid, else the
     highest lower-z shape whose box covers the text (center inside + >=50% overlap). A picture,
@@ -1863,7 +1877,7 @@ def _backing_fill(bx, ti, own=True, chrome=()):
     (the old behaviour) but resolves a template's own brand furniture to the page colour."""
     t = bx[ti]
     if own:
-        if t["fill"]:
+        if t["fill"] and t.get("alpha", 1.0) >= 0.999:
             return t["fill"]
         if t.get("unk"):
             return "UNKNOWN"
@@ -1881,9 +1895,15 @@ def _backing_fill(bx, ti, own=True, chrome=()):
             continue                                     # the text sits in the shape's hole (ink's ensō), not on its paint
         if s["pic"] or s.get("unk"):
             best, best_is_bg = "UNKNOWN", bool(s.get("bg"))
+        elif s["fill"] and s.get("alpha", 1.0) < 0.999:
+            # a translucent tint shows what is under it: a 14% wash over cream IS (almost) cream. Taken as
+            # solid it failed every line drawn on it (a test build declared ~90 marks decorative, 2026-11-27)
+            best = _over(s["fill"], s["alpha"], best)
         elif s["fill"]:
             # a background read from a picture is its colour only where the text sits on that colour
             best, best_is_bg = (_bg_under(s, t, s["w"], s["h"]) if s.get("bgpix") else s["fill"]), bool(s.get("bg"))
+    if own and t["fill"] and best is not None:
+        best = _over(t["fill"], t.get("alpha", 1.0), best)
     # inherited chrome sits between the page background and the slide's own shapes
     if chrome and (best is None or best_is_bg):
         ch = _chrome_under(chrome, t)
@@ -1904,6 +1924,8 @@ def _fill_under_point(bx, x, y, zmax):
             continue
         if s["pic"] or s.get("unk"):
             best = "UNKNOWN"
+        elif s["fill"] and s.get("alpha", 1.0) < 0.999:
+            best = _over(s["fill"], s["alpha"], best)
         elif s["fill"]:
             best = (_bg_under(s, {"l": x - 0.05, "r": x + 0.05, "t": y - 0.05, "b": y + 0.05}, s["w"], s["h"])
                     if s.get("bgpix") else s["fill"])

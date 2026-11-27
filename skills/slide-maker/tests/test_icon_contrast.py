@@ -281,5 +281,19 @@ else:
 print("\n".join("  ok   " + x for x in ok))
 if bad:
     print("\n".join("  FAIL " + x for x in bad))
+# a translucent wash is composited with what is under it, never read as its solid colour (test build 2026-11-27)
+from lxml import etree as _et                                  # noqa: E402
+from pptx.oxml.ns import qn as _qn                             # noqa: E402
+_p = dk.blank_deck(); _s = dk.add_slide(_p); dk.slide_background(_s, "F3EEE2")
+_r = dk.box(_s, 1, 1, 8, 3, fill="203A2E")
+_et.SubElement(_r._element.spPr.find(_qn("a:solidFill"))[0], _qn("a:alpha")).set("val", "14000")
+dk.box(_s, 2, 2, 0.3, 0.3, fill="2B4A3C")                      # a dark mark on a 14% dark wash over cream
+_p.save(str(TMP / "wash.pptx"))
+_w = _warns(TMP / "wash.pptx")
+(ok if "NON-TEXT CONTRAST" not in _w else bad).append("a dark mark on a 14% wash is judged against the composite, not the solid wash")
+_c = L._over("D6452B", 0.14, "F3EEE2")
+(ok if _c == "EFD6C8" else bad).append("_over composites 14%% #D6452B over #F3EEE2 to #EFD6C8 (got #%s)" % _c)
+(ok if L._over("D6452B", 0.14, None) == "UNKNOWN" else bad).append("_over over an unknown backing is UNKNOWN")
+
 print(f"\n{len(ok)} passed, {len(bad)} failed")
 raise SystemExit(1 if bad else 0)
