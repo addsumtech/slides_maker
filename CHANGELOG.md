@@ -22,6 +22,13 @@ section is a distilled summary — the full notes live on the
   instead of hardcoding BOLD; a review may name `playbook: <genre>` as its overlay; `picks` exits 0 after a
   successful write; `directions.json` is kept at the deck root; a `fast` round under auto with majors open runs
   one more round automatically; detail-floor sizes are canvas-relative; the generic example uses `slide_background`.
+- Second round from the two test builds and a user review: `CUT_UNIT` (a declared bleed that slices one unit of a
+  repeated row is overflow, not bleed); grouped author-year markers `(A, 2019; B, 2020)` / `（A；B）` are parsed;
+  reference lines keep "et al." for Latin-script works in a Chinese deck (GB/T 7714) and add no full stop after
+  `?`/`!`; `reference_page` heading follows `y`, takes `w=`, uses the body face for CJK and measures rows with
+  `measure_text`; `HEADLINE_CROWDED` picks the largest FONT, not the tallest block (`_max_font_pt` never existed);
+  the contrast backing composites translucent fills; the file-level text height reads line spacing; `stat_row`
+  captions scale with the canvas; the design dispatch asks the art director for the material probe.
 - `DETAIL_FLOORS`, printed with every brief: mark tight, one face per kind, results on the slide, reproducible from
   the screen, readable floor, decodable marks, scale by role, colour never the only signal.
 
