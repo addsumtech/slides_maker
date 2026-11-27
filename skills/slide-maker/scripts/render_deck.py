@@ -28,6 +28,18 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from written_reason import reason_width  # noqa: E402  (one shared definition, never a copy)
 
 
+def _freshen_pngs(out, n):
+    """After --fast decided slides were unchanged, their PNGs ARE the current build's — touch them so a later
+    "renders older than the .pptx" check (blind_read packet, lint auto-discovery) does not refuse a good render.
+    Measured 2026-11-27, twice: a --fast run skipped unchanged slides and the next blind-read packet was refused."""
+    import glob as _g
+    for p in _g.glob(os.path.join(out, "slide*.png")):
+        try:
+            os.utime(p, None)
+        except OSError:
+            pass
+
+
 def find_soffice():
     """Locate the LibreOffice binary across macOS / Linux / WSL / native Windows.
 
@@ -4844,6 +4856,7 @@ def main(argv):
         # theme/canvas change). A subset of "all slides" is just a full render with extra steps.
         skip_reason = "every slide changed"
     if fast and changed is not None and not changed:
+        _freshen_pngs(out, len(fps))
         print("no slide changed since the last render — nothing to re-render")
         print("next: python3 {} {} --renders {}".format(
             shlex.quote(os.path.join(os.path.dirname(os.path.abspath(__file__)), "lint_deck.py")),
@@ -5107,6 +5120,7 @@ def main(argv):
         try: os.remove(stale)
         except OSError: pass
     if incremental:
+        _freshen_pngs(out, len(fps))
         print("{}: {} of {} slides re-rendered ({}) -> {}".format(
             "slides render" if only is not None else "fast render",
             len(keep), len(fps), ", ".join(str(i + 1) for i in keep), out))

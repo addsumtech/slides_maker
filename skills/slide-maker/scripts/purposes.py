@@ -597,11 +597,14 @@ PURPOSES = (
                "Every metric says what it counts (users = what; bookings ≠ revenue), carries its period or date, and "
                "every % growth sits next to its absolute base.",
                "One ask amount, not a range, with the milestones it buys over a stated runway."),
-        design=("Legible from the back of the room: large, bold, high-contrast type, text near the top — Kawasaki's "
-                "floor is no text under 30pt on a presented pitch.",
+        design=("Legible from the back of the room: large, bold, high-contrast type, text near the top. Aim for "
+                "Kawasaki's 30pt on the headline and the one number per slide; supporting text never under the detail "
+                "floor (18pt body, 14pt captions).",
                 "Traction as a monthly (not cumulative) chart, a labelled y-axis with its unit, a dated period, and a "
                 "caption stating the conclusion.",
-                "No memes, transitions or animations; one idea per slide."),
+                "No memes or decorative transitions; a click-reveal only where it paces a punchline. One idea per slide.",
+                "When the material has only dated point values (no monthly series), show those values dated — never "
+                "draw a series the data does not contain."),
         pitfalls=("Dense, illegible slides.", "Cumulative charts or vanity metrics with no base.", "No clear single ask."),
         sources=("Sequoia, Writing a business plan (purpose → vision order)", "Kawasaki, the 10/20/30 rule (30pt, the ask)",
                  "YC (Hale), How to design a better pitch deck", "YC, Demo Day pitch guide", "Seibel, How to pitch your company",

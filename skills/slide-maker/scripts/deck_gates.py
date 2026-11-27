@@ -751,7 +751,10 @@ def _cmd_interview(a):
                 print("{!r} is not an interview axis — expected one of {}".format(
                     k, ", ".join(INTERVIEW_AXES)), file=sys.stderr)
                 return 2
-            iv[k] = v.strip()
+            v = v.strip()
+            if k == "length" and v.isdigit():
+                v = "{} slides".format(v)    # --gate-check refuses a one-character length; say the unit
+            iv[k] = v
         g["interview"] = iv
         _save(a.deck_dir, g)
         print("recorded: " + " · ".join("{} {}".format(k, iv[k]) for k in INTERVIEW_AXES if iv.get(k)))

@@ -409,6 +409,15 @@ def record(plan_path, deck_dir, dispatched, waived=None, category=None) -> dict:
     design = gates.get("design_plan")
     if not isinstance(design, dict):
         design = {}
+    # Keep the plan WITH the deck: a plan recorded by a scratchpad path broke the hand-off gate once the
+    # scratchpad was wiped (reported by a test build, 2026-11-27). A hidden folder keeps the deliverable clean.
+    keep_dir = os.path.join(deck_dir, ".slide-maker")
+    os.makedirs(keep_dir, exist_ok=True)
+    kept = os.path.join(keep_dir, "design-plan.md")
+    if os.path.abspath(plan_path) != os.path.abspath(kept):
+        import shutil
+        shutil.copyfile(plan_path, kept)
+    plan_path = kept
     abs_plan, abs_deck = os.path.abspath(plan_path), os.path.abspath(deck_dir)
     rel = os.path.relpath(abs_plan, abs_deck) if abs_plan.startswith(abs_deck + os.sep) else abs_plan
     with open(plan_path, encoding="utf-8", errors="replace") as f:

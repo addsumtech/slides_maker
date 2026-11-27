@@ -58,5 +58,14 @@ check("median 3 words over 8 slides: a note", "sparse" in (DC.sparse_note(3, 8) 
 check("median 25 words: no note", DC.sparse_note(25, 8) is None)
 check("a 2-slide deck is never called sparse", DC.sparse_note(2, 2) is None)
 
+# a bare slide count is stored with its unit, so `deck_gates.py check` and `--gate-check` agree
+# (a test build, 2026-11-27: `interview --set length=8` passed the record check and failed at hand-off)
+import json as _json, subprocess as _sp, tempfile as _tf, os as _os  # noqa: E401,E402
+_d = _tf.mkdtemp(prefix="len-")
+_sp.run([sys.executable, _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "..", "scripts", "deck_gates.py"),
+         "interview", _d, "--set", "length=8"], capture_output=True, text=True)
+_len = _json.load(open(_os.path.join(_d, ".deck-gates.json")))["interview"]["length"]
+check("interview --set length=8 is stored as '8 slides'", _len == "8 slides", _len)
+
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 sys.exit(1 if FAIL else 0)

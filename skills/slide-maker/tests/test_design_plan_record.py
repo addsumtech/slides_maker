@@ -74,9 +74,16 @@ check("gate: a recorded, dispatched plan has no fault", DPR.gate_faults(g["desig
       DPR.gate_faults(g["design_plan"], str(deck)))
 check("gate: no plan_file is a fault that says how to record one",
       any("design_plan_record.py" in f for f in DPR.gate_faults({"boldness": "x"}, str(deck))))
-plan.write_text(PLAN_EN + "\nedited later\n", encoding="utf-8")
+kept = deck / ".slide-maker" / "design-plan.md"
+check("record keeps a copy of the plan inside the deck's hidden folder", kept.exists() and pf.get("path") ==
+      ".slide-maker/design-plan.md", pf.get("path"))
+plan.unlink()                         # the scratchpad copy is wiped (a real test build hit this, 2026-11-27)
+check("gate: deleting the original plan file does not break the record", DPR.gate_faults(g["design_plan"], str(deck)) == [],
+      DPR.gate_faults(g["design_plan"], str(deck)))
+kept.write_text(PLAN_EN + "\nedited later\n", encoding="utf-8")
 check("gate: a plan edited after recording is a fault",
       any("changed" in f for f in DPR.gate_faults(g["design_plan"], str(deck))))
+kept.write_text(PLAN_EN, encoding="utf-8")
 plan.write_text(PLAN_EN, encoding="utf-8")
 self_auth = dict(g["design_plan"], plan_file=dict(pf, dispatched=False))
 check("gate: a self-authored plan without an allowed waiver is a fault",
