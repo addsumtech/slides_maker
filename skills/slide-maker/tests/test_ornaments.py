@@ -82,7 +82,7 @@ with tempfile.TemporaryDirectory() as td:
     else:
         subprocess.run([soffice, "--headless", "--convert-to", "pdf", "--outdir", td, str(deck)],
                        check=True, capture_output=True, timeout=180)
-        import fitz
+        import pymupdf as fitz
         from PIL import Image
         pix = fitz.open(str(Path(td) / "orn.pdf"))[0].get_pixmap(dpi=40)
         im = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)

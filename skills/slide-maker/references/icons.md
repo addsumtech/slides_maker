@@ -60,9 +60,13 @@ visual: draw the schematic (`schematic-diagrams.md`). Icons mark categories, way
 repeated entities — they never *stand in for* the mechanism the slide exists to explain.
 
 ## Mechanism — fetch → recolor → rasterize → place
-python-pptx can't reliably embed SVG, so rasterize to a **transparent high-DPI PNG** (renders
-identically in PowerPoint / Keynote / the LibreOffice render / the critic) and recolor to the deck
-palette first. `scripts/icons.py` does it; `deckkit.icon()` / `icon_card()` place it.
+`scripts/icons.py` recolors the SVG to the deck palette and rasterizes it to a **transparent
+high-DPI PNG**, and keeps the recolored SVG beside it (`<name>.icon.svg`); `deckkit.icon()` /
+`icon_card()` place the PNG and embed that SVG with it (`asvg:svgBlip`, the PNG as fallback), so
+PowerPoint 2019+/365 and LibreOffice 24.2+ draw the icon sharp at any size and the user can
+recolour it, while older viewers show the PNG. **Gradient icons stay PNG-only** — LibreOffice 26.2
+strokes SVG gradients with notches. If a render shows `SVG BLANK IN RENDER`, set
+`deckkit.SVG_ICONS = False` (PNG only).
 
 ```python
 from icons import icon_png            # scripts/icons.py

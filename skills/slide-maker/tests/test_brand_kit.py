@@ -93,7 +93,7 @@ im2 = Image.new("RGB", (200, 100), (255, 255, 255))
 ImageDraw.Draw(im2).rectangle((40, 20, 160, 80), fill=(0x2F, 0x7D, 0x4F))
 im2.save(jpg, quality=92)
 
-import fitz  # noqa: E402
+import pymupdf as fitz  # noqa: E402
 
 guide = FX / "tidewater-guide.pdf"
 doc = fitz.open()

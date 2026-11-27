@@ -174,8 +174,9 @@ def item4_charts_equations(prs, build_path):
         src = Path(build_path).read_text(encoding="utf-8")
         png = len(re.findall(r"\bequation_png\s*\(", src))
         nat = len(re.findall(r"\bequation_native\s*\(", src))
-        notes.append(f"{nat} equation_native, {png} equation_png")
-        if png and not nat:
+        omml = len(re.findall(r"\bequation_omml\s*\(", src))
+        notes.append(f"{nat} equation_native, {omml} equation_omml, {png} equation_png")
+        if png and not (nat or omml):
             findings.append("only raster equation_png used - 1-D math must be equation_native "
                             "(raster is the 2-D carve only)")
         if re.search(r"designed_charts|plt\.savefig", src) and native == 0:

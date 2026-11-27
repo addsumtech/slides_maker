@@ -147,7 +147,7 @@ else:
         p4.save(str(d4))
         subprocess.run([soffice, "--headless", "--convert-to", "pdf", "--outdir", str(td), str(d4)],
                        check=True, capture_output=True, timeout=180)
-        import fitz  # noqa: E402
+        import pymupdf as fitz  # noqa: E402
         (td / "render").mkdir()
         fitz.open(str(td / "m4.pdf"))[0].get_pixmap(dpi=60).save(str(td / "render" / "slide01.png"))
         buf = io.StringIO()

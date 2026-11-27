@@ -201,6 +201,8 @@
   "8f2ee52ac6012334": "Pointer rewritten in place, nothing lost (2026-11-08): this was the slimming change's own pointer to what --deliverables requires; it now names all twelve required design_plan fields (check_design_contracts.py demands that `form_ledger` and the rest are named in SKILL.md). The full field specs it points at still live in references/troubleshooting-faq.md, word for word.",
   "6aa76c4ef37eab0a": "Reworded in place, nothing lost (2026-11-24 prompt audit): 'is no longer the evidence' became 'is not the evidence' — the same rule stated as a current fact instead of a diff against an older rule. The sentence it belongs to is still at SKILL.md:467.",
   "800fe0847422863c": "Reworded in place, nothing lost (2026-11-24 prompt audit): 'you no longer have to declare a composition to be allowed one' became 'a composition does not have to be declared to be allowed' — same rule, stated as current fact. Still at SKILL.md:2415.",
-  "64248226ff47a380": "Line re-wrapped, nothing lost (2026-11-24 prompt audit): the 2415 rewording shifted the wrap, so this line's bytes changed; its text (the LEFTOVER definition) is unchanged in SKILL.md:2415-2416."
+  "64248226ff47a380": "Line re-wrapped, nothing lost (2026-11-24 prompt audit): the 2415 rewording shifted the wrap, so this line's bytes changed; its text (the LEFTOVER definition) is unchanged in SKILL.md:2415-2416.",
+  "7e389ce3b9b9c172": "Reworded, not lost (2026-11-27 toolchain pass): the line now names equation_omml for 2-D math (editable OMML, PNG fallback) and keeps equation_png for matrices / what OMML cannot parse.",
+  "8a0ef29879192ac8": "Reworded, not lost (2026-11-27 toolchain pass): the charts-native rule is unchanged; its math clause now routes 2-D math to equation_omml and keeps equation_png for matrices."
  }
 }

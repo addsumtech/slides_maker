@@ -1144,7 +1144,7 @@ def _pdf_first_origins(prs, tag):
     (the glyphs' own origins); None when soffice or PyMuPDF is missing."""
     import shutil, subprocess
     try:
-        import fitz
+        import pymupdf as fitz
     except ImportError:
         return None
     if not shutil.which("soffice"):
@@ -1393,7 +1393,7 @@ def _render_slides(prs, tag, dpi=60):
     soffice = _rd.find_soffice()
     if not soffice:
         return None
-    import fitz
+    import pymupdf as fitz
     from PIL import Image
     d = WORK / ("r_" + tag); d.mkdir(exist_ok=True)
     f = d / (tag + ".pptx"); prs.save(str(f))

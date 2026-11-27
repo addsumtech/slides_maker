@@ -56,7 +56,7 @@ box with `crop_helper.py grid`, divide by the render scale (dpi/72) to get point
 import sys
 import os
 import re
-import fitz   # PyMuPDF
+import pymupdf as fitz   # PyMuPDF
 
 # _rect_area_compat: pymupdf>=1.26 removed Rect.get_area()
 if not hasattr(fitz.Rect, "get_area"):

@@ -130,7 +130,7 @@ else:
        "which this skill demanded the notes for and never produced", got)
     if got:
         try:
-            import fitz
+            import pymupdf as fitz
             doc = fitz.open(dest)
             ck(doc.page_count == 3, "one page per slide", doc.page_count)
             txt = re.sub(r"\s+", " ", doc[0].get_text())   # the renderer wraps mid-phrase

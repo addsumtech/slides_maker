@@ -37,11 +37,11 @@ def ensure_mpl_config_dir():
 
 
 # The pip deps the build path IMPORTS — every script fails without these. Kept as (import-name,
-# pip-name) because the two differ (fitz→pymupdf, PIL→Pillow). This is the manifest `--ensure`
+# pip-name) because the two differ (e.g. PIL→Pillow). This is the manifest `--ensure`
 # installs; the optional/system deps below it reports but never auto-installs.
 REQUIRED_PIP = [
     ("pptx", "python-pptx"),
-    ("fitz", "pymupdf"),
+    ("pymupdf", "pymupdf"),
     ("PIL", "Pillow"),
     ("matplotlib", "matplotlib"),
     ("numpy", "numpy"),
@@ -240,7 +240,7 @@ def main():
     print("slide-maker environment check:")
     print("  install python deps: {}".format(PIP_REQ))
     check_module("pptx", "python-pptx", "python-pptx")
-    check_module("fitz", "pymupdf", "pymupdf")
+    check_module("pymupdf", "pymupdf", "pymupdf")
     check_module("PIL", "Pillow", "Pillow")
     check_module("matplotlib", "matplotlib", "matplotlib",
                  optional=True, note="only for equation_png")

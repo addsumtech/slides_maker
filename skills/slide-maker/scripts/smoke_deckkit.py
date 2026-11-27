@@ -826,6 +826,80 @@ ok("equation_native (linear LaTeX -> editable runs)", lambda: dk.equation_native
 raises("equation_native rejects 2-D \\frac (use equation_png)", lambda: dk.equation_native(
     S(), 0.8, 2.4, 6.0, 0.8, r"\frac{a}{b}"))
 
+
+def _equation_omml():
+    """2-D math as a live OMML equation (PowerPoint) over an equation_png fallback (LibreOffice):
+    both halves present, the box sized from the cropped PNG, and the file reopens."""
+    import io
+    s = S()
+    g = dk.equation_omml(s, 0.8, 1.2, r"x=\frac{-b\pm\sqrt{b^2-4ac}}{2a}+\sum_{i=1}^{N}\left(\frac{a_i}{b}\right)", size=24)
+    x = g._element
+    m = "{http://schemas.openxmlformats.org/officeDocument/2006/math}"
+    for tag in ("f", "rad", "nary", "d", "sSup"):
+        assert x.find(f".//{m}{tag}") is not None, f"OMML lost its <m:{tag}>"
+    assert x.xpath(".//*[local-name()='Fallback']//*[local-name()='blip']"), "no fallback picture"
+    assert 0.2 < g.height / 914400 < 1.5 and g.width / 914400 < 8, "box not cropped to the formula"
+    ids = [e.get("id") for e in x.iter() if e.tag.endswith("}cNvPr")]
+    assert len(ids) == len(set(ids)), f"duplicate shape ids {ids}"
+    nxt = s.shapes.add_textbox(0, 0, 10, 10).shape_id
+    assert str(nxt) not in ids, "next shape reuses an equation id"
+    buf = io.BytesIO(); prs.save(buf); buf.seek(0); dk.Presentation(buf)   # the file reopens
+    assert "\u2009min" in dk.latex_to_omml(r"\arg\min_x f"), "arg min needs its thin space"
+ok("equation_omml (2-D LaTeX -> editable OMML + PNG fallback)", _equation_omml)
+raises("equation_omml rejects matrices", lambda: dk.equation_omml(
+    S(), 0.8, 2.4, r"\begin{pmatrix}a & b\end{pmatrix}"))
+raises("equation_omml rejects unknown commands", lambda: dk.latex_to_omml(r"\mathscr{A}"))
+
+
+def _picture_weight_and_svg():
+    """picture(): a camera-size JPEG is stored at PICTURE_MAX_PPI of its shown size (max_ppi=None
+    keeps it); an icon_png() raster gets its vector twin as svgBlip, a plain PNG does not; and
+    lint's SVG BLANK IN RENDER fires on a flat render of that icon, not on an inked one."""
+    import io, sys as _s
+    from PIL import Image
+    import icons
+    big = os.path.join(TMP, "_smoke_big.jpg")
+    Image.new("RGB", (4800, 3200), (90, 120, 160)).save(big, quality=90)
+    s = S()
+    pic = dk.picture(s, big, 0.5, 0.5, 4, 3, fit="contain")
+    assert pic.image.size == (1200, 800), f"not capped to 300 ppi: {pic.image.size}"
+    assert dk.picture(s, big, 5, 0.5, 4, 3, max_ppi=None).image.size == (4800, 3200)
+    png = os.path.join(TMP, "_smoke_icon.png")
+    Image.new("RGBA", (96, 96), (194, 24, 91, 255)).save(png)
+    plain = dk.picture(s, png, 0.5, 4, 1, 1)
+    assert not plain._element.xpath(".//*[local-name()='svgBlip']"), "svgBlip without a twin"
+    with open(icons.svg_sibling(png), "w") as fh:
+        fh.write('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" fill="#C2185B"/></svg>')
+    ic = dk.icon(s, png, 2, 4, 1)
+    blip = ic._element.xpath(".//*[local-name()='svgBlip']")
+    assert blip, "icon_png twin not embedded"
+    rid = blip[0].get("{http://schemas.openxmlformats.org/officeDocument/2006/relationships}embed")
+    assert s.part.related_part(rid).content_type == "image/svg+xml"
+    _s.path.insert(0, os.path.dirname(os.path.abspath(dk.__file__)))
+    import lint_deck
+    one = dk.blank_deck(10, 5.625); sl = one.slides.add_slide(one.slide_layouts[6])
+    dk.icon(sl, png, 2, 2, 1)
+    flat = os.path.join(TMP, "_smoke_flat.png"); inked = os.path.join(TMP, "_smoke_inked.png")
+    Image.new("RGB", (1000, 562), "white").save(flat)
+    im = Image.new("RGB", (1000, 562), "white"); im.paste((194, 24, 91), (220, 220, 300, 300)); im.save(inked)
+    assert lint_deck._svg_blank_faults(one, [flat]), "blank svg render not reported"
+    assert not lint_deck._svg_blank_faults(one, [inked]), "inked svg render reported"
+    # a grouped icon is judged where the GROUP draws it (child space mapped through chOff/chExt)
+    from pptx.util import Inches as _In
+    two = dk.blank_deck(10, 5.625); sl2 = two.slides.add_slide(two.slide_layouts[6])
+    g = sl2.shapes.add_group_shape()
+    p2 = dk.icon(sl2, png, 2, 2, 1)
+    g._element.append(p2._element)                       # move the icon into the group
+    xf = g._element.grpSpPr.get_or_add_xfrm()
+    xf.off.x, xf.off.y, xf.ext.cx, xf.ext.cy = _In(5), _In(1), _In(1), _In(1)
+    ch = xf.get_or_add_chOff(); ch.x, ch.y = _In(2), _In(2)
+    ce = xf.get_or_add_chExt(); ce.cx, ce.cy = _In(1), _In(1)
+    at5 = os.path.join(TMP, "_smoke_at5.png")
+    im = Image.new("RGB", (1000, 562), "white"); im.paste((194, 24, 91), (520, 120, 580, 180)); im.save(at5)
+    assert not lint_deck._svg_blank_faults(two, [at5]), "grouped icon judged at its child offset"
+    assert lint_deck._svg_blank_faults(two, [flat]), "grouped blank icon not reported"
+ok("picture(): 300-ppi cap, svgBlip twin, SVG BLANK IN RENDER", _picture_weight_and_svg)
+
 # --- step_list active_idx: the active disc's fill must DIFFER from an inactive one
 #     (regression: the vertical branch once used _blend(acc, WHITE, 0.0) == acc, a no-op) ---
 def _step_list_active():

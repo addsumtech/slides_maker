@@ -346,7 +346,7 @@ def _read_source(p):
 
 
 def _read_pdf(p, src):
-    import fitz                                                        # noqa: PLC0415
+    import pymupdf as fitz                                                        # noqa: PLC0415
     with fitz.open(str(p)) as doc:
         for i, page in enumerate(doc, 1):
             for ln in page.get_text().splitlines():

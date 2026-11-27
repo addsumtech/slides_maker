@@ -1,5 +1,5 @@
 python-pptx>=1.0.0
-PyMuPDF>=1.24.0
+PyMuPDF>=1.24.3       # `import pymupdf` (`import fitz` warns from 2.0)
 Pillow>=10.0.0
 matplotlib>=3.8.0
 numpy>=1.24.0          # imported DIRECTLY by designed_charts.distribution/radar. It arrives

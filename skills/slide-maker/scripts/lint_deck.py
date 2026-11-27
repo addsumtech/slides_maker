@@ -2878,6 +2878,64 @@ def _render_png_paths(path, renders_dir, n):
     return pngs
 
 
+def _svg_blank_faults(prs, pngs):
+    """SVG BLANK IN RENDER: a picture carrying an svgBlip (deckkit's vector icons) whose PNG fallback
+    has ink but whose area in the render is one flat colour. LibreOffice has drawn svgBlip images
+    as blank rectangles in some builds (tdf#172094, open on 26.8), and the delivered PDF comes from
+    that same render — so a regression there would ship a deck with every icon missing, silently.
+    Returns [(slide#, message)]; nothing without renders."""
+    if not pngs or len(pngs) != len(prs.slides):
+        return []
+    import io
+    from PIL import Image, ImageStat
+    sw, sh = prs.slide_width, prs.slide_height
+    out = []
+
+    def pics(shapes, tf=(0.0, 0.0, 1.0, 1.0)):
+        """(picture, slide-space box) — a group child's offsets are in the group's own child
+        space (chOff/chExt), so each group level maps them onto where the group draws."""
+        ox, oy, kx_, ky_ = tf
+        for x in shapes:
+            if x.shape_type == 6:
+                try:
+                    xf = x._element.grpSpPr.find(qn("a:xfrm"))
+                    off, ext = xf.find(qn("a:off")), xf.find(qn("a:ext"))
+                    co, ce = xf.find(qn("a:chOff")), xf.find(qn("a:chExt"))
+                    gx = int(ext.get("cx")) / max(1, int(ce.get("cx")))
+                    gy = int(ext.get("cy")) / max(1, int(ce.get("cy")))
+                    sub = (ox + kx_ * (int(off.get("x")) - gx * int(co.get("x"))),
+                           oy + ky_ * (int(off.get("y")) - gy * int(co.get("y"))), kx_ * gx, ky_ * gy)
+                except Exception:
+                    continue                     # an unreadable group transform: skip, never guess
+                yield from pics(x.shapes, sub)
+            elif x._element.xpath(".//*[local-name()='svgBlip']"):
+                yield x, (ox + kx_ * x.left, oy + ky_ * x.top, kx_ * x.width, ky_ * x.height)
+    for si, (slide, png) in enumerate(zip(prs.slides, pngs), 1):
+        found = list(pics(slide.shapes))
+        if not found:
+            continue
+        ren = Image.open(png).convert("L")
+        kx, ky = ren.width / sw, ren.height / sh
+        for x, (bl, bt, bw, bh) in found:
+            try:
+                alpha = Image.open(io.BytesIO(x.image.blob)).convert("RGBA").getchannel("A")
+                if ImageStat.Stat(alpha).mean[0] < 255 * 0.03:      # the fallback itself is ~empty
+                    continue
+                if getattr(x, "rotation", 0):
+                    continue
+                box = (max(0, int(bl * kx)), max(0, int(bt * ky)),     # PIL pads an off-image crop
+                       min(ren.width, int((bl + bw) * kx)), min(ren.height, int((bt + bh) * ky)))
+                if box[2] - box[0] < 4 or box[3] - box[1] < 4:
+                    continue
+                if ImageStat.Stat(ren.crop(box)).stddev[0] < 2.0:
+                    out.append((si, f"SVG BLANK IN RENDER: '{x.name}' has ink in its PNG fallback but "
+                                    "renders as a flat box — this LibreOffice draws the svgBlip blank "
+                                    "(tdf#172094). Rebuild with deckkit.SVG_ICONS = False (PNG only)"))
+            except Exception:
+                continue
+    return out
+
+
 def _load_render_lums(path, renders_dir, n, pngs=...):
     """Per-slide (mean luminance, mean HSV saturation, largest blank column-void fraction) from
     the rendered PNGs, or None. Discovery/guards live in _render_png_paths; lint() passes its
@@ -3651,6 +3709,8 @@ def lint(path, mode="presented", json_out=None, renders_dir=None, static_ok=Fals
         # inside _datum_faults). If deckkit cannot be reached, the report has to say so.
         print(f"  [skipped] build-time checks (DATUM SCALE · ASSET NOT USABLE) NOT re-run here: "
               f"{type(_exc).__name__}: {_exc}")
+    for _sn, _msg in _svg_blank_faults(prs, pngs):
+        _early.setdefault(_sn, []).append(_msg)
     _slide_bx = []                                       # every slide's _boxes records, in order (read-only after the loop)
     titles = []                                          # (slide#, normalized title, display snip)
     prov = []                                            # (slide#, claim numbers, sourced?)

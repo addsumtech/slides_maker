@@ -9,6 +9,20 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+**Toolchain: editable 2-D equations, vector icons, lighter photos, PyMuPDF 2.x.**
+- `equation_omml()`: fractions, roots, big operators with limits, `\left…\right` and `\binom` go in as a
+  real PowerPoint equation (OMML, click-editable) with the `equation_png` picture as its `mc:Fallback`.
+  LibreOffice (≥24.2.7) shows the fallback, so the render loop and the PDF are unchanged.
+- Icons: `icon_png()` keeps the recoloured SVG beside the PNG and `picture()` embeds it as `asvg:svgBlip`
+  (PNG fallback) — sharp at any size in PowerPoint 2019+/365 and LibreOffice 24.2+. Gradient icons stay
+  PNG-only. New render finding `SVG BLANK IN RENDER` (LibreOffice tdf#172094); `deckkit.SVG_ICONS = False`
+  turns the vector off.
+- `picture()` stores a JPEG/PNG over 1 MP at 300 ppi of its shown size (`max_ppi=None` keeps it): a
+  6000 px camera photo in a 4 in frame goes from 20 MB to 0.3 MB.
+- `import pymupdf` replaces `import fitz` (a FutureWarning from PyMuPDF 2.0); floor PyMuPDF ≥ 1.24.3.
+- Icon rasterizing via headless Chrome: Chrome 158 on macOS writes the screenshot and then exits 2 in teardown,
+  which threw every icon away when cairosvg/rsvg-convert were absent; the fresh, inked PNG is now the verdict.
+
 ## [6.3.0] — 2026-11-25
 
 **User memory: the skill remembers who you are and what you keep asking for — on any agent runtime.**

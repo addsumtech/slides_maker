@@ -34,7 +34,7 @@ SCRIPTS = HERE.parent / "scripts"
 SC = SCRIPTS / "source_check.py"
 sys.path.insert(0, str(SCRIPTS))
 
-for _m in ("pptx", "fitz"):
+for _m in ("pptx", "pymupdf"):
     try:
         __import__(_m)
     except ImportError:
@@ -91,7 +91,7 @@ def write_xlsx(path, sheet, rows, pct_cells=()):
 
 
 def write_pdf(path, lines):
-    import fitz
+    import pymupdf as fitz
     doc = fitz.open()
     page = doc.new_page()
     font = fitz.Font("cjk")
@@ -182,7 +182,7 @@ try:
     check(".doc is UNREADABLE", False)
 except S.Unreadable as exc:
     check(".doc is UNREADABLE and names the export to ask for", ".docx" in str(exc), str(exc))
-import fitz  # noqa: E402
+import pymupdf as fitz  # noqa: E402
 _d = fitz.open()
 _d.new_page()
 _d.save(str(D / "scan.pdf"))

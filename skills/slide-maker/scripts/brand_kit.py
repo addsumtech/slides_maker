@@ -362,7 +362,7 @@ def from_svg(path, assets):
             else:
                 unparsed.add(v)
     # the RENDER: weight for the declared colours, and the only truth when none are declared
-    import fitz
+    import pymupdf as fitz
     try:
         doc = fitz.open(stream=raw, filetype="svg")
         page = doc[0]
@@ -460,7 +460,7 @@ _BASE14 = {"Helvetica", "Times", "Courier", "Symbol", "Zapf Dingbats", "Helv", "
 
 
 def from_pdf(path):
-    import fitz
+    import pymupdf as fitz
     try:
         doc = fitz.open(path)
     except Exception as exc:

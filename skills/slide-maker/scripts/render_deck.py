@@ -1307,7 +1307,7 @@ def _rasterize_chunk(args):
     been. Rendering them in the parent instead silently changes two PNGs the critic looks at.
     """
     pdf, idxs, out, thumbs = args
-    import fitz
+    import pymupdf as fitz
     doc = fitz.open(pdf)
     try:
         for i in idxs:
@@ -4880,7 +4880,7 @@ def main(argv):
     atexit.register(shutil.rmtree, tmp_dir, True)       # a die() mid-render must not leak a deck copy
     pdf, result, cmd = _render_pdf(soffice, src_pptx, tmp_dir)
     try:
-        import fitz  # pymupdf
+        import pymupdf as fitz  # pymupdf
     except ImportError:
         die("pymupdf not installed — run: {} -m pip install pymupdf".format(
             os.path.basename(sys.executable) or "python"))

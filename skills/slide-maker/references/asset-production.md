@@ -261,9 +261,13 @@ generated or sourced. Fold in the user's design edits, then set up the canvas (S
   `\models`, …). It does NOT silently mangle — but a *display-style* stacked sum/integral with bounds
   (`\sum_{i=1}^{N}`) still renders *inline* (bounds beside, not stacked), so use `equation_png` when the
   stacked 2-D look matters. **Always view each native equation in the render** and switch that one
-  formula to `equation_png` if a glyph is missing. *(A true PowerPoint OMML equation OBJECT is editable
-  in PowerPoint but **invisible in the LibreOffice render & PDF export** — so it is NOT the default;
-  native runs are verifiable in the loop.)* **Never** paste Unicode super/subscripts (ᴴ ᵀ ᵣ) — tofu.
+  formula to `equation_png` if a glyph is missing. **2-D math (fractions, roots, stacked sums/integrals,
+  `\left…\right`, `\binom`) → `deckkit.equation_omml(slide, x, y, latex, size=…)`**: a real
+  PowerPoint equation (OMML, click-editable, Cambria Math) with an `equation_png` picture as its
+  `mc:Fallback`. LibreOffice ≥24.2.7 shows the fallback (tdf#129061), so the render loop, the pixel
+  gates and the PDF see exactly the raster they always did, while the user edits the live equation in
+  PowerPoint. Its box is the PNG cropped to the ink; it raises on matrices/unknown commands — use
+  `equation_png` for those. **Never** paste Unicode super/subscripts (ᴴ ᵀ ᵣ) — tofu.
   **Math font (a real dependency):** `equation_native` needs a math font for ℒ Σ ‖ … (`deckkit.EQ_MATHFONT`
   = `'STIX Two Math'`; set `'Cambria Math'` for Office portability). **STIX ships on neither stock macOS
   nor Windows, and Cambria Math needs MS Office** — so on a machine with NEITHER, the math glyphs **tofu**

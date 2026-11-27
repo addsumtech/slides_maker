@@ -32,7 +32,7 @@ real baseline-shifted ASCII in a full-coverage font, so it is crisp anywhere.
 # out with SLIDE_MAKER_NO_ENV_CHECK=1. Keep the list in lockstep with check_env.REQUIRED_PIP.
 # (import-name, pip-name) — kept in lockstep with check_env.REQUIRED_PIP; test_env_bootstrap.py
 # asserts the two are identical so they can never drift.
-_RUNTIME_DEPS = [("pptx", "python-pptx"), ("fitz", "pymupdf"), ("PIL", "Pillow"),
+_RUNTIME_DEPS = [("pptx", "python-pptx"), ("pymupdf", "pymupdf"), ("PIL", "Pillow"),
                  ("matplotlib", "matplotlib"), ("numpy", "numpy")]
 
 
@@ -4338,8 +4338,61 @@ def _pic_geom(pic, shape, w_in, h_in, seed=0):
             spPr.insert(0, g)
 
 
+PICTURE_MAX_PPI = 300   # pixels per SHOWN inch kept in the file: ~2x a 1080p projector, past print
+SVG_ICONS = True        # embed icons.icon_png()'s vector beside its PNG (svgBlip); False = PNG only
+
+
+def _attach_svg(pic, png_path):
+    """Give a picture placed from an icon_png() raster its vector twin as an `asvg:svgBlip` — the
+    PNG stays as the fallback. python-pptx cannot add SVG (issue #1112), so the part, relationship
+    and extension are written here. No sibling vector (any non-icon image) = untouched."""
+    from icons import svg_sibling
+    from pptx.opc.package import Part
+    svg_path = svg_sibling(png_path)
+    if not (SVG_ICONS and _os_rg.path.exists(svg_path)
+            and _os_rg.path.getmtime(svg_path) >= _os_rg.path.getmtime(png_path) - 1):
+        return
+    with open(svg_path, "rb") as fh:
+        blob = fh.read()
+    slide_part = pic.part
+    part = Part(slide_part.package.next_partname("/ppt/media/image%d.svg"), "image/svg+xml",
+                slide_part.package, blob)
+    rid = slide_part.relate_to(part, "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image")
+    pic._element.blipFill.blip.append(parse_xml(
+        '<a:extLst %s><a:ext uri="{96DAC541-7B7A-43D3-8B79-37D633B846F1}"><asvg:svgBlip '
+        'xmlns:asvg="http://schemas.microsoft.com/office/drawing/2016/SVG/main" r:embed="%s"/>'
+        '</a:ext></a:extLst>' % (nsdecls("a", "r"), rid)))
+
+
+def _cap_ppi(path, in_per_px, max_ppi):
+    """A photo far denser than it is shown (a 6000 px camera JPEG in a 4 in frame) is resampled to
+    `max_ppi` at its shown size into a temp file; anything else comes back as `path` untouched.
+    JPEG/PNG only (a GIF keeps its frames); the ICC profile is kept so colours do not shift."""
+    if not max_ppi:
+        return path
+    import tempfile
+    from PIL import Image
+    with Image.open(path) as im:
+        ppi = 1.0 / in_per_px
+        if im.format not in ("JPEG", "PNG") or ppi <= 1.25 * max_ppi or im.width * im.height <= 1e6:
+            return path                  # icons and small figures weigh nothing: left as they are
+        k = max_ppi / ppi
+        size = (max(1, round(im.width * k)), max(1, round(im.height * k)))
+        out = im.resize(size, Image.LANCZOS)
+        icc = im.info.get("icc_profile")
+        fd, tmp = tempfile.mkstemp(suffix=".jpg" if im.format == "JPEG" else ".png",
+                                   prefix="pic_capped_")
+        _os_rg.close(fd)
+        kw = {"icc_profile": icc} if icc else {}
+        if im.format == "JPEG":
+            out.save(tmp, "JPEG", quality=90, subsampling=0 if im.mode == "L" else 2, **kw)
+        else:
+            out.save(tmp, "PNG", optimize=True, **kw)
+    return tmp
+
+
 def picture(slide, path, x, y, w, h, fit="contain", alt=None, round=False, r=None, *,
-            shape=None, rotation=0.0, focus=(0.5, 0.5), seed=0):
+            shape=None, rotation=0.0, focus=(0.5, 0.5), seed=0, max_ppi=PICTURE_MAX_PPI):
     """Place an image in a frame without distorting it.
 
     `fit="contain"` shows the whole image inside the frame, letterboxed by whitespace.
@@ -4360,7 +4413,9 @@ def picture(slide, path, x, y, w, h, fit="contain", alt=None, round=False, r=Non
     cut off. `shape` and `round`/`r` are mutually exclusive. `rotation=` tilts the picture
     clockwise in degrees (a pinned print, a tilted polaroid); both gates measure it where it paints.
 
-    Pass `alt` for informative images; pass `alt=""` for decorative plates. Returns the
+    Pass `alt` for informative images; pass `alt=""` for decorative plates. A JPEG/PNG denser than
+    `max_ppi` pixels per shown inch (default 300) goes into the file resampled to that density —
+    camera photos otherwise make a deck tens of MB; `max_ppi=None` keeps the original. Returns the
     picture shape. Requires Pillow for reliable aspect-ratio reads, matching the rest of
     deckkit's image/equation helpers.
     """
@@ -4388,6 +4443,9 @@ def picture(slide, path, x, y, w, h, fit="contain", alt=None, round=False, r=Non
     img_ar = iw / ih
     frame_ar = w / h
     fit = fit.lower()
+    if fit in ("contain", "cover"):
+        in_per_px = min(w / iw, h / ih) if fit == "contain" else max(w / iw, h / ih)
+        src, path = path, _cap_ppi(path, in_per_px, max_ppi)
     if fit == "contain":
         if frame_ar > img_ar:
             ph = h
@@ -4410,6 +4468,9 @@ def picture(slide, path, x, y, w, h, fit="contain", alt=None, round=False, r=Non
             pic.crop_top, pic.crop_bottom = crop * fy, crop * (1.0 - fy)
     else:
         raise ValueError("fit must be 'contain' or 'cover'")
+    if path != src:                           # the resampled copy now lives in the package
+        os.remove(path)
+    _attach_svg(pic, src)
 
     if round or r is not None:
         pwp, php = (pw, ph) if fit == "contain" else (w, h)
@@ -7384,8 +7445,7 @@ def eq_par(tf, tokens, base, color, first=False, italic=False, font=None):
 # A LaTeX-subset → real TEXT RUNS renderer: italic variables, upright operators, true
 # sub/superscripts, math symbols, in a math font. The result is CLICK-EDITABLE native
 # text that renders identically in PowerPoint / Keynote / LibreOffice / PDF — unlike
-# equation_png (a flat raster) and unlike an OMML equation object (invisible in the
-# LibreOffice render/PDF). Use this for LINEAR formulas (sums, norms, sub/superscripts,
+# equation_png (a flat raster). Use this for LINEAR formulas (sums, norms, sub/superscripts,
 # Greek, operators); 2-D math (fractions, matrices, stacked limits) raises — use
 # equation_png there. See SKILL §4 "Equations".
 _EQ_GREEK = {'alpha':'α','beta':'β','gamma':'γ','delta':'δ','epsilon':'ε','varepsilon':'ε',
@@ -7517,9 +7577,9 @@ def equation_native(slide, x, y, w, h, latex, *, size=20, color=DEEP, font=None,
     Renders a LaTeX-subset (or a pre-tokenised list) as real, click-editable PowerPoint TEXT
     RUNS (italic variables · upright operators · true sub/superscripts · math glyphs) in a math
     `font`, so it renders identically in PowerPoint / Keynote / LibreOffice / PDF AND stays
-    editable — unlike `equation_png` (a flat raster) and unlike an OMML equation object (which is
-    invisible in the LibreOffice render & PDF export). For LINEAR formulas; 2-D math (fractions,
-    matrices, stacked limits) raises NotImplementedError → use `equation_png` for those.
+    editable — unlike `equation_png` (a flat raster). For LINEAR formulas; 2-D math (fractions,
+    stacked limits) raises NotImplementedError → use `equation_omml` (editable in PowerPoint), or
+    `equation_png` for matrices.
 
     `latex` e.g. r"\\mathcal{L} = \\sum_i \\|A x_i - y_i\\|_2^2 + \\lambda R(x_i)" (or a list of
     (text, kind) tokens). `font` defaults to a math font (`EQ_MATHFONT` = 'STIX Two Math'; set it
@@ -7541,6 +7601,313 @@ def equation_native(slide, x, y, w, h, latex, *, size=20, color=DEEP, font=None,
         if k in ('sup','isup'): r._r.get_or_add_rPr().set('baseline', '30000')
         if k in ('sub','isub'): r._r.get_or_add_rPr().set('baseline', '-22000')
     return tb
+
+
+# ================================================================ editable 2-D math (OMML)
+# PowerPoint stores a typed equation as OMML inside `mc:AlternateContent`: the Choice (a14:m) is
+# the live, editable equation; the Fallback is a picture for any app that does not read a14. On
+# LibreOffice 26.2 that fallback IS what renders (measured 2026-11-27: the PDF shows the PNG, no
+# math text), and PowerPoint for Mac draws the Choice as real Cambria Math (fraction bar, radical,
+# superscript all laid out). So one object is editable where the user edits and pixel-identical to
+# equation_png wherever the deck is rendered or checked.
+_OM_NS = "http://schemas.openxmlformats.org/officeDocument/2006/math"
+_OM_NARY = {'sum': '∑', 'prod': '∏', 'coprod': '∐', 'int': '∫', 'iint': '∬', 'iiint': '∭',
+            'oint': '∮', 'bigcup': '⋃', 'bigcap': '⋂'}
+_OM_REL = set('=<>') | {'≤', '≥', '≠', '≈', '∼', '≃', '≡', '≅', '∝', '→', '⇒', '↦', '∈'}
+_OM_DELIM = {'(': '(', ')': ')', '[': '[', ']': ']', '|': '|', '.': '', '\\|': '‖', '\\{': '{',
+             '\\}': '}', '\\langle': '⟨', '\\rangle': '⟩', '\\lfloor': '⌊', '\\rfloor': '⌋',
+             '\\lceil': '⌈', '\\rceil': '⌉'}
+
+
+def _om_esc(t):
+    return t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+class _OmmlParser:
+    """LaTeX subset → OMML element strings. Covers what equation_png's mathtext covers (fractions,
+    roots, scripts, big operators with limits, accents, \\left…\\right, fonts); an unknown command
+    raises NotImplementedError instead of being spelled out as letters."""
+
+    def __init__(self, s, rpr, raw=False):
+        if not raw:                      # raw: a slice of an already-normalised string (offsets kept)
+            for a, b in (('\\,', ' '), ('\\;', ' '), ('\\:', ' '), ('\\!', ''), ('~', ' '),
+                         ('\\ ', ' ')):
+                s = s.replace(a, b)
+            s = s.strip().strip('$')
+        self.s, self.i, self.rpr = s, 0, rpr
+
+    def run(self, text, sty=None):
+        if not text:
+            return ''
+        mrpr = f'<m:rPr><m:sty m:val="{sty}"/></m:rPr>' if sty else ''
+        return f'<m:r>{mrpr}{self.rpr}<m:t xml:space="preserve">{_om_esc(text)}</m:t></m:r>'
+
+    def peek(self):
+        return self.s[self.i] if self.i < len(self.s) else ''
+
+    def cmd(self):                       # at '\\': read the control word (or one escaped symbol)
+        j = self.i + 1
+        while j < len(self.s) and self.s[j].isalpha():
+            j += 1
+        if j == self.i + 1 and j < len(self.s):
+            j += 1
+        name, self.i = self.s[self.i + 1:j], j
+        return name
+
+    def group_text(self):                # raw text of the next {…} (or the next single char)
+        while self.peek() == ' ':
+            self.i += 1
+        if self.peek() == '{':
+            inner, self.i = _eq_read_group(self.s, self.i)
+            return inner
+        c = self.peek(); self.i += 1
+        return c
+
+    def arg(self):                       # the next atom as OMML (a group, a command, or one char)
+        while self.peek() == ' ':
+            self.i += 1
+        if self.peek() == '{':
+            return _OmmlParser(self.group_text(), self.rpr).parse()
+        return ''.join(self.atom() or [])
+
+    def delim(self):
+        while self.peek() == ' ':
+            self.i += 1
+        if self.peek() == '\\':
+            tok = '\\' + self.cmd()
+        else:
+            tok = self.peek(); self.i += 1
+        if tok not in _OM_DELIM:
+            raise NotImplementedError(f"delimiter {tok!r} not supported in OMML — use equation_png")
+        return _OM_DELIM[tok]
+
+    def atom(self):
+        """Parse one atom; returns a list of OMML strings (an atom may be several runs)."""
+        c = self.peek()
+        if c == '{':
+            return [self.arg()]
+        if c in '}':
+            self.i += 1; return []
+        if c == ' ':
+            self.i += 1; return []
+        if c == '|':
+            self.i += 1; return [self.run('|', 'p')]
+        if c != '\\':
+            self.i += 1
+            if c.isalpha():
+                return [self.run(c)]
+            return [self.run(c, 'p')]
+        start = self.i
+        name = self.cmd()
+        if name in ('frac', 'dfrac', 'tfrac'):
+            num, den = self.arg(), self.arg()
+            return [f'<m:f><m:num>{num}</m:num><m:den>{den}</m:den></m:f>']
+        if name == 'binom':
+            top, bot = self.arg(), self.arg()
+            return [f'<m:d><m:e><m:f><m:fPr><m:type m:val="noBar"/></m:fPr><m:num>{top}</m:num>'
+                    f'<m:den>{bot}</m:den></m:f></m:e></m:d>']
+        if name == 'sqrt':
+            deg = ''
+            if self.peek() == '[':
+                j = self.s.index(']', self.i)
+                deg = _OmmlParser(self.s[self.i + 1:j], self.rpr).parse(); self.i = j + 1
+            body = self.arg()
+            pr = '' if deg else '<m:radPr><m:degHide m:val="1"/></m:radPr>'
+            return [f'<m:rad>{pr}<m:deg>{deg}</m:deg><m:e>{body}</m:e></m:rad>']
+        if name in _EQ_ACC:
+            body = self.arg()
+            return [f'<m:acc><m:accPr><m:chr m:val="{_EQ_ACC[name]}"/></m:accPr><m:e>{body}</m:e></m:acc>']
+        if name in ('overline', 'underline'):
+            pos = 'top' if name == 'overline' else 'bot'
+            return [f'<m:bar><m:barPr><m:pos m:val="{pos}"/></m:barPr><m:e>{self.arg()}</m:e></m:bar>']
+        if name == 'left':
+            beg = self.delim()
+            depth, j = 0, self.i
+            while j < len(self.s):              # the matching \right at this nesting level
+                if self.s.startswith('\\left', j):
+                    depth += 1
+                elif self.s.startswith('\\right', j):
+                    if depth == 0:
+                        break
+                    depth -= 1
+                j += 1
+            else:
+                raise NotImplementedError("\\left without \\right")
+            body = _OmmlParser(self.s[self.i:j], self.rpr).parse()
+            self.i = j + len('\\right')
+            end = self.delim()
+            return [f'<m:d><m:dPr><m:begChr m:val="{_om_esc(beg)}"/><m:endChr m:val="{_om_esc(end)}"/>'
+                    f'</m:dPr><m:e>{body}</m:e></m:d>']
+        if name in _OM_NARY:
+            return [('NARY', _OM_NARY[name])]
+        if name in ('mathrm', 'text', 'operatorname', 'mathbf', 'mathit', 'boldsymbol', 'mathcal',
+                    'mathbb'):
+            inner = self.group_text()
+            if name == 'mathcal':
+                return [self.run(''.join(_EQ_MCAL.get(ch, ch) for ch in inner), 'p')]
+            if name == 'mathbb':
+                return [self.run(''.join(_EQ_BB.get(ch, ch) for ch in inner), 'p')]
+            sty = {'mathbf': 'b', 'boldsymbol': 'bi', 'mathit': 'i'}.get(name, 'p')
+            return [self.run(inner.replace('\\', ''), sty)]
+        if name in _EQ_OPNAMES:          # \\arg\\min: PowerPoint would set it "argmin" — thin space
+            prev = re.search(r"\\([A-Za-z]+)\s*$", self.s[:start])
+            return [self.run(('\u2009' if prev and prev.group(1) in _EQ_OPNAMES else '') + name, 'p')]
+        if name in _EQ_GREEK:
+            return [self.run(_EQ_GREEK[name], 'p' if name[0].isupper() else None)]
+        if name in _EQ_SYM:
+            return [self.run(_EQ_SYM[name], 'p')]
+        if name in ('quad', 'qquad'):
+            return [self.run(' ' * (1 if name == 'quad' else 2), 'p')]
+        if name in ('displaystyle', 'textstyle', 'limits', 'nolimits', 'bigl', 'bigr', 'Bigl', 'Bigr',
+                    'big', 'Big'):
+            return []
+        if len(name) == 1 and not name.isalpha():   # \| \{ \} \% \# \_
+            return [self.run('‖' if name == '|' else name, 'p')]
+        raise NotImplementedError(f"\\{name} not supported by equation_omml — use equation_png")
+
+    def script(self):
+        """Read any _ / ^ following a base; returns (sub, sup) OMML or None."""
+        sub = sup = None
+        while self.peek() in ('_', '^'):
+            c = self.peek(); self.i += 1
+            if c == '_':
+                sub = self.arg()
+            else:
+                sup = self.arg()
+        return sub, sup
+
+    def parse(self, stop_rel=False):
+        """Parse to the end — or, for a big operator's operand (`stop_rel`), up to the first
+        top-level relation (=, ≤, →, …), which LaTeX leaves implicit and OMML needs explicit."""
+        out = []
+        while self.i < len(self.s):
+            save = self.i
+            items = [''] if self.peek() in '_^' else self.atom()   # a script with no base
+            if not items:
+                continue
+            *head, base = items
+            if stop_rel and not head and isinstance(base, str) and base.startswith('<m:r>') and \
+                    any(f'>{_om_esc(r)}</m:t>' in base for r in _OM_REL):
+                self.i = save
+                break
+            out.extend(head)
+            sub, sup = self.script()
+            if isinstance(base, tuple):                    # big operator: limits, then its operand
+                operand = _OmmlParser(self.s[self.i:], self.rpr, raw=True)
+                body = operand.parse(stop_rel=True)
+                self.i += operand.i
+                out.append(self._nary(base[1], sub, sup, body))
+            else:
+                out.append(self._wrap(base, sub, sup))
+        return ''.join(out)
+
+    @staticmethod
+    def _wrap(base, sub, sup):
+        if sub is None and sup is None:
+            return base
+        if sub is not None and sup is not None:
+            return f'<m:sSubSup><m:e>{base}</m:e><m:sub>{sub}</m:sub><m:sup>{sup}</m:sup></m:sSubSup>'
+        if sup is not None:
+            return f'<m:sSup><m:e>{base}</m:e><m:sup>{sup}</m:sup></m:sSup>'
+        return f'<m:sSub><m:e>{base}</m:e><m:sub>{sub}</m:sub></m:sSub>'
+
+    @staticmethod
+    def _nary(ch, sub, sup, body):
+        pr = f'<m:chr m:val="{ch}"/>'
+        if sub is None:
+            pr += '<m:subHide m:val="1"/>'
+        if sup is None:
+            pr += '<m:supHide m:val="1"/>'
+        return (f'<m:nary><m:naryPr>{pr}</m:naryPr><m:sub>{sub or ""}</m:sub><m:sup>{sup or ""}</m:sup>'
+                f'<m:e>{body}</m:e></m:nary>')
+
+
+def latex_to_omml(latex, *, size=28, color=DEEP, font="Cambria Math"):
+    """LaTeX subset → one `<m:oMath>` string (OMML), runs styled for DrawingML (size in pt, colour).
+    Raises NotImplementedError on what it cannot lay out (matrices, unknown commands)."""
+    rpr = (f'<a:rPr lang="en-US" sz="{int(round(size * 100))}" b="0" i="0"><a:solidFill><a:srgbClr '
+           f'val="{_hex(_as_rgb(color))}"/></a:solidFill><a:latin typeface="{font}"/>'
+           f'<a:cs typeface="{font}"/></a:rPr>')
+    if any(k in latex for k in ('\\begin', '\\matrix', '\\substack', '\\over ', '&')):
+        raise NotImplementedError("matrices/arrays are not supported by equation_omml or equation_png")
+    return f'<m:oMath>{_OmmlParser(latex, rpr).parse()}</m:oMath>'
+
+
+def equation_omml(slide, x, y, latex, *, size=28, color=DEEP, h=None, mathfont="cm",
+                  png_path=None, font="Cambria Math"):
+    """EDITABLE 2-D math — fractions, roots, big operators with limits, \\left…\\right — as a real
+    PowerPoint equation (OMML) that the user can click and edit, with an `equation_png` picture as
+    its fallback. Use it wherever you would have used `equation_png` for a 2-D formula; 1-D math
+    stays `equation_native`.
+
+    Where it renders: PowerPoint draws the live equation in `font` (Cambria Math, ships with
+    Office); LibreOffice — so the render loop, every pixel gate and the PDF — shows the fallback
+    PNG, identical to what `equation_png` gives. The two faces differ slightly (Computer Modern vs
+    Cambria Math at the same point size); the box is sized from the PNG.
+
+    `latex` is one formula string (a list = one line each, stacked). `size` is the point size of
+    both renderings; `h` (inches) instead scales the formula to that height. `color` any colour
+    form. `png_path` keeps the fallback PNG at that path (default: a temp file). Returns the group
+    shape (it is what the geometry gates see; its alt text is the LaTeX source).
+    Raises NotImplementedError for matrices/unknown commands — use `equation_png` for those."""
+    import os
+    import tempfile
+    lines = [latex] if isinstance(latex, str) else list(latex)
+    omml = [latex_to_omml(ln, size=size, color=color, font=font) for ln in lines]   # raises first
+    if png_path is None:
+        fd, png_path = tempfile.mkstemp(suffix=".png", prefix="eq_omml_"); os.close(fd)
+    dpi = 300
+    # OMML lays a fraction out display-style; mathtext's \\frac is text-style (about half the
+    # height), so the fallback uses \\dfrac or the two renderings disagree on the box they fill
+    shown = [re.sub(r"\\frac(?![a-zA-Z])", r"\\dfrac", ln) for ln in lines]
+    equation_png(shown, png_path, color=_hex(_as_rgb(color)), fontsize=size, dpi=dpi,
+                 mathfont=mathfont)
+    from PIL import Image
+    im = Image.open(png_path)            # equation_png keeps its 8in-wide canvas: crop to the ink
+    box = im.getchannel("A").getbbox()
+    if box is None:
+        raise ValueError(f"equation_omml: the fallback render of {lines!r} came out empty")
+    pad = int(0.04 * dpi)
+    im.crop((max(box[0] - pad, 0), max(box[1] - pad, 0), min(box[2] + pad, im.width),
+             min(box[3] + pad, im.height))).save(png_path)
+    w_px, h_px = Image.open(png_path).size
+    w_in, h_in = w_px / dpi, h_px / dpi
+    if h:
+        k = h / h_in
+        w_in, h_in = w_in * k, h
+        omml = [latex_to_omml(ln, size=size * k, color=color, font=font) for ln in lines]
+    pic = slide.shapes.add_picture(png_path, Inches(x), Inches(y), Inches(w_in), Inches(h_in))
+    rid = pic._element.blipFill.blip.rEmbed
+    pic._element.getparent().remove(pic._element)
+    X, Y, W, H = (int(Inches(v)) for v in (x, y, w_in, h_in))
+    nid = slide.shapes._next_shape_id
+    alt = _om_esc(" ; ".join(lines)).replace('"', "&quot;")
+    paras = ''.join(f'<a:p><a:pPr algn="l"/><a14:m><m:oMathPara><m:oMathParaPr><m:jc m:val="left"/>'
+                    f'</m:oMathParaPr>{o}</m:oMathPara></a14:m></a:p>' for o in omml)
+    xfrm = f'<a:xfrm><a:off x="{X}" y="{Y}"/><a:ext cx="{W}" cy="{H}"/></a:xfrm>'
+    body = '<a:bodyPr wrap="none" lIns="0" tIns="0" rIns="0" bIns="0" anchor="ctr"/><a:lstStyle/>'
+    xml = (
+        f'<p:grpSp xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" '
+        f'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" '
+        f'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" '
+        f'xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" '
+        f'xmlns:a14="http://schemas.microsoft.com/office/drawing/2010/main" xmlns:m="{_OM_NS}">'
+        f'<p:nvGrpSpPr><p:cNvPr id="{nid}" name="Equation {nid}" descr="{alt}"/><p:cNvGrpSpPr/><p:nvPr/>'
+        f'</p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="{X}" y="{Y}"/><a:ext cx="{W}" cy="{H}"/>'
+        f'<a:chOff x="{X}" y="{Y}"/><a:chExt cx="{W}" cy="{H}"/></a:xfrm></p:grpSpPr>'
+        f'<mc:AlternateContent><mc:Choice Requires="a14">'
+        f'<p:sp><p:nvSpPr><p:cNvPr id="{nid + 1}" name="Equation text {nid}" descr="{alt}"/>'
+        f'<p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr><p:spPr>{xfrm}<a:prstGeom prst="rect"><a:avLst/>'
+        f'</a:prstGeom><a:noFill/></p:spPr><p:txBody>{body}{paras}</p:txBody></p:sp></mc:Choice>'
+        f'<mc:Fallback><p:sp><p:nvSpPr><p:cNvPr id="{nid + 2}" name="Equation image {nid}" '
+        f'descr="{alt}"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr><p:spPr>{xfrm}<a:prstGeom '
+        f'prst="rect"><a:avLst/></a:prstGeom><a:blipFill><a:blip r:embed="{rid}"/><a:stretch>'
+        f'<a:fillRect/></a:stretch></a:blipFill></p:spPr><p:txBody><a:bodyPr/><a:lstStyle/><a:p>'
+        f'<a:endParaRPr lang="en-US"/></a:p></p:txBody></p:sp></mc:Fallback></mc:AlternateContent>'
+        f'</p:grpSp>')
+    el = parse_xml(xml)                  # python-pptx's parser: the group gets its shape class
+    slide.shapes._spTree.append(el)
+    return next(s for s in slide.shapes if s._element is el)
 
 
 # ================================================================ template reuse

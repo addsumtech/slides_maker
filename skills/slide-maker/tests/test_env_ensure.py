@@ -105,8 +105,8 @@ def main():
     names = {p for _, p in CE.REQUIRED_PIP}
     check("python-pptx / pymupdf / Pillow / matplotlib / numpy are all required",
           {"python-pptx", "pymupdf", "Pillow", "matplotlib", "numpy"} <= names)
-    check("import-name vs pip-name mapping is kept (fitz->pymupdf, PIL->Pillow)",
-          ("fitz", "pymupdf") in CE.REQUIRED_PIP and ("PIL", "Pillow") in CE.REQUIRED_PIP)
+    check("import-name vs pip-name mapping is kept (PIL->Pillow)",
+          ("pymupdf", "pymupdf") in CE.REQUIRED_PIP and ("PIL", "Pillow") in CE.REQUIRED_PIP)
 
     print(f"\n{PASS} passed, {FAIL} failed")
     return 1 if FAIL else 0

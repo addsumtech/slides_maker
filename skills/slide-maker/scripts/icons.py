@@ -388,12 +388,20 @@ def rasterize(svg, out_png, px=160):
             # reaches here, so no local file can be read and no JS/SSRF can run. --disable-remote-fonts
             # blocks any web-font egress; we deliberately do NOT pass --blink-settings=scriptEnabled=false
             # because it silently breaks the headless screenshot on current Chrome (produces no file).
-            subprocess.run([chrome, "--headless", "--disable-gpu", f"--screenshot={out_png}",
-                            "--disable-remote-fonts",
-                            f"--window-size={px},{px}",
-                            f"--force-device-scale-factor={_SUPERSAMPLE}",
-                            "--default-background-color=00000000", "--hide-scrollbars",
-                            f"file://{src}"], check=True, capture_output=True, timeout=60)
+            # The exit code is NOT the verdict: Chrome 158 on macOS writes the screenshot, then
+            # dies in teardown ("Teardown watchdog expired") with status 2 (measured 2026-11-27) —
+            # check=True threw a good icon away. The fresh, inked PNG is the verdict instead.
+            if os.path.exists(out_png):
+                os.remove(out_png)
+            res = subprocess.run([chrome, "--headless", "--disable-gpu", f"--screenshot={out_png}",
+                                  "--disable-remote-fonts",
+                                  f"--window-size={px},{px}",
+                                  f"--force-device-scale-factor={_SUPERSAMPLE}",
+                                  "--default-background-color=00000000", "--hide-scrollbars",
+                                  f"file://{src}"], capture_output=True, timeout=60)
+            if not (os.path.exists(out_png) and os.path.getsize(out_png) > 0):
+                raise RuntimeError(f"headless Chrome wrote no screenshot (exit {res.returncode}): "
+                                   + res.stderr.decode("utf-8", "replace")[-400:])
             return _save(out_png)
         finally:
             os.unlink(src)
@@ -404,6 +412,8 @@ def rasterize(svg, out_png, px=160):
 
 def icon_png(spec_or_path, out_png, *, color=None, gradient=None, grad_angle="diag", px=160):
     """Fetch (or load a local .svg), recolor, and rasterize to a transparent PNG. Returns out_png.
+    The recoloured SVG (not a gradient one) is written beside it (`svg_sibling(out_png)`) for
+    deckkit to embed.
 
     `spec_or_path` — "library:name" (fetched) OR a path to a local .svg / .png. A .png passes
     through unchanged (already raster). Recolor with `color` (deck accent/ink hex); `None` keeps
@@ -424,7 +434,24 @@ def icon_png(spec_or_path, out_png, *, color=None, gradient=None, grad_angle="di
     else:
         svg = fetch_svg(spec_or_path)
     svg = gradient_recolor(svg, gradient, angle=grad_angle) if gradient else recolor(svg, color)
-    return rasterize(svg, out_png, px=px)
+    out = rasterize(svg, out_png, px=px)
+    # the vector beside the raster: deckkit.picture() embeds it as svgBlip with this PNG as the
+    # fallback, so PowerPoint (2019+/365) and LibreOffice (24.2+) draw the icon sharp at any size.
+    # Not for a gradient: LibreOffice 26.2 strokes url(#…) gradients with notches at path starts
+    # (measured 2026-11-27) — that icon stays raster-only, and a stale twin must not be picked up.
+    twin = svg_sibling(out_png)
+    if gradient:
+        if os.path.exists(twin):
+            os.remove(twin)
+    else:
+        with open(twin, "w", encoding="utf-8") as fh:
+            fh.write(sanitize_svg(svg))
+    return out
+
+
+def svg_sibling(png_path):
+    """Where icon_png() keeps the vector for `png_path` (one name, shared with deckkit)."""
+    return os.path.splitext(png_path)[0] + ".icon.svg"
 
 
 if __name__ == "__main__":

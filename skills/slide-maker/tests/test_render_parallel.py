@@ -42,7 +42,7 @@ def check(name, cond, detail=""):
 
 def _require_deps():
     try:
-        import fitz  # noqa: F401
+        import pymupdf as fitz  # noqa: F401
         import pptx  # noqa: F401
     except ImportError as e:
         print("SKIPPED — missing dependency ({}). Install requirements.txt.".format(e))
