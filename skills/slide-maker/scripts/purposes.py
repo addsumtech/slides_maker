@@ -440,6 +440,11 @@ PURPOSES = (
                "story, a 'which would you choose?' vote."),
         design=("Signal where they are: a lesson progress strip (step_list with the active step lit).",
                 "Build complex diagrams step by step (anim.Build) in the order you explain them; one highlight at a time.",
+                "Reveal an answer by marking the OPTION itself — ring or tick its letter or label, tight to the text. "
+                "Never a ring around a whole drawing: a mark that has to grow to avoid its own label is too big, and "
+                "the drawing already shows why.",
+                "Formulas are read, so they are set at reading size (≈ body, at most the title's size). A lesson's "
+                "hero is a number or a sentence, never an equation blown up to fill the slide.",
                 "Checks get their own recognisable look across the deck — deckkit.check_question (choose / predict, "
                 "answer revealed on click) and deckkit.prompt_card (think-pair-share, try it, discuss) — so learners "
                 "know 'now it is my turn'.",

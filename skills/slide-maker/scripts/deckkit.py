@@ -7569,6 +7569,7 @@ def latex_to_runs(latex):
         push(_eq_resolve(c), 0); i += 1
     return [(t, k) for t, k in out if t != '']   # drop any spurious empty runs (lone '\\', escaped delimiters)
 
+FORMULA_MAX_PT = 44             # a formula never goes past title size (lint_layout FORMULA_OVERSIZE)
 EQ_MATHFONT = "STIX Two Math"   # math font with ℒ Σ ‖ … ; 'Cambria Math' is the Office-portable alt
 
 def equation_native(slide, x, y, w, h, latex, *, size=20, color=DEEP, font=None,
@@ -7588,6 +7589,7 @@ def equation_native(slide, x, y, w, h, latex, *, size=20, color=DEEP, font=None,
     toks = latex if isinstance(latex, list) else latex_to_runs(latex)
     fnt = font or EQ_MATHFONT
     tb = slide.shapes.add_textbox(Inches(x), Inches(y), Inches(w), Inches(h))
+    tb.name = "Equation native · {:.0f}pt".format(size)       # read by lint_layout's FORMULA_OVERSIZE
     tf = tb.text_frame; tf.word_wrap = True
     try: tf.vertical_anchor = anchor
     except Exception: pass
@@ -7880,6 +7882,7 @@ def equation_omml(slide, x, y, latex, *, size=28, color=DEEP, h=None, mathfont="
     rid = pic._element.blipFill.blip.rEmbed
     pic._element.getparent().remove(pic._element)
     X, Y, W, H = (int(Inches(v)) for v in (x, y, w_in, h_in))
+    eff_pt = size * (h / (h_px / dpi) if h else 1.0)          # the type size the formula is actually set at
     nid = slide.shapes._next_shape_id
     alt = _om_esc(" ; ".join(lines)).replace('"', "&quot;")
     paras = ''.join(f'<a:p><a:pPr algn="l"/><a14:m><m:oMathPara><m:oMathParaPr><m:jc m:val="left"/>'
@@ -7892,7 +7895,7 @@ def equation_omml(slide, x, y, latex, *, size=28, color=DEEP, h=None, mathfont="
         f'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" '
         f'xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" '
         f'xmlns:a14="http://schemas.microsoft.com/office/drawing/2010/main" xmlns:m="{_OM_NS}">'
-        f'<p:nvGrpSpPr><p:cNvPr id="{nid}" name="Equation {nid}" descr="{alt}"/><p:cNvGrpSpPr/><p:nvPr/>'
+        f'<p:nvGrpSpPr><p:cNvPr id="{nid}" name="Equation {nid} · {eff_pt:.0f}pt" descr="{alt}"/><p:cNvGrpSpPr/><p:nvPr/>'
         f'</p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="{X}" y="{Y}"/><a:ext cx="{W}" cy="{H}"/>'
         f'<a:chOff x="{X}" y="{Y}"/><a:chExt cx="{W}" cy="{H}"/></a:xfrm></p:grpSpPr>'
         f'<mc:AlternateContent><mc:Choice Requires="a14">'
@@ -12641,6 +12644,8 @@ def _lint_layout_impl(prs, *, verbose=True, strict=False, overlap_tol=0.05, esca
                      the real footer; a footer-less slide relies on OFF_CANVAS + the Step-5 lint_deck).
       OFFCENTER    — a card whose ONLY content is a single line of text leaves a lopsided top/bottom
                      gap (one line in a block reads best vertically centred — anchor it MIDDLE).
+      FORMULA_OVERSIZE — an equation_omml / equation_native formula set past FORMULA_MAX_PT (44pt): a
+                     formula is read at body size; at most it reaches the title's size, never poster size.
       SLIVER_GAP   — two panels (or a panel and a picture) NEARLY touch: their projections overlap
                      on one axis and the edge gap on the other is a sliver (0.005–0.10in — clearly
                      below the documented ~0.12in "≥ ~⅓ GUTTER" floor, so rule-compliant gaps never
@@ -12892,6 +12897,20 @@ def _lint_layout_impl(prs, *, verbose=True, strict=False, overlap_tol=0.05, esca
                             "horizontal" if horiz else "vertical",
                             _snip(sh_t.text_frame.text, 26), cross)))
                     break
+
+        # ---- FORMULA_OVERSIZE: a formula is READ, so it is set at reading size. Measured 2026-11-27 on a
+        #      grade-8 lesson: an art-director plan made p = F/S the slide's "hero" at ~4in tall (well over
+        #      100pt) — the user: "公式太大了，显得很丑". The rule already existed as prose (SKILL.md "Formula
+        #      sized to content"; only a deliberate hero equation may exceed body size and it stays below
+        #      the title) and nothing checked it. Equations built by equation_omml / equation_native carry
+        #      their effective size in the shape name, so this is decidable.
+        for sh in slide.shapes:
+            _m = re.match(r"Equation (?:\d+|native) · (\d+)pt$", getattr(sh, "name", "") or "")
+            if _m and int(_m.group(1)) > FORMULA_MAX_PT:
+                findings.append((n, "WARN", "FORMULA_OVERSIZE",
+                    f"a formula set at {_m.group(1)}pt — formulas are read at body size (~20–32pt); one that "
+                    f"is the slide's point may go up to the title's size (≤{FORMULA_MAX_PT}pt), never poster "
+                    f"size. Make the slide's hero a number or words, not the equation"))
 
         # ---- SLIVER_GAP: near-touching panels (panel–panel or panel–picture; picture–picture is
         #      skipped). A gap that exists but reads as touching clips rounded corners and looks

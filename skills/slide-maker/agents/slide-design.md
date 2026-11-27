@@ -922,7 +922,10 @@ and closer is a picture wasted.
 words it is built around>`: its largest type must reach **2.5x** the deck's typical top size (the gate measures
 the built file and names the target size), with the deck's accent at full strength on it. Or `hero: none —
 <conservative | template-locked | tiny-deck | image-led>: <why>` (image-led: a full-bleed picture or a character
-carries the peak). *(Measured 2026-11-08 on a launch brief: the winning decks' biggest type sat at 5.7–7.1x the
+carries the peak). 🔴 **The hero is a number or words — never a formula.** An equation is read, so it stays at
+reading size (≤ the title's size; `lint_layout` warns `FORMULA_OVERSIZE` past 44pt). Measured 2026-11-27: a plan
+made p = F/S a ~4in "visual peak" and the user called it ugly. Likewise an answer is MARKED where it is named (a
+tight ring on the option's label), not by a ring wrapped round a whole drawing. *(Measured 2026-11-08 on a launch brief: the winning decks' biggest type sat at 5.7–7.1x the
 deck's typical top size, the gallery decks at 2.3–6.5x; the losing deck at 1.6x — "tidy but quiet".)*
 *(Measured 2026-11-08: the older skill's decks flipped 1–3 interior pages each and won a blind design
 comparison on every consistent pair; the newer decks flipped 0–1 — dark covers and closers around one

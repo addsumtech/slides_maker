@@ -405,6 +405,23 @@ _out = _sp.run([sys.executable, os.path.join(SKILL, "scripts", "deck_gates.py"),
                 "purpose=a talk for my cat", "--source", "stated"], capture_output=True, text=True).stdout
 ck("binds no registered genre" in _out, "an unbound purpose says so when it is recorded, instead of staying silent")
 
+print("\n— a formula is read at reading size: FORMULA_OVERSIZE past the title's size (2026-11-27)")
+import io as _io2, contextlib as _cl2  # noqa: E401,E402
+_fx = dk.blank_deck()
+_fs = dk.add_slide(_fx)
+dk.equation_omml(_fs, 0.5, 0.5, r"p=\frac{F}{S}", h=4.2)            # the user's "公式太大了，显得很丑"
+_fs2 = dk.add_slide(_fx)
+dk.equation_omml(_fs2, 0.5, 0.5, r"p=\frac{F}{S}", size=40)
+dk.equation_native(_fs2, 5.5, 0.5, 4.0, 0.8, r"p = F/S", size=28)
+_b3 = _io2.StringIO()
+with _cl2.redirect_stdout(_b3):
+    dk.lint_layout(_fx, strict=False)
+_ov = [l for l in _b3.getvalue().splitlines() if "FORMULA_OVERSIZE" in l]
+ck(len(_ov) == 1 and "slide  1" in _ov[0], "a 4in-tall formula is reported, 40pt and 28pt formulas are not: %s" % _ov)
+_tb = purposes.brief(purposes.BY_NAME["teaching"])
+ck("marking the OPTION itself" in _tb and "reading size" in _tb,
+   "the teaching playbook tells the designer to mark the option and keep formulas at reading size")
+
 print("\n— a teaching deck must name a check for understanding; 'Questions?' is not one")
 _t = deck("teach_noquiz.pptx", ["Learning objectives", "Worked example: Ohm's law", "Recap", "Questions?"])
 ck("check for understanding" in missing(_t, "a lecture on circuits"), "a lecture whose only 'check' is 'Questions?' is missing one")

@@ -9,6 +9,13 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+**Formulas at reading size, answers marked where they are named (feedback on the first real lesson deck).**
+- New build-time warning `FORMULA_OVERSIZE`: an `equation_omml` / `equation_native` formula set past 44pt (the
+  title's size). Equations now carry their effective size in the shape name so this is decidable.
+- The teaching playbook and the art director's hero rule: the hero is a number or words, never a formula; an
+  answer is revealed by a tight mark on the option's label, not a ring round a whole drawing.
+- `prompt_card` refuses a box too short for its prompt and names the height it needs.
+
 **Genres: a playbook for every everyday deck, and checks that make a lesson a lesson.**
 - `purposes.py` carries a playbook per genre — arc, content rules, design conventions (applied inside the
   chosen look, never instead of it), failure modes and sources — printed by `purposes.py --brief "<purpose>"`
