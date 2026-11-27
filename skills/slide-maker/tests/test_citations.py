@@ -397,6 +397,34 @@ ck("citations" in sigs.MODULES and "reference_page" in sigs.EXAMPLES,
    "`sigs.py reference_page --example` hands back a runnable call — the citation helpers are found "
    "through the same door as every other component, and the smoke suite EXECUTES that scaffold")
 
+# ── found by the Chinese student-presentation test build (2026-11-27)
+def _t(name, cond, detail=""):
+    (OK if cond else BAD).append(name)
+    print(("  ok   " if cond else "  FAIL ") + name + ("" if cond else "  " + str(detail)))
+
+
+_m = cc.author_year_markers("（Macintyre 与 Heaviside，2019；U.S. EPA，2026c）(Iungman 等, 2023; Knight, 2021)")
+_t("a grouped marker names every work inside it, full-width or ASCII",
+   {("macintyre", "2019"), ("u.s. epa", "2026c"), ("iungman", "2023"), ("knight", "2021")} <= _m, _m)
+_many = {"key": "k", "type": "article", "title": "What Are Heat Islands?", "year": "2023",
+         "author": "A, B and C, D and E, F and G, H and I, J and K, L and M, N"}
+_many["author_raw"] = _many["author"]
+_line = cit.format_reference(_many, "author-year", 1, etal="等")
+_t("a Latin-script work keeps 'et al.' in a Chinese deck (GB/T 7714)", "et al." in _line and "等" not in _line, _line)
+_t("a title ending in '?' gets no extra full stop", "Islands?." not in _line and "Islands? " in _line + " ", _line)
+_zh = dict(_many, title="城市热岛研究", author="张, 三 and 李, 四 and 王, 五 and 赵, 六 and 钱, 七 and 孙, 八 and 周, 九")
+_zh["author_raw"] = _zh["author"]
+_t("a CJK-language work takes 等", "等" in cit.format_reference(_zh, "author-year", 1, etal="等"))
+_ea0, dk.EAFONT = dk.EAFONT, "Hiragino Sans GB"      # a Chinese deck sets its East-Asian face
+_p = dk.blank_deck(); _s = dk.add_slide(_p)
+cit.reference_page(_s, [_many, _zh], style="author-year", title="参考文献", etal="等", size=11, y=2.0, w=6.0)
+_crit = [f for f in dk.lint_layout(_p, strict=False) if f[1] == "CRITICAL"]
+dk.EAFONT = _ea0
+_eyebrow = [sh for sh in _s.shapes if sh.has_text_frame and sh.text_frame.text.strip() == "参考文献"]
+_t("the heading follows y (it was pinned at 0.6)", _eyebrow and abs(_eyebrow[0].top / 914400 - 1.2) < 0.05,
+   [sh.top / 914400 for sh in _eyebrow])
+_t("a Chinese reference page builds with no critical layout finding", not _crit, _crit)
+
 print()
 print("%d passed, %d failed" % (len(OK), len(BAD)))
 raise SystemExit(1 if BAD else 0)

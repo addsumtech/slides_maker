@@ -3809,6 +3809,15 @@ def bleed_intent(shape, reason):
     return shape
 
 
+def _max_font_pt(sh):
+    """The largest explicit run size (pt) in a text shape, or None when no run states one.
+    HEADLINE_CROWDED asked for this by name for months while it did not exist (`… in dir()` was always
+    False), so the 'headline' was the TALLEST top-third block: a six-line reference entry at 11pt beat
+    a 13pt heading and every row gap on the page was judged as a headline gap (test build, 2026-11-27)."""
+    sizes = [int(v) / 100.0 for v in re.findall(r'<a:rPr[^>]*\ssz="(\d+)"', sh._element.xml)] if _is_text(sh) else []
+    return max(sizes) if sizes else None
+
+
 def _declared_bleed(sh):
     n = str(getattr(sh, "name", "") or "")
     return n.startswith(BLEED_TAG) or "+bleed" in n.split(":", 1)[0]
@@ -13169,7 +13178,7 @@ def _lint_layout_impl(prs, *, verbose=True, strict=False, overlap_tol=0.05, esca
             if _shape_rot(_sh):
                 continue                              # a rotated margin label is not the headline
                                                       # (it stole the slot and silenced the check)
-            _fs = _max_font_pt(_sh) if "_max_font_pt" in dir() else None
+            _fs = _max_font_pt(_sh)
             _key = _fs if _fs else _ink[3]            # font size when known, else ink height
             if _head is None or _key > _head[0]:
                 _head = (_key, t)

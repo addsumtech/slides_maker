@@ -386,6 +386,11 @@ def format_reference(entry, style="numeric", n=None, *, etal="et al.", amp="&", 
     names = authors(entry)
     more = more_authors(entry)
     title = _clean(entry.get("title", ""))
+    # GB/T 7714: a CJK "et al." (等) is for CJK-language works; a Latin-script work keeps "et al."
+    # A 等 inside a Latin line also switched the whole run to East-Asian line breaking in a render
+    # ("K onno", "ozon e" — test build, 2026-11-27).
+    if etal != "et al." and not re.search(r"[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]", " ".join(names) + title):
+        etal = "et al."
     yr = year(entry)
     venue = next((_clean(entry[f]) for f in VENUE_FIELDS if entry.get(f)), "")
     if not venue and entry.get("eprint"):
@@ -397,7 +402,7 @@ def format_reference(entry, style="numeric", n=None, *, etal="et al.", amp="&", 
         who = ", ".join((("%s %s" % (initials(a), surname(a))).strip()) for a in names[:6])
         if len(names) > 6 or more:
             who = _join(who + ",", etal)
-        bits = ["[%d] %s," % (n, who), '"%s,"' % title]
+        bits = ["[%d] %s," % (n, who), '"%s"' % title if title.endswith(("?", "!")) else '"%s,"' % title]
         if venue:
             bits.append("%s," % venue)
         bits.append("%s." % yr)
@@ -413,7 +418,7 @@ def format_reference(entry, style="numeric", n=None, *, etal="et al.", amp="&", 
         who = _join(", ".join(parts[:-1]), amp, parts[-1])
     else:
         who = parts[0]
-    line = "%s (%s%s). %s." % (who, yr, suffix, title)
+    line = "%s (%s%s). %s%s" % (who, yr, suffix, title, "" if title.endswith((".", "?", "!")) else ".")
     if venue:
         line += " %s." % venue
     if doi:
@@ -432,7 +437,7 @@ def doi_url(entry):
 
 def reference_page(slide, entries, *, style="numeric", title="References", cols=1, x=0.7, y=1.4,
                    accent=None, ink=None, chrome=None, size=9, link_dois=True, etal="et al.",
-                   link_style="ink"):
+                   link_style="ink", w=None):
     """Render the reference list, FORMATTED FROM THE ENTRIES, with每 DOI clickable.
 
     `entries` is the ordered list of parsed entries (numeric markers are their 1-based positions).
@@ -450,11 +455,16 @@ def reference_page(slide, entries, *, style="numeric", title="References", cols=
     ink = dk.DEEP if ink is None else ink
     if link_dois and link_style == "ink":
         dk.set_link_color(slide, ink)
-    chrome = chrome or dk.MONO
+    sfx0 = suffixes(entries) if style == "author-year" else [""] * len(entries)
+    lines0 = [format_reference(e, style, i + 1, etal=etal, suffix=sfx0[i]) for i, e in enumerate(entries)]
+    # a Chinese list in the mono chrome mixes faces mid-line (Consolas has no CJK glyphs) and measures
+    # with the wrong metrics, so its rows overlapped in a test build (2026-11-27): CJK uses the body face
+    chrome = chrome or (dk.FONT if any(dk._has_cjk(t) for t in lines0 + [title, etal]) else dk.MONO)
     sw, _sh = dk._slide_size(slide)
-    dk.part_eyebrow(slide, x, 0.6, title, color=accent, font=chrome, size=13)
-    dk.box(slide, x, 1.02, 1.2, 0.05, fill=accent)
-    w = (sw - 2 * x - 0.4 * (cols - 1)) / cols
+    # the heading follows `y` (it was pinned at 0.6 whatever `y` said); the default y=1.4 places it as before
+    dk.part_eyebrow(slide, x, y - 0.8, title, color=accent, font=chrome, size=13)
+    dk.box(slide, x, y - 0.38, 1.2, 0.05, fill=accent)
+    w = ((w if w is not None else sw - 2 * x) - 0.4 * (cols - 1)) / cols
     per = (len(entries) + cols - 1) // cols
     sfx = suffixes(entries) if style == "author-year" else [""] * len(entries)
     # 🔴 Only the NUMERIC style has a marker to hang in a gutter. Author-year's marker IS the
@@ -470,8 +480,9 @@ def reference_page(slide, entries, *, style="numeric", title="References", cols=
             line = format_reference(e, style, i + 1, etal=etal, suffix=sfx[i])
             mark = in_text(e, style, i + 1, etal=etal, suffix=sfx[i]) if gut else ""
             body = line[len(mark):].strip() if mark and line.startswith(mark) else line
-            n_lines = dk.measure_lines([(body, False)], size, w - gut, font=chrome)
-            h = max(0.3, n_lines * size / 72.0 * 1.25)
+            # measured with the same model and line spacing the text is placed with (and the build lint
+            # reads): a hand-rolled `lines × size × 1.25` disagreed with both and rows overlapped (2026-11-27)
+            h = max(0.3, dk.measure_text([(body, False)], w - gut, size, font=chrome, line_spacing=1.15))
             if mark:
                 # The gutter must HOLD its marker. This is the invariant the author-year pile
                 # broke, so it is asserted rather than trusted: a marker that needs more lines

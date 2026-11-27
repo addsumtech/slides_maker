@@ -118,7 +118,16 @@ def numeric_markers(text):
 def author_year_markers(text):
     """{(first surname lowered, year)} for every `(Berg et al., 2020)` / `Berg (2020)` marker."""
     found = set()
-    for a, b, c, d in _AUTHOR_YEAR.findall(_widen(text)):
+    wide = _widen(text)
+    pairs = list(_AUTHOR_YEAR.findall(wide))
+    # a grouped marker — `(A 与 B, 2019; C, 2026c)` — names several works in one pair of parentheses;
+    # the single-work pattern cannot see inside it, and a test build had 6 of 8 entries read UNCITED
+    for grp in re.findall(r"\(([^()]*;[^()]*)\)", wide):
+        for piece in grp.split(";"):
+            m = re.match(r"^\s*([^\d,;]{2,60}?)\s*,\s*(\d{4}[a-z]?)\s*$", piece)
+            if m:
+                pairs.append((m.group(1), m.group(2), "", ""))
+    for a, b, c, d in pairs:
         who, yr = (a, b) if a else (c, d)
         # `et al.` / `&` / `and` take spaces; 等 / 与 do not, because Chinese does not space them.
         who = re.split(r"(?:\s+(?:et al\.?|&|and)\s*|\s*[等与]\s*)", who.strip(), maxsplit=1)[0]
