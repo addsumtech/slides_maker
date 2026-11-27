@@ -7835,7 +7835,21 @@ def latex_to_omml(latex, *, size=28, color=DEEP, font="Cambria Math"):
     return f'<m:oMath>{_OmmlParser(latex, rpr).parse()}</m:oMath>'
 
 
-def equation_omml(slide, x, y, latex, *, size=28, color=DEEP, h=None, mathfont="cm",
+_SERIF_HINTS = ("times", "georgia", "garamond", "palatino", "cambria", "baskerville", "bodoni", "didot", "caslon",
+                "minion", "book antiqua", "constantia", "hoefler", "charter", "iowan", "merriweather", "playfair",
+                "lora", "crimson", "songti", "stsong", "simsun", "mincho", "宋", "明朝")
+
+
+def _math_register(face=None):
+    """'cm' (serif math) when the deck's body face is a serif, else 'stixsans' — so a formula's fallback
+    picture matches the type around it. Measured 2026-11-27: Computer Modern formulas beside Trebuchet step
+    text on one slide read as two different hands ('公式字体还存在不统一')."""
+    f = str(face or FONT or "").lower()
+    serif = any(h in f for h in _SERIF_HINTS) or ("serif" in f and "sans" not in f)
+    return "cm" if serif else "stixsans"
+
+
+def equation_omml(slide, x, y, latex, *, size=28, color=DEEP, h=None, mathfont=None,
                   png_path=None, font="Cambria Math"):
     """EDITABLE 2-D math — fractions, roots, big operators with limits, \\left…\\right — as a real
     PowerPoint equation (OMML) that the user can click and edit, with an `equation_png` picture as
@@ -7847,6 +7861,10 @@ def equation_omml(slide, x, y, latex, *, size=28, color=DEEP, h=None, mathfont="
     PNG, identical to what `equation_png` gives. The two faces differ slightly (Computer Modern vs
     Cambria Math at the same point size); the box is sized from the PNG.
 
+    One face per slide: when a slide carries a formula, set EVERY formula on it this way (steps, substitutions,
+    results) rather than mixing typed "F = G = mg" text with equation objects. `mathfont=None` picks serif or
+    sans math to match the deck's body face (`_math_register`); pass 'cm' / 'stixsans' to override.
+
     `latex` is one formula string (a list = one line each, stacked). `size` is the point size of
     both renderings; `h` (inches) instead scales the formula to that height. `color` any colour
     form. `png_path` keeps the fallback PNG at that path (default: a temp file). Returns the group
@@ -7855,6 +7873,7 @@ def equation_omml(slide, x, y, latex, *, size=28, color=DEEP, h=None, mathfont="
     import os
     import tempfile
     lines = [latex] if isinstance(latex, str) else list(latex)
+    mathfont = mathfont or _math_register()
     omml = [latex_to_omml(ln, size=size, color=color, font=font) for ln in lines]   # raises first
     if png_path is None:
         fd, png_path = tempfile.mkstemp(suffix=".png", prefix="eq_omml_"); os.close(fd)

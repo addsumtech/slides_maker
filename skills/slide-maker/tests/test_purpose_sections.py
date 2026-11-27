@@ -418,6 +418,9 @@ with _cl2.redirect_stdout(_b3):
     dk.lint_layout(_fx, strict=False)
 _ov = [l for l in _b3.getvalue().splitlines() if "FORMULA_OVERSIZE" in l]
 ck(len(_ov) == 1 and "slide  1" in _ov[0], "a 4in-tall formula is reported, 40pt and 28pt formulas are not: %s" % _ov)
+ck(dk._math_register("Trebuchet MS") == "stixsans" and dk._math_register("Georgia") == "cm"
+   and dk._math_register("Noto Serif SC") == "cm" and dk._math_register("Noto Sans SC") == "stixsans",
+   "equation_omml's fallback math face follows the deck's body face (sans deck → sans math, serif → serif)")
 _tb = purposes.brief(purposes.BY_NAME["teaching"])
 ck("marking the OPTION itself" in _tb and "reading size" in _tb,
    "the teaching playbook tells the designer to mark the option and keep formulas at reading size")

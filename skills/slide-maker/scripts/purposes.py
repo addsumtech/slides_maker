@@ -450,6 +450,9 @@ PURPOSES = (
                 "the drawing already shows why.",
                 "Formulas are read, so they are set at reading size (≈ body, at most the title's size). A lesson's "
                 "hero is a number or a sentence, never an equation blown up to fill the slide.",
+                "One face for every formula on a slide: a worked example's steps, substitution and result are ALL "
+                "equation objects (deckkit.equation_omml) — never typed 'F = G = mg' text beside an equation object, "
+                "which reads as two different hands.",
                 "Checks get their own recognisable look across the deck — deckkit.check_question (choose / predict, "
                 "answer revealed on click) and deckkit.prompt_card (think-pair-share, try it, discuss) — so learners "
                 "know 'now it is my turn'.",

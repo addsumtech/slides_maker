@@ -262,7 +262,8 @@ generated or sourced. Fold in the user's design edits, then set up the canvas (S
   (`\sum_{i=1}^{N}`) still renders *inline* (bounds beside, not stacked), so use `equation_png` when the
   stacked 2-D look matters. **Always view each native equation in the render** and switch that one
   formula to `equation_png` if a glyph is missing. **2-D math (fractions, roots, stacked sums/integrals,
-  `\left…\right`, `\binom`) → `deckkit.equation_omml(slide, x, y, latex, size=…)`**: a real
+  `\left…\right`, `\binom`) → `deckkit.equation_omml(slide, x, y, latex, size=…)`** (one face per slide: once a
+  slide has an equation object, every formula on it is one — its fallback math face follows the deck's body face): a real
   PowerPoint equation (OMML, click-editable, Cambria Math) with an `equation_png` picture as its
   `mc:Fallback`. LibreOffice ≥24.2.7 shows the fallback (tdf#129061), so the render loop, the pixel
   gates and the PDF see exactly the raster they always did, while the user edits the live equation in

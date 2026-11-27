@@ -18,6 +18,8 @@ section is a distilled summary — the full notes live on the
 - Teaching / training: "discuss first, then reveal" — every check and activity slide shows its answer on the slide
   on the click after the room commits, even when animation was declined (then on the next slide); answers that live
   only in the speaker notes are a named failure mode. The interview's builds question carries this carve.
+- One face per slide for formulas: `equation_omml`'s fallback math face now follows the deck's body face (sans deck →
+  STIX Sans, serif deck → Computer Modern) and the teaching playbook asks for every formula on a slide as an equation object.
 - `check_question` sizes its revealed explanation to the text at 16pt instead of shrinking it to ~11pt;
   `preflight_check` counts a component that stages its own reveal (`build=b`) as a Build step.
 
