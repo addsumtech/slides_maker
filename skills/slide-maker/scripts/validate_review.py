@@ -230,6 +230,15 @@ def _rubric_overlay(obj, errors):
     norm = val.strip().lower()
     if norm in RUBRIC_OVERLAYS:
         return
+    if norm.startswith("playbook:"):            # the genres added in 2026-11 carry a playbook, not an overlay section
+        try:
+            import purposes as _pp
+            if norm.split(":", 1)[1].strip().replace(" ", "_") in _pp.BY_NAME:
+                return
+        except Exception:
+            pass
+        errors.append("$.rubric_overlay: %r names no registered purpose — `python3 scripts/purposes.py --list`" % val)
+        return
     if norm.startswith("none"):
         tail = norm[4:].lstrip(" -—:")
         if len(tail) >= 8:

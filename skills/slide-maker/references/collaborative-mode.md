@@ -210,9 +210,10 @@ Build the **full** deck in the approved content + design plan — single-author 
   are driven by the **same design tokens** (palette/fonts/motif), and the chosen direction is
   **confirmed with one real pptx render** before the full build — so approve ≈ ship with the
   fidelity gap closed, not hand-waved.
-- **Previews are disposable:** once the user picks, delete the `_directions/` folder
-  (`directions.json` + `directions.html`) and the rejected token-sets — only the chosen
-  `style.py` and the real deck survive. Clean up after the choice; never hand back a folder
+- **Previews are disposable:** once the user picks, delete `directions.html` and the rejected
+  token-sets — but MOVE `directions.json` to the deck root and keep it: the hand-off gate re-scores
+  the direction set from it (deleting it failed a test build's gate, 2026-11-27). Only the chosen
+  `style.py`, `directions.json` and the real deck survive. Clean up after the choice; never hand back a folder
   full of demo files alongside the deliverable.
 - **Diff-based iteration:** freeze what the user approved; change only what they
   flagged; show before/after. Don't re-litigate settled gates.

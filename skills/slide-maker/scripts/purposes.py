@@ -764,8 +764,9 @@ DETAIL_FLOORS = (
     "revealed on a click, or on the next slide — never only in the speaker notes.",
     "Reproducible from the screen: a calculation, worked example or metric shows its givens, units, assumptions "
     "and as-of date on the slide; a reader who sees only the slide can redo it.",
-    "Readable floor: anything the audience must read stays at presented size (body ≥ 18pt; an explanation or "
-    "caption never under 14pt). A component that shrinks text to fit is a layout defect, not a fit.",
+    "Readable floor: anything the audience must read stays at presented size — body ≥ 18pt, an explanation or "
+    "caption ≥ 14pt on a 13.33in-wide slide (×0.75 on the 10in canvas: 13.5pt / 10.5pt). A component that "
+    "shrinks text to fit is a layout defect, not a fit.",
     "Decodable marks: an icon or device carries a word beside it or is labelled at first use; one nobody can "
     "name in a second is decoration — drop it.",
     "Scale by role: the hero is a number or a sentence; formulas, labels and furniture stay at reading size.",

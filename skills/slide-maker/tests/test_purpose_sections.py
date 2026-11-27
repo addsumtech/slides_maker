@@ -425,6 +425,17 @@ _tb = purposes.brief(purposes.BY_NAME["teaching"])
 ck("marking the OPTION itself" in _tb and "reading size" in _tb,
    "the teaching playbook tells the designer to mark the option and keep formulas at reading size")
 
+print("\n— the new genres plug into the review contract and the picks recorder (test builds, 2026-11-27)")
+import validate_review as _vr  # noqa: E402
+_e = []; _vr._rubric_overlay({"rubric_overlay": "playbook: student_presentation"}, _e)
+ck(_e == [], "a review may name a genre's playbook as its overlay: %s" % _e)
+_e = []; _vr._rubric_overlay({"rubric_overlay": "playbook: astrology"}, _e)
+ck(_e != [], "…but only a registered genre")
+_pd = tempfile.mkdtemp(prefix="picks-rc-")
+_rc = _sp.run([sys.executable, os.path.join(SKILL, "scripts", "deck_gates.py"), "picks", _pd, "--set", "language=中文",
+               "--source", "stated"], capture_output=True, text=True).returncode
+ck(_rc == 0, "a successful picks write exits 0 while other axes remain, so an && chain does not break (rc=%s)" % _rc)
+
 print("\n— a teaching deck must name a check for understanding; 'Questions?' is not one")
 _t = deck("teach_noquiz.pptx", ["Learning objectives", "Worked example: Ohm's law", "Recap", "Questions?"])
 ck("check for understanding" in missing(_t, "a lecture on circuits"), "a lecture whose only 'check' is 'Questions?' is missing one")

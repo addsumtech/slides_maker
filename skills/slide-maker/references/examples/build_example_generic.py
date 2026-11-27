@@ -45,7 +45,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 from deckkit import (  # noqa: E402
     blank_deck, add_slide, title_bar, footer,
-    box, text, bullet, callout, bottom_callout, arrow, chip, modbox, equation_native,
+    box, slide_background, text, bullet, callout, bottom_callout, arrow, chip, modbox, equation_native,
     equation_png,
     columns, rows, vstack, content_band, skeleton, measure_bullets, measure_callout,
     register_mark, motif_page, motif_legend, tag_motif, page_marker, picture, lint_layout,
@@ -65,7 +65,7 @@ def slide_cover(prs):
     """role=cover | form=full-bleed statement | static: nothing to pace |
     takeaway='Project Title — the one line this deck argues'"""
     s = add_slide(prs)
-    box(s, 0, 0, 10, 5.625, fill=DEEP)
+    slide_background(s, DEEP)                 # a real <p:bg>, not a full-canvas rectangle the user can grab
     box(s, 0, 0, 0.18, 5.625, fill=MAGENTA)
     # The register signature, drawn by the helper so it is correct AND tagged. `loud=True` marks a
     # hero appearance (budgeted at <=3); interior pages use the same call without it.

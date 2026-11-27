@@ -2168,7 +2168,10 @@ entirely is a legitimate answer, not a loophole. Three rules keep it honest:
   sizing, not the decision to skip review entirely; the FYI records `review: fast (post-build
   default — auto)` and the user escalates at hand-off if they want more. Auto MAY escalate above
   `fast` for a high-stakes purpose (defense / exec readout / pitch) with the reason recorded —
-  `review: thorough (escalated — defense deck, auto)` — it may only never decline.
+  `review: thorough (escalated — defense deck, auto)` — it may only never decline. When a `fast` round
+  under auto returns a blocker/major there is no user to ask, so run ONE more round automatically and
+  record `review: fast+1 (auto — majors open after round 1)`; still open after it → `cap-reached-majors-open`
+  with `surfaced_to_user: false`, named in the hand-off.
 
 Then run the **actor-critic loop** at the chosen tier — this is the quality engine, and the
 critic is a *demanding* judge (see `agents/critic.md`), not a rubber stamp:

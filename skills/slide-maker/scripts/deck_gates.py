@@ -841,8 +841,10 @@ def _cmd_picks(a):
     if missing:
         print("still to record: {} — `{} picks {} --set AXIS=VALUE --source …`".format(
             " · ".join(missing), _SELF, shlex.quote(str(a.deck_dir))))
-    if rest or missing:
+    if rest:
         return 1
+    if missing:
+        return 0 if a.set else 1      # a write that succeeded must not break an `&&` chain of picks
     print("all {} Step-0 axes recorded; delegated_picks finds nothing wrong".format(len(dpk.AXES)))
     return 0
 

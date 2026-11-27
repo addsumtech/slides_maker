@@ -15,6 +15,13 @@ section is a distilled summary — the full notes live on the
   what student presentations are actually graded on), or is labelled a house rule. ~40 sourced detail rules added
   (RAG legend and colour words; units and one highlight colour on exec charts; client accountabilities and payment
   terms; RQ labels and slide numbers in a defense; monthly, labelled traction charts; dated metrics; image credits).
+- Fixes from two end-to-end test builds (an English investor pitch, a Chinese student presentation): a bare
+  slide count is stored with its unit; `--fast` freshens unchanged PNGs so the blind-read packet accepts them; the
+  design plan is kept in `<deck>/.slide-maker/` so the gate survives a wiped scratchpad; `source_check` never
+  auto-records a number inside a sentence as a rescaled figure; the design dispatch follows the derived boldness
+  instead of hardcoding BOLD; a review may name `playbook: <genre>` as its overlay; `picks` exits 0 after a
+  successful write; `directions.json` is kept at the deck root; a `fast` round under auto with majors open runs
+  one more round automatically; detail-floor sizes are canvas-relative; the generic example uses `slide_background`.
 - `DETAIL_FLOORS`, printed with every brief: mark tight, one face per kind, results on the slide, reproducible from
   the screen, readable floor, decodable marks, scale by role, colour never the only signal.
 
