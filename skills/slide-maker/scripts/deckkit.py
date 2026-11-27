@@ -2183,6 +2183,8 @@ def stat_row(slide, x, y, w, items, *, ink=DEEP, accent=MAGENTA, serif=None, div
     `divider_c` colours the hairlines (default #DDDDDD). The old hardcoded value is 1.13:1 on a
     cream ground and fails WCAG 1.4.11 there, which left `dividers=False` as the only way out.
     """
+    # the caption holds the detail floor (14pt on a 13.33in slide): 12pt on the 10in canvas, 14pt on 13.33in
+    cap_pt = max(12.0, round(14.0 * _slide_size(slide)[0] / 13.333 * 2) / 2)
     if not items:
         return y
     n = len(items); gap = 0.4; cw = (w - (n - 1) * gap) / n
@@ -2212,8 +2214,8 @@ def stat_row(slide, x, y, w, items, *, ink=DEEP, accent=MAGENTA, serif=None, div
         box_h = max(0.7, fig_h + 0.02)
         cap_y = max(0.66, fig_h + 0.02)
         tb.height = Inches(box_h)
-        cap_h = max(0.4, measure_text([(str(label), False)], cw, 12, pad=0.04))
-        text(slide, cx, y + cap_y, cw, cap_h, [[(str(label), 12, label_c, False, False)]], space_after=0)
+        cap_h = max(0.4, measure_text([(str(label), False)], cw, cap_pt, pad=0.04))
+        text(slide, cx, y + cap_y, cw, cap_h, [[(str(label), cap_pt, label_c, False, False)]], space_after=0)
         bottom = max(bottom, y + cap_y + cap_h + 0.04)
         if dividers and i > 0:
             dcol = divider_c if divider_c is not None else _th("rule", RGBColor(0xDD, 0xDD, 0xDD))
