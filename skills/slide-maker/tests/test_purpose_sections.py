@@ -429,6 +429,12 @@ for bad_opts in (["only one"], ["a", "b", "c", "d", "e"]):
         ck(False, "check_question refuses %d options" % len(bad_opts))
     except ValueError:
         ck(True, "check_question refuses %d options — a check is a choice of 2–4" % len(bad_opts))
+try:
+    dk.prompt_card(dk.add_slide(_scratch), 0.7, 1.0, 8.6, 1.75, "Too short?", kind="think-pair-share")
+    ck(False, "prompt_card refuses a box too short for its prompt")
+except ValueError as _e:
+    ck("at least" in str(_e), "prompt_card refuses a box too short for its prompt and names the height it needs "
+       "(found by the first real deck: a 1.75in card raised a bare non-positive-box error)")
 _s2 = dk.add_slide(_prs)
 dk.prompt_card(_s2, 0.7, 1.0, 8.6, 3.2, "你家里哪些地方的能量以热的形式浪费掉了？", kind="think-pair-share",
                minutes=3, steps=("独立思考", "同桌讨论", "全班分享"))

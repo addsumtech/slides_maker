@@ -10836,6 +10836,11 @@ def prompt_card(slide, x, y, w, h, prompt, *, kind="try", label=None, steps=None
         _card_label(slide, x + w - pad - cw, y + pad - 0.1, cw, 0.5, "{} min".format(minutes), 13, on(chip_fill))
     sh = 0.56 if steps else 0.0
     ph = h - (y + pad + 0.48 - y) - pad - (sh + 0.16 if steps else 0)
+    if ph < 0.5:                         # the prompt needs room for at least one line of type
+        need = h - ph + 0.5
+        raise ValueError("prompt_card(): h={:.2f}in leaves no room for the prompt — give it at least {:.2f}in "
+                         "({}the kicker row and the padding take the rest)".format(
+                             h, need, "the step row, " if steps else ""))
     psz = fit_text_size([(prompt, True)], w - 2 * pad, ph, size, font=DISPLAY or FONT, min_size=14)
     text(slide, x + pad, y + pad + 0.48, w - 2 * pad, ph, [[(prompt, psz, ink_, True, False, DISPLAY or FONT)]],
          anchor=MSO_ANCHOR.MIDDLE, space_after=0)
