@@ -576,6 +576,15 @@ untr = {(sl, tok) for sl, tok, _l, _n in res_u["untraced"]}
 check("month labels 11月 / 12 月 are dates, not claims", not any(sl == 3 for sl, _t in untr), untr)
 check("'12个月' (a duration) is still a claim to trace", (4, "12") in untr, untr)
 
+# a number inside a sentence is never auto-recorded as "the same figure in k" (test build, 2026-11-27)
+_res = {"untraced": [(5, "12", "× 12 months", [(0, "12,000", "m.md", "the same figure in k")]),
+                     (6, "38.2", "38.2", [(0, "38,200,000元", "m.md", "the same figure in M")]),
+                     (7, "12", "Photos (thousands): 12", [(0, "12,000", "m.md", "the same figure in k")])]}
+_rows, _left = S.auto_rows(_res)
+check("'× 12 months' is left to the agent, not written as 12,000 in k; a bare chart label and a line that "
+      "states its unit still write", [r["slide"] for r in _rows] == [6, 7] and [l[0] for l in _left] == [5],
+      (_rows, _left))
+
 print(f"\n{len(PASS)} passed, {len(FAIL)} failed")
 print("[test_source_check] " + ("ok" if not FAIL else f"FAILED: {len(FAIL)} problem(s)"))
 raise SystemExit(1 if FAIL else 0)

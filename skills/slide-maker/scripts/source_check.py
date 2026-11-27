@@ -903,6 +903,18 @@ def _sig_digits(tok):
     return len(re.sub(r"\D", "", "{:.12g}".format(abs(p["mantissa"]))).strip("0"))
 
 
+_UNIT_WORDS = {"k": ("k", "thousand", "千", "000s"), "万": ("万",), "M": ("m", "million", "百万", "mn"),
+               "亿": ("亿",), "B": ("b", "billion", "bn")}
+
+
+def _line_states_unit(line, unit):
+    """Does the slide line itself say the figure is in `unit` (a '(thousands)' header, '$12k', '12万')?"""
+    low = unicodedata.normalize("NFKC", str(line or "")).lower()
+    words = _UNIT_WORDS.get(unit, (unit.lower(),))
+    return any((re.search(r"(?<![a-z])" + re.escape(w) + r"s?(?![a-z])", low) if w.isascii() else w in low)
+               for w in words)
+
+
 def auto_rows(res):
     """The rows `--write-rows` may write by itself, and the numbers it leaves to the agent.
 
@@ -921,6 +933,13 @@ def auto_rows(res):
             left.append((slide, tok, line, near))
             continue
         _, ntok, where, why = best[0]
+        if why.startswith("the same figure in ") and not (
+                _line_states_unit(line, why.rsplit(" ", 1)[1]) or str(line or "").strip() == str(tok).strip()):
+            # a number inside a sentence is not "in thousands" because a source figure happens to be 1000x it:
+            # measured, "× 12 months" was about to be recorded as 12,000 labelled photos "in k" (test build
+            # 2026-11-27). A chart's bare data label ("38.2") or a line that states its unit still writes.
+            left.append((slide, tok, line, near))
+            continue
         row = {"value": tok, "slide": slide, "source_value": ntok}
         if why.startswith("the same figure in "):
             row["unit"] = why.rsplit(" ", 1)[1]
