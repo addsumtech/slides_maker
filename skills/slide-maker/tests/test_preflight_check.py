@@ -391,6 +391,23 @@ def _(td):
     return "word_wrap OFF" not in out and "WRAPS" in out
 
 
+@case("a component that stages its own reveal (check_question(build=b)) counts as a Build step")
+def _component_build(td):
+    import preflight_check as pc
+    src = td / "build_x.py"
+    src.write_text(
+        'def slide_08(prs, k):\n'
+        '    """role=recap | build: one click marks the answer"""\n'
+        '    b = anim.Build(s)\n'
+        '    dk.check_question(s, 0, 0, 5, 4, "Q?", ["a", "b"], answer=1, build=b)\n'
+        '    b.apply()\n'
+        'def slide_09(prs, k):\n'
+        '    """role=x | build: promised but never staged"""\n'
+        '    dk.check_question(s, 0, 0, 5, 4, "Q?", ["a", "b"], answer=1, build=None)\n', encoding="utf-8")
+    verdict, msg = pc.item3b_build_docstrings(str(src))
+    return verdict == "FAIL" and "slide_09" in msg and "slide_08" not in msg
+
+
 def main() -> int:
     passed = failed = 0
     with tempfile.TemporaryDirectory() as d:

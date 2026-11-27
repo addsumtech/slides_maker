@@ -10750,7 +10750,9 @@ def check_question(slide, x, y, w, h, question, options, *, answer=None, why=Non
     qh = min(qcap, measure_text([(question, True)], w, qsize, font=DISPLAY or FONT) + 0.08)
     text(slide, x, y + 0.62, w, qh, [[(question, qsize, ic, True, False, DISPLAY or FONT)]], space_after=0)
     # option cards, lettered
-    reveal_h = 0.72 if why else 0.0
+    # the explanation is READ by the room: size its band to the text at 16pt rather than shrinking the type
+    # into a fixed band (measured: a 30-character why fell to ~11pt, below the projection floor)
+    reveal_h = max(0.72, measure_text([(why, False)], w - 0.4, 16) + 0.36) if why else 0.0
     oy = y + 0.62 + qh + 0.18
     rows = (len(opts) + ncol - 1) // ncol
     gap = 0.16
@@ -10786,7 +10788,7 @@ def check_question(slide, x, y, w, h, question, options, *, answer=None, why=Non
             band = _blend(acc, WHITE, 0.72)
             box(slide, x, wy, w, reveal_h, fill=band, round=True, r=0.12)
             _card_label(slide, x + 0.2, wy, w - 0.4, reveal_h, why, 16, on(band), bold=False,
-                        align=PP_ALIGN.LEFT, min_size=11)
+                        align=PP_ALIGN.LEFT, min_size=14)
 
     if build is not None:
         with build.step():

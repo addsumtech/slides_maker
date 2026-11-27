@@ -431,6 +431,11 @@ PURPOSES = (
                "Every check asks the learner to DO something — choose, predict, compute, explain — and the answer "
                "is revealed on the next click with why the wrong options are wrong. 'Any questions?' is not a check.",
                "A check for understanding every few content slides, not only at the end.",
+               "Discuss first, then reveal: every check and activity slide SHOWS its answer on the slide, on the click "
+               "after the room has committed (anim.Build — check_question(build=…) or the answers drawn in a "
+               "Build.step). This is part of the lesson, not decoration, so it holds even when the user declined "
+               "animation — then the answer goes on the next slide. An answer that lives only in the speaker notes "
+               "never reaches the students.",
                "Concrete before abstract: an everyday example or picture first, the definition second.",
                "Set the register by AGE BAND (ask it): K-12 — short sentences, everyday words, a character or story, a "
                "challenge or game frame, larger type and fewer words than a university deck; university — precise terms "
@@ -452,7 +457,8 @@ PURPOSES = (
                 "visual language (cutpaper · bricks · chalkboard) or a recurring character carries the fun."),
         pitfalls=("The lecture script pasted onto the slides — learners read instead of listening.",
                   "A continuous stream with no practice or checks until the end.",
-                  "Checks that are not checks ('Got it?')."),
+                  "Checks that are not checks ('Got it?').",
+                  "Answers that exist only in the speaker notes — the class discusses and never sees the result."),
         sources=("Gagné's nine events of instruction", "Rosenshine's principles of instruction",
                  "Mayer's multimedia principles (segmenting, signaling, coherence, pre-training)",
                  "worked and faded examples (MIT, EEF)", "retrieval practice (CMU)",
@@ -591,6 +597,8 @@ PURPOSES = (
              "Recap + a job aid (checklist) to keep",
              "Where to get help; for onboarding, what good looks like at 30 / 60 / 90 days"),
         rules=("Task-centred: teach what they will DO on the job, with scenarios from their context.",
+               "A knowledge check or scenario shows its answer on the slide after the learners commit (a click reveal, "
+               "or the next slide on a self-paced deck) — never only in the notes.",
                "A knowledge check per module, not one quiz at the end; asking first, then telling, works too.",
                "Self-paced decks must stand alone: descriptive headings, instructions, and navigation.",
                "Onboarding: pace it over weeks; people and culture early, not only paperwork."),

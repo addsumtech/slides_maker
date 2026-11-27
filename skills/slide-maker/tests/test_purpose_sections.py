@@ -465,6 +465,12 @@ dk.check_question(_e1, 0.7, 0.6, 8.6, 4.7, "Which change doubles the pressure of
 _b2.apply()
 dk.prompt_card(dk.add_slide(_en), 0.7, 1.0, 8.6, 3.2, "Where in your home is energy lost as heat?",
                kind="think-pair-share", minutes=3)
+_sz = dk.blank_deck(); _w1 = dk.add_slide(_sz)
+dk.check_question(_w1, 7.0, 0.95, 5.3, 5.5, "这位同学改成单脚站立，对地面的压强是多少？", ["12500 Pa", "25000 Pa", "6250 Pa"],
+                  answer=1, why="压力还是 500 N，受力面积减半为 0.02 m²，所以压强变成 2 倍。", size=24)
+_why = [r.font.size.pt for sh in _w1.shapes if sh.has_text_frame and "压强变成" in sh.text_frame.text
+        for pa in sh.text_frame.paragraphs for r in pa.runs if r.font.size]
+ck(_why and min(_why) >= 14, "the revealed 'why' stays readable (>=14pt) in a narrow column: %s" % _why)
 _p = os.path.join(TMP, "components.pptx"); _en.save(_p)
 import lint_deck  # noqa: E402
 import io as _io, contextlib as _cl  # noqa: E401,E402

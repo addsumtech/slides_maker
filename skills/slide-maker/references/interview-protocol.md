@@ -456,7 +456,12 @@ four template choices:
        chosen slide is staged **FULLY** — every content element reveals in a deliberate reading order,
        nothing pre-shown but the title/frame (Step 4 / `references/animation.md`). If they opt **OUT**,
        the deck is static: no builds, and no `NO BUILDS` pressure (run lint with `--static`). Carry the
-       choice into the design plan's motion manifest.
+       choice into the design plan's motion manifest. 🔴 **One carve, and it is not decoration: on a teaching
+       or training deck the ANSWER REVEAL on a check / activity slide stays** — discuss, then one click shows
+       the answer (or the answer goes on the next slide if the user refused animation outright). Say so in
+       the option text ("静态，但提问页讨论后点击揭晓答案"). Measured 2026-11-27: a grade-8 lesson built
+       "static" left two answers in the speaker notes, and the teacher's verdict was that a question page
+       always discusses first and then shows the answer.
      - **Primary goal / intent — inform & educate · support a decision · inspire / motivate action.**
        This sets the **rhetorical arc**: *inform* builds to the evidence; *decide* leads with the
        recommendation and the ask; *inspire* opens on stakes and closes on a call to action. Purpose

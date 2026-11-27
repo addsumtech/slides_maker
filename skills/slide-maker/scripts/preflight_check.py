@@ -149,10 +149,14 @@ def item3b_build_docstrings(build_path):
         doc = ast.get_docstring(fn) or ""
         if "build:" not in doc:
             continue
+        # a component that stages its own reveal counts too: check_question(..., build=b) draws its answer
+        # layer inside b.step() (measured 2026-11-27: a lesson's exit ticket was flagged as un-built)
         steps = sum(
             1 for n in ast.walk(fn)
-            if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
-            and n.func.attr == "step"
+            if isinstance(n, ast.Call) and (
+                (isinstance(n.func, ast.Attribute) and n.func.attr == "step")
+                or any(kw.arg == "build" and not (isinstance(kw.value, ast.Constant) and kw.value.value is None)
+                       for kw in n.keywords))
         )
         if steps == 0:
             bad.append(fn.name)

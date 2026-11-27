@@ -15,6 +15,11 @@ section is a distilled summary — the full notes live on the
 - The teaching playbook and the art director's hero rule: the hero is a number or words, never a formula; an
   answer is revealed by a tight mark on the option's label, not a ring round a whole drawing.
 - `prompt_card` refuses a box too short for its prompt and names the height it needs.
+- Teaching / training: "discuss first, then reveal" — every check and activity slide shows its answer on the slide
+  on the click after the room commits, even when animation was declined (then on the next slide); answers that live
+  only in the speaker notes are a named failure mode. The interview's builds question carries this carve.
+- `check_question` sizes its revealed explanation to the text at 16pt instead of shrinking it to ~11pt;
+  `preflight_check` counts a component that stages its own reveal (`build=b`) as a Build step.
 
 **Genres: a playbook for every everyday deck, and checks that make a lesson a lesson.**
 - `purposes.py` carries a playbook per genre — arc, content rules, design conventions (applied inside the
