@@ -35,6 +35,10 @@ agents.
   Note that most decks are **partial**: a source *plus* gaps the web must fill — a paper that needs
   since-publication context or current framing, a code repo with no writeup, figures with no prose, a
   doc that omits the venue. Treat source vs. no-source as a spectrum, not a switch.
+- **The genre's playbook FIRST** — `python3 scripts/purposes.py --brief "<recorded purpose>"`. Its ARC is
+  the order your plan follows (adapt the count to the time budget, keep the order), its CONTENT RULES
+  bind every slide, and its REQUIRED SECTIONS are checked on the built deck. A teaching plan carries the
+  checks for understanding the brief asks for; an investor plan carries "why now". No genre bound → ask.
 - The **content-relevant references**: `references/review-rubrics.md` (how the critic will judge
   you — the content lens), `references/multilingual.md` (non-Latin / bilingual, and "write like a
   human"). *(The design references — `design-principles.md`, `design-by-purpose.md`,

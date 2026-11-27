@@ -93,8 +93,8 @@ for text, want in (("PhD guidance committee meeting", "committee"),
                    ("journal club on a MICCAI paper", "journal_club"),
                    ("组会读论文", "journal_club"),
                    ("tumour board case presentation", "clinical_case"),
-                   ("a product pitch to investors", "product_pitch"),   # was None until
-                   ("teaching a first-year lecture", "teaching"),        # these two registered
+                   ("a product pitch to investors", "investor_pitch"),  # was None, then product_pitch, until
+                   ("teaching a first-year lecture", "teaching"),        # these were registered
                    ("an ethics committee submission", None),
                    ("", None)):
     got = purposes.match(text)
@@ -118,13 +118,17 @@ ck(_ec is not None and _ec.name == "exec_readout",
 # 🔴 Two more cases MOVED to positive when `product_pitch` and `teaching` were registered, the
 # same way "steering committee update" did when `exec_readout` was. Recording each move instead of
 # deleting the case: a negative assertion that becomes wrong is the registry growing correctly.
-for text, want in (("a product pitch to investors", "product_pitch"),
+# 🔴 …and MOVED AGAIN on 2026-11-27 when `investor_pitch` and `client_proposal` were registered: a pitch to
+# investors is an investor pitch (problem · market · model · team · the ask), and a business proposal for a
+# client is a client proposal (goals · scope · timeline · investment). "project proposal review" stays negative.
+for text, want in (("a product pitch to investors", "investor_pitch"),
+                   ("a business proposal for a client", "client_proposal"),
                    ("teaching a first-year lecture", "teaching")):
     got = purposes.match(text)
     ck(got is not None and got.name == want,
        "%r now binds to %s — it was negative until that genre was registered" % (text[:34], want))
 for text in ("investment committee readout", "ethics committee submission",
-             "a business proposal for a client", "project proposal review",
+             "project proposal review",
              "an IRB submission", "a press release"):
     ck(purposes.match(text) is None,
        "%r binds to NOTHING — it is not one of these genres" % text[:40])
@@ -238,7 +242,8 @@ pre = deck("prefix.pptx", ["Specific aims", "Feasibility and our track record",
                            "Risk and mitigation"])
 ck(missing(pre, "ERC grant") == [],
    "'feasib' still matches FEASIBility — a trailing boundary would have broken it silently")
-pre2 = deck("prefix2.pptx", ["Learning objectives", "A live demonstration", "Recap of key points"])
+pre2 = deck("prefix2.pptx", ["Learning objectives", "A live demonstration", "Your turn: try one",
+                             "Recap of key points"])
 ck(missing(pre2, "a lecture") == [],
    "'demo' still matches DEMOnstration")
 ck(cp._names("%", "we grew 50% this year"),
@@ -262,8 +267,8 @@ ck("purposes.py" in skill, "…and the registry")
 dbp = open(os.path.join(SKILL, "references/design-by-purpose.md")).read()
 for genre in ("Grant proposal", "guidance committee", "Journal club", "Clinical case"):
     ck(genre in dbp, "design-by-purpose.md carries the %r recipe" % genre)
-ck("TWELVE of the thirteen" in dbp and "delivery MODE, not a genre" in dbp,
-   "…and states the coverage exactly (12 of 13) plus WHY the thirteenth has no list — a delivery "
+ck("SEVENTEEN of the eighteen" in dbp and "delivery MODE, not a genre" in dbp,
+   "…and states the coverage exactly (17 of 18) plus WHY the eighteenth has no list — a delivery "
    "mode is not a genre — rather than implying full coverage or vague under-coverage")
 
 print("\n— the Codex RUNBOOK is a hand-copy of the registry, and the drift guard must not be vacuous")
@@ -349,6 +354,103 @@ for text, want in (
     got = purposes.match(text)
     ck((got.name if got else None) == want,
        "%r -> %s (want %s)" % (text[:40], got.name if got else "NOTHING", want or "NOTHING"))
+
+print("\n— everyday genres bind in the words people use, in English and Chinese (2026-11-27)")
+# Measured before this block existed: 'sales pitch', 'client proposal', 'investor pitch', 'K-12 lesson',
+# 'class presentation', 'all-hands meeting', 'corporate training', 课堂汇报, 融资路演, 年会 … all bound
+# NOTHING, so the genre's playbook and its section check never applied to the decks people make most.
+for text, want in (
+        ("weekly status update for my manager", "work_status"), ("项目周报", "work_status"),
+        ("project review meeting", "work_status"), ("年终总结述职", "work_status"),
+        ("business case for leadership approval", "exec_readout"), ("立项汇报", "exec_readout"),
+        ("a lecture on Fourier transforms", "teaching"), ("给初二学生上一节物理课", "teaching"),
+        ("小学数学课件", "teaching"), ("K-12 lesson plan on fractions", "teaching"),
+        ("class presentation on climate change", "student_presentation"), ("课堂汇报", "student_presentation"),
+        ("小组展示 期末", "student_presentation"), ("group project for my marketing course", "student_presentation"),
+        ("sales pitch to a hospital", "product_pitch"), ("产品发布会", "product_pitch"), ("客户推介", "product_pitch"),
+        ("client proposal for a website redesign", "client_proposal"), ("投标方案", "client_proposal"),
+        ("RFP response", "client_proposal"),
+        ("investor pitch for our seed round", "investor_pitch"), ("融资路演", "investor_pitch"),
+        ("pitch deck for demo day", "investor_pitch"),
+        ("corporate training on GDPR", "training"), ("新员工入职培训", "training"),
+        ("self-paced onboarding course", "training"),
+        ("all-hands meeting", "all_hands"), ("公司年会", "all_hands"), ("keynote speech at a summit", "all_hands"),
+        ("town hall Q3", "all_hands"),
+        # traps: a retrospective is not a lesson, the Keynote APP is not a keynote, a seed is not a round
+        ("lessons learned retrospective", None), ("make it in keynote please", None),
+        ("a talk about seed germination", None), ("我们的培训手册里写了", "training")):
+    got = purposes.match(text)
+    ck((got.name if got else None) == want,
+       "%r -> %s (want %s)" % (text[:40], got.name if got else "NOTHING", want or "NOTHING"))
+
+print("\n— every everyday genre carries a full playbook, printed where every runtime sees it")
+SCENARIOS = ("work_status", "exec_readout", "teaching", "student_presentation", "product_pitch", "client_proposal",
+             "investor_pitch", "training", "all_hands", "conference_talk", "defense")
+for name in SCENARIOS:
+    p_ = purposes.BY_NAME[name]
+    ck(len(p_.arc) >= 5 and p_.rules and p_.design and p_.pitfalls and p_.sources,
+       "%s: arc (%d beats), rules, design, pitfalls and sources are all filled" % (name, len(p_.arc)))
+    b_ = purposes.brief(p_)
+    ck("INSIDE the deck's chosen direction" in b_ and "Never flatten the design" in b_,
+       "%s: the brief says its design conventions sit INSIDE the chosen look — the bold direction stays" % name)
+ck(purposes.resolve("teaching") is purposes.BY_NAME["teaching"] and purposes.resolve("融资路演").name == "investor_pitch",
+   "resolve() takes a registry name or the user's own words")
+import subprocess as _sp  # noqa: E402
+_gd = tempfile.mkdtemp(prefix="picks-")
+_out = _sp.run([sys.executable, os.path.join(SKILL, "scripts", "deck_gates.py"), "picks", _gd, "--set",
+                "purpose=给初二学生上物理课", "--source", "stated"], capture_output=True, text=True).stdout
+ck("DECK PLAYBOOK — Teaching" in _out and "check for understanding" in _out,
+   "recording the purpose prints the genre's playbook (deck_gates.py picks --set purpose=…)")
+_out = _sp.run([sys.executable, os.path.join(SKILL, "scripts", "deck_gates.py"), "picks", _gd, "--set",
+                "purpose=a talk for my cat", "--source", "stated"], capture_output=True, text=True).stdout
+ck("binds no registered genre" in _out, "an unbound purpose says so when it is recorded, instead of staying silent")
+
+print("\n— a teaching deck must name a check for understanding; 'Questions?' is not one")
+_t = deck("teach_noquiz.pptx", ["Learning objectives", "Worked example: Ohm's law", "Recap", "Questions?"])
+ck("check for understanding" in missing(_t, "a lecture on circuits"), "a lecture whose only 'check' is 'Questions?' is missing one")
+_t = deck("teach_quiz.pptx", ["Learning objectives", "Worked example: Ohm's law", "Your turn: predict the current", "Recap"])
+ck("check for understanding" not in missing(_t, "a lecture on circuits"), "'Your turn: predict…' is a check")
+
+print("\n— the check and activity components: answer revealed on the next click, any language")
+import anim  # noqa: E402
+_prs = dk.blank_deck()
+_s = dk.add_slide(_prs)
+_b = anim.Build(_s)
+_n0 = len(_s.shapes)
+dk.check_question(_s, 0.7, 0.6, 8.6, 4.7, "哪种做法能让气体压强加倍？", ["体积减半", "体积加倍", "温度减半"],
+                  answer=0, why="温度不变时 P×V 是定值。", build=_b, label="随堂小测")
+_b.apply()
+ck(len(_b.steps) == 1 and len(_b.steps[0]) >= 3, "the answer layer (outline, tick, why) is ONE click step (%s)" % _b.steps)
+ck(len(_s.shapes) > _n0 + 10, "the question, kicker and lettered options are drawn")
+_scratch = dk.blank_deck()
+for bad_opts in (["only one"], ["a", "b", "c", "d", "e"]):
+    try:
+        dk.check_question(dk.add_slide(_scratch), 0.7, 0.6, 8.6, 4.7, "Q?", bad_opts)
+        ck(False, "check_question refuses %d options" % len(bad_opts))
+    except ValueError:
+        ck(True, "check_question refuses %d options — a check is a choice of 2–4" % len(bad_opts))
+_s2 = dk.add_slide(_prs)
+dk.prompt_card(_s2, 0.7, 1.0, 8.6, 3.2, "你家里哪些地方的能量以热的形式浪费掉了？", kind="think-pair-share",
+               minutes=3, steps=("独立思考", "同桌讨论", "全班分享"))
+_txt = " ".join(sh.text_frame.text for sh in _s2.shapes if sh.has_text_frame)
+ck("同桌讨论" in _txt and "3 min" in _txt, "prompt_card draws its own-language steps and the time chip")
+_en = dk.blank_deck()
+_b2 = anim.Build(_e1 := dk.add_slide(_en))
+dk.check_question(_e1, 0.7, 0.6, 8.6, 4.7, "Which change doubles the pressure of a gas?",
+                  ["Halve the volume", "Double the volume", "Halve the temperature", "Add more gas at random"],
+                  answer=0, why="At fixed temperature P x V is constant.", build=_b2)
+_b2.apply()
+dk.prompt_card(dk.add_slide(_en), 0.7, 1.0, 8.6, 3.2, "Where in your home is energy lost as heat?",
+               kind="think-pair-share", minutes=3)
+_p = os.path.join(TMP, "components.pptx"); _en.save(_p)
+import lint_deck  # noqa: E402
+import io as _io, contextlib as _cl  # noqa: E401,E402
+_buf = _io.StringIO()
+with _cl.redirect_stdout(_buf):
+    lint_deck.lint(_p, static_ok=True)
+_hard = [l for l in _buf.getvalue().splitlines() if l.strip().startswith("slide ") and "[warn]" not in l
+         and "[stats]" not in l and "NO SLIDE TITLE" not in l]
+ck(not _hard, "both components lint clean (TEXT PADDING, contrast, overflow): %s" % _hard[:3])
 
 print()
 print("%d passed, %d failed" % (len(OK), len(BAD)))

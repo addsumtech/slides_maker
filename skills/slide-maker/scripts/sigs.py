@@ -217,6 +217,15 @@ EXAMPLES = {
                   '              mode="funnel")',
     "leaderboard": 'c1, c2 = dk.palette(2)   # two distinct category colours on ANY palette (one-accent languages too)\ndk.leaderboard(s, 0.6, 1.0, 5.0,\n'
                    '               [(c1, "alpha", 42), (c2, "beta", "18", "sub")])',
+    # a CHECK FOR UNDERSTANDING (teaching / training): the learner chooses, the answer is revealed.
+    # On a presented deck pass build=anim.Build(s) and call .apply() after it — the answer then lands
+    # on the next click; with no build (as here) it is drawn at once, for a self-read deck.
+    "check_question": 'dk.check_question(s, 0.7, 0.6, 8.6, 4.7, "Which change doubles the pressure of a gas?",\n'
+                      '                  ["Halve the volume", "Double the volume", "Halve the temperature"],\n'
+                      '                  answer=0, why="At fixed temperature P x V is constant, so halving V doubles P.")',
+    # an ACTIVITY prompt: try · predict · discuss · think-pair-share (its three steps drawn as a row)
+    "prompt_card": 'dk.prompt_card(s, 0.7, 1.0, 8.6, 3.2, "Where in your home is energy lost as heat?",\n'
+                   '               kind="think-pair-share", minutes=3)',
     "scorecard": 'dk.scorecard(s, 0.6, 1.0, 2.5, 1.8, "Users", 1234, delta="3.2pp")',
     "meter_bar": 'dk.meter_bar(s, 0.6, 2.0, 4.7, 0.62, value="62%")',
     "dot_strip": 'dk.dot_strip(s, 0.6, 2.0, 8.0, [("A", 70), ("B", 100), ("C", 180)], 0, 200)',

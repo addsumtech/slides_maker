@@ -183,6 +183,10 @@ feel art-directed rather than defaulted, and it's yours to set once and hold. Pi
 > `eastern_traditional` · dark fashion/luxury → `luxury_dark` · memorial/exhibition → `museum_memorial` ·
 > modernist geometric → `bauhaus` · warm retro (Eames-era) → `midcentury` · CLI/phosphor CRT →
 > `terminal` · retro-future neon → `synthwave` (**18 total** — full menu in `design-gallery.md`).
+- **The genre's DESIGN CONVENTIONS** (`python3 scripts/purposes.py --brief "<recorded purpose>"`) are
+  structure and legibility rules — a check slide that looks like a check, a status board, a full-bleed
+  keynote moment — applied INSIDE the direction you pick. They never replace the preset / visual
+  language, the signature move, components or icons.
 - **Name the bias and beat it — on BOTH axes, purpose AND topic.** `design-by-purpose.md` keys the
   look on *what kind of talk* it is; **`design-by-topic.md` keys it on *what the subject IS*** (its
   DOMAIN → apt presets → ANTI-PICK), and the topic axis is what makes the look *fit the subject* rather

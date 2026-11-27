@@ -776,6 +776,24 @@ def _cmd_interview(a):
     return 0
 
 
+def _print_purpose_brief(value):
+    """The genre's playbook, printed the moment the purpose is recorded — so the planner on ANY runtime has
+    the genre's arc, rules and design conventions in context, not in a reference file it may never open."""
+    try:
+        import purposes as _pp
+    except Exception as exc:                                  # never block recording on the printout
+        print("  (purpose playbook unavailable: {}: {})".format(type(exc).__name__, exc))
+        return
+    p = _pp.resolve(value)
+    if p is None:
+        print("  ⚠ '{}' binds no registered genre — check_purpose will report NOT CHECKED. Record the genre in "
+              "words it knows (`purposes.py --list`), e.g. 'teaching', 'investor pitch', '课堂汇报'.".format(value))
+        return
+    print()
+    print(_pp.brief(p))
+    print()
+
+
 def _cmd_picks(a):
     """Record ONE auto-mode `interview.picks` row, validated by delegated_picks BEFORE it is written.
 
@@ -809,6 +827,8 @@ def _cmd_picks(a):
         g["interview"] = iv
         _save(a.deck_dir, g)
         print("recorded: {} = {} ({})".format(row["axis"], row["value"] or "—", row["source"]))
+        if row["axis"] == "purpose":
+            _print_purpose_brief(row["value"])
     probs = dpk.faults({"picks": picks}, auto=True) if picks else []
     rest = [f for f in probs if not f.startswith("no pick recorded for")]
     seen = {str(p.get("axis") or "").strip().lower() for p in picks}

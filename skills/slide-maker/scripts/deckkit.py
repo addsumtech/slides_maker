@@ -10700,6 +10700,158 @@ def concept_equation(slide, x, y, w, h, terms, *, op="=", accent=None, ink=None,
     return y + h
 
 
+def _card_label(slide, x, y, w, h, label, size, color, *, bold=True, align=PP_ALIGN.CENTER, font=None, min_size=10):
+    """One line of text centred in a small card with the interior padding the TEXT PADDING lint asks for: the
+    frame is inset from the card's top and bottom, and the size shrinks until the line fits inside it."""
+    inset = min(0.09, h * 0.18)
+    sz = fit_text_size([(label, bold)], w, h - 2 * inset - 0.1, size, font=font, min_size=min_size)
+    run = (label, sz, color, bold, False, font) if font else (label, sz, color, bold, False)
+    return text(slide, x, y + inset, w, h - 2 * inset, [[run]], align=align, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
+
+
+def check_question(slide, x, y, w, h, question, options, *, answer=None, why=None, build=None,
+                   label="Check", accent=None, ink=None, cols=None, size=22):
+    """A CHECK FOR UNDERSTANDING — the learner chooses, then the answer is revealed. Teaching and
+    training decks need one every few content slides (`purposes.py --brief teaching`); 'Any
+    questions?' is not one. Give every check in a deck this one look, so the room learns that this
+    shape means 'your turn'.
+
+    `options` are 2–4 short strings, lettered A–D. `answer` is the index of the right one and `why`
+    one line on why it is right (and the tempting wrong one wrong). Pass `build=anim.Build(slide)`
+    on a presented deck and the answer layer — the right option marked, the explanation — appears
+    on the next click (call `build.apply()` after the slide's last step); with no build it is drawn
+    straight away, which is what a self-read deck or a handout wants. `cols` 1 or 2 (default: 2 for
+    four options on a wide block, else 1). `label` is the kicker ('Check', 'Quick quiz', '想一想').
+    Returns the block's bottom y.
+
+        b = anim.Build(s)
+        dk.check_question(s, 0.7, 1.0, 8.6, 3.9, "Which change doubles the pressure?",
+                          ["Halve the volume", "Double the volume", "Halve the temperature"],
+                          answer=0, why="P·V is constant at fixed T, so halving V doubles P.", build=b)
+        b.apply()
+    """
+    opts = [str(o) for o in options]
+    if not 2 <= len(opts) <= 4:
+        raise ValueError("check_question(): give 2–4 options (got {}) — a check is a choice, not a list".format(len(opts)))
+    if answer is not None and not (isinstance(answer, int) and 0 <= answer < len(opts)):
+        raise ValueError("check_question(): answer is the 0-based index of the right option (got {!r})".format(answer))
+    acc = accent if accent is not None else MAGENTA
+    ic = ink if ink is not None else DEEP
+    ncol = cols or (2 if len(opts) == 4 and w >= 7.0 else 1)
+    # kicker pill + the question
+    kw_ = min(3.0, 0.4 + (0.13 if label.isascii() else 0.2) * len(label))
+    box(slide, x, y, kw_, 0.5, fill=acc, round=True, r=0.25)
+    _card_label(slide, x, y, kw_, 0.5, label.upper() if label.isascii() else label, 13, on(acc))
+    qcap = h * 0.32                       # the question takes what it needs (≤ ~a third); the options get the rest
+    qsize = fit_text_size([(question, True)], w, qcap, size, font=DISPLAY or FONT, min_size=14)
+    qh = min(qcap, measure_text([(question, True)], w, qsize, font=DISPLAY or FONT) + 0.08)
+    text(slide, x, y + 0.62, w, qh, [[(question, qsize, ic, True, False, DISPLAY or FONT)]], space_after=0)
+    # option cards, lettered
+    reveal_h = 0.72 if why else 0.0
+    oy = y + 0.62 + qh + 0.18
+    rows = (len(opts) + ncol - 1) // ncol
+    gap = 0.16
+    oh = max(0.5, min(0.95, (y + h - reveal_h - oy - gap * (rows - 1) - (0.14 if why else 0)) / rows))
+    ow = (w - gap * (ncol - 1)) / ncol
+    card_fill = _blend(acc, WHITE, 0.88)
+    cards = []
+    for i, o in enumerate(opts):
+        cx, cy = x + (i % ncol) * (ow + gap), oy + (i // ncol) * (oh + gap)
+        box(slide, cx, cy, ow, oh, fill=card_fill, round=True, r=min(0.14, oh / 3))
+        d = min(0.44, oh - 0.16)
+        box(slide, cx + 0.14, cy + (oh - d) / 2, d, d, fill=acc, round=True, r=d / 2)
+        text(slide, cx + 0.14, cy + (oh - d) / 2, d, d, [[("ABCD"[i], 15, on(acc), True, False)]],
+             align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
+        tx = cx + 0.14 + d + 0.14
+        _card_label(slide, tx, cy, cx + ow - 0.14 - tx - (0.5 if i == answer else 0), oh, o, 20, on(card_fill),
+                    bold=False, align=PP_ALIGN.LEFT, min_size=12)
+        cards.append((cx, cy, ow, oh))
+    bottom = oy + rows * oh + gap * (rows - 1)
+    if answer is None:
+        return bottom
+
+    def _reveal():
+        cx, cy, cw, ch = cards[answer]
+        box(slide, cx - 0.04, cy - 0.04, cw + 0.08, ch + 0.08, fill=None, line=acc, line_w=3.0, round=True,
+            r=min(0.17, ch / 3 + 0.04))
+        t = min(0.34, ch * 0.5)
+        box(slide, cx + cw - t - 0.1, cy + (ch - t) / 2, t, t, fill=acc, round=True, r=t / 2)
+        text(slide, cx + cw - t - 0.1, cy + (ch - t) / 2, t, t, [[("✓", 12, on(acc), True, False)]],
+             align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE, space_after=0)
+        if why:
+            wy = bottom + 0.14
+            band = _blend(acc, WHITE, 0.72)
+            box(slide, x, wy, w, reveal_h, fill=band, round=True, r=0.12)
+            _card_label(slide, x + 0.2, wy, w - 0.4, reveal_h, why, 16, on(band), bold=False,
+                        align=PP_ALIGN.LEFT, min_size=11)
+
+    if build is not None:
+        with build.step():
+            _reveal()
+    else:
+        _reveal()
+    return bottom + (0.14 + reveal_h if why else 0)
+
+
+_PROMPT_KINDS = {
+    "think-pair-share": ("Think · Pair · Share", ("Think alone", "Pair up", "Share")),
+    "try": ("Your turn", ()),
+    "discuss": ("Discuss", ()),
+    "predict": ("Predict first", ()),
+}
+
+
+def prompt_card(slide, x, y, w, h, prompt, *, kind="try", label=None, steps=None, minutes=None,
+                icon_png=None, accent=None, ink=None, size=24):
+    """An ACTIVITY prompt — the moment a lesson or training hands the room something to do:
+    `kind` 'try' (a problem to work), 'predict' (commit to an answer before the reveal), 'discuss',
+    or 'think-pair-share' (think alone → pair → share; its three steps are drawn as a numbered row).
+    `steps` overrides those step labels (any language), `label` the kicker, `minutes` adds a time
+    chip, `icon_png` (an icons.icon_png raster) anchors it visually. A filled accent panel, so it
+    reads as a different KIND of slide from the content around it. Returns the bottom y.
+
+        dk.prompt_card(s, 0.7, 1.2, 8.6, 3.0, "Where in your home is energy wasted as heat?",
+                       kind="think-pair-share", minutes=3)
+    """
+    if kind not in _PROMPT_KINDS:
+        raise ValueError("prompt_card(): kind is one of {}".format(", ".join(_PROMPT_KINDS)))
+    acc = accent if accent is not None else MAGENTA
+    kick, default_steps = _PROMPT_KINDS[kind]
+    steps = tuple(steps) if steps is not None else default_steps
+    ink_ = ink if ink is not None else on(acc)
+    box(slide, x, y, w, h, fill=acc, round=True, r=0.18)
+    pad = 0.36
+    ix = x + pad
+    if icon_png:
+        isz = min(0.9, h * 0.32)
+        icon(slide, icon_png, ix, y + pad, isz)
+        ix += isz + 0.24
+    head = label or kick
+    text(slide, ix, y + pad - 0.04, x + w - pad - ix - (1.3 if minutes else 0), 0.36,
+         [[(head.upper() if head.isascii() else head, 15, ink_, True, False)]], space_after=0)
+    if minutes:
+        cw = 1.15
+        chip_fill = _blend(acc, WHITE, 0.82)
+        box(slide, x + w - pad - cw, y + pad - 0.1, cw, 0.5, fill=chip_fill, round=True, r=0.25)
+        _card_label(slide, x + w - pad - cw, y + pad - 0.1, cw, 0.5, "{} min".format(minutes), 13, on(chip_fill))
+    sh = 0.56 if steps else 0.0
+    ph = h - (y + pad + 0.48 - y) - pad - (sh + 0.16 if steps else 0)
+    psz = fit_text_size([(prompt, True)], w - 2 * pad, ph, size, font=DISPLAY or FONT, min_size=14)
+    text(slide, x + pad, y + pad + 0.48, w - 2 * pad, ph, [[(prompt, psz, ink_, True, False, DISPLAY or FONT)]],
+         anchor=MSO_ANCHOR.MIDDLE, space_after=0)
+    if steps:
+        sy = y + h - pad - sh
+        n = len(steps)
+        g = 0.14
+        sw = (w - 2 * pad - g * (n - 1)) / n
+        sfill = _blend(acc, WHITE, 0.82)
+        for i, st in enumerate(steps):
+            sx = x + pad + i * (sw + g)
+            box(slide, sx, sy, sw, sh, fill=sfill, round=True, r=0.12)
+            _card_label(slide, sx, sy, sw, sh, "{}  {}".format(i + 1, st), 15, on(sfill))
+    return y + h
+
+
 def cta_button(slide, x, y, w, h, label, *, variant="primary", accent=None, tcolor=None,
                arrow=True, mono=False, bg=None):
     """A call-to-action button: filled `variant='primary'` (accent fill) or `variant='secondary'`

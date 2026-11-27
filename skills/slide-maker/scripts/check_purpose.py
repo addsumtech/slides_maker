@@ -196,7 +196,8 @@ def _selftest():
                        ("journal club on a MICCAI paper", "journal_club"),
                        ("组会读论文", "journal_club"),
                        ("tumour board", "clinical_case"),
-                       ("a product pitch to investors", "product_pitch"),
+                       ("a product pitch to investors", "investor_pitch"),   # moved when that genre was registered
+                       ("a sales pitch to a hospital", "product_pitch"),
                        ("an ethics committee submission", None),
                        ("", None)):
         got = purposes.match(text)
@@ -230,7 +231,8 @@ def _selftest():
     # meeting", the colloquial trigger, where every gate message says `research_meeting`), so an
     # agent grepping the doc for the name in its own error found nothing. Not a style check: it is
     # the doc-vs-code drift that makes a capability invisible to whichever runtime reads that file.
-    COUNTS = {11: "eleven", 12: "twelve", 13: "thirteen", 14: "fourteen", 15: "fifteen"}
+    COUNTS = {11: "eleven", 12: "twelve", 13: "thirteen", 14: "fourteen", 15: "fifteen", 16: "sixteen",
+              17: "seventeen", 18: "eighteen", 19: "nineteen", 20: "twenty"}
     REF = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "references")
     # (file, anchor, span) — an anchor bounds the check to the paragraph that makes the claim;
     # None means the whole file is the genre reference.

@@ -385,8 +385,14 @@ four template choices:
    *research meeting with a supervisor* · *work status update to a manager/boss* ·
    *academic conference talk* · *academic job talk / faculty interview* ·
    *company/stakeholder readout* · *product description / pitch* · *thesis defense* ·
-   *teaching* · *webinar / online presentation*. Get the **time budget**. This selects
-   the critic's rubric (`references/review-rubrics.md`).
+   *teaching* · *webinar / online presentation* — and the other everyday genres:
+   *student class / group presentation* · *client proposal / bid* · *investor pitch* ·
+   *corporate training / onboarding* · *all-hands / town hall / keynote / 年会*. Get the **time budget**.
+   This selects the critic's rubric (`references/review-rubrics.md`) and the genre's playbook
+   (`python3 scripts/purposes.py --brief "<their words>"` — run it once the genre is known).
+   - **Teaching or training → also ask the AGE BAND / level** (K-12 — which grade · university ·
+     adult professionals). It sets vocabulary, type size, words per slide and how much story or
+     game framing the deck carries; never infer it from the topic.
    - **Also capture two axes that the purpose alone doesn't pin down — ASK, don't infer them**
      (both change foundational design decisions *before* you build):
      - **Delivery context — presented live to a room · shared/screen-shared in a meeting · sent

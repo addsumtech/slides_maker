@@ -429,6 +429,7 @@ units, and code may stay in their original form (that's not "mixing"). Build a
 systematically (same pairing on every slide). See `references/multilingual.md`.
 
 ## Step 1 — Understand & plan the CONTENT (use the content-planner)
+Hand the planner the genre's playbook — `python3 scripts/purposes.py --brief "<recorded purpose>"` (arc · content rules · design conventions · failure modes; `deck_gates.py picks --set purpose=…` prints it too).
 Hand the planner `python3 scripts/memory.py recall --step content [--venue <venue>]`: the user's
 profile (field, audiences, languages), the content rules they taught, and cached venue facts.
 **Use `agents/content-planner.md` for this step — the CONTENT only** — dispatch

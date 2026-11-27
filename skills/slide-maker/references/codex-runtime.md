@@ -322,15 +322,20 @@ be reconstructed post-hoc at the delivery gate.
    device that advisory is the expected result — say so in the plan rather than adding a key you
    do not want.
 
-**The deck's GENRE may declare required content — `check_purpose.py`, on both gate paths.** TWELVE of the thirteen
+**The deck's GENRE may declare required content — `check_purpose.py`, on both gate paths.** SEVENTEEN of the eighteen
 genres in `design-by-purpose.md` carry sections their audience is asked to judge against, so a deck
 missing one is not a lean deck: **grant** (aims · feasibility · risk) · **committee** (progress ·
 plan · **ask**) · **journal club** (attribution · critique) · **clinical case** (presentation ·
 investigations · management · outcome) · **defense** (contributions · limitations · future work) ·
 **conference talk** (contribution · evidence · limitations) · **job talk** (track record · research
 plan · fit) · **exec readout** (the ask · the number · the risk) · **research meeting** (lab/group meeting: what
-changed · open questions) · **work status** (outcome · the ask) · **product pitch** (positioning · benefits) ·
-**teaching** (objectives · worked example · recap). 🔴 The thirteenth, **webinar**, has no list on
+changed · open questions) · **work status** (outcome · the ask · risks) · **product pitch** (positioning ·
+benefits · proof · next step) · **teaching** (objectives · worked example · recap · check for understanding) ·
+**student presentation** (introduction · conclusion · references) · **client proposal** (their goals · scope ·
+timeline · investment) · **investor pitch** (problem · market · business model · team · the ask) · **training**
+(objectives · practice · knowledge check · recap) · **all hands** (agenda · updates · recognition · q&a). Each
+genre's playbook — arc, content rules, design conventions, failure modes — prints with
+`python3 scripts/purposes.py --brief "<purpose>"`; read it before planning. 🔴 The eighteenth, **webinar**, has no list on
 purpose — it is a delivery MODE, not a genre, and `check_purpose` says so and asks you for the
 GENRE rather than silently checking nothing. Matching is word-START boundary for Latin (naive
 substring made three of these VACUOUS: `ct` inside a-CT-ion, `fit` inside bene-FIT) and plain

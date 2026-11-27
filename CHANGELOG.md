@@ -9,6 +9,17 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+**Genres: a playbook for every everyday deck, and checks that make a lesson a lesson.**
+- `purposes.py` carries a playbook per genre — arc, content rules, design conventions (applied inside the
+  chosen look, never instead of it), failure modes and sources — printed by `purposes.py --brief "<purpose>"`
+  and automatically when `deck_gates.py picks --set purpose=…` records it, so every runtime plans from it.
+- Five new genres: student presentation, client proposal, investor pitch, training/onboarding, all-hands/keynote.
+  Teaching gains a *check for understanding* section and an age-band question; work status gains *risks*;
+  the pitch gains *proof* and *next step*. Everyday wording now binds in English and Chinese (课堂汇报, 融资路演,
+  年会, 新员工培训, client proposal, sales pitch …), where before it bound nothing and went unchecked.
+- New components `check_question` (choose, answer revealed on the next click) and `prompt_card`
+  (try · predict · discuss · think-pair-share), themed by whatever direction the deck uses.
+
 **Toolchain: editable 2-D equations, vector icons, lighter photos, PyMuPDF 2.x.**
 - `equation_omml()`: fractions, roots, big operators with limits, `\left…\right` and `\binom` go in as a
   real PowerPoint equation (OMML, click-editable) with the `equation_png` picture as its `mc:Fallback`.

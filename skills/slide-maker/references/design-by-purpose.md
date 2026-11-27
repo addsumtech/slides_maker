@@ -412,7 +412,7 @@ a decision, and they cannot do that without the information that was available w
 > is the critic's job. Terms are multilingual; extend them with `design_plan.purpose_section_terms`
 > rather than waiving, and waive in writing when a deck genuinely has none.
 >
-> **TWELVE of the thirteen entries on this page are now checked.** The thirteenth, **webinar**, has no
+> **SEVENTEEN of the eighteen entries on this page are now checked.** The eighteenth, **webinar**, has no
 > section list on purpose: it is a delivery MODE, not a genre, and `check_purpose` says so rather
 > than checking nothing (see its entry above).
 >
@@ -424,6 +424,25 @@ a decision, and they cannot do that without the information that was available w
 > would fire on good decks, and a check that fires on good decks is how people learn to ignore
 > checks.
 
+## The everyday genres — their playbooks live in `purposes.py`
+Five genres that make up most of the decks people build outside a lab, each with a full playbook — arc,
+content rules, design conventions, failure modes, sources — printed by `python3 scripts/purposes.py --brief
+"<their words>"` (and on `deck_gates.py picks --set purpose=…`). The design conventions there sit INSIDE the
+direction you pick; they never replace the preset, the visual language, the signature move or the icons.
+- **student presentation** (课堂汇报 · group project) — sections: introduction · conclusion · references. Graded
+  on a rubric: one central message, sourced evidence, a structure the room can follow, the time limit.
+- **client proposal** (bid · RFP · 投标) — sections: their goals · scope · timeline · investment. Scope names
+  what is OUT; price comes as options.
+- **investor pitch** (pitch deck · 融资路演) — sections: problem · market · business model · team · the ask.
+  About ten slides, legible from the back, a dated metric behind every traction claim.
+- **training** (onboarding · e-learning · 培训) — sections: objectives · practice · knowledge check · recap.
+  Modules end in a check (`deckkit.check_question`); self-paced decks stand alone.
+- **all hands** (town hall · keynote · 年会) — sections: agenda · updates · recognition · q&a. Picture-led,
+  one engineered moment, honest about the hard news.
+The upgraded genres gained sections the same way: **teaching** adds *check for understanding* (a
+`check_question` / `prompt_card`, not "Questions?"), **work status** adds *risks*, **product pitch** adds
+*proof* and *next step*.
+
 ## Preset fit by purpose — a fast sanity map (fit is a default, avoid is a flag, both overridable with a stated reason)
 | Purpose | Natural fits | Flag before using |
 |---|---|---|
@@ -432,4 +451,11 @@ a decision, and they cannot do that without the information that was available w
 | Conference talk | `swiss` · `editorial_paper` · `dark_tech` (AI/systems) | heavy `glassmorphism` (projector contrast risk) |
 | Product pitch / launch | `glassmorphism` · `dark_tech` · `memphis` (consumer/playful) | `brutalist` · `museum_memorial` |
 | Teaching / lecture | `editorial_paper` · `swiss` · warm custom | `luxury_dark` · `consulting` (cold for a classroom) |
+| Teaching — K-12 | visual languages `cutpaper` · `bricks` · `chalkboard` · preset `memphis` | `consulting` · `luxury_dark` · `terminal` (adult registers lose a young room) |
+| Work status update | `editorial_report` · `swiss` · `consulting` | `synthwave` · `memphis` (a status board must read neutral) |
+| Student class presentation | `swiss` · `editorial_paper` · `bauhaus` / `memphis` (creative courses) | `luxury_dark` (projector contrast) · template-heavy chrome |
+| Client proposal / bid | `consulting` · `editorial_report` · `swiss` · client co-brand | `synthwave` · `memphis` (unless the client is a creative brand) |
+| Investor pitch | `dark_tech` · `glassmorphism` · `swiss` | `editorial_paper` (reads as a report) · `museum_memorial` |
+| Training / onboarding | `swiss` · `bauhaus` · `midcentury` · visual languages `wayfinding` · `boardgame` · `chalkboard` | `luxury_dark` · `brutalist` (hostile to a learner) |
+| All-hands / keynote / 年会 | brand custom · `glassmorphism` · `dark_tech` · `synthwave` (celebration) | `editorial_paper` · `consulting` (too quiet for a stage) |
 | Culture / heritage / CN-brand | `ink_wash` · `eastern_traditional` · `museum_memorial` | `dark_tech` (register clash) — and the reverse: don't reach for ink/seal on a technical/clinical deck without a content reason (`east-asian-aesthetic.md`) |

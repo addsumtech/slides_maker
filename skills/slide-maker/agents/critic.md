@@ -338,7 +338,10 @@ Do not just skim for the first few obvious issues. Run these passes:
          clear fix, not an unmet appetite. And this never over-rides a floor: an idea that broke
          legibility is a floor finding first, redone legibly.)*
        **Does the look fit the purpose?** crisp/corporate status vs sober defense vs bold pitch vs warm
-       lecture (`design-by-purpose.md`) — a mismatch is a real finding. **If a style example was given, judge
+       lecture (`design-by-purpose.md`) — a mismatch is a real finding. **Run `python3 scripts/purposes.py
+       --brief "<recorded purpose>"` and judge the deck against the genre's ARC order and FAILURE MODES** — a
+       lecture with no check for understanding, an investor deck with no "why now", a status update whose
+       ask is buried are content findings, whatever the look. **If a style example was given, judge
        fidelity to it PER THE CHOSEN MIMIC MODE** (the contract card carries it; `style-analysis.md`): **Mode A
        (reproduce)** → it should read as the **same family** (palette, type, chrome, motifs, density);
        **Mode B (borrow & restyle)** → the example's **components / layout / signature motif** should
