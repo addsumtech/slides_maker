@@ -446,6 +446,7 @@ def _boxes(slide, sw, sh, slide_no=None, record=True):
             _rot = rotgeom.norm(_rot + _vt)
         paras, size, align, anchor, mathfont = [], 0.0, None, None, None
         pspace = []                                      # (space_before, space_after) pt, one per kept paragraph
+        lsp = None                                       # largest explicit line-spacing MULTIPLE in the box
         _face, _bold = None, False
         if s.has_text_frame:
             size = max((r.font.size.pt for p in s.text_frame.paragraphs for r in p.runs if r.font.size),
@@ -467,6 +468,9 @@ def _boxes(slide, sw, sh, slide_no=None, record=True):
                         mathfont = r.font.name           # an equation_native run in a math font
                 if pr:
                     paras.append(pr)
+                    _ls = p.line_spacing
+                    if isinstance(_ls, float):           # a multiple (1.15); a Length (exact pt) is left alone
+                        lsp = max(lsp or 0.0, _ls)
                     try:                                 # paragraph spacing in points (None = inherited 0)
                         pspace.append((p.space_before.pt if p.space_before is not None else 0.0,
                                        p.space_after.pt if p.space_after is not None else 0.0))
@@ -567,7 +571,7 @@ def _boxes(slide, sw, sh, slide_no=None, record=True):
                     "runs": run_colors, "run_hl": run_hl, "run_fmt": run_fmt, "fill": fill_rgb, "alpha": fill_alpha, "unk": fill_unk, "pic": is_pic, "grad": is_grad,
                     "icon": icon_ink,
                     "st": str(s.shape_type).split()[0], "txt": txt, "full": full, "size": size or 12.0,
-                    "paras": paras, "pspace": pspace, "solid": s.shape_type in SOLID, "align": align, "anchor": anchor,
+                    "paras": paras, "pspace": pspace, "lsp": lsp, "solid": s.shape_type in SOLID, "align": align, "anchor": anchor,
                     "font": _face, "bold": _bold,
                     "text": bool(s.has_text_frame and txt), "descr": descr, "mathfont": mathfont,
                     "title_ph": tph, "bg": (w * h) >= 0.95 * (sw * sh), "grp": grp,
@@ -893,10 +897,18 @@ def _frame(t):
     return f
 
 
+def _pitch(f):
+    """Line pitch (in) of a text record: the default factor, grown by an explicit line-spacing multiple.
+    The fixed 1.25 ignored `line_spacing=1.15` (≈1.38× size) and measured such text short of its render
+    — a test build's rows passed here and overlapped on the page (2026-11-27). Only ever GROWS the
+    default, so tight display text keeps today's reading."""
+    base = 1.4 if _cjk(f) else 1.25
+    return (f["size"] / 72.0) * max(base, 1.2 * (f.get("lsp") or 0.0))
+
+
 def _txt_h(t):
     f = _frame(t)
-    return _est_lines(f["paras"], f["w"], f.get("font"), f.get("bold", False)) * \
-        (f["size"] / 72.0) * (1.4 if _cjk(f) else 1.25)
+    return _est_lines(f["paras"], f["w"], f.get("font"), f.get("bold", False)) * _pitch(f)
 
 
 def _nat_width(t):                                       # natural one-line width of the widest paragraph
@@ -1102,7 +1114,7 @@ def _glyph_bands(im, s, sw, sh):
     ps = s.get("pspace") or []
     if not s.get("rot") and ps and len(ps) == len(s.get("paras") or []) and any(b_ or a_ for b_, a_ in ps):
         f = _frame(s)
-        pitch = (s["size"] / 72.0) * (1.4 if _cjk(f) else 1.25)
+        pitch = _pitch(f)
         rows, y = [], 0.0
         for i, pr in enumerate(s["paras"]):
             if i:

@@ -295,5 +295,11 @@ _c = L._over("D6452B", 0.14, "F3EEE2")
 (ok if _c == "EFD6C8" else bad).append("_over composites 14%% #D6452B over #F3EEE2 to #EFD6C8 (got #%s)" % _c)
 (ok if L._over("D6452B", 0.14, None) == "UNKNOWN" else bad).append("_over over an unknown backing is UNKNOWN")
 
+# lint_deck's text height reads an explicit line-spacing multiple (it assumed 1.25× size whatever the box said)
+_rec = {"paras": [[("Body line that wraps " * 6, 14.0)]], "w": 4.0, "size": 14.0, "font": "Calibri", "bold": False}
+_h0 = L._txt_h(dict(_rec, lsp=None)); _h1 = L._txt_h(dict(_rec, lsp=1.3)); _h2 = L._txt_h(dict(_rec, lsp=0.9))
+(ok if _h1 > _h0 * 1.2 and abs(_h2 - _h0) < 1e-9 else bad).append(
+    "_txt_h grows with line_spacing=1.3 and never shrinks below the default (%.2f / %.2f / %.2f)" % (_h0, _h1, _h2))
+
 print(f"\n{len(ok)} passed, {len(bad)} failed")
 raise SystemExit(1 if bad else 0)

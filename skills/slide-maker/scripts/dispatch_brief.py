@@ -131,6 +131,9 @@ ROLE_PROMPTS = {
         "vocabulary, not the layouts: compose the signature, densest and key-data pages for this content. "
         "Icons are the default on categorical content; reach for a deckkit component before hand-building "
         "a form (`python3 {skill}/scripts/sigs.py --list`).\n"
+        "🔴 BEFORE writing the plan, build the MATERIAL PROBE yourself (slide-design.md §8): the signature page "
+        "in the deck's `build_<deck>.py`, rendered and looked at; the plan's `material probe:` line carries its PNG "
+        "and the safe-version sentence. Keep its code — it becomes the anchor proof's `signature` slide.\n"
         "Return the Design plan with every required field, including the gate line, as markdown in "
         "slide-design.md's Output shape — it is recorded with design_plan_record.py."),
 }
