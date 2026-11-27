@@ -9,6 +9,15 @@ section is a distilled summary — the full notes live on the
 
 ## [Unreleased]
 
+**Every genre's playbook audited against its sources, and detail floors for all genres.**
+- Each playbook rule now traces to a named source, is corrected where the source said otherwise (investor deck size by
+  use; Sequoia vs Kawasaki attribution; builds used sparingly in a research talk; the all-hands "wow" moment optional;
+  what student presentations are actually graded on), or is labelled a house rule. ~40 sourced detail rules added
+  (RAG legend and colour words; units and one highlight colour on exec charts; client accountabilities and payment
+  terms; RQ labels and slide numbers in a defense; monthly, labelled traction charts; dated metrics; image credits).
+- `DETAIL_FLOORS`, printed with every brief: mark tight, one face per kind, results on the slide, reproducible from
+  the screen, readable floor, decodable marks, scale by role, colour never the only signal.
+
 **Formulas at reading size, answers marked where they are named (feedback on the first real lesson deck).**
 - New build-time warning `FORMULA_OVERSIZE`: an `equation_omml` / `equation_native` formula set past 44pt (the
   title's size). Equations now carry their effective size in the shape name so this is decidable.

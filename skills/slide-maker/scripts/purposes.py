@@ -177,22 +177,25 @@ PURPOSES = (
         ),
         fidelity="Own the limitations before the committee finds them. A limitation you raised is "
                  "evidence of judgement; the same one raised from the floor is a gap.",
-        arc=("Thesis statement and the contributions, in one slide",
+        arc=("Thesis statement and the contributions, early",
              "Context: the gap the thesis fills",
-             "Each contribution: question → method → result (one chapter = one block)",
+             "Each contribution, keyed to its research question (RQ1, RQ2 …): question → method → result",
              "Synthesis: what the contributions add up to",
              "Limitations — raised by you, before the committee does",
              "Future work",
-             "Backup slides for the questions you predict from each member's own research"),
+             "Backup slides after the closing slide, for the questions you predict from each member's research"),
         rules=("Keep the main talk short; detail lives in backup slides you can jump to.",
+               "Number the research questions (RQ1, RQ2 …) and reuse the same labels on the result slides.",
                "Predict the committee's questions from their research interests and prepare a backup for each.",
-               "Every result slide states its claim as a sentence (assertion-evidence)."),
+               "Every result slide states its claim as a sentence (assertion-evidence); graphs over tables for findings."),
         design=("Assertion–evidence: a sentence headline, at most two lines, over the figure that proves it.",
-                "A chapter progress marker so the committee always knows which contribution they are in.",
-                "Same internal layout for every contribution block — the repetition is the signpost."),
+                "Slide numbers on every slide, so a committee member can point at one.",
+                "A chapter progress marker; no decorative transitions or animations.",
+                "Same internal layout for every contribution block — the repetition is the signpost (house rule)."),
         pitfalls=("An 80-slide stack skipped through at speed.", "No limitations slide.",
-                  "Bullet slides where the evidence should be a figure."),
-        sources=("Alley, assertion–evidence (Penn State)", "McGill / CMU defense guides", "MSVU defense prep"),
+                  "Bullet slides or tables where the evidence should be a figure."),
+        sources=("Alley, assertion–evidence (Penn State)", "CMU library defense guide", "Columbia (Schulzrinne) defense hints",
+                 "Valdosta State dissertation-defense guide (limitations, RQ labels)", "MSVU defense preparation"),
     ),
     Purpose(
         "conference_talk", "Academic conference talk",
@@ -210,25 +213,27 @@ PURPOSES = (
         ),
         fidelity="A conference audience cannot check you in the room, which is exactly why the "
                  "limitation slide matters. State the regime where the method does NOT hold.",
-        arc=("Title + the contribution in one sentence",
+        arc=("Title + the contribution in one sentence (no outline slide)",
              "The problem and why it matters to THIS audience",
              "The key idea — intuition before formalism",
              "Method: just enough to trust the result",
-             "Evidence: the main result first, then what supports it",
+             "Evidence: the main result first, written on the slide, then what supports it",
              "Limitations: where it does not hold",
-             "Take-home message (the one thing to remember)",
+             "Contributions slide last — left up during questions",
              "Backup slides: details from the paper"),
         rules=("One main idea done well beats everything done superficially; cut the first draft hard.",
-               "Roughly one slide per minute is an upper bound, not a target.",
-               "Open with the problem, not apologies or an outline slide.",
-               "Details belong to the paper and to backup slides."),
-        design=("Assertion–evidence: sentence headline (≤ 2 lines) + visual evidence, minimal bullets.",
-                "Readable from the back row: big figures, labelled axes, few words.",
-                "Builds for complex figures in the order you explain them."),
+               "About a slide a minute is an upper bound, not a target.",
+               "The key result is written on its slide (title or callout), not only spoken or left in the notes.",
+               "Every symbol in an on-slide equation is defined on that slide; an equation appears only when it carries the headline.",
+               "Cite a borrowed figure or claim on the slide where it appears."),
+        design=("Assertion–evidence: a sentence headline (≤ 2 lines) over visual evidence, minimal bullets.",
+                "Paper figures redrawn for the room: thicker lines, bigger points, figure text at body size.",
+                "Slide numbers on every slide, so questions can point at one.",
+                "Builds very sparingly — only for a punchline or a staged process."),
         pitfalls=("All-bullet slides.", "Too many slides, then rushing the result.",
-                  "Equations or tables no one can read from the room."),
-        sources=("Alley, assertion–evidence (Penn State)", "Peyton Jones, How to give a good research talk",
-                 "Waterloo talk notes"),
+                  "Equations or figure text no one can read from the room."),
+        sources=("Alley, assertion–evidence (Penn State; UNM checklist)", "Peyton Jones, How to give a good research talk",
+                 "Ernst, giving a technical talk", "Naegle, ten simple rules for effective presentation slides (PLOS)"),
     ),
     Purpose(
         "job_talk", "Academic job talk / faculty interview",
@@ -268,24 +273,26 @@ PURPOSES = (
         fidelity="A readout that names no downside is read as a sales pitch, and the first "
                  "question will be the one you left out. Name the assumption the number rests on.",
         arc=("The answer: the recommendation and the decision you ask for (SCQA opening)",
-             "Why: 2–4 supporting arguments, mutually exclusive and together complete — one slide each",
+             "Why: the supporting arguments, mutually exclusive and together complete — one slide each",
              "The number(s) that carry the case, with the assumption each rests on",
              "Options considered, and why this one",
              "The risk you ask them to accept, and its mitigation",
              "The ask restated + next steps and dates",
              "Appendix: backup for each question you expect"),
         rules=("Action titles: every title is a full-sentence takeaway, and the titles read in order ARE the argument "
-               "(draft the titles alone first — a 'ghost deck' — and fix the logic before designing).",
+               "(draft the titles alone first and fix the logic before designing — consulting practice).",
                "One exhibit per claim; the exhibit proves its title and nothing more.",
                "Quantify the stakes in the room's terms (money, time, risk) and name the assumption.",
+               "At most two bullet levels: nothing critical may sit in a sub-bullet.",
                "A pre-read sent before the meeting is a self-read document (delivery = self-read), not a talk deck."),
-        design=("Hero number + one simplified chart per argument; an insight banner states what the chart means.",
-                "Restraint and white space; the consulting / editorial presets fit, but the deck's chosen look wins.",
-                "Backup slides share the main deck's look and are reachable from the agenda."),
+        design=("Units on every chart ('$M'), the same scale on charts compared across slides, numbers rounded to what the decision needs.",
+                "One highlight colour for the bar or line the title is about; everything else neutral.",
+                "Direct labels instead of a legend; label the start, the key points and the end.",
+                "Restraint and white space; the consulting / editorial presets fit, but the deck's chosen look wins."),
         pitfalls=("The critical finding buried in nested bullets.", "No downside named.",
-                  "Statistics with no stakes attached."),
-        sources=("Minto, The Pyramid Principle / SCQA", "consulting action titles", "Duarte on pre-reads",
-                 "Tufte on the Columbia slides"),
+                  "Charts without units, or compared charts on different scales.", "Statistics with no stakes attached."),
+        sources=("Minto, The Pyramid Principle / SCQA", "Umbrex, design principles for consulting charts",
+                 "Storytelling with Data, horizontal logic", "Duarte on pre-reads", "Tufte on the Columbia slides"),
     ),
 
     Purpose(
@@ -324,23 +331,26 @@ PURPOSES = (
         ),
         fidelity="A status update with no ask is a report the reader did not need. If nothing is "
                  "wanted from them, say that explicitly rather than leaving them to guess.",
-        arc=("Headline: overall status + the one thing you need from them",
-             "Status by dimension (scope · schedule · budget · quality …): red / amber / green, trend, and what each colour means",
+        arc=("Headline: overall status + the one thing you need from them (bottom line up front)",
+             "Status by dimension (scope · schedule · budget · quality …): red / amber / green, trend, and a legend saying what each colour means",
              "Done since last update — outcomes, not activity",
-             "Risks (might happen) and issues (happening now) — each with owner, impact, next action",
+             "Risks (might happen) and issues (happening now) — each with owner, impact, next action and due date",
              "Decisions needed — options, your recommendation, and what happens if no one decides",
-             "Plan for the next period",
+             "Plan for the next period — milestones with baseline and forecast dates",
              "Appendix: detail and backup"),
-        rules=("Lead with the ask; it is why the meeting exists.",
-               "Outcomes over activity: 'shipped X, latency down 20%', not 'worked on X'.",
-               "Every number carries an as-of date, and the same number matches on every slide.",
-               "Keep risks and issues apart; every one has an owner."),
-        design=("A status board: scorecards / RAG chips per dimension; red-amber-green used ONLY for status, never decoration.",
-                "A milestone strip or timeline for schedule.",
+        rules=("Lead with the ask; it is why the meeting exists (bottom line up front).",
+               "Every red or amber item states its cause, the corrective action and the date it is expected back to green.",
+               "Keep risks and issues apart; every one has an owner and a due date.",
+               "Outcomes over activity: 'shipped X, latency down 20%', not 'worked on X' (house rule).",
+               "A 'data as of <date>' line on every slide that carries numbers, and the same number matches on every slide (house rule)."),
+        design=("A status board: scorecards / RAG chips per dimension, with a one-line legend per colour on the page.",
+                "Every RAG chip carries its colour as a word or letter (R / A / G) so it reads in greyscale and to colour-blind readers; red-amber-green is used ONLY for status.",
+                "A milestone strip showing baseline vs forecast date; slipped items marked.",
                 "A predictable grid, one slide per workstream; the detail goes to the appendix."),
         pitfalls=("An activity dump that buries the signal.", "The decision deferred because the ask was buried.",
-                  "Stale or conflicting numbers."),
-        sources=("Umbrex, consultant's guide to project updates", "project status reporting practice (RAG by dimension, risk vs issue)"),
+                  "RAG colours with no legend, or colour as the only signal.", "Stale or conflicting numbers."),
+        sources=("UK IPA delivery-confidence guide (status by dimension, defined colours)", "PMI, risks vs issues",
+                 "plainlanguage.gov / AR 25-50 (bottom line up front)", "Harrin, Rebel's Guide to PM (RAG legend, back-to-green date)"),
     ),
     Purpose(
         "product_pitch", "Sales pitch / product pitch / launch",
@@ -371,19 +381,22 @@ PURPOSES = (
              "The stakes: who wins and who loses as that change plays out",
              "The promised land: the customer's better future — not your features",
              "Capabilities as obstacle-removers: each feature tied to one obstacle on the way there",
-             "Proof: real customers, results, a case study",
-             "Next step: one concrete ask (pilot · demo · trial) with a date",
-             "Launch event / keynote variant: what is ↔ what could be, one 'wow' moment, rule of three"),
-        rules=("Lead with their problem and the change in their world, not with your company history.",
+             "Proof: a customer comparable to this one, before → after on a metric over a stated period",
+             "Next step: one concrete ask with an owner and a date",
+             "Launch event / keynote variant: what is ↔ what could be, rule of three, one planned surprise moment"),
+        rules=("Lead with their problem and the change in their world; 'about us' is at most one slide, after the shift.",
                "Benefits over features; a feature earns its slide by removing a named obstacle.",
-               "Tailor it: name this customer's context, numbers and words.",
-               "Only real numbers, logos and quotes — a customer may hold you to each one.",
-               "One call to action."),
-        design=("Brand-led and the boldest register: full-bleed imagery for the shift and the stakes, big hero claims.",
-                "Real product screenshots and logos only — cropped and annotated, never mock UI.",
-                "One idea per slide; a demo or screenshot gets the whole slide."),
-        pitfalls=("Opening with 'about us'.", "A feature list.", "A generic deck not tailored to this customer."),
-        sources=("Andy Raskin, the strategic narrative", "Duarte", "Gallo on Jobs's launch structure"),
+               "Every number carries its unit, its period and a comparison the audience relates to.",
+               "Logos, names and quotes only with permission; every quote attributed with name, role and company.",
+               "One call to action, on the last slide — no second one elsewhere."),
+        design=("This skill's house register for a pitch is brand-led and bold — full-bleed imagery for the shift and "
+                "the stakes, big headline claims (house style, not a sourced rule).",
+                "Real product screenshots and logos only — cropped to the one thing that matters, never mock UI.",
+                "One idea per slide; headlines short enough to tweet."),
+        pitfalls=("Opening with 'about us'.", "A feature list.", "Numbers with no unit, period or comparison.",
+                  "A generic deck not tailored to this customer."),
+        sources=("Andy Raskin, the strategic narrative (via secondary summary)", "Duarte (what is / what could be, the CTA)",
+                 "Gallo on Jobs's keynotes", "Gong, sales presentation research (vendor)"),
     ),
     Purpose(
         "teaching", "Teaching / lecture",
@@ -421,7 +434,7 @@ PURPOSES = (
                  "simplifying — 'this is roughly true, the exact version is…' — or the "
                  "simplification is what they will carry away as fact.",
         arc=("Hook: a question, puzzle, surprising fact or everyday situation the lesson will answer",
-             "Objectives: 2–4 'by the end you can …' statements with learner verbs (explain · compute · compare), not topics",
+             "Objectives: a few 'by the end you can …' statements with learner verbs (explain · compute · compare), not topics",
              "Recall what they already know + define the terms the lesson needs (pre-training)",
              "Small steps, repeated: one new idea → example → check for understanding",
              "Worked example → guided practice → independent practice (fade the steps: full example, then one with gaps, then theirs)",
@@ -429,49 +442,50 @@ PURPOSES = (
              "Recap + exit ticket: the key points and one question that tests an objective"),
         rules=("One new idea per slide; a slide with two is two slides.",
                "Every check asks the learner to DO something — choose, predict, compute, explain — and the answer "
-               "is revealed on the next click with why the wrong options are wrong. 'Any questions?' is not a check.",
+               "is revealed with why the wrong options are wrong. 'Any questions?' is not a check.",
                "A check for understanding every few content slides, not only at the end.",
                "Discuss first, then reveal: every check and activity slide SHOWS its answer on the slide, on the click "
                "after the room has committed (anim.Build — check_question(build=…) or the answers drawn in a "
                "Build.step). This is part of the lesson, not decoration, so it holds even when the user declined "
                "animation — then the answer goes on the next slide. An answer that lives only in the speaker notes "
                "never reaches the students.",
+               "A worked example lists its givens with units BEFORE substituting (m = 50 kg, g = 10 N/kg, S = 0.04 m²), "
+               "then substitutes with units — a student who sees only the slide can redo it.",
                "Concrete before abstract: an everyday example or picture first, the definition second.",
-               "Set the register by AGE BAND (ask it): K-12 — short sentences, everyday words, a character or story, a "
-               "challenge or game frame, larger type and fewer words than a university deck; university — precise terms "
-               "defined on first use, derivations as builds, sources cited; adult / professional — why it matters to "
-               "their work first, case-based.",
+               "Set the register by AGE BAND (ask it): younger readers — fewer words, larger type, everyday words, a "
+               "character or story; university — precise terms defined on first use, derivations as builds, sources "
+               "cited; adult / professional — why it matters to their work first, case-based. No sourced pt figure "
+               "exists for K-12: hold the 18pt body floor and go up for the primary grades.",
                "Interesting through substance, not decoration: a mystery to solve, a real stake, a surprising result, a "
                "story, a 'which would you choose?' vote."),
-        design=("Signal where they are: a lesson progress strip (step_list with the active step lit).",
+        design=("Signal where they are: a lesson progress strip, or the objective's own number heading its pages.",
                 "Build complex diagrams step by step (anim.Build) in the order you explain them; one highlight at a time.",
-                "Reveal an answer by marking the OPTION itself — ring or tick its letter or label, tight to the text. "
-                "Never a ring around a whole drawing: a mark that has to grow to avoid its own label is too big, and "
-                "the drawing already shows why.",
-                "Formulas are read, so they are set at reading size (≈ body, at most the title's size). A lesson's "
-                "hero is a number or a sentence, never an equation blown up to fill the slide.",
-                "One face for every formula on a slide: a worked example's steps, substitution and result are ALL "
-                "equation objects (deckkit.equation_omml) — never typed 'F = G = mg' text beside an equation object, "
-                "which reads as two different hands.",
                 "Checks get their own recognisable look across the deck — deckkit.check_question (choose / predict, "
                 "answer revealed on click) and deckkit.prompt_card (think-pair-share, try it, discuss) — so learners "
                 "know 'now it is my turn'.",
-                "Icons as concept anchors: one icon per concept, reused every time the concept returns. For K-12 a "
-                "visual language (cutpaper · bricks · chalkboard) or a recurring character carries the fun."),
+                "Reveal an answer by marking the OPTION itself — ring or tick its letter or label, tight to the text. "
+                "Never a ring around a whole drawing (house rule).",
+                "Formulas are read, so they are set at reading size (≈ body, at most the title's size); a lesson's "
+                "hero is a number or a sentence, never an equation blown up to fill the slide (house rule).",
+                "Notation: quantity symbols italic (m, g, F), units upright (kg, N), a space between number and unit; "
+                "every formula on a slide set the same way — all equation objects (deckkit.equation_omml).",
+                "Icons as concept anchors, each with a word beside it; for K-12 a visual language (cutpaper · bricks · "
+                "chalkboard) or a recurring character carries the fun."),
         pitfalls=("The lecture script pasted onto the slides — learners read instead of listening.",
                   "A continuous stream with no practice or checks until the end.",
                   "Checks that are not checks ('Got it?').",
-                  "Answers that exist only in the speaker notes — the class discusses and never sees the result."),
-        sources=("Gagné's nine events of instruction", "Rosenshine's principles of instruction",
+                  "Answers that exist only in the speaker notes — the class discusses and never sees the result.",
+                  "A worked example whose givens are missing from the slide."),
+        sources=("Rosenshine, Principles of Instruction (AFT)", "Gagné's nine events of instruction (NIU)",
                  "Mayer's multimedia principles (segmenting, signaling, coherence, pre-training)",
-                 "worked and faded examples (MIT, EEF)", "retrieval practice (CMU)",
-                 "checks for understanding (Yale Poorvu)"),
+                 "worked and faded examples (MIT, EEF)", "explanatory feedback (Moreno 2004)", "retrieval practice (CMU)",
+                 "OpenStax, solving problems in physics (givens before substitution)", "NIST SP 811 (italic symbols, upright units)"),
     ),
     Purpose(
         "student_presentation", "Student class / group presentation",
-        "A presentation a STUDENT gives for a course. The instructor grades it against a rubric — a clear central "
-        "message, credible and varied evidence, an organisation the room can follow, language for the audience, "
-        "and the time limit — so the deck is built for those, not for a boardroom.",
+        "A presentation a STUDENT gives for a course. It is graded on a clear central message, credible and varied "
+        "evidence, an organisation the room can follow, language for the audience and delivery (AAC&U), and course "
+        "rubrics add the time limit and legible visual aids — so the deck is built for those, not for a boardroom.",
         binds_on=("class presentation", "course presentation", "course project", "group project", "group presentation",
                   "student presentation", "presentation for my class", "presentation for class", "book report",
                   "课堂汇报", "课堂展示", "课堂报告", "小组汇报", "小组展示", "小组作业", "课程汇报", "课程展示",
@@ -486,24 +500,30 @@ PURPOSES = (
         ),
         fidelity="Every fact, figure and image comes from a source the student can name — cite it on the slide in "
                  "short form and list it at the end. An instructor treats an unsourced claim as a missing one.",
-        arc=("Title + who presents which part (group decks: a name on each section divider)",
+        arc=("Title + who presents which part (a name on each section divider)",
              "Hook + the central message in one sentence",
              "Roadmap: the 2–4 parts",
-             "Body: each part is one claim + its evidence (data · quote · image) with the source",
+             "Body: each part is one claim + its evidence (data · quote · image) with its source on the same slide",
              "Conclusion: the message again, and what it means",
              "References",
              "Q&A"),
-        rules=("Build for the rubric: one clear central message, credible varied evidence, an obvious structure, "
-               "language for classmates, the time limit.",
-               "Fit the time: about a slide a minute at most; a group deck splits the minutes by presenter.",
-               "The script goes in the speaker notes; the slide carries keywords and evidence — rubrics mark down "
-               "reading full sentences off the screen.",
-               "Cite as you go (short form on the slide), full list at the end."),
-        design=("One distinctive, consistent look — visual aids are graded, and a strong design reads as effort.",
-                "Evidence as visuals (chart · photo · diagram) rather than bullet lists; icons as section anchors.",
+        rules=("Build for what is graded: a clear central message, credible varied supporting material, an obvious "
+               "organisation, language for classmates, delivery to the room (AAC&U) — plus what course rubrics add: the "
+               "time limit and visual aids that every seat can read.",
+               "Fit the time: about a slide a minute at most; plan the minutes per section in the speaker notes so they "
+               "add up to the limit, and split them evenly across presenters.",
+               "Cite on the slide: a short author–year (Smith, 2020) next to the fact it supports — when a slide has "
+               "several sources, make clear which fact is whose — and the full list at the end.",
+               "Every borrowed image carries a credit line under it: title, author, source, licence.",
+               "The script goes in the speaker notes; the slide carries keywords and evidence."),
+        design=("Visual aids are graded on relevance and legibility from every seat — design serves those first.",
+                "Evidence as visuals (chart · photo · diagram) rather than bullet lists; icons with a word beside them.",
                 "Section dividers double as presenter handovers."),
-        pitfalls=("Text walls read aloud.", "Running over time.", "No clear central message.", "Missing sources."),
-        sources=("AAC&U Oral Communication VALUE rubric", "course presentation rubrics (Aalto, Colorado State, Alliant)"),
+        pitfalls=("Text walls read aloud.", "Running over time.", "No clear central message.",
+                  "Facts or images with no source on the slide."),
+        sources=("AAC&U Oral Communication VALUE rubric", "Newcastle University presentation marking criteria",
+                 "Brock University, citing in presentations", "Creative Commons, attribution best practices (TASL)",
+                 "Monash, group presentations"),
     ),
     Purpose(
         "client_proposal", "Client proposal / bid / RFP response",
@@ -524,28 +544,32 @@ PURPOSES = (
         ),
         fidelity="Scope and price are promises. State what is OUT of scope and the assumptions the price rests "
                  "on — the line you leave vague is the one the client will read most generously.",
-        arc=("Their situation and goals, in their words",
-             "What success looks like — measurable outcomes",
+        arc=("Their situation and goals, in their words (situation appraisal)",
+             "What success looks like — the measures by which they will know",
              "Our approach, in phases",
-             "Scope and deliverables — including what is out of scope",
-             "Timeline and milestones",
-             "Team and relevant experience (proof)",
-             "Investment: options, with the recommended one marked",
-             "Next steps: the decision and a start date"),
+             "Scope and deliverables — what is included, what is excluded, and what the client must provide",
+             "Timeline: start, end and progress checks",
+             "Investment: options (a 'choice of yeses'), each with one fee, payment terms and expenses",
+             "Acceptance: the decision, who signs, and a start date (credentials folded in briefly, not a full section)"),
         rules=("Mirror the client's language and priorities; the first slides are about them.",
-               "Make scope explicit, including exclusions, assumptions and dependencies.",
-               "Tie price to value and to options, not a lone number.",
-               "One clear next step with a date."),
+               "Make scope explicit — inclusions, exclusions, assumptions — and list the client's own accountabilities (access, data, people).",
+               "Each option carries a single fixed fee; say how payment and expenses work.",
+               "Write 'will', not 'can' or 'strive'; every superlative carries its proof (a number or a case).",
+               "End on one acceptance step with a date."),
         design=("Clean and confident; co-brand with the client where appropriate.",
                 "A timeline / phase strip and a pricing table with the recommended option highlighted.",
-                "Case-study cards with real logos and results only."),
-        pitfalls=("A deck that is all about us.", "Vague scope.", "A price with no options or rationale."),
-        sources=("practitioner convention for proposals and RFP responses (no single canonical source)",),
+                "Every graphic carries an action caption: what the client should conclude, in their terms.",
+                "Case-study cards with real logos and results only, used with permission."),
+        pitfalls=("A deck that is all about us.", "Vague scope, or no client accountabilities.",
+                  "A price with no options or rationale.", "No closing step."),
+        sources=("Alan Weiss, sample proposals (situation, measures, value, options, terms)",
+                 "Shipley, seven rules for winning proposals; proposal graphics"),
     ),
     Purpose(
         "investor_pitch", "Investor / startup pitch",
-        "Raising money from investors who see many decks a week and decide fast. Sequoia's outline and Kawasaki's "
-        "10/20/30 agree on the spine: problem, solution, why now, market, model, traction, team, the ask.",
+        "Raising money from investors who see many decks a week and decide fast. Sequoia's outline gives the order "
+        "(purpose · problem · solution · why now · market · competition · model · team · vision); Kawasaki and YC add "
+        "the traction and the single ask.",
         binds_on=("investor pitch", "pitch deck", "startup pitch", "fundraising", "fund raising", "seed round",
                   "pre-seed", "series a", "series b", "demo day", "vc pitch", "pitch to investors", "pitch to vcs",
                   "融资路演", "路演", "融资", "天使轮", "商业计划书", "创业大赛", "创业比赛"),
@@ -561,17 +585,27 @@ PURPOSES = (
         fidelity="Every traction number is real, dated and defined (users = what, revenue = booked or "
                  "recognised). Investors diligence the deck; one inflated metric costs the whole round's trust.",
         arc=("Purpose: what the company does, in one sentence",
-             "Problem", "Solution (+ demo)", "Why now", "Market size", "Competition and alternatives",
-             "Business model", "Traction", "Team", "The ask, the use of funds and the milestones it buys + vision"),
-        rules=("About ten slides; the 5–7 points an investor must remember drive everything.",
+             "Problem", "Solution — shown in its simplest form (a short list of steps), not a busy screenshot",
+             "Why now", "Market size, worked bottom-up (price × number of customers)", "Competition and alternatives",
+             "Business model", "Traction", "Team",
+             "The ask: one amount, the runway it buys and the milestones it reaches + vision"),
+        rules=("Size by use: about ten slides plus an appendix for a presented meeting; about five self-explanatory "
+               "slides for an emailed deck; five to seven for a Demo Day — and the emailed deck makes sense with no "
+               "speaker (nothing only in the notes).",
                "Each slide states its conclusion — a stranger glancing at it should be able to say your idea.",
                "Answer 'why now?' and 'why this team?'.",
-               "Real, dated metrics only; label what each one counts."),
-        design=("Legible from the back of the room: large type, one idea per slide, high contrast, text near the top.",
-                "Screenshots cropped to the one thing that matters and annotated — never a full busy UI.",
-                "Traction as a clean chart with labelled axes; no gimmicky transitions or memes."),
-        pitfalls=("Dense, illegible slides.", "Vanity or unverifiable metrics.", "No clear ask."),
-        sources=("Sequoia, Writing a business plan", "Kawasaki, the 10/20/30 rule", "YC (Hale), How to design a better pitch deck"),
+               "Every metric says what it counts (users = what; bookings ≠ revenue), carries its period or date, and "
+               "every % growth sits next to its absolute base.",
+               "One ask amount, not a range, with the milestones it buys over a stated runway."),
+        design=("Legible from the back of the room: large, bold, high-contrast type, text near the top — Kawasaki's "
+                "floor is no text under 30pt on a presented pitch.",
+                "Traction as a monthly (not cumulative) chart, a labelled y-axis with its unit, a dated period, and a "
+                "caption stating the conclusion.",
+                "No memes, transitions or animations; one idea per slide."),
+        pitfalls=("Dense, illegible slides.", "Cumulative charts or vanity metrics with no base.", "No clear single ask."),
+        sources=("Sequoia, Writing a business plan (purpose → vision order)", "Kawasaki, the 10/20/30 rule (30pt, the ask)",
+                 "YC (Hale), How to design a better pitch deck", "YC, Demo Day pitch guide", "Seibel, How to pitch your company",
+                 "a16z, 16 startup metrics", "Hustle Fund, the two pitch decks founders need"),
     ),
     Purpose(
         "training", "Corporate training / onboarding / self-paced course",
@@ -602,16 +636,20 @@ PURPOSES = (
         rules=("Task-centred: teach what they will DO on the job, with scenarios from their context.",
                "A knowledge check or scenario shows its answer on the slide after the learners commit (a click reveal, "
                "or the next slide on a self-paced deck) — never only in the notes.",
-               "A knowledge check per module, not one quiz at the end; asking first, then telling, works too.",
-               "Self-paced decks must stand alone: descriptive headings, instructions, and navigation.",
-               "Onboarding: pace it over weeks; people and culture early, not only paperwork."),
+               "Feedback on each wrong option names that specific mistake and explains the right answer; feedback "
+               "explains, it does not praise ('Great job!' teaches nothing).",
+               "Scenario options are on-the-job actions, and the feedback shows what happens as a result.",
+               "A knowledge check per module, not one quiz at the end; practice spread through the course.",
+               "Self-paced decks must stand alone: descriptive headings, instructions, and navigation."),
         design=("Module dividers with a progress marker; checks share one recognisable look (deckkit.check_question).",
-                "A job-aid slide designed to be printed or screenshotted.",
+                "The job aid: one task, numbered steps, keywords not prose, high contrast, key points marked by shape or "
+                "bold — not colour alone — and designed to be printed or screenshotted.",
                 "Self-read: a linked agenda for navigation; denser text is fine but structured, never a wall."),
         pitfalls=("An information dump.", "A click-through with an end quiz nobody learns from.",
-                  "Generic content that never touches their actual job."),
-        sources=("Clark & Mayer, e-Learning and the Science of Instruction", "ATD", "SHRM on onboarding",
-                 "UCF self-paced module practice"),
+                  "Feedback that only says right or wrong.", "Generic content that never touches their actual job."),
+        sources=("Clark & Mayer, e-Learning and the Science of Instruction", "ATD, design considerations for job aids",
+                 "QUB digital learning, feedback in objective tests", "Cathy Moore, scenario design (practitioner)",
+                 "SHRM on onboarding check-ins"),
     ),
     Purpose(
         "all_hands", "All-hands / town hall / keynote / company annual meeting",
@@ -630,22 +668,28 @@ PURPOSES = (
         ),
         fidelity="Talk to the uncertainty people already feel — changes, decisions, departures. A deck that only "
                  "celebrates reads as spin, and the room fills the silence with rumour.",
-        arc=("Purpose and agenda for today",
+        arc=("Purpose and agenda for today — and, if you like, two or three questions right away",
              "Where we are (what is) ↔ where we are going (what could be)",
-             "Updates by team or function — short, outcome-based",
-             "Recognition: people and wins, by name",
-             "The hard part: changes and open questions, addressed honestly",
+             "Updates by team or function — short, outcome-based, against the goals announced earlier",
+             "Recognition: people by full name and team, each with one specific contribution",
+             "The hard part: what we know, what we can change, what is still undecided and when people will hear",
              "Live Q&A",
              "Close: one rallying message or call to action"),
-        rules=("Rule of three: three messages the room should carry out.",
-               "Real names, real wins, real numbers.",
-               "Keep each team update short; end strong — the ending is what is remembered."),
-        design=("Picture superiority: full-bleed photos of people and products, big type, minimal text.",
-                "One engineered 'wow' moment (a reveal, a number, a story).",
+        rules=("Three messages at most for the room to carry out; short segments.",
+               "Every metric is dated and shown against the goal it serves.",
+               "Talk to the uncertainty — acknowledge reality while leaving room for optimism; a deck that only "
+               "celebrates reads as spin.",
+               "The Q&A slide shows how to ask (link, QR code or channel, and an anonymous option) and when unanswered "
+               "questions will be answered.",
+               "Mark non-public figures as internal; that part is not recorded or shared."),
+        design=("People and products in photographs where you have them; big type, little text (house style).",
+                "A planned 'wow' moment is optional — a keynote convention; town halls are built for dialogue.",
                 "Consistent section dividers per team; celebratory but on-brand."),
-        pitfalls=("Filler updates that send people to their phones.", "A staged, inauthentic tone.", "A weak ending."),
-        sources=("Duarte, Resonate (what is / what could be)", "SHRM on town halls", "Lattice on all-hands",
-                 "Gallo on Jobs's keynotes"),
+        pitfalls=("Filler updates that send people to their phones.", "A staged, inauthentic tone.",
+                  "Undated numbers.", "Recognition with no names or specifics."),
+        sources=("SHRM on better town halls", "HBR 2025, leading an all-hands after bad news",
+                 "Gallup, authentic recognition", "Lattice on all-hands (vendor)", "GitLab handbook, SAFE framework",
+                 "Duarte, Resonate (what is / what could be)"),
     ),
 )
 
@@ -704,6 +748,29 @@ def match(recorded: str):
     return best[1] if best else None
 
 
+# 🔴 DETAIL FLOORS — every genre. Each one is a defect a real build shipped and a person caught by eye
+# (the 压强 lesson, 2026-11-27, eight findings from one 8-slide deck). They are small, so a generator skips
+# them; they are visible, so the audience does not. Printed with every brief so planner, designer and critic
+# all hold the same list.
+DETAIL_FLOORS = (
+    "Mark tight: a ring, underline or highlight hugs the thing it marks (the option's label, the one number). "
+    "A mark that has to grow to avoid its own text is marking the wrong object.",
+    "One face per kind: every formula on a slide is set the same way (all equation objects or all text), every "
+    "number in one face, every unit spelled one way across the deck.",
+    "Results on the slide: a question, check, activity or comparison shows its answer or result ON the slide — "
+    "revealed on a click, or on the next slide — never only in the speaker notes.",
+    "Reproducible from the screen: a calculation, worked example or metric shows its givens, units, assumptions "
+    "and as-of date on the slide; a reader who sees only the slide can redo it.",
+    "Readable floor: anything the audience must read stays at presented size (body ≥ 18pt; an explanation or "
+    "caption never under 14pt). A component that shrinks text to fit is a layout defect, not a fit.",
+    "Decodable marks: an icon or device carries a word beside it or is labelled at first use; one nobody can "
+    "name in a second is decoration — drop it.",
+    "Scale by role: the hero is a number or a sentence; formulas, labels and furniture stay at reading size.",
+    "Colour is never the only signal: a status, category or answer also carries a word, letter or shape, so it "
+    "reads in greyscale and to colour-blind viewers.",
+)
+
+
 def resolve(text):
     """A Purpose from its registry NAME or from recorded words (`match`), else None."""
     if not text:
@@ -729,6 +796,8 @@ def brief(p):
     if p.pitfalls:
         out.append("FAILURE MODES — the critic checks for these:")
         out += ["  - " + f for f in p.pitfalls]
+    out.append("DETAIL FLOORS — every genre, every slide (each one shipped once and was caught by eye):")
+    out += ["  - " + d for d in DETAIL_FLOORS]
     if p.required_sections:
         out.append("REQUIRED SECTIONS — check_purpose.py fails the hand-off if the deck names none of a section's "
                    "words: " + ", ".join(lbl for lbl, _t in p.required_sections))
