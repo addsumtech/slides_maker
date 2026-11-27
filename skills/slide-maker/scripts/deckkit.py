@@ -12653,6 +12653,8 @@ def _lint_layout_impl(prs, *, verbose=True, strict=False, overlap_tol=0.05, esca
 
       OFF_CANVAS   — a text box's INK, or a card/table, extends past the slide edge. Full-bleed
                      PICTURES (and giant watermark numerals) are exempt — they're meant to bleed.
+      CUT_UNIT     — a declared bleed that is one unit of a repeated row (≥2 same-size whole siblings), cut by
+                     the trim: reads as overflow. Bleed continuous forms only.
       OVERFLOW     — a VISIBLE (filled/outlined) text box whose ink needs more height/width than it has.
       ESCAPES_CARD — a text box's ink / a figure / a labelled node pokes outside the FILLED card or
                      panel that encloses its centre (the "bullet ran past the bottom of its card" bug).
@@ -12978,6 +12980,18 @@ def _lint_layout_impl(prs, *, verbose=True, strict=False, overlap_tol=0.05, esca
                 off = [s for s, c in (("left", ext[0] < -budget), ("top", ext[1] < -budget),
                                       ("right", ext[0]+ext[2] > W+budget+slack),
                                       ("bottom", ext[1]+ext[3] > H+budget+slack)) if c]
+                if off and _declared_bleed(sh) and ink is None:
+                    # a declared bleed that is ONE UNIT of a repeated row (same size as ≥2 whole siblings) is a
+                    # cut-off item, not a device running past the trim: the user read a shelf of facings sliced
+                    # at both edges as "the boxes overflow the page" (2026-11-27). Bleed continuous forms only.
+                    twins = [b for s2, b, st2, ik2, _r in info if s2 is not sh and ik2 is None
+                             and abs(b[2] - bb[2]) <= 0.02 * max(bb[2], 0.05) and abs(b[3] - bb[3]) <= 0.02 * max(bb[3], 0.05)
+                             and b[0] >= 0 and b[1] >= 0 and b[0] + b[2] <= W and b[1] + b[3] <= H]
+                    if len(twins) >= 2:
+                        findings.append((n, "CRITICAL", "CUT_UNIT",
+                            f"a unit of a repeated row ({len(twins)} same-size siblings) is cut by the {', '.join(off)} "
+                            f"edge — a sliced item reads as overflow, not bleed. Fit whole units inside the margins "
+                            f"(n = width // pitch); bleed_intent is for continuous forms (a rule, a field, a ray fan)"))
                 if off and (_declared_bleed(sh) or _is_a11y_title(sh)):
                     off = []                     # declared, per shape, with a written reason (or a11y_title's own)
                 if off and not ((is_pic or is_wm) and full_bleed):

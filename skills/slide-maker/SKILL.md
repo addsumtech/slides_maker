@@ -1214,6 +1214,11 @@ The helper set, by job:
   (`OFF_CANVAS` at build time and `OVERFLOW` at file level), and it COMPOSES with a motif tag so a
   bleeding device stays countable in the ≤3 budget. An UNdeclared shape off the canvas still fails,
   which is the point: the check keeps catching the accident and stops refusing the composition.
+  🔴 **Bleed continuous forms only — never a cut unit of a repeated row.** A row of discrete, countable
+  items (facings, bars, tiles, dots) sliced at the trim reads as overflow, not as "it continues": the
+  user read exactly that on a pitch cover (2026-11-27). Fit whole units inside the margins (`n = width //
+  pitch`), aligned to the text column; `lint_layout` refuses a declared bleed with ≥2 same-size whole
+  siblings as `CUT_UNIT`.
   `motif_page` declares its own bleeders for you.
 - **Composed overlap (`overlap_intent`)** — `lint_layout`'s `TEXT_OVERLAP` is a CRITICAL that refuses
   to save, and it is right to be: colliding text is the commonest way a build ships unreadable. But it
