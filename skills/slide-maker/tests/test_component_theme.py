@@ -80,6 +80,8 @@ CHANGED_ON_PURPOSE = {           # name -> the listed fix that changed it, and t
     "source_note": ("2026-11-18: the line records its measured line count in its name (deckkit-source:N) for the "
                     "lint's SOURCE CLUTTER line — names only",
                     "0455290bfec84bc9285bed356930f0edd6d79efba364f879703979495e665422"),
+    "stat_row": ("2026-11-27: the caption scales with the canvas to hold the detail floor — 14pt on the 13.33in "
+                 "guard canvas, still 12pt on 10in", "b861eeb04966a62e8197807a28b5901cea1208258e5ef0a89b1c9a6e6c04338e"),
 }
 dk.set_theme(None)
 # the hashes were taken with macOS faces: text measured with another platform's faces lays out differently, so the
